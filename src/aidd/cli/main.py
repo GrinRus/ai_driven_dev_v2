@@ -12,6 +12,12 @@ from aidd.adapters.base import CapabilityReport
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.generic_cli import probe as probe_generic_cli
 from aidd.config import load_config
+from aidd.core.interview import (
+    load_answers_document,
+    load_questions_document,
+    resolved_question_ids,
+    stage_has_unresolved_blocking_questions,
+)
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.harness.scenarios import load_scenario
@@ -147,6 +153,70 @@ def stage_run(
         "Stage execution is not implemented yet. "
         "See contracts/stages/ and docs/architecture/document-contracts.md."
     )
+
+
+@stage_app.command("questions")
+def stage_questions(
+    stage: Annotated[str, typer.Argument(help="Stage name")],
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+) -> None:
+    """Show pending stage questions and answer guidance."""
+    if not is_valid_stage(stage):
+        raise typer.BadParameter(f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}")
+
+    questions = load_questions_document(
+        workspace_root=root,
+        work_item=work_item,
+        stage=stage,
+    )
+    if not questions:
+        console.print("No stage questions recorded.")
+        return
+
+    resolved_ids: set[str] = set()
+    answers_path = root / "workitems" / work_item / "stages" / stage / "answers.md"
+    if answers_path.exists():
+        resolved_ids = set(
+            resolved_question_ids(
+                answers=load_answers_document(
+                    workspace_root=root,
+                    work_item=work_item,
+                    stage=stage,
+                )
+            )
+        )
+
+    table = Table(title=f"Stage questions: {stage} / {work_item}")
+    table.add_column("Question id")
+    table.add_column("Policy")
+    table.add_column("Status")
+    table.add_column("Text")
+    for question in questions:
+        if question.question_id in resolved_ids:
+            status = "resolved"
+        elif question.policy.value == "blocking":
+            status = "pending-blocking"
+        else:
+            status = "pending-non-blocking"
+        table.add_row(question.question_id, question.policy.value, status, question.text)
+    console.print(table)
+
+    if stage_has_unresolved_blocking_questions(
+        workspace_root=root,
+        work_item=work_item,
+        stage=stage,
+    ):
+        console.print(
+            "Blocking questions are unresolved. Add `[resolved]` answers in "
+            f"`{answers_path.as_posix()}` before progressing this stage."
+        )
+        return
+
+    console.print("No unresolved blocking questions. Stage can proceed if other checks pass.")
 
 
 @eval_app.command("run")
