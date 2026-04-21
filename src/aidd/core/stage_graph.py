@@ -13,6 +13,9 @@ class StageDependencyResolutionError(ValueError):
     """Raised when a stage declares an invalid upstream dependency."""
 
 
+_RUNNABLE_STAGE_STATUSES = frozenset({StageState.PENDING.value, StageState.REPAIR_NEEDED.value})
+
+
 @dataclass(frozen=True, slots=True)
 class StageEligibility:
     stage: str
@@ -134,3 +137,42 @@ def evaluate_stage_eligibility(
         blocked_upstream_stages=tuple(blocked),
         failed_upstream_stages=tuple(failed),
     )
+
+
+def _can_attempt_stage(status: str | None) -> bool:
+    if status is None:
+        return True
+    normalized = status.strip().lower()
+    if normalized == StageState.SUCCEEDED.value:
+        return False
+    return normalized in _RUNNABLE_STAGE_STATUSES
+
+
+def select_next_runnable_stage(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> str | None:
+    for stage in stage_graph():
+        metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        if not _can_attempt_stage(metadata.status if metadata else None):
+            continue
+
+        eligibility = evaluate_stage_eligibility(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            contracts_root=contracts_root,
+        )
+        if eligibility.is_eligible:
+            return stage
+
+    return None

@@ -11,6 +11,7 @@ from aidd.core.stage_graph import (
     evaluate_stage_eligibility,
     resolve_stage_dependencies,
     resolve_stage_dependency_graph,
+    select_next_runnable_stage,
 )
 from aidd.core.stages import STAGES, stage_index
 from aidd.core.state_machine import StageState
@@ -152,3 +153,143 @@ def test_evaluate_stage_eligibility_accepts_satisfied_dependencies(tmp_path: Pat
     assert eligibility.blocked_upstream_stages == ()
     assert eligibility.failed_upstream_stages == ()
     assert eligibility.is_eligible is True
+
+
+def test_select_next_runnable_stage_returns_first_stage_for_new_run(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+    )
+
+    assert (
+        select_next_runnable_stage(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+        )
+        == "idea"
+    )
+
+
+def test_select_next_runnable_stage_skips_completed_stages(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="idea",
+        status=StageState.SUCCEEDED.value,
+    )
+
+    assert (
+        select_next_runnable_stage(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+        )
+        == "research"
+    )
+
+
+def test_select_next_runnable_stage_prefers_repair_needed_stage(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="idea",
+        status=StageState.SUCCEEDED.value,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="research",
+        status=StageState.REPAIR_NEEDED.value,
+    )
+
+    assert (
+        select_next_runnable_stage(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+        )
+        == "research"
+    )
+
+
+def test_select_next_runnable_stage_returns_none_when_upstream_is_blocked(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="idea",
+        status=StageState.BLOCKED.value,
+    )
+
+    assert (
+        select_next_runnable_stage(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+        )
+        is None
+    )
+
+
+def test_select_next_runnable_stage_returns_none_when_upstream_failed(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="idea",
+        status=StageState.FAILED.value,
+    )
+
+    assert (
+        select_next_runnable_stage(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+        )
+        is None
+    )

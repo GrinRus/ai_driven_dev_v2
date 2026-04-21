@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E2-S3-T3` Implement the selection of the next runnable stage in a workflow sequence.
+- `W3-E2-S3-T4` Implement advancement summaries that explain why a stage can or cannot run.
 
 ## Soon
 
-- `W3-E2-S3-T4` Implement advancement summaries that explain why a stage can or cannot run.
+- `W3-E2-S3-T5` Add dependency-resolution tests for branching, skipped stages, and blocked upstream states.
 
 ## Parking lot
 
