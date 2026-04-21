@@ -35,11 +35,17 @@ Optional context documents may enrich the stage output, but their absence must n
 
 Validators for `idea` should check:
 
-- required document existence,
-- required headings and sections,
-- consistency with upstream inputs,
-- whether the main output actually serves the stage purpose,
-- whether the stage result reflects validator and repair outcomes.
+- required output existence for `idea-brief.md`, `stage-result.md`, and `validator-report.md`,
+- required heading coverage in `idea-brief.md` (`Problem statement`, `Desired outcome`, `Constraints`, `Open questions`),
+- minimum completeness of `idea-brief.md`:
+  - `Problem statement` states the core user or business problem and affected scope;
+  - `Desired outcome` states a concrete target result or acceptance signal;
+  - `Constraints` lists actionable boundaries or explicitly records `- none`;
+  - `Open questions` lists unresolved decisions or explicitly records `- none`,
+- no unresolved placeholder content in required sections (for example `TBD`, `TODO`, `N/A`, `...`, or equivalent filler),
+- consistency between `idea-brief.md` and required inputs (`context/intake.md`, `context/user-request.md`) for goals and constraints,
+- `validator-report.md` issue codes and severities follow the shared `validator-report.md` contract vocabulary,
+- `stage-result.md` status and validation summary agree with `validator-report.md` and any repair outcomes (for example, no `succeeded` when validator verdict is `fail`).
 
 ## Interview policy
 
