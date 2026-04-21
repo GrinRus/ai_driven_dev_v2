@@ -492,7 +492,7 @@ Exit evidence:
 - workspace documents can be loaded and addressed by stage and document type;
 - malformed documents fail with actionable loader errors.
 
-#### Slice W2-E2-S2 — structural validation (`planned`)
+#### Slice W2-E2-S2 — structural validation (`done`)
 Goal: validate required files and required sections before semantic checks run.
 
 Primary outputs:
@@ -519,7 +519,7 @@ Local tasks:
 - `W2-E2-S2-T3` (done) Implement required-section checks against common-document and stage-document contracts.
 - `W2-E2-S2-T4` (done) Implement validator issue objects with stable codes, severity, and source location fields.
 - `W2-E2-S2-T5` (done) Implement `validator-report.md` rendering from collected structural issues.
-- `W2-E2-S2-T6` Add regression tests for missing documents, missing headings, duplicated headings, and empty sections.
+- `W2-E2-S2-T6` (done) Add regression tests for missing documents, missing headings, duplicated headings, and empty sections.
 
 Exit evidence:
 

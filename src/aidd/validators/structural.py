@@ -15,6 +15,8 @@ from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
 MISSING_REQUIRED_DOCUMENT_CODE = "STRUCT-MISSING-REQUIRED-DOCUMENT"
 MISSING_REQUIRED_SECTION_CODE = "STRUCT-MISSING-REQUIRED-SECTION"
+DUPLICATE_REQUIRED_SECTION_CODE = "STRUCT-DUPLICATE-REQUIRED-SECTION"
+EMPTY_REQUIRED_SECTION_CODE = "STRUCT-EMPTY-REQUIRED-SECTION"
 _HEADING_PATTERN = re.compile(r"^(#{1,6})[ \t]+(.+?)\s*$")
 _FENCE_PREFIXES = ("```", "~~~")
 _INLINE_CODE_PATTERN = re.compile(r"`([^`]+)`")
@@ -187,6 +189,25 @@ def extract_document_headings(*, path: Path, workspace_root: Path) -> tuple[Mark
     return extract_markdown_headings(loaded_document.body)
 
 
+def _section_has_meaningful_content(
+    *,
+    heading_index: int,
+    headings: tuple[MarkdownHeading, ...],
+    markdown_lines: list[str],
+) -> bool:
+    heading = headings[heading_index]
+    start_index = heading.line_number
+    end_index = len(markdown_lines)
+
+    for next_heading in headings[heading_index + 1 :]:
+        if next_heading.level <= heading.level:
+            end_index = next_heading.line_number - 1
+            break
+
+    section_lines = markdown_lines[start_index:end_index]
+    return any(line.strip() for line in section_lines)
+
+
 def validate_required_document_existence(
     *,
     stage: str,
@@ -246,21 +267,73 @@ def validate_required_sections(
         if not required_sections:
             continue
 
-        headings = extract_document_headings(path=output_path, workspace_root=workspace_root)
-        present_headings = {_normalized_heading(heading.title) for heading in headings}
+        loaded_document = load_markdown_document(path=output_path, workspace_root=workspace_root)
+        headings = extract_markdown_headings(loaded_document.body)
+        markdown_lines = loaded_document.body.splitlines()
+        headings_by_title: dict[str, list[tuple[int, MarkdownHeading]]] = {}
+        for index, heading in enumerate(headings):
+            normalized_title = _normalized_heading(heading.title)
+            headings_by_title.setdefault(normalized_title, []).append((index, heading))
+
         for section in required_sections:
-            if _normalized_heading(section) in present_headings:
+            normalized_section = _normalized_heading(section)
+            matches = headings_by_title.get(normalized_section, [])
+            if not matches:
+                findings.append(
+                    ValidationFinding(
+                        code=MISSING_REQUIRED_SECTION_CODE,
+                        message=(
+                            "Missing required section "
+                            f"`{section}` in {_workspace_relative(output_path, workspace_root)}"
+                        ),
+                        severity="high",
+                        location=ValidationIssueLocation(
+                            workspace_relative_path=_workspace_relative(output_path, workspace_root)
+                        ),
+                    )
+                )
                 continue
+
+            if len(matches) > 1:
+                duplicate_heading = matches[1][1]
+                findings.append(
+                    ValidationFinding(
+                        code=DUPLICATE_REQUIRED_SECTION_CODE,
+                        message=(
+                            "Duplicate required section "
+                            f"`{section}` in {_workspace_relative(output_path, workspace_root)}"
+                        ),
+                        severity="high",
+                        location=ValidationIssueLocation(
+                            workspace_relative_path=_workspace_relative(
+                                output_path,
+                                workspace_root,
+                            ),
+                            line_number=duplicate_heading.line_number,
+                        ),
+                    )
+                )
+
+            primary_index, primary_heading = matches[0]
+            if _section_has_meaningful_content(
+                heading_index=primary_index,
+                headings=headings,
+                markdown_lines=markdown_lines,
+            ):
+                continue
+
             findings.append(
                 ValidationFinding(
-                    code=MISSING_REQUIRED_SECTION_CODE,
+                    code=EMPTY_REQUIRED_SECTION_CODE,
                     message=(
-                        "Missing required section "
-                        f"`{section}` in {_workspace_relative(output_path, workspace_root)}"
+                        "Required section "
+                        f"`{section}` is empty in "
+                        f"{_workspace_relative(output_path, workspace_root)}"
                     ),
                     severity="high",
                     location=ValidationIssueLocation(
-                        workspace_relative_path=_workspace_relative(output_path, workspace_root)
+                        workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                        line_number=primary_heading.line_number,
                     ),
                 )
             )

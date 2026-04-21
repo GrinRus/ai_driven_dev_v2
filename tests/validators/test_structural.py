@@ -4,6 +4,8 @@ from pathlib import Path
 
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.structural import (
+    DUPLICATE_REQUIRED_SECTION_CODE,
+    EMPTY_REQUIRED_SECTION_CODE,
     MISSING_REQUIRED_DOCUMENT_CODE,
     MISSING_REQUIRED_SECTION_CODE,
     MarkdownHeading,
@@ -444,3 +446,130 @@ def test_validate_required_sections_passes_when_required_sections_exist(tmp_path
     )
 
     assert findings == ()
+
+
+def test_validate_required_sections_reports_duplicate_required_heading(tmp_path: Path) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_inputs = ("context/intake.md",)
+    required_outputs = ("stage-result.md",)
+    prompt_paths = ("prompt-packs/stages/qa/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="qa",
+        required_inputs=required_inputs,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _write_document_contract(
+        repo_root=tmp_path,
+        document_name="stage-result.md",
+        required_sections=("Status",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_workspace_markdown(workspace_root, "workitems/WI-001/context/intake.md")
+    stage_result_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "stage-result.md"
+    )
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(
+        (
+            "# Stage Result\n\n"
+            "## Status\n\n"
+            "- first status\n\n"
+            "## Status\n\n"
+            "- second status\n"
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_required_sections(
+        stage="qa",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=DUPLICATE_REQUIRED_SECTION_CODE,
+            message=(
+                "Duplicate required section `Status` "
+                "in workitems/WI-001/stages/qa/stage-result.md"
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/qa/stage-result.md",
+                line_number=7,
+            ),
+        ),
+    )
+
+
+def test_validate_required_sections_reports_empty_required_heading(tmp_path: Path) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_inputs = ("context/intake.md",)
+    required_outputs = ("stage-result.md",)
+    prompt_paths = ("prompt-packs/stages/qa/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="qa",
+        required_inputs=required_inputs,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _write_document_contract(
+        repo_root=tmp_path,
+        document_name="stage-result.md",
+        required_sections=("Validation summary",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_workspace_markdown(workspace_root, "workitems/WI-001/context/intake.md")
+    stage_result_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "stage-result.md"
+    )
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(
+        (
+            "# Stage Result\n\n"
+            "## Validation summary\n\n"
+            "## Next actions\n\n"
+            "- rerun checks\n"
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_required_sections(
+        stage="qa",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=EMPTY_REQUIRED_SECTION_CODE,
+            message=(
+                "Required section `Validation summary` is empty "
+                "in workitems/WI-001/stages/qa/stage-result.md"
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/qa/stage-result.md",
+                line_number=3,
+            ),
+        ),
+    )
