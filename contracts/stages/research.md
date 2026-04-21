@@ -15,6 +15,16 @@ Collect relevant technical and product context before a plan is written.
 ## Required inputs
 
 - `../idea/output/idea-brief.md`
+- `../idea/output/stage-result.md`
+- `context/repository-state.md`
+
+## Optional context inputs
+
+- `context/business-context.md`
+- `context/constraints.md`
+- `context/previous-decisions.md`
+
+Optional context documents may enrich research quality, but their absence must not block a `research` run.
 
 ## Validation focus
 
