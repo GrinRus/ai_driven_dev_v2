@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
 from aidd.core.run_store import (
     RUN_ATTEMPTS_DIRNAME,
+    RUN_MANIFEST_FILENAME,
     RUN_STAGES_DIRNAME,
     RunStore,
+    create_run_manifest,
     format_attempt_directory_name,
     run_attempt_root,
     run_root,
@@ -57,3 +60,24 @@ def test_run_store_dataclass_root_matches_helper(tmp_path: Path) -> None:
     store = RunStore(workspace_root=workspace_root, work_item="WI-001", run_id="run-001")
 
     assert store.root == run_root(workspace_root, "WI-001", "run-001")
+
+
+def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    manifest_path = create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"log_mode": "both"},
+    )
+
+    assert manifest_path.name == RUN_MANIFEST_FILENAME
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert payload["run_id"] == "run-001"
+    assert payload["work_item_id"] == "WI-001"
+    assert payload["runtime_id"] == "generic-cli"
+    assert payload["stage_target"] == "plan"
+    assert payload["config_snapshot"] == {"log_mode": "both"}
+    assert payload["schema_version"] == 1
