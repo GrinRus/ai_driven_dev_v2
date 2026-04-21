@@ -973,7 +973,7 @@ Dependencies:
 Local tasks:
 
 - `W4-E2-S1-T1` (done) Implement Claude Code command discovery for the configured executable name or path.
-- `W4-E2-S1-T2` Capture version or identity information from the Claude Code CLI.
+- `W4-E2-S1-T2` (done) Capture version or identity information from the Claude Code CLI.
 - `W4-E2-S1-T3` Detect advertised capability flags that matter to AIDD, such as streaming or non-interactive support.
 - `W4-E2-S1-T4` Expose Claude Code probe results and capability flags in `aidd doctor`.
 - `W4-E2-S1-T5` Add probe tests for found binaries, missing binaries, and unexpected version output.
