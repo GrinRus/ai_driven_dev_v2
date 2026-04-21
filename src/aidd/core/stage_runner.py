@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
 from aidd.core.run_store import (
@@ -15,7 +16,7 @@ from aidd.core.stage_registry import (
     resolve_expected_output_documents,
     resolve_required_input_documents,
 )
-from aidd.core.state_machine import StageState
+from aidd.core.state_machine import StageState, transition_stage_state
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +35,23 @@ class StageExecutionState:
     run_id: str
     attempt_number: int
     attempt_path: Path
+    stage_metadata_path: Path
+
+
+class ValidationVerdict(StrEnum):
+    PASS = "pass"
+    REPAIR = "repair"
+    BLOCKED = "blocked"
+    FAIL = "fail"
+
+
+@dataclass(frozen=True, slots=True)
+class StageValidationState:
+    stage: str
+    work_item: str
+    run_id: str
+    verdict: ValidationVerdict
+    next_state: StageState
     stage_metadata_path: Path
 
 
@@ -142,5 +160,42 @@ def persist_execution_state(
         run_id=run_id,
         attempt_number=_attempt_number_from_path(attempt_path),
         attempt_path=attempt_path,
+        stage_metadata_path=stage_metadata_path,
+    )
+
+
+def persist_validation_state(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    verdict: ValidationVerdict,
+    from_state: StageState = StageState.VALIDATING,
+    changed_at_utc: datetime | None = None,
+) -> StageValidationState:
+    next_state_map = {
+        ValidationVerdict.PASS: StageState.SUCCEEDED,
+        ValidationVerdict.REPAIR: StageState.REPAIR_NEEDED,
+        ValidationVerdict.BLOCKED: StageState.BLOCKED,
+        ValidationVerdict.FAIL: StageState.FAILED,
+    }
+    next_state = next_state_map[verdict]
+    transition_stage_state(from_state=from_state, to_state=next_state)
+
+    stage_metadata_path = persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        status=next_state.value,
+        changed_at_utc=changed_at_utc,
+    )
+    return StageValidationState(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        verdict=verdict,
+        next_state=next_state,
         stage_metadata_path=stage_metadata_path,
     )

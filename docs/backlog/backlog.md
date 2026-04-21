@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E2-S2-T4` Implement validation-state persistence and transition decisions after validator completion.
+- `W3-E2-S2-T5` Implement terminal transition handling for success, blocked, failed, and repair-needed outcomes.
 
 ## Soon
 
-- `W3-E2-S2-T5` Implement terminal transition handling for success, blocked, failed, and repair-needed outcomes.
+- `W3-E2-S2-T6` Add tests that cover happy-path, validator-failure, blocked-question, and adapter-failure transitions.
 
 ## Parking lot
 

@@ -4,8 +4,21 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from aidd.core.run_store import create_run_manifest, run_attempt_artifact_index_path
-from aidd.core.stage_runner import persist_execution_state, prepare_stage_bundle
+import pytest
+
+from aidd.core.run_store import (
+    create_run_manifest,
+    persist_stage_status,
+    run_attempt_artifact_index_path,
+    run_stage_metadata_path,
+)
+from aidd.core.stage_runner import (
+    ValidationVerdict,
+    persist_execution_state,
+    persist_validation_state,
+    prepare_stage_bundle,
+)
+from aidd.core.state_machine import StageState
 
 
 def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Path) -> None:
@@ -117,3 +130,87 @@ def test_persist_execution_state_uses_monotonic_attempt_numbers(tmp_path: Path) 
 
     assert first.attempt_number == 1
     assert second.attempt_number == 2
+
+
+@pytest.mark.parametrize(
+    ("verdict", "expected_state"),
+    (
+        (ValidationVerdict.PASS, StageState.SUCCEEDED),
+        (ValidationVerdict.REPAIR, StageState.REPAIR_NEEDED),
+        (ValidationVerdict.BLOCKED, StageState.BLOCKED),
+        (ValidationVerdict.FAIL, StageState.FAILED),
+    ),
+)
+def test_persist_validation_state_persists_verdict_transition(
+    tmp_path: Path,
+    verdict: ValidationVerdict,
+    expected_state: StageState,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+        changed_at_utc=datetime(2026, 4, 22, 10, 0, tzinfo=UTC),
+    )
+
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=verdict,
+        changed_at_utc=datetime(2026, 4, 22, 10, 5, tzinfo=UTC),
+    )
+
+    assert validation_state.verdict is verdict
+    assert validation_state.next_state == expected_state
+    stage_metadata_payload = json.loads(
+        validation_state.stage_metadata_path.read_text(encoding="utf-8")
+    )
+    assert stage_metadata_payload["status"] == expected_state.value
+    assert stage_metadata_payload["updated_at_utc"] == "2026-04-22T10:05:00Z"
+    assert [entry["status"] for entry in stage_metadata_payload["status_history"]] == [
+        "validating",
+        expected_state.value,
+    ]
+
+
+def test_persist_validation_state_rejects_illegal_transition(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+
+    with pytest.raises(ValueError, match="Illegal stage transition"):
+        persist_validation_state(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            verdict=ValidationVerdict.PASS,
+            from_state=StageState.PENDING,
+        )
+
+    metadata_path = run_stage_metadata_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert not metadata_path.exists()
