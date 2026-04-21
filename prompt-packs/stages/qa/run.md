@@ -36,9 +36,10 @@ Summarize verification outcomes, remaining risks, and readiness status.
 4. Write `qa-report.md` with explicit quality verdict, residual risk summary, and release recommendation.
 5. Tie verdict and recommendation claims to concrete verification evidence references.
 6. Keep release recommendation actionable (`proceed`, `proceed-with-conditions`, or `hold`).
-7. Write or update `stage-result.md` and `validator-report.md` so QA outcome is consistent.
-8. If required inputs are missing or evidence baseline is contradictory, raise a question instead of inventing assumptions.
-9. Keep the output useful for the next stage rather than merely well-formatted.
+7. Do not issue `ready` or `proceed` conclusions when unresolved must-fix findings or missing critical checks remain.
+8. Write or update `stage-result.md` and `validator-report.md` so QA outcome is consistent.
+9. If required inputs are missing or evidence baseline is contradictory, raise a question instead of inventing assumptions.
+10. Keep the output useful for the next stage rather than merely well-formatted.
 
 ## Completion checklist
 
@@ -46,4 +47,5 @@ Summarize verification outcomes, remaining risks, and readiness status.
 - residual risks include severity plus mitigation/ownership notes,
 - release recommendation is actionable and coherent with verdict,
 - evidence references are present for material claims,
+- verdict does not conflict with unresolved must-fix findings or missing critical evidence,
 - stage result and validator report agree with QA outcome.

@@ -51,11 +51,15 @@ Optional context documents may improve QA depth, but they must not replace imple
 
 Validators for `qa` should check:
 
-- required document existence,
-- required headings and sections,
-- consistency with upstream inputs,
-- whether the main output actually serves the stage purpose,
-- whether the stage result reflects validator and repair outcomes.
+- required output existence and heading coverage for `qa-report.md`, `stage-result.md`, and `validator-report.md`,
+- consistency with upstream review decision and verification evidence artifacts,
+- unsupported verdicts:
+  - quality verdict and release recommendation must follow from cited evidence and risk profile,
+  - verdicts that contradict material unresolved findings or missing checks are rejected,
+- missing evidence references:
+  - material QA claims must reference concrete verification artifacts or execution outputs,
+  - evidence-free pass/ready claims are rejected,
+- cross-document consistency between QA verdict, residual risk summary, validator findings, and terminal status in `stage-result.md`.
 
 ## Interview policy
 
