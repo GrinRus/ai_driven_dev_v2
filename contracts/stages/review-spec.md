@@ -32,6 +32,14 @@ Optional context documents may refine review quality, but they must not replace 
 - `review-spec` depends on artifacts from the latest completed `plan` attempt.
 - `review-spec` must not declare `succeeded` if required plan artifacts are missing or inconsistent.
 
+## Review output expectations
+
+- `review-spec-report.md` must contain:
+  - an explicit issue list with severity and rationale,
+  - a recommendation summary that prioritizes remediation steps,
+  - a readiness state suitable for go/no-go decision on task decomposition.
+- `stage-result.md` and `validator-report.md` must remain consistent with the declared readiness state.
+
 ## Validation focus
 
 Validators for `review-spec` should check:
