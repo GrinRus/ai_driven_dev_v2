@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from aidd.core.interview import (
+    AdapterQuestionEvent,
     InterviewQuestion,
     QuestionPolicy,
     interview_requires_input,
+    parse_questions_markdown,
+    persist_questions_document,
     question_policy_from_marker,
+    render_questions_markdown,
     unresolved_blocking_questions,
 )
 
@@ -76,3 +82,97 @@ def test_interview_requires_input_depends_on_unresolved_blockers() -> None:
 
     assert interview_requires_input(questions=questions, resolved_question_ids=set())
     assert not interview_requires_input(questions=questions, resolved_question_ids={"Q1"})
+
+
+def test_parse_and_render_questions_markdown_round_trip() -> None:
+    questions = (
+        InterviewQuestion(
+            question_id="Q1",
+            text="Confirm launch scope for the first milestone.",
+            policy=QuestionPolicy.BLOCKING,
+        ),
+        InterviewQuestion(
+            question_id="Q2",
+            text="Optional naming convention alignment for stage outputs.",
+            policy=QuestionPolicy.NON_BLOCKING,
+        ),
+    )
+
+    rendered = render_questions_markdown(questions)
+    parsed = parse_questions_markdown(rendered)
+
+    assert parsed == questions
+
+
+def test_persist_questions_document_uses_stage_output_when_provided(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_output = (
+        "# Questions\n\n"
+        "## Questions\n\n"
+        "- Q1 [blocking] Confirm the deployment environment for the first release.\n"
+    )
+
+    questions_path = persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+        stage_output_questions_markdown=stage_output,
+    )
+
+    assert questions_path.exists()
+    assert parse_questions_markdown(questions_path.read_text(encoding="utf-8")) == (
+        InterviewQuestion(
+            question_id="Q1",
+            text="Confirm the deployment environment for the first release.",
+            policy=QuestionPolicy.BLOCKING,
+        ),
+    )
+
+
+def test_persist_questions_document_appends_adapter_events(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+        stage_output_questions_markdown=(
+            "# Questions\n\n"
+            "## Questions\n\n"
+            "- Q1 [blocking] Confirm whether compliance review is required.\n"
+        ),
+    )
+
+    questions_path = persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+        adapter_question_events=(
+            AdapterQuestionEvent(
+                text="Clarify fallback behavior when no release owner is assigned.",
+                policy=QuestionPolicy.BLOCKING,
+            ),
+            AdapterQuestionEvent(
+                question_id="Q9",
+                text="Optional preference for report section ordering.",
+                policy=QuestionPolicy.NON_BLOCKING,
+            ),
+        ),
+    )
+
+    assert parse_questions_markdown(questions_path.read_text(encoding="utf-8")) == (
+        InterviewQuestion(
+            question_id="Q1",
+            text="Confirm whether compliance review is required.",
+            policy=QuestionPolicy.BLOCKING,
+        ),
+        InterviewQuestion(
+            question_id="Q2",
+            text="Clarify fallback behavior when no release owner is assigned.",
+            policy=QuestionPolicy.BLOCKING,
+        ),
+        InterviewQuestion(
+            question_id="Q9",
+            text="Optional preference for report section ordering.",
+            policy=QuestionPolicy.NON_BLOCKING,
+        ),
+    )
