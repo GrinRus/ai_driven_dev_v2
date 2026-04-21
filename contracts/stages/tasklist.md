@@ -62,7 +62,28 @@ Validators for `tasklist` should check:
 
 ## Interview policy
 
-optional when task prioritization or scope boundaries remain unclear
+`tasklist` may ask user questions when it cannot produce a safe and executable decomposition from available planning artifacts.
+
+Mandatory question triggers:
+
+- unresolved sequencing constraints where multiple valid orders materially change risk or delivery outcome,
+- unresolved staffing or ownership assumptions that affect task decomposition or parallelization,
+- conflicting prioritization directives that block a coherent dependency order.
+
+Blocking-question rules:
+
+- mark as `[blocking]` when unresolved ambiguity prevents deterministic critical-path ordering or task ownership assumptions,
+- unresolved `[blocking]` questions must force stage status `blocked` (never `succeeded`).
+
+Non-blocking-question rules:
+
+- mark as `[non-blocking]` when decomposition can proceed with explicit bounded assumptions,
+- record non-blocking assumptions in `tasklist.md` so downstream stages can validate or revise them.
+
+Question/answer document rules:
+
+- write each question to `questions.md` with a stable id and marker (`[blocking]` or `[non-blocking]`),
+- treat blocking questions as resolved only when `answers.md` includes matching `[resolved]` entries.
 
 ## Repair policy
 

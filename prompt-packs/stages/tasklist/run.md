@@ -35,7 +35,7 @@ Break the approved plan into reviewable implementation tasks with verification n
 6. Record explicit dependencies for every task (`none` when independent) and keep ordering executable in dependency order.
 7. Add verification notes for every task that name the primary check, test, or scenario proving completion.
 8. Write or update `stage-result.md` and `validator-report.md` so readiness and validation outcomes are consistent.
-9. If required inputs are missing or a critical decision is unclear, raise a question instead of inventing an answer.
+9. If required inputs are missing or sequencing/staffing assumptions are unresolved, raise questions with stable ids and `[blocking]` / `[non-blocking]` markers instead of inventing answers.
 10. Keep the output useful for the next stage rather than merely well-formatted.
 
 ## Completion checklist
