@@ -866,7 +866,7 @@ Dependencies:
 
 Local tasks:
 
-- `W4-E1-S1-T1` Implement command discovery for the configured generic CLI executable.
+- `W4-E1-S1-T1` (done) Implement command discovery for the configured generic CLI executable.
 - `W4-E1-S1-T2` Capture version or identity information from the discovered CLI.
 - `W4-E1-S1-T3` Derive a minimal capability map for the generic adapter from config and probe results.
 - `W4-E1-S1-T4` Expose generic-cli probe results in `aidd doctor`.

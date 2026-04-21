@@ -6,7 +6,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W4-E1-S1-T1` Implement command discovery for the configured generic CLI executable.
 - `W4-E2-S1-T1` Implement Claude Code command discovery for the configured executable name or path.
 
 ## Soon
