@@ -516,7 +516,7 @@ Local tasks:
 
 - `W2-E2-S2-T1` (done) Implement required-document existence checks from stage manifests.
 - `W2-E2-S2-T2` (done) Implement Markdown heading extraction for contract section validation.
-- `W2-E2-S2-T3` Implement required-section checks against common-document and stage-document contracts.
+- `W2-E2-S2-T3` (done) Implement required-section checks against common-document and stage-document contracts.
 - `W2-E2-S2-T4` Implement validator issue objects with stable codes, severity, and source location fields.
 - `W2-E2-S2-T5` Implement `validator-report.md` rendering from collected structural issues.
 - `W2-E2-S2-T6` Add regression tests for missing documents, missing headings, duplicated headings, and empty sections.

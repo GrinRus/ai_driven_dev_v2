@@ -6,6 +6,7 @@ from pathlib import Path
 
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
+    load_stage_manifest,
     resolve_expected_output_documents,
     resolve_required_input_documents,
 )
@@ -13,8 +14,14 @@ from aidd.validators.document_loader import load_markdown_document
 from aidd.validators.models import ValidationFinding
 
 MISSING_REQUIRED_DOCUMENT_CODE = "STRUCT-MISSING-REQUIRED-DOCUMENT"
+MISSING_REQUIRED_SECTION_CODE = "STRUCT-MISSING-REQUIRED-SECTION"
 _HEADING_PATTERN = re.compile(r"^(#{1,6})[ \t]+(.+?)\s*$")
 _FENCE_PREFIXES = ("```", "~~~")
+_INLINE_CODE_PATTERN = re.compile(r"`([^`]+)`")
+_STAGE_HEADING_REQUIREMENT_PATTERN = re.compile(
+    r"required heading coverage in\s+`([^`]+)`\s*\((.+)\)",
+    flags=re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +64,80 @@ def _iter_required_documents(
 
 def _workspace_relative(path: Path, workspace_root: Path) -> str:
     return path.resolve(strict=False).relative_to(workspace_root.resolve(strict=False)).as_posix()
+
+
+def _extract_section_lines(markdown_text: str, heading: str) -> list[str]:
+    target_heading = f"## {heading}".lower()
+    in_section = False
+    section_lines: list[str] = []
+
+    for raw_line in markdown_text.splitlines():
+        stripped = raw_line.strip()
+        if stripped.startswith("## "):
+            if in_section:
+                break
+            in_section = stripped.lower() == target_heading
+            continue
+        if in_section:
+            section_lines.append(raw_line)
+
+    return section_lines
+
+
+def _extract_required_sections_from_document_contract(contract_text: str) -> tuple[str, ...]:
+    sections: list[str] = []
+    for line in _extract_section_lines(contract_text, heading="Required sections"):
+        stripped = line.strip()
+        if not stripped.startswith("- "):
+            continue
+        sections.extend(token.strip() for token in _INLINE_CODE_PATTERN.findall(stripped))
+    return tuple(dict.fromkeys(section for section in sections if section))
+
+
+def _extract_stage_required_heading_map(stage_contract_text: str) -> dict[str, tuple[str, ...]]:
+    requirements: dict[str, tuple[str, ...]] = {}
+    for line in _extract_section_lines(stage_contract_text, heading="Validation focus"):
+        stripped = line.strip()
+        if not stripped.startswith("- "):
+            continue
+
+        match = _STAGE_HEADING_REQUIREMENT_PATTERN.search(stripped)
+        if match is None:
+            continue
+
+        document_name = match.group(1).strip()
+        sections = tuple(
+            token.strip() for token in _INLINE_CODE_PATTERN.findall(match.group(2)) if token.strip()
+        )
+        if sections:
+            requirements[document_name] = sections
+
+    return requirements
+
+
+def _normalized_heading(title: str) -> str:
+    return re.sub(r"\s+", " ", title).strip().lower()
+
+
+def _required_sections_for_document(
+    *,
+    stage: str,
+    document_name: str,
+    contracts_root: Path,
+) -> tuple[str, ...]:
+    sections: list[str] = []
+    document_contract_path = contracts_root.parent / "documents" / document_name
+    if document_contract_path.exists():
+        document_contract_text = document_contract_path.read_text(encoding="utf-8")
+        sections.extend(_extract_required_sections_from_document_contract(document_contract_text))
+
+    stage_contract_path = contracts_root / f"{stage}.md"
+    if stage_contract_path.exists():
+        stage_contract_text = stage_contract_path.read_text(encoding="utf-8")
+        stage_requirements = _extract_stage_required_heading_map(stage_contract_text)
+        sections.extend(stage_requirements.get(document_name, ()))
+
+    return tuple(dict.fromkeys(section for section in sections if section))
 
 
 def extract_markdown_headings(markdown_text: str) -> tuple[MarkdownHeading, ...]:
@@ -128,5 +209,52 @@ def validate_required_document_existence(
                 message=f"Missing required document: {_workspace_relative(path, workspace_root)}",
             )
         )
+
+    return tuple(findings)
+
+
+def validate_required_sections(
+    *,
+    stage: str,
+    work_item: str,
+    workspace_root: Path,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[ValidationFinding, ...]:
+    # Make dependency explicit for this validation slice.
+    load_stage_manifest(stage=stage, contracts_root=contracts_root)
+    expected_outputs = resolve_expected_output_documents(
+        stage=stage,
+        work_item=work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    findings: list[ValidationFinding] = []
+    for output_path in expected_outputs:
+        if not output_path.exists():
+            continue
+
+        required_sections = _required_sections_for_document(
+            stage=stage,
+            document_name=output_path.name,
+            contracts_root=contracts_root,
+        )
+        if not required_sections:
+            continue
+
+        headings = extract_document_headings(path=output_path, workspace_root=workspace_root)
+        present_headings = {_normalized_heading(heading.title) for heading in headings}
+        for section in required_sections:
+            if _normalized_heading(section) in present_headings:
+                continue
+            findings.append(
+                ValidationFinding(
+                    code=MISSING_REQUIRED_SECTION_CODE,
+                    message=(
+                        "Missing required section "
+                        f"`{section}` in {_workspace_relative(output_path, workspace_root)}"
+                    ),
+                )
+            )
 
     return tuple(findings)
