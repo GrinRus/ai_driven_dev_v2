@@ -826,7 +826,7 @@ Dependencies:
 
 Local tasks:
 
-- `W3-E3-S2-T1` Implement repair-budget configuration and attempt counters for each stage.
+- `W3-E3-S2-T1` (done) Implement repair-budget configuration and attempt counters for each stage.
 - `W3-E3-S2-T2` Implement generation of `repair-brief.md` from a validator report and prior stage artifacts.
 - `W3-E3-S2-T3` Implement rerun preparation that injects repair context into the next adapter invocation.
 - `W3-E3-S2-T4` Implement durable repair-history recording in stage metadata and `stage-result.md`.
