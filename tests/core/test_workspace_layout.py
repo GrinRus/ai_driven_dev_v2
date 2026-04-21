@@ -4,6 +4,7 @@ from pathlib import Path
 
 from aidd.core.stages import STAGES
 from aidd.core.workspace import (
+    DEFAULT_CONTRACT_REFERENCES_FILENAME,
     RESERVED_STAGE_FILENAMES,
     STAGE_INPUT_DIRNAME,
     STAGE_OUTPUT_DIRNAME,
@@ -60,6 +61,19 @@ def test_reserved_stage_filenames_are_seeded_by_init(tmp_path: Path) -> None:
 
     for filename in RESERVED_STAGE_FILENAMES:
         assert (plan_stage_root / filename).exists()
+
+
+def test_init_workspace_seeds_default_contract_references(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    work_item = "WI-001"
+
+    item_root = init_workspace(root=root, work_item=work_item)
+    references_path = item_root / WORKITEM_CONTEXT_DIRNAME / DEFAULT_CONTRACT_REFERENCES_FILENAME
+
+    assert references_path.exists()
+    content = references_path.read_text(encoding="utf-8")
+    assert "contracts/documents/stage-brief.md" in content
+    assert "contracts/stages/plan.md" in content
 
 
 def test_create_workspace_tree_builds_canonical_directories(tmp_path: Path) -> None:

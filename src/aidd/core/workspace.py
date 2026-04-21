@@ -18,8 +18,10 @@ WORKITEM_STAGES_DIRNAME = "stages"
 
 STAGE_INPUT_DIRNAME = "input"
 STAGE_OUTPUT_DIRNAME = "output"
+DEFAULT_CONTRACT_REFERENCES_FILENAME = "default-contract-files.md"
 
 RESERVED_STAGE_FILENAMES: tuple[str, ...] = (
+    "stage-brief.md",
     "questions.md",
     "answers.md",
     "validator-report.md",
@@ -27,7 +29,7 @@ RESERVED_STAGE_FILENAMES: tuple[str, ...] = (
     "stage-result.md",
 )
 
-_RESERVED_STAGE_FILE_CONTENTS: dict[str, str] = {
+_STAGE_FILE_TEMPLATES: dict[str, str] = {
     "questions.md": "# Questions\n\nNo questions yet.\n",
     "answers.md": "# Answers\n\nNo answers yet.\n",
     "validator-report.md": "# Validator report\n\nNo validator output yet.\n",
@@ -111,12 +113,55 @@ def create_workspace_tree(root: Path, work_item: str) -> Path:
     return item_root
 
 
+def _starter_stage_file_contents(stage: str) -> dict[str, str]:
+    stage_brief = (
+        "# Stage\n\n"
+        f"{stage}\n\n"
+        "# Goal\n\n"
+        "Describe the intended outcome for this stage run.\n\n"
+        "# Inputs\n\n"
+        "- none\n\n"
+        "# Outputs\n\n"
+        "- none\n\n"
+        "# Constraints\n\n"
+        "- keep output in Markdown\n\n"
+        "# Open questions\n\n"
+        "- none\n"
+    )
+    return {"stage-brief.md": stage_brief, **_STAGE_FILE_TEMPLATES}
+
+
+def _default_contract_reference_paths() -> tuple[str, ...]:
+    common_contracts = tuple(f"contracts/documents/{name}" for name in RESERVED_STAGE_FILENAMES)
+    stage_contracts = tuple(f"contracts/stages/{stage}.md" for stage in STAGES)
+    return common_contracts + stage_contracts
+
+
+def seed_default_contract_references(root: Path, work_item: str) -> Path:
+    references_path = work_item_context_root(root=root, work_item=work_item) / (
+        DEFAULT_CONTRACT_REFERENCES_FILENAME
+    )
+    if references_path.exists():
+        return references_path
+
+    lines = [
+        "# Default contract files",
+        "",
+        "The workspace is initialized with these contract references:",
+        "",
+    ]
+    lines.extend(f"- `{path}`" for path in _default_contract_reference_paths())
+    references_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return references_path
+
+
 def init_workspace(root: Path, work_item: str) -> Path:
     item_root = create_workspace_tree(root=root, work_item=work_item)
+    seed_default_contract_references(root=root, work_item=work_item)
 
     for stage in STAGES:
         stage_root_path = stage_root(root=root, work_item=work_item, stage=stage)
-        for filename, content in _RESERVED_STAGE_FILE_CONTENTS.items():
+        for filename, content in _starter_stage_file_contents(stage).items():
             file_path = stage_root_path / filename
             if not file_path.exists():
                 file_path.write_text(content, encoding="utf-8")
