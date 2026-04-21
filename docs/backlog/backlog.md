@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E1-S2-T5` Implement an artifact index that records canonical paths for stage documents and logs.
+- `W3-E1-S2-T6` Add run-store tests for fresh runs, repeated attempts, and interrupted writes.
 
 ## Soon
 
-- `W3-E1-S2-T6` Add run-store tests for fresh runs, repeated attempts, and interrupted writes.
+- `W3-E1-S3-T1` Implement helpers that resolve the latest run and latest attempt for a work item.
 
 ## Parking lot
 

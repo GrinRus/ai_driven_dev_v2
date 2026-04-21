@@ -111,6 +111,69 @@ class StageRunMetadata:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class RunArtifactIndex:
+    run_id: str
+    work_item_id: str
+    stage: str
+    attempt_number: int
+    documents: dict[str, str]
+    logs: dict[str, str]
+    created_at_utc: str
+    updated_at_utc: str
+    schema_version: int = 1
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        run_id: str,
+        work_item_id: str,
+        stage: str,
+        attempt_number: int,
+        documents: dict[str, str],
+        logs: dict[str, str],
+        changed_at_utc: str,
+    ) -> RunArtifactIndex:
+        return cls(
+            run_id=run_id,
+            work_item_id=work_item_id,
+            stage=stage,
+            attempt_number=attempt_number,
+            documents=dict(documents),
+            logs=dict(logs),
+            created_at_utc=changed_at_utc,
+            updated_at_utc=changed_at_utc,
+        )
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> RunArtifactIndex:
+        return cls(
+            schema_version=int(payload.get("schema_version", 1)),
+            run_id=str(payload["run_id"]),
+            work_item_id=str(payload["work_item_id"]),
+            stage=str(payload["stage"]),
+            attempt_number=int(payload["attempt_number"]),
+            documents=dict(payload.get("documents", {})),
+            logs=dict(payload.get("logs", {})),
+            created_at_utc=str(payload["created_at_utc"]),
+            updated_at_utc=str(payload["updated_at_utc"]),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "run_id": self.run_id,
+            "work_item_id": self.work_item_id,
+            "stage": self.stage,
+            "attempt_number": self.attempt_number,
+            "documents": dict(self.documents),
+            "logs": dict(self.logs),
+            "created_at_utc": self.created_at_utc,
+            "updated_at_utc": self.updated_at_utc,
+        }
+
+
 @dataclass(frozen=True)
 class RunRecord:
     run_id: str

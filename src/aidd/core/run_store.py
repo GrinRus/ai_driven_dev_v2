@@ -6,19 +6,36 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from aidd.core.models.run import StageRunMetadata
-from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_RUNS_DIRNAME
+from aidd.core.models.run import RunArtifactIndex, StageRunMetadata
+from aidd.core.workspace import (
+    RESERVED_STAGE_FILENAMES,
+    WORKSPACE_REPORTS_DIRNAME,
+    WORKSPACE_REPORTS_RUNS_DIRNAME,
+)
+from aidd.core.workspace import (
+    stage_root as work_item_stage_root,
+)
 
 RUN_STAGES_DIRNAME = "stages"
 RUN_ATTEMPTS_DIRNAME = "attempts"
 RUN_ATTEMPT_PREFIX = "attempt-"
 RUN_MANIFEST_FILENAME = "run-manifest.json"
 RUN_STAGE_METADATA_FILENAME = "stage-metadata.json"
+RUN_ARTIFACT_INDEX_FILENAME = "artifact-index.json"
+RUN_RUNTIME_LOG_FILENAME = "runtime.log"
 
 
 def _format_utc_timestamp(timestamp: datetime | None = None) -> str:
     moment = (timestamp or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0)
     return moment.isoformat().replace("+00:00", "Z")
+
+
+def _workspace_relative_canonical_path(workspace_root: Path, path: Path) -> str:
+    resolved_workspace = workspace_root.resolve(strict=False)
+    resolved_path = path.resolve(strict=False)
+    if not resolved_path.is_relative_to(resolved_workspace):
+        raise ValueError(f"Path must stay inside workspace root: {resolved_path}")
+    return resolved_path.relative_to(resolved_workspace).as_posix()
 
 
 def run_store_root(workspace_root: Path) -> Path:
@@ -85,6 +102,44 @@ def run_attempt_root(
     )
 
 
+def run_attempt_runtime_log_path(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> Path:
+    return (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / RUN_RUNTIME_LOG_FILENAME
+    )
+
+
+def run_attempt_artifact_index_path(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> Path:
+    return (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / RUN_ARTIFACT_INDEX_FILENAME
+    )
+
+
 def _parse_attempt_directory_name(name: str) -> int | None:
     if not name.startswith(RUN_ATTEMPT_PREFIX):
         return None
@@ -141,6 +196,13 @@ def create_next_attempt_directory(
         attempt_number=attempt_number,
     )
     attempt_path.mkdir(parents=False, exist_ok=False)
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
     return attempt_path
 
 
@@ -175,6 +237,126 @@ def load_stage_metadata(
         return None
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
     return StageRunMetadata.from_dict(payload)
+
+
+def load_attempt_artifact_index(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> RunArtifactIndex | None:
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    if not artifact_index_path.exists():
+        return None
+    payload = json.loads(artifact_index_path.read_text(encoding="utf-8"))
+    return RunArtifactIndex.from_dict(payload)
+
+
+def _canonical_stage_documents(workspace_root: Path, work_item: str, stage: str) -> dict[str, str]:
+    stage_documents_root = work_item_stage_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    return {
+        filename.removesuffix(".md").replace("-", "_"): _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=stage_documents_root / filename,
+        )
+        for filename in RESERVED_STAGE_FILENAMES
+    }
+
+
+def _canonical_log_paths(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> dict[str, str]:
+    runtime_log = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    return {
+        "runtime_log": _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=runtime_log,
+        )
+    }
+
+
+def write_attempt_artifact_index(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+    *,
+    changed_at_utc: datetime | None = None,
+) -> Path:
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    timestamp = _format_utc_timestamp(changed_at_utc)
+    existing_index = load_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    documents = _canonical_stage_documents(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    logs = _canonical_log_paths(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+
+    index = RunArtifactIndex.create(
+        run_id=run_id,
+        work_item_id=work_item,
+        stage=stage,
+        attempt_number=attempt_number,
+        documents=documents,
+        logs=logs,
+        changed_at_utc=timestamp,
+    )
+    if existing_index is not None:
+        index = RunArtifactIndex(
+            schema_version=existing_index.schema_version,
+            run_id=index.run_id,
+            work_item_id=index.work_item_id,
+            stage=index.stage,
+            attempt_number=index.attempt_number,
+            documents=index.documents,
+            logs=index.logs,
+            created_at_utc=existing_index.created_at_utc,
+            updated_at_utc=timestamp,
+        )
+
+    _write_json_payload(artifact_index_path, index.to_dict())
+    return artifact_index_path
 
 
 def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
@@ -334,6 +516,31 @@ class RunStore:
             work_item=self.work_item,
             run_id=self.run_id,
             stage=stage,
+        )
+
+    def attempt_artifact_index_path(self, stage: str, attempt_number: int) -> Path:
+        return run_attempt_artifact_index_path(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=self.run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+
+    def write_attempt_artifact_index(
+        self,
+        stage: str,
+        attempt_number: int,
+        *,
+        changed_at_utc: datetime | None = None,
+    ) -> Path:
+        return write_attempt_artifact_index(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=self.run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+            changed_at_utc=changed_at_utc,
         )
 
     def stage_metadata_path(self, stage: str) -> Path:

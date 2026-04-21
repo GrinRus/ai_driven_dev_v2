@@ -7,8 +7,10 @@ from pathlib import Path
 import pytest
 
 from aidd.core.run_store import (
+    RUN_ARTIFACT_INDEX_FILENAME,
     RUN_ATTEMPTS_DIRNAME,
     RUN_MANIFEST_FILENAME,
+    RUN_RUNTIME_LOG_FILENAME,
     RUN_STAGE_METADATA_FILENAME,
     RUN_STAGES_DIRNAME,
     RunStore,
@@ -17,7 +19,9 @@ from aidd.core.run_store import (
     format_attempt_directory_name,
     next_attempt_number,
     persist_stage_status,
+    run_attempt_artifact_index_path,
     run_attempt_root,
+    run_attempt_runtime_log_path,
     run_manifest_path,
     run_root,
     run_stage_metadata_path,
@@ -26,7 +30,11 @@ from aidd.core.run_store import (
     run_store_root,
     work_item_runs_root,
 )
-from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_RUNS_DIRNAME
+from aidd.core.workspace import (
+    RESERVED_STAGE_FILENAMES,
+    WORKSPACE_REPORTS_DIRNAME,
+    WORKSPACE_REPORTS_RUNS_DIRNAME,
+)
 
 
 def test_run_store_root_uses_reports_runs_layout(tmp_path: Path) -> None:
@@ -118,6 +126,73 @@ def test_create_next_attempt_directory_uses_monotonic_numbering(tmp_path: Path) 
     )
 
     assert created.name == "attempt-0004"
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=4,
+    )
+    assert artifact_index_path.exists()
+
+    payload = json.loads(artifact_index_path.read_text(encoding="utf-8"))
+    assert payload["attempt_number"] == 4
+    assert payload["logs"]["runtime_log"] == (
+        run_attempt_runtime_log_path(workspace_root, "WI-001", "run-001", "plan", 4)
+        .relative_to(workspace_root)
+        .as_posix()
+    )
+
+
+def test_attempt_artifact_index_records_canonical_stage_document_paths(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    created = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert created.name == "attempt-0001"
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    )
+    assert artifact_index_path.name == RUN_ARTIFACT_INDEX_FILENAME
+
+    payload = json.loads(artifact_index_path.read_text(encoding="utf-8"))
+    expected_doc_keys = {
+        name.removesuffix(".md").replace("-", "_")
+        for name in RESERVED_STAGE_FILENAMES
+    }
+    assert set(payload["documents"]) == expected_doc_keys
+
+    for filename in RESERVED_STAGE_FILENAMES:
+        key = filename.removesuffix(".md").replace("-", "_")
+        expected_path = (
+            workspace_root / "workitems" / "WI-001" / "stages" / "plan" / filename
+        ).relative_to(workspace_root)
+        assert payload["documents"][key] == expected_path.as_posix()
+
+    assert payload["logs"] == {
+        "runtime_log": (
+            workspace_root
+            / "reports"
+            / "runs"
+            / "WI-001"
+            / "run-001"
+            / "stages"
+            / "plan"
+            / "attempts"
+            / "attempt-0001"
+            / RUN_RUNTIME_LOG_FILENAME
+        )
+        .relative_to(workspace_root)
+        .as_posix()
+    }
 
 
 def test_persist_stage_status_creates_stage_metadata_and_touches_manifest(tmp_path: Path) -> None:
