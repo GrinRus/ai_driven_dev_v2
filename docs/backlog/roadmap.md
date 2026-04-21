@@ -794,7 +794,7 @@ Local tasks:
 - `W3-E3-S1-T1` (done) Implement the interview policy model that distinguishes blocking and non-blocking questions.
 - `W3-E3-S1-T2` (done) Implement persistence of `questions.md` from stage output or adapter-detected question events.
 - `W3-E3-S1-T3` (done) Implement persistence and merging of `answers.md` without losing prior answers.
-- `W3-E3-S1-T4` Implement stage gating that blocks progression when blocking questions remain unresolved.
+- `W3-E3-S1-T4` (done) Implement stage gating that blocks progression when blocking questions remain unresolved.
 - `W3-E3-S1-T5` Implement CLI helpers that display pending questions and guide the operator to answer them.
 - `W3-E3-S1-T6` Implement state updates that unblock the stage once required answers are present.
 - `W3-E3-S1-T7` Add tests for question persistence, partial answers, and unblock transitions.

@@ -429,3 +429,102 @@ def test_stage_transition_flow_covers_adapter_failure_path(tmp_path: Path) -> No
         StageState.FAILED.value,
     ]
     assert is_terminal_state(StageState.FAILED) is True
+
+
+def test_decide_post_validation_transition_blocks_success_with_unresolved_questions(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
+        encoding="utf-8",
+    )
+
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=ValidationVerdict.PASS,
+    )
+
+    transition = decide_post_validation_transition(
+        validation_state,
+        workspace_root=workspace_root,
+    )
+
+    assert transition.next_state == StageState.BLOCKED
+    assert transition.action == PostValidationAction.WAIT
+    assert transition.is_terminal is False
+    payload = json.loads(transition.stage_metadata_path.read_text(encoding="utf-8"))
+    assert payload["status"] == StageState.BLOCKED.value
+    assert [entry["status"] for entry in payload["status_history"]] == [
+        StageState.VALIDATING.value,
+        StageState.SUCCEEDED.value,
+        StageState.BLOCKED.value,
+    ]
+
+
+def test_decide_post_validation_transition_allows_success_when_questions_resolved(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approval is recorded.\n",
+        encoding="utf-8",
+    )
+
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=ValidationVerdict.PASS,
+    )
+
+    transition = decide_post_validation_transition(
+        validation_state,
+        workspace_root=workspace_root,
+    )
+
+    assert transition.next_state == StageState.SUCCEEDED
+    assert transition.action == PostValidationAction.ADVANCE
+    assert transition.is_terminal is True

@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
+from aidd.core.interview import stage_has_unresolved_blocking_questions
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     create_next_attempt_directory,
@@ -221,25 +222,48 @@ def persist_validation_state(
 
 def decide_post_validation_transition(
     validation_state: StageValidationState,
+    *,
+    workspace_root: Path | None = None,
 ) -> PostValidationTransition:
+    next_state = validation_state.next_state
+    stage_metadata_path = validation_state.stage_metadata_path
+
+    if (
+        workspace_root is not None
+        and next_state == StageState.SUCCEEDED
+        and stage_has_unresolved_blocking_questions(
+            workspace_root=workspace_root,
+            work_item=validation_state.work_item,
+            stage=validation_state.stage,
+        )
+    ):
+        next_state = StageState.BLOCKED
+        stage_metadata_path = persist_stage_status(
+            workspace_root=workspace_root,
+            work_item=validation_state.work_item,
+            run_id=validation_state.run_id,
+            stage=validation_state.stage,
+            status=StageState.BLOCKED.value,
+        )
+
     action_map: dict[StageState, PostValidationAction] = {
         StageState.SUCCEEDED: PostValidationAction.ADVANCE,
         StageState.REPAIR_NEEDED: PostValidationAction.REPAIR,
         StageState.BLOCKED: PostValidationAction.WAIT,
         StageState.FAILED: PostValidationAction.STOP,
     }
-    if validation_state.next_state not in action_map:
+    if next_state not in action_map:
         raise ValueError(
             "Unsupported post-validation state: "
-            f"{validation_state.next_state}"
+            f"{next_state}"
         )
 
     return PostValidationTransition(
         stage=validation_state.stage,
         work_item=validation_state.work_item,
         run_id=validation_state.run_id,
-        next_state=validation_state.next_state,
-        action=action_map[validation_state.next_state],
-        is_terminal=is_terminal_state(validation_state.next_state),
-        stage_metadata_path=validation_state.stage_metadata_path,
+        next_state=next_state,
+        action=action_map[next_state],
+        is_terminal=is_terminal_state(next_state),
+        stage_metadata_path=stage_metadata_path,
     )

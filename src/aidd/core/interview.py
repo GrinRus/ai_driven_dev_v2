@@ -252,6 +252,78 @@ def interview_requires_input(
     )
 
 
+def resolved_question_ids(*, answers: Iterable[InterviewAnswer]) -> tuple[str, ...]:
+    return tuple(
+        answer.question_id for answer in answers if answer.resolution == AnswerResolution.RESOLVED
+    )
+
+
+def _stage_document_path(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    document_name: str,
+) -> Path:
+    return workspace_root / "workitems" / work_item / "stages" / stage / document_name
+
+
+def load_questions_document(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> tuple[InterviewQuestion, ...]:
+    questions_path = _stage_document_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        document_name="questions.md",
+    )
+    if not questions_path.exists():
+        return ()
+    return parse_questions_markdown(questions_path.read_text(encoding="utf-8"))
+
+
+def load_answers_document(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> tuple[InterviewAnswer, ...]:
+    answers_path = _stage_document_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        document_name="answers.md",
+    )
+    if not answers_path.exists():
+        return ()
+    return parse_answers_markdown(answers_path.read_text(encoding="utf-8"))
+
+
+def stage_has_unresolved_blocking_questions(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> bool:
+    questions = load_questions_document(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    answers = load_answers_document(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    return interview_requires_input(
+        questions=questions,
+        resolved_question_ids=resolved_question_ids(answers=answers),
+    )
+
+
 def _next_question_id(existing_ids: set[str]) -> str:
     next_numeric = 1
     for question_id in existing_ids:
