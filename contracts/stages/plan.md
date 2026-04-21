@@ -15,7 +15,23 @@ Describe the intended solution, boundaries, risks, rollout, and verification app
 ## Required inputs
 
 - `../idea/output/idea-brief.md`
+- `../idea/output/stage-result.md`
 - `../research/output/research-notes.md`
+- `../research/output/stage-result.md`
+- `../research/output/validator-report.md`
+
+## Optional context inputs
+
+- `context/repository-state.md`
+- `context/constraints.md`
+- `context/previous-decisions.md`
+
+Optional context documents may improve planning quality, but they must not replace required upstream stage artifacts.
+
+## Upstream dependency rule
+
+- `plan` depends on `research` artifacts from the latest completed `research` attempt.
+- `plan` must not declare `succeeded` when `research` stage status is unresolved or its validator verdict is `fail`.
 
 ## Validation focus
 

@@ -275,7 +275,7 @@ Dependencies:
 
 Local tasks:
 
-- `W2-E1-S4-T1` Define the required `plan` input bundle and the dependency on `research` artifacts.
+- `W2-E1-S4-T1` (done) Define the required `plan` input bundle and the dependency on `research` artifacts.
 - `W2-E1-S4-T2` Define the required `plan` outputs, including milestones, risks, and verification notes.
 - `W2-E1-S4-T3` Define validator rules for plan completeness, sequencing clarity, and user-approval readiness.
 - `W2-E1-S4-T4` Define interview triggers for unresolved scope, sequencing disputes, or missing acceptance signals.
