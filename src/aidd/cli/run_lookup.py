@@ -6,9 +6,9 @@ from pathlib import Path
 from aidd.core.run_lookup import (
     ClosedRunError,
     CorruptedRunError,
+    guard_latest_run_resume,
     guard_run_resume,
     latest_attempt_number,
-    latest_run_id,
     resolve_attempt_artifact_paths,
 )
 from aidd.core.run_store import run_attempt_root
@@ -32,20 +32,21 @@ def resolve_cli_run_target(
     run_id: str | None = None,
     attempt_number: int | None = None,
 ) -> ResolvedCliRunTarget:
-    selected_run_id = run_id or latest_run_id(
-        workspace_root=workspace_root,
-        work_item=work_item,
-    )
-    if selected_run_id is None:
-        raise ValueError(f"No runs found for work item '{work_item}'.")
-
     try:
-        guard_run_resume(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=selected_run_id,
-            stage=stage,
-        )
+        if run_id is None:
+            selected_run_id = guard_latest_run_resume(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                stage=stage,
+            )
+        else:
+            selected_run_id = run_id
+            guard_run_resume(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=selected_run_id,
+                stage=stage,
+            )
     except (ClosedRunError, CorruptedRunError) as exc:
         raise ValueError(str(exc)) from exc
 

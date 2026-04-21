@@ -112,15 +112,12 @@ def _load_manifest_payload(
     return payload
 
 
-def latest_run_path(workspace_root: Path, work_item: str) -> Path | None:
+def _latest_run_entries(workspace_root: Path, work_item: str) -> list[tuple[Path, datetime]]:
     runs_root = work_item_runs_root(workspace_root=workspace_root, work_item=work_item)
     if not runs_root.exists():
-        return None
+        return []
 
-    latest_path: Path | None = None
-    latest_timestamp = _MIN_TIMESTAMP
-    latest_run_id = ""
-
+    entries: list[tuple[Path, datetime]] = []
     for candidate in runs_root.iterdir():
         if not candidate.is_dir():
             continue
@@ -137,14 +134,16 @@ def latest_run_path(workspace_root: Path, work_item: str) -> Path | None:
         timestamp = _parse_utc_timestamp(
             str(payload.get("updated_at_utc", payload.get("created_at_utc")))
         )
-        if timestamp > latest_timestamp or (
-            timestamp == latest_timestamp and candidate.name > latest_run_id
-        ):
-            latest_timestamp = timestamp
-            latest_run_id = candidate.name
-            latest_path = candidate
+        entries.append((candidate, timestamp))
+    return entries
 
-    return latest_path
+
+def latest_run_path(workspace_root: Path, work_item: str) -> Path | None:
+    entries = _latest_run_entries(workspace_root=workspace_root, work_item=work_item)
+    if not entries:
+        return None
+
+    return max(entries, key=lambda item: (item[1], item[0].name))[0]
 
 
 def latest_run_id(workspace_root: Path, work_item: str) -> str | None:
@@ -265,9 +264,21 @@ def guard_run_resume(
 
 
 def guard_latest_run_resume(workspace_root: Path, work_item: str, stage: str) -> str:
-    run_id = latest_run_id(workspace_root=workspace_root, work_item=work_item)
-    if run_id is None:
+    entries = _latest_run_entries(workspace_root=workspace_root, work_item=work_item)
+    if not entries:
         raise CorruptedRunError(f"No resumable runs found for work item '{work_item}'.")
+
+    latest_timestamp = max(timestamp for _, timestamp in entries)
+    matching_run_ids = sorted(
+        path.name for path, timestamp in entries if timestamp == latest_timestamp
+    )
+    if len(matching_run_ids) > 1:
+        raise CorruptedRunError(
+            "Ambiguous latest run for work item "
+            f"'{work_item}': {', '.join(matching_run_ids)}."
+        )
+
+    run_id = matching_run_ids[0]
     guard_run_resume(
         workspace_root=workspace_root,
         work_item=work_item,

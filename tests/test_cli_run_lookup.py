@@ -180,3 +180,60 @@ def test_resolve_cli_run_target_rejects_missing_artifact_index(tmp_path: Path) -
             run_id="run-001",
             attempt_number=1,
         )
+
+
+def test_resolve_cli_run_target_rejects_ambiguous_latest_run(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    now = datetime.now(UTC).replace(microsecond=0)
+
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-002",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-002",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status="running",
+        changed_at_utc=now + timedelta(minutes=5),
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-002",
+        stage="plan",
+        status="running",
+        changed_at_utc=now + timedelta(minutes=5),
+    )
+
+    with pytest.raises(ValueError, match="Ambiguous latest run"):
+        resolve_cli_run_target(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            stage="plan",
+        )

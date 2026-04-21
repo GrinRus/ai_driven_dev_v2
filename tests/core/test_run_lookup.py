@@ -475,3 +475,48 @@ def test_guard_latest_run_resume_returns_latest_run_id(tmp_path: Path) -> None:
         )
         == "run-002"
     )
+
+
+def test_guard_latest_run_resume_rejects_ambiguous_latest_runs(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    now = datetime.now(UTC).replace(microsecond=0)
+
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-002",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status="running",
+        changed_at_utc=now + timedelta(minutes=10),
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-002",
+        stage="plan",
+        status="running",
+        changed_at_utc=now + timedelta(minutes=10),
+    )
+
+    with pytest.raises(CorruptedRunError, match="Ambiguous latest run"):
+        guard_latest_run_resume(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            stage="plan",
+        )
