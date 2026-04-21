@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E1-S1-T2` Implement a reusable service that creates the workspace directory tree.
+- `W3-E1-S1-T3` Implement starter document seeding for the first work item and default contract files.
 
 ## Soon
 
-- `W3-E1-S1-T3` Implement starter document seeding for the first work item and default contract files.
 - `W3-E1-S1-T4` Define and write the work-item metadata file with stable identifiers and timestamps.
 - `W3-E1-S1-T5` Refactor `aidd init` to use the new workspace bootstrap service.
 - `W3-E1-S1-T6` Add bootstrap tests for fresh directories, existing directories, and partially initialized workspaces.

@@ -8,6 +8,10 @@ WORKSPACE_CONFIG_DIRNAME = "config"
 WORKSPACE_REPORTS_DIRNAME = "reports"
 WORKSPACE_TRACES_DIRNAME = "traces"
 WORKSPACE_WORKITEMS_DIRNAME = "workitems"
+WORKSPACE_REPORTS_RUNS_DIRNAME = "runs"
+WORKSPACE_REPORTS_EVALS_DIRNAME = "evals"
+WORKSPACE_TRACES_SESSIONS_DIRNAME = "sessions"
+WORKSPACE_TRACES_REPLAYS_DIRNAME = "replays"
 
 WORKITEM_CONTEXT_DIRNAME = "context"
 WORKITEM_STAGES_DIRNAME = "stages"
@@ -36,6 +40,18 @@ def workspace_workitems_root(root: Path) -> Path:
     return root / WORKSPACE_WORKITEMS_DIRNAME
 
 
+def workspace_config_root(root: Path) -> Path:
+    return root / WORKSPACE_CONFIG_DIRNAME
+
+
+def workspace_reports_root(root: Path) -> Path:
+    return root / WORKSPACE_REPORTS_DIRNAME
+
+
+def workspace_traces_root(root: Path) -> Path:
+    return root / WORKSPACE_TRACES_DIRNAME
+
+
 def work_item_root(root: Path, work_item: str) -> Path:
     return workspace_workitems_root(root) / work_item
 
@@ -60,12 +76,29 @@ def stage_output_root(root: Path, work_item: str, stage: str) -> Path:
     return stage_root(root=root, work_item=work_item, stage=stage) / STAGE_OUTPUT_DIRNAME
 
 
-def init_workspace(root: Path, work_item: str) -> Path:
+def create_workspace_tree(root: Path, work_item: str) -> Path:
+    workspace_config_root(root).mkdir(parents=True, exist_ok=True)
+    (workspace_reports_root(root) / WORKSPACE_REPORTS_RUNS_DIRNAME).mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (workspace_reports_root(root) / WORKSPACE_REPORTS_EVALS_DIRNAME).mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (workspace_traces_root(root) / WORKSPACE_TRACES_SESSIONS_DIRNAME).mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (workspace_traces_root(root) / WORKSPACE_TRACES_REPLAYS_DIRNAME).mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
     item_root = work_item_root(root=root, work_item=work_item)
     work_item_context_root(root=root, work_item=work_item).mkdir(parents=True, exist_ok=True)
 
     for stage in STAGES:
-        stage_root_path = stage_root(root=root, work_item=work_item, stage=stage)
         stage_input_root(root=root, work_item=work_item, stage=stage).mkdir(
             parents=True,
             exist_ok=True,
@@ -74,6 +107,15 @@ def init_workspace(root: Path, work_item: str) -> Path:
             parents=True,
             exist_ok=True,
         )
+
+    return item_root
+
+
+def init_workspace(root: Path, work_item: str) -> Path:
+    item_root = create_workspace_tree(root=root, work_item=work_item)
+
+    for stage in STAGES:
+        stage_root_path = stage_root(root=root, work_item=work_item, stage=stage)
         for filename, content in _RESERVED_STAGE_FILE_CONTENTS.items():
             file_path = stage_root_path / filename
             if not file_path.exists():

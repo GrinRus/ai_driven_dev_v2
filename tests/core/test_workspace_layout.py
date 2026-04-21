@@ -2,13 +2,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from aidd.core.stages import STAGES
 from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
     STAGE_INPUT_DIRNAME,
     STAGE_OUTPUT_DIRNAME,
     WORKITEM_CONTEXT_DIRNAME,
     WORKITEM_STAGES_DIRNAME,
+    WORKSPACE_CONFIG_DIRNAME,
+    WORKSPACE_REPORTS_DIRNAME,
+    WORKSPACE_REPORTS_EVALS_DIRNAME,
+    WORKSPACE_REPORTS_RUNS_DIRNAME,
+    WORKSPACE_TRACES_DIRNAME,
+    WORKSPACE_TRACES_REPLAYS_DIRNAME,
+    WORKSPACE_TRACES_SESSIONS_DIRNAME,
     WORKSPACE_WORKITEMS_DIRNAME,
+    create_workspace_tree,
     init_workspace,
     stage_input_root,
     stage_output_root,
@@ -51,3 +60,22 @@ def test_reserved_stage_filenames_are_seeded_by_init(tmp_path: Path) -> None:
 
     for filename in RESERVED_STAGE_FILENAMES:
         assert (plan_stage_root / filename).exists()
+
+
+def test_create_workspace_tree_builds_canonical_directories(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    work_item = "WI-001"
+
+    item_root = create_workspace_tree(root=root, work_item=work_item)
+
+    assert item_root == root / WORKSPACE_WORKITEMS_DIRNAME / work_item
+    assert (root / WORKSPACE_CONFIG_DIRNAME).exists()
+    assert (root / WORKSPACE_REPORTS_DIRNAME / WORKSPACE_REPORTS_RUNS_DIRNAME).exists()
+    assert (root / WORKSPACE_REPORTS_DIRNAME / WORKSPACE_REPORTS_EVALS_DIRNAME).exists()
+    assert (root / WORKSPACE_TRACES_DIRNAME / WORKSPACE_TRACES_SESSIONS_DIRNAME).exists()
+    assert (root / WORKSPACE_TRACES_DIRNAME / WORKSPACE_TRACES_REPLAYS_DIRNAME).exists()
+    assert (item_root / WORKITEM_CONTEXT_DIRNAME).exists()
+
+    for stage in STAGES:
+        assert (item_root / WORKITEM_STAGES_DIRNAME / stage / STAGE_INPUT_DIRNAME).exists()
+        assert (item_root / WORKITEM_STAGES_DIRNAME / stage / STAGE_OUTPUT_DIRNAME).exists()
