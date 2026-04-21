@@ -415,7 +415,7 @@ Local tasks:
 - `W2-E1-S8-T2` (done) Define the required `review` outputs, including findings, severity, and approval status.
 - `W2-E1-S8-T3` (done) Define validator rules for unsupported findings, missing severity labels, and absent disposition.
 - `W2-E1-S8-T4` (done) Define interview triggers for contradictory instructions or missing review baseline.
-- `W2-E1-S8-T5` Create the `review` prompt-pack scaffold.
+- `W2-E1-S8-T5` (done) Create the `review` prompt-pack scaffold.
 - `W2-E1-S8-T6` Add one worked `review` example bundle.
 
 Exit evidence:
