@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from aidd.validators.models import LoadedMarkdownDocument, MarkdownDocumentMetadata
+
 _COMMON_DOCUMENTS = frozenset(
     {
         "answers.md",
@@ -17,6 +19,10 @@ _STAGE_IO_DIRECTORIES = frozenset({"input", "output"})
 
 class DocumentPathError(ValueError):
     """Raised when a document path cannot be resolved safely."""
+
+
+class DocumentLoadError(ValueError):
+    """Raised when a resolved document cannot be loaded."""
 
 
 def _resolve_workspace_relative_path(workspace_root: Path, relative_path: Path) -> Path:
@@ -97,3 +103,29 @@ def resolve_stage_document_path(
         / io_direction
         / document_name,
     )
+
+
+def load_markdown_document(path: Path, workspace_root: Path) -> LoadedMarkdownDocument:
+    resolved_workspace = workspace_root.resolve(strict=False)
+    resolved_path = path.resolve(strict=False)
+
+    if not resolved_path.is_relative_to(resolved_workspace):
+        raise DocumentPathError(
+            f"Document path must stay inside workspace: {path} (workspace={resolved_workspace})"
+        )
+    if resolved_path.suffix.lower() != ".md":
+        raise DocumentPathError(f"Expected a Markdown file (.md), got: {resolved_path.name}")
+    if not resolved_path.exists():
+        raise DocumentLoadError(f"Markdown file does not exist: {resolved_path}")
+    if not resolved_path.is_file():
+        raise DocumentLoadError(f"Markdown path is not a file: {resolved_path}")
+
+    body = resolved_path.read_text(encoding="utf-8")
+    stat = resolved_path.stat()
+    metadata = MarkdownDocumentMetadata(
+        path=resolved_path,
+        workspace_relative_path=resolved_path.relative_to(resolved_workspace),
+        size_bytes=stat.st_size,
+        modified_time_epoch_s=stat.st_mtime,
+    )
+    return LoadedMarkdownDocument(body=body, metadata=metadata)
