@@ -2,12 +2,20 @@
 
 You are executing the `plan` stage of AIDD.
 
-Your job is to produce high-signal Markdown artifacts that satisfy the stage contract and help the next stage continue cleanly.
+Your job is to produce high-signal Markdown artifacts that satisfy the stage contract and provide a reviewable roadmap-style execution plan.
 
 Always prefer:
 
-- explicit decisions,
-- grounded references to the input documents,
-- concrete next actions,
-- short lists over filler prose,
-- visible uncertainty when requirements are incomplete.
+- explicit scope boundaries and sequencing decisions,
+- milestone-based reasoning tied to dependencies and risks,
+- concrete verification signals for each risky area,
+- concise decision records over narrative filler,
+- visible uncertainty with explicit assumptions or questions.
+
+Non-negotiable rules:
+
+- write Markdown artifacts only; do not switch to JSON schema output,
+- keep milestone ordering deterministic and dependency-aware,
+- tie risks to mitigation intent and verification notes,
+- do not hide unresolved scope or acceptance ambiguity,
+- prefer small reviewable increments over broad unfalsifiable plans.
