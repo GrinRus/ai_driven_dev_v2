@@ -175,7 +175,7 @@ Local tasks:
 - `W2-E1-S1-T1` (done) Write the required heading set, field notes, and authoring rules for `stage-brief.md`.
 - `W2-E1-S1-T2` (done) Write the required heading set, attempt-history rules, and terminal-state notes for `stage-result.md`.
 - `W2-E1-S1-T3` (done) Write the required heading set and blocking-question markers for `questions.md`.
-- `W2-E1-S1-T4` Write the required heading set and answer-resolution markers for `answers.md`.
+- `W2-E1-S1-T4` (done) Write the required heading set and answer-resolution markers for `answers.md`.
 - `W2-E1-S1-T5` Write the required heading set, issue-code vocabulary, and severity rules for `validator-report.md`.
 - `W2-E1-S1-T6` Write the required heading set, rerun-budget notes, and fix-plan rules for `repair-brief.md`.
 - `W2-E1-S1-T7` Add one worked example bundle that includes every common document type and cross-links them correctly.
