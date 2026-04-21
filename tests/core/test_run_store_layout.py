@@ -10,8 +10,10 @@ from aidd.core.run_store import (
     RUN_MANIFEST_FILENAME,
     RUN_STAGES_DIRNAME,
     RunStore,
+    create_next_attempt_directory,
     create_run_manifest,
     format_attempt_directory_name,
+    next_attempt_number,
     run_attempt_root,
     run_root,
     run_stage_root,
@@ -81,3 +83,33 @@ def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: 
     assert payload["stage_target"] == "plan"
     assert payload["config_snapshot"] == {"log_mode": "both"}
     assert payload["schema_version"] == 1
+
+
+def test_next_attempt_number_starts_from_one_when_attempts_missing(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    assert next_attempt_number(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    ) == 1
+
+
+def test_create_next_attempt_directory_uses_monotonic_numbering(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_attempts_root = (
+        run_stage_root(workspace_root, "WI-001", "run-001", "plan") / RUN_ATTEMPTS_DIRNAME
+    )
+    (stage_attempts_root / "attempt-0001").mkdir(parents=True)
+    (stage_attempts_root / "attempt-0003").mkdir(parents=True)
+    (stage_attempts_root / "misc-dir").mkdir(parents=True)
+
+    created = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert created.name == "attempt-0004"

@@ -78,6 +78,65 @@ def run_attempt_root(
     )
 
 
+def _parse_attempt_directory_name(name: str) -> int | None:
+    if not name.startswith(RUN_ATTEMPT_PREFIX):
+        return None
+
+    suffix = name.removeprefix(RUN_ATTEMPT_PREFIX)
+    if not suffix.isdigit():
+        return None
+    return int(suffix)
+
+
+def next_attempt_number(workspace_root: Path, work_item: str, run_id: str, stage: str) -> int:
+    attempts_root = run_attempts_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if not attempts_root.exists():
+        return 1
+
+    existing_numbers = [
+        number
+        for child in attempts_root.iterdir()
+        if child.is_dir() and (number := _parse_attempt_directory_name(child.name)) is not None
+    ]
+    return max(existing_numbers, default=0) + 1
+
+
+def create_next_attempt_directory(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> Path:
+    attempts_root = run_attempts_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    attempts_root.mkdir(parents=True, exist_ok=True)
+
+    attempt_number = next_attempt_number(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    attempt_path = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    attempt_path.mkdir(parents=False, exist_ok=False)
+    return attempt_path
+
+
 def run_manifest_path(workspace_root: Path, work_item: str, run_id: str) -> Path:
     return run_root(workspace_root=workspace_root, work_item=work_item, run_id=run_id) / (
         RUN_MANIFEST_FILENAME
@@ -156,4 +215,12 @@ class RunStore:
             runtime_id=runtime_id,
             stage_target=stage_target,
             config_snapshot=config_snapshot,
+        )
+
+    def create_next_attempt(self, stage: str) -> Path:
+        return create_next_attempt_directory(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=self.run_id,
+            stage=stage,
         )
