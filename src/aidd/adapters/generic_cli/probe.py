@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shlex
 import shutil
+import subprocess
 
 from aidd.adapters.base import CapabilityReport
 
@@ -21,12 +22,33 @@ def discover_command(command: str) -> str | None:
     return shutil.which(tokens[0])
 
 
+def discover_version(command_path: str) -> str | None:
+    try:
+        result = subprocess.run(
+            [command_path, "--version"],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=2,
+        )
+    except (FileNotFoundError, PermissionError, OSError, subprocess.TimeoutExpired):
+        return None
+
+    output = result.stdout.strip() or result.stderr.strip()
+    if not output:
+        return None
+
+    return output.splitlines()[0].strip() or None
+
+
 def probe(command: str) -> CapabilityReport:
     discovered = discover_command(command)
+    version_text = discover_version(discovered) if discovered else None
     return CapabilityReport(
         runtime_id="generic-cli",
         available=discovered is not None,
         command=discovered or command,
+        version_text=version_text,
         supports_structured_log_stream=False,
         supports_questions=False,
         supports_resume=False,

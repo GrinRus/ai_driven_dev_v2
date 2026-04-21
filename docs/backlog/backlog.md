@@ -6,11 +6,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W4-E1-S1-T2` Capture version or identity information from the discovered CLI.
+- `W4-E2-S1-T2` Capture version or identity information from the Claude Code CLI.
 
 ## Soon
-
-- `W4-E2-S1-T2` Capture version or identity information from the Claude Code CLI.
 
 ## Parking lot
 
