@@ -11,6 +11,8 @@ from aidd.validators.semantic import (
     validate_semantic_outputs,
 )
 
+_SEMANTIC_FIXTURES_ROOT = Path(__file__).parent / "fixtures" / "semantic"
+
 
 def _write_stage_contract(
     *,
@@ -307,3 +309,37 @@ def test_validate_semantic_outputs_passes_for_grounded_complete_content(tmp_path
     )
 
     assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_valid_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "valid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="idea",
+        work_item="WI-SEM-VALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_invalid_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "invalid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="idea",
+        work_item="WI-SEM-INVALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=PLACEHOLDER_CONTENT_CODE,
+            message="Placeholder content remains in required section `Desired outcome`.",
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-SEM-INVALID/stages/idea/idea-brief.md",
+                line_number=7,
+            ),
+        ),
+    )
