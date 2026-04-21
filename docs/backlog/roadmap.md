@@ -287,7 +287,7 @@ Exit evidence:
 - the `plan` stage can be evaluated from Markdown artifacts alone;
 - validators can distinguish a reviewable plan from a vague or unsafely broad one.
 
-#### Slice W2-E1-S5 — `review-spec` stage contract (`planned`)
+#### Slice W2-E1-S5 — `review-spec` stage contract (`done`)
 Goal: define the specification-review stage that pressure-tests the plan before task generation.
 
 Primary outputs:
@@ -314,7 +314,7 @@ Local tasks:
 - `W2-E1-S5-T3` (done) Define validator rules for issue quality, actionable recommendations, and explicit sign-off status.
 - `W2-E1-S5-T4` (done) Define interview triggers for contradictory constraints or missing baseline assumptions.
 - `W2-E1-S5-T5` (done) Create the `review-spec` prompt-pack scaffold.
-- `W2-E1-S5-T6` Add one worked `review-spec` example bundle.
+- `W2-E1-S5-T6` (done) Add one worked `review-spec` example bundle.
 
 Exit evidence:
 
