@@ -19,6 +19,7 @@ from aidd.core.interview import (
     question_policy_from_marker,
     render_answers_markdown,
     render_questions_markdown,
+    stage_has_unresolved_blocking_questions,
     unresolved_blocking_questions,
 )
 
@@ -258,4 +259,34 @@ def test_persist_answers_document_merges_without_losing_prior_answers(tmp_path: 
             resolution=AnswerResolution.DEFERRED,
             text="Observability naming convention deferred to `plan` stage.",
         ),
+    )
+
+
+def test_partial_answers_keep_blocking_questions_unresolved(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_questions_markdown=(
+            "# Questions\n\n"
+            "## Questions\n\n"
+            "- Q1 [blocking] Confirm release owner approval before rollout.\n"
+        ),
+    )
+    persist_answers_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_answers_markdown=(
+            "# Answers\n\n"
+            "## Answers\n\n"
+            "- Q1 [partial] Approval thread started; final sign-off still pending.\n"
+        ),
+    )
+
+    assert stage_has_unresolved_blocking_questions(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
     )

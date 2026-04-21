@@ -768,7 +768,7 @@ Exit evidence:
 ### Epic W3-E3 — interview and repair controllers (`planned`)
 Linked stories: `US-04`, `US-05`, `US-06`
 
-#### Slice W3-E3-S1 — interview controller (`planned`)
+#### Slice W3-E3-S1 — interview controller (`done`)
 Goal: persist and gate user questions.
 
 Primary outputs:
@@ -797,7 +797,7 @@ Local tasks:
 - `W3-E3-S1-T4` (done) Implement stage gating that blocks progression when blocking questions remain unresolved.
 - `W3-E3-S1-T5` (done) Implement CLI helpers that display pending questions and guide the operator to answer them.
 - `W3-E3-S1-T6` (done) Implement state updates that unblock the stage once required answers are present.
-- `W3-E3-S1-T7` Add tests for question persistence, partial answers, and unblock transitions.
+- `W3-E3-S1-T7` (done) Add tests for question persistence, partial answers, and unblock transitions.
 
 Exit evidence:
 
