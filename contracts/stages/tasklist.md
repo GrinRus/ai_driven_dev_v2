@@ -15,7 +15,23 @@ Break the approved plan into reviewable implementation tasks with verification n
 ## Required inputs
 
 - `../plan/output/plan.md`
+- `../plan/output/stage-result.md`
 - `../review-spec/output/review-spec-report.md`
+- `../review-spec/output/stage-result.md`
+- `../review-spec/output/validator-report.md`
+
+## Optional context inputs
+
+- `context/repository-state.md`
+- `context/constraints.md`
+- `context/previous-decisions.md`
+
+Optional context documents may improve task decomposition quality, but they must not replace required plan and review-spec artifacts.
+
+## Upstream dependency rule
+
+- `tasklist` depends on artifacts from the latest completed `review-spec` attempt.
+- `tasklist` must not declare `succeeded` when review-spec readiness/sign-off outcome indicates unresolved blocking conditions.
 
 ## Validation focus
 
