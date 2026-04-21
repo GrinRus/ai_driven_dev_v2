@@ -450,7 +450,7 @@ Local tasks:
 - `W2-E1-S9-T2` (done) Define the required `qa` outputs, including verdict, residual risk, and release recommendation.
 - `W2-E1-S9-T3` (done) Define validator rules for unsupported verdicts and missing evidence references.
 - `W2-E1-S9-T4` (done) Define interview triggers for blocked verification or missing execution artifacts.
-- `W2-E1-S9-T5` Create the `qa` prompt-pack scaffold.
+- `W2-E1-S9-T5` (done) Create the `qa` prompt-pack scaffold.
 - `W2-E1-S9-T6` Add one worked `qa` example bundle.
 
 Exit evidence:
