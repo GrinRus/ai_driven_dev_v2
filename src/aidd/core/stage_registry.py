@@ -4,6 +4,8 @@ from pathlib import Path
 
 from aidd.core.stage_manifest import StageManifest
 from aidd.core.stages import STAGES, is_valid_stage
+from aidd.core.workspace import stage_root as workspace_stage_root
+from aidd.core.workspace import work_item_root as workspace_work_item_root
 
 DEFAULT_STAGE_CONTRACTS_ROOT = Path("contracts/stages")
 DEFAULT_DOCUMENT_CONTRACTS_ROOT = Path("contracts/documents")
@@ -133,3 +135,48 @@ def load_all_stage_manifests(
         stage: load_stage_manifest(stage=stage, contracts_root=contracts_root)
         for stage in STAGES
     }
+
+
+def _resolve_declared_document_path(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    declaration: str,
+) -> Path:
+    relative = Path(declaration)
+    if relative.is_absolute():
+        raise StageManifestLoadError(f"Document declaration must be relative: {declaration}")
+
+    if relative.parts and relative.parts[0] == "context":
+        base = workspace_work_item_root(root=workspace_root, work_item=work_item)
+    else:
+        base = workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
+
+    resolved_workspace = workspace_root.resolve(strict=False)
+    candidate = (base / relative).resolve(strict=False)
+    if not candidate.is_relative_to(resolved_workspace):
+        raise StageManifestLoadError(
+            "Document declaration escapes workspace root: "
+            f"{declaration} (stage={stage}, work_item={work_item})"
+        )
+    return candidate
+
+
+def resolve_required_input_documents(
+    *,
+    stage: str,
+    work_item: str,
+    workspace_root: Path,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[Path, ...]:
+    manifest = load_stage_manifest(stage=stage, contracts_root=contracts_root)
+    return tuple(
+        _resolve_declared_document_path(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            declaration=declaration.path,
+        )
+        for declaration in manifest.required_inputs
+    )

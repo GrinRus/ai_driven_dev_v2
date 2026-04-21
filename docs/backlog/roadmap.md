@@ -690,7 +690,7 @@ Local tasks:
 - `W3-E2-S1-T1` (done) Define the Python model for a stage manifest and its required input/output declarations.
 - `W3-E2-S1-T2` (done) Implement loading of stage manifests from `contracts/stages/`.
 - `W3-E2-S1-T3` (done) Implement validation of manifest references to document contracts and prompt-pack paths.
-- `W3-E2-S1-T4` Implement resolution of required input documents for a selected stage.
+- `W3-E2-S1-T4` (done) Implement resolution of required input documents for a selected stage.
 - `W3-E2-S1-T5` Implement resolution of expected output documents and validator targets for a selected stage.
 - `W3-E2-S1-T6` Add tests for valid manifests, missing references, and duplicate stage ids.
 

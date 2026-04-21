@@ -9,6 +9,7 @@ from aidd.core.stage_registry import (
     all_stages,
     load_all_stage_manifests,
     load_stage_manifest,
+    resolve_required_input_documents,
 )
 
 
@@ -16,6 +17,7 @@ def _write_stage_contract(
     *,
     contracts_root: Path,
     stage: str,
+    required_inputs: tuple[str, ...],
     required_outputs: tuple[str, ...],
     prompt_pack_paths: tuple[str, ...],
 ) -> None:
@@ -34,8 +36,7 @@ def _write_stage_contract(
                 "",
                 "## Required inputs",
                 "",
-                "- `context/intake.md`",
-                "- `context/user-request.md`",
+                *[f"- `{item}`" for item in required_inputs],
                 "",
                 "## Prompt pack",
                 "",
@@ -72,6 +73,7 @@ def test_load_stage_manifest_parses_required_inputs_outputs(tmp_path: Path) -> N
     _write_stage_contract(
         contracts_root=contracts_root,
         stage="idea",
+        required_inputs=("context/intake.md", "context/user-request.md"),
         required_outputs=required_outputs,
         prompt_pack_paths=prompt_paths,
     )
@@ -104,6 +106,7 @@ def test_load_stage_manifest_fails_when_prompt_pack_reference_is_missing(tmp_pat
     _write_stage_contract(
         contracts_root=contracts_root,
         stage="idea",
+        required_inputs=("context/intake.md", "context/user-request.md"),
         required_outputs=required_outputs,
         prompt_pack_paths=("prompt-packs/stages/idea/system.md",),
     )
@@ -125,6 +128,7 @@ def test_load_stage_manifest_fails_when_document_contract_is_missing(tmp_path: P
     _write_stage_contract(
         contracts_root=contracts_root,
         stage="idea",
+        required_inputs=("context/intake.md", "context/user-request.md"),
         required_outputs=required_outputs,
         prompt_pack_paths=prompt_paths,
     )
@@ -144,3 +148,47 @@ def test_load_all_stage_manifests_reads_all_known_stages() -> None:
     assert set(manifests) == set(all_stages())
     assert manifests["idea"].stage == "idea"
     assert manifests["qa"].stage == "qa"
+
+
+def test_resolve_required_input_documents_maps_context_and_upstream_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    resolved = resolve_required_input_documents(
+        stage="implement",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert resolved == (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "output" / "tasklist.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "repository-state.md",
+    )
+
+
+def test_resolve_required_input_documents_rejects_workspace_escape(tmp_path: Path) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "stage-result.md")
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_inputs=("../../../../../outside.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    with pytest.raises(StageManifestLoadError, match="escapes workspace"):
+        resolve_required_input_documents(
+            stage="idea",
+            work_item="WI-001",
+            workspace_root=tmp_path / ".aidd",
+            contracts_root=contracts_root,
+        )
