@@ -63,3 +63,25 @@ def test_probe_discovers_existing_command_path() -> None:
     assert Path(report.command).name == command_name
     assert report.version_text is not None
     assert report.supports_raw_log_stream is True
+
+
+def test_probe_handles_unexpected_version_output(tmp_path: Path) -> None:
+    fake_cli = tmp_path / "fake-claude-code"
+    fake_cli.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"--version\" ]; then\n"
+        "  echo \"???\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "if [ \"$1\" = \"--help\" ]; then\n"
+        "  echo \"--non-interactive\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "echo \"ok\"\n",
+        encoding="utf-8",
+    )
+    fake_cli.chmod(0o755)
+
+    report = probe(str(fake_cli))
+    assert report.available is True
+    assert report.version_text == "???"
