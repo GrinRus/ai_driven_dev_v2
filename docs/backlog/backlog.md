@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E1-S2-T6` Add run-store tests for fresh runs, repeated attempts, and interrupted writes.
+- `W3-E1-S3-T1` Implement helpers that resolve the latest run and latest attempt for a work item.
 
 ## Soon
 
-- `W3-E1-S3-T1` Implement helpers that resolve the latest run and latest attempt for a work item.
+- `W3-E1-S3-T2` Implement helpers that resolve artifact paths for a named stage and attempt.
 
 ## Parking lot
 

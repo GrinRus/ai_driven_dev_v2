@@ -360,7 +360,15 @@ def write_attempt_artifact_index(
 
 
 def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    serialized_payload = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f".{path.name}.tmp")
+    temp_path.write_text(serialized_payload, encoding="utf-8")
+    try:
+        temp_path.replace(path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
 
 
 def _touch_manifest_timestamp(

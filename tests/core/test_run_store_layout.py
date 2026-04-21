@@ -195,6 +195,128 @@ def test_attempt_artifact_index_records_canonical_stage_document_paths(tmp_path:
     }
 
 
+def test_run_store_fresh_run_creates_manifest_attempt_and_stage_metadata(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    store = RunStore(workspace_root=workspace_root, work_item="WI-001", run_id="run-001")
+
+    manifest_path = store.create_manifest(
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    attempt_path = store.create_next_attempt("plan")
+    stage_metadata_path = store.persist_stage_status(
+        stage="plan",
+        status="running",
+        changed_at_utc=datetime(2026, 4, 21, 11, 0, tzinfo=UTC),
+    )
+
+    assert manifest_path.exists()
+    assert attempt_path.name == "attempt-0001"
+    assert store.attempt_artifact_index_path("plan", 1).exists()
+    stage_metadata = json.loads(stage_metadata_path.read_text(encoding="utf-8"))
+    assert stage_metadata["status"] == "running"
+    assert stage_metadata["updated_at_utc"] == "2026-04-21T11:00:00Z"
+
+
+def test_run_store_repeated_attempts_keep_distinct_artifact_indexes(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    store = RunStore(workspace_root=workspace_root, work_item="WI-001", run_id="run-001")
+
+    first_attempt = store.create_next_attempt("plan")
+    second_attempt = store.create_next_attempt("plan")
+
+    assert first_attempt.name == "attempt-0001"
+    assert second_attempt.name == "attempt-0002"
+
+    first_index = json.loads(
+        store.attempt_artifact_index_path("plan", 1).read_text(encoding="utf-8")
+    )
+    second_index = json.loads(
+        store.attempt_artifact_index_path("plan", 2).read_text(encoding="utf-8")
+    )
+
+    assert first_index["attempt_number"] == 1
+    assert second_index["attempt_number"] == 2
+    assert first_index["logs"]["runtime_log"].endswith("/attempt-0001/runtime.log")
+    assert second_index["logs"]["runtime_log"].endswith("/attempt-0002/runtime.log")
+
+
+def test_stage_metadata_write_is_atomic_on_interrupted_replace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status="running",
+        changed_at_utc=datetime(2026, 4, 21, 12, 0, tzinfo=UTC),
+    )
+    metadata_path = run_stage_metadata_path(workspace_root, "WI-001", "run-001", "plan")
+    original_payload = metadata_path.read_text(encoding="utf-8")
+    original_replace = Path.replace
+
+    def _failing_replace(path_obj: Path, target: Path) -> Path:
+        if Path(target).name == RUN_STAGE_METADATA_FILENAME:
+            raise OSError("simulated interrupted write")
+        return original_replace(path_obj, target)
+
+    monkeypatch.setattr(Path, "replace", _failing_replace)
+
+    with pytest.raises(OSError, match="simulated interrupted write"):
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            status="failed",
+            changed_at_utc=datetime(2026, 4, 21, 12, 5, tzinfo=UTC),
+        )
+
+    assert metadata_path.read_text(encoding="utf-8") == original_payload
+    assert (metadata_path.parent / f".{RUN_STAGE_METADATA_FILENAME}.tmp").exists() is False
+
+
+def test_artifact_index_write_is_atomic_on_interrupted_replace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    store = RunStore(workspace_root=workspace_root, work_item="WI-001", run_id="run-001")
+    store.create_next_attempt("plan")
+    artifact_index_path = store.attempt_artifact_index_path("plan", 1)
+    original_payload = artifact_index_path.read_text(encoding="utf-8")
+    original_replace = Path.replace
+
+    def _failing_replace(path_obj: Path, target: Path) -> Path:
+        if Path(target).name == RUN_ARTIFACT_INDEX_FILENAME:
+            raise OSError("simulated interrupted write")
+        return original_replace(path_obj, target)
+
+    monkeypatch.setattr(Path, "replace", _failing_replace)
+
+    with pytest.raises(OSError, match="simulated interrupted write"):
+        store.write_attempt_artifact_index(
+            stage="plan",
+            attempt_number=1,
+            changed_at_utc=datetime(2026, 4, 21, 12, 10, tzinfo=UTC),
+        )
+
+    assert artifact_index_path.read_text(encoding="utf-8") == original_payload
+    assert (artifact_index_path.parent / f".{RUN_ARTIFACT_INDEX_FILENAME}.tmp").exists() is False
+
+
 def test_persist_stage_status_creates_stage_metadata_and_touches_manifest(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     work_item = "WI-001"
