@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from aidd.core.stages import STAGES
@@ -19,6 +21,7 @@ WORKITEM_STAGES_DIRNAME = "stages"
 STAGE_INPUT_DIRNAME = "input"
 STAGE_OUTPUT_DIRNAME = "output"
 DEFAULT_CONTRACT_REFERENCES_FILENAME = "default-contract-files.md"
+WORKITEM_METADATA_FILENAME = "work-item.json"
 
 RESERVED_STAGE_FILENAMES: tuple[str, ...] = (
     "stage-brief.md",
@@ -64,6 +67,10 @@ def work_item_context_root(root: Path, work_item: str) -> Path:
 
 def work_item_stages_root(root: Path, work_item: str) -> Path:
     return work_item_root(root=root, work_item=work_item) / WORKITEM_STAGES_DIRNAME
+
+
+def work_item_metadata_path(root: Path, work_item: str) -> Path:
+    return work_item_root(root=root, work_item=work_item) / WORKITEM_METADATA_FILENAME
 
 
 def stage_root(root: Path, work_item: str, stage: str) -> Path:
@@ -155,8 +162,26 @@ def seed_default_contract_references(root: Path, work_item: str) -> Path:
     return references_path
 
 
+def seed_work_item_metadata(root: Path, work_item: str) -> Path:
+    metadata_path = work_item_metadata_path(root=root, work_item=work_item)
+    if metadata_path.exists():
+        return metadata_path
+
+    now = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    payload = {
+        "schema_version": 1,
+        "work_item_id": work_item,
+        "created_at_utc": now,
+        "updated_at_utc": now,
+        "stage_order": list(STAGES),
+    }
+    metadata_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return metadata_path
+
+
 def init_workspace(root: Path, work_item: str) -> Path:
     item_root = create_workspace_tree(root=root, work_item=work_item)
+    seed_work_item_metadata(root=root, work_item=work_item)
     seed_default_contract_references(root=root, work_item=work_item)
 
     for stage in STAGES:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from aidd.core.stages import STAGES
@@ -9,6 +10,7 @@ from aidd.core.workspace import (
     STAGE_INPUT_DIRNAME,
     STAGE_OUTPUT_DIRNAME,
     WORKITEM_CONTEXT_DIRNAME,
+    WORKITEM_METADATA_FILENAME,
     WORKITEM_STAGES_DIRNAME,
     WORKSPACE_CONFIG_DIRNAME,
     WORKSPACE_REPORTS_DIRNAME,
@@ -74,6 +76,25 @@ def test_init_workspace_seeds_default_contract_references(tmp_path: Path) -> Non
     content = references_path.read_text(encoding="utf-8")
     assert "contracts/documents/stage-brief.md" in content
     assert "contracts/stages/plan.md" in content
+
+
+def test_init_workspace_seeds_stable_work_item_metadata(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    work_item = "WI-001"
+
+    item_root = init_workspace(root=root, work_item=work_item)
+    metadata_path = item_root / WORKITEM_METADATA_FILENAME
+
+    assert metadata_path.exists()
+    first_payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert first_payload["work_item_id"] == work_item
+    assert first_payload["schema_version"] == 1
+    assert first_payload["stage_order"] == list(STAGES)
+
+    init_workspace(root=root, work_item=work_item)
+    second_payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+    assert second_payload == first_payload
 
 
 def test_create_workspace_tree_builds_canonical_directories(tmp_path: Path) -> None:
