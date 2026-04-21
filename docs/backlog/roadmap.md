@@ -389,7 +389,7 @@ Exit evidence:
 - `implement` has a contract that does not rely on any one runtime's native schema;
 - validators can force repair when execution claims are unsupported by artifacts.
 
-#### Slice W2-E1-S8 — `review` stage contract (`next`)
+#### Slice W2-E1-S8 — `review` stage contract (`done`)
 Goal: define the code or artifact review stage as a first-class document protocol.
 
 Primary outputs:
@@ -416,7 +416,7 @@ Local tasks:
 - `W2-E1-S8-T3` (done) Define validator rules for unsupported findings, missing severity labels, and absent disposition.
 - `W2-E1-S8-T4` (done) Define interview triggers for contradictory instructions or missing review baseline.
 - `W2-E1-S8-T5` (done) Create the `review` prompt-pack scaffold.
-- `W2-E1-S8-T6` Add one worked `review` example bundle.
+- `W2-E1-S8-T6` (done) Add one worked `review` example bundle.
 
 Exit evidence:
 
