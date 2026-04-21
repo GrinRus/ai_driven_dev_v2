@@ -6,6 +6,7 @@ from aidd.core.stage_manifest import StageManifest
 from aidd.core.stages import STAGES, is_valid_stage
 
 DEFAULT_STAGE_CONTRACTS_ROOT = Path("contracts/stages")
+DEFAULT_DOCUMENT_CONTRACTS_ROOT = Path("contracts/documents")
 
 
 class StageManifestLoadError(ValueError):
@@ -60,6 +61,37 @@ def _extract_paragraph(markdown_text: str, heading: str) -> str | None:
     return " ".join(parts)
 
 
+def _validate_stage_contract_references(
+    *,
+    required_inputs: tuple[str, ...],
+    required_outputs: tuple[str, ...],
+    prompt_pack_paths: tuple[str, ...],
+    contracts_root: Path,
+) -> None:
+    problems: list[str] = []
+    document_contracts_root = contracts_root.parent / "documents"
+    repository_root = contracts_root.parent.parent
+
+    for declaration in (*required_inputs, *required_outputs):
+        candidate = Path(declaration)
+        if len(candidate.parts) != 1 or candidate.suffix.lower() != ".md":
+            continue
+        referenced_contract = document_contracts_root / candidate.name
+        if not referenced_contract.exists():
+            problems.append(f"missing document contract reference: {candidate.name}")
+
+    if not prompt_pack_paths:
+        problems.append("missing prompt-pack section entries")
+    for prompt_reference in prompt_pack_paths:
+        prompt_path = repository_root / prompt_reference
+        if not prompt_path.exists():
+            problems.append(f"missing prompt-pack path: {prompt_reference}")
+
+    if problems:
+        joined = "; ".join(problems)
+        raise StageManifestLoadError(f"Invalid contract references for stage manifest: {joined}")
+
+
 def load_stage_manifest(
     stage: str,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
@@ -71,7 +103,15 @@ def load_stage_manifest(
     markdown_text = contract_path.read_text(encoding="utf-8")
     required_inputs = _extract_bullets(markdown_text=markdown_text, heading="Required inputs")
     required_outputs = _extract_bullets(markdown_text=markdown_text, heading="Primary output")
+    prompt_pack_paths = _extract_bullets(markdown_text=markdown_text, heading="Prompt pack")
     purpose = _extract_paragraph(markdown_text=markdown_text, heading="Purpose")
+
+    _validate_stage_contract_references(
+        required_inputs=required_inputs,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_pack_paths,
+        contracts_root=contracts_root,
+    )
 
     try:
         return StageManifest.from_document_paths(

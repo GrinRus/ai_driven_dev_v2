@@ -12,13 +12,17 @@ from aidd.core.stage_registry import (
 )
 
 
-def test_load_stage_manifest_parses_required_inputs_outputs(tmp_path: Path) -> None:
-    contracts_root = tmp_path / "contracts" / "stages"
-    contracts_root.mkdir(parents=True)
-    (contracts_root / "idea.md").write_text(
+def _write_stage_contract(
+    *,
+    contracts_root: Path,
+    stage: str,
+    required_outputs: tuple[str, ...],
+    prompt_pack_paths: tuple[str, ...],
+) -> None:
+    (contracts_root / f"{stage}.md").write_text(
         "\n".join(
             [
-                "# Stage Contract: `idea`",
+                f"# Stage Contract: `{stage}`",
                 "",
                 "## Purpose",
                 "",
@@ -26,17 +30,55 @@ def test_load_stage_manifest_parses_required_inputs_outputs(tmp_path: Path) -> N
                 "",
                 "## Primary output",
                 "",
-                "- `idea-brief.md`",
-                "- `stage-result.md`",
+                *[f"- `{item}`" for item in required_outputs],
                 "",
                 "## Required inputs",
                 "",
                 "- `context/intake.md`",
                 "- `context/user-request.md`",
+                "",
+                "## Prompt pack",
+                "",
+                *[f"- `{item}`" for item in prompt_pack_paths],
             ]
         )
         + "\n",
         encoding="utf-8",
+    )
+
+
+def _touch_contract_references(
+    *,
+    repo_root: Path,
+    required_outputs: tuple[str, ...],
+    prompt_pack_paths: tuple[str, ...],
+) -> None:
+    documents_root = repo_root / "contracts" / "documents"
+    documents_root.mkdir(parents=True, exist_ok=True)
+    for output in required_outputs:
+        (documents_root / output).write_text("# Contract\n", encoding="utf-8")
+
+    for prompt_path in prompt_pack_paths:
+        target = repo_root / prompt_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("# Prompt\n", encoding="utf-8")
+
+
+def test_load_stage_manifest_parses_required_inputs_outputs(tmp_path: Path) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "stage-result.md")
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
     )
 
     manifest = load_stage_manifest(stage="idea", contracts_root=contracts_root)
@@ -52,6 +94,47 @@ def test_load_stage_manifest_fails_when_contract_file_missing(tmp_path: Path) ->
     contracts_root.mkdir(parents=True)
 
     with pytest.raises(StageManifestLoadError, match="not found"):
+        load_stage_manifest(stage="idea", contracts_root=contracts_root)
+
+
+def test_load_stage_manifest_fails_when_prompt_pack_reference_is_missing(tmp_path: Path) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "stage-result.md")
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_outputs=required_outputs,
+        prompt_pack_paths=("prompt-packs/stages/idea/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=(),
+    )
+
+    with pytest.raises(StageManifestLoadError, match="missing prompt-pack path"):
+        load_stage_manifest(stage="idea", contracts_root=contracts_root)
+
+
+def test_load_stage_manifest_fails_when_document_contract_is_missing(tmp_path: Path) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "stage-result.md")
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=prompt_paths,
+    )
+
+    with pytest.raises(StageManifestLoadError, match="missing document contract reference"):
         load_stage_manifest(stage="idea", contracts_root=contracts_root)
 
 
