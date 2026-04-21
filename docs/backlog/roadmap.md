@@ -211,7 +211,7 @@ Local tasks:
 - `W2-E1-S2-T2` (done) Define the required output documents and exit states for the `idea` stage.
 - `W2-E1-S2-T3` (done) Define stage-specific validation rules, including minimum completeness and no-placeholder requirements.
 - `W2-E1-S2-T4` (done) Define when `idea` may ask the user questions and which questions block progression.
-- `W2-E1-S2-T5` Create the `idea` prompt-pack scaffold with system, task, and repair instructions.
+- `W2-E1-S2-T5` (done) Create the `idea` prompt-pack scaffold with system, task, and repair instructions.
 - `W2-E1-S2-T6` Add one worked `idea` example bundle that matches the contract and prompt pack.
 
 Exit evidence:
