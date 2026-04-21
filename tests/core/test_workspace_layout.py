@@ -20,6 +20,7 @@ from aidd.core.workspace import (
     WORKSPACE_TRACES_REPLAYS_DIRNAME,
     WORKSPACE_TRACES_SESSIONS_DIRNAME,
     WORKSPACE_WORKITEMS_DIRNAME,
+    WorkspaceBootstrapService,
     create_workspace_tree,
     init_workspace,
     stage_input_root,
@@ -114,3 +115,13 @@ def test_create_workspace_tree_builds_canonical_directories(tmp_path: Path) -> N
     for stage in STAGES:
         assert (item_root / WORKITEM_STAGES_DIRNAME / stage / STAGE_INPUT_DIRNAME).exists()
         assert (item_root / WORKITEM_STAGES_DIRNAME / stage / STAGE_OUTPUT_DIRNAME).exists()
+
+
+def test_workspace_bootstrap_service_bootstraps_work_item(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    service = WorkspaceBootstrapService(root=root)
+
+    item_root = service.bootstrap_work_item(work_item="WI-001")
+
+    assert item_root == root / WORKSPACE_WORKITEMS_DIRNAME / "WI-001"
+    assert (item_root / WORKITEM_METADATA_FILENAME).exists()

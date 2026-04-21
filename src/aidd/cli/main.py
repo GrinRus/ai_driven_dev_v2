@@ -13,7 +13,7 @@ from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.generic_cli import probe as probe_generic_cli
 from aidd.config import load_config
 from aidd.core.stages import STAGES, is_valid_stage
-from aidd.core.workspace import init_workspace
+from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.harness.scenarios import load_scenario
 
 console = Console(no_color=True)
@@ -114,7 +114,8 @@ def init(
     ] = Path(".aidd"),
 ) -> None:
     """Create a starter AIDD workspace for one work item."""
-    work_item_root = init_workspace(root=root, work_item=work_item)
+    bootstrap_service = WorkspaceBootstrapService(root=root)
+    work_item_root = bootstrap_service.bootstrap_work_item(work_item=work_item)
     console.print(f"Initialized workspace: {work_item_root.resolve()}")
 
 

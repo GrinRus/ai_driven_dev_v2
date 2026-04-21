@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -192,3 +193,11 @@ def init_workspace(root: Path, work_item: str) -> Path:
                 file_path.write_text(content, encoding="utf-8")
 
     return item_root
+
+
+@dataclass(frozen=True)
+class WorkspaceBootstrapService:
+    root: Path
+
+    def bootstrap_work_item(self, work_item: str) -> Path:
+        return init_workspace(root=self.root, work_item=work_item)

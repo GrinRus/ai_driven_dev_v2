@@ -590,7 +590,7 @@ Local tasks:
 - `W3-E1-S1-T2` (done) Implement a reusable service that creates the workspace directory tree.
 - `W3-E1-S1-T3` (done) Implement starter document seeding for the first work item and default contract files.
 - `W3-E1-S1-T4` (done) Define and write the work-item metadata file with stable identifiers and timestamps.
-- `W3-E1-S1-T5` Refactor `aidd init` to use the new workspace bootstrap service.
+- `W3-E1-S1-T5` (done) Refactor `aidd init` to use the new workspace bootstrap service.
 - `W3-E1-S1-T6` Add bootstrap tests for fresh directories, existing directories, and partially initialized workspaces.
 
 Exit evidence:
