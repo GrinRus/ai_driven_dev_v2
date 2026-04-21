@@ -514,7 +514,7 @@ Dependencies:
 
 Local tasks:
 
-- `W2-E2-S2-T1` Implement required-document existence checks from stage manifests.
+- `W2-E2-S2-T1` (done) Implement required-document existence checks from stage manifests.
 - `W2-E2-S2-T2` Implement Markdown heading extraction for contract section validation.
 - `W2-E2-S2-T3` Implement required-section checks against common-document and stage-document contracts.
 - `W2-E2-S2-T4` Implement validator issue objects with stable codes, severity, and source location fields.
