@@ -71,6 +71,13 @@ optional when a destructive or policy-sensitive choice must be confirmed
 - default repair budget: 2 attempts after the initial run
 - repair uses the same target documents
 - every failed attempt must preserve validator findings and a repair brief
+- invalid-run handling:
+  - when validation fails, repair must target the root cause class (`missing diffs`, `unverifiable claims`, or `incomplete summary`) before adding new content,
+  - repaired outputs must keep previously valid sections unless they conflict with root-cause fixes.
+- no-op handling:
+  - no-op output is allowed only when selected task is already satisfied or blocked by explicit external constraints,
+  - no-op runs must include explicit justification, evidence, and next action in `implementation-report.md` and `stage-result.md`,
+  - no-op without evidence or actionable next step must fail validation and require repair.
 
 ## Prompt pack
 

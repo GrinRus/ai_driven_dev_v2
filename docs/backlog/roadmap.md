@@ -380,7 +380,7 @@ Local tasks:
 - `W2-E1-S7-T1` (done) Define the required `implement` inputs, including task selection, repository state, and allowed write scope.
 - `W2-E1-S7-T2` (done) Define the required `implement` outputs, including change summary, touched files, and verification notes.
 - `W2-E1-S7-T3` (done) Define validator rules for missing diffs, unverifiable claims, and incomplete execution summaries.
-- `W2-E1-S7-T4` Define repair expectations for invalid implementation runs and no-op outputs.
+- `W2-E1-S7-T4` (done) Define repair expectations for invalid implementation runs and no-op outputs.
 - `W2-E1-S7-T5` Create the `implement` prompt-pack scaffold with explicit edit and verification guidance.
 - `W2-E1-S7-T6` Add one worked `implement` example bundle with both success and repair-needed variants.
 
