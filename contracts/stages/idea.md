@@ -49,7 +49,30 @@ Validators for `idea` should check:
 
 ## Interview policy
 
-required when the problem statement, success criteria, or constraints are ambiguous
+`idea` may ask user questions only when required inputs are insufficient to produce a reliable `idea-brief.md`.
+
+Mandatory question triggers:
+
+- the core user or business problem is missing or ambiguous,
+- success criteria are missing, contradictory, or non-testable,
+- constraints are missing or contradictory where they can change scope, feasibility, or priority,
+- a high-impact assumption (for example compliance, security, budget, or deadline) cannot be grounded in the provided inputs.
+
+Blocking-question rules:
+
+- mark a question as `[blocking]` when the answer is required to produce truthful `Problem statement`, `Desired outcome`, or `Constraints` content,
+- mark a question as `[blocking]` when unresolved uncertainty can invalidate progression safety for downstream stages,
+- unresolved `[blocking]` questions must force the stage to exit as `blocked` (never `succeeded`).
+
+Non-blocking-question rules:
+
+- mark a question as `[non-blocking]` when the stage can proceed with an explicit, low-risk assumption,
+- when using `[non-blocking]`, record the assumption in `idea-brief.md` so downstream stages can revisit it.
+
+Question/answer document rules:
+
+- write every question to `questions.md` with a stable question id and marker (`[blocking]` or `[non-blocking]`),
+- treat a blocking question as resolved only when `answers.md` provides a matching `[resolved]` answer for the same question id.
 
 ## Repair policy
 
