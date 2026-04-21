@@ -152,6 +152,43 @@ def test_load_all_stage_manifests_reads_all_known_stages() -> None:
     assert manifests["qa"].stage == "qa"
 
 
+def test_load_all_stage_manifests_rejects_duplicate_declared_stage_ids(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "stage-result.md")
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    # second file declares the same stage id in heading
+    duplicate_file = contracts_root / "duplicate.md"
+    duplicate_file.write_text(
+        (contracts_root / "idea.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    with pytest.raises(StageManifestLoadError, match="Duplicate stage ids detected"):
+        load_all_stage_manifests(contracts_root=contracts_root)
+
+
 def test_resolve_required_input_documents_maps_context_and_upstream_paths(
     tmp_path: Path,
 ) -> None:

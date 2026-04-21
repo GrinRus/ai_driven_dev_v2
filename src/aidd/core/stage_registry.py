@@ -69,6 +69,13 @@ def _extract_paragraph(markdown_text: str, heading: str) -> str | None:
     return " ".join(parts)
 
 
+def _extract_declared_stage_id(markdown_text: str) -> str | None:
+    match = re.search(r"^# Stage Contract:\s*`([^`]+)`\s*$", markdown_text, re.MULTILINE)
+    if match is None:
+        return None
+    return match.group(1).strip()
+
+
 def _validate_stage_contract_references(
     *,
     required_inputs: tuple[str, ...],
@@ -109,6 +116,17 @@ def load_stage_manifest(
         raise StageManifestLoadError(f"Stage contract file not found: {contract_path}")
 
     markdown_text = contract_path.read_text(encoding="utf-8")
+    declared_stage = _extract_declared_stage_id(markdown_text)
+    if declared_stage is None:
+        raise StageManifestLoadError(
+            f"Missing stage contract heading in file: {contract_path}"
+        )
+    if declared_stage != stage:
+        raise StageManifestLoadError(
+            f"Stage contract heading mismatch in {contract_path}: "
+            f"expected '{stage}', declared '{declared_stage}'."
+        )
+
     required_inputs = _extract_bullets(markdown_text=markdown_text, heading="Required inputs")
     required_outputs = _extract_bullets(markdown_text=markdown_text, heading="Primary output")
     prompt_pack_paths = _extract_bullets(markdown_text=markdown_text, heading="Prompt pack")
@@ -137,6 +155,24 @@ def load_stage_manifest(
 def load_all_stage_manifests(
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> dict[str, StageManifest]:
+    declared_ids: dict[str, list[str]] = {}
+    for contract_path in contracts_root.glob("*.md"):
+        if contract_path.name == "AGENTS.md":
+            continue
+
+        declared = _extract_declared_stage_id(contract_path.read_text(encoding="utf-8"))
+        if not declared:
+            continue
+        declared_ids.setdefault(declared, []).append(contract_path.name)
+
+    duplicates = {stage_id: files for stage_id, files in declared_ids.items() if len(files) > 1}
+    if duplicates:
+        duplicate_text = ", ".join(
+            f"{stage_id} -> {', '.join(sorted(files))}"
+            for stage_id, files in sorted(duplicates.items())
+        )
+        raise StageManifestLoadError(f"Duplicate stage ids detected: {duplicate_text}")
+
     return {
         stage: load_stage_manifest(stage=stage, contracts_root=contracts_root)
         for stage in STAGES

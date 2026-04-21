@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E2-S1-T6` Add tests for valid manifests, missing references, and duplicate stage ids.
+- `W3-E2-S2-T1` Define the canonical stage states and legal transitions.
 
 ## Soon
 
-- `W3-E2-S2-T1` Define the canonical stage states and legal transitions.
+- `W3-E2-S2-T2` Implement preparation logic that assembles the stage brief and expected input bundle.
 
 ## Parking lot
 
