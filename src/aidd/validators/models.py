@@ -22,3 +22,4 @@ class MarkdownDocumentMetadata:
 class LoadedMarkdownDocument:
     body: str
     metadata: MarkdownDocumentMetadata
+    frontmatter: dict[str, str] | None = None

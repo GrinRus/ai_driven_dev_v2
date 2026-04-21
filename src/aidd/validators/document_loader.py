@@ -105,6 +105,39 @@ def resolve_stage_document_path(
     )
 
 
+def _parse_optional_frontmatter(raw_body: str) -> dict[str, str] | None:
+    lines = raw_body.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+
+    closing_index: int | None = None
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            closing_index = index
+            break
+
+    if closing_index is None:
+        raise DocumentLoadError("Frontmatter is missing a closing '---' delimiter.")
+
+    frontmatter: dict[str, str] = {}
+    for line in lines[1:closing_index]:
+        if not line.strip():
+            continue
+        if ":" not in line:
+            raise DocumentLoadError(f"Malformed frontmatter line: {line!r}")
+
+        key, value = line.split(":", maxsplit=1)
+        normalized_key = key.strip()
+        if not normalized_key:
+            raise DocumentLoadError(f"Malformed frontmatter key in line: {line!r}")
+        if normalized_key in frontmatter:
+            raise DocumentLoadError(f"Duplicate frontmatter key: {normalized_key}")
+
+        frontmatter[normalized_key] = value.strip()
+
+    return frontmatter
+
+
 def load_markdown_document(path: Path, workspace_root: Path) -> LoadedMarkdownDocument:
     resolved_workspace = workspace_root.resolve(strict=False)
     resolved_path = path.resolve(strict=False)
@@ -121,6 +154,7 @@ def load_markdown_document(path: Path, workspace_root: Path) -> LoadedMarkdownDo
         raise DocumentLoadError(f"Markdown path is not a file: {resolved_path}")
 
     body = resolved_path.read_text(encoding="utf-8")
+    frontmatter = _parse_optional_frontmatter(body)
     stat = resolved_path.stat()
     metadata = MarkdownDocumentMetadata(
         path=resolved_path,
@@ -128,4 +162,4 @@ def load_markdown_document(path: Path, workspace_root: Path) -> LoadedMarkdownDo
         size_bytes=stat.st_size,
         modified_time_epoch_s=stat.st_mtime,
     )
-    return LoadedMarkdownDocument(body=body, metadata=metadata)
+    return LoadedMarkdownDocument(body=body, metadata=metadata, frontmatter=frontmatter)

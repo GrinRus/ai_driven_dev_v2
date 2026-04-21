@@ -118,3 +118,37 @@ def test_load_markdown_document_rejects_missing_file(tmp_path: Path) -> None:
 
     with pytest.raises(DocumentLoadError, match="does not exist"):
         load_markdown_document(path=doc_path, workspace_root=workspace_root)
+
+
+def test_load_markdown_document_parses_optional_frontmatter(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    doc_path = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
+    doc_path.parent.mkdir(parents=True)
+    body = "---\ndoc_kind: aidd.plan\nstage: plan\n---\n# Plan\n\nBody.\n"
+    doc_path.write_text(body, encoding="utf-8")
+
+    loaded = load_markdown_document(path=doc_path, workspace_root=workspace_root)
+
+    assert loaded.frontmatter == {"doc_kind": "aidd.plan", "stage": "plan"}
+    assert loaded.body == body
+
+
+def test_load_markdown_document_keeps_frontmatter_optional(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    doc_path = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
+    doc_path.parent.mkdir(parents=True)
+    doc_path.write_text("# Plan\n\nNo frontmatter.\n", encoding="utf-8")
+
+    loaded = load_markdown_document(path=doc_path, workspace_root=workspace_root)
+
+    assert loaded.frontmatter is None
+
+
+def test_load_markdown_document_rejects_unclosed_frontmatter(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    doc_path = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
+    doc_path.parent.mkdir(parents=True)
+    doc_path.write_text("---\ndoc_kind: aidd.plan\nstage: plan\n# Plan\n", encoding="utf-8")
+
+    with pytest.raises(DocumentLoadError, match="closing '---' delimiter"):
+        load_markdown_document(path=doc_path, workspace_root=workspace_root)
