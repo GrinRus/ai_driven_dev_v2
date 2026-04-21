@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from aidd.validators.cross_document import (
@@ -68,6 +69,19 @@ def _touch_contract_references(
 
 def _stage_root(workspace_root: Path) -> Path:
     return workspace_root / "workitems" / "WI-001" / "stages" / "review"
+
+
+def _copy_example_bundle(
+    *,
+    example_root: Path,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> None:
+    stage_root = workspace_root / "workitems" / work_item / "stages" / stage
+    stage_root.mkdir(parents=True, exist_ok=True)
+    for source_path in example_root.glob("*.md"):
+        shutil.copy2(source_path, stage_root / source_path.name)
 
 
 def test_validate_cross_document_consistency_passes_for_consistent_bundle(tmp_path: Path) -> None:
@@ -413,6 +427,59 @@ def test_validate_cross_document_consistency_reports_exhausted_repair_budget(
             location=ValidationIssueLocation(
                 workspace_relative_path="workitems/WI-001/stages/review/stage-result.md",
                 line_number=7,
+            ),
+        ),
+    )
+
+
+def test_validate_cross_document_consistency_avoids_false_positive_on_answered_bundle(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _copy_example_bundle(
+        example_root=Path("contracts/examples/research/answered"),
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="research",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="research",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_cross_document_consistency_avoids_false_negative_on_unresolved_bundle(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _copy_example_bundle(
+        example_root=Path("contracts/examples/research/unresolved"),
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="research",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="research",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=BLOCKING_UNANSWERED_CODE,
+            message=(
+                "`Q1` is marked `[blocking]` and has no matching `[resolved]` answer in "
+                "`answers.md`."
+            ),
+            severity="critical",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/research/questions.md",
+                line_number=5,
             ),
         ),
     )

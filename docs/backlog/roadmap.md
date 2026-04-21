@@ -143,7 +143,7 @@ Local tasks:
 
 ---
 
-## Wave 2 — document contracts and validator foundations (`next`)
+## Wave 2 — document contracts and validator foundations (`done`)
 
 ### Epic W2-E1 — common and stage-specific contracts (`done`)
 Linked stories: `US-02`, `US-03`, `US-04`, `US-05`
@@ -458,10 +458,10 @@ Exit evidence:
 - `qa` produces a durable, auditable release-quality decision;
 - validators can block downstream verdict use when evidence is missing.
 
-### Epic W2-E2 — validator engine foundation (`next`)
+### Epic W2-E2 — validator engine foundation (`done`)
 Linked stories: `US-03`, `US-04`, `US-07`
 
-#### Slice W2-E2-S1 — markdown document loader (`next`)
+#### Slice W2-E2-S1 — markdown document loader (`done`)
 Goal: load and classify document artifacts from the workspace.
 
 Primary outputs:
@@ -526,7 +526,7 @@ Exit evidence:
 - structural validation can fail before runtime-specific interpretation happens;
 - validator reports are durable Markdown artifacts, not console-only output.
 
-#### Slice W2-E2-S3 — semantic and cross-document validation (`planned`)
+#### Slice W2-E2-S3 — semantic and cross-document validation (`done`)
 Goal: validate deeper contract rules after structural checks pass.
 
 Primary outputs:
@@ -551,7 +551,7 @@ Local tasks:
 - `W2-E2-S3-T2` (done) Implement cross-document consistency checks for questions, answers, repair briefs, and stage results.
 - `W2-E2-S3-T3` (done) Implement validation rules for unresolved blocking questions and exhausted repair budgets.
 - `W2-E2-S3-T4` (done) Add semantic regression fixtures with both valid and invalid document bundles.
-- `W2-E2-S3-T5` Add false-positive and false-negative tests for representative stage bundles.
+- `W2-E2-S3-T5` (done) Add false-positive and false-negative tests for representative stage bundles.
 
 Exit evidence:
 
