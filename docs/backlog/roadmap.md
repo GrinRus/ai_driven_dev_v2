@@ -654,7 +654,7 @@ Local tasks:
 - `W3-E1-S3-T1` (done) Implement helpers that resolve the latest run and latest attempt for a work item.
 - `W3-E1-S3-T2` (done) Implement helpers that resolve artifact paths for a named stage and attempt.
 - `W3-E1-S3-T3` (done) Implement resume guards that refuse to resume closed or corrupted runs.
-- `W3-E1-S3-T4` Expose run lookup in CLI-facing utilities used by later commands.
+- `W3-E1-S3-T4` (done) Expose run lookup in CLI-facing utilities used by later commands.
 - `W3-E1-S3-T5` Add tests for ambiguous runs, missing manifests, and resume-on-closed-run cases.
 
 Exit evidence:
