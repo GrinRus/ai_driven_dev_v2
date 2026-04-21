@@ -733,7 +733,7 @@ Exit evidence:
 - stage progression is modeled explicitly rather than hidden in CLI branching;
 - every terminal state leaves durable stage metadata behind.
 
-#### Slice W3-E2-S3 — stage dependency resolution and advancement (`planned`)
+#### Slice W3-E2-S3 — stage dependency resolution and advancement (`done`)
 Goal: decide whether a stage may run and which stage should run next.
 
 Primary outputs:
@@ -758,7 +758,7 @@ Local tasks:
 - `W3-E2-S3-T2` (done) Implement eligibility checks for missing prerequisites, blocked questions, and failed required stages.
 - `W3-E2-S3-T3` (done) Implement the selection of the next runnable stage in a workflow sequence.
 - `W3-E2-S3-T4` (done) Implement advancement summaries that explain why a stage can or cannot run.
-- `W3-E2-S3-T5` Add dependency-resolution tests for branching, skipped stages, and blocked upstream states.
+- `W3-E2-S3-T5` (done) Add dependency-resolution tests for branching, skipped stages, and blocked upstream states.
 
 Exit evidence:
 

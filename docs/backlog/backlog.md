@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E2-S3-T5` Add dependency-resolution tests for branching, skipped stages, and blocked upstream states.
+- `W3-E3-S1-T1` Implement the interview policy model that distinguishes blocking and non-blocking questions.
 
 ## Soon
 
-- `W3-E3-S1-T1` Implement the interview policy model that distinguishes blocking and non-blocking questions.
+- `W3-E3-S1-T2` Implement persistence of `questions.md` from stage output or adapter-detected question events.
 
 ## Parking lot
 
