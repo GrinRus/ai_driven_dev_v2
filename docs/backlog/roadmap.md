@@ -219,7 +219,7 @@ Exit evidence:
 - `idea` can be run document-first with explicit input/output requirements;
 - a validator can determine whether an `idea` result is acceptable without runtime-specific knowledge.
 
-#### Slice W2-E1-S3 — `research` stage contract (`planned`)
+#### Slice W2-E1-S3 — `research` stage contract (`done`)
 Goal: define the research stage as a durable document exchange rather than an adapter-specific behavior.
 
 Primary outputs:
@@ -246,7 +246,7 @@ Local tasks:
 - `W2-E1-S3-T3` (done) Define `research` validator rules for source grounding, uncertainty notes, and stale-fact handling.
 - `W2-E1-S3-T4` (done) Define `research` interview triggers for missing constraints, target repos, or ambiguous goals.
 - `W2-E1-S3-T5` (done) Create the `research` prompt-pack scaffold, including explicit evidence and question-generation guidance.
-- `W2-E1-S3-T6` Add one worked `research` example bundle that includes unresolved-question and answered-question variants.
+- `W2-E1-S3-T6` (done) Add one worked `research` example bundle that includes unresolved-question and answered-question variants.
 
 Exit evidence:
 
