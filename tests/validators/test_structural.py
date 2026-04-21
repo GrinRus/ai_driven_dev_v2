@@ -5,6 +5,9 @@ from pathlib import Path
 from aidd.validators.models import ValidationFinding
 from aidd.validators.structural import (
     MISSING_REQUIRED_DOCUMENT_CODE,
+    MarkdownHeading,
+    extract_document_headings,
+    extract_markdown_headings,
     validate_required_document_existence,
 )
 
@@ -186,4 +189,56 @@ def test_validate_required_document_existence_deduplicates_manifest_paths(tmp_pa
             code=MISSING_REQUIRED_DOCUMENT_CODE,
             message="Missing required document: workitems/WI-001/stages/qa/stage-result.md",
         ),
+    )
+
+
+def test_extract_markdown_headings_returns_level_title_and_line_number() -> None:
+    markdown = """# QA Report
+Intro paragraph.
+
+```md
+## Ignored heading in fence
+```
+
+## Residual risks ##
+### Follow-up checks
+#NoSpaceHeading
+    ## Indented code line
+"""
+
+    headings = extract_markdown_headings(markdown)
+
+    assert headings == (
+        MarkdownHeading(level=1, title="QA Report", line_number=1),
+        MarkdownHeading(level=2, title="Residual risks", line_number=8),
+        MarkdownHeading(level=3, title="Follow-up checks", line_number=9),
+    )
+
+
+def test_extract_document_headings_reads_workspace_markdown(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    doc_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    doc_path.parent.mkdir(parents=True)
+    doc_path.write_text(
+        "\n".join(
+            [
+                "---",
+                "doc_kind: qa-report",
+                "---",
+                "# QA Report",
+                "",
+                "## Release recommendation",
+                "",
+                "Body.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    headings = extract_document_headings(path=doc_path, workspace_root=workspace_root)
+
+    assert headings == (
+        MarkdownHeading(level=1, title="QA Report", line_number=4),
+        MarkdownHeading(level=2, title="Release recommendation", line_number=6),
     )
