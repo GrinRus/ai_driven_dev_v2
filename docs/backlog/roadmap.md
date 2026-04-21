@@ -755,7 +755,7 @@ Dependencies:
 Local tasks:
 
 - `W3-E2-S3-T1` (done) Implement stage dependency resolution from manifest-declared upstream stages.
-- `W3-E2-S3-T2` Implement eligibility checks for missing prerequisites, blocked questions, and failed required stages.
+- `W3-E2-S3-T2` (done) Implement eligibility checks for missing prerequisites, blocked questions, and failed required stages.
 - `W3-E2-S3-T3` Implement the selection of the next runnable stage in a workflow sequence.
 - `W3-E2-S3-T4` Implement advancement summaries that explain why a stage can or cannot run.
 - `W3-E2-S3-T5` Add dependency-resolution tests for branching, skipped stages, and blocked upstream states.

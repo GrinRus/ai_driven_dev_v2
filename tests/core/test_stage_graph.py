@@ -5,12 +5,15 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core.run_store import create_run_manifest, persist_stage_status
 from aidd.core.stage_graph import (
     StageDependencyResolutionError,
+    evaluate_stage_eligibility,
     resolve_stage_dependencies,
     resolve_stage_dependency_graph,
 )
 from aidd.core.stages import STAGES, stage_index
+from aidd.core.state_machine import StageState
 
 
 def _copy_contract_workspace(tmp_path: Path) -> Path:
@@ -48,3 +51,104 @@ def test_resolve_stage_dependencies_rejects_unknown_upstream_stage(tmp_path: Pat
 
     with pytest.raises(StageDependencyResolutionError, match="Unknown upstream stage"):
         resolve_stage_dependencies("plan", contracts_root=contracts_root)
+
+
+def test_evaluate_stage_eligibility_reports_missing_prerequisites(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+
+    eligibility = evaluate_stage_eligibility(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert eligibility.dependencies == ("idea", "research")
+    assert eligibility.missing_prerequisites == ("idea", "research")
+    assert eligibility.blocked_upstream_stages == ()
+    assert eligibility.failed_upstream_stages == ()
+    assert eligibility.is_eligible is False
+
+
+def test_evaluate_stage_eligibility_reports_blocked_and_failed_upstream(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="idea",
+        status=StageState.BLOCKED.value,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="research",
+        status=StageState.FAILED.value,
+    )
+
+    eligibility = evaluate_stage_eligibility(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert eligibility.missing_prerequisites == ()
+    assert eligibility.blocked_upstream_stages == ("idea",)
+    assert eligibility.failed_upstream_stages == ("research",)
+    assert eligibility.is_eligible is False
+
+
+def test_evaluate_stage_eligibility_accepts_satisfied_dependencies(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="idea",
+        status=StageState.SUCCEEDED.value,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="research",
+        status=StageState.SUCCEEDED.value,
+    )
+
+    eligibility = evaluate_stage_eligibility(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert eligibility.missing_prerequisites == ()
+    assert eligibility.blocked_upstream_stages == ()
+    assert eligibility.failed_upstream_stages == ()
+    assert eligibility.is_eligible is True

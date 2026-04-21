@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E2-S3-T2` Implement eligibility checks for missing prerequisites, blocked questions, and failed required stages.
+- `W3-E2-S3-T3` Implement the selection of the next runnable stage in a workflow sequence.
 
 ## Soon
 
-- `W3-E2-S3-T3` Implement the selection of the next runnable stage in a workflow sequence.
+- `W3-E2-S3-T4` Implement advancement summaries that explain why a stage can or cannot run.
 
 ## Parking lot
 
