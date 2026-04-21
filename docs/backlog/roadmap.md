@@ -321,7 +321,7 @@ Exit evidence:
 - the `review-spec` stage can block downstream work with durable review artifacts;
 - validators can distinguish actionable spec review from shallow commentary.
 
-#### Slice W2-E1-S6 — `tasklist` stage contract (`next`)
+#### Slice W2-E1-S6 — `tasklist` stage contract (`done`)
 Goal: define the stage that converts approved plans into concrete engineering tasks.
 
 Primary outputs:
@@ -348,7 +348,7 @@ Local tasks:
 - `W2-E1-S6-T3` (done) Define validator rules for task independence, ordering clarity, and reviewability.
 - `W2-E1-S6-T4` (done) Define interview triggers for unresolved sequencing or staffing assumptions.
 - `W2-E1-S6-T5` (done) Create the `tasklist` prompt-pack scaffold.
-- `W2-E1-S6-T6` Add one worked `tasklist` example bundle.
+- `W2-E1-S6-T6` (done) Add one worked `tasklist` example bundle.
 
 Exit evidence:
 
