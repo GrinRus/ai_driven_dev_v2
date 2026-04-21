@@ -35,6 +35,16 @@ Optional context documents may improve implementation quality, but they must not
 - `implement` must not declare `succeeded` when selected task id is missing from `tasklist.md`.
 - `implement` must not declare `succeeded` when edits exceed `context/allowed-write-scope.md` or the scope definition is missing.
 
+## Implementation output expectations
+
+- `implementation-report.md` must include:
+  - an explicit change summary mapped to the selected task id,
+  - a touched-files list with file path and short change intent per entry,
+  - verification notes naming the primary checks executed and their outcomes,
+  - follow-up notes for known residual risks or deferred non-blocking items.
+- touched-files entries must stay within `context/allowed-write-scope.md`.
+- `stage-result.md` and `validator-report.md` must remain consistent with declared verification outcomes.
+
 ## Validation focus
 
 Validators for `implement` should check:
