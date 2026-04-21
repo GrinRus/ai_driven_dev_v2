@@ -547,7 +547,7 @@ Dependencies:
 
 Local tasks:
 
-- `W2-E2-S3-T1` Implement stage-specific semantic validators for completeness, unsupported claims, and placeholder detection.
+- `W2-E2-S3-T1` (done) Implement stage-specific semantic validators for completeness, unsupported claims, and placeholder detection.
 - `W2-E2-S3-T2` Implement cross-document consistency checks for questions, answers, repair briefs, and stage results.
 - `W2-E2-S3-T3` Implement validation rules for unresolved blocking questions and exhausted repair budgets.
 - `W2-E2-S3-T4` Add semantic regression fixtures with both valid and invalid document bundles.
