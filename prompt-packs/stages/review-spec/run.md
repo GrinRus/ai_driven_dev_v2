@@ -28,3 +28,11 @@ Review whether the plan is coherent, safe, and ready to decompose into tasks.
 5. Write or update `stage-result.md` and `validator-report.md` so status and readiness state are consistent.
 6. If plan artifacts or review context are missing or contradictory, raise a question instead of inventing assumptions.
 7. Keep the output useful for downstream task decomposition rather than merely well-formatted.
+
+## Completion checklist
+
+- issue list items are concrete, severity-tagged, and rationale-backed,
+- recommendation summary is prioritized and actionable,
+- readiness state, decision, and sign-off status are mutually consistent,
+- required changes map to identified issues,
+- stage status and validator summary agree with the report outcome.
