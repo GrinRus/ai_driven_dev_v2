@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core.repair import RepairBudgetPolicy
 from aidd.core.run_store import (
     create_run_manifest,
     persist_stage_status,
@@ -14,11 +15,13 @@ from aidd.core.run_store import (
 )
 from aidd.core.stage_runner import (
     PostValidationAction,
+    RepairBudgetValidationTransition,
     StageValidationState,
     ValidationVerdict,
     decide_post_validation_transition,
     persist_execution_state,
     persist_validation_state,
+    persist_validation_state_with_repair_budget,
     prepare_adapter_invocation,
     prepare_stage_bundle,
     update_stage_unblock_state,
@@ -372,6 +375,103 @@ def test_persist_validation_state_rejects_illegal_transition(tmp_path: Path) -> 
         stage="plan",
     )
     assert not metadata_path.exists()
+
+
+def test_persist_validation_state_with_repair_budget_keeps_repair_when_budget_remains(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+
+    transition = persist_validation_state_with_repair_budget(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=ValidationVerdict.REPAIR,
+        repair_policy=RepairBudgetPolicy(default_max_repair_attempts=2),
+    )
+
+    assert isinstance(transition, RepairBudgetValidationTransition)
+    assert transition.requested_verdict is ValidationVerdict.REPAIR
+    assert transition.resolved_verdict is ValidationVerdict.REPAIR
+    assert transition.budget_exhausted is False
+    assert transition.remaining_repair_attempts == 2
+    assert transition.validation_state.next_state is StageState.REPAIR_NEEDED
+
+
+def test_persist_validation_state_with_repair_budget_forces_fail_when_exhausted(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+
+    transition = persist_validation_state_with_repair_budget(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=ValidationVerdict.REPAIR,
+        repair_policy=RepairBudgetPolicy(default_max_repair_attempts=2),
+    )
+
+    assert transition.requested_verdict is ValidationVerdict.REPAIR
+    assert transition.resolved_verdict is ValidationVerdict.FAIL
+    assert transition.budget_exhausted is True
+    assert transition.remaining_repair_attempts == 0
+    assert transition.validation_state.next_state is StageState.FAILED
 
 
 @pytest.mark.parametrize(

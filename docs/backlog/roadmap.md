@@ -830,7 +830,7 @@ Local tasks:
 - `W3-E3-S2-T2` (done) Implement generation of `repair-brief.md` from a validator report and prior stage artifacts.
 - `W3-E3-S2-T3` (done) Implement rerun preparation that injects repair context into the next adapter invocation.
 - `W3-E3-S2-T4` (done) Implement durable repair-history recording in stage metadata and `stage-result.md`.
-- `W3-E3-S2-T5` Implement terminal blocking when the repair budget is exhausted.
+- `W3-E3-S2-T5` (done) Implement terminal blocking when the repair budget is exhausted.
 - `W3-E3-S2-T6` Add tests for one-shot repair success, repeated repair failure, and exhausted-budget blocking.
 
 Exit evidence:

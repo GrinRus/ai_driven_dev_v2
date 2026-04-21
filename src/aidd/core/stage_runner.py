@@ -6,6 +6,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from aidd.core.interview import stage_has_unresolved_blocking_questions
+from aidd.core.repair import RepairBudgetPolicy, evaluate_stage_repair_counter
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     create_next_attempt_directory,
@@ -71,6 +72,18 @@ class StageValidationState:
     verdict: ValidationVerdict
     next_state: StageState
     stage_metadata_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class RepairBudgetValidationTransition:
+    stage: str
+    work_item: str
+    run_id: str
+    requested_verdict: ValidationVerdict
+    resolved_verdict: ValidationVerdict
+    budget_exhausted: bool
+    remaining_repair_attempts: int | None
+    validation_state: StageValidationState
 
 
 class PostValidationAction(StrEnum):
@@ -333,6 +346,55 @@ def persist_validation_state(
         verdict=verdict,
         next_state=next_state,
         stage_metadata_path=stage_metadata_path,
+    )
+
+
+def persist_validation_state_with_repair_budget(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    verdict: ValidationVerdict,
+    repair_policy: RepairBudgetPolicy | None = None,
+    from_state: StageState = StageState.VALIDATING,
+    changed_at_utc: datetime | None = None,
+) -> RepairBudgetValidationTransition:
+    resolved_verdict = verdict
+    budget_exhausted = False
+    remaining_repair_attempts: int | None = None
+
+    if verdict is ValidationVerdict.REPAIR:
+        repair_counter = evaluate_stage_repair_counter(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            policy=repair_policy,
+        )
+        budget_exhausted = repair_counter.budget_exhausted
+        remaining_repair_attempts = repair_counter.remaining_repair_attempts
+        if budget_exhausted:
+            resolved_verdict = ValidationVerdict.FAIL
+
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        verdict=resolved_verdict,
+        from_state=from_state,
+        changed_at_utc=changed_at_utc,
+    )
+    return RepairBudgetValidationTransition(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        requested_verdict=verdict,
+        resolved_verdict=resolved_verdict,
+        budget_exhausted=budget_exhausted,
+        remaining_repair_attempts=remaining_repair_attempts,
+        validation_state=validation_state,
     )
 
 
