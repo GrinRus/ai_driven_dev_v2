@@ -13,6 +13,7 @@ def test_doctor_runs() -> None:
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0
     assert "AIDD doctor" in result.stdout
+    assert "generic-cli capabilities" in result.stdout
 
 
 def test_init_creates_workspace(tmp_path: Path) -> None:

@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from aidd import __version__
+from aidd.adapters.base import CapabilityReport
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.generic_cli import probe as probe_generic_cli
 from aidd.config import load_config
@@ -27,6 +28,21 @@ eval_app = typer.Typer(help="Eval and harness commands.", add_completion=False)
 
 app.add_typer(stage_app, name="stage")
 app.add_typer(eval_app, name="eval")
+
+
+def _capability_summary(report: CapabilityReport) -> str:
+    capability_pairs = (
+        ("raw-log", report.supports_raw_log_stream),
+        ("structured-log", report.supports_structured_log_stream),
+        ("questions", report.supports_questions),
+        ("resume", report.supports_resume),
+        ("subagents", report.supports_subagents),
+        ("non-interactive", report.supports_non_interactive_mode),
+        ("cwd-control", report.supports_working_directory_control),
+        ("env-injection", report.supports_env_injection),
+    )
+    enabled = [name for name, is_enabled in capability_pairs if is_enabled]
+    return ", ".join(enabled) if enabled else "none"
 
 
 def _version_callback(value: bool) -> None:
@@ -70,6 +86,8 @@ def doctor(
     table.add_row("Workspace root", str(cfg.workspace_root))
     table.add_row("generic-cli command", generic.command)
     table.add_row("generic-cli available", "yes" if generic.available else "no")
+    table.add_row("generic-cli version", generic.version_text or "unknown")
+    table.add_row("generic-cli capabilities", _capability_summary(generic))
     table.add_row("claude-code command", claude.command)
     table.add_row("claude-code available", "yes" if claude.available else "no")
     table.add_row("log mode", cfg.log_mode)
