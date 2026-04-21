@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E2-S1-T1` Define the Python model for a stage manifest and its required input/output declarations.
+- `W3-E2-S1-T2` Implement loading of stage manifests from `contracts/stages/`.
 
 ## Soon
 
-- `W3-E2-S1-T2` Implement loading of stage manifests from `contracts/stages/`.
+- `W3-E2-S1-T3` Implement validation of manifest references to document contracts and prompt-pack paths.
 
 ## Parking lot
 
