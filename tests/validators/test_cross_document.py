@@ -4,9 +4,11 @@ from pathlib import Path
 
 from aidd.validators.cross_document import (
     ANSWER_WITHOUT_QUESTION_CODE,
+    BLOCKING_UNANSWERED_CODE,
     DUPLICATE_ANSWER_ID_CODE,
     DUPLICATE_QUESTION_ID_CODE,
     REPAIR_BRIEF_NOT_REFERENCED_CODE,
+    REPAIR_BUDGET_EXHAUSTED_CODE,
     REPAIR_MENTION_WITHOUT_BRIEF_CODE,
     validate_cross_document_consistency,
 )
@@ -129,7 +131,10 @@ def test_validate_cross_document_consistency_reports_answer_without_question(
     workspace_root = tmp_path / ".aidd"
     stage_root = _stage_root(workspace_root)
     stage_root.mkdir(parents=True, exist_ok=True)
-    (stage_root / "questions.md").write_text("# Questions\n\n- `Q1` `[blocking]` Confirm scope.\n")
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n- `Q1` `[non-blocking]` Confirm scope.\n",
+        encoding="utf-8",
+    )
     (stage_root / "answers.md").write_text(
         "# Answers\n\n- `Q9` `[resolved]` Scope is confirmed.\n",
         encoding="utf-8",
@@ -287,6 +292,127 @@ def test_validate_cross_document_consistency_reports_repair_mismatch_cases(
             severity="medium",
             location=ValidationIssueLocation(
                 workspace_relative_path="workitems/WI-001/stages/review/stage-result.md",
+            ),
+        ),
+    )
+
+
+def test_validate_cross_document_consistency_reports_unresolved_blocking_question(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n- `Q1` `[blocking]` Confirm scope.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        "# Answers\n\n- `Q1` `[partial]` Scope details are pending legal review.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "stage-result.md").write_text(
+        "# Stage\n\nreview\n\n## Status\n\n- `succeeded`\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=BLOCKING_UNANSWERED_CODE,
+            message=(
+                "`Q1` is marked `[blocking]` and has no matching `[resolved]` answer in "
+                "`answers.md`. Stage status must not be `succeeded` while blocking questions "
+                "remain."
+            ),
+            severity="critical",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/review/questions.md",
+                line_number=3,
+            ),
+        ),
+    )
+
+
+def test_validate_cross_document_consistency_reports_exhausted_repair_budget(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "stage-result.md").write_text(
+        (
+            "# Stage\n\nreview\n\n"
+            "## Status\n\n"
+            "- `blocked`\n\n"
+            "## Terminal state notes\n\n"
+            "- See `repair-brief.md` for the final exhausted-budget decision context.\n"
+        ),
+        encoding="utf-8",
+    )
+    (stage_root / "repair-brief.md").write_text(
+        "# Failed checks\n\n"
+        "- `SEM-PLACEHOLDER-CONTENT` (`high`) in `workitems/WI-001/stages/review/plan.md`.\n\n"
+        "## Required corrections\n\n"
+        "- Remove placeholder text and rerun checks.\n\n"
+        "## Relevant upstream docs\n\n"
+        "- `questions.md`\n\n"
+        "repair-budget-exhausted\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=REPAIR_BUDGET_EXHAUSTED_CODE,
+            message=(
+                "`repair-brief.md` declares `repair-budget-exhausted`; stage-result.md status "
+                "must be `failed`."
+            ),
+            severity="critical",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/review/stage-result.md",
+                line_number=7,
             ),
         ),
     )
