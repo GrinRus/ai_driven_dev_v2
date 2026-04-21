@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W2-E2-S1-T4` Implement document-type classification from path and filename conventions.
+- `W4-E1-S1-T2` Capture version or identity information from the discovered CLI.
 
 ## Soon
 
-- `W4-E1-S1-T2` Capture version or identity information from the discovered CLI.
 - `W4-E2-S1-T2` Capture version or identity information from the Claude Code CLI.
 
 ## Parking lot

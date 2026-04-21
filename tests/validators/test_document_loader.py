@@ -7,6 +7,7 @@ import pytest
 from aidd.validators.document_loader import (
     DocumentLoadError,
     DocumentPathError,
+    classify_document_type,
     load_markdown_document,
     resolve_common_document_path,
     resolve_stage_document_path,
@@ -98,6 +99,7 @@ def test_load_markdown_document_returns_raw_body_and_metadata(tmp_path: Path) ->
     assert loaded.metadata.workspace_relative_path == Path(
         "workitems/WI-001/stages/plan/output/plan.md"
     )
+    assert loaded.metadata.document_type == "stage-output"
     assert loaded.metadata.size_bytes == len(body.encode("utf-8"))
     assert loaded.metadata.modified_time_epoch_s > 0
 
@@ -152,3 +154,18 @@ def test_load_markdown_document_rejects_unclosed_frontmatter(tmp_path: Path) -> 
 
     with pytest.raises(DocumentLoadError, match="closing '---' delimiter"):
         load_markdown_document(path=doc_path, workspace_root=workspace_root)
+
+
+def test_classify_document_type_detects_common_document() -> None:
+    path = Path("workitems/WI-001/stages/plan/stage-result.md")
+    assert classify_document_type(path) == "common:stage-result"
+
+
+def test_classify_document_type_detects_stage_input_document() -> None:
+    path = Path("workitems/WI-001/stages/plan/input/research-notes.md")
+    assert classify_document_type(path) == "stage-input"
+
+
+def test_classify_document_type_returns_unknown_for_non_stage_path() -> None:
+    path = Path("reports/evals/run-001/validator-report.md")
+    assert classify_document_type(path) == "unknown"

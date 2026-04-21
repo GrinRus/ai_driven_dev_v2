@@ -138,6 +138,27 @@ def _parse_optional_frontmatter(raw_body: str) -> dict[str, str] | None:
     return frontmatter
 
 
+def classify_document_type(workspace_relative_path: Path) -> str:
+    parts = workspace_relative_path.parts
+    if len(parts) < 5:
+        return "unknown"
+    if parts[0] != "workitems" or parts[2] != "stages":
+        return "unknown"
+
+    stage_local_parts = parts[4:]
+    if len(stage_local_parts) == 1 and stage_local_parts[0] in _COMMON_DOCUMENTS:
+        doc_name = stage_local_parts[0].removesuffix(".md")
+        return f"common:{doc_name}"
+    if (
+        len(stage_local_parts) >= 2
+        and stage_local_parts[0] in _STAGE_IO_DIRECTORIES
+        and workspace_relative_path.suffix.lower() == ".md"
+    ):
+        return f"stage-{stage_local_parts[0]}"
+
+    return "unknown"
+
+
 def load_markdown_document(path: Path, workspace_root: Path) -> LoadedMarkdownDocument:
     resolved_workspace = workspace_root.resolve(strict=False)
     resolved_path = path.resolve(strict=False)
@@ -156,9 +177,11 @@ def load_markdown_document(path: Path, workspace_root: Path) -> LoadedMarkdownDo
     body = resolved_path.read_text(encoding="utf-8")
     frontmatter = _parse_optional_frontmatter(body)
     stat = resolved_path.stat()
+    workspace_relative_path = resolved_path.relative_to(resolved_workspace)
     metadata = MarkdownDocumentMetadata(
         path=resolved_path,
-        workspace_relative_path=resolved_path.relative_to(resolved_workspace),
+        workspace_relative_path=workspace_relative_path,
+        document_type=classify_document_type(workspace_relative_path),
         size_bytes=stat.st_size,
         modified_time_epoch_s=stat.st_mtime,
     )

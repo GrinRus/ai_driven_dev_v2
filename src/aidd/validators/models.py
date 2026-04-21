@@ -14,6 +14,7 @@ class ValidationFinding:
 class MarkdownDocumentMetadata:
     path: Path
     workspace_relative_path: Path
+    document_type: str
     size_bytes: int
     modified_time_epoch_s: float
 
