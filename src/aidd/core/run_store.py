@@ -6,12 +6,19 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from aidd.core.models.run import StageRunMetadata
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_RUNS_DIRNAME
 
 RUN_STAGES_DIRNAME = "stages"
 RUN_ATTEMPTS_DIRNAME = "attempts"
 RUN_ATTEMPT_PREFIX = "attempt-"
 RUN_MANIFEST_FILENAME = "run-manifest.json"
+RUN_STAGE_METADATA_FILENAME = "stage-metadata.json"
+
+
+def _format_utc_timestamp(timestamp: datetime | None = None) -> str:
+    moment = (timestamp or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0)
+    return moment.isoformat().replace("+00:00", "Z")
 
 
 def run_store_root(workspace_root: Path) -> Path:
@@ -143,6 +150,110 @@ def run_manifest_path(workspace_root: Path, work_item: str, run_id: str) -> Path
     )
 
 
+def run_stage_metadata_path(workspace_root: Path, work_item: str, run_id: str, stage: str) -> Path:
+    return run_stage_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    ) / RUN_STAGE_METADATA_FILENAME
+
+
+def load_stage_metadata(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> StageRunMetadata | None:
+    metadata_path = run_stage_metadata_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if not metadata_path.exists():
+        return None
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    return StageRunMetadata.from_dict(payload)
+
+
+def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _touch_manifest_timestamp(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    updated_at_utc: str,
+) -> None:
+    manifest_path = run_manifest_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
+    if not manifest_path.exists():
+        return
+
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["updated_at_utc"] = updated_at_utc
+    _write_json_payload(manifest_path, payload)
+
+
+def persist_stage_status(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    status: str,
+    *,
+    changed_at_utc: datetime | None = None,
+) -> Path:
+    if not status.strip():
+        raise ValueError("Status must be a non-empty string.")
+
+    timestamp = _format_utc_timestamp(changed_at_utc)
+    stage_root = run_stage_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    stage_root.mkdir(parents=True, exist_ok=True)
+    metadata_path = run_stage_metadata_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+
+    existing = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if existing is None:
+        metadata = StageRunMetadata.create(
+            run_id=run_id,
+            work_item_id=work_item,
+            stage=stage,
+            status=status,
+            changed_at_utc=timestamp,
+        )
+    else:
+        metadata = existing.with_status(status=status, changed_at_utc=timestamp)
+
+    _write_json_payload(metadata_path, metadata.to_dict())
+    _touch_manifest_timestamp(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        updated_at_utc=timestamp,
+    )
+    return metadata_path
+
+
 def create_run_manifest(
     workspace_root: Path,
     work_item: str,
@@ -166,7 +277,7 @@ def create_run_manifest(
         stage=stage_target,
     ).mkdir(parents=True, exist_ok=True)
 
-    now = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    now = _format_utc_timestamp()
     payload = {
         "schema_version": 1,
         "run_id": run_id,
@@ -177,7 +288,7 @@ def create_run_manifest(
         "created_at_utc": now,
         "updated_at_utc": now,
     }
-    manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_payload(manifest_path, payload)
     return manifest_path
 
 
@@ -223,4 +334,28 @@ class RunStore:
             work_item=self.work_item,
             run_id=self.run_id,
             stage=stage,
+        )
+
+    def stage_metadata_path(self, stage: str) -> Path:
+        return run_stage_metadata_path(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=self.run_id,
+            stage=stage,
+        )
+
+    def persist_stage_status(
+        self,
+        stage: str,
+        status: str,
+        *,
+        changed_at_utc: datetime | None = None,
+    ) -> Path:
+        return persist_stage_status(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=self.run_id,
+            stage=stage,
+            status=status,
+            changed_at_utc=changed_at_utc,
         )

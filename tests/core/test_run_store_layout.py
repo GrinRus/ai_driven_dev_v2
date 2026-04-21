@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -8,14 +9,18 @@ import pytest
 from aidd.core.run_store import (
     RUN_ATTEMPTS_DIRNAME,
     RUN_MANIFEST_FILENAME,
+    RUN_STAGE_METADATA_FILENAME,
     RUN_STAGES_DIRNAME,
     RunStore,
     create_next_attempt_directory,
     create_run_manifest,
     format_attempt_directory_name,
     next_attempt_number,
+    persist_stage_status,
     run_attempt_root,
+    run_manifest_path,
     run_root,
+    run_stage_metadata_path,
     run_stage_root,
     run_stages_root,
     run_store_root,
@@ -113,3 +118,97 @@ def test_create_next_attempt_directory_uses_monotonic_numbering(tmp_path: Path) 
     )
 
     assert created.name == "attempt-0004"
+
+
+def test_persist_stage_status_creates_stage_metadata_and_touches_manifest(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-001"
+    run_id = "run-001"
+    stage = "plan"
+    changed_at = datetime(2026, 4, 21, 10, 0, tzinfo=UTC)
+
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id="generic-cli",
+        stage_target=stage,
+        config_snapshot={"mode": "test"},
+    )
+    metadata_path = persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        status="running",
+        changed_at_utc=changed_at,
+    )
+
+    assert metadata_path == run_stage_metadata_path(workspace_root, work_item, run_id, stage)
+    assert metadata_path.name == RUN_STAGE_METADATA_FILENAME
+
+    metadata_payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata_payload["run_id"] == run_id
+    assert metadata_payload["work_item_id"] == work_item
+    assert metadata_payload["stage"] == stage
+    assert metadata_payload["status"] == "running"
+    assert metadata_payload["created_at_utc"] == "2026-04-21T10:00:00Z"
+    assert metadata_payload["updated_at_utc"] == "2026-04-21T10:00:00Z"
+    assert metadata_payload["status_history"] == [
+        {"status": "running", "changed_at_utc": "2026-04-21T10:00:00Z"}
+    ]
+
+    manifest_payload = json.loads(
+        run_manifest_path(workspace_root, work_item, run_id).read_text(encoding="utf-8")
+    )
+    assert manifest_payload["updated_at_utc"] == "2026-04-21T10:00:00Z"
+
+
+def test_persist_stage_status_is_history_aware_across_status_transitions(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-001"
+    run_id = "run-001"
+    stage = "plan"
+
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id="generic-cli",
+        stage_target=stage,
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        status="running",
+        changed_at_utc=datetime(2026, 4, 21, 10, 0, tzinfo=UTC),
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        status="running",
+        changed_at_utc=datetime(2026, 4, 21, 10, 5, tzinfo=UTC),
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        status="passed",
+        changed_at_utc=datetime(2026, 4, 21, 10, 8, tzinfo=UTC),
+    )
+
+    metadata_path = run_stage_metadata_path(workspace_root, work_item, run_id, stage)
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "passed"
+    assert payload["created_at_utc"] == "2026-04-21T10:00:00Z"
+    assert payload["updated_at_utc"] == "2026-04-21T10:08:00Z"
+    assert payload["status_history"] == [
+        {"status": "running", "changed_at_utc": "2026-04-21T10:00:00Z"},
+        {"status": "passed", "changed_at_utc": "2026-04-21T10:08:00Z"},
+    ]

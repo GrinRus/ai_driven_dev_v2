@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E1-S2-T4` Persist stage status changes and timestamps in durable metadata files.
+- `W3-E1-S2-T5` Implement an artifact index that records canonical paths for stage documents and logs.
 
 ## Soon
 
-- `W3-E1-S2-T5` Implement an artifact index that records canonical paths for stage documents and logs.
 - `W3-E1-S2-T6` Add run-store tests for fresh runs, repeated attempts, and interrupted writes.
 
 ## Parking lot
