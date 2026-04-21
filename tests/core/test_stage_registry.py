@@ -9,7 +9,9 @@ from aidd.core.stage_registry import (
     all_stages,
     load_all_stage_manifests,
     load_stage_manifest,
+    resolve_expected_output_documents,
     resolve_required_input_documents,
+    resolve_validator_targets,
 )
 
 
@@ -192,3 +194,28 @@ def test_resolve_required_input_documents_rejects_workspace_escape(tmp_path: Pat
             workspace_root=tmp_path / ".aidd",
             contracts_root=contracts_root,
         )
+
+
+def test_resolve_expected_output_documents_and_validator_targets(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    expected_outputs = resolve_expected_output_documents(
+        stage="idea",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+    validator_targets = resolve_validator_targets(
+        stage="idea",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert expected_outputs == (
+        workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "idea-brief.md",
+        workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "stage-result.md",
+        workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "validator-report.md",
+        workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "repair-brief.md",
+        workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "questions.md",
+        workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "answers.md",
+    )
+    assert validator_targets == expected_outputs

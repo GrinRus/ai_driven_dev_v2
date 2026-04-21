@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from aidd.core.stage_manifest import StageManifest
@@ -49,9 +50,14 @@ def _extract_bullets(markdown_text: str, heading: str) -> tuple[str, ...]:
         stripped = line.strip()
         if not stripped.startswith("- "):
             continue
-        item = stripped.removeprefix("- ").strip().strip("`")
-        if item:
-            items.append(item)
+        bullet_body = stripped.removeprefix("- ").strip()
+        inline_code_paths = [match.strip() for match in re.findall(r"`([^`]+)`", bullet_body)]
+        if inline_code_paths:
+            items.extend(path for path in inline_code_paths if path)
+            continue
+        fallback_item = bullet_body.strip("`")
+        if fallback_item:
+            items.append(fallback_item)
     return tuple(items)
 
 
@@ -180,3 +186,38 @@ def resolve_required_input_documents(
         )
         for declaration in manifest.required_inputs
     )
+
+
+def resolve_expected_output_documents(
+    *,
+    stage: str,
+    work_item: str,
+    workspace_root: Path,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[Path, ...]:
+    manifest = load_stage_manifest(stage=stage, contracts_root=contracts_root)
+    return tuple(
+        _resolve_declared_document_path(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            declaration=declaration.path,
+        )
+        for declaration in manifest.required_outputs
+    )
+
+
+def resolve_validator_targets(
+    *,
+    stage: str,
+    work_item: str,
+    workspace_root: Path,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[Path, ...]:
+    expected_outputs = resolve_expected_output_documents(
+        stage=stage,
+        work_item=work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+    return tuple(path for path in expected_outputs if path.suffix.lower() == ".md")
