@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E2-S2-T2` Implement preparation logic that assembles the stage brief and expected input bundle.
+- `W3-E2-S2-T3` Implement execution-state persistence before handing off to an adapter.
 
 ## Soon
 
-- `W3-E2-S2-T3` Implement execution-state persistence before handing off to an adapter.
+- `W3-E2-S2-T4` Implement validation-state persistence and transition decisions after validator completion.
 
 ## Parking lot
 

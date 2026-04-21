@@ -722,7 +722,7 @@ Dependencies:
 Local tasks:
 
 - `W3-E2-S2-T1` (done) Define the canonical stage states and legal transitions.
-- `W3-E2-S2-T2` Implement preparation logic that assembles the stage brief and expected input bundle.
+- `W3-E2-S2-T2` (done) Implement preparation logic that assembles the stage brief and expected input bundle.
 - `W3-E2-S2-T3` Implement execution-state persistence before handing off to an adapter.
 - `W3-E2-S2-T4` Implement validation-state persistence and transition decisions after validator completion.
 - `W3-E2-S2-T5` Implement terminal transition handling for success, blocked, failed, and repair-needed outcomes.
