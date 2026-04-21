@@ -33,6 +33,14 @@ Optional context documents may improve planning quality, but they must not repla
 - `plan` depends on `research` artifacts from the latest completed `research` attempt.
 - `plan` must not declare `succeeded` when `research` stage status is unresolved or its validator verdict is `fail`.
 
+## Plan output expectations
+
+- `plan.md` must include explicit milestones, risk coverage, dependencies, and verification notes.
+- milestones should be ordered and map to clear execution increments.
+- risk entries should include impact and mitigation intent.
+- verification notes should tie checks to milestones or risk-heavy areas.
+- `stage-result.md` and `validator-report.md` must stay consistent with the declared plan readiness.
+
 ## Validation focus
 
 Validators for `plan` should check:

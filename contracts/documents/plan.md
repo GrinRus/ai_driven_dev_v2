@@ -8,10 +8,24 @@ Capture the implementation plan, boundaries, risks, dependencies, and rollout or
 
 - `Goals`
 - `Out of scope`
+- `Milestones`
 - `Implementation strategy`
 - `Risks`
 - `Dependencies`
 - `Verification approach`
+- `Verification notes`
+
+## Field notes
+
+- `Milestones`
+  - Must list execution increments in planned order.
+  - Each milestone should describe expected outcome and readiness signal.
+- `Risks`
+  - Must identify concrete delivery or quality risks, not generic cautions.
+  - Each risk should include a mitigation direction.
+- `Verification notes`
+  - Must map planned checks to milestones, risks, or both.
+  - Must include at least one note for the highest-risk milestone.
 
 ## Validation cues
 
