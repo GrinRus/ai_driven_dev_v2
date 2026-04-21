@@ -21,7 +21,7 @@ from aidd.core.stage_runner import (
     persist_validation_state,
     prepare_stage_bundle,
 )
-from aidd.core.state_machine import StageState
+from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 
 
 def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Path) -> None:
@@ -292,3 +292,118 @@ def test_decide_post_validation_transition_rejects_unsupported_state() -> None:
                 stage_metadata_path=Path("/tmp/stage-metadata.json"),
             )
         )
+
+
+@pytest.mark.parametrize(
+    ("verdict", "expected_state", "expected_action", "expected_terminal"),
+    (
+        (
+            ValidationVerdict.PASS,
+            StageState.SUCCEEDED,
+            PostValidationAction.ADVANCE,
+            True,
+        ),
+        (
+            ValidationVerdict.REPAIR,
+            StageState.REPAIR_NEEDED,
+            PostValidationAction.REPAIR,
+            False,
+        ),
+        (
+            ValidationVerdict.BLOCKED,
+            StageState.BLOCKED,
+            PostValidationAction.WAIT,
+            False,
+        ),
+    ),
+)
+def test_stage_transition_flow_covers_happy_validator_failure_and_blocked_paths(
+    tmp_path: Path,
+    verdict: ValidationVerdict,
+    expected_state: StageState,
+    expected_action: PostValidationAction,
+    expected_terminal: bool,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        changed_at_utc=datetime(2026, 4, 22, 10, 0, tzinfo=UTC),
+    )
+    transition_stage_state(StageState.EXECUTING, StageState.VALIDATING)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+        changed_at_utc=datetime(2026, 4, 22, 10, 1, tzinfo=UTC),
+    )
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=verdict,
+        changed_at_utc=datetime(2026, 4, 22, 10, 2, tzinfo=UTC),
+    )
+
+    transition = decide_post_validation_transition(validation_state)
+
+    assert transition.next_state == expected_state
+    assert transition.action == expected_action
+    assert transition.is_terminal is expected_terminal
+    payload = json.loads(validation_state.stage_metadata_path.read_text(encoding="utf-8"))
+    assert [entry["status"] for entry in payload["status_history"]] == [
+        StageState.EXECUTING.value,
+        StageState.VALIDATING.value,
+        expected_state.value,
+    ]
+
+
+def test_stage_transition_flow_covers_adapter_failure_path(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        changed_at_utc=datetime(2026, 4, 22, 10, 0, tzinfo=UTC),
+    )
+    transition_stage_state(StageState.EXECUTING, StageState.FAILED)
+    metadata_path = persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.FAILED.value,
+        changed_at_utc=datetime(2026, 4, 22, 10, 1, tzinfo=UTC),
+    )
+
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert payload["status"] == StageState.FAILED.value
+    assert [entry["status"] for entry in payload["status_history"]] == [
+        StageState.EXECUTING.value,
+        StageState.FAILED.value,
+    ]
+    assert is_terminal_state(StageState.FAILED) is True

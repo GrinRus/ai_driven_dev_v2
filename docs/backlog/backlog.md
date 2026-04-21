@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E2-S2-T6` Add tests that cover happy-path, validator-failure, blocked-question, and adapter-failure transitions.
+- `W3-E2-S3-T1` Implement stage dependency resolution from manifest-declared upstream stages.
 
 ## Soon
 
-- `W3-E2-S3-T1` Implement stage dependency resolution from manifest-declared upstream stages.
+- `W3-E2-S3-T2` Implement eligibility checks for missing prerequisites, blocked questions, and failed required stages.
 
 ## Parking lot
 

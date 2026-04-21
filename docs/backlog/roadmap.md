@@ -726,7 +726,7 @@ Local tasks:
 - `W3-E2-S2-T3` (done) Implement execution-state persistence before handing off to an adapter.
 - `W3-E2-S2-T4` (done) Implement validation-state persistence and transition decisions after validator completion.
 - `W3-E2-S2-T5` (done) Implement terminal transition handling for success, blocked, failed, and repair-needed outcomes.
-- `W3-E2-S2-T6` Add tests that cover happy-path, validator-failure, blocked-question, and adapter-failure transitions.
+- `W3-E2-S2-T6` (done) Add tests that cover happy-path, validator-failure, blocked-question, and adapter-failure transitions.
 
 Exit evidence:
 
