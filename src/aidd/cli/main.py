@@ -90,6 +90,8 @@ def doctor(
     table.add_row("generic-cli capabilities", _capability_summary(generic))
     table.add_row("claude-code command", claude.command)
     table.add_row("claude-code available", "yes" if claude.available else "no")
+    table.add_row("claude-code version", claude.version_text or "unknown")
+    table.add_row("claude-code capabilities", _capability_summary(claude))
     table.add_row("log mode", cfg.log_mode)
     table.add_row("max repair attempts", str(cfg.max_repair_attempts))
 

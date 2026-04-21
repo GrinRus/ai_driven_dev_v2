@@ -6,9 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W4-E2-S1-T4` Expose Claude Code probe results and capability flags in `aidd doctor`.
+- `W4-E1-S1-T5` Add probe tests for found binaries, missing binaries, and non-zero version commands.
 
 ## Soon
+
+- `W4-E2-S1-T5` Add probe tests for found binaries, missing binaries, and unexpected version output.
 
 ## Parking lot
 
