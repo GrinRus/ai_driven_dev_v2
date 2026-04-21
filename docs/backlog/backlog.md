@@ -6,18 +6,23 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E3-S1-T1` Implement the interview policy model that distinguishes blocking and non-blocking questions.
+- `W2-E1-S2-T2`
 
 ## Soon
 
-- `W3-E3-S1-T2` Implement persistence of `questions.md` from stage output or adapter-detected question events.
+- `W2-E1-S2-T3`
 
 ## Parking lot
 
-- `W5-E3-S1-T1` Pin the Typer repository revision and record the target scenario objective.
-- `W5-E3-S5-T1` Define the sqlite-utils scenario conditions that force at least one user question.
-- `W6-E2-S3-T6` Add one harness or integration scenario that proves the `implement` repair loop end to end.
-- `W7-E3-S2-T2` Finalize container publishing configuration and image tagging rules.
+- `W2-E1-S2-T4`
+- `W2-E1-S2-T5`
+- `W2-E1-S2-T6`
+- `W3-E3-S1-T1`
+- `W3-E3-S1-T2`
+- `W5-E3-S1-T1`
+- `W5-E3-S5-T1`
+- `W6-E2-S3-T6`
+- `W7-E3-S2-T2`
 
 ## Update rules
 

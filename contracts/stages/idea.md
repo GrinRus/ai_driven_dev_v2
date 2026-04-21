@@ -17,6 +17,15 @@ Turn the incoming request into a clearer problem statement, desired outcome, con
 - `context/intake.md`
 - `context/user-request.md`
 
+## Optional context inputs
+
+- `context/business-context.md`
+- `context/constraints.md`
+- `context/repository-state.md`
+- `context/previous-decisions.md`
+
+Optional context documents may enrich the stage output, but their absence must not block an `idea` run.
+
 ## Validation focus
 
 Validators for `idea` should check:

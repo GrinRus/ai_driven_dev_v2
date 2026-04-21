@@ -207,7 +207,7 @@ Dependencies:
 
 Local tasks:
 
-- `W2-E1-S2-T1` Define the required input documents and optional context documents for the `idea` stage.
+- `W2-E1-S2-T1` (done) Define the required input documents and optional context documents for the `idea` stage.
 - `W2-E1-S2-T2` Define the required output documents and exit states for the `idea` stage.
 - `W2-E1-S2-T3` Define stage-specific validation rules, including minimum completeness and no-placeholder requirements.
 - `W2-E1-S2-T4` Define when `idea` may ask the user questions and which questions block progression.
