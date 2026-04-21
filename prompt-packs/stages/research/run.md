@@ -24,5 +24,7 @@ Collect relevant technical and product context before a plan is written.
 2. Write `research-notes.md` with complete sections required by the document contract, including `Evidence trace`.
 3. Use stable citation ids in `Sources` (for example `[S1]`) and reference those ids from `Findings` for material claims.
 4. Ensure `Evidence trace` maps major findings or recommendations to citation ids.
-5. Write or update `stage-result.md` and `validator-report.md` so status and evidence references are consistent.
-6. If an input is missing or a critical decision is unclear, raise a question instead of inventing an answer.
+5. Record unresolved uncertainty explicitly in `Trade-offs` or `Open questions`; do not present uncertain claims as facts.
+6. Mark time-sensitive evidence with freshness context (access date or stale-risk note) when findings depend on it.
+7. Write or update `stage-result.md` and `validator-report.md` so status and evidence references are consistent.
+8. If an input is missing or a critical decision is unclear, raise a question instead of inventing an answer.

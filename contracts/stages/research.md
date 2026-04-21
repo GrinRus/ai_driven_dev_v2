@@ -43,11 +43,18 @@ Optional context documents may enrich research quality, but their absence must n
 
 Validators for `research` should check:
 
-- required document existence,
-- required headings and sections,
-- consistency with upstream inputs,
-- whether the main output actually serves the stage purpose,
-- whether the stage result reflects validator and repair outcomes.
+- required output existence and required heading coverage for `research-notes.md`, `stage-result.md`, and `validator-report.md`,
+- source grounding:
+  - material findings and recommendations must reference citation ids defined in `Sources`,
+  - evidence trace links must resolve to declared citation ids,
+  - unsupported claims must fail validation,
+- uncertainty notes:
+  - unresolved uncertainty must be explicit in `Trade-offs` or `Open questions`,
+  - findings presented as certain must not hide missing or weak evidence,
+- stale-fact handling:
+  - time-sensitive sources must include an access date or freshness note,
+  - findings that depend on possibly stale evidence must include a stale-risk note and follow-up action,
+- cross-document consistency between citation coverage in `research-notes.md`, findings in `validator-report.md`, and terminal status in `stage-result.md`.
 
 ## Interview policy
 
