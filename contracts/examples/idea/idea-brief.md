@@ -1,11 +1,19 @@
 # Idea Brief
 
-This is an example `idea` output document.
+## Problem statement
 
-## Summary
+Teams track incident follow-up actions in ad-hoc chats, so ownership and deadlines are often lost after the incident call ends.
 
-Example content for the `idea` stage.
+## Desired outcome
 
-## Notes
+Provide a lightweight follow-up tracker that captures action owner, due date, and completion status so teams can close incident tasks within agreed SLAs.
 
-Use this as a worked example only. Real runs should write repository-specific content.
+## Constraints
+
+- The first release must work with existing team email workflows.
+- The solution must avoid introducing a new authentication provider in v1.
+- Implementation effort for v1 should stay within one delivery wave.
+
+## Open questions
+
+- none

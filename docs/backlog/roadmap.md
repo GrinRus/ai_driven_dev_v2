@@ -185,7 +185,7 @@ Exit evidence:
 - every common contract file contains normative headings and section intent;
 - one example bundle is reviewable end to end without missing document types.
 
-#### Slice W2-E1-S2 — `idea` stage contract (`planned`)
+#### Slice W2-E1-S2 — `idea` stage contract (`done`)
 Goal: define one stage contract that can capture a product idea before deeper research.
 
 Primary outputs:
@@ -212,7 +212,7 @@ Local tasks:
 - `W2-E1-S2-T3` (done) Define stage-specific validation rules, including minimum completeness and no-placeholder requirements.
 - `W2-E1-S2-T4` (done) Define when `idea` may ask the user questions and which questions block progression.
 - `W2-E1-S2-T5` (done) Create the `idea` prompt-pack scaffold with system, task, and repair instructions.
-- `W2-E1-S2-T6` Add one worked `idea` example bundle that matches the contract and prompt pack.
+- `W2-E1-S2-T6` (done) Add one worked `idea` example bundle that matches the contract and prompt pack.
 
 Exit evidence:
 
