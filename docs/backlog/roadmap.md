@@ -355,7 +355,7 @@ Exit evidence:
 - `tasklist` produces durable execution units rather than vague bullet lists;
 - validators can reject oversized or ambiguous task decompositions.
 
-#### Slice W2-E1-S7 — `implement` stage contract (`next`)
+#### Slice W2-E1-S7 — `implement` stage contract (`done`)
 Goal: define the stage that applies code or document changes in a runtime-agnostic way.
 
 Primary outputs:
@@ -382,7 +382,7 @@ Local tasks:
 - `W2-E1-S7-T3` (done) Define validator rules for missing diffs, unverifiable claims, and incomplete execution summaries.
 - `W2-E1-S7-T4` (done) Define repair expectations for invalid implementation runs and no-op outputs.
 - `W2-E1-S7-T5` (done) Create the `implement` prompt-pack scaffold with explicit edit and verification guidance.
-- `W2-E1-S7-T6` Add one worked `implement` example bundle with both success and repair-needed variants.
+- `W2-E1-S7-T6` (done) Add one worked `implement` example bundle with both success and repair-needed variants.
 
 Exit evidence:
 
