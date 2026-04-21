@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W2-E1-S4-T4`
+- `W2-E1-S4-T5`
 
 ## Soon
 
-- `W2-E1-S4-T5`
+- `W2-E1-S4-T6`
 
 ## Parking lot
 

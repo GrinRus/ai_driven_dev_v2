@@ -278,7 +278,7 @@ Local tasks:
 - `W2-E1-S4-T1` (done) Define the required `plan` input bundle and the dependency on `research` artifacts.
 - `W2-E1-S4-T2` (done) Define the required `plan` outputs, including milestones, risks, and verification notes.
 - `W2-E1-S4-T3` (done) Define validator rules for plan completeness, sequencing clarity, and user-approval readiness.
-- `W2-E1-S4-T4` Define interview triggers for unresolved scope, sequencing disputes, or missing acceptance signals.
+- `W2-E1-S4-T4` (done) Define interview triggers for unresolved scope, sequencing disputes, or missing acceptance signals.
 - `W2-E1-S4-T5` Create the `plan` prompt-pack scaffold with explicit roadmap-style reasoning rules.
 - `W2-E1-S4-T6` Add one worked `plan` example bundle with a valid output and a validator-failing output.
 

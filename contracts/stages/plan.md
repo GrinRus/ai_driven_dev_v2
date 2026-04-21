@@ -59,7 +59,28 @@ Validators for `plan` should check:
 
 ## Interview policy
 
-required when solution boundaries, trade-offs, or priorities are unclear
+`plan` may ask user questions when available artifacts are insufficient to produce a reviewable and approvable execution plan.
+
+Mandatory question triggers:
+
+- unresolved scope boundaries (what is in/out of scope remains ambiguous or contradictory),
+- sequencing disputes (competing milestone orders have materially different risk profiles),
+- missing acceptance signals (success criteria or approval expectations are undefined for key milestones).
+
+Blocking-question rules:
+
+- mark as `[blocking]` when unresolved ambiguity prevents trustworthy milestone sequencing or approval readiness,
+- unresolved `[blocking]` questions must force the stage to exit as `blocked` (never `succeeded`).
+
+Non-blocking-question rules:
+
+- mark as `[non-blocking]` when planning can proceed with explicit bounded assumptions,
+- record non-blocking assumptions in `plan.md` under `Out of scope`, `Risks`, or `Verification notes`.
+
+Question/answer document rules:
+
+- write each question to `questions.md` with a stable id and marker (`[blocking]` or `[non-blocking]`),
+- treat blocking questions as resolved only when `answers.md` includes matching `[resolved]` entries.
 
 ## Repair policy
 
