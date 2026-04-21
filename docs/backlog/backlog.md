@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E2-S1-T2` Implement loading of stage manifests from `contracts/stages/`.
+- `W3-E2-S1-T3` Implement validation of manifest references to document contracts and prompt-pack paths.
 
 ## Soon
 
-- `W3-E2-S1-T3` Implement validation of manifest references to document contracts and prompt-pack paths.
+- `W3-E2-S1-T4` Implement resolution of required input documents for a selected stage.
 
 ## Parking lot
 
