@@ -6,12 +6,18 @@ import pytest
 
 from aidd.core.interview import (
     AdapterQuestionEvent,
+    AnswerResolution,
+    InterviewAnswer,
     InterviewQuestion,
     QuestionPolicy,
+    answer_resolution_from_marker,
     interview_requires_input,
+    parse_answers_markdown,
     parse_questions_markdown,
+    persist_answers_document,
     persist_questions_document,
     question_policy_from_marker,
+    render_answers_markdown,
     render_questions_markdown,
     unresolved_blocking_questions,
 )
@@ -174,5 +180,82 @@ def test_persist_questions_document_appends_adapter_events(tmp_path: Path) -> No
             question_id="Q9",
             text="Optional preference for report section ordering.",
             policy=QuestionPolicy.NON_BLOCKING,
+        ),
+    )
+
+
+def test_answer_resolution_from_marker_accepts_contract_markers() -> None:
+    assert answer_resolution_from_marker("[resolved]") == AnswerResolution.RESOLVED
+    assert answer_resolution_from_marker("partial") == AnswerResolution.PARTIAL
+    assert answer_resolution_from_marker("deferred") == AnswerResolution.DEFERRED
+
+
+def test_parse_and_render_answers_markdown_round_trip() -> None:
+    answers = (
+        InterviewAnswer(
+            question_id="Q1",
+            resolution=AnswerResolution.RESOLVED,
+            text="Deployment environment is staging-first, then production.",
+        ),
+        InterviewAnswer(
+            question_id="Q2",
+            resolution=AnswerResolution.PARTIAL,
+            text="Metrics export schema is agreed, retention policy still pending.",
+        ),
+    )
+
+    rendered = render_answers_markdown(answers)
+    parsed = parse_answers_markdown(rendered)
+
+    assert parsed == answers
+
+
+def test_persist_answers_document_merges_without_losing_prior_answers(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    persist_answers_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+        stage_output_answers_markdown=(
+            "# Answers\n\n"
+            "## Answers\n\n"
+            "- Q1 [resolved] Compliance review is required before rollout.\n"
+            "- Q2 [partial] Launch checklist draft is ready; legal sign-off is pending.\n"
+        ),
+    )
+
+    answers_path = persist_answers_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+        incoming_answers=(
+            InterviewAnswer(
+                question_id="Q2",
+                resolution=AnswerResolution.RESOLVED,
+                text="Legal sign-off completed; checklist is approved.",
+            ),
+            InterviewAnswer(
+                question_id="Q3",
+                resolution=AnswerResolution.DEFERRED,
+                text="Observability naming convention deferred to `plan` stage.",
+            ),
+        ),
+    )
+
+    assert parse_answers_markdown(answers_path.read_text(encoding="utf-8")) == (
+        InterviewAnswer(
+            question_id="Q1",
+            resolution=AnswerResolution.RESOLVED,
+            text="Compliance review is required before rollout.",
+        ),
+        InterviewAnswer(
+            question_id="Q2",
+            resolution=AnswerResolution.RESOLVED,
+            text="Legal sign-off completed; checklist is approved.",
+        ),
+        InterviewAnswer(
+            question_id="Q3",
+            resolution=AnswerResolution.DEFERRED,
+            text="Observability naming convention deferred to `plan` stage.",
         ),
     )

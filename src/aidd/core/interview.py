@@ -12,9 +12,18 @@ class QuestionPolicy(StrEnum):
     NON_BLOCKING = "non-blocking"
 
 
+class AnswerResolution(StrEnum):
+    RESOLVED = "resolved"
+    PARTIAL = "partial"
+    DEFERRED = "deferred"
+
+
 _QUESTION_ID_PATTERN = re.compile(r"^Q[\w-]*$")
 _QUESTION_LINE_PATTERN = re.compile(
     r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(blocking|non-blocking)\]`?\s+(.+?)\s*$"
+)
+_ANSWER_LINE_PATTERN = re.compile(
+    r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(resolved|partial|deferred)\]`?\s+(.+?)\s*$"
 )
 _QUESTION_ID_NUMERIC_SUFFIX_PATTERN = re.compile(r"^Q(\d+)$")
 
@@ -66,6 +75,29 @@ class AdapterQuestionEvent:
         object.__setattr__(self, "question_id", normalized_id)
 
 
+@dataclass(frozen=True, slots=True)
+class InterviewAnswer:
+    question_id: str
+    text: str
+    resolution: AnswerResolution
+
+    def __post_init__(self) -> None:
+        normalized_id = self.question_id.strip()
+        if not normalized_id:
+            raise ValueError("Answer question id must not be empty.")
+        if _QUESTION_ID_PATTERN.match(normalized_id) is None:
+            raise ValueError(
+                "Answer question id must use a stable `Q`-prefixed token "
+                "(for example `Q1`, `Q2`)."
+            )
+        object.__setattr__(self, "question_id", normalized_id)
+
+        normalized_text = self.text.strip()
+        if not normalized_text:
+            raise ValueError("Answer text must not be empty.")
+        object.__setattr__(self, "text", normalized_text)
+
+
 def question_policy_from_marker(marker: str) -> QuestionPolicy:
     normalized = marker.strip()
     if normalized.startswith("[") and normalized.endswith("]"):
@@ -79,6 +111,24 @@ def question_policy_from_marker(marker: str) -> QuestionPolicy:
     raise ValueError(
         "Question marker must be one of "
         "`[blocking]`, `[non-blocking]`, `blocking`, or `non-blocking`."
+    )
+
+
+def answer_resolution_from_marker(marker: str) -> AnswerResolution:
+    normalized = marker.strip()
+    if normalized.startswith("[") and normalized.endswith("]"):
+        normalized = normalized[1:-1].strip()
+
+    if normalized == AnswerResolution.RESOLVED.value:
+        return AnswerResolution.RESOLVED
+    if normalized == AnswerResolution.PARTIAL.value:
+        return AnswerResolution.PARTIAL
+    if normalized == AnswerResolution.DEFERRED.value:
+        return AnswerResolution.DEFERRED
+
+    raise ValueError(
+        "Answer marker must be one of "
+        "`[resolved]`, `[partial]`, `[deferred]`, `resolved`, `partial`, or `deferred`."
     )
 
 
@@ -124,6 +174,53 @@ def render_questions_markdown(questions: Iterable[InterviewQuestion]) -> str:
         for question in ordered:
             lines.append(
                 f"- `{question.question_id}` `[{question.policy.value}]` {question.text}"
+            )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def parse_answers_markdown(markdown_text: str) -> tuple[InterviewAnswer, ...]:
+    parsed: list[InterviewAnswer] = []
+    seen_ids: set[str] = set()
+
+    for line_number, line in enumerate(markdown_text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped.startswith("- "):
+            continue
+        if stripped.lower() == "- none":
+            continue
+
+        match = _ANSWER_LINE_PATTERN.match(stripped)
+        if match is None:
+            raise ValueError(
+                "Invalid answer entry at line "
+                f"{line_number}: expected `- <QID> [resolved|partial|deferred] <text>`."
+            )
+
+        answer = InterviewAnswer(
+            question_id=match.group(1),
+            resolution=answer_resolution_from_marker(match.group(2)),
+            text=match.group(3),
+        )
+        if answer.question_id in seen_ids:
+            raise ValueError(
+                f"Duplicate answer id `{answer.question_id}` in answers markdown content."
+            )
+        seen_ids.add(answer.question_id)
+        parsed.append(answer)
+
+    return tuple(parsed)
+
+
+def render_answers_markdown(answers: Iterable[InterviewAnswer]) -> str:
+    ordered = tuple(answers)
+    lines = ["# Answers", "", "## Answers", ""]
+    if not ordered:
+        lines.append("- none")
+    else:
+        for answer in ordered:
+            lines.append(
+                f"- `{answer.question_id}` `[{answer.resolution.value}]` {answer.text}"
             )
     lines.append("")
     return "\n".join(lines)
@@ -192,6 +289,25 @@ def _questions_from_events(
     return tuple(parsed)
 
 
+def _merge_answers(
+    *,
+    existing: Iterable[InterviewAnswer],
+    incoming: Iterable[InterviewAnswer],
+) -> tuple[InterviewAnswer, ...]:
+    merged = list(existing)
+    index_by_question_id = {answer.question_id: index for index, answer in enumerate(merged)}
+
+    for answer in incoming:
+        existing_index = index_by_question_id.get(answer.question_id)
+        if existing_index is None:
+            index_by_question_id[answer.question_id] = len(merged)
+            merged.append(answer)
+            continue
+        merged[existing_index] = answer
+
+    return tuple(merged)
+
+
 def persist_questions_document(
     *,
     workspace_root: Path,
@@ -216,6 +332,37 @@ def persist_questions_document(
 
     questions_path.write_text(render_questions_markdown(merged), encoding="utf-8")
     return questions_path
+
+
+def persist_answers_document(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    stage_output_answers_markdown: str | None = None,
+    incoming_answers: Iterable[InterviewAnswer] = (),
+) -> Path:
+    answers_path = workspace_root / "workitems" / work_item / "stages" / stage / "answers.md"
+    answers_path.parent.mkdir(parents=True, exist_ok=True)
+
+    existing_answers: tuple[InterviewAnswer, ...]
+    if answers_path.exists():
+        existing_answers = parse_answers_markdown(answers_path.read_text(encoding="utf-8"))
+    else:
+        existing_answers = ()
+
+    staged_answers: tuple[InterviewAnswer, ...]
+    if stage_output_answers_markdown is not None:
+        staged_answers = parse_answers_markdown(stage_output_answers_markdown)
+    else:
+        staged_answers = ()
+
+    merged = _merge_answers(
+        existing=existing_answers,
+        incoming=(*staged_answers, *tuple(incoming_answers)),
+    )
+    answers_path.write_text(render_answers_markdown(merged), encoding="utf-8")
+    return answers_path
 
 
 def interview_supported() -> bool:
