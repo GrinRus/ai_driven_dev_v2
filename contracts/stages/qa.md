@@ -14,8 +14,28 @@ Summarize verification outcomes, remaining risks, and readiness status.
 
 ## Required inputs
 
+- `../implement/output/implementation-report.md`
+- `../implement/output/stage-result.md`
+- `../implement/output/validator-report.md`
 - `../review/output/review-report.md`
+- `../review/output/stage-result.md`
+- `../review/output/validator-report.md`
 - `context/verification-output.md`
+- `context/verification-artifacts.md`
+
+## Optional context inputs
+
+- `context/repository-state.md`
+- `context/constraints.md`
+- `context/release-policy.md`
+
+Optional context documents may improve QA depth, but they must not replace implementation artifacts, review findings, and verification evidence.
+
+## Upstream dependency rule
+
+- `qa` depends on artifacts from the latest completed `review` attempt.
+- `qa` must not declare `succeeded` when review status is unresolved or review decision is `rejected`.
+- `qa` must not declare `succeeded` when verification output or verification artifacts are missing.
 
 ## Validation focus
 
