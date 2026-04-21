@@ -34,14 +34,17 @@ Apply the selected task to the repository, explain the change, and record verifi
 4. Write `implementation-report.md` with selected task id, explicit change summary, touched-files list, and verification notes.
 5. Ensure each touched-files entry includes path plus short change intent and stays inside allowed write scope.
 6. Include verification outcomes for the primary checks actually run; do not claim checks that were not executed.
-7. Write or update `stage-result.md` and `validator-report.md` so readiness and verification outcomes are consistent.
-8. If required inputs are missing or write-scope/task-selection constraints are unclear, raise a question instead of inventing assumptions.
-9. Keep the output useful for the next stage rather than merely well-formatted.
+7. Do not report file changes, test results, or runtime behavior unless they are backed by observable evidence from this run.
+8. Write or update `stage-result.md` and `validator-report.md` so readiness and verification outcomes are consistent.
+9. If required inputs are missing or write-scope/task-selection constraints are unclear, raise a question instead of inventing assumptions.
+10. Keep the output useful for the next stage rather than merely well-formatted.
 
 ## Completion checklist
 
 - implementation report references the selected task id directly,
 - change summary is specific and aligned with produced edits,
 - touched-files list is explicit and within allowed write scope,
+- touched-files list does not claim edits without observable change evidence,
 - verification notes name concrete checks and observed outcomes,
+- verification notes do not include unverifiable or unexecuted claims,
 - stage result and validator report agree with implementation outcomes.

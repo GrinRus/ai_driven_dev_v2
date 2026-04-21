@@ -49,11 +49,18 @@ Optional context documents may improve implementation quality, but they must not
 
 Validators for `implement` should check:
 
-- required document existence,
-- required headings and sections,
-- consistency with upstream inputs,
-- whether the main output actually serves the stage purpose,
-- whether the stage result reflects validator and repair outcomes.
+- required output existence and heading coverage for `implementation-report.md`, `stage-result.md`, and `validator-report.md`,
+- consistency with selected task id, task intent, and allowed write scope from inputs,
+- missing diffs:
+  - touched-files entries are non-empty for non-no-op runs and map to actual modified paths,
+  - claimed modifications without observable file-level change evidence are rejected,
+- unverifiable claims:
+  - verification notes reference concrete executed checks and outcomes,
+  - claims about tests, lint, or runtime behavior without supporting evidence are rejected,
+- incomplete execution summaries:
+  - change summary, touched-files list, and verification notes are all present and mutually consistent,
+  - residual risks or deferred non-blocking items are explicitly recorded when applicable,
+- cross-document consistency between implementation report claims, validator findings, and terminal status in `stage-result.md`.
 
 ## Interview policy
 
