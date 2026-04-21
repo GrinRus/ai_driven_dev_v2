@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E1-S3-T2` Implement helpers that resolve artifact paths for a named stage and attempt.
+- `W3-E1-S3-T3` Implement resume guards that refuse to resume closed or corrupted runs.
 
 ## Soon
 
-- `W3-E1-S3-T3` Implement resume guards that refuse to resume closed or corrupted runs.
+- `W3-E1-S3-T4` Expose run lookup in CLI-facing utilities used by later commands.
 
 ## Parking lot
 

@@ -4,11 +4,14 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from aidd.core.run_lookup import (
+    attempt_artifact_index_path,
     latest_attempt_number,
     latest_attempt_path,
     latest_attempt_path_for_work_item,
     latest_run_id,
     latest_run_path,
+    resolve_attempt_artifact_paths,
+    resolve_latest_attempt_artifact_paths,
 )
 from aidd.core.run_store import (
     create_next_attempt_directory,
@@ -178,4 +181,168 @@ def test_latest_attempt_path_for_work_item_uses_latest_run(tmp_path: Path) -> No
         run_id="run-002",
         stage=stage,
         attempt_number=2,
+    )
+
+
+def test_attempt_artifact_index_path_matches_attempt_layout(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    ) == (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-001"
+        / "run-001"
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+        / "artifact-index.json"
+    )
+
+
+def test_resolve_attempt_artifact_paths_returns_absolute_document_and_log_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    resolved = resolve_attempt_artifact_paths(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    )
+
+    assert resolved is not None
+    assert resolved.run_id == "run-001"
+    assert resolved.stage == "plan"
+    assert resolved.attempt_number == 1
+    assert resolved.documents["stage_brief"] == (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "stage-brief.md"
+    )
+    assert resolved.logs["runtime_log"] == (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-001"
+        / "run-001"
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+        / "runtime.log"
+    )
+
+
+def test_resolve_attempt_artifact_paths_returns_none_when_index_missing(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    index_path = attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    )
+    index_path.unlink()
+
+    assert (
+        resolve_attempt_artifact_paths(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_number=1,
+        )
+        is None
+    )
+
+
+def test_resolve_latest_attempt_artifact_paths_uses_latest_run_and_attempt(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-001"
+    stage = "plan"
+    now = datetime.now(UTC).replace(microsecond=0)
+
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target=stage,
+        config_snapshot={"mode": "test"},
+    )
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-002",
+        runtime_id="generic-cli",
+        stage_target=stage,
+        config_snapshot={"mode": "test"},
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-001",
+        stage=stage,
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-002",
+        stage=stage,
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-002",
+        stage=stage,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-002",
+        stage=stage,
+        status="running",
+        changed_at_utc=now + timedelta(minutes=10),
+    )
+
+    resolved = resolve_latest_attempt_artifact_paths(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    assert resolved is not None
+    assert resolved.run_id == "run-002"
+    assert resolved.attempt_number == 2
+    assert resolved.logs["runtime_log"].as_posix().endswith(
+        "/run-002/stages/plan/attempts/attempt-0002/runtime.log"
     )
