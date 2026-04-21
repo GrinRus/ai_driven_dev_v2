@@ -7,11 +7,13 @@ import pytest
 
 from aidd.core.run_store import create_run_manifest, persist_stage_status
 from aidd.core.stage_graph import (
+    StageAdvancementSummary,
     StageDependencyResolutionError,
     evaluate_stage_eligibility,
     resolve_stage_dependencies,
     resolve_stage_dependency_graph,
     select_next_runnable_stage,
+    summarize_workflow_advancement,
 )
 from aidd.core.stages import STAGES, stage_index
 from aidd.core.state_machine import StageState
@@ -21,6 +23,12 @@ def _copy_contract_workspace(tmp_path: Path) -> Path:
     shutil.copytree(Path("contracts"), tmp_path / "contracts")
     shutil.copytree(Path("prompt-packs"), tmp_path / "prompt-packs")
     return tmp_path / "contracts" / "stages"
+
+
+def _summary_by_stage(
+    workflow_summaries: tuple[StageAdvancementSummary, ...],
+) -> dict[str, StageAdvancementSummary]:
+    return {summary.stage: summary for summary in workflow_summaries}
 
 
 def test_resolve_stage_dependencies_uses_manifest_declared_upstream_stages() -> None:
@@ -293,3 +301,98 @@ def test_select_next_runnable_stage_returns_none_when_upstream_failed(tmp_path: 
         )
         is None
     )
+
+
+def test_summarize_workflow_advancement_explains_runnable_and_missing_cases(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+    )
+
+    summaries = summarize_workflow_advancement(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+    )
+    by_stage = _summary_by_stage(summaries)
+
+    assert by_stage["idea"].can_run is True
+    assert by_stage["idea"].reason == "next runnable stage"
+    assert by_stage["research"].can_run is False
+    assert by_stage["research"].reason == "missing prerequisites: idea"
+
+
+def test_summarize_workflow_advancement_explains_blocked_and_blocked_upstream(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="idea",
+        status=StageState.BLOCKED.value,
+    )
+
+    summaries = summarize_workflow_advancement(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+    )
+    by_stage = _summary_by_stage(summaries)
+
+    assert by_stage["idea"].reason == "stage is blocked"
+    assert by_stage["research"].reason == "blocked upstream stages: idea"
+
+
+def test_summarize_workflow_advancement_explains_failed_and_failed_upstream(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="idea",
+        status=StageState.SUCCEEDED.value,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="research",
+        status=StageState.FAILED.value,
+    )
+
+    summaries = summarize_workflow_advancement(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+    )
+    by_stage = _summary_by_stage(summaries)
+
+    assert by_stage["research"].reason == "stage has failed"
+    assert by_stage["plan"].reason == "failed upstream stages: research"

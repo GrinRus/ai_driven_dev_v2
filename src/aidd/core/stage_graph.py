@@ -33,6 +33,18 @@ class StageEligibility:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class StageAdvancementSummary:
+    stage: str
+    current_status: str | None
+    can_run: bool
+    reason: str
+    dependencies: tuple[str, ...]
+    missing_prerequisites: tuple[str, ...]
+    blocked_upstream_stages: tuple[str, ...]
+    failed_upstream_stages: tuple[str, ...]
+
+
 def stage_graph() -> tuple[str, ...]:
     return STAGES
 
@@ -176,3 +188,85 @@ def select_next_runnable_stage(
             return stage
 
     return None
+
+
+def _summarize_eligibility_blockers(eligibility: StageEligibility) -> str:
+    reasons: list[str] = []
+    if eligibility.missing_prerequisites:
+        reasons.append(
+            "missing prerequisites: " + ", ".join(eligibility.missing_prerequisites)
+        )
+    if eligibility.blocked_upstream_stages:
+        reasons.append(
+            "blocked upstream stages: " + ", ".join(eligibility.blocked_upstream_stages)
+        )
+    if eligibility.failed_upstream_stages:
+        reasons.append(
+            "failed upstream stages: " + ", ".join(eligibility.failed_upstream_stages)
+        )
+    return "; ".join(reasons)
+
+
+def summarize_workflow_advancement(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[StageAdvancementSummary, ...]:
+    next_runnable = select_next_runnable_stage(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        contracts_root=contracts_root,
+    )
+    summaries: list[StageAdvancementSummary] = []
+
+    for stage in stage_graph():
+        metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        current_status = metadata.status.strip().lower() if metadata is not None else None
+        eligibility = evaluate_stage_eligibility(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            contracts_root=contracts_root,
+        )
+
+        can_run = False
+        reason = "not runnable"
+        if current_status == StageState.SUCCEEDED.value:
+            reason = "already completed"
+        elif current_status == StageState.BLOCKED.value:
+            reason = "stage is blocked"
+        elif current_status == StageState.FAILED.value:
+            reason = "stage has failed"
+        elif not eligibility.is_eligible:
+            reason = _summarize_eligibility_blockers(eligibility)
+        elif next_runnable == stage:
+            can_run = True
+            reason = "next runnable stage"
+        elif next_runnable is None:
+            reason = "no runnable stage available"
+        else:
+            reason = f"waiting for earlier runnable stage '{next_runnable}'"
+
+        summaries.append(
+            StageAdvancementSummary(
+                stage=stage,
+                current_status=current_status,
+                can_run=can_run,
+                reason=reason,
+                dependencies=eligibility.dependencies,
+                missing_prerequisites=eligibility.missing_prerequisites,
+                blocked_upstream_stages=eligibility.blocked_upstream_stages,
+                failed_upstream_stages=eligibility.failed_upstream_stages,
+            )
+        )
+
+    return tuple(summaries)
