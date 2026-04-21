@@ -870,7 +870,7 @@ Local tasks:
 - `W4-E1-S1-T2` (done) Capture version or identity information from the discovered CLI.
 - `W4-E1-S1-T3` (done) Derive a minimal capability map for the generic adapter from config and probe results.
 - `W4-E1-S1-T4` (done) Expose generic-cli probe results in `aidd doctor`.
-- `W4-E1-S1-T5` Add probe tests for found binaries, missing binaries, and non-zero version commands.
+- `W4-E1-S1-T5` (done) Add probe tests for found binaries, missing binaries, and non-zero version commands.
 
 Exit evidence:
 

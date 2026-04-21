@@ -42,3 +42,21 @@ def test_probe_discovers_existing_command_path() -> None:
     assert report.supports_non_interactive_mode is True
     assert report.supports_working_directory_control is True
     assert report.supports_env_injection is True
+
+
+def test_probe_handles_nonzero_version_command(tmp_path: Path) -> None:
+    fake_cli = tmp_path / "fake-generic-cli"
+    fake_cli.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"--version\" ]; then\n"
+        "  echo \"fake-generic-cli 0.1\" >&2\n"
+        "  exit 1\n"
+        "fi\n"
+        "echo \"ok\"\n",
+        encoding="utf-8",
+    )
+    fake_cli.chmod(0o755)
+
+    report = probe(str(fake_cli))
+    assert report.available is True
+    assert report.version_text == "fake-generic-cli 0.1"
