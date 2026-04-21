@@ -58,7 +58,28 @@ Validators for `research` should check:
 
 ## Interview policy
 
-optional when source selection or evaluation scope is unclear
+`research` may ask user questions only when available inputs are insufficient for reliable source selection or evidence interpretation.
+
+Mandatory question triggers:
+
+- target repository or system boundary is missing, ambiguous, or contradictory,
+- decision-critical constraints (for example security, compliance, deadline, budget, or platform) are missing for research scoping,
+- research goal is ambiguous, conflicting, or not specific enough to choose evidence priorities.
+
+Blocking-question rules:
+
+- mark a question as `[blocking]` when unresolved ambiguity prevents trustworthy source selection or invalidates material findings,
+- unresolved `[blocking]` questions must force the stage to exit as `blocked` (never `succeeded`).
+
+Non-blocking-question rules:
+
+- mark a question as `[non-blocking]` when research can proceed with explicit assumptions and bounded risk,
+- when `[non-blocking]` assumptions are used, record them in `research-notes.md` under `Trade-offs` or `Open questions`.
+
+Question/answer document rules:
+
+- write every question to `questions.md` with a stable id and marker (`[blocking]` or `[non-blocking]`),
+- treat blocking questions as resolved only when `answers.md` includes matching `[resolved]` entries for the same ids.
 
 ## Repair policy
 
