@@ -125,3 +125,44 @@ def test_workspace_bootstrap_service_bootstraps_work_item(tmp_path: Path) -> Non
 
     assert item_root == root / WORKSPACE_WORKITEMS_DIRNAME / "WI-001"
     assert (item_root / WORKITEM_METADATA_FILENAME).exists()
+
+
+def test_init_workspace_bootstraps_fresh_root(tmp_path: Path) -> None:
+    root = tmp_path / "fresh-root"
+    work_item = "WI-NEW"
+
+    assert root.exists() is False
+    item_root = init_workspace(root=root, work_item=work_item)
+
+    assert item_root == root / WORKSPACE_WORKITEMS_DIRNAME / work_item
+    assert (item_root / WORKITEM_CONTEXT_DIRNAME).exists()
+    assert (item_root / WORKITEM_STAGES_DIRNAME / "plan" / STAGE_INPUT_DIRNAME).exists()
+    assert (item_root / WORKITEM_STAGES_DIRNAME / "plan" / STAGE_OUTPUT_DIRNAME).exists()
+
+
+def test_init_workspace_is_idempotent_for_existing_directories(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    work_item = "WI-001"
+
+    first = init_workspace(root=root, work_item=work_item)
+    second = init_workspace(root=root, work_item=work_item)
+
+    assert first == second
+    assert (second / WORKITEM_METADATA_FILENAME).exists()
+
+
+def test_init_workspace_recovers_partially_initialized_workspace(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    work_item = "WI-001"
+    partial_stage_root = (
+        root / WORKSPACE_WORKITEMS_DIRNAME / work_item / WORKITEM_STAGES_DIRNAME / "plan"
+    )
+    (partial_stage_root / STAGE_INPUT_DIRNAME).mkdir(parents=True)
+    existing_stage_result = partial_stage_root / "stage-result.md"
+    existing_stage_result.write_text("# Stage result\n\npre-existing\n", encoding="utf-8")
+
+    init_workspace(root=root, work_item=work_item)
+
+    assert (partial_stage_root / STAGE_OUTPUT_DIRNAME).exists()
+    assert (partial_stage_root / "stage-brief.md").exists()
+    assert existing_stage_result.read_text(encoding="utf-8") == "# Stage result\n\npre-existing\n"

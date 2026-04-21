@@ -6,9 +6,12 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E1-S1-T6` Add bootstrap tests for fresh directories, existing directories, and partially initialized workspaces.
+- `W3-E1-S2-T1` Define the run directory layout, including stage and attempt subdirectories.
 
 ## Soon
+
+- `W3-E1-S2-T2` Implement run-manifest creation with runtime id, stage target, and config snapshot.
+- `W3-E1-S2-T3` Implement attempt-directory creation with monotonic attempt numbering.
 
 ## Parking lot
 
