@@ -37,6 +37,16 @@ Optional context documents may improve QA depth, but they must not replace imple
 - `qa` must not declare `succeeded` when review status is unresolved or review decision is `rejected`.
 - `qa` must not declare `succeeded` when verification output or verification artifacts are missing.
 
+## QA output expectations
+
+- `qa-report.md` must include:
+  - an explicit quality verdict (`ready`, `ready-with-risks`, `not-ready`),
+  - residual risk summary with severity and mitigation/ownership notes,
+  - release recommendation aligned to verdict and risk profile,
+  - evidence references linking verdict claims to verification artifacts.
+- release recommendation must be actionable (for example: `proceed`, `proceed-with-conditions`, `hold`).
+- `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.
+
 ## Validation focus
 
 Validators for `qa` should check:

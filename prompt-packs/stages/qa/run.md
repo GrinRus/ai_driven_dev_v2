@@ -33,6 +33,17 @@ Summarize verification outcomes, remaining risks, and readiness status.
 1. Read all required upstream artifacts before writing outputs.
 2. Confirm review status is resolved and review decision is not `rejected`.
 3. Use verification outputs and verification artifacts as mandatory evidence baseline for QA conclusions.
-4. Write or update required output documents in Markdown.
-5. If required inputs are missing or evidence baseline is contradictory, raise a question instead of inventing assumptions.
-6. Keep the output useful for the next stage rather than merely well-formatted.
+4. Write `qa-report.md` with explicit quality verdict, residual risk summary, and release recommendation.
+5. Tie verdict and recommendation claims to concrete verification evidence references.
+6. Keep release recommendation actionable (`proceed`, `proceed-with-conditions`, or `hold`).
+7. Write or update `stage-result.md` and `validator-report.md` so QA outcome is consistent.
+8. If required inputs are missing or evidence baseline is contradictory, raise a question instead of inventing assumptions.
+9. Keep the output useful for the next stage rather than merely well-formatted.
+
+## Completion checklist
+
+- quality verdict is explicit and evidence-backed,
+- residual risks include severity plus mitigation/ownership notes,
+- release recommendation is actionable and coherent with verdict,
+- evidence references are present for material claims,
+- stage result and validator report agree with QA outcome.
