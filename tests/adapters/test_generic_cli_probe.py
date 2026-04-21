@@ -26,6 +26,10 @@ def test_probe_marks_missing_command_unavailable() -> None:
     assert report.available is False
     assert report.command == "definitely-missing-aidd-runtime-command"
     assert report.version_text is None
+    assert report.supports_raw_log_stream is False
+    assert report.supports_non_interactive_mode is False
+    assert report.supports_working_directory_control is False
+    assert report.supports_env_injection is False
 
 
 def test_probe_discovers_existing_command_path() -> None:
@@ -34,3 +38,7 @@ def test_probe_discovers_existing_command_path() -> None:
     assert report.available is True
     assert Path(report.command).name == command_name
     assert report.version_text is not None
+    assert report.supports_raw_log_stream is True
+    assert report.supports_non_interactive_mode is True
+    assert report.supports_working_directory_control is True
+    assert report.supports_env_injection is True

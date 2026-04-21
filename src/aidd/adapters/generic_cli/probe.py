@@ -43,14 +43,19 @@ def discover_version(command_path: str) -> str | None:
 
 def probe(command: str) -> CapabilityReport:
     discovered = discover_command(command)
+    available = discovered is not None
     version_text = discover_version(discovered) if discovered else None
     return CapabilityReport(
         runtime_id="generic-cli",
-        available=discovered is not None,
+        available=available,
         command=discovered or command,
         version_text=version_text,
+        supports_raw_log_stream=available,
         supports_structured_log_stream=False,
         supports_questions=False,
         supports_resume=False,
         supports_subagents=False,
+        supports_non_interactive_mode=available,
+        supports_working_directory_control=available,
+        supports_env_injection=available,
     )
