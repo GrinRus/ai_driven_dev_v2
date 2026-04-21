@@ -44,11 +44,17 @@ Optional context documents may refine review quality, but they must not replace 
 
 Validators for `review-spec` should check:
 
-- required document existence,
-- required headings and sections,
-- consistency with upstream inputs,
-- whether the main output actually serves the stage purpose,
-- whether the stage result reflects validator and repair outcomes.
+- required output existence and heading coverage for `review-spec-report.md`, `stage-result.md`, and `validator-report.md`,
+- issue quality:
+  - issues are concrete, scoped, and linked to observable plan risks or gaps,
+  - issue severity and rationale are explicit and non-generic,
+- actionable recommendations:
+  - recommendation summary maps recommendations to identified issues where applicable,
+  - recommendations are prioritized and specific enough to guide remediation,
+- explicit sign-off status:
+  - readiness state and decision form a coherent sign-off outcome,
+  - sign-off status is consistent with issue severity and required changes,
+- cross-document consistency between review-spec readiness/sign-off status, validator findings, and terminal stage status.
 
 ## Interview policy
 

@@ -24,6 +24,9 @@ Record whether the plan is coherent and ready for task decomposition.
 - `Recommendation summary`
   - Must summarize actionable review recommendations in priority order.
   - Must map recommendations to listed issues when applicable.
+- `Decision`
+  - Must declare explicit sign-off status using one of: `approved`, `approved-with-conditions`, `rejected`.
+  - Must align with `Readiness state` and issue severity.
 
 ## Validation cues
 
