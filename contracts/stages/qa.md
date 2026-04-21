@@ -63,7 +63,28 @@ Validators for `qa` should check:
 
 ## Interview policy
 
-optional when release or acceptance policy is unclear
+`qa` may ask user questions when it cannot produce a defensible quality verdict from available execution evidence.
+
+Mandatory question triggers:
+
+- blocked verification where required checks could not run to completion or produced inconclusive outputs,
+- missing execution artifacts needed to support material verdict or release recommendation claims,
+- contradictory critical-check evidence across verification outputs and review findings.
+
+Blocking-question rules:
+
+- mark as `[blocking]` when unresolved ambiguity prevents a reliable `ready`/`not-ready` verdict or actionable release recommendation,
+- unresolved `[blocking]` questions must force stage status `blocked` (never `succeeded`) and release recommendation `hold`.
+
+Non-blocking-question rules:
+
+- mark as `[non-blocking]` when QA can proceed with bounded assumptions and explicit mitigations,
+- record each non-blocking assumption in `qa-report.md` so downstream release decisions can revisit it.
+
+Question/answer document rules:
+
+- write each question to `questions.md` with a stable id and marker (`[blocking]` or `[non-blocking]`),
+- treat blocking questions as resolved only when `answers.md` includes matching `[resolved]` entries.
 
 ## Repair policy
 
