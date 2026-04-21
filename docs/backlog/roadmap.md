@@ -796,7 +796,7 @@ Local tasks:
 - `W3-E3-S1-T3` (done) Implement persistence and merging of `answers.md` without losing prior answers.
 - `W3-E3-S1-T4` (done) Implement stage gating that blocks progression when blocking questions remain unresolved.
 - `W3-E3-S1-T5` (done) Implement CLI helpers that display pending questions and guide the operator to answer them.
-- `W3-E3-S1-T6` Implement state updates that unblock the stage once required answers are present.
+- `W3-E3-S1-T6` (done) Implement state updates that unblock the stage once required answers are present.
 - `W3-E3-S1-T7` Add tests for question persistence, partial answers, and unblock transitions.
 
 Exit evidence:

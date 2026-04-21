@@ -20,6 +20,7 @@ from aidd.core.stage_runner import (
     persist_execution_state,
     persist_validation_state,
     prepare_stage_bundle,
+    update_stage_unblock_state,
 )
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 
@@ -528,3 +529,93 @@ def test_decide_post_validation_transition_allows_success_when_questions_resolve
     assert transition.next_state == StageState.SUCCEEDED
     assert transition.action == PostValidationAction.ADVANCE
     assert transition.is_terminal is True
+
+
+def test_update_stage_unblock_state_keeps_stage_blocked_when_answers_missing(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    metadata_path = persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.BLOCKED.value,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
+        encoding="utf-8",
+    )
+
+    unblock_state = update_stage_unblock_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert unblock_state.was_blocked is True
+    assert unblock_state.unblocked is False
+    assert unblock_state.next_state == StageState.BLOCKED
+    assert unblock_state.stage_metadata_path == metadata_path
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert payload["status"] == StageState.BLOCKED.value
+
+
+def test_update_stage_unblock_state_moves_stage_to_preparing_when_answers_ready(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.BLOCKED.value,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approval is recorded.\n",
+        encoding="utf-8",
+    )
+
+    unblock_state = update_stage_unblock_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert unblock_state.was_blocked is True
+    assert unblock_state.unblocked is True
+    assert unblock_state.next_state == StageState.PREPARING
+    assert unblock_state.stage_metadata_path is not None
+    payload = json.loads(unblock_state.stage_metadata_path.read_text(encoding="utf-8"))
+    assert payload["status"] == StageState.PREPARING.value
+    assert [entry["status"] for entry in payload["status_history"]] == [
+        StageState.BLOCKED.value,
+        StageState.PREPARING.value,
+    ]

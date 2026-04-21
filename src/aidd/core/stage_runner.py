@@ -9,7 +9,9 @@ from aidd.core.interview import stage_has_unresolved_blocking_questions
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     create_next_attempt_directory,
+    load_stage_metadata,
     persist_stage_status,
+    run_stage_metadata_path,
 )
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
@@ -72,6 +74,17 @@ class PostValidationTransition:
     action: PostValidationAction
     is_terminal: bool
     stage_metadata_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class StageUnblockState:
+    stage: str
+    work_item: str
+    run_id: str
+    was_blocked: bool
+    unblocked: bool
+    next_state: StageState | None
+    stage_metadata_path: Path | None
 
 
 def _to_workspace_relative_paths(workspace_root: Path, paths: tuple[Path, ...]) -> tuple[str, ...]:
@@ -216,6 +229,92 @@ def persist_validation_state(
         run_id=run_id,
         verdict=verdict,
         next_state=next_state,
+        stage_metadata_path=stage_metadata_path,
+    )
+
+
+def update_stage_unblock_state(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    changed_at_utc: datetime | None = None,
+) -> StageUnblockState:
+    stage_metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if stage_metadata is None:
+        return StageUnblockState(
+            stage=stage,
+            work_item=work_item,
+            run_id=run_id,
+            was_blocked=False,
+            unblocked=False,
+            next_state=None,
+            stage_metadata_path=None,
+        )
+
+    current_status = stage_metadata.status.lower()
+    if current_status != StageState.BLOCKED.value:
+        try:
+            next_state: StageState | None = StageState(current_status)
+        except ValueError:
+            next_state = None
+        return StageUnblockState(
+            stage=stage,
+            work_item=work_item,
+            run_id=run_id,
+            was_blocked=False,
+            unblocked=False,
+            next_state=next_state,
+            stage_metadata_path=run_stage_metadata_path(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+            ),
+        )
+
+    if stage_has_unresolved_blocking_questions(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    ):
+        return StageUnblockState(
+            stage=stage,
+            work_item=work_item,
+            run_id=run_id,
+            was_blocked=True,
+            unblocked=False,
+            next_state=StageState.BLOCKED,
+            stage_metadata_path=run_stage_metadata_path(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+            ),
+        )
+
+    transition_stage_state(from_state=StageState.BLOCKED, to_state=StageState.PREPARING)
+    stage_metadata_path = persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        status=StageState.PREPARING.value,
+        changed_at_utc=changed_at_utc,
+    )
+    return StageUnblockState(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        was_blocked=True,
+        unblocked=True,
+        next_state=StageState.PREPARING,
         stage_metadata_path=stage_metadata_path,
     )
 
