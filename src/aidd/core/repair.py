@@ -3,9 +3,17 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
-from aidd.core.run_store import RUN_ATTEMPT_PREFIX, run_attempts_root
+from aidd.core.models.run import RepairHistoryEntry
+from aidd.core.run_store import (
+    RUN_ATTEMPT_PREFIX,
+    load_stage_metadata,
+    persist_repair_history_entry,
+    run_attempts_root,
+)
+from aidd.core.workspace import stage_root as workspace_stage_root
 
 _VALIDATOR_FINDING_PATTERN = re.compile(
     r"^- `(?P<code>[^`]+)` "
@@ -80,6 +88,12 @@ class StageRepairCounter:
     max_repair_attempts: int
     remaining_repair_attempts: int
     budget_exhausted: bool
+
+
+@dataclass(frozen=True, slots=True)
+class RepairHistoryPersistenceResult:
+    stage_metadata_path: Path
+    stage_result_path: Path
 
 
 def _extract_location_path(location: str) -> str | None:
@@ -300,6 +314,197 @@ def generate_repair_brief(
 
 def write_repair_brief(*, path: Path, repair_brief_markdown: str) -> None:
     path.write_text(repair_brief_markdown, encoding="utf-8")
+
+
+def _format_attempt_history_line(entry: RepairHistoryEntry) -> str:
+    line = f"- Attempt `{entry.attempt_number}` (`{entry.trigger}`) -> {entry.outcome}."
+    evidence_items: list[str] = []
+    if entry.validator_report_path is not None:
+        evidence_items.append(f"validator: `{entry.validator_report_path}`")
+    if entry.repair_brief_path is not None:
+        evidence_items.append(f"repair brief: `{entry.repair_brief_path}`")
+    if evidence_items:
+        line += f" Evidence: {', '.join(evidence_items)}."
+    return line
+
+
+def render_stage_result_with_repair_history(
+    *,
+    stage: str,
+    work_item: str | None,
+    status: str,
+    repair_history: Iterable[RepairHistoryEntry],
+    validator_report_path: str | Path | None = None,
+    repair_brief_path: str | Path | None = None,
+    workspace_root: Path | None = None,
+) -> str:
+    normalized_stage = stage.strip()
+    if not normalized_stage:
+        raise ValueError("Stage must not be empty for stage-result rendering.")
+
+    normalized_status = status.strip().lower()
+    if not normalized_status:
+        raise ValueError("Status must not be empty for stage-result rendering.")
+
+    history_entries = tuple(
+        sorted(
+            repair_history,
+            key=lambda entry: (entry.attempt_number, entry.trigger),
+        )
+    )
+    normalized_validator_report_path = (
+        _normalize_workspace_relative_path(
+            path=validator_report_path,
+            workspace_root=workspace_root,
+        )
+        if validator_report_path is not None
+        else None
+    )
+    normalized_repair_brief_path = (
+        _normalize_workspace_relative_path(path=repair_brief_path, workspace_root=workspace_root)
+        if repair_brief_path is not None
+        else None
+    )
+
+    lines = [
+        "# Stage",
+        "",
+        normalized_stage,
+        "",
+        "## Attempt history",
+        "",
+    ]
+    if history_entries:
+        lines.extend(_format_attempt_history_line(entry) for entry in history_entries)
+    else:
+        lines.append("- none")
+
+    lines.extend(
+        [
+            "",
+            "## Status",
+            "",
+            f"- `{normalized_status}`",
+            "",
+            "## Produced outputs",
+            "",
+            (
+                f"- `workitems/{work_item}/stages/{normalized_stage}/stage-result.md`"
+                if work_item is not None
+                else "- `stage-result.md`"
+            ),
+        ]
+    )
+    if normalized_validator_report_path is not None:
+        lines.append(f"- `{normalized_validator_report_path}`")
+    if normalized_repair_brief_path is not None:
+        lines.append(f"- `{normalized_repair_brief_path}`")
+
+    lines.extend(
+        [
+            "",
+            "## Validation summary",
+            "",
+            (
+                f"- Validator findings: see `{normalized_validator_report_path}`."
+                if normalized_validator_report_path is not None
+                else "- Validator findings: none recorded."
+            ),
+            "",
+            "## Blockers",
+            "",
+        ]
+    )
+    if normalized_status == "succeeded":
+        lines.append("- none")
+    else:
+        lines.append(f"- Stage ended with status `{normalized_status}` and needs operator action.")
+
+    lines.extend(
+        [
+            "",
+            "## Next actions",
+            "",
+        ]
+    )
+    if normalized_status == "succeeded":
+        lines.append("- Advance to the next stage.")
+    elif normalized_status == "failed":
+        lines.append("- Review validator report and decide whether to reopen scope or stop.")
+    else:
+        lines.append("- Resolve blockers and rerun the stage when policy allows.")
+
+    lines.extend(
+        [
+            "",
+            "## Terminal state notes",
+            "",
+            f"- Repair history entries recorded: `{len(history_entries)}`.",
+        ]
+    )
+    if normalized_repair_brief_path is not None:
+        lines.append(
+            f"- Repair decision context recorded in `{normalized_repair_brief_path}`."
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def persist_repair_history_snapshot(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+    trigger: str,
+    outcome: str,
+    stage_status: str,
+    validator_report_path: Path | None = None,
+    repair_brief_path: Path | None = None,
+    changed_at_utc: datetime | None = None,
+) -> RepairHistoryPersistenceResult:
+    stage_metadata_path = persist_repair_history_entry(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+        trigger=trigger,
+        outcome=outcome,
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+        changed_at_utc=changed_at_utc,
+    )
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if metadata is None:
+        raise RuntimeError("Stage metadata is missing after persisting repair history.")
+
+    stage_result_path = (
+        workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
+        / "stage-result.md"
+    )
+    stage_result_markdown = render_stage_result_with_repair_history(
+        stage=stage,
+        work_item=work_item,
+        status=stage_status,
+        repair_history=metadata.repair_history,
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+        workspace_root=workspace_root,
+    )
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(stage_result_markdown, encoding="utf-8")
+
+    return RepairHistoryPersistenceResult(
+        stage_metadata_path=stage_metadata_path,
+        stage_result_path=stage_result_path,
+    )
 
 
 def default_repair_budget() -> int:

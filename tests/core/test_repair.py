@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core.models.run import RepairHistoryEntry
 from aidd.core.repair import (
     RepairBudgetPolicy,
     count_stage_attempts,
@@ -12,11 +13,14 @@ from aidd.core.repair import (
     evaluate_stage_repair_counter,
     generate_repair_brief,
     parse_validator_report_findings,
+    persist_repair_history_snapshot,
     remaining_repair_attempts,
     render_repair_brief,
+    render_stage_result_with_repair_history,
     repair_attempts_used,
     write_repair_brief,
 )
+from aidd.core.run_store import create_run_manifest, load_stage_metadata, persist_stage_status
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.reports import render_validator_report
 
@@ -276,3 +280,90 @@ def test_generate_and_write_repair_brief_roundtrip(tmp_path: Path) -> None:
 
     assert brief_path.exists()
     assert "# Failed checks" in brief_path.read_text(encoding="utf-8")
+
+
+def test_render_stage_result_with_repair_history_includes_attempt_lines() -> None:
+    stage_result = render_stage_result_with_repair_history(
+        stage="review",
+        work_item="WI-001",
+        status="failed",
+        repair_history=(
+            RepairHistoryEntry(
+                attempt_number=1,
+                trigger="initial",
+                outcome="failed validation",
+                recorded_at_utc="2026-04-22T10:00:00Z",
+                validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+            ),
+            RepairHistoryEntry(
+                attempt_number=2,
+                trigger="repair",
+                outcome="failed validation",
+                recorded_at_utc="2026-04-22T10:05:00Z",
+                validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+                repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
+            ),
+        ),
+        validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+        repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
+    )
+
+    assert "## Attempt history" in stage_result
+    assert "- Attempt `1` (`initial`) -> failed validation." in stage_result
+    assert "- Attempt `2` (`repair`) -> failed validation." in stage_result
+    assert "`workitems/WI-001/stages/review/repair-brief.md`" in stage_result
+
+
+def test_persist_repair_history_snapshot_updates_metadata_and_stage_result(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status="repair-needed",
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    validator_report_path = stage_root / "validator-report.md"
+    repair_brief_path = stage_root / "repair-brief.md"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    validator_report_path.write_text("# Validator Report\n", encoding="utf-8")
+    repair_brief_path.write_text("# Failed checks\n", encoding="utf-8")
+
+    result = persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+        trigger="initial",
+        outcome="failed validation",
+        stage_status="failed",
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+    )
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert len(metadata.repair_history) == 1
+    assert metadata.repair_history[0].attempt_number == 1
+    assert metadata.repair_history[0].trigger == "initial"
+    assert result.stage_result_path.exists()
+
+    stage_result_text = result.stage_result_path.read_text(encoding="utf-8")
+    assert "- Attempt `1` (`initial`) -> failed validation." in stage_result_text
+    assert "`workitems/WI-001/stages/plan/validator-report.md`" in stage_result_text
+    assert "`workitems/WI-001/stages/plan/repair-brief.md`" in stage_result_text

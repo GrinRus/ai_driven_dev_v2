@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from aidd.core.models.run import RunArtifactIndex, StageRunMetadata
+from aidd.core.models.run import RepairHistoryEntry, RunArtifactIndex, StageRunMetadata
 from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
     WORKSPACE_REPORTS_DIRNAME,
@@ -434,6 +434,71 @@ def persist_stage_status(
     else:
         metadata = existing.with_status(status=status, changed_at_utc=timestamp)
 
+    _write_json_payload(metadata_path, metadata.to_dict())
+    _touch_manifest_timestamp(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        updated_at_utc=timestamp,
+    )
+    return metadata_path
+
+
+def _workspace_relative_optional_path(workspace_root: Path, path: Path | None) -> str | None:
+    if path is None:
+        return None
+    return _workspace_relative_canonical_path(workspace_root=workspace_root, path=path)
+
+
+def persist_repair_history_entry(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    *,
+    attempt_number: int,
+    trigger: str,
+    outcome: str,
+    validator_report_path: Path | None = None,
+    repair_brief_path: Path | None = None,
+    changed_at_utc: datetime | None = None,
+) -> Path:
+    existing = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if existing is None:
+        raise ValueError(
+            "Cannot persist repair history before stage metadata exists: "
+            f"run_id={run_id}, work_item={work_item}, stage={stage}"
+        )
+
+    timestamp = _format_utc_timestamp(changed_at_utc)
+    metadata = existing.with_repair_history_entry(
+        entry=RepairHistoryEntry(
+            attempt_number=attempt_number,
+            trigger=trigger,
+            outcome=outcome,
+            recorded_at_utc=timestamp,
+            validator_report_path=_workspace_relative_optional_path(
+                workspace_root=workspace_root,
+                path=validator_report_path,
+            ),
+            repair_brief_path=_workspace_relative_optional_path(
+                workspace_root=workspace_root,
+                path=repair_brief_path,
+            ),
+        ),
+        changed_at_utc=timestamp,
+    )
+    metadata_path = run_stage_metadata_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
     _write_json_payload(metadata_path, metadata.to_dict())
     _touch_manifest_timestamp(
         workspace_root=workspace_root,

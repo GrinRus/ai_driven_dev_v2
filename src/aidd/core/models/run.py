@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 
@@ -24,6 +25,79 @@ class StageStatusChange:
 
 
 @dataclass(frozen=True, slots=True)
+class RepairHistoryEntry:
+    attempt_number: int
+    trigger: str
+    outcome: str
+    recorded_at_utc: str
+    validator_report_path: str | None = None
+    repair_brief_path: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.attempt_number < 1:
+            raise ValueError("Repair history attempt number must be >= 1.")
+
+        normalized_trigger = self.trigger.strip().lower()
+        if normalized_trigger not in {"initial", "repair"}:
+            raise ValueError("Repair history trigger must be either 'initial' or 'repair'.")
+        object.__setattr__(self, "trigger", normalized_trigger)
+
+        normalized_outcome = self.outcome.strip()
+        if not normalized_outcome:
+            raise ValueError("Repair history outcome must not be empty.")
+        object.__setattr__(self, "outcome", normalized_outcome)
+
+        normalized_recorded_at = self.recorded_at_utc.strip()
+        if not normalized_recorded_at:
+            raise ValueError("Repair history recorded_at_utc must not be empty.")
+        object.__setattr__(self, "recorded_at_utc", normalized_recorded_at)
+
+        for field_name in ("validator_report_path", "repair_brief_path"):
+            value = getattr(self, field_name)
+            if value is None:
+                continue
+            normalized_path = value.strip()
+            if not normalized_path:
+                object.__setattr__(self, field_name, None)
+                continue
+            if Path(normalized_path).is_absolute():
+                raise ValueError(
+                    "Repair history paths must be workspace-relative: "
+                    f"{field_name}={normalized_path}"
+                )
+            object.__setattr__(self, field_name, normalized_path)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "attempt_number": self.attempt_number,
+            "trigger": self.trigger,
+            "outcome": self.outcome,
+            "recorded_at_utc": self.recorded_at_utc,
+            "validator_report_path": self.validator_report_path,
+            "repair_brief_path": self.repair_brief_path,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> RepairHistoryEntry:
+        return cls(
+            attempt_number=int(payload["attempt_number"]),
+            trigger=str(payload["trigger"]),
+            outcome=str(payload["outcome"]),
+            recorded_at_utc=str(payload["recorded_at_utc"]),
+            validator_report_path=(
+                str(payload["validator_report_path"])
+                if payload.get("validator_report_path") is not None
+                else None
+            ),
+            repair_brief_path=(
+                str(payload["repair_brief_path"])
+                if payload.get("repair_brief_path") is not None
+                else None
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class StageRunMetadata:
     run_id: str
     work_item_id: str
@@ -32,6 +106,7 @@ class StageRunMetadata:
     created_at_utc: str
     updated_at_utc: str
     status_history: tuple[StageStatusChange, ...]
+    repair_history: tuple[RepairHistoryEntry, ...] = ()
     schema_version: int = 1
 
     @classmethod
@@ -71,6 +146,10 @@ class StageRunMetadata:
                     changed_at_utc=fallback_timestamp,
                 ),
             )
+        repair_history = tuple(
+            RepairHistoryEntry.from_dict(entry)
+            for entry in payload.get("repair_history", [])
+        )
 
         return cls(
             schema_version=int(payload.get("schema_version", 1)),
@@ -81,6 +160,7 @@ class StageRunMetadata:
             created_at_utc=str(payload["created_at_utc"]),
             updated_at_utc=str(payload["updated_at_utc"]),
             status_history=history,
+            repair_history=repair_history,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -93,6 +173,7 @@ class StageRunMetadata:
             "created_at_utc": self.created_at_utc,
             "updated_at_utc": self.updated_at_utc,
             "status_history": [change.to_dict() for change in self.status_history],
+            "repair_history": [entry.to_dict() for entry in self.repair_history],
         }
 
     def with_status(self, *, status: str, changed_at_utc: str) -> StageRunMetadata:
@@ -108,6 +189,36 @@ class StageRunMetadata:
             created_at_utc=self.created_at_utc,
             updated_at_utc=changed_at_utc,
             status_history=history,
+            repair_history=self.repair_history,
+        )
+
+    def with_repair_history_entry(
+        self,
+        *,
+        entry: RepairHistoryEntry,
+        changed_at_utc: str,
+    ) -> StageRunMetadata:
+        history = list(self.repair_history)
+        for index, existing in enumerate(history):
+            if (
+                existing.attempt_number == entry.attempt_number
+                and existing.trigger == entry.trigger
+            ):
+                history[index] = entry
+                break
+        else:
+            history.append(entry)
+
+        return StageRunMetadata(
+            schema_version=self.schema_version,
+            run_id=self.run_id,
+            work_item_id=self.work_item_id,
+            stage=self.stage,
+            status=self.status,
+            created_at_utc=self.created_at_utc,
+            updated_at_utc=changed_at_utc,
+            status_history=self.status_history,
+            repair_history=tuple(history),
         )
 
 
