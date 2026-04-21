@@ -36,8 +36,30 @@ def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Pat
     assert bundle.stage == "implement"
     assert bundle.work_item == "WI-001"
     assert bundle.expected_input_bundle == (
-        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "output" / "tasklist.md",
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md",
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "stage-result.md",
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "validator-report.md",
         workspace_root / "workitems" / "WI-001" / "context" / "repository-state.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "task-selection.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "allowed-write-scope.md",
     )
     assert bundle.expected_output_documents == (
         workspace_root

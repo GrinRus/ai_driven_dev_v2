@@ -201,8 +201,30 @@ def test_resolve_required_input_documents_maps_context_and_upstream_paths(
     )
 
     assert resolved == (
-        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "output" / "tasklist.md",
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md",
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "stage-result.md",
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "validator-report.md",
         workspace_root / "workitems" / "WI-001" / "context" / "repository-state.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "task-selection.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "allowed-write-scope.md",
     )
 
 

@@ -15,7 +15,25 @@ Apply the selected task to the repository, explain the change, and record verifi
 ## Required inputs
 
 - `../tasklist/output/tasklist.md`
+- `../tasklist/output/stage-result.md`
+- `../tasklist/output/validator-report.md`
 - `context/repository-state.md`
+- `context/task-selection.md`
+- `context/allowed-write-scope.md`
+
+## Optional context inputs
+
+- `context/constraints.md`
+- `context/previous-decisions.md`
+- `context/runtime-capabilities.md`
+
+Optional context documents may improve implementation quality, but they must not replace task selection, repository state, and write-scope controls.
+
+## Upstream dependency rule
+
+- `implement` depends on artifacts from the latest completed `tasklist` attempt.
+- `implement` must not declare `succeeded` when selected task id is missing from `tasklist.md`.
+- `implement` must not declare `succeeded` when edits exceed `context/allowed-write-scope.md` or the scope definition is missing.
 
 ## Validation focus
 
