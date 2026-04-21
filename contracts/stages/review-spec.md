@@ -58,7 +58,28 @@ Validators for `review-spec` should check:
 
 ## Interview policy
 
-required when plan approval depends on unresolved product decisions
+`review-spec` may ask user questions when review conclusions cannot be made safely from available plan artifacts and review context.
+
+Mandatory question triggers:
+
+- contradictory constraints that produce conflicting go/no-go conclusions,
+- missing baseline assumptions required to interpret plan trade-offs or risk posture,
+- unresolved decision authority or acceptance policy needed for sign-off status.
+
+Blocking-question rules:
+
+- mark as `[blocking]` when unresolved ambiguity prevents reliable readiness/sign-off decision,
+- unresolved `[blocking]` questions must force stage status `blocked` (never `succeeded`).
+
+Non-blocking-question rules:
+
+- mark as `[non-blocking]` when review can proceed with explicit bounded assumptions,
+- record non-blocking assumptions in `review-spec-report.md` so downstream stages can revisit them.
+
+Question/answer document rules:
+
+- write each question to `questions.md` with a stable id and marker (`[blocking]` or `[non-blocking]`),
+- treat blocking questions as resolved only when `answers.md` includes matching `[resolved]` entries.
 
 ## Repair policy
 
