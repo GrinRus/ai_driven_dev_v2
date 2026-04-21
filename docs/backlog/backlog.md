@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W4-E2-S1-T1` Implement Claude Code command discovery for the configured executable name or path.
+- `W2-E1-S1-T4` Write the required heading set and answer-resolution markers for `answers.md`.
 
 ## Soon
 
-- `W2-E1-S1-T4` Write the required heading set and answer-resolution markers for `answers.md`.
 - `W2-E1-S1-T5` Write the required heading set, issue-code vocabulary, and severity rules for `validator-report.md`.
 - `W2-E1-S1-T6` Write the required heading set, rerun-budget notes, and fix-plan rules for `repair-brief.md`.
 - `W2-E1-S1-T7` Add one worked example bundle that includes every common document type and cross-links them correctly.
