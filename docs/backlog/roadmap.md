@@ -253,7 +253,7 @@ Exit evidence:
 - `research` inputs and outputs are explicit enough for any adapter to run the stage;
 - validators can reject unsupported assertions and incomplete research bundles.
 
-#### Slice W2-E1-S4 — `plan` stage contract (`planned`)
+#### Slice W2-E1-S4 — `plan` stage contract (`done`)
 Goal: define the planning stage that turns research into a bounded execution plan.
 
 Primary outputs:
@@ -280,7 +280,7 @@ Local tasks:
 - `W2-E1-S4-T3` (done) Define validator rules for plan completeness, sequencing clarity, and user-approval readiness.
 - `W2-E1-S4-T4` (done) Define interview triggers for unresolved scope, sequencing disputes, or missing acceptance signals.
 - `W2-E1-S4-T5` (done) Create the `plan` prompt-pack scaffold with explicit roadmap-style reasoning rules.
-- `W2-E1-S4-T6` Add one worked `plan` example bundle with a valid output and a validator-failing output.
+- `W2-E1-S4-T6` (done) Add one worked `plan` example bundle with a valid output and a validator-failing output.
 
 Exit evidence:
 
