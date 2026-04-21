@@ -10,7 +10,20 @@ Capture relevant sources, findings, trade-offs, and unresolved items.
 - `Sources`
 - `Findings`
 - `Trade-offs`
+- `Evidence trace`
 - `Open questions`
+
+## Field notes
+
+- `Sources`
+  - Each source entry must include a stable citation id (for example `[S1]`).
+  - Each source entry must include enough locator detail to revisit the evidence (URL, file path, or document reference).
+- `Findings`
+  - Findings that influence scope, feasibility, architecture, or risk must reference one or more source citation ids.
+  - Findings without supporting evidence must be marked as assumptions, not facts.
+- `Evidence trace`
+  - Must map major findings or recommendations to supporting citation ids.
+  - Must make missing evidence explicit when any finding has only partial support.
 
 ## Validation cues
 

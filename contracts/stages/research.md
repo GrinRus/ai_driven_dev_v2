@@ -6,9 +6,14 @@ Collect relevant technical and product context before a plan is written.
 
 ## Primary output
 
+Required outputs for every `research` attempt:
+
 - `research-notes.md`
 - `stage-result.md`
 - `validator-report.md`
+
+Conditional outputs:
+
 - `repair-brief.md` when validation fails
 - `questions.md` / `answers.md` when clarification is required
 
@@ -25,6 +30,14 @@ Collect relevant technical and product context before a plan is written.
 - `context/previous-decisions.md`
 
 Optional context documents may enrich research quality, but their absence must not block a `research` run.
+
+## Research output expectations
+
+- `research-notes.md` must include the required stage sections, including an explicit `Evidence trace` section.
+- `Sources` must contain traceable citation ids (for example `[S1]`, `[S2]`) with enough metadata to re-open the source.
+- `Findings` must reference supporting citation ids for claims that affect scope, feasibility, or risk.
+- `Evidence trace` must map major findings or decisions to supporting citation ids.
+- `stage-result.md` and `validator-report.md` must stay consistent with the documented citation coverage.
 
 ## Validation focus
 
