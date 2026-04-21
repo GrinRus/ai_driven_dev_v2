@@ -34,6 +34,16 @@ Optional context documents may improve review depth, but they must not replace i
 - `review` must not declare `succeeded` when `implement` validator verdict is `fail` or stage status is unresolved.
 - `review` must not declare `succeeded` when diff context or acceptance criteria are missing.
 
+## Review output expectations
+
+- `review-report.md` must include:
+  - findings with stable ids, explicit severity, and disposition per finding,
+  - rationale tied to implementation evidence and acceptance criteria,
+  - an explicit approval status suitable for go/no-go decision (`approved`, `approved-with-conditions`, `rejected`),
+  - summary of required changes when approval status is not `approved`.
+- severity labels must remain explicit and consistent across findings and summary sections.
+- `stage-result.md` and `validator-report.md` must remain consistent with findings and approval status.
+
 ## Validation focus
 
 Validators for `review` should check:

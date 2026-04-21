@@ -412,7 +412,7 @@ Dependencies:
 Local tasks:
 
 - `W2-E1-S8-T1` (done) Define the required `review` inputs, including implementation output, diff context, and acceptance criteria.
-- `W2-E1-S8-T2` Define the required `review` outputs, including findings, severity, and approval status.
+- `W2-E1-S8-T2` (done) Define the required `review` outputs, including findings, severity, and approval status.
 - `W2-E1-S8-T3` Define validator rules for unsupported findings, missing severity labels, and absent disposition.
 - `W2-E1-S8-T4` Define interview triggers for contradictory instructions or missing review baseline.
 - `W2-E1-S8-T5` Create the `review` prompt-pack scaffold.
