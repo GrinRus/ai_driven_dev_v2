@@ -6,7 +6,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W2-E1-S1-T3` Write the required heading set and blocking-question markers for `questions.md`.
 - `W2-E2-S1-T1` Implement workspace-relative path resolution for stage documents and common documents.
 - `W2-E2-S1-T2` Implement Markdown file loading that returns raw body text plus file metadata.
 - `W3-E1-S1-T1` Define the canonical workspace directory layout and reserved file names.
