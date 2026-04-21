@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W3-E1-S3-T3` Implement resume guards that refuse to resume closed or corrupted runs.
+- `W3-E1-S3-T4` Expose run lookup in CLI-facing utilities used by later commands.
 
 ## Soon
 
-- `W3-E1-S3-T4` Expose run lookup in CLI-facing utilities used by later commands.
+- `W3-E1-S3-T5` Add tests for ambiguous runs, missing manifests, and resume-on-closed-run cases.
 
 ## Parking lot
 

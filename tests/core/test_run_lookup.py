@@ -3,8 +3,14 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from aidd.core.run_lookup import (
+    ClosedRunError,
+    CorruptedRunError,
     attempt_artifact_index_path,
+    guard_latest_run_resume,
+    guard_run_resume,
     latest_attempt_number,
     latest_attempt_path,
     latest_attempt_path_for_work_item,
@@ -18,6 +24,7 @@ from aidd.core.run_store import (
     create_run_manifest,
     persist_stage_status,
     run_attempt_root,
+    run_manifest_path,
     run_root,
 )
 
@@ -345,4 +352,126 @@ def test_resolve_latest_attempt_artifact_paths_uses_latest_run_and_attempt(
     assert resolved.attempt_number == 2
     assert resolved.logs["runtime_log"].as_posix().endswith(
         "/run-002/stages/plan/attempts/attempt-0002/runtime.log"
+    )
+
+
+def test_guard_run_resume_allows_non_terminal_stage_status(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status="running",
+        changed_at_utc=datetime.now(UTC).replace(microsecond=0) + timedelta(minutes=1),
+    )
+
+    guard_run_resume(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+
+def test_guard_run_resume_rejects_terminal_stage_status(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status="passed",
+        changed_at_utc=datetime.now(UTC).replace(microsecond=0) + timedelta(minutes=2),
+    )
+
+    with pytest.raises(ClosedRunError, match="terminal status"):
+        guard_run_resume(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+        )
+
+
+def test_guard_run_resume_rejects_missing_or_corrupted_manifest(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    with pytest.raises(CorruptedRunError, match="manifest is missing"):
+        guard_run_resume(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+        )
+
+    broken_manifest = run_manifest_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-002",
+    )
+    broken_manifest.parent.mkdir(parents=True, exist_ok=True)
+    broken_manifest.write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(CorruptedRunError, match="not valid JSON"):
+        guard_run_resume(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-002",
+            stage="plan",
+        )
+
+
+def test_guard_latest_run_resume_returns_latest_run_id(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    now = datetime.now(UTC).replace(microsecond=0)
+
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-002",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-002",
+        stage="plan",
+        status="running",
+        changed_at_utc=now + timedelta(minutes=10),
+    )
+
+    assert (
+        guard_latest_run_resume(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            stage="plan",
+        )
+        == "run-002"
     )

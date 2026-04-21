@@ -4,10 +4,12 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     load_attempt_artifact_index,
+    load_stage_metadata,
     run_attempt_artifact_index_path,
     run_attempt_root,
     run_attempts_root,
@@ -16,6 +18,17 @@ from aidd.core.run_store import (
 )
 
 _MIN_TIMESTAMP = datetime(1970, 1, 1, tzinfo=UTC)
+_TERMINAL_STAGE_STATUSES = frozenset(
+    {
+        "blocked",
+        "closed",
+        "completed",
+        "done",
+        "failed",
+        "passed",
+        "succeeded",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +38,18 @@ class AttemptArtifactPaths:
     attempt_number: int
     documents: dict[str, Path]
     logs: dict[str, Path]
+
+
+class ResumeGuardError(ValueError):
+    """Base error for resume guard failures."""
+
+
+class CorruptedRunError(ResumeGuardError):
+    """Raised when run metadata is missing or malformed."""
+
+
+class ClosedRunError(ResumeGuardError):
+    """Raised when a run has already reached a terminal stage status."""
 
 
 def _parse_utc_timestamp(timestamp: str | None) -> datetime:
@@ -49,6 +74,44 @@ def _resolve_workspace_relative_path(workspace_root: Path, relative_path: str) -
     return resolved_path
 
 
+def _load_manifest_payload(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+) -> dict[str, Any]:
+    manifest_path = run_manifest_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
+    if not manifest_path.exists():
+        raise CorruptedRunError(
+            f"Run manifest is missing for work item '{work_item}', run '{run_id}'."
+        )
+
+    try:
+        loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise CorruptedRunError(
+            f"Run manifest is not valid JSON for work item '{work_item}', run '{run_id}'."
+        ) from exc
+    if not isinstance(loaded, dict):
+        raise CorruptedRunError(
+            f"Run manifest must be a JSON object for work item '{work_item}', run '{run_id}'."
+        )
+    payload: dict[str, Any] = dict(loaded)
+
+    if str(payload.get("run_id")) != run_id:
+        raise CorruptedRunError(
+            f"Run manifest run_id mismatch for work item '{work_item}', run '{run_id}'."
+        )
+    if str(payload.get("work_item_id")) != work_item:
+        raise CorruptedRunError(
+            f"Run manifest work_item_id mismatch for work item '{work_item}', run '{run_id}'."
+        )
+    return payload
+
+
 def latest_run_path(workspace_root: Path, work_item: str) -> Path | None:
     runs_root = work_item_runs_root(workspace_root=workspace_root, work_item=work_item)
     if not runs_root.exists():
@@ -62,15 +125,15 @@ def latest_run_path(workspace_root: Path, work_item: str) -> Path | None:
         if not candidate.is_dir():
             continue
 
-        manifest_path = run_manifest_path(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=candidate.name,
-        )
-        if not manifest_path.exists():
+        try:
+            payload = _load_manifest_payload(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=candidate.name,
+            )
+        except CorruptedRunError:
             continue
 
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         timestamp = _parse_utc_timestamp(
             str(payload.get("updated_at_utc", payload.get("created_at_utc")))
         )
@@ -162,6 +225,56 @@ def latest_attempt_path_for_work_item(
         run_id=run_id,
         stage=stage,
     )
+
+
+def guard_run_resume(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> None:
+    _load_manifest_payload(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
+    stage_metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if stage_metadata is None:
+        return
+
+    if stage_metadata.run_id != run_id or stage_metadata.work_item_id != work_item:
+        raise CorruptedRunError(
+            f"Stage metadata mismatch for work item '{work_item}', run '{run_id}', stage '{stage}'."
+        )
+    if stage_metadata.stage != stage:
+        raise CorruptedRunError(
+            "Stage metadata stage mismatch for work item "
+            f"'{work_item}', run '{run_id}', stage '{stage}'."
+        )
+
+    status = stage_metadata.status.lower()
+    if status in _TERMINAL_STAGE_STATUSES:
+        raise ClosedRunError(
+            f"Run '{run_id}' stage '{stage}' is in terminal status '{stage_metadata.status}'."
+        )
+
+
+def guard_latest_run_resume(workspace_root: Path, work_item: str, stage: str) -> str:
+    run_id = latest_run_id(workspace_root=workspace_root, work_item=work_item)
+    if run_id is None:
+        raise CorruptedRunError(f"No resumable runs found for work item '{work_item}'.")
+    guard_run_resume(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    return run_id
 
 
 def attempt_artifact_index_path(
