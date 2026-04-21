@@ -901,7 +901,7 @@ Dependencies:
 Local tasks:
 
 - `W4-E1-S2-T1` (done) Implement command assembly from adapter config, stage context, and prompt-pack path.
-- `W4-E1-S2-T2` Implement environment-variable injection for workspace, stage, and run metadata.
+- `W4-E1-S2-T2` (done) Implement environment-variable injection for workspace, stage, and run metadata.
 - `W4-E1-S2-T3` Implement workspace and prompt-pack path exposure for subprocess execution.
 - `W4-E1-S2-T4` Implement stdout and stderr streaming to the CLI while the subprocess runs.
 - `W4-E1-S2-T5` Persist raw `runtime.log` and basic exit metadata for each attempt.

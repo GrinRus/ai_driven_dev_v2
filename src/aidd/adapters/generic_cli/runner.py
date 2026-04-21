@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shlex
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -64,3 +65,23 @@ def command_preview(
         configured_command=configured_command,
         context=context,
     ))
+
+
+def build_execution_environment(
+    *,
+    workspace_root: Path,
+    context: GenericCliStageContext,
+    base_env: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    env = dict(base_env or {})
+    env.update(
+        {
+            "AIDD_WORKSPACE_ROOT": workspace_root.as_posix(),
+            "AIDD_STAGE": context.stage,
+            "AIDD_WORK_ITEM": context.work_item,
+            "AIDD_RUN_ID": context.run_id,
+            "AIDD_PROMPT_PACK_PATH": context.prompt_pack_path.as_posix(),
+            "AIDD_RUNTIME_ID": "generic-cli",
+        }
+    )
+    return env

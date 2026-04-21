@@ -7,6 +7,7 @@ import pytest
 from aidd.adapters.generic_cli.runner import (
     GenericCliStageContext,
     assemble_command,
+    build_execution_environment,
     command_preview,
 )
 
@@ -68,3 +69,28 @@ def test_command_preview_renders_shell_escaped_output() -> None:
 
     assert preview.startswith("runtime --profile 'fast lane'")
     assert "--prompt-pack prompt-packs/stages/plan/system.md" in preview
+
+
+def test_build_execution_environment_injects_stage_and_run_metadata() -> None:
+    env = build_execution_environment(
+        workspace_root=Path(".aidd"),
+        context=_context(),
+    )
+
+    assert env["AIDD_WORKSPACE_ROOT"] == ".aidd"
+    assert env["AIDD_STAGE"] == "plan"
+    assert env["AIDD_WORK_ITEM"] == "WI-001"
+    assert env["AIDD_RUN_ID"] == "run-001"
+    assert env["AIDD_PROMPT_PACK_PATH"] == "prompt-packs/stages/plan/system.md"
+    assert env["AIDD_RUNTIME_ID"] == "generic-cli"
+
+
+def test_build_execution_environment_preserves_non_aidd_env_keys() -> None:
+    env = build_execution_environment(
+        workspace_root=Path(".aidd"),
+        context=_context(),
+        base_env={"PATH": "/usr/bin", "AIDD_STAGE": "stale"},
+    )
+
+    assert env["PATH"] == "/usr/bin"
+    assert env["AIDD_STAGE"] == "plan"
