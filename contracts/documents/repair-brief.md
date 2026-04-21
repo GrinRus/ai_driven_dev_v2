@@ -10,12 +10,47 @@ Describe what failed validation and what the repair attempt must correct.
 - `Required corrections`
 - `Relevant upstream docs`
 
+## Field notes
+
+- `Failed checks`
+  - Must list failed validator issues from the latest attempt with issue code and severity.
+  - Must include workspace-relative source document references for each failed check.
+- `Required corrections`
+  - Must define concrete corrections mapped to the listed failed checks.
+  - Must separate mandatory fixes from optional quality improvements.
+- `Relevant upstream docs`
+  - Must list upstream artifacts required to perform the repair safely.
+  - Must include `questions.md` or `answers.md` when clarification state affects the fix.
+
+## Rerun-budget notes
+
+- Must include current attempt index and remaining repair attempts.
+- Must state whether another rerun is allowed after this repair attempt.
+- Must declare `repair-budget-exhausted` when no attempts remain.
+- Must not instruct indefinite retries.
+
+## Fix-plan rules
+
+- Each required correction must map to one or more failed check codes.
+- Fix actions must be actionable and scoped to document-level edits.
+- If a failed check cannot be repaired automatically, mark it as `needs-human-input` with reason.
+- Do not add new scope beyond resolving listed failed checks unless explicitly required.
+
+## Authoring rules
+
+- Keep remediation steps deterministic and stage-scoped.
+- Use backticked workspace-relative paths for all document references.
+- Keep one correction item per bullet to preserve auditability.
+- Avoid generic instructions such as `improve quality` without concrete expected changes.
+- Do not omit budget state; missing budget context invalidates repair control.
+
 ## Validation cues
 
-- the file exists in the expected stage directory,
-- the required headings are present,
-- the content is non-placeholder and stage-relevant,
-- upstream references are present when the stage requires them.
+- the required heading set is present exactly once,
+- failed checks include code, severity, and source references,
+- rerun-budget state is explicit and internally consistent,
+- required corrections map back to failed checks,
+- fix-plan items stay within repair scope.
 
 ## Notes
 
