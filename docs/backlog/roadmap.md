@@ -344,7 +344,7 @@ Dependencies:
 Local tasks:
 
 - `W2-E1-S6-T1` (done) Define the required `tasklist` inputs, including approved plan and spec-review results.
-- `W2-E1-S6-T2` Define the required `tasklist` outputs, including task granularity, dependencies, and verification notes.
+- `W2-E1-S6-T2` (done) Define the required `tasklist` outputs, including task granularity, dependencies, and verification notes.
 - `W2-E1-S6-T3` Define validator rules for task independence, ordering clarity, and reviewability.
 - `W2-E1-S6-T4` Define interview triggers for unresolved sequencing or staffing assumptions.
 - `W2-E1-S6-T5` Create the `tasklist` prompt-pack scaffold.

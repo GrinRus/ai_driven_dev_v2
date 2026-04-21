@@ -30,6 +30,18 @@ Break the approved plan into reviewable implementation tasks with verification n
 1. Read all required upstream artifacts before writing outputs.
 2. Treat the latest completed `review-spec` attempt as the gating upstream source.
 3. Do not declare success when review-spec readiness or sign-off indicates unresolved blocking conditions.
-4. Write or update the required output documents in Markdown.
-5. If required inputs are missing or a critical decision is unclear, raise a question instead of inventing an answer.
-6. Keep the output useful for the next stage rather than merely well-formatted.
+4. Write `tasklist.md` as an ordered implementation decomposition with stable task ids and imperative titles.
+5. Keep each task bounded to one dominant output artifact so it stays reviewable as a standalone unit.
+6. Record explicit dependencies for every task (`none` when independent) and keep ordering executable in dependency order.
+7. Add verification notes for every task that name the primary check, test, or scenario proving completion.
+8. Write or update `stage-result.md` and `validator-report.md` so readiness and validation outcomes are consistent.
+9. If required inputs are missing or a critical decision is unclear, raise a question instead of inventing an answer.
+10. Keep the output useful for the next stage rather than merely well-formatted.
+
+## Completion checklist
+
+- task entries are ordered, uniquely identified, and imperative,
+- each task has one dominant output artifact,
+- each task has explicit dependencies (`none` or concrete upstream ids),
+- each task has at least one concrete verification note,
+- `stage-result.md` and `validator-report.md` agree with tasklist readiness.

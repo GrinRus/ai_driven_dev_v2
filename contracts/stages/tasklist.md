@@ -33,6 +33,16 @@ Optional context documents may improve task decomposition quality, but they must
 - `tasklist` depends on artifacts from the latest completed `review-spec` attempt.
 - `tasklist` must not declare `succeeded` when review-spec readiness/sign-off outcome indicates unresolved blocking conditions.
 
+## Tasklist output expectations
+
+- `tasklist.md` must include:
+  - an ordered decomposition of implementation tasks with stable task ids and imperative titles,
+  - one dominant output artifact per task so each item remains reviewable as a standalone unit,
+  - explicit dependency notes per task (upstream task ids or `none`),
+  - verification notes per task naming the primary check, test, or scenario proving completion.
+- task ordering should be executable in dependency order rather than by prose grouping alone.
+- `stage-result.md` and `validator-report.md` must stay consistent with the declared tasklist readiness.
+
 ## Validation focus
 
 Validators for `tasklist` should check:
