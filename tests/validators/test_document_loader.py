@@ -9,6 +9,7 @@ from aidd.validators.document_loader import (
     DocumentPathError,
     classify_document_type,
     load_markdown_document,
+    load_markdown_documents,
     resolve_common_document_path,
     resolve_stage_document_path,
     resolve_stage_root,
@@ -154,6 +155,58 @@ def test_load_markdown_document_rejects_unclosed_frontmatter(tmp_path: Path) -> 
 
     with pytest.raises(DocumentLoadError, match="closing '---' delimiter"):
         load_markdown_document(path=doc_path, workspace_root=workspace_root)
+
+
+def test_load_markdown_document_normalizes_workspace_relative_path(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    canonical_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
+    )
+    canonical_path.parent.mkdir(parents=True)
+    canonical_path.write_text("# Plan\n", encoding="utf-8")
+
+    aliased_path = (
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "plan"
+        / "output"
+        / "."
+        / "plan.md"
+    )
+    loaded = load_markdown_document(path=aliased_path, workspace_root=workspace_root)
+
+    assert loaded.metadata.workspace_relative_path == Path(
+        "workitems/WI-001/stages/plan/output/plan.md"
+    )
+
+
+def test_load_markdown_documents_rejects_duplicate_paths_after_normalization(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    canonical_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
+    )
+    canonical_path.parent.mkdir(parents=True)
+    canonical_path.write_text("# Plan\n", encoding="utf-8")
+    aliased_path = (
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "plan"
+        / "output"
+        / "."
+        / "plan.md"
+    )
+
+    with pytest.raises(DocumentLoadError, match="Duplicate document path after normalization"):
+        load_markdown_documents(
+            paths=[canonical_path, aliased_path],
+            workspace_root=workspace_root,
+        )
 
 
 def test_classify_document_type_detects_common_document() -> None:

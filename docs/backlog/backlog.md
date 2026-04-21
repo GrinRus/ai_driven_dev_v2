@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W2-E2-S1-T5` Add loader tests for missing files, malformed frontmatter, duplicate paths, and path normalization.
+- `W4-E1-S1-T3` Derive a minimal capability map for the generic adapter from config and probe results.
 
 ## Soon
 
-- `W4-E1-S1-T3` Derive a minimal capability map for the generic adapter from config and probe results.
 - `W4-E2-S1-T3` Detect advertised capability flags that matter to AIDD, such as streaming or non-interactive support.
 
 ## Parking lot

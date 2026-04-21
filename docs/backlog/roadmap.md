@@ -485,7 +485,7 @@ Local tasks:
 - `W2-E2-S1-T2` (done) Implement Markdown file loading that returns raw body text plus file metadata.
 - `W2-E2-S1-T3` (done) Implement optional frontmatter parsing without making frontmatter required.
 - `W2-E2-S1-T4` (done) Implement document-type classification from path and filename conventions.
-- `W2-E2-S1-T5` Add loader tests for missing files, malformed frontmatter, duplicate paths, and path normalization.
+- `W2-E2-S1-T5` (done) Add loader tests for missing files, malformed frontmatter, duplicate paths, and path normalization.
 
 Exit evidence:
 

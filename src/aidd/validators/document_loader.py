@@ -186,3 +186,25 @@ def load_markdown_document(path: Path, workspace_root: Path) -> LoadedMarkdownDo
         modified_time_epoch_s=stat.st_mtime,
     )
     return LoadedMarkdownDocument(body=body, metadata=metadata, frontmatter=frontmatter)
+
+
+def load_markdown_documents(
+    paths: list[Path],
+    workspace_root: Path,
+) -> list[LoadedMarkdownDocument]:
+    loaded_documents: list[LoadedMarkdownDocument] = []
+    seen_paths: set[Path] = set()
+
+    for path in paths:
+        loaded = load_markdown_document(path=path, workspace_root=workspace_root)
+        normalized_path = loaded.metadata.workspace_relative_path
+        if normalized_path in seen_paths:
+            raise DocumentLoadError(
+                "Duplicate document path after normalization: "
+                f"{normalized_path} (source={path})"
+            )
+
+        seen_paths.add(normalized_path)
+        loaded_documents.append(loaded)
+
+    return loaded_documents
