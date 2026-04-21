@@ -1,0 +1,293 @@
+# Repository Manifest
+
+Total files: **262**
+
+## Top-level counts
+
+- `.agents` — 10 files
+- `.editorconfig` — 1 files
+- `.github` — 3 files
+- `.gitignore` — 1 files
+- `.pytest_cache` — 4 files
+- `AGENTS.md` — 1 files
+- `CLAUDE.md` — 1 files
+- `CONTRIBUTING.md` — 1 files
+- `Dockerfile` — 1 files
+- `LICENSE` — 1 files
+- `MANIFEST.md` — 1 files
+- `Makefile` — 1 files
+- `README.md` — 1 files
+- `aidd.example.toml` — 1 files
+- `contracts` — 44 files
+- `docs` — 18 files
+- `harness` — 18 files
+- `manifest.txt` — 1 files
+- `prompt-packs` — 52 files
+- `pyproject.toml` — 1 files
+- `src` — 85 files
+- `tests` — 15 files
+
+## File list
+
+- `.agents/skills/AGENTS.md`
+- `.agents/skills/aidd-eval/SKILL.md`
+- `.agents/skills/aidd-eval/references/e2e-flow-audit.md`
+- `.agents/skills/backlog-ops/SKILL.md`
+- `.agents/skills/live-e2e/SKILL.md`
+- `.agents/skills/project-navigation/SKILL.md`
+- `.agents/skills/runtime-log-triage/SKILL.md`
+- `.agents/skills/stage-contract-change/SKILL.md`
+- `.agents/skills/task-slicing/SKILL.md`
+- `.agents/skills/user-story-check/SKILL.md`
+- `.editorconfig`
+- `.github/pull_request_template.md`
+- `.github/workflows/ci.yml`
+- `.github/workflows/release.yml`
+- `.gitignore`
+- `.pytest_cache/.gitignore`
+- `.pytest_cache/CACHEDIR.TAG`
+- `.pytest_cache/README.md`
+- `.pytest_cache/v/cache/nodeids`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `CONTRIBUTING.md`
+- `Dockerfile`
+- `LICENSE`
+- `MANIFEST.md`
+- `Makefile`
+- `README.md`
+- `aidd.example.toml`
+- `contracts/AGENTS.md`
+- `contracts/documents/AGENTS.md`
+- `contracts/documents/answers.md`
+- `contracts/documents/idea-brief.md`
+- `contracts/documents/implementation-report.md`
+- `contracts/documents/plan.md`
+- `contracts/documents/qa-report.md`
+- `contracts/documents/questions.md`
+- `contracts/documents/repair-brief.md`
+- `contracts/documents/research-notes.md`
+- `contracts/documents/review-report.md`
+- `contracts/documents/review-spec-report.md`
+- `contracts/documents/stage-brief.md`
+- `contracts/documents/stage-result.md`
+- `contracts/documents/tasklist.md`
+- `contracts/documents/validator-report.md`
+- `contracts/examples/AGENTS.md`
+- `contracts/examples/common-documents/AGENTS.md`
+- `contracts/examples/common-documents/stage-brief.md`
+- `contracts/examples/idea/AGENTS.md`
+- `contracts/examples/idea/idea-brief.md`
+- `contracts/examples/implement/AGENTS.md`
+- `contracts/examples/implement/implementation-report.md`
+- `contracts/examples/plan/AGENTS.md`
+- `contracts/examples/plan/plan.md`
+- `contracts/examples/qa/AGENTS.md`
+- `contracts/examples/qa/qa-report.md`
+- `contracts/examples/research/AGENTS.md`
+- `contracts/examples/research/research-notes.md`
+- `contracts/examples/review-spec/AGENTS.md`
+- `contracts/examples/review-spec/review-spec-report.md`
+- `contracts/examples/review/AGENTS.md`
+- `contracts/examples/review/review-report.md`
+- `contracts/examples/tasklist/AGENTS.md`
+- `contracts/examples/tasklist/tasklist.md`
+- `contracts/stages/AGENTS.md`
+- `contracts/stages/idea.md`
+- `contracts/stages/implement.md`
+- `contracts/stages/plan.md`
+- `contracts/stages/qa.md`
+- `contracts/stages/research.md`
+- `contracts/stages/review-spec.md`
+- `contracts/stages/review.md`
+- `contracts/stages/tasklist.md`
+- `docs/AGENTS.md`
+- `docs/analysis/AGENTS.md`
+- `docs/analysis/analytical-note.md`
+- `docs/architecture/AGENTS.md`
+- `docs/architecture/adapter-protocol.md`
+- `docs/architecture/distribution-and-development.md`
+- `docs/architecture/document-contracts.md`
+- `docs/architecture/eval-harness-integration.md`
+- `docs/architecture/runtime-matrix.md`
+- `docs/architecture/target-architecture.md`
+- `docs/backlog/AGENTS.md`
+- `docs/backlog/backlog.md`
+- `docs/backlog/rebuild-plan.md`
+- `docs/backlog/roadmap.md`
+- `docs/e2e/AGENTS.md`
+- `docs/e2e/live-e2e-catalog.md`
+- `docs/product/AGENTS.md`
+- `docs/product/user-stories.md`
+- `harness/AGENTS.md`
+- `harness/fixtures/AGENTS.md`
+- `harness/fixtures/minimal-python/AGENTS.md`
+- `harness/fixtures/minimal-python/pyproject.toml`
+- `harness/fixtures/minimal-python/src/minimal_app/__init__.py`
+- `harness/fixtures/minimal-python/tests/test_minimal_app.py`
+- `harness/scenarios/AGENTS.md`
+- `harness/scenarios/live/AGENTS.md`
+- `harness/scenarios/live/hono-non-error-throw-handling.yaml`
+- `harness/scenarios/live/hono-router-double-star-parity.yaml`
+- `harness/scenarios/live/httpx-cli-docs-sync.yaml`
+- `harness/scenarios/live/httpx-invalid-header-message.yaml`
+- `harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml`
+- `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml`
+- `harness/scenarios/live/typer-boolean-help-rendering.yaml`
+- `harness/scenarios/live/typer-styled-help-alignment.yaml`
+- `harness/scenarios/smoke/AGENTS.md`
+- `harness/scenarios/smoke/plan-stage-minimal-fixture.yaml`
+- `manifest.txt`
+- `prompt-packs/AGENTS.md`
+- `prompt-packs/common/AGENTS.md`
+- `prompt-packs/common/run-rules.md`
+- `prompt-packs/idea/AGENTS.md`
+- `prompt-packs/implement/AGENTS.md`
+- `prompt-packs/plan/AGENTS.md`
+- `prompt-packs/qa/AGENTS.md`
+- `prompt-packs/research/AGENTS.md`
+- `prompt-packs/review-spec/AGENTS.md`
+- `prompt-packs/review/AGENTS.md`
+- `prompt-packs/stages/AGENTS.md`
+- `prompt-packs/stages/idea/AGENTS.md`
+- `prompt-packs/stages/idea/interview.md`
+- `prompt-packs/stages/idea/repair.md`
+- `prompt-packs/stages/idea/run.md`
+- `prompt-packs/stages/idea/system.md`
+- `prompt-packs/stages/implement/AGENTS.md`
+- `prompt-packs/stages/implement/interview.md`
+- `prompt-packs/stages/implement/repair.md`
+- `prompt-packs/stages/implement/run.md`
+- `prompt-packs/stages/implement/system.md`
+- `prompt-packs/stages/plan/AGENTS.md`
+- `prompt-packs/stages/plan/interview.md`
+- `prompt-packs/stages/plan/repair.md`
+- `prompt-packs/stages/plan/run.md`
+- `prompt-packs/stages/plan/system.md`
+- `prompt-packs/stages/qa/AGENTS.md`
+- `prompt-packs/stages/qa/interview.md`
+- `prompt-packs/stages/qa/repair.md`
+- `prompt-packs/stages/qa/run.md`
+- `prompt-packs/stages/qa/system.md`
+- `prompt-packs/stages/research/AGENTS.md`
+- `prompt-packs/stages/research/interview.md`
+- `prompt-packs/stages/research/repair.md`
+- `prompt-packs/stages/research/run.md`
+- `prompt-packs/stages/research/system.md`
+- `prompt-packs/stages/review-spec/AGENTS.md`
+- `prompt-packs/stages/review-spec/interview.md`
+- `prompt-packs/stages/review-spec/repair.md`
+- `prompt-packs/stages/review-spec/run.md`
+- `prompt-packs/stages/review-spec/system.md`
+- `prompt-packs/stages/review/AGENTS.md`
+- `prompt-packs/stages/review/interview.md`
+- `prompt-packs/stages/review/repair.md`
+- `prompt-packs/stages/review/run.md`
+- `prompt-packs/stages/review/system.md`
+- `prompt-packs/stages/tasklist/AGENTS.md`
+- `prompt-packs/stages/tasklist/interview.md`
+- `prompt-packs/stages/tasklist/repair.md`
+- `prompt-packs/stages/tasklist/run.md`
+- `prompt-packs/stages/tasklist/system.md`
+- `prompt-packs/tasklist/AGENTS.md`
+- `pyproject.toml`
+- `src/aidd/AGENTS.md`
+- `src/aidd/__init__.py`
+- `src/aidd/__pycache__/__init__.cpython-313.pyc`
+- `src/aidd/__pycache__/config.cpython-313.pyc`
+- `src/aidd/adapters/AGENTS.md`
+- `src/aidd/adapters/__init__.py`
+- `src/aidd/adapters/__pycache__/__init__.cpython-313.pyc`
+- `src/aidd/adapters/__pycache__/base.cpython-313.pyc`
+- `src/aidd/adapters/base.py`
+- `src/aidd/adapters/claude_code/AGENTS.md`
+- `src/aidd/adapters/claude_code/__init__.py`
+- `src/aidd/adapters/claude_code/__pycache__/__init__.cpython-313.pyc`
+- `src/aidd/adapters/claude_code/__pycache__/probe.cpython-313.pyc`
+- `src/aidd/adapters/claude_code/probe.py`
+- `src/aidd/adapters/claude_code/runner.py`
+- `src/aidd/adapters/codex/AGENTS.md`
+- `src/aidd/adapters/codex/__init__.py`
+- `src/aidd/adapters/codex/probe.py`
+- `src/aidd/adapters/codex/runner.py`
+- `src/aidd/adapters/generic_cli/AGENTS.md`
+- `src/aidd/adapters/generic_cli/__init__.py`
+- `src/aidd/adapters/generic_cli/__pycache__/__init__.cpython-313.pyc`
+- `src/aidd/adapters/generic_cli/__pycache__/probe.cpython-313.pyc`
+- `src/aidd/adapters/generic_cli/probe.py`
+- `src/aidd/adapters/generic_cli/runner.py`
+- `src/aidd/adapters/opencode/AGENTS.md`
+- `src/aidd/adapters/opencode/__init__.py`
+- `src/aidd/adapters/opencode/probe.py`
+- `src/aidd/adapters/opencode/runner.py`
+- `src/aidd/cli/AGENTS.md`
+- `src/aidd/cli/__init__.py`
+- `src/aidd/cli/__pycache__/__init__.cpython-313.pyc`
+- `src/aidd/cli/__pycache__/main.cpython-313.pyc`
+- `src/aidd/cli/main.py`
+- `src/aidd/config.py`
+- `src/aidd/core/AGENTS.md`
+- `src/aidd/core/__init__.py`
+- `src/aidd/core/__pycache__/__init__.cpython-313.pyc`
+- `src/aidd/core/__pycache__/contracts.cpython-313.pyc`
+- `src/aidd/core/__pycache__/stages.cpython-313.pyc`
+- `src/aidd/core/__pycache__/workspace.cpython-313.pyc`
+- `src/aidd/core/contracts.py`
+- `src/aidd/core/interview.py`
+- `src/aidd/core/models/AGENTS.md`
+- `src/aidd/core/models/__init__.py`
+- `src/aidd/core/models/run.py`
+- `src/aidd/core/repair.py`
+- `src/aidd/core/run_lookup.py`
+- `src/aidd/core/run_store.py`
+- `src/aidd/core/stage_graph.py`
+- `src/aidd/core/stage_manifest.py`
+- `src/aidd/core/stage_registry.py`
+- `src/aidd/core/stage_runner.py`
+- `src/aidd/core/stages.py`
+- `src/aidd/core/state_machine.py`
+- `src/aidd/core/work_item.py`
+- `src/aidd/core/workspace.py`
+- `src/aidd/evals/AGENTS.md`
+- `src/aidd/evals/__init__.py`
+- `src/aidd/evals/__pycache__/__init__.cpython-313.pyc`
+- `src/aidd/evals/__pycache__/reporting.cpython-313.pyc`
+- `src/aidd/evals/log_analysis.py`
+- `src/aidd/evals/reporting.py`
+- `src/aidd/evals/verdicts.py`
+- `src/aidd/harness/AGENTS.md`
+- `src/aidd/harness/__init__.py`
+- `src/aidd/harness/__pycache__/__init__.cpython-313.pyc`
+- `src/aidd/harness/__pycache__/scenarios.cpython-313.pyc`
+- `src/aidd/harness/repo_prep.py`
+- `src/aidd/harness/result_bundle.py`
+- `src/aidd/harness/runner.py`
+- `src/aidd/harness/scenario_loader.py`
+- `src/aidd/harness/scenarios.py`
+- `src/aidd/runtime_logs/AGENTS.md`
+- `src/aidd/runtime_logs/__init__.py`
+- `src/aidd/runtime_logs/model.py`
+- `src/aidd/validators/AGENTS.md`
+- `src/aidd/validators/__init__.py`
+- `src/aidd/validators/cross_document.py`
+- `src/aidd/validators/document_loader.py`
+- `src/aidd/validators/documents.py`
+- `src/aidd/validators/models.py`
+- `src/aidd/validators/reports.py`
+- `src/aidd/validators/semantic.py`
+- `src/aidd/validators/structural.py`
+- `tests/AGENTS.md`
+- `tests/__pycache__/test_cli_smoke.cpython-313-pytest-9.0.2.pyc`
+- `tests/__pycache__/test_contract_registry.cpython-313-pytest-9.0.2.pyc`
+- `tests/__pycache__/test_reporting.cpython-313-pytest-9.0.2.pyc`
+- `tests/__pycache__/test_scenario_loader.cpython-313-pytest-9.0.2.pyc`
+- `tests/adapters/AGENTS.md`
+- `tests/cli/AGENTS.md`
+- `tests/core/AGENTS.md`
+- `tests/evals/AGENTS.md`
+- `tests/harness/AGENTS.md`
+- `tests/test_cli_smoke.py`
+- `tests/test_contract_registry.py`
+- `tests/test_reporting.py`
+- `tests/test_scenario_loader.py`
+- `tests/validators/AGENTS.md`

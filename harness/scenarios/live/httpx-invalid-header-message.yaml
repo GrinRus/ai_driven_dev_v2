@@ -1,0 +1,26 @@
+id: AIDD-LIVE-003
+repo:
+  url: https://github.com/encode/httpx
+  default_branch: master
+issue:
+  id: 3400
+  title: invalid header error message
+task: Improve the invalid-header encoding error so the failing header name is visible
+  in the resulting exception or wrapper message.
+stage_scope:
+  start: plan
+  end: qa
+setup:
+  commands:
+  - uv sync || pip install -e .[dev]
+verify:
+  commands:
+  - uv run pytest -q || pytest -q
+limits:
+  patch_budget_files: 8
+  timeout_minutes: 20
+interview:
+  required: false
+runtime_targets:
+- claude-code
+- generic-cli

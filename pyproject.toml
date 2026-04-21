@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-driven-dev-v2"
+version = "0.1.0a0"
+description = "Runtime-agnostic, document-first orchestration for AI-driven software delivery."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [
+  { name = "GrinRus" }
+]
+dependencies = [
+  "typer>=0.12.3",
+  "rich>=13.7.1",
+  "PyYAML>=6.0.2",
+  "python-frontmatter>=1.1.0",
+  "markdown-it-py>=3.0.0",
+  "pydantic>=2.9.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.3",
+  "pytest-cov>=5.0.0",
+  "ruff>=0.7.0",
+  "mypy>=1.11.2",
+]
+docs = [
+  "mkdocs>=1.6.1",
+  "mkdocs-material>=9.5.39",
+]
+
+[project.scripts]
+aidd = "aidd.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/GrinRus/ai_driven_dev_v2"
+Repository = "https://github.com/GrinRus/ai_driven_dev_v2"
+Issues = "https://github.com/GrinRus/ai_driven_dev_v2/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aidd"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src"]
+strict = true

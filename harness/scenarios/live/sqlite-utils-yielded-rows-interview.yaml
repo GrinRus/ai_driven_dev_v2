@@ -1,0 +1,27 @@
+id: AIDD-LIVE-006
+repo:
+  url: https://github.com/simonw/sqlite-utils
+  default_branch: main
+issue:
+  id: 694
+  title: yielded rows feature
+task: Add a CLI path for passing Python code or a Python file that yields rows to
+  insert. Require an interview about trust boundaries, accepted input form, and documentation
+  expectations.
+stage_scope:
+  start: idea
+  end: qa
+setup:
+  commands:
+  - uv sync || pip install -e .[dev]
+verify:
+  commands:
+  - uv run pytest -q || pytest -q
+limits:
+  patch_budget_files: 10
+  timeout_minutes: 25
+interview:
+  required: true
+runtime_targets:
+- claude-code
+- generic-cli

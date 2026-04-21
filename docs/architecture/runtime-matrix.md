@@ -1,0 +1,32 @@
+# Runtime Matrix
+
+## Support policy
+
+The project distinguishes between:
+
+- **MVP maintained**
+- **Planned**
+- **Future / experimental**
+
+## Runtime table
+
+| Runtime | Status | Integration mode | Native logs | Structured logs | Native questions | Subagents | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `generic-cli` | MVP maintained | subprocess CLI | yes, if the wrapped tool emits them | adapter-defined | usually no | no | baseline portability adapter |
+| `claude-code` | MVP maintained | CLI-first, optional richer SDK path later | yes | yes when available | yes when available | yes | first-class maintained runtime |
+| `codex` | Planned | CLI-first | yes | partial/adapter-defined | adapter-defined | yes | second-wave maintained runtime |
+| `opencode` | Planned | CLI / backend attach | yes | adapter-defined | adapter-defined | yes | third-wave runtime |
+| `pi-mono` | Future / experimental | external bridge | adapter-defined | adapter-defined | adapter-defined | adapter-defined | treat as compatibility target first |
+
+## Capability principle
+
+A runtime does not need every capability to participate, but the adapter must declare what is missing and the core must apply an explicit fallback.
+
+## MVP commitment
+
+The repository must ship working support for:
+
+- `generic-cli`
+- `claude-code`
+
+before additional runtimes are considered stable.

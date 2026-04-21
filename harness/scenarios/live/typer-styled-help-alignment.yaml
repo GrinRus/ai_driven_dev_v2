@@ -1,0 +1,27 @@
+id: AIDD-LIVE-001
+repo:
+  url: https://github.com/fastapi/typer
+  default_branch: master
+issue:
+  id: 1159
+  title: styled help alignment bugfix
+task: Fix help-line width calculation when styled help text is present. Add regression
+  coverage.
+stage_scope:
+  start: plan
+  end: qa
+setup:
+  commands:
+  - uv sync --group tests || uv sync
+  - uv run pytest -q || pytest -q
+verify:
+  commands:
+  - uv run pytest -q || pytest -q
+limits:
+  patch_budget_files: 8
+  timeout_minutes: 20
+interview:
+  required: false
+runtime_targets:
+- claude-code
+- generic-cli

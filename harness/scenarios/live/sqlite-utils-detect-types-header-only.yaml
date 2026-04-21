@@ -1,0 +1,26 @@
+id: AIDD-LIVE-005
+repo:
+  url: https://github.com/simonw/sqlite-utils
+  default_branch: main
+issue:
+  id: 705
+  title: header-only CSV bugfix
+task: Prevent a crash when --detect-types is used on a CSV file that contains only
+  a header row. Add regression coverage.
+stage_scope:
+  start: plan
+  end: qa
+setup:
+  commands:
+  - uv sync || pip install -e .[dev]
+verify:
+  commands:
+  - uv run pytest -q || pytest -q
+limits:
+  patch_budget_files: 8
+  timeout_minutes: 20
+interview:
+  required: false
+runtime_targets:
+- claude-code
+- generic-cli

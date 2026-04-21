@@ -1,0 +1,26 @@
+id: AIDD-LIVE-002
+repo:
+  url: https://github.com/fastapi/typer
+  default_branch: master
+issue:
+  id: 678
+  title: boolean option help rendering
+task: Improve --help rendering for boolean options while preserving clarity of type
+  and default details.
+stage_scope:
+  start: plan
+  end: qa
+setup:
+  commands:
+  - uv sync --group tests || uv sync
+verify:
+  commands:
+  - uv run pytest -q || pytest -q
+limits:
+  patch_budget_files: 8
+  timeout_minutes: 20
+interview:
+  required: false
+runtime_targets:
+- claude-code
+- generic-cli

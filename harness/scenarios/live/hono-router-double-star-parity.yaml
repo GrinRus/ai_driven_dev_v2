@@ -1,0 +1,27 @@
+id: AIDD-LIVE-008
+repo:
+  url: https://github.com/honojs/hono
+  default_branch: main
+issue:
+  id: 4633
+  title: router parity with /** syntax
+task: Align router behavior or document the intended divergence. Ask the user if compatibility
+  risk is unclear.
+stage_scope:
+  start: idea
+  end: qa
+setup:
+  commands:
+  - bun install
+verify:
+  commands:
+  - bun test
+  - bunx tsc --noEmit
+limits:
+  patch_budget_files: 10
+  timeout_minutes: 25
+interview:
+  required: true
+runtime_targets:
+- claude-code
+- generic-cli

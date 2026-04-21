@@ -1,0 +1,14 @@
+[workspace]
+root = ".aidd"
+
+[runtime.generic_cli]
+command = "python"
+
+[runtime.claude_code]
+command = "claude"
+
+[logging]
+mode = "both"
+
+[repair]
+max_attempts = 2

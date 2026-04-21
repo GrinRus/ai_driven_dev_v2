@@ -1,0 +1,20 @@
+id: AIDD-SMOKE-001
+fixture:
+  path: harness/fixtures/minimal-python
+task: Run the plan stage against the local minimal fixture and verify that required
+  output files are produced.
+stage_scope:
+  start: plan
+  end: plan
+setup:
+  commands:
+  - uv sync --extra dev
+verify:
+  commands:
+  - uv run pytest -q tests/test_cli_smoke.py
+limits:
+  timeout_minutes: 5
+interview:
+  required: false
+runtime_targets:
+- generic-cli

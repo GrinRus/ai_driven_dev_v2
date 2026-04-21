@@ -1,0 +1,27 @@
+id: AIDD-LIVE-007
+repo:
+  url: https://github.com/honojs/hono
+  default_branch: main
+issue:
+  id: 4708
+  title: non-Error throw handling
+task: Ensure thrown non-Error values from middleware still flow through onError instead
+  of causing an unhandled rejection.
+stage_scope:
+  start: plan
+  end: qa
+setup:
+  commands:
+  - bun install
+verify:
+  commands:
+  - bun test
+  - bunx tsc --noEmit
+limits:
+  patch_budget_files: 8
+  timeout_minutes: 20
+interview:
+  required: false
+runtime_targets:
+- claude-code
+- generic-cli
