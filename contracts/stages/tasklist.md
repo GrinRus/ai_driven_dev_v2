@@ -47,11 +47,18 @@ Optional context documents may improve task decomposition quality, but they must
 
 Validators for `tasklist` should check:
 
-- required document existence,
-- required headings and sections,
-- consistency with upstream inputs,
-- whether the main output actually serves the stage purpose,
-- whether the stage result reflects validator and repair outcomes.
+- required output existence and heading coverage for `tasklist.md`, `stage-result.md`, and `validator-report.md`,
+- consistency with approved upstream `plan` and `review-spec` outcomes,
+- task independence:
+  - each task has one dominant deliverable rather than bundled unrelated outcomes,
+  - dependency notes avoid hidden coupling and do not rely on unspecified prerequisites,
+- ordering clarity:
+  - task order is executable in dependency order and avoids contradictory sequencing,
+  - dependency references are explicit and resolvable to listed task ids or upstream stage artifacts,
+- reviewability:
+  - each task has a bounded completion surface and at least one concrete verification note,
+  - task scope remains small enough for single-pass implementation and review,
+- cross-document consistency between tasklist readiness claims, validator findings, and terminal status in `stage-result.md`.
 
 ## Interview policy
 

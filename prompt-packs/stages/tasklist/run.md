@@ -43,5 +43,7 @@ Break the approved plan into reviewable implementation tasks with verification n
 - task entries are ordered, uniquely identified, and imperative,
 - each task has one dominant output artifact,
 - each task has explicit dependencies (`none` or concrete upstream ids),
+- dependencies are resolvable and do not imply hidden prerequisites,
 - each task has at least one concrete verification note,
+- each task stays small enough for single-pass implementation and review,
 - `stage-result.md` and `validator-report.md` agree with tasklist readiness.
