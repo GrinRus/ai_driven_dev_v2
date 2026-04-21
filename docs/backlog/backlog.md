@@ -6,9 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W4-E2-S1-T3` Detect advertised capability flags that matter to AIDD, such as streaming or non-interactive support.
+- `W4-E1-S1-T4` Expose generic-cli probe results in `aidd doctor`.
 
 ## Soon
+
+- `W4-E2-S1-T4` Expose Claude Code probe results and capability flags in `aidd doctor`.
 
 ## Parking lot
 
