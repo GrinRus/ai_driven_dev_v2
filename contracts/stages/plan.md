@@ -45,11 +45,17 @@ Optional context documents may improve planning quality, but they must not repla
 
 Validators for `plan` should check:
 
-- required document existence,
-- required headings and sections,
-- consistency with upstream inputs,
-- whether the main output actually serves the stage purpose,
-- whether the stage result reflects validator and repair outcomes.
+- required output existence and heading coverage for `plan.md`, `stage-result.md`, and `validator-report.md`,
+- plan completeness:
+  - required sections are populated with non-placeholder content,
+  - milestones, risks, dependencies, and verification notes are present and specific,
+- sequencing clarity:
+  - milestone order is coherent and executable,
+  - dependencies and sequencing constraints are explicit rather than implied,
+- user-approval readiness:
+  - scope boundaries and trade-offs are explicit enough for operator review,
+  - major risks have mitigation intent and verification linkage,
+- cross-document consistency between plan claims, validator findings, and declared terminal status in `stage-result.md`.
 
 ## Interview policy
 
