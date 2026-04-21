@@ -48,11 +48,18 @@ Optional context documents may improve review depth, but they must not replace i
 
 Validators for `review` should check:
 
-- required document existence,
-- required headings and sections,
-- consistency with upstream inputs,
-- whether the main output actually serves the stage purpose,
-- whether the stage result reflects validator and repair outcomes.
+- required output existence and heading coverage for `review-report.md`, `stage-result.md`, and `validator-report.md`,
+- consistency with implementation evidence, diff context, and acceptance criteria,
+- unsupported findings:
+  - findings must reference observable implementation evidence or acceptance-criteria mismatch,
+  - speculative or evidence-free findings must be rejected,
+- missing severity labels:
+  - each finding must include an explicit severity label,
+  - summary and approval status must remain coherent with finding severities,
+- absent disposition:
+  - each finding must include disposition (`must-fix`, `follow-up`, `accepted-risk`, or `invalid`),
+  - approval status must not be `approved` when unresolved `must-fix` findings remain,
+- cross-document consistency between review findings, validator result, and terminal status in `stage-result.md`.
 
 ## Interview policy
 
