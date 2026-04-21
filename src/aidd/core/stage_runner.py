@@ -20,6 +20,7 @@ from aidd.core.stage_registry import (
     resolve_required_input_documents,
 )
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
+from aidd.core.workspace import stage_root as workspace_stage_root
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +40,20 @@ class StageExecutionState:
     attempt_number: int
     attempt_path: Path
     stage_metadata_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class AdapterInvocationBundle:
+    stage: str
+    work_item: str
+    run_id: str
+    attempt_number: int
+    repair_mode: bool
+    stage_brief_markdown: str
+    repair_context_markdown: str | None
+    repair_brief_path: Path | None
+    expected_input_bundle: tuple[Path, ...]
+    expected_output_documents: tuple[Path, ...]
 
 
 class ValidationVerdict(StrEnum):
@@ -92,6 +107,10 @@ def _to_workspace_relative_paths(workspace_root: Path, paths: tuple[Path, ...]) 
     return tuple(
         path.resolve(strict=False).relative_to(resolved_workspace).as_posix() for path in paths
     )
+
+
+def _workspace_relative_path(workspace_root: Path, path: Path) -> str:
+    return path.resolve(strict=False).relative_to(workspace_root.resolve(strict=False)).as_posix()
 
 
 def _render_stage_brief(
@@ -193,6 +212,90 @@ def persist_execution_state(
         attempt_number=_attempt_number_from_path(attempt_path),
         attempt_path=attempt_path,
         stage_metadata_path=stage_metadata_path,
+    )
+
+
+def _render_repair_context(
+    *,
+    workspace_root: Path,
+    attempt_number: int,
+    repair_brief_path: Path,
+    repair_brief_markdown: str,
+) -> str:
+    lines = [
+        "# Repair context",
+        "",
+        "- Mode: `repair`",
+        f"- Attempt number: `{attempt_number}`",
+        f"- Repair brief source: `{_workspace_relative_path(workspace_root, repair_brief_path)}`",
+        "",
+        "## Repair instructions",
+        "",
+        repair_brief_markdown.strip(),
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def prepare_adapter_invocation(
+    *,
+    workspace_root: Path,
+    preparation_bundle: StagePreparationBundle,
+    execution_state: StageExecutionState,
+) -> AdapterInvocationBundle:
+    if preparation_bundle.stage != execution_state.stage:
+        raise ValueError(
+            "Preparation bundle stage does not match execution state stage: "
+            f"{preparation_bundle.stage} != {execution_state.stage}"
+        )
+    if preparation_bundle.work_item != execution_state.work_item:
+        raise ValueError(
+            "Preparation bundle work item does not match execution state work item: "
+            f"{preparation_bundle.work_item} != {execution_state.work_item}"
+        )
+
+    repair_mode = execution_state.attempt_number > 1
+    repair_brief_path: Path | None = None
+    repair_context_markdown: str | None = None
+
+    if repair_mode:
+        repair_brief_path = (
+            workspace_stage_root(
+                root=workspace_root,
+                work_item=execution_state.work_item,
+                stage=execution_state.stage,
+            )
+            / "repair-brief.md"
+        )
+        if not repair_brief_path.exists():
+            raise FileNotFoundError(
+                "Repair rerun requires an existing repair brief: "
+                f"{_workspace_relative_path(workspace_root, repair_brief_path)}"
+            )
+        repair_brief_markdown = repair_brief_path.read_text(encoding="utf-8").strip()
+        if not repair_brief_markdown:
+            raise ValueError(
+                "Repair rerun requires a non-empty repair brief: "
+                f"{_workspace_relative_path(workspace_root, repair_brief_path)}"
+            )
+        repair_context_markdown = _render_repair_context(
+            workspace_root=workspace_root,
+            attempt_number=execution_state.attempt_number,
+            repair_brief_path=repair_brief_path,
+            repair_brief_markdown=repair_brief_markdown,
+        )
+
+    return AdapterInvocationBundle(
+        stage=execution_state.stage,
+        work_item=execution_state.work_item,
+        run_id=execution_state.run_id,
+        attempt_number=execution_state.attempt_number,
+        repair_mode=repair_mode,
+        stage_brief_markdown=preparation_bundle.stage_brief_markdown,
+        repair_context_markdown=repair_context_markdown,
+        repair_brief_path=repair_brief_path,
+        expected_input_bundle=preparation_bundle.expected_input_bundle,
+        expected_output_documents=preparation_bundle.expected_output_documents,
     )
 
 

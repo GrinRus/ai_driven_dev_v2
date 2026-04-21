@@ -19,6 +19,7 @@ from aidd.core.stage_runner import (
     decide_post_validation_transition,
     persist_execution_state,
     persist_validation_state,
+    prepare_adapter_invocation,
     prepare_stage_bundle,
     update_stage_unblock_state,
 )
@@ -156,6 +157,137 @@ def test_persist_execution_state_uses_monotonic_attempt_numbers(tmp_path: Path) 
 
     assert first.attempt_number == 1
     assert second.attempt_number == 2
+
+
+def test_prepare_adapter_invocation_initial_attempt_has_no_repair_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+
+    assert invocation.attempt_number == 1
+    assert invocation.repair_mode is False
+    assert invocation.repair_context_markdown is None
+    assert invocation.repair_brief_path is None
+    assert invocation.stage_brief_markdown == preparation_bundle.stage_brief_markdown
+
+
+def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    second_attempt = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    repair_brief_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md"
+    )
+    repair_brief_path.parent.mkdir(parents=True, exist_ok=True)
+    repair_brief_path.write_text(
+        (
+            "# Failed checks\n\n"
+            "- `STRUCT-MISSING-REQUIRED-SECTION` `high` in "
+            "`workitems/WI-001/stages/plan/plan.md`\n"
+        ),
+        encoding="utf-8",
+    )
+
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=second_attempt,
+    )
+
+    assert invocation.attempt_number == 2
+    assert invocation.repair_mode is True
+    assert invocation.repair_brief_path == repair_brief_path
+    assert invocation.repair_context_markdown is not None
+    assert "Mode: `repair`" in invocation.repair_context_markdown
+    assert "Attempt number: `2`" in invocation.repair_context_markdown
+    assert "repair-brief.md" in invocation.repair_context_markdown
+    assert "STRUCT-MISSING-REQUIRED-SECTION" in invocation.repair_context_markdown
+
+
+def test_prepare_adapter_invocation_repair_attempt_requires_repair_brief(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    second_attempt = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    with pytest.raises(FileNotFoundError, match="Repair rerun requires an existing repair brief"):
+        prepare_adapter_invocation(
+            workspace_root=workspace_root,
+            preparation_bundle=preparation_bundle,
+            execution_state=second_attempt,
+        )
 
 
 @pytest.mark.parametrize(
