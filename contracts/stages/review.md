@@ -63,7 +63,28 @@ Validators for `review` should check:
 
 ## Interview policy
 
-optional when review trade-offs require operator judgment
+`review` may ask user questions when it cannot produce a defensible approval decision from available review baseline artifacts.
+
+Mandatory question triggers:
+
+- contradictory instructions where acceptance criteria and operator constraints imply conflicting dispositions,
+- missing review baseline needed to classify severity or disposition for material findings,
+- unclear decision authority for approval status when evidence indicates mixed go/no-go outcomes.
+
+Blocking-question rules:
+
+- mark as `[blocking]` when unresolved ambiguity prevents reliable severity/disposition assignment for high-impact findings,
+- unresolved `[blocking]` questions must force stage status `blocked` (never `succeeded`).
+
+Non-blocking-question rules:
+
+- mark as `[non-blocking]` when review can proceed with explicit bounded assumptions,
+- record non-blocking assumptions in `review-report.md` so downstream QA can revisit them.
+
+Question/answer document rules:
+
+- write each question to `questions.md` with a stable id and marker (`[blocking]` or `[non-blocking]`),
+- treat blocking questions as resolved only when `answers.md` includes matching `[resolved]` entries.
 
 ## Repair policy
 
