@@ -586,7 +586,7 @@ Dependencies:
 
 Local tasks:
 
-- `W3-E1-S1-T1` Define the canonical workspace directory layout and reserved file names.
+- `W3-E1-S1-T1` (done) Define the canonical workspace directory layout and reserved file names.
 - `W3-E1-S1-T2` Implement a reusable service that creates the workspace directory tree.
 - `W3-E1-S1-T3` Implement starter document seeding for the first work item and default contract files.
 - `W3-E1-S1-T4` Define and write the work-item metadata file with stable identifiers and timestamps.
