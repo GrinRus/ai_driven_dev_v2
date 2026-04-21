@@ -618,7 +618,7 @@ Dependencies:
 
 Local tasks:
 
-- `W3-E1-S2-T1` Define the run directory layout, including stage and attempt subdirectories.
+- `W3-E1-S2-T1` (done) Define the run directory layout, including stage and attempt subdirectories.
 - `W3-E1-S2-T2` Implement run-manifest creation with runtime id, stage target, and config snapshot.
 - `W3-E1-S2-T3` Implement attempt-directory creation with monotonic attempt numbering.
 - `W3-E1-S2-T4` Persist stage status changes and timestamps in durable metadata files.
