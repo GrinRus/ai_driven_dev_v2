@@ -11,7 +11,7 @@ from aidd.core.stage_registry import (
     resolve_required_input_documents,
 )
 from aidd.validators.document_loader import load_markdown_document
-from aidd.validators.models import ValidationFinding
+from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
 MISSING_REQUIRED_DOCUMENT_CODE = "STRUCT-MISSING-REQUIRED-DOCUMENT"
 MISSING_REQUIRED_SECTION_CODE = "STRUCT-MISSING-REQUIRED-SECTION"
@@ -207,6 +207,10 @@ def validate_required_document_existence(
             ValidationFinding(
                 code=MISSING_REQUIRED_DOCUMENT_CODE,
                 message=f"Missing required document: {_workspace_relative(path, workspace_root)}",
+                severity="critical",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(path, workspace_root)
+                ),
             )
         )
 
@@ -253,6 +257,10 @@ def validate_required_sections(
                     message=(
                         "Missing required section "
                         f"`{section}` in {_workspace_relative(output_path, workspace_root)}"
+                    ),
+                    severity="high",
+                    location=ValidationIssueLocation(
+                        workspace_relative_path=_workspace_relative(output_path, workspace_root)
                     ),
                 )
             )

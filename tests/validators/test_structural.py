@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.validators.models import ValidationFinding
+from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.structural import (
     MISSING_REQUIRED_DOCUMENT_CODE,
     MISSING_REQUIRED_SECTION_CODE,
@@ -179,10 +179,18 @@ def test_validate_required_document_existence_reports_missing_input_and_output(
         ValidationFinding(
             code=MISSING_REQUIRED_DOCUMENT_CODE,
             message="Missing required document: workitems/WI-001/context/intake.md",
+            severity="critical",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/context/intake.md"
+            ),
         ),
         ValidationFinding(
             code=MISSING_REQUIRED_DOCUMENT_CODE,
             message="Missing required document: workitems/WI-001/stages/qa/stage-result.md",
+            severity="critical",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/qa/stage-result.md"
+            ),
         ),
     )
 
@@ -218,6 +226,10 @@ def test_validate_required_document_existence_deduplicates_manifest_paths(tmp_pa
         ValidationFinding(
             code=MISSING_REQUIRED_DOCUMENT_CODE,
             message="Missing required document: workitems/WI-001/stages/qa/stage-result.md",
+            severity="critical",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/qa/stage-result.md"
+            ),
         ),
     )
 
@@ -325,6 +337,10 @@ def test_validate_required_sections_uses_common_document_contract_headings(
                 "Missing required section `Validation summary` "
                 "in workitems/WI-001/stages/qa/stage-result.md"
             ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/qa/stage-result.md"
+            ),
         ),
     )
 
@@ -376,6 +392,10 @@ def test_validate_required_sections_uses_stage_contract_heading_requirements(
             message=(
                 "Missing required section `Constraints` "
                 "in workitems/WI-001/stages/idea/idea-brief.md"
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/idea/idea-brief.md"
             ),
         ),
     )
