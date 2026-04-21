@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W2-E1-S1-T7` Add one worked example bundle that includes every common document type and cross-links them correctly.
+- `W2-E2-S1-T3` Implement optional frontmatter parsing without making frontmatter required.
 
 ## Soon
 
-- `W2-E2-S1-T3` Implement optional frontmatter parsing without making frontmatter required.
 - `W2-E2-S1-T4` Implement document-type classification from path and filename conventions.
 - `W4-E1-S1-T2` Capture version or identity information from the discovered CLI.
 - `W4-E2-S1-T2` Capture version or identity information from the Claude Code CLI.

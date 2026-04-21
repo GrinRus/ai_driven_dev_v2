@@ -178,7 +178,7 @@ Local tasks:
 - `W2-E1-S1-T4` (done) Write the required heading set and answer-resolution markers for `answers.md`.
 - `W2-E1-S1-T5` (done) Write the required heading set, issue-code vocabulary, and severity rules for `validator-report.md`.
 - `W2-E1-S1-T6` (done) Write the required heading set, rerun-budget notes, and fix-plan rules for `repair-brief.md`.
-- `W2-E1-S1-T7` Add one worked example bundle that includes every common document type and cross-links them correctly.
+- `W2-E1-S1-T7` (done) Add one worked example bundle that includes every common document type and cross-links them correctly.
 
 Exit evidence:
 
