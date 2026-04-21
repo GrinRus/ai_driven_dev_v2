@@ -245,7 +245,7 @@ Local tasks:
 - `W2-E1-S3-T2` (done) Define the required `research` outputs, citation expectations, and evidence trace sections.
 - `W2-E1-S3-T3` (done) Define `research` validator rules for source grounding, uncertainty notes, and stale-fact handling.
 - `W2-E1-S3-T4` (done) Define `research` interview triggers for missing constraints, target repos, or ambiguous goals.
-- `W2-E1-S3-T5` Create the `research` prompt-pack scaffold, including explicit evidence and question-generation guidance.
+- `W2-E1-S3-T5` (done) Create the `research` prompt-pack scaffold, including explicit evidence and question-generation guidance.
 - `W2-E1-S3-T6` Add one worked `research` example bundle that includes unresolved-question and answered-question variants.
 
 Exit evidence:

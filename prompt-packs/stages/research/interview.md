@@ -9,4 +9,10 @@ If the stage cannot proceed responsibly without user clarification:
 5. use `[non-blocking]` only when the stage can proceed with explicit bounded-risk assumptions,
 6. wait for or incorporate `answers.md`, and treat blocking items as resolved only with matching `[resolved]` answers.
 
+Prioritize questions about:
+
+- missing target repositories or system boundaries,
+- missing constraints that change research direction or risk posture,
+- ambiguous success criteria that prevent ranking evidence relevance.
+
 Do not ask questions that can be resolved from the provided documents.

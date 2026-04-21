@@ -26,5 +26,14 @@ Collect relevant technical and product context before a plan is written.
 4. Ensure `Evidence trace` maps major findings or recommendations to citation ids.
 5. Record unresolved uncertainty explicitly in `Trade-offs` or `Open questions`; do not present uncertain claims as facts.
 6. Mark time-sensitive evidence with freshness context (access date or stale-risk note) when findings depend on it.
-7. Write or update `stage-result.md` and `validator-report.md` so status and evidence references are consistent.
-8. If an input is missing or a critical decision is unclear, raise a question instead of inventing an answer.
+7. If target repositories, constraints, or research goals are ambiguous, write decisive questions with stable ids and `[blocking]`/`[non-blocking]` markers.
+8. Write or update `stage-result.md` and `validator-report.md` so status and evidence references are consistent.
+9. If a critical decision remains unclear after available inputs are exhausted, raise a question instead of inventing an answer.
+
+## Completion checklist
+
+- all required output files exist and are Markdown,
+- material findings reference citation ids that exist in `Sources`,
+- `Evidence trace` covers major findings or recommendations,
+- unresolved uncertainty is explicit (not implicit),
+- question markers and stage status are consistent (`[blocking]` unresolved => no `succeeded`).
