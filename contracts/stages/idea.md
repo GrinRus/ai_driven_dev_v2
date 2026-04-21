@@ -6,9 +6,14 @@ Turn the incoming request into a clearer problem statement, desired outcome, con
 
 ## Primary output
 
+Required outputs for every `idea` attempt:
+
 - `idea-brief.md`
 - `stage-result.md`
 - `validator-report.md`
+
+Conditional outputs:
+
 - `repair-brief.md` when validation fails
 - `questions.md` / `answers.md` when clarification is required
 
@@ -45,6 +50,13 @@ required when the problem statement, success criteria, or constraints are ambigu
 - default repair budget: 2 attempts after the initial run
 - repair uses the same target documents
 - every failed attempt must preserve validator findings and a repair brief
+
+## Exit states
+
+- `succeeded` — all required outputs exist, validation passes, and no blocking questions remain.
+- `repair-needed` — validation failed and the repair budget still allows another attempt.
+- `blocked` — one or more blocking questions remain unresolved.
+- `failed` — repair budget is exhausted or a non-recoverable stage failure occurred.
 
 ## Prompt pack
 
