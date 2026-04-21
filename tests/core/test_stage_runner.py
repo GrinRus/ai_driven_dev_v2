@@ -13,7 +13,10 @@ from aidd.core.run_store import (
     run_stage_metadata_path,
 )
 from aidd.core.stage_runner import (
+    PostValidationAction,
+    StageValidationState,
     ValidationVerdict,
+    decide_post_validation_transition,
     persist_execution_state,
     persist_validation_state,
     prepare_stage_bundle,
@@ -214,3 +217,78 @@ def test_persist_validation_state_rejects_illegal_transition(tmp_path: Path) -> 
         stage="plan",
     )
     assert not metadata_path.exists()
+
+
+@pytest.mark.parametrize(
+    ("verdict", "expected_state", "expected_action", "expected_terminal"),
+    (
+        (
+            ValidationVerdict.PASS,
+            StageState.SUCCEEDED,
+            PostValidationAction.ADVANCE,
+            True,
+        ),
+        (
+            ValidationVerdict.REPAIR,
+            StageState.REPAIR_NEEDED,
+            PostValidationAction.REPAIR,
+            False,
+        ),
+        (
+            ValidationVerdict.BLOCKED,
+            StageState.BLOCKED,
+            PostValidationAction.WAIT,
+            False,
+        ),
+        (
+            ValidationVerdict.FAIL,
+            StageState.FAILED,
+            PostValidationAction.STOP,
+            True,
+        ),
+    ),
+)
+def test_decide_post_validation_transition_maps_supported_outcomes(
+    tmp_path: Path,
+    verdict: ValidationVerdict,
+    expected_state: StageState,
+    expected_action: PostValidationAction,
+    expected_terminal: bool,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=verdict,
+    )
+
+    transition = decide_post_validation_transition(validation_state)
+
+    assert transition.next_state == expected_state
+    assert transition.action == expected_action
+    assert transition.is_terminal is expected_terminal
+    assert transition.stage_metadata_path == validation_state.stage_metadata_path
+
+
+def test_decide_post_validation_transition_rejects_unsupported_state() -> None:
+    with pytest.raises(ValueError, match="Unsupported post-validation state"):
+        decide_post_validation_transition(
+            StageValidationState(
+                stage="plan",
+                work_item="WI-001",
+                run_id="run-001",
+                verdict=ValidationVerdict.PASS,
+                next_state=StageState.VALIDATING,
+                stage_metadata_path=Path("/tmp/stage-metadata.json"),
+            )
+        )

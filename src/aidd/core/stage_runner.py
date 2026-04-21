@@ -16,7 +16,7 @@ from aidd.core.stage_registry import (
     resolve_expected_output_documents,
     resolve_required_input_documents,
 )
-from aidd.core.state_machine import StageState, transition_stage_state
+from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +52,24 @@ class StageValidationState:
     run_id: str
     verdict: ValidationVerdict
     next_state: StageState
+    stage_metadata_path: Path
+
+
+class PostValidationAction(StrEnum):
+    ADVANCE = "advance"
+    REPAIR = "repair"
+    WAIT = "wait"
+    STOP = "stop"
+
+
+@dataclass(frozen=True, slots=True)
+class PostValidationTransition:
+    stage: str
+    work_item: str
+    run_id: str
+    next_state: StageState
+    action: PostValidationAction
+    is_terminal: bool
     stage_metadata_path: Path
 
 
@@ -198,4 +216,30 @@ def persist_validation_state(
         verdict=verdict,
         next_state=next_state,
         stage_metadata_path=stage_metadata_path,
+    )
+
+
+def decide_post_validation_transition(
+    validation_state: StageValidationState,
+) -> PostValidationTransition:
+    action_map: dict[StageState, PostValidationAction] = {
+        StageState.SUCCEEDED: PostValidationAction.ADVANCE,
+        StageState.REPAIR_NEEDED: PostValidationAction.REPAIR,
+        StageState.BLOCKED: PostValidationAction.WAIT,
+        StageState.FAILED: PostValidationAction.STOP,
+    }
+    if validation_state.next_state not in action_map:
+        raise ValueError(
+            "Unsupported post-validation state: "
+            f"{validation_state.next_state}"
+        )
+
+    return PostValidationTransition(
+        stage=validation_state.stage,
+        work_item=validation_state.work_item,
+        run_id=validation_state.run_id,
+        next_state=validation_state.next_state,
+        action=action_map[validation_state.next_state],
+        is_terminal=is_terminal_state(validation_state.next_state),
+        stage_metadata_path=validation_state.stage_metadata_path,
     )
