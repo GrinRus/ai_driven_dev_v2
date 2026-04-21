@@ -15,6 +15,22 @@ Review whether the plan is coherent, safe, and ready to decompose into tasks.
 ## Required inputs
 
 - `../plan/output/plan.md`
+- `../plan/output/stage-result.md`
+- `../plan/output/validator-report.md`
+- `context/review-context.md`
+
+## Optional context inputs
+
+- `context/repository-state.md`
+- `context/constraints.md`
+- `context/previous-decisions.md`
+
+Optional context documents may refine review quality, but they must not replace required plan and review-context artifacts.
+
+## Upstream dependency rule
+
+- `review-spec` depends on artifacts from the latest completed `plan` attempt.
+- `review-spec` must not declare `succeeded` if required plan artifacts are missing or inconsistent.
 
 ## Validation focus
 
