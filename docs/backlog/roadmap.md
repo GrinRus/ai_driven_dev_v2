@@ -145,10 +145,10 @@ Local tasks:
 
 ## Wave 2 — document contracts and validator foundations (`next`)
 
-### Epic W2-E1 — common and stage-specific contracts (`next`)
+### Epic W2-E1 — common and stage-specific contracts (`done`)
 Linked stories: `US-02`, `US-03`, `US-04`, `US-05`
 
-#### Slice W2-E1-S1 — normative common document templates (`next`)
+#### Slice W2-E1-S1 — normative common document templates (`done`)
 Goal: turn the current document placeholders into normative contracts.
 
 Primary outputs:
@@ -423,7 +423,7 @@ Exit evidence:
 - `review` can be executed and judged from durable Markdown artifacts;
 - validators can distinguish a real review from a superficial summary.
 
-#### Slice W2-E1-S9 — `qa` stage contract (`next`)
+#### Slice W2-E1-S9 — `qa` stage contract (`done`)
 Goal: define the QA stage that translates artifacts and test evidence into a final quality verdict.
 
 Primary outputs:
@@ -451,7 +451,7 @@ Local tasks:
 - `W2-E1-S9-T3` (done) Define validator rules for unsupported verdicts and missing evidence references.
 - `W2-E1-S9-T4` (done) Define interview triggers for blocked verification or missing execution artifacts.
 - `W2-E1-S9-T5` (done) Create the `qa` prompt-pack scaffold.
-- `W2-E1-S9-T6` Add one worked `qa` example bundle.
+- `W2-E1-S9-T6` (done) Add one worked `qa` example bundle.
 
 Exit evidence:
 
