@@ -332,3 +332,28 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
         "--runtime",
         "generic-cli",
     ]
+    assert scenario.verify.commands == (
+        "uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW",
+        "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md",
+        "bun test",
+        "bunx tsc --noEmit",
+    )
+    assert scenario.raw["verify"]["pass_conditions"] == [
+        "The first stage-questions check reports at least one pending blocking question.",
+        "Answers file resolves each blocking question before stage rerun.",
+        "Verification commands exit with status 0 after resume.",
+    ]
+    assert scenario.raw["verify"]["flow_steps"] == [
+        {
+            "step": "blocked",
+            "evidence": "questions.md exists with at least one blocking question id.",
+        },
+        {
+            "step": "resumed",
+            "evidence": "answers.md exists and marks each blocking question as resolved.",
+        },
+        {
+            "step": "completed",
+            "evidence": "verification commands succeed after the resolved-answer rerun.",
+        },
+    ]
