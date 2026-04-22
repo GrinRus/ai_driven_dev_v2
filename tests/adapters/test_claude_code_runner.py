@@ -37,6 +37,55 @@ def _context() -> ClaudeCodeCommandContext:
     )
 
 
+def _write_dry_run_fixture_script(tmp_path: Path) -> Path:
+    script_path = tmp_path / "claude_dry_run_fixture.py"
+    script_path.write_text(
+        "import argparse\n"
+        "import time\n"
+        "\n"
+        "parser = argparse.ArgumentParser()\n"
+        "parser.add_argument('--stage', required=True)\n"
+        "parser.add_argument('--work-item', required=True)\n"
+        "parser.add_argument('--run-id', required=True)\n"
+        "parser.add_argument('--workspace-root', required=True)\n"
+        "parser.add_argument('--stage-brief', required=True)\n"
+        "parser.add_argument('--prompt-pack', action='append', default=[])\n"
+        "parser.add_argument('--sleep-seconds', type=float, default=0.0)\n"
+        "parser.add_argument('--exit-code', type=int, default=0)\n"
+        "args, _unknown = parser.parse_known_args()\n"
+        "print(f'fixture-start stage={args.stage}', flush=True)\n"
+        "print(f'fixture-prompt-packs={len(args.prompt_pack)}', flush=True)\n"
+        "if args.sleep_seconds > 0:\n"
+        "    time.sleep(args.sleep_seconds)\n"
+        "print('fixture-end', flush=True)\n"
+        "raise SystemExit(args.exit_code)\n",
+        encoding="utf-8",
+    )
+    return script_path
+
+
+def _prepare_dry_run_workspace(
+    *,
+    repository_root: Path,
+    workspace_root: Path,
+) -> None:
+    (workspace_root / "stages/plan").mkdir(parents=True, exist_ok=True)
+    (workspace_root / "stages/plan/stage-brief.md").write_text(
+        "# Stage Brief\n\nDry-run fixture input.\n",
+        encoding="utf-8",
+    )
+    prompt_pack_root = repository_root / "prompt-packs/stages/plan"
+    prompt_pack_root.mkdir(parents=True, exist_ok=True)
+    (prompt_pack_root / "system.md").write_text(
+        "# System\n\nDry-run system prompt.\n",
+        encoding="utf-8",
+    )
+    (prompt_pack_root / "task.md").write_text(
+        "# Task\n\nDry-run task prompt.\n",
+        encoding="utf-8",
+    )
+
+
 def test_assemble_command_includes_stage_brief_workspace_and_prompt_packs(tmp_path: Path) -> None:
     repository_root = tmp_path / "repo"
     workspace_root = repository_root / ".aidd" / "workitems" / "WI-001"
@@ -261,6 +310,105 @@ def test_run_subprocess_with_streaming_classifies_cancellation(tmp_path: Path) -
     assert result.exit_classification is ClaudeCodeExitClassification.CANCELLED
     assert "ready\n" in result.runtime_log_text
     assert "never-reached\n" not in result.runtime_log_text
+
+
+def test_build_subprocess_spec_run_fixture_launch_success(tmp_path: Path) -> None:
+    repository_root = tmp_path / "repo"
+    workspace_root = repository_root / ".aidd" / "workitems" / "WI-001"
+    fixture_script = _write_dry_run_fixture_script(tmp_path)
+    _prepare_dry_run_workspace(repository_root=repository_root, workspace_root=workspace_root)
+    context = ClaudeCodeCommandContext(
+        stage="plan",
+        work_item="WI-001",
+        run_id="run-001",
+        workspace_root=workspace_root,
+        stage_brief_path=Path("stages/plan/stage-brief.md"),
+        prompt_pack_paths=(
+            Path("prompt-packs/stages/plan/system.md"),
+            Path("prompt-packs/stages/plan/task.md"),
+        ),
+    )
+    spec = build_subprocess_spec(
+        configured_command=f"{sys.executable} {fixture_script.as_posix()}",
+        context=context,
+        repository_root=repository_root,
+    )
+
+    result = run_subprocess_with_streaming(spec=spec)
+
+    assert result.exit_classification is ClaudeCodeExitClassification.SUCCESS
+    assert result.exit_code == 0
+    assert "fixture-start stage=plan\n" in result.runtime_log_text
+    assert "fixture-prompt-packs=2\n" in result.runtime_log_text
+    assert "fixture-end\n" in result.runtime_log_text
+
+
+def test_build_subprocess_spec_run_fixture_timeout(tmp_path: Path) -> None:
+    repository_root = tmp_path / "repo"
+    workspace_root = repository_root / ".aidd" / "workitems" / "WI-001"
+    fixture_script = _write_dry_run_fixture_script(tmp_path)
+    _prepare_dry_run_workspace(repository_root=repository_root, workspace_root=workspace_root)
+    context = ClaudeCodeCommandContext(
+        stage="plan",
+        work_item="WI-001",
+        run_id="run-001",
+        workspace_root=workspace_root,
+        stage_brief_path=Path("stages/plan/stage-brief.md"),
+        prompt_pack_paths=(Path("prompt-packs/stages/plan/system.md"),),
+    )
+    spec = build_subprocess_spec(
+        configured_command=f"{sys.executable} {fixture_script.as_posix()} --sleep-seconds 5",
+        context=context,
+        repository_root=repository_root,
+    )
+
+    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.1)
+
+    assert result.exit_classification is ClaudeCodeExitClassification.TIMEOUT
+    assert "fixture-start stage=plan\n" in result.runtime_log_text
+    assert "fixture-end\n" not in result.runtime_log_text
+
+
+def test_build_subprocess_spec_run_fixture_cancelled(tmp_path: Path) -> None:
+    repository_root = tmp_path / "repo"
+    workspace_root = repository_root / ".aidd" / "workitems" / "WI-001"
+    fixture_script = _write_dry_run_fixture_script(tmp_path)
+    _prepare_dry_run_workspace(repository_root=repository_root, workspace_root=workspace_root)
+    context = ClaudeCodeCommandContext(
+        stage="plan",
+        work_item="WI-001",
+        run_id="run-001",
+        workspace_root=workspace_root,
+        stage_brief_path=Path("stages/plan/stage-brief.md"),
+        prompt_pack_paths=(Path("prompt-packs/stages/plan/system.md"),),
+    )
+    spec = build_subprocess_spec(
+        configured_command=f"{sys.executable} {fixture_script.as_posix()} --sleep-seconds 5",
+        context=context,
+        repository_root=repository_root,
+    )
+
+    cancel_event = threading.Event()
+    first_stdout_seen = threading.Event()
+
+    def _on_stdout(chunk: str) -> None:
+        if "fixture-start" in chunk:
+            first_stdout_seen.set()
+
+    def _request_cancel() -> bool:
+        if first_stdout_seen.is_set():
+            cancel_event.set()
+        return cancel_event.is_set()
+
+    result = run_subprocess_with_streaming(
+        spec=spec,
+        on_stdout=_on_stdout,
+        cancel_requested=_request_cancel,
+    )
+
+    assert result.exit_classification is ClaudeCodeExitClassification.CANCELLED
+    assert "fixture-start stage=plan\n" in result.runtime_log_text
+    assert "fixture-end\n" not in result.runtime_log_text
 
 
 def test_assemble_command_rejects_empty_configured_command() -> None:
