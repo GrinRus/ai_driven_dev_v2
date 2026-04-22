@@ -501,6 +501,13 @@ class ClaudeCodeQuestionPersistence:
     metadata_updated: bool
 
 
+@dataclass(frozen=True, slots=True)
+class ClaudeCodeResumeDecision:
+    can_resume: bool
+    resume_command: tuple[str, ...] | None
+    unresolved_blocking_question_ids: tuple[str, ...]
+
+
 def _question_policy_from_runtime_event(event: Mapping[str, object]) -> QuestionPolicy:
     policy_value = event.get("policy")
     if isinstance(policy_value, str):
@@ -698,6 +705,66 @@ def persist_surfaced_questions(
         stage_metadata_path=metadata_path,
         unresolved_blocking_question_ids=unresolved_ids,
         metadata_updated=metadata_updated,
+    )
+
+
+def prepare_resume_after_answers(
+    *,
+    configured_command: str,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    run_id: str,
+) -> ClaudeCodeResumeDecision:
+    questions = load_questions_document(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    answers = load_answers_document(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    unresolved = unresolved_blocking_questions(
+        questions=questions,
+        resolved_question_ids=resolved_question_ids(answers=answers),
+    )
+    unresolved_ids = tuple(question.question_id for question in unresolved)
+    if unresolved_ids:
+        return ClaudeCodeResumeDecision(
+            can_resume=False,
+            resume_command=None,
+            unresolved_blocking_question_ids=unresolved_ids,
+        )
+
+    stripped = configured_command.strip()
+    if not stripped:
+        raise ValueError("Configured claude-code command must not be empty.")
+    try:
+        base_tokens = shlex.split(stripped)
+    except ValueError as exc:
+        raise ValueError(
+            "Configured claude-code command is not valid shell syntax: "
+            f"{configured_command!r}"
+        ) from exc
+    if not base_tokens:
+        raise ValueError("Configured claude-code command must produce at least one token.")
+
+    resume_command = (
+        *base_tokens,
+        "resume",
+        "--run-id",
+        run_id,
+        "--stage",
+        stage,
+        "--work-item",
+        work_item,
+    )
+    return ClaudeCodeResumeDecision(
+        can_resume=True,
+        resume_command=resume_command,
+        unresolved_blocking_question_ids=(),
     )
 
 

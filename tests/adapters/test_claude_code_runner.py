@@ -17,6 +17,7 @@ from aidd.adapters.claude_code.runner import (
     ClaudeCodeQuestionDetection,
     ClaudeCodeQuestionPersistence,
     ClaudeCodeQuestionRouting,
+    ClaudeCodeResumeDecision,
     ClaudeCodeRunResult,
     ClaudeCodeRuntimeArtifacts,
     ClaudeCodeSubprocessSpec,
@@ -30,6 +31,7 @@ from aidd.adapters.claude_code.runner import (
     persist_attempt_runtime_log,
     persist_normalized_events_jsonl,
     persist_surfaced_questions,
+    prepare_resume_after_answers,
     route_questions_with_file_fallback,
     run_subprocess_with_streaming,
 )
@@ -739,6 +741,77 @@ def test_persist_surfaced_questions_skips_metadata_update_when_file_missing(
 
     assert persistence.metadata_updated is False
     assert persistence.questions_path.exists()
+
+
+def test_prepare_resume_after_answers_blocks_on_unresolved_questions(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_questions_markdown=(
+            "# Questions\n\n## Questions\n\n"
+            "- `Q1` `[blocking]` Need repository URL?\n"
+        ),
+    )
+
+    resume = prepare_resume_after_answers(
+        configured_command="claude",
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        run_id="run-001",
+    )
+
+    assert isinstance(resume, ClaudeCodeResumeDecision)
+    assert resume.can_resume is False
+    assert resume.resume_command is None
+    assert resume.unresolved_blocking_question_ids == ("Q1",)
+
+
+def test_prepare_resume_after_answers_builds_resume_command_when_unblocked(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_questions_markdown=(
+            "# Questions\n\n## Questions\n\n"
+            "- `Q1` `[blocking]` Need repository URL?\n"
+        ),
+    )
+    persist_answers_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_answers_markdown=(
+            "# Answers\n\n## Answers\n\n"
+            "- `Q1` `[resolved]` Repository is github.com/acme/app.\n"
+        ),
+    )
+
+    resume = prepare_resume_after_answers(
+        configured_command='claude --profile "team alpha"',
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        run_id="run-001",
+    )
+
+    assert resume.can_resume is True
+    assert resume.unresolved_blocking_question_ids == ()
+    assert resume.resume_command == (
+        "claude",
+        "--profile",
+        "team alpha",
+        "resume",
+        "--run-id",
+        "run-001",
+        "--stage",
+        "plan",
+        "--work-item",
+        "WI-001",
+    )
 
 
 def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: Path) -> None:
