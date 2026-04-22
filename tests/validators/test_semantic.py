@@ -4,10 +4,13 @@ from pathlib import Path
 
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.semantic import (
+    INCOMPLETE_EXECUTION_SUMMARY_CODE,
     INCOMPLETE_SECTION_CODE,
+    MISSING_DIFF_EVIDENCE_CODE,
     MISSING_EVIDENCE_LINK_CODE,
     PLACEHOLDER_CONTENT_CODE,
     UNSUPPORTED_CLAIM_CODE,
+    UNVERIFIABLE_CHECK_CLAIM_CODE,
     has_non_placeholder_text,
     validate_semantic_outputs,
 )
@@ -948,6 +951,128 @@ def test_validate_semantic_outputs_flags_invalid_tasklist_fixture_bundle() -> No
             location=ValidationIssueLocation(
                 workspace_relative_path=(
                     "workitems/WI-SEM-TASKLIST-INVALID/stages/tasklist/tasklist.md"
+                ),
+                line_number=16,
+            ),
+        ),
+    )
+
+
+def test_validate_semantic_outputs_accepts_valid_implement_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "implement-valid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-VALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_invalid_implement_noop_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "implement-invalid-noop" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-NOOP",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_EXECUTION_SUMMARY_CODE,
+            message=(
+                "No-op output requires explicit evidence-backed justification "
+                "in summary or follow-up notes."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-IMPLEMENT-NOOP/stages/implement/implementation-report.md"
+                ),
+                line_number=8,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_EXECUTION_SUMMARY_CODE,
+            message=(
+                "No-op output must include an actionable next step in "
+                "`Follow-up notes`."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-IMPLEMENT-NOOP/stages/implement/implementation-report.md"
+                ),
+                line_number=20,
+            ),
+        ),
+        ValidationFinding(
+            code=MISSING_DIFF_EVIDENCE_CODE,
+            message=(
+                "Change summary claims completed implementation but touched-files "
+                "list is empty."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-IMPLEMENT-NOOP/stages/implement/implementation-report.md"
+                ),
+                line_number=8,
+            ),
+        ),
+        ValidationFinding(
+            code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+            message=(
+                "Verification note includes outcome claim without executable "
+                "command evidence."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-IMPLEMENT-NOOP/stages/implement/implementation-report.md"
+                ),
+                line_number=16,
+            ),
+        ),
+    )
+
+
+def test_validate_semantic_outputs_flags_invalid_implement_verification_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "implement-invalid-verification" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-VERIFY",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+            message=(
+                "Verification note must include observed command outcome "
+                "(for example `-> pass` or exit code)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-IMPLEMENT-VERIFY/stages/implement/implementation-report.md"
+                ),
+                line_number=16,
+            ),
+        ),
+        ValidationFinding(
+            code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+            message=(
+                "Verification note includes outcome claim without executable "
+                "command evidence."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-IMPLEMENT-VERIFY/stages/implement/implementation-report.md"
                 ),
                 line_number=16,
             ),
