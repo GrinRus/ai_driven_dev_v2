@@ -58,7 +58,51 @@ Promotion/demotion policy:
 - A runtime moves up only after sustained conformance in adapter checks and live scenario coverage.
 - A runtime may move down when sustained regressions or ecosystem breakages exceed maintenance capacity.
 
-## 4. Change control
+## 4. Live E2E baseline and pinned-revision refresh policy
+
+Live E2E scenarios must remain reproducible and comparable across refreshes.
+
+### 4.1 Pinned revision rules
+
+- Every live scenario manifest must pin upstream repository revision data.
+- A pinned revision change must be atomic with:
+  - updated scenario manifest pin;
+  - updated `docs/e2e/live-e2e-catalog.md` reference metadata;
+  - archived replacement reference bundle identifiers.
+- Unpinned live scenarios are not allowed in maintained lanes.
+
+### 4.2 Refresh cadence and triggers
+
+Default cadence:
+
+- review live scenario pins at least once per quarter.
+
+Immediate refresh triggers:
+
+- upstream project changes invalidate deterministic verification steps;
+- runtime/adapter changes materially alter expected behavior;
+- contract or validator changes alter pass/fail interpretation for the lane.
+
+### 4.3 Required refresh procedure
+
+For each refreshed lane:
+
+1. Update pinned revision in the scenario manifest.
+2. Re-run required scenario lanes for maintained runtimes first.
+3. Compare new run artifacts against the previous baseline.
+4. Update `docs/e2e/live-e2e-catalog.md` with:
+   - refresh date;
+   - runtime used;
+   - new reference bundle id;
+   - known deltas and limitations.
+5. Keep historical references in Git history; do not silently overwrite outcome context.
+
+### 4.4 Failure and rollback policy
+
+- If refreshed baselines regress determinism or verification fidelity, rollback to the previous pin.
+- If rollback is impossible, record the lane as degraded and open roadmap follow-up work before promoting the new baseline.
+
+## 5. Change control
 
 Any compatibility policy change must update, in the same change:
 
