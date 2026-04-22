@@ -1644,7 +1644,7 @@ Dependencies:
 Local tasks:
 
 - `W6-E1-S2-T1` (done) Write the `research` base prompt with explicit evidence, citation, and uncertainty guidance.
-- `W6-E1-S2-T2` Write the `research` repair prompt for unsupported claims and missing evidence.
+- `W6-E1-S2-T2` (done) Write the `research` repair prompt for unsupported claims and missing evidence.
 - `W6-E1-S2-T3` Implement `research`-specific semantic validators.
 - `W6-E1-S2-T4` Add valid and invalid `research` fixtures, including missing-source and unresolved-question cases.
 - `W6-E1-S2-T5` Add unit tests that execute the `research` validator against the fixtures.
