@@ -2148,7 +2148,7 @@ Dependencies:
 Local tasks:
 
 - `W7-E3-S3-T1` (done) Define the supported Python-version window and platform support policy.
-- `W7-E3-S3-T2` Define runtime-support tiers for generic-cli, Claude Code, Codex, and OpenCode.
+- `W7-E3-S3-T2` (done) Define runtime-support tiers for generic-cli, Claude Code, Codex, and OpenCode.
 - `W7-E3-S3-T3` Define the policy for refreshing live E2E scenario baselines and pinned revisions.
 - `W7-E3-S3-T4` Define deprecation rules for contract changes, adapters, and scenario manifests.
 

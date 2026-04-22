@@ -36,7 +36,29 @@ Operational notes:
 - Tier 1 regressions block release readiness.
 - Tier 2 regressions should be fixed promptly but may ship with documented caveats when no Tier 1 impact exists.
 
-## 3. Change control
+## 3. Runtime support tiers
+
+Runtime support is tiered by release impact and maintenance expectation.
+
+| Runtime | Tier | Support expectation | Current notes |
+| --- | --- | --- | --- |
+| `generic-cli` | Tier 1 (release-blocking maintained) | Regressions are release blockers. Compatibility and behavior drift must be fixed before release. | Baseline portability runtime. |
+| `claude-code` | Tier 1 (release-blocking maintained) | Regressions are release blockers. Adapter and operator flows must stay production-usable. | First-class maintained runtime. |
+| `codex` | Tier 2 (actively maintained, non-blocking) | Regressions should be fixed promptly but may ship with explicit caveats when Tier 1 remains healthy. | Parity and eval behavior are still being hardened. |
+| `opencode` | Tier 3 (planned/limited) | Best-effort support only. Known gaps are acceptable when documented. | Parity lane remains partially blocked by current harness placeholder execution. |
+
+Operational policy:
+
+- Tier 1 defects: highest triage priority, release-blocking.
+- Tier 2 defects: normal priority, not release-blocking by default.
+- Tier 3 defects: roadmap-prioritized, may remain open with documented limitations.
+
+Promotion/demotion policy:
+
+- A runtime moves up only after sustained conformance in adapter checks and live scenario coverage.
+- A runtime may move down when sustained regressions or ecosystem breakages exceed maintenance capacity.
+
+## 4. Change control
 
 Any compatibility policy change must update, in the same change:
 
