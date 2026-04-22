@@ -1389,7 +1389,7 @@ Dependencies:
 
 Local tasks:
 
-- `W5-E2-S3-T1` Implement per-scenario summary rows with verdict, runtime, duration, and failure boundary.
+- `W5-E2-S3-T1` (done) Implement per-scenario summary rows with verdict, runtime, duration, and failure boundary.
 - `W5-E2-S3-T2` Implement runtime-level summary aggregation across many scenarios.
 - `W5-E2-S3-T3` Render a Markdown summary report suitable for CI artifacts.
 - `W5-E2-S3-T4` Add a CLI summary command that prints the latest eval report.
