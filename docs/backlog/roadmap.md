@@ -1358,7 +1358,7 @@ Dependencies:
 Local tasks:
 
 - `W5-E2-S2-T1` (done) Implement parsing of `runtime.log` into coarse runtime events.
-- `W5-E2-S2-T2` Implement parsing of `events.jsonl` when a runtime exposes normalized events.
+- `W5-E2-S2-T2` (done) Implement parsing of `events.jsonl` when a runtime exposes normalized events.
 - `W5-E2-S2-T3` Implement parsing of `validator-report.md` and stage-result metadata for validation failures.
 - `W5-E2-S2-T4` Implement the failure taxonomy that separates environment, adapter, runtime, validation, and scenario-verification failures.
 - `W5-E2-S2-T5` Implement first-failure-boundary selection from competing log signals.
