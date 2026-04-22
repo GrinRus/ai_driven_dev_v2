@@ -1171,7 +1171,7 @@ Local tasks:
 - `W4-E3-S3-T1` (done) Add a command that prints the stored metadata for a run and its stages.
 - `W4-E3-S3-T2` (done) Add a command that prints or tails the persisted runtime log for a selected attempt.
 - `W4-E3-S3-T3` (done) Add a command that lists document and report artifact paths for a selected attempt.
-- `W4-E3-S3-T4` Add CLI tests for missing runs, valid runs, and ambiguous run selection.
+- `W4-E3-S3-T4` (done) Add CLI tests for missing runs, valid runs, and ambiguous run selection.
 
 Exit evidence:
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,12 @@ from aidd.core.run_lookup import (
     latest_run_id,
     resolve_attempt_artifact_paths,
 )
-from aidd.core.run_store import load_stage_metadata, run_attempt_root, run_manifest_path
+from aidd.core.run_store import (
+    load_stage_metadata,
+    run_attempt_root,
+    run_manifest_path,
+    work_item_runs_root,
+)
 from aidd.core.run_store import run_stages_root as run_stage_roots_path
 
 
@@ -78,6 +84,19 @@ class RunArtifactsSummary:
     attempt_number: int
     documents: dict[str, str]
     logs: dict[str, str]
+
+
+_MIN_TIMESTAMP = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def _parse_utc_timestamp(value: str | None) -> datetime:
+    if not value:
+        return _MIN_TIMESTAMP
+    normalized = value.replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(normalized).astimezone(UTC)
+    except ValueError:
+        return _MIN_TIMESTAMP
 
 
 def _load_runtime_id(
@@ -143,15 +162,62 @@ def _load_manifest_payload(
     return payload
 
 
+def _resolve_selected_run_id(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str | None,
+) -> str:
+    if run_id is not None:
+        return run_id
+
+    runs_root = work_item_runs_root(workspace_root=workspace_root, work_item=work_item)
+    if not runs_root.exists():
+        raise ValueError(f"No runs found for work item '{work_item}'.")
+
+    run_entries: list[tuple[str, datetime]] = []
+    for candidate in runs_root.iterdir():
+        if not candidate.is_dir():
+            continue
+        try:
+            payload = _load_manifest_payload(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=candidate.name,
+            )
+        except ValueError:
+            continue
+
+        timestamp = _parse_utc_timestamp(
+            str(payload.get("updated_at_utc") or payload.get("created_at_utc") or "")
+        )
+        run_entries.append((candidate.name, timestamp))
+
+    if not run_entries:
+        raise ValueError(f"No runs found for work item '{work_item}'.")
+
+    latest_timestamp = max(timestamp for _, timestamp in run_entries)
+    candidate_ids = sorted(
+        run_id for run_id, timestamp in run_entries if timestamp == latest_timestamp
+    )
+    if len(candidate_ids) > 1:
+        raise ValueError(
+            f"Ambiguous latest run for work item '{work_item}': {', '.join(candidate_ids)}."
+        )
+    return candidate_ids[0]
+
+
 def resolve_run_metadata_summary(
     workspace_root: Path,
     work_item: str,
     *,
     run_id: str | None = None,
 ) -> RunMetadataSummary:
-    selected_run_id = run_id or latest_run_id(workspace_root=workspace_root, work_item=work_item)
-    if selected_run_id is None:
-        raise ValueError(f"No runs found for work item '{work_item}'.")
+    selected_run_id = _resolve_selected_run_id(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
 
     manifest_payload = _load_manifest_payload(
         workspace_root=workspace_root,
@@ -226,9 +292,11 @@ def resolve_run_log_summary(
     run_id: str | None = None,
     attempt_number: int | None = None,
 ) -> RunLogSummary:
-    selected_run_id = run_id or latest_run_id(workspace_root=workspace_root, work_item=work_item)
-    if selected_run_id is None:
-        raise ValueError(f"No runs found for work item '{work_item}'.")
+    selected_run_id = _resolve_selected_run_id(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
 
     selected_attempt = attempt_number or latest_attempt_number(
         workspace_root=workspace_root,
@@ -282,9 +350,11 @@ def resolve_run_artifacts_summary(
     run_id: str | None = None,
     attempt_number: int | None = None,
 ) -> RunArtifactsSummary:
-    selected_run_id = run_id or latest_run_id(workspace_root=workspace_root, work_item=work_item)
-    if selected_run_id is None:
-        raise ValueError(f"No runs found for work item '{work_item}'.")
+    selected_run_id = _resolve_selected_run_id(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
 
     selected_attempt = attempt_number or latest_attempt_number(
         workspace_root=workspace_root,
