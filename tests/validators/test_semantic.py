@@ -8,8 +8,10 @@ from aidd.validators.semantic import (
     INCOMPLETE_SECTION_CODE,
     MISSING_DIFF_EVIDENCE_CODE,
     MISSING_EVIDENCE_LINK_CODE,
+    MISSING_EVIDENCE_REF_CODE,
     PLACEHOLDER_CONTENT_CODE,
     UNSUPPORTED_CLAIM_CODE,
+    UNSUPPORTED_VERDICT_CODE,
     UNVERIFIABLE_CHECK_CLAIM_CODE,
     has_non_placeholder_text,
     validate_semantic_outputs,
@@ -1198,6 +1200,73 @@ def test_validate_semantic_outputs_flags_invalid_review_fixture_bundle() -> None
                     "workitems/WI-SEM-REVIEW-INVALID/stages/review/review-report.md"
                 ),
                 line_number=12,
+            ),
+        ),
+    )
+
+
+def test_validate_semantic_outputs_accepts_valid_qa_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "qa-valid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item="WI-SEM-QA-VALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_invalid_qa_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "qa-invalid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item="WI-SEM-QA-INVALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=MISSING_EVIDENCE_REF_CODE,
+            message=(
+                "Material QA claims and release recommendation must reference "
+                "verification artifacts or execution outputs."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-INVALID/stages/qa/qa-report.md"
+                ),
+                line_number=15,
+            ),
+        ),
+        ValidationFinding(
+            code=UNSUPPORTED_VERDICT_CODE,
+            message=(
+                "Verdicts `ready` or `ready-with-risks` cannot pair with "
+                "release recommendation `hold`."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-INVALID/stages/qa/qa-report.md"
+                ),
+                line_number=11,
+            ),
+        ),
+        ValidationFinding(
+            code=UNSUPPORTED_VERDICT_CODE,
+            message=(
+                "Ready/proceed-style outcomes are unsupported without concrete "
+                "verification evidence references."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-INVALID/stages/qa/qa-report.md"
+                ),
+                line_number=3,
             ),
         ),
     )

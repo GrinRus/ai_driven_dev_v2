@@ -965,9 +965,13 @@ def validate_semantic_outputs(
                 )
 
             risk_items = _extract_bullet_items(risks_content)
-            has_residual_risk_entries = any(
-                item.lower() != "none" for item in risk_items
+            risk_entry_items = tuple(
+                item
+                for item in risk_items
+                if item.lower() != "none"
+                and not item.lower().startswith(("mitigation:", "owner:"))
             )
+            has_residual_risk_entries = bool(risk_entry_items)
             if qa_verdict == "ready-with-risks" and not has_residual_risk_entries:
                 findings.append(
                     ValidationFinding(
@@ -996,7 +1000,7 @@ def validate_semantic_outputs(
                     )
                 )
 
-            for risk_item in (item for item in risk_items if item.lower() != "none"):
+            for risk_item in risk_entry_items:
                 if _REVIEW_SPEC_SEVERITY_PATTERN.search(risk_item) is None:
                     findings.append(
                         ValidationFinding(
@@ -1011,23 +1015,22 @@ def validate_semantic_outputs(
                     )
                     break
 
-                has_mitigation_note = (
-                    _RISK_MITIGATION_PATTERN.search(risk_item) is not None
-                    or _QA_OWNER_PATTERN.search(risk_item) is not None
-                )
-                if not has_mitigation_note:
-                    findings.append(
-                        ValidationFinding(
-                            code=RISK_UNDERREPORT_CODE,
-                            message=(
-                                "Each residual risk item must include mitigation and/or "
-                                "ownership note."
-                            ),
-                            severity="medium",
-                            location=risks_location,
-                        )
+            has_mitigation_or_owner_note = (
+                _RISK_MITIGATION_PATTERN.search(risks_content) is not None
+                or _QA_OWNER_PATTERN.search(risks_content) is not None
+            )
+            if has_residual_risk_entries and not has_mitigation_or_owner_note:
+                findings.append(
+                    ValidationFinding(
+                        code=RISK_UNDERREPORT_CODE,
+                        message=(
+                            "Residual risk summary must include mitigation and/or ownership "
+                            "notes."
+                        ),
+                        severity="medium",
+                        location=risks_location,
                     )
-                    break
+                )
 
             evidence_items = _extract_bullet_items(evidence_content)
             has_evidence_entries = any(
