@@ -4,9 +4,11 @@ import json
 import shlex
 import subprocess
 import threading
+import time
 from collections import deque
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
@@ -45,6 +47,7 @@ class GenericCliRunResult:
     stdout_text: str
     stderr_text: str
     runtime_log_text: str
+    exit_classification: GenericCliExitClassification
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,8 +56,45 @@ class GenericCliRuntimeArtifacts:
     runtime_exit_metadata_path: Path
 
 
+class GenericCliExitClassification(StrEnum):
+    SUCCESS = "success"
+    NON_ZERO_EXIT = "non_zero_exit"
+    TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
+
+
 StreamTarget = Literal["stdout", "stderr"]
 RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
+
+
+def _resolve_exit_classification(
+    *,
+    exit_code: int,
+    stop_reason: GenericCliExitClassification | None,
+) -> GenericCliExitClassification:
+    if stop_reason is not None:
+        return stop_reason
+    if exit_code == 0:
+        return GenericCliExitClassification.SUCCESS
+    return GenericCliExitClassification.NON_ZERO_EXIT
+
+
+def _request_subprocess_stop(process: subprocess.Popen[str]) -> None:
+    if process.poll() is not None:
+        return
+
+    try:
+        process.terminate()
+    except (OSError, ProcessLookupError):
+        return
+
+    try:
+        process.wait(timeout=0.5)
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+        except (OSError, ProcessLookupError):
+            return
 
 
 def assemble_command(
@@ -188,7 +228,12 @@ def run_subprocess_with_streaming(
     spec: GenericCliSubprocessSpec,
     on_stdout: Callable[[str], None] | None = None,
     on_stderr: Callable[[str], None] | None = None,
+    timeout_seconds: float | None = None,
+    cancel_requested: Callable[[], bool] | None = None,
 ) -> GenericCliRunResult:
+    if timeout_seconds is not None and timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be greater than zero when provided.")
+
     process = subprocess.Popen(
         spec.command,
         cwd=spec.cwd,
@@ -218,8 +263,22 @@ def run_subprocess_with_streaming(
     stdout_chunks: deque[str] = deque()
     stderr_chunks: deque[str] = deque()
     runtime_log_chunks: deque[str] = deque()
+    deadline = (
+        time.monotonic() + timeout_seconds
+        if timeout_seconds is not None
+        else None
+    )
+    stop_reason: GenericCliExitClassification | None = None
     completed_readers = 0
     while completed_readers < 2:
+        if stop_reason is None:
+            if cancel_requested is not None and cancel_requested():
+                stop_reason = GenericCliExitClassification.CANCELLED
+                _request_subprocess_stop(process)
+            elif deadline is not None and time.monotonic() >= deadline:
+                stop_reason = GenericCliExitClassification.TIMEOUT
+                _request_subprocess_stop(process)
+
         try:
             target, chunk = queue.get(timeout=0.1)
         except Empty:
@@ -243,11 +302,16 @@ def run_subprocess_with_streaming(
     for thread in reader_threads:
         thread.join(timeout=0.5)
     exit_code = process.wait()
+    exit_classification = _resolve_exit_classification(
+        exit_code=exit_code,
+        stop_reason=stop_reason,
+    )
     return GenericCliRunResult(
         exit_code=exit_code,
         stdout_text="".join(stdout_chunks),
         stderr_text="".join(stderr_chunks),
         runtime_log_text="".join(runtime_log_chunks),
+        exit_classification=exit_classification,
     )
 
 
@@ -265,6 +329,7 @@ def persist_attempt_runtime_artifacts(
     runtime_exit_metadata = {
         "schema_version": 1,
         "exit_code": run_result.exit_code,
+        "exit_classification": run_result.exit_classification.value,
         "stdout_char_count": len(run_result.stdout_text),
         "stderr_char_count": len(run_result.stderr_text),
         "runtime_log_char_count": len(run_result.runtime_log_text),

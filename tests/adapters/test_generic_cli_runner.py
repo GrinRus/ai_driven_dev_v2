@@ -10,10 +10,12 @@ import pytest
 
 from aidd.adapters.generic_cli.runner import (
     RUNTIME_EXIT_METADATA_FILENAME,
+    GenericCliExitClassification,
     GenericCliRunResult,
     GenericCliRuntimeArtifacts,
     GenericCliStageContext,
     GenericCliSubprocessSpec,
+    _resolve_exit_classification,
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
@@ -160,6 +162,7 @@ def test_run_subprocess_with_streaming_returns_stdout_and_stderr(tmp_path: Path)
     assert "err-1\n" in result.stderr_text
     assert "out-1\n" in result.runtime_log_text
     assert "err-1\n" in result.runtime_log_text
+    assert result.exit_classification is GenericCliExitClassification.SUCCESS
     assert stdout_events
     assert stderr_events
 
@@ -199,6 +202,7 @@ def test_persist_attempt_runtime_artifacts_writes_log_and_exit_metadata(tmp_path
         stdout_text="out-1\nout-2\n",
         stderr_text="err-1\n",
         runtime_log_text="out-1\nerr-1\nout-2\n",
+        exit_classification=GenericCliExitClassification.NON_ZERO_EXIT,
     )
 
     artifacts = persist_attempt_runtime_artifacts(
@@ -215,7 +219,30 @@ def test_persist_attempt_runtime_artifacts_writes_log_and_exit_metadata(tmp_path
     assert exit_metadata == {
         "schema_version": 1,
         "exit_code": 17,
+        "exit_classification": "non_zero_exit",
         "stdout_char_count": len(run_result.stdout_text),
         "stderr_char_count": len(run_result.stderr_text),
         "runtime_log_char_count": len(run_result.runtime_log_text),
     }
+
+
+def test_resolve_exit_classification_prefers_stop_reason_over_exit_code() -> None:
+    timeout_classification = _resolve_exit_classification(
+        exit_code=0,
+        stop_reason=GenericCliExitClassification.TIMEOUT,
+    )
+    cancelled_classification = _resolve_exit_classification(
+        exit_code=7,
+        stop_reason=GenericCliExitClassification.CANCELLED,
+    )
+
+    assert timeout_classification is GenericCliExitClassification.TIMEOUT
+    assert cancelled_classification is GenericCliExitClassification.CANCELLED
+
+
+def test_resolve_exit_classification_uses_exit_code_without_stop_reason() -> None:
+    success_classification = _resolve_exit_classification(exit_code=0, stop_reason=None)
+    non_zero_classification = _resolve_exit_classification(exit_code=3, stop_reason=None)
+
+    assert success_classification is GenericCliExitClassification.SUCCESS
+    assert non_zero_classification is GenericCliExitClassification.NON_ZERO_EXIT
