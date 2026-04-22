@@ -131,3 +131,30 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
         "If accepted input forms are ambiguous, ask a blocking question before task decomposition.",
         "If documentation obligations are unclear, ask a blocking question before implementation.",
     ]
+    assert scenario.raw["interview"]["answer_flow"]["mode"] == "answers_markdown_and_stage_rerun"
+    assert (
+        scenario.raw["interview"]["answer_flow"]["answers_file"]
+        == ".aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md"
+    )
+    assert scenario.raw["interview"]["answer_flow"]["question_check_command"] == [
+        "uv",
+        "run",
+        "aidd",
+        "stage",
+        "questions",
+        "idea",
+        "--work-item",
+        "WI-LIVE-SQLITE-INTERVIEW",
+    ]
+    assert scenario.raw["interview"]["answer_flow"]["resume_command"] == [
+        "uv",
+        "run",
+        "aidd",
+        "stage",
+        "run",
+        "idea",
+        "--work-item",
+        "WI-LIVE-SQLITE-INTERVIEW",
+        "--runtime",
+        "generic-cli",
+    ]

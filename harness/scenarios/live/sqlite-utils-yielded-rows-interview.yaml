@@ -31,6 +31,32 @@ interview:
   - If code execution policy is not explicitly stated, ask a blocking question before planning.
   - If accepted input forms are ambiguous, ask a blocking question before task decomposition.
   - If documentation obligations are unclear, ask a blocking question before implementation.
+  answer_flow:
+    mode: answers_markdown_and_stage_rerun
+    answers_file: .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md
+    question_check_command:
+    - uv
+    - run
+    - aidd
+    - stage
+    - questions
+    - idea
+    - --work-item
+    - WI-LIVE-SQLITE-INTERVIEW
+    resume_command:
+    - uv
+    - run
+    - aidd
+    - stage
+    - run
+    - idea
+    - --work-item
+    - WI-LIVE-SQLITE-INTERVIEW
+    - --runtime
+    - generic-cli
+    answer_requirements:
+    - Resolve every blocking question with explicit policy choices.
+    - Keep accepted input-form decisions and documentation obligations in the same answers file.
 runtime_targets:
 - claude-code
 - generic-cli
