@@ -11,6 +11,7 @@ from aidd import __version__
 from aidd.adapters.base import CapabilityReport
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.generic_cli import probe as probe_generic_cli
+from aidd.cli.run_lookup import resolve_stage_result_summary
 from aidd.config import load_config
 from aidd.core.interview import (
     load_answers_document,
@@ -217,6 +218,43 @@ def stage_questions(
         return
 
     console.print("No unresolved blocking questions. Stage can proceed if other checks pass.")
+
+
+@stage_app.command("summary")
+def stage_summary(
+    stage: Annotated[str, typer.Argument(help="Stage name")],
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Optional run id; defaults to the latest run."),
+    ] = None,
+) -> None:
+    """Show a stage result summary for one work item run."""
+    if not is_valid_stage(stage):
+        raise typer.BadParameter(f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}")
+
+    try:
+        summary = resolve_stage_result_summary(
+            workspace_root=root,
+            work_item=work_item,
+            stage=stage,
+            run_id=run_id,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    table = Table(title=f"Stage summary: {stage} / {work_item}")
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("run id", summary.run_id)
+    table.add_row("runtime", summary.runtime_id)
+    table.add_row("final state", summary.final_state)
+    table.add_row("attempt count", str(summary.attempt_count))
+    console.print(table)
 
 
 @eval_app.command("run")
