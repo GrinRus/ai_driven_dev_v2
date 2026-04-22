@@ -1585,7 +1585,7 @@ Exit evidence:
 ### Epic W6-E1 — strategy stages (`planned`)
 Linked stories: `US-02`, `US-03`, `US-05`
 
-#### Slice W6-E1-S1 — `idea` stage pack (`planned`)
+#### Slice W6-E1-S1 — `idea` stage pack (`done`)
 Goal: make the `idea` stage runnable with a real prompt pack, validator, and fixtures.
 
 Primary outputs:
@@ -1613,11 +1613,12 @@ Local tasks:
 - `W6-E1-S1-T3` (done) Implement `idea`-specific semantic validators.
 - `W6-E1-S1-T4` (done) Add valid and invalid `idea` fixtures for regression tests.
 - `W6-E1-S1-T5` (done) Add unit tests that execute the `idea` validator against the fixtures.
-- `W6-E1-S1-T6` Run one smoke execution of `idea` through an adapter and archive the output bundle.
+- `W6-E1-S1-T6` (done) Run one smoke execution of `idea` through an adapter and archive the output bundle.
 
 Exit evidence:
 
 - the `idea` stage is more than a contract file; it is runnable, validated, and repairable.
+- smoke bundle archived at `.aidd/reports/evals/eval-stage-idea-smoke-20260422T100325Z`.
 
 #### Slice W6-E1-S2 — `research` stage pack (`planned`)
 Goal: make the `research` stage runnable with evidence-aware validation.
