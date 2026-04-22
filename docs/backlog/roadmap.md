@@ -1269,7 +1269,7 @@ Local tasks:
 - `W5-E1-S3-T2` (done) Implement AIDD invocation with runtime, scenario, and work-item parameters.
 - `W5-E1-S3-T3` (done) Implement verification-step execution after the AIDD run completes.
 - `W5-E1-S3-T4` (done) Capture durations, exit codes, and command transcripts for setup, run, and verification steps.
-- `W5-E1-S3-T5` Implement teardown handling that runs even after a failed scenario.
+- `W5-E1-S3-T5` (done) Implement teardown handling that runs even after a failed scenario.
 - `W5-E1-S3-T6` Add integration tests for passing scenarios, failing setup steps, failing verification steps, and interrupted runs.
 
 Exit evidence:

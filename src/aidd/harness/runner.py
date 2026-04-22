@@ -3,9 +3,10 @@ from __future__ import annotations
 import os
 import subprocess
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from aidd.harness.scenarios import Scenario
 
@@ -16,6 +17,10 @@ class HarnessSetupError(RuntimeError):
 
 class HarnessVerificationError(RuntimeError):
     """Raised when a verification command fails."""
+
+
+class HarnessTeardownError(RuntimeError):
+    """Raised when a teardown command fails."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +55,13 @@ class HarnessAiddRunResult:
 class HarnessVerificationResult:
     executed_commands: tuple[str, ...]
     aidd_exit_code: int
+    command_transcripts: tuple[HarnessCommandTranscript, ...]
+    duration_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
+class HarnessTeardownResult:
+    executed_commands: tuple[str, ...]
     command_transcripts: tuple[HarnessCommandTranscript, ...]
     duration_seconds: float
 
@@ -213,3 +225,63 @@ def run_verification_steps(
         command_transcripts=command_transcripts,
         duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
     )
+
+
+def run_teardown_steps(
+    *,
+    teardown_commands: tuple[str, ...],
+    working_copy_path: Path,
+    environment: Mapping[str, str] | None = None,
+) -> HarnessTeardownResult:
+    _validate_working_copy_path(working_copy_path)
+
+    command_env = dict(os.environ)
+    if environment is not None:
+        command_env.update(environment)
+
+    command_transcripts = _run_shell_commands(
+        commands=teardown_commands,
+        working_copy_path=working_copy_path,
+        command_env=command_env,
+        error_label="Teardown",
+        error_type=HarnessTeardownError,
+    )
+    return HarnessTeardownResult(
+        executed_commands=tuple(transcript.command for transcript in command_transcripts),
+        command_transcripts=command_transcripts,
+        duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
+    )
+
+
+def run_with_teardown[T](
+    *,
+    action: Callable[[], T],
+    teardown_commands: tuple[str, ...],
+    working_copy_path: Path,
+    environment: Mapping[str, str] | None = None,
+) -> tuple[T, HarnessTeardownResult]:
+    result_marker = object()
+    action_result: T | object = result_marker
+    action_error: Exception | None = None
+    try:
+        action_result = action()
+    except Exception as exc:  # pragma: no cover - exercised by failure-path tests.
+        action_error = exc
+
+    try:
+        teardown_result = run_teardown_steps(
+            teardown_commands=teardown_commands,
+            working_copy_path=working_copy_path,
+            environment=environment,
+        )
+    except Exception as teardown_error:
+        if action_error is not None:
+            raise ExceptionGroup(
+                "Scenario execution and teardown both failed.",
+                [action_error, teardown_error],
+            ) from None
+        raise
+
+    if action_error is not None:
+        raise action_error
+    return cast(T, action_result), teardown_result
