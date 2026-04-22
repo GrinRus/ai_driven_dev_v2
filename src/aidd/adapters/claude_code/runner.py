@@ -2,9 +2,16 @@ from __future__ import annotations
 
 import os
 import shlex
-from collections.abc import Mapping
+import subprocess
+import threading
+import time
+from collections import deque
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
+from queue import Empty, Queue
+from typing import Literal, TextIO
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +75,25 @@ class ClaudeCodeSubprocessSpec:
     command: tuple[str, ...]
     cwd: Path
     env: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
+class ClaudeCodeRunResult:
+    exit_code: int
+    stdout_text: str
+    stderr_text: str
+    runtime_log_text: str
+    exit_classification: ClaudeCodeExitClassification
+
+
+class ClaudeCodeExitClassification(StrEnum):
+    SUCCESS = "success"
+    NON_ZERO_EXIT = "non_zero_exit"
+    TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
+
+
+StreamTarget = Literal["stdout", "stderr"]
 
 
 def _resolve_stage_brief_path_for_execution(
@@ -225,6 +251,151 @@ def build_subprocess_spec(
             base_env=base_env,
             repository_root=repository_root,
         ),
+    )
+
+
+def _resolve_exit_classification(
+    *,
+    exit_code: int,
+    stop_reason: ClaudeCodeExitClassification | None,
+) -> ClaudeCodeExitClassification:
+    if stop_reason is not None:
+        return stop_reason
+    if exit_code == 0:
+        return ClaudeCodeExitClassification.SUCCESS
+    return ClaudeCodeExitClassification.NON_ZERO_EXIT
+
+
+def _request_subprocess_stop(process: subprocess.Popen[str]) -> None:
+    if process.poll() is not None:
+        return
+
+    try:
+        process.terminate()
+    except (OSError, ProcessLookupError):
+        return
+
+    try:
+        process.wait(timeout=0.5)
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+        except (OSError, ProcessLookupError):
+            return
+
+
+def _stream_reader(
+    *,
+    target: StreamTarget,
+    pipe: TextIO | None,
+    queue: Queue[tuple[StreamTarget, str | None]],
+) -> None:
+    if pipe is None:
+        queue.put((target, None))
+        return
+
+    try:
+        for chunk in iter(pipe.readline, ""):
+            queue.put((target, chunk))
+    finally:
+        pipe.close()
+        queue.put((target, None))
+
+
+def run_subprocess_with_streaming(
+    *,
+    spec: ClaudeCodeSubprocessSpec,
+    on_stdout: Callable[[str], None] | None = None,
+    on_stderr: Callable[[str], None] | None = None,
+    timeout_seconds: float | None = None,
+    cancel_requested: Callable[[], bool] | None = None,
+) -> ClaudeCodeRunResult:
+    if timeout_seconds is not None and timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be greater than zero when provided.")
+
+    process = subprocess.Popen(
+        spec.command,
+        cwd=spec.cwd,
+        env=spec.env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+
+    queue: Queue[tuple[StreamTarget, str | None]] = Queue()
+    reader_threads = (
+        threading.Thread(
+            target=_stream_reader,
+            kwargs={"target": "stdout", "pipe": process.stdout, "queue": queue},
+            daemon=True,
+        ),
+        threading.Thread(
+            target=_stream_reader,
+            kwargs={"target": "stderr", "pipe": process.stderr, "queue": queue},
+            daemon=True,
+        ),
+    )
+    for thread in reader_threads:
+        thread.start()
+
+    stdout_chunks: deque[str] = deque()
+    stderr_chunks: deque[str] = deque()
+    runtime_log_chunks: deque[str] = deque()
+    stream_done: dict[StreamTarget, bool] = {"stdout": False, "stderr": False}
+    started_at = time.monotonic()
+    stop_reason: ClaudeCodeExitClassification | None = None
+
+    while True:
+        if cancel_requested is not None and cancel_requested():
+            stop_reason = ClaudeCodeExitClassification.CANCELLED
+            _request_subprocess_stop(process)
+
+        if (
+            timeout_seconds is not None
+            and stop_reason is None
+            and (time.monotonic() - started_at) >= timeout_seconds
+        ):
+            stop_reason = ClaudeCodeExitClassification.TIMEOUT
+            _request_subprocess_stop(process)
+
+        try:
+            target, chunk = queue.get(timeout=0.05)
+        except Empty:
+            if process.poll() is not None and all(stream_done.values()):
+                break
+            continue
+
+        if chunk is None:
+            stream_done[target] = True
+            if process.poll() is not None and all(stream_done.values()):
+                break
+            continue
+
+        runtime_log_chunks.append(chunk)
+        if target == "stdout":
+            stdout_chunks.append(chunk)
+            if on_stdout is not None:
+                on_stdout(chunk)
+        else:
+            stderr_chunks.append(chunk)
+            if on_stderr is not None:
+                on_stderr(chunk)
+
+    for thread in reader_threads:
+        thread.join(timeout=0.1)
+
+    exit_code = process.wait()
+    exit_classification = _resolve_exit_classification(
+        exit_code=exit_code,
+        stop_reason=stop_reason,
+    )
+    return ClaudeCodeRunResult(
+        exit_code=exit_code,
+        stdout_text="".join(stdout_chunks),
+        stderr_text="".join(stderr_chunks),
+        runtime_log_text="".join(runtime_log_chunks),
+        exit_classification=exit_classification,
     )
 
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -8,12 +10,16 @@ import pytest
 from aidd.adapters.claude_code.runner import (
     ClaudeCodeCommandContext,
     ClaudeCodeConfigFlag,
+    ClaudeCodeExitClassification,
     ClaudeCodeLaunchOptions,
+    ClaudeCodeRunResult,
     ClaudeCodeSubprocessSpec,
+    _resolve_exit_classification,
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
     command_preview,
+    run_subprocess_with_streaming,
 )
 
 
@@ -184,6 +190,77 @@ def test_build_subprocess_spec_sets_command_cwd_and_env(tmp_path: Path) -> None:
     assert spec.cwd == workspace_root.resolve(strict=False)
     assert spec.env["PATH"] == "/usr/bin"
     assert spec.env["AIDD_WORKSPACE_ROOT"] == workspace_root.resolve(strict=False).as_posix()
+
+
+def test_resolve_exit_classification_prefers_stop_reason_over_exit_code() -> None:
+    timeout_classification = _resolve_exit_classification(
+        exit_code=0,
+        stop_reason=ClaudeCodeExitClassification.TIMEOUT,
+    )
+    cancelled_classification = _resolve_exit_classification(
+        exit_code=7,
+        stop_reason=ClaudeCodeExitClassification.CANCELLED,
+    )
+
+    assert timeout_classification is ClaudeCodeExitClassification.TIMEOUT
+    assert cancelled_classification is ClaudeCodeExitClassification.CANCELLED
+
+
+def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> None:
+    script = (
+        "import time\n"
+        "print('started', flush=True)\n"
+        "time.sleep(5)\n"
+        "print('finished', flush=True)\n"
+    )
+    spec = ClaudeCodeSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.1)
+
+    assert isinstance(result, ClaudeCodeRunResult)
+    assert result.exit_classification is ClaudeCodeExitClassification.TIMEOUT
+    assert "started\n" in result.runtime_log_text
+    assert "finished\n" not in result.runtime_log_text
+
+
+def test_run_subprocess_with_streaming_classifies_cancellation(tmp_path: Path) -> None:
+    script = (
+        "import time\n"
+        "print('ready', flush=True)\n"
+        "time.sleep(5)\n"
+        "print('never-reached', flush=True)\n"
+    )
+    spec = ClaudeCodeSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    cancel_event = threading.Event()
+    first_stdout_seen = threading.Event()
+
+    def _on_stdout(chunk: str) -> None:
+        if "ready" in chunk:
+            first_stdout_seen.set()
+
+    def _request_cancel() -> bool:
+        if first_stdout_seen.is_set():
+            cancel_event.set()
+        return cancel_event.is_set()
+
+    result = run_subprocess_with_streaming(
+        spec=spec,
+        on_stdout=_on_stdout,
+        cancel_requested=_request_cancel,
+    )
+
+    assert result.exit_classification is ClaudeCodeExitClassification.CANCELLED
+    assert "ready\n" in result.runtime_log_text
+    assert "never-reached\n" not in result.runtime_log_text
 
 
 def test_assemble_command_rejects_empty_configured_command() -> None:
