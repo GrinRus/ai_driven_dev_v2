@@ -175,6 +175,56 @@ def test_persist_attempt_runtime_log_writes_runtime_log(tmp_path: Path) -> None:
     assert runtime_log_path.read_text(encoding="utf-8") == run_result.runtime_log_text
 
 
+def test_run_subprocess_with_streaming_classifies_non_zero_exit(tmp_path: Path) -> None:
+    spec = CodexSubprocessSpec(
+        command=(
+            sys.executable,
+            "-c",
+            "import sys; print('boom', file=sys.stderr); raise SystemExit(3)",
+        ),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(spec=spec)
+
+    assert result.exit_code == 3
+    assert result.exit_classification == CodexExitClassification.NON_ZERO_EXIT
+    assert "boom\n" in result.stderr_text
+
+
+def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> None:
+    spec = CodexSubprocessSpec(
+        command=(sys.executable, "-c", "import time; time.sleep(2)"),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.1)
+
+    assert result.exit_classification == CodexExitClassification.TIMEOUT
+    assert result.exit_code != 0
+
+
+def test_run_subprocess_with_streaming_classifies_cancelled(tmp_path: Path) -> None:
+    spec = CodexSubprocessSpec(
+        command=(sys.executable, "-c", "import time; time.sleep(2)"),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+    poll_count = 0
+
+    def cancel_requested() -> bool:
+        nonlocal poll_count
+        poll_count += 1
+        return poll_count >= 2
+
+    result = run_subprocess_with_streaming(spec=spec, cancel_requested=cancel_requested)
+
+    assert result.exit_classification == CodexExitClassification.CANCELLED
+    assert result.exit_code != 0
+
+
 def test_assemble_command_rejects_empty_configured_command(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="must not be empty"):
         assemble_command(configured_command="   ", context=_context(tmp_path))
