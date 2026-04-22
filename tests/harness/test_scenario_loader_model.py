@@ -139,6 +139,11 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         "start": "plan",
         "end": "qa",
     }
+    assert scenario.raw["verify"]["pass_conditions"] == [
+        "Verification command exits with status 0.",
+        "Pytest output reports all tests as passed.",
+        "No new failing tests are introduced relative to baseline.",
+    ]
 
 
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:
