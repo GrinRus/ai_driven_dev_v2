@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -310,6 +311,64 @@ def test_run_subprocess_with_streaming_classifies_cancellation(tmp_path: Path) -
     assert result.exit_classification is ClaudeCodeExitClassification.CANCELLED
     assert "ready\n" in result.runtime_log_text
     assert "never-reached\n" not in result.runtime_log_text
+
+
+def test_run_subprocess_with_streaming_emits_stdout_and_stderr_callbacks(tmp_path: Path) -> None:
+    script = (
+        "import sys, time\n"
+        "print('out-1', flush=True)\n"
+        "print('err-1', file=sys.stderr, flush=True)\n"
+        "time.sleep(0.05)\n"
+        "print('out-2', flush=True)\n"
+    )
+    spec = ClaudeCodeSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    stdout_events: list[str] = []
+    stderr_events: list[str] = []
+    result = run_subprocess_with_streaming(
+        spec=spec,
+        on_stdout=stdout_events.append,
+        on_stderr=stderr_events.append,
+    )
+
+    assert result.exit_classification is ClaudeCodeExitClassification.SUCCESS
+    assert "out-1\n" in result.stdout_text
+    assert "out-2\n" in result.stdout_text
+    assert "err-1\n" in result.stderr_text
+    assert "out-1\n" in result.runtime_log_text
+    assert "err-1\n" in result.runtime_log_text
+    assert stdout_events
+    assert stderr_events
+
+
+def test_run_subprocess_with_streaming_emits_stdout_before_process_end(tmp_path: Path) -> None:
+    script = (
+        "import time\n"
+        "print('out-early', flush=True)\n"
+        "time.sleep(0.2)\n"
+        "print('out-late', flush=True)\n"
+    )
+    spec = ClaudeCodeSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    callback_times: list[float] = []
+    started_at = time.monotonic()
+    run_subprocess_with_streaming(
+        spec=spec,
+        on_stdout=lambda _chunk: callback_times.append(time.monotonic()),
+    )
+    finished_at = time.monotonic()
+
+    assert callback_times
+    assert callback_times[0] - started_at < 0.15
+    assert finished_at - callback_times[0] > 0.05
 
 
 def test_build_subprocess_spec_run_fixture_launch_success(tmp_path: Path) -> None:

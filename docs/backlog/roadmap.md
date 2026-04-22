@@ -1038,7 +1038,7 @@ Dependencies:
 
 Local tasks:
 
-- `W4-E2-S3-T1` Stream raw Claude Code stdout and stderr to the operator CLI in real time.
+- `W4-E2-S3-T1` (done) Stream raw Claude Code stdout and stderr to the operator CLI in real time.
 - `W4-E2-S3-T2` Persist a full `runtime.log` that matches the raw streamed output as closely as possible.
 - `W4-E2-S3-T3` Normalize any machine-readable Claude Code events into a durable `events.jsonl` artifact when available.
 - `W4-E2-S3-T4` Implement exit classification that distinguishes adapter, runtime, and user-cancelled outcomes.
