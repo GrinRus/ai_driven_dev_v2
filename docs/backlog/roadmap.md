@@ -1402,7 +1402,7 @@ Exit evidence:
 ### Epic W5-E3 — live E2E lanes (`planned`)
 Linked stories: `US-07`, `US-11`, `US-12`
 
-#### Slice W5-E3-S1 — Typer smoke lane (`planned`)
+#### Slice W5-E3-S1 — Typer smoke lane (`done`)
 Goal: make one minimal Typer scenario pass under the harness.
 
 Primary outputs:
@@ -1427,7 +1427,7 @@ Local tasks:
 - `W5-E3-S1-T1` (done) Pin the Typer repository revision and record the target scenario objective.
 - `W5-E3-S1-T2` (done) Define setup steps and AIDD invocation parameters for the Typer smoke scenario.
 - `W5-E3-S1-T3` (done) Define deterministic verification steps and expected pass conditions for the scenario.
-- `W5-E3-S1-T4` Run the scenario once end to end and capture the first reference artifact bundle.
+- `W5-E3-S1-T4` (done) Run the scenario once end to end and capture the first reference artifact bundle.
 
 Exit evidence:
 

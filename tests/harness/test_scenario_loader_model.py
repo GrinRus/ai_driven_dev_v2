@@ -39,6 +39,17 @@ def test_live_scenario_exposes_repo_steps_and_run_config() -> None:
         "Pytest output reports all tests as passed.",
         "No new failing tests are introduced relative to baseline.",
     ]
+    assert scenario.raw["reference_run"]["run_id"] == "eval-live-001-reference-20260422T081401Z"
+    assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
+    assert scenario.raw["reference_run"]["status"] == "harness_fail"
+    assert (
+        scenario.raw["reference_run"]["resolved_revision"]
+        == "9ce8e30383ef419c490431caab5a515eca669b1b"
+    )
+    assert (
+        scenario.raw["reference_run"]["bundle_root"]
+        == ".aidd/reports/evals/eval-live-001-reference-20260422T081401Z"
+    )
     assert scenario.run.stage_start == "plan"
     assert scenario.run.stage_end == "qa"
     assert scenario.run.patch_budget_files == 8

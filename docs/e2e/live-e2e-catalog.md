@@ -43,6 +43,9 @@ Initial scenarios:
 
 - **AIDD-LIVE-001 — styled help alignment bugfix**  
   Based on issue `#1159`. Fix help-line width calculation when styled help text is present. Add a regression test and preserve existing help rendering behavior.
+  First reference run on April 22, 2026 used runtime `generic-cli`, pinned revision
+  `9ce8e30383ef419c490431caab5a515eca669b1b`, and produced status `harness_fail`
+  because setup command `uv run pytest -q || pytest -q` exited with status `2`.
 - **AIDD-LIVE-002 — boolean option help rendering**  
   Based on issue `#678`. Improve `--help` rendering for boolean options so type/default details remain clear. Add regression coverage.
 

@@ -39,6 +39,15 @@ verify:
   - Verification command exits with status 0.
   - Pytest output reports all tests as passed.
   - No new failing tests are introduced relative to baseline.
+reference_run:
+  run_id: eval-live-001-reference-20260422T081401Z
+  recorded_at_utc: '2026-04-22T08:14:01Z'
+  runtime: generic-cli
+  status: harness_fail
+  resolved_revision: 9ce8e30383ef419c490431caab5a515eca669b1b
+  bundle_root: .aidd/reports/evals/eval-live-001-reference-20260422T081401Z
+  first_failure_signal: Setup command `uv run pytest -q || pytest -q` exited with
+    status 2 because uv ignored the active virtual environment in setup.
 limits:
   patch_budget_files: 8
   timeout_minutes: 20
