@@ -1821,7 +1821,7 @@ Dependencies:
 
 Local tasks:
 
-- `W6-E3-S1-T1` Write the `review` base prompt.
+- `W6-E3-S1-T1` (done) Write the `review` base prompt.
 - `W6-E3-S1-T2` Write the `review` repair prompt.
 - `W6-E3-S1-T3` Implement `review` semantic validators.
 - `W6-E3-S1-T4` Add valid and invalid `review` fixtures.

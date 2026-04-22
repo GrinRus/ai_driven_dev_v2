@@ -1,20 +1,30 @@
 # Run prompt for `review`
 
-## Goal
+## Stage objective
 
-Review the implementation result, identify risks, and confirm whether the change is ready for QA or merge.
+Produce a defensible `review` package that classifies implementation findings by severity and
+disposition, then makes an explicit approval decision (`approved`, `approved-with-conditions`,
+or `rejected`).
+
+The stage is complete only when every finding is evidence-backed, severity/disposition labels are
+coherent, and approval status matches unresolved `must-fix` items.
 
 ## Inputs to read first
 
-- `../implement/output/implementation-report.md`
-- `../implement/output/stage-result.md`
-- `../implement/output/validator-report.md`
-- `context/diff-summary.md`
-- `context/acceptance-criteria.md`
-- optional context when available: repository state, constraints, review baseline
-- stage contract: `contracts/stages/review.md`
+- required:
+  - `../implement/output/implementation-report.md`
+  - `../implement/output/stage-result.md`
+  - `../implement/output/validator-report.md`
+  - `context/diff-summary.md`
+  - `context/acceptance-criteria.md`
+- optional context when available:
+  - `context/repository-state.md`
+  - `context/constraints.md`
+  - `context/review-baseline.md`
+- contract of record:
+  - `contracts/stages/review.md`
 
-## Required outputs
+## Required outputs (always write)
 
 - `review-report.md`
 - `stage-result.md`
@@ -25,25 +35,37 @@ Review the implementation result, identify risks, and confirm whether the change
 - `questions.md` and `answers.md` when clarification is needed
 - `repair-brief.md` only when validation fails and repair is required
 
-## Instructions
+## Review discipline
 
-1. Read all required upstream artifacts before writing outputs.
-2. Confirm `implement` stage result is resolved and validator verdict is not `fail`.
-3. Use `context/diff-summary.md` and `context/acceptance-criteria.md` as mandatory review baseline inputs.
-4. Write `review-report.md` with stable finding ids, explicit severity, disposition, and evidence-backed rationale.
-5. Declare explicit approval status as `approved`, `approved-with-conditions`, or `rejected`.
-6. When status is not `approved`, include required changes tied to specific findings.
-7. Do not include findings that cannot be tied to observable evidence or explicit acceptance-criteria mismatches.
-8. Write or update `stage-result.md` and `validator-report.md` so review status and findings are consistent.
-9. If required inputs are missing or review baseline is contradictory, raise a question instead of inventing assumptions.
-10. Keep the output useful for the next stage rather than merely well-formatted.
+1. Findings must have stable ids, explicit severity, explicit disposition, and rationale tied to
+   implementation evidence or acceptance-criteria mismatch.
+2. Severity and disposition labels must stay consistent between detailed findings and summary
+   sections.
+3. `must-fix` findings block `approved` status until resolved.
+4. Required changes must map to concrete finding ids when status is conditional or rejected.
+5. Missing/contradictory baseline context must become explicit questions, not silent assumptions.
+
+## Execution instructions
+
+1. Read required `implement` artifacts, diff summary, acceptance criteria, and
+   `contracts/stages/review.md` before drafting outputs.
+2. Do not mark stage `succeeded` when `implement` status is unresolved or validator verdict is
+   `fail`.
+3. Draft `review-report.md` with sections for findings, approval decision, and required changes.
+4. Keep every finding tied to observable evidence from `implementation-report.md` and/or explicit
+   acceptance-criteria mismatch.
+5. Use allowed dispositions (`must-fix`, `follow-up`, `accepted-risk`, `invalid`) and keep wording
+   unambiguous for downstream QA.
+6. If contradictions in baseline prevent defensible decision, ask a `[blocking]` question instead
+   of forcing approval.
+7. Update `validator-report.md` and `stage-result.md` so verdict, blockers, and next actions match
+   the final review decision.
 
 ## Completion checklist
 
-- findings are uniquely identified and severity-labeled,
-- each finding has explicit disposition and rationale,
-- each finding is supported by implementation evidence or acceptance-criteria mismatch,
-- approval status is explicit and consistent with findings,
-- unresolved `must-fix` findings prevent `approved` status,
-- required changes are listed when approval is conditional or rejected,
-- stage result and validator report agree with review outcome.
+- findings are uniquely identified with severity and disposition labels,
+- each finding is evidence-backed or tied to acceptance-criteria mismatch,
+- approval status is explicit and consistent with unresolved `must-fix` findings,
+- required changes map to concrete findings for non-approved outcomes,
+- blocking ambiguity is surfaced via explicit questions,
+- `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.
