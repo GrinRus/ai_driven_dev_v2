@@ -1608,7 +1608,7 @@ Dependencies:
 
 Local tasks:
 
-- `W6-E1-S1-T1` Write the `idea` base prompt that explains the stage objective and required outputs.
+- `W6-E1-S1-T1` (done) Write the `idea` base prompt that explains the stage objective and required outputs.
 - `W6-E1-S1-T2` Write the `idea` repair prompt that maps validator failures into concrete fixes.
 - `W6-E1-S1-T3` Implement `idea`-specific semantic validators.
 - `W6-E1-S1-T4` Add valid and invalid `idea` fixtures for regression tests.
