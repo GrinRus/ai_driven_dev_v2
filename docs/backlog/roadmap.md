@@ -1679,7 +1679,7 @@ Dependencies:
 
 Local tasks:
 
-- `W6-E1-S3-T1` Write the `plan` base prompt with milestone, dependency, and verification expectations.
+- `W6-E1-S3-T1` (done) Write the `plan` base prompt with milestone, dependency, and verification expectations.
 - `W6-E1-S3-T2` Write the `plan` repair prompt for vague sequencing, missing risks, or unreviewable scope.
 - `W6-E1-S3-T3` Implement `plan`-specific semantic validators.
 - `W6-E1-S3-T4` Add valid and invalid `plan` fixtures.

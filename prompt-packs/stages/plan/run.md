@@ -1,41 +1,72 @@
 # Run prompt for `plan`
 
-## Goal
+## Stage objective
 
-Describe the intended solution, boundaries, risks, rollout, and verification approach.
+Produce an execution-ready `plan` package that a reviewer can approve without guessing milestone
+order, dependency constraints, or verification expectations.
+
+The stage is complete only when sequencing is explicit, risk handling is concrete, and verification
+signals are mapped to planned increments.
 
 ## Inputs to read first
 
-- `../idea/output/idea-brief.md`
-- `../idea/output/stage-result.md`
-- `../research/output/research-notes.md`
-- `../research/output/stage-result.md`
-- `../research/output/validator-report.md`
-- optional context when available: repository state, constraints, previous decisions
-- stage contract: `contracts/stages/plan.md`
+- required:
+  - `../idea/output/idea-brief.md`
+  - `../idea/output/stage-result.md`
+  - `../research/output/research-notes.md`
+  - `../research/output/stage-result.md`
+  - `../research/output/validator-report.md`
+- optional context when available:
+  - `context/repository-state.md`
+  - `context/constraints.md`
+  - `context/previous-decisions.md`
+- contract of record:
+  - `contracts/stages/plan.md`
 
-## Required outputs
+## Required outputs (always write)
 
 - `plan.md`
+  - include complete sections:
+    - `Goals`
+    - `Out of scope`
+    - `Milestones`
+    - `Implementation strategy`
+    - `Risks`
+    - `Dependencies`
+    - `Verification approach`
+    - `Verification notes`
 - `stage-result.md`
 - `validator-report.md`
 
-## Instructions
+## Planning discipline
 
-1. Read all required upstream artifacts and the `plan` stage contract before writing outputs.
-2. Build `plan.md` from grounded `idea` and `research` artifacts; do not bypass unresolved upstream failures.
-3. Write `plan.md` with explicit `Milestones`, `Risks`, `Dependencies`, `Verification approach`, and `Verification notes`.
-4. Use roadmap-style reasoning: order milestones by dependency and risk, and justify major sequencing choices.
-5. Ensure each major risk has mitigation intent plus at least one verification note.
-6. Ensure scope boundaries, trade-offs, and acceptance signals are explicit enough for user approval review.
-7. Write or update `stage-result.md` and `validator-report.md` in Markdown.
-8. If required upstream context is missing or contradictory, raise a question instead of inventing assumptions.
-9. Keep the output useful for downstream execution rather than merely well-formatted.
+1. `Milestones` must be dependency-ordered execution increments, not unordered wishes.
+2. Each milestone must state the expected outcome and an approval/readiness signal.
+3. `Dependencies` must make sequencing constraints explicit (`depends on`, `before`, `after`).
+4. Major `Risks` must include mitigation intent and a linked verification expectation.
+5. `Verification notes` must map checks to milestones, risks, or both, and cover the highest-risk
+   milestone explicitly.
+6. `Out of scope` and trade-offs must be explicit enough for operator approval review.
+
+## Execution instructions
+
+1. Read required inputs and `contracts/stages/plan.md` before drafting outputs.
+2. If upstream `research` status is unresolved or its validator verdict is `fail`, do not mark the
+   `plan` stage as `succeeded`.
+3. Draft `plan.md` with concrete, non-placeholder content aligned to the required sections.
+4. Prefer the narrowest safe sequencing that preserves dependency constraints and verification
+   coverage.
+5. If scope boundaries, ordering, or acceptance signals are ambiguous, raise a question instead of
+   inventing assumptions.
+6. Update `validator-report.md` so findings and verdict match plan completeness and sequencing
+   clarity.
+7. Update `stage-result.md` so status, blockers, and next actions remain consistent with validator
+   and question artifacts.
 
 ## Completion checklist
 
-- milestone ordering is coherent and dependency-aware,
-- risks are specific and linked to mitigation intent,
-- verification notes map to milestones, risks, or both,
-- scope boundaries and acceptance signals are explicit,
-- stage status and validator summary are consistent.
+- required outputs exist and are Markdown,
+- milestone order and dependencies are explicit and executable,
+- risks include mitigation intent with linked verification expectations,
+- verification notes map to milestones/risks and cover highest-risk work,
+- stage status and validator verdict are consistent with blocker/question state.
