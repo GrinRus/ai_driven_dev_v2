@@ -1078,3 +1078,126 @@ def test_validate_semantic_outputs_flags_invalid_implement_verification_fixture_
             ),
         ),
     )
+
+
+def test_validate_semantic_outputs_accepts_valid_review_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "review-valid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item="WI-SEM-REVIEW-VALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_invalid_review_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "review-invalid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item="WI-SEM-REVIEW-INVALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Each finding must include explicit severity "
+                "(critical/high/medium/low)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-INVALID/stages/review/review-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Each finding must include rationale "
+                "(for example `Rationale:` or `because ...`)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-INVALID/stages/review/review-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=UNSUPPORTED_CLAIM_CODE,
+            message=(
+                "Finding is missing evidence reference to implementation output "
+                "or acceptance criteria."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-INVALID/stages/review/review-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Each finding must include explicit disposition "
+                "(`must-fix`, `follow-up`, `accepted-risk`, or `invalid`)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-INVALID/stages/review/review-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Each finding must include rationale "
+                "(for example `Rationale:` or `because ...`)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-INVALID/stages/review/review-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=UNSUPPORTED_CLAIM_CODE,
+            message=(
+                "Finding is missing evidence reference to implementation output "
+                "or acceptance criteria."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-INVALID/stages/review/review-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Approval status cannot be `approved` while unresolved "
+                "`must-fix` findings remain."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-INVALID/stages/review/review-report.md"
+                ),
+                line_number=12,
+            ),
+        ),
+    )
