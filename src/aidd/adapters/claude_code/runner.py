@@ -13,6 +13,8 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
 
+from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
+
 
 @dataclass(frozen=True, slots=True)
 class ClaudeCodeCommandContext:
@@ -84,6 +86,11 @@ class ClaudeCodeRunResult:
     stderr_text: str
     runtime_log_text: str
     exit_classification: ClaudeCodeExitClassification
+
+
+@dataclass(frozen=True, slots=True)
+class ClaudeCodeRuntimeArtifacts:
+    runtime_log_path: Path
 
 
 class ClaudeCodeExitClassification(StrEnum):
@@ -397,6 +404,17 @@ def run_subprocess_with_streaming(
         runtime_log_text="".join(runtime_log_chunks),
         exit_classification=exit_classification,
     )
+
+
+def persist_attempt_runtime_log(
+    *,
+    attempt_path: Path,
+    run_result: ClaudeCodeRunResult,
+) -> ClaudeCodeRuntimeArtifacts:
+    attempt_path.mkdir(parents=True, exist_ok=True)
+    runtime_log_path = attempt_path / RUN_RUNTIME_LOG_FILENAME
+    runtime_log_path.write_text(run_result.runtime_log_text, encoding="utf-8")
+    return ClaudeCodeRuntimeArtifacts(runtime_log_path=runtime_log_path)
 
 
 def command_preview(

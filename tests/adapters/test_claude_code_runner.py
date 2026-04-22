@@ -14,12 +14,14 @@ from aidd.adapters.claude_code.runner import (
     ClaudeCodeExitClassification,
     ClaudeCodeLaunchOptions,
     ClaudeCodeRunResult,
+    ClaudeCodeRuntimeArtifacts,
     ClaudeCodeSubprocessSpec,
     _resolve_exit_classification,
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
     command_preview,
+    persist_attempt_runtime_log,
     run_subprocess_with_streaming,
 )
 
@@ -468,6 +470,26 @@ def test_build_subprocess_spec_run_fixture_cancelled(tmp_path: Path) -> None:
     assert result.exit_classification is ClaudeCodeExitClassification.CANCELLED
     assert "fixture-start stage=plan\n" in result.runtime_log_text
     assert "fixture-end\n" not in result.runtime_log_text
+
+
+def test_persist_attempt_runtime_log_writes_runtime_log_file(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    run_result = ClaudeCodeRunResult(
+        exit_code=0,
+        stdout_text="out-1\n",
+        stderr_text="err-1\n",
+        runtime_log_text="out-1\nerr-1\n",
+        exit_classification=ClaudeCodeExitClassification.SUCCESS,
+    )
+
+    artifacts = persist_attempt_runtime_log(
+        attempt_path=attempt_path,
+        run_result=run_result,
+    )
+
+    assert isinstance(artifacts, ClaudeCodeRuntimeArtifacts)
+    assert artifacts.runtime_log_path == attempt_path / "runtime.log"
+    assert artifacts.runtime_log_path.read_text(encoding="utf-8") == run_result.runtime_log_text
 
 
 def test_assemble_command_rejects_empty_configured_command() -> None:
