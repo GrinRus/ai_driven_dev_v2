@@ -39,6 +39,14 @@ verify:
   - Verification commands exit with status 0.
   - Bun test run reports no failing tests.
   - TypeScript compile check reports no type errors.
+reference_run:
+  run_id: eval-live-007-reference-20260422T092510Z
+  recorded_at_utc: '2026-04-22T09:36:09Z'
+  runtime: generic-cli
+  status: harness_fail
+  resolved_revision: cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba
+  bundle_root: .aidd/reports/evals/eval-live-007-reference-20260422T092510Z
+  first_failure_signal: Verification command `bun test` exited with status 1.
 limits:
   patch_budget_files: 8
   timeout_minutes: 20

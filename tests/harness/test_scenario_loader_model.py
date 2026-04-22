@@ -188,6 +188,17 @@ def test_hono_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
         "Bun test run reports no failing tests.",
         "TypeScript compile check reports no type errors.",
     ]
+    assert scenario.raw["reference_run"]["run_id"] == "eval-live-007-reference-20260422T092510Z"
+    assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
+    assert scenario.raw["reference_run"]["status"] == "harness_fail"
+    assert (
+        scenario.raw["reference_run"]["resolved_revision"]
+        == "cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba"
+    )
+    assert (
+        scenario.raw["reference_run"]["bundle_root"]
+        == ".aidd/reports/evals/eval-live-007-reference-20260422T092510Z"
+    )
 
 
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:

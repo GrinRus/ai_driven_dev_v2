@@ -121,6 +121,9 @@ Initial scenarios:
 
 - **AIDD-LIVE-007 — non-Error throw handling**  
   Based on issue `#4708`. Ensure thrown non-`Error` values from middleware still flow through `onError` instead of causing an unhandled rejection. Add a regression test.
+  First reference run on April 22, 2026 used runtime `generic-cli`, pinned revision
+  `cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba`, and produced status `harness_fail`
+  because verification command `bun test` exited with status `1`.
 - **AIDD-LIVE-008 — router parity with `/**` syntax**  
   Based on issue `#4633`. Align router behavior or document the intended divergence. This may require an interview if the compatibility risk is unclear.
 
