@@ -90,6 +90,8 @@ Recommended release flow:
 5. publish container image,
 6. publish release notes.
 
+Operator-oriented step-by-step release execution lives in `docs/release-checklist.md`.
+
 ## 9. Container image tagging rules
 
 Container images are published to `ghcr.io/<owner>/ai-driven-dev-v2` from release tags that
