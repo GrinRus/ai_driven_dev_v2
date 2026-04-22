@@ -29,7 +29,7 @@ from aidd.core.interview import (
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
-from aidd.harness.scenarios import load_scenario
+from aidd.harness.eval_runner import run_eval_scenario
 
 console = Console(no_color=True)
 
@@ -518,17 +518,21 @@ def eval_run(
     if not scenario_path.exists():
         raise typer.BadParameter(f"Scenario not found: {scenario}")
 
-    loaded = load_scenario(
-        scenario_path,
-        runtime_id=runtime,
-        workspace_root=Path(".aidd"),
-    )
-    console.print(f"AIDD eval run: scenario={loaded.scenario_id} runtime={runtime}")
-    console.print(f"Task: {loaded.task}")
-    console.print(
-        "Harness execution is not implemented yet. "
-        "See docs/architecture/eval-harness-integration.md."
-    )
+    try:
+        result = run_eval_scenario(
+            scenario_path=scenario_path,
+            runtime_id=runtime,
+            workspace_root=Path(".aidd"),
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(f"AIDD eval run: scenario={result.scenario_id} runtime={runtime}")
+    console.print(f"Status: {result.status}")
+    console.print(f"Run id: {result.run_id}")
+    console.print(f"Bundle root: {result.bundle_root.as_posix()}")
+    console.print(f"Verdict path: {result.verdict_path.as_posix()}")
+    console.print(f"Summary path: {result.summary_path.as_posix()}")
 
 
 @eval_app.command("summary")

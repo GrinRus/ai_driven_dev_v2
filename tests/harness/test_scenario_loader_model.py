@@ -158,7 +158,18 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         scenario.raw["reference_run"]["bundle_root"]
         == ".aidd/reports/evals/eval-live-005-codex-reference-20260422T123518Z"
     )
+    assert (
+        scenario.raw["opencode_reference_run"]["run_id"]
+        == "eval-live-005-opencode-20260422T142733Z"
+    )
+    assert scenario.raw["opencode_reference_run"]["runtime"] == "opencode"
+    assert scenario.raw["opencode_reference_run"]["status"] == "harness_pass"
+    assert (
+        scenario.raw["opencode_reference_run"]["bundle_root"]
+        == ".aidd/reports/evals/eval-live-005-opencode-20260422T142733Z"
+    )
     assert "codex" in scenario.runtime_targets
+    assert "opencode" in scenario.runtime_targets
 
 
 def test_hono_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
@@ -289,7 +300,18 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
         scenario.raw["reference_run"]["bundle_root"]
         == ".aidd/reports/evals/eval-live-006-codex-reference-20260422T123937Z"
     )
+    assert (
+        scenario.raw["opencode_reference_run"]["run_id"]
+        == "eval-live-006-opencode-20260422T142812Z"
+    )
+    assert scenario.raw["opencode_reference_run"]["runtime"] == "opencode"
+    assert scenario.raw["opencode_reference_run"]["status"] == "harness_blocked"
+    assert (
+        scenario.raw["opencode_reference_run"]["bundle_root"]
+        == ".aidd/reports/evals/eval-live-006-opencode-20260422T142812Z"
+    )
     assert "codex" in scenario.runtime_targets
+    assert "opencode" in scenario.runtime_targets
 
 
 def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:

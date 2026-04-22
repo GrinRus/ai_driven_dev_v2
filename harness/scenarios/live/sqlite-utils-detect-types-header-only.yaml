@@ -46,6 +46,14 @@ reference_run:
   resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
   bundle_root: .aidd/reports/evals/eval-live-005-codex-reference-20260422T123518Z
   first_failure_signal: none (setup, aidd invocation, and verification all passed).
+opencode_reference_run:
+  run_id: eval-live-005-opencode-20260422T142733Z
+  recorded_at_utc: '2026-04-22T14:28:06Z'
+  runtime: opencode
+  status: harness_pass
+  resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
+  bundle_root: .aidd/reports/evals/eval-live-005-opencode-20260422T142733Z
+  first_failure_signal: none (setup, aidd invocation, and verification all passed).
 limits:
   patch_budget_files: 8
   timeout_minutes: 20
@@ -55,3 +63,4 @@ runtime_targets:
 - claude-code
 - generic-cli
 - codex
+- opencode

@@ -39,6 +39,15 @@ reference_run:
   bundle_root: .aidd/reports/evals/eval-live-006-codex-reference-20260422T123937Z
   first_failure_signal: Verification command `test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md`
     exited with status 1.
+opencode_reference_run:
+  run_id: eval-live-006-opencode-20260422T142812Z
+  recorded_at_utc: '2026-04-22T14:28:19Z'
+  runtime: opencode
+  status: harness_blocked
+  resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
+  bundle_root: .aidd/reports/evals/eval-live-006-opencode-20260422T142812Z
+  first_failure_signal: Verification command `test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md`
+    exited with status 1.
 limits:
   patch_budget_files: 10
   timeout_minutes: 25
@@ -83,3 +92,4 @@ runtime_targets:
 - claude-code
 - generic-cli
 - codex
+- opencode

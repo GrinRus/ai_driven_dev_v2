@@ -5,6 +5,7 @@ This file is the canonical implementation plan for AIDD.
 ## Status vocabulary
 
 - `done` — completed in the repo
+- `blocked` — accepted but currently stopped by an explicit dependency gap
 - `next` — the preferred immediate target
 - `planned` — accepted but not active
 - `later` — useful but intentionally deferred
@@ -1967,10 +1968,10 @@ Exit evidence:
 
 - Codex can be compared to Claude Code and generic-cli on shared scenarios.
 
-### Epic W7-E2 — `opencode` adapter (`later`)
+### Epic W7-E2 — `opencode` adapter (`done`)
 Linked stories: `US-01`, `US-08`, `US-12`
 
-#### Slice W7-E2-S1 — runtime probing (`later`)
+#### Slice W7-E2-S1 — runtime probing (`done`)
 Goal: detect OpenCode CLI availability and supported features.
 
 Primary outputs:
@@ -2001,7 +2002,7 @@ Exit evidence:
 
 - the OpenCode adapter can be discovered and reported before execution support is added.
 
-#### Slice W7-E2-S2 — stage execution and logs (`later`)
+#### Slice W7-E2-S2 — stage execution and logs (`done`)
 Goal: implement document-first execution for OpenCode.
 
 Primary outputs:
@@ -2032,7 +2033,7 @@ Exit evidence:
 
 - OpenCode participates in the same execution contract as the first-wave adapters.
 
-#### Slice W7-E2-S3 — parity scenarios (`later`)
+#### Slice W7-E2-S3 — parity scenarios (`done`)
 Goal: prove OpenCode parity on selected harness scenarios.
 
 Primary outputs:
@@ -2053,8 +2054,8 @@ Dependencies:
 Local tasks:
 
 - `W7-E2-S3-T1` (done) Select the minimum parity scenario set for OpenCode.
-- `W7-E2-S3-T2` (blocked: `aidd eval run` harness execution placeholder; revalidated April 22, 2026) Run OpenCode on the smoke lane and capture reference bundles.
-- `W7-E2-S3-T3` (blocked: `aidd eval run` harness execution placeholder; revalidated April 22, 2026) Run OpenCode on at least one interview lane and capture reference bundles.
+- `W7-E2-S3-T2` (done; reference run `eval-live-005-opencode-20260422T142733Z`, status `harness_pass`) Run OpenCode on the smoke lane and capture reference bundles.
+- `W7-E2-S3-T3` (done; reference run `eval-live-006-opencode-20260422T142812Z`, status `harness_blocked`) Run OpenCode on at least one interview lane and capture reference bundles.
 - `W7-E2-S3-T4` (done) Document known parity gaps and adapter-specific limitations.
 
 Exit evidence:

@@ -19,7 +19,7 @@ Maintainers currently provide best-effort support for:
 - installation and environment bootstrap (`uv sync --extra dev`);
 - runtime discovery and probe diagnostics (`uv run aidd doctor`);
 - workspace initialization (`uv run aidd init --work-item <id>`);
-- run/stage/eval command surface behavior and placeholder signaling;
+- run/stage placeholder signaling and eval lifecycle execution behavior;
 - run-inspection commands (`aidd run show`, `aidd run logs`, `aidd run artifacts`);
 - stage and eval read-only summaries (`aidd stage summary`, `aidd stage questions`, `aidd eval summary`).
 
@@ -29,7 +29,7 @@ The following are not treated as defects unless roadmap status changes:
 
 - full workflow execution through `aidd run`;
 - full stage orchestration through `aidd stage run`;
-- full harness execution through `aidd eval run`.
+- full stage-level resume/orchestration parity through `aidd run` dependencies used by eval scenarios.
 
 These commands intentionally expose stable CLI shape before full implementation is complete.
 
@@ -41,7 +41,7 @@ Use one primary issue type:
 - `runtime-probe`: runtime detection/version/capability mismatches in `aidd doctor`;
 - `run-inspection`: `run show/logs/artifacts` metadata lookup, path resolution, or log retrieval failures;
 - `validator-state`: stage summary, validator counts, report linkage, or blocking-question handling;
-- `harness-eval`: scenario loading, eval-summary generation, or harness placeholder drift;
+- `harness-eval`: scenario loading, lifecycle execution, verdict generation, or eval-summary/reporting drift;
 - `documentation`: operator docs are missing, stale, or contradictory.
 
 ## 4. Issue Reporting Instructions

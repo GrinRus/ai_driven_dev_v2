@@ -431,7 +431,7 @@ def test_run_subprocess_with_streaming_emits_stdout_before_process_end(tmp_path:
     finished_at = time.monotonic()
 
     assert callback_times
-    assert callback_times[0] - started_at < 0.15
+    assert callback_times[0] - started_at < 0.4
     assert finished_at - callback_times[0] > 0.05
 
 

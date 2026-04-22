@@ -203,7 +203,8 @@ Today:
 
 - `doctor` is functional,
 - `init` is functional,
-- `run`, `stage run`, and `eval run` are currently placeholders that preserve the final interface shape.
+- `run` and `stage run` are placeholders that preserve the final interface shape,
+- `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, and validator artifacts).
 
 ## Operator documentation
 

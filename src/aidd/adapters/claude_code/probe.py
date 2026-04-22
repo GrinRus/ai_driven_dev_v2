@@ -6,9 +6,26 @@ import subprocess
 
 from aidd.adapters.base import CapabilityReport
 
+_PROBE_TIMEOUT_SECONDS = 5
+
 
 def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
     return any(marker in text for marker in markers)
+
+
+def _normalize_output_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode(errors="replace")
+    return value
+
+
+def _first_non_empty_line(*, stdout: str | bytes | None, stderr: str | bytes | None) -> str | None:
+    output = _normalize_output_text(stdout).strip() or _normalize_output_text(stderr).strip()
+    if not output:
+        return None
+    return output.splitlines()[0].strip() or None
 
 
 def discover_command(command: str) -> str | None:
@@ -33,16 +50,14 @@ def discover_version(command_path: str) -> str | None:
             capture_output=True,
             check=False,
             text=True,
-            timeout=2,
+            timeout=_PROBE_TIMEOUT_SECONDS,
         )
-    except (FileNotFoundError, PermissionError, OSError, subprocess.TimeoutExpired):
+    except subprocess.TimeoutExpired as exc:
+        return _first_non_empty_line(stdout=exc.stdout, stderr=exc.stderr)
+    except (FileNotFoundError, PermissionError, OSError):
         return None
 
-    output = result.stdout.strip() or result.stderr.strip()
-    if not output:
-        return None
-
-    return output.splitlines()[0].strip() or None
+    return _first_non_empty_line(stdout=result.stdout, stderr=result.stderr)
 
 
 def discover_help_text(command_path: str) -> str | None:
@@ -52,9 +67,15 @@ def discover_help_text(command_path: str) -> str | None:
             capture_output=True,
             check=False,
             text=True,
-            timeout=2,
+            timeout=_PROBE_TIMEOUT_SECONDS,
         )
-    except (FileNotFoundError, PermissionError, OSError, subprocess.TimeoutExpired):
+    except subprocess.TimeoutExpired as exc:
+        return (
+            _normalize_output_text(exc.stdout).strip()
+            or _normalize_output_text(exc.stderr).strip()
+            or None
+        )
+    except (FileNotFoundError, PermissionError, OSError):
         return None
 
     output = result.stdout.strip() or result.stderr.strip()

@@ -18,7 +18,8 @@ Today:
 
 - `aidd doctor` is functional;
 - `aidd init` is functional;
-- `aidd run`, `aidd stage run`, and `aidd eval run` keep the final interface shape but are still placeholders.
+- `aidd run` and `aidd stage run` keep the final interface shape but are still placeholders;
+- `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle.
 
 Plan all operator usage with that constraint in mind.
 
@@ -121,7 +122,7 @@ Verify that:
 - stage document placeholders exist;
 - initialization is repeatable and deterministic for operator use.
 
-### 6.4 Validate placeholder command behavior
+### 6.4 Validate execution surfaces
 
 ```bash
 uv run aidd run --work-item WI-001 --runtime claude-code
@@ -131,8 +132,8 @@ uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-onl
 
 Expected behavior in current bootstrap state:
 
-- commands print intent and context;
-- execution orchestration is reported as not implemented yet.
+- `aidd run` and `aidd stage run` report placeholder execution behavior;
+- `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths.
 
 ## 7. Operational Notes
 

@@ -212,15 +212,15 @@ Known parity gaps and adapter-specific limitations:
 
 Observed outcomes for the selected minimum set:
 
-- Smoke lane (`AIDD-LIVE-005`): blocked, because `uv run aidd eval run ... --runtime opencode` reports `Harness execution is not implemented yet`.
-- Interview lane (`AIDD-LIVE-006`): blocked, because `uv run aidd eval run ... --runtime opencode` reports `Harness execution is not implemented yet`.
+- Smoke lane (`AIDD-LIVE-005`): `eval-live-005-opencode-20260422T142733Z` -> `harness_pass`.
+- Interview lane (`AIDD-LIVE-006`): `eval-live-006-opencode-20260422T142812Z` -> `harness_blocked`.
 
 Known parity gaps and adapter-specific limitations:
 
-- Harness execution for live eval scenarios is still a placeholder in the current CLI, so OpenCode parity runs cannot yet produce reference bundles for smoke/interview lanes.
+- Interview flow parity is incomplete: `AIDD-LIVE-006` remains blocked because `.aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md` is not produced before the verify gate.
 - Current OpenCode probe capability report is limited to `raw-log`; no validated support is declared for structured logs, native question events, resume, non-interactive mode, working-directory control, env injection, or subagents.
 - `aidd doctor` currently reports OpenCode version as `unknown` in this environment, so parity tracking remains capability-level until runtime identity/version discovery is stabilized.
-- Docs-alignment lane (`AIDD-LIVE-004`) is deferred until harness execution support exists and at least one OpenCode reference bundle is archived.
+- Docs-alignment lane (`AIDD-LIVE-004`) remains deferred until workflow/stage execution (`aidd run`, `aidd stage run`) moves beyond placeholder behavior.
 
 ## What a live E2E report must record
 

@@ -135,17 +135,26 @@ Actions:
 1. Use a repository-relative scenario path under `harness/scenarios/`.
 2. Confirm the path exists before running eval.
 
-### 5.2 Harness execution placeholder
+### 5.2 Harness eval run reports `fail`, `blocked`, or `infra-fail`
 
 Symptoms:
 
-- `aidd eval run` prints: `Harness execution is not implemented yet.`
+- `aidd eval run` exits non-zero;
+- or completes with `Status: fail`, `Status: blocked`, or `Status: infra-fail`.
 
 Actions:
 
-1. Treat this as expected until harness execution slices are completed.
-2. Record the scenario id and runtime used.
-3. Check roadmap items under harness/eval implementation for current status.
+1. Capture the printed `Run id` and `Bundle root`.
+2. Open bundle artifacts first:
+   - `runtime.log`
+   - `validator-report.md`
+   - `verdict.md`
+   - `log-analysis.md`
+3. Classify failure source:
+   - `infra-fail`: setup/teardown/repo-prep issue;
+   - `blocked`: interview lane is waiting for required answers evidence;
+   - `fail`: verification or run command failed.
+4. Re-run the same scenario/runtime after fixing the first failure boundary.
 
 ### 5.3 Eval summary is missing
 
@@ -157,7 +166,7 @@ Actions:
 
 1. Confirm `.aidd/reports/evals/` exists.
 2. Confirm at least one `summary.md` was produced by an eval-capable run.
-3. If harness execution is still placeholder-only, absence of summary reports is expected.
+3. Run `uv run aidd eval run <scenario> --runtime <runtime>` once, then retry summary.
 
 ## 6. Evidence Checklist for Escalation
 
