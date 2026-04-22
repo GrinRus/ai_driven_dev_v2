@@ -27,3 +27,9 @@ Fixtures for `tests/validators/test_semantic.py` regression coverage.
 - `tasklist-invalid/workspace/` contains a bundle with weak task summary scope, unresolved
   dependency mapping, and incomplete verification coverage, and must fail `tasklist` semantic
   checks.
+- `implement-valid/workspace/` contains a bundle that should pass `implement` semantic checks for
+  selected task traceability, touched-file evidence, and command-grounded verification outcomes.
+- `implement-invalid-noop/workspace/` contains a no-op bundle with unsupported completion claims
+  and no actionable follow-up, and must fail `implement` semantic checks.
+- `implement-invalid-verification/workspace/` contains verification claims without command/result
+  grounding and must fail `implement` semantic checks.
