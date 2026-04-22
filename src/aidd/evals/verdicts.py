@@ -17,6 +17,9 @@ class ScenarioVerdict:
     status: VerdictStatus
     summary: str
     created_at_utc: str
+    artifact_links: tuple[str, ...]
+    first_failure_note: str | None
+    verification_summary: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +52,25 @@ def _default_created_at_utc() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _normalize_optional_field(*, field_name: str, value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"{field_name} must be non-empty when provided.")
+    return normalized
+
+
+def _normalize_artifact_links(artifact_links: tuple[str, ...] | None) -> tuple[str, ...]:
+    if artifact_links is None:
+        return tuple()
+
+    normalized_links = tuple(link.strip() for link in artifact_links)
+    if any(not link for link in normalized_links):
+        raise ValueError("artifact_links must contain only non-empty values.")
+    return normalized_links
+
+
 def map_harness_outcome_to_verdict_status(outcome: HarnessOutcome) -> VerdictStatus:
     if outcome.infrastructure_failure:
         return "infra-fail"
@@ -67,6 +89,9 @@ def build_scenario_verdict(
     status: str,
     summary: str,
     created_at_utc: str | None = None,
+    artifact_links: tuple[str, ...] | None = None,
+    first_failure_note: str | None = None,
+    verification_summary: str | None = None,
 ) -> ScenarioVerdict:
     return ScenarioVerdict(
         scenario_id=_normalize_required_field(field_name="scenario_id", value=scenario_id),
@@ -79,10 +104,27 @@ def build_scenario_verdict(
             if created_at_utc is not None
             else _default_created_at_utc()
         ),
+        artifact_links=_normalize_artifact_links(artifact_links),
+        first_failure_note=_normalize_optional_field(
+            field_name="first_failure_note",
+            value=first_failure_note,
+        ),
+        verification_summary=_normalize_optional_field(
+            field_name="verification_summary",
+            value=verification_summary,
+        ),
     )
 
 
 def render_scenario_verdict_markdown(verdict: ScenarioVerdict) -> str:
+    artifact_lines = (
+        ["- Artifact: none"]
+        if not verdict.artifact_links
+        else [f"- Artifact: `{artifact}`" for artifact in verdict.artifact_links]
+    )
+    first_failure_note = verdict.first_failure_note or "none"
+    verification_summary = verdict.verification_summary or "none"
+
     lines = [
         "# Verdict",
         "",
@@ -95,6 +137,13 @@ def render_scenario_verdict_markdown(verdict: ScenarioVerdict) -> str:
         "## Outcome",
         f"- Status: `{verdict.status}`",
         f"- Summary: {verdict.summary}",
+        "",
+        "## Evidence",
+        *artifact_lines,
+        "",
+        "## Analysis",
+        f"- First Failure Note: {first_failure_note}",
+        f"- Verification Summary: {verification_summary}",
         "",
     ]
     return "\n".join(lines)

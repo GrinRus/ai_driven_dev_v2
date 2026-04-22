@@ -1330,7 +1330,7 @@ Local tasks:
 
 - `W5-E2-S1-T1` (done) Define the verdict model and Markdown artifact layout.
 - `W5-E2-S1-T2` (done) Map harness outcomes into `pass`, `fail`, `blocked`, and `infra-fail` verdict states.
-- `W5-E2-S1-T3` Record linked artifacts, first-failure notes, and verification summaries in the verdict.
+- `W5-E2-S1-T3` (done) Record linked artifacts, first-failure notes, and verification summaries in the verdict.
 - `W5-E2-S1-T4` Add tests for verdict generation across each terminal outcome.
 
 Exit evidence:

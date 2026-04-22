@@ -22,6 +22,9 @@ def test_build_scenario_verdict_uses_declared_model_fields() -> None:
         status="pass",
         summary="Scenario completed without validation or verification issues.",
         created_at_utc="2026-04-22T09:00:00Z",
+        artifact_links=("reports/evals/eval-run-001/runtime.log",),
+        first_failure_note=None,
+        verification_summary="Verification commands completed with exit code 0.",
     )
 
     assert verdict.scenario_id == "AIDD-LIVE-001"
@@ -30,6 +33,9 @@ def test_build_scenario_verdict_uses_declared_model_fields() -> None:
     assert verdict.status == "pass"
     assert verdict.summary.startswith("Scenario completed")
     assert verdict.created_at_utc == "2026-04-22T09:00:00Z"
+    assert verdict.artifact_links == ("reports/evals/eval-run-001/runtime.log",)
+    assert verdict.first_failure_note is None
+    assert verdict.verification_summary == "Verification commands completed with exit code 0."
 
 
 @pytest.mark.parametrize("status", VERDICT_STATUSES)
@@ -57,6 +63,19 @@ def test_build_scenario_verdict_rejects_unknown_status() -> None:
         )
 
 
+def test_build_scenario_verdict_rejects_blank_artifact_link() -> None:
+    with pytest.raises(ValueError, match="artifact_links must contain only non-empty values"):
+        build_scenario_verdict(
+            scenario_id="AIDD-LIVE-003A",
+            run_id="eval-run-003A",
+            runtime_id="generic-cli",
+            status="fail",
+            summary="Invalid artifact links.",
+            artifact_links=("reports/evals/eval-run-003A/runtime.log", "   "),
+            created_at_utc="2026-04-22T09:11:00Z",
+        )
+
+
 def test_render_scenario_verdict_markdown_uses_stable_layout() -> None:
     verdict = build_scenario_verdict(
         scenario_id="AIDD-LIVE-004",
@@ -65,6 +84,12 @@ def test_render_scenario_verdict_markdown_uses_stable_layout() -> None:
         status="blocked",
         summary="Run paused because additional user input was required.",
         created_at_utc="2026-04-22T09:15:00Z",
+        artifact_links=(
+            "reports/evals/eval-run-004/runtime.log",
+            "reports/evals/eval-run-004/validator-report.md",
+        ),
+        first_failure_note="Validation was blocked waiting for user clarification.",
+        verification_summary="Verification steps skipped because run terminated as blocked.",
     )
 
     markdown = render_scenario_verdict_markdown(verdict)
@@ -76,6 +101,18 @@ def test_render_scenario_verdict_markdown_uses_stable_layout() -> None:
     assert "- Created At (UTC): `2026-04-22T09:15:00Z`" in markdown
     assert "## Outcome" in markdown
     assert "- Status: `blocked`" in markdown
+    assert "## Evidence" in markdown
+    assert "- Artifact: `reports/evals/eval-run-004/runtime.log`" in markdown
+    assert "- Artifact: `reports/evals/eval-run-004/validator-report.md`" in markdown
+    assert "## Analysis" in markdown
+    assert (
+        "- First Failure Note: Validation was blocked waiting for user clarification."
+        in markdown
+    )
+    assert (
+        "- Verification Summary: Verification steps skipped because run terminated as blocked."
+        in markdown
+    )
     assert markdown.endswith("\n")
 
 
@@ -87,6 +124,9 @@ def test_write_scenario_verdict_markdown_persists_file(tmp_path: Path) -> None:
         status="infra-fail",
         summary="Infrastructure error prevented scenario completion.",
         created_at_utc="2026-04-22T09:20:00Z",
+        artifact_links=("reports/evals/eval-run-005/runtime.log",),
+        first_failure_note="Repository checkout failed before run execution started.",
+        verification_summary="Verification did not execute because scenario setup failed.",
     )
     verdict_path = tmp_path / "reports" / "evals" / "eval-run-005" / "verdict.md"
 
@@ -97,6 +137,9 @@ def test_write_scenario_verdict_markdown_persists_file(tmp_path: Path) -> None:
     assert "# Verdict" in content
     assert "- Status: `infra-fail`" in content
     assert "Infrastructure error prevented scenario completion." in content
+    assert "- Artifact: `reports/evals/eval-run-005/runtime.log`" in content
+    assert "Repository checkout failed before run execution started." in content
+    assert "Verification did not execute because scenario setup failed." in content
 
 
 @pytest.mark.parametrize(
