@@ -305,3 +305,30 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
         "If documentation and compatibility obligations are unclear, ask a blocking "
         "question before implementation.",
     ]
+    assert scenario.raw["interview"]["answer_flow"]["mode"] == "answers_markdown_and_stage_rerun"
+    assert (
+        scenario.raw["interview"]["answer_flow"]["answers_file"]
+        == ".aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md"
+    )
+    assert scenario.raw["interview"]["answer_flow"]["question_check_command"] == [
+        "uv",
+        "run",
+        "aidd",
+        "stage",
+        "questions",
+        "idea",
+        "--work-item",
+        "WI-LIVE-HONO-INTERVIEW",
+    ]
+    assert scenario.raw["interview"]["answer_flow"]["resume_command"] == [
+        "uv",
+        "run",
+        "aidd",
+        "stage",
+        "run",
+        "idea",
+        "--work-item",
+        "WI-LIVE-HONO-INTERVIEW",
+        "--runtime",
+        "generic-cli",
+    ]
