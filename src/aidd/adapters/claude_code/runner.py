@@ -10,6 +10,7 @@ import time
 from collections import deque
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from queue import Empty, Queue
@@ -20,10 +21,11 @@ from aidd.core.interview import (
     QuestionPolicy,
     load_answers_document,
     load_questions_document,
+    persist_questions_document,
     resolved_question_ids,
     unresolved_blocking_questions,
 )
-from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
+from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME, run_stage_metadata_path
 
 
 @dataclass(frozen=True, slots=True)
@@ -491,6 +493,14 @@ class ClaudeCodeQuestionRouting:
     used_file_fallback: bool
 
 
+@dataclass(frozen=True, slots=True)
+class ClaudeCodeQuestionPersistence:
+    questions_path: Path
+    stage_metadata_path: Path
+    unresolved_blocking_question_ids: tuple[str, ...]
+    metadata_updated: bool
+
+
 def _question_policy_from_runtime_event(event: Mapping[str, object]) -> QuestionPolicy:
     policy_value = event.get("policy")
     if isinstance(policy_value, str):
@@ -615,6 +625,79 @@ def route_questions_with_file_fallback(
         question_events=fallback_events,
         pause_detected=bool(fallback_events),
         used_file_fallback=bool(fallback_events),
+    )
+
+
+def _workspace_relative_path(workspace_root: Path, path: Path) -> str:
+    resolved_workspace = workspace_root.resolve(strict=False)
+    resolved_path = path.resolve(strict=False)
+    return resolved_path.relative_to(resolved_workspace).as_posix()
+
+
+def persist_surfaced_questions(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    adapter_question_events: tuple[AdapterQuestionEvent, ...],
+    stage_output_questions_markdown: str | None = None,
+) -> ClaudeCodeQuestionPersistence:
+    questions_path = persist_questions_document(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        stage_output_questions_markdown=stage_output_questions_markdown,
+        adapter_question_events=adapter_question_events,
+    )
+    questions = load_questions_document(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    answers = load_answers_document(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    unresolved_ids = tuple(
+        question.question_id
+        for question in unresolved_blocking_questions(
+            questions=questions,
+            resolved_question_ids=resolved_question_ids(answers=answers),
+        )
+    )
+
+    metadata_path = run_stage_metadata_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    metadata_updated = False
+    if metadata_path.exists():
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        payload["claude_question_artifact"] = {
+            "questions_path": _workspace_relative_path(workspace_root, questions_path),
+            "unresolved_blocking_question_ids": list(unresolved_ids),
+        }
+        payload["updated_at_utc"] = (
+            datetime.now(UTC).astimezone(UTC).replace(microsecond=0).isoformat().replace(
+                "+00:00",
+                "Z",
+            )
+        )
+        metadata_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        metadata_updated = True
+
+    return ClaudeCodeQuestionPersistence(
+        questions_path=questions_path,
+        stage_metadata_path=metadata_path,
+        unresolved_blocking_question_ids=unresolved_ids,
+        metadata_updated=metadata_updated,
     )
 
 

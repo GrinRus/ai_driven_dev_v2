@@ -15,6 +15,7 @@ from aidd.adapters.claude_code.runner import (
     ClaudeCodeExitClassification,
     ClaudeCodeLaunchOptions,
     ClaudeCodeQuestionDetection,
+    ClaudeCodeQuestionPersistence,
     ClaudeCodeQuestionRouting,
     ClaudeCodeRunResult,
     ClaudeCodeRuntimeArtifacts,
@@ -28,6 +29,7 @@ from aidd.adapters.claude_code.runner import (
     normalize_structured_events,
     persist_attempt_runtime_log,
     persist_normalized_events_jsonl,
+    persist_surfaced_questions,
     route_questions_with_file_fallback,
     run_subprocess_with_streaming,
 )
@@ -37,6 +39,7 @@ from aidd.core.interview import (
     persist_answers_document,
     persist_questions_document,
 )
+from aidd.core.run_store import persist_stage_status
 
 
 def _context() -> ClaudeCodeCommandContext:
@@ -673,6 +676,69 @@ def test_route_questions_with_file_fallback_reads_unresolved_blocking_questions(
             policy=QuestionPolicy.BLOCKING,
         ),
     )
+
+
+def test_persist_surfaced_questions_writes_questions_and_stage_metadata(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status="executing",
+    )
+
+    persistence = persist_surfaced_questions(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_question_events=(
+            AdapterQuestionEvent(
+                question_id="Q1",
+                text="Need repository URL?",
+                policy=QuestionPolicy.BLOCKING,
+            ),
+        ),
+    )
+
+    assert isinstance(persistence, ClaudeCodeQuestionPersistence)
+    assert persistence.metadata_updated is True
+    assert persistence.unresolved_blocking_question_ids == ("Q1",)
+    assert persistence.questions_path.exists()
+    questions_text = persistence.questions_path.read_text(encoding="utf-8")
+    assert "`Q1` `[blocking]` Need repository URL?" in questions_text
+
+    metadata_payload = json.loads(persistence.stage_metadata_path.read_text(encoding="utf-8"))
+    assert metadata_payload["claude_question_artifact"] == {
+        "questions_path": "workitems/WI-001/stages/plan/questions.md",
+        "unresolved_blocking_question_ids": ["Q1"],
+    }
+
+
+def test_persist_surfaced_questions_skips_metadata_update_when_file_missing(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    persistence = persist_surfaced_questions(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_question_events=(
+            AdapterQuestionEvent(
+                question_id="Q1",
+                text="Need repository URL?",
+                policy=QuestionPolicy.BLOCKING,
+            ),
+        ),
+    )
+
+    assert persistence.metadata_updated is False
+    assert persistence.questions_path.exists()
 
 
 def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: Path) -> None:
