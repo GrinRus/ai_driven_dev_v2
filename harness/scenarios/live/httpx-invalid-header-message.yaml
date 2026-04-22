@@ -16,6 +16,21 @@ stage_scope:
 setup:
   commands:
   - uv sync || pip install -e .[dev]
+  rationale:
+  - Install HTTPX development dependencies before the smoke run.
+  - Confirm the repository environment is ready for targeted regression verification.
+aidd_invocation:
+  command:
+  - uv
+  - run
+  - aidd
+  - run
+  work_item: WI-LIVE-HTTPX-SMOKE
+  work_item_flag: --work-item
+  runtime_flag: --runtime
+  expected_stage_scope:
+    start: plan
+    end: qa
 verify:
   commands:
   - uv run pytest -q || pytest -q

@@ -81,3 +81,16 @@ def test_httpx_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
         == "Keep HTTPX smoke lane deterministic by targeting the invalid-header "
         "diagnostics defect with bounded patch scope."
     )
+    assert scenario.setup.commands == ("uv sync || pip install -e .[dev]",)
+    assert scenario.raw["setup"]["rationale"] == [
+        "Install HTTPX development dependencies before the smoke run.",
+        "Confirm the repository environment is ready for targeted regression verification.",
+    ]
+    assert scenario.raw["aidd_invocation"]["command"] == ["uv", "run", "aidd", "run"]
+    assert scenario.raw["aidd_invocation"]["work_item"] == "WI-LIVE-HTTPX-SMOKE"
+    assert scenario.raw["aidd_invocation"]["work_item_flag"] == "--work-item"
+    assert scenario.raw["aidd_invocation"]["runtime_flag"] == "--runtime"
+    assert scenario.raw["aidd_invocation"]["expected_stage_scope"] == {
+        "start": "plan",
+        "end": "qa",
+    }
