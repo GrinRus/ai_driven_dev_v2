@@ -59,6 +59,17 @@ class AdapterInvocationBundle:
     expected_output_documents: tuple[Path, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class StageOutputDiscovery:
+    stage: str
+    work_item: str
+    run_id: str
+    attempt_number: int
+    expected_markdown_documents: tuple[Path, ...]
+    discovered_markdown_documents: tuple[Path, ...]
+    missing_markdown_documents: tuple[Path, ...]
+
+
 class ValidationVerdict(StrEnum):
     PASS = "pass"
     REPAIR = "repair"
@@ -367,6 +378,54 @@ def prepare_adapter_invocation(
         input_bundle_markdown=input_bundle_markdown,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
         expected_output_documents=preparation_bundle.expected_output_documents,
+    )
+
+
+def discover_stage_markdown_outputs(
+    *,
+    execution_state: StageExecutionState,
+    invocation_bundle: AdapterInvocationBundle,
+) -> StageOutputDiscovery:
+    if execution_state.stage != invocation_bundle.stage:
+        raise ValueError(
+            "Execution state stage does not match adapter invocation stage: "
+            f"{execution_state.stage} != {invocation_bundle.stage}"
+        )
+    if execution_state.work_item != invocation_bundle.work_item:
+        raise ValueError(
+            "Execution state work item does not match adapter invocation work item: "
+            f"{execution_state.work_item} != {invocation_bundle.work_item}"
+        )
+    if execution_state.run_id != invocation_bundle.run_id:
+        raise ValueError(
+            "Execution state run id does not match adapter invocation run id: "
+            f"{execution_state.run_id} != {invocation_bundle.run_id}"
+        )
+    if execution_state.attempt_number != invocation_bundle.attempt_number:
+        raise ValueError(
+            "Execution state attempt number does not match adapter invocation attempt number: "
+            f"{execution_state.attempt_number} != {invocation_bundle.attempt_number}"
+        )
+
+    expected_markdown_documents = tuple(
+        path
+        for path in invocation_bundle.expected_output_documents
+        if path.suffix.lower() == ".md"
+    )
+    discovered_markdown_documents = tuple(
+        path for path in expected_markdown_documents if path.exists()
+    )
+    missing_markdown_documents = tuple(
+        path for path in expected_markdown_documents if not path.exists()
+    )
+    return StageOutputDiscovery(
+        stage=execution_state.stage,
+        work_item=execution_state.work_item,
+        run_id=execution_state.run_id,
+        attempt_number=execution_state.attempt_number,
+        expected_markdown_documents=expected_markdown_documents,
+        discovered_markdown_documents=discovered_markdown_documents,
+        missing_markdown_documents=missing_markdown_documents,
     )
 
 

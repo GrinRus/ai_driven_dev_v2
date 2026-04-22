@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -17,9 +18,12 @@ from aidd.core.stage_runner import (
     ATTEMPT_INPUT_BUNDLE_FILENAME,
     PostValidationAction,
     RepairBudgetValidationTransition,
+    StageExecutionState,
+    StageOutputDiscovery,
     StageValidationState,
     ValidationVerdict,
     decide_post_validation_transition,
+    discover_stage_markdown_outputs,
     persist_execution_state,
     persist_validation_state,
     persist_validation_state_with_repair_budget,
@@ -306,6 +310,106 @@ def test_prepare_adapter_invocation_requires_existing_input_documents(tmp_path: 
             workspace_root=workspace_root,
             preparation_bundle=preparation_bundle,
             execution_state=execution_state,
+        )
+
+
+def test_discover_stage_markdown_outputs_returns_discovered_and_missing_documents(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    for output_path in preparation_bundle.expected_output_documents[:2]:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("# Output\n\nPresent.\n", encoding="utf-8")
+
+    invocation_with_non_markdown_output = replace(
+        invocation,
+        expected_output_documents=(
+            *invocation.expected_output_documents,
+            execution_state.attempt_path / "runtime.log",
+        ),
+    )
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation_with_non_markdown_output,
+    )
+
+    assert isinstance(discovery, StageOutputDiscovery)
+    assert discovery.stage == "plan"
+    assert discovery.attempt_number == 1
+    assert all(path.suffix.lower() == ".md" for path in discovery.expected_markdown_documents)
+    assert execution_state.attempt_path / "runtime.log" not in discovery.expected_markdown_documents
+    assert discovery.discovered_markdown_documents == (
+        preparation_bundle.expected_output_documents[:2]
+    )
+    assert discovery.missing_markdown_documents == preparation_bundle.expected_output_documents[2:]
+
+
+def test_discover_stage_markdown_outputs_rejects_mismatched_execution_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+
+    with pytest.raises(ValueError, match="does not match adapter invocation stage"):
+        discover_stage_markdown_outputs(
+            execution_state=StageExecutionState(
+                stage="qa",
+                work_item=execution_state.work_item,
+                run_id=execution_state.run_id,
+                attempt_number=execution_state.attempt_number,
+                attempt_path=execution_state.attempt_path,
+                stage_metadata_path=execution_state.stage_metadata_path,
+            ),
+            invocation_bundle=invocation,
         )
 
 
