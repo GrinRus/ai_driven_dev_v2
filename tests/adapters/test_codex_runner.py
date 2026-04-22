@@ -8,6 +8,7 @@ import pytest
 
 from aidd.adapters.codex.runner import (
     CodexCommandContext,
+    CodexExitClassification,
     CodexSubprocessSpec,
     assemble_command,
     build_execution_environment,
@@ -152,6 +153,7 @@ def test_run_subprocess_with_streaming_captures_output_and_callbacks(tmp_path: P
     assert result.stderr_text == "stderr-line\n"
     assert "stdout-line\n" in result.runtime_log_text
     assert "stderr-line\n" in result.runtime_log_text
+    assert result.exit_classification == CodexExitClassification.SUCCESS
     assert stdout_chunks == ["stdout-line\n"]
     assert stderr_chunks == ["stderr-line\n"]
 
