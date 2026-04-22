@@ -401,3 +401,43 @@ def test_validate_semantic_outputs_flags_invalid_fixture_bundle() -> None:
             ),
         ),
     )
+
+
+def test_validate_semantic_outputs_accepts_valid_list_format_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "valid-list-format" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="idea",
+        work_item="WI-SEM-LIST-VALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_invalid_list_format_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "invalid-list-format" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="idea",
+        work_item="WI-SEM-LIST-INVALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Required section `Constraints` must use bullet items "
+                "(or `- none`) so downstream stages can parse constraints "
+                "and open questions deterministically."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-LIST-INVALID/stages/idea/idea-brief.md"
+                ),
+                line_number=11,
+            ),
+        ),
+    )

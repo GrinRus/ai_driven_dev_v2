@@ -1612,7 +1612,7 @@ Local tasks:
 - `W6-E1-S1-T2` (done) Write the `idea` repair prompt that maps validator failures into concrete fixes.
 - `W6-E1-S1-T3` (done) Implement `idea`-specific semantic validators.
 - `W6-E1-S1-T4` (done) Add valid and invalid `idea` fixtures for regression tests.
-- `W6-E1-S1-T5` Add unit tests that execute the `idea` validator against the fixtures.
+- `W6-E1-S1-T5` (done) Add unit tests that execute the `idea` validator against the fixtures.
 - `W6-E1-S1-T6` Run one smoke execution of `idea` through an adapter and archive the output bundle.
 
 Exit evidence:
