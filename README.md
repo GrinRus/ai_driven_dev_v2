@@ -199,6 +199,14 @@ Today:
 - `init` is functional,
 - `run`, `stage run`, and `eval run` are currently placeholders that preserve the final interface shape.
 
+## Operator documentation
+
+For installation, diagnostics, and issue reporting workflows, use:
+
+- `docs/operator-handbook.md`
+- `docs/operator-troubleshooting.md`
+- `docs/operator-support-policy.md`
+
 ## Live E2E catalog
 
 The repository includes a curated live E2E set built on public GitHub repositories:

@@ -44,6 +44,14 @@ uv run aidd doctor
 uv run pytest
 ```
 
+## Operator docs
+
+When your change affects operator-facing behavior or support instructions, keep these docs aligned:
+
+- `docs/operator-handbook.md`
+- `docs/operator-troubleshooting.md`
+- `docs/operator-support-policy.md`
+
 ## Planning model
 
 This repository plans work in four levels:
