@@ -906,7 +906,7 @@ Local tasks:
 - `W4-E1-S2-T4` (done) Implement stdout and stderr streaming to the CLI while the subprocess runs.
 - `W4-E1-S2-T5` (done) Persist raw `runtime.log` and basic exit metadata for each attempt.
 - `W4-E1-S2-T6` (done) Implement timeout, cancellation, and non-zero exit classification.
-- `W4-E1-S2-T7` Add tests for successful runs, timed-out runs, cancelled runs, and non-zero exits.
+- `W4-E1-S2-T7` (done) Add tests for successful runs, timed-out runs, cancelled runs, and non-zero exits.
 
 Exit evidence:
 

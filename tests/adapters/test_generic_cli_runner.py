@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -246,3 +247,74 @@ def test_resolve_exit_classification_uses_exit_code_without_stop_reason() -> Non
 
     assert success_classification is GenericCliExitClassification.SUCCESS
     assert non_zero_classification is GenericCliExitClassification.NON_ZERO_EXIT
+
+
+def test_run_subprocess_with_streaming_classifies_non_zero_exit(tmp_path: Path) -> None:
+    script = (
+        "import sys\n"
+        "print('out-before-exit', flush=True)\n"
+        "print('err-before-exit', file=sys.stderr, flush=True)\n"
+        "raise SystemExit(3)\n"
+    )
+    spec = GenericCliSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(spec=spec)
+
+    assert result.exit_code == 3
+    assert result.exit_classification is GenericCliExitClassification.NON_ZERO_EXIT
+    assert "out-before-exit\n" in result.stdout_text
+    assert "err-before-exit\n" in result.stderr_text
+
+
+def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> None:
+    script = (
+        "import time\n"
+        "print('started', flush=True)\n"
+        "time.sleep(5)\n"
+        "print('finished', flush=True)\n"
+    )
+    spec = GenericCliSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.1)
+
+    assert result.exit_classification is GenericCliExitClassification.TIMEOUT
+    assert "started\n" in result.runtime_log_text
+    assert "finished\n" not in result.runtime_log_text
+
+
+def test_run_subprocess_with_streaming_classifies_cancellation(tmp_path: Path) -> None:
+    script = (
+        "import time\n"
+        "print('ready', flush=True)\n"
+        "time.sleep(5)\n"
+        "print('never-reached', flush=True)\n"
+    )
+    spec = GenericCliSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    cancel_event = threading.Event()
+
+    def _on_stdout(chunk: str) -> None:
+        if "ready" in chunk:
+            cancel_event.set()
+
+    result = run_subprocess_with_streaming(
+        spec=spec,
+        on_stdout=_on_stdout,
+        cancel_requested=cancel_event.is_set,
+    )
+
+    assert result.exit_classification is GenericCliExitClassification.CANCELLED
+    assert "ready\n" in result.runtime_log_text
+    assert "never-reached\n" not in result.runtime_log_text
