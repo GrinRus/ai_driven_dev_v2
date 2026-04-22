@@ -12,6 +12,7 @@ from aidd.adapters.base import CapabilityReport
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.generic_cli import probe as probe_generic_cli
 from aidd.cli.run_lookup import (
+    resolve_run_artifacts_summary,
     resolve_run_log_summary,
     resolve_run_metadata_summary,
     resolve_stage_result_summary,
@@ -292,6 +293,54 @@ def run_logs(
         console.print("(empty runtime log)")
         return
     console.print(log_text, end="")
+
+
+@run_app.command("artifacts")
+def run_artifacts(
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    stage: Annotated[str, typer.Option("--stage", help="Stage id, for example plan")],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Optional run id; defaults to the latest run."),
+    ] = None,
+    attempt: Annotated[
+        int | None,
+        typer.Option("--attempt", help="Optional attempt number; defaults to the latest attempt."),
+    ] = None,
+) -> None:
+    """List document and log artifact paths for a selected run attempt."""
+    try:
+        summary = resolve_run_artifacts_summary(
+            workspace_root=root,
+            work_item=work_item,
+            stage=stage,
+            run_id=run_id,
+            attempt_number=attempt,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(
+        "Run artifacts: "
+        f"run_id={summary.run_id} stage={summary.stage} attempt={summary.attempt_number}"
+    )
+    console.print("Document artifacts:")
+    if summary.documents:
+        for name, path in summary.documents.items():
+            console.print(f"- {name}: {path}")
+    else:
+        console.print("- none")
+
+    console.print("Log artifacts:")
+    if summary.logs:
+        for name, path in summary.logs.items():
+            console.print(f"- {name}: {path}")
+    else:
+        console.print("- none")
 
 
 @stage_app.command("run")

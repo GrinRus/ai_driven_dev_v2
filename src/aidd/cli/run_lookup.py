@@ -71,6 +71,15 @@ class RunLogSummary:
     runtime_log_path: Path
 
 
+@dataclass(frozen=True, slots=True)
+class RunArtifactsSummary:
+    run_id: str
+    stage: str
+    attempt_number: int
+    documents: dict[str, str]
+    logs: dict[str, str]
+
+
 def _load_runtime_id(
     *,
     workspace_root: Path,
@@ -262,6 +271,58 @@ def resolve_run_log_summary(
         stage=stage,
         attempt_number=selected_attempt,
         runtime_log_path=runtime_log_path,
+    )
+
+
+def resolve_run_artifacts_summary(
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    *,
+    run_id: str | None = None,
+    attempt_number: int | None = None,
+) -> RunArtifactsSummary:
+    selected_run_id = run_id or latest_run_id(workspace_root=workspace_root, work_item=work_item)
+    if selected_run_id is None:
+        raise ValueError(f"No runs found for work item '{work_item}'.")
+
+    selected_attempt = attempt_number or latest_attempt_number(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+    )
+    if selected_attempt is None:
+        raise ValueError(
+            "No attempts found for work item "
+            f"'{work_item}', run '{selected_run_id}', stage '{stage}'."
+        )
+
+    artifact_paths = resolve_attempt_artifact_paths(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+    )
+    if artifact_paths is None:
+        raise ValueError(
+            f"Artifact index is missing for work item '{work_item}', run '{selected_run_id}', "
+            f"stage '{stage}', attempt {selected_attempt}."
+        )
+
+    return RunArtifactsSummary(
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+        documents={
+            key: _workspace_relative_path(workspace_root, path)
+            for key, path in sorted(artifact_paths.documents.items())
+        },
+        logs={
+            key: _workspace_relative_path(workspace_root, path)
+            for key, path in sorted(artifact_paths.logs.items())
+        },
     )
 
 
