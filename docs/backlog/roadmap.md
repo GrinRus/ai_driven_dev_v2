@@ -1728,7 +1728,7 @@ Exit evidence:
 - `review-spec` can block downstream work with durable, validated review findings.
 - smoke bundle archived at `.aidd/reports/evals/eval-stage-review-spec-smoke-20260422T105603Z`.
 
-#### Slice W6-E2-S2 — `tasklist` stage pack (`planned`)
+#### Slice W6-E2-S2 — `tasklist` stage pack (`done`)
 Goal: make `tasklist` runnable with decomposition-aware validation.
 
 Primary outputs:
@@ -1754,11 +1754,12 @@ Local tasks:
 - `W6-E2-S2-T3` (done) Implement `tasklist` semantic validators for granularity and dependency clarity.
 - `W6-E2-S2-T4` (done) Add valid and invalid `tasklist` fixtures.
 - `W6-E2-S2-T5` (done) Add unit tests for `tasklist` validation.
-- `W6-E2-S2-T6` Run one smoke execution of `tasklist` and archive the artifacts.
+- `W6-E2-S2-T6` (done) Run one smoke execution of `tasklist` and archive the artifacts.
 
 Exit evidence:
 
 - `tasklist` produces reviewable execution units and fails predictably when decomposition is poor.
+- smoke bundle archived at `.aidd/reports/evals/eval-stage-tasklist-smoke-20260422T111757Z`.
 
 #### Slice W6-E2-S3 — `implement` stage pack (`planned`)
 Goal: make `implement` runnable with repair-loop expectations and log-aware validation.
