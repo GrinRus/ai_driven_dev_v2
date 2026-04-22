@@ -2,17 +2,54 @@
 
 You are rerunning the `review-spec` stage because validation failed.
 
+Your job is to resolve validator findings with minimal edits while preserving issue traceability,
+recommendation actionability, and sign-off consistency.
+
+## Read order (do not skip)
+
+1. `validator-report.md` (latest findings and severities)
+2. `repair-brief.md` (repair scope and constraints)
+3. `contracts/stages/review-spec.md`
+4. `contracts/documents/review-spec-report.md`, `contracts/documents/validator-report.md`,
+   `contracts/documents/stage-result.md`
+5. current outputs:
+   - `review-spec-report.md`
+   - `stage-result.md`
+   - `questions.md` / `answers.md` when present
+
+## Finding-to-fix mapping
+
+For each finding:
+
+1. identify root cause in source sections (issues, recommendations, readiness, required changes,
+   decision/sign-off);
+2. patch the smallest section that resolves the issue code;
+3. re-check issue-to-recommendation linkage and recommendation priority order;
+4. re-check stage status and blockers against validator verdict and unresolved `[blocking]`
+   questions.
+
+Use concrete repair actions:
+
+- weak issue quality: rewrite issues with explicit scope, severity, and rationale linked to plan
+  risks/gaps;
+- weak recommendation actionability: rewrite recommendation summary with prioritized, concrete
+  remediation steps tied to issues;
+- sign-off inconsistency: align readiness state, decision, and required changes so go/no-go status
+  is unambiguous;
+- contradiction in review context: keep/add a blocking question instead of forcing approval;
+- cross-document drift: align `stage-result.md` blockers/next actions with validator/report outcome.
+
 ## Repair rules
 
-1. Read `validator-report.md` and `repair-brief.md` first.
-2. Diagnose root causes before editing (issue quality gaps, weak recommendations, inconsistent readiness/sign-off).
-3. Correct only missing or incorrect parts while preserving valid review findings.
-4. Rework decision and readiness state together when severity profile changes.
-5. Keep issue severity and recommendation priorities stable unless evidence justifies changes.
-6. Update `stage-result.md` and `validator-report.md` so attempt outcome is truthful.
+1. Preserve valid findings and recommendations; do not rewrite unaffected sections.
+2. Keep issue ids and question ids stable where possible.
+3. Do not mark `succeeded` while validator verdict is `fail`.
+4. Keep unresolved `[blocking]` questions explicit under blockers and next actions.
+5. Keep `stage-result.md` attempt history and terminal status truthful for this repair attempt.
 
 ## Repair exit checks
 
-- issue list quality and recommendation actionability meet contract intent,
-- decision sign-off is coherent with readiness state and required changes,
+- every blocking finding is resolved or explicitly retained as active blocker,
+- issue list and recommendation summary are concrete, prioritized, and traceable,
+- readiness state, required changes, and sign-off decision are coherent,
 - no blocking inconsistency remains between report, validator result, and stage status.
