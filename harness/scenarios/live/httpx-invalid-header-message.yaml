@@ -2,9 +2,12 @@ id: AIDD-LIVE-003
 repo:
   url: https://github.com/encode/httpx
   default_branch: master
+  revision: b5addb64f0161ff6bfe94c124ef76f6a1fba5254
 issue:
   id: 3400
   title: invalid header error message
+objective: Keep HTTPX smoke lane deterministic by targeting the invalid-header
+  diagnostics defect with bounded patch scope.
 task: Improve the invalid-header encoding error so the failing header name is visible
   in the resulting exception or wrapper message.
 stage_scope:

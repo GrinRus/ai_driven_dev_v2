@@ -67,3 +67,17 @@ def test_all_live_scenarios_load_as_valid_manifests() -> None:
         scenario = load_scenario(scenario_file)
         assert scenario.scenario_id
         assert scenario.task
+
+
+def test_httpx_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
+    scenario = load_scenario(Path("harness/scenarios/live/httpx-invalid-header-message.yaml"))
+
+    assert scenario.scenario_id == "AIDD-LIVE-003"
+    assert scenario.repo.url == "https://github.com/encode/httpx"
+    assert scenario.repo.default_branch == "master"
+    assert scenario.repo.revision == "b5addb64f0161ff6bfe94c124ef76f6a1fba5254"
+    assert (
+        scenario.raw["objective"]
+        == "Keep HTTPX smoke lane deterministic by targeting the invalid-header "
+        "diagnostics defect with bounded patch scope."
+    )

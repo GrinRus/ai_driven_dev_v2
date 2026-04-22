@@ -1453,7 +1453,7 @@ Dependencies:
 
 Local tasks:
 
-- `W5-E3-S2-T1` Pin the HTTPX repository revision and record the target scenario objective.
+- `W5-E3-S2-T1` (done) Pin the HTTPX repository revision and record the target scenario objective.
 - `W5-E3-S2-T2` Define setup steps and AIDD invocation parameters for the HTTPX smoke scenario.
 - `W5-E3-S2-T3` Define deterministic verification steps and expected pass conditions for the scenario.
 - `W5-E3-S2-T4` Run the scenario once end to end and capture the first reference artifact bundle.
