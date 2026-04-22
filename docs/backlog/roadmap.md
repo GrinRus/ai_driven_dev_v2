@@ -1753,7 +1753,7 @@ Local tasks:
 - `W6-E2-S2-T2` (done) Write the `tasklist` repair prompt.
 - `W6-E2-S2-T3` (done) Implement `tasklist` semantic validators for granularity and dependency clarity.
 - `W6-E2-S2-T4` (done) Add valid and invalid `tasklist` fixtures.
-- `W6-E2-S2-T5` Add unit tests for `tasklist` validation.
+- `W6-E2-S2-T5` (done) Add unit tests for `tasklist` validation.
 - `W6-E2-S2-T6` Run one smoke execution of `tasklist` and archive the artifacts.
 
 Exit evidence:

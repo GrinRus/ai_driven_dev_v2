@@ -875,3 +875,81 @@ def test_validate_semantic_outputs_flags_invalid_review_spec_fixture_bundle() ->
             ),
         ),
     )
+
+
+def test_validate_semantic_outputs_accepts_valid_tasklist_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "tasklist-valid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-VALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_invalid_tasklist_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "tasklist-invalid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-INVALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Section `Task summary` is too brief to explain decomposition "
+                "scope and sequencing intent."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-TASKLIST-INVALID/stages/tasklist/tasklist.md"
+                ),
+                line_number=3,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message="Section `Dependencies` references unknown task ids: TL-9.",
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-TASKLIST-INVALID/stages/tasklist/tasklist.md"
+                ),
+                line_number=12,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Section `Dependencies` must include explicit entries "
+                "for each task id. Missing: TL-1."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-TASKLIST-INVALID/stages/tasklist/tasklist.md"
+                ),
+                line_number=12,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Section `Verification notes` must include at least one "
+                "check per task id. Missing: TL-2."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-TASKLIST-INVALID/stages/tasklist/tasklist.md"
+                ),
+                line_number=16,
+            ),
+        ),
+    )
