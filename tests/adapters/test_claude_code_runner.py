@@ -14,6 +14,7 @@ from aidd.adapters.claude_code.runner import (
     ClaudeCodeConfigFlag,
     ClaudeCodeExitClassification,
     ClaudeCodeLaunchOptions,
+    ClaudeCodeQuestionDetection,
     ClaudeCodeRunResult,
     ClaudeCodeRuntimeArtifacts,
     ClaudeCodeSubprocessSpec,
@@ -22,11 +23,13 @@ from aidd.adapters.claude_code.runner import (
     build_execution_environment,
     build_subprocess_spec,
     command_preview,
+    detect_question_or_pause_events,
     normalize_structured_events,
     persist_attempt_runtime_log,
     persist_normalized_events_jsonl,
     run_subprocess_with_streaming,
 )
+from aidd.core.interview import QuestionPolicy
 
 
 def _context() -> ClaudeCodeCommandContext:
@@ -554,6 +557,45 @@ def test_normalize_structured_events_collects_json_from_stdout_and_stderr() -> N
         {"event": "run_started", "id": "abc", "source": "stdout"},
         {"level": "warn", "msg": "slow", "source": "stderr"},
     )
+
+
+def test_detect_question_or_pause_events_from_runtime_events() -> None:
+    detection = detect_question_or_pause_events(
+        normalized_events=(
+            {
+                "event": "question_raised",
+                "question_id": "Q7",
+                "question": "Need database access?",
+                "policy": "non-blocking",
+                "source": "stdout",
+            },
+            {
+                "event": "input_required",
+                "paused": True,
+                "source": "stderr",
+            },
+        )
+    )
+
+    assert isinstance(detection, ClaudeCodeQuestionDetection)
+    assert detection.pause_detected is True
+    assert detection.question_events[0].question_id == "Q7"
+    assert detection.question_events[0].policy is QuestionPolicy.NON_BLOCKING
+    assert detection.question_events[0].text == "Need database access?"
+    assert detection.question_events[1].policy is QuestionPolicy.BLOCKING
+    assert detection.question_events[1].text == "Runtime paused and requires operator input."
+
+
+def test_detect_question_or_pause_events_ignores_non_question_events() -> None:
+    detection = detect_question_or_pause_events(
+        normalized_events=(
+            {"event": "run_started", "source": "stdout"},
+            {"event": "token", "message": "chunk", "source": "stdout"},
+        )
+    )
+
+    assert detection.pause_detected is False
+    assert detection.question_events == ()
 
 
 def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: Path) -> None:

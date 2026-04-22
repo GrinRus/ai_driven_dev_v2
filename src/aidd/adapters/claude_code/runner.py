@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import threading
@@ -14,6 +15,7 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
 
+from aidd.core.interview import AdapterQuestionEvent, QuestionPolicy
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
@@ -104,6 +106,7 @@ class ClaudeCodeExitClassification(StrEnum):
 
 StreamTarget = Literal["stdout", "stderr"]
 EVENTS_JSONL_FILENAME = "events.jsonl"
+QUESTION_ID_PATTERN = re.compile(r"^Q[\w-]*$")
 
 
 def _resolve_stage_brief_path_for_execution(
@@ -466,6 +469,96 @@ def normalize_structured_events(
         source="stderr",
     )
     return tuple((*stdout_events, *stderr_events))
+
+
+@dataclass(frozen=True, slots=True)
+class ClaudeCodeQuestionDetection:
+    question_events: tuple[AdapterQuestionEvent, ...]
+    pause_detected: bool
+
+
+def _question_policy_from_runtime_event(event: Mapping[str, object]) -> QuestionPolicy:
+    policy_value = event.get("policy")
+    if isinstance(policy_value, str):
+        normalized = policy_value.strip().lower()
+        if normalized in {"non-blocking", "non_blocking", "nonblocking"}:
+            return QuestionPolicy.NON_BLOCKING
+        if normalized == "blocking":
+            return QuestionPolicy.BLOCKING
+
+    blocking_value = event.get("blocking")
+    if isinstance(blocking_value, bool):
+        return QuestionPolicy.BLOCKING if blocking_value else QuestionPolicy.NON_BLOCKING
+
+    return QuestionPolicy.BLOCKING
+
+
+def _question_id_from_runtime_event(event: Mapping[str, object]) -> str | None:
+    for field_name in ("question_id", "questionId", "id"):
+        raw_value = event.get(field_name)
+        if not isinstance(raw_value, str):
+            continue
+        candidate = raw_value.strip()
+        if QUESTION_ID_PATTERN.match(candidate):
+            return candidate
+    return None
+
+
+def _question_text_from_runtime_event(event: Mapping[str, object]) -> str | None:
+    for field_name in ("question", "text", "prompt", "message"):
+        raw_value = event.get(field_name)
+        if isinstance(raw_value, str) and raw_value.strip():
+            return raw_value.strip()
+    return None
+
+
+def detect_question_or_pause_events(
+    *,
+    normalized_events: tuple[dict[str, object], ...],
+) -> ClaudeCodeQuestionDetection:
+    question_events: list[AdapterQuestionEvent] = []
+    pause_detected = False
+
+    for event in normalized_events:
+        event_kind = str(event.get("event") or event.get("type") or "").strip().lower()
+        pause_flag = bool(event.get("paused", False))
+        is_question_kind = event_kind in {
+            "question",
+            "question_raised",
+            "question-raised",
+            "ask_user",
+            "ask-user",
+        }
+        is_pause_kind = event_kind in {
+            "pause",
+            "paused",
+            "awaiting_input",
+            "awaiting-input",
+            "input_required",
+            "input-required",
+        }
+        if not (is_question_kind or is_pause_kind or pause_flag):
+            continue
+
+        pause_detected = pause_detected or is_pause_kind or pause_flag
+        question_text = _question_text_from_runtime_event(event)
+        if question_text is None and pause_detected:
+            question_text = "Runtime paused and requires operator input."
+        if question_text is None:
+            continue
+
+        question_events.append(
+            AdapterQuestionEvent(
+                text=question_text,
+                policy=_question_policy_from_runtime_event(event),
+                question_id=_question_id_from_runtime_event(event),
+            )
+        )
+
+    return ClaudeCodeQuestionDetection(
+        question_events=tuple(question_events),
+        pause_detected=pause_detected,
+    )
 
 
 def persist_normalized_events_jsonl(
