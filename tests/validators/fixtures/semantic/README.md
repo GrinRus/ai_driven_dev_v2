@@ -33,3 +33,7 @@ Fixtures for `tests/validators/test_semantic.py` regression coverage.
   and no actionable follow-up, and must fail `implement` semantic checks.
 - `implement-invalid-verification/workspace/` contains verification claims without command/result
   grounding and must fail `implement` semantic checks.
+- `review-valid/workspace/` contains a bundle that should pass `review` semantic checks for
+  evidence-backed findings, severity/disposition labels, and approval coherence.
+- `review-invalid/workspace/` contains unsupported findings, missing severity/disposition details,
+  and approval/required-change mismatch, and must fail `review` semantic checks.

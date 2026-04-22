@@ -1824,7 +1824,7 @@ Local tasks:
 - `W6-E3-S1-T1` (done) Write the `review` base prompt.
 - `W6-E3-S1-T2` (done) Write the `review` repair prompt.
 - `W6-E3-S1-T3` (done) Implement `review` semantic validators.
-- `W6-E3-S1-T4` Add valid and invalid `review` fixtures.
+- `W6-E3-S1-T4` (done) Add valid and invalid `review` fixtures.
 - `W6-E3-S1-T5` Add unit tests for `review` validation.
 - `W6-E3-S1-T6` Run one smoke execution of `review` and archive the artifacts.
 
