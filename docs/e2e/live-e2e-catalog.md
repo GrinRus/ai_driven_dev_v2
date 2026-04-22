@@ -178,6 +178,20 @@ Out-of-scope for the minimum set:
 
 - `AIDD-LIVE-007` and `AIDD-LIVE-008` (Bun/TypeScript lane), deferred until the first Codex parity baseline is archived.
 
+## Codex Parity Snapshot (April 22, 2026)
+
+Completed reference runs from the minimum set:
+
+- Smoke lane (`AIDD-LIVE-005`): `eval-live-005-codex-reference-20260422T123518Z` -> `harness_pass`.
+- Interview lane (`AIDD-LIVE-006`): `eval-live-006-codex-reference-20260422T123937Z` -> `harness_fail`.
+
+Known parity gaps and adapter-specific limitations:
+
+- The `aidd run` command remains a roadmap placeholder for all runtimes, so current Codex parity is infrastructure-level (setup/run/verify contract) rather than full stage-execution parity.
+- Interview flow parity is incomplete: `AIDD-LIVE-006` fails because `.aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md` is not produced before the verify gate.
+- Current Codex probe capability report is limited to `raw-log` and `env-injection`; no validated support is declared for structured logs, native question events, resume, non-interactive mode, working-directory control, or subagents.
+- Docs-alignment lane (`AIDD-LIVE-004`) remains the next comparator for code/docs/example coherence after runtime-specific behavior differences.
+
 ## What a live E2E report must record
 
 Every report must include:
