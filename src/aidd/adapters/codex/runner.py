@@ -2,9 +2,16 @@ from __future__ import annotations
 
 import os
 import shlex
-from collections.abc import Mapping
+import subprocess
+import threading
+from collections import deque
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from queue import Empty, Queue
+from typing import Literal, TextIO
+
+from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +45,17 @@ class CodexSubprocessSpec:
     command: tuple[str, ...]
     cwd: Path
     env: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
+class CodexRunResult:
+    exit_code: int
+    stdout_text: str
+    stderr_text: str
+    runtime_log_text: str
+
+
+StreamTarget = Literal["stdout", "stderr"]
 
 
 def _resolve_stage_brief_path_for_execution(
@@ -167,6 +185,103 @@ def build_subprocess_spec(
             repository_root=repository_root,
         ),
     )
+
+
+def _stream_reader(
+    *,
+    target: StreamTarget,
+    pipe: TextIO | None,
+    queue: Queue[tuple[StreamTarget, str | None]],
+) -> None:
+    if pipe is None:
+        queue.put((target, None))
+        return
+
+    try:
+        for chunk in iter(pipe.readline, ""):
+            queue.put((target, chunk))
+    finally:
+        pipe.close()
+        queue.put((target, None))
+
+
+def run_subprocess_with_streaming(
+    *,
+    spec: CodexSubprocessSpec,
+    on_stdout: Callable[[str], None] | None = None,
+    on_stderr: Callable[[str], None] | None = None,
+) -> CodexRunResult:
+    process = subprocess.Popen(
+        spec.command,
+        cwd=spec.cwd,
+        env=spec.env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+
+    queue: Queue[tuple[StreamTarget, str | None]] = Queue()
+    reader_threads = (
+        threading.Thread(
+            target=_stream_reader,
+            kwargs={"target": "stdout", "pipe": process.stdout, "queue": queue},
+            daemon=True,
+        ),
+        threading.Thread(
+            target=_stream_reader,
+            kwargs={"target": "stderr", "pipe": process.stderr, "queue": queue},
+            daemon=True,
+        ),
+    )
+    for thread in reader_threads:
+        thread.start()
+
+    stdout_chunks: deque[str] = deque()
+    stderr_chunks: deque[str] = deque()
+    runtime_log_chunks: deque[str] = deque()
+    completed_readers = 0
+    while completed_readers < 2:
+        try:
+            target, chunk = queue.get(timeout=0.1)
+        except Empty:
+            continue
+
+        if chunk is None:
+            completed_readers += 1
+            continue
+
+        runtime_log_chunks.append(chunk)
+        if target == "stdout":
+            stdout_chunks.append(chunk)
+            if on_stdout is not None:
+                on_stdout(chunk)
+            continue
+
+        stderr_chunks.append(chunk)
+        if on_stderr is not None:
+            on_stderr(chunk)
+
+    for thread in reader_threads:
+        thread.join(timeout=0.5)
+
+    return CodexRunResult(
+        exit_code=process.wait(),
+        stdout_text="".join(stdout_chunks),
+        stderr_text="".join(stderr_chunks),
+        runtime_log_text="".join(runtime_log_chunks),
+    )
+
+
+def persist_attempt_runtime_log(
+    *,
+    attempt_path: Path,
+    run_result: CodexRunResult,
+) -> Path:
+    attempt_path.mkdir(parents=True, exist_ok=True)
+    runtime_log_path = attempt_path / RUN_RUNTIME_LOG_FILENAME
+    runtime_log_path.write_text(run_result.runtime_log_text, encoding="utf-8")
+    return runtime_log_path
 
 
 def command_preview(

@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 import pytest
 
 from aidd.adapters.codex.runner import (
     CodexCommandContext,
+    CodexSubprocessSpec,
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
     command_preview,
+    persist_attempt_runtime_log,
+    run_subprocess_with_streaming,
 )
 
 
@@ -122,6 +126,51 @@ def test_build_subprocess_spec_uses_workspace_as_cwd(tmp_path: Path) -> None:
     assert spec.command[0] == "codex"
     assert spec.env["BASE_FLAG"] == "1"
     assert spec.env["AIDD_RUNTIME_ID"] == "codex"
+
+
+def test_run_subprocess_with_streaming_captures_output_and_callbacks(tmp_path: Path) -> None:
+    spec = CodexSubprocessSpec(
+        command=(
+            sys.executable,
+            "-c",
+            "import sys; print('stdout-line'); print('stderr-line', file=sys.stderr)",
+        ),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+
+    result = run_subprocess_with_streaming(
+        spec=spec,
+        on_stdout=stdout_chunks.append,
+        on_stderr=stderr_chunks.append,
+    )
+
+    assert result.exit_code == 0
+    assert result.stdout_text == "stdout-line\n"
+    assert result.stderr_text == "stderr-line\n"
+    assert "stdout-line\n" in result.runtime_log_text
+    assert "stderr-line\n" in result.runtime_log_text
+    assert stdout_chunks == ["stdout-line\n"]
+    assert stderr_chunks == ["stderr-line\n"]
+
+
+def test_persist_attempt_runtime_log_writes_runtime_log(tmp_path: Path) -> None:
+    spec = CodexSubprocessSpec(
+        command=(sys.executable, "-c", "print('runtime-log-line')"),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+    run_result = run_subprocess_with_streaming(spec=spec)
+
+    runtime_log_path = persist_attempt_runtime_log(
+        attempt_path=tmp_path / "attempt-001",
+        run_result=run_result,
+    )
+
+    assert runtime_log_path.exists()
+    assert runtime_log_path.read_text(encoding="utf-8") == run_result.runtime_log_text
 
 
 def test_assemble_command_rejects_empty_configured_command(tmp_path: Path) -> None:
