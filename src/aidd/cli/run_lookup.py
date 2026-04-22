@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,6 +34,9 @@ class StageResultSummary:
     runtime_id: str
     final_state: str
     attempt_count: int
+    validator_pass_count: int
+    validator_fail_count: int
+    validator_report_path: str
 
 
 def _load_runtime_id(
@@ -70,6 +74,34 @@ def _load_runtime_id(
     return runtime
 
 
+def _workspace_relative_path(workspace_root: Path, path: Path) -> str:
+    return path.resolve(strict=False).relative_to(workspace_root.resolve(strict=False)).as_posix()
+
+
+def _validator_counts_from_history(*, outcomes: tuple[str, ...]) -> tuple[int, int]:
+    pass_count = 0
+    fail_count = 0
+    for outcome in outcomes:
+        normalized = outcome.strip().lower()
+        if "fail" in normalized:
+            fail_count += 1
+            continue
+        if "pass" in normalized or "succeed" in normalized:
+            pass_count += 1
+    return pass_count, fail_count
+
+
+def _validator_verdict_from_report(report_path: Path) -> str | None:
+    if not report_path.exists():
+        return None
+
+    for line in report_path.read_text(encoding="utf-8").splitlines():
+        matched = re.search(r"- Verdict:\s*`(?P<verdict>pass|fail)`", line)
+        if matched is not None:
+            return matched.group("verdict")
+    return None
+
+
 def resolve_stage_result_summary(
     workspace_root: Path,
     work_item: str,
@@ -105,6 +137,18 @@ def resolve_stage_result_summary(
             f"'{work_item}', run '{selected_run_id}', stage '{stage}'."
         )
 
+    stage_root = workspace_root / "workitems" / work_item / "stages" / stage
+    validator_report = stage_root / "validator-report.md"
+    pass_count, fail_count = _validator_counts_from_history(
+        outcomes=tuple(entry.outcome for entry in stage_metadata.repair_history)
+    )
+    if pass_count == 0 and fail_count == 0:
+        verdict = _validator_verdict_from_report(validator_report)
+        if verdict == "pass":
+            pass_count = 1
+        elif verdict == "fail":
+            fail_count = 1
+
     return StageResultSummary(
         run_id=selected_run_id,
         stage=stage,
@@ -115,6 +159,9 @@ def resolve_stage_result_summary(
         ),
         final_state=stage_metadata.status,
         attempt_count=attempts,
+        validator_pass_count=pass_count,
+        validator_fail_count=fail_count,
+        validator_report_path=_workspace_relative_path(workspace_root, validator_report),
     )
 
 

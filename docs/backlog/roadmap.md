@@ -1108,7 +1108,7 @@ Dependencies:
 Local tasks:
 
 - `W4-E3-S1-T1` (done) Implement stage-result summaries that show final state, runtime, and attempt count.
-- `W4-E3-S1-T2` Implement validator-outcome summaries that show pass/fail counts and report paths.
+- `W4-E3-S1-T2` (done) Implement validator-outcome summaries that show pass/fail counts and report paths.
 - `W4-E3-S1-T3` Implement artifact path summaries for logs, documents, and repair outputs.
 - `W4-E3-S1-T4` Add CLI tests for success, blocked, repair-needed, and failed summaries.
 

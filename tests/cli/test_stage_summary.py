@@ -18,6 +18,7 @@ runner = CliRunner()
 def test_stage_summary_reports_final_state_runtime_and_attempt_count(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     now = datetime.now(UTC).replace(microsecond=0)
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
 
     create_run_manifest(
         workspace_root=workspace_root,
@@ -44,8 +45,18 @@ def test_stage_summary_reports_final_state_runtime_and_attempt_count(tmp_path: P
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
-        status="succeeded",
+        status="failed",
         changed_at_utc=now + timedelta(minutes=5),
+    )
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "validator-report.md").write_text(
+        (
+            "# Validator Report\n\n"
+            "## Result\n\n"
+            "- Verdict: `fail`\n"
+            "- Repair required for progression: yes\n"
+        ),
+        encoding="utf-8",
     )
 
     result = runner.invoke(
@@ -68,9 +79,15 @@ def test_stage_summary_reports_final_state_runtime_and_attempt_count(tmp_path: P
     assert "runtime" in result.stdout
     assert "claude-code" in result.stdout
     assert "final state" in result.stdout
-    assert "succeeded" in result.stdout
+    assert "failed" in result.stdout
     assert "attempt count" in result.stdout
     assert "2" in result.stdout
+    assert "validator pass count" in result.stdout
+    assert "0" in result.stdout
+    assert "validator fail count" in result.stdout
+    assert "1" in result.stdout
+    assert "validator report" in result.stdout
+    assert "workitems/WI-001/stages/plan/validator-report.md" in result.stdout
 
 
 def test_stage_summary_rejects_missing_runs(tmp_path: Path) -> None:

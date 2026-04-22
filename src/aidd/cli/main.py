@@ -254,6 +254,9 @@ def stage_summary(
     table.add_row("runtime", summary.runtime_id)
     table.add_row("final state", summary.final_state)
     table.add_row("attempt count", str(summary.attempt_count))
+    table.add_row("validator pass count", str(summary.validator_pass_count))
+    table.add_row("validator fail count", str(summary.validator_fail_count))
+    table.add_row("validator report", summary.validator_report_path)
     console.print(table)
 
 
