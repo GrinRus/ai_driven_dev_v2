@@ -182,3 +182,14 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
             "evidence": "verification command succeeds after the resolved-answer rerun.",
         },
     ]
+    assert scenario.raw["reference_run"]["run_id"] == "eval-live-006-reference-20260422T084432Z"
+    assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
+    assert scenario.raw["reference_run"]["status"] == "harness_fail"
+    assert (
+        scenario.raw["reference_run"]["resolved_revision"]
+        == "8d74ffc93292c604d5827e2b44fffedca0c28c19"
+    )
+    assert (
+        scenario.raw["reference_run"]["bundle_root"]
+        == ".aidd/reports/evals/eval-live-006-reference-20260422T084432Z"
+    )
