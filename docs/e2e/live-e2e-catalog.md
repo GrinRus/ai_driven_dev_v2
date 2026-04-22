@@ -208,6 +208,20 @@ Known parity gaps and adapter-specific limitations:
 - Current Codex probe capability report is limited to `raw-log` and `env-injection`; no validated support is declared for structured logs, native question events, resume, non-interactive mode, working-directory control, or subagents.
 - Docs-alignment lane (`AIDD-LIVE-004`) remains the next comparator for code/docs/example coherence after runtime-specific behavior differences.
 
+## OpenCode Parity Snapshot (April 22, 2026)
+
+Observed outcomes for the selected minimum set:
+
+- Smoke lane (`AIDD-LIVE-005`): blocked, because `uv run aidd eval run ... --runtime opencode` reports `Harness execution is not implemented yet`.
+- Interview lane (`AIDD-LIVE-006`): blocked, because `uv run aidd eval run ... --runtime opencode` reports `Harness execution is not implemented yet`.
+
+Known parity gaps and adapter-specific limitations:
+
+- Harness execution for live eval scenarios is still a placeholder in the current CLI, so OpenCode parity runs cannot yet produce reference bundles for smoke/interview lanes.
+- Current OpenCode probe capability report is limited to `raw-log`; no validated support is declared for structured logs, native question events, resume, non-interactive mode, working-directory control, env injection, or subagents.
+- `aidd doctor` currently reports OpenCode version as `unknown` in this environment, so parity tracking remains capability-level until runtime identity/version discovery is stabilized.
+- Docs-alignment lane (`AIDD-LIVE-004`) is deferred until harness execution support exists and at least one OpenCode reference bundle is archived.
+
 ## What a live E2E report must record
 
 Every report must include:

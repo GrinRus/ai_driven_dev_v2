@@ -5,7 +5,6 @@ This file is the short actionable queue.
 Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, epic, slice, and local task.
 
 ## Next
-- `W7-E2-S3-T4`
 
 ## Soon
 
