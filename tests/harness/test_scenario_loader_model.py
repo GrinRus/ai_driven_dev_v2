@@ -34,6 +34,11 @@ def test_live_scenario_exposes_repo_steps_and_run_config() -> None:
         "end": "qa",
     }
     assert scenario.verify.commands == ("uv run pytest -q || pytest -q",)
+    assert scenario.raw["verify"]["pass_conditions"] == [
+        "Verification command exits with status 0.",
+        "Pytest output reports all tests as passed.",
+        "No new failing tests are introduced relative to baseline.",
+    ]
     assert scenario.run.stage_start == "plan"
     assert scenario.run.stage_end == "qa"
     assert scenario.run.patch_budget_files == 8
