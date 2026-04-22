@@ -1042,7 +1042,7 @@ Local tasks:
 - `W4-E2-S3-T2` (done) Persist a full `runtime.log` that matches the raw streamed output as closely as possible.
 - `W4-E2-S3-T3` (done) Normalize any machine-readable Claude Code events into a durable `events.jsonl` artifact when available.
 - `W4-E2-S3-T4` (done) Implement exit classification that distinguishes adapter, runtime, and user-cancelled outcomes.
-- `W4-E2-S3-T5` Add tests that verify raw-log persistence, event normalization, and exit classification.
+- `W4-E2-S3-T5` (done) Add tests that verify raw-log persistence, event normalization, and exit classification.
 
 Exit evidence:
 

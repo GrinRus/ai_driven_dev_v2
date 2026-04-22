@@ -58,9 +58,12 @@ def _write_dry_run_fixture_script(tmp_path: Path) -> Path:
         "parser.add_argument('--prompt-pack', action='append', default=[])\n"
         "parser.add_argument('--sleep-seconds', type=float, default=0.0)\n"
         "parser.add_argument('--exit-code', type=int, default=0)\n"
+        "parser.add_argument('--emit-json-events', action='store_true')\n"
         "args, _unknown = parser.parse_known_args()\n"
         "print(f'fixture-start stage={args.stage}', flush=True)\n"
         "print(f'fixture-prompt-packs={len(args.prompt_pack)}', flush=True)\n"
+        "if args.emit_json_events:\n"
+        "    print('{\"event\":\"fixture_tick\",\"ok\":true}', flush=True)\n"
         "if args.sleep_seconds > 0:\n"
         "    time.sleep(args.sleep_seconds)\n"
         "print('fixture-end', flush=True)\n"
@@ -593,6 +596,49 @@ def test_persist_normalized_events_jsonl_returns_none_without_json_lines(tmp_pat
 
     assert events_path is None
     assert not (attempt_path / "events.jsonl").exists()
+
+
+def test_artifact_persistence_and_classification_regression(tmp_path: Path) -> None:
+    repository_root = tmp_path / "repo"
+    workspace_root = repository_root / ".aidd" / "workitems" / "WI-001"
+    fixture_script = _write_dry_run_fixture_script(tmp_path)
+    _prepare_dry_run_workspace(repository_root=repository_root, workspace_root=workspace_root)
+    context = ClaudeCodeCommandContext(
+        stage="plan",
+        work_item="WI-001",
+        run_id="run-001",
+        workspace_root=workspace_root,
+        stage_brief_path=Path("stages/plan/stage-brief.md"),
+        prompt_pack_paths=(Path("prompt-packs/stages/plan/system.md"),),
+    )
+    spec = build_subprocess_spec(
+        configured_command=(
+            f"{sys.executable} {fixture_script.as_posix()} "
+            "--emit-json-events --exit-code 3"
+        ),
+        context=context,
+        repository_root=repository_root,
+    )
+    result = run_subprocess_with_streaming(spec=spec)
+
+    assert result.exit_classification is ClaudeCodeExitClassification.RUNTIME_NON_ZERO_EXIT
+
+    attempt_path = tmp_path / "attempt-0001"
+    runtime_artifacts = persist_attempt_runtime_log(
+        attempt_path=attempt_path,
+        run_result=result,
+    )
+    events_path = persist_normalized_events_jsonl(
+        attempt_path=attempt_path,
+        run_result=result,
+    )
+
+    assert "fixture-start stage=plan\n" in runtime_artifacts.runtime_log_path.read_text(
+        encoding="utf-8"
+    )
+    assert events_path is not None
+    events = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()]
+    assert {"event": "fixture_tick", "ok": True, "source": "stdout"} in events
 
 
 def test_assemble_command_rejects_empty_configured_command() -> None:
