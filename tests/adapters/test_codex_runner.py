@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
 
-from aidd.adapters.codex.runner import CodexCommandContext, assemble_command, command_preview
+from aidd.adapters.codex.runner import (
+    CodexCommandContext,
+    assemble_command,
+    build_execution_environment,
+    build_subprocess_spec,
+    command_preview,
+)
 
 
 def _context(tmp_path: Path) -> CodexCommandContext:
@@ -78,6 +85,43 @@ def test_command_preview_renders_shell_quoted_command(tmp_path: Path) -> None:
     assert preview.startswith("codex ")
     assert "--stage plan" in preview
     assert "--work-item WI-123" in preview
+
+
+def test_build_execution_environment_sets_runtime_metadata(tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    env = build_execution_environment(
+        context=context,
+        base_env={"BASE_FLAG": "1"},
+        repository_root=tmp_path,
+    )
+
+    assert env["BASE_FLAG"] == "1"
+    assert env["AIDD_RUNTIME_ID"] == "codex"
+    assert env["AIDD_STAGE"] == "plan"
+    assert env["AIDD_WORK_ITEM"] == "WI-123"
+    assert env["AIDD_RUN_ID"] == "run-001"
+    assert env["AIDD_WORKSPACE_ROOT"] == context.workspace_root.resolve(strict=False).as_posix()
+    assert env["AIDD_STAGE_BRIEF_PATH"] == (
+        context.workspace_root / context.stage_brief_path
+    ).resolve(strict=False).as_posix()
+    assert env["AIDD_PROMPT_PACK_PATHS"] == os.pathsep.join(
+        (tmp_path / path).resolve(strict=False).as_posix() for path in context.prompt_pack_paths
+    )
+
+
+def test_build_subprocess_spec_uses_workspace_as_cwd(tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    spec = build_subprocess_spec(
+        configured_command="codex",
+        context=context,
+        base_env={"BASE_FLAG": "1"},
+        repository_root=tmp_path,
+    )
+
+    assert spec.cwd == context.workspace_root.resolve(strict=False)
+    assert spec.command[0] == "codex"
+    assert spec.env["BASE_FLAG"] == "1"
+    assert spec.env["AIDD_RUNTIME_ID"] == "codex"
 
 
 def test_assemble_command_rejects_empty_configured_command(tmp_path: Path) -> None:
