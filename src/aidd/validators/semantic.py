@@ -49,6 +49,10 @@ _REVIEW_SPEC_RATIONALE_PATTERN = re.compile(
     r"\b(rationale|because)\b",
     flags=re.IGNORECASE,
 )
+_TASKLIST_TASK_ID_PATTERN = re.compile(
+    r"\b([A-Z][A-Z0-9]{0,15}-\d+)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _extract_section_lines(markdown_text: str, heading: str) -> list[str]:
@@ -190,6 +194,10 @@ def _extract_review_spec_decision(text: str) -> str | None:
     return match.group(1).lower()
 
 
+def _extract_tasklist_task_ids(text: str) -> set[str]:
+    return {match.group(1).upper() for match in _TASKLIST_TASK_ID_PATTERN.finditer(text)}
+
+
 def validate_semantic_outputs(
     *,
     stage: str,
@@ -279,6 +287,20 @@ def validate_semantic_outputs(
                     workspace_relative_path=_workspace_relative(output_path, workspace_root),
                     line_number=decision_heading.line_number,
                 )
+
+        tasklist_task_ids: set[str] = set()
+        if stage == "tasklist" and output_path.name == "tasklist.md":
+            ordered_task_matches = headings_by_title.get(
+                _normalized_heading("Ordered tasks"), []
+            )
+            if ordered_task_matches:
+                ordered_tasks_index, _ = ordered_task_matches[0]
+                ordered_tasks_content = _section_content_for_heading(
+                    heading_index=ordered_tasks_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                tasklist_task_ids = _extract_tasklist_task_ids(ordered_tasks_content)
 
         for section in required_sections:
             matches = headings_by_title.get(_normalized_heading(section), [])
@@ -662,6 +684,195 @@ def validate_semantic_outputs(
                             location=location,
                         )
                     )
+
+            if stage == "tasklist" and output_path.name == "tasklist.md":
+                normalized_section = _normalized_heading(section)
+                compact_content = re.sub(r"\s+", " ", section_content).strip()
+                bullet_items = _extract_bullet_items(section_content)
+
+                if normalized_section == "task summary":
+                    if compact_content.lower() in {"none", "- none"} or len(compact_content) < 30:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Task summary` is too brief to explain decomposition "
+                                    "scope and sequencing intent."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+
+                if normalized_section == "ordered tasks":
+                    if not tasklist_task_ids:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Ordered tasks` must declare stable task ids "
+                                    "(for example `TL-1`) in executable order."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    elif not bullet_items and "###" not in section_content:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Ordered tasks` must enumerate task entries as bullet "
+                                    "items or task subheadings with ids."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+
+                if normalized_section == "dependencies":
+                    if not bullet_items:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Dependencies` must use bullet items with explicit "
+                                    "task dependency notes."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    else:
+                        referenced_task_ids = _extract_tasklist_task_ids(section_content)
+                        if (
+                            tasklist_task_ids
+                            and not referenced_task_ids
+                            and compact_content.lower() not in {"none", "- none"}
+                        ):
+                            findings.append(
+                                ValidationFinding(
+                                    code=INCOMPLETE_SECTION_CODE,
+                                    message=(
+                                        "Section `Dependencies` must reference task ids or "
+                                        "explicitly mark entries as `none`."
+                                    ),
+                                    severity="medium",
+                                    location=location,
+                                )
+                            )
+                        else:
+                            unknown_task_ids = sorted(
+                                referenced_task_ids - tasklist_task_ids
+                            )
+                            if unknown_task_ids:
+                                unknown_ids_text = ", ".join(unknown_task_ids)
+                                findings.append(
+                                    ValidationFinding(
+                                        code=INCOMPLETE_SECTION_CODE,
+                                        message=(
+                                            "Section `Dependencies` references unknown task ids: "
+                                            f"{unknown_ids_text}."
+                                        ),
+                                        severity="medium",
+                                        location=location,
+                                    )
+                                )
+
+                            missing_dependency_entries = sorted(
+                                tasklist_task_ids - referenced_task_ids
+                            )
+                            if missing_dependency_entries and compact_content.lower() not in {
+                                "none",
+                                "- none",
+                            }:
+                                missing_ids_text = ", ".join(missing_dependency_entries)
+                                findings.append(
+                                    ValidationFinding(
+                                        code=INCOMPLETE_SECTION_CODE,
+                                        message=(
+                                            "Section `Dependencies` must include explicit entries "
+                                            f"for each task id. Missing: {missing_ids_text}."
+                                        ),
+                                        severity="medium",
+                                        location=location,
+                                    )
+                                )
+
+                if normalized_section == "verification notes":
+                    if not bullet_items:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Verification notes` must use bullet items mapped "
+                                    "to task ids."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    elif compact_content.lower() in {"none", "- none"}:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Verification notes` cannot be `none`; include at "
+                                    "least one concrete check per task."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    else:
+                        referenced_task_ids = _extract_tasklist_task_ids(section_content)
+                        if tasklist_task_ids and not referenced_task_ids:
+                            findings.append(
+                                ValidationFinding(
+                                    code=INCOMPLETE_SECTION_CODE,
+                                    message=(
+                                        "Section `Verification notes` must reference task ids "
+                                        "so checks map to task decomposition."
+                                    ),
+                                    severity="medium",
+                                    location=location,
+                                )
+                            )
+                        else:
+                            unknown_task_ids = sorted(
+                                referenced_task_ids - tasklist_task_ids
+                            )
+                            if unknown_task_ids:
+                                unknown_ids_text = ", ".join(unknown_task_ids)
+                                findings.append(
+                                    ValidationFinding(
+                                        code=INCOMPLETE_SECTION_CODE,
+                                        message=(
+                                            "Section `Verification notes` references unknown task "
+                                            f"ids: {unknown_ids_text}."
+                                        ),
+                                        severity="medium",
+                                        location=location,
+                                    )
+                                )
+
+                            missing_verification_entries = sorted(
+                                tasklist_task_ids - referenced_task_ids
+                            )
+                            if missing_verification_entries:
+                                missing_ids_text = ", ".join(missing_verification_entries)
+                                findings.append(
+                                    ValidationFinding(
+                                        code=INCOMPLETE_SECTION_CODE,
+                                        message=(
+                                            "Section `Verification notes` must include "
+                                            "at least one "
+                                            f"check per task id. Missing: {missing_ids_text}."
+                                        ),
+                                        severity="medium",
+                                        location=location,
+                                    )
+                                )
 
         if (
             stage == "review-spec"
