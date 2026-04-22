@@ -169,6 +169,20 @@ def test_hono_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
         == "Keep Hono smoke lane deterministic by targeting the non-Error throw "
         "handling defect with bounded patch scope."
     )
+    assert scenario.setup.commands == ("bun install",)
+    assert scenario.raw["setup"]["rationale"] == [
+        "Install Hono development dependencies with Bun before the smoke run.",
+        "Confirm the repository workspace is ready for targeted middleware regression "
+        "verification.",
+    ]
+    assert scenario.raw["aidd_invocation"]["command"] == ["uv", "run", "aidd", "run"]
+    assert scenario.raw["aidd_invocation"]["work_item"] == "WI-LIVE-HONO-SMOKE"
+    assert scenario.raw["aidd_invocation"]["work_item_flag"] == "--work-item"
+    assert scenario.raw["aidd_invocation"]["runtime_flag"] == "--runtime"
+    assert scenario.raw["aidd_invocation"]["expected_stage_scope"] == {
+        "start": "plan",
+        "end": "qa",
+    }
 
 
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:

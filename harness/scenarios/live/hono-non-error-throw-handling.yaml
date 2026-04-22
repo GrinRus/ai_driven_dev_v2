@@ -16,6 +16,21 @@ stage_scope:
 setup:
   commands:
   - bun install
+  rationale:
+  - Install Hono development dependencies with Bun before the smoke run.
+  - Confirm the repository workspace is ready for targeted middleware regression verification.
+aidd_invocation:
+  command:
+  - uv
+  - run
+  - aidd
+  - run
+  work_item: WI-LIVE-HONO-SMOKE
+  work_item_flag: --work-item
+  runtime_flag: --runtime
+  expected_stage_scope:
+    start: plan
+    end: qa
 verify:
   commands:
   - bun test
