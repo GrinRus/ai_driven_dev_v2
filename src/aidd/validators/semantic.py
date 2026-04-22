@@ -33,6 +33,22 @@ _RISK_MITIGATION_PATTERN = re.compile(
     r"\b(mitigation|mitigate|fallback|retry|reduce|avoid|monitor)\b",
     flags=re.IGNORECASE,
 )
+_REVIEW_SPEC_READINESS_PATTERN = re.compile(
+    r"\b(ready-with-conditions|not-ready|ready)\b",
+    flags=re.IGNORECASE,
+)
+_REVIEW_SPEC_DECISION_PATTERN = re.compile(
+    r"\b(approved-with-conditions|rejected|approved)\b",
+    flags=re.IGNORECASE,
+)
+_REVIEW_SPEC_SEVERITY_PATTERN = re.compile(
+    r"\b(critical|high|medium|low)\b",
+    flags=re.IGNORECASE,
+)
+_REVIEW_SPEC_RATIONALE_PATTERN = re.compile(
+    r"\b(rationale|because)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _extract_section_lines(markdown_text: str, heading: str) -> list[str]:
@@ -160,6 +176,20 @@ def _extract_milestone_ids(text: str) -> set[str]:
     return {match.group(1).upper() for match in _MILESTONE_ID_PATTERN.finditer(text)}
 
 
+def _extract_review_spec_readiness_state(text: str) -> str | None:
+    match = _REVIEW_SPEC_READINESS_PATTERN.search(text)
+    if match is None:
+        return None
+    return match.group(1).lower()
+
+
+def _extract_review_spec_decision(text: str) -> str | None:
+    match = _REVIEW_SPEC_DECISION_PATTERN.search(text)
+    if match is None:
+        return None
+    return match.group(1).lower()
+
+
 def validate_semantic_outputs(
     *,
     stage: str,
@@ -219,6 +249,36 @@ def validate_semantic_outputs(
                     markdown_lines=markdown_lines,
                 )
                 plan_milestone_ids = _extract_milestone_ids(milestones_content)
+
+        review_spec_readiness_state: str | None = None
+        review_spec_decision: str | None = None
+        review_spec_decision_location: ValidationIssueLocation | None = None
+        if stage == "review-spec" and output_path.name == "review-spec-report.md":
+            readiness_matches = headings_by_title.get(_normalized_heading("Readiness state"), [])
+            if readiness_matches:
+                readiness_index, _ = readiness_matches[0]
+                readiness_content = _section_content_for_heading(
+                    heading_index=readiness_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                review_spec_readiness_state = _extract_review_spec_readiness_state(
+                    readiness_content
+                )
+
+            decision_matches = headings_by_title.get(_normalized_heading("Decision"), [])
+            if decision_matches:
+                decision_index, decision_heading = decision_matches[0]
+                decision_content = _section_content_for_heading(
+                    heading_index=decision_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                review_spec_decision = _extract_review_spec_decision(decision_content)
+                review_spec_decision_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=decision_heading.line_number,
+                )
 
         for section in required_sections:
             matches = headings_by_title.get(_normalized_heading(section), [])
@@ -500,5 +560,138 @@ def validate_semantic_outputs(
                                         location=location,
                                     )
                                 )
+
+            if stage == "review-spec" and output_path.name == "review-spec-report.md":
+                normalized_section = _normalized_heading(section)
+                compact_content = re.sub(r"\s+", " ", section_content).strip()
+                bullet_items = _extract_bullet_items(section_content)
+
+                if normalized_section == "issue list":
+                    if not bullet_items:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Required section `Issue list` must use bullet items with "
+                                    "severity and rationale."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    else:
+                        if any(
+                            _REVIEW_SPEC_SEVERITY_PATTERN.search(item) is None
+                            for item in bullet_items
+                        ):
+                            findings.append(
+                                ValidationFinding(
+                                    code=INCOMPLETE_SECTION_CODE,
+                                    message=(
+                                        "Each `Issue list` item must include explicit severity "
+                                        "(critical/high/medium/low)."
+                                    ),
+                                    severity="medium",
+                                    location=location,
+                                )
+                            )
+                        if any(
+                            _REVIEW_SPEC_RATIONALE_PATTERN.search(item) is None
+                            for item in bullet_items
+                        ):
+                            findings.append(
+                                ValidationFinding(
+                                    code=INCOMPLETE_SECTION_CODE,
+                                    message=(
+                                        "Each `Issue list` item must include rationale "
+                                        "(for example `because ...`)."
+                                    ),
+                                    severity="medium",
+                                    location=location,
+                                )
+                            )
+
+                if normalized_section == "recommendation summary":
+                    if not bullet_items:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Required section `Recommendation summary` must use "
+                                    "prioritized bullet items."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    elif compact_content.lower() in {"none", "- none"}:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Recommendation summary` cannot be `none`; "
+                                    "include actionable remediation steps."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+
+                if normalized_section == "readiness state" and review_spec_readiness_state is None:
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_SECTION_CODE,
+                            message=(
+                                "Section `Readiness state` must declare one explicit state: "
+                                "`ready`, `ready-with-conditions`, or `not-ready`."
+                            ),
+                            severity="medium",
+                            location=location,
+                        )
+                    )
+
+                if normalized_section == "decision" and review_spec_decision is None:
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_SECTION_CODE,
+                            message=(
+                                "Section `Decision` must declare one explicit sign-off status: "
+                                "`approved`, `approved-with-conditions`, or `rejected`."
+                            ),
+                            severity="medium",
+                            location=location,
+                        )
+                    )
+
+        if (
+            stage == "review-spec"
+            and output_path.name == "review-spec-report.md"
+            and review_spec_readiness_state is not None
+            and review_spec_decision is not None
+        ):
+            expected_decision_by_state = {
+                "ready": "approved",
+                "ready-with-conditions": "approved-with-conditions",
+                "not-ready": "rejected",
+            }
+            expected_decision = expected_decision_by_state[review_spec_readiness_state]
+            if review_spec_decision != expected_decision:
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Sections `Readiness state` and `Decision` are inconsistent: "
+                            f"`{review_spec_readiness_state}` expects `{expected_decision}`."
+                        ),
+                        severity="high",
+                        location=review_spec_decision_location
+                        or ValidationIssueLocation(
+                            workspace_relative_path=_workspace_relative(
+                                output_path, workspace_root
+                            ),
+                            line_number=1,
+                        ),
+                    )
+                )
 
     return tuple(findings)
