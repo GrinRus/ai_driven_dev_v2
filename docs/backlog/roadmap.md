@@ -1076,7 +1076,7 @@ Local tasks:
 - `W4-E2-S4-T2` (done) Fall back to file-based unresolved-question detection when runtime-native events are absent.
 - `W4-E2-S4-T3` (done) Persist surfaced questions into the standard `questions.md` artifact and stage metadata.
 - `W4-E2-S4-T4` (done) Implement adapter-side resume behavior after the operator provides answers.
-- `W4-E2-S4-T5` Add tests for runtime-native questions, file-based questions, and resume-after-answer behavior.
+- `W4-E2-S4-T5` (done) Add tests for runtime-native questions, file-based questions, and resume-after-answer behavior.
 
 Exit evidence:
 

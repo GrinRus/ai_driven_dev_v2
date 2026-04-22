@@ -814,6 +814,79 @@ def test_prepare_resume_after_answers_builds_resume_command_when_unblocked(tmp_p
     )
 
 
+def test_question_and_resume_integration_paths(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    native_detection = detect_question_or_pause_events(
+        normalized_events=(
+            {
+                "event": "question_raised",
+                "question_id": "Q1",
+                "question": "Runtime-native question?",
+                "policy": "blocking",
+                "source": "stdout",
+            },
+        )
+    )
+    native_routing = route_questions_with_file_fallback(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        runtime_detection=native_detection,
+    )
+    assert native_routing.used_file_fallback is False
+    assert native_routing.question_events[0].text == "Runtime-native question?"
+
+    persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_questions_markdown=(
+            "# Questions\n\n## Questions\n\n"
+            "- `Q2` `[blocking]` Need repository URL?\n"
+        ),
+    )
+    file_routing = route_questions_with_file_fallback(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        runtime_detection=ClaudeCodeQuestionDetection(
+            question_events=(),
+            pause_detected=False,
+        ),
+    )
+    assert file_routing.used_file_fallback is True
+    assert file_routing.question_events[0].question_id == "Q2"
+
+    blocked_resume = prepare_resume_after_answers(
+        configured_command="claude",
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        run_id="run-001",
+    )
+    assert blocked_resume.can_resume is False
+    assert blocked_resume.unresolved_blocking_question_ids == ("Q2",)
+
+    persist_answers_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_answers_markdown=(
+            "# Answers\n\n## Answers\n\n"
+            "- `Q2` `[resolved]` Repository is github.com/acme/app.\n"
+        ),
+    )
+    unblocked_resume = prepare_resume_after_answers(
+        configured_command="claude",
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        run_id="run-001",
+    )
+    assert unblocked_resume.can_resume is True
+
+
 def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: Path) -> None:
     attempt_path = tmp_path / "attempt-0001"
     run_result = ClaudeCodeRunResult(
