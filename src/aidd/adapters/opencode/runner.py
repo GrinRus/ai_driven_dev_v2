@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import shlex
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +31,13 @@ class OpenCodeCommandContext:
             raise ValueError("Stage context requires at least one prompt-pack path.")
         if any(str(path).strip() == "" for path in self.prompt_pack_paths):
             raise ValueError("Stage context prompt-pack paths must not be empty.")
+
+
+@dataclass(frozen=True, slots=True)
+class OpenCodeSubprocessSpec:
+    command: tuple[str, ...]
+    cwd: Path
+    env: dict[str, str]
 
 
 def _resolve_stage_brief_path_for_execution(
@@ -116,4 +125,60 @@ def command_preview(
             context=context,
             repository_root=repository_root,
         )
+    )
+
+
+def build_execution_environment(
+    *,
+    context: OpenCodeCommandContext,
+    base_env: Mapping[str, str] | None = None,
+    repository_root: Path | None = None,
+) -> dict[str, str]:
+    resolved_workspace_root = context.workspace_root.resolve(strict=False)
+    resolved_stage_brief_path = _resolve_stage_brief_path_for_execution(
+        stage_brief_path=context.stage_brief_path,
+        workspace_root=resolved_workspace_root,
+    )
+    resolved_prompt_pack_paths = _resolve_prompt_pack_paths_for_execution(
+        prompt_pack_paths=context.prompt_pack_paths,
+        repository_root=repository_root,
+    )
+
+    env = dict(base_env or {})
+    env.update(
+        {
+            "AIDD_WORKSPACE_ROOT": resolved_workspace_root.as_posix(),
+            "AIDD_STAGE": context.stage,
+            "AIDD_WORK_ITEM": context.work_item,
+            "AIDD_RUN_ID": context.run_id,
+            "AIDD_STAGE_BRIEF_PATH": resolved_stage_brief_path.as_posix(),
+            "AIDD_PROMPT_PACK_PATHS": os.pathsep.join(
+                path.as_posix() for path in resolved_prompt_pack_paths
+            ),
+            "AIDD_RUNTIME_ID": "opencode",
+        }
+    )
+    return env
+
+
+def build_subprocess_spec(
+    *,
+    configured_command: str,
+    context: OpenCodeCommandContext,
+    base_env: Mapping[str, str] | None = None,
+    repository_root: Path | None = None,
+) -> OpenCodeSubprocessSpec:
+    resolved_workspace_root = context.workspace_root.resolve(strict=False)
+    return OpenCodeSubprocessSpec(
+        command=assemble_command(
+            configured_command=configured_command,
+            context=context,
+            repository_root=repository_root,
+        ),
+        cwd=resolved_workspace_root,
+        env=build_execution_environment(
+            context=context,
+            base_env=base_env,
+            repository_root=repository_root,
+        ),
     )

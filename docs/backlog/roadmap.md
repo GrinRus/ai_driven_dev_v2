@@ -2023,7 +2023,7 @@ Dependencies:
 Local tasks:
 
 - `W7-E2-S2-T1` (done) Implement OpenCode command assembly from stage inputs.
-- `W7-E2-S2-T2` Implement workspace and environment setup for OpenCode runs.
+- `W7-E2-S2-T2` (done) Implement workspace and environment setup for OpenCode runs.
 - `W7-E2-S2-T3` Implement raw log streaming and `runtime.log` persistence.
 - `W7-E2-S2-T4` Implement exit classification, timeout handling, and cancellation handling.
 - `W7-E2-S2-T5` Add execution tests for success, failure, timeout, and cancellation paths.
