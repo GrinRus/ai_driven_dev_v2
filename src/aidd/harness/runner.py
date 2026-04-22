@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,8 +19,19 @@ class HarnessVerificationError(RuntimeError):
 
 
 @dataclass(frozen=True, slots=True)
+class HarnessCommandTranscript:
+    command: str
+    exit_code: int
+    stdout_text: str
+    stderr_text: str
+    duration_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
 class HarnessSetupResult:
     executed_commands: tuple[str, ...]
+    command_transcripts: tuple[HarnessCommandTranscript, ...]
+    duration_seconds: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,12 +42,16 @@ class HarnessAiddRunResult:
     exit_code: int
     stdout_text: str
     stderr_text: str
+    duration_seconds: float
+    command_transcript: HarnessCommandTranscript
 
 
 @dataclass(frozen=True, slots=True)
 class HarnessVerificationResult:
     executed_commands: tuple[str, ...]
     aidd_exit_code: int
+    command_transcripts: tuple[HarnessCommandTranscript, ...]
+    duration_seconds: float
 
 
 def _validate_working_copy_path(working_copy_path: Path) -> None:
@@ -52,9 +68,10 @@ def _run_shell_commands(
     command_env: Mapping[str, str],
     error_label: str,
     error_type: type[RuntimeError],
-) -> tuple[str, ...]:
-    executed_commands: list[str] = []
+) -> tuple[HarnessCommandTranscript, ...]:
+    command_transcripts: list[HarnessCommandTranscript] = []
     for command in commands:
+        start = time.monotonic()
         completed = subprocess.run(
             ["/bin/sh", "-lc", command],
             cwd=working_copy_path,
@@ -63,14 +80,22 @@ def _run_shell_commands(
             text=True,
             check=False,
         )
+        duration_seconds = time.monotonic() - start
+        transcript = HarnessCommandTranscript(
+            command=command,
+            exit_code=completed.returncode,
+            stdout_text=completed.stdout,
+            stderr_text=completed.stderr,
+            duration_seconds=duration_seconds,
+        )
         if completed.returncode != 0:
             stderr = completed.stderr.strip() or completed.stdout.strip() or "no command output"
             raise error_type(
                 f"{error_label} command failed with non-zero exit "
                 f"({completed.returncode}): {command}\n{stderr}"
             )
-        executed_commands.append(command)
-    return tuple(executed_commands)
+        command_transcripts.append(transcript)
+    return tuple(command_transcripts)
 
 
 def run_setup_steps(
@@ -85,14 +110,17 @@ def run_setup_steps(
     if environment is not None:
         command_env.update(environment)
 
+    command_transcripts = _run_shell_commands(
+        commands=scenario.setup.commands,
+        working_copy_path=working_copy_path,
+        command_env=command_env,
+        error_label="Setup",
+        error_type=HarnessSetupError,
+    )
     return HarnessSetupResult(
-        executed_commands=_run_shell_commands(
-            commands=scenario.setup.commands,
-            working_copy_path=working_copy_path,
-            command_env=command_env,
-            error_label="Setup",
-            error_type=HarnessSetupError,
-        )
+        executed_commands=tuple(transcript.command for transcript in command_transcripts),
+        command_transcripts=command_transcripts,
+        duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
     )
 
 
@@ -129,6 +157,7 @@ def invoke_aidd_run(
     if environment is not None:
         command_env.update(environment)
 
+    start = time.monotonic()
     completed = subprocess.run(
         command,
         cwd=working_copy_path,
@@ -137,6 +166,14 @@ def invoke_aidd_run(
         text=True,
         check=False,
     )
+    duration_seconds = time.monotonic() - start
+    command_transcript = HarnessCommandTranscript(
+        command=" ".join(command),
+        exit_code=completed.returncode,
+        stdout_text=completed.stdout,
+        stderr_text=completed.stderr,
+        duration_seconds=duration_seconds,
+    )
     return HarnessAiddRunResult(
         command=command,
         runtime_id=runtime_id,
@@ -144,6 +181,8 @@ def invoke_aidd_run(
         exit_code=completed.returncode,
         stdout_text=completed.stdout,
         stderr_text=completed.stderr,
+        duration_seconds=duration_seconds,
+        command_transcript=command_transcript,
     )
 
 
@@ -161,13 +200,16 @@ def run_verification_steps(
     if environment is not None:
         command_env.update(environment)
 
+    command_transcripts = _run_shell_commands(
+        commands=scenario.verify.commands,
+        working_copy_path=working_copy_path,
+        command_env=command_env,
+        error_label="Verification",
+        error_type=HarnessVerificationError,
+    )
     return HarnessVerificationResult(
-        executed_commands=_run_shell_commands(
-            commands=scenario.verify.commands,
-            working_copy_path=working_copy_path,
-            command_env=command_env,
-            error_label="Verification",
-            error_type=HarnessVerificationError,
-        ),
+        executed_commands=tuple(transcript.command for transcript in command_transcripts),
         aidd_exit_code=aidd_run_result.exit_code,
+        command_transcripts=command_transcripts,
+        duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
     )

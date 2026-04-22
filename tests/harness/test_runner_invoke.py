@@ -82,6 +82,9 @@ def test_invoke_aidd_run_executes_with_runtime_and_work_item(tmp_path: Path) -> 
     assert result.exit_code == 0
     assert "stdout from fake aidd" in result.stdout_text
     assert "stderr from fake aidd" in result.stderr_text
+    assert result.duration_seconds >= 0
+    assert result.command_transcript.command == " ".join(result.command)
+    assert result.command_transcript.exit_code == 0
     assert (working_copy_path / "invoked-args.txt").read_text(encoding="utf-8").splitlines() == [
         "run",
         "--work-item",
@@ -120,6 +123,7 @@ def test_invoke_aidd_run_preserves_non_zero_exit(tmp_path: Path) -> None:
     assert result.exit_code == 17
     assert "stdout from fake aidd" in result.stdout_text
     assert "stderr from fake aidd" in result.stderr_text
+    assert result.command_transcript.exit_code == 17
 
 
 def test_invoke_aidd_run_rejects_unsupported_runtime(tmp_path: Path) -> None:

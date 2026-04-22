@@ -53,6 +53,10 @@ def test_run_setup_steps_executes_commands_in_order(tmp_path: Path) -> None:
     )
 
     assert result.executed_commands == scenario.setup.commands
+    assert len(result.command_transcripts) == 2
+    assert result.command_transcripts[0].command == scenario.setup.commands[0]
+    assert result.command_transcripts[0].exit_code == 0
+    assert result.duration_seconds >= 0
     assert (working_copy_path / "setup.log").read_text(encoding="utf-8") == "first\nsecond\n"
 
 

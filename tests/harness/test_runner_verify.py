@@ -6,6 +6,7 @@ import pytest
 
 from aidd.harness.runner import (
     HarnessAiddRunResult,
+    HarnessCommandTranscript,
     HarnessVerificationError,
     run_verification_steps,
 )
@@ -49,6 +50,14 @@ def _build_aidd_run_result(*, exit_code: int) -> HarnessAiddRunResult:
         exit_code=exit_code,
         stdout_text="stdout",
         stderr_text="stderr",
+        duration_seconds=0.01,
+        command_transcript=HarnessCommandTranscript(
+            command="uv run aidd run --work-item WI-001 --runtime generic-cli",
+            exit_code=exit_code,
+            stdout_text="stdout",
+            stderr_text="stderr",
+            duration_seconds=0.01,
+        ),
     )
 
 
@@ -70,6 +79,10 @@ def test_run_verification_steps_executes_commands_after_aidd_run(tmp_path: Path)
 
     assert result.executed_commands == scenario.verify.commands
     assert result.aidd_exit_code == 0
+    assert len(result.command_transcripts) == 2
+    assert result.command_transcripts[0].command == scenario.verify.commands[0]
+    assert result.command_transcripts[0].exit_code == 0
+    assert result.duration_seconds >= 0
     assert (working_copy_path / "verify-exit-code.txt").read_text(encoding="utf-8") == "0\n"
     assert (working_copy_path / "verify.log").read_text(encoding="utf-8") == "verified\n"
 
