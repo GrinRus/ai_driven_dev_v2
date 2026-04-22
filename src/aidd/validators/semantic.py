@@ -73,6 +73,12 @@ _IMPLEMENT_NOOP_JUSTIFICATION_PATTERN = re.compile(
     r"\b(no-op|already (satisfied|implemented)|blocked|external constraint|out of scope)\b",
     flags=re.IGNORECASE,
 )
+_REVIEW_FINDING_ID_PATTERN = re.compile(r"\bRV-\d+\b", flags=re.IGNORECASE)
+_REVIEW_DISPOSITION_PATTERN = re.compile(
+    r"\b(must-fix|follow-up|accepted-risk|invalid)\b",
+    flags=re.IGNORECASE,
+)
+_REVIEW_ACCEPTANCE_CRITERIA_PATTERN = re.compile(r"\bAC-\d+\b", flags=re.IGNORECASE)
 
 
 def _extract_section_lines(markdown_text: str, heading: str) -> list[str]:
@@ -614,6 +620,206 @@ def validate_semantic_outputs(
                                 location=verification_location,
                             )
                         )
+
+        if stage == "review" and output_path.name == "review-report.md":
+            findings_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Findings",),
+            )
+            approval_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Approval status", "Verdict"),
+            )
+            required_changes_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Required changes", "Required follow-up"),
+            )
+
+            findings_content = ""
+            findings_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if findings_match is not None:
+                findings_index, findings_heading = findings_match
+                findings_content = _section_content_for_heading(
+                    heading_index=findings_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                findings_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=findings_heading.line_number,
+                )
+
+            findings_items = _extract_bullet_items(findings_content)
+            if not findings_items:
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Section `Findings` must include bullet entries with stable ids, "
+                            "severity, disposition, and rationale."
+                        ),
+                        severity="medium",
+                        location=findings_location,
+                    )
+                )
+
+            unresolved_must_fix_count = 0
+            for finding_item in findings_items:
+                if _REVIEW_FINDING_ID_PATTERN.search(finding_item) is None:
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_SECTION_CODE,
+                            message=(
+                                "Each finding must include a stable id "
+                                "(for example `RV-1`)."
+                            ),
+                            severity="medium",
+                            location=findings_location,
+                        )
+                    )
+
+                if _REVIEW_SPEC_SEVERITY_PATTERN.search(finding_item) is None:
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_SECTION_CODE,
+                            message=(
+                                "Each finding must include explicit severity "
+                                "(critical/high/medium/low)."
+                            ),
+                            severity="medium",
+                            location=findings_location,
+                        )
+                    )
+
+                if _REVIEW_DISPOSITION_PATTERN.search(finding_item) is None:
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_SECTION_CODE,
+                            message=(
+                                "Each finding must include explicit disposition "
+                                "(`must-fix`, `follow-up`, `accepted-risk`, or `invalid`)."
+                            ),
+                            severity="medium",
+                            location=findings_location,
+                        )
+                    )
+
+                if _REVIEW_SPEC_RATIONALE_PATTERN.search(finding_item) is None:
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_SECTION_CODE,
+                            message=(
+                                "Each finding must include rationale "
+                                "(for example `Rationale:` or `because ...`)."
+                            ),
+                            severity="medium",
+                            location=findings_location,
+                        )
+                    )
+
+                has_implementation_evidence = _IMPLEMENT_FILE_ENTRY_PATTERN.search(
+                    finding_item
+                ) is not None
+                has_acceptance_reference = (
+                    _REVIEW_ACCEPTANCE_CRITERIA_PATTERN.search(finding_item) is not None
+                )
+                if not has_implementation_evidence and not has_acceptance_reference:
+                    findings.append(
+                        ValidationFinding(
+                            code=UNSUPPORTED_CLAIM_CODE,
+                            message=(
+                                "Finding is missing evidence reference to implementation output "
+                                "or acceptance criteria."
+                            ),
+                            severity="high",
+                            location=findings_location,
+                        )
+                    )
+
+                if re.search(r"\bmust-fix\b", finding_item, flags=re.IGNORECASE):
+                    unresolved_must_fix_count += 1
+
+            approval_content = ""
+            approval_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if approval_match is not None:
+                approval_index, approval_heading = approval_match
+                approval_content = _section_content_for_heading(
+                    heading_index=approval_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                approval_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=approval_heading.line_number,
+                )
+
+            approval_status = _extract_review_spec_decision(approval_content)
+            if approval_status is None:
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Section `Approval status` must declare one explicit state: "
+                            "`approved`, `approved-with-conditions`, or `rejected`."
+                        ),
+                        severity="medium",
+                        location=approval_location,
+                    )
+                )
+            elif approval_status == "approved" and unresolved_must_fix_count > 0:
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Approval status cannot be `approved` while unresolved "
+                            "`must-fix` findings remain."
+                        ),
+                        severity="high",
+                        location=approval_location,
+                    )
+                )
+
+            required_changes_content = ""
+            required_changes_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if required_changes_match is not None:
+                required_changes_index, required_changes_heading = required_changes_match
+                required_changes_content = _section_content_for_heading(
+                    heading_index=required_changes_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                required_changes_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=required_changes_heading.line_number,
+                )
+
+            required_changes_items = _extract_bullet_items(required_changes_content)
+            has_required_change_entries = any(
+                item.lower() != "none" for item in required_changes_items
+            )
+            if (
+                approval_status in {"approved-with-conditions", "rejected"}
+                and not has_required_change_entries
+            ):
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Non-approved outcomes must include concrete required-change entries."
+                        ),
+                        severity="medium",
+                        location=required_changes_location,
+                    )
+                )
 
         for section in required_sections:
             matches = headings_by_title.get(_normalized_heading(section), [])
