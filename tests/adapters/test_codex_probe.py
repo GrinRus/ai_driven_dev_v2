@@ -91,3 +91,26 @@ def test_probe_handles_nonzero_version_command(tmp_path: Path) -> None:
     assert report.supports_working_directory_control is True
     assert report.supports_env_injection is True
     assert report.supports_subagents is True
+
+
+def test_probe_handles_malformed_version_output(tmp_path: Path) -> None:
+    fake_cli = tmp_path / "fake-codex-cli-malformed-version"
+    fake_cli.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"--version\" ]; then\n"
+        "  echo \"???\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "if [ \"$1\" = \"--help\" ]; then\n"
+        "  echo \"--non-interactive\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "echo \"ok\"\n",
+        encoding="utf-8",
+    )
+    fake_cli.chmod(0o755)
+
+    report = probe(str(fake_cli))
+    assert report.available is True
+    assert report.version_text == "???"
+    assert report.supports_non_interactive_mode is True
