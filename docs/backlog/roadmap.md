@@ -1800,7 +1800,7 @@ Exit evidence:
 ### Epic W6-E3 — assurance stages (`planned`)
 Linked stories: `US-03`, `US-04`, `US-07`
 
-#### Slice W6-E3-S1 — `review` stage pack (`planned`)
+#### Slice W6-E3-S1 — `review` stage pack (`done`)
 Goal: make `review` runnable with severity-aware findings and approval states.
 
 Primary outputs:
@@ -1826,11 +1826,12 @@ Local tasks:
 - `W6-E3-S1-T3` (done) Implement `review` semantic validators.
 - `W6-E3-S1-T4` (done) Add valid and invalid `review` fixtures.
 - `W6-E3-S1-T5` (done) Add unit tests for `review` validation.
-- `W6-E3-S1-T6` Run one smoke execution of `review` and archive the artifacts.
+- `W6-E3-S1-T6` (done) Run one smoke execution of `review` and archive the artifacts.
 
 Exit evidence:
 
 - `review` findings are durable, severity-labeled, and validator-backed.
+- smoke bundle archived at `.aidd/reports/evals/eval-stage-review-smoke-20260422T114904Z`.
 
 #### Slice W6-E3-S2 — `qa` stage pack (`planned`)
 Goal: make `qa` runnable with eval-ready verdict artifacts.
