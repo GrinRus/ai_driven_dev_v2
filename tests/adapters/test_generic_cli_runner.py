@@ -194,6 +194,7 @@ def test_run_subprocess_with_streaming_emits_early_stdout_before_process_end(
     assert callback_times
     assert callback_times[0] - started_at < 0.15
     assert finished_at - callback_times[0] > 0.05
+    assert finished_at - started_at < 1.0
 
 
 def test_persist_attempt_runtime_artifacts_writes_log_and_exit_metadata(tmp_path: Path) -> None:
@@ -309,12 +310,15 @@ def test_run_subprocess_with_streaming_classifies_cancellation(tmp_path: Path) -
         if "ready" in chunk:
             cancel_event.set()
 
+    started_at = time.monotonic()
     result = run_subprocess_with_streaming(
         spec=spec,
         on_stdout=_on_stdout,
         cancel_requested=cancel_event.is_set,
     )
+    finished_at = time.monotonic()
 
     assert result.exit_classification is GenericCliExitClassification.CANCELLED
     assert "ready\n" in result.runtime_log_text
     assert "never-reached\n" not in result.runtime_log_text
+    assert finished_at - started_at < 3.0

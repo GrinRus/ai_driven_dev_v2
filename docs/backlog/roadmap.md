@@ -1139,7 +1139,7 @@ Local tasks:
 
 - `W4-E3-S2-T1` (done) Add a CLI flag that enables explicit live-log follow behavior for stage runs.
 - `W4-E3-S2-T2` (done) Prefix streamed runtime lines with adapter and stage context when multiple streams are possible.
-- `W4-E3-S2-T3` Add tests for follow-mode formatting and graceful shutdown on process end or cancellation.
+- `W4-E3-S2-T3` (done) Add tests for follow-mode formatting and graceful shutdown on process end or cancellation.
 
 Exit evidence:
 

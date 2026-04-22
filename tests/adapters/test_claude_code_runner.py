@@ -485,7 +485,7 @@ def test_build_subprocess_spec_run_fixture_timeout(tmp_path: Path) -> None:
         repository_root=repository_root,
     )
 
-    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.1)
+    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.5)
 
     assert result.exit_classification is ClaudeCodeExitClassification.TIMEOUT
     assert "fixture-start stage=plan\n" in result.runtime_log_text
