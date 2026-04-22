@@ -1620,7 +1620,7 @@ Exit evidence:
 - the `idea` stage is more than a contract file; it is runnable, validated, and repairable.
 - smoke bundle archived at `.aidd/reports/evals/eval-stage-idea-smoke-20260422T100325Z`.
 
-#### Slice W6-E1-S2 — `research` stage pack (`planned`)
+#### Slice W6-E1-S2 — `research` stage pack (`done`)
 Goal: make the `research` stage runnable with evidence-aware validation.
 
 Primary outputs:
@@ -1648,11 +1648,12 @@ Local tasks:
 - `W6-E1-S2-T3` (done) Implement `research`-specific semantic validators.
 - `W6-E1-S2-T4` (done) Add valid and invalid `research` fixtures, including missing-source and unresolved-question cases.
 - `W6-E1-S2-T5` (done) Add unit tests that execute the `research` validator against the fixtures.
-- `W6-E1-S2-T6` Run one smoke execution of `research` through an adapter and archive the output bundle.
+- `W6-E1-S2-T6` (done) Run one smoke execution of `research` through an adapter and archive the output bundle.
 
 Exit evidence:
 
 - `research` can produce auditable outputs and fail predictably when evidence is weak.
+- smoke bundle archived at `.aidd/reports/evals/eval-stage-research-smoke-20260422T101720Z`.
 
 #### Slice W6-E1-S3 — `plan` stage pack (`planned`)
 Goal: make the `plan` stage runnable with planning-specific validation and harness coverage.
