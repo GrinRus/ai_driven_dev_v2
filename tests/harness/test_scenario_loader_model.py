@@ -21,6 +21,18 @@ def test_live_scenario_exposes_repo_steps_and_run_config() -> None:
         "uv sync --group tests || uv sync",
         "uv run pytest -q || pytest -q",
     )
+    assert scenario.raw["setup"]["rationale"] == [
+        "Install Typer dependencies and test extras before the smoke run.",
+        "Confirm a clean baseline test pass before AIDD applies changes.",
+    ]
+    assert scenario.raw["aidd_invocation"]["command"] == ["uv", "run", "aidd", "run"]
+    assert scenario.raw["aidd_invocation"]["work_item"] == "WI-LIVE-TYPER-SMOKE"
+    assert scenario.raw["aidd_invocation"]["work_item_flag"] == "--work-item"
+    assert scenario.raw["aidd_invocation"]["runtime_flag"] == "--runtime"
+    assert scenario.raw["aidd_invocation"]["expected_stage_scope"] == {
+        "start": "plan",
+        "end": "qa",
+    }
     assert scenario.verify.commands == ("uv run pytest -q || pytest -q",)
     assert scenario.run.stage_start == "plan"
     assert scenario.run.stage_end == "qa"

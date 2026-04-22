@@ -17,6 +17,21 @@ setup:
   commands:
   - uv sync --group tests || uv sync
   - uv run pytest -q || pytest -q
+  rationale:
+  - Install Typer dependencies and test extras before the smoke run.
+  - Confirm a clean baseline test pass before AIDD applies changes.
+aidd_invocation:
+  command:
+  - uv
+  - run
+  - aidd
+  - run
+  work_item: WI-LIVE-TYPER-SMOKE
+  work_item_flag: --work-item
+  runtime_flag: --runtime
+  expected_stage_scope:
+    start: plan
+    end: qa
 verify:
   commands:
   - uv run pytest -q || pytest -q

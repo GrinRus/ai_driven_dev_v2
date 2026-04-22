@@ -1425,7 +1425,7 @@ Dependencies:
 Local tasks:
 
 - `W5-E3-S1-T1` (done) Pin the Typer repository revision and record the target scenario objective.
-- `W5-E3-S1-T2` Define setup steps and AIDD invocation parameters for the Typer smoke scenario.
+- `W5-E3-S1-T2` (done) Define setup steps and AIDD invocation parameters for the Typer smoke scenario.
 - `W5-E3-S1-T3` Define deterministic verification steps and expected pass conditions for the scenario.
 - `W5-E3-S1-T4` Run the scenario once end to end and capture the first reference artifact bundle.
 
