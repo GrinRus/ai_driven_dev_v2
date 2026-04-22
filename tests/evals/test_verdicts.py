@@ -262,3 +262,60 @@ def test_build_scenario_verdict_from_harness_outcome_for_terminal_states(
     assert f"- Status: `{expected_status}`" in markdown
     assert "First decisive signal captured." in markdown
     assert "Verification summary captured." in markdown
+
+
+def test_build_scenario_verdict_integration_from_qa_success_bundle(tmp_path: Path) -> None:
+    qa_bundle_root = Path("contracts/examples/qa/success")
+    qa_report_path = qa_bundle_root / "qa-report.md"
+    stage_result_path = qa_bundle_root / "stage-result.md"
+    validator_report_path = qa_bundle_root / "validator-report.md"
+
+    qa_report_text = qa_report_path.read_text(encoding="utf-8")
+    stage_result_text = stage_result_path.read_text(encoding="utf-8")
+    validator_report_text = validator_report_path.read_text(encoding="utf-8")
+
+    assert "`ready-with-risks`" in qa_report_text
+    assert "- `succeeded`" in stage_result_text
+    assert "Verdict: `pass`" in validator_report_text
+
+    verdict = build_scenario_verdict_from_harness_outcome(
+        scenario_id="AIDD-STAGEPACK-QA-VERDICT-001",
+        run_id="eval-stage-qa-verdict-integration",
+        runtime_id="generic-cli",
+        outcome=HarnessOutcome(
+            aidd_exit_code=0,
+            verification_failed=False,
+            blocked_by_questions=False,
+            infrastructure_failure=False,
+        ),
+        summary=(
+            "QA integration scenario produced evidence-backed "
+            "ready-with-risks release output."
+        ),
+        created_at_utc="2026-04-22T12:00:00Z",
+        artifact_links=(
+            qa_report_path.as_posix(),
+            stage_result_path.as_posix(),
+            validator_report_path.as_posix(),
+        ),
+        first_failure_note=None,
+        verification_summary=(
+            "QA status succeeded, validator verdict pass, and release conditions captured."
+        ),
+    )
+
+    verdict_path = (
+        tmp_path
+        / "reports"
+        / "evals"
+        / "eval-stage-qa-verdict-integration"
+        / "verdict.md"
+    )
+    write_scenario_verdict_markdown(path=verdict_path, verdict=verdict)
+    verdict_text = verdict_path.read_text(encoding="utf-8")
+
+    assert "- Status: `pass`" in verdict_text
+    assert f"- Artifact: `{qa_report_path.as_posix()}`" in verdict_text
+    assert f"- Artifact: `{stage_result_path.as_posix()}`" in verdict_text
+    assert f"- Artifact: `{validator_report_path.as_posix()}`" in verdict_text
+    assert "ready-with-risks release output" in verdict_text

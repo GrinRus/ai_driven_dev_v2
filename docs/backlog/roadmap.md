@@ -1833,7 +1833,7 @@ Exit evidence:
 - `review` findings are durable, severity-labeled, and validator-backed.
 - smoke bundle archived at `.aidd/reports/evals/eval-stage-review-smoke-20260422T114904Z`.
 
-#### Slice W6-E3-S2 — `qa` stage pack (`planned`)
+#### Slice W6-E3-S2 — `qa` stage pack (`done`)
 Goal: make `qa` runnable with eval-ready verdict artifacts.
 
 Primary outputs:
@@ -1862,11 +1862,12 @@ Local tasks:
 - `W6-E3-S2-T3` (done) Implement `qa` semantic validators.
 - `W6-E3-S2-T4` (done) Add valid and invalid `qa` fixtures.
 - `W6-E3-S2-T5` (done) Add unit tests for `qa` validation.
-- `W6-E3-S2-T6` Add one integration scenario that converts `qa` output into an eval verdict artifact.
+- `W6-E3-S2-T6` (done) Add one integration scenario that converts `qa` output into an eval verdict artifact.
 
 Exit evidence:
 
 - `qa` can feed directly into harness verdict writing with auditable evidence links.
+- integration scenario added at `tests/evals/test_verdicts.py` (`test_build_scenario_verdict_integration_from_qa_success_bundle`).
 
 ---
 
