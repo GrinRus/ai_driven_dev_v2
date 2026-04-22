@@ -2,9 +2,12 @@ id: AIDD-LIVE-007
 repo:
   url: https://github.com/honojs/hono
   default_branch: main
+  revision: cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba
 issue:
   id: 4708
   title: non-Error throw handling
+objective: Keep Hono smoke lane deterministic by targeting the non-Error throw
+  handling defect with bounded patch scope.
 task: Ensure thrown non-Error values from middleware still flow through onError instead
   of causing an unhandled rejection.
 stage_scope:

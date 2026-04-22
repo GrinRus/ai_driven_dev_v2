@@ -157,6 +157,20 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
     )
 
 
+def test_hono_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
+    scenario = load_scenario(Path("harness/scenarios/live/hono-non-error-throw-handling.yaml"))
+
+    assert scenario.scenario_id == "AIDD-LIVE-007"
+    assert scenario.repo.url == "https://github.com/honojs/hono"
+    assert scenario.repo.default_branch == "main"
+    assert scenario.repo.revision == "cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba"
+    assert (
+        scenario.raw["objective"]
+        == "Keep Hono smoke lane deterministic by targeting the non-Error throw "
+        "handling defect with bounded patch scope."
+    )
+
+
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:
     scenario = load_scenario(
         Path("harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml")
