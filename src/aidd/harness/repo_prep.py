@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -68,6 +69,30 @@ def _git_stdout(args: list[str], *, cwd: Path) -> str:
     return completed.stdout.strip()
 
 
+def _remove_tree(path: Path) -> None:
+    try:
+        shutil.rmtree(path)
+    except OSError as exc:
+        raise RepoPreparationError(
+            f"Failed to remove stale path '{path.as_posix()}': {exc}"
+        ) from exc
+
+
+def _cleanup_transient_git_files(repo_path: Path) -> None:
+    git_dir = repo_path / ".git"
+    if not git_dir.exists():
+        return
+    for lock_name in ("index.lock", "HEAD.lock", "packed-refs.lock", "shallow.lock"):
+        lock_path = git_dir / lock_name
+        if lock_path.exists():
+            try:
+                lock_path.unlink()
+            except OSError as exc:
+                raise RepoPreparationError(
+                    f"Failed to remove transient git lock '{lock_path.as_posix()}': {exc}"
+                ) from exc
+
+
 def _pin_repository_revision(*, repo_path: Path, scenario: Scenario) -> None:
     target_revision = scenario.repo.revision
     if target_revision:
@@ -104,16 +129,16 @@ def prepare_scenario_repository(*, cache_root: Path, scenario: Scenario) -> Prep
     repo_path = repo_cache_root / _repo_slug(scenario.repo.url)
     if repo_path.exists():
         if not (repo_path / ".git").exists():
-            raise RepoPreparationError(
-                f"Repository cache path exists but is not a git repository: {repo_path.as_posix()}"
+            _remove_tree(repo_path)
+        else:
+            _cleanup_transient_git_files(repo_path)
+            _run_git(["fetch", "--prune", "origin"], cwd=repo_path)
+            _pin_repository_revision(repo_path=repo_path, scenario=scenario)
+            return PreparedRepository(
+                repo_path=repo_path,
+                action="fetched",
+                resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=repo_path),
             )
-        _run_git(["fetch", "--prune", "origin"], cwd=repo_path)
-        _pin_repository_revision(repo_path=repo_path, scenario=scenario)
-        return PreparedRepository(
-            repo_path=repo_path,
-            action="fetched",
-            resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=repo_path),
-        )
 
     _run_git(["clone", "--origin", "origin", scenario.repo.url, repo_path.as_posix()])
     _pin_repository_revision(repo_path=repo_path, scenario=scenario)
@@ -137,11 +162,11 @@ def prepare_working_copy(
     action = "reused"
     if working_copy_path.exists():
         if not (working_copy_path / ".git").exists():
-            raise RepoPreparationError(
-                "Working copy path exists but is not a git repository: "
-                f"{working_copy_path.as_posix()}"
-            )
+            _remove_tree(working_copy_path)
+            action = "cloned"
     else:
+        action = "cloned"
+    if action == "cloned":
         _run_git(
             [
                 "clone",
@@ -151,8 +176,8 @@ def prepare_working_copy(
                 working_copy_path.as_posix(),
             ]
         )
-        action = "cloned"
 
+    _cleanup_transient_git_files(working_copy_path)
     _run_git(
         ["checkout", "--detach", "--force", prepared_repository.resolved_revision],
         cwd=working_copy_path,

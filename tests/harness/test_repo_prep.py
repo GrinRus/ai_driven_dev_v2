@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -201,3 +202,50 @@ def test_prepare_working_copy_resets_dirty_state_between_invocations(tmp_path: P
     assert readme_path.read_text(encoding="utf-8") == "init\n"
     assert not (second.working_copy_path / "TEMP.txt").exists()
     assert _run(["git", "status", "--porcelain"], cwd=second.working_copy_path) == ""
+
+
+def test_prepare_scenario_repository_replaces_stale_non_git_cache_path(
+    tmp_path: Path,
+) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+
+    first = prepare_scenario_repository(cache_root=tmp_path / "cache", scenario=scenario)
+    shutil.rmtree(first.repo_path / ".git")
+    (first.repo_path / "STALE.txt").write_text("stale\n", encoding="utf-8")
+
+    second = prepare_scenario_repository(cache_root=tmp_path / "cache", scenario=scenario)
+
+    assert second.action == "cloned"
+    assert second.repo_path == first.repo_path
+    assert (second.repo_path / ".git").exists()
+    assert not (second.repo_path / "STALE.txt").exists()
+
+
+def test_prepare_working_copy_removes_transient_git_lock_file(tmp_path: Path) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+    prepared_repository = prepare_scenario_repository(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+    )
+    prepared_working_copy = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared_repository,
+    )
+
+    lock_path = prepared_working_copy.working_copy_path / ".git" / "index.lock"
+    lock_path.write_text("locked\n", encoding="utf-8")
+
+    refreshed_working_copy = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared_repository,
+    )
+
+    assert refreshed_working_copy.action == "reused"
+    assert refreshed_working_copy.working_copy_path == prepared_working_copy.working_copy_path
+    assert not lock_path.exists()
