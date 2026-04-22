@@ -1785,7 +1785,7 @@ Local tasks:
 - `W6-E2-S3-T3` Implement `implement` semantic validators.
 - `W6-E2-S3-T4` Add valid and invalid `implement` fixtures, including no-op and incomplete-verification cases.
 - `W6-E2-S3-T5` Add unit tests for `implement` validation.
-- `W6-E2-S3-T6` Add one harness or integration scenario that proves the `implement` repair loop end to end.
+- `W6-E2-S3-T6` (done) Add one harness or integration scenario that proves the `implement` repair loop end to end.
 
 Exit evidence:
 
