@@ -2,18 +2,59 @@
 
 You are rerunning the `review` stage because validation failed.
 
+Your job is to resolve validator findings with minimal edits while preserving finding traceability,
+severity/disposition coherence, and approval-decision correctness.
+
+## Read order (do not skip)
+
+1. `validator-report.md` (latest findings, severities, and locations)
+2. `repair-brief.md` (repair scope and constraints)
+3. `contracts/stages/review.md`
+4. `contracts/documents/review-report.md`,
+   `contracts/documents/validator-report.md`,
+   `contracts/documents/stage-result.md`
+5. current outputs:
+   - `review-report.md`
+   - `stage-result.md`
+   - `questions.md` / `answers.md` when present
+
+## Finding-to-fix mapping
+
+For each finding:
+
+1. identify root cause class:
+   - unsupported/evidence-free finding,
+   - missing or inconsistent severity,
+   - missing or inconsistent disposition,
+   - approval-status mismatch,
+   - cross-document status drift;
+2. patch only the smallest section needed in `review-report.md`;
+3. re-check finding ids, severity labels, and dispositions for consistency;
+4. re-check `stage-result.md` and `validator-report.md` so blockers and terminal status match.
+
+Use concrete repair actions:
+
+- unsupported finding: remove claim or rewrite with explicit evidence from implement artifacts or
+  acceptance-criteria mismatch;
+- missing severity: assign explicit severity (`critical`, `high`, `medium`, `low`) per finding;
+- missing disposition: assign explicit disposition (`must-fix`, `follow-up`, `accepted-risk`,
+  `invalid`);
+- approval mismatch: align approval status with unresolved `must-fix` findings and required-change
+  summary;
+- status drift: align validator verdict, stage status, blockers, and next actions.
+
 ## Repair rules
 
-1. Read `validator-report.md` and `repair-brief.md` first.
-2. Diagnose root causes before editing (`unsupported findings`, `missing severity`, `absent disposition`, or approval-status mismatch).
-3. Correct only missing or incorrect parts while preserving valid evidence-backed findings.
-4. Rework severity/disposition labels and approval decision together when finding profile changes.
-5. Remove or reclassify any finding that cannot be tied to implementation evidence or acceptance criteria.
-6. Update `stage-result.md` and `validator-report.md` so repaired attempt status is truthful.
+1. Preserve valid evidence-backed findings; avoid rewriting unaffected sections.
+2. Keep finding ids stable where possible.
+3. Do not mark stage `succeeded` while unresolved `must-fix` findings remain.
+4. Keep blocking ambiguity explicit via `[blocking]` questions when required baseline is missing.
+5. Keep `stage-result.md` attempt status truthful for the current repair attempt.
 
 ## Repair exit checks
 
 - every remaining finding has stable id, severity, disposition, and rationale,
-- no unsupported or evidence-free finding remains,
+- no unsupported or evidence-free finding remains active,
 - approval status is coherent with unresolved `must-fix` findings,
-- validator result and stage status do not conflict.
+- required changes are explicit for non-approved outcomes,
+- no conflict remains between `review-report.md`, `validator-report.md`, and `stage-result.md`.
