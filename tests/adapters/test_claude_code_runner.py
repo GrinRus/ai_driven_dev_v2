@@ -254,11 +254,31 @@ def test_resolve_exit_classification_prefers_stop_reason_over_exit_code() -> Non
     )
     cancelled_classification = _resolve_exit_classification(
         exit_code=7,
-        stop_reason=ClaudeCodeExitClassification.CANCELLED,
+        stop_reason=ClaudeCodeExitClassification.USER_CANCELLED,
     )
 
     assert timeout_classification is ClaudeCodeExitClassification.TIMEOUT
-    assert cancelled_classification is ClaudeCodeExitClassification.CANCELLED
+    assert cancelled_classification is ClaudeCodeExitClassification.USER_CANCELLED
+
+
+def test_resolve_exit_classification_maps_non_zero_exit_to_runtime_class() -> None:
+    classification = _resolve_exit_classification(exit_code=3, stop_reason=None)
+
+    assert classification is ClaudeCodeExitClassification.RUNTIME_NON_ZERO_EXIT
+
+
+def test_run_subprocess_with_streaming_classifies_adapter_failures(tmp_path: Path) -> None:
+    spec = ClaudeCodeSubprocessSpec(
+        command=("definitely-missing-aidd-claude-command",),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(spec=spec)
+
+    assert result.exit_classification is ClaudeCodeExitClassification.ADAPTER_FAILURE
+    assert result.exit_code == -1
+    assert "adapter-failure" in result.runtime_log_text
 
 
 def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> None:
@@ -280,6 +300,27 @@ def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> Non
     assert result.exit_classification is ClaudeCodeExitClassification.TIMEOUT
     assert "started\n" in result.runtime_log_text
     assert "finished\n" not in result.runtime_log_text
+
+
+def test_run_subprocess_with_streaming_classifies_runtime_non_zero_exit(tmp_path: Path) -> None:
+    script = (
+        "import sys\n"
+        "print('out-before-exit', flush=True)\n"
+        "print('err-before-exit', file=sys.stderr, flush=True)\n"
+        "raise SystemExit(3)\n"
+    )
+    spec = ClaudeCodeSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(spec=spec)
+
+    assert result.exit_code == 3
+    assert result.exit_classification is ClaudeCodeExitClassification.RUNTIME_NON_ZERO_EXIT
+    assert "out-before-exit\n" in result.stdout_text
+    assert "err-before-exit\n" in result.stderr_text
 
 
 def test_run_subprocess_with_streaming_classifies_cancellation(tmp_path: Path) -> None:
@@ -313,7 +354,7 @@ def test_run_subprocess_with_streaming_classifies_cancellation(tmp_path: Path) -
         cancel_requested=_request_cancel,
     )
 
-    assert result.exit_classification is ClaudeCodeExitClassification.CANCELLED
+    assert result.exit_classification is ClaudeCodeExitClassification.USER_CANCELLED
     assert "ready\n" in result.runtime_log_text
     assert "never-reached\n" not in result.runtime_log_text
 
@@ -470,7 +511,7 @@ def test_build_subprocess_spec_run_fixture_cancelled(tmp_path: Path) -> None:
         cancel_requested=_request_cancel,
     )
 
-    assert result.exit_classification is ClaudeCodeExitClassification.CANCELLED
+    assert result.exit_classification is ClaudeCodeExitClassification.USER_CANCELLED
     assert "fixture-start stage=plan\n" in result.runtime_log_text
     assert "fixture-end\n" not in result.runtime_log_text
 

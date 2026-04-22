@@ -96,9 +96,10 @@ class ClaudeCodeRuntimeArtifacts:
 
 class ClaudeCodeExitClassification(StrEnum):
     SUCCESS = "success"
-    NON_ZERO_EXIT = "non_zero_exit"
+    RUNTIME_NON_ZERO_EXIT = "runtime_non_zero_exit"
     TIMEOUT = "timeout"
-    CANCELLED = "cancelled"
+    USER_CANCELLED = "user_cancelled"
+    ADAPTER_FAILURE = "adapter_failure"
 
 
 StreamTarget = Literal["stdout", "stderr"]
@@ -272,7 +273,7 @@ def _resolve_exit_classification(
         return stop_reason
     if exit_code == 0:
         return ClaudeCodeExitClassification.SUCCESS
-    return ClaudeCodeExitClassification.NON_ZERO_EXIT
+    return ClaudeCodeExitClassification.RUNTIME_NON_ZERO_EXIT
 
 
 def _request_subprocess_stop(process: subprocess.Popen[str]) -> None:
@@ -322,15 +323,25 @@ def run_subprocess_with_streaming(
     if timeout_seconds is not None and timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be greater than zero when provided.")
 
-    process = subprocess.Popen(
-        spec.command,
-        cwd=spec.cwd,
-        env=spec.env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1,
-    )
+    try:
+        process = subprocess.Popen(
+            spec.command,
+            cwd=spec.cwd,
+            env=spec.env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+    except (FileNotFoundError, PermissionError, OSError) as exc:
+        message = f"[adapter-failure] {exc}\n"
+        return ClaudeCodeRunResult(
+            exit_code=-1,
+            stdout_text="",
+            stderr_text=message,
+            runtime_log_text=message,
+            exit_classification=ClaudeCodeExitClassification.ADAPTER_FAILURE,
+        )
 
     queue: Queue[tuple[StreamTarget, str | None]] = Queue()
     reader_threads = (
@@ -357,7 +368,7 @@ def run_subprocess_with_streaming(
 
     while True:
         if cancel_requested is not None and cancel_requested():
-            stop_reason = ClaudeCodeExitClassification.CANCELLED
+            stop_reason = ClaudeCodeExitClassification.USER_CANCELLED
             _request_subprocess_stop(process)
 
         if (
