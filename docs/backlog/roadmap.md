@@ -1482,7 +1482,7 @@ Dependencies:
 
 Local tasks:
 
-- `W5-E3-S3-T1` Pin the sqlite-utils repository revision and record the target scenario objective.
+- `W5-E3-S3-T1` (done) Pin the sqlite-utils repository revision and record the target scenario objective.
 - `W5-E3-S3-T2` Define setup steps and AIDD invocation parameters for the sqlite-utils smoke scenario.
 - `W5-E3-S3-T3` Define deterministic verification steps and expected pass conditions for the scenario.
 - `W5-E3-S3-T4` Run the scenario once end to end and capture the first reference artifact bundle.

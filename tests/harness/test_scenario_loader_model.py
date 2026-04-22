@@ -112,6 +112,22 @@ def test_httpx_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
     )
 
 
+def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
+    scenario = load_scenario(
+        Path("harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml")
+    )
+
+    assert scenario.scenario_id == "AIDD-LIVE-005"
+    assert scenario.repo.url == "https://github.com/simonw/sqlite-utils"
+    assert scenario.repo.default_branch == "main"
+    assert scenario.repo.revision == "8d74ffc93292c604d5827e2b44fffedca0c28c19"
+    assert (
+        scenario.raw["objective"]
+        == "Keep sqlite-utils smoke lane deterministic by targeting the header-only "
+        "detect-types crash with bounded patch scope."
+    )
+
+
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:
     scenario = load_scenario(
         Path("harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml")

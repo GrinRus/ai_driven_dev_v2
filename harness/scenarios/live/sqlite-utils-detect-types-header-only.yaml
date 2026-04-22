@@ -2,9 +2,12 @@ id: AIDD-LIVE-005
 repo:
   url: https://github.com/simonw/sqlite-utils
   default_branch: main
+  revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
 issue:
   id: 705
   title: header-only CSV bugfix
+objective: Keep sqlite-utils smoke lane deterministic by targeting the header-only
+  detect-types crash with bounded patch scope.
 task: Prevent a crash when --detect-types is used on a CSV file that contains only
   a header row. Add regression coverage.
 stage_scope:
