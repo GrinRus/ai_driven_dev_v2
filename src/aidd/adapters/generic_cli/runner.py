@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import shlex
-from collections.abc import Mapping
+import subprocess
+import threading
+from collections import deque
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from queue import Empty, Queue
+from typing import Literal, TextIO
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +34,16 @@ class GenericCliSubprocessSpec:
     command: tuple[str, ...]
     cwd: Path
     env: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
+class GenericCliRunResult:
+    exit_code: int
+    stdout_text: str
+    stderr_text: str
+
+
+StreamTarget = Literal["stdout", "stderr"]
 
 
 def assemble_command(
@@ -136,4 +151,87 @@ def build_subprocess_spec(
             context=resolved_context,
             base_env=base_env,
         ),
+    )
+
+
+def _stream_reader(
+    *,
+    target: StreamTarget,
+    pipe: TextIO | None,
+    queue: Queue[tuple[StreamTarget, str | None]],
+) -> None:
+    if pipe is None:
+        queue.put((target, None))
+        return
+
+    try:
+        for chunk in iter(pipe.readline, ""):
+            queue.put((target, chunk))
+    finally:
+        pipe.close()
+        queue.put((target, None))
+
+
+def run_subprocess_with_streaming(
+    *,
+    spec: GenericCliSubprocessSpec,
+    on_stdout: Callable[[str], None] | None = None,
+    on_stderr: Callable[[str], None] | None = None,
+) -> GenericCliRunResult:
+    process = subprocess.Popen(
+        spec.command,
+        cwd=spec.cwd,
+        env=spec.env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+
+    queue: Queue[tuple[StreamTarget, str | None]] = Queue()
+    reader_threads = (
+        threading.Thread(
+            target=_stream_reader,
+            kwargs={"target": "stdout", "pipe": process.stdout, "queue": queue},
+            daemon=True,
+        ),
+        threading.Thread(
+            target=_stream_reader,
+            kwargs={"target": "stderr", "pipe": process.stderr, "queue": queue},
+            daemon=True,
+        ),
+    )
+    for thread in reader_threads:
+        thread.start()
+
+    stdout_chunks: deque[str] = deque()
+    stderr_chunks: deque[str] = deque()
+    completed_readers = 0
+    while completed_readers < 2:
+        try:
+            target, chunk = queue.get(timeout=0.1)
+        except Empty:
+            continue
+
+        if chunk is None:
+            completed_readers += 1
+            continue
+
+        if target == "stdout":
+            stdout_chunks.append(chunk)
+            if on_stdout is not None:
+                on_stdout(chunk)
+            continue
+
+        stderr_chunks.append(chunk)
+        if on_stderr is not None:
+            on_stderr(chunk)
+
+    for thread in reader_threads:
+        thread.join(timeout=0.5)
+    exit_code = process.wait()
+    return GenericCliRunResult(
+        exit_code=exit_code,
+        stdout_text="".join(stdout_chunks),
+        stderr_text="".join(stderr_chunks),
     )

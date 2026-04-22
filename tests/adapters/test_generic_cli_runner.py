@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+import os
+import sys
+import time
 from pathlib import Path
 
 import pytest
 
 from aidd.adapters.generic_cli.runner import (
+    GenericCliRunResult,
     GenericCliStageContext,
+    GenericCliSubprocessSpec,
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
     command_preview,
+    run_subprocess_with_streaming,
 )
 
 
@@ -118,3 +124,62 @@ def test_build_subprocess_spec_exposes_workspace_and_prompt_pack_paths(tmp_path:
     assert spec.command[-2:] == ("--prompt-pack", expected_prompt_pack_path.as_posix())
     assert spec.env["AIDD_WORKSPACE_ROOT"] == workspace_root.resolve(strict=False).as_posix()
     assert spec.env["AIDD_PROMPT_PACK_PATH"] == expected_prompt_pack_path.as_posix()
+
+
+def test_run_subprocess_with_streaming_returns_stdout_and_stderr(tmp_path: Path) -> None:
+    script = (
+        "import sys, time\n"
+        "print('out-1', flush=True)\n"
+        "print('err-1', file=sys.stderr, flush=True)\n"
+        "time.sleep(0.05)\n"
+        "print('out-2', flush=True)\n"
+    )
+    spec = GenericCliSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    stdout_events: list[str] = []
+    stderr_events: list[str] = []
+    result = run_subprocess_with_streaming(
+        spec=spec,
+        on_stdout=stdout_events.append,
+        on_stderr=stderr_events.append,
+    )
+
+    assert isinstance(result, GenericCliRunResult)
+    assert result.exit_code == 0
+    assert "out-1\n" in result.stdout_text
+    assert "out-2\n" in result.stdout_text
+    assert "err-1\n" in result.stderr_text
+    assert stdout_events
+    assert stderr_events
+
+
+def test_run_subprocess_with_streaming_emits_early_stdout_before_process_end(
+    tmp_path: Path,
+) -> None:
+    script = (
+        "import time\n"
+        "print('out-early', flush=True)\n"
+        "time.sleep(0.2)\n"
+        "print('out-late', flush=True)\n"
+    )
+    spec = GenericCliSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    callback_times: list[float] = []
+    started_at = time.monotonic()
+    run_subprocess_with_streaming(
+        spec=spec,
+        on_stdout=lambda _chunk: callback_times.append(time.monotonic()),
+    )
+    finished_at = time.monotonic()
+
+    assert callback_times
+    assert callback_times[0] - started_at < 0.15
+    assert finished_at - callback_times[0] > 0.05
