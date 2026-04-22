@@ -144,6 +144,17 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         "Pytest output reports all tests as passed.",
         "No new failing tests are introduced relative to baseline.",
     ]
+    assert scenario.raw["reference_run"]["run_id"] == "eval-live-005-reference-20260422T090823Z"
+    assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
+    assert scenario.raw["reference_run"]["status"] == "harness_pass"
+    assert (
+        scenario.raw["reference_run"]["resolved_revision"]
+        == "8d74ffc93292c604d5827e2b44fffedca0c28c19"
+    )
+    assert (
+        scenario.raw["reference_run"]["bundle_root"]
+        == ".aidd/reports/evals/eval-live-005-reference-20260422T090823Z"
+    )
 
 
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:

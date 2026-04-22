@@ -1462,7 +1462,7 @@ Exit evidence:
 
 - HTTPX smoke is runnable repeatedly through the harness with a stable baseline.
 
-#### Slice W5-E3-S3 — sqlite-utils smoke lane (`planned`)
+#### Slice W5-E3-S3 — sqlite-utils smoke lane (`done`)
 Goal: make one minimal sqlite-utils scenario pass under the harness.
 
 Primary outputs:
@@ -1485,7 +1485,7 @@ Local tasks:
 - `W5-E3-S3-T1` (done) Pin the sqlite-utils repository revision and record the target scenario objective.
 - `W5-E3-S3-T2` (done) Define setup steps and AIDD invocation parameters for the sqlite-utils smoke scenario.
 - `W5-E3-S3-T3` (done) Define deterministic verification steps and expected pass conditions for the scenario.
-- `W5-E3-S3-T4` Run the scenario once end to end and capture the first reference artifact bundle.
+- `W5-E3-S3-T4` (done) Run the scenario once end to end and capture the first reference artifact bundle.
 
 Exit evidence:
 

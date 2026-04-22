@@ -93,6 +93,9 @@ Initial scenarios:
 
 - **AIDD-LIVE-005 — header-only CSV bugfix**  
   Based on issue `#705`. Prevent a crash when `--detect-types` is used on a CSV file that contains only a header row. Add a regression test.
+  First reference run on April 22, 2026 used runtime `generic-cli`, pinned revision
+  `8d74ffc93292c604d5827e2b44fffedca0c28c19`, and produced status `harness_pass`
+  with all setup, run, and verification commands succeeding.
 - **AIDD-LIVE-006 — yielded rows feature with interview**  
   Based on issue `#694`. Add a CLI path for passing Python code or a Python file that yields rows to insert. This is explicitly an interview scenario: the system must ask the user about execution trust boundaries, accepted input form, and documentation expectations before implementation.
   First reference run on April 22, 2026 used runtime `generic-cli`, pinned revision
