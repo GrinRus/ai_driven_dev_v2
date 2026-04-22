@@ -156,6 +156,22 @@ Use these to validate that code, examples, docs, and validation all stay coheren
 - AIDD-LIVE-002
 - AIDD-LIVE-004
 
+## Codex Minimum Parity Scenario Set
+
+This matrix defines the minimum Codex parity set for `W7-E1-S3`.
+The goal is to establish one stable smoke baseline, one interview baseline,
+and one docs/alignment comparator before expanding lane coverage.
+
+| Lane | Scenario ID | Selection rationale | Planned task |
+| --- | --- | --- | --- |
+| smoke | `AIDD-LIVE-005` | Stable Python-only setup with an existing harness-pass baseline and bounded patch scope. | `W7-E1-S3-T2` |
+| interview | `AIDD-LIVE-006` | Exercises blocking question flow, answer persistence, and resume behavior. | `W7-E1-S3-T3` |
+| docs-alignment | `AIDD-LIVE-004` | Validates docs/examples coherence after runtime-specific execution differences. | `W7-E1-S3-T4` |
+
+Out-of-scope for the minimum set:
+
+- `AIDD-LIVE-007` and `AIDD-LIVE-008` (Bun/TypeScript lane), deferred until the first Codex parity baseline is archived.
+
 ## What a live E2E report must record
 
 Every report must include:
