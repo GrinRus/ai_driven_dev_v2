@@ -15,6 +15,14 @@ RuntimeEventCategory = Literal[
     "stage",
     "info",
 ]
+FailureTaxonomyCategory = Literal[
+    "environment",
+    "adapter",
+    "runtime",
+    "validation",
+    "scenario-verification",
+    "none",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +38,12 @@ class NormalizedRuntimeEvent:
     event_kind: str
     source: str | None
     payload: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class FailureTaxonomyResult:
+    category: FailureTaxonomyCategory
+    reason: str
 
 
 VALIDATOR_FINDING_PATTERN = re.compile(
@@ -255,6 +269,94 @@ def parse_stage_metadata_validation_failures(
         )
     return parse_stage_metadata_validation_failures_text(
         stage_metadata_path.read_text(encoding="utf-8")
+    )
+
+
+def _is_environment_signal(message: str) -> bool:
+    normalized = message.lower()
+    return any(
+        token in normalized
+        for token in (
+            "network unreachable",
+            "connection refused",
+            "no space left",
+            "no such file or directory",
+            "not found",
+            "dns",
+            "unable to resolve host",
+            "timed out",
+        )
+    )
+
+
+def _is_adapter_signal(message: str) -> bool:
+    normalized = message.lower()
+    return any(token in normalized for token in ("adapter", "protocol mismatch"))
+
+
+def classify_failure_taxonomy(
+    *,
+    runtime_events: tuple[CoarseRuntimeEvent, ...] = (),
+    normalized_events: tuple[NormalizedRuntimeEvent, ...] = (),
+    validator_failures: tuple[CoarseRuntimeEvent, ...] = (),
+    stage_metadata_failures: tuple[CoarseRuntimeEvent, ...] = (),
+    aidd_exit_code: int | None = None,
+    verification_exit_code: int | None = None,
+) -> FailureTaxonomyResult:
+    for event in runtime_events:
+        if _is_environment_signal(event.message):
+            return FailureTaxonomyResult(
+                category="environment",
+                reason=f"runtime log signal: {event.message}",
+            )
+    for normalized_event in normalized_events:
+        if _is_environment_signal(normalized_event.event_kind):
+            return FailureTaxonomyResult(
+                category="environment",
+                reason=f"normalized event signal: {normalized_event.event_kind}",
+            )
+
+    for event in runtime_events:
+        if _is_adapter_signal(event.message):
+            return FailureTaxonomyResult(
+                category="adapter",
+                reason=f"runtime log signal: {event.message}",
+            )
+    for normalized_event in normalized_events:
+        if _is_adapter_signal(normalized_event.event_kind):
+            return FailureTaxonomyResult(
+                category="adapter",
+                reason=f"normalized event signal: {normalized_event.event_kind}",
+            )
+
+    if aidd_exit_code not in (None, 0):
+        return FailureTaxonomyResult(
+            category="runtime",
+            reason=f"AIDD run exited with non-zero status {aidd_exit_code}.",
+        )
+    for event in runtime_events:
+        if event.category == "error":
+            return FailureTaxonomyResult(
+                category="runtime",
+                reason=f"runtime error signal: {event.message}",
+            )
+
+    validation_signals = (*validator_failures, *stage_metadata_failures)
+    if validation_signals:
+        return FailureTaxonomyResult(
+            category="validation",
+            reason=f"validation signal: {validation_signals[0].message}",
+        )
+
+    if verification_exit_code not in (None, 0):
+        return FailureTaxonomyResult(
+            category="scenario-verification",
+            reason=f"verification exited with non-zero status {verification_exit_code}.",
+        )
+
+    return FailureTaxonomyResult(
+        category="none",
+        reason="No failure signal detected.",
     )
 
 
