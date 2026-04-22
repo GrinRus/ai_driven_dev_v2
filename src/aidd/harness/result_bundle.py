@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -234,3 +236,52 @@ def write_command_transcripts(
         ),
     )
     return setup_path, run_path, verify_path, teardown_path
+
+
+def _copy_or_link_file(*, source_path: Path, destination_path: Path) -> Path:
+    if not source_path.exists() or not source_path.is_file():
+        raise ValueError(f"Artifact source file does not exist: {source_path.as_posix()}")
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    if destination_path.exists():
+        destination_path.unlink()
+    try:
+        os.link(source_path, destination_path)
+    except OSError:
+        shutil.copy2(source_path, destination_path)
+    return destination_path
+
+
+def copy_or_link_run_artifacts(
+    *,
+    layout: ResultBundleLayout,
+    runtime_log_path: Path,
+    validator_report_path: Path,
+    verdict_path: Path,
+    runtime_jsonl_path: Path | None = None,
+    events_jsonl_path: Path | None = None,
+) -> dict[str, Path]:
+    copied: dict[str, Path] = {
+        "runtime_log": _copy_or_link_file(
+            source_path=runtime_log_path,
+            destination_path=layout.runtime_log_path,
+        ),
+        "validator_report": _copy_or_link_file(
+            source_path=validator_report_path,
+            destination_path=layout.validator_report_path,
+        ),
+        "verdict": _copy_or_link_file(
+            source_path=verdict_path,
+            destination_path=layout.verdict_path,
+        ),
+    }
+    if runtime_jsonl_path is not None:
+        copied["runtime_jsonl"] = _copy_or_link_file(
+            source_path=runtime_jsonl_path,
+            destination_path=layout.runtime_jsonl_path,
+        )
+    if events_jsonl_path is not None:
+        copied["events_jsonl"] = _copy_or_link_file(
+            source_path=events_jsonl_path,
+            destination_path=layout.events_jsonl_path,
+        )
+    return copied
