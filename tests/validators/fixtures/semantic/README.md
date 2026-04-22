@@ -37,3 +37,7 @@ Fixtures for `tests/validators/test_semantic.py` regression coverage.
   evidence-backed findings, severity/disposition labels, and approval coherence.
 - `review-invalid/workspace/` contains unsupported findings, missing severity/disposition details,
   and approval/required-change mismatch, and must fail `review` semantic checks.
+- `qa-valid/workspace/` contains a bundle that should pass `qa` semantic checks for verdict,
+  recommendation, residual-risk notes, and evidence references.
+- `qa-invalid/workspace/` contains a bundle with unsupported `ready/hold` pairing and missing
+  evidence references, and must fail `qa` semantic checks.
