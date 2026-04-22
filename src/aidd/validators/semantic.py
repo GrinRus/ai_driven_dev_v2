@@ -19,6 +19,9 @@ MISSING_EVIDENCE_LINK_CODE = "SEM-MISSING-EVIDENCE-LINK"
 MISSING_DIFF_EVIDENCE_CODE = "SEM-MISSING-DIFF-EVIDENCE"
 UNVERIFIABLE_CHECK_CLAIM_CODE = "SEM-UNVERIFIABLE-CHECK-CLAIM"
 INCOMPLETE_EXECUTION_SUMMARY_CODE = "SEM-INCOMPLETE-EXECUTION-SUMMARY"
+UNSUPPORTED_VERDICT_CODE = "SEM-UNSUPPORTED-VERDICT"
+MISSING_EVIDENCE_REF_CODE = "SEM-MISSING-EVIDENCE-REF"
+RISK_UNDERREPORT_CODE = "SEM-RISK-UNDERREPORT"
 
 _INLINE_CODE_PATTERN = re.compile(r"`([^`]+)`")
 _STAGE_HEADING_REQUIREMENT_PATTERN = re.compile(
@@ -79,6 +82,16 @@ _REVIEW_DISPOSITION_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 _REVIEW_ACCEPTANCE_CRITERIA_PATTERN = re.compile(r"\bAC-\d+\b", flags=re.IGNORECASE)
+_QA_VERDICT_PATTERN = re.compile(
+    r"\b(ready-with-risks|not-ready|ready)\b",
+    flags=re.IGNORECASE,
+)
+_QA_RELEASE_RECOMMENDATION_PATTERN = re.compile(
+    r"\b(proceed-with-conditions|hold|proceed)\b",
+    flags=re.IGNORECASE,
+)
+_QA_EVIDENCE_ID_PATTERN = re.compile(r"\bEV-\d+\b", flags=re.IGNORECASE)
+_QA_OWNER_PATTERN = re.compile(r"\bowner\b", flags=re.IGNORECASE)
 
 
 def _extract_section_lines(markdown_text: str, heading: str) -> list[str]:
@@ -215,6 +228,20 @@ def _extract_review_spec_readiness_state(text: str) -> str | None:
 
 def _extract_review_spec_decision(text: str) -> str | None:
     match = _REVIEW_SPEC_DECISION_PATTERN.search(text)
+    if match is None:
+        return None
+    return match.group(1).lower()
+
+
+def _extract_qa_verdict(text: str) -> str | None:
+    match = _QA_VERDICT_PATTERN.search(text)
+    if match is None:
+        return None
+    return match.group(1).lower()
+
+
+def _extract_qa_release_recommendation(text: str) -> str | None:
+    match = _QA_RELEASE_RECOMMENDATION_PATTERN.search(text)
     if match is None:
         return None
     return match.group(1).lower()
@@ -820,6 +847,271 @@ def validate_semantic_outputs(
                         location=required_changes_location,
                     )
                 )
+
+        if stage == "qa" and output_path.name == "qa-report.md":
+            verdict_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Quality verdict", "Readiness"),
+            )
+            risks_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Residual risks", "Known issues"),
+            )
+            recommendation_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Release recommendation",),
+            )
+            evidence_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Evidence references", "Evidence"),
+            )
+
+            verdict_content = ""
+            verdict_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if verdict_match is not None:
+                verdict_index, verdict_heading = verdict_match
+                verdict_content = _section_content_for_heading(
+                    heading_index=verdict_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                verdict_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=verdict_heading.line_number,
+                )
+
+            risks_content = ""
+            risks_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if risks_match is not None:
+                risks_index, risks_heading = risks_match
+                risks_content = _section_content_for_heading(
+                    heading_index=risks_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                risks_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=risks_heading.line_number,
+                )
+
+            recommendation_content = ""
+            recommendation_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if recommendation_match is not None:
+                recommendation_index, recommendation_heading = recommendation_match
+                recommendation_content = _section_content_for_heading(
+                    heading_index=recommendation_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                recommendation_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=recommendation_heading.line_number,
+                )
+
+            evidence_content = ""
+            evidence_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if evidence_match is not None:
+                evidence_index, evidence_heading = evidence_match
+                evidence_content = _section_content_for_heading(
+                    heading_index=evidence_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                evidence_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=evidence_heading.line_number,
+                )
+
+            qa_verdict = _extract_qa_verdict(verdict_content)
+            if qa_verdict is None:
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Section `Quality verdict` must declare one explicit state: "
+                            "`ready`, `ready-with-risks`, or `not-ready`."
+                        ),
+                        severity="medium",
+                        location=verdict_location,
+                    )
+                )
+
+            qa_recommendation = _extract_qa_release_recommendation(
+                recommendation_content
+            )
+            if qa_recommendation is None:
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Section `Release recommendation` must declare one explicit state: "
+                            "`proceed`, `proceed-with-conditions`, or `hold`."
+                        ),
+                        severity="medium",
+                        location=recommendation_location,
+                    )
+                )
+
+            risk_items = _extract_bullet_items(risks_content)
+            has_residual_risk_entries = any(
+                item.lower() != "none" for item in risk_items
+            )
+            if qa_verdict == "ready-with-risks" and not has_residual_risk_entries:
+                findings.append(
+                    ValidationFinding(
+                        code=RISK_UNDERREPORT_CODE,
+                        message=(
+                            "Verdict `ready-with-risks` requires explicit residual risk entries "
+                            "with mitigation/ownership notes."
+                        ),
+                        severity="high",
+                        location=risks_location,
+                    )
+                )
+            if (
+                qa_recommendation == "proceed-with-conditions"
+                and not has_residual_risk_entries
+            ):
+                findings.append(
+                    ValidationFinding(
+                        code=RISK_UNDERREPORT_CODE,
+                        message=(
+                            "Recommendation `proceed-with-conditions` requires explicit residual "
+                            "risk entries."
+                        ),
+                        severity="high",
+                        location=risks_location,
+                    )
+                )
+
+            for risk_item in (item for item in risk_items if item.lower() != "none"):
+                if _REVIEW_SPEC_SEVERITY_PATTERN.search(risk_item) is None:
+                    findings.append(
+                        ValidationFinding(
+                            code=RISK_UNDERREPORT_CODE,
+                            message=(
+                                "Each residual risk item must include explicit severity "
+                                "(critical/high/medium/low)."
+                            ),
+                            severity="medium",
+                            location=risks_location,
+                        )
+                    )
+                    break
+
+                has_mitigation_note = (
+                    _RISK_MITIGATION_PATTERN.search(risk_item) is not None
+                    or _QA_OWNER_PATTERN.search(risk_item) is not None
+                )
+                if not has_mitigation_note:
+                    findings.append(
+                        ValidationFinding(
+                            code=RISK_UNDERREPORT_CODE,
+                            message=(
+                                "Each residual risk item must include mitigation and/or "
+                                "ownership note."
+                            ),
+                            severity="medium",
+                            location=risks_location,
+                        )
+                    )
+                    break
+
+            evidence_items = _extract_bullet_items(evidence_content)
+            has_evidence_entries = any(
+                item.lower() not in {"none", "none recorded"}
+                for item in evidence_items
+            )
+            if not has_evidence_entries:
+                findings.append(
+                    ValidationFinding(
+                        code=MISSING_EVIDENCE_REF_CODE,
+                        message=(
+                            "Material QA claims and release recommendation must reference "
+                            "verification artifacts or execution outputs."
+                        ),
+                        severity="high",
+                        location=evidence_location,
+                    )
+                )
+            else:
+                for evidence_item in (
+                    item
+                    for item in evidence_items
+                    if item.lower() not in {"none", "none recorded"}
+                ):
+                    has_artifact_path_reference = (
+                        _IMPLEMENT_FILE_ENTRY_PATTERN.search(evidence_item) is not None
+                    )
+                    has_evidence_id = _QA_EVIDENCE_ID_PATTERN.search(evidence_item) is not None
+                    if not has_artifact_path_reference and not has_evidence_id:
+                        findings.append(
+                            ValidationFinding(
+                                code=MISSING_EVIDENCE_REF_CODE,
+                                message=(
+                                    "Evidence entries must include stable evidence id "
+                                    "(for example `EV-1`) and/or artifact path in backticks."
+                                ),
+                                severity="medium",
+                                location=evidence_location,
+                            )
+                        )
+                        break
+
+            if qa_verdict is not None and qa_recommendation is not None:
+                if qa_verdict == "not-ready" and qa_recommendation != "hold":
+                    findings.append(
+                        ValidationFinding(
+                            code=UNSUPPORTED_VERDICT_CODE,
+                            message=(
+                                "Verdict `not-ready` must align with release recommendation "
+                                "`hold`."
+                            ),
+                            severity="high",
+                            location=recommendation_location,
+                        )
+                    )
+
+                if qa_verdict in {"ready", "ready-with-risks"} and qa_recommendation == "hold":
+                    findings.append(
+                        ValidationFinding(
+                            code=UNSUPPORTED_VERDICT_CODE,
+                            message=(
+                                "Verdicts `ready` or `ready-with-risks` cannot pair with "
+                                "release recommendation `hold`."
+                            ),
+                            severity="high",
+                            location=recommendation_location,
+                        )
+                    )
+
+                if (
+                    qa_verdict in {"ready", "ready-with-risks"}
+                    and not has_evidence_entries
+                ):
+                    findings.append(
+                        ValidationFinding(
+                            code=UNSUPPORTED_VERDICT_CODE,
+                            message=(
+                                "Ready/proceed-style outcomes are unsupported without concrete "
+                                "verification evidence references."
+                            ),
+                            severity="high",
+                            location=verdict_location,
+                        )
+                    )
 
         for section in required_sections:
             matches = headings_by_title.get(_normalized_heading(section), [])
