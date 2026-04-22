@@ -1,23 +1,36 @@
 # Run prompt for `qa`
 
-## Goal
+## Stage objective
 
-Summarize verification outcomes, remaining risks, and readiness status.
+Produce a defensible `qa` package that states:
+
+- quality verdict (`ready`, `ready-with-risks`, or `not-ready`),
+- residual risk profile with mitigation and ownership notes,
+- release recommendation (`proceed`, `proceed-with-conditions`, or `hold`),
+- evidence links that justify material claims.
+
+The stage is complete only when verdict, recommendation, and evidence are coherent across
+`qa-report.md`, `stage-result.md`, and `validator-report.md`.
 
 ## Inputs to read first
 
-- `../implement/output/implementation-report.md`
-- `../implement/output/stage-result.md`
-- `../implement/output/validator-report.md`
-- `../review/output/review-report.md`
-- `../review/output/stage-result.md`
-- `../review/output/validator-report.md`
-- `context/verification-output.md`
-- `context/verification-artifacts.md`
-- optional context when available: repository state, constraints, release policy
-- stage contract: `contracts/stages/qa.md`
+- required:
+  - `../implement/output/implementation-report.md`
+  - `../implement/output/stage-result.md`
+  - `../implement/output/validator-report.md`
+  - `../review/output/review-report.md`
+  - `../review/output/stage-result.md`
+  - `../review/output/validator-report.md`
+  - `context/verification-output.md`
+  - `context/verification-artifacts.md`
+- optional context when available:
+  - `context/repository-state.md`
+  - `context/constraints.md`
+  - `context/release-policy.md`
+- contract of record:
+  - `contracts/stages/qa.md`
 
-## Required outputs
+## Required outputs (always write)
 
 - `qa-report.md`
 - `stage-result.md`
@@ -28,24 +41,32 @@ Summarize verification outcomes, remaining risks, and readiness status.
 - `questions.md` and `answers.md` when clarification is needed
 - `repair-brief.md` only when validation fails and repair is required
 
-## Instructions
+## QA discipline
 
-1. Read all required upstream artifacts before writing outputs.
-2. Confirm review status is resolved and review decision is not `rejected`.
-3. Use verification outputs and verification artifacts as mandatory evidence baseline for QA conclusions.
-4. Write `qa-report.md` with explicit quality verdict, residual risk summary, and release recommendation.
-5. Tie verdict and recommendation claims to concrete verification evidence references.
-6. Keep release recommendation actionable (`proceed`, `proceed-with-conditions`, or `hold`).
-7. Do not issue `ready` or `proceed` conclusions when unresolved must-fix findings or missing critical checks remain.
-8. Write or update `stage-result.md` and `validator-report.md` so QA outcome is consistent.
-9. If critical verification is blocked, required execution artifacts are missing, or evidence baseline is contradictory, raise a question instead of inventing assumptions.
-10. Keep the output useful for the next stage rather than merely well-formatted.
+1. Do not declare `succeeded`, `ready`, or `proceed` when upstream `review` is unresolved or
+   explicitly `rejected`.
+2. Do not pass QA when required verification output/artifacts are missing for material claims.
+3. Every material verdict/recommendation claim must point to concrete verification evidence.
+4. Residual risks must include severity and explicit mitigation/ownership notes.
+5. Blocking uncertainty must become a `[blocking]` question with release recommendation `hold`.
+
+## Execution instructions
+
+1. Read all required upstream artifacts and `contracts/stages/qa.md` before drafting outputs.
+2. Verify upstream `review` outcome is not `rejected` and is consistent with implementation status.
+3. Build `qa-report.md` with explicit quality verdict, residual risks, and release recommendation.
+4. Tie verdict and recommendation claims to `verification-output.md` and/or
+   `verification-artifacts.md` references.
+5. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
+6. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
+   instead of inventing assumptions.
+7. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
 
 ## Completion checklist
 
 - quality verdict is explicit and evidence-backed,
-- residual risks include severity plus mitigation/ownership notes,
-- release recommendation is actionable and coherent with verdict,
-- evidence references are present for material claims,
-- verdict does not conflict with unresolved must-fix findings or missing critical evidence,
-- stage result and validator report agree with QA outcome.
+- residual risks include severity plus mitigation/ownership,
+- release recommendation is actionable and consistent with verdict,
+- material claims reference concrete verification evidence,
+- unresolved critical uncertainty is surfaced as blocking question with `hold`,
+- `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.
