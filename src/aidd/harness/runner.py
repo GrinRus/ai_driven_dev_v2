@@ -262,10 +262,10 @@ def run_with_teardown[T](
 ) -> tuple[T, HarnessTeardownResult]:
     result_marker = object()
     action_result: T | object = result_marker
-    action_error: Exception | None = None
+    action_error: BaseException | None = None
     try:
         action_result = action()
-    except Exception as exc:  # pragma: no cover - exercised by failure-path tests.
+    except BaseException as exc:  # pragma: no cover - exercised by failure-path tests.
         action_error = exc
 
     try:
@@ -274,9 +274,14 @@ def run_with_teardown[T](
             working_copy_path=working_copy_path,
             environment=environment,
         )
-    except Exception as teardown_error:
+    except BaseException as teardown_error:
         if action_error is not None:
-            raise ExceptionGroup(
+            if isinstance(action_error, Exception) and isinstance(teardown_error, Exception):
+                raise ExceptionGroup(
+                    "Scenario execution and teardown both failed.",
+                    [action_error, teardown_error],
+                ) from None
+            raise BaseExceptionGroup(
                 "Scenario execution and teardown both failed.",
                 [action_error, teardown_error],
             ) from None
