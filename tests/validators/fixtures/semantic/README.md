@@ -17,3 +17,8 @@ Fixtures for `tests/validators/test_semantic.py` regression coverage.
   ids, risk mitigation notes, dependency lists, and verification-note mapping.
 - `plan-invalid/workspace/` contains a bundle with weak risk mitigation, non-list dependencies, and
   missing milestone references in verification notes, and must fail `plan` semantic checks.
+- `review-spec-valid/workspace/` contains a bundle that should pass `review-spec` semantic checks
+  for issue severity/rationale, recommendation quality, and readiness/decision alignment.
+- `review-spec-invalid/workspace/` contains a bundle with missing issue severity/rationale, a
+  non-actionable recommendation summary, and inconsistent readiness/decision status, and must fail
+  `review-spec` semantic checks.

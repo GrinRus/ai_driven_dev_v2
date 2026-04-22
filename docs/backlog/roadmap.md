@@ -1719,7 +1719,7 @@ Local tasks:
 - `W6-E2-S1-T1` (done) Write the `review-spec` base prompt.
 - `W6-E2-S1-T2` (done) Write the `review-spec` repair prompt.
 - `W6-E2-S1-T3` (done) Implement `review-spec` semantic validators.
-- `W6-E2-S1-T4` Add valid and invalid `review-spec` fixtures.
+- `W6-E2-S1-T4` (done) Add valid and invalid `review-spec` fixtures.
 - `W6-E2-S1-T5` Add unit tests for `review-spec` validation.
 - `W6-E2-S1-T6` Run one smoke execution of `review-spec` and archive the artifacts.
 
