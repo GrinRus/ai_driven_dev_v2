@@ -1898,7 +1898,7 @@ Dependencies:
 Local tasks:
 
 - `W7-E1-S1-T1` (done) Implement Codex command discovery.
-- `W7-E1-S1-T2` Capture Codex version or identity output.
+- `W7-E1-S1-T2` (done) Capture Codex version or identity output.
 - `W7-E1-S1-T3` Derive Codex capability flags relevant to AIDD.
 - `W7-E1-S1-T4` Expose Codex probe results in `aidd doctor`.
 - `W7-E1-S1-T5` Add probe tests for found, missing, and malformed-version cases.
