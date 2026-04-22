@@ -267,6 +267,12 @@ The canonical plan lives in `docs/backlog/roadmap.md`.
 
 The short actionable queue lives in `docs/backlog/backlog.md`.
 
+## Compatibility policy
+
+Compatibility guarantees for Python versions and operating platforms live in:
+
+- `docs/compatibility-policy.md`
+
 ## Contributing
 
 See `CONTRIBUTING.md`.
