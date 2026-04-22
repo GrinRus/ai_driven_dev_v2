@@ -68,6 +68,9 @@ Initial scenarios:
 
 - **AIDD-LIVE-003 — invalid header error message**  
   Based on issue `#3400`. Improve the invalid-header encoding error so the failing header name is visible in the resulting exception or wrapper message. Add regression coverage.
+  First reference run on April 22, 2026 used runtime `generic-cli`, pinned revision
+  `b5addb64f0161ff6bfe94c124ef76f6a1fba5254`, and produced status `harness_fail`
+  because verification command `uv run pytest -q || pytest -q` exited with status `4`.
 - **AIDD-LIVE-004 — CLI docs sync**  
   A controlled docs-and-tests scenario around the integrated CLI. The task is to update docs/examples after a small CLI behavior change and prove that docs, examples, and verification still align.
 

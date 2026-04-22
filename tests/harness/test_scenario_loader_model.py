@@ -99,3 +99,14 @@ def test_httpx_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
         "Pytest output reports all tests as passed.",
         "No new failing tests are introduced relative to baseline.",
     ]
+    assert scenario.raw["reference_run"]["run_id"] == "eval-live-003-reference-20260422T083406Z"
+    assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
+    assert scenario.raw["reference_run"]["status"] == "harness_fail"
+    assert (
+        scenario.raw["reference_run"]["resolved_revision"]
+        == "b5addb64f0161ff6bfe94c124ef76f6a1fba5254"
+    )
+    assert (
+        scenario.raw["reference_run"]["bundle_root"]
+        == ".aidd/reports/evals/eval-live-003-reference-20260422T083406Z"
+    )

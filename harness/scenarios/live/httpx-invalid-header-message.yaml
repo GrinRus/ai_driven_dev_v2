@@ -38,6 +38,15 @@ verify:
   - Verification command exits with status 0.
   - Pytest output reports all tests as passed.
   - No new failing tests are introduced relative to baseline.
+reference_run:
+  run_id: eval-live-003-reference-20260422T083406Z
+  recorded_at_utc: '2026-04-22T08:34:14Z'
+  runtime: generic-cli
+  status: harness_fail
+  resolved_revision: b5addb64f0161ff6bfe94c124ef76f6a1fba5254
+  bundle_root: .aidd/reports/evals/eval-live-003-reference-20260422T083406Z
+  first_failure_signal: Verification command `uv run pytest -q || pytest -q` exited
+    with status 4.
 limits:
   patch_budget_files: 8
   timeout_minutes: 20
