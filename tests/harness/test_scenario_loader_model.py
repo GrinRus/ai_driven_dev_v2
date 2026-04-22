@@ -183,6 +183,11 @@ def test_hono_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
         "start": "plan",
         "end": "qa",
     }
+    assert scenario.raw["verify"]["pass_conditions"] == [
+        "Verification commands exit with status 0.",
+        "Bun test run reports no failing tests.",
+        "TypeScript compile check reports no type errors.",
+    ]
 
 
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:
