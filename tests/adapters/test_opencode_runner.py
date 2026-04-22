@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from aidd.adapters.opencode.runner import (
+    OpenCodeCommandContext,
+    assemble_command,
+    command_preview,
+)
+
+
+def _context(tmp_path: Path) -> OpenCodeCommandContext:
+    workspace_root = tmp_path / ".aidd"
+    return OpenCodeCommandContext(
+        stage="plan",
+        work_item="WI-123",
+        run_id="run-001",
+        workspace_root=workspace_root,
+        stage_brief_path=Path("workitems/WI-123/stages/plan/stage-brief.md"),
+        prompt_pack_paths=(
+            Path("prompt-packs/stages/plan/run.md"),
+            Path("prompt-packs/stages/plan/repair.md"),
+        ),
+    )
+
+
+def test_assemble_command_includes_stage_workspace_brief_and_prompt_packs(
+    tmp_path: Path,
+) -> None:
+    context = _context(tmp_path)
+    command = assemble_command(
+        configured_command="opencode",
+        context=context,
+        repository_root=tmp_path,
+    )
+
+    expected_workspace = context.workspace_root.resolve(strict=False).as_posix()
+    expected_stage_brief = (
+        context.workspace_root / context.stage_brief_path
+    ).resolve(strict=False).as_posix()
+    expected_prompt_1 = (tmp_path / context.prompt_pack_paths[0]).resolve(strict=False).as_posix()
+    expected_prompt_2 = (tmp_path / context.prompt_pack_paths[1]).resolve(strict=False).as_posix()
+
+    assert command == (
+        "opencode",
+        "--stage",
+        "plan",
+        "--work-item",
+        "WI-123",
+        "--run-id",
+        "run-001",
+        "--workspace-root",
+        expected_workspace,
+        "--stage-brief",
+        expected_stage_brief,
+        "--prompt-pack",
+        expected_prompt_1,
+        "--prompt-pack",
+        expected_prompt_2,
+    )
+
+
+def test_assemble_command_respects_shell_quoted_base_tokens(tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    command = assemble_command(
+        configured_command="opencode exec",
+        context=context,
+        repository_root=tmp_path,
+    )
+
+    assert command[:2] == ("opencode", "exec")
+
+
+def test_command_preview_renders_shell_quoted_command(tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    preview = command_preview(
+        configured_command="opencode",
+        context=context,
+        repository_root=tmp_path,
+    )
+
+    assert preview.startswith("opencode ")
+    assert "--stage plan" in preview
+    assert "--work-item WI-123" in preview
+
+
+def test_assemble_command_rejects_empty_configured_command(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="must not be empty"):
+        assemble_command(configured_command="   ", context=_context(tmp_path))
+
+
+def test_assemble_command_rejects_invalid_shell_syntax(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="not valid shell syntax"):
+        assemble_command(configured_command='"unterminated', context=_context(tmp_path))
