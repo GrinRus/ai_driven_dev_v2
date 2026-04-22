@@ -144,8 +144,11 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         "Pytest output reports all tests as passed.",
         "No new failing tests are introduced relative to baseline.",
     ]
-    assert scenario.raw["reference_run"]["run_id"] == "eval-live-005-reference-20260422T090823Z"
-    assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
+    assert (
+        scenario.raw["reference_run"]["run_id"]
+        == "eval-live-005-codex-reference-20260422T123518Z"
+    )
+    assert scenario.raw["reference_run"]["runtime"] == "codex"
     assert scenario.raw["reference_run"]["status"] == "harness_pass"
     assert (
         scenario.raw["reference_run"]["resolved_revision"]
@@ -153,8 +156,9 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
     )
     assert (
         scenario.raw["reference_run"]["bundle_root"]
-        == ".aidd/reports/evals/eval-live-005-reference-20260422T090823Z"
+        == ".aidd/reports/evals/eval-live-005-codex-reference-20260422T123518Z"
     )
+    assert "codex" in scenario.runtime_targets
 
 
 def test_hono_smoke_scenario_exposes_pinned_revision_and_objective() -> None:

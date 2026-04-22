@@ -39,12 +39,12 @@ verify:
   - Pytest output reports all tests as passed.
   - No new failing tests are introduced relative to baseline.
 reference_run:
-  run_id: eval-live-005-reference-20260422T090823Z
-  recorded_at_utc: '2026-04-22T09:08:35Z'
-  runtime: generic-cli
+  run_id: eval-live-005-codex-reference-20260422T123518Z
+  recorded_at_utc: '2026-04-22T12:35:29Z'
+  runtime: codex
   status: harness_pass
   resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
-  bundle_root: .aidd/reports/evals/eval-live-005-reference-20260422T090823Z
+  bundle_root: .aidd/reports/evals/eval-live-005-codex-reference-20260422T123518Z
   first_failure_signal: none (setup, aidd invocation, and verification all passed).
 limits:
   patch_budget_files: 8
@@ -54,3 +54,4 @@ interview:
 runtime_targets:
 - claude-code
 - generic-cli
+- codex
