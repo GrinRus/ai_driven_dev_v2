@@ -110,3 +110,24 @@ def test_httpx_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
         scenario.raw["reference_run"]["bundle_root"]
         == ".aidd/reports/evals/eval-live-003-reference-20260422T083406Z"
     )
+
+
+def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:
+    scenario = load_scenario(
+        Path("harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml")
+    )
+
+    assert scenario.scenario_id == "AIDD-LIVE-006"
+    assert scenario.run.interview_required is True
+    assert scenario.raw["interview"]["must_ask_at_least_one"] is True
+    assert scenario.raw["interview"]["blocking_question_topics"] == [
+        "Execution trust boundary for user-provided Python code.",
+        "Accepted input form (inline expression, file, or both).",
+        "Required documentation updates and examples for the selected form.",
+    ]
+    assert scenario.raw["interview"]["trigger_conditions"] == [
+        "If code execution policy is not explicitly stated, ask a blocking question before "
+        "planning.",
+        "If accepted input forms are ambiguous, ask a blocking question before task decomposition.",
+        "If documentation obligations are unclear, ask a blocking question before implementation.",
+    ]

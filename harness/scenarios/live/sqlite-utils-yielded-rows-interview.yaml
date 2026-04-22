@@ -22,6 +22,15 @@ limits:
   timeout_minutes: 25
 interview:
   required: true
+  must_ask_at_least_one: true
+  blocking_question_topics:
+  - Execution trust boundary for user-provided Python code.
+  - Accepted input form (inline expression, file, or both).
+  - Required documentation updates and examples for the selected form.
+  trigger_conditions:
+  - If code execution policy is not explicitly stated, ask a blocking question before planning.
+  - If accepted input forms are ambiguous, ask a blocking question before task decomposition.
+  - If documentation obligations are unclear, ask a blocking question before implementation.
 runtime_targets:
 - claude-code
 - generic-cli
