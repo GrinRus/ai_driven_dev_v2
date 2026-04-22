@@ -89,3 +89,27 @@ def test_probe_derives_capabilities_from_help_text(monkeypatch: pytest.MonkeyPat
     assert report.supports_non_interactive_mode is True
     assert report.supports_working_directory_control is True
     assert report.supports_env_injection is True
+
+
+def test_probe_handles_malformed_version_output(tmp_path: Path) -> None:
+    fake_cli = tmp_path / "fake-opencode-cli-malformed-version"
+    fake_cli.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"--version\" ]; then\n"
+        "  echo \"???\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "if [ \"$1\" = \"--help\" ]; then\n"
+        "  echo \"--non-interactive\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "echo \"ok\"\n",
+        encoding="utf-8",
+    )
+    fake_cli.chmod(0o755)
+
+    report = probe(str(fake_cli))
+
+    assert report.available is True
+    assert report.version_text == "???"
+    assert report.supports_non_interactive_mode is True
