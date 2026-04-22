@@ -15,6 +15,7 @@ from aidd.validators.structural import MarkdownHeading, extract_markdown_heading
 INCOMPLETE_SECTION_CODE = "SEM-INCOMPLETE-SECTION"
 UNSUPPORTED_CLAIM_CODE = "SEM-UNSUPPORTED-CLAIM"
 PLACEHOLDER_CONTENT_CODE = "SEM-PLACEHOLDER-CONTENT"
+MISSING_EVIDENCE_LINK_CODE = "SEM-MISSING-EVIDENCE-LINK"
 
 _INLINE_CODE_PATTERN = re.compile(r"`([^`]+)`")
 _STAGE_HEADING_REQUIREMENT_PATTERN = re.compile(
@@ -26,6 +27,7 @@ _UNSUPPORTED_CLAIM_PATTERN = re.compile(
     r"\b(always|never|guarantee(?:d|s)?|proven|certain(?:ly)?)\b",
     flags=re.IGNORECASE,
 )
+_CITATION_ID_PATTERN = re.compile(r"\[(S\d+)\]")
 
 
 def _extract_section_lines(markdown_text: str, heading: str) -> list[str]:
@@ -137,6 +139,10 @@ def _has_bullet_items(section_content: str) -> bool:
     return any(line.strip().startswith("- ") for line in section_content.splitlines())
 
 
+def _extract_citation_ids(text: str) -> set[str]:
+    return {match.group(1) for match in _CITATION_ID_PATTERN.finditer(text)}
+
+
 def validate_semantic_outputs(
     *,
     stage: str,
@@ -172,6 +178,18 @@ def validate_semantic_outputs(
         for index, heading in enumerate(headings):
             normalized_title = _normalized_heading(heading.title)
             headings_by_title.setdefault(normalized_title, []).append((index, heading))
+
+        research_source_ids: set[str] = set()
+        if stage == "research" and output_path.name == "research-notes.md":
+            sources_matches = headings_by_title.get(_normalized_heading("Sources"), [])
+            if sources_matches:
+                sources_index, _ = sources_matches[0]
+                sources_content = _section_content_for_heading(
+                    heading_index=sources_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                research_source_ids = _extract_citation_ids(sources_content)
 
         for section in required_sections:
             matches = headings_by_title.get(_normalized_heading(section), [])
@@ -245,6 +263,55 @@ def validate_semantic_outputs(
                                     "constraints and open questions deterministically."
                                 ),
                                 severity="medium",
+                                location=location,
+                            )
+                        )
+
+            if stage == "research" and output_path.name == "research-notes.md":
+                normalized_section = _normalized_heading(section)
+                compact_content = re.sub(r"\s+", " ", section_content).strip()
+
+                if normalized_section == "sources" and not research_source_ids:
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_SECTION_CODE,
+                            message=(
+                                "Required section `Sources` must declare citation ids "
+                                "(for example `[S1]`) for downstream evidence linking."
+                            ),
+                            severity="medium",
+                            location=location,
+                        )
+                    )
+
+                if normalized_section in {"findings", "evidence trace"}:
+                    if compact_content.lower() in {"none", "- none"}:
+                        continue
+                    referenced_ids = _extract_citation_ids(section_content)
+                    if not referenced_ids:
+                        findings.append(
+                            ValidationFinding(
+                                code=MISSING_EVIDENCE_LINK_CODE,
+                                message=(
+                                    f"Section `{section}` must reference citation ids from "
+                                    "`Sources` for material research claims."
+                                ),
+                                severity="high",
+                                location=location,
+                            )
+                        )
+                        continue
+
+                    unknown_ids = sorted(referenced_ids - research_source_ids)
+                    if unknown_ids:
+                        findings.append(
+                            ValidationFinding(
+                                code=MISSING_EVIDENCE_LINK_CODE,
+                                message=(
+                                    f"Section `{section}` references unknown citation ids: "
+                                    f"{', '.join(f'[{item}]' for item in unknown_ids)}."
+                                ),
+                                severity="high",
                                 location=location,
                             )
                         )
