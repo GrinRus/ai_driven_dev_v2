@@ -1549,7 +1549,7 @@ Exit evidence:
 
 - one live scenario proves that the AIDD interview loop works outside synthetic fixtures.
 
-#### Slice W5-E3-S6 — Hono interview lane (`planned`)
+#### Slice W5-E3-S6 — Hono interview lane (`done`)
 Goal: prove user-question handling in a second live repository scenario.
 
 Primary outputs:
@@ -1572,7 +1572,7 @@ Local tasks:
 - `W5-E3-S6-T1` (done) Define the Hono scenario conditions that force at least one user question.
 - `W5-E3-S6-T2` (done) Define the operator answer file or CLI-answer flow used by the scenario.
 - `W5-E3-S6-T3` (done) Define verification steps that prove the run blocked, resumed, and completed correctly.
-- `W5-E3-S6-T4` Run the scenario once end to end and archive the reference blocked-and-resumed bundle.
+- `W5-E3-S6-T4` (done) Run the scenario once end to end and archive the reference blocked-and-resumed bundle.
 
 Exit evidence:
 
