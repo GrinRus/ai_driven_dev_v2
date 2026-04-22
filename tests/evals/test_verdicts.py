@@ -6,7 +6,9 @@ import pytest
 
 from aidd.evals.verdicts import (
     VERDICT_STATUSES,
+    HarnessOutcome,
     build_scenario_verdict,
+    map_harness_outcome_to_verdict_status,
     render_scenario_verdict_markdown,
     write_scenario_verdict_markdown,
 )
@@ -95,3 +97,60 @@ def test_write_scenario_verdict_markdown_persists_file(tmp_path: Path) -> None:
     assert "# Verdict" in content
     assert "- Status: `infra-fail`" in content
     assert "Infrastructure error prevented scenario completion." in content
+
+
+@pytest.mark.parametrize(
+    ("outcome", "expected_status"),
+    [
+        (
+            HarnessOutcome(
+                aidd_exit_code=0,
+                verification_failed=False,
+                blocked_by_questions=False,
+                infrastructure_failure=False,
+            ),
+            "pass",
+        ),
+        (
+            HarnessOutcome(
+                aidd_exit_code=2,
+                verification_failed=False,
+                blocked_by_questions=False,
+                infrastructure_failure=False,
+            ),
+            "fail",
+        ),
+        (
+            HarnessOutcome(
+                aidd_exit_code=0,
+                verification_failed=True,
+                blocked_by_questions=False,
+                infrastructure_failure=False,
+            ),
+            "fail",
+        ),
+        (
+            HarnessOutcome(
+                aidd_exit_code=0,
+                verification_failed=False,
+                blocked_by_questions=True,
+                infrastructure_failure=False,
+            ),
+            "blocked",
+        ),
+        (
+            HarnessOutcome(
+                aidd_exit_code=0,
+                verification_failed=False,
+                blocked_by_questions=True,
+                infrastructure_failure=True,
+            ),
+            "infra-fail",
+        ),
+    ],
+)
+def test_map_harness_outcome_to_verdict_status(
+    outcome: HarnessOutcome,
+    expected_status: str,
+) -> None:
+    assert map_harness_outcome_to_verdict_status(outcome) == expected_status

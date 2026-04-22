@@ -19,6 +19,14 @@ class ScenarioVerdict:
     created_at_utc: str
 
 
+@dataclass(frozen=True, slots=True)
+class HarnessOutcome:
+    aidd_exit_code: int | None
+    verification_failed: bool
+    blocked_by_questions: bool
+    infrastructure_failure: bool
+
+
 def _normalize_required_field(*, field_name: str, value: str) -> str:
     normalized = value.strip()
     if not normalized:
@@ -39,6 +47,16 @@ def _normalize_verdict_status(status: str) -> VerdictStatus:
 
 def _default_created_at_utc() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def map_harness_outcome_to_verdict_status(outcome: HarnessOutcome) -> VerdictStatus:
+    if outcome.infrastructure_failure:
+        return "infra-fail"
+    if outcome.blocked_by_questions:
+        return "blocked"
+    if outcome.aidd_exit_code == 0 and not outcome.verification_failed:
+        return "pass"
+    return "fail"
 
 
 def build_scenario_verdict(
@@ -89,10 +107,12 @@ def write_scenario_verdict_markdown(*, path: Path, verdict: ScenarioVerdict) -> 
 
 
 __all__ = [
+    "HarnessOutcome",
     "ScenarioVerdict",
     "VerdictStatus",
     "VERDICT_STATUSES",
     "build_scenario_verdict",
+    "map_harness_outcome_to_verdict_status",
     "render_scenario_verdict_markdown",
     "write_scenario_verdict_markdown",
 ]
