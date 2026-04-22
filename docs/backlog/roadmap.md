@@ -1542,7 +1542,7 @@ Local tasks:
 
 - `W5-E3-S5-T1` (done) Define the sqlite-utils scenario conditions that force at least one user question.
 - `W5-E3-S5-T2` (done) Define the operator answer file or CLI-answer flow used by the scenario.
-- `W5-E3-S5-T3` Define verification steps that prove the run blocked, resumed, and completed correctly.
+- `W5-E3-S5-T3` (done) Define verification steps that prove the run blocked, resumed, and completed correctly.
 - `W5-E3-S5-T4` Run the scenario once end to end and archive the reference blocked-and-resumed bundle.
 
 Exit evidence:
