@@ -249,3 +249,33 @@ def test_prepare_working_copy_removes_transient_git_lock_file(tmp_path: Path) ->
     assert refreshed_working_copy.action == "reused"
     assert refreshed_working_copy.working_copy_path == prepared_working_copy.working_copy_path
     assert not lock_path.exists()
+
+
+def test_prepare_working_copy_replaces_stale_non_git_path(tmp_path: Path) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+    prepared_repository = prepare_scenario_repository(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+    )
+    first_working_copy = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared_repository,
+    )
+
+    shutil.rmtree(first_working_copy.working_copy_path / ".git")
+    stale_file = first_working_copy.working_copy_path / "STALE.txt"
+    stale_file.write_text("stale\n", encoding="utf-8")
+
+    refreshed_working_copy = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared_repository,
+    )
+
+    assert refreshed_working_copy.action == "cloned"
+    assert refreshed_working_copy.working_copy_path == first_working_copy.working_copy_path
+    assert (refreshed_working_copy.working_copy_path / ".git").exists()
+    assert not stale_file.exists()
