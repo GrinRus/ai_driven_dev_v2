@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+import importlib
 import sys
 from pathlib import Path
 
-from aidd.adapters.opencode.probe import discover_command, discover_version, probe
+import pytest
+
+from aidd.adapters.opencode.probe import (
+    detect_capability_flags,
+    discover_command,
+    discover_version,
+    probe,
+)
 
 
 def test_discover_command_supports_arguments() -> None:
@@ -38,4 +46,46 @@ def test_probe_discovers_existing_command_path() -> None:
     assert Path(report.command).name == command_name
     assert report.version_text is not None
     assert report.supports_raw_log_stream is True
+
+
+def test_detect_capability_flags_parses_help_markers() -> None:
+    help_text = "\n".join(
+        [
+            "Usage: opencode --json --resume --non-interactive --cwd PATH --env KEY=VALUE",
+            "Subagent mode supported",
+            "Ask-user questions interactively",
+        ]
+    )
+
+    detected = detect_capability_flags(help_text)
+
+    assert detected["supports_structured_log_stream"] is True
+    assert detected["supports_questions"] is True
+    assert detected["supports_resume"] is True
+    assert detected["supports_subagents"] is True
+    assert detected["supports_non_interactive_mode"] is True
+    assert detected["supports_working_directory_control"] is True
+    assert detected["supports_env_injection"] is True
+
+
+def test_probe_derives_capabilities_from_help_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    probe_module = importlib.import_module("aidd.adapters.opencode.probe")
+    monkeypatch.setattr(probe_module, "discover_command", lambda _: "/tmp/opencode")
+    monkeypatch.setattr(probe_module, "discover_version", lambda _: "opencode 1.2.3")
+    monkeypatch.setattr(
+        probe_module,
+        "discover_help_text",
+        lambda _: "opencode --json --resume --non-interactive --cwd --env subagent question",
+    )
+
+    report = probe_module.probe("opencode")
+
+    assert report.available is True
+    assert report.version_text == "opencode 1.2.3"
+    assert report.supports_structured_log_stream is True
+    assert report.supports_questions is True
+    assert report.supports_resume is True
     assert report.supports_subagents is True
+    assert report.supports_non_interactive_mode is True
+    assert report.supports_working_directory_control is True
+    assert report.supports_env_injection is True
