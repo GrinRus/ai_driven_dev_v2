@@ -794,3 +794,84 @@ def test_validate_semantic_outputs_flags_invalid_plan_fixture_bundle() -> None:
             ),
         ),
     )
+
+
+def test_validate_semantic_outputs_accepts_valid_review_spec_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "review-spec-valid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-SEM-REVIEW-SPEC-VALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_invalid_review_spec_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "review-spec-invalid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-SEM-REVIEW-SPEC-INVALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Each `Issue list` item must include explicit severity "
+                "(critical/high/medium/low)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-SPEC-INVALID/stages/review-spec/review-spec-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Each `Issue list` item must include rationale "
+                "(for example `because ...`)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-SPEC-INVALID/stages/review-spec/review-spec-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Section `Recommendation summary` cannot be `none`; "
+                "include actionable remediation steps."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-SPEC-INVALID/stages/review-spec/review-spec-report.md"
+                ),
+                line_number=15,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Sections `Readiness state` and `Decision` are inconsistent: "
+                "`not-ready` expects `rejected`."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-SPEC-INVALID/stages/review-spec/review-spec-report.md"
+                ),
+                line_number=23,
+            ),
+        ),
+    )
