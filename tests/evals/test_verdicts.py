@@ -8,6 +8,7 @@ from aidd.evals.verdicts import (
     VERDICT_STATUSES,
     HarnessOutcome,
     build_scenario_verdict,
+    build_scenario_verdict_from_harness_outcome,
     map_harness_outcome_to_verdict_status,
     render_scenario_verdict_markdown,
     write_scenario_verdict_markdown,
@@ -197,3 +198,67 @@ def test_map_harness_outcome_to_verdict_status(
     expected_status: str,
 ) -> None:
     assert map_harness_outcome_to_verdict_status(outcome) == expected_status
+
+
+@pytest.mark.parametrize(
+    ("outcome", "expected_status"),
+    [
+        (
+            HarnessOutcome(
+                aidd_exit_code=0,
+                verification_failed=False,
+                blocked_by_questions=False,
+                infrastructure_failure=False,
+            ),
+            "pass",
+        ),
+        (
+            HarnessOutcome(
+                aidd_exit_code=3,
+                verification_failed=False,
+                blocked_by_questions=False,
+                infrastructure_failure=False,
+            ),
+            "fail",
+        ),
+        (
+            HarnessOutcome(
+                aidd_exit_code=0,
+                verification_failed=False,
+                blocked_by_questions=True,
+                infrastructure_failure=False,
+            ),
+            "blocked",
+        ),
+        (
+            HarnessOutcome(
+                aidd_exit_code=0,
+                verification_failed=False,
+                blocked_by_questions=False,
+                infrastructure_failure=True,
+            ),
+            "infra-fail",
+        ),
+    ],
+)
+def test_build_scenario_verdict_from_harness_outcome_for_terminal_states(
+    outcome: HarnessOutcome,
+    expected_status: str,
+) -> None:
+    verdict = build_scenario_verdict_from_harness_outcome(
+        scenario_id="AIDD-LIVE-TERMINAL",
+        run_id="eval-run-terminal",
+        runtime_id="generic-cli",
+        outcome=outcome,
+        summary=f"Terminal outcome: {expected_status}",
+        created_at_utc="2026-04-22T10:00:00Z",
+        artifact_links=("reports/evals/eval-run-terminal/verdict.md",),
+        first_failure_note="First decisive signal captured.",
+        verification_summary="Verification summary captured.",
+    )
+    markdown = render_scenario_verdict_markdown(verdict)
+
+    assert verdict.status == expected_status
+    assert f"- Status: `{expected_status}`" in markdown
+    assert "First decisive signal captured." in markdown
+    assert "Verification summary captured." in markdown

@@ -116,6 +116,31 @@ def build_scenario_verdict(
     )
 
 
+def build_scenario_verdict_from_harness_outcome(
+    *,
+    scenario_id: str,
+    run_id: str,
+    runtime_id: str,
+    outcome: HarnessOutcome,
+    summary: str,
+    created_at_utc: str | None = None,
+    artifact_links: tuple[str, ...] | None = None,
+    first_failure_note: str | None = None,
+    verification_summary: str | None = None,
+) -> ScenarioVerdict:
+    return build_scenario_verdict(
+        scenario_id=scenario_id,
+        run_id=run_id,
+        runtime_id=runtime_id,
+        status=map_harness_outcome_to_verdict_status(outcome),
+        summary=summary,
+        created_at_utc=created_at_utc,
+        artifact_links=artifact_links,
+        first_failure_note=first_failure_note,
+        verification_summary=verification_summary,
+    )
+
+
 def render_scenario_verdict_markdown(verdict: ScenarioVerdict) -> str:
     artifact_lines = (
         ["- Artifact: none"]
@@ -161,6 +186,7 @@ __all__ = [
     "VerdictStatus",
     "VERDICT_STATUSES",
     "build_scenario_verdict",
+    "build_scenario_verdict_from_harness_outcome",
     "map_harness_outcome_to_verdict_status",
     "render_scenario_verdict_markdown",
     "write_scenario_verdict_markdown",
