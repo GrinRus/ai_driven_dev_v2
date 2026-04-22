@@ -1006,7 +1006,7 @@ Dependencies:
 Local tasks:
 
 - `W4-E2-S2-T1` (done) Implement Claude Code command assembly from stage brief, workspace path, and prompt-pack inputs.
-- `W4-E2-S2-T2` Implement adapter-side mapping of sandbox, permission, and config flags into the launch command.
+- `W4-E2-S2-T2` (done) Implement adapter-side mapping of sandbox, permission, and config flags into the launch command.
 - `W4-E2-S2-T3` Implement environment and working-directory setup for Claude Code runs.
 - `W4-E2-S2-T4` Implement timeout and cancellation handling that maps process outcomes into adapter statuses.
 - `W4-E2-S2-T5` Add execution tests for a dry-run or fixture command path that covers launch, cancel, and timeout handling.

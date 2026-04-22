@@ -6,6 +6,8 @@ import pytest
 
 from aidd.adapters.claude_code.runner import (
     ClaudeCodeCommandContext,
+    ClaudeCodeConfigFlag,
+    ClaudeCodeLaunchOptions,
     assemble_command,
     command_preview,
 )
@@ -77,6 +79,45 @@ def test_assemble_command_respects_shell_quoted_base_tokens() -> None:
     assert command[:3] == ("claude", "--profile", "team alpha")
 
 
+def test_assemble_command_maps_sandbox_permission_and_config_flags() -> None:
+    command = assemble_command(
+        configured_command="claude",
+        context=_context(),
+        launch_options=ClaudeCodeLaunchOptions(
+            sandbox_mode="workspace-write",
+            permission_mode="approval-required",
+            config_flags=(
+                ClaudeCodeConfigFlag(flag="model", value="sonnet"),
+                ClaudeCodeConfigFlag(flag="--verbose"),
+            ),
+        ),
+    )
+
+    assert command[1:11] == (
+        "--sandbox",
+        "workspace-write",
+        "--permission-mode",
+        "approval-required",
+        "--model",
+        "sonnet",
+        "--verbose",
+        "--stage",
+        "plan",
+        "--work-item",
+    )
+
+
+def test_assemble_command_maps_bypass_permission_to_dangerous_flag() -> None:
+    command = assemble_command(
+        configured_command="claude",
+        context=_context(),
+        launch_options=ClaudeCodeLaunchOptions(permission_mode="bypass"),
+    )
+
+    assert "--dangerously-skip-permissions" in command
+    assert "--permission-mode" not in command
+
+
 def test_assemble_command_rejects_empty_configured_command() -> None:
     with pytest.raises(ValueError, match="must not be empty"):
         assemble_command(configured_command="   ", context=_context())
@@ -109,3 +150,11 @@ def test_context_rejects_empty_prompt_pack_inputs() -> None:
             stage_brief_path=Path("stages/plan/stage-brief.md"),
             prompt_pack_paths=(),
         )
+
+
+def test_launch_options_reject_blank_modes() -> None:
+    with pytest.raises(ValueError, match="Sandbox mode must not be blank"):
+        ClaudeCodeLaunchOptions(sandbox_mode="   ")
+
+    with pytest.raises(ValueError, match="Permission mode must not be blank"):
+        ClaudeCodeLaunchOptions(permission_mode="   ")

@@ -31,6 +31,36 @@ class ClaudeCodeCommandContext:
             raise ValueError("Stage context prompt-pack paths must not be empty.")
 
 
+@dataclass(frozen=True, slots=True)
+class ClaudeCodeConfigFlag:
+    flag: str
+    value: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.flag.strip():
+            raise ValueError("Config flag name must not be empty.")
+
+    @property
+    def normalized_flag(self) -> str:
+        stripped = self.flag.strip()
+        if stripped.startswith("--"):
+            return stripped
+        return f"--{stripped}"
+
+
+@dataclass(frozen=True, slots=True)
+class ClaudeCodeLaunchOptions:
+    sandbox_mode: str | None = None
+    permission_mode: str | None = None
+    config_flags: tuple[ClaudeCodeConfigFlag, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.sandbox_mode is not None and not self.sandbox_mode.strip():
+            raise ValueError("Sandbox mode must not be blank when provided.")
+        if self.permission_mode is not None and not self.permission_mode.strip():
+            raise ValueError("Permission mode must not be blank when provided.")
+
+
 def _resolve_stage_brief_path_for_execution(
     *,
     stage_brief_path: Path,
@@ -57,10 +87,33 @@ def _resolve_prompt_pack_paths_for_execution(
     return tuple(resolved)
 
 
+def _assemble_launch_flags(options: ClaudeCodeLaunchOptions | None) -> tuple[str, ...]:
+    if options is None:
+        return ()
+
+    launch_flags: list[str] = []
+    if options.sandbox_mode is not None:
+        launch_flags.extend(("--sandbox", options.sandbox_mode.strip()))
+
+    if options.permission_mode is not None:
+        normalized_permission_mode = options.permission_mode.strip()
+        if normalized_permission_mode == "bypass":
+            launch_flags.append("--dangerously-skip-permissions")
+        else:
+            launch_flags.extend(("--permission-mode", normalized_permission_mode))
+
+    for config_flag in options.config_flags:
+        launch_flags.append(config_flag.normalized_flag)
+        if config_flag.value is not None:
+            launch_flags.append(config_flag.value)
+    return tuple(launch_flags)
+
+
 def assemble_command(
     *,
     configured_command: str,
     context: ClaudeCodeCommandContext,
+    launch_options: ClaudeCodeLaunchOptions | None = None,
     repository_root: Path | None = None,
 ) -> tuple[str, ...]:
     stripped = configured_command.strip()
@@ -86,9 +139,11 @@ def assemble_command(
         prompt_pack_paths=context.prompt_pack_paths,
         repository_root=repository_root,
     )
+    launch_flags = _assemble_launch_flags(launch_options)
 
     command: list[str] = [
         *base_tokens,
+        *launch_flags,
         "--stage",
         context.stage,
         "--work-item",
@@ -110,6 +165,7 @@ def command_preview(
     *,
     configured_command: str,
     context: ClaudeCodeCommandContext,
+    launch_options: ClaudeCodeLaunchOptions | None = None,
     repository_root: Path | None = None,
 ) -> str:
     return " ".join(
@@ -117,6 +173,7 @@ def command_preview(
         for token in assemble_command(
             configured_command=configured_command,
             context=context,
+            launch_options=launch_options,
             repository_root=repository_root,
         )
     )
