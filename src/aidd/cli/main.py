@@ -10,6 +10,7 @@ from rich.table import Table
 from aidd import __version__
 from aidd.adapters.base import CapabilityReport
 from aidd.adapters.claude_code import probe as probe_claude_code
+from aidd.adapters.codex import probe as probe_codex
 from aidd.adapters.generic_cli import probe as probe_generic_cli
 from aidd.cli.run_lookup import (
     resolve_run_artifacts_summary,
@@ -127,6 +128,7 @@ def doctor(
     cfg = load_config(config)
     generic = probe_generic_cli(cfg.generic_cli_command)
     claude = probe_claude_code(cfg.claude_code_command)
+    codex = probe_codex("codex")
 
     table = Table(title="AIDD doctor")
     table.add_column("Check")
@@ -142,6 +144,10 @@ def doctor(
     table.add_row("claude-code available", "yes" if claude.available else "no")
     table.add_row("claude-code version", claude.version_text or "unknown")
     table.add_row("claude-code capabilities", _capability_summary(claude))
+    table.add_row("codex command", codex.command)
+    table.add_row("codex available", "yes" if codex.available else "no")
+    table.add_row("codex version", codex.version_text or "unknown")
+    table.add_row("codex capabilities", _capability_summary(codex))
     table.add_row("log mode", cfg.log_mode)
     table.add_row("max repair attempts", str(cfg.max_repair_attempts))
 
