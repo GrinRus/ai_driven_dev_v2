@@ -109,3 +109,57 @@ Any compatibility policy change must update, in the same change:
 - `README.md` references and operator-facing docs when affected;
 - CI/release workflow configuration when policy requirements change;
 - roadmap status for the corresponding local task.
+
+## 6. Deprecation rules
+
+Deprecations must be explicit, time-bounded, and reversible until the announced removal window closes.
+
+### 6.1 Shared deprecation lifecycle
+
+Every deprecation follows these phases:
+
+1. Announcement:
+   - mark deprecated in docs and roadmap notes;
+   - describe replacement path;
+   - define the planned removal milestone.
+2. Transition window:
+   - keep legacy behavior available;
+   - provide migration guidance and examples.
+3. Removal:
+   - remove deprecated behavior;
+   - update contracts/docs/scenarios to remove stale references.
+
+Minimum notice window:
+
+- at least two tagged releases between deprecation announcement and removal for non-critical changes;
+- immediate removal is allowed only for security or severe data-integrity risks, with explicit incident notes.
+
+### 6.2 Contract deprecation rules
+
+Applies to stage/document contracts and contract examples.
+
+- Breaking contract changes require:
+  - migration notes describing old vs new contract expectations;
+  - synchronized updates to validators, prompts, examples, and affected tests;
+  - explicit compatibility statement in release notes.
+- Removing a required section or renaming canonical fields without migration notes is not allowed.
+
+### 6.3 Adapter deprecation rules
+
+Applies to runtime adapters and adapter capability surfaces.
+
+- Deprecating an adapter requires:
+  - updated runtime support tier entry in this policy;
+  - operator-facing impact note;
+  - documented fallback runtime path when available.
+- Tier 1 adapter deprecation cannot ship without a replacement Tier 1 path.
+
+### 6.4 Scenario manifest deprecation rules
+
+Applies to smoke/interview/live scenario manifests and associated catalog entries.
+
+- Deprecated scenarios must include:
+  - replacement scenario id (or explicit no-replacement rationale);
+  - reason for deprecation;
+  - removal target release.
+- Scenario removal must update `docs/e2e/live-e2e-catalog.md` and keep historical evidence discoverable in Git history.
