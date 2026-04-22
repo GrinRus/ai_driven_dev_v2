@@ -1368,7 +1368,7 @@ Exit evidence:
 
 - evals can explain where a run failed instead of only reporting that it failed.
 
-#### Slice W5-E2-S3 — eval summary reports (`planned`)
+#### Slice W5-E2-S3 — eval summary reports (`done`)
 Goal: aggregate scenario verdicts into operator-friendly reports.
 
 Primary outputs:
@@ -1393,7 +1393,7 @@ Local tasks:
 - `W5-E2-S3-T2` (done) Implement runtime-level summary aggregation across many scenarios.
 - `W5-E2-S3-T3` (done) Render a Markdown summary report suitable for CI artifacts.
 - `W5-E2-S3-T4` (done) Add a CLI summary command that prints the latest eval report.
-- `W5-E2-S3-T5` Add tests for empty eval sets, mixed outcomes, and repeated scenario runs.
+- `W5-E2-S3-T5` (done) Add tests for empty eval sets, mixed outcomes, and repeated scenario runs.
 
 Exit evidence:
 
