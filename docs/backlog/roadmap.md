@@ -1361,7 +1361,7 @@ Local tasks:
 - `W5-E2-S2-T2` (done) Implement parsing of `events.jsonl` when a runtime exposes normalized events.
 - `W5-E2-S2-T3` (done) Implement parsing of `validator-report.md` and stage-result metadata for validation failures.
 - `W5-E2-S2-T4` (done) Implement the failure taxonomy that separates environment, adapter, runtime, validation, and scenario-verification failures.
-- `W5-E2-S2-T5` Implement first-failure-boundary selection from competing log signals.
+- `W5-E2-S2-T5` (done) Implement first-failure-boundary selection from competing log signals.
 - `W5-E2-S2-T6` Add regression tests for ambiguous failures, multi-error runs, and empty-log cases.
 
 Exit evidence:

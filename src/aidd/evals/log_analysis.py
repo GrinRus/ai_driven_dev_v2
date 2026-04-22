@@ -46,6 +46,14 @@ class FailureTaxonomyResult:
     reason: str
 
 
+@dataclass(frozen=True, slots=True)
+class FailureBoundarySelection:
+    category: FailureTaxonomyCategory
+    signal_source: str
+    signal_line_number: int | None
+    reason: str
+
+
 VALIDATOR_FINDING_PATTERN = re.compile(
     r"^- `(?P<code>[^`]+)` \(`(?P<severity>[^`]+)`\) in (?P<location>.+?): (?P<message>.+)$"
 )
@@ -358,6 +366,152 @@ def classify_failure_taxonomy(
         category="none",
         reason="No failure signal detected.",
     )
+
+
+def select_first_failure_boundary(
+    *,
+    runtime_events: tuple[CoarseRuntimeEvent, ...] = (),
+    normalized_events: tuple[NormalizedRuntimeEvent, ...] = (),
+    validator_failures: tuple[CoarseRuntimeEvent, ...] = (),
+    stage_metadata_failures: tuple[CoarseRuntimeEvent, ...] = (),
+    aidd_exit_code: int | None = None,
+    verification_exit_code: int | None = None,
+) -> FailureBoundarySelection:
+    ranked_candidates: list[tuple[int, int, FailureBoundarySelection]] = []
+
+    def _push_candidate(
+        *,
+        rank: int,
+        line_number: int | None,
+        selection: FailureBoundarySelection,
+    ) -> None:
+        ranked_candidates.append(
+            (
+                rank,
+                line_number if line_number is not None else 10**9,
+                selection,
+            )
+        )
+
+    for event in runtime_events:
+        if _is_environment_signal(event.message):
+            _push_candidate(
+                rank=0,
+                line_number=event.line_number,
+                selection=FailureBoundarySelection(
+                    category="environment",
+                    signal_source="runtime.log",
+                    signal_line_number=event.line_number,
+                    reason=event.message,
+                ),
+            )
+        elif _is_adapter_signal(event.message):
+            _push_candidate(
+                rank=1,
+                line_number=event.line_number,
+                selection=FailureBoundarySelection(
+                    category="adapter",
+                    signal_source="runtime.log",
+                    signal_line_number=event.line_number,
+                    reason=event.message,
+                ),
+            )
+        elif event.category == "error":
+            _push_candidate(
+                rank=2,
+                line_number=event.line_number,
+                selection=FailureBoundarySelection(
+                    category="runtime",
+                    signal_source="runtime.log",
+                    signal_line_number=event.line_number,
+                    reason=event.message,
+                ),
+            )
+
+    for normalized_event in normalized_events:
+        if _is_environment_signal(normalized_event.event_kind):
+            _push_candidate(
+                rank=0,
+                line_number=normalized_event.line_number,
+                selection=FailureBoundarySelection(
+                    category="environment",
+                    signal_source="events.jsonl",
+                    signal_line_number=normalized_event.line_number,
+                    reason=normalized_event.event_kind,
+                ),
+            )
+        elif _is_adapter_signal(normalized_event.event_kind):
+            _push_candidate(
+                rank=1,
+                line_number=normalized_event.line_number,
+                selection=FailureBoundarySelection(
+                    category="adapter",
+                    signal_source="events.jsonl",
+                    signal_line_number=normalized_event.line_number,
+                    reason=normalized_event.event_kind,
+                ),
+            )
+        elif any(
+            token in normalized_event.event_kind
+            for token in ("error", "fail", "exception", "timeout")
+        ):
+            _push_candidate(
+                rank=2,
+                line_number=normalized_event.line_number,
+                selection=FailureBoundarySelection(
+                    category="runtime",
+                    signal_source="events.jsonl",
+                    signal_line_number=normalized_event.line_number,
+                    reason=normalized_event.event_kind,
+                ),
+            )
+
+    for event in (*validator_failures, *stage_metadata_failures):
+        _push_candidate(
+            rank=3,
+            line_number=event.line_number,
+            selection=FailureBoundarySelection(
+                category="validation",
+                signal_source="validator-or-stage-metadata",
+                signal_line_number=event.line_number,
+                reason=event.message,
+            ),
+        )
+
+    if aidd_exit_code not in (None, 0):
+        _push_candidate(
+            rank=2,
+            line_number=None,
+            selection=FailureBoundarySelection(
+                category="runtime",
+                signal_source="aidd-exit-code",
+                signal_line_number=None,
+                reason=f"AIDD exited with {aidd_exit_code}",
+            ),
+        )
+
+    if verification_exit_code not in (None, 0):
+        _push_candidate(
+            rank=4,
+            line_number=None,
+            selection=FailureBoundarySelection(
+                category="scenario-verification",
+                signal_source="verification-exit-code",
+                signal_line_number=None,
+                reason=f"verification exited with {verification_exit_code}",
+            ),
+        )
+
+    if not ranked_candidates:
+        return FailureBoundarySelection(
+            category="none",
+            signal_source="none",
+            signal_line_number=None,
+            reason="No failure signal detected.",
+        )
+
+    ranked_candidates.sort(key=lambda item: (item[0], item[1]))
+    return ranked_candidates[0][2]
 
 
 def parse_runtime_log_text(runtime_log_text: str) -> tuple[CoarseRuntimeEvent, ...]:
