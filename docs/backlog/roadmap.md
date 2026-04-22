@@ -1300,7 +1300,7 @@ Local tasks:
 - `W5-E1-S4-T1` (done) Define the scenario run directory layout and stable artifact names.
 - `W5-E1-S4-T2` (done) Persist harness metadata, command transcripts, and references to AIDD run artifacts.
 - `W5-E1-S4-T3` (done) Copy or link validator reports, runtime logs, and verdict files into the bundle.
-- `W5-E1-S4-T4` Add tests that verify bundle completeness for pass, fail, and blocked runs.
+- `W5-E1-S4-T4` (done) Add tests that verify bundle completeness for pass, fail, and blocked runs.
 
 Exit evidence:
 
