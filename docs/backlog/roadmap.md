@@ -1682,7 +1682,7 @@ Local tasks:
 - `W6-E1-S3-T1` (done) Write the `plan` base prompt with milestone, dependency, and verification expectations.
 - `W6-E1-S3-T2` (done) Write the `plan` repair prompt for vague sequencing, missing risks, or unreviewable scope.
 - `W6-E1-S3-T3` (done) Implement `plan`-specific semantic validators.
-- `W6-E1-S3-T4` Add valid and invalid `plan` fixtures.
+- `W6-E1-S3-T4` (done) Add valid and invalid `plan` fixtures.
 - `W6-E1-S3-T5` Add unit tests that execute the `plan` validator against the fixtures.
 - `W6-E1-S3-T6` Add one harness smoke scenario that exercises `plan` and archives the resulting artifacts.
 

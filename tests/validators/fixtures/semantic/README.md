@@ -13,3 +13,7 @@ Fixtures for `tests/validators/test_semantic.py` regression coverage.
   and must fail `research` semantic checks.
 - `research-invalid-unresolved-question/workspace/` contains a bundle with unresolved evidence in
   findings/evidence trace and must fail `research` semantic checks.
+- `plan-valid/workspace/` contains a bundle that should pass `plan` semantic checks for milestone
+  ids, risk mitigation notes, dependency lists, and verification-note mapping.
+- `plan-invalid/workspace/` contains a bundle with weak risk mitigation, non-list dependencies, and
+  missing milestone references in verification notes, and must fail `plan` semantic checks.
