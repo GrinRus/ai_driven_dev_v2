@@ -90,12 +90,24 @@ Recommended release flow:
 5. publish container image,
 6. publish release notes.
 
-## 9. Versioning policy
+## 9. Container image tagging rules
+
+Container images are published to `ghcr.io/<owner>/ai-driven-dev-v2` from release tags that
+start with `v`.
+
+Tag set:
+
+- exact release tag, for example `v1.4.2`;
+- semantic aliases `v1.4` and `v1`;
+- immutable commit tag `sha-<git-sha>`;
+- `latest` only for stable tags without a prerelease suffix.
+
+## 10. Versioning policy
 
 This bootstrap uses a normal package version for releases.
 
 Document contracts and prompt packs do not use foldered version trees. Provenance is tracked through Git revision and file hashes.
 
-## 10. Summary
+## 11. Summary
 
 AIDD is developed like a normal Python open-source project, but with first-class contracts, prompt packs, scenarios, and runtime adapters.

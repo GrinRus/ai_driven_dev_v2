@@ -156,6 +156,12 @@ The intended release channels are:
 
 Runtime binaries remain external dependencies. AIDD does not bundle Claude Code, Codex, OpenCode, or other runtimes.
 
+Container image tagging rules for release tags:
+
+- publish `vX.Y.Z`, `vX.Y`, and `vX`;
+- publish `sha-<git-sha>` for traceability;
+- publish `latest` only for stable tags without prerelease suffixes.
+
 ## Quickstart
 
 ```bash

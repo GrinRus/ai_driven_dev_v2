@@ -15,7 +15,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 ## Parking lot
 
 - `W6-E2-S3-T6`
-- `W7-E3-S2-T2`
 
 ## Update rules
 
