@@ -1655,7 +1655,7 @@ Exit evidence:
 - `research` can produce auditable outputs and fail predictably when evidence is weak.
 - smoke bundle archived at `.aidd/reports/evals/eval-stage-research-smoke-20260422T101720Z`.
 
-#### Slice W6-E1-S3 — `plan` stage pack (`planned`)
+#### Slice W6-E1-S3 — `plan` stage pack (`done`)
 Goal: make the `plan` stage runnable with planning-specific validation and harness coverage.
 
 Primary outputs:
@@ -1684,11 +1684,13 @@ Local tasks:
 - `W6-E1-S3-T3` (done) Implement `plan`-specific semantic validators.
 - `W6-E1-S3-T4` (done) Add valid and invalid `plan` fixtures.
 - `W6-E1-S3-T5` (done) Add unit tests that execute the `plan` validator against the fixtures.
-- `W6-E1-S3-T6` Add one harness smoke scenario that exercises `plan` and archives the resulting artifacts.
+- `W6-E1-S3-T6` (done) Add one harness smoke scenario that exercises `plan` and archives the resulting artifacts.
 
 Exit evidence:
 
 - `plan` is fully wired into validation and harness execution.
+- smoke scenario added at `harness/scenarios/smoke/plan-stagepack-smoke.yaml`.
+- smoke bundle archived at `.aidd/reports/evals/eval-stage-plan-smoke-20260422T102945Z`.
 
 ### Epic W6-E2 — delivery stages (`planned`)
 Linked stories: `US-02`, `US-03`, `US-04`, `US-05`
