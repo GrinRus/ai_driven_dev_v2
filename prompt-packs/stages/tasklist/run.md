@@ -1,49 +1,61 @@
 # Run prompt for `tasklist`
 
-## Goal
+## Stage objective
 
-Break the approved plan into reviewable implementation tasks with verification notes.
+Produce a `tasklist` package that is executable in dependency order, reviewable task by task,
+and consistent with upstream `plan` and `review-spec` decisions.
+
+The stage is complete only when each task has a single dominant deliverable, explicit dependency
+notes, and a concrete verification signal.
 
 ## Inputs to read first
 
-- `../plan/output/plan.md`
-- `../plan/output/stage-result.md`
-- `../review-spec/output/review-spec-report.md`
-- `../review-spec/output/stage-result.md`
-- `../review-spec/output/validator-report.md`
-- optional context when available: repository state, constraints, previous decisions
-- stage contract: `contracts/stages/tasklist.md`
+- required:
+  - `../plan/output/plan.md`
+  - `../plan/output/stage-result.md`
+  - `../review-spec/output/review-spec-report.md`
+  - `../review-spec/output/stage-result.md`
+  - `../review-spec/output/validator-report.md`
+- optional context when available:
+  - `context/repository-state.md`
+  - `context/constraints.md`
+  - `context/previous-decisions.md`
+- contract of record:
+  - `contracts/stages/tasklist.md`
 
-## Required outputs
+## Required outputs (always write)
 
 - `tasklist.md`
 - `stage-result.md`
 - `validator-report.md`
 
-## Conditional outputs
+## Decomposition discipline
 
-- `questions.md` and `answers.md` when clarification is needed
-- `repair-brief.md` only when validation fails and repair is required
+1. Use stable task ids and imperative task titles.
+2. Keep one dominant output artifact per task so each item can be implemented and reviewed in one pass.
+3. Record explicit dependencies for every task (`none` or concrete task/upstream ids).
+4. Keep task ordering executable in dependency order, not only grouped by topic.
+5. Add at least one concrete verification note per task (test/check/scenario).
+6. Do not mark stage `succeeded` when upstream `review-spec` readiness/sign-off has unresolved
+   blocking conditions.
 
-## Instructions
+## Execution instructions
 
-1. Read all required upstream artifacts before writing outputs.
-2. Treat the latest completed `review-spec` attempt as the gating upstream source.
-3. Do not declare success when review-spec readiness or sign-off indicates unresolved blocking conditions.
-4. Write `tasklist.md` as an ordered implementation decomposition with stable task ids and imperative titles.
-5. Keep each task bounded to one dominant output artifact so it stays reviewable as a standalone unit.
-6. Record explicit dependencies for every task (`none` when independent) and keep ordering executable in dependency order.
-7. Add verification notes for every task that name the primary check, test, or scenario proving completion.
-8. Write or update `stage-result.md` and `validator-report.md` so readiness and validation outcomes are consistent.
-9. If required inputs are missing or sequencing/staffing assumptions are unresolved, raise questions with stable ids and `[blocking]` / `[non-blocking]` markers instead of inventing answers.
-10. Keep the output useful for the next stage rather than merely well-formatted.
+1. Read all required inputs and `contracts/stages/tasklist.md` before drafting outputs.
+2. Build `tasklist.md` with sections required by contract (`Task summary`, `Ordered tasks`,
+   `Dependencies`, `Verification notes`).
+3. Ensure dependency references are resolvable and avoid hidden prerequisites.
+4. Keep task scope bounded; split bundled work into separate ordered tasks.
+5. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
+   consistent with tasklist content.
+6. If required inputs are missing or sequencing/ownership assumptions are unresolved, raise
+   questions with stable ids and `[blocking]` / `[non-blocking]` markers instead of inventing
+   decisions.
 
 ## Completion checklist
 
-- task entries are ordered, uniquely identified, and imperative,
-- each task has one dominant output artifact,
-- each task has explicit dependencies (`none` or concrete upstream ids),
-- dependencies are resolvable and do not imply hidden prerequisites,
-- each task has at least one concrete verification note,
-- each task stays small enough for single-pass implementation and review,
-- `stage-result.md` and `validator-report.md` agree with tasklist readiness.
+- tasklist decomposition is ordered and dependency-executable,
+- each task has one dominant deliverable and explicit dependency note,
+- verification notes are concrete and task-specific,
+- unresolved blocking ambiguity is represented as explicit questions,
+- `stage-result.md` and `validator-report.md` match tasklist readiness and blockers.
