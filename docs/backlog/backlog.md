@@ -5,10 +5,9 @@ This file is the short actionable queue.
 Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, epic, slice, and local task.
 
 ## Next
-- `W7-E1-S2-T1`
+- `W7-E1-S2-T2`
 
 ## Soon
-- `W7-E1-S2-T2`
 - `W7-E1-S2-T3`
 
 ## Parking lot
