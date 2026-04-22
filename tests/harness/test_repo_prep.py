@@ -3,6 +3,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from aidd.harness.repo_prep import prepare_scenario_repository
 from aidd.harness.scenarios import (
     Scenario,
@@ -27,11 +29,20 @@ def _run(
     return completed.stdout.strip()
 
 
-def _build_scenario(repo_url: str) -> Scenario:
+def _build_scenario(
+    repo_url: str,
+    *,
+    default_branch: str | None = None,
+    revision: str | None = None,
+) -> Scenario:
     return Scenario(
         scenario_id="AIDD-TEST-REPO-PREP",
         task="Prepare repo",
-        repo=ScenarioRepoSource(url=repo_url, default_branch=None, revision=None),
+        repo=ScenarioRepoSource(
+            url=repo_url,
+            default_branch=default_branch,
+            revision=revision,
+        ),
         setup=ScenarioCommandSteps(commands=("echo setup",)),
         run=ScenarioRunConfig(
             stage_start=None,
@@ -69,6 +80,7 @@ def test_prepare_scenario_repository_clones_repository(tmp_path: Path) -> None:
 
     assert prepared.action == "cloned"
     assert (prepared.repo_path / ".git").exists()
+    assert prepared.resolved_revision
     assert (
         _run(["git", "rev-parse", f"refs/remotes/origin/{branch}"], cwd=prepared.repo_path)
         == source_head
@@ -90,7 +102,45 @@ def test_prepare_scenario_repository_fetches_existing_clone(tmp_path: Path) -> N
 
     assert second.action == "fetched"
     assert second.repo_path == first.repo_path
+    assert second.resolved_revision
     assert (
         _run(["git", "rev-parse", f"refs/remotes/origin/{branch}"], cwd=second.repo_path)
         == updated_head
     )
+
+
+def test_prepare_scenario_repository_pins_explicit_revision(tmp_path: Path) -> None:
+    source_repo = tmp_path / "source"
+    _, first_head = _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri(), revision=first_head)
+
+    prepared = prepare_scenario_repository(cache_root=tmp_path / "cache", scenario=scenario)
+
+    assert prepared.resolved_revision == first_head
+    assert _run(["git", "rev-parse", "HEAD"], cwd=prepared.repo_path) == first_head
+
+
+def test_prepare_scenario_repository_rejects_invalid_revision(tmp_path: Path) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri(), revision="deadbeef")
+
+    with pytest.raises(
+        RuntimeError,
+        match="Failed to pin repository to revision 'deadbeef'",
+    ):
+        prepare_scenario_repository(cache_root=tmp_path / "cache", scenario=scenario)
+
+
+def test_prepare_scenario_repository_pins_default_branch_when_revision_missing(
+    tmp_path: Path,
+) -> None:
+    source_repo = tmp_path / "source"
+    branch, source_head = _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri(), default_branch=branch)
+
+    prepared = prepare_scenario_repository(cache_root=tmp_path / "cache", scenario=scenario)
+
+    assert prepared.resolved_revision == source_head
+    assert _run(["git", "rev-parse", "HEAD"], cwd=prepared.repo_path) == source_head
+    assert _run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=prepared.repo_path) == "HEAD"
