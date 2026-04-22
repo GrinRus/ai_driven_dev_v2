@@ -162,6 +162,12 @@ Container image tagging rules for release tags:
 - publish `sha-<git-sha>` for traceability;
 - publish `latest` only for stable tags without prerelease suffixes.
 
+PyPI publishing tag rules:
+
+- tag format must be `v<major>.<minor>.<patch>` with optional PEP 440 suffix (`aN`, `bN`, `rcN`, `.postN`, `.devN`);
+- release tag must exactly match `v<project.version>` from `pyproject.toml`;
+- tag-triggered publish jobs fail fast when tag format or tag/version alignment is invalid.
+
 ## Quickstart
 
 ```bash

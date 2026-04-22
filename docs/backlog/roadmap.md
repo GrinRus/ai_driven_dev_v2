@@ -2115,7 +2115,7 @@ Dependencies:
 
 Local tasks:
 
-- `W7-E3-S2-T1` Finalize PyPI publishing configuration and release tagging rules.
+- `W7-E3-S2-T1` (done) Finalize PyPI publishing configuration and release tagging rules.
 - `W7-E3-S2-T2` (done) Finalize container publishing configuration and image tagging rules.
 - `W7-E3-S2-T3` Add a human-readable release checklist that covers package, image, and changelog steps.
 - `W7-E3-S2-T4` Add release-verification steps that prove the published CLI can still run `aidd doctor`.

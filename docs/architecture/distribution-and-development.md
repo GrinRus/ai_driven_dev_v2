@@ -102,12 +102,22 @@ Tag set:
 - immutable commit tag `sha-<git-sha>`;
 - `latest` only for stable tags without a prerelease suffix.
 
-## 10. Versioning policy
+## 10. PyPI release tagging rules
+
+PyPI publishing accepts release tags that:
+
+- start with `v`;
+- use `v<major>.<minor>.<patch>` with optional PEP 440 suffix (`aN`, `bN`, `rcN`, `.postN`, `.devN`);
+- exactly match `v<project.version>` from `pyproject.toml`.
+
+If a release tag fails format or version-alignment checks, the release workflow fails before package publishing.
+
+## 11. Versioning policy
 
 This bootstrap uses a normal package version for releases.
 
 Document contracts and prompt packs do not use foldered version trees. Provenance is tracked through Git revision and file hashes.
 
-## 11. Summary
+## 12. Summary
 
 AIDD is developed like a normal Python open-source project, but with first-class contracts, prompt packs, scenarios, and runtime adapters.
