@@ -150,12 +150,22 @@ def stage_run(
     stage: Annotated[str, typer.Argument(help="Stage name")],
     work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
     runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+    log_follow: Annotated[
+        bool,
+        typer.Option(
+            "--log-follow/--no-log-follow",
+            help="Enable explicit live-log follow mode during stage execution.",
+        ),
+    ] = False,
 ) -> None:
     """Run a single AIDD stage."""
     if not is_valid_stage(stage):
         raise typer.BadParameter(f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}")
 
-    console.print(f"AIDD stage run: stage={stage} work_item={work_item} runtime={runtime}")
+    console.print(
+        "AIDD stage run: "
+        f"stage={stage} work_item={work_item} runtime={runtime} log_follow={log_follow}"
+    )
     console.print(
         "Stage execution is not implemented yet. "
         "See contracts/stages/ and docs/architecture/document-contracts.md."
