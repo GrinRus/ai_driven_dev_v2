@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import shlex
 import subprocess
@@ -101,6 +102,7 @@ class ClaudeCodeExitClassification(StrEnum):
 
 
 StreamTarget = Literal["stdout", "stderr"]
+EVENTS_JSONL_FILENAME = "events.jsonl"
 
 
 def _resolve_stage_brief_path_for_execution(
@@ -415,6 +417,60 @@ def persist_attempt_runtime_log(
     runtime_log_path = attempt_path / RUN_RUNTIME_LOG_FILENAME
     runtime_log_path.write_text(run_result.runtime_log_text, encoding="utf-8")
     return ClaudeCodeRuntimeArtifacts(runtime_log_path=runtime_log_path)
+
+
+def _normalize_stream_events(
+    *,
+    stream_text: str,
+    source: StreamTarget,
+) -> list[dict[str, object]]:
+    normalized: list[dict[str, object]] = []
+    for line in stream_text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            parsed = json.loads(stripped)
+        except json.JSONDecodeError:
+            continue
+
+        if isinstance(parsed, dict):
+            normalized.append({**parsed, "source": source})
+            continue
+
+        normalized.append({"payload": parsed, "source": source})
+    return normalized
+
+
+def normalize_structured_events(
+    *,
+    run_result: ClaudeCodeRunResult,
+) -> tuple[dict[str, object], ...]:
+    stdout_events = _normalize_stream_events(
+        stream_text=run_result.stdout_text,
+        source="stdout",
+    )
+    stderr_events = _normalize_stream_events(
+        stream_text=run_result.stderr_text,
+        source="stderr",
+    )
+    return tuple((*stdout_events, *stderr_events))
+
+
+def persist_normalized_events_jsonl(
+    *,
+    attempt_path: Path,
+    run_result: ClaudeCodeRunResult,
+) -> Path | None:
+    normalized_events = normalize_structured_events(run_result=run_result)
+    if not normalized_events:
+        return None
+
+    attempt_path.mkdir(parents=True, exist_ok=True)
+    events_path = attempt_path / EVENTS_JSONL_FILENAME
+    lines = [json.dumps(event, sort_keys=True) for event in normalized_events]
+    events_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return events_path
 
 
 def command_preview(

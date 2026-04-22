@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 import threading
@@ -21,7 +22,9 @@ from aidd.adapters.claude_code.runner import (
     build_execution_environment,
     build_subprocess_spec,
     command_preview,
+    normalize_structured_events,
     persist_attempt_runtime_log,
+    persist_normalized_events_jsonl,
     run_subprocess_with_streaming,
 )
 
@@ -490,6 +493,65 @@ def test_persist_attempt_runtime_log_writes_runtime_log_file(tmp_path: Path) -> 
     assert isinstance(artifacts, ClaudeCodeRuntimeArtifacts)
     assert artifacts.runtime_log_path == attempt_path / "runtime.log"
     assert artifacts.runtime_log_path.read_text(encoding="utf-8") == run_result.runtime_log_text
+
+
+def test_normalize_structured_events_collects_json_from_stdout_and_stderr() -> None:
+    run_result = ClaudeCodeRunResult(
+        exit_code=0,
+        stdout_text='{"event":"run_started","id":"abc"}\nnot-json\n',
+        stderr_text='{"level":"warn","msg":"slow"}\n',
+        runtime_log_text="",
+        exit_classification=ClaudeCodeExitClassification.SUCCESS,
+    )
+
+    events = normalize_structured_events(run_result=run_result)
+
+    assert events == (
+        {"event": "run_started", "id": "abc", "source": "stdout"},
+        {"level": "warn", "msg": "slow", "source": "stderr"},
+    )
+
+
+def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    run_result = ClaudeCodeRunResult(
+        exit_code=0,
+        stdout_text='{"event":"run_started","id":"abc"}\n',
+        stderr_text='{"event":"warn","msg":"slow"}\n',
+        runtime_log_text="",
+        exit_classification=ClaudeCodeExitClassification.SUCCESS,
+    )
+
+    events_path = persist_normalized_events_jsonl(
+        attempt_path=attempt_path,
+        run_result=run_result,
+    )
+
+    assert events_path == attempt_path / "events.jsonl"
+    lines = events_path.read_text(encoding="utf-8").strip().splitlines()
+    assert [json.loads(line) for line in lines] == [
+        {"event": "run_started", "id": "abc", "source": "stdout"},
+        {"event": "warn", "msg": "slow", "source": "stderr"},
+    ]
+
+
+def test_persist_normalized_events_jsonl_returns_none_without_json_lines(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    run_result = ClaudeCodeRunResult(
+        exit_code=0,
+        stdout_text="plain text only\n",
+        stderr_text="still plain text\n",
+        runtime_log_text="",
+        exit_classification=ClaudeCodeExitClassification.SUCCESS,
+    )
+
+    events_path = persist_normalized_events_jsonl(
+        attempt_path=attempt_path,
+        run_result=run_result,
+    )
+
+    assert events_path is None
+    assert not (attempt_path / "events.jsonl").exists()
 
 
 def test_assemble_command_rejects_empty_configured_command() -> None:
