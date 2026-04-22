@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from aidd.evals.log_analysis import FailureTaxonomyCategory
@@ -121,6 +122,106 @@ def aggregate_runtime_summary_rows(
     return tuple(summaries)
 
 
+def _format_duration(duration_seconds: float) -> str:
+    return f"{duration_seconds:.3f}"
+
+
+def _default_created_at_utc() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def render_eval_summary_markdown(
+    *,
+    scenario_rows: tuple[ScenarioSummaryRow, ...],
+    runtime_summaries: tuple[RuntimeSummaryRow, ...] | None = None,
+    created_at_utc: str | None = None,
+) -> str:
+    normalized_runtime_summaries = (
+        aggregate_runtime_summary_rows(scenario_rows)
+        if runtime_summaries is None
+        else tuple(sorted(runtime_summaries, key=lambda row: row.runtime_id))
+    )
+    normalized_scenario_rows = tuple(
+        sorted(scenario_rows, key=lambda row: (row.scenario_id, row.run_id))
+    )
+
+    lines = [
+        "# Eval Summary",
+        "",
+        "## Overview",
+        f"- Generated At (UTC): `{(created_at_utc or _default_created_at_utc()).strip()}`",
+        f"- Scenario Rows: `{len(normalized_scenario_rows)}`",
+        f"- Runtime Rows: `{len(normalized_runtime_summaries)}`",
+        "",
+        "## Runtime Summary",
+    ]
+    if not normalized_runtime_summaries:
+        lines.append("- No runtime summary rows.")
+    else:
+        lines.extend(
+            (
+                "| Runtime | Scenarios | Pass | Fail | Blocked | Infra Fail | "
+                "Total Duration (s) | Avg Duration (s) |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            )
+        )
+        for runtime_row in normalized_runtime_summaries:
+            lines.append(
+                "| "
+                f"`{runtime_row.runtime_id}` | "
+                f"{runtime_row.scenario_count} | "
+                f"{runtime_row.pass_count} | "
+                f"{runtime_row.fail_count} | "
+                f"{runtime_row.blocked_count} | "
+                f"{runtime_row.infra_fail_count} | "
+                f"{_format_duration(runtime_row.total_duration_seconds)} | "
+                f"{_format_duration(runtime_row.average_duration_seconds)} |"
+            )
+
+    lines.extend(("", "## Scenario Summary"))
+    if not normalized_scenario_rows:
+        lines.append("- No scenario summary rows.")
+    else:
+        lines.extend(
+            (
+                "| Scenario | Run | Runtime | Verdict | Duration (s) | Failure Boundary |",
+                "| --- | --- | --- | --- | ---: | --- |",
+            )
+        )
+        for scenario_row in normalized_scenario_rows:
+            lines.append(
+                "| "
+                f"`{scenario_row.scenario_id}` | "
+                f"`{scenario_row.run_id}` | "
+                f"`{scenario_row.runtime_id}` | "
+                f"`{scenario_row.verdict_status}` | "
+                f"{_format_duration(scenario_row.duration_seconds)} | "
+                f"`{scenario_row.failure_boundary}` |"
+            )
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_eval_summary_markdown(
+    *,
+    path: Path,
+    scenario_rows: tuple[ScenarioSummaryRow, ...],
+    runtime_summaries: tuple[RuntimeSummaryRow, ...] | None = None,
+    created_at_utc: str | None = None,
+) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_eval_summary_markdown(
+            scenario_rows=scenario_rows,
+            runtime_summaries=runtime_summaries,
+            created_at_utc=created_at_utc,
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def write_verdict(path: Path, status: str, summary: str) -> None:
     if status not in FAILURE_CLASSES:
         raise ValueError(f"Unknown failure class: {status}")
@@ -137,5 +238,7 @@ __all__ = [
     "ScenarioSummaryRow",
     "aggregate_runtime_summary_rows",
     "build_scenario_summary_row",
+    "render_eval_summary_markdown",
+    "write_eval_summary_markdown",
     "write_verdict",
 ]
