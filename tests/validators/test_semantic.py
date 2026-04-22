@@ -103,6 +103,13 @@ def _write_research_notes(workspace_root: Path, work_item: str, body: str) -> Pa
     return path
 
 
+def _write_plan_document(workspace_root: Path, work_item: str, body: str) -> Path:
+    path = workspace_root / "workitems" / work_item / "stages" / "plan" / "plan.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
 def test_has_non_placeholder_text_detects_placeholders() -> None:
     assert has_non_placeholder_text("Final answer with concrete detail.")
     assert not has_non_placeholder_text("TBD: fill this section later.")
@@ -519,6 +526,26 @@ def test_validate_semantic_outputs_rejects_unknown_research_citation_ids(tmp_pat
         ),
     )
 
+    findings = validate_semantic_outputs(
+        stage="research",
+        work_item="WI-RESEARCH-002",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=MISSING_EVIDENCE_LINK_CODE,
+            message="Section `Evidence trace` references unknown citation ids: [S2].",
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-RESEARCH-002/stages/research/research-notes.md"
+                ),
+                line_number=19,
+            ),
+        ),
+    )
+
 
 def test_validate_semantic_outputs_accepts_valid_research_fixture_bundle() -> None:
     workspace_root = _SEMANTIC_FIXTURES_ROOT / "research-valid" / "workspace"
@@ -589,6 +616,120 @@ def test_validate_semantic_outputs_flags_research_unresolved_fixture_bundle() ->
                     "workitems/WI-SEM-RESEARCH-UNRESOLVED/stages/research/research-notes.md"
                 ),
                 line_number=11,
+            ),
+        ),
+    )
+
+
+def test_validate_semantic_outputs_requires_plan_verification_note_milestone_links(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_document(
+        workspace_root,
+        "WI-PLAN-001",
+        (
+            "# Plan\n\n"
+            "## Goals\n\n"
+            "- Deliver incident follow-up tracking.\n\n"
+            "## Out of scope\n\n"
+            "- none\n\n"
+            "## Milestones\n\n"
+            "- M1: Add persistence layer for follow-up actions.\n"
+            "- M2: Expose operator workflow for action lifecycle.\n\n"
+            "## Implementation strategy\n\n"
+            "- Deliver M1 before M2 and keep rollout incremental.\n\n"
+            "## Risks\n\n"
+            "- R1: Email dispatch errors can hide alerts; mitigation: add retry checks.\n\n"
+            "## Dependencies\n\n"
+            "- Existing email integration utility module.\n\n"
+            "## Verification approach\n\n"
+            "- Run targeted checks per milestone before broad test gates.\n\n"
+            "## Verification notes\n\n"
+            "- Verify dispatch and retry behavior before release.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="plan",
+        work_item="WI-PLAN-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Section `Verification notes` must reference milestone ids "
+                "(for example `M1`) to keep checks tied to planned increments."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-PLAN-001/stages/plan/plan.md",
+                line_number=32,
+            ),
+        ),
+    )
+
+
+def test_validate_semantic_outputs_requires_plan_dependency_lists_and_risk_mitigation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_document(
+        workspace_root,
+        "WI-PLAN-002",
+        (
+            "# Plan\n\n"
+            "## Goals\n\n"
+            "- Deliver incident follow-up tracking.\n\n"
+            "## Out of scope\n\n"
+            "- none\n\n"
+            "## Milestones\n\n"
+            "- M1: Add notifications first.\n"
+            "- M2: Decide data model later.\n\n"
+            "## Implementation strategy\n\n"
+            "- Start with whichever task seems fastest.\n\n"
+            "## Risks\n\n"
+            "- R1: Might be risky.\n\n"
+            "## Dependencies\n\n"
+            "Some internal services.\n\n"
+            "## Verification approach\n\n"
+            "- Run tests.\n\n"
+            "## Verification notes\n\n"
+            "- M1: verify notification dispatch and rollback behavior.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="plan",
+        work_item="WI-PLAN-002",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Each `Risks` item must include mitigation direction "
+                "(for example `mitigation:`)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-PLAN-002/stages/plan/plan.md",
+                line_number=20,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Required section `Dependencies` must use bullet items "
+                "so ordering constraints are explicit."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-PLAN-002/stages/plan/plan.md",
+                line_number=24,
             ),
         ),
     )

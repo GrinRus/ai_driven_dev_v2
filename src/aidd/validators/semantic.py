@@ -28,6 +28,11 @@ _UNSUPPORTED_CLAIM_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 _CITATION_ID_PATTERN = re.compile(r"\[(S\d+)\]")
+_MILESTONE_ID_PATTERN = re.compile(r"\b(M\d+)\b", flags=re.IGNORECASE)
+_RISK_MITIGATION_PATTERN = re.compile(
+    r"\b(mitigation|mitigate|fallback|retry|reduce|avoid|monitor)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _extract_section_lines(markdown_text: str, heading: str) -> list[str]:
@@ -139,8 +144,20 @@ def _has_bullet_items(section_content: str) -> bool:
     return any(line.strip().startswith("- ") for line in section_content.splitlines())
 
 
+def _extract_bullet_items(section_content: str) -> tuple[str, ...]:
+    return tuple(
+        line.strip()[2:].strip()
+        for line in section_content.splitlines()
+        if line.strip().startswith("- ")
+    )
+
+
 def _extract_citation_ids(text: str) -> set[str]:
     return {match.group(1) for match in _CITATION_ID_PATTERN.finditer(text)}
+
+
+def _extract_milestone_ids(text: str) -> set[str]:
+    return {match.group(1).upper() for match in _MILESTONE_ID_PATTERN.finditer(text)}
 
 
 def validate_semantic_outputs(
@@ -190,6 +207,18 @@ def validate_semantic_outputs(
                     markdown_lines=markdown_lines,
                 )
                 research_source_ids = _extract_citation_ids(sources_content)
+
+        plan_milestone_ids: set[str] = set()
+        if stage == "plan" and output_path.name == "plan.md":
+            milestone_matches = headings_by_title.get(_normalized_heading("Milestones"), [])
+            if milestone_matches:
+                milestone_index, _ = milestone_matches[0]
+                milestones_content = _section_content_for_heading(
+                    heading_index=milestone_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                plan_milestone_ids = _extract_milestone_ids(milestones_content)
 
         for section in required_sections:
             matches = headings_by_title.get(_normalized_heading(section), [])
@@ -315,5 +344,161 @@ def validate_semantic_outputs(
                                 location=location,
                             )
                         )
+
+            if stage == "plan" and output_path.name == "plan.md":
+                normalized_section = _normalized_heading(section)
+                compact_content = re.sub(r"\s+", " ", section_content).strip()
+                bullet_items = _extract_bullet_items(section_content)
+
+                if normalized_section == "milestones":
+                    if not bullet_items:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Required section `Milestones` must use bullet items "
+                                    "with stable milestone ids (for example `M1`)."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    elif not plan_milestone_ids:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Milestones` must declare stable milestone ids "
+                                    "(for example `M1`, `M2`) for sequencing and "
+                                    "verification mapping."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+
+                if normalized_section == "dependencies":
+                    if not bullet_items:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Required section `Dependencies` must use bullet items "
+                                    "so ordering constraints are explicit."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    elif compact_content.lower() in {"none", "- none"}:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Dependencies` cannot be `none`; list explicit "
+                                    "upstream or sequencing constraints."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+
+                if normalized_section == "risks":
+                    if not bullet_items:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Required section `Risks` must use bullet items with "
+                                    "concrete mitigation direction."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    elif compact_content.lower() in {"none", "- none"}:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Risks` cannot be `none`; include concrete delivery "
+                                    "risks with mitigation intent."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    elif any(
+                        _RISK_MITIGATION_PATTERN.search(item) is None for item in bullet_items
+                    ):
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Each `Risks` item must include mitigation direction "
+                                    "(for example `mitigation:`)."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+
+                if normalized_section == "verification notes":
+                    if not bullet_items:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Required section `Verification notes` must use bullet "
+                                    "items mapped to milestone ids."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    elif compact_content.lower() in {"none", "- none"}:
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    "Section `Verification notes` cannot be `none`; map checks "
+                                    "to milestone ids (for example `M1`)."
+                                ),
+                                severity="medium",
+                                location=location,
+                            )
+                        )
+                    else:
+                        referenced_milestone_ids = _extract_milestone_ids(section_content)
+                        if not referenced_milestone_ids:
+                            findings.append(
+                                ValidationFinding(
+                                    code=INCOMPLETE_SECTION_CODE,
+                                    message=(
+                                        "Section `Verification notes` must reference milestone ids "
+                                        "(for example `M1`) to keep checks tied to "
+                                        "planned increments."
+                                    ),
+                                    severity="medium",
+                                    location=location,
+                                )
+                            )
+                        else:
+                            unknown_milestone_ids = sorted(
+                                referenced_milestone_ids - plan_milestone_ids
+                            )
+                            if unknown_milestone_ids:
+                                unknown_ids_text = ", ".join(unknown_milestone_ids)
+                                findings.append(
+                                    ValidationFinding(
+                                        code=INCOMPLETE_SECTION_CODE,
+                                        message=(
+                                            "Section `Verification notes` references "
+                                            f"unknown milestone ids: {unknown_ids_text}."
+                                        ),
+                                        severity="medium",
+                                        location=location,
+                                    )
+                                )
 
     return tuple(findings)
