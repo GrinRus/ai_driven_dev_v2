@@ -312,7 +312,7 @@ def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> Non
         env=dict(os.environ),
     )
 
-    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.1)
+    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.5)
 
     assert isinstance(result, ClaudeCodeRunResult)
     assert result.exit_classification is ClaudeCodeExitClassification.TIMEOUT

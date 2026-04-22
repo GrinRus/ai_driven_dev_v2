@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from aidd.cli.main import app
@@ -117,3 +118,79 @@ def test_stage_summary_rejects_missing_runs(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "No runs found for work item 'WI-404'." in result.output
+
+
+@pytest.mark.parametrize(
+    ("status", "verdict", "expected_pass_count", "expected_fail_count"),
+    (
+        ("succeeded", "pass", "1", "0"),
+        ("blocked", "fail", "0", "1"),
+        ("repair-needed", "fail", "0", "1"),
+        ("failed", "fail", "0", "1"),
+    ),
+)
+def test_stage_summary_supports_success_blocked_repair_needed_and_failed(
+    tmp_path: Path,
+    *,
+    status: str,
+    verdict: str,
+    expected_pass_count: str,
+    expected_fail_count: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_root = workspace_root / "workitems" / "WI-900" / "stages" / "plan"
+
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-900",
+        run_id="run-900",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-900",
+        run_id="run-900",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-900",
+        run_id="run-900",
+        stage="plan",
+        status=status,
+    )
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "validator-report.md").write_text(
+        (
+            "# Validator Report\n\n"
+            "## Result\n\n"
+            f"- Verdict: `{verdict}`\n"
+            "- Repair required for progression: no\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "summary",
+            "plan",
+            "--work-item",
+            "WI-900",
+            "--root",
+            str(workspace_root),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Stage summary: plan / WI-900" in result.stdout
+    assert "run-900" in result.stdout
+    assert "generic-cli" in result.stdout
+    assert status in result.stdout
+    assert "validator pass count" in result.stdout
+    assert expected_pass_count in result.stdout
+    assert "validator fail count" in result.stdout
+    assert expected_fail_count in result.stdout
