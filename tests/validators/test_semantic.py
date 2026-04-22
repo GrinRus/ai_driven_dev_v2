@@ -733,3 +733,64 @@ def test_validate_semantic_outputs_requires_plan_dependency_lists_and_risk_mitig
             ),
         ),
     )
+
+
+def test_validate_semantic_outputs_accepts_valid_plan_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "plan-valid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="plan",
+        work_item="WI-SEM-PLAN-VALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_invalid_plan_fixture_bundle() -> None:
+    workspace_root = _SEMANTIC_FIXTURES_ROOT / "plan-invalid" / "workspace"
+
+    findings = validate_semantic_outputs(
+        stage="plan",
+        work_item="WI-SEM-PLAN-INVALID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Each `Risks` item must include mitigation direction "
+                "(for example `mitigation:`)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-SEM-PLAN-INVALID/stages/plan/plan.md",
+                line_number=20,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Required section `Dependencies` must use bullet items "
+                "so ordering constraints are explicit."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-SEM-PLAN-INVALID/stages/plan/plan.md",
+                line_number=24,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Section `Verification notes` must reference milestone ids "
+                "(for example `M1`) to keep checks tied to planned increments."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-SEM-PLAN-INVALID/stages/plan/plan.md",
+                line_number=32,
+            ),
+        ),
+    )
