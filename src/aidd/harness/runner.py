@@ -13,6 +13,10 @@ class HarnessSetupError(RuntimeError):
     """Raised when a setup command fails."""
 
 
+class HarnessVerificationError(RuntimeError):
+    """Raised when a verification command fails."""
+
+
 @dataclass(frozen=True, slots=True)
 class HarnessSetupResult:
     executed_commands: tuple[str, ...]
@@ -28,23 +32,29 @@ class HarnessAiddRunResult:
     stderr_text: str
 
 
-def run_setup_steps(
-    *,
-    scenario: Scenario,
-    working_copy_path: Path,
-    environment: Mapping[str, str] | None = None,
-) -> HarnessSetupResult:
+@dataclass(frozen=True, slots=True)
+class HarnessVerificationResult:
+    executed_commands: tuple[str, ...]
+    aidd_exit_code: int
+
+
+def _validate_working_copy_path(working_copy_path: Path) -> None:
     if not working_copy_path.exists() or not working_copy_path.is_dir():
         raise ValueError(
             f"Working copy path must be an existing directory: {working_copy_path.as_posix()}"
         )
 
-    command_env = dict(os.environ)
-    if environment is not None:
-        command_env.update(environment)
 
+def _run_shell_commands(
+    *,
+    commands: tuple[str, ...],
+    working_copy_path: Path,
+    command_env: Mapping[str, str],
+    error_label: str,
+    error_type: type[RuntimeError],
+) -> tuple[str, ...]:
     executed_commands: list[str] = []
-    for command in scenario.setup.commands:
+    for command in commands:
         completed = subprocess.run(
             ["/bin/sh", "-lc", command],
             cwd=working_copy_path,
@@ -55,13 +65,35 @@ def run_setup_steps(
         )
         if completed.returncode != 0:
             stderr = completed.stderr.strip() or completed.stdout.strip() or "no command output"
-            raise HarnessSetupError(
-                "Setup command failed with non-zero exit "
+            raise error_type(
+                f"{error_label} command failed with non-zero exit "
                 f"({completed.returncode}): {command}\n{stderr}"
             )
         executed_commands.append(command)
+    return tuple(executed_commands)
 
-    return HarnessSetupResult(executed_commands=tuple(executed_commands))
+
+def run_setup_steps(
+    *,
+    scenario: Scenario,
+    working_copy_path: Path,
+    environment: Mapping[str, str] | None = None,
+) -> HarnessSetupResult:
+    _validate_working_copy_path(working_copy_path)
+
+    command_env = dict(os.environ)
+    if environment is not None:
+        command_env.update(environment)
+
+    return HarnessSetupResult(
+        executed_commands=_run_shell_commands(
+            commands=scenario.setup.commands,
+            working_copy_path=working_copy_path,
+            command_env=command_env,
+            error_label="Setup",
+            error_type=HarnessSetupError,
+        )
+    )
 
 
 def invoke_aidd_run(
@@ -73,10 +105,7 @@ def invoke_aidd_run(
     aidd_command: tuple[str, ...] = ("uv", "run", "aidd"),
     environment: Mapping[str, str] | None = None,
 ) -> HarnessAiddRunResult:
-    if not working_copy_path.exists() or not working_copy_path.is_dir():
-        raise ValueError(
-            f"Working copy path must be an existing directory: {working_copy_path.as_posix()}"
-        )
+    _validate_working_copy_path(working_copy_path)
     if runtime_id not in scenario.runtime_targets:
         supported = ", ".join(scenario.runtime_targets)
         raise ValueError(
@@ -115,4 +144,30 @@ def invoke_aidd_run(
         exit_code=completed.returncode,
         stdout_text=completed.stdout,
         stderr_text=completed.stderr,
+    )
+
+
+def run_verification_steps(
+    *,
+    scenario: Scenario,
+    working_copy_path: Path,
+    aidd_run_result: HarnessAiddRunResult,
+    environment: Mapping[str, str] | None = None,
+) -> HarnessVerificationResult:
+    _validate_working_copy_path(working_copy_path)
+
+    command_env = dict(os.environ)
+    command_env["AIDD_HARNESS_AIDD_EXIT_CODE"] = str(aidd_run_result.exit_code)
+    if environment is not None:
+        command_env.update(environment)
+
+    return HarnessVerificationResult(
+        executed_commands=_run_shell_commands(
+            commands=scenario.verify.commands,
+            working_copy_path=working_copy_path,
+            command_env=command_env,
+            error_label="Verification",
+            error_type=HarnessVerificationError,
+        ),
+        aidd_exit_code=aidd_run_result.exit_code,
     )
