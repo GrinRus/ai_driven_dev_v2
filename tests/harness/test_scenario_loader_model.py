@@ -126,6 +126,19 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         == "Keep sqlite-utils smoke lane deterministic by targeting the header-only "
         "detect-types crash with bounded patch scope."
     )
+    assert scenario.setup.commands == ("uv sync || pip install -e .[dev]",)
+    assert scenario.raw["setup"]["rationale"] == [
+        "Install sqlite-utils development dependencies before the smoke run.",
+        "Confirm the repository environment is ready for targeted regression verification.",
+    ]
+    assert scenario.raw["aidd_invocation"]["command"] == ["uv", "run", "aidd", "run"]
+    assert scenario.raw["aidd_invocation"]["work_item"] == "WI-LIVE-SQLITE-SMOKE"
+    assert scenario.raw["aidd_invocation"]["work_item_flag"] == "--work-item"
+    assert scenario.raw["aidd_invocation"]["runtime_flag"] == "--runtime"
+    assert scenario.raw["aidd_invocation"]["expected_stage_scope"] == {
+        "start": "plan",
+        "end": "qa",
+    }
 
 
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:
