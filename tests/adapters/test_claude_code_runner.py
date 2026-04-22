@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,10 @@ from aidd.adapters.claude_code.runner import (
     ClaudeCodeCommandContext,
     ClaudeCodeConfigFlag,
     ClaudeCodeLaunchOptions,
+    ClaudeCodeSubprocessSpec,
     assemble_command,
+    build_execution_environment,
+    build_subprocess_spec,
     command_preview,
 )
 
@@ -116,6 +120,70 @@ def test_assemble_command_maps_bypass_permission_to_dangerous_flag() -> None:
 
     assert "--dangerously-skip-permissions" in command
     assert "--permission-mode" not in command
+
+
+def test_build_execution_environment_sets_stage_workspace_and_prompt_pack_values(
+    tmp_path: Path,
+) -> None:
+    repository_root = tmp_path / "repo"
+    workspace_root = repository_root / ".aidd" / "workitems" / "WI-001"
+    env = build_execution_environment(
+        context=ClaudeCodeCommandContext(
+            stage="plan",
+            work_item="WI-001",
+            run_id="run-001",
+            workspace_root=workspace_root,
+            stage_brief_path=Path("stages/plan/stage-brief.md"),
+            prompt_pack_paths=(
+                Path("prompt-packs/stages/plan/system.md"),
+                Path("prompt-packs/stages/plan/task.md"),
+            ),
+        ),
+        base_env={"PATH": "/usr/bin", "AIDD_STAGE": "stale"},
+        repository_root=repository_root,
+    )
+
+    assert env["PATH"] == "/usr/bin"
+    assert env["AIDD_WORKSPACE_ROOT"] == workspace_root.resolve(strict=False).as_posix()
+    assert env["AIDD_STAGE"] == "plan"
+    assert env["AIDD_WORK_ITEM"] == "WI-001"
+    assert env["AIDD_RUN_ID"] == "run-001"
+    assert env["AIDD_STAGE_BRIEF_PATH"] == (
+        workspace_root / "stages/plan/stage-brief.md"
+    ).resolve(strict=False).as_posix()
+    assert env["AIDD_PROMPT_PACK_PATHS"] == (
+        (repository_root / "prompt-packs/stages/plan/system.md").resolve(strict=False).as_posix()
+        + os.pathsep
+        + (repository_root / "prompt-packs/stages/plan/task.md").resolve(strict=False).as_posix()
+    )
+    assert env["AIDD_RUNTIME_ID"] == "claude-code"
+
+
+def test_build_subprocess_spec_sets_command_cwd_and_env(tmp_path: Path) -> None:
+    repository_root = tmp_path / "repo"
+    workspace_root = repository_root / ".aidd" / "workitems" / "WI-001"
+    context = ClaudeCodeCommandContext(
+        stage="plan",
+        work_item="WI-001",
+        run_id="run-001",
+        workspace_root=workspace_root,
+        stage_brief_path=Path("stages/plan/stage-brief.md"),
+        prompt_pack_paths=(Path("prompt-packs/stages/plan/system.md"),),
+    )
+    spec = build_subprocess_spec(
+        configured_command="claude",
+        context=context,
+        launch_options=ClaudeCodeLaunchOptions(sandbox_mode="workspace-write"),
+        base_env={"PATH": "/usr/bin"},
+        repository_root=repository_root,
+    )
+
+    assert isinstance(spec, ClaudeCodeSubprocessSpec)
+    assert spec.command[0] == "claude"
+    assert spec.command[1:3] == ("--sandbox", "workspace-write")
+    assert spec.cwd == workspace_root.resolve(strict=False)
+    assert spec.env["PATH"] == "/usr/bin"
+    assert spec.env["AIDD_WORKSPACE_ROOT"] == workspace_root.resolve(strict=False).as_posix()
 
 
 def test_assemble_command_rejects_empty_configured_command() -> None:
