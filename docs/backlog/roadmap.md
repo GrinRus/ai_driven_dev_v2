@@ -1569,7 +1569,7 @@ Dependencies:
 
 Local tasks:
 
-- `W5-E3-S6-T1` Define the Hono scenario conditions that force at least one user question.
+- `W5-E3-S6-T1` (done) Define the Hono scenario conditions that force at least one user question.
 - `W5-E3-S6-T2` Define the operator answer file or CLI-answer flow used by the scenario.
 - `W5-E3-S6-T3` Define verification steps that prove the run blocked, resumed, and completed correctly.
 - `W5-E3-S6-T4` Run the scenario once end to end and archive the reference blocked-and-resumed bundle.

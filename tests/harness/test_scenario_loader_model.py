@@ -282,3 +282,26 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
         scenario.raw["reference_run"]["bundle_root"]
         == ".aidd/reports/evals/eval-live-006-reference-20260422T084432Z"
     )
+
+
+def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
+    scenario = load_scenario(Path("harness/scenarios/live/hono-router-double-star-parity.yaml"))
+
+    assert scenario.scenario_id == "AIDD-LIVE-008"
+    assert scenario.run.interview_required is True
+    assert scenario.raw["interview"]["must_ask_at_least_one"] is True
+    assert scenario.raw["interview"]["blocking_question_topics"] == [
+        "Expected `/**` behavior relative to existing wildcard routing semantics.",
+        "Whether router parity should be implemented or explicitly documented as an "
+        "intentional divergence.",
+        "Required compatibility notes and release-facing documentation updates for the "
+        "chosen behavior.",
+    ]
+    assert scenario.raw["interview"]["trigger_conditions"] == [
+        "If expected `/**` matching behavior is not explicitly defined, ask a blocking "
+        "question before planning.",
+        "If parity-vs-divergence decision is ambiguous, ask a blocking question before "
+        "task decomposition.",
+        "If documentation and compatibility obligations are unclear, ask a blocking "
+        "question before implementation.",
+    ]

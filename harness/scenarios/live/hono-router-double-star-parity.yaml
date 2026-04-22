@@ -22,6 +22,15 @@ limits:
   timeout_minutes: 25
 interview:
   required: true
+  must_ask_at_least_one: true
+  blocking_question_topics:
+  - Expected `/**` behavior relative to existing wildcard routing semantics.
+  - Whether router parity should be implemented or explicitly documented as an intentional divergence.
+  - Required compatibility notes and release-facing documentation updates for the chosen behavior.
+  trigger_conditions:
+  - If expected `/**` matching behavior is not explicitly defined, ask a blocking question before planning.
+  - If parity-vs-divergence decision is ambiguous, ask a blocking question before task decomposition.
+  - If documentation and compatibility obligations are unclear, ask a blocking question before implementation.
 runtime_targets:
 - claude-code
 - generic-cli
