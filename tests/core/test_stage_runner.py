@@ -14,6 +14,7 @@ from aidd.core.run_store import (
     run_stage_metadata_path,
 )
 from aidd.core.stage_runner import (
+    ATTEMPT_INPUT_BUNDLE_FILENAME,
     PostValidationAction,
     RepairBudgetValidationTransition,
     StageValidationState,
@@ -27,6 +28,15 @@ from aidd.core.stage_runner import (
     update_stage_unblock_state,
 )
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
+
+
+def _materialize_expected_inputs(paths: tuple[Path, ...]) -> None:
+    for index, path in enumerate(paths, start=1):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            f"# Input {index}\n\nPrepared input for `{path.name}`.\n",
+            encoding="utf-8",
+        )
 
 
 def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Path) -> None:
@@ -179,6 +189,7 @@ def test_prepare_adapter_invocation_initial_attempt_has_no_repair_context(
         work_item="WI-001",
         stage="plan",
     )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
     execution_state = persist_execution_state(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -196,6 +207,14 @@ def test_prepare_adapter_invocation_initial_attempt_has_no_repair_context(
     assert invocation.repair_mode is False
     assert invocation.repair_context_markdown is None
     assert invocation.repair_brief_path is None
+    assert invocation.input_bundle_path == (
+        execution_state.attempt_path / ATTEMPT_INPUT_BUNDLE_FILENAME
+    )
+    assert invocation.input_bundle_path.exists()
+    assert invocation.input_bundle_markdown == invocation.input_bundle_path.read_text(
+        encoding="utf-8"
+    )
+    assert "# Input bundle" in invocation.input_bundle_markdown
     assert invocation.stage_brief_markdown == preparation_bundle.stage_brief_markdown
 
 
@@ -214,6 +233,7 @@ def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_pa
         work_item="WI-001",
         stage="plan",
     )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
     persist_execution_state(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -253,6 +273,40 @@ def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_pa
     assert "Attempt number: `2`" in invocation.repair_context_markdown
     assert "repair-brief.md" in invocation.repair_context_markdown
     assert "STRUCT-MISSING-REQUIRED-SECTION" in invocation.repair_context_markdown
+    assert invocation.input_bundle_path == (
+        second_attempt.attempt_path / ATTEMPT_INPUT_BUNDLE_FILENAME
+    )
+    assert invocation.input_bundle_path.exists()
+
+
+def test_prepare_adapter_invocation_requires_existing_input_documents(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    with pytest.raises(FileNotFoundError, match="Input bundle preparation requires an existing"):
+        prepare_adapter_invocation(
+            workspace_root=workspace_root,
+            preparation_bundle=preparation_bundle,
+            execution_state=execution_state,
+        )
 
 
 def test_prepare_adapter_invocation_repair_attempt_requires_repair_brief(

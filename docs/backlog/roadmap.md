@@ -936,7 +936,7 @@ Dependencies:
 
 Local tasks:
 
-- `W4-E1-S3-T1` Implement input-bundle preparation for a stage attempt before subprocess launch.
+- `W4-E1-S3-T1` (done) Implement input-bundle preparation for a stage attempt before subprocess launch.
 - `W4-E1-S3-T2` Implement post-run output discovery that finds expected Markdown artifacts in the workspace.
 - `W4-E1-S3-T3` Trigger structural validation immediately after output discovery and persist the report path.
 - `W4-E1-S3-T4` Detect unresolved questions from `questions.md` and route them into the interview controller.

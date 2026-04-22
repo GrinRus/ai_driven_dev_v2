@@ -53,6 +53,8 @@ class AdapterInvocationBundle:
     stage_brief_markdown: str
     repair_context_markdown: str | None
     repair_brief_path: Path | None
+    input_bundle_path: Path
+    input_bundle_markdown: str
     expected_input_bundle: tuple[Path, ...]
     expected_output_documents: tuple[Path, ...]
 
@@ -113,6 +115,9 @@ class StageUnblockState:
     unblocked: bool
     next_state: StageState | None
     stage_metadata_path: Path | None
+
+
+ATTEMPT_INPUT_BUNDLE_FILENAME = "input-bundle.md"
 
 
 def _to_workspace_relative_paths(workspace_root: Path, paths: tuple[Path, ...]) -> tuple[str, ...]:
@@ -250,6 +255,51 @@ def _render_repair_context(
     return "\n".join(lines)
 
 
+def _render_input_bundle_markdown(
+    *,
+    workspace_root: Path,
+    expected_input_bundle: tuple[Path, ...],
+) -> str:
+    lines = [
+        "# Input bundle",
+        "",
+        "Resolved stage inputs for this attempt.",
+        "",
+    ]
+    for document_path in expected_input_bundle:
+        relative_path = _workspace_relative_path(workspace_root, document_path)
+        if not document_path.exists():
+            raise FileNotFoundError(
+                "Input bundle preparation requires an existing input document: "
+                f"{relative_path}"
+            )
+        document_content = document_path.read_text(encoding="utf-8").strip()
+        lines.extend(
+            [
+                f"## `{relative_path}`",
+                "",
+                document_content if document_content else "(empty document)",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def _prepare_attempt_input_bundle(
+    *,
+    workspace_root: Path,
+    attempt_path: Path,
+    expected_input_bundle: tuple[Path, ...],
+) -> tuple[Path, str]:
+    input_bundle_markdown = _render_input_bundle_markdown(
+        workspace_root=workspace_root,
+        expected_input_bundle=expected_input_bundle,
+    )
+    input_bundle_path = attempt_path / ATTEMPT_INPUT_BUNDLE_FILENAME
+    input_bundle_path.write_text(input_bundle_markdown, encoding="utf-8")
+    return input_bundle_path, input_bundle_markdown
+
+
 def prepare_adapter_invocation(
     *,
     workspace_root: Path,
@@ -298,6 +348,12 @@ def prepare_adapter_invocation(
             repair_brief_markdown=repair_brief_markdown,
         )
 
+    input_bundle_path, input_bundle_markdown = _prepare_attempt_input_bundle(
+        workspace_root=workspace_root,
+        attempt_path=execution_state.attempt_path,
+        expected_input_bundle=preparation_bundle.expected_input_bundle,
+    )
+
     return AdapterInvocationBundle(
         stage=execution_state.stage,
         work_item=execution_state.work_item,
@@ -307,6 +363,8 @@ def prepare_adapter_invocation(
         stage_brief_markdown=preparation_bundle.stage_brief_markdown,
         repair_context_markdown=repair_context_markdown,
         repair_brief_path=repair_brief_path,
+        input_bundle_path=input_bundle_path,
+        input_bundle_markdown=input_bundle_markdown,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
         expected_output_documents=preparation_bundle.expected_output_documents,
     )
