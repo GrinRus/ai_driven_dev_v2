@@ -940,7 +940,7 @@ Local tasks:
 - `W4-E1-S3-T2` (done) Implement post-run output discovery that finds expected Markdown artifacts in the workspace.
 - `W4-E1-S3-T3` (done) Trigger structural validation immediately after output discovery and persist the report path.
 - `W4-E1-S3-T4` (done) Detect unresolved questions from `questions.md` and route them into the interview controller.
-- `W4-E1-S3-T5` Implement resume behavior after answers are added for a generic-cli stage.
+- `W4-E1-S3-T5` (done) Implement resume behavior after answers are added for a generic-cli stage.
 - `W4-E1-S3-T6` Add integration tests for valid output, invalid output, and question-blocked output.
 
 Exit evidence:

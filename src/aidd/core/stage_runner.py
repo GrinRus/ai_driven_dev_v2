@@ -162,6 +162,17 @@ class StageUnblockState:
     stage_metadata_path: Path | None
 
 
+@dataclass(frozen=True, slots=True)
+class StageResumeResult:
+    stage: str
+    work_item: str
+    run_id: str
+    unblock_state: StageUnblockState
+    preparation_bundle: StagePreparationBundle | None
+    execution_state: StageExecutionState | None
+    adapter_invocation: AdapterInvocationBundle | None
+
+
 ATTEMPT_INPUT_BUNDLE_FILENAME = "input-bundle.md"
 
 
@@ -710,6 +721,62 @@ def update_stage_unblock_state(
         unblocked=True,
         next_state=StageState.PREPARING,
         stage_metadata_path=stage_metadata_path,
+    )
+
+
+def prepare_stage_resume_after_answers(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    changed_at_utc: datetime | None = None,
+) -> StageResumeResult:
+    unblock_state = update_stage_unblock_state(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        changed_at_utc=changed_at_utc,
+    )
+    if not unblock_state.unblocked:
+        return StageResumeResult(
+            stage=stage,
+            work_item=work_item,
+            run_id=run_id,
+            unblock_state=unblock_state,
+            preparation_bundle=None,
+            execution_state=None,
+            adapter_invocation=None,
+        )
+
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        contracts_root=contracts_root,
+    )
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        changed_at_utc=changed_at_utc,
+    )
+    adapter_invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    return StageResumeResult(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        unblock_state=unblock_state,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+        adapter_invocation=adapter_invocation,
     )
 
 
