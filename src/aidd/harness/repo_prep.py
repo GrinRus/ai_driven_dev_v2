@@ -19,6 +19,13 @@ class PreparedRepository:
     resolved_revision: str
 
 
+@dataclass(frozen=True, slots=True)
+class PreparedWorkingCopy:
+    working_copy_path: Path
+    action: str
+    resolved_revision: str
+
+
 def _repo_slug(repo_url: str) -> str:
     normalized = repo_url.strip().rstrip("/")
     if normalized.endswith(".git"):
@@ -114,4 +121,47 @@ def prepare_scenario_repository(*, cache_root: Path, scenario: Scenario) -> Prep
         repo_path=repo_path,
         action="cloned",
         resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=repo_path),
+    )
+
+
+def prepare_working_copy(
+    *,
+    cache_root: Path,
+    scenario: Scenario,
+    prepared_repository: PreparedRepository,
+) -> PreparedWorkingCopy:
+    working_copy_root = cache_root / "workdirs"
+    working_copy_root.mkdir(parents=True, exist_ok=True)
+    working_copy_path = working_copy_root / _repo_slug(scenario.repo.url)
+
+    action = "reused"
+    if working_copy_path.exists():
+        if not (working_copy_path / ".git").exists():
+            raise RepoPreparationError(
+                "Working copy path exists but is not a git repository: "
+                f"{working_copy_path.as_posix()}"
+            )
+    else:
+        _run_git(
+            [
+                "clone",
+                "--origin",
+                "origin",
+                prepared_repository.repo_path.as_posix(),
+                working_copy_path.as_posix(),
+            ]
+        )
+        action = "cloned"
+
+    _run_git(
+        ["checkout", "--detach", "--force", prepared_repository.resolved_revision],
+        cwd=working_copy_path,
+    )
+    _run_git(["reset", "--hard", prepared_repository.resolved_revision], cwd=working_copy_path)
+    _run_git(["clean", "-fdx"], cwd=working_copy_path)
+
+    return PreparedWorkingCopy(
+        working_copy_path=working_copy_path,
+        action=action,
+        resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=working_copy_path),
     )

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from aidd.harness.repo_prep import prepare_scenario_repository
+from aidd.harness.repo_prep import prepare_scenario_repository, prepare_working_copy
 from aidd.harness.scenarios import (
     Scenario,
     ScenarioCommandSteps,
@@ -144,3 +144,60 @@ def test_prepare_scenario_repository_pins_default_branch_when_revision_missing(
     assert prepared.resolved_revision == source_head
     assert _run(["git", "rev-parse", "HEAD"], cwd=prepared.repo_path) == source_head
     assert _run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=prepared.repo_path) == "HEAD"
+
+
+def test_prepare_working_copy_clones_from_prepared_repository(tmp_path: Path) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+    prepared_repository = prepare_scenario_repository(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+    )
+
+    prepared_working_copy = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared_repository,
+    )
+
+    assert prepared_working_copy.action == "cloned"
+    assert (prepared_working_copy.working_copy_path / ".git").exists()
+    assert prepared_working_copy.resolved_revision == prepared_repository.resolved_revision
+    assert (
+        _run(["git", "rev-parse", "HEAD"], cwd=prepared_working_copy.working_copy_path)
+        == prepared_repository.resolved_revision
+    )
+
+
+def test_prepare_working_copy_resets_dirty_state_between_invocations(tmp_path: Path) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+    prepared_repository = prepare_scenario_repository(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+    )
+
+    first = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared_repository,
+    )
+    readme_path = first.working_copy_path / "README.md"
+    readme_path.write_text("dirty\n", encoding="utf-8")
+    (first.working_copy_path / "TEMP.txt").write_text("temp\n", encoding="utf-8")
+    assert _run(["git", "status", "--porcelain"], cwd=first.working_copy_path)
+
+    second = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared_repository,
+    )
+
+    assert second.action == "reused"
+    assert second.working_copy_path == first.working_copy_path
+    assert second.resolved_revision == prepared_repository.resolved_revision
+    assert readme_path.read_text(encoding="utf-8") == "init\n"
+    assert not (second.working_copy_path / "TEMP.txt").exists()
+    assert _run(["git", "status", "--porcelain"], cwd=second.working_copy_path) == ""
