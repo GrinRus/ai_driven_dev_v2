@@ -133,6 +133,10 @@ def has_non_placeholder_text(text: str) -> bool:
     return _PLACEHOLDER_PATTERN.search(text) is None
 
 
+def _has_bullet_items(section_content: str) -> bool:
+    return any(line.strip().startswith("- ") for line in section_content.splitlines())
+
+
 def validate_semantic_outputs(
     *,
     stage: str,
@@ -226,6 +230,21 @@ def validate_semantic_outputs(
                                     "without evidence grounding."
                                 ),
                                 severity="high",
+                                location=location,
+                            )
+                        )
+
+                if normalized_section in {"constraints", "open questions"}:
+                    if not _has_bullet_items(section_content):
+                        findings.append(
+                            ValidationFinding(
+                                code=INCOMPLETE_SECTION_CODE,
+                                message=(
+                                    f"Required section `{section}` must use bullet items "
+                                    "(or `- none`) so downstream stages can parse "
+                                    "constraints and open questions deterministically."
+                                ),
+                                severity="medium",
                                 location=location,
                             )
                         )

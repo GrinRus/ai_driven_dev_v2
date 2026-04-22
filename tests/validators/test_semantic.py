@@ -266,6 +266,64 @@ def test_validate_semantic_outputs_reports_unsupported_claims(tmp_path: Path) ->
     )
 
 
+def test_validate_semantic_outputs_requires_list_format_for_constraints(tmp_path: Path) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md",)
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_idea_brief(
+        workspace_root,
+        (
+            "# Idea Brief\n\n"
+            "## Problem statement\n\n"
+            "Operators spend too much time reconstructing missing task context after handoffs.\n\n"
+            "## Desired outcome\n\n"
+            "Capture problem framing and boundaries in a reusable artifact for "
+            "downstream stages.\n\n"
+            "## Constraints\n\n"
+            "Keep rollout in one delivery wave and avoid introducing a new auth provider.\n\n"
+            "## Open questions\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="idea",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Required section `Constraints` must use bullet items "
+                "(or `- none`) so downstream stages can parse constraints "
+                "and open questions deterministically."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/idea/idea-brief.md",
+                line_number=11,
+            ),
+        ),
+    )
+
+
 def test_validate_semantic_outputs_passes_for_grounded_complete_content(tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts" / "stages"
     contracts_root.mkdir(parents=True)
