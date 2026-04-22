@@ -11,6 +11,12 @@ def test_live_scenario_exposes_repo_steps_and_run_config() -> None:
     assert scenario.scenario_id == "AIDD-LIVE-001"
     assert scenario.repo.url == "https://github.com/fastapi/typer"
     assert scenario.repo.default_branch == "master"
+    assert scenario.repo.revision == "9ce8e30383ef419c490431caab5a515eca669b1b"
+    assert (
+        scenario.raw["objective"]
+        == "Keep Typer smoke lane deterministic by targeting the styled help alignment "
+        "defect with bounded patch scope and regression coverage."
+    )
     assert scenario.setup.commands == (
         "uv sync --group tests || uv sync",
         "uv run pytest -q || pytest -q",

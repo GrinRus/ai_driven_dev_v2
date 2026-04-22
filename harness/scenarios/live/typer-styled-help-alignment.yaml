@@ -2,9 +2,12 @@ id: AIDD-LIVE-001
 repo:
   url: https://github.com/fastapi/typer
   default_branch: master
+  revision: 9ce8e30383ef419c490431caab5a515eca669b1b
 issue:
   id: 1159
   title: styled help alignment bugfix
+objective: Keep Typer smoke lane deterministic by targeting the styled help alignment
+  defect with bounded patch scope and regression coverage.
 task: Fix help-line width calculation when styled help text is present. Add regression
   coverage.
 stage_scope:
