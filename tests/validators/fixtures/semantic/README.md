@@ -22,3 +22,8 @@ Fixtures for `tests/validators/test_semantic.py` regression coverage.
 - `review-spec-invalid/workspace/` contains a bundle with missing issue severity/rationale, a
   non-actionable recommendation summary, and inconsistent readiness/decision status, and must fail
   `review-spec` semantic checks.
+- `tasklist-valid/workspace/` contains a bundle that should pass `tasklist` semantic checks for
+  bounded decomposition, explicit dependency notes, and per-task verification mapping.
+- `tasklist-invalid/workspace/` contains a bundle with weak task summary scope, unresolved
+  dependency mapping, and incomplete verification coverage, and must fail `tasklist` semantic
+  checks.
