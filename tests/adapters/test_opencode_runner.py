@@ -8,6 +8,7 @@ import pytest
 
 from aidd.adapters.opencode.runner import (
     OpenCodeCommandContext,
+    OpenCodeExitClassification,
     OpenCodeSubprocessSpec,
     assemble_command,
     build_execution_environment,
@@ -154,6 +155,7 @@ def test_run_subprocess_with_streaming_captures_output_and_callbacks(tmp_path: P
     assert result.stderr_text == "stderr-line\n"
     assert "stdout-line\n" in result.runtime_log_text
     assert "stderr-line\n" in result.runtime_log_text
+    assert result.exit_classification == OpenCodeExitClassification.SUCCESS
     assert stdout_chunks == ["stdout-line\n"]
     assert stderr_chunks == ["stderr-line\n"]
 
@@ -173,6 +175,17 @@ def test_persist_attempt_runtime_log_writes_runtime_log(tmp_path: Path) -> None:
 
     assert runtime_log_path.exists()
     assert runtime_log_path.read_text(encoding="utf-8") == run_result.runtime_log_text
+
+
+def test_run_subprocess_with_streaming_rejects_non_positive_timeout(tmp_path: Path) -> None:
+    spec = OpenCodeSubprocessSpec(
+        command=(sys.executable, "-c", "print('ok')"),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    with pytest.raises(ValueError, match="greater than zero"):
+        run_subprocess_with_streaming(spec=spec, timeout_seconds=0)
 
 
 def test_assemble_command_rejects_empty_configured_command(tmp_path: Path) -> None:
