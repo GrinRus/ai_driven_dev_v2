@@ -505,7 +505,11 @@ def eval_run(
     if not scenario_path.exists():
         raise typer.BadParameter(f"Scenario not found: {scenario}")
 
-    loaded = load_scenario(scenario_path)
+    loaded = load_scenario(
+        scenario_path,
+        runtime_id=runtime,
+        workspace_root=Path(".aidd"),
+    )
     console.print(f"AIDD eval run: scenario={loaded.scenario_id} runtime={runtime}")
     console.print(f"Task: {loaded.task}")
     console.print(

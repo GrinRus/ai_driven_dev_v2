@@ -1206,7 +1206,7 @@ Local tasks:
 
 - `W5-E1-S1-T1` (done) Define the Python model for scenario manifests, including repo source, setup steps, run config, and verification steps.
 - `W5-E1-S1-T2` (done) Implement YAML manifest loading with stable validation errors for missing keys and invalid values.
-- `W5-E1-S1-T3` Implement variable substitution for runtime id, workspace path, and scenario-scoped parameters.
+- `W5-E1-S1-T3` (done) Implement variable substitution for runtime id, workspace path, and scenario-scoped parameters.
 - `W5-E1-S1-T4` Add tests for valid manifests, missing fields, and parameter substitution.
 
 Exit evidence:
