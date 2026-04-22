@@ -44,6 +44,7 @@ git push origin v0.1.0a0
 ```bash
 pipx install ai-driven-dev-v2==<version>
 aidd --version
+aidd doctor
 ```
 
 ## 4. Container publish checklist (GHCR)
@@ -57,14 +58,45 @@ aidd --version
   - semver aliases (`vX.Y`, `vX`) when applicable;
   - `latest` only for stable releases.
 
-## 5. Changelog and release notes checklist
+## 5. Release verification checklist (`aidd doctor`)
+
+- [ ] Verify installed CLI from package can run `aidd doctor` in a clean shell.
+- [ ] Verify `aidd --version` matches the released version.
+- [ ] Verify `aidd doctor` output includes the expected runtime capability table.
+
+Suggested package-path verification:
+
+```bash
+pipx install ai-driven-dev-v2==<version>
+aidd --version
+aidd doctor
+pipx uninstall ai-driven-dev-v2
+```
+
+Suggested `uv tool` verification:
+
+```bash
+uv tool install ai-driven-dev-v2==<version>
+aidd --version
+aidd doctor
+uv tool uninstall ai-driven-dev-v2
+```
+
+Suggested container-path verification:
+
+```bash
+docker run --rm ghcr.io/<owner>/ai-driven-dev-v2:<tag> aidd --version
+docker run --rm ghcr.io/<owner>/ai-driven-dev-v2:<tag> aidd doctor
+```
+
+## 6. Changelog and release notes checklist
 
 - [ ] Summarize user-visible changes for this release.
 - [ ] Include task ids and major behavior/contract updates.
 - [ ] Include known limitations and blocked items if they affect operators.
 - [ ] Publish GitHub release notes for the tag.
 
-## 6. Post-release follow-up
+## 7. Post-release follow-up
 
 - [ ] Confirm roadmap/backlog status reflects shipped work.
 - [ ] Open follow-up issues for any deferred release defects.
