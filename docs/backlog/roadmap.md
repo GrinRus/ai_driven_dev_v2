@@ -1392,7 +1392,7 @@ Local tasks:
 - `W5-E2-S3-T1` (done) Implement per-scenario summary rows with verdict, runtime, duration, and failure boundary.
 - `W5-E2-S3-T2` (done) Implement runtime-level summary aggregation across many scenarios.
 - `W5-E2-S3-T3` (done) Render a Markdown summary report suitable for CI artifacts.
-- `W5-E2-S3-T4` Add a CLI summary command that prints the latest eval report.
+- `W5-E2-S3-T4` (done) Add a CLI summary command that prints the latest eval report.
 - `W5-E2-S3-T5` Add tests for empty eval sets, mixed outcomes, and repeated scenario runs.
 
 Exit evidence:

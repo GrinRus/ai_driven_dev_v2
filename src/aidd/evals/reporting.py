@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
 from aidd.evals.log_analysis import FailureTaxonomyCategory
 from aidd.evals.verdicts import ScenarioVerdict, VerdictStatus
 
@@ -29,6 +30,7 @@ FAILURE_BOUNDARY_CATEGORIES: tuple[FailureTaxonomyCategory, ...] = (
     "scenario-verification",
     "none",
 )
+SUMMARY_REPORT_FILENAME = "summary.md"
 
 
 @dataclass(frozen=True, slots=True)
@@ -222,6 +224,36 @@ def write_eval_summary_markdown(
     return path
 
 
+def resolve_latest_eval_summary_report_path(*, workspace_root: Path) -> Path:
+    eval_reports_root = workspace_root / WORKSPACE_REPORTS_DIRNAME / WORKSPACE_REPORTS_EVALS_DIRNAME
+    if not eval_reports_root.exists() or not eval_reports_root.is_dir():
+        raise ValueError(f"No eval reports found under: {eval_reports_root.as_posix()}")
+
+    candidate_paths: list[Path] = []
+    direct_summary_path = eval_reports_root / SUMMARY_REPORT_FILENAME
+    if direct_summary_path.exists() and direct_summary_path.is_file():
+        candidate_paths.append(direct_summary_path)
+
+    for child in eval_reports_root.iterdir():
+        if not child.is_dir():
+            continue
+        summary_path = child / SUMMARY_REPORT_FILENAME
+        if summary_path.exists() and summary_path.is_file():
+            candidate_paths.append(summary_path)
+
+    if not candidate_paths:
+        raise ValueError(
+            "No eval summary reports found. "
+            f"Expected `{SUMMARY_REPORT_FILENAME}` under {eval_reports_root.as_posix()}."
+        )
+
+    candidate_paths.sort(
+        key=lambda path: (path.stat().st_mtime, path.as_posix()),
+        reverse=True,
+    )
+    return candidate_paths[0]
+
+
 def write_verdict(path: Path, status: str, summary: str) -> None:
     if status not in FAILURE_CLASSES:
         raise ValueError(f"Unknown failure class: {status}")
@@ -236,9 +268,11 @@ __all__ = [
     "FAILURE_CLASSES",
     "RuntimeSummaryRow",
     "ScenarioSummaryRow",
+    "SUMMARY_REPORT_FILENAME",
     "aggregate_runtime_summary_rows",
     "build_scenario_summary_row",
     "render_eval_summary_markdown",
+    "resolve_latest_eval_summary_report_path",
     "write_eval_summary_markdown",
     "write_verdict",
 ]

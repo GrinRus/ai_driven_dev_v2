@@ -26,6 +26,7 @@ from aidd.core.interview import (
 )
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.workspace import WorkspaceBootstrapService
+from aidd.evals.reporting import resolve_latest_eval_summary_report_path
 from aidd.harness.scenarios import load_scenario
 
 console = Console(no_color=True)
@@ -516,6 +517,23 @@ def eval_run(
         "Harness execution is not implemented yet. "
         "See docs/architecture/eval-harness-integration.md."
     )
+
+
+@eval_app.command("summary")
+def eval_summary(
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+) -> None:
+    """Print the latest eval summary report."""
+    try:
+        summary_path = resolve_latest_eval_summary_report_path(workspace_root=root)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(f"Latest eval report: {summary_path.as_posix()}")
+    console.print(summary_path.read_text(encoding="utf-8").rstrip())
 
 
 def main() -> None:
