@@ -37,6 +37,9 @@ class StageResultSummary:
     validator_pass_count: int
     validator_fail_count: int
     validator_report_path: str
+    log_artifact_paths: tuple[str, ...]
+    document_artifact_paths: tuple[str, ...]
+    repair_output_paths: tuple[str, ...]
 
 
 def _load_runtime_id(
@@ -102,6 +105,19 @@ def _validator_verdict_from_report(report_path: Path) -> str | None:
     return None
 
 
+def _normalize_repair_output_paths(
+    *,
+    workspace_root: Path,
+    repair_history_paths: tuple[str, ...],
+    stage_root: Path,
+) -> tuple[str, ...]:
+    collected = {path.strip() for path in repair_history_paths if path.strip()}
+    repair_brief = stage_root / "repair-brief.md"
+    if repair_brief.exists():
+        collected.add(_workspace_relative_path(workspace_root, repair_brief))
+    return tuple(sorted(collected))
+
+
 def resolve_stage_result_summary(
     workspace_root: Path,
     work_item: str,
@@ -149,6 +165,41 @@ def resolve_stage_result_summary(
         elif verdict == "fail":
             fail_count = 1
 
+    artifact_paths = resolve_attempt_artifact_paths(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=attempts,
+    )
+    log_artifact_paths = (
+        tuple(
+            sorted(
+                _workspace_relative_path(workspace_root, path)
+                for path in artifact_paths.logs.values()
+            )
+        )
+        if artifact_paths is not None
+        else ()
+    )
+    document_artifact_paths = (
+        tuple(
+            sorted(
+                _workspace_relative_path(workspace_root, path)
+                for path in artifact_paths.documents.values()
+            )
+        )
+        if artifact_paths is not None
+        else ()
+    )
+    repair_output_paths = _normalize_repair_output_paths(
+        workspace_root=workspace_root,
+        repair_history_paths=tuple(
+            entry.repair_brief_path or "" for entry in stage_metadata.repair_history
+        ),
+        stage_root=stage_root,
+    )
+
     return StageResultSummary(
         run_id=selected_run_id,
         stage=stage,
@@ -162,6 +213,9 @@ def resolve_stage_result_summary(
         validator_pass_count=pass_count,
         validator_fail_count=fail_count,
         validator_report_path=_workspace_relative_path(workspace_root, validator_report),
+        log_artifact_paths=log_artifact_paths,
+        document_artifact_paths=document_artifact_paths,
+        repair_output_paths=repair_output_paths,
     )
 
 

@@ -58,6 +58,10 @@ def test_stage_summary_reports_final_state_runtime_and_attempt_count(tmp_path: P
         ),
         encoding="utf-8",
     )
+    (stage_root / "repair-brief.md").write_text(
+        "# Repair brief\n\n- Fix missing sections.\n",
+        encoding="utf-8",
+    )
 
     result = runner.invoke(
         app,
@@ -88,6 +92,12 @@ def test_stage_summary_reports_final_state_runtime_and_attempt_count(tmp_path: P
     assert "1" in result.stdout
     assert "validator report" in result.stdout
     assert "workitems/WI-001/stages/plan/validator-report.md" in result.stdout
+    assert "log artifacts" in result.stdout
+    assert "reports/runs/WI-001/run-001/stages/plan/attempts/" in result.stdout
+    assert "document artifacts" in result.stdout
+    assert "workitems/WI-001/stages/plan/stage-result.md" in result.stdout
+    assert "repair outputs" in result.stdout
+    assert "workitems/WI-001/stages/plan/repair-brief.md" in result.stdout
 
 
 def test_stage_summary_rejects_missing_runs(tmp_path: Path) -> None:

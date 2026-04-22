@@ -52,6 +52,12 @@ def _capability_summary(report: CapabilityReport) -> str:
     return ", ".join(enabled) if enabled else "none"
 
 
+def _path_summary(paths: tuple[str, ...]) -> str:
+    if not paths:
+        return "none"
+    return "\n".join(paths)
+
+
 def _version_callback(value: bool) -> None:
     if value:
         console.print(f"aidd {__version__}")
@@ -257,6 +263,9 @@ def stage_summary(
     table.add_row("validator pass count", str(summary.validator_pass_count))
     table.add_row("validator fail count", str(summary.validator_fail_count))
     table.add_row("validator report", summary.validator_report_path)
+    table.add_row("log artifacts", _path_summary(summary.log_artifact_paths))
+    table.add_row("document artifacts", _path_summary(summary.document_artifact_paths))
+    table.add_row("repair outputs", _path_summary(summary.repair_output_paths))
     console.print(table)
 
 
