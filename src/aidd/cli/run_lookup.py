@@ -4,6 +4,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from aidd.core.run_lookup import (
     ClosedRunError,
@@ -15,6 +16,7 @@ from aidd.core.run_lookup import (
     resolve_attempt_artifact_paths,
 )
 from aidd.core.run_store import load_stage_metadata, run_attempt_root, run_manifest_path
+from aidd.core.run_store import run_stages_root as run_stage_roots_path
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +42,25 @@ class StageResultSummary:
     log_artifact_paths: tuple[str, ...]
     document_artifact_paths: tuple[str, ...]
     repair_output_paths: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RunStageMetadataSummary:
+    stage: str
+    status: str
+    updated_at_utc: str
+    attempt_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class RunMetadataSummary:
+    run_id: str
+    work_item: str
+    runtime_id: str
+    stage_target: str
+    created_at_utc: str
+    updated_at_utc: str
+    stages: tuple[RunStageMetadataSummary, ...]
 
 
 def _load_runtime_id(
@@ -75,6 +96,109 @@ def _load_runtime_id(
             f"Run manifest runtime_id is missing for work item '{work_item}', run '{run_id}'."
         )
     return runtime
+
+
+def _load_manifest_payload(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+) -> dict[str, Any]:
+    manifest = run_manifest_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
+    if not manifest.exists():
+        raise ValueError(
+            f"Run manifest is missing for work item '{work_item}', run '{run_id}'."
+        )
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"Run manifest is not valid JSON for work item '{work_item}', run '{run_id}'."
+        ) from exc
+    if not isinstance(payload, dict):
+        raise ValueError(
+            f"Run manifest must be a JSON object for work item '{work_item}', run '{run_id}'."
+        )
+    return payload
+
+
+def resolve_run_metadata_summary(
+    workspace_root: Path,
+    work_item: str,
+    *,
+    run_id: str | None = None,
+) -> RunMetadataSummary:
+    selected_run_id = run_id or latest_run_id(workspace_root=workspace_root, work_item=work_item)
+    if selected_run_id is None:
+        raise ValueError(f"No runs found for work item '{work_item}'.")
+
+    manifest_payload = _load_manifest_payload(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+    )
+    runtime_id = str(manifest_payload.get("runtime_id", "")).strip()
+    if not runtime_id:
+        raise ValueError(
+            "Run manifest runtime_id is missing for work item "
+            f"'{work_item}', run '{selected_run_id}'."
+        )
+    stage_target = str(manifest_payload.get("stage_target", "")).strip()
+    if not stage_target:
+        raise ValueError(
+            "Run manifest stage_target is missing for work item "
+            f"'{work_item}', run '{selected_run_id}'."
+        )
+    created_at_utc = str(manifest_payload.get("created_at_utc", "")).strip()
+    updated_at_utc = str(manifest_payload.get("updated_at_utc", "")).strip()
+
+    stage_roots = run_stage_roots_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+    )
+    stage_summaries: list[RunStageMetadataSummary] = []
+    if stage_roots.exists():
+        for child in sorted(stage_roots.iterdir(), key=lambda path: path.name):
+            if not child.is_dir():
+                continue
+            stage_name = child.name
+            stage_metadata = load_stage_metadata(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=selected_run_id,
+                stage=stage_name,
+            )
+            if stage_metadata is None:
+                continue
+            attempts = latest_attempt_number(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=selected_run_id,
+                stage=stage_name,
+            )
+            stage_summaries.append(
+                RunStageMetadataSummary(
+                    stage=stage_name,
+                    status=stage_metadata.status,
+                    updated_at_utc=stage_metadata.updated_at_utc,
+                    attempt_count=attempts or 0,
+                )
+            )
+
+    return RunMetadataSummary(
+        run_id=selected_run_id,
+        work_item=work_item,
+        runtime_id=runtime_id,
+        stage_target=stage_target,
+        created_at_utc=created_at_utc,
+        updated_at_utc=updated_at_utc,
+        stages=tuple(stage_summaries),
+    )
 
 
 def _workspace_relative_path(workspace_root: Path, path: Path) -> str:

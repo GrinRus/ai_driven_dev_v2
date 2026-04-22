@@ -11,7 +11,7 @@ from aidd import __version__
 from aidd.adapters.base import CapabilityReport
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.generic_cli import probe as probe_generic_cli
-from aidd.cli.run_lookup import resolve_stage_result_summary
+from aidd.cli.run_lookup import resolve_run_metadata_summary, resolve_stage_result_summary
 from aidd.config import load_config
 from aidd.core.interview import (
     load_answers_document,
@@ -32,9 +32,11 @@ app = typer.Typer(
 )
 stage_app = typer.Typer(help="Stage-level commands.", add_completion=False)
 eval_app = typer.Typer(help="Eval and harness commands.", add_completion=False)
+run_app = typer.Typer(help="Run-level commands.", add_completion=False, invoke_without_command=True)
 
 app.add_typer(stage_app, name="stage")
 app.add_typer(eval_app, name="eval")
+app.add_typer(run_app, name="run")
 
 
 def _capability_summary(report: CapabilityReport) -> str:
@@ -154,17 +156,76 @@ def init(
     console.print(f"Initialized workspace: {work_item_root.resolve()}")
 
 
-@app.command()
-def run(
-    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+@run_app.callback(invoke_without_command=True)
+def run_callback(
+    ctx: typer.Context,
+    work_item: Annotated[
+        str | None,
+        typer.Option("--work-item", help="Work item id"),
+    ] = None,
     runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "claude-code",
 ) -> None:
     """Run the AIDD workflow for a work item."""
+    if ctx.invoked_subcommand is not None:
+        return
+    if work_item is None:
+        raise typer.BadParameter("Missing option '--work-item'.")
     console.print(f"AIDD run: work_item={work_item} runtime={runtime}")
     console.print(
         "Workflow execution is not implemented yet. "
         "See docs/backlog/roadmap.md for the next implementation slices."
     )
+
+
+@run_app.command("show")
+def run_show(
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Optional run id; defaults to the latest run."),
+    ] = None,
+) -> None:
+    """Show stored metadata for a run and its stages."""
+    try:
+        summary = resolve_run_metadata_summary(
+            workspace_root=root,
+            work_item=work_item,
+            run_id=run_id,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    run_table = Table(title=f"Run metadata: {summary.run_id} / {summary.work_item}")
+    run_table.add_column("Field")
+    run_table.add_column("Value")
+    run_table.add_row("run id", summary.run_id)
+    run_table.add_row("work item", summary.work_item)
+    run_table.add_row("runtime", summary.runtime_id)
+    run_table.add_row("stage target", summary.stage_target)
+    run_table.add_row("created at (UTC)", summary.created_at_utc or "unknown")
+    run_table.add_row("updated at (UTC)", summary.updated_at_utc or "unknown")
+    console.print(run_table)
+
+    stage_table = Table(title=f"Run stages: {summary.run_id}")
+    stage_table.add_column("Stage")
+    stage_table.add_column("Status")
+    stage_table.add_column("Attempts")
+    stage_table.add_column("Updated at (UTC)")
+    if summary.stages:
+        for stage_summary in summary.stages:
+            stage_table.add_row(
+                stage_summary.stage,
+                stage_summary.status,
+                str(stage_summary.attempt_count),
+                stage_summary.updated_at_utc or "unknown",
+            )
+    else:
+        stage_table.add_row("none", "none", "0", "none")
+    console.print(stage_table)
 
 
 @stage_app.command("run")
