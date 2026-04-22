@@ -281,7 +281,7 @@ def parse_stage_metadata_validation_failures(
 
 
 def _is_environment_signal(message: str) -> bool:
-    normalized = message.lower()
+    normalized = message.lower().replace("_", " ").replace("-", " ")
     return any(
         token in normalized
         for token in (
