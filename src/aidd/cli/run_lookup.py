@@ -63,6 +63,14 @@ class RunMetadataSummary:
     stages: tuple[RunStageMetadataSummary, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class RunLogSummary:
+    run_id: str
+    stage: str
+    attempt_number: int
+    runtime_log_path: Path
+
+
 def _load_runtime_id(
     *,
     workspace_root: Path,
@@ -198,6 +206,62 @@ def resolve_run_metadata_summary(
         created_at_utc=created_at_utc,
         updated_at_utc=updated_at_utc,
         stages=tuple(stage_summaries),
+    )
+
+
+def resolve_run_log_summary(
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    *,
+    run_id: str | None = None,
+    attempt_number: int | None = None,
+) -> RunLogSummary:
+    selected_run_id = run_id or latest_run_id(workspace_root=workspace_root, work_item=work_item)
+    if selected_run_id is None:
+        raise ValueError(f"No runs found for work item '{work_item}'.")
+
+    selected_attempt = attempt_number or latest_attempt_number(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+    )
+    if selected_attempt is None:
+        raise ValueError(
+            "No attempts found for work item "
+            f"'{work_item}', run '{selected_run_id}', stage '{stage}'."
+        )
+
+    artifact_paths = resolve_attempt_artifact_paths(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+    )
+    if artifact_paths is None:
+        raise ValueError(
+            f"Artifact index is missing for work item '{work_item}', run '{selected_run_id}', "
+            f"stage '{stage}', attempt {selected_attempt}."
+        )
+
+    runtime_log_path = artifact_paths.logs.get("runtime_log")
+    if runtime_log_path is None:
+        raise ValueError(
+            "Runtime log path is missing in artifact index for work item "
+            f"'{work_item}', run '{selected_run_id}', stage '{stage}', attempt {selected_attempt}."
+        )
+    if not runtime_log_path.exists():
+        raise ValueError(
+            f"Runtime log file does not exist: {runtime_log_path.as_posix()}."
+        )
+
+    return RunLogSummary(
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+        runtime_log_path=runtime_log_path,
     )
 
 

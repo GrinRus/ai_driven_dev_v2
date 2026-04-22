@@ -11,7 +11,11 @@ from aidd import __version__
 from aidd.adapters.base import CapabilityReport
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.generic_cli import probe as probe_generic_cli
-from aidd.cli.run_lookup import resolve_run_metadata_summary, resolve_stage_result_summary
+from aidd.cli.run_lookup import (
+    resolve_run_log_summary,
+    resolve_run_metadata_summary,
+    resolve_stage_result_summary,
+)
 from aidd.config import load_config
 from aidd.core.interview import (
     load_answers_document,
@@ -58,6 +62,13 @@ def _path_summary(paths: tuple[str, ...]) -> str:
     if not paths:
         return "none"
     return "\n".join(paths)
+
+
+def _tail_lines(text: str, *, line_count: int) -> str:
+    lines = text.splitlines()
+    if line_count >= len(lines):
+        return text
+    return "\n".join(lines[-line_count:]) + "\n"
 
 
 def _stream_prefix(*, runtime: str, stage: str, stream: Literal["stdout", "stderr"]) -> str:
@@ -226,6 +237,61 @@ def run_show(
     else:
         stage_table.add_row("none", "none", "0", "none")
     console.print(stage_table)
+
+
+@run_app.command("logs")
+def run_logs(
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    stage: Annotated[str, typer.Option("--stage", help="Stage id, for example plan")],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Optional run id; defaults to the latest run."),
+    ] = None,
+    attempt: Annotated[
+        int | None,
+        typer.Option("--attempt", help="Optional attempt number; defaults to the latest attempt."),
+    ] = None,
+    tail: Annotated[
+        bool,
+        typer.Option("--tail/--no-tail", help="Print only the last N lines of the runtime log."),
+    ] = False,
+    lines: Annotated[
+        int,
+        typer.Option("--lines", help="Number of lines to print with --tail."),
+    ] = 40,
+) -> None:
+    """Print or tail the persisted runtime log for a selected run attempt."""
+    if lines <= 0:
+        raise typer.BadParameter("--lines must be greater than zero.")
+
+    try:
+        summary = resolve_run_log_summary(
+            workspace_root=root,
+            work_item=work_item,
+            stage=stage,
+            run_id=run_id,
+            attempt_number=attempt,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    log_text = summary.runtime_log_path.read_text(encoding="utf-8")
+    if tail:
+        log_text = _tail_lines(log_text, line_count=lines)
+
+    console.print(
+        "Run log: "
+        f"run_id={summary.run_id} stage={summary.stage} attempt={summary.attempt_number}"
+    )
+    console.print(f"Path: {summary.runtime_log_path.as_posix()}")
+    if not log_text:
+        console.print("(empty runtime log)")
+        return
+    console.print(log_text, end="")
 
 
 @stage_app.command("run")
