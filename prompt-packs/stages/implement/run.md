@@ -1,21 +1,30 @@
 # Run prompt for `implement`
 
-## Goal
+## Stage objective
 
-Apply the selected task to the repository, explain the change, and record verification evidence.
+Execute the selected `tasklist` item inside the allowed write scope, produce a truthful
+implementation summary, and capture verification evidence that is auditable.
+
+The stage is complete only when reported edits, verification outcomes, and stage status are
+consistent across `implementation-report.md`, `validator-report.md`, and `stage-result.md`.
 
 ## Inputs to read first
 
-- `../tasklist/output/tasklist.md`
-- `../tasklist/output/stage-result.md`
-- `../tasklist/output/validator-report.md`
-- `context/repository-state.md`
-- `context/task-selection.md`
-- `context/allowed-write-scope.md`
-- optional context when available: constraints, previous decisions, runtime capabilities
-- stage contract: `contracts/stages/implement.md`
+- required:
+  - `../tasklist/output/tasklist.md`
+  - `../tasklist/output/stage-result.md`
+  - `../tasklist/output/validator-report.md`
+  - `context/repository-state.md`
+  - `context/task-selection.md`
+  - `context/allowed-write-scope.md`
+- optional context when available:
+  - `context/constraints.md`
+  - `context/previous-decisions.md`
+  - `context/runtime-capabilities.md`
+- contract of record:
+  - `contracts/stages/implement.md`
 
-## Required outputs
+## Required outputs (always write)
 
 - `implementation-report.md`
 - `stage-result.md`
@@ -23,28 +32,37 @@ Apply the selected task to the repository, explain the change, and record verifi
 
 ## Conditional outputs
 
-- `questions.md` and `answers.md` when clarification is needed
-- `repair-brief.md` only when validation fails and repair is required
+- `questions.md` and `answers.md` when blocking clarification is required
+- `repair-brief.md` only after validation failure
 
-## Instructions
+## Implementation discipline
 
-1. Read all required upstream artifacts before writing outputs.
-2. Confirm selected task id exists in `tasklist.md` before applying changes.
-3. Treat `context/allowed-write-scope.md` as a hard constraint for touched files.
-4. Write `implementation-report.md` with selected task id, explicit change summary, touched-files list, and verification notes.
-5. Ensure each touched-files entry includes path plus short change intent and stays inside allowed write scope.
-6. Include verification outcomes for the primary checks actually run; do not claim checks that were not executed.
-7. Do not report file changes, test results, or runtime behavior unless they are backed by observable evidence from this run.
-8. Write or update `stage-result.md` and `validator-report.md` so readiness and verification outcomes are consistent.
-9. If required inputs are missing or write-scope/task-selection constraints are unclear, raise a question instead of inventing assumptions.
-10. Keep the output useful for the next stage rather than merely well-formatted.
+1. Selected task id from `context/task-selection.md` must exist in upstream `tasklist.md`.
+2. `context/allowed-write-scope.md` is a hard boundary for touched files.
+3. Change summary must describe what changed, why it changed, and how it maps to selected task id.
+4. Touched-files list must include concrete path + short intent per entry and never claim unobserved edits.
+5. Verification notes must list actual checks run (or explicitly not run) with observed outcomes.
+6. No-op outcomes require explicit evidence-based justification plus next action; otherwise no-op is invalid.
+7. Stage/validator status must match observed implementation and verification evidence.
+
+## Execution instructions
+
+1. Read all required inputs and `contracts/stages/implement.md` before drafting outputs.
+2. Confirm selected task id, scope limits, and repository baseline before editing outputs.
+3. Produce `implementation-report.md` with selected task id, scoped change summary, touched-files list,
+   verification notes, and residual risk/deferred notes when applicable.
+4. Keep touched-files entries bounded to allowed scope and aligned with observable repository changes.
+5. Record verification using concrete commands/checks and outcomes; do not imply execution that did not happen.
+6. If required inputs are missing or scope/task constraints conflict, raise a `[blocking]` question
+   instead of inventing assumptions.
+7. Update `validator-report.md` and `stage-result.md` so readiness, blockers, and next actions remain
+   consistent with implementation evidence.
 
 ## Completion checklist
 
-- implementation report references the selected task id directly,
-- change summary is specific and aligned with produced edits,
-- touched-files list is explicit and within allowed write scope,
-- touched-files list does not claim edits without observable change evidence,
-- verification notes name concrete checks and observed outcomes,
-- verification notes do not include unverifiable or unexecuted claims,
-- stage result and validator report agree with implementation outcomes.
+- selected task id is explicit and traced to implementation summary,
+- edits stay within allowed write scope,
+- touched-files list is concrete and evidence-backed,
+- verification notes are factual and command-specific,
+- no-op handling (if any) includes justification, evidence, and next action,
+- `implementation-report.md`, `validator-report.md`, and `stage-result.md` are consistent.
