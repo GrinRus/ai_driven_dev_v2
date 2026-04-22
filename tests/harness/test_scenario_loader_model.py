@@ -94,3 +94,8 @@ def test_httpx_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
         "start": "plan",
         "end": "qa",
     }
+    assert scenario.raw["verify"]["pass_conditions"] == [
+        "Verification command exits with status 0.",
+        "Pytest output reports all tests as passed.",
+        "No new failing tests are introduced relative to baseline.",
+    ]
