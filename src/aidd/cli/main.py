@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 from rich.console import Console
@@ -56,6 +56,28 @@ def _path_summary(paths: tuple[str, ...]) -> str:
     if not paths:
         return "none"
     return "\n".join(paths)
+
+
+def _stream_prefix(*, runtime: str, stage: str, stream: Literal["stdout", "stderr"]) -> str:
+    return f"[{runtime}:{stage}:{stream}]"
+
+
+def _prefix_stream_chunk(
+    *,
+    runtime: str,
+    stage: str,
+    stream: Literal["stdout", "stderr"],
+    chunk: str,
+    multi_stream: bool,
+) -> str:
+    if not multi_stream:
+        return chunk
+
+    prefix = _stream_prefix(runtime=runtime, stage=stage, stream=stream)
+    lines = chunk.splitlines(keepends=True)
+    if not lines:
+        return f"{prefix} "
+    return "".join(f"{prefix} {line}" for line in lines)
 
 
 def _version_callback(value: bool) -> None:
@@ -166,6 +188,24 @@ def stage_run(
         "AIDD stage run: "
         f"stage={stage} work_item={work_item} runtime={runtime} log_follow={log_follow}"
     )
+    if log_follow:
+        stdout_preview = _prefix_stream_chunk(
+            runtime=runtime,
+            stage=stage,
+            stream="stdout",
+            chunk="runtime-output-line\n",
+            multi_stream=True,
+        ).rstrip("\n")
+        stderr_preview = _prefix_stream_chunk(
+            runtime=runtime,
+            stage=stage,
+            stream="stderr",
+            chunk="runtime-error-line\n",
+            multi_stream=True,
+        ).rstrip("\n")
+        console.print("Live-log follow prefix mode enabled for multi-stream output.")
+        console.print(f"stdout prefix preview: {stdout_preview}", markup=False)
+        console.print(f"stderr prefix preview: {stderr_preview}", markup=False)
     console.print(
         "Stage execution is not implemented yet. "
         "See contracts/stages/ and docs/architecture/document-contracts.md."
