@@ -22,3 +22,14 @@ def test_live_scenario_exposes_repo_steps_and_run_config() -> None:
     assert scenario.run.timeout_minutes == 20
     assert scenario.run.interview_required is False
     assert scenario.run.runtime_targets == ("claude-code", "generic-cli")
+
+
+def test_all_live_scenarios_load_as_valid_manifests() -> None:
+    live_root = Path("harness/scenarios/live")
+    scenario_files = sorted(live_root.glob("*.yaml"))
+    assert scenario_files
+
+    for scenario_file in scenario_files:
+        scenario = load_scenario(scenario_file)
+        assert scenario.scenario_id
+        assert scenario.task

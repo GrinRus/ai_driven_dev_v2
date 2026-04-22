@@ -80,3 +80,27 @@ runtime_targets:
 
     with pytest.raises(ScenarioManifestError, match="key 'setup\\.commands'"):
         load_scenario(manifest)
+
+
+def test_load_scenario_rejects_missing_repo_url(tmp_path: Path) -> None:
+    manifest = _write_manifest(
+        tmp_path / "scenario.yaml",
+        """
+id: AIDD-TEST-001
+task: Example task
+repo:
+  default_branch: main
+setup:
+  commands:
+    - echo setup
+verify:
+  commands:
+    - echo verify
+runtime_targets:
+  - generic-cli
+""".strip()
+        + "\n",
+    )
+
+    with pytest.raises(ScenarioManifestError, match="missing required key: url"):
+        load_scenario(manifest)

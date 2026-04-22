@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.harness.scenarios import load_scenario
+import pytest
+
+from aidd.harness.scenarios import ScenarioManifestError, load_scenario
 
 
 def test_load_scenario_applies_runtime_workspace_and_scenario_parameters(
@@ -49,3 +51,28 @@ runtime_targets:
     )
     assert scenario.verify.commands == ("echo repo=typer",)
     assert scenario.runtime_targets == ("generic-cli",)
+
+
+def test_load_scenario_rejects_unresolved_runtime_placeholder(tmp_path: Path) -> None:
+    manifest = tmp_path / "scenario.yaml"
+    manifest.write_text(
+        """
+id: AIDD-TMP-002
+task: Run ${runtime_id}
+repo:
+  url: https://github.com/fastapi/typer
+setup:
+  commands:
+    - echo setup
+verify:
+  commands:
+    - echo verify
+runtime_targets:
+  - ${runtime_id}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ScenarioManifestError, match="unresolved placeholder\\(s\\): runtime_id"):
+        load_scenario(manifest)
