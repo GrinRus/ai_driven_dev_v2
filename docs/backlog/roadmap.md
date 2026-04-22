@@ -1992,7 +1992,7 @@ Dependencies:
 Local tasks:
 
 - `W7-E2-S1-T1` (done) Implement OpenCode command discovery.
-- `W7-E2-S1-T2` Capture OpenCode version or identity output.
+- `W7-E2-S1-T2` (done) Capture OpenCode version or identity output.
 - `W7-E2-S1-T3` Derive OpenCode capability flags relevant to AIDD.
 - `W7-E2-S1-T4` Expose OpenCode probe results in `aidd doctor`.
 - `W7-E2-S1-T5` Add probe tests for found, missing, and malformed-version cases.
