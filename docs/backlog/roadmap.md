@@ -2052,7 +2052,7 @@ Dependencies:
 
 Local tasks:
 
-- `W7-E2-S3-T1` Select the minimum parity scenario set for OpenCode.
+- `W7-E2-S3-T1` (done) Select the minimum parity scenario set for OpenCode.
 - `W7-E2-S3-T2` Run OpenCode on the smoke lane and capture reference bundles.
 - `W7-E2-S3-T3` Run OpenCode on at least one interview lane and capture reference bundles.
 - `W7-E2-S3-T4` Document known parity gaps and adapter-specific limitations.

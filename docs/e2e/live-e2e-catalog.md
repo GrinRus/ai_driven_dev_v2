@@ -178,6 +178,22 @@ Out-of-scope for the minimum set:
 
 - `AIDD-LIVE-007` and `AIDD-LIVE-008` (Bun/TypeScript lane), deferred until the first Codex parity baseline is archived.
 
+## OpenCode Minimum Parity Scenario Set
+
+This matrix defines the minimum OpenCode parity set for `W7-E2-S3`.
+The goal is to mirror the Codex lane structure so parity deltas can be
+compared on the same smoke, interview, and docs/alignment baselines.
+
+| Lane | Scenario ID | Selection rationale | Planned task |
+| --- | --- | --- | --- |
+| smoke | `AIDD-LIVE-005` | Stable Python-only setup with bounded patch scope and an existing baseline history in the catalog. | `W7-E2-S3-T2` |
+| interview | `AIDD-LIVE-006` | Exercises blocking question flow and resume expectations under the same interview lane used for other adapters. | `W7-E2-S3-T3` |
+| docs-alignment | `AIDD-LIVE-004` | Provides a docs/examples coherence comparator that is directly reusable across runtime adapters. | `W7-E2-S3-T4` |
+
+Out-of-scope for the minimum set:
+
+- `AIDD-LIVE-007` and `AIDD-LIVE-008` (Bun/TypeScript lane), deferred until the first OpenCode parity baseline is archived.
+
 ## Codex Parity Snapshot (April 22, 2026)
 
 Completed reference runs from the minimum set:
