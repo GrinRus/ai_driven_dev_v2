@@ -19,6 +19,7 @@ from aidd.core.stage_runner import (
     PostValidationAction,
     RepairBudgetValidationTransition,
     StageExecutionState,
+    StageInterviewRouting,
     StageOutputDiscovery,
     StageStructuralValidationResult,
     StageValidationState,
@@ -30,6 +31,7 @@ from aidd.core.stage_runner import (
     persist_validation_state_with_repair_budget,
     prepare_adapter_invocation,
     prepare_stage_bundle,
+    route_stage_questions_to_interview,
     run_structural_validation_after_output_discovery,
     update_stage_unblock_state,
 )
@@ -471,6 +473,132 @@ def test_run_structural_validation_after_output_discovery_writes_report_path(
     )
     report_text = structural_validation.validator_report_path.read_text(encoding="utf-8")
     assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" in report_text
+
+
+def test_route_stage_questions_to_interview_detects_unresolved_blocking_questions(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        (
+            "# Questions\n\n"
+            "## Questions\n\n"
+            "- `Q1` `[blocking]` Confirm scope.\n"
+            "- `Q2` `[non-blocking]` Optional context.\n"
+        ),
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        (
+            "# Answers\n\n"
+            "## Answers\n\n"
+            "- `Q2` `[resolved]` Added optional context.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    routing = route_stage_questions_to_interview(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+
+    assert isinstance(routing, StageInterviewRouting)
+    assert routing.requires_interview is True
+    assert routing.unresolved_blocking_question_ids == ("Q1",)
+    assert routing.questions_path == stage_root / "questions.md"
+    assert routing.answers_path == stage_root / "answers.md"
+
+
+def test_route_stage_questions_to_interview_skips_when_blocking_questions_resolved(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        (
+            "# Questions\n\n"
+            "## Questions\n\n"
+            "- `Q1` `[blocking]` Confirm scope.\n"
+        ),
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        (
+            "# Answers\n\n"
+            "## Answers\n\n"
+            "- `Q1` `[resolved]` Scope confirmed.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    routing = route_stage_questions_to_interview(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+
+    assert routing.requires_interview is False
+    assert routing.unresolved_blocking_question_ids == ()
 
 
 def test_prepare_adapter_invocation_repair_attempt_requires_repair_brief(

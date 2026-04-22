@@ -5,7 +5,13 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
-from aidd.core.interview import stage_has_unresolved_blocking_questions
+from aidd.core.interview import (
+    load_answers_document,
+    load_questions_document,
+    resolved_question_ids,
+    stage_has_unresolved_blocking_questions,
+    unresolved_blocking_questions,
+)
 from aidd.core.repair import RepairBudgetPolicy, evaluate_stage_repair_counter
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
@@ -101,6 +107,18 @@ class StageStructuralValidationResult:
     attempt_number: int
     validator_report_path: Path
     findings: tuple[ValidationFinding, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class StageInterviewRouting:
+    stage: str
+    work_item: str
+    run_id: str
+    attempt_number: int
+    questions_path: Path
+    answers_path: Path
+    unresolved_blocking_question_ids: tuple[str, ...]
+    requires_interview: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -480,6 +498,46 @@ def run_structural_validation_after_output_discovery(
         attempt_number=discovery.attempt_number,
         validator_report_path=validator_report_path,
         findings=findings,
+    )
+
+
+def route_stage_questions_to_interview(
+    *,
+    workspace_root: Path,
+    discovery: StageOutputDiscovery,
+) -> StageInterviewRouting:
+    stage_documents_root = workspace_stage_root(
+        root=workspace_root,
+        work_item=discovery.work_item,
+        stage=discovery.stage,
+    )
+    questions_path = stage_documents_root / "questions.md"
+    answers_path = stage_documents_root / "answers.md"
+
+    questions = load_questions_document(
+        workspace_root=workspace_root,
+        work_item=discovery.work_item,
+        stage=discovery.stage,
+    )
+    answers = load_answers_document(
+        workspace_root=workspace_root,
+        work_item=discovery.work_item,
+        stage=discovery.stage,
+    )
+    unresolved = unresolved_blocking_questions(
+        questions=questions,
+        resolved_question_ids=resolved_question_ids(answers=answers),
+    )
+    unresolved_ids = tuple(question.question_id for question in unresolved)
+    return StageInterviewRouting(
+        stage=discovery.stage,
+        work_item=discovery.work_item,
+        run_id=discovery.run_id,
+        attempt_number=discovery.attempt_number,
+        questions_path=questions_path,
+        answers_path=answers_path,
+        unresolved_blocking_question_ids=unresolved_ids,
+        requires_interview=bool(unresolved_ids),
     )
 
 
