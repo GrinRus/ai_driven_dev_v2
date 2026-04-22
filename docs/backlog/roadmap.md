@@ -1265,7 +1265,7 @@ Dependencies:
 
 Local tasks:
 
-- `W5-E1-S3-T1` Implement setup-step execution before AIDD is invoked.
+- `W5-E1-S3-T1` (done) Implement setup-step execution before AIDD is invoked.
 - `W5-E1-S3-T2` Implement AIDD invocation with runtime, scenario, and work-item parameters.
 - `W5-E1-S3-T3` Implement verification-step execution after the AIDD run completes.
 - `W5-E1-S3-T4` Capture durations, exit codes, and command transcripts for setup, run, and verification steps.
