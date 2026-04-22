@@ -1695,7 +1695,7 @@ Exit evidence:
 ### Epic W6-E2 — delivery stages (`planned`)
 Linked stories: `US-02`, `US-03`, `US-04`, `US-05`
 
-#### Slice W6-E2-S1 — `review-spec` stage pack (`planned`)
+#### Slice W6-E2-S1 — `review-spec` stage pack (`done`)
 Goal: make `review-spec` runnable with actionable review outputs.
 
 Primary outputs:
@@ -1721,11 +1721,12 @@ Local tasks:
 - `W6-E2-S1-T3` (done) Implement `review-spec` semantic validators.
 - `W6-E2-S1-T4` (done) Add valid and invalid `review-spec` fixtures.
 - `W6-E2-S1-T5` (done) Add unit tests for `review-spec` validation.
-- `W6-E2-S1-T6` Run one smoke execution of `review-spec` and archive the artifacts.
+- `W6-E2-S1-T6` (done) Run one smoke execution of `review-spec` and archive the artifacts.
 
 Exit evidence:
 
 - `review-spec` can block downstream work with durable, validated review findings.
+- smoke bundle archived at `.aidd/reports/evals/eval-stage-review-spec-smoke-20260422T105603Z`.
 
 #### Slice W6-E2-S2 — `tasklist` stage pack (`planned`)
 Goal: make `tasklist` runnable with decomposition-aware validation.
