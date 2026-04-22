@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shlex
 import subprocess
 import threading
@@ -9,6 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
+
+from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,9 +44,17 @@ class GenericCliRunResult:
     exit_code: int
     stdout_text: str
     stderr_text: str
+    runtime_log_text: str
+
+
+@dataclass(frozen=True, slots=True)
+class GenericCliRuntimeArtifacts:
+    runtime_log_path: Path
+    runtime_exit_metadata_path: Path
 
 
 StreamTarget = Literal["stdout", "stderr"]
+RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
 
 
 def assemble_command(
@@ -206,6 +217,7 @@ def run_subprocess_with_streaming(
 
     stdout_chunks: deque[str] = deque()
     stderr_chunks: deque[str] = deque()
+    runtime_log_chunks: deque[str] = deque()
     completed_readers = 0
     while completed_readers < 2:
         try:
@@ -217,6 +229,7 @@ def run_subprocess_with_streaming(
             completed_readers += 1
             continue
 
+        runtime_log_chunks.append(chunk)
         if target == "stdout":
             stdout_chunks.append(chunk)
             if on_stdout is not None:
@@ -234,4 +247,34 @@ def run_subprocess_with_streaming(
         exit_code=exit_code,
         stdout_text="".join(stdout_chunks),
         stderr_text="".join(stderr_chunks),
+        runtime_log_text="".join(runtime_log_chunks),
+    )
+
+
+def persist_attempt_runtime_artifacts(
+    *,
+    attempt_path: Path,
+    run_result: GenericCliRunResult,
+) -> GenericCliRuntimeArtifacts:
+    attempt_path.mkdir(parents=True, exist_ok=True)
+
+    runtime_log_path = attempt_path / RUN_RUNTIME_LOG_FILENAME
+    runtime_log_path.write_text(run_result.runtime_log_text, encoding="utf-8")
+
+    runtime_exit_metadata_path = attempt_path / RUNTIME_EXIT_METADATA_FILENAME
+    runtime_exit_metadata = {
+        "schema_version": 1,
+        "exit_code": run_result.exit_code,
+        "stdout_char_count": len(run_result.stdout_text),
+        "stderr_char_count": len(run_result.stderr_text),
+        "runtime_log_char_count": len(run_result.runtime_log_text),
+    }
+    runtime_exit_metadata_path.write_text(
+        json.dumps(runtime_exit_metadata, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    return GenericCliRuntimeArtifacts(
+        runtime_log_path=runtime_log_path,
+        runtime_exit_metadata_path=runtime_exit_metadata_path,
     )

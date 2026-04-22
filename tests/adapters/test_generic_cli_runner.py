@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 import time
@@ -8,15 +9,19 @@ from pathlib import Path
 import pytest
 
 from aidd.adapters.generic_cli.runner import (
+    RUNTIME_EXIT_METADATA_FILENAME,
     GenericCliRunResult,
+    GenericCliRuntimeArtifacts,
     GenericCliStageContext,
     GenericCliSubprocessSpec,
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
     command_preview,
+    persist_attempt_runtime_artifacts,
     run_subprocess_with_streaming,
 )
+from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
 def _context() -> GenericCliStageContext:
@@ -153,6 +158,8 @@ def test_run_subprocess_with_streaming_returns_stdout_and_stderr(tmp_path: Path)
     assert "out-1\n" in result.stdout_text
     assert "out-2\n" in result.stdout_text
     assert "err-1\n" in result.stderr_text
+    assert "out-1\n" in result.runtime_log_text
+    assert "err-1\n" in result.runtime_log_text
     assert stdout_events
     assert stderr_events
 
@@ -183,3 +190,32 @@ def test_run_subprocess_with_streaming_emits_early_stdout_before_process_end(
     assert callback_times
     assert callback_times[0] - started_at < 0.15
     assert finished_at - callback_times[0] > 0.05
+
+
+def test_persist_attempt_runtime_artifacts_writes_log_and_exit_metadata(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    run_result = GenericCliRunResult(
+        exit_code=17,
+        stdout_text="out-1\nout-2\n",
+        stderr_text="err-1\n",
+        runtime_log_text="out-1\nerr-1\nout-2\n",
+    )
+
+    artifacts = persist_attempt_runtime_artifacts(
+        attempt_path=attempt_path,
+        run_result=run_result,
+    )
+
+    assert isinstance(artifacts, GenericCliRuntimeArtifacts)
+    assert artifacts.runtime_log_path == attempt_path / RUN_RUNTIME_LOG_FILENAME
+    assert artifacts.runtime_exit_metadata_path == attempt_path / RUNTIME_EXIT_METADATA_FILENAME
+    assert artifacts.runtime_log_path.read_text(encoding="utf-8") == run_result.runtime_log_text
+
+    exit_metadata = json.loads(artifacts.runtime_exit_metadata_path.read_text(encoding="utf-8"))
+    assert exit_metadata == {
+        "schema_version": 1,
+        "exit_code": 17,
+        "stdout_char_count": len(run_result.stdout_text),
+        "stderr_char_count": len(run_result.stderr_text),
+        "runtime_log_char_count": len(run_result.runtime_log_text),
+    }
