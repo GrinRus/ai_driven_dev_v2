@@ -7,6 +7,10 @@ import subprocess
 from aidd.adapters.base import CapabilityReport
 
 
+def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
+    return any(marker in text for marker in markers)
+
+
 def discover_command(command: str) -> str | None:
     stripped = command.strip()
     if not stripped:
@@ -41,10 +45,61 @@ def discover_version(command_path: str) -> str | None:
     return output.splitlines()[0].strip() or None
 
 
+def discover_help_text(command_path: str) -> str | None:
+    try:
+        result = subprocess.run(
+            [command_path, "--help"],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=2,
+        )
+    except (FileNotFoundError, PermissionError, OSError, subprocess.TimeoutExpired):
+        return None
+
+    output = result.stdout.strip() or result.stderr.strip()
+    return output or None
+
+
+def detect_capability_flags(help_text: str) -> dict[str, bool]:
+    normalized = help_text.lower()
+    return {
+        "supports_structured_log_stream": _contains_any(
+            normalized,
+            ("--json", "--jsonl", "jsonl", "structured output"),
+        ),
+        "supports_questions": _contains_any(
+            normalized,
+            ("question", "ask-user", "prompt for input"),
+        ),
+        "supports_resume": _contains_any(
+            normalized,
+            ("--resume", "resume run", "continue run"),
+        ),
+        "supports_subagents": _contains_any(
+            normalized,
+            ("subagent", "sub-agent"),
+        ),
+        "supports_non_interactive_mode": _contains_any(
+            normalized,
+            ("--non-interactive", "--ci", "--yes"),
+        ),
+        "supports_working_directory_control": _contains_any(
+            normalized,
+            ("--cwd", "--workdir", "--working-directory"),
+        ),
+        "supports_env_injection": _contains_any(
+            normalized,
+            ("--env", "--set-env", "environment variable"),
+        ),
+    }
+
+
 def probe(command: str) -> CapabilityReport:
     discovered = discover_command(command)
     available = discovered is not None
     version_text = discover_version(discovered) if discovered else None
+    detected = detect_capability_flags(discover_help_text(discovered) or "") if discovered else {}
 
     return CapabilityReport(
         runtime_id="codex",
@@ -52,11 +107,14 @@ def probe(command: str) -> CapabilityReport:
         command=discovered or command,
         version_text=version_text,
         supports_raw_log_stream=available,
-        supports_structured_log_stream=False,
-        supports_questions=False,
-        supports_resume=False,
-        supports_subagents=available,
-        supports_non_interactive_mode=available,
-        supports_working_directory_control=available,
-        supports_env_injection=available,
+        supports_structured_log_stream=detected.get("supports_structured_log_stream", False),
+        supports_questions=detected.get("supports_questions", False),
+        supports_resume=detected.get("supports_resume", False),
+        supports_subagents=detected.get("supports_subagents", False),
+        supports_non_interactive_mode=detected.get("supports_non_interactive_mode", False),
+        supports_working_directory_control=detected.get(
+            "supports_working_directory_control",
+            False,
+        ),
+        supports_env_injection=detected.get("supports_env_injection", False),
     )
