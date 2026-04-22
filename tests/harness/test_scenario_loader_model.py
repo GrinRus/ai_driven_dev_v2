@@ -275,8 +275,11 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
             "evidence": "verification command succeeds after the resolved-answer rerun.",
         },
     ]
-    assert scenario.raw["reference_run"]["run_id"] == "eval-live-006-reference-20260422T084432Z"
-    assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
+    assert (
+        scenario.raw["reference_run"]["run_id"]
+        == "eval-live-006-codex-reference-20260422T123937Z"
+    )
+    assert scenario.raw["reference_run"]["runtime"] == "codex"
     assert scenario.raw["reference_run"]["status"] == "harness_fail"
     assert (
         scenario.raw["reference_run"]["resolved_revision"]
@@ -284,8 +287,9 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
     )
     assert (
         scenario.raw["reference_run"]["bundle_root"]
-        == ".aidd/reports/evals/eval-live-006-reference-20260422T084432Z"
+        == ".aidd/reports/evals/eval-live-006-codex-reference-20260422T123937Z"
     )
+    assert "codex" in scenario.runtime_targets
 
 
 def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:

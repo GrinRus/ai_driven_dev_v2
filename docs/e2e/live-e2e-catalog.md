@@ -104,6 +104,9 @@ Initial scenarios:
   First reference run on April 22, 2026 used runtime `generic-cli`, pinned revision
   `8d74ffc93292c604d5827e2b44fffedca0c28c19`, and produced status `harness_fail`
   because the verify-stage check for `answers.md` exited with status `1`.
+  Codex parity reference run on April 22, 2026 used runtime `codex`, pinned revision
+  `8d74ffc93292c604d5827e2b44fffedca0c28c19`, and produced status `harness_fail`
+  because the verify-stage check for `answers.md` exited with status `1`.
 
 ### 4. `honojs/hono`
 

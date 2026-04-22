@@ -1960,7 +1960,7 @@ Local tasks:
 
 - `W7-E1-S3-T1` (done) Select the minimum parity scenario set for Codex.
 - `W7-E1-S3-T2` (done) Run Codex on the smoke lane and capture reference bundles.
-- `W7-E1-S3-T3` Run Codex on at least one interview lane and capture reference bundles.
+- `W7-E1-S3-T3` (done) Run Codex on at least one interview lane and capture reference bundles.
 - `W7-E1-S3-T4` Document known parity gaps and adapter-specific limitations.
 
 Exit evidence:
