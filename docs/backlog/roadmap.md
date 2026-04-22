@@ -1233,7 +1233,7 @@ Dependencies:
 
 Local tasks:
 
-- `W5-E1-S2-T1` Implement repository clone or fetch logic for scenario targets.
+- `W5-E1-S2-T1` (done) Implement repository clone or fetch logic for scenario targets.
 - `W5-E1-S2-T2` Implement revision pinning so a scenario runs against a stable commit or tag.
 - `W5-E1-S2-T3` Implement clean working-copy preparation for each scenario invocation.
 - `W5-E1-S2-T4` Implement cleanup rules for previous scenario artifacts and transient files.
