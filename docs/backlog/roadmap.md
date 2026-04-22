@@ -1788,7 +1788,7 @@ Local tasks:
 
 - `W6-E2-S3-T1` (done) Write the `implement` base prompt with edit-scope, verification, and summary expectations.
 - `W6-E2-S3-T2` (done) Write the `implement` repair prompt for validator-driven reruns.
-- `W6-E2-S3-T3` Implement `implement` semantic validators.
+- `W6-E2-S3-T3` (done) Implement `implement` semantic validators.
 - `W6-E2-S3-T4` Add valid and invalid `implement` fixtures, including no-op and incomplete-verification cases.
 - `W6-E2-S3-T5` Add unit tests for `implement` validation.
 - `W6-E2-S3-T6` (done) Add one harness or integration scenario that proves the `implement` repair loop end to end.

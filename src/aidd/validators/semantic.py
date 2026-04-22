@@ -16,6 +16,9 @@ INCOMPLETE_SECTION_CODE = "SEM-INCOMPLETE-SECTION"
 UNSUPPORTED_CLAIM_CODE = "SEM-UNSUPPORTED-CLAIM"
 PLACEHOLDER_CONTENT_CODE = "SEM-PLACEHOLDER-CONTENT"
 MISSING_EVIDENCE_LINK_CODE = "SEM-MISSING-EVIDENCE-LINK"
+MISSING_DIFF_EVIDENCE_CODE = "SEM-MISSING-DIFF-EVIDENCE"
+UNVERIFIABLE_CHECK_CLAIM_CODE = "SEM-UNVERIFIABLE-CHECK-CLAIM"
+INCOMPLETE_EXECUTION_SUMMARY_CODE = "SEM-INCOMPLETE-EXECUTION-SUMMARY"
 
 _INLINE_CODE_PATTERN = re.compile(r"`([^`]+)`")
 _STAGE_HEADING_REQUIREMENT_PATTERN = re.compile(
@@ -51,6 +54,23 @@ _REVIEW_SPEC_RATIONALE_PATTERN = re.compile(
 )
 _TASKLIST_TASK_ID_PATTERN = re.compile(
     r"\b([A-Z][A-Z0-9]{0,15}-\d+)\b",
+    flags=re.IGNORECASE,
+)
+_IMPLEMENT_FILE_ENTRY_PATTERN = re.compile(r"`[^`]*?/[^`]+`")
+_IMPLEMENT_COMMAND_PATTERN = re.compile(
+    r"\b(uv run|pytest|ruff|mypy|python -m|npm|pnpm|yarn|go test|cargo test|make)\b",
+    flags=re.IGNORECASE,
+)
+_IMPLEMENT_RESULT_PATTERN = re.compile(
+    r"(->\s*(pass|fail|ok|error)|\b(pass(?:ed)?|fail(?:ed)?|error|exit code)\b)",
+    flags=re.IGNORECASE,
+)
+_IMPLEMENT_COMPLETION_CLAIM_PATTERN = re.compile(
+    r"\b(completed|fully|done|implemented|finished)\b",
+    flags=re.IGNORECASE,
+)
+_IMPLEMENT_NOOP_JUSTIFICATION_PATTERN = re.compile(
+    r"\b(no-op|already (satisfied|implemented)|blocked|external constraint|out of scope)\b",
     flags=re.IGNORECASE,
 )
 
@@ -198,6 +218,18 @@ def _extract_tasklist_task_ids(text: str) -> set[str]:
     return {match.group(1).upper() for match in _TASKLIST_TASK_ID_PATTERN.finditer(text)}
 
 
+def _first_heading_match(
+    *,
+    headings_by_title: dict[str, list[tuple[int, MarkdownHeading]]],
+    candidates: tuple[str, ...],
+) -> tuple[int, MarkdownHeading] | None:
+    for candidate in candidates:
+        matches = headings_by_title.get(_normalized_heading(candidate), [])
+        if matches:
+            return matches[0]
+    return None
+
+
 def validate_semantic_outputs(
     *,
     stage: str,
@@ -301,6 +333,287 @@ def validate_semantic_outputs(
                     markdown_lines=markdown_lines,
                 )
                 tasklist_task_ids = _extract_tasklist_task_ids(ordered_tasks_content)
+
+        if stage == "implement" and output_path.name == "implementation-report.md":
+            selected_task_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Selected task",),
+            )
+            summary_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Change summary", "Summary"),
+            )
+            touched_files_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Touched files",),
+            )
+            verification_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Verification notes", "Verification"),
+            )
+            follow_up_match = _first_heading_match(
+                headings_by_title=headings_by_title,
+                candidates=("Follow-up notes", "Follow-up", "Risks"),
+            )
+
+            selected_task_content = ""
+            selected_task_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if selected_task_match is not None:
+                selected_task_index, selected_task_heading = selected_task_match
+                selected_task_content = _section_content_for_heading(
+                    heading_index=selected_task_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                selected_task_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=selected_task_heading.line_number,
+                )
+
+            summary_content = ""
+            summary_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if summary_match is not None:
+                summary_index, summary_heading = summary_match
+                summary_content = _section_content_for_heading(
+                    heading_index=summary_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                summary_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=summary_heading.line_number,
+                )
+
+            touched_files_content = ""
+            touched_files_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if touched_files_match is not None:
+                touched_files_index, touched_files_heading = touched_files_match
+                touched_files_content = _section_content_for_heading(
+                    heading_index=touched_files_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                touched_files_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=touched_files_heading.line_number,
+                )
+
+            verification_content = ""
+            verification_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if verification_match is not None:
+                verification_index, verification_heading = verification_match
+                verification_content = _section_content_for_heading(
+                    heading_index=verification_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                verification_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=verification_heading.line_number,
+                )
+
+            follow_up_content = ""
+            follow_up_location = ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                line_number=1,
+            )
+            if follow_up_match is not None:
+                follow_up_index, follow_up_heading = follow_up_match
+                follow_up_content = _section_content_for_heading(
+                    heading_index=follow_up_index,
+                    headings=headings,
+                    markdown_lines=markdown_lines,
+                )
+                follow_up_location = ValidationIssueLocation(
+                    workspace_relative_path=_workspace_relative(output_path, workspace_root),
+                    line_number=follow_up_heading.line_number,
+                )
+
+            if not _extract_tasklist_task_ids(selected_task_content):
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Section `Selected task` must include a stable task id "
+                            "(for example `TL-2`)."
+                        ),
+                        severity="medium",
+                        location=selected_task_location,
+                    )
+                )
+
+            compact_summary_content = re.sub(r"\s+", " ", summary_content).strip()
+            if (
+                compact_summary_content.lower() in {"none", "- none"}
+                or len(compact_summary_content) < 30
+            ):
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_EXECUTION_SUMMARY_CODE,
+                        message=(
+                            "Section `Change summary` is too brief to explain task intent, "
+                            "actual edits, and execution outcome."
+                        ),
+                        severity="medium",
+                        location=summary_location,
+                    )
+                )
+
+            touched_file_items = _extract_bullet_items(touched_files_content)
+            if not touched_file_items:
+                findings.append(
+                    ValidationFinding(
+                        code=MISSING_DIFF_EVIDENCE_CODE,
+                        message=(
+                            "Section `Touched files` must list concrete file entries "
+                            "or explicit no-op justification."
+                        ),
+                        severity="high",
+                        location=touched_files_location,
+                    )
+                )
+
+            has_real_touched_file_entries = any(
+                item.lower() != "none" for item in touched_file_items
+            )
+            if has_real_touched_file_entries:
+                if any(
+                    _IMPLEMENT_FILE_ENTRY_PATTERN.search(item) is None
+                    for item in touched_file_items
+                    if item.lower() != "none"
+                ):
+                    findings.append(
+                        ValidationFinding(
+                            code=MISSING_DIFF_EVIDENCE_CODE,
+                            message=(
+                                "Section `Touched files` entries must include file paths "
+                                "in backticks."
+                            ),
+                            severity="high",
+                            location=touched_files_location,
+                        )
+                    )
+
+                if any(
+                    " - " not in item and ":" not in item
+                    for item in touched_file_items
+                    if item.lower() != "none"
+                ):
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_SECTION_CODE,
+                            message=(
+                                "Each `Touched files` entry must include short change intent "
+                                "after the path."
+                            ),
+                            severity="medium",
+                            location=touched_files_location,
+                        )
+                    )
+            else:
+                no_op_context = " ".join((summary_content, follow_up_content))
+                if _IMPLEMENT_NOOP_JUSTIFICATION_PATTERN.search(no_op_context) is None:
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_EXECUTION_SUMMARY_CODE,
+                            message=(
+                                "No-op output requires explicit evidence-backed justification "
+                                "in summary or follow-up notes."
+                            ),
+                            severity="medium",
+                            location=summary_location,
+                        )
+                    )
+
+                compact_follow_up_content = re.sub(r"\s+", " ", follow_up_content).strip()
+                if compact_follow_up_content.lower() in {"", "none", "- none"}:
+                    findings.append(
+                        ValidationFinding(
+                            code=INCOMPLETE_EXECUTION_SUMMARY_CODE,
+                            message=(
+                                "No-op output must include an actionable next step in "
+                                "`Follow-up notes`."
+                            ),
+                            severity="medium",
+                            location=follow_up_location,
+                        )
+                    )
+
+                if _IMPLEMENT_COMPLETION_CLAIM_PATTERN.search(compact_summary_content):
+                    findings.append(
+                        ValidationFinding(
+                            code=MISSING_DIFF_EVIDENCE_CODE,
+                            message=(
+                                "Change summary claims completed implementation but "
+                                "touched-files list is empty."
+                            ),
+                            severity="high",
+                            location=summary_location,
+                        )
+                    )
+
+            verification_items = _extract_bullet_items(verification_content)
+            if not verification_items:
+                findings.append(
+                    ValidationFinding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Section `Verification notes` must list concrete checks and outcomes."
+                        ),
+                        severity="medium",
+                        location=verification_location,
+                    )
+                )
+            else:
+                for verification_item in verification_items:
+                    normalized_item = verification_item.lower()
+                    if normalized_item in {"none", "not run"}:
+                        continue
+
+                    has_command_reference = (
+                        _IMPLEMENT_COMMAND_PATTERN.search(verification_item) is not None
+                    )
+                    has_result_reference = (
+                        _IMPLEMENT_RESULT_PATTERN.search(verification_item) is not None
+                    )
+                    if has_result_reference and not has_command_reference:
+                        findings.append(
+                            ValidationFinding(
+                                code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+                                message=(
+                                    "Verification note includes outcome claim without executable "
+                                    "command evidence."
+                                ),
+                                severity="high",
+                                location=verification_location,
+                            )
+                        )
+                        continue
+
+                    if has_command_reference and not has_result_reference:
+                        findings.append(
+                            ValidationFinding(
+                                code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+                                message=(
+                                    "Verification note must include observed command outcome "
+                                    "(for example `-> pass` or exit code)."
+                                ),
+                                severity="medium",
+                                location=verification_location,
+                            )
+                        )
 
         for section in required_sections:
             matches = headings_by_title.get(_normalized_heading(section), [])
