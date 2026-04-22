@@ -1858,7 +1858,7 @@ Dependencies:
 Local tasks:
 
 - `W6-E3-S2-T1` (done) Write the `qa` base prompt.
-- `W6-E3-S2-T2` Write the `qa` repair prompt.
+- `W6-E3-S2-T2` (done) Write the `qa` repair prompt.
 - `W6-E3-S2-T3` Implement `qa` semantic validators.
 - `W6-E3-S2-T4` Add valid and invalid `qa` fixtures.
 - `W6-E3-S2-T5` Add unit tests for `qa` validation.
