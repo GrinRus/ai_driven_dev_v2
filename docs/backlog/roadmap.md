@@ -2086,7 +2086,7 @@ Dependencies:
 Local tasks:
 
 - `W7-E3-S1-T1` (done) Write the operator handbook for installation, configuration, and first run.
-- `W7-E3-S1-T2` Write the troubleshooting guide for runtime, validator, and harness failures.
+- `W7-E3-S1-T2` (done) Write the troubleshooting guide for runtime, validator, and harness failures.
 - `W7-E3-S1-T3` Write the support policy and issue-reporting instructions.
 - `W7-E3-S1-T4` Add links from `README.md` and `CONTRIBUTING.md` into the new operator docs.
 
