@@ -15,6 +15,7 @@ from aidd.adapters.claude_code.runner import (
     ClaudeCodeExitClassification,
     ClaudeCodeLaunchOptions,
     ClaudeCodeQuestionDetection,
+    ClaudeCodeQuestionRouting,
     ClaudeCodeRunResult,
     ClaudeCodeRuntimeArtifacts,
     ClaudeCodeSubprocessSpec,
@@ -27,9 +28,15 @@ from aidd.adapters.claude_code.runner import (
     normalize_structured_events,
     persist_attempt_runtime_log,
     persist_normalized_events_jsonl,
+    route_questions_with_file_fallback,
     run_subprocess_with_streaming,
 )
-from aidd.core.interview import QuestionPolicy
+from aidd.core.interview import (
+    AdapterQuestionEvent,
+    QuestionPolicy,
+    persist_answers_document,
+    persist_questions_document,
+)
 
 
 def _context() -> ClaudeCodeCommandContext:
@@ -596,6 +603,76 @@ def test_detect_question_or_pause_events_ignores_non_question_events() -> None:
 
     assert detection.pause_detected is False
     assert detection.question_events == ()
+
+
+def test_route_questions_with_file_fallback_uses_runtime_detection_when_present() -> None:
+    runtime_detection = ClaudeCodeQuestionDetection(
+        question_events=(
+            AdapterQuestionEvent(
+                question_id="Q1",
+                text="Runtime-native question",
+                policy=QuestionPolicy.BLOCKING,
+            ),
+        ),
+        pause_detected=True,
+    )
+
+    routing = route_questions_with_file_fallback(
+        workspace_root=Path(".aidd"),
+        work_item="WI-001",
+        stage="plan",
+        runtime_detection=runtime_detection,
+    )
+
+    assert isinstance(routing, ClaudeCodeQuestionRouting)
+    assert routing.used_file_fallback is False
+    assert routing.pause_detected is True
+    assert routing.question_events[0].text == "Runtime-native question"
+
+
+def test_route_questions_with_file_fallback_reads_unresolved_blocking_questions(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_questions_markdown=(
+            "# Questions\n\n## Questions\n\n"
+            "- `Q1` `[blocking]` Need repository URL?\n"
+            "- `Q2` `[non-blocking]` Preferred naming?\n"
+        ),
+    )
+    persist_answers_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_answers_markdown=(
+            "# Answers\n\n## Answers\n\n"
+            "- `Q2` `[resolved]` Use snake_case.\n"
+        ),
+    )
+
+    routing = route_questions_with_file_fallback(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        runtime_detection=ClaudeCodeQuestionDetection(
+            question_events=(),
+            pause_detected=False,
+        ),
+    )
+
+    assert routing.used_file_fallback is True
+    assert routing.pause_detected is True
+    assert routing.question_events == (
+        AdapterQuestionEvent(
+            question_id="Q1",
+            text="Need repository URL?",
+            policy=QuestionPolicy.BLOCKING,
+        ),
+    )
 
 
 def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: Path) -> None:

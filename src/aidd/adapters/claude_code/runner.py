@@ -15,7 +15,14 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
 
-from aidd.core.interview import AdapterQuestionEvent, QuestionPolicy
+from aidd.core.interview import (
+    AdapterQuestionEvent,
+    QuestionPolicy,
+    load_answers_document,
+    load_questions_document,
+    resolved_question_ids,
+    unresolved_blocking_questions,
+)
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
@@ -477,6 +484,13 @@ class ClaudeCodeQuestionDetection:
     pause_detected: bool
 
 
+@dataclass(frozen=True, slots=True)
+class ClaudeCodeQuestionRouting:
+    question_events: tuple[AdapterQuestionEvent, ...]
+    pause_detected: bool
+    used_file_fallback: bool
+
+
 def _question_policy_from_runtime_event(event: Mapping[str, object]) -> QuestionPolicy:
     policy_value = event.get("policy")
     if isinstance(policy_value, str):
@@ -558,6 +572,49 @@ def detect_question_or_pause_events(
     return ClaudeCodeQuestionDetection(
         question_events=tuple(question_events),
         pause_detected=pause_detected,
+    )
+
+
+def route_questions_with_file_fallback(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    runtime_detection: ClaudeCodeQuestionDetection,
+) -> ClaudeCodeQuestionRouting:
+    if runtime_detection.question_events or runtime_detection.pause_detected:
+        return ClaudeCodeQuestionRouting(
+            question_events=runtime_detection.question_events,
+            pause_detected=runtime_detection.pause_detected,
+            used_file_fallback=False,
+        )
+
+    questions = load_questions_document(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    answers = load_answers_document(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    unresolved = unresolved_blocking_questions(
+        questions=questions,
+        resolved_question_ids=resolved_question_ids(answers=answers),
+    )
+    fallback_events = tuple(
+        AdapterQuestionEvent(
+            question_id=question.question_id,
+            text=question.text,
+            policy=question.policy,
+        )
+        for question in unresolved
+    )
+    return ClaudeCodeQuestionRouting(
+        question_events=fallback_events,
+        pause_detected=bool(fallback_events),
+        used_file_fallback=bool(fallback_events),
     )
 
 
