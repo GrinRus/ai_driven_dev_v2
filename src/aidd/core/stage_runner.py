@@ -22,6 +22,12 @@ from aidd.core.stage_registry import (
 )
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 from aidd.core.workspace import stage_root as workspace_stage_root
+from aidd.validators.models import ValidationFinding
+from aidd.validators.reports import write_validator_report
+from aidd.validators.structural import (
+    validate_required_document_existence,
+    validate_required_sections,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,6 +91,16 @@ class StageValidationState:
     verdict: ValidationVerdict
     next_state: StageState
     stage_metadata_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class StageStructuralValidationResult:
+    stage: str
+    work_item: str
+    run_id: str
+    attempt_number: int
+    validator_report_path: Path
+    findings: tuple[ValidationFinding, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -426,6 +442,44 @@ def discover_stage_markdown_outputs(
         expected_markdown_documents=expected_markdown_documents,
         discovered_markdown_documents=discovered_markdown_documents,
         missing_markdown_documents=missing_markdown_documents,
+    )
+
+
+def run_structural_validation_after_output_discovery(
+    *,
+    workspace_root: Path,
+    discovery: StageOutputDiscovery,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> StageStructuralValidationResult:
+    structural_findings = validate_required_document_existence(
+        stage=discovery.stage,
+        work_item=discovery.work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+    section_findings = validate_required_sections(
+        stage=discovery.stage,
+        work_item=discovery.work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+    findings = (*structural_findings, *section_findings)
+
+    stage_root = workspace_stage_root(
+        root=workspace_root,
+        work_item=discovery.work_item,
+        stage=discovery.stage,
+    )
+    stage_root.mkdir(parents=True, exist_ok=True)
+    validator_report_path = stage_root / "validator-report.md"
+    write_validator_report(path=validator_report_path, findings=findings)
+    return StageStructuralValidationResult(
+        stage=discovery.stage,
+        work_item=discovery.work_item,
+        run_id=discovery.run_id,
+        attempt_number=discovery.attempt_number,
+        validator_report_path=validator_report_path,
+        findings=findings,
     )
 
 

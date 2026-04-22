@@ -20,6 +20,7 @@ from aidd.core.stage_runner import (
     RepairBudgetValidationTransition,
     StageExecutionState,
     StageOutputDiscovery,
+    StageStructuralValidationResult,
     StageValidationState,
     ValidationVerdict,
     decide_post_validation_transition,
@@ -29,6 +30,7 @@ from aidd.core.stage_runner import (
     persist_validation_state_with_repair_budget,
     prepare_adapter_invocation,
     prepare_stage_bundle,
+    run_structural_validation_after_output_discovery,
     update_stage_unblock_state,
 )
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
@@ -411,6 +413,64 @@ def test_discover_stage_markdown_outputs_rejects_mismatched_execution_context(
             ),
             invocation_bundle=invocation,
         )
+
+
+def test_run_structural_validation_after_output_discovery_writes_report_path(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    plan_output_path = preparation_bundle.expected_output_documents[0]
+    plan_output_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_output_path.write_text("# Plan\n\nPartial output.\n", encoding="utf-8")
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+
+    structural_validation = run_structural_validation_after_output_discovery(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+
+    assert isinstance(structural_validation, StageStructuralValidationResult)
+    assert structural_validation.stage == "plan"
+    assert structural_validation.run_id == "run-001"
+    assert structural_validation.attempt_number == 1
+    assert structural_validation.validator_report_path == (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "validator-report.md"
+    )
+    assert structural_validation.validator_report_path.exists()
+    assert any(
+        finding.code == "STRUCT-MISSING-REQUIRED-DOCUMENT"
+        for finding in structural_validation.findings
+    )
+    report_text = structural_validation.validator_report_path.read_text(encoding="utf-8")
+    assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" in report_text
 
 
 def test_prepare_adapter_invocation_repair_attempt_requires_repair_brief(
