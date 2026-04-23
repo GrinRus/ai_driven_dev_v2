@@ -2507,10 +2507,10 @@ Exit evidence:
 
 ## Wave 9 — backlog cycle restart and workflow parity (`next`)
 
-### Epic W9-E0 — governance bootstrap (`next`)
+### Epic W9-E0 — governance bootstrap (`done`)
 Linked stories: `US-10`
 
-#### Slice W9-E0-S1 — roadmap status normalization and queue bootstrap (`next`)
+#### Slice W9-E0-S1 — roadmap status normalization and queue bootstrap (`done`)
 Goal: normalize planning statuses and prepare a decision-complete queue restart path.
 
 Primary outputs:
@@ -2531,7 +2531,7 @@ Local tasks:
 
 - `W9-E0-S1-T1` (done) Normalize roadmap status consistency for completed Wave 7 planning nodes and add a dated sync note.
 - `W9-E0-S1-T2` (done) Open a decision-complete Wave 9 implementation lane for workflow runtime parity.
-- `W9-E0-S1-T3` (planned) Restore actionable backlog queue ordering from the new Wave 9 decomposition.
+- `W9-E0-S1-T3` (done) Restore actionable backlog queue ordering from the new Wave 9 decomposition.
 
 Exit evidence:
 
