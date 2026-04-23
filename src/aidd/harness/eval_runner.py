@@ -134,6 +134,29 @@ def _is_missing_answers_failure(error: BaseException | None) -> bool:
     return "answers.md" in text and ("test -f" in text or "no such file" in text)
 
 
+def _combined_run_output(aidd_run_result: HarnessAiddRunResult | None) -> str:
+    if aidd_run_result is None:
+        return ""
+    return f"{aidd_run_result.stdout_text}\n{aidd_run_result.stderr_text}".lower()
+
+
+def _has_unsupported_runtime_signal(aidd_run_result: HarnessAiddRunResult | None) -> bool:
+    output = _combined_run_output(aidd_run_result)
+    if not output:
+        return False
+    return (
+        "failure classification: unsupported-runtime" in output
+        or "implemented for runtime 'generic-cli' only" in output
+    )
+
+
+def _has_noop_execution_signal(aidd_run_result: HarnessAiddRunResult | None) -> bool:
+    output = _combined_run_output(aidd_run_result)
+    if not output:
+        return False
+    return "workflow run completed: no runnable stages found." in output
+
+
 def _classify_status(
     *,
     scenario: Scenario,
@@ -164,6 +187,24 @@ def _classify_status(
             "blocked",
             "Interview scenario blocked waiting for required answers.md evidence.",
             True,
+            False,
+            True,
+        )
+
+    if _has_unsupported_runtime_signal(aidd_run_result):
+        return (
+            "fail",
+            "AIDD run reported unsupported-runtime classification; execution path is non-pass.",
+            False,
+            False,
+            True,
+        )
+
+    if _has_noop_execution_signal(aidd_run_result):
+        return (
+            "fail",
+            "AIDD run completed with no runnable stages; no-op execution is non-pass.",
+            False,
             False,
             True,
         )

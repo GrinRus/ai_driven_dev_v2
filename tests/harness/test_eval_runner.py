@@ -29,12 +29,18 @@ def _init_source_repo(path: Path) -> None:
     _run(["git", "commit", "-m", "init"], cwd=path)
 
 
-def _write_fake_aidd(path: Path, *, exit_code: int) -> None:
+def _write_fake_aidd(
+    path: Path,
+    *,
+    exit_code: int,
+    stdout_lines: tuple[str, ...] = ("fake aidd",),
+) -> None:
+    print_lines = tuple(f"printf '%s\\n' {line!r}" for line in stdout_lines)
     path.write_text(
         "\n".join(
             (
                 "#!/bin/sh",
-                "printf 'fake aidd\\n'",
+                *print_lines,
                 f"exit {exit_code}",
             )
         ),
@@ -188,3 +194,72 @@ def test_eval_runner_infra_fail_status_for_setup_error(tmp_path: Path) -> None:
     _assert_bundle_basics(result.bundle_root)
     verdict_text = result.verdict_path.read_text(encoding="utf-8")
     assert "- Status: `infra-fail`" in verdict_text
+
+
+def test_eval_runner_fails_when_run_reports_unsupported_runtime_classification(
+    tmp_path: Path,
+) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    fake_aidd = tmp_path / "fake-aidd-unsupported"
+    _write_fake_aidd(
+        fake_aidd,
+        exit_code=0,
+        stdout_lines=(
+            "AIDD run: work_item=WI-EVAL-UNSUPPORTED runtime=opencode",
+            "Failure classification: unsupported-runtime",
+        ),
+    )
+    scenario_path = tmp_path / "scenario-unsupported.yaml"
+    _write_scenario_manifest(
+        path=scenario_path,
+        repo_url=source_repo.as_uri(),
+        setup_commands=("printf 'setup\\n' > setup.log",),
+        verify_commands=("printf 'verify\\n' > verify.log",),
+        interview_required=False,
+        work_item="WI-EVAL-UNSUPPORTED",
+        aidd_command=(fake_aidd.as_posix(),),
+    )
+
+    result = run_eval_scenario(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        workspace_root=tmp_path / ".aidd",
+    )
+
+    assert result.status == "fail"
+    verdict_text = result.verdict_path.read_text(encoding="utf-8")
+    assert "- Status: `fail`" in verdict_text
+    assert "unsupported-runtime classification" in verdict_text
+
+
+def test_eval_runner_fails_when_run_completes_as_noop(tmp_path: Path) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    fake_aidd = tmp_path / "fake-aidd-noop"
+    _write_fake_aidd(
+        fake_aidd,
+        exit_code=0,
+        stdout_lines=("Workflow run completed: no runnable stages found.",),
+    )
+    scenario_path = tmp_path / "scenario-noop.yaml"
+    _write_scenario_manifest(
+        path=scenario_path,
+        repo_url=source_repo.as_uri(),
+        setup_commands=("printf 'setup\\n' > setup.log",),
+        verify_commands=("printf 'verify\\n' > verify.log",),
+        interview_required=False,
+        work_item="WI-EVAL-NOOP",
+        aidd_command=(fake_aidd.as_posix(),),
+    )
+
+    result = run_eval_scenario(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        workspace_root=tmp_path / ".aidd",
+    )
+
+    assert result.status == "fail"
+    verdict_text = result.verdict_path.read_text(encoding="utf-8")
+    assert "- Status: `fail`" in verdict_text
+    assert "no-op execution is non-pass" in verdict_text
