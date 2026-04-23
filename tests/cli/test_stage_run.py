@@ -1,13 +1,137 @@
 from __future__ import annotations
 
+import json
+import shlex
+import sys
+from pathlib import Path
+
 from typer.testing import CliRunner
 
 from aidd.cli.main import _prefix_stream_chunk, app
+from aidd.core.run_lookup import latest_run_id
+from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
+from aidd.core.stage_runner import prepare_stage_bundle
 
 runner = CliRunner()
 
 
-def test_stage_run_supports_explicit_log_follow_flag() -> None:
+def _materialize_plan_inputs(*, workspace_root: Path, work_item: str) -> None:
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage="plan",
+    )
+    for index, path in enumerate(bundle.expected_input_bundle, start=1):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"# Input {index}\n\nPrepared.\n", encoding="utf-8")
+
+
+def _valid_plan_output_documents() -> dict[str, str]:
+    return {
+        "plan.md": (
+            "# Plan\n\n"
+            "## Goals\n\n- Deliver a reviewable execution plan.\n\n"
+            "## Out of scope\n\n- Runtime migration is excluded.\n\n"
+            "## Milestones\n\n- M1: Draft and validate plan.\n\n"
+            "## Implementation strategy\n\n- Use staged, document-first increments.\n\n"
+            "## Risks\n\n- Risk: Missing constraints; mitigation: clarify assumptions.\n\n"
+            "## Dependencies\n\n- Research artifacts from prior stage.\n\n"
+            "## Verification approach\n\n- Run structural and semantic checks.\n\n"
+            "## Verification notes\n\n"
+            "- M1: Validate highest-risk milestone with targeted tests.\n"
+        ),
+        "stage-result.md": (
+            "# Stage result\n\n"
+            "## Stage\n\nplan\n\n"
+            "## Attempt history\n\n- attempt-0001\n\n"
+            "## Status\n\nsucceeded\n\n"
+            "## Produced outputs\n\n- plan.md\n- repair-brief.md (no repair needed)\n\n"
+            "## Validation summary\n\n- structural: pass\n\n"
+            "## Blockers\n\n- none\n\n"
+            "## Next actions\n\n- advance\n\n"
+            "## Terminal state notes\n\nReady.\n"
+        ),
+        "validator-report.md": (
+            "# Validator Report\n\n"
+            "## Summary\n\n- Total issues: 0\n\n"
+            "## Structural checks\n\n- none\n\n"
+            "## Semantic checks\n\n- none\n\n"
+            "## Cross-document checks\n\n- none\n\n"
+            "## Result\n\n- Verdict: `pass`\n"
+        ),
+        "repair-brief.md": (
+            "# Failed checks\n\n- none\n\n"
+            "## Required corrections\n\n- none\n\n"
+            "## Relevant upstream docs\n\n- none\n"
+        ),
+        "questions.md": "# Questions\n\n- none\n",
+        "answers.md": "# Answers\n\n- none\n",
+    }
+
+
+def _write_runtime_writer_script(
+    *,
+    tmp_path: Path,
+    documents: dict[str, str],
+    exit_code: int,
+) -> Path:
+    script_path = tmp_path / f"runtime_writer_{exit_code}.py"
+    script_lines = [
+        "import os",
+        "import sys",
+        "from pathlib import Path",
+        f"documents = {documents!r}",
+        "root = Path(os.environ['AIDD_WORKSPACE_ROOT'])",
+        (
+            "stage_root = root / 'workitems' / os.environ['AIDD_WORK_ITEM'] / "
+            "'stages' / os.environ['AIDD_STAGE']"
+        ),
+        "stage_root.mkdir(parents=True, exist_ok=True)",
+        "for name, content in documents.items():",
+        "    (stage_root / name).write_text(content, encoding='utf-8')",
+        "print('runtime-output-line')",
+        "print('runtime-error-line', file=sys.stderr)",
+        f"raise SystemExit({exit_code})",
+    ]
+    script_path.write_text("\n".join(script_lines) + "\n", encoding="utf-8")
+    return script_path
+
+
+def _write_cli_config(*, tmp_path: Path, runtime_command: str) -> Path:
+    config_path = tmp_path / "aidd.test.toml"
+    config_path.write_text(
+        (
+            "[workspace]\n"
+            "root = \".aidd\"\n\n"
+            "[runtime.generic_cli]\n"
+            f"command = \"{runtime_command}\"\n"
+        ),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _run_id_for_work_item(*, workspace_root: Path, work_item: str) -> str:
+    run_id = latest_run_id(workspace_root=workspace_root, work_item=work_item)
+    assert run_id is not None
+    return run_id
+
+
+def test_stage_run_executes_generic_cli_stage_and_streams_with_log_follow(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-001")
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+        exit_code=0,
+    )
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    )
+    config_path = _write_cli_config(tmp_path=tmp_path, runtime_command=runtime_command)
+
     result = runner.invoke(
         app,
         [
@@ -18,23 +142,143 @@ def test_stage_run_supports_explicit_log_follow_flag() -> None:
             "WI-001",
             "--runtime",
             "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
             "--log-follow",
         ],
     )
 
-    assert result.exit_code == 0
-    assert "AIDD stage run: stage=plan work_item=WI-001 runtime=generic-cli log_follow=True" in (
-        result.stdout
-    )
-    assert "Live-log follow prefix mode enabled for multi-stream output." in result.stdout
-    assert "stdout prefix preview:" in result.stdout
+    assert result.exit_code == 0, result.output
+    assert "Live-log follow mode enabled for runtime stream output." in result.stdout
     assert "[generic-cli:plan:stdout] runtime-output-line" in result.stdout
-    assert "stderr prefix preview:" in result.stdout
     assert "[generic-cli:plan:stderr] runtime-error-line" in result.stdout
-    assert "Stage execution is not implemented yet." in result.stdout
+    run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-001")
+    assert f"run_id={run_id}" in result.stdout
+    assert (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
+    ).exists()
+    runtime_log_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-001"
+        / run_id
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+        / RUN_RUNTIME_LOG_FILENAME
+    )
+    assert runtime_log_path.exists()
+    runtime_log = runtime_log_path.read_text(encoding="utf-8")
+    assert "runtime-output-line" in runtime_log
+    assert "runtime-error-line" in runtime_log
 
 
-def test_stage_run_without_log_follow_omits_stream_prefix_preview() -> None:
+def test_stage_run_without_log_follow_omits_stream_prefixes(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-002")
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+        exit_code=0,
+    )
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    )
+    config_path = _write_cli_config(tmp_path=tmp_path, runtime_command=runtime_command)
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-002",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "[generic-cli:plan:stdout]" not in result.stdout
+    assert "[generic-cli:plan:stderr]" not in result.stdout
+    run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-002")
+    runtime_log_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-002"
+        / run_id
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+        / RUN_RUNTIME_LOG_FILENAME
+    )
+    assert runtime_log_path.exists()
+    runtime_log = runtime_log_path.read_text(encoding="utf-8")
+    assert "runtime-output-line" in runtime_log
+    assert "runtime-error-line" in runtime_log
+
+
+def test_stage_run_returns_nonzero_when_runtime_fails(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-003")
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents={},
+        exit_code=3,
+    )
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    )
+    config_path = _write_cli_config(tmp_path=tmp_path, runtime_command=runtime_command)
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-003",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "action=stop state=failed" in result.stdout
+    run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-003")
+    metadata_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-003"
+        / run_id
+        / "stages"
+        / "plan"
+        / "stage-metadata.json"
+    )
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "failed"
+
+
+def test_stage_run_rejects_non_generic_runtime() -> None:
     result = runner.invoke(
         app,
         [
@@ -44,14 +288,12 @@ def test_stage_run_without_log_follow_omits_stream_prefix_preview() -> None:
             "--work-item",
             "WI-001",
             "--runtime",
-            "generic-cli",
-            "--no-log-follow",
+            "claude-code",
         ],
     )
 
-    assert result.exit_code == 0
-    assert "log_follow=False" in result.stdout
-    assert "Live-log follow prefix mode enabled for multi-stream output." not in result.stdout
+    assert result.exit_code != 0
+    assert "supports runtime 'generic-cli'" in result.output
 
 
 def test_prefix_stream_chunk_formats_multiline_follow_output() -> None:

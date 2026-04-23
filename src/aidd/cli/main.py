@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -12,6 +14,13 @@ from aidd.adapters.base import CapabilityReport
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.codex import probe as probe_codex
 from aidd.adapters.generic_cli import probe as probe_generic_cli
+from aidd.adapters.generic_cli.runner import (
+    GenericCliExitClassification,
+    GenericCliStageContext,
+    build_subprocess_spec,
+    persist_attempt_runtime_artifacts,
+    run_subprocess_with_streaming,
+)
 from aidd.adapters.opencode import probe as probe_opencode
 from aidd.cli.run_lookup import (
     resolve_run_artifacts_summary,
@@ -25,6 +34,19 @@ from aidd.core.interview import (
     load_questions_document,
     resolved_question_ids,
     stage_has_unresolved_blocking_questions,
+)
+from aidd.core.run_store import (
+    RUN_RUNTIME_LOG_FILENAME,
+    create_run_manifest,
+    work_item_runs_root,
+)
+from aidd.core.stage_registry import resolve_prompt_pack_paths
+from aidd.core.stage_runner import (
+    AdapterExecutionOutcome,
+    AdapterInvocationBundle,
+    PostValidationAction,
+    StageExecutionState,
+    run_single_stage_orchestration,
 )
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.workspace import WorkspaceBootstrapService
@@ -95,6 +117,17 @@ def _prefix_stream_chunk(
     if not lines:
         return f"{prefix} "
     return "".join(f"{prefix} {line}" for line in lines)
+
+
+def _allocate_stage_run_id(*, workspace_root: Path, work_item: str) -> str:
+    base_run_id = f"run-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+    runs_root = work_item_runs_root(workspace_root=workspace_root, work_item=work_item)
+    candidate = base_run_id
+    suffix = 2
+    while (runs_root / candidate).exists():
+        candidate = f"{base_run_id}-{suffix:02d}"
+        suffix += 1
+    return candidate
 
 
 def _version_callback(value: bool) -> None:
@@ -371,6 +404,14 @@ def stage_run(
     stage: Annotated[str, typer.Argument(help="Stage name")],
     work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
     runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+    root: Annotated[
+        Path | None,
+        typer.Option("--root", help="Root AIDD storage directory. Defaults to config value."),
+    ] = None,
+    config: Annotated[
+        Path,
+        typer.Option("--config", help="Path to an AIDD TOML config file."),
+    ] = Path("aidd.example.toml"),
     log_follow: Annotated[
         bool,
         typer.Option(
@@ -382,33 +423,127 @@ def stage_run(
     """Run a single AIDD stage."""
     if not is_valid_stage(stage):
         raise typer.BadParameter(f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}")
+    if runtime != "generic-cli":
+        raise typer.BadParameter(
+            "Stage run execution currently supports runtime 'generic-cli' only."
+        )
+
+    cfg = load_config(config)
+    workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
+    run_id = _allocate_stage_run_id(workspace_root=workspace_root, work_item=work_item)
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id=runtime,
+        stage_target=stage,
+        config_snapshot={
+            "config_path": config.as_posix(),
+            "workspace_root": workspace_root.as_posix(),
+            "runtime_command": cfg.generic_cli_command,
+            "log_follow": log_follow,
+        },
+    )
+    prompt_pack_paths = resolve_prompt_pack_paths(stage=stage)
+    prompt_pack_path = Path(prompt_pack_paths[0])
 
     console.print(
         "AIDD stage run: "
-        f"stage={stage} work_item={work_item} runtime={runtime} log_follow={log_follow}"
+        f"stage={stage} work_item={work_item} runtime={runtime} "
+        f"log_follow={log_follow} run_id={run_id}"
     )
     if log_follow:
-        stdout_preview = _prefix_stream_chunk(
+        console.print("Live-log follow mode enabled for runtime stream output.")
+
+    def _stream_runtime_chunk(
+        *,
+        stream: Literal["stdout", "stderr"],
+        chunk: str,
+    ) -> None:
+        if not log_follow:
+            return
+        prefixed_chunk = _prefix_stream_chunk(
             runtime=runtime,
             stage=stage,
-            stream="stdout",
-            chunk="runtime-output-line\n",
+            stream=stream,
+            chunk=chunk,
             multi_stream=True,
-        ).rstrip("\n")
-        stderr_preview = _prefix_stream_chunk(
-            runtime=runtime,
+        )
+        console.print(prefixed_chunk, end="", markup=False, highlight=False)
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        context = GenericCliStageContext(
+            stage=invocation.stage,
+            work_item=invocation.work_item,
+            run_id=invocation.run_id,
+            prompt_pack_path=prompt_pack_path,
+        )
+        spec = build_subprocess_spec(
+            configured_command=cfg.generic_cli_command,
+            workspace_root=workspace_root,
+            context=context,
+            base_env=dict(os.environ),
+            repository_root=Path.cwd(),
+        )
+        try:
+            run_result = run_subprocess_with_streaming(
+                spec=spec,
+                on_stdout=(
+                    lambda chunk: _stream_runtime_chunk(stream="stdout", chunk=chunk)
+                    if log_follow
+                    else None
+                ),
+                on_stderr=(
+                    lambda chunk: _stream_runtime_chunk(stream="stderr", chunk=chunk)
+                    if log_follow
+                    else None
+                ),
+            )
+        except OSError as exc:
+            return AdapterExecutionOutcome(
+                succeeded=False,
+                details=f"runtime-launch-error: {exc}",
+            )
+        persist_attempt_runtime_artifacts(
+            attempt_path=execution_state.attempt_path,
+            run_result=run_result,
+        )
+        return AdapterExecutionOutcome(
+            succeeded=run_result.exit_classification is GenericCliExitClassification.SUCCESS,
+            details=run_result.exit_classification.value,
+        )
+
+    try:
+        orchestration = run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
             stage=stage,
-            stream="stderr",
-            chunk="runtime-error-line\n",
-            multi_stream=True,
-        ).rstrip("\n")
-        console.print("Live-log follow prefix mode enabled for multi-stream output.")
-        console.print(f"stdout prefix preview: {stdout_preview}", markup=False)
-        console.print(f"stderr prefix preview: {stderr_preview}", markup=False)
+            adapter_executor=_adapter_executor,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    runtime_log_path = orchestration.execution_state.attempt_path / RUN_RUNTIME_LOG_FILENAME
     console.print(
-        "Stage execution is not implemented yet. "
-        "See contracts/stages/ and docs/architecture/document-contracts.md."
+        "Stage run result: "
+        f"action={orchestration.transition.action.value} "
+        f"state={orchestration.transition.next_state.value}"
     )
+    console.print(f"Stage metadata: {orchestration.transition.stage_metadata_path.as_posix()}")
+    console.print(f"Runtime log: {runtime_log_path.as_posix()}")
+    if orchestration.validation_result is not None:
+        console.print(
+            "Validator report: "
+            f"{orchestration.validation_result.validator_report_path.as_posix()}"
+        )
+    if orchestration.adapter_outcome.details:
+        console.print(f"Adapter outcome: {orchestration.adapter_outcome.details}")
+    if orchestration.transition.action is not PostValidationAction.ADVANCE:
+        raise typer.Exit(code=1)
 
 
 @stage_app.command("questions")
