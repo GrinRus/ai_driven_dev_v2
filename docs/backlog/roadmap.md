@@ -2666,10 +2666,10 @@ Exit evidence:
 
 - a tagged release produces visible pass/fail evidence for `pipx`, `uv tool install`, and GHCR install paths.
 
-### Epic W10-E2 — adapter conformance (`next`)
+### Epic W10-E2 — adapter conformance (`done`)
 Linked stories: `US-07`, `US-08`
 
-#### Slice W10-E2-S1 — maintained-runtime conformance lane (`next`)
+#### Slice W10-E2-S1 — maintained-runtime conformance lane (`done`)
 Goal: convert adapter-extension safety from distributed evidence into one repeatable conformance lane.
 
 Primary outputs:
@@ -2693,20 +2693,21 @@ Dependencies:
 Local tasks:
 
 - `W10-E2-S1-T1` (done) Define the maintained-runtime conformance matrix for probe behavior, capability declaration, raw log capture, failure mapping, question surfacing, timeout behavior, and workspace targeting.
-- `W10-E2-S1-T2` (next) Add an automated adapter-conformance lane that executes the matrix for `generic-cli`, `claude-code`, `codex`, and `opencode` and reports per-runtime pass/fail evidence.
+- `W10-E2-S1-T2` (done) Add an automated adapter-conformance lane that executes the matrix for `generic-cli`, `claude-code`, `codex`, and `opencode` and reports per-runtime pass/fail evidence.
 
 Sync notes:
 
 - `2026-04-23` `W10-E2-S1-T1` completed: architecture now includes a maintained-runtime conformance matrix and harness tests assert runtime and dimension completeness.
+- `2026-04-23` `W10-E2-S1-T2` completed: harness now includes a deterministic adapter-conformance lane with per-runtime pass/fail tests and CI wiring.
 
 Exit evidence:
 
 - adding a runtime requires adapter-local changes plus one conformance entry, not scattered ad hoc checks.
 
-### Epic W10-E3 — live workflow proof (`later`)
+### Epic W10-E3 — live workflow proof (`next`)
 Linked stories: `US-01`, `US-06`, `US-07`
 
-#### Slice W10-E3-S1 — non-generic live workflow evidence (`later`)
+#### Slice W10-E3-S1 — non-generic live workflow evidence (`next`)
 Goal: produce one durable public-repo workflow bundle on a maintained non-generic runtime.
 
 Primary outputs:
@@ -2728,7 +2729,7 @@ Dependencies:
 
 Local tasks:
 
-- `W10-E3-S1-T1` (planned) Promote one pinned live scenario to full workflow-path verification on a maintained non-generic runtime and require produced stage-output documents in the bundle.
+- `W10-E3-S1-T1` (next) Promote one pinned live scenario to full workflow-path verification on a maintained non-generic runtime and require produced stage-output documents in the bundle.
 
 Exit evidence:
 

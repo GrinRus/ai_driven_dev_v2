@@ -39,8 +39,30 @@ jobs:
       - name: Test
         run: uv run pytest -q
 
-  build:
+  adapter-conformance:
     needs: lint-type-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Adapter conformance lane
+        run: uv run pytest -vv tests/harness/test_adapter_conformance_lane.py
+
+  build:
+    needs:
+      - lint-type-test
+      - adapter-conformance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
