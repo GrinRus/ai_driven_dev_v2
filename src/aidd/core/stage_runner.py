@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
+from shutil import copy2
 
 from aidd.core.interview import (
     load_answers_document,
@@ -27,6 +28,9 @@ from aidd.core.stage_registry import (
     resolve_required_input_documents,
 )
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
+from aidd.core.workspace import (
+    stage_output_root as workspace_stage_output_root,
+)
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.models import ValidationFinding
 from aidd.validators.reports import write_validator_report
@@ -107,6 +111,15 @@ class StageStructuralValidationResult:
     attempt_number: int
     validator_report_path: Path
     findings: tuple[ValidationFinding, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class StageOutputPublication:
+    stage: str
+    work_item: str
+    run_id: str
+    published_output_root: Path
+    published_documents: tuple[Path, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -512,6 +525,74 @@ def run_structural_validation_after_output_discovery(
     )
 
 
+def _deduplicate_paths(paths: tuple[Path, ...]) -> tuple[Path, ...]:
+    deduplicated: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        normalized = path.resolve(strict=False)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        deduplicated.append(path)
+    return tuple(deduplicated)
+
+
+def publish_stage_outputs_after_validation_pass(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> StageOutputPublication:
+    stage_documents_root = workspace_stage_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    published_output_root = workspace_stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    published_output_root.mkdir(parents=True, exist_ok=True)
+
+    declared_primary_outputs = resolve_expected_output_documents(
+        stage=stage,
+        work_item=work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+    source_documents = _deduplicate_paths(
+        (
+            *declared_primary_outputs,
+            stage_documents_root / "stage-result.md",
+            stage_documents_root / "validator-report.md",
+        )
+    )
+
+    published_documents: list[Path] = []
+    for source_document in source_documents:
+        if source_document.suffix.lower() != ".md":
+            continue
+        if not source_document.exists():
+            raise FileNotFoundError(
+                "Stage output publishing requires an existing source document: "
+                f"{_workspace_relative_path(workspace_root, source_document)}"
+            )
+        destination_document = published_output_root / source_document.name
+        copy2(source_document, destination_document)
+        published_documents.append(destination_document)
+
+    return StageOutputPublication(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        published_output_root=published_output_root,
+        published_documents=tuple(published_documents),
+    )
+
+
 def route_stage_questions_to_interview(
     *,
     workspace_root: Path,
@@ -784,6 +865,7 @@ def decide_post_validation_transition(
     validation_state: StageValidationState,
     *,
     workspace_root: Path | None = None,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> PostValidationTransition:
     next_state = validation_state.next_state
     stage_metadata_path = validation_state.stage_metadata_path
@@ -804,6 +886,14 @@ def decide_post_validation_transition(
             run_id=validation_state.run_id,
             stage=validation_state.stage,
             status=StageState.BLOCKED.value,
+        )
+    elif workspace_root is not None and next_state == StageState.SUCCEEDED:
+        publish_stage_outputs_after_validation_pass(
+            workspace_root=workspace_root,
+            work_item=validation_state.work_item,
+            run_id=validation_state.run_id,
+            stage=validation_state.stage,
+            contracts_root=contracts_root,
         )
 
     action_map: dict[StageState, PostValidationAction] = {

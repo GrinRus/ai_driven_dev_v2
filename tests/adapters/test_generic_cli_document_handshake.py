@@ -220,6 +220,14 @@ def test_generic_cli_handshake_valid_output_flow_advances(tmp_path: Path) -> Non
     )
     assert transition.action is PostValidationAction.ADVANCE
     assert transition.next_state is StageState.SUCCEEDED
+    published_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output"
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    assert (published_root / "plan.md").exists()
+    assert (published_root / "stage-result.md").exists()
+    assert (published_root / "validator-report.md").exists()
+    assert (published_root / "plan.md").read_text(encoding="utf-8") == (
+        stage_root / "plan.md"
+    ).read_text(encoding="utf-8")
 
 
 def test_generic_cli_handshake_invalid_output_flow_stops(tmp_path: Path) -> None:

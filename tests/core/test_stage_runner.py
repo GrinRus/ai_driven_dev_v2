@@ -49,6 +49,15 @@ def _materialize_expected_inputs(paths: tuple[Path, ...]) -> None:
         )
 
 
+def _materialize_expected_outputs(paths: tuple[Path, ...]) -> None:
+    for index, path in enumerate(paths, start=1):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            f"# Output {index}\n\nPrepared output for `{path.name}`.\n",
+            encoding="utf-8",
+        )
+
+
 def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
 
@@ -1092,6 +1101,12 @@ def test_decide_post_validation_transition_allows_success_when_questions_resolve
         "# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approval is recorded.\n",
         encoding="utf-8",
     )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_outputs(preparation_bundle.expected_output_documents)
 
     validation_state = persist_validation_state(
         workspace_root=workspace_root,
@@ -1109,6 +1124,13 @@ def test_decide_post_validation_transition_allows_success_when_questions_resolve
     assert transition.next_state == StageState.SUCCEEDED
     assert transition.action == PostValidationAction.ADVANCE
     assert transition.is_terminal is True
+    published_root = stage_root / "output"
+    assert (published_root / "plan.md").exists()
+    assert (published_root / "stage-result.md").exists()
+    assert (published_root / "validator-report.md").exists()
+    assert (published_root / "plan.md").read_text(encoding="utf-8") == (
+        stage_root / "plan.md"
+    ).read_text(encoding="utf-8")
 
 
 def test_update_stage_unblock_state_keeps_stage_blocked_when_answers_missing(

@@ -815,7 +815,7 @@ Dependencies:
 
 Local tasks:
 
-- `W3-E2-S4-T1` Implement stage-output publishing into `workitems/<id>/stages/<stage>/output/` after validation pass (copy declared primary outputs + `stage-result.md` + `validator-report.md`).
+- `W3-E2-S4-T1` (done) Implement stage-output publishing into `workitems/<id>/stages/<stage>/output/` after validation pass (copy declared primary outputs + `stage-result.md` + `validator-report.md`).
 - `W3-E2-S4-T2` Add regression tests proving downstream required inputs (for example `plan` reads `../idea/output/...`) become satisfiable after publish.
 
 Exit evidence:
