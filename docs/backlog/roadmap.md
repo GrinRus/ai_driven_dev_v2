@@ -2024,7 +2024,7 @@ Exit evidence:
 
 ---
 
-## Wave 7 — runtime widening and release hardening (`next`)
+## Wave 7 — runtime widening and release hardening (`done`)
 
 ### Epic W7-E1 — `codex` adapter (`done`)
 Linked stories: `US-01`, `US-08`
@@ -2214,7 +2214,7 @@ Exit evidence:
 
 - OpenCode can be compared to Claude Code, Codex, and generic-cli on shared scenarios.
 
-### Epic W7-E3 — public release hardening (`next`)
+### Epic W7-E3 — public release hardening (`done`)
 Linked stories: `US-07`, `US-09`, `US-10`
 
 #### Slice W7-E3-S1 — operator handbook (`done`)
@@ -2309,7 +2309,7 @@ Exit evidence:
 
 - contributors and operators know what support guarantees AIDD actually makes.
 
-#### Slice W7-E3-S4 — doc + planning consistency cleanup (`next`)
+#### Slice W7-E3-S4 — doc + planning consistency cleanup (`done`)
 Goal: remove the remaining runtime-support and planning drift before resuming broader implementation.
 
 Primary outputs:
@@ -2338,6 +2338,7 @@ Local tasks:
 Sync notes:
 
 - `2026-04-23` Roadmap and backlog were re-synchronized after readiness cleanup; queue restoration tracking started under `W7-E3-S4` and Wave 8 follow-up slices.
+- `2026-04-23` Status consistency normalization completed: Wave 7, Epic `W7-E3`, and Slice `W7-E3-S4` were set to `done` after all local tasks were verified as done.
 
 Exit evidence:
 
@@ -2501,3 +2502,38 @@ Queue restoration policy (roadmap all `done` + backlog empty):
 Exit evidence:
 
 - maintainers have a documented, repeatable procedure to reopen the next wave without governance drift.
+
+---
+
+## Wave 9 — backlog cycle restart and workflow parity (`next`)
+
+### Epic W9-E0 — governance bootstrap (`next`)
+Linked stories: `US-10`
+
+#### Slice W9-E0-S1 — roadmap status normalization and queue bootstrap (`next`)
+Goal: normalize planning statuses and prepare a decision-complete queue restart path.
+
+Primary outputs:
+
+- roadmap status-normalization note
+- wave bootstrap decomposition for queue restart
+- queue restoration sync readiness
+
+Touched areas:
+
+- `docs/backlog/`
+
+Dependencies:
+
+- none
+
+Local tasks:
+
+- `W9-E0-S1-T1` (done) Normalize roadmap status consistency for completed Wave 7 planning nodes and add a dated sync note.
+- `W9-E0-S1-T2` (planned) Open a decision-complete Wave 9 implementation lane for workflow runtime parity.
+- `W9-E0-S1-T3` (planned) Restore actionable backlog queue ordering from the new Wave 9 decomposition.
+
+Exit evidence:
+
+- roadmap top-level status labels match local-task reality;
+- queue bootstrap tasks exist and are reviewable before implementation resumes.
