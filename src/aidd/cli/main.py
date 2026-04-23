@@ -279,7 +279,8 @@ def run_callback(
             "Workflow execution is currently implemented for runtime 'generic-cli' only. "
             "Use `aidd stage run` for stage-level execution on this runtime for now."
         )
-        return
+        console.print("Failure classification: unsupported-runtime")
+        raise typer.Exit(code=2)
 
     cfg = load_config(config)
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)

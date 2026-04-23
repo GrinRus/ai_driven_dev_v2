@@ -29,6 +29,20 @@ def _init_source_repo(path: Path) -> None:
     _run(["git", "commit", "-m", "init"], cwd=path)
 
 
+def _write_fake_aidd(path: Path, *, exit_code: int) -> None:
+    path.write_text(
+        "\n".join(
+            (
+                "#!/bin/sh",
+                "printf 'fake aidd\\n'",
+                f"exit {exit_code}",
+            )
+        ),
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+
+
 def _write_scenario_manifest(
     *,
     path: Path,
@@ -38,7 +52,11 @@ def _write_scenario_manifest(
     interview_required: bool,
     runtime_targets: tuple[str, ...] = ("opencode",),
     work_item: str = "WI-EVAL-RUNNER",
+    aidd_command: tuple[str, ...] | None = None,
 ) -> None:
+    aidd_invocation: dict[str, object] = {"work_item": work_item}
+    if aidd_command is not None:
+        aidd_invocation["command"] = list(aidd_command)
     payload = {
         "id": "AIDD-TEST-EVAL-RUNNER",
         "task": "exercise eval orchestration",
@@ -47,7 +65,7 @@ def _write_scenario_manifest(
         "verify": {"commands": list(verify_commands)},
         "interview": {"required": interview_required},
         "runtime_targets": list(runtime_targets),
-        "aidd_invocation": {"work_item": work_item},
+        "aidd_invocation": aidd_invocation,
     }
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
@@ -69,6 +87,8 @@ def _assert_bundle_basics(bundle_root: Path) -> None:
 def test_eval_runner_pass_status(tmp_path: Path) -> None:
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
+    fake_aidd = tmp_path / "fake-aidd"
+    _write_fake_aidd(fake_aidd, exit_code=0)
     scenario_path = tmp_path / "scenario-pass.yaml"
     _write_scenario_manifest(
         path=scenario_path,
@@ -77,6 +97,7 @@ def test_eval_runner_pass_status(tmp_path: Path) -> None:
         verify_commands=("printf 'verify\\n' > verify.log",),
         interview_required=False,
         work_item="WI-EVAL-PASS",
+        aidd_command=(fake_aidd.as_posix(),),
     )
 
     result = run_eval_scenario(

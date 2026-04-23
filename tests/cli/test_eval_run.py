@@ -32,7 +32,21 @@ def _init_source_repo(path: Path) -> None:
     _run(["git", "commit", "-m", "init"], cwd=path)
 
 
-def _write_scenario_manifest(*, path: Path, repo_url: str) -> None:
+def _write_fake_aidd(path: Path, *, exit_code: int) -> None:
+    path.write_text(
+        "\n".join(
+            (
+                "#!/bin/sh",
+                "printf 'fake aidd\\n'",
+                f"exit {exit_code}",
+            )
+        ),
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+
+
+def _write_scenario_manifest(*, path: Path, repo_url: str, aidd_command: tuple[str, ...]) -> None:
     payload = {
         "id": "AIDD-TEST-EVAL-RUN-CLI",
         "task": "exercise eval cli command",
@@ -41,7 +55,7 @@ def _write_scenario_manifest(*, path: Path, repo_url: str) -> None:
         "verify": {"commands": ["printf 'verify\\n' > verify.log"]},
         "runtime_targets": ["opencode"],
         "interview": {"required": False},
-        "aidd_invocation": {"work_item": "WI-EVAL-CLI"},
+        "aidd_invocation": {"work_item": "WI-EVAL-CLI", "command": list(aidd_command)},
     }
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
@@ -51,8 +65,14 @@ def test_eval_run_executes_harness_lifecycle_and_writes_bundle(
 ) -> None:
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
+    fake_aidd = tmp_path / "fake-aidd"
+    _write_fake_aidd(fake_aidd, exit_code=0)
     scenario_path = tmp_path / "scenario.yaml"
-    _write_scenario_manifest(path=scenario_path, repo_url=source_repo.as_uri())
+    _write_scenario_manifest(
+        path=scenario_path,
+        repo_url=source_repo.as_uri(),
+        aidd_command=(fake_aidd.as_posix(),),
+    )
     monkeypatch.chdir(tmp_path)
 
     result = runner.invoke(

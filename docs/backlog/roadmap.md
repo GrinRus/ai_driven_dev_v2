@@ -2371,7 +2371,7 @@ Dependencies:
 
 Local tasks:
 
-- `W8-E1-S1-T1` (next) Make `aidd run --runtime <unsupported>` fail fast with non-zero exit and explicit unsupported-runtime classification.
+- `W8-E1-S1-T1` (done) Make `aidd run --runtime <unsupported>` fail fast with non-zero exit and explicit unsupported-runtime classification.
 - `W8-E1-S1-T2` (planned) Make harness status mapping treat unsupported-runtime/no-op execution as fail or blocked, never pass.
 - `W8-E1-S1-T3` (planned) Add regression tests that lock non-generic run-path behavior in CLI and harness.
 

@@ -151,3 +151,21 @@ def test_run_stops_when_stage_execution_returns_nonzero_exit(
     assert "Workflow stopped at stage 'research'." in result.stdout
     assert "Workflow summary:" in result.stdout
     assert "- research: status=failed attempts=0" in result.stdout
+
+
+def test_run_rejects_unsupported_runtime_with_nonzero_exit() -> None:
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "run",
+            "--work-item",
+            "WI-012",
+            "--runtime",
+            "opencode",
+        ],
+    )
+
+    assert result.exit_code == 2, result.output
+    assert "AIDD run: work_item=WI-012 runtime=opencode" in result.stdout
+    assert "implemented for runtime 'generic-cli' only" in result.stdout
+    assert "Failure classification: unsupported-runtime" in result.stdout
