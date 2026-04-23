@@ -33,6 +33,7 @@ from aidd.core.stage_runner import (
     prepare_adapter_invocation,
     prepare_stage_bundle,
     prepare_stage_resume_after_answers,
+    publish_stage_outputs_after_validation_pass,
     route_stage_questions_to_interview,
     run_structural_validation_after_output_discovery,
     update_stage_unblock_state,
@@ -426,6 +427,83 @@ def test_discover_stage_markdown_outputs_rejects_mismatched_execution_context(
             ),
             invocation_bundle=invocation,
         )
+
+
+def test_publish_stage_outputs_makes_downstream_output_references_satisfiable(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-idea",
+        runtime_id="generic-cli",
+        stage_target="idea",
+        config_snapshot={"mode": "test"},
+    )
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-research",
+        runtime_id="generic-cli",
+        stage_target="research",
+        config_snapshot={"mode": "test"},
+    )
+
+    idea_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+    )
+    _materialize_expected_inputs(idea_bundle.expected_input_bundle)
+    _materialize_expected_outputs(idea_bundle.expected_output_documents)
+
+    research_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="research",
+    )
+    for input_path in research_bundle.expected_input_bundle:
+        if "/context/" not in input_path.as_posix():
+            continue
+        input_path.parent.mkdir(parents=True, exist_ok=True)
+        input_path.write_text("# Repository state\n\nClean baseline.\n", encoding="utf-8")
+
+    research_execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-research",
+        stage="research",
+    )
+    with pytest.raises(
+        FileNotFoundError,
+        match="workitems/WI-001/stages/idea/output/idea-brief.md",
+    ):
+        prepare_adapter_invocation(
+            workspace_root=workspace_root,
+            preparation_bundle=research_bundle,
+            execution_state=research_execution_state,
+        )
+
+    publish_stage_outputs_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-idea",
+        stage="idea",
+    )
+
+    research_invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=research_bundle,
+        execution_state=research_execution_state,
+    )
+    assert research_invocation.input_bundle_path.exists()
+    assert "workitems/WI-001/stages/idea/output/idea-brief.md" in (
+        research_invocation.input_bundle_markdown
+    )
+    assert (
+        workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "output" / "idea-brief.md"
+    ).exists()
 
 
 def test_run_structural_validation_after_output_discovery_writes_report_path(

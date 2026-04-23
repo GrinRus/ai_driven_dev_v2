@@ -795,7 +795,7 @@ Exit evidence:
 - the orchestrator can explain readiness instead of silently skipping stages;
 - stage order is derived from contracts, not adapter code.
 
-#### Slice W3-E2-S4 — published stage outputs (`next`)
+#### Slice W3-E2-S4 — published stage outputs (`done`)
 Goal: make upstream references like `../<stage>/output/*.md` satisfiable after a successful run.
 
 Primary outputs:
@@ -816,7 +816,7 @@ Dependencies:
 Local tasks:
 
 - `W3-E2-S4-T1` (done) Implement stage-output publishing into `workitems/<id>/stages/<stage>/output/` after validation pass (copy declared primary outputs + `stage-result.md` + `validator-report.md`).
-- `W3-E2-S4-T2` Add regression tests proving downstream required inputs (for example `plan` reads `../idea/output/...`) become satisfiable after publish.
+- `W3-E2-S4-T2` (done) Add regression tests proving downstream required inputs (for example `plan` reads `../idea/output/...`) become satisfiable after publish.
 
 Exit evidence:
 
