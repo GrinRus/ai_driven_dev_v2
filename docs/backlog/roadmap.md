@@ -2612,8 +2612,12 @@ Dependencies:
 
 Local tasks:
 
-- `W10-E0-S1-T1` (next) Rewrite README runtime-support and current-CLI sections to match maintained workflow and stage runtime behavior after Wave 9.
-- `W10-E0-S1-T2` (planned) Replace the stale `aidd doctor` footer with wording that names the remaining release-proof and live-E2E gaps instead of calling implemented subsystems roadmap work.
+- `W10-E0-S1-T1` (done) Rewrite README runtime-support and current-CLI sections to match maintained workflow and stage runtime behavior after Wave 9.
+- `W10-E0-S1-T2` (next) Replace the stale `aidd doctor` footer with wording that names the remaining release-proof and live-E2E gaps instead of calling implemented subsystems roadmap work.
+
+Sync notes:
+
+- `2026-04-23` `W10-E0-S1-T1` completed: README runtime-support and current CLI sections now align with post-W9 workflow and stage runtime parity.
 
 Exit evidence:
 

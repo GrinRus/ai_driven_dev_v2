@@ -116,14 +116,11 @@ This starter repository already includes:
 - CI and release workflow skeletons,
 - a minimal Python package and CLI bootstrap.
 
-The following parts are still intentionally skeletal:
+The following parts are still intentionally in-progress:
 
-- non-generic runtime execution parity for `aidd run`,
-- stage-run parity hardening across adapters (artifact persistence and smoke verification),
-- real validator engine,
-- real repair and interview controllers,
-- real runtime adapters,
-- real harness runner and graders.
+- release-channel verification against published artifacts (`pipx`, `uv tool install`, GHCR),
+- maintained-runtime adapter conformance lane and reporting,
+- one durable non-generic live workflow proof lane on a pinned public repository scenario.
 
 That is deliberate: this bundle is meant to be the **starting repository for implementation**, not a falsely complete system.
 
@@ -210,8 +207,9 @@ Today:
 
 - `doctor` is functional,
 - `init` is functional,
-- `run` executes workflow progression for runtime `generic-cli` and fails fast for unsupported runtimes,
+- `run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`,
 - `stage run` executes single-stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`,
+- `run` and `stage run` fail fast for unknown runtime ids with `unsupported-runtime` classification,
 - `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, and validator artifacts).
 
 ## Operator documentation
