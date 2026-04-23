@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
+from aidd.adapters.generic_cli.runner import (
+    GenericCliExitClassification,
+    GenericCliStageContext,
+    build_subprocess_spec,
+    persist_attempt_runtime_artifacts,
+    run_subprocess_with_streaming,
+)
 from aidd.core.repair import RepairBudgetPolicy
 from aidd.core.run_store import (
     create_run_manifest,
@@ -16,10 +25,13 @@ from aidd.core.run_store import (
 )
 from aidd.core.stage_runner import (
     ATTEMPT_INPUT_BUNDLE_FILENAME,
+    AdapterExecutionOutcome,
+    AdapterInvocationBundle,
     PostValidationAction,
     RepairBudgetValidationTransition,
     StageExecutionState,
     StageInterviewRouting,
+    StageOrchestrationResult,
     StageOutputDiscovery,
     StageResumeResult,
     StageStructuralValidationResult,
@@ -36,6 +48,7 @@ from aidd.core.stage_runner import (
     prepare_stage_resume_after_answers,
     publish_stage_outputs_after_validation_pass,
     route_stage_questions_to_interview,
+    run_single_stage_orchestration,
     run_structural_validation_after_output_discovery,
     update_stage_unblock_state,
 )
@@ -59,6 +72,75 @@ def _materialize_expected_outputs(paths: tuple[Path, ...]) -> None:
             f"# Output {index}\n\nPrepared output for `{path.name}`.\n",
             encoding="utf-8",
         )
+
+
+def _valid_plan_output_documents() -> dict[str, str]:
+    return {
+        "plan.md": (
+            "# Plan\n\n"
+            "## Goals\n\n- Deliver a reviewable execution plan.\n\n"
+            "## Out of scope\n\n- Runtime migration is excluded.\n\n"
+            "## Milestones\n\n- M1: Draft and validate plan.\n\n"
+            "## Implementation strategy\n\n- Use staged, document-first increments.\n\n"
+            "## Risks\n\n- Risk: Missing constraints; mitigation: clarify assumptions.\n\n"
+            "## Dependencies\n\n- Research artifacts from prior stage.\n\n"
+            "## Verification approach\n\n- Run structural and semantic checks.\n\n"
+            "## Verification notes\n\n"
+            "- M1: Validate highest-risk milestone with targeted tests.\n"
+        ),
+        "stage-result.md": (
+            "# Stage result\n\n"
+            "## Stage\n\nplan\n\n"
+            "## Attempt history\n\n- attempt-0001\n\n"
+            "## Status\n\nsucceeded\n\n"
+            "## Produced outputs\n\n- plan.md\n- repair-brief.md (no repair needed)\n\n"
+            "## Validation summary\n\n- structural: pass\n\n"
+            "## Blockers\n\n- none\n\n"
+            "## Next actions\n\n- advance\n\n"
+            "## Terminal state notes\n\nReady.\n"
+        ),
+        "validator-report.md": (
+            "# Validator Report\n\n"
+            "## Summary\n\n- Total issues: 0\n\n"
+            "## Structural checks\n\n- none\n\n"
+            "## Semantic checks\n\n- none\n\n"
+            "## Cross-document checks\n\n- none\n\n"
+            "## Result\n\n- Verdict: `pass`\n"
+        ),
+        "repair-brief.md": (
+            "# Failed checks\n\n- none\n\n"
+            "## Required corrections\n\n- none\n\n"
+            "## Relevant upstream docs\n\n- none\n"
+        ),
+        "questions.md": "# Questions\n\n- none\n",
+        "answers.md": "# Answers\n\n- none\n",
+    }
+
+
+def _write_runtime_writer_command(
+    *,
+    tmp_path: Path,
+    documents: dict[str, str],
+    exit_code: int = 0,
+) -> str:
+    script_path = tmp_path / f"runtime_writer_{exit_code}.py"
+    script_lines = [
+        "import os",
+        "import sys",
+        "from pathlib import Path",
+        f"documents = {documents!r}",
+        "root = Path(os.environ['AIDD_WORKSPACE_ROOT'])",
+        (
+            "stage_root = root / 'workitems' / os.environ['AIDD_WORK_ITEM'] / "
+            "'stages' / os.environ['AIDD_STAGE']"
+        ),
+        "stage_root.mkdir(parents=True, exist_ok=True)",
+        "for name, content in documents.items():",
+        "    (stage_root / name).write_text(content, encoding='utf-8')",
+        f"raise SystemExit({exit_code})",
+    ]
+    script_path.write_text("\n".join(script_lines) + "\n", encoding="utf-8")
+    return f"{sys.executable} {script_path.as_posix()}"
 
 
 def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Path) -> None:
@@ -506,6 +588,142 @@ def test_publish_stage_outputs_makes_downstream_output_references_satisfiable(
     assert (
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "output" / "idea-brief.md"
     ).exists()
+
+
+def test_run_single_stage_orchestration_executes_generic_cli_happy_path(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    command = _write_runtime_writer_command(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+        exit_code=0,
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        context = GenericCliStageContext(
+            stage=invocation.stage,
+            work_item=invocation.work_item,
+            run_id=invocation.run_id,
+            prompt_pack_path=Path("prompt-packs/stages/plan/system.md"),
+        )
+        spec = build_subprocess_spec(
+            configured_command=command,
+            workspace_root=workspace_root,
+            context=context,
+            base_env=dict(os.environ),
+            repository_root=Path.cwd(),
+        )
+        run_result = run_subprocess_with_streaming(spec=spec)
+        persist_attempt_runtime_artifacts(
+            attempt_path=execution_state.attempt_path,
+            run_result=run_result,
+        )
+        return AdapterExecutionOutcome(
+            succeeded=run_result.exit_classification is GenericCliExitClassification.SUCCESS,
+            details=run_result.exit_classification.value,
+        )
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert isinstance(orchestration, StageOrchestrationResult)
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert orchestration.transition.next_state is StageState.SUCCEEDED
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.PASS
+    assert (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
+    ).exists()
+    metadata_payload = json.loads(
+        orchestration.transition.stage_metadata_path.read_text(encoding="utf-8")
+    )
+    assert metadata_payload["status"] == StageState.SUCCEEDED.value
+
+
+def test_run_single_stage_orchestration_stops_on_adapter_failure(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    command = _write_runtime_writer_command(
+        tmp_path=tmp_path,
+        documents={},
+        exit_code=3,
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        context = GenericCliStageContext(
+            stage=invocation.stage,
+            work_item=invocation.work_item,
+            run_id=invocation.run_id,
+            prompt_pack_path=Path("prompt-packs/stages/plan/system.md"),
+        )
+        spec = build_subprocess_spec(
+            configured_command=command,
+            workspace_root=workspace_root,
+            context=context,
+            base_env=dict(os.environ),
+            repository_root=Path.cwd(),
+        )
+        run_result = run_subprocess_with_streaming(spec=spec)
+        persist_attempt_runtime_artifacts(
+            attempt_path=execution_state.attempt_path,
+            run_result=run_result,
+        )
+        return AdapterExecutionOutcome(
+            succeeded=run_result.exit_classification is GenericCliExitClassification.SUCCESS,
+            details=run_result.exit_classification.value,
+        )
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.STOP
+    assert orchestration.transition.next_state is StageState.FAILED
+    assert orchestration.validation_result is None
+    assert orchestration.validation_transition is None
 
 
 def test_run_structural_validation_after_output_discovery_writes_report_path(

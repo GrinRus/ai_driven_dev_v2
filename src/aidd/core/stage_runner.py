@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -201,6 +202,28 @@ class StageResumeResult:
     preparation_bundle: StagePreparationBundle | None
     execution_state: StageExecutionState | None
     adapter_invocation: AdapterInvocationBundle | None
+
+
+@dataclass(frozen=True, slots=True)
+class AdapterExecutionOutcome:
+    succeeded: bool
+    details: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class StageOrchestrationResult:
+    stage: str
+    work_item: str
+    run_id: str
+    preparation_bundle: StagePreparationBundle
+    execution_state: StageExecutionState
+    adapter_invocation: AdapterInvocationBundle
+    adapter_outcome: AdapterExecutionOutcome
+    discovery: StageOutputDiscovery | None
+    validation_result: StageStructuralValidationResult | None
+    interview_routing: StageInterviewRouting | None
+    validation_transition: RepairBudgetValidationTransition | None
+    transition: PostValidationTransition
 
 
 ATTEMPT_INPUT_BUNDLE_FILENAME = "input-bundle.md"
@@ -890,6 +913,130 @@ def prepare_stage_resume_after_answers(
         preparation_bundle=preparation_bundle,
         execution_state=execution_state,
         adapter_invocation=adapter_invocation,
+    )
+
+
+def run_single_stage_orchestration(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    adapter_executor: Callable[
+        [AdapterInvocationBundle, StageExecutionState],
+        AdapterExecutionOutcome,
+    ],
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    repair_policy: RepairBudgetPolicy | None = None,
+    changed_at_utc: datetime | None = None,
+) -> StageOrchestrationResult:
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        contracts_root=contracts_root,
+    )
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        changed_at_utc=changed_at_utc,
+    )
+    adapter_invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    adapter_outcome = adapter_executor(adapter_invocation, execution_state)
+
+    if not adapter_outcome.succeeded:
+        failed_metadata_path = persist_stage_status(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            status=StageState.FAILED.value,
+            changed_at_utc=changed_at_utc,
+        )
+        failed_validation_state = StageValidationState(
+            stage=stage,
+            work_item=work_item,
+            run_id=run_id,
+            verdict=ValidationVerdict.FAIL,
+            next_state=StageState.FAILED,
+            stage_metadata_path=failed_metadata_path,
+        )
+        transition = decide_post_validation_transition(failed_validation_state)
+        return StageOrchestrationResult(
+            stage=stage,
+            work_item=work_item,
+            run_id=run_id,
+            preparation_bundle=preparation_bundle,
+            execution_state=execution_state,
+            adapter_invocation=adapter_invocation,
+            adapter_outcome=adapter_outcome,
+            discovery=None,
+            validation_result=None,
+            interview_routing=None,
+            validation_transition=None,
+            transition=transition,
+        )
+
+    transition_stage_state(from_state=StageState.EXECUTING, to_state=StageState.VALIDATING)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        status=StageState.VALIDATING.value,
+        changed_at_utc=changed_at_utc,
+    )
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=adapter_invocation,
+    )
+    validation_result = run_structural_validation_after_output_discovery(
+        workspace_root=workspace_root,
+        discovery=discovery,
+        contracts_root=contracts_root,
+    )
+    interview_routing = route_stage_questions_to_interview(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+    verdict = derive_validation_verdict(
+        findings=validation_result.findings,
+        interview_routing=interview_routing,
+    )
+    validation_transition = persist_validation_state_with_repair_budget(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        verdict=verdict,
+        repair_policy=repair_policy,
+        from_state=StageState.VALIDATING,
+        changed_at_utc=changed_at_utc,
+    )
+    transition = decide_post_validation_transition(
+        validation_transition.validation_state,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+    return StageOrchestrationResult(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+        adapter_invocation=adapter_invocation,
+        adapter_outcome=adapter_outcome,
+        discovery=discovery,
+        validation_result=validation_result,
+        interview_routing=interview_routing,
+        validation_transition=validation_transition,
+        transition=transition,
     )
 
 
