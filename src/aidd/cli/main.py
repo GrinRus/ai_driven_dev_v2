@@ -137,6 +137,28 @@ def _allocate_stage_run_id(*, workspace_root: Path, work_item: str) -> str:
     return candidate
 
 
+def _print_workflow_run_summary(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+) -> None:
+    summary = resolve_run_metadata_summary(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
+    console.print(f"Workflow summary: run_id={summary.run_id} runtime={summary.runtime_id}")
+    if not summary.stages:
+        console.print("- no stage metadata recorded")
+        return
+    for stage_summary in summary.stages:
+        console.print(
+            f"- {stage_summary.stage}: "
+            f"status={stage_summary.status} attempts={stage_summary.attempt_count}"
+        )
+
+
 def _version_callback(value: bool) -> None:
     if value:
         console.print(f"aidd {__version__}")
@@ -302,8 +324,14 @@ def run_callback(
         except typer.Exit as exc:
             if exc.exit_code not in (None, 0):
                 console.print(f"Workflow stopped at stage '{next_stage}'.")
+                _print_workflow_run_summary(
+                    workspace_root=workspace_root,
+                    work_item=work_item,
+                    run_id=run_id,
+                )
                 raise
         executed_stage_count += 1
+        console.print(f"Workflow progress: stage={next_stage} status=succeeded")
 
     advancement = summarize_workflow_advancement(
         workspace_root=workspace_root,
@@ -317,8 +345,18 @@ def run_callback(
         console.print("Workflow stopped: no runnable stage is currently available.")
         for summary in incomplete[:3]:
             console.print(f"- {summary.stage}: {summary.reason}")
+        _print_workflow_run_summary(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+        )
         raise typer.Exit(code=1)
 
+    _print_workflow_run_summary(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
     console.print(
         "Workflow run completed: "
         f"run_id={run_id} stages_executed={executed_stage_count}"

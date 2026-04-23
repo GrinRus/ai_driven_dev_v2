@@ -928,7 +928,7 @@ Exit evidence:
 
 ---
 
-## Wave 4 — runtimes and operator UX (`planned`)
+## Wave 4 — runtimes and operator UX (`done`)
 
 ### Epic W4-E1 — `generic-cli` adapter (`done`)
 Linked stories: `US-01`, `US-06`, `US-08`
@@ -1171,7 +1171,7 @@ Exit evidence:
 - the Claude Code adapter enters the same interview loop as the generic adapter;
 - unanswered questions block the stage instead of disappearing into runtime logs.
 
-### Epic W4-E3 — operator CLI experience (`planned`)
+### Epic W4-E3 — operator CLI experience (`done`)
 Linked stories: `US-05`, `US-06`, `US-09`
 
 #### Slice W4-E3-S1 — run summaries (`done`)
@@ -1300,7 +1300,7 @@ Exit evidence:
 - `--log-follow` streams runtime-native output and preserves it in `runtime.log`;
 - repair and interview flows stop or resume without silently skipping required work.
 
-#### Slice W4-E3-S5 — implement `aidd run` workflow execution (`later`)
+#### Slice W4-E3-S5 — implement `aidd run` workflow execution (`done`)
 Goal: remove placeholder behavior in `aidd run` and execute a full multi-stage workflow.
 
 Primary outputs:
@@ -1323,7 +1323,7 @@ Dependencies:
 Local tasks:
 
 - `W4-E3-S5-T1` (done) Implement workflow run loop using stage dependency resolution (select next runnable stage, stop on blocked/failed).
-- `W4-E3-S5-T2` Add CLI progress + final summary output consistent with stored run artifacts.
+- `W4-E3-S5-T2` (done) Add CLI progress + final summary output consistent with stored run artifacts.
 
 Exit evidence:
 

@@ -80,6 +80,9 @@ def test_run_executes_runnable_stages_in_dependency_order(
 
     assert result.exit_code == 0, result.output
     assert executed_stages == list(STAGES)
+    assert "Workflow progress: stage=qa status=succeeded" in result.stdout
+    assert "Workflow summary:" in result.stdout
+    assert "- qa: status=succeeded attempts=0" in result.stdout
     assert "Workflow run completed:" in result.stdout
 
 
@@ -146,3 +149,5 @@ def test_run_stops_when_stage_execution_returns_nonzero_exit(
     assert result.exit_code == 1, result.output
     assert executed_stages == ["idea", "research"]
     assert "Workflow stopped at stage 'research'." in result.stdout
+    assert "Workflow summary:" in result.stdout
+    assert "- research: status=failed attempts=0" in result.stdout
