@@ -1,9 +1,9 @@
 id: AIDD-STAGEPACK-PLAN-SMOKE-001
 repo:
   url: harness/fixtures/minimal-python
-objective: Exercise the plan stage smoke lane with a local fixture and preserve a
-  deterministic reference bundle for stage-pack validation.
-task: Run the plan stage through the stage CLI and archive resulting smoke artifacts.
+objective: Define a cross-runtime smoke lane for plan-stage execution and require
+  durable output artifacts for every declared runtime target.
+task: Run the plan-stage smoke lane and verify required output documents are produced.
 stage_scope:
   start: plan
   end: plan
@@ -18,9 +18,7 @@ aidd_invocation:
   - uv
   - run
   - aidd
-  - stage
   - run
-  - plan
   work_item: WI-STAGE-PLAN-SMOKE
   work_item_flag: --work-item
   runtime_flag: --runtime
@@ -29,22 +27,18 @@ aidd_invocation:
     end: plan
 verify:
   commands:
-  - test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/stage-result.md
+  - test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/plan.md
+  - test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/stage-result.md
+  - test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/validator-report.md
   pass_conditions:
-  - Verification command exits with status 0.
-  - Stage result artifact exists for the plan stage work item.
-reference_run:
-  run_id: eval-stage-plan-smoke-20260422T102945Z
-  recorded_at_utc: '2026-04-22T10:29:45Z'
-  runtime: generic-cli
-  status: harness_fail
-  bundle_root: .aidd/reports/evals/eval-stage-plan-smoke-20260422T102945Z
-  first_failure_signal: Verification command `test -f
-    .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/stage-result.md` exited with
-    status 1.
+  - Verification commands exit with status 0.
+  - Plan stage output includes `plan.md`, `stage-result.md`, and `validator-report.md`.
 limits:
   timeout_minutes: 5
 interview:
   required: false
 runtime_targets:
 - generic-cli
+- claude-code
+- codex
+- opencode

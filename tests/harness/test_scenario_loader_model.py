@@ -412,3 +412,27 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
         scenario.raw["reference_run"]["bundle_root"]
         == ".aidd/reports/evals/eval-live-008-reference-20260422T094912Z"
     )
+
+
+def test_smoke_plan_stagepack_scenario_declares_cross_runtime_output_checks() -> None:
+    scenario = load_scenario(Path("harness/scenarios/smoke/plan-stagepack-smoke.yaml"))
+
+    assert scenario.scenario_id == "AIDD-STAGEPACK-PLAN-SMOKE-001"
+    assert scenario.raw["aidd_invocation"]["command"] == ["uv", "run", "aidd", "run"]
+    assert scenario.run.stage_start == "plan"
+    assert scenario.run.stage_end == "plan"
+    assert scenario.runtime_targets == (
+        "generic-cli",
+        "claude-code",
+        "codex",
+        "opencode",
+    )
+    assert scenario.verify.commands == (
+        "test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/plan.md",
+        "test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/stage-result.md",
+        "test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/validator-report.md",
+    )
+    assert scenario.raw["verify"]["pass_conditions"] == [
+        "Verification commands exit with status 0.",
+        "Plan stage output includes `plan.md`, `stage-result.md`, and `validator-report.md`.",
+    ]
