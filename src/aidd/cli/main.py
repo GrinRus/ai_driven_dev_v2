@@ -35,6 +35,7 @@ from aidd.core.interview import (
     resolved_question_ids,
     stage_has_unresolved_blocking_questions,
 )
+from aidd.core.repair import RepairBudgetPolicy, generate_repair_brief, write_repair_brief
 from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
     create_run_manifest,
@@ -46,6 +47,7 @@ from aidd.core.stage_runner import (
     AdapterInvocationBundle,
     PostValidationAction,
     StageExecutionState,
+    StageOrchestrationResult,
     run_single_stage_orchestration,
 )
 from aidd.core.stages import STAGES, is_valid_stage
@@ -430,6 +432,7 @@ def stage_run(
 
     cfg = load_config(config)
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
+    repair_policy = RepairBudgetPolicy(default_max_repair_attempts=cfg.max_repair_attempts)
     run_id = _allocate_stage_run_id(workspace_root=workspace_root, work_item=work_item)
     create_run_manifest(
         workspace_root=workspace_root,
@@ -516,16 +519,51 @@ def stage_run(
             details=run_result.exit_classification.value,
         )
 
-    try:
-        orchestration = run_single_stage_orchestration(
+    def _write_repair_brief_for_retry(
+        *,
+        orchestration: StageOrchestrationResult,
+    ) -> Path:
+        if orchestration.validation_result is None:
+            raise ValueError("Repair retry requires validator findings from the previous attempt.")
+
+        validator_report_path = orchestration.validation_result.validator_report_path
+        repair_brief_path = validator_report_path.parent / "repair-brief.md"
+        repair_brief = generate_repair_brief(
+            validator_report_path=validator_report_path,
+            prior_stage_artifacts=orchestration.adapter_invocation.expected_input_bundle,
+            stage_attempt_count=orchestration.execution_state.attempt_number,
+            max_repair_attempts=repair_policy.default_max_repair_attempts,
             workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage=stage,
-            adapter_executor=_adapter_executor,
         )
-    except (FileNotFoundError, ValueError) as exc:
-        raise typer.BadParameter(str(exc)) from exc
+        write_repair_brief(path=repair_brief_path, repair_brief_markdown=repair_brief)
+        return repair_brief_path
+
+    orchestration: StageOrchestrationResult | None = None
+    stage_attempt_count = 0
+    while True:
+        try:
+            orchestration = run_single_stage_orchestration(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                adapter_executor=_adapter_executor,
+                repair_policy=repair_policy,
+            )
+        except (FileNotFoundError, ValueError) as exc:
+            raise typer.BadParameter(str(exc)) from exc
+
+        stage_attempt_count += 1
+        if orchestration.transition.action is not PostValidationAction.REPAIR:
+            break
+        repair_brief_path = _write_repair_brief_for_retry(orchestration=orchestration)
+        console.print(f"Repair brief prepared: {repair_brief_path.as_posix()}")
+        console.print(
+            "Repair retry scheduled: "
+            f"attempt={orchestration.execution_state.attempt_number + 1}"
+        )
+
+    assert orchestration is not None
 
     runtime_log_path = orchestration.execution_state.attempt_path / RUN_RUNTIME_LOG_FILENAME
     console.print(
@@ -533,6 +571,7 @@ def stage_run(
         f"action={orchestration.transition.action.value} "
         f"state={orchestration.transition.next_state.value}"
     )
+    console.print(f"Stage attempts: {stage_attempt_count}")
     console.print(f"Stage metadata: {orchestration.transition.stage_metadata_path.as_posix()}")
     console.print(f"Runtime log: {runtime_log_path.as_posix()}")
     if orchestration.validation_result is not None:

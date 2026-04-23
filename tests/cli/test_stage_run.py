@@ -26,8 +26,8 @@ def _materialize_plan_inputs(*, workspace_root: Path, work_item: str) -> None:
         path.write_text(f"# Input {index}\n\nPrepared.\n", encoding="utf-8")
 
 
-def _valid_plan_output_documents() -> dict[str, str]:
-    return {
+def _valid_plan_output_documents(*, include_repair_brief: bool = True) -> dict[str, str]:
+    documents = {
         "plan.md": (
             "# Plan\n\n"
             "## Goals\n\n- Deliver a reviewable execution plan.\n\n"
@@ -59,10 +59,39 @@ def _valid_plan_output_documents() -> dict[str, str]:
             "## Cross-document checks\n\n- none\n\n"
             "## Result\n\n- Verdict: `pass`\n"
         ),
-        "repair-brief.md": (
+        "questions.md": "# Questions\n\n- none\n",
+        "answers.md": "# Answers\n\n- none\n",
+    }
+    if include_repair_brief:
+        documents["repair-brief.md"] = (
             "# Failed checks\n\n- none\n\n"
             "## Required corrections\n\n- none\n\n"
             "## Relevant upstream docs\n\n- none\n"
+        )
+    return documents
+
+
+def _repair_trigger_plan_output_documents() -> dict[str, str]:
+    return {
+        "plan.md": "# Plan\n\nInsufficient detail for a reviewable plan.\n",
+        "stage-result.md": (
+            "# Stage result\n\n"
+            "## Stage\n\nplan\n\n"
+            "## Attempt history\n\n- attempt-0001\n\n"
+            "## Status\n\nsucceeded\n\n"
+            "## Produced outputs\n\n- plan.md\n\n"
+            "## Validation summary\n\n- structural: pending\n\n"
+            "## Blockers\n\n- none\n\n"
+            "## Next actions\n\n- retry\n\n"
+            "## Terminal state notes\n\nNeeds correction.\n"
+        ),
+        "validator-report.md": (
+            "# Validator Report\n\n"
+            "## Summary\n\n- Total issues: 3\n\n"
+            "## Structural checks\n\n- pending\n\n"
+            "## Semantic checks\n\n- pending\n\n"
+            "## Cross-document checks\n\n- pending\n\n"
+            "## Result\n\n- Verdict: `fail`\n"
         ),
         "questions.md": "# Questions\n\n- none\n",
         "answers.md": "# Answers\n\n- none\n",
@@ -74,17 +103,33 @@ def _write_runtime_writer_script(
     tmp_path: Path,
     documents: dict[str, str],
     exit_code: int,
+    next_documents: dict[str, str] | None = None,
 ) -> Path:
     script_path = tmp_path / f"runtime_writer_{exit_code}.py"
     script_lines = [
         "import os",
         "import sys",
         "from pathlib import Path",
-        f"documents = {documents!r}",
+        f"first_documents = {documents!r}",
+        f"next_documents = {next_documents!r}",
         "root = Path(os.environ['AIDD_WORKSPACE_ROOT'])",
         (
             "stage_root = root / 'workitems' / os.environ['AIDD_WORK_ITEM'] / "
             "'stages' / os.environ['AIDD_STAGE']"
+        ),
+        (
+            "attempts_root = root / 'reports' / 'runs' / os.environ['AIDD_WORK_ITEM'] / "
+            "os.environ['AIDD_RUN_ID'] / 'stages' / os.environ['AIDD_STAGE'] / 'attempts'"
+        ),
+        (
+            "attempt_count = sum("
+            "1 for child in attempts_root.iterdir() "
+            "if child.is_dir() and child.name.startswith('attempt-')"
+            ") if attempts_root.exists() else 0"
+        ),
+        (
+            "documents = first_documents if (attempt_count <= 1 or next_documents is None) "
+            "else next_documents"
         ),
         "stage_root.mkdir(parents=True, exist_ok=True)",
         "for name, content in documents.items():",
@@ -97,14 +142,21 @@ def _write_runtime_writer_script(
     return script_path
 
 
-def _write_cli_config(*, tmp_path: Path, runtime_command: str) -> Path:
+def _write_cli_config(
+    *,
+    tmp_path: Path,
+    runtime_command: str,
+    max_repair_attempts: int = 2,
+) -> Path:
     config_path = tmp_path / "aidd.test.toml"
     config_path.write_text(
         (
             "[workspace]\n"
             "root = \".aidd\"\n\n"
             "[runtime.generic_cli]\n"
-            f"command = \"{runtime_command}\"\n"
+            f"command = \"{runtime_command}\"\n\n"
+            "[repair]\n"
+            f"max_attempts = {max_repair_attempts}\n"
         ),
         encoding="utf-8",
     )
@@ -294,6 +346,125 @@ def test_stage_run_rejects_non_generic_runtime() -> None:
 
     assert result.exit_code != 0
     assert "supports runtime 'generic-cli'" in result.output
+
+
+def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-004")
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=_repair_trigger_plan_output_documents(),
+        next_documents=_valid_plan_output_documents(include_repair_brief=False),
+        exit_code=0,
+    )
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    )
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=runtime_command,
+        max_repair_attempts=2,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-004",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Repair brief prepared:" in result.stdout
+    assert "Stage attempts: 2" in result.stdout
+    run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-004")
+    assert (
+        workspace_root / "reports" / "runs" / "WI-004" / run_id / "stages" / "plan" / "attempts"
+    ).exists()
+    assert (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-004"
+        / run_id
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0002"
+        / RUN_RUNTIME_LOG_FILENAME
+    ).exists()
+    repair_brief_path = (
+        workspace_root / "workitems" / "WI-004" / "stages" / "plan" / "repair-brief.md"
+    )
+    assert repair_brief_path.exists()
+    assert "Repair attempt context" in repair_brief_path.read_text(encoding="utf-8")
+    assert (
+        workspace_root / "workitems" / "WI-004" / "stages" / "plan" / "output" / "plan.md"
+    ).exists()
+
+
+def test_stage_run_stops_when_repair_budget_is_exhausted(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-005")
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=_repair_trigger_plan_output_documents(),
+        exit_code=0,
+    )
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    )
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=runtime_command,
+        max_repair_attempts=1,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-005",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "Repair brief prepared:" in result.stdout
+    assert "Stage attempts: 2" in result.stdout
+    assert "action=stop state=failed" in result.stdout
+    run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-005")
+    metadata_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-005"
+        / run_id
+        / "stages"
+        / "plan"
+        / "stage-metadata.json"
+    )
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "failed"
 
 
 def test_prefix_stream_chunk_formats_multiline_follow_output() -> None:
