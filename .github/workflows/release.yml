@@ -136,6 +136,50 @@ jobs:
           python -m pipx run --spec "ai-driven-dev-v2==${PACKAGE_VERSION}" aidd --version
           python -m pipx run --spec "ai-driven-dev-v2==${PACKAGE_VERSION}" aidd doctor
 
+  verify-uv-tool-install:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: verify-pypi-install
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify published package installability via uv tool
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          PACKAGE_VERSION="${RELEASE_TAG#v}"
+          PACKAGE_SPEC="ai-driven-dev-v2==${PACKAGE_VERSION}"
+          ATTEMPTS=10
+          BACKOFF_SECONDS=30
+
+          for attempt in $(seq 1 "${ATTEMPTS}"); do
+            echo "Attempt ${attempt}/${ATTEMPTS}: uv tool install ${PACKAGE_SPEC}"
+            if uv tool install --force "${PACKAGE_SPEC}"; then
+              break
+            fi
+            if [ "${attempt}" -eq "${ATTEMPTS}" ]; then
+              echo "uv tool could not install ${PACKAGE_SPEC} after ${ATTEMPTS} attempts."
+              exit 1
+            fi
+            echo "Waiting ${BACKOFF_SECONDS}s for package availability..."
+            sleep "${BACKOFF_SECONDS}"
+          done
+
+          uv tool run --from "${PACKAGE_SPEC}" aidd --version
+          uv tool run --from "${PACKAGE_SPEC}" aidd doctor
+
   publish-container:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
