@@ -2347,7 +2347,7 @@ Exit evidence:
 
 ---
 
-## Wave 8 — readiness recovery and runtime parity (`next`)
+## Wave 8 — readiness recovery and runtime parity (`done`)
 
 ### Epic W8-E1 — runtime execution parity (`done`)
 Linked stories: `US-01`, `US-06`, `US-08`
@@ -2457,10 +2457,10 @@ Exit evidence:
 - eval pass status always implies evidenced stage-output side effects;
 - no-op execution paths are classified and reported as non-pass outcomes.
 
-### Epic W8-E3 — planning governance recovery (`planned`)
+### Epic W8-E3 — planning governance recovery (`done`)
 Linked stories: `US-10`
 
-#### Slice W8-E3-S1 — backlog restoration policy (`planned`)
+#### Slice W8-E3-S1 — backlog restoration policy (`done`)
 Goal: define and document how to reopen execution flow when roadmap slices were previously all marked done.
 
 Primary outputs:
@@ -2478,7 +2478,25 @@ Dependencies:
 
 Local tasks:
 
-- `W8-E3-S1-T1` (planned) Document the policy for restoring actionable queue state when roadmap is fully done and backlog is empty.
+- `W8-E3-S1-T1` (done) Document the policy for restoring actionable queue state when roadmap is fully done and backlog is empty.
+
+Queue restoration policy (roadmap all `done` + backlog empty):
+
+1. Confirm trigger conditions:
+   - `docs/backlog/backlog.md` has no task IDs in `Next`, `Soon`, or `Parking lot`;
+   - active roadmap wave has no remaining `next`, `planned`, `later`, or `blocked` local tasks.
+2. Open a new wave in `docs/backlog/roadmap.md` using `wave -> epic -> slice -> local task` decomposition before editing backlog.
+3. Add at least one actionable local task with explicit output, dominant touched area, and one verification signal.
+4. Set statuses in roadmap first (`next`/`planned`) and verify dependencies are explicit at slice level.
+5. Promote queue entries in `docs/backlog/backlog.md`:
+   - first actionable task(s) to `Next`;
+   - dependent near-term tasks to `Soon`;
+   - deferred visibility items to `Parking lot`.
+6. Add a dated sync note in roadmap or backlog describing the queue restoration event and the first promoted task IDs.
+7. Run the backlog sync checklist before implementation starts:
+   - every backlog ID exists in roadmap;
+   - only local task IDs appear in backlog;
+   - no completed task remains queued.
 
 Exit evidence:
 
