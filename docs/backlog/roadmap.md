@@ -2024,7 +2024,7 @@ Exit evidence:
 
 ---
 
-## Wave 7 — runtime widening and release hardening (`planned`)
+## Wave 7 — runtime widening and release hardening (`done`)
 
 ### Epic W7-E1 — `codex` adapter (`done`)
 Linked stories: `US-01`, `US-08`
@@ -2214,7 +2214,7 @@ Exit evidence:
 
 - OpenCode can be compared to Claude Code, Codex, and generic-cli on shared scenarios.
 
-### Epic W7-E3 — public release hardening (`planned`)
+### Epic W7-E3 — public release hardening (`done`)
 Linked stories: `US-07`, `US-09`, `US-10`
 
 #### Slice W7-E3-S1 — operator handbook (`done`)
@@ -2309,7 +2309,7 @@ Exit evidence:
 
 - contributors and operators know what support guarantees AIDD actually makes.
 
-#### Slice W7-E3-S4 — doc + planning consistency cleanup (`next`)
+#### Slice W7-E3-S4 — doc + planning consistency cleanup (`done`)
 Goal: remove planning and documentation drift and add lightweight consistency checks.
 
 Primary outputs:
@@ -2333,7 +2333,7 @@ Local tasks:
 - `W7-E3-S4-T1` (done) Fix invalid `Linked stories` references in `docs/backlog/roadmap.md` so they reference only defined user story ids.
 - `W7-E3-S4-T2` (done) Align runtime support vocabulary between `docs/architecture/runtime-matrix.md` and `docs/compatibility-policy.md`.
 - `W7-E3-S4-T3` (done) Reconcile workspace layout + stage IO semantics in `docs/architecture/target-architecture.md` with `src/aidd/core/workspace.py` and the `output/` publishing model.
-- `W7-E3-S4-T4` Add a lightweight consistency check (script or test) that fails on unknown user story ids in roadmap and missing prompt-pack paths in stage contracts.
+- `W7-E3-S4-T4` (done) Add a lightweight consistency check (script or test) that fails on unknown user story ids in roadmap and missing prompt-pack paths in stage contracts.
 
 Exit evidence:
 

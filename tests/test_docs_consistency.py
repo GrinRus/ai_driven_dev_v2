@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
+
+from aidd.core.contracts import repo_root_from
+from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, resolve_prompt_pack_paths
+from aidd.core.stages import STAGES
+
+_USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
+_ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
+
+
+def _repo_root() -> Path:
+    return repo_root_from(Path(__file__).resolve())
+
+
+def test_roadmap_references_only_existing_user_story_ids() -> None:
+    repo_root = _repo_root()
+    user_stories_path = repo_root / "docs" / "product" / "user-stories.md"
+    roadmap_path = repo_root / "docs" / "backlog" / "roadmap.md"
+
+    declared_story_ids = set(_USER_STORY_ID_PATTERN.findall(user_stories_path.read_text("utf-8")))
+    referenced_story_ids = set(_ROADMAP_STORY_ID_PATTERN.findall(roadmap_path.read_text("utf-8")))
+    unknown_story_ids = sorted(referenced_story_ids - declared_story_ids)
+
+    assert not unknown_story_ids, (
+        "Roadmap references unknown user story ids: "
+        f"{', '.join(unknown_story_ids)}"
+    )
+
+
+def test_stage_contract_prompt_pack_paths_exist() -> None:
+    repo_root = _repo_root()
+    contracts_root = repo_root / DEFAULT_STAGE_CONTRACTS_ROOT
+    missing_prompt_pack_paths: list[str] = []
+
+    for stage in STAGES:
+        try:
+            prompt_pack_paths = resolve_prompt_pack_paths(
+                stage=stage,
+                contracts_root=contracts_root,
+            )
+        except ValueError as exc:
+            pytest.fail(f"Stage '{stage}' has invalid prompt-pack declarations: {exc}")
+        if not prompt_pack_paths:
+            missing_prompt_pack_paths.append(f"{stage}:<none>")
+            continue
+        for prompt_pack_path in prompt_pack_paths:
+            if not (repo_root / prompt_pack_path).exists():
+                missing_prompt_pack_paths.append(f"{stage}:{prompt_pack_path}")
+
+    assert not missing_prompt_pack_paths, (
+        "Missing prompt-pack paths declared in stage contracts: "
+        f"{', '.join(missing_prompt_pack_paths)}"
+    )
