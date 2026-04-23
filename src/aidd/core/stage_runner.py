@@ -28,12 +28,12 @@ from aidd.core.stage_registry import (
     resolve_required_input_documents,
 )
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
-from aidd.core.workspace import (
-    stage_output_root as workspace_stage_output_root,
-)
+from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.core.workspace import stage_root as workspace_stage_root
+from aidd.validators.cross_document import validate_cross_document_consistency
 from aidd.validators.models import ValidationFinding
 from aidd.validators.reports import write_validator_report
+from aidd.validators.semantic import validate_semantic_outputs
 from aidd.validators.structural import (
     validate_required_document_existence,
     validate_required_sections,
@@ -505,7 +505,22 @@ def run_structural_validation_after_output_discovery(
         workspace_root=workspace_root,
         contracts_root=contracts_root,
     )
+    findings: tuple[ValidationFinding, ...]
     findings = (*structural_findings, *section_findings)
+    if not findings:
+        semantic_findings = validate_semantic_outputs(
+            stage=discovery.stage,
+            work_item=discovery.work_item,
+            workspace_root=workspace_root,
+            contracts_root=contracts_root,
+        )
+        cross_document_findings = validate_cross_document_consistency(
+            stage=discovery.stage,
+            work_item=discovery.work_item,
+            workspace_root=workspace_root,
+            contracts_root=contracts_root,
+        )
+        findings = (*semantic_findings, *cross_document_findings)
 
     stage_root = workspace_stage_root(
         root=workspace_root,

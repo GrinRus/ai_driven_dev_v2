@@ -146,14 +146,15 @@ def _valid_output_documents(*, unresolved_question: bool = False) -> dict[str, s
             "## Risks\n\n- Risk: Missing constraints; mitigation: clarify assumptions.\n\n"
             "## Dependencies\n\n- Research artifacts from prior stage.\n\n"
             "## Verification approach\n\n- Run structural and semantic checks.\n\n"
-            "## Verification notes\n\n- Validate highest-risk milestone with targeted tests.\n"
+            "## Verification notes\n\n"
+            "- M1: Validate highest-risk milestone with targeted tests.\n"
         ),
         "stage-result.md": (
             "# Stage result\n\n"
             "## Stage\n\nplan\n\n"
             "## Attempt history\n\n- attempt-0001\n\n"
             "## Status\n\nsucceeded\n\n"
-            "## Produced outputs\n\n- plan.md\n\n"
+            "## Produced outputs\n\n- plan.md\n- repair-brief.md (no repair needed)\n\n"
             "## Validation summary\n\n- structural: pass\n\n"
             "## Blockers\n\n- none\n\n"
             "## Next actions\n\n- advance\n\n"
@@ -272,6 +273,35 @@ def test_generic_cli_handshake_invalid_output_flow_stops(tmp_path: Path) -> None
     assert transition.next_state is StageState.FAILED
 
 
+def test_generic_cli_handshake_semantic_failure_is_reported(tmp_path: Path) -> None:
+    workspace_root, execution_state, invocation = _prepare_plan_attempt(tmp_path)
+    documents = _valid_output_documents()
+    documents["plan.md"] = documents["plan.md"].replace(
+        "Deliver a reviewable execution plan.",
+        "TBD define a reviewable execution plan.",
+    )
+    _run_runtime_script(
+        tmp_path=tmp_path,
+        workspace_root=workspace_root,
+        documents=documents,
+    )
+
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+    structural = run_structural_validation_after_output_discovery(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+    assert any(finding.code.startswith("SEM-") for finding in structural.findings)
+    assert any(finding.code == "SEM-PLACEHOLDER-CONTENT" for finding in structural.findings)
+    report_text = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "validator-report.md"
+    ).read_text(encoding="utf-8")
+    assert "`SEM-PLACEHOLDER-CONTENT`" in report_text
+
+
 def test_generic_cli_handshake_question_blocked_flow_waits(tmp_path: Path) -> None:
     workspace_root, execution_state, invocation = _prepare_plan_attempt(tmp_path)
     _run_runtime_script(
@@ -288,7 +318,10 @@ def test_generic_cli_handshake_question_blocked_flow_waits(tmp_path: Path) -> No
         workspace_root=workspace_root,
         discovery=discovery,
     )
-    assert structural.findings == ()
+    assert any(
+        finding.code == "CROSS-BLOCKING-UNANSWERED"
+        for finding in structural.findings
+    )
     interview_routing = route_stage_questions_to_interview(
         workspace_root=workspace_root,
         discovery=discovery,

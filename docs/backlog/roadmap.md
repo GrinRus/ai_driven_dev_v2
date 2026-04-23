@@ -845,7 +845,7 @@ Dependencies:
 
 Local tasks:
 
-- `W3-E2-S5-T1` Wire semantic and cross-document validators into the post-run validation path and render a combined `validator-report.md`.
+- `W3-E2-S5-T1` (done) Wire semantic and cross-document validators into the post-run validation path and render a combined `validator-report.md`.
 - `W3-E2-S5-T2` Add an end-to-end regression: structural passes but semantic/cross-document fails -> verdict is not `pass`, report contains `SEM-*/CROSS-*` findings.
 
 Exit evidence:
