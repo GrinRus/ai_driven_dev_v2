@@ -21,6 +21,7 @@ Today:
 - `aidd run` executes workflow progression for runtime `generic-cli` only;
 - `aidd stage run` executes stage orchestration for runtime `generic-cli` only;
 - `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle.
+- This runtime gate is a temporary limitation until parity slices `W8-E1-S1` and `W8-E1-S2` are complete.
 
 Plan all operator usage with that constraint in mind.
 

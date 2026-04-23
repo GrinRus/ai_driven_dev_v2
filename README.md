@@ -87,6 +87,10 @@ Planned execution parity:
 - `codex`
 - `opencode`
 
+Temporary limitation:
+
+- Workflow and stage execution are intentionally `generic-cli` only until runtime parity slices `W8-E1-S1` and `W8-E1-S2` are complete.
+
 Future bridge target:
 
 - `pi-mono`
