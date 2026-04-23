@@ -11,6 +11,7 @@ from aidd.core.run_store import (
     RUN_ARTIFACT_INDEX_FILENAME,
     RUN_ATTEMPTS_DIRNAME,
     RUN_MANIFEST_FILENAME,
+    RUN_RUNTIME_EXIT_METADATA_FILENAME,
     RUN_RUNTIME_LOG_FILENAME,
     RUN_STAGE_METADATA_FILENAME,
     RUN_STAGES_DIRNAME,
@@ -31,6 +32,7 @@ from aidd.core.run_store import (
     run_stages_root,
     run_store_root,
     work_item_runs_root,
+    write_attempt_artifact_index,
 )
 from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
@@ -305,6 +307,42 @@ def test_run_store_repeated_attempts_keep_distinct_artifact_indexes(tmp_path: Pa
     assert second_index["attempt_number"] == 2
     assert first_index["logs"]["runtime_log"].endswith("/attempt-0001/runtime.log")
     assert second_index["logs"]["runtime_log"].endswith("/attempt-0002/runtime.log")
+
+
+def test_attempt_artifact_index_records_runtime_exit_metadata_when_present(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    attempt_path = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    (attempt_path / RUN_RUNTIME_LOG_FILENAME).write_text("runtime-log\n", encoding="utf-8")
+    (attempt_path / RUN_RUNTIME_EXIT_METADATA_FILENAME).write_text("{}", encoding="utf-8")
+
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    )
+    payload = json.loads(
+        run_attempt_artifact_index_path(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_number=1,
+        ).read_text(encoding="utf-8")
+    )
+
+    assert payload["logs"]["runtime_log"].endswith("/attempt-0001/runtime.log")
+    assert payload["logs"]["runtime_exit_metadata"].endswith(
+        "/attempt-0001/runtime-exit.json"
+    )
 
 
 def test_stage_metadata_write_is_atomic_on_interrupted_replace(

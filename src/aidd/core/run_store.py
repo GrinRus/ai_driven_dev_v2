@@ -26,6 +26,7 @@ RUN_MANIFEST_FILENAME = "run-manifest.json"
 RUN_STAGE_METADATA_FILENAME = "stage-metadata.json"
 RUN_ARTIFACT_INDEX_FILENAME = "artifact-index.json"
 RUN_RUNTIME_LOG_FILENAME = "runtime.log"
+RUN_RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
 _GIT_SHA_LENGTH = 40
 
 
@@ -356,12 +357,25 @@ def _canonical_log_paths(
         stage=stage,
         attempt_number=attempt_number,
     )
-    return {
+    logs = {
         "runtime_log": _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=runtime_log,
         )
     }
+    runtime_exit_metadata = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    ) / RUN_RUNTIME_EXIT_METADATA_FILENAME
+    if runtime_exit_metadata.exists():
+        logs["runtime_exit_metadata"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=runtime_exit_metadata,
+        )
+    return logs
 
 
 def write_attempt_artifact_index(
