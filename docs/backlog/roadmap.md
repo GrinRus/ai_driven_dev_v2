@@ -2332,7 +2332,7 @@ Local tasks:
 
 - `W7-E3-S4-T1` (done) Fix invalid `Linked stories` references in `docs/backlog/roadmap.md` so they reference only defined user story ids.
 - `W7-E3-S4-T2` (done) Align runtime support vocabulary between `docs/architecture/runtime-matrix.md` and `docs/compatibility-policy.md`.
-- `W7-E3-S4-T3` Reconcile workspace layout + stage IO semantics in `docs/architecture/target-architecture.md` with `src/aidd/core/workspace.py` and the `output/` publishing model.
+- `W7-E3-S4-T3` (done) Reconcile workspace layout + stage IO semantics in `docs/architecture/target-architecture.md` with `src/aidd/core/workspace.py` and the `output/` publishing model.
 - `W7-E3-S4-T4` Add a lightweight consistency check (script or test) that fails on unknown user story ids in roadmap and missing prompt-pack paths in stage contracts.
 
 Exit evidence:

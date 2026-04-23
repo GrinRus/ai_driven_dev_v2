@@ -111,18 +111,62 @@ Recommended shape:
     aidd.toml
   workitems/
     TICKET-123/
-      00-intake/
-      10-idea/
-      20-research/
-      30-plan/
-      40-review-spec/
-      50-tasklist/
-      60-implement/
-      70-review/
-      80-qa/
-      90-run/
+      work-item.json
+      context/
+        intake.md
+        user-request.md
+        repository-state.md
+      stages/
+        idea/
+          input/
+          output/
+          stage-brief.md
+          questions.md
+          answers.md
+          validator-report.md
+          repair-brief.md
+          stage-result.md
+        research/
+          input/
+          output/
+          ...
+        plan/
+          input/
+          output/
+          ...
+        review-spec/
+          input/
+          output/
+          ...
+        tasklist/
+          input/
+          output/
+          ...
+        implement/
+          input/
+          output/
+          ...
+        review/
+          input/
+          output/
+          ...
+        qa/
+          input/
+          output/
+          ...
   reports/
     runs/
+      TICKET-123/
+        run-001/
+          run-manifest.json
+          stages/
+            plan/
+              stage-metadata.json
+              attempts/
+                attempt-0001/
+                  input-bundle.md
+                  runtime.log
+                  artifact-index.json
     evals/
   traces/
     sessions/
@@ -132,6 +176,8 @@ Recommended shape:
 The exact layout may evolve, but the model is fixed:
 
 - work-item documents are durable,
+- stage-local canonical documents live in `workitems/<id>/stages/<stage>/`,
+- upstream-facing handoff documents are published to `workitems/<id>/stages/<stage>/output/`,
 - reports and traces are system-owned,
 - runtime-facing artifacts remain local to the repository.
 
@@ -176,7 +222,9 @@ For every stage run:
    - resume if allowed.
 8. After the runtime finishes, validate the declared output documents.
 9. If validation passes:
-   - write `stage-result.md`,
+   - write/update `stage-result.md` and `validator-report.md` in the stage root,
+   - publish upstream-facing outputs to `workitems/<id>/stages/<stage>/output/`
+     (declared primary outputs plus `stage-result.md` and `validator-report.md`),
    - update run state,
    - advance to the next stage if requested.
 10. If validation fails:
@@ -215,7 +263,8 @@ Markdown contracts make the system:
 
 ## 10. Stage result model
 
-Every stage produces a Markdown `stage-result.md` document.
+Every stage produces a Markdown `stage-result.md` document in the stage root and
+publishes it to the stage `output/` directory for downstream consumption.
 
 It includes:
 
