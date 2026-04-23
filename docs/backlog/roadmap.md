@@ -2530,10 +2530,50 @@ Dependencies:
 Local tasks:
 
 - `W9-E0-S1-T1` (done) Normalize roadmap status consistency for completed Wave 7 planning nodes and add a dated sync note.
-- `W9-E0-S1-T2` (planned) Open a decision-complete Wave 9 implementation lane for workflow runtime parity.
+- `W9-E0-S1-T2` (done) Open a decision-complete Wave 9 implementation lane for workflow runtime parity.
 - `W9-E0-S1-T3` (planned) Restore actionable backlog queue ordering from the new Wave 9 decomposition.
 
 Exit evidence:
 
 - roadmap top-level status labels match local-task reality;
 - queue bootstrap tasks exist and are reviewable before implementation resumes.
+
+### Epic W9-E1 — workflow runtime parity (`next`)
+Linked stories: `US-01`, `US-06`, `US-08`
+
+#### Slice W9-E1-S1 — workflow runtime dispatch and parity hardening (`next`)
+Goal: execute `aidd run` through maintained runtime adapters with parity-safe artifact and regression coverage.
+
+Primary outputs:
+
+- runtime dispatcher in `aidd run` for maintained non-generic runtimes
+- unified workflow run artifact persistence across runtimes
+- workflow regression coverage for non-generic runtime paths
+- cross-runtime smoke verification for produced stage output documents
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `src/aidd/adapters/`
+- `src/aidd/harness/`
+- `tests/cli/`
+- `tests/harness/`
+- `harness/scenarios/smoke/`
+
+Dependencies:
+
+- `W8-E1-S2`
+- `W8-E2-S1`
+- `W5-E2-S1`
+
+Local tasks:
+
+- `W9-E1-S1-T1` (planned) Implement runtime dispatch in `aidd run` for `claude-code`, `codex`, and `opencode`.
+- `W9-E1-S1-T2` (planned) Unify workflow run artifact persistence across runtimes under the existing run-store layout.
+- `W9-E1-S1-T3` (planned) Add workflow-path regressions for non-generic runtimes, including success, fail, no-op, and unsupported paths.
+- `W9-E1-S1-T4` (planned) Add cross-runtime smoke scenario checks that require produced stage output artifacts in workflow execution lane.
+
+Exit evidence:
+
+- `aidd run` can execute workflow-path runs on maintained runtimes without soft-success behavior;
+- workflow artifacts and regression expectations remain comparable across runtime lanes.
