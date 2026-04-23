@@ -2584,3 +2584,136 @@ Exit evidence:
 
 - `aidd run` can execute workflow-path runs on maintained runtimes without soft-success behavior;
 - workflow artifacts and regression expectations remain comparable across runtime lanes.
+
+---
+
+## Wave 10 — release confidence and external readiness (`next`)
+
+### Epic W10-E0 — operator state sync (`next`)
+Linked stories: `US-09`, `US-10`
+
+#### Slice W10-E0-S1 — current-state messaging alignment (`next`)
+Goal: align operator-facing status text with actual post-W9 behavior before further external-readiness work.
+
+Primary outputs:
+
+- corrected `README.md` runtime-support section
+- corrected `README.md` current-CLI section
+- corrected `aidd doctor` footer
+
+Touched areas:
+
+- `README.md`
+- `src/aidd/cli/`
+
+Dependencies:
+
+- `W9-E1-S1`
+
+Local tasks:
+
+- `W10-E0-S1-T1` (next) Rewrite README runtime-support and current-CLI sections to match maintained workflow and stage runtime behavior after Wave 9.
+- `W10-E0-S1-T2` (planned) Replace the stale `aidd doctor` footer with wording that names the remaining release-proof and live-E2E gaps instead of calling implemented subsystems roadmap work.
+
+Exit evidence:
+
+- `README.md` no longer contradicts runtime parity;
+- `uv run aidd doctor` prints current-state wording that matches post-W9 behavior.
+
+### Epic W10-E1 — published install verification (`planned`)
+Linked stories: `US-09`, `US-10`
+
+#### Slice W10-E1-S1 — release-channel verification (`planned`)
+Goal: turn `US-09` from documented intent into automated evidence against published artifacts.
+
+Primary outputs:
+
+- PyPI install verification
+- `uv tool install` verification
+- GHCR verification
+- release-checklist evidence requirements
+
+Touched areas:
+
+- `.github/workflows/`
+- `docs/release-checklist.md`
+
+Dependencies:
+
+- `W7-E3-S2`
+- `W10-E0-S1`
+
+Local tasks:
+
+- `W10-E1-S1-T1` (planned) Add a post-publish PyPI verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged version is installable via `pipx`, then runs `aidd --version` and `aidd doctor`.
+- `W10-E1-S1-T2` (planned) Add a post-publish `uv tool install` verification job that retries up to 10 times with 30-second backoff until the tagged version is installable, then runs `aidd --version` and `aidd doctor`.
+- `W10-E1-S1-T3` (planned) Add a post-publish GHCR verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged image is pullable, then runs `aidd --version` and `aidd doctor` in the container.
+- `W10-E1-S1-T4` (planned) Update release documentation so the three verification jobs are required release evidence for tagged builds.
+
+Exit evidence:
+
+- a tagged release produces visible pass/fail evidence for `pipx`, `uv tool install`, and GHCR install paths.
+
+### Epic W10-E2 — adapter conformance (`planned`)
+Linked stories: `US-07`, `US-08`
+
+#### Slice W10-E2-S1 — maintained-runtime conformance lane (`planned`)
+Goal: convert adapter-extension safety from distributed evidence into one repeatable conformance lane.
+
+Primary outputs:
+
+- maintained-runtime conformance matrix
+- automated conformance execution across maintained runtimes
+
+Touched areas:
+
+- `docs/architecture/`
+- `src/aidd/harness/`
+- `tests/harness/`
+- `.github/workflows/`
+
+Dependencies:
+
+- `W8-E2-S1`
+- `W9-E1-S1`
+- `W10-E1-S1`
+
+Local tasks:
+
+- `W10-E2-S1-T1` (planned) Define the maintained-runtime conformance matrix for probe behavior, capability declaration, raw log capture, failure mapping, question surfacing, timeout behavior, and workspace targeting.
+- `W10-E2-S1-T2` (planned) Add an automated adapter-conformance lane that executes the matrix for `generic-cli`, `claude-code`, `codex`, and `opencode` and reports per-runtime pass/fail evidence.
+
+Exit evidence:
+
+- adding a runtime requires adapter-local changes plus one conformance entry, not scattered ad hoc checks.
+
+### Epic W10-E3 — live workflow proof (`later`)
+Linked stories: `US-01`, `US-06`, `US-07`
+
+#### Slice W10-E3-S1 — non-generic live workflow evidence (`later`)
+Goal: produce one durable public-repo workflow bundle on a maintained non-generic runtime.
+
+Primary outputs:
+
+- one pinned live workflow scenario
+- one durable result bundle with stage outputs, verdict, and runtime logs
+
+Touched areas:
+
+- `harness/scenarios/live/`
+- `src/aidd/harness/`
+- `tests/harness/`
+- `docs/e2e/`
+
+Dependencies:
+
+- `W10-E1-S1`
+- `W10-E2-S1`
+
+Local tasks:
+
+- `W10-E3-S1-T1` (planned) Promote one pinned live scenario to full workflow-path verification on a maintained non-generic runtime and require produced stage-output documents in the bundle.
+
+Exit evidence:
+
+- one public workflow lane can be rerun with preserved verdict, logs, and produced documents.
