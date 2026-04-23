@@ -63,3 +63,21 @@ def test_release_workflow_has_uv_tool_install_verification_job() -> None:
     assert "uv tool run --from" in run_blocks
     assert "aidd --version" in run_blocks
     assert "aidd doctor" in run_blocks
+
+
+def test_release_workflow_has_ghcr_verification_job() -> None:
+    jobs = _release_workflow_jobs()
+    assert "verify-ghcr-install" in jobs
+
+    verify_job = jobs["verify-ghcr-install"]
+    normalized_needs = _normalize_needs(verify_job.get("needs"))
+    assert "publish-container" in normalized_needs
+    assert "verify-uv-tool-install" in normalized_needs
+
+    run_blocks = _job_run_blocks(verify_job)
+    assert "ATTEMPTS=10" in run_blocks
+    assert "BACKOFF_SECONDS=30" in run_blocks
+    assert "docker pull" in run_blocks
+    assert "docker run --rm" in run_blocks
+    assert "--version" in run_blocks
+    assert "doctor" in run_blocks

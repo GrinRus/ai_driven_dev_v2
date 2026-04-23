@@ -218,3 +218,40 @@ jobs:
           push: true
           tags: ${{ steps.image_meta.outputs.tags }}
           labels: ${{ steps.image_meta.outputs.labels }}
+
+  verify-ghcr-install:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - verify-uv-tool-install
+      - publish-container
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Verify GHCR image pullability and CLI behavior
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/ai-driven-dev-v2
+        run: |
+          set -euo pipefail
+
+          IMAGE_REF="${IMAGE_REPOSITORY}:${RELEASE_TAG}"
+          ATTEMPTS=10
+          BACKOFF_SECONDS=30
+
+          for attempt in $(seq 1 "${ATTEMPTS}"); do
+            echo "Attempt ${attempt}/${ATTEMPTS}: docker pull ${IMAGE_REF}"
+            if docker pull "${IMAGE_REF}"; then
+              break
+            fi
+            if [ "${attempt}" -eq "${ATTEMPTS}" ]; then
+              echo "Container image ${IMAGE_REF} was not pullable after ${ATTEMPTS} attempts."
+              exit 1
+            fi
+            echo "Waiting ${BACKOFF_SECONDS}s for image availability..."
+            sleep "${BACKOFF_SECONDS}"
+          done
+
+          docker run --rm "${IMAGE_REF}" --version
+          docker run --rm "${IMAGE_REF}" doctor

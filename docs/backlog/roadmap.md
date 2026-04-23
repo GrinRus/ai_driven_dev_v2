@@ -2652,13 +2652,14 @@ Local tasks:
 
 - `W10-E1-S1-T1` (done) Add a post-publish PyPI verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged version is installable via `pipx`, then runs `aidd --version` and `aidd doctor`.
 - `W10-E1-S1-T2` (done) Add a post-publish `uv tool install` verification job that retries up to 10 times with 30-second backoff until the tagged version is installable, then runs `aidd --version` and `aidd doctor`.
-- `W10-E1-S1-T3` (next) Add a post-publish GHCR verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged image is pullable, then runs `aidd --version` and `aidd doctor` in the container.
-- `W10-E1-S1-T4` (planned) Update release documentation so the three verification jobs are required release evidence for tagged builds.
+- `W10-E1-S1-T3` (done) Add a post-publish GHCR verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged image is pullable, then runs `aidd --version` and `aidd doctor` in the container.
+- `W10-E1-S1-T4` (next) Update release documentation so the three verification jobs are required release evidence for tagged builds.
 
 Sync notes:
 
 - `2026-04-23` `W10-E1-S1-T1` completed: release workflow now includes a post-publish PyPI verification job with bounded retries and explicit `aidd --version`/`aidd doctor` checks.
 - `2026-04-23` `W10-E1-S1-T2` completed: release workflow now includes a post-publish `uv tool install` verification job with bounded retries and explicit `aidd --version`/`aidd doctor` checks.
+- `2026-04-23` `W10-E1-S1-T3` completed: release workflow now includes a post-publish GHCR verification job with bounded pull retries and containerized `aidd --version`/`aidd doctor` checks.
 
 Exit evidence:
 
