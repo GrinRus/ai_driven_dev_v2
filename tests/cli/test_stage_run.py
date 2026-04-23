@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.cli.main import _prefix_stream_chunk, app
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
@@ -415,6 +416,12 @@ def test_stage_run_executes_supported_non_generic_runtime(
     )
     assert runtime_log_path.exists()
     assert "runtime-output-line" in runtime_log_path.read_text(encoding="utf-8")
+    runtime_exit_metadata_path = runtime_log_path.parent / RUNTIME_EXIT_METADATA_FILENAME
+    assert runtime_exit_metadata_path.exists()
+    runtime_exit_metadata = json.loads(runtime_exit_metadata_path.read_text(encoding="utf-8"))
+    assert runtime_exit_metadata["schema_version"] == 1
+    assert runtime_exit_metadata["exit_code"] == 0
+    assert runtime_exit_metadata["runtime_log_char_count"] >= len("runtime-output-line\n")
 
 
 def test_stage_run_rejects_unknown_runtime() -> None:

@@ -2410,7 +2410,7 @@ Dependencies:
 Local tasks:
 
 - `W8-E1-S2-T1` (done) Add runtime dispatch in `aidd stage run` for `claude-code`, `codex`, and `opencode`.
-- `W8-E1-S2-T2` (planned) Unify runtime artifact persistence for new dispatch paths under the existing run-store layout.
+- `W8-E1-S2-T2` (done) Unify runtime artifact persistence for new dispatch paths under the existing run-store layout.
 - `W8-E1-S2-T3` (planned) Add cross-runtime smoke scenarios that assert required stage output documents were produced.
 
 Exit evidence:

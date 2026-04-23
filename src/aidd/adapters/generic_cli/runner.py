@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import shlex
 import subprocess
 import threading
@@ -13,6 +12,12 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
 
+from aidd.adapters.runtime_artifacts import (
+    RUNTIME_EXIT_METADATA_FILENAME as _RUNTIME_EXIT_METADATA_FILENAME,
+)
+from aidd.adapters.runtime_artifacts import (
+    write_runtime_exit_metadata,
+)
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
@@ -64,9 +69,7 @@ class GenericCliExitClassification(StrEnum):
 
 
 StreamTarget = Literal["stdout", "stderr"]
-RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
-
-
+RUNTIME_EXIT_METADATA_FILENAME = _RUNTIME_EXIT_METADATA_FILENAME
 def _resolve_exit_classification(
     *,
     exit_code: int,
@@ -325,18 +328,13 @@ def persist_attempt_runtime_artifacts(
     runtime_log_path = attempt_path / RUN_RUNTIME_LOG_FILENAME
     runtime_log_path.write_text(run_result.runtime_log_text, encoding="utf-8")
 
-    runtime_exit_metadata_path = attempt_path / RUNTIME_EXIT_METADATA_FILENAME
-    runtime_exit_metadata = {
-        "schema_version": 1,
-        "exit_code": run_result.exit_code,
-        "exit_classification": run_result.exit_classification.value,
-        "stdout_char_count": len(run_result.stdout_text),
-        "stderr_char_count": len(run_result.stderr_text),
-        "runtime_log_char_count": len(run_result.runtime_log_text),
-    }
-    runtime_exit_metadata_path.write_text(
-        json.dumps(runtime_exit_metadata, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    runtime_exit_metadata_path = write_runtime_exit_metadata(
+        attempt_path=attempt_path,
+        exit_code=run_result.exit_code,
+        exit_classification=run_result.exit_classification.value,
+        stdout_text=run_result.stdout_text,
+        stderr_text=run_result.stderr_text,
+        runtime_log_text=run_result.runtime_log_text,
     )
 
     return GenericCliRuntimeArtifacts(

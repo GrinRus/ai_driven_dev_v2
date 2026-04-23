@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -17,6 +18,7 @@ from aidd.adapters.opencode.runner import (
     persist_attempt_runtime_log,
     run_subprocess_with_streaming,
 )
+from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
 
 
 def _context(tmp_path: Path) -> OpenCodeCommandContext:
@@ -175,6 +177,10 @@ def test_persist_attempt_runtime_log_writes_runtime_log(tmp_path: Path) -> None:
 
     assert runtime_log_path.exists()
     assert runtime_log_path.read_text(encoding="utf-8") == run_result.runtime_log_text
+    runtime_exit_metadata_path = runtime_log_path.parent / RUNTIME_EXIT_METADATA_FILENAME
+    assert runtime_exit_metadata_path.exists()
+    runtime_exit_metadata = json.loads(runtime_exit_metadata_path.read_text(encoding="utf-8"))
+    assert runtime_exit_metadata["exit_classification"] == OpenCodeExitClassification.SUCCESS.value
 
 
 def test_run_subprocess_with_streaming_classifies_non_zero_exit(tmp_path: Path) -> None:

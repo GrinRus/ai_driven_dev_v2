@@ -16,6 +16,7 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
 
+from aidd.adapters.runtime_artifacts import write_runtime_exit_metadata
 from aidd.core.interview import (
     AdapterQuestionEvent,
     QuestionPolicy,
@@ -103,6 +104,7 @@ class ClaudeCodeRunResult:
 @dataclass(frozen=True, slots=True)
 class ClaudeCodeRuntimeArtifacts:
     runtime_log_path: Path
+    runtime_exit_metadata_path: Path
 
 
 class ClaudeCodeExitClassification(StrEnum):
@@ -439,7 +441,18 @@ def persist_attempt_runtime_log(
     attempt_path.mkdir(parents=True, exist_ok=True)
     runtime_log_path = attempt_path / RUN_RUNTIME_LOG_FILENAME
     runtime_log_path.write_text(run_result.runtime_log_text, encoding="utf-8")
-    return ClaudeCodeRuntimeArtifacts(runtime_log_path=runtime_log_path)
+    runtime_exit_metadata_path = write_runtime_exit_metadata(
+        attempt_path=attempt_path,
+        exit_code=run_result.exit_code,
+        exit_classification=run_result.exit_classification.value,
+        stdout_text=run_result.stdout_text,
+        stderr_text=run_result.stderr_text,
+        runtime_log_text=run_result.runtime_log_text,
+    )
+    return ClaudeCodeRuntimeArtifacts(
+        runtime_log_path=runtime_log_path,
+        runtime_exit_metadata_path=runtime_exit_metadata_path,
+    )
 
 
 def _normalize_stream_events(

@@ -35,6 +35,7 @@ from aidd.adapters.claude_code.runner import (
     route_questions_with_file_fallback,
     run_subprocess_with_streaming,
 )
+from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.core.interview import (
     AdapterQuestionEvent,
     QuestionPolicy,
@@ -551,7 +552,15 @@ def test_persist_attempt_runtime_log_writes_runtime_log_file(tmp_path: Path) -> 
 
     assert isinstance(artifacts, ClaudeCodeRuntimeArtifacts)
     assert artifacts.runtime_log_path == attempt_path / "runtime.log"
+    assert artifacts.runtime_exit_metadata_path == attempt_path / RUNTIME_EXIT_METADATA_FILENAME
     assert artifacts.runtime_log_path.read_text(encoding="utf-8") == run_result.runtime_log_text
+    runtime_exit_metadata = json.loads(
+        artifacts.runtime_exit_metadata_path.read_text(encoding="utf-8")
+    )
+    assert (
+        runtime_exit_metadata["exit_classification"]
+        == ClaudeCodeExitClassification.SUCCESS.value
+    )
 
 
 def test_normalize_structured_events_collects_json_from_stdout_and_stderr() -> None:
