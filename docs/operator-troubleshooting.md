@@ -20,7 +20,7 @@ uv run aidd doctor
 
 2. Identify the failing lane:
 
-- workflow placeholder (`aidd run`, `aidd stage run`);
+- workflow/stage runtime gate (`aidd run`, `aidd stage run`);
 - stage artifacts and validator state (`aidd stage summary`, `aidd stage questions`);
 - eval lane (`aidd eval run`, `aidd eval summary`).
 
@@ -57,18 +57,20 @@ Actions:
 1. Verify the runtime binary works directly (`<runtime> --version`).
 2. If the runtime command succeeds but AIDD still shows `unknown`, treat this as a probe-parsing gap and capture the full `aidd doctor` output for maintainer triage.
 
-### 3.3 Workflow or stage execution is not yet implemented
+### 3.3 Workflow or stage runtime is not supported for execution
 
 Symptoms:
 
-- `aidd run` prints: `Workflow execution is not implemented yet.`
-- `aidd stage run` prints: `Stage execution is not implemented yet.`
+- `aidd run --runtime <non-generic>` prints:
+  `Workflow execution is currently implemented for runtime 'generic-cli' only.`
+- `aidd stage run --runtime <non-generic>` fails with:
+  `Stage run execution currently supports runtime 'generic-cli' only.`
 
 Actions:
 
-1. Confirm this is expected bootstrap behavior.
-2. Track implementation progress in `docs/backlog/roadmap.md`.
-3. Use `aidd init`, `aidd doctor`, and read-only inspection commands while execution slices are still in progress.
+1. Use `runtime=generic-cli` for workflow and stage execution commands.
+2. Use `aidd doctor` to verify probe availability for other runtimes.
+3. Track execution-parity progress in `docs/backlog/roadmap.md` before expecting non-generic execution.
 
 ### 3.4 Run lookup errors in inspection commands
 

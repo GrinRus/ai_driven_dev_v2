@@ -2330,7 +2330,7 @@ Dependencies:
 
 Local tasks:
 
-- `W7-E3-S4-T1` (next) Update runtime-support statements in `README.md` and operator docs so they do not contradict the current CLI runtime gate.
+- `W7-E3-S4-T1` (done) Update runtime-support statements in `README.md` and operator docs so they do not contradict the current CLI runtime gate.
 - `W7-E3-S4-T2` (planned) Replace placeholder wording for `aidd run` and `aidd stage run` with the current implemented scope.
 - `W7-E3-S4-T3` (planned) Add an explicit temporary limitation note that workflow execution remains `generic-cli` only until parity slices complete.
 - `W7-E3-S4-T4` (planned) Add a traceable roadmap/backlog sync note that records the post-audit queue restoration.

@@ -67,15 +67,23 @@ The project is anchored in these outcomes:
 
 See `docs/product/user-stories.md` for the full set.
 
-## Maintained runtimes
+## Runtime support (current)
 
-Maintained first:
+Workflow and stage execution today:
+
+- `aidd run` supports runtime `generic-cli` only.
+- `aidd stage run` supports runtime `generic-cli` only.
+
+Runtime probes in `aidd doctor`:
 
 - `generic-cli`
 - `claude-code`
+- `codex`
+- `opencode`
 
-Planned next:
+Planned execution parity:
 
+- `claude-code`
 - `codex`
 - `opencode`
 
@@ -194,9 +202,9 @@ The bootstrap CLI already exposes the intended product shape:
 ```bash
 aidd doctor
 aidd init --work-item WI-001
-aidd run --work-item WI-001 --runtime claude-code
+aidd run --work-item WI-001 --runtime generic-cli
 aidd stage run plan --work-item WI-001 --runtime generic-cli
-aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml --runtime claude-code
+aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml --runtime generic-cli
 ```
 
 Today:

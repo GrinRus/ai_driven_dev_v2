@@ -18,7 +18,8 @@ Today:
 
 - `aidd doctor` is functional;
 - `aidd init` is functional;
-- `aidd run` and `aidd stage run` keep the final interface shape but are still placeholders;
+- `aidd run` executes workflow progression for runtime `generic-cli` only;
+- `aidd stage run` executes stage orchestration for runtime `generic-cli` only;
 - `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle.
 
 Plan all operator usage with that constraint in mind.
@@ -32,7 +33,7 @@ Required:
 
 Optional:
 
-- runtime CLIs you want to probe (for example `claude`, `codex`, `opencode`)
+- runtime CLIs you want to probe in `aidd doctor` (for example `claude`, `codex`, `opencode`)
 
 Runtime binaries are external dependencies and are not bundled by AIDD.
 
@@ -125,14 +126,19 @@ Verify that:
 ### 6.4 Validate execution surfaces
 
 ```bash
+uv run aidd run --work-item WI-001 --runtime generic-cli
 uv run aidd run --work-item WI-001 --runtime claude-code
 uv run aidd stage run plan --work-item WI-001 --runtime generic-cli
-uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
+uv run aidd stage run plan --work-item WI-001 --runtime opencode
+uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime generic-cli
 ```
 
 Expected behavior in current bootstrap state:
 
-- `aidd run` and `aidd stage run` report placeholder execution behavior;
+- `aidd run --runtime generic-cli` performs workflow execution;
+- `aidd run --runtime <non-generic>` prints the runtime gate notice and does not execute workflow stages;
+- `aidd stage run --runtime generic-cli` performs stage execution;
+- `aidd stage run --runtime <non-generic>` returns a runtime gate error;
 - `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths.
 
 ## 7. Operational Notes
