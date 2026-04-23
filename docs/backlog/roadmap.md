@@ -2625,10 +2625,10 @@ Exit evidence:
 - `README.md` no longer contradicts runtime parity;
 - `uv run aidd doctor` prints current-state wording that matches post-W9 behavior.
 
-### Epic W10-E1 — published install verification (`next`)
+### Epic W10-E1 — published install verification (`done`)
 Linked stories: `US-09`, `US-10`
 
-#### Slice W10-E1-S1 — release-channel verification (`next`)
+#### Slice W10-E1-S1 — release-channel verification (`done`)
 Goal: turn `US-09` from documented intent into automated evidence against published artifacts.
 
 Primary outputs:
@@ -2653,22 +2653,23 @@ Local tasks:
 - `W10-E1-S1-T1` (done) Add a post-publish PyPI verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged version is installable via `pipx`, then runs `aidd --version` and `aidd doctor`.
 - `W10-E1-S1-T2` (done) Add a post-publish `uv tool install` verification job that retries up to 10 times with 30-second backoff until the tagged version is installable, then runs `aidd --version` and `aidd doctor`.
 - `W10-E1-S1-T3` (done) Add a post-publish GHCR verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged image is pullable, then runs `aidd --version` and `aidd doctor` in the container.
-- `W10-E1-S1-T4` (next) Update release documentation so the three verification jobs are required release evidence for tagged builds.
+- `W10-E1-S1-T4` (done) Update release documentation so the three verification jobs are required release evidence for tagged builds.
 
 Sync notes:
 
 - `2026-04-23` `W10-E1-S1-T1` completed: release workflow now includes a post-publish PyPI verification job with bounded retries and explicit `aidd --version`/`aidd doctor` checks.
 - `2026-04-23` `W10-E1-S1-T2` completed: release workflow now includes a post-publish `uv tool install` verification job with bounded retries and explicit `aidd --version`/`aidd doctor` checks.
 - `2026-04-23` `W10-E1-S1-T3` completed: release workflow now includes a post-publish GHCR verification job with bounded pull retries and containerized `aidd --version`/`aidd doctor` checks.
+- `2026-04-23` `W10-E1-S1-T4` completed: release checklist now names the three post-publish verification jobs as required tagged-release evidence.
 
 Exit evidence:
 
 - a tagged release produces visible pass/fail evidence for `pipx`, `uv tool install`, and GHCR install paths.
 
-### Epic W10-E2 — adapter conformance (`planned`)
+### Epic W10-E2 — adapter conformance (`next`)
 Linked stories: `US-07`, `US-08`
 
-#### Slice W10-E2-S1 — maintained-runtime conformance lane (`planned`)
+#### Slice W10-E2-S1 — maintained-runtime conformance lane (`next`)
 Goal: convert adapter-extension safety from distributed evidence into one repeatable conformance lane.
 
 Primary outputs:
@@ -2691,7 +2692,7 @@ Dependencies:
 
 Local tasks:
 
-- `W10-E2-S1-T1` (planned) Define the maintained-runtime conformance matrix for probe behavior, capability declaration, raw log capture, failure mapping, question surfacing, timeout behavior, and workspace targeting.
+- `W10-E2-S1-T1` (next) Define the maintained-runtime conformance matrix for probe behavior, capability declaration, raw log capture, failure mapping, question surfacing, timeout behavior, and workspace targeting.
 - `W10-E2-S1-T2` (planned) Add an automated adapter-conformance lane that executes the matrix for `generic-cli`, `claude-code`, `codex`, and `opencode` and reports per-runtime pass/fail evidence.
 
 Exit evidence:

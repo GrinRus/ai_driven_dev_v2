@@ -11,6 +11,11 @@ from aidd.core.stages import STAGES
 
 _USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
 _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
+_REQUIRED_RELEASE_VERIFICATION_JOB_IDS: tuple[str, ...] = (
+    "verify-pypi-install",
+    "verify-uv-tool-install",
+    "verify-ghcr-install",
+)
 
 
 def _repo_root() -> Path:
@@ -56,3 +61,19 @@ def test_stage_contract_prompt_pack_paths_exist() -> None:
         "Missing prompt-pack paths declared in stage contracts: "
         f"{', '.join(missing_prompt_pack_paths)}"
     )
+
+
+def test_release_checklist_requires_verification_job_evidence() -> None:
+    release_checklist_path = _repo_root() / "docs" / "release-checklist.md"
+    release_checklist = release_checklist_path.read_text(encoding="utf-8")
+    missing_job_references = [
+        job_id
+        for job_id in _REQUIRED_RELEASE_VERIFICATION_JOB_IDS
+        if job_id not in release_checklist
+    ]
+
+    assert not missing_job_references, (
+        "Release checklist is missing required verification job references: "
+        f"{', '.join(missing_job_references)}"
+    )
+    assert "required release evidence for tagged builds" in release_checklist.lower()

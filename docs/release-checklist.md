@@ -58,11 +58,12 @@ aidd doctor
   - semver aliases (`vX.Y`, `vX`) when applicable;
   - `latest` only for stable releases.
 
-## 5. Release verification checklist (`aidd doctor`)
+## 5. Release verification evidence requirements (`aidd doctor`)
 
-- [ ] Verify installed CLI from package can run `aidd doctor` in a clean shell.
-- [ ] Verify `aidd --version` matches the released version.
-- [ ] Verify `aidd doctor` output includes the expected runtime capability table.
+- [ ] `verify-pypi-install` job passed and its logs include `aidd --version` and `aidd doctor`.
+- [ ] `verify-uv-tool-install` job passed and its logs include `aidd --version` and `aidd doctor`.
+- [ ] `verify-ghcr-install` job passed and its logs include containerized `aidd --version` and `aidd doctor`.
+- [ ] These three jobs are required release evidence for tagged builds.
 
 Suggested package-path verification:
 
