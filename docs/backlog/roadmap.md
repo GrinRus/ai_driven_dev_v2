@@ -40,7 +40,7 @@ When a task touches multiple subsystem families, mixes design and rollout, or ha
 ## Wave 0 — bootstrap artifacts and contributor ergonomics (`done`)
 
 ### Epic W0-E1 — root docs and architecture (`done`)
-Linked stories: `US-01`, `US-02`, `US-07`, `US-09`, `US-10`, `US-13`
+Linked stories: `US-01`, `US-02`, `US-07`, `US-09`, `US-10`
 
 #### Slice W0-E1-S1 — root documentation set (`done`)
 Goal: provide a clear project overview and contributor entrypoint.
@@ -63,7 +63,7 @@ Local tasks:
 - `W0-E1-S2-T5` Write runtime matrix and distribution notes.
 
 ### Epic W0-E2 — planning system and agent ergonomics (`done`)
-Linked stories: `US-10`, `US-11`, `US-13`
+Linked stories: `US-10`
 
 #### Slice W0-E2-S1 — planning model (`done`)
 Goal: make work selection explicit and hierarchical.
@@ -84,7 +84,7 @@ Local tasks:
 - `W0-E2-S2-T3` Add root skills for navigation, backlog work, story checks, live E2E, and log triage.
 
 ### Epic W0-E3 — live E2E discovery (`done`)
-Linked stories: `US-07`, `US-11`
+Linked stories: `US-07`
 
 #### Slice W0-E3-S1 — repository selection (`done`)
 Goal: define a first public-repo live E2E set.
@@ -100,7 +100,7 @@ Local tasks:
 ## Wave 1 — package, local developer loop, and release scaffolding (`done`)
 
 ### Epic W1-E1 — package and CLI scaffold (`done`)
-Linked stories: `US-09`, `US-13`
+Linked stories: `US-09`
 
 #### Slice W1-E1-S1 — installable Python package (`done`)
 Goal: make the repo runnable from source with a real console entrypoint.
@@ -122,7 +122,7 @@ Local tasks:
 - `W1-E1-S2-T3` Add a sample config file.
 
 ### Epic W1-E2 — repository health files (`done`)
-Linked stories: `US-09`, `US-10`, `US-13`
+Linked stories: `US-09`, `US-10`
 
 #### Slice W1-E2-S1 — contribution and license docs (`done`)
 Goal: make the repo ready for external contributors.
@@ -566,7 +566,7 @@ Exit evidence:
 ### Epic W3-E1 — workspace and run store (`planned`)
 Linked stories: `US-02`, `US-07`, `US-09`
 
-#### Slice W3-E1-S1 — workspace bootstrap service (`next`)
+#### Slice W3-E1-S1 — workspace bootstrap service (`done`)
 Goal: move workspace creation logic from the CLI helper into reusable core code.
 
 Primary outputs:
@@ -599,7 +599,7 @@ Exit evidence:
 - workspace creation can be called from code without going through CLI-specific logic;
 - repeated initialization attempts fail or recover in a predictable way.
 
-#### Slice W3-E1-S2 — run metadata and storage (`planned`)
+#### Slice W3-E1-S2 — run metadata and storage (`done`)
 Goal: persist runs and attempts durably.
 
 Primary outputs:
@@ -631,7 +631,7 @@ Exit evidence:
 - each run has durable storage that can be inspected after process exit;
 - attempt history survives retries and repairs.
 
-#### Slice W3-E1-S3 — run lookup and resume helpers (`planned`)
+#### Slice W3-E1-S3 — run lookup and resume helpers (`done`)
 Goal: make existing runs addressable and resumable.
 
 Primary outputs:
@@ -663,10 +663,39 @@ Exit evidence:
 - the orchestration layer can reopen a run without scanning the workspace ad hoc;
 - invalid resume targets fail with clear errors.
 
+#### Slice W3-E1-S4 — prompt provenance in run manifests (`planned`)
+Goal: record prompt provenance so prompt and workflow changes remain auditable and reproducible.
+
+Primary outputs:
+
+- `src/aidd/core/run_store.py`
+- `src/aidd/cli/run_lookup.py`
+- run-manifest regression tests
+
+Touched areas:
+
+- `src/aidd/core/`
+- `src/aidd/cli/`
+- `tests/core/`
+
+Dependencies:
+
+- `W3-E1-S2`
+
+Local tasks:
+
+- `W3-E1-S4-T1` Record repository Git SHA + prompt-pack paths + content hashes in `run-manifest.json` and expose them via `aidd run show`.
+- `W3-E1-S4-T2` Persist per-attempt prompt-pack provenance in `artifact-index.json` (or a sibling artifact) for later eval reproducibility.
+
+Exit evidence:
+
+- a run manifest captures prompt provenance robustly enough to reproduce the exact prompt inputs used;
+- run inspection commands surface the recorded provenance without manual file digging.
+
 ### Epic W3-E2 — stage controller (`planned`)
 Linked stories: `US-01`, `US-02`, `US-03`
 
-#### Slice W3-E2-S1 — stage manifest loader (`planned`)
+#### Slice W3-E2-S1 — stage manifest loader (`done`)
 Goal: load stage definitions and required documents.
 
 Primary outputs:
@@ -700,7 +729,7 @@ Exit evidence:
 - stage metadata can be loaded from files rather than hardcoded in adapters;
 - invalid contract references are caught before stage execution starts.
 
-#### Slice W3-E2-S2 — stage state machine (`planned`)
+#### Slice W3-E2-S2 — stage state machine (`done`)
 Goal: run one stage through prepare -> execute -> validate -> advance/repair/block.
 
 Primary outputs:
@@ -766,7 +795,65 @@ Exit evidence:
 - the orchestrator can explain readiness instead of silently skipping stages;
 - stage order is derived from contracts, not adapter code.
 
-### Epic W3-E3 — interview and repair controllers (`planned`)
+#### Slice W3-E2-S4 — published stage outputs (`next`)
+Goal: make upstream references like `../<stage>/output/*.md` satisfiable after a successful run.
+
+Primary outputs:
+
+- `src/aidd/core/stage_runner.py`
+- output publishing regression tests
+
+Touched areas:
+
+- `src/aidd/core/`
+- `tests/core/`
+
+Dependencies:
+
+- `W3-E2-S1`
+- `W3-E2-S2`
+
+Local tasks:
+
+- `W3-E2-S4-T1` Implement stage-output publishing into `workitems/<id>/stages/<stage>/output/` after validation pass (copy declared primary outputs + `stage-result.md` + `validator-report.md`).
+- `W3-E2-S4-T2` Add regression tests proving downstream required inputs (for example `plan` reads `../idea/output/...`) become satisfiable after publish.
+
+Exit evidence:
+
+- downstream stage required inputs that reference `../<stage>/output/*.md` can resolve successfully after an upstream stage succeeds;
+- published outputs remain stable across retries and can be diffed independently of attempt artifacts.
+
+#### Slice W3-E2-S5 — full validation wiring (`next`)
+Goal: wire semantic and cross-document validators into stage validation and render a combined report.
+
+Primary outputs:
+
+- `src/aidd/core/stage_runner.py`
+- `src/aidd/validators/reports.py`
+- validation wiring regression tests
+
+Touched areas:
+
+- `src/aidd/core/`
+- `src/aidd/validators/`
+- `tests/core/`
+
+Dependencies:
+
+- `W2-E2-S3`
+- `W3-E2-S2`
+
+Local tasks:
+
+- `W3-E2-S5-T1` Wire semantic and cross-document validators into the post-run validation path and render a combined `validator-report.md`.
+- `W3-E2-S5-T2` Add an end-to-end regression: structural passes but semantic/cross-document fails -> verdict is not `pass`, report contains `SEM-*/CROSS-*` findings.
+
+Exit evidence:
+
+- validator reports include semantic and cross-document buckets when applicable;
+- stage progression decisions use the combined verdict rather than structural-only checks.
+
+### Epic W3-E3 — interview and repair controllers (`done`)
 Linked stories: `US-04`, `US-05`, `US-06`
 
 #### Slice W3-E3-S1 — interview controller (`done`)
@@ -805,7 +892,7 @@ Exit evidence:
 - user questions become durable workflow artifacts rather than transient console prompts;
 - blocked stages can resume only after required answers exist.
 
-#### Slice W3-E3-S2 — repair controller (`planned`)
+#### Slice W3-E3-S2 — repair controller (`done`)
 Goal: rerun invalid stages with bounded repair.
 
 Primary outputs:
@@ -843,10 +930,10 @@ Exit evidence:
 
 ## Wave 4 — runtimes and operator UX (`planned`)
 
-### Epic W4-E1 — `generic-cli` adapter (`planned`)
+### Epic W4-E1 — `generic-cli` adapter (`done`)
 Linked stories: `US-01`, `US-06`, `US-08`
 
-#### Slice W4-E1-S1 — runtime probing (`next`)
+#### Slice W4-E1-S1 — runtime probing (`done`)
 Goal: detect whether a generic CLI target is available.
 
 Primary outputs:
@@ -878,7 +965,7 @@ Exit evidence:
 - operators can tell whether the generic adapter is runnable before starting a stage;
 - doctor output reports both availability and a minimal capability summary.
 
-#### Slice W4-E1-S2 — stage execution (`planned`)
+#### Slice W4-E1-S2 — stage execution (`done`)
 Goal: run one stage through a generic command adapter.
 
 Primary outputs:
@@ -914,7 +1001,7 @@ Exit evidence:
 - the generic adapter can execute a stage without hiding native output;
 - adapter failures are separated from validator failures in durable metadata.
 
-#### Slice W4-E1-S3 — document handshake and question surfacing (`planned`)
+#### Slice W4-E1-S3 — document handshake and question surfacing (`done`)
 Goal: connect generic subprocess execution to document validation and interview flow.
 
 Primary outputs:
@@ -949,10 +1036,10 @@ Exit evidence:
 - the generic adapter participates in the same document-first orchestration loop as richer adapters;
 - question files are handled consistently even without runtime-native question events.
 
-### Epic W4-E2 — `claude-code` adapter (`planned`)
+### Epic W4-E2 — `claude-code` adapter (`done`)
 Linked stories: `US-01`, `US-05`, `US-06`, `US-08`
 
-#### Slice W4-E2-S1 — runtime probing (`next`)
+#### Slice W4-E2-S1 — runtime probing (`done`)
 Goal: detect Claude Code availability and adapter capability flags.
 
 Primary outputs:
@@ -984,7 +1071,7 @@ Exit evidence:
 - operators can verify whether the Claude Code adapter is usable on the current machine;
 - the adapter advertises its supported features before first execution.
 
-#### Slice W4-E2-S2 — stage execution and command assembly (`planned`)
+#### Slice W4-E2-S2 — stage execution and command assembly (`done`)
 Goal: launch Claude Code in a way that keeps the core runtime-agnostic.
 
 Primary outputs:
@@ -1017,7 +1104,7 @@ Exit evidence:
 - the Claude Code adapter can be launched repeatedly with deterministic inputs;
 - launch configuration stays isolated inside the adapter boundary.
 
-#### Slice W4-E2-S3 — log streaming and event normalization (`planned`)
+#### Slice W4-E2-S3 — log streaming and event normalization (`done`)
 Goal: preserve native Claude Code output while also producing normalized run artifacts.
 
 Primary outputs:
@@ -1050,7 +1137,7 @@ Exit evidence:
 - operators can see native runtime logs during execution;
 - evals can consume normalized events without losing the raw source log.
 
-#### Slice W4-E2-S4 — question surfacing and resume (`planned`)
+#### Slice W4-E2-S4 — question surfacing and resume (`done`)
 Goal: map runtime-native pauses or questions into the AIDD interview flow.
 
 Primary outputs:
@@ -1087,7 +1174,7 @@ Exit evidence:
 ### Epic W4-E3 — operator CLI experience (`planned`)
 Linked stories: `US-05`, `US-06`, `US-09`
 
-#### Slice W4-E3-S1 — run summaries (`planned`)
+#### Slice W4-E3-S1 — run summaries (`done`)
 Goal: give the operator a useful end-of-run summary.
 
 Primary outputs:
@@ -1118,7 +1205,7 @@ Exit evidence:
 - a completed run leaves the operator with a direct path to the important artifacts;
 - summary output is consistent across adapters.
 
-#### Slice W4-E3-S2 — live log follow mode (`planned`)
+#### Slice W4-E3-S2 — live log follow mode (`done`)
 Goal: make long-running stages observable without leaving the CLI.
 
 Primary outputs:
@@ -1146,7 +1233,7 @@ Exit evidence:
 
 - operators can follow runtime-native logs without opening artifact files manually.
 
-#### Slice W4-E3-S3 — run inspection commands (`planned`)
+#### Slice W4-E3-S3 — run inspection commands (`done`)
 Goal: make stored artifacts easy to inspect after execution.
 
 Primary outputs:
@@ -1178,14 +1265,79 @@ Exit evidence:
 
 - stored run artifacts are inspectable without manual filesystem traversal.
 
+#### Slice W4-E3-S4 — implement `aidd stage run` (`planned`)
+Goal: remove placeholder behavior in `aidd stage run` and execute one stage end to end.
+
+Primary outputs:
+
+- `src/aidd/cli/main.py`
+- `src/aidd/core/stage_runner.py`
+- stage-run integration tests
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `src/aidd/core/`
+- `src/aidd/adapters/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W3-E2-S4`
+- `W3-E2-S5`
+- `W4-E1-S3` or `W4-E2-S4`
+
+Local tasks:
+
+- `W4-E3-S4-T1` Implement core single-stage orchestration for `generic-cli` (prepare -> adapter run -> validation -> persist status -> publish outputs).
+- `W4-E3-S4-T2` Wire `aidd stage run` CLI to the orchestrator, including real `--log-follow` streaming behavior.
+- `W4-E3-S4-T3` Add bounded repair loop integration for stage run (retry with repair brief until budget exhausted).
+- `W4-E3-S4-T4` Add interview loop integration: detect unresolved blocking questions, stop as blocked, resume once answers exist.
+
+Exit evidence:
+
+- `aidd stage run <stage>` executes the full document-first loop and leaves durable artifacts behind;
+- `--log-follow` streams runtime-native output and preserves it in `runtime.log`;
+- repair and interview flows stop or resume without silently skipping required work.
+
+#### Slice W4-E3-S5 — implement `aidd run` workflow execution (`later`)
+Goal: remove placeholder behavior in `aidd run` and execute a full multi-stage workflow.
+
+Primary outputs:
+
+- `src/aidd/cli/main.py`
+- `src/aidd/core/stage_graph.py`
+- workflow-run regression tests
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `src/aidd/core/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W4-E3-S4`
+- `W3-E2-S3`
+
+Local tasks:
+
+- `W4-E3-S5-T1` Implement workflow run loop using stage dependency resolution (select next runnable stage, stop on blocked/failed).
+- `W4-E3-S5-T2` Add CLI progress + final summary output consistent with stored run artifacts.
+
+Exit evidence:
+
+- `aidd run --work-item <id>` can advance stages safely and stop with a clear reason when blocked or failed;
+- run artifacts and summaries remain consistent with the stored stage metadata and validator reports.
+
 ---
 
-## Wave 5 — harness, eval, and log analysis (`planned`)
+## Wave 5 — harness, eval, and log analysis (`done`)
 
-### Epic W5-E1 — scenario runner (`planned`)
-Linked stories: `US-07`, `US-11`, `US-12`
+### Epic W5-E1 — scenario runner (`done`)
+Linked stories: `US-07`
 
-#### Slice W5-E1-S1 — scenario manifest loader (`planned`)
+#### Slice W5-E1-S1 — scenario manifest loader (`done`)
 Goal: load live and local eval scenarios from durable manifest files.
 
 Primary outputs:
@@ -1215,7 +1367,7 @@ Exit evidence:
 - scenarios can be loaded without hardcoded repo-specific logic;
 - invalid manifests fail before repository preparation begins.
 
-#### Slice W5-E1-S2 — repository preparation (`planned`)
+#### Slice W5-E1-S2 — repository preparation (`done`)
 Goal: prepare a clean repository workspace for each scenario run.
 
 Primary outputs:
@@ -1245,7 +1397,7 @@ Exit evidence:
 - every scenario run starts from a deterministic repository state;
 - repo preparation failures are distinguishable from AIDD execution failures.
 
-#### Slice W5-E1-S3 — setup, run, and verification execution (`planned`)
+#### Slice W5-E1-S3 — setup, run, and verification execution (`done`)
 Goal: execute the full harness lifecycle for one scenario.
 
 Primary outputs:
@@ -1278,7 +1430,7 @@ Exit evidence:
 - a single harness command can prepare, run, verify, and archive one scenario;
 - step boundaries remain visible in logs and metadata.
 
-#### Slice W5-E1-S4 — scenario result bundle (`planned`)
+#### Slice W5-E1-S4 — scenario result bundle (`done`)
 Goal: persist a stable artifact set for each scenario run.
 
 Primary outputs:
@@ -1307,10 +1459,10 @@ Exit evidence:
 
 - every scenario run leaves behind one self-contained artifact bundle.
 
-### Epic W5-E2 — graders and verdicts (`planned`)
-Linked stories: `US-07`, `US-12`
+### Epic W5-E2 — graders and verdicts (`done`)
+Linked stories: `US-07`
 
-#### Slice W5-E2-S1 — verdict writing (`planned`)
+#### Slice W5-E2-S1 — verdict writing (`done`)
 Goal: write a durable verdict artifact for each scenario run.
 
 Primary outputs:
@@ -1400,8 +1552,8 @@ Exit evidence:
 
 - operators can compare many scenario runs without opening each artifact bundle individually.
 
-### Epic W5-E3 — live E2E lanes (`planned`)
-Linked stories: `US-07`, `US-11`, `US-12`
+### Epic W5-E3 — live E2E lanes (`done`)
+Linked stories: `US-07`
 
 #### Slice W5-E3-S1 — Typer smoke lane (`done`)
 Goal: make one minimal Typer scenario pass under the harness.
@@ -1581,9 +1733,9 @@ Exit evidence:
 
 ---
 
-## Wave 6 — canonical stage packs (`planned`)
+## Wave 6 — canonical stage packs (`done`)
 
-### Epic W6-E1 — strategy stages (`planned`)
+### Epic W6-E1 — strategy stages (`done`)
 Linked stories: `US-02`, `US-03`, `US-05`
 
 #### Slice W6-E1-S1 — `idea` stage pack (`done`)
@@ -1693,7 +1845,7 @@ Exit evidence:
 - smoke scenario added at `harness/scenarios/smoke/plan-stagepack-smoke.yaml`.
 - smoke bundle archived at `.aidd/reports/evals/eval-stage-plan-smoke-20260422T102945Z`.
 
-### Epic W6-E2 — delivery stages (`planned`)
+### Epic W6-E2 — delivery stages (`done`)
 Linked stories: `US-02`, `US-03`, `US-04`, `US-05`
 
 #### Slice W6-E2-S1 — `review-spec` stage pack (`done`)
@@ -1762,7 +1914,7 @@ Exit evidence:
 - `tasklist` produces reviewable execution units and fails predictably when decomposition is poor.
 - smoke bundle archived at `.aidd/reports/evals/eval-stage-tasklist-smoke-20260422T111757Z`.
 
-#### Slice W6-E2-S3 — `implement` stage pack (`planned`)
+#### Slice W6-E2-S3 — `implement` stage pack (`done`)
 Goal: make `implement` runnable with repair-loop expectations and log-aware validation.
 
 Primary outputs:
@@ -1798,7 +1950,7 @@ Exit evidence:
 
 - `implement` can fail, repair, and succeed through the same document-first loop.
 
-### Epic W6-E3 — assurance stages (`planned`)
+### Epic W6-E3 — assurance stages (`done`)
 Linked stories: `US-03`, `US-04`, `US-07`
 
 #### Slice W6-E3-S1 — `review` stage pack (`done`)
@@ -1872,12 +2024,12 @@ Exit evidence:
 
 ---
 
-## Wave 7 — runtime widening and release hardening (`later`)
+## Wave 7 — runtime widening and release hardening (`planned`)
 
-### Epic W7-E1 — `codex` adapter (`later`)
-Linked stories: `US-01`, `US-08`, `US-12`, `US-13`
+### Epic W7-E1 — `codex` adapter (`done`)
+Linked stories: `US-01`, `US-08`
 
-#### Slice W7-E1-S1 — runtime probing (`later`)
+#### Slice W7-E1-S1 — runtime probing (`done`)
 Goal: detect Codex CLI availability and supported features.
 
 Primary outputs:
@@ -1908,7 +2060,7 @@ Exit evidence:
 
 - the Codex adapter can be discovered and reported without execution support yet being complete.
 
-#### Slice W7-E1-S2 — stage execution and logs (`later`)
+#### Slice W7-E1-S2 — stage execution and logs (`done`)
 Goal: implement document-first execution for Codex.
 
 Primary outputs:
@@ -1939,7 +2091,7 @@ Exit evidence:
 
 - Codex participates in the same execution contract as the first-wave adapters.
 
-#### Slice W7-E1-S3 — parity scenarios (`later`)
+#### Slice W7-E1-S3 — parity scenarios (`done`)
 Goal: prove Codex parity on selected harness scenarios.
 
 Primary outputs:
@@ -1969,7 +2121,7 @@ Exit evidence:
 - Codex can be compared to Claude Code and generic-cli on shared scenarios.
 
 ### Epic W7-E2 — `opencode` adapter (`done`)
-Linked stories: `US-01`, `US-08`, `US-12`
+Linked stories: `US-01`, `US-08`
 
 #### Slice W7-E2-S1 — runtime probing (`done`)
 Goal: detect OpenCode CLI availability and supported features.
@@ -2062,10 +2214,10 @@ Exit evidence:
 
 - OpenCode can be compared to Claude Code, Codex, and generic-cli on shared scenarios.
 
-### Epic W7-E3 — public release hardening (`later`)
+### Epic W7-E3 — public release hardening (`planned`)
 Linked stories: `US-07`, `US-09`, `US-10`
 
-#### Slice W7-E3-S1 — operator handbook (`later`)
+#### Slice W7-E3-S1 — operator handbook (`done`)
 Goal: document how to install, configure, and operate AIDD in real environments.
 
 Primary outputs:
@@ -2095,7 +2247,7 @@ Exit evidence:
 
 - a new operator can install and diagnose AIDD without reading the source tree.
 
-#### Slice W7-E3-S2 — release operations (`later`)
+#### Slice W7-E3-S2 — release operations (`done`)
 Goal: finalize repeatable packaging and publishing operations.
 
 Primary outputs:
@@ -2125,7 +2277,7 @@ Exit evidence:
 
 - releases can be published and verified through a documented, repeatable path.
 
-#### Slice W7-E3-S3 — compatibility and maintenance policy (`later`)
+#### Slice W7-E3-S3 — compatibility and maintenance policy (`done`)
 Goal: define how AIDD supports runtimes, Python versions, and scenario baselines over time.
 
 Primary outputs:
@@ -2156,3 +2308,35 @@ Local tasks:
 Exit evidence:
 
 - contributors and operators know what support guarantees AIDD actually makes.
+
+#### Slice W7-E3-S4 — doc + planning consistency cleanup (`next`)
+Goal: remove planning and documentation drift and add lightweight consistency checks.
+
+Primary outputs:
+
+- `docs/backlog/roadmap.md`
+- `docs/architecture/runtime-matrix.md`
+- `docs/architecture/target-architecture.md`
+- a consistency check script or test
+
+Touched areas:
+
+- `docs/`
+- `tests/`
+
+Dependencies:
+
+- none
+
+Local tasks:
+
+- `W7-E3-S4-T1` Fix invalid `Linked stories` references in `docs/backlog/roadmap.md` so they reference only defined user story ids.
+- `W7-E3-S4-T2` Align runtime support vocabulary between `docs/architecture/runtime-matrix.md` and `docs/compatibility-policy.md`.
+- `W7-E3-S4-T3` Reconcile workspace layout + stage IO semantics in `docs/architecture/target-architecture.md` with `src/aidd/core/workspace.py` and the `output/` publishing model.
+- `W7-E3-S4-T4` Add a lightweight consistency check (script or test) that fails on unknown user story ids in roadmap and missing prompt-pack paths in stage contracts.
+
+Exit evidence:
+
+- roadmap references only user story ids that exist in `docs/product/user-stories.md`;
+- docs do not contradict runtime tier policy and workspace IO semantics;
+- a consistency check catches future drift in CI.
