@@ -19,6 +19,7 @@ from aidd.core.stage_runner import (
     StageExecutionState,
     ValidationVerdict,
     decide_post_validation_transition,
+    derive_validation_verdict,
     discover_stage_markdown_outputs,
     persist_execution_state,
     persist_validation_state,
@@ -301,6 +302,26 @@ def test_generic_cli_handshake_semantic_failure_is_reported(tmp_path: Path) -> N
     ).read_text(encoding="utf-8")
     assert "`SEM-PLACEHOLDER-CONTENT`" in report_text
 
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+    verdict = derive_validation_verdict(findings=structural.findings)
+    assert verdict is not ValidationVerdict.PASS
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=verdict,
+    )
+    transition = decide_post_validation_transition(validation_state)
+    assert transition.action is PostValidationAction.REPAIR
+    assert transition.next_state is StageState.REPAIR_NEEDED
+
 
 def test_generic_cli_handshake_question_blocked_flow_waits(tmp_path: Path) -> None:
     workspace_root, execution_state, invocation = _prepare_plan_attempt(tmp_path)
@@ -336,12 +357,17 @@ def test_generic_cli_handshake_question_blocked_flow_waits(tmp_path: Path) -> No
         stage="plan",
         status=StageState.VALIDATING.value,
     )
+    verdict = derive_validation_verdict(
+        findings=structural.findings,
+        interview_routing=interview_routing,
+    )
+    assert verdict is not ValidationVerdict.PASS
     validation_state = persist_validation_state(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
-        verdict=ValidationVerdict.PASS,
+        verdict=verdict,
     )
     transition = decide_post_validation_transition(
         validation_state,

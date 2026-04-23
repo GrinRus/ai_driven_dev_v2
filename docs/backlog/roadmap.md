@@ -823,7 +823,7 @@ Exit evidence:
 - downstream stage required inputs that reference `../<stage>/output/*.md` can resolve successfully after an upstream stage succeeds;
 - published outputs remain stable across retries and can be diffed independently of attempt artifacts.
 
-#### Slice W3-E2-S5 — full validation wiring (`next`)
+#### Slice W3-E2-S5 — full validation wiring (`done`)
 Goal: wire semantic and cross-document validators into stage validation and render a combined report.
 
 Primary outputs:
@@ -846,7 +846,7 @@ Dependencies:
 Local tasks:
 
 - `W3-E2-S5-T1` (done) Wire semantic and cross-document validators into the post-run validation path and render a combined `validator-report.md`.
-- `W3-E2-S5-T2` Add an end-to-end regression: structural passes but semantic/cross-document fails -> verdict is not `pass`, report contains `SEM-*/CROSS-*` findings.
+- `W3-E2-S5-T2` (done) Add an end-to-end regression: structural passes but semantic/cross-document fails -> verdict is not `pass`, report contains `SEM-*/CROSS-*` findings.
 
 Exit evidence:
 

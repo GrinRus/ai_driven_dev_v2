@@ -26,6 +26,7 @@ from aidd.core.stage_runner import (
     StageValidationState,
     ValidationVerdict,
     decide_post_validation_transition,
+    derive_validation_verdict,
     discover_stage_markdown_outputs,
     persist_execution_state,
     persist_validation_state,
@@ -39,6 +40,7 @@ from aidd.core.stage_runner import (
     update_stage_unblock_state,
 )
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
+from aidd.validators.models import ValidationFinding
 
 
 def _materialize_expected_inputs(paths: tuple[Path, ...]) -> None:
@@ -726,6 +728,41 @@ def test_prepare_adapter_invocation_repair_attempt_requires_repair_brief(
             preparation_bundle=preparation_bundle,
             execution_state=second_attempt,
         )
+
+
+def test_derive_validation_verdict_maps_combined_validation_outcomes() -> None:
+    assert derive_validation_verdict(findings=()) is ValidationVerdict.PASS
+    assert derive_validation_verdict(
+        findings=(
+            ValidationFinding(
+                code="SEM-INCOMPLETE-SECTION",
+                message="Semantic section is incomplete.",
+            ),
+        )
+    ) is ValidationVerdict.REPAIR
+    assert derive_validation_verdict(
+        findings=(
+            ValidationFinding(
+                code="CROSS-BLOCKING-UNANSWERED",
+                message="Blocking question is unresolved.",
+            ),
+        )
+    ) is ValidationVerdict.BLOCKED
+
+    interview_routing = StageInterviewRouting(
+        stage="plan",
+        work_item="WI-001",
+        run_id="run-001",
+        attempt_number=1,
+        questions_path=Path("/tmp/questions.md"),
+        answers_path=Path("/tmp/answers.md"),
+        unresolved_blocking_question_ids=("Q1",),
+        requires_interview=True,
+    )
+    assert derive_validation_verdict(
+        findings=(),
+        interview_routing=interview_routing,
+    ) is ValidationVerdict.BLOCKED
 
 
 @pytest.mark.parametrize(

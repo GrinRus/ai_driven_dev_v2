@@ -30,7 +30,10 @@ from aidd.core.stage_registry import (
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.core.workspace import stage_root as workspace_stage_root
-from aidd.validators.cross_document import validate_cross_document_consistency
+from aidd.validators.cross_document import (
+    BLOCKING_UNANSWERED_CODE,
+    validate_cross_document_consistency,
+)
 from aidd.validators.models import ValidationFinding
 from aidd.validators.reports import write_validator_report
 from aidd.validators.semantic import validate_semantic_outputs
@@ -132,6 +135,20 @@ class StageInterviewRouting:
     answers_path: Path
     unresolved_blocking_question_ids: tuple[str, ...]
     requires_interview: bool
+
+
+def derive_validation_verdict(
+    *,
+    findings: tuple[ValidationFinding, ...],
+    interview_routing: StageInterviewRouting | None = None,
+) -> ValidationVerdict:
+    if any(finding.code == BLOCKING_UNANSWERED_CODE for finding in findings):
+        return ValidationVerdict.BLOCKED
+    if findings:
+        return ValidationVerdict.REPAIR
+    if interview_routing is not None and interview_routing.requires_interview:
+        return ValidationVerdict.BLOCKED
+    return ValidationVerdict.PASS
 
 
 @dataclass(frozen=True, slots=True)
