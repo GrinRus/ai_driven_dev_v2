@@ -1322,7 +1322,7 @@ Dependencies:
 
 Local tasks:
 
-- `W4-E3-S5-T1` Implement workflow run loop using stage dependency resolution (select next runnable stage, stop on blocked/failed).
+- `W4-E3-S5-T1` (done) Implement workflow run loop using stage dependency resolution (select next runnable stage, stop on blocked/failed).
 - `W4-E3-S5-T2` Add CLI progress + final summary output consistent with stored run artifacts.
 
 Exit evidence:

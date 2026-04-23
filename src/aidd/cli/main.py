@@ -43,6 +43,7 @@ from aidd.core.run_store import (
     load_stage_metadata,
     work_item_runs_root,
 )
+from aidd.core.stage_graph import select_next_runnable_stage, summarize_workflow_advancement
 from aidd.core.stage_registry import resolve_prompt_pack_paths
 from aidd.core.stage_runner import (
     AdapterExecutionOutcome,
@@ -227,17 +228,100 @@ def run_callback(
         str | None,
         typer.Option("--work-item", help="Work item id"),
     ] = None,
-    runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "claude-code",
+    runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+    root: Annotated[
+        Path | None,
+        typer.Option("--root", help="Root AIDD storage directory. Defaults to config value."),
+    ] = None,
+    config: Annotated[
+        Path,
+        typer.Option("--config", help="Path to an AIDD TOML config file."),
+    ] = Path("aidd.example.toml"),
+    log_follow: Annotated[
+        bool,
+        typer.Option(
+            "--log-follow/--no-log-follow",
+            help="Enable explicit live-log follow mode for each stage run.",
+        ),
+    ] = False,
 ) -> None:
     """Run the AIDD workflow for a work item."""
     if ctx.invoked_subcommand is not None:
         return
     if work_item is None:
         raise typer.BadParameter("Missing option '--work-item'.")
-    console.print(f"AIDD run: work_item={work_item} runtime={runtime}")
+
+    if runtime != "generic-cli":
+        console.print(f"AIDD run: work_item={work_item} runtime={runtime}")
+        console.print(
+            "Workflow execution is currently implemented for runtime 'generic-cli' only. "
+            "Use `aidd stage run` for stage-level execution on this runtime for now."
+        )
+        return
+
+    cfg = load_config(config)
+    workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
+    run_id = _allocate_stage_run_id(workspace_root=workspace_root, work_item=work_item)
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id=runtime,
+        stage_target=STAGES[-1],
+        config_snapshot={
+            "config_path": config.as_posix(),
+            "workspace_root": workspace_root.as_posix(),
+            "runtime_command": cfg.generic_cli_command,
+            "log_follow": log_follow,
+            "mode": "workflow",
+        },
+    )
+    console.print(f"AIDD run: work_item={work_item} runtime={runtime} run_id={run_id}")
+
+    executed_stage_count = 0
+    while True:
+        next_stage = select_next_runnable_stage(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+        )
+        if next_stage is None:
+            break
+
+        console.print(f"Workflow next stage: {next_stage}")
+        try:
+            stage_run(
+                stage=next_stage,
+                work_item=work_item,
+                runtime=runtime,
+                run_id=run_id,
+                root=workspace_root,
+                config=config,
+                log_follow=log_follow,
+            )
+        except typer.Exit as exc:
+            if exc.exit_code not in (None, 0):
+                console.print(f"Workflow stopped at stage '{next_stage}'.")
+                raise
+        executed_stage_count += 1
+
+    advancement = summarize_workflow_advancement(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
+    incomplete = [
+        summary for summary in advancement if summary.current_status != StageState.SUCCEEDED.value
+    ]
+    if incomplete:
+        console.print("Workflow stopped: no runnable stage is currently available.")
+        for summary in incomplete[:3]:
+            console.print(f"- {summary.stage}: {summary.reason}")
+        raise typer.Exit(code=1)
+
     console.print(
-        "Workflow execution is not implemented yet. "
-        "See docs/backlog/roadmap.md for the next implementation slices."
+        "Workflow run completed: "
+        f"run_id={run_id} stages_executed={executed_stage_count}"
     )
 
 
@@ -410,6 +494,10 @@ def stage_run(
     stage: Annotated[str, typer.Argument(help="Stage name")],
     work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
     runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Optional run id; defaults to latest blocked or new run."),
+    ] = None,
     root: Annotated[
         Path | None,
         typer.Option("--root", help="Root AIDD storage directory. Defaults to config value."),
@@ -438,19 +526,39 @@ def stage_run(
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
     repair_policy = RepairBudgetPolicy(default_max_repair_attempts=cfg.max_repair_attempts)
     selected_run_id: str | None = None
-    latest_existing_run = latest_run_id(workspace_root=workspace_root, work_item=work_item)
-    if latest_existing_run is not None:
-        latest_stage_metadata = load_stage_metadata(
+    if run_id is not None:
+        normalized_run_id = run_id.strip()
+        if not normalized_run_id:
+            raise typer.BadParameter("Option '--run-id' must not be empty.")
+        selected_run_id = normalized_run_id
+    else:
+        latest_existing_run = latest_run_id(workspace_root=workspace_root, work_item=work_item)
+        if latest_existing_run is not None:
+            latest_stage_metadata = load_stage_metadata(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=latest_existing_run,
+                stage=stage,
+            )
+            if (
+                latest_stage_metadata is not None
+                and latest_stage_metadata.status.lower() == StageState.BLOCKED.value
+            ):
+                selected_run_id = latest_existing_run
+
+    is_resume_candidate = False
+    if selected_run_id is not None:
+        selected_stage_metadata = load_stage_metadata(
             workspace_root=workspace_root,
             work_item=work_item,
-            run_id=latest_existing_run,
+            run_id=selected_run_id,
             stage=stage,
         )
-        if (
-            latest_stage_metadata is not None
-            and latest_stage_metadata.status.lower() == StageState.BLOCKED.value
-        ):
-            selected_run_id = latest_existing_run
+        is_resume_candidate = (
+            selected_stage_metadata is not None
+            and selected_stage_metadata.status.lower() == StageState.BLOCKED.value
+        )
+
     run_id = selected_run_id or _allocate_stage_run_id(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -476,7 +584,7 @@ def stage_run(
         f"stage={stage} work_item={work_item} runtime={runtime} "
         f"log_follow={log_follow} run_id={run_id}"
     )
-    if selected_run_id is not None:
+    if is_resume_candidate:
         console.print("Detected blocked stage metadata on the latest run; attempting resume.")
     if log_follow:
         console.print("Live-log follow mode enabled for runtime stream output.")
