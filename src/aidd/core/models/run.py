@@ -224,12 +224,35 @@ class StageRunMetadata:
 
 @dataclass(frozen=True, slots=True)
 class RunArtifactIndex:
+    @dataclass(frozen=True, slots=True)
+    class PromptPackProvenanceEntry:
+        path: str
+        sha256: str
+
+        def to_dict(self) -> dict[str, str]:
+            return {
+                "path": self.path,
+                "sha256": self.sha256,
+            }
+
+        @classmethod
+        def from_dict(
+            cls,
+            payload: dict[str, Any],
+        ) -> RunArtifactIndex.PromptPackProvenanceEntry | None:
+            path = str(payload.get("path", "")).strip()
+            sha256 = str(payload.get("sha256", "")).strip()
+            if not path or not sha256:
+                return None
+            return cls(path=path, sha256=sha256)
+
     run_id: str
     work_item_id: str
     stage: str
     attempt_number: int
     documents: dict[str, str]
     logs: dict[str, str]
+    prompt_pack_provenance: tuple[PromptPackProvenanceEntry, ...]
     created_at_utc: str
     updated_at_utc: str
     schema_version: int = 1
@@ -244,6 +267,7 @@ class RunArtifactIndex:
         attempt_number: int,
         documents: dict[str, str],
         logs: dict[str, str],
+        prompt_pack_provenance: tuple[PromptPackProvenanceEntry, ...] = (),
         changed_at_utc: str,
     ) -> RunArtifactIndex:
         return cls(
@@ -253,12 +277,23 @@ class RunArtifactIndex:
             attempt_number=attempt_number,
             documents=dict(documents),
             logs=dict(logs),
+            prompt_pack_provenance=tuple(prompt_pack_provenance),
             created_at_utc=changed_at_utc,
             updated_at_utc=changed_at_utc,
         )
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> RunArtifactIndex:
+        raw_prompt_pack_provenance = payload.get("prompt_pack_provenance", [])
+        prompt_pack_provenance: list[RunArtifactIndex.PromptPackProvenanceEntry] = []
+        if isinstance(raw_prompt_pack_provenance, list):
+            for entry in raw_prompt_pack_provenance:
+                if not isinstance(entry, dict):
+                    continue
+                parsed_entry = RunArtifactIndex.PromptPackProvenanceEntry.from_dict(entry)
+                if parsed_entry is None:
+                    continue
+                prompt_pack_provenance.append(parsed_entry)
         return cls(
             schema_version=int(payload.get("schema_version", 1)),
             run_id=str(payload["run_id"]),
@@ -267,6 +302,7 @@ class RunArtifactIndex:
             attempt_number=int(payload["attempt_number"]),
             documents=dict(payload.get("documents", {})),
             logs=dict(payload.get("logs", {})),
+            prompt_pack_provenance=tuple(prompt_pack_provenance),
             created_at_utc=str(payload["created_at_utc"]),
             updated_at_utc=str(payload["updated_at_utc"]),
         )
@@ -280,6 +316,7 @@ class RunArtifactIndex:
             "attempt_number": self.attempt_number,
             "documents": dict(self.documents),
             "logs": dict(self.logs),
+            "prompt_pack_provenance": [entry.to_dict() for entry in self.prompt_pack_provenance],
             "created_at_utc": self.created_at_utc,
             "updated_at_utc": self.updated_at_utc,
         }

@@ -316,6 +316,7 @@ def persist_execution_state(
     work_item: str,
     run_id: str,
     stage: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     changed_at_utc: datetime | None = None,
 ) -> StageExecutionState:
     attempt_path = create_next_attempt_directory(
@@ -323,6 +324,7 @@ def persist_execution_state(
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        contracts_root=contracts_root,
     )
     stage_metadata_path = persist_stage_status(
         workspace_root=workspace_root,
@@ -898,6 +900,7 @@ def prepare_stage_resume_after_answers(
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        contracts_root=contracts_root,
         changed_at_utc=changed_at_utc,
     )
     adapter_invocation = prepare_adapter_invocation(
@@ -941,6 +944,7 @@ def run_single_stage_orchestration(
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        contracts_root=contracts_root,
         changed_at_utc=changed_at_utc,
     )
     adapter_invocation = prepare_adapter_invocation(

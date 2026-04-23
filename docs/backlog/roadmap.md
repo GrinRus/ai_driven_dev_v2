@@ -561,9 +561,9 @@ Exit evidence:
 
 ---
 
-## Wave 3 — orchestration core (`planned`)
+## Wave 3 — orchestration core (`done`)
 
-### Epic W3-E1 — workspace and run store (`planned`)
+### Epic W3-E1 — workspace and run store (`done`)
 Linked stories: `US-02`, `US-07`, `US-09`
 
 #### Slice W3-E1-S1 — workspace bootstrap service (`done`)
@@ -663,7 +663,7 @@ Exit evidence:
 - the orchestration layer can reopen a run without scanning the workspace ad hoc;
 - invalid resume targets fail with clear errors.
 
-#### Slice W3-E1-S4 — prompt provenance in run manifests (`planned`)
+#### Slice W3-E1-S4 — prompt provenance in run manifests (`done`)
 Goal: record prompt provenance so prompt and workflow changes remain auditable and reproducible.
 
 Primary outputs:
@@ -685,14 +685,14 @@ Dependencies:
 Local tasks:
 
 - `W3-E1-S4-T1` (done) Record repository Git SHA + prompt-pack paths + content hashes in `run-manifest.json` and expose them via `aidd run show`.
-- `W3-E1-S4-T2` Persist per-attempt prompt-pack provenance in `artifact-index.json` (or a sibling artifact) for later eval reproducibility.
+- `W3-E1-S4-T2` (done) Persist per-attempt prompt-pack provenance in `artifact-index.json` (or a sibling artifact) for later eval reproducibility.
 
 Exit evidence:
 
 - a run manifest captures prompt provenance robustly enough to reproduce the exact prompt inputs used;
 - run inspection commands surface the recorded provenance without manual file digging.
 
-### Epic W3-E2 — stage controller (`planned`)
+### Epic W3-E2 — stage controller (`done`)
 Linked stories: `US-01`, `US-02`, `US-03`
 
 #### Slice W3-E2-S1 — stage manifest loader (`done`)

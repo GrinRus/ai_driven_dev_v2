@@ -83,18 +83,18 @@ def _collect_prompt_pack_provenance(
     stage_target: str,
     contracts_root: Path,
     repository_root: Path,
-) -> list[dict[str, str]]:
+) -> tuple[RunArtifactIndex.PromptPackProvenanceEntry, ...]:
     prompt_pack_paths = resolve_prompt_pack_paths(
         stage=stage_target,
         contracts_root=contracts_root,
     )
-    return [
-        {
-            "path": prompt_path,
-            "sha256": _sha256_hex(repository_root / prompt_path),
-        }
+    return tuple(
+        RunArtifactIndex.PromptPackProvenanceEntry(
+            path=prompt_path,
+            sha256=_sha256_hex(repository_root / prompt_path),
+        )
         for prompt_path in prompt_pack_paths
-    ]
+    )
 
 
 def run_store_root(workspace_root: Path) -> Path:
@@ -232,6 +232,9 @@ def create_next_attempt_directory(
     work_item: str,
     run_id: str,
     stage: str,
+    *,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    repository_root: Path | None = None,
 ) -> Path:
     attempts_root = run_attempts_root(
         workspace_root=workspace_root,
@@ -255,12 +258,18 @@ def create_next_attempt_directory(
         attempt_number=attempt_number,
     )
     attempt_path.mkdir(parents=False, exist_ok=False)
+    resolved_repository_root = _resolve_repository_root(
+        contracts_root=contracts_root,
+        repository_root=repository_root,
+    )
     write_attempt_artifact_index(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
         stage=stage,
         attempt_number=attempt_number,
+        contracts_root=contracts_root,
+        repository_root=resolved_repository_root,
     )
     return attempt_path
 
@@ -363,6 +372,8 @@ def write_attempt_artifact_index(
     attempt_number: int,
     *,
     changed_at_utc: datetime | None = None,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    repository_root: Path | None = None,
 ) -> Path:
     artifact_index_path = run_attempt_artifact_index_path(
         workspace_root=workspace_root,
@@ -391,6 +402,15 @@ def write_attempt_artifact_index(
         stage=stage,
         attempt_number=attempt_number,
     )
+    resolved_repository_root = _resolve_repository_root(
+        contracts_root=contracts_root,
+        repository_root=repository_root,
+    )
+    prompt_pack_provenance = _collect_prompt_pack_provenance(
+        stage_target=stage,
+        contracts_root=contracts_root,
+        repository_root=resolved_repository_root,
+    )
 
     index = RunArtifactIndex.create(
         run_id=run_id,
@@ -399,6 +419,7 @@ def write_attempt_artifact_index(
         attempt_number=attempt_number,
         documents=documents,
         logs=logs,
+        prompt_pack_provenance=prompt_pack_provenance,
         changed_at_utc=timestamp,
     )
     if existing_index is not None:
@@ -410,6 +431,7 @@ def write_attempt_artifact_index(
             attempt_number=index.attempt_number,
             documents=index.documents,
             logs=index.logs,
+            prompt_pack_provenance=index.prompt_pack_provenance,
             created_at_utc=existing_index.created_at_utc,
             updated_at_utc=timestamp,
         )
@@ -613,7 +635,7 @@ def create_run_manifest(
         "stage_target": stage_target,
         "config_snapshot": config_snapshot,
         "repository_git_sha": repository_git_sha,
-        "prompt_pack_provenance": prompt_pack_provenance,
+        "prompt_pack_provenance": [entry.to_dict() for entry in prompt_pack_provenance],
         "created_at_utc": now,
         "updated_at_utc": now,
     }
@@ -662,12 +684,20 @@ class RunStore:
             repository_root=repository_root,
         )
 
-    def create_next_attempt(self, stage: str) -> Path:
+    def create_next_attempt(
+        self,
+        stage: str,
+        *,
+        contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+        repository_root: Path | None = None,
+    ) -> Path:
         return create_next_attempt_directory(
             workspace_root=self.workspace_root,
             work_item=self.work_item,
             run_id=self.run_id,
             stage=stage,
+            contracts_root=contracts_root,
+            repository_root=repository_root,
         )
 
     def attempt_artifact_index_path(self, stage: str, attempt_number: int) -> Path:
@@ -685,6 +715,8 @@ class RunStore:
         attempt_number: int,
         *,
         changed_at_utc: datetime | None = None,
+        contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+        repository_root: Path | None = None,
     ) -> Path:
         return write_attempt_artifact_index(
             workspace_root=self.workspace_root,
@@ -693,6 +725,8 @@ class RunStore:
             stage=stage,
             attempt_number=attempt_number,
             changed_at_utc=changed_at_utc,
+            contracts_root=contracts_root,
+            repository_root=repository_root,
         )
 
     def stage_metadata_path(self, stage: str) -> Path:

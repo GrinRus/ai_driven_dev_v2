@@ -18,6 +18,7 @@ from aidd.core.run_store import (
     create_next_attempt_directory,
     create_run_manifest,
     format_attempt_directory_name,
+    load_attempt_artifact_index,
     next_attempt_number,
     persist_stage_status,
     run_attempt_artifact_index_path,
@@ -210,6 +211,53 @@ def test_attempt_artifact_index_records_canonical_stage_document_paths(tmp_path:
         .relative_to(workspace_root)
         .as_posix()
     }
+    prompt_pack_provenance = payload["prompt_pack_provenance"]
+    assert isinstance(prompt_pack_provenance, list)
+    assert prompt_pack_provenance
+    system_prompt = next(
+        entry
+        for entry in prompt_pack_provenance
+        if entry["path"] == "prompt-packs/stages/plan/system.md"
+    )
+    expected_hash = hashlib.sha256(Path(system_prompt["path"]).read_bytes()).hexdigest()
+    assert system_prompt["sha256"] == expected_hash
+
+
+def test_load_attempt_artifact_index_supports_legacy_payload_without_prompt_provenance(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    )
+    payload = json.loads(artifact_index_path.read_text(encoding="utf-8"))
+    payload.pop("prompt_pack_provenance", None)
+    artifact_index_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    )
+
+    assert loaded is not None
+    assert loaded.prompt_pack_provenance == ()
 
 
 def test_run_store_fresh_run_creates_manifest_attempt_and_stage_metadata(tmp_path: Path) -> None:
