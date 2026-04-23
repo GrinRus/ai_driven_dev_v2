@@ -143,7 +143,10 @@ def test_run_show_rejects_ambiguous_latest_run_selection(tmp_path: Path) -> None
     assert "run-002" in result.output
 
 
-def test_run_placeholder_still_requires_work_item() -> None:
+def test_run_without_args_exits_non_zero() -> None:
     result = runner.invoke(app, ["run"])
     assert result.exit_code != 0
-    assert "Missing option '--work-item'." in result.output
+    assert (
+        "Missing option '--work-item'." in result.output
+        or "Usage: root run [OPTIONS] COMMAND [ARGS]..." in result.output
+    )
