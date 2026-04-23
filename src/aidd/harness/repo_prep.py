@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import fcntl
 import re
 import shutil
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -93,6 +96,31 @@ def _cleanup_transient_git_files(repo_path: Path) -> None:
                 ) from exc
 
 
+@contextmanager
+def _acquire_cache_lock(*, lock_path: Path) -> Iterator[None]:
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with lock_path.open("a+", encoding="utf-8") as lock_file:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            except OSError as exc:
+                raise RepoPreparationError(
+                    f"Failed to acquire harness cache lock '{lock_path.as_posix()}': {exc}"
+                ) from exc
+            try:
+                yield
+            finally:
+                try:
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                except OSError:
+                    # Lock release on close is best-effort; close still guarantees unlock semantics.
+                    pass
+    except OSError as exc:
+        raise RepoPreparationError(
+            f"Failed to open harness cache lock '{lock_path.as_posix()}': {exc}"
+        ) from exc
+
+
 def _pin_repository_revision(*, repo_path: Path, scenario: Scenario) -> None:
     target_revision = scenario.repo.revision
     if target_revision:
@@ -126,27 +154,31 @@ def prepare_scenario_repository(*, cache_root: Path, scenario: Scenario) -> Prep
     repo_cache_root = cache_root / "repos"
     repo_cache_root.mkdir(parents=True, exist_ok=True)
 
-    repo_path = repo_cache_root / _repo_slug(scenario.repo.url)
-    if repo_path.exists():
-        if not (repo_path / ".git").exists():
-            _remove_tree(repo_path)
-        else:
-            _cleanup_transient_git_files(repo_path)
-            _run_git(["fetch", "--prune", "origin"], cwd=repo_path)
-            _pin_repository_revision(repo_path=repo_path, scenario=scenario)
-            return PreparedRepository(
-                repo_path=repo_path,
-                action="fetched",
-                resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=repo_path),
-            )
+    slug = _repo_slug(scenario.repo.url)
+    repo_path = repo_cache_root / slug
+    repo_lock_path = cache_root / ".locks" / f"repo-{slug}.lock"
 
-    _run_git(["clone", "--origin", "origin", scenario.repo.url, repo_path.as_posix()])
-    _pin_repository_revision(repo_path=repo_path, scenario=scenario)
-    return PreparedRepository(
-        repo_path=repo_path,
-        action="cloned",
-        resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=repo_path),
-    )
+    with _acquire_cache_lock(lock_path=repo_lock_path):
+        if repo_path.exists():
+            if not (repo_path / ".git").exists():
+                _remove_tree(repo_path)
+            else:
+                _cleanup_transient_git_files(repo_path)
+                _run_git(["fetch", "--prune", "origin"], cwd=repo_path)
+                _pin_repository_revision(repo_path=repo_path, scenario=scenario)
+                return PreparedRepository(
+                    repo_path=repo_path,
+                    action="fetched",
+                    resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=repo_path),
+                )
+
+        _run_git(["clone", "--origin", "origin", scenario.repo.url, repo_path.as_posix()])
+        _pin_repository_revision(repo_path=repo_path, scenario=scenario)
+        return PreparedRepository(
+            repo_path=repo_path,
+            action="cloned",
+            resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=repo_path),
+        )
 
 
 def prepare_working_copy(
@@ -157,36 +189,39 @@ def prepare_working_copy(
 ) -> PreparedWorkingCopy:
     working_copy_root = cache_root / "workdirs"
     working_copy_root.mkdir(parents=True, exist_ok=True)
-    working_copy_path = working_copy_root / _repo_slug(scenario.repo.url)
+    slug = _repo_slug(scenario.repo.url)
+    working_copy_path = working_copy_root / slug
+    workdir_lock_path = cache_root / ".locks" / f"workdir-{slug}.lock"
 
-    action = "reused"
-    if working_copy_path.exists():
-        if not (working_copy_path / ".git").exists():
-            _remove_tree(working_copy_path)
+    with _acquire_cache_lock(lock_path=workdir_lock_path):
+        action = "reused"
+        if working_copy_path.exists():
+            if not (working_copy_path / ".git").exists():
+                _remove_tree(working_copy_path)
+                action = "cloned"
+        else:
             action = "cloned"
-    else:
-        action = "cloned"
-    if action == "cloned":
+        if action == "cloned":
+            _run_git(
+                [
+                    "clone",
+                    "--origin",
+                    "origin",
+                    prepared_repository.repo_path.as_posix(),
+                    working_copy_path.as_posix(),
+                ]
+            )
+
+        _cleanup_transient_git_files(working_copy_path)
         _run_git(
-            [
-                "clone",
-                "--origin",
-                "origin",
-                prepared_repository.repo_path.as_posix(),
-                working_copy_path.as_posix(),
-            ]
+            ["checkout", "--detach", "--force", prepared_repository.resolved_revision],
+            cwd=working_copy_path,
         )
+        _run_git(["reset", "--hard", prepared_repository.resolved_revision], cwd=working_copy_path)
+        _run_git(["clean", "-fdx"], cwd=working_copy_path)
 
-    _cleanup_transient_git_files(working_copy_path)
-    _run_git(
-        ["checkout", "--detach", "--force", prepared_repository.resolved_revision],
-        cwd=working_copy_path,
-    )
-    _run_git(["reset", "--hard", prepared_repository.resolved_revision], cwd=working_copy_path)
-    _run_git(["clean", "-fdx"], cwd=working_copy_path)
-
-    return PreparedWorkingCopy(
-        working_copy_path=working_copy_path,
-        action=action,
-        resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=working_copy_path),
-    )
+        return PreparedWorkingCopy(
+            working_copy_path=working_copy_path,
+            action=action,
+            resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=working_copy_path),
+        )

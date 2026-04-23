@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 
+import aidd.harness.repo_prep as repo_prep
 from aidd.harness.repo_prep import prepare_scenario_repository, prepare_working_copy
 from aidd.harness.scenarios import (
     Scenario,
@@ -279,3 +283,83 @@ def test_prepare_working_copy_replaces_stale_non_git_path(tmp_path: Path) -> Non
     assert refreshed_working_copy.working_copy_path == first_working_copy.working_copy_path
     assert (refreshed_working_copy.working_copy_path / ".git").exists()
     assert not stale_file.exists()
+
+
+def test_prepare_scenario_repository_serializes_concurrent_access(
+    tmp_path: Path, monkeypatch
+) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+
+    in_flight = 0
+    max_in_flight = 0
+    counter_lock = threading.Lock()
+    real_run_git = repo_prep._run_git
+
+    def tracked_run_git(args: list[str], *, cwd: Path | None = None) -> None:
+        nonlocal in_flight, max_in_flight
+        with counter_lock:
+            in_flight += 1
+            max_in_flight = max(max_in_flight, in_flight)
+        try:
+            time.sleep(0.02)
+            real_run_git(args, cwd=cwd)
+        finally:
+            with counter_lock:
+                in_flight -= 1
+
+    monkeypatch.setattr(repo_prep, "_run_git", tracked_run_git)
+
+    def _prepare() -> None:
+        prepare_scenario_repository(cache_root=tmp_path / "cache", scenario=scenario)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(_prepare), pool.submit(_prepare)]
+        for future in futures:
+            future.result(timeout=30)
+
+    assert max_in_flight == 1
+
+
+def test_prepare_working_copy_serializes_concurrent_access(tmp_path: Path, monkeypatch) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+    prepared_repository = prepare_scenario_repository(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+    )
+
+    in_flight = 0
+    max_in_flight = 0
+    counter_lock = threading.Lock()
+    real_run_git = repo_prep._run_git
+
+    def tracked_run_git(args: list[str], *, cwd: Path | None = None) -> None:
+        nonlocal in_flight, max_in_flight
+        with counter_lock:
+            in_flight += 1
+            max_in_flight = max(max_in_flight, in_flight)
+        try:
+            time.sleep(0.02)
+            real_run_git(args, cwd=cwd)
+        finally:
+            with counter_lock:
+                in_flight -= 1
+
+    monkeypatch.setattr(repo_prep, "_run_git", tracked_run_git)
+
+    def _prepare() -> None:
+        prepare_working_copy(
+            cache_root=tmp_path / "cache",
+            scenario=scenario,
+            prepared_repository=prepared_repository,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(_prepare), pool.submit(_prepare)]
+        for future in futures:
+            future.result(timeout=30)
+
+    assert max_in_flight == 1
