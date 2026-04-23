@@ -14,6 +14,12 @@ AIDD is intended to ship through three primary channels:
 
 Source checkout remains the default contributor path.
 
+Installed live E2E is a separate operator-proof path:
+
+- contributors work from source checkout;
+- live scenarios in development and CI build a local wheel from that checkout;
+- the harness installs that wheel via `uv tool` and runs installed `aidd` from the target repository root.
+
 ## 3. Runtime binaries
 
 AIDD does not bundle third-party runtimes.
@@ -85,10 +91,15 @@ Recommended release flow:
 
 1. tag a release candidate,
 2. build the Python package,
-3. run release verification,
+3. run installability and live-scenario release verification,
 4. publish to PyPI,
 5. publish container image,
 6. publish release notes.
+
+Current tagged-release live-scenario proof uses `AIDD-LIVE-005` with the published package
+installed via `uv tool` and the deterministic `generic-cli` release-proof runtime helper. That
+job proves install/cwd/workspace semantics for the published artifact; maintained-runtime task
+completion remains a separate development and nightly signal.
 
 Operator-oriented step-by-step release execution lives in `docs/release-checklist.md`.
 

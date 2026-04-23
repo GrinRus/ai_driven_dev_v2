@@ -253,6 +253,8 @@ class RunArtifactIndex:
     documents: dict[str, str]
     logs: dict[str, str]
     prompt_pack_provenance: tuple[PromptPackProvenanceEntry, ...]
+    resource_source: str | None
+    resource_root: str | None
     created_at_utc: str
     updated_at_utc: str
     schema_version: int = 1
@@ -268,6 +270,8 @@ class RunArtifactIndex:
         documents: dict[str, str],
         logs: dict[str, str],
         prompt_pack_provenance: tuple[PromptPackProvenanceEntry, ...] = (),
+        resource_source: str | None = None,
+        resource_root: str | None = None,
         changed_at_utc: str,
     ) -> RunArtifactIndex:
         return cls(
@@ -278,6 +282,8 @@ class RunArtifactIndex:
             documents=dict(documents),
             logs=dict(logs),
             prompt_pack_provenance=tuple(prompt_pack_provenance),
+            resource_source=resource_source,
+            resource_root=resource_root,
             created_at_utc=changed_at_utc,
             updated_at_utc=changed_at_utc,
         )
@@ -303,6 +309,16 @@ class RunArtifactIndex:
             documents=dict(payload.get("documents", {})),
             logs=dict(payload.get("logs", {})),
             prompt_pack_provenance=tuple(prompt_pack_provenance),
+            resource_source=(
+                str(payload["resource_source"])
+                if payload.get("resource_source") is not None
+                else None
+            ),
+            resource_root=(
+                str(payload["resource_root"])
+                if payload.get("resource_root") is not None
+                else None
+            ),
             created_at_utc=str(payload["created_at_utc"]),
             updated_at_utc=str(payload["updated_at_utc"]),
         )
@@ -317,6 +333,8 @@ class RunArtifactIndex:
             "documents": dict(self.documents),
             "logs": dict(self.logs),
             "prompt_pack_provenance": [entry.to_dict() for entry in self.prompt_pack_provenance],
+            "resource_source": self.resource_source,
+            "resource_root": self.resource_root,
             "created_at_utc": self.created_at_utc,
             "updated_at_utc": self.updated_at_utc,
         }

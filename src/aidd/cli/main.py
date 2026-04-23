@@ -83,7 +83,9 @@ from aidd.core.run_store import (
     work_item_runs_root,
 )
 from aidd.core.stage_graph import select_next_runnable_stage, summarize_workflow_advancement
-from aidd.core.stage_registry import resolve_prompt_pack_paths
+from aidd.core.stage_registry import (
+    resolve_prompt_pack_file_paths,
+)
 from aidd.core.stage_runner import (
     AdapterExecutionOutcome,
     AdapterInvocationBundle,
@@ -280,9 +282,8 @@ def doctor(
 
     console.print(table)
     console.print(
-        "Workflow and stage execution are available on maintained runtimes. "
-        "Remaining roadmap work focuses on release-channel verification and "
-        "durable non-generic live E2E evidence."
+        "Workflow, installed live E2E, and published-package release proof are "
+        "available on maintained runtimes."
     )
 
 
@@ -679,8 +680,8 @@ def stage_run(
             "log_follow": log_follow,
         },
     )
-    prompt_pack_paths = resolve_prompt_pack_paths(stage=stage)
-    prompt_pack_path = Path(prompt_pack_paths[0])
+    prompt_pack_file_paths = resolve_prompt_pack_file_paths(stage=stage)
+    prompt_pack_path = prompt_pack_file_paths[0]
 
     console.print(
         "AIDD stage run: "
@@ -761,7 +762,7 @@ def stage_run(
                     details=generic_run_result.exit_classification.value,
                 )
 
-            prompt_pack_paths_for_runtime = tuple(Path(path) for path in prompt_pack_paths)
+            prompt_pack_paths_for_runtime = tuple(prompt_pack_file_paths)
             if runtime == "claude-code":
                 claude_context = ClaudeCodeCommandContext(
                     stage=invocation.stage,

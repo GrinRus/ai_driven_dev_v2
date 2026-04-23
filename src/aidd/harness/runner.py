@@ -143,6 +143,7 @@ def invoke_aidd_run(
     runtime_id: str,
     work_item: str,
     aidd_command: tuple[str, ...] = ("uv", "run", "aidd"),
+    config_path: Path | None = None,
     environment: Mapping[str, str] | None = None,
 ) -> HarnessAiddRunResult:
     _validate_working_copy_path(working_copy_path)
@@ -157,7 +158,17 @@ def invoke_aidd_run(
     if not aidd_command:
         raise ValueError("aidd_command must contain at least one token.")
 
-    command = (*aidd_command, "run", "--work-item", work_item, "--runtime", runtime_id)
+    command_parts: list[str] = [
+        *aidd_command,
+        "run",
+        "--work-item",
+        work_item,
+        "--runtime",
+        runtime_id,
+    ]
+    if config_path is not None:
+        command_parts.extend(("--config", config_path.as_posix()))
+    command = tuple(command_parts)
     command_env = dict(os.environ)
     command_env.update(
         {

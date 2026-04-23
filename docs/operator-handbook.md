@@ -8,7 +8,8 @@ Use it when you need a repeatable local setup for:
 
 - checking runtime availability;
 - initializing a work item workspace;
-- validating the baseline toolchain before deeper scenario work.
+- validating the baseline toolchain before deeper scenario work;
+- understanding the installed live E2E operator path.
 
 ## 2. Scope and Current Product State
 
@@ -18,12 +19,13 @@ Today:
 
 - `aidd doctor` is functional;
 - `aidd init` is functional;
-- `aidd run` executes workflow progression for runtime `generic-cli` only;
+- `aidd run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`;
 - `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`;
-- `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle.
-- Workflow runtime gating is a temporary limitation while parity work remains in progress.
+- `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle;
+- live scenarios under `harness/scenarios/live/` prepare a pinned public-repository working copy, install a local AIDD wheel via `uv tool`, and run installed `aidd` from the target repository root.
+- tagged releases additionally verify one published-package live scenario on `AIDD-LIVE-005` with the deterministic `generic-cli` release-proof runtime.
 
-Plan all operator usage with that constraint in mind.
+Smoke, conformance, and live operator proof are separate lanes. Do not treat them as interchangeable.
 
 ## 3. Prerequisites
 
@@ -57,7 +59,9 @@ uv run pytest
 
 ## 5. Configuration
 
-By default, `aidd doctor` reads `aidd.example.toml` from the repository root.
+By default, `aidd doctor` and other commands look for `aidd.example.toml`.
+In a source checkout, that file lives at the repository root as an example config.
+Installed operator flows may omit it entirely and rely on defaults or an explicit `--config`.
 
 Use this as the base operator config template:
 
@@ -137,22 +141,24 @@ uv run aidd run --work-item WI-001 --runtime generic-cli
 uv run aidd run --work-item WI-001 --runtime claude-code
 uv run aidd stage run plan --work-item WI-001 --runtime generic-cli
 uv run aidd stage run plan --work-item WI-001 --runtime opencode
-uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime generic-cli
+uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
 ```
 
 Expected behavior in current bootstrap state:
 
-- `aidd run --runtime generic-cli` performs workflow execution;
-- `aidd run --runtime <non-generic>` prints the runtime gate notice and does not execute workflow stages;
+- `aidd run --runtime <maintained-runtime>` performs workflow execution through the selected adapter;
 - `aidd stage run --runtime generic-cli` performs stage execution;
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
-- `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths.
+- `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths;
+- live `aidd eval run` installs a local wheel with `uv tool`, enters the pinned target repository, and keeps `.aidd/` inside that repository.
+- tagged-release live proof installs the published package via `uv tool` and runs `AIDD-LIVE-005` with the release-proof `generic-cli` runtime helper.
 
 ## 7. Operational Notes
 
 - Prefer absolute paths for config and workspace roots in automation scripts.
 - Treat `doctor` output as the canonical machine-readiness snapshot before live scenario work.
 - Record the exact command outputs for reproducible environment triage.
+- For live E2E, distinguish the AIDD artifact root from the target repository cwd.
 - Keep runtime authentication state and secrets outside the repository.
 
 ## 8. Related References

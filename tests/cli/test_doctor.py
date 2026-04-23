@@ -10,10 +10,9 @@ from aidd.cli import main as cli_main
 
 runner = CliRunner()
 
-_POST_W9_DOCTOR_FOOTER = (
-    "Workflow and stage execution are available on maintained runtimes. "
-    "Remaining roadmap work focuses on release-channel verification and "
-    "durable non-generic live E2E evidence."
+_CURRENT_DOCTOR_FOOTER = (
+    "Workflow, installed live E2E, and published-package release proof are "
+    "available on maintained runtimes."
 )
 
 
@@ -54,7 +53,7 @@ def _fake_capability_report(runtime_id: str, command: str) -> CapabilityReport:
     )
 
 
-def test_doctor_reports_post_w9_footer(
+def test_doctor_reports_current_footer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -84,5 +83,5 @@ def test_doctor_reports_post_w9_footer(
 
     assert result.exit_code == 0, result.output
     normalized_stdout = " ".join(result.stdout.split())
-    expected_footer = " ".join(_POST_W9_DOCTOR_FOOTER.split())
+    expected_footer = " ".join(_CURRENT_DOCTOR_FOOTER.split())
     assert expected_footer in normalized_stdout

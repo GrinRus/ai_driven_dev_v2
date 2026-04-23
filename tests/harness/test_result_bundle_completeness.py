@@ -79,6 +79,7 @@ def _write_run_artifact_sources(
 def _assert_required_bundle_files(layout_root: Path) -> None:
     required_artifact_names = (
         "harness-metadata.json",
+        "install-transcript.json",
         "setup-transcript.json",
         "run-transcript.json",
         "verify-transcript.json",

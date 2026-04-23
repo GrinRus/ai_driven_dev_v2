@@ -284,12 +284,54 @@ def test_stage_run_without_log_follow_omits_stream_prefixes(tmp_path: Path) -> N
     assert result.exit_code == 0, result.output
     assert "[generic-cli:plan:stdout]" not in result.stdout
     assert "[generic-cli:plan:stderr]" not in result.stdout
-    run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-002")
+
+
+def test_stage_run_resolves_runtime_resources_from_outside_source_checkout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_root = tmp_path / "external-project"
+    project_root.mkdir(parents=True)
+    workspace_root = project_root / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-EXT")
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+        exit_code=0,
+    )
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    )
+    config_path = _write_cli_config(tmp_path=project_root, runtime_command=runtime_command)
+    monkeypatch.chdir(project_root)
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-EXT",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (
+        workspace_root / "workitems" / "WI-EXT" / "stages" / "plan" / "output" / "plan.md"
+    ).exists()
+    run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-EXT")
     runtime_log_path = (
         workspace_root
         / "reports"
         / "runs"
-        / "WI-002"
+        / "WI-EXT"
         / run_id
         / "stages"
         / "plan"

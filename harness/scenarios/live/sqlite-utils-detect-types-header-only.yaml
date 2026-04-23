@@ -20,17 +20,16 @@ setup:
   - Install sqlite-utils development dependencies before the smoke run.
   - Confirm the repository environment is ready for targeted regression verification.
 aidd_invocation:
-  command:
-  - uv
-  - run
-  - aidd
-  - run
   work_item: WI-LIVE-SQLITE-SMOKE
-  work_item_flag: --work-item
-  runtime_flag: --runtime
   expected_stage_scope:
     start: plan
     end: qa
+operator_execution:
+  install_channel: uv-tool
+  artifact_source: local-wheel
+  execution_cwd: repository-root
+  workspace_root: .aidd
+  resource_source: packaged-assets
 verify:
   commands:
   - uv run pytest -q || pytest -q
@@ -42,8 +41,9 @@ verify:
   - No new failing tests are introduced relative to baseline.
   - QA stage output artifacts exist for the selected work item.
 workflow_bundle:
-  lane: primary-non-generic-workflow-proof
+  lane: installed-live-operator-proof
   maintained_runtime: codex
+  release_proof_runtime: generic-cli
   required_artifacts:
   - stage-result.md
   - validator-report.md
@@ -55,6 +55,7 @@ reference_run:
   status: harness_pass
   resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
   bundle_root: .aidd/reports/evals/eval-live-005-codex-reference-20260422T123518Z
+  execution_model: legacy-source-checkout
   first_failure_signal: none (setup, aidd invocation, and verification all passed).
 opencode_reference_run:
   run_id: eval-live-005-opencode-20260422T142733Z
@@ -63,6 +64,7 @@ opencode_reference_run:
   status: harness_pass
   resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
   bundle_root: .aidd/reports/evals/eval-live-005-opencode-20260422T142733Z
+  execution_model: legacy-source-checkout
   first_failure_signal: none (setup, aidd invocation, and verification all passed).
 limits:
   patch_budget_files: 8
@@ -70,5 +72,6 @@ limits:
 interview:
   required: false
 runtime_targets:
+- generic-cli
 - codex
 - opencode

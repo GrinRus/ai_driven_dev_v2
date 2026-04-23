@@ -44,15 +44,6 @@ def test_live_scenario_exposes_repo_steps_and_run_config() -> None:
         "No new failing tests are introduced relative to baseline.",
         "QA stage output artifacts exist for the selected work item.",
     ]
-    assert scenario.raw["workflow_bundle"] == {
-        "lane": "primary-non-generic-workflow-proof",
-        "maintained_runtime": "codex",
-        "required_artifacts": [
-            "stage-result.md",
-            "validator-report.md",
-            "runtime.log",
-        ],
-    }
     assert scenario.raw["reference_run"]["run_id"] == "eval-live-001-reference-20260422T081401Z"
     assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
     assert scenario.raw["reference_run"]["status"] == "harness_fail"
@@ -146,13 +137,17 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         "Install sqlite-utils development dependencies before the smoke run.",
         "Confirm the repository environment is ready for targeted regression verification.",
     ]
-    assert scenario.raw["aidd_invocation"]["command"] == ["uv", "run", "aidd", "run"]
     assert scenario.raw["aidd_invocation"]["work_item"] == "WI-LIVE-SQLITE-SMOKE"
-    assert scenario.raw["aidd_invocation"]["work_item_flag"] == "--work-item"
-    assert scenario.raw["aidd_invocation"]["runtime_flag"] == "--runtime"
     assert scenario.raw["aidd_invocation"]["expected_stage_scope"] == {
         "start": "plan",
         "end": "qa",
+    }
+    assert scenario.raw["operator_execution"] == {
+        "install_channel": "uv-tool",
+        "artifact_source": "local-wheel",
+        "execution_cwd": "repository-root",
+        "workspace_root": ".aidd",
+        "resource_source": "packaged-assets",
     }
     assert scenario.raw["verify"]["pass_conditions"] == [
         "Verification command exits with status 0.",
@@ -160,6 +155,16 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         "No new failing tests are introduced relative to baseline.",
         "QA stage output artifacts exist for the selected work item.",
     ]
+    assert scenario.raw["workflow_bundle"] == {
+        "lane": "installed-live-operator-proof",
+        "maintained_runtime": "codex",
+        "release_proof_runtime": "generic-cli",
+        "required_artifacts": [
+            "stage-result.md",
+            "validator-report.md",
+            "runtime.log",
+        ],
+    }
     assert (
         scenario.raw["reference_run"]["run_id"]
         == "eval-live-005-codex-reference-20260422T123518Z"
@@ -174,6 +179,7 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         scenario.raw["reference_run"]["bundle_root"]
         == ".aidd/reports/evals/eval-live-005-codex-reference-20260422T123518Z"
     )
+    assert scenario.raw["reference_run"]["execution_model"] == "legacy-source-checkout"
     assert (
         scenario.raw["opencode_reference_run"]["run_id"]
         == "eval-live-005-opencode-20260422T142733Z"
@@ -184,7 +190,11 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         scenario.raw["opencode_reference_run"]["bundle_root"]
         == ".aidd/reports/evals/eval-live-005-opencode-20260422T142733Z"
     )
-    assert scenario.runtime_targets == ("codex", "opencode")
+    assert (
+        scenario.raw["opencode_reference_run"]["execution_model"]
+        == "legacy-source-checkout"
+    )
+    assert scenario.runtime_targets == ("generic-cli", "codex", "opencode")
 
 
 def test_hono_smoke_scenario_exposes_pinned_revision_and_objective() -> None:

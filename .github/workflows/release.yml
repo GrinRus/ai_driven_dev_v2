@@ -180,6 +180,44 @@ jobs:
           uv tool run --from "${PACKAGE_SPEC}" aidd --version
           uv tool run --from "${PACKAGE_SPEC}" aidd doctor
 
+  verify-published-live-e2e:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: verify-uv-tool-install
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Verify published package on a pinned live scenario
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          AIDD_EVAL_GENERIC_CLI_COMMAND: python ${{ github.workspace }}/scripts/release_live_proof_runtime.py
+        run: |
+          set -euo pipefail
+
+          PACKAGE_VERSION="${RELEASE_TAG#v}"
+          export AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==${PACKAGE_VERSION}"
+          uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime generic-cli
+
+      - name: Upload published live eval bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-live-e2e-bundle
+          path: .aidd/reports/evals/
+
   publish-container:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
@@ -223,6 +261,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - verify-uv-tool-install
+      - verify-published-live-e2e
       - publish-container
     runs-on: ubuntu-latest
     permissions:

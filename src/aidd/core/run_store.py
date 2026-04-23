@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from aidd.core.models.run import RepairHistoryEntry, RunArtifactIndex, StageRunMetadata
+from aidd.core.resources import resolve_resource_layout_from_contracts_root
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, resolve_prompt_pack_paths
 from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
@@ -50,7 +51,17 @@ def _resolve_repository_root(
 ) -> Path:
     if repository_root is not None:
         return repository_root.resolve(strict=False)
-    return contracts_root.resolve(strict=False).parent.parent
+    return resolve_resource_layout_from_contracts_root(contracts_root).root
+
+
+def _classify_resource_source(resource_root: Path) -> str:
+    if resource_root.name == "_resources":
+        return "packaged"
+    if (resource_root / "contracts").is_dir() and (resource_root / "prompt-packs").is_dir():
+        if (resource_root / "pyproject.toml").exists():
+            return "repository"
+        return "custom"
+    return "custom"
 
 
 def _resolve_repository_git_sha(repository_root: Path) -> str | None:
@@ -83,7 +94,7 @@ def _collect_prompt_pack_provenance(
     *,
     stage_target: str,
     contracts_root: Path,
-    repository_root: Path,
+    resource_root: Path,
 ) -> tuple[RunArtifactIndex.PromptPackProvenanceEntry, ...]:
     prompt_pack_paths = resolve_prompt_pack_paths(
         stage=stage_target,
@@ -92,7 +103,7 @@ def _collect_prompt_pack_provenance(
     return tuple(
         RunArtifactIndex.PromptPackProvenanceEntry(
             path=prompt_path,
-            sha256=_sha256_hex(repository_root / prompt_path),
+            sha256=_sha256_hex((resource_root / prompt_path).resolve(strict=False)),
         )
         for prompt_path in prompt_pack_paths
     )
@@ -420,10 +431,11 @@ def write_attempt_artifact_index(
         contracts_root=contracts_root,
         repository_root=repository_root,
     )
+    resource_source = _classify_resource_source(resolved_repository_root)
     prompt_pack_provenance = _collect_prompt_pack_provenance(
         stage_target=stage,
         contracts_root=contracts_root,
-        repository_root=resolved_repository_root,
+        resource_root=resolved_repository_root,
     )
 
     index = RunArtifactIndex.create(
@@ -434,6 +446,8 @@ def write_attempt_artifact_index(
         documents=documents,
         logs=logs,
         prompt_pack_provenance=prompt_pack_provenance,
+        resource_source=resource_source,
+        resource_root=resolved_repository_root.as_posix(),
         changed_at_utc=timestamp,
     )
     if existing_index is not None:
@@ -446,6 +460,8 @@ def write_attempt_artifact_index(
             documents=index.documents,
             logs=index.logs,
             prompt_pack_provenance=index.prompt_pack_provenance,
+            resource_source=index.resource_source,
+            resource_root=index.resource_root,
             created_at_utc=existing_index.created_at_utc,
             updated_at_utc=timestamp,
         )
@@ -635,11 +651,12 @@ def create_run_manifest(
         contracts_root=contracts_root,
         repository_root=repository_root,
     )
+    resource_source = _classify_resource_source(resolved_repository_root)
     repository_git_sha = _resolve_repository_git_sha(resolved_repository_root)
     prompt_pack_provenance = _collect_prompt_pack_provenance(
         stage_target=stage_target,
         contracts_root=contracts_root,
-        repository_root=resolved_repository_root,
+        resource_root=resolved_repository_root,
     )
     payload = {
         "schema_version": 1,
@@ -649,6 +666,8 @@ def create_run_manifest(
         "stage_target": stage_target,
         "config_snapshot": config_snapshot,
         "repository_git_sha": repository_git_sha,
+        "resource_source": resource_source,
+        "resource_root": resolved_repository_root.as_posix(),
         "prompt_pack_provenance": [entry.to_dict() for entry in prompt_pack_provenance],
         "created_at_utc": now,
         "updated_at_utc": now,

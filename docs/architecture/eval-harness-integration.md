@@ -2,95 +2,135 @@
 
 ## 1. Purpose
 
-This document explains how harness and eval capabilities are embedded into AIDD v2 from the beginning.
+This document defines how harness and eval capabilities are embedded into AIDD and how they relate to installed live E2E execution.
 
 ## 2. Why harness is part of product architecture
 
-AIDD v2 supports multiple runtimes and document repair loops. That means the system can fail in ways that ordinary unit tests do not capture:
+AIDD supports multiple runtimes, repair loops, and interview pauses. Ordinary unit tests do not capture failures such as:
 
-- runtime availability problems,
-- permission or auth issues,
-- document validation churn,
-- self-repair loops,
-- question/answer pauses,
-- adapter-specific log behavior,
-- drift between runtimes.
+- runtime availability problems;
+- installability drift between source and packaged CLI paths;
+- permission or auth issues;
+- document validation churn;
+- self-repair loops;
+- question and answer pauses;
+- adapter-specific log behavior;
+- drift between maintained runtimes;
+- divergence between contributor checkout behavior and operator-installed behavior.
 
-The harness is therefore a core subsystem, not an afterthought.
+The harness is therefore product code, not an afterthought.
 
 ## 3. Harness responsibilities
 
 The harness owns:
 
-- fixture workspace setup,
-- scenario loading,
-- adapter probing,
-- stage execution control,
-- raw log capture,
-- normalized event capture,
-- validator and repair history capture,
-- replay support,
-- grader invocation,
-- log analysis,
-- final verdict assembly.
+- scenario loading;
+- adapter probing;
+- repository preparation and pinning;
+- install preparation for installed-live lanes;
+- stage or workflow execution control;
+- raw log capture;
+- normalized event capture;
+- validator and repair history capture;
+- question and answer artifact capture;
+- replay support;
+- grader invocation;
+- log analysis;
+- final verdict assembly;
+- durable result-bundle writing.
 
 ## 4. Eval layers
 
 ### 4.1 Unit validation layer
 
-- document validators,
-- parser behavior,
-- cross-document rules,
+- document validators;
+- parser behavior;
+- cross-document rules;
 - failure classification.
 
 ### 4.2 Adapter conformance layer
 
-- probe,
-- launch,
-- raw log capture,
-- question handling,
-- timeout behavior,
-- failure mapping.
+This layer answers: does an adapter honor the maintained runtime contract?
+
+It covers:
+
+- probe behavior;
+- capability declaration;
+- launch semantics;
+- raw log capture;
+- question handling;
+- timeout behavior;
+- failure mapping;
+- workspace targeting.
 
 ### 4.3 Stage smoke layer
 
-Run one stage with a controlled fixture and verify:
-- output documents,
-- validator behavior,
-- repair behavior,
-- logs.
+This layer runs one stage or one bounded workflow subset and verifies:
 
-### 4.4 Full e2e workflow layer
+- required output documents;
+- validator behavior;
+- repair behavior;
+- log capture;
+- verdict correctness.
 
-Run the complete workflow or a large subset across a realistic repository fixture.
+### 4.4 Installed live operator layer
+
+This layer answers: can an operator install AIDD, enter a real repository, and run a governed flow there?
+
+Its contract is:
+
+- the target repository is a pinned public repository from the live catalog;
+- the artifact under test is an installed AIDD CLI, not a source-checkout shortcut;
+- AIDD runs from the target repository root;
+- `.aidd/` is rooted inside that repository;
+- the harness seeds a target-repository `aidd.example.toml` for the installed run;
+- install, setup, run, verify, and teardown evidence is preserved.
+
+Development and CI should usually exercise this lane through a local wheel installed by `uv tool`.
+
+### 4.5 Published artifact release proof layer
+
+This layer answers: can the published release artifact complete at least one pinned live workflow scenario?
+
+It extends installability checks beyond `aidd --version` and `aidd doctor` to one real live workflow proof.
 
 ## 5. Scenario model
 
-Harness scenarios should be defined in YAML and describe:
+Harness scenarios are defined in YAML and describe:
 
-- scenario id,
-- runtime(s),
-- fixture repo,
-- stage scope,
-- prompt pack versions,
-- validation expectations,
-- whether user questions are expected,
-- grading rules,
-- timeout and budget limits.
+- scenario id;
+- target repository and optional pin;
+- stage scope;
+- runtime targets;
+- setup and verify commands;
+- interview expectations;
+- grading rules;
+- timeout and patch-budget limits.
+
+Live scenarios additionally imply:
+
+- install channel;
+- artifact source and identity;
+- target repository cwd as the operator execution root;
+- `.aidd` workspace rooted inside that target repository.
+- a live runtime config written into the prepared working copy, with optional command overrides from `AIDD_EVAL_<RUNTIME>_COMMAND`.
 
 ## 6. Eval run lifecycle
 
-1. Probe the requested adapter.
-2. Materialize or reset the fixture workspace.
-3. Start the requested stage or flow.
-4. Capture raw runtime logs.
-5. Capture normalized events.
-6. Record question/answer events.
-7. Record validator outcomes.
-8. Record repair attempts.
-9. Run graders.
-10. Run log analysis.
-11. Write final verdict artifacts.
+1. Load the scenario and validate runtime eligibility.
+2. Probe the requested adapter and record capabilities.
+3. Prepare or reset the pinned target repository working copy.
+4. Prepare the AIDD artifact under test when the scenario uses the installed-live lane.
+5. Run setup commands in the target repository root.
+6. Launch AIDD from the target repository root.
+7. Capture raw runtime logs and structured logs when supported.
+8. Capture normalized events.
+9. Capture question and answer artifacts when used.
+10. Capture validator outcomes and repair attempts.
+11. Run scenario verification commands.
+12. Run graders.
+13. Run log analysis.
+14. Write verdict and durable bundle metadata, including install provenance when applicable.
 
 ## 7. Mandatory output artifacts
 
@@ -98,53 +138,63 @@ Every eval run should aim to write:
 
 - `.aidd/reports/evals/<run_id>/runtime.log`
 - `.aidd/reports/evals/<run_id>/runtime.jsonl` when supported
-- `.aidd/reports/evals/<run_id>/events.jsonl`
+- `.aidd/reports/evals/<run_id>/events.jsonl` when supported
 - `.aidd/reports/evals/<run_id>/validator-report.md`
 - `.aidd/reports/evals/<run_id>/repair-history.md`
 - `.aidd/reports/evals/<run_id>/log-analysis.md`
 - `.aidd/reports/evals/<run_id>/grader.json`
 - `.aidd/reports/evals/<run_id>/verdict.md`
+- `.aidd/reports/evals/<run_id>/summary.md`
+- `.aidd/reports/evals/<run_id>/setup-transcript.json`
+- `.aidd/reports/evals/<run_id>/run-transcript.json`
+- `.aidd/reports/evals/<run_id>/verify-transcript.json`
+- `.aidd/reports/evals/<run_id>/teardown-transcript.json`
+
+Installed live runs should additionally preserve install provenance in harness metadata:
+
+- install channel;
+- artifact source;
+- artifact identity;
+- target repository cwd;
+- workspace root;
+- packaged-resource source.
 
 ## 8. Log analysis requirements
 
-Log analysis is mandatory for eval runs because logs often reveal adapter and runtime problems before graders do.
+Log analysis is mandatory because logs often reveal adapter or install-path failures before graders do.
 
 The analysis should detect at least:
 
-- repeated identical failure loops,
-- repeated validator failures across repair attempts,
-- permission denials,
-- auth problems,
-- no-op runs,
-- missing file writes,
-- suspiciously short runs,
-- timeout drift,
-- excessive question churn.
-
-Output should exist in both:
-- human-readable Markdown,
-- machine-friendly structured form if needed later.
+- repeated identical failure loops;
+- repeated validator failures across repair attempts;
+- permission denials;
+- auth problems;
+- no-op runs;
+- missing file writes;
+- suspiciously short runs;
+- timeout drift;
+- excessive question churn;
+- install-path mismatches between target cwd and artifact expectations.
 
 ## 9. Converting failures into regression cases
 
-Every real-world failure that matters should be convertible into:
+Every real failure that matters should be convertible into:
 
-- a fixture,
-- a scenario,
-- a grader,
-- and an expected result.
+- a fixture or public-repo scenario;
+- a grader or explicit verify command;
+- a reproducible expected result.
 
-This is how the project accumulates reliability over time.
+This is how the project accumulates reliability instead of anecdote.
 
-## 10. CI integration
+## 10. CI and release integration
 
-Recommended CI layers:
+Recommended layers:
 
-- pull request: lint, typecheck, unit tests, one smoke scenario,
-- main branch: wider smoke matrix,
-- nightly: adapter conformance + selected e2e evals,
-- release: full maintained runtime matrix.
+- pull request: lint, typecheck, unit tests, and one smoke or packaging regression;
+- main branch: wider smoke matrix and packaging/resource regressions;
+- nightly: adapter conformance and selected installed live runs;
+- release: installability checks plus one published-artifact live workflow proof.
 
 ## 11. Summary
 
-Harness and eval are required to make runtime agnosticism measurable rather than aspirational.
+Harness and eval make runtime agnosticism, installed-operator behavior, and release readiness measurable rather than aspirational.

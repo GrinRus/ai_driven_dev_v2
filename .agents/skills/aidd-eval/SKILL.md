@@ -47,6 +47,7 @@ description: Run harness and eval scenarios for ai_driven_dev_v2, validate docum
 6. Always keep question/answer events as durable artifacts.
 7. Always generate log-analysis output.
 8. Keep infrastructure failures separate from model or document failures.
+9. For live scenarios, preserve install evidence for the AIDD artifact under test.
 
 ## Default procedure
 
@@ -54,7 +55,9 @@ description: Run harness and eval scenarios for ai_driven_dev_v2, validate docum
 2. Probe the adapter and record capability information.
 3. Prepare or reset the fixture workspace.
 4. Run the requested stage or flow through the harness.
+   For live scenarios, install the artifact under test first and run AIDD from the target repository root.
 5. Capture:
+   - install transcript and artifact identity for live scenarios,
    - raw runtime logs,
    - structured runtime logs when available,
    - normalized events,
@@ -72,6 +75,7 @@ description: Run harness and eval scenarios for ai_driven_dev_v2, validate docum
 - `.aidd/reports/evals/<run_id>/runtime.log`
 - `.aidd/reports/evals/<run_id>/runtime.jsonl`
 - `.aidd/reports/evals/<run_id>/events.jsonl`
+- `.aidd/reports/evals/<run_id>/install-transcript.json`
 - `.aidd/reports/evals/<run_id>/validator-report.md`
 - `.aidd/reports/evals/<run_id>/repair-history.md`
 - `.aidd/reports/evals/<run_id>/log-analysis.md`

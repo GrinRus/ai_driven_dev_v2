@@ -127,7 +127,7 @@ def test_write_command_transcripts_persists_all_step_transcripts(tmp_path: Path)
         duration_seconds=0.25,
     )
 
-    setup_path, run_path, verify_path, teardown_path = write_command_transcripts(
+    install_path, setup_path, run_path, verify_path, teardown_path = write_command_transcripts(
         layout=layout,
         setup_result=setup_result,
         aidd_run_result=aidd_run_result,
@@ -135,11 +135,14 @@ def test_write_command_transcripts_persists_all_step_transcripts(tmp_path: Path)
         teardown_result=teardown_result,
     )
 
+    install_payload = json.loads(install_path.read_text(encoding="utf-8"))
     setup_payload = json.loads(setup_path.read_text(encoding="utf-8"))
     run_payload = json.loads(run_path.read_text(encoding="utf-8"))
     verify_payload = json.loads(verify_path.read_text(encoding="utf-8"))
     teardown_payload = json.loads(teardown_path.read_text(encoding="utf-8"))
 
+    assert install_payload["step"] == "install"
+    assert install_payload["command_count"] == 0
     assert setup_payload["step"] == "setup"
     assert setup_payload["command_count"] == 1
     assert run_payload["step"] == "run"

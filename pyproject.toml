@@ -44,6 +44,10 @@ Issues = "https://github.com/GrinRus/ai_driven_dev_v2/issues"
 [tool.hatch.build.targets.wheel]
 packages = ["src/aidd"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"contracts" = "aidd/_resources/contracts"
+"prompt-packs" = "aidd/_resources/prompt-packs"
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100

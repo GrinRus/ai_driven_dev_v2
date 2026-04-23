@@ -2738,3 +2738,165 @@ Sync notes:
 Exit evidence:
 
 - one public workflow lane can be rerun with preserved verdict, logs, and produced documents.
+
+---
+
+## Wave 11 — installed live E2E realignment (`done`)
+
+Sync notes:
+
+- `2026-04-23` Wave 11 was opened via `W8-E3-S1` queue-restoration policy to realign live E2E around the installed operator model. Initial queue restoration promotes `W11-E1-S1-T1` to `Next`, `W11-E1-S1-T2` and `W11-E1-S2-T1` to `Soon`, and `W11-E1-S2-T2`, `W11-E1-S2-T3`, `W11-E1-S3-T1`, `W11-E1-S3-T2`, `W11-E1-S3-T3`, `W11-E1-S3-T4`, `W11-E2-S1-T1`, and `W11-E2-S1-T2` to `Parking lot`.
+- `2026-04-23` Wave 11 completed: published-package live scenario release proof now runs in release automation, operator/release docs require the evidence, and the backlog queue is empty until the next wave is opened via `W8-E3-S1`.
+
+### Epic W11-E1 — live E2E operator model (`done`)
+Linked stories: `US-07`, `US-09`, `US-10`
+
+#### Slice W11-E1-S1 — live E2E contract realignment (`done`)
+Goal: redefine live E2E as an installed-CLI operator proof lane instead of a source-checkout eval shortcut.
+
+Primary outputs:
+
+- updated live E2E contract and terminology set
+- aligned catalog and architecture wording for install-like operator runs
+- separated operator-proof guidance from smoke and conformance parity lanes
+
+Touched areas:
+
+- `README.md`
+- `docs/e2e/`
+- `docs/architecture/`
+
+Dependencies:
+
+- `W10-E1-S1`
+- `W10-E2-S1`
+- `W10-E3-S1`
+
+Local tasks:
+
+- `W11-E1-S1-T1` (done) Define install-like semantics for live E2E and rewrite catalog/architecture wording so live scenarios are installed-CLI runs, not source-checkout eval shortcuts.
+- `W11-E1-S1-T2` (done) Update README/operator docs to separate live operator proof from smoke/conformance parity lanes.
+
+Sync notes:
+
+- `2026-04-23` `W11-E1-S1-T1` completed: live E2E contract docs now define the lane as installed operator proof with explicit target-repository cwd, install evidence, and lane separation from smoke/conformance.
+- `2026-04-23` `W11-E1-S1-T2` completed: README, operator docs, distribution notes, and eval skills now describe live operator proof separately from smoke/conformance parity work.
+
+Exit evidence:
+
+- live E2E docs describe installed-CLI execution from the target repository root;
+- operator-facing docs no longer treat source-checkout harness behavior as the canonical live lane.
+
+#### Slice W11-E1-S2 — packaged runtime resources (`done`)
+Goal: make installed AIDD self-sufficient by shipping runtime-owned contracts and prompt packs inside the package.
+
+Primary outputs:
+
+- wheel-packaged contracts and prompt packs
+- packaged-resource resolver for runtime-owned assets
+- external-cwd regression coverage for installed CLI stage/workflow execution
+
+Touched areas:
+
+- `pyproject.toml`
+- `src/aidd/core/`
+- `tests/core/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W11-E1-S1`
+
+Local tasks:
+
+- `W11-E1-S2-T1` (done) Package contracts and prompt packs into the wheel and expose a packaged-resource resolver.
+- `W11-E1-S2-T2` (done) Switch contract/prompt-pack resolution and provenance capture to packaged resources instead of source-tree-relative paths.
+- `W11-E1-S2-T3` (done) Add external-cwd regressions for installed CLI stage/workflow execution.
+
+Sync notes:
+
+- `2026-04-23` `W11-E1-S2-T1` completed: wheel builds now force-include `contracts/` and `prompt-packs/` under packaged AIDD resources, and a dedicated resource resolver selects packaged assets outside a source checkout.
+- `2026-04-23` `W11-E1-S2-T2` completed: stage contract validation, prompt-pack execution paths, and run-store provenance now resolve against packaged resources instead of assuming `cwd` contains `contracts/` and `prompt-packs/`.
+- `2026-04-23` `W11-E1-S2-T3` completed: regression coverage now proves `aidd stage run` resolves runtime-owned assets from an external project directory, and wheel-build tests assert packaged contracts/prompt packs exist.
+
+Exit evidence:
+
+- installed CLI no longer requires `contracts/` or `prompt-packs/` in the operator cwd;
+- packaged artifacts and provenance remain available outside a source checkout.
+
+#### Slice W11-E1-S3 — installed live harness execution (`done`)
+Goal: run live harness scenarios through an installed local wheel so live E2E matches operator execution semantics.
+
+Primary outputs:
+
+- local-wheel install preparation for live harness runs
+- target-repo-root execution model for installed AIDD
+- install-aware eval bundle metadata and transcripts
+- migrated canonical live scenario expectations for `AIDD-LIVE-005`
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `harness/scenarios/live/`
+- `tests/harness/`
+- `docs/e2e/`
+
+Dependencies:
+
+- `W11-E1-S2`
+
+Local tasks:
+
+- `W11-E1-S3-T1` (done) Build a local wheel and prepare an isolated `uv tool` install for live harness runs.
+- `W11-E1-S3-T2` (done) Run installed AIDD from the target repository root and keep `.aidd` rooted in that repository.
+- `W11-E1-S3-T3` (done) Persist install-channel, artifact identity, and install transcripts in the eval bundle.
+- `W11-E1-S3-T4` (done) Promote `AIDD-LIVE-005` to the first canonical installed live workflow proof and update manifest expectations.
+
+Sync notes:
+
+- `2026-04-23` `W11-E1-S3-T1` completed: live eval runner now prepares installed AIDD artifacts through a dedicated harness install helper, with local-wheel `uv tool` install as the default development and CI path.
+- `2026-04-23` `W11-E1-S3-T2` completed: live eval execution now runs installed `aidd` from the prepared target repository root, which keeps `.aidd/` rooted inside that repository.
+- `2026-04-23` `W11-E1-S3-T3` completed: result bundles now include `install-transcript.json` plus harness metadata for install channel, artifact identity, execution context, and resource source.
+- `2026-04-23` `W11-E1-S3-T4` completed: `AIDD-LIVE-005` now declares installed-operator expectations in its manifest, and harness tests cover the new canonical live install flow.
+
+Exit evidence:
+
+- live harness runs invoke installed AIDD from the prepared target repository root;
+- eval bundles capture install provenance alongside runtime and verification evidence.
+
+### Epic W11-E2 — published live artifact proof (`done`)
+Linked stories: `US-07`, `US-09`, `US-10`
+
+#### Slice W11-E2-S1 — published live scenario release proof (`done`)
+Goal: extend release verification from installability-only checks to one published live workflow proof.
+
+Primary outputs:
+
+- release verification lane that runs one pinned live scenario from the published package
+- updated release/operator evidence requirements for published live-scenario proof
+
+Touched areas:
+
+- `.github/workflows/`
+- `docs/release-checklist.md`
+- `docs/architecture/`
+
+Dependencies:
+
+- `W11-E1-S3`
+- `W10-E1-S1`
+
+Local tasks:
+
+- `W11-E2-S1-T1` (done) Add a release verification lane that installs the published package via `uv tool` and runs one pinned live scenario.
+- `W11-E2-S1-T2` (done) Update release checklist and operator docs to require published live-scenario evidence.
+
+Sync notes:
+
+- `2026-04-23` `W11-E2-S1-T1` completed: release automation now installs the published package, runs `AIDD-LIVE-005` through the deterministic `generic-cli` release-proof lane, and uploads the resulting eval bundle as durable release evidence.
+- `2026-04-23` `W11-E2-S1-T2` completed: the release checklist, operator docs, architecture notes, live E2E catalog, and release-workflow checks now require published live-scenario proof instead of stopping at installability-only validation.
+
+Exit evidence:
+
+- tagged releases prove one published install path can complete a pinned live workflow scenario;
+- release docs require that evidence instead of stopping at `aidd doctor`.

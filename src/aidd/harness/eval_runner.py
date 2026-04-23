@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -8,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic
 
+from aidd.core.resources import resolve_resource_layout
 from aidd.core.stages import STAGES
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.evals.log_analysis import (
@@ -28,6 +30,14 @@ from aidd.evals.verdicts import (
     build_scenario_verdict_from_harness_outcome,
     write_scenario_verdict_markdown,
 )
+from aidd.harness.install_artifact import (
+    HarnessInstallError,
+    HarnessInstallResult,
+    prepare_local_wheel_install,
+    prepare_published_package_install,
+)
+from aidd.harness.live_runtime_config import write_live_runtime_config
+from aidd.harness.live_workspace_bootstrap import bootstrap_live_work_item
 from aidd.harness.repo_prep import (
     PreparedRepository,
     PreparedWorkingCopy,
@@ -62,6 +72,15 @@ _PASS_GUARD_REQUIRED_OUTPUT_FILES: tuple[str, ...] = (
     "stage-result.md",
     "validator-report.md",
 )
+
+
+def _is_live_scenario_path(scenario_path: Path) -> bool:
+    resolved = scenario_path.resolve(strict=False)
+    return (
+        resolved.parent.name == "live"
+        and resolved.parent.parent.name == "scenarios"
+        and resolved.suffix == ".yaml"
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,6 +219,7 @@ def _classify_status(
     *,
     scenario: Scenario,
     prep_error: BaseException | None,
+    install_error: BaseException | None,
     setup_error: BaseException | None,
     run_error: BaseException | None,
     verification_error: BaseException | None,
@@ -216,6 +236,15 @@ def _classify_status(
             False,
             True,
             verification_error is not None,
+        )
+
+    if install_error is not None:
+        return (
+            "fail",
+            f"AIDD install preparation failed before scenario execution: {install_error}",
+            False,
+            False,
+            False,
         )
 
     blocked_by_questions = scenario.run.interview_required and _is_missing_answers_failure(
@@ -289,6 +318,7 @@ def _render_runtime_log_source(
     scenario: Scenario,
     runtime_id: str,
     run_id: str,
+    install_result: HarnessInstallResult | None,
     prepared_repository: PreparedRepository | None,
     prepared_working_copy: PreparedWorkingCopy | None,
     setup_result: HarnessSetupResult | None,
@@ -296,6 +326,7 @@ def _render_runtime_log_source(
     verification_result: HarnessVerificationResult | None,
     teardown_result: HarnessTeardownResult | None,
     prep_error: BaseException | None,
+    install_error: BaseException | None,
     setup_error: BaseException | None,
     run_error: BaseException | None,
     verification_error: BaseException | None,
@@ -312,6 +343,22 @@ def _render_runtime_log_source(
         lines.append(f"resolved_revision={prepared_repository.resolved_revision}")
     if prepared_working_copy is not None:
         lines.append(f"working_copy={prepared_working_copy.working_copy_path.as_posix()}")
+    if install_result is not None:
+        lines.append(f"install_channel={install_result.install_channel}")
+        lines.append(f"artifact_source={install_result.artifact_source}")
+        lines.append(f"artifact_identity={install_result.artifact_identity}")
+        lines.append(f"install_home={install_result.install_home.as_posix()}")
+        lines.append(f"installed_command={' '.join(install_result.installed_command)}")
+        lines.append(f"install_commands={len(install_result.command_transcripts)}")
+        for transcript in install_result.command_transcripts:
+            lines.append(f"install_command={transcript.command}")
+            lines.append(f"install_command_exit_code={transcript.exit_code}")
+            if transcript.stdout_text.strip():
+                lines.append("install_stdout:")
+                lines.extend(transcript.stdout_text.rstrip().splitlines())
+            if transcript.stderr_text.strip():
+                lines.append("install_stderr:")
+                lines.extend(transcript.stderr_text.rstrip().splitlines())
 
     if setup_result is not None:
         lines.append(f"setup_commands={len(setup_result.command_transcripts)}")
@@ -328,7 +375,14 @@ def _render_runtime_log_source(
     if teardown_result is not None:
         lines.append(f"teardown_commands={len(teardown_result.command_transcripts)}")
 
-    for error in (prep_error, setup_error, run_error, verification_error, teardown_error):
+    for error in (
+        prep_error,
+        install_error,
+        setup_error,
+        run_error,
+        verification_error,
+        teardown_error,
+    ):
         if error is not None:
             lines.append(f"error={error}")
 
@@ -340,6 +394,7 @@ def _render_validator_report_source(
     status: VerdictStatus,
     summary: str,
     prep_error: BaseException | None,
+    install_error: BaseException | None,
     setup_error: BaseException | None,
     run_error: BaseException | None,
     verification_error: BaseException | None,
@@ -360,6 +415,10 @@ def _render_validator_report_source(
         code = "HARNESS_INTERVIEW_BLOCKED"
         message = summary
         location = "verify"
+    elif install_error is not None:
+        code = "HARNESS_INSTALL_FAILURE"
+        message = str(install_error)
+        location = "install"
     elif status == "infra-fail":
         code = "HARNESS_INFRA_FAILURE"
         error = prep_error or setup_error or teardown_error
@@ -433,11 +492,15 @@ def run_eval_scenario(
     prepare_workspace(workspace_root)
 
     cache_root = workspace_root / "harness-cache"
-    aidd_command = _derive_aidd_command(scenario)
+    live_scenario = _is_live_scenario_path(scenario_path)
+    published_package_spec = os.environ.get("AIDD_EVAL_PUBLISHED_PACKAGE_SPEC", "").strip() or None
+    resource_layout = resolve_resource_layout()
+    aidd_command: tuple[str, ...] | None = None if live_scenario else _derive_aidd_command(scenario)
     work_item = _derive_work_item(scenario)
     teardown_commands = _derive_teardown_commands(scenario)
 
     prep_error: BaseException | None = None
+    install_error: BaseException | None = None
     setup_error: BaseException | None = None
     run_error: BaseException | None = None
     verification_error: BaseException | None = None
@@ -445,10 +508,12 @@ def run_eval_scenario(
 
     prepared_repository: PreparedRepository | None = None
     prepared_working_copy: PreparedWorkingCopy | None = None
+    install_result: HarnessInstallResult | None = None
     setup_result: HarnessSetupResult | None = None
     aidd_run_result: HarnessAiddRunResult | None = None
     verification_result: HarnessVerificationResult | None = None
     teardown_result: HarnessTeardownResult | None = None
+    live_runtime_config_path: Path | None = None
 
     started = monotonic()
     try:
@@ -463,6 +528,32 @@ def run_eval_scenario(
         prep_error = exc
     else:
         try:
+            if live_scenario:
+                bootstrap_live_work_item(
+                    working_copy_path=prepared_working_copy.working_copy_path,
+                    scenario=scenario,
+                    work_item=work_item,
+                    resolved_revision=prepared_working_copy.resolved_revision,
+                )
+                live_runtime_config_path = write_live_runtime_config(
+                    working_copy_path=prepared_working_copy.working_copy_path,
+                    runtime_id=runtime_id,
+                    scenario=scenario,
+                )
+                if published_package_spec is not None:
+                    install_result = prepare_published_package_install(
+                        workspace_root=workspace_root,
+                        run_id=run_id,
+                        package_spec=published_package_spec,
+                    )
+                else:
+                    install_result = prepare_local_wheel_install(
+                        workspace_root=workspace_root,
+                        run_id=run_id,
+                    )
+                aidd_command = install_result.installed_command
+            if aidd_command is None:
+                raise RuntimeError("Failed to derive an AIDD command for harness execution.")
             setup_result = run_setup_steps(
                 scenario=scenario,
                 working_copy_path=prepared_working_copy.working_copy_path,
@@ -473,12 +564,15 @@ def run_eval_scenario(
                 runtime_id=runtime_id,
                 work_item=work_item,
                 aidd_command=aidd_command,
+                config_path=live_runtime_config_path,
             )
             verification_result = run_verification_steps(
                 scenario=scenario,
                 working_copy_path=prepared_working_copy.working_copy_path,
                 aidd_run_result=aidd_run_result,
             )
+        except HarnessInstallError as exc:
+            install_error = exc
         except HarnessSetupError as exc:
             setup_error = exc
         except HarnessVerificationError as exc:
@@ -498,6 +592,7 @@ def run_eval_scenario(
         _classify_status(
             scenario=scenario,
             prep_error=prep_error,
+            install_error=install_error,
             setup_error=setup_error,
             run_error=run_error,
             verification_error=verification_error,
@@ -529,6 +624,7 @@ def run_eval_scenario(
         scenario=scenario,
         runtime_id=runtime_id,
         run_id=run_id,
+        install_result=install_result,
         prepared_repository=prepared_repository,
         prepared_working_copy=prepared_working_copy,
         setup_result=setup_result,
@@ -536,6 +632,7 @@ def run_eval_scenario(
         verification_result=verification_result,
         teardown_result=teardown_result,
         prep_error=prep_error,
+        install_error=install_error,
         setup_error=setup_error,
         run_error=run_error,
         verification_error=verification_error,
@@ -545,6 +642,7 @@ def run_eval_scenario(
         status=status,
         summary=summary,
         prep_error=prep_error,
+        install_error=install_error,
         setup_error=setup_error,
         run_error=run_error,
         verification_error=verification_error,
@@ -609,6 +707,20 @@ def run_eval_scenario(
         runtime_id=runtime_id,
         work_item=work_item,
         status=status,
+        install_result=install_result,
+        target_repository_cwd=(
+            None if prepared_working_copy is None else prepared_working_copy.working_copy_path
+        ),
+        workspace_root=(
+            None
+            if prepared_working_copy is None
+            else prepared_working_copy.working_copy_path / ".aidd"
+        ),
+        resource_source=(
+            "packaged"
+            if install_result is not None
+            else resource_layout.source
+        ),
         aidd_run_id=None if aidd_run_result is None else run_id,
         aidd_run_result=aidd_run_result,
         aidd_artifact_references={
@@ -616,15 +728,35 @@ def run_eval_scenario(
             "runtime_log_source": runtime_log_source_path.as_posix(),
             "validator_report_source": validator_report_source_path.as_posix(),
             "verdict_source": verdict_source_path.as_posix(),
+            "resource_source": (
+                "packaged"
+                if install_result is not None
+                else resource_layout.source
+            ),
+            "artifact_path": (
+                "n/a"
+                if install_result is None
+                else (
+                    install_result.artifact_identity
+                    if install_result.artifact_path is None
+                    else install_result.artifact_path.as_posix()
+                )
+            ),
             "working_copy_path": (
                 prepared_working_copy.working_copy_path.as_posix()
                 if prepared_working_copy is not None
+                else "n/a"
+            ),
+            "live_runtime_config_path": (
+                live_runtime_config_path.as_posix()
+                if live_runtime_config_path is not None
                 else "n/a"
             ),
         },
     )
     write_command_transcripts(
         layout=layout,
+        install_result=install_result,
         setup_result=setup_result,
         aidd_run_result=aidd_run_result,
         verification_result=verification_result,

@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 from aidd.core.contracts import repo_root_from
-from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, resolve_prompt_pack_paths
+from aidd.core.stage_registry import (
+    DEFAULT_STAGE_CONTRACTS_ROOT,
+    resolve_prompt_pack_file_paths,
+    resolve_prompt_pack_paths,
+)
 from aidd.core.stages import STAGES
 
 _USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
@@ -14,6 +18,7 @@ _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
 _REQUIRED_RELEASE_VERIFICATION_JOB_IDS: tuple[str, ...] = (
     "verify-pypi-install",
     "verify-uv-tool-install",
+    "verify-published-live-e2e",
     "verify-ghcr-install",
 )
 
@@ -38,8 +43,7 @@ def test_roadmap_references_only_existing_user_story_ids() -> None:
 
 
 def test_stage_contract_prompt_pack_paths_exist() -> None:
-    repo_root = _repo_root()
-    contracts_root = repo_root / DEFAULT_STAGE_CONTRACTS_ROOT
+    contracts_root = DEFAULT_STAGE_CONTRACTS_ROOT
     missing_prompt_pack_paths: list[str] = []
 
     for stage in STAGES:
@@ -48,13 +52,21 @@ def test_stage_contract_prompt_pack_paths_exist() -> None:
                 stage=stage,
                 contracts_root=contracts_root,
             )
+            prompt_pack_file_paths = resolve_prompt_pack_file_paths(
+                stage=stage,
+                contracts_root=contracts_root,
+            )
         except ValueError as exc:
             pytest.fail(f"Stage '{stage}' has invalid prompt-pack declarations: {exc}")
         if not prompt_pack_paths:
             missing_prompt_pack_paths.append(f"{stage}:<none>")
             continue
-        for prompt_pack_path in prompt_pack_paths:
-            if not (repo_root / prompt_pack_path).exists():
+        for prompt_pack_path, prompt_pack_file_path in zip(
+            prompt_pack_paths,
+            prompt_pack_file_paths,
+            strict=True,
+        ):
+            if not prompt_pack_file_path.exists():
                 missing_prompt_pack_paths.append(f"{stage}:{prompt_pack_path}")
 
     assert not missing_prompt_pack_paths, (

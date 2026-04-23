@@ -3,13 +3,19 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from aidd.core.resources import (
+    default_document_contracts_root,
+    default_stage_contracts_root,
+    resolve_prompt_pack_path,
+    resolve_resource_layout_from_contracts_root,
+)
 from aidd.core.stage_manifest import StageManifest
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.core.workspace import work_item_root as workspace_work_item_root
 
-DEFAULT_STAGE_CONTRACTS_ROOT = Path("contracts/stages")
-DEFAULT_DOCUMENT_CONTRACTS_ROOT = Path("contracts/documents")
+DEFAULT_STAGE_CONTRACTS_ROOT = default_stage_contracts_root()
+DEFAULT_DOCUMENT_CONTRACTS_ROOT = default_document_contracts_root()
 
 
 class StageManifestLoadError(ValueError):
@@ -84,8 +90,8 @@ def _validate_stage_contract_references(
     contracts_root: Path,
 ) -> None:
     problems: list[str] = []
-    document_contracts_root = contracts_root.parent / "documents"
-    repository_root = contracts_root.parent.parent
+    layout = resolve_resource_layout_from_contracts_root(contracts_root)
+    document_contracts_root = layout.document_contracts_root
 
     for declaration in (*required_inputs, *required_outputs):
         candidate = Path(declaration)
@@ -98,7 +104,10 @@ def _validate_stage_contract_references(
     if not prompt_pack_paths:
         problems.append("missing prompt-pack section entries")
     for prompt_reference in prompt_pack_paths:
-        prompt_path = repository_root / prompt_reference
+        prompt_path = resolve_prompt_pack_path(
+            prompt_reference=prompt_reference,
+            contracts_root=contracts_root,
+        )
         if not prompt_path.exists():
             problems.append(f"missing prompt-pack path: {prompt_reference}")
 
@@ -190,6 +199,23 @@ def resolve_prompt_pack_paths(
     return _extract_bullets(
         markdown_text=contract_path.read_text(encoding="utf-8"),
         heading="Prompt pack",
+    )
+
+
+def resolve_prompt_pack_file_paths(
+    *,
+    stage: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[Path, ...]:
+    return tuple(
+        resolve_prompt_pack_path(
+            prompt_reference=prompt_reference,
+            contracts_root=contracts_root,
+        )
+        for prompt_reference in resolve_prompt_pack_paths(
+            stage=stage,
+            contracts_root=contracts_root,
+        )
     )
 
 

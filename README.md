@@ -3,7 +3,7 @@
 Runtime-agnostic orchestration for document-first AI software delivery.
 
 > Status: bootstrap repository + executable scaffold.  
-> This archive is a **complete, consistent starting repository** for `ai_driven_dev_v2`: it includes architecture, roadmap, contracts, prompt packs, Codex-compatible skills, live E2E manifests, contributor workflows, and a minimal installable Python CLI.
+> This archive is a **complete, consistent starting repository** for `ai_driven_dev_v2`: it includes architecture, roadmap, contracts, prompt packs, Codex-compatible skills, live E2E manifests, contributor workflows, and an installable Python CLI with packaged runtime resources.
 
 ## What this project is
 
@@ -118,11 +118,14 @@ This starter repository already includes:
 
 The following parts are still intentionally in-progress:
 
-- release-channel verification against published artifacts (`pipx`, `uv tool install`, GHCR),
-- maintained-runtime adapter conformance lane and reporting,
-- one durable non-generic live workflow proof lane on a pinned public repository scenario.
+- live interview parity on installed public-repository scenarios,
+- broader installed live lane coverage beyond the first canonical scenario.
 
 That is deliberate: this bundle is meant to be the **starting repository for implementation**, not a falsely complete system.
+
+Tagged-release verification now includes one published-package live-scenario proof on
+`AIDD-LIVE-005` using the deterministic `generic-cli` release-proof runtime. Maintained-runtime
+task-completion evidence remains a separate development and nightly concern.
 
 ## Installation from source
 
@@ -159,6 +162,13 @@ The intended release channels are:
 - source checkout for contributors and CI
 
 Runtime binaries remain external dependencies. AIDD does not bundle Claude Code, Codex, OpenCode, or other runtimes.
+
+For live E2E in development and CI, the canonical operator-proof path is:
+
+- build a local wheel from the current checkout;
+- install it with `uv tool`;
+- enter the pinned target repository;
+- run installed `aidd` there with `.aidd/` rooted inside that repository.
 
 Container image tagging rules for release tags:
 
@@ -210,7 +220,8 @@ Today:
 - `run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`,
 - `stage run` executes single-stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`,
 - `run` and `stage run` fail fast for unknown runtime ids with `unsupported-runtime` classification,
-- `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, and validator artifacts).
+- `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, and validator artifacts),
+- live `eval run` scenarios under `harness/scenarios/live/` install a local wheel via `uv tool` and run AIDD from the target repository root.
 
 ## Operator documentation
 
@@ -222,7 +233,11 @@ For installation, diagnostics, and issue reporting workflows, use:
 
 ## Live E2E catalog
 
-The repository includes a curated live E2E set built on public GitHub repositories:
+The repository includes a curated live E2E set built on public GitHub repositories.
+
+In this repository, live E2E means installed operator proof, not the same thing as smoke or adapter conformance.
+
+Repository set:
 
 - `fastapi/typer`
 - `encode/httpx`

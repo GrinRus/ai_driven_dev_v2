@@ -19,8 +19,9 @@ Maintainers currently provide best-effort support for:
 - installation and environment bootstrap (`uv sync --extra dev`);
 - runtime discovery and probe diagnostics (`uv run aidd doctor`);
 - workspace initialization (`uv run aidd init --work-item <id>`);
-- workflow runtime-gate behavior (`aidd run` remains `generic-cli` lane);
+- workflow execution through maintained runtimes (`aidd run`);
 - stage execution support through `aidd stage run` on `generic-cli`, `claude-code`, `codex`, and `opencode`;
+- installed live E2E execution through `aidd eval run` on manifests under `harness/scenarios/live/`;
 - run-inspection commands (`aidd run show`, `aidd run logs`, `aidd run artifacts`);
 - stage and eval read-only summaries (`aidd stage summary`, `aidd stage questions`, `aidd eval summary`).
 
@@ -28,10 +29,10 @@ Maintainers currently provide best-effort support for:
 
 The following are not treated as defects unless roadmap status changes:
 
-- workflow execution through `aidd run` on runtimes other than `generic-cli`;
-- full stage-level parity for eval scenarios that depend on non-generic runtime execution.
+- runtime credentials, auth state, or local policy blocks external to AIDD;
+- scenario requests outside the curated live catalog.
 
-Execution support is intentionally gated while runtime parity slices are in progress.
+Known parity or release-proof gaps are valid roadmap work, but they are no longer described as generic workflow gating.
 
 ## 3. Issue Types and Triage Intent
 

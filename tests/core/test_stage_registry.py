@@ -10,6 +10,7 @@ from aidd.core.stage_registry import (
     load_all_stage_manifests,
     load_stage_manifest,
     resolve_expected_output_documents,
+    resolve_prompt_pack_file_paths,
     resolve_required_input_documents,
     resolve_validator_targets,
 )
@@ -91,6 +92,29 @@ def test_load_stage_manifest_parses_required_inputs_outputs(tmp_path: Path) -> N
     assert manifest.purpose == "Shape the incoming request into a reviewable brief."
     assert manifest.required_input_paths == ("context/intake.md", "context/user-request.md")
     assert manifest.required_output_paths == ("idea-brief.md", "stage-result.md")
+
+
+def test_resolve_prompt_pack_file_paths_uses_contract_root_resource_tree(tmp_path: Path) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "stage-result.md")
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_inputs=("context/intake.md", "context/user-request.md"),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    resolved = resolve_prompt_pack_file_paths(stage="idea", contracts_root=contracts_root)
+
+    assert resolved == (tmp_path / "prompt-packs" / "stages" / "idea" / "system.md",)
 
 
 def test_load_stage_manifest_fails_when_contract_file_missing(tmp_path: Path) -> None:

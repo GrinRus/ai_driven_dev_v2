@@ -58,12 +58,20 @@ aidd doctor
   - semver aliases (`vX.Y`, `vX`) when applicable;
   - `latest` only for stable releases.
 
-## 5. Release verification evidence requirements (`aidd doctor`)
+## 5. Release verification evidence requirements
 
 - [ ] `verify-pypi-install` job passed and its logs include `aidd --version` and `aidd doctor`.
 - [ ] `verify-uv-tool-install` job passed and its logs include `aidd --version` and `aidd doctor`.
+- [ ] `verify-published-live-e2e` job passed and uploaded the published-package eval bundle for `AIDD-LIVE-005`.
 - [ ] `verify-ghcr-install` job passed and its logs include containerized `aidd --version` and `aidd doctor`.
-- [ ] These three jobs are required release evidence for tagged builds.
+- [ ] These four jobs are required release evidence for tagged builds.
+
+Published live-scenario release-proof notes:
+
+- This job installs the published package via `uv tool`.
+- It runs `AIDD-LIVE-005` from the pinned sqlite-utils repository root.
+- It uses the deterministic `generic-cli` release-proof runtime helper.
+- It proves install/cwd/workspace semantics for the published artifact and does not replace maintained-runtime bugfix proof.
 
 Suggested package-path verification:
 

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
+from aidd.harness.install_artifact import HarnessInstallResult
 from aidd.harness.runner import (
     HarnessAiddRunResult,
     HarnessCommandTranscript,
@@ -28,6 +29,7 @@ LOG_ANALYSIS_FILENAME = "log-analysis.md"
 GRADER_FILENAME = "grader.json"
 VERDICT_FILENAME = "verdict.md"
 HARNESS_METADATA_FILENAME = "harness-metadata.json"
+INSTALL_TRANSCRIPT_FILENAME = "install-transcript.json"
 SETUP_TRANSCRIPT_FILENAME = "setup-transcript.json"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 VERIFY_TRANSCRIPT_FILENAME = "verify-transcript.json"
@@ -38,6 +40,7 @@ TEARDOWN_TRANSCRIPT_FILENAME = "teardown-transcript.json"
 class ResultBundleLayout:
     run_root: Path
     harness_metadata_path: Path
+    install_transcript_path: Path
     setup_transcript_path: Path
     run_transcript_path: Path
     verify_transcript_path: Path
@@ -70,6 +73,7 @@ def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBu
     return ResultBundleLayout(
         run_root=run_root,
         harness_metadata_path=run_root / HARNESS_METADATA_FILENAME,
+        install_transcript_path=run_root / INSTALL_TRANSCRIPT_FILENAME,
         setup_transcript_path=run_root / SETUP_TRANSCRIPT_FILENAME,
         run_transcript_path=run_root / RUN_TRANSCRIPT_FILENAME,
         verify_transcript_path=run_root / VERIFY_TRANSCRIPT_FILENAME,
@@ -133,6 +137,10 @@ def write_harness_metadata(
     runtime_id: str,
     work_item: str,
     status: str,
+    install_result: HarnessInstallResult | None = None,
+    target_repository_cwd: Path | None = None,
+    workspace_root: Path | None = None,
+    resource_source: str | None = None,
     aidd_run_id: str | None = None,
     aidd_run_result: HarnessAiddRunResult | None = None,
     aidd_artifact_references: Mapping[str, str] | None = None,
@@ -164,6 +172,27 @@ def write_harness_metadata(
     }
     if aidd_run_id is not None:
         metadata_payload["aidd_run_id"] = aidd_run_id
+    if install_result is not None:
+        metadata_payload["aidd_install"] = {
+            "artifact_identity": install_result.artifact_identity,
+            "artifact_source": install_result.artifact_source,
+            "install_channel": install_result.install_channel,
+            "install_home": install_result.install_home.as_posix(),
+            "installed_command": list(install_result.installed_command),
+            "tool_bin_dir": install_result.tool_bin_dir.as_posix(),
+        }
+    if (
+        target_repository_cwd is not None
+        or workspace_root is not None
+        or resource_source is not None
+    ):
+        metadata_payload["execution_context"] = {
+            "resource_source": resource_source,
+            "target_repository_cwd": (
+                None if target_repository_cwd is None else target_repository_cwd.as_posix()
+            ),
+            "workspace_root": None if workspace_root is None else workspace_root.as_posix(),
+        }
     if aidd_run_result is not None:
         metadata_payload["aidd_run"] = {
             "command": list(aidd_run_result.command),
@@ -178,11 +207,22 @@ def write_harness_metadata(
 def write_command_transcripts(
     *,
     layout: ResultBundleLayout,
+    install_result: HarnessInstallResult | None = None,
     setup_result: HarnessSetupResult | None = None,
     aidd_run_result: HarnessAiddRunResult | None = None,
     verification_result: HarnessVerificationResult | None = None,
     teardown_result: HarnessTeardownResult | None = None,
-) -> tuple[Path, Path, Path, Path]:
+) -> tuple[Path, Path, Path, Path, Path]:
+    install_path = _write_json(
+        layout.install_transcript_path,
+        _step_transcript_payload(
+            step="install",
+            command_transcripts=(
+                install_result.command_transcripts if install_result is not None else tuple()
+            ),
+            duration_seconds=install_result.duration_seconds if install_result is not None else 0.0,
+        ),
+    )
     setup_path = _write_json(
         layout.setup_transcript_path,
         _step_transcript_payload(
@@ -235,7 +275,7 @@ def write_command_transcripts(
             ),
         ),
     )
-    return setup_path, run_path, verify_path, teardown_path
+    return install_path, setup_path, run_path, verify_path, teardown_path
 
 
 def _copy_or_link_file(*, source_path: Path, destination_path: Path) -> Path:
