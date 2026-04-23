@@ -1265,7 +1265,7 @@ Exit evidence:
 
 - stored run artifacts are inspectable without manual filesystem traversal.
 
-#### Slice W4-E3-S4 — implement `aidd stage run` (`planned`)
+#### Slice W4-E3-S4 — implement `aidd stage run` (`done`)
 Goal: remove placeholder behavior in `aidd stage run` and execute one stage end to end.
 
 Primary outputs:
@@ -1292,7 +1292,7 @@ Local tasks:
 - `W4-E3-S4-T1` (done) Implement core single-stage orchestration for `generic-cli` (prepare -> adapter run -> validation -> persist status -> publish outputs).
 - `W4-E3-S4-T2` (done) Wire `aidd stage run` CLI to the orchestrator, including real `--log-follow` streaming behavior.
 - `W4-E3-S4-T3` (done) Add bounded repair loop integration for stage run (retry with repair brief until budget exhausted).
-- `W4-E3-S4-T4` Add interview loop integration: detect unresolved blocking questions, stop as blocked, resume once answers exist.
+- `W4-E3-S4-T4` (done) Add interview loop integration: detect unresolved blocking questions, stop as blocked, resume once answers exist.
 
 Exit evidence:
 

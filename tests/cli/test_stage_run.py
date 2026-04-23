@@ -98,6 +98,16 @@ def _repair_trigger_plan_output_documents() -> dict[str, str]:
     }
 
 
+def _blocked_question_output_documents() -> dict[str, str]:
+    documents = _valid_plan_output_documents()
+    documents["questions.md"] = (
+        "# Questions\n\n"
+        "- `Q1` `[blocking]` Confirm whether the rollout must include migration fallback.\n"
+    )
+    documents["answers.md"] = "# Answers\n\n- none\n"
+    return documents
+
+
 def _write_runtime_writer_script(
     *,
     tmp_path: Path,
@@ -465,6 +475,106 @@ def test_stage_run_stops_when_repair_budget_is_exhausted(tmp_path: Path) -> None
     )
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert payload["status"] == "failed"
+
+
+def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-006")
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=_blocked_question_output_documents(),
+        next_documents=_valid_plan_output_documents(),
+        exit_code=0,
+    )
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    )
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=runtime_command,
+        max_repair_attempts=1,
+    )
+
+    first_run = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-006",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert first_run.exit_code == 1, first_run.output
+    assert "action=wait state=blocked" in first_run.stdout
+    blocked_run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-006")
+    answers_path = workspace_root / "workitems" / "WI-006" / "stages" / "plan" / "answers.md"
+    answers_path.write_text(
+        (
+            "# Answers\n\n"
+            "- `Q1` `[resolved]` Include migration fallback in the first rollout.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    resumed_run = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-006",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert resumed_run.exit_code == 0, resumed_run.output
+    assert (
+        "Detected blocked stage metadata on the latest run; attempting resume."
+        in resumed_run.stdout
+    )
+    assert "Resuming blocked stage after answers were detected." in resumed_run.stdout
+    assert f"run_id={blocked_run_id}" in resumed_run.stdout
+    assert "Stage attempts: 1" in resumed_run.stdout
+    assert (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-006"
+        / blocked_run_id
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0002"
+        / RUN_RUNTIME_LOG_FILENAME
+    ).exists()
+    metadata_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-006"
+        / blocked_run_id
+        / "stages"
+        / "plan"
+        / "stage-metadata.json"
+    )
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "succeeded"
 
 
 def test_prefix_stream_chunk_formats_multiline_follow_output() -> None:

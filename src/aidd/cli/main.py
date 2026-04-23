@@ -36,9 +36,11 @@ from aidd.core.interview import (
     stage_has_unresolved_blocking_questions,
 )
 from aidd.core.repair import RepairBudgetPolicy, generate_repair_brief, write_repair_brief
+from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
     create_run_manifest,
+    load_stage_metadata,
     work_item_runs_root,
 )
 from aidd.core.stage_registry import resolve_prompt_pack_paths
@@ -49,8 +51,10 @@ from aidd.core.stage_runner import (
     StageExecutionState,
     StageOrchestrationResult,
     run_single_stage_orchestration,
+    update_stage_unblock_state,
 )
 from aidd.core.stages import STAGES, is_valid_stage
+from aidd.core.state_machine import StageState
 from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
 from aidd.harness.eval_runner import run_eval_scenario
@@ -433,7 +437,24 @@ def stage_run(
     cfg = load_config(config)
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
     repair_policy = RepairBudgetPolicy(default_max_repair_attempts=cfg.max_repair_attempts)
-    run_id = _allocate_stage_run_id(workspace_root=workspace_root, work_item=work_item)
+    selected_run_id: str | None = None
+    latest_existing_run = latest_run_id(workspace_root=workspace_root, work_item=work_item)
+    if latest_existing_run is not None:
+        latest_stage_metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=latest_existing_run,
+            stage=stage,
+        )
+        if (
+            latest_stage_metadata is not None
+            and latest_stage_metadata.status.lower() == StageState.BLOCKED.value
+        ):
+            selected_run_id = latest_existing_run
+    run_id = selected_run_id or _allocate_stage_run_id(
+        workspace_root=workspace_root,
+        work_item=work_item,
+    )
     create_run_manifest(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -455,6 +476,8 @@ def stage_run(
         f"stage={stage} work_item={work_item} runtime={runtime} "
         f"log_follow={log_follow} run_id={run_id}"
     )
+    if selected_run_id is not None:
+        console.print("Detected blocked stage metadata on the latest run; attempting resume.")
     if log_follow:
         console.print("Live-log follow mode enabled for runtime stream output.")
 
@@ -541,6 +564,24 @@ def stage_run(
     orchestration: StageOrchestrationResult | None = None
     stage_attempt_count = 0
     while True:
+        unblock_state = update_stage_unblock_state(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        if unblock_state.was_blocked and not unblock_state.unblocked:
+            stage_documents_root = workspace_root / "workitems" / work_item / "stages" / stage
+            console.print("Stage run result: action=wait state=blocked")
+            if unblock_state.stage_metadata_path is not None:
+                console.print(f"Stage metadata: {unblock_state.stage_metadata_path.as_posix()}")
+            console.print("Blocking questions are unresolved.")
+            console.print(f"Questions: {(stage_documents_root / 'questions.md').as_posix()}")
+            console.print(f"Answers: {(stage_documents_root / 'answers.md').as_posix()}")
+            raise typer.Exit(code=1)
+        if unblock_state.unblocked:
+            console.print("Resuming blocked stage after answers were detected.")
+
         try:
             orchestration = run_single_stage_orchestration(
                 workspace_root=workspace_root,
