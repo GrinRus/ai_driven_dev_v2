@@ -6,13 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W9-E1-S1-T3`
+- `W9-E1-S1-T4`
 
 ## Soon
 
 ## Parking lot
-
-- `W9-E1-S1-T4`
 
 ## Update rules
 
@@ -30,3 +28,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-04-23` Wave 9 queue bootstrap promoted `W9-E1-S1-T1` to `Next`, `W9-E1-S1-T2` and `W9-E1-S1-T3` to `Soon`, and `W9-E1-S1-T4` to `Parking lot`.
 - `2026-04-23` After completing `W9-E1-S1-T1`, backlog queue advanced with `W9-E1-S1-T2` promoted to `Next`.
 - `2026-04-23` After completing `W9-E1-S1-T2`, backlog queue advanced with `W9-E1-S1-T3` promoted to `Next`.
+- `2026-04-23` After completing `W9-E1-S1-T3`, backlog queue advanced with `W9-E1-S1-T4` promoted from `Parking lot` to `Next`.

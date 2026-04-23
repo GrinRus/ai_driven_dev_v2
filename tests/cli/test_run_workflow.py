@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from aidd.cli import main as cli_main
 from aidd.core.run_store import persist_stage_status, run_manifest_path, work_item_runs_root
+from aidd.core.stage_graph import StageAdvancementSummary
 from aidd.core.stages import STAGES
 from aidd.core.state_machine import StageState
 
@@ -309,3 +310,135 @@ def test_run_manifest_persists_runtime_specific_command_snapshot(
     )
     assert manifest["runtime_id"] == selected_runtime
     assert manifest["config_snapshot"]["runtime_command"] == _RUNTIME_COMMANDS[selected_runtime]
+
+
+def test_run_stops_for_non_generic_runtime_when_stage_execution_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = _write_config(tmp_path)
+    executed_stages: list[str] = []
+
+    def _fake_stage_run(
+        *,
+        stage: str,
+        work_item: str,
+        runtime: str,
+        run_id: str | None,
+        root: Path | None,
+        config: Path,
+        log_follow: bool,
+    ) -> None:
+        assert runtime == "codex"
+        assert run_id is not None
+        assert root is not None
+        assert config == config_path
+        _ = log_follow
+        executed_stages.append(stage)
+        if stage == "idea":
+            persist_stage_status(
+                workspace_root=root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                status=StageState.SUCCEEDED.value,
+            )
+            return
+        persist_stage_status(
+            workspace_root=root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            status=StageState.FAILED.value,
+        )
+        raise typer.Exit(code=1)
+
+    monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "run",
+            "--work-item",
+            "WI-015",
+            "--runtime",
+            "codex",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert executed_stages == ["idea", "research"]
+    assert "Workflow stopped at stage 'research'." in result.stdout
+    assert "Workflow summary:" in result.stdout
+
+
+def test_run_reports_non_generic_noop_path_with_nonzero_exit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = _write_config(tmp_path)
+
+    def _fake_select_next_runnable_stage(
+        *,
+        workspace_root: Path,
+        work_item: str,
+        run_id: str,
+    ) -> str | None:
+        _ = workspace_root, work_item, run_id
+        return None
+
+    def _fake_summarize_workflow_advancement(
+        *,
+        workspace_root: Path,
+        work_item: str,
+        run_id: str,
+    ) -> tuple[StageAdvancementSummary, ...]:
+        _ = workspace_root, work_item, run_id
+        return (
+            StageAdvancementSummary(
+                stage="idea",
+                current_status=None,
+                can_run=False,
+                reason="no runnable stage available",
+                dependencies=tuple(),
+                missing_prerequisites=tuple(),
+                blocked_upstream_stages=tuple(),
+                failed_upstream_stages=tuple(),
+            ),
+        )
+
+    def _unexpected_stage_run(**_: object) -> None:
+        raise AssertionError("stage_run should not be called when no stage is runnable")
+
+    monkeypatch.setattr(cli_main, "select_next_runnable_stage", _fake_select_next_runnable_stage)
+    monkeypatch.setattr(
+        cli_main,
+        "summarize_workflow_advancement",
+        _fake_summarize_workflow_advancement,
+    )
+    monkeypatch.setattr(cli_main, "stage_run", _unexpected_stage_run)
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "run",
+            "--work-item",
+            "WI-016",
+            "--runtime",
+            "opencode",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "AIDD run: work_item=WI-016 runtime=opencode" in result.stdout
+    assert "Workflow stopped: no runnable stage is currently available." in result.stdout
