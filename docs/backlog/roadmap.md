@@ -2505,7 +2505,7 @@ Exit evidence:
 
 ---
 
-## Wave 9 — backlog cycle restart and workflow parity (`next`)
+## Wave 9 — backlog cycle restart and workflow parity (`done`)
 
 ### Epic W9-E0 — governance bootstrap (`done`)
 Linked stories: `US-10`
@@ -2538,10 +2538,10 @@ Exit evidence:
 - roadmap top-level status labels match local-task reality;
 - queue bootstrap tasks exist and are reviewable before implementation resumes.
 
-### Epic W9-E1 — workflow runtime parity (`next`)
+### Epic W9-E1 — workflow runtime parity (`done`)
 Linked stories: `US-01`, `US-06`, `US-08`
 
-#### Slice W9-E1-S1 — workflow runtime dispatch and parity hardening (`next`)
+#### Slice W9-E1-S1 — workflow runtime dispatch and parity hardening (`done`)
 Goal: execute `aidd run` through maintained runtime adapters with parity-safe artifact and regression coverage.
 
 Primary outputs:
@@ -2571,13 +2571,14 @@ Local tasks:
 - `W9-E1-S1-T1` (done) Implement runtime dispatch in `aidd run` for `claude-code`, `codex`, and `opencode`.
 - `W9-E1-S1-T2` (done) Unify workflow run artifact persistence across runtimes under the existing run-store layout.
 - `W9-E1-S1-T3` (done) Add workflow-path regressions for non-generic runtimes, including success, fail, no-op, and unsupported paths.
-- `W9-E1-S1-T4` (planned) Add cross-runtime smoke scenario checks that require produced stage output artifacts in workflow execution lane.
+- `W9-E1-S1-T4` (done) Add cross-runtime smoke scenario checks that require produced stage output artifacts in workflow execution lane.
 
 Sync notes:
 
 - `2026-04-23` `W9-E1-S1-T1` completed: `aidd run` now dispatches workflow execution for `generic-cli`, `claude-code`, `codex`, and `opencode`; unsupported runtime ids remain fail-fast with explicit `unsupported-runtime` classification.
 - `2026-04-23` `W9-E1-S1-T2` completed: workflow artifact indexing now records `runtime_exit_metadata` when `runtime-exit.json` exists, and workflow run manifest persistence is regression-covered for runtime-specific command snapshots.
 - `2026-04-23` `W9-E1-S1-T3` completed: workflow-path regression coverage now includes non-generic runtime success, failure, no-op, and unsupported-runtime behaviors in CLI tests.
+- `2026-04-23` `W9-E1-S1-T4` completed: smoke scenario `harness/scenarios/smoke/plan-stagepack-smoke.yaml` declares cross-runtime workflow execution targets and verify checks for produced `plan.md`, `stage-result.md`, and `validator-report.md`.
 
 Exit evidence:
 

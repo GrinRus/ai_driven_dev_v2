@@ -6,8 +6,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W9-E1-S1-T4`
-
 ## Soon
 
 ## Parking lot
@@ -29,3 +27,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-04-23` After completing `W9-E1-S1-T1`, backlog queue advanced with `W9-E1-S1-T2` promoted to `Next`.
 - `2026-04-23` After completing `W9-E1-S1-T2`, backlog queue advanced with `W9-E1-S1-T3` promoted to `Next`.
 - `2026-04-23` After completing `W9-E1-S1-T3`, backlog queue advanced with `W9-E1-S1-T4` promoted from `Parking lot` to `Next`.
+- `2026-04-23` After completing `W9-E1-S1-T4`, Wave 9 queue is empty; open a new wave via `W8-E3-S1` queue-restoration policy before further implementation.
