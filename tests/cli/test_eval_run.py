@@ -46,7 +46,15 @@ def _write_fake_aidd(path: Path, *, exit_code: int) -> None:
     path.chmod(0o755)
 
 
-def _write_scenario_manifest(*, path: Path, repo_url: str, aidd_command: tuple[str, ...]) -> None:
+def _write_scenario_manifest(
+    *,
+    path: Path,
+    repo_url: str,
+    aidd_command: tuple[str, ...] | None = None,
+) -> None:
+    aidd_invocation: dict[str, object] = {"work_item": "WI-EVAL-CLI"}
+    if aidd_command is not None:
+        aidd_invocation["command"] = list(aidd_command)
     payload = {
         "id": "AIDD-TEST-EVAL-RUN-CLI",
         "task": "exercise eval cli command",
@@ -55,7 +63,7 @@ def _write_scenario_manifest(*, path: Path, repo_url: str, aidd_command: tuple[s
         "verify": {"commands": ["printf 'verify\\n' > verify.log"]},
         "runtime_targets": ["opencode"],
         "interview": {"required": False},
-        "aidd_invocation": {"work_item": "WI-EVAL-CLI", "command": list(aidd_command)},
+        "aidd_invocation": aidd_invocation,
     }
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
@@ -87,3 +95,22 @@ def test_eval_run_executes_harness_lifecycle_and_writes_bundle(
     assert "Bundle root:" in result.stdout
     assert ".aidd/reports/evals/eval-test-eval-run-cli-opencode-" in normalized_output
     assert "Harness execution is not implemented yet." not in result.stdout
+
+
+def test_eval_run_reports_fail_for_unsupported_runtime_real_invocation(
+    tmp_path: Path, monkeypatch
+) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario_path = tmp_path / "scenario-real-run.yaml"
+    _write_scenario_manifest(path=scenario_path, repo_url=source_repo.as_uri())
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["eval", "run", str(scenario_path), "--runtime", "opencode"],
+    )
+
+    assert result.exit_code == 0
+    assert "AIDD eval run: scenario=AIDD-TEST-EVAL-RUN-CLI runtime=opencode" in result.stdout
+    assert "Status: fail" in result.stdout
