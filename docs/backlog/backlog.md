@@ -10,7 +10,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Soon
 
-- `W7-E3-S4-T4`
 - `W8-E1-S1-T2`
 - `W8-E1-S1-T3`
 - `W8-E2-S1-T2`
@@ -30,3 +29,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - If a task is too large, split it in `roadmap.md` before coding.
 - Add new work to `roadmap.md` first, then promote it here only if it becomes immediate.
 - Remove completed tasks rather than leaving stale queue entries behind.
+
+## Queue sync notes
+
+- `2026-04-23` Backlog queue was restored after readiness cleanup and synchronized with Wave 7/Wave 8 roadmap tasks.

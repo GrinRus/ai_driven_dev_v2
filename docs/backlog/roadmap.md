@@ -2333,7 +2333,11 @@ Local tasks:
 - `W7-E3-S4-T1` (done) Update runtime-support statements in `README.md` and operator docs so they do not contradict the current CLI runtime gate.
 - `W7-E3-S4-T2` (done) Replace placeholder wording for `aidd run` and `aidd stage run` with the current implemented scope.
 - `W7-E3-S4-T3` (done) Add an explicit temporary limitation note that workflow execution remains `generic-cli` only until parity slices complete.
-- `W7-E3-S4-T4` (planned) Add a traceable roadmap/backlog sync note that records the post-audit queue restoration.
+- `W7-E3-S4-T4` (done) Add a traceable roadmap/backlog sync note that records the post-audit queue restoration.
+
+Sync notes:
+
+- `2026-04-23` Roadmap and backlog were re-synchronized after readiness cleanup; queue restoration tracking started under `W7-E3-S4` and Wave 8 follow-up slices.
 
 Exit evidence:
 
