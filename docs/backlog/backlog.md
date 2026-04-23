@@ -6,11 +6,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W10-E1-S1-T1`
+- `W10-E1-S1-T2`
 
 ## Soon
-
-- `W10-E1-S1-T2`
 
 ## Parking lot
 
@@ -41,3 +39,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-04-23` Wave 10 was opened via `W8-E3-S1` queue-restoration policy; promoted `W10-E0-S1-T1` to `Next`, `W10-E0-S1-T2`, `W10-E1-S1-T1`, and `W10-E1-S1-T2` to `Soon`, and `W10-E1-S1-T3`, `W10-E1-S1-T4`, `W10-E2-S1-T1`, `W10-E2-S1-T2`, and `W10-E3-S1-T1` to `Parking lot`.
 - `2026-04-23` After completing `W10-E0-S1-T1`, backlog queue advanced with `W10-E0-S1-T2` promoted to `Next`.
 - `2026-04-23` After completing `W10-E0-S1-T2`, backlog queue advanced with `W10-E1-S1-T1` promoted to `Next`.
+- `2026-04-23` After completing `W10-E1-S1-T1`, backlog queue advanced with `W10-E1-S1-T2` promoted to `Next`.

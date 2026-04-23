@@ -94,6 +94,48 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
+  verify-pypi-install:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pipx
+        run: python -m pip install --upgrade pipx
+
+      - name: Verify published package installability via pipx
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          PACKAGE_VERSION="${RELEASE_TAG#v}"
+          ATTEMPTS=10
+          BACKOFF_SECONDS=30
+
+          for attempt in $(seq 1 "${ATTEMPTS}"); do
+            echo "Attempt ${attempt}/${ATTEMPTS}: pipx install ai-driven-dev-v2==${PACKAGE_VERSION}"
+            if python -m pipx install --force "ai-driven-dev-v2==${PACKAGE_VERSION}"; then
+              break
+            fi
+            if [ "${attempt}" -eq "${ATTEMPTS}" ]; then
+              echo "PyPI package ai-driven-dev-v2==${PACKAGE_VERSION} was not installable after ${ATTEMPTS} attempts."
+              exit 1
+            fi
+            echo "Waiting ${BACKOFF_SECONDS}s for package availability..."
+            sleep "${BACKOFF_SECONDS}"
+          done
+
+          python -m pipx run --spec "ai-driven-dev-v2==${PACKAGE_VERSION}" aidd --version
+          python -m pipx run --spec "ai-driven-dev-v2==${PACKAGE_VERSION}" aidd doctor
+
   publish-container:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
