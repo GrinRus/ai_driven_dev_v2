@@ -307,6 +307,7 @@ def test_eval_runner_fails_when_run_completes_as_noop(tmp_path: Path) -> None:
     verdict_text = result.verdict_path.read_text(encoding="utf-8")
     assert "- Status: `fail`" in verdict_text
     assert "no-op execution is non-pass" in verdict_text
+    assert result.first_failure_boundary.category == "scenario-verification"
 
 
 def test_eval_runner_fails_pass_status_when_required_outputs_are_missing(

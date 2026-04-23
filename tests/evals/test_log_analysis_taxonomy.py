@@ -69,6 +69,21 @@ def test_classify_failure_taxonomy_detects_scenario_verification_failures() -> N
     assert result.category == "scenario-verification"
 
 
+def test_classify_failure_taxonomy_detects_noop_execution_signals() -> None:
+    result = classify_failure_taxonomy(
+        runtime_events=(
+            CoarseRuntimeEvent(
+                line_number=10,
+                category="info",
+                message="Workflow run completed: no runnable stages found.",
+            ),
+        ),
+    )
+
+    assert result.category == "scenario-verification"
+    assert "no-op execution signal" in result.reason
+
+
 def test_classify_failure_taxonomy_prioritizes_validation_over_verification() -> None:
     result = classify_failure_taxonomy(
         aidd_exit_code=0,

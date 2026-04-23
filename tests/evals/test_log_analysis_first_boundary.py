@@ -98,6 +98,25 @@ def test_select_first_failure_boundary_handles_adapter_event_signal() -> None:
     )
 
 
+def test_select_first_failure_boundary_detects_noop_runtime_signal() -> None:
+    selection = select_first_failure_boundary(
+        runtime_events=(
+            _runtime_event(
+                line_number=6,
+                category="info",
+                message="Workflow run completed: no runnable stages found.",
+            ),
+        ),
+    )
+
+    assert selection == FailureBoundarySelection(
+        category="scenario-verification",
+        signal_source="runtime.log",
+        signal_line_number=6,
+        reason="Workflow run completed: no runnable stages found.",
+    )
+
+
 def test_select_first_failure_boundary_returns_none_when_no_signals() -> None:
     selection = select_first_failure_boundary()
 

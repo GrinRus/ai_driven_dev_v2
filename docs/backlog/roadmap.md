@@ -2449,7 +2449,7 @@ Blocker notes:
 Local tasks:
 
 - `W8-E2-S1-T1` (done) Add a guard that forbids `pass` verdicts when required stage output artifacts are missing.
-- `W8-E2-S1-T2` (planned) Add a no-op execution detector and map it to fail/blocked classifications.
+- `W8-E2-S1-T2` (done) Add a no-op execution detector and map it to fail/blocked classifications.
 - `W8-E2-S1-T3` (planned) Strengthen live scenario verification expectations so checks assert repository effects, not only command exit status.
 
 Exit evidence:

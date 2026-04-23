@@ -302,6 +302,18 @@ def _is_adapter_signal(message: str) -> bool:
     return any(token in normalized for token in ("adapter", "protocol mismatch"))
 
 
+def _is_noop_signal(message: str) -> bool:
+    normalized = message.lower()
+    return any(
+        token in normalized
+        for token in (
+            "no runnable stages found",
+            "failure classification: unsupported-runtime",
+            "unsupported-runtime classification",
+        )
+    )
+
+
 def classify_failure_taxonomy(
     *,
     runtime_events: tuple[CoarseRuntimeEvent, ...] = (),
@@ -335,6 +347,19 @@ def classify_failure_taxonomy(
             return FailureTaxonomyResult(
                 category="adapter",
                 reason=f"normalized event signal: {normalized_event.event_kind}",
+            )
+
+    for event in runtime_events:
+        if _is_noop_signal(event.message):
+            return FailureTaxonomyResult(
+                category="scenario-verification",
+                reason=f"no-op execution signal: {event.message}",
+            )
+    for normalized_event in normalized_events:
+        if _is_noop_signal(normalized_event.event_kind):
+            return FailureTaxonomyResult(
+                category="scenario-verification",
+                reason=f"no-op execution signal: {normalized_event.event_kind}",
             )
 
     if aidd_exit_code not in (None, 0):
@@ -416,6 +441,17 @@ def select_first_failure_boundary(
                     reason=event.message,
                 ),
             )
+        elif _is_noop_signal(event.message):
+            _push_candidate(
+                rank=2,
+                line_number=event.line_number,
+                selection=FailureBoundarySelection(
+                    category="scenario-verification",
+                    signal_source="runtime.log",
+                    signal_line_number=event.line_number,
+                    reason=event.message,
+                ),
+            )
         elif event.category == "error":
             _push_candidate(
                 rank=2,
@@ -446,6 +482,17 @@ def select_first_failure_boundary(
                 line_number=normalized_event.line_number,
                 selection=FailureBoundarySelection(
                     category="adapter",
+                    signal_source="events.jsonl",
+                    signal_line_number=normalized_event.line_number,
+                    reason=normalized_event.event_kind,
+                ),
+            )
+        elif _is_noop_signal(normalized_event.event_kind):
+            _push_candidate(
+                rank=2,
+                line_number=normalized_event.line_number,
+                selection=FailureBoundarySelection(
+                    category="scenario-verification",
                     signal_source="events.jsonl",
                     signal_line_number=normalized_event.line_number,
                     reason=normalized_event.event_kind,
