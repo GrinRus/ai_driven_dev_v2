@@ -17,6 +17,7 @@ def test_doctor_runs() -> None:
     assert "claude-code capabilities" in result.stdout
     assert "codex capabilities" in result.stdout
     assert "opencode capabilities" in result.stdout
+    assert "pi-mono capabilities" in result.stdout
 
 
 def test_init_creates_workspace(tmp_path: Path) -> None:

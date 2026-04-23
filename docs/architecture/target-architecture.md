@@ -91,7 +91,7 @@ core orchestrator
           +--> claude-code adapter
           +--> codex adapter
           +--> opencode adapter
-          +--> future pi-mono bridge
+          +--> pi-mono bridge adapter
   |
   v
 repository workspace
@@ -332,6 +332,22 @@ Every run stores:
 - normalized events,
 - stage timing,
 - validation and repair history.
+
+### 15.1 Run bundle contract
+
+Each stage attempt must produce a durable run bundle index that includes:
+
+- stage documents (`stage-brief`, `questions`, `answers`, `validator-report`, `repair-brief`, `stage-result`);
+- raw runtime logs (`runtime.log`);
+- normalized events when available (`events.jsonl`);
+- validator verdict artifacts (`validator-report.md`);
+- grader verdict artifacts (`grader.json`).
+
+The run bundle index is the runtime-agnostic handoff surface for:
+
+- operator inspection in CLI commands,
+- eval/harness artifact harvesting,
+- replay and failure triage tooling.
 
 ## 16. Prompt provenance architecture
 

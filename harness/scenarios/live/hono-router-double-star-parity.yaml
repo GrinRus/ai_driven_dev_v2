@@ -2,6 +2,7 @@ id: AIDD-LIVE-008
 repo:
   url: https://github.com/honojs/hono
   default_branch: main
+  revision: cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba
 issue:
   id: 4633
   title: router parity with /** syntax

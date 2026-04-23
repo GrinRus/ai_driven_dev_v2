@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shlex
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -13,6 +14,7 @@ from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.codex import probe as probe_codex
 from aidd.adapters.generic_cli import probe as probe_generic_cli
 from aidd.adapters.opencode import probe as probe_opencode
+from aidd.adapters.pi_mono import probe as probe_pi_mono
 from aidd.cli.run_lookup import (
     resolve_run_artifacts_summary,
     resolve_run_log_summary,
@@ -26,10 +28,13 @@ from aidd.core.interview import (
     resolved_question_ids,
     stage_has_unresolved_blocking_questions,
 )
+from aidd.core.orchestrator import RunOrchestrator
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
-from aidd.harness.eval_runner import run_eval_scenario
+from aidd.harness.eval_run import run_eval_scenario
+from aidd.harness.scenarios import load_scenario
+from aidd.migrations.v1_assets import import_v1_assets
 
 console = Console(no_color=True)
 
@@ -41,19 +46,25 @@ app = typer.Typer(
 stage_app = typer.Typer(help="Stage-level commands.", add_completion=False)
 eval_app = typer.Typer(help="Eval and harness commands.", add_completion=False)
 run_app = typer.Typer(help="Run-level commands.", add_completion=False, invoke_without_command=True)
+migrate_app = typer.Typer(help="Migration commands.", add_completion=False)
 
 app.add_typer(stage_app, name="stage")
 app.add_typer(eval_app, name="eval")
 app.add_typer(run_app, name="run")
+app.add_typer(migrate_app, name="migrate")
 
 
 def _capability_summary(report: CapabilityReport) -> str:
     capability_pairs = (
+        ("tool-calls", report.supports_tool_calls),
         ("raw-log", report.supports_raw_log_stream),
         ("structured-log", report.supports_structured_log_stream),
+        ("log-access", report.supports_log_access),
         ("questions", report.supports_questions),
         ("resume", report.supports_resume),
+        ("interrupts", report.supports_interrupts),
         ("subagents", report.supports_subagents),
+        ("hooks", report.supports_hooks),
         ("non-interactive", report.supports_non_interactive_mode),
         ("cwd-control", report.supports_working_directory_control),
         ("env-injection", report.supports_env_injection),
@@ -73,6 +84,17 @@ def _tail_lines(text: str, *, line_count: int) -> str:
     if line_count >= len(lines):
         return text
     return "\n".join(lines[-line_count:]) + "\n"
+
+
+def _parse_include_categories(raw_value: str) -> tuple[str, ...]:
+    parts = tuple(
+        item.strip().lower() for item in raw_value.split(",") if item.strip()
+    )
+    if not parts:
+        raise ValueError(
+            "Include categories must not be empty. Allowed: contracts,prompt-packs,scenarios."
+        )
+    return parts
 
 
 def _stream_prefix(*, runtime: str, stage: str, stream: Literal["stdout", "stderr"]) -> str:
@@ -129,8 +151,9 @@ def doctor(
     cfg = load_config(config)
     generic = probe_generic_cli(cfg.generic_cli_command)
     claude = probe_claude_code(cfg.claude_code_command)
-    codex = probe_codex("codex")
-    opencode = probe_opencode("opencode")
+    codex = probe_codex(cfg.codex_command)
+    opencode = probe_opencode(cfg.opencode_command)
+    pi_mono = probe_pi_mono(cfg.pi_mono_command)
 
     table = Table(title="AIDD doctor")
     table.add_column("Check")
@@ -146,21 +169,24 @@ def doctor(
     table.add_row("claude-code available", "yes" if claude.available else "no")
     table.add_row("claude-code version", claude.version_text or "unknown")
     table.add_row("claude-code capabilities", _capability_summary(claude))
-    table.add_row("codex command", codex.command)
+    table.add_row("codex command", cfg.codex_command)
     table.add_row("codex available", "yes" if codex.available else "no")
     table.add_row("codex version", codex.version_text or "unknown")
     table.add_row("codex capabilities", _capability_summary(codex))
-    table.add_row("opencode command", opencode.command)
+    table.add_row("opencode command", cfg.opencode_command)
     table.add_row("opencode available", "yes" if opencode.available else "no")
     table.add_row("opencode version", opencode.version_text or "unknown")
     table.add_row("opencode capabilities", _capability_summary(opencode))
+    table.add_row("pi-mono command", cfg.pi_mono_command)
+    table.add_row("pi-mono available", "yes" if pi_mono.available else "no")
+    table.add_row("pi-mono version", pi_mono.version_text or "unknown")
+    table.add_row("pi-mono capabilities", _capability_summary(pi_mono))
     table.add_row("log mode", cfg.log_mode)
     table.add_row("max repair attempts", str(cfg.max_repair_attempts))
 
     console.print(table)
     console.print(
-        "Bootstrap commands are functional. Stage execution, validators, adapters, and harness "
-        "orchestration are still roadmap work."
+        "Doctor checks runtime availability and capability flags for configured commands."
     )
 
 
@@ -189,17 +215,80 @@ def run_callback(
         typer.Option("--work-item", help="Work item id"),
     ] = None,
     runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "claude-code",
+    stage_start: Annotated[
+        str,
+        typer.Option("--stage-start", help="Workflow start stage."),
+    ] = STAGES[0],
+    stage_target: Annotated[
+        str,
+        typer.Option("--stage-target", help="Workflow terminal stage."),
+    ] = STAGES[-1],
+    root: Annotated[
+        Path | None,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = None,
+    config: Annotated[
+        Path,
+        typer.Option("--config", help="Path to an AIDD TOML config file."),
+    ] = Path("aidd.example.toml"),
+    log_follow: Annotated[
+        bool,
+        typer.Option(
+            "--log-follow/--no-log-follow",
+            help="Stream raw runtime logs while the workflow is executing.",
+        ),
+    ] = False,
 ) -> None:
     """Run the AIDD workflow for a work item."""
     if ctx.invoked_subcommand is not None:
         return
     if work_item is None:
         raise typer.BadParameter("Missing option '--work-item'.")
-    console.print(f"AIDD run: work_item={work_item} runtime={runtime}")
-    console.print(
-        "Workflow execution is not implemented yet. "
-        "See docs/backlog/roadmap.md for the next implementation slices."
+    cfg = load_config(config)
+    workspace_root = root or cfg.workspace_root
+
+    def _stream_callback(stream: Literal["stdout", "stderr"], chunk: str) -> None:
+        if not log_follow:
+            return
+        if not chunk:
+            return
+        if stream == "stdout":
+            console.print(chunk, end="", markup=False)
+            return
+        console.print(chunk, end="", markup=False, style="red")
+
+    orchestrator = RunOrchestrator(
+        workspace_root=workspace_root,
+        config=cfg,
+        repository_root=Path.cwd(),
+        on_runtime_stream=_stream_callback,
     )
+
+    try:
+        outcome = orchestrator.run_workflow(
+            work_item=work_item,
+            runtime_id=runtime,
+            stage_start=stage_start,
+            stage_target=stage_target,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(
+        "AIDD run: "
+        f"run_id={outcome.run_id} work_item={outcome.work_item} runtime={outcome.runtime_id}"
+    )
+    console.print(
+        f"Workflow window: start={outcome.stage_start} target={outcome.stage_target} "
+        f"final_state={outcome.final_state.value}"
+    )
+    console.print(f"Executed stages: {len(outcome.stage_outcomes)}")
+    for stage_outcome in outcome.stage_outcomes:
+        console.print(
+            "- "
+            f"{stage_outcome.stage}: state={stage_outcome.final_state.value} "
+            f"attempts={len(stage_outcome.attempts)} action={stage_outcome.final_action.value}"
+        )
 
 
 @run_app.command("show")
@@ -361,6 +450,14 @@ def stage_run(
     stage: Annotated[str, typer.Argument(help="Stage name")],
     work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
     runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+    root: Annotated[
+        Path | None,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = None,
+    config: Annotated[
+        Path,
+        typer.Option("--config", help="Path to an AIDD TOML config file."),
+    ] = Path("aidd.example.toml"),
     log_follow: Annotated[
         bool,
         typer.Option(
@@ -372,33 +469,67 @@ def stage_run(
     """Run a single AIDD stage."""
     if not is_valid_stage(stage):
         raise typer.BadParameter(f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}")
+    cfg = load_config(config)
+    workspace_root = root or cfg.workspace_root
+    multi_stream = log_follow
+
+    def _stream_callback(stream: Literal["stdout", "stderr"], chunk: str) -> None:
+        if not log_follow:
+            return
+        rendered = _prefix_stream_chunk(
+            runtime=runtime,
+            stage=stage,
+            stream=stream,
+            chunk=chunk,
+            multi_stream=multi_stream,
+        )
+        if stream == "stdout":
+            console.print(rendered, end="", markup=False)
+            return
+        console.print(rendered, end="", markup=False, style="red")
+
+    orchestrator = RunOrchestrator(
+        workspace_root=workspace_root,
+        config=cfg,
+        repository_root=Path.cwd(),
+        on_runtime_stream=_stream_callback,
+    )
+
+    try:
+        outcome = orchestrator.run_stage(
+            work_item=work_item,
+            stage=stage,
+            runtime_id=runtime,
+            stage_target=stage,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
     console.print(
         "AIDD stage run: "
-        f"stage={stage} work_item={work_item} runtime={runtime} log_follow={log_follow}"
+        f"run_id={outcome.run_id} stage={outcome.stage} work_item={outcome.work_item} "
+        f"runtime={outcome.runtime_id}"
     )
-    if log_follow:
-        stdout_preview = _prefix_stream_chunk(
-            runtime=runtime,
-            stage=stage,
-            stream="stdout",
-            chunk="runtime-output-line\n",
-            multi_stream=True,
-        ).rstrip("\n")
-        stderr_preview = _prefix_stream_chunk(
-            runtime=runtime,
-            stage=stage,
-            stream="stderr",
-            chunk="runtime-error-line\n",
-            multi_stream=True,
-        ).rstrip("\n")
-        console.print("Live-log follow prefix mode enabled for multi-stream output.")
-        console.print(f"stdout prefix preview: {stdout_preview}", markup=False)
-        console.print(f"stderr prefix preview: {stderr_preview}", markup=False)
     console.print(
-        "Stage execution is not implemented yet. "
-        "See contracts/stages/ and docs/architecture/document-contracts.md."
+        f"Final state: {outcome.final_state.value} | action={outcome.final_action.value} "
+        f"| attempts={len(outcome.attempts)}"
     )
+    for attempt in outcome.attempts:
+        console.print(
+            "- "
+            f"attempt={attempt.attempt_number} "
+            f"runtime_exit={attempt.runtime_exit_classification} "
+            f"requested={attempt.requested_verdict.value} "
+            f"resolved={attempt.resolved_verdict.value} "
+            f"findings={attempt.finding_count}"
+        )
+        console.print(
+            f"  log={attempt.runtime_log_path.as_posix()} "
+            f"validator={attempt.validator_report_path.as_posix()} "
+            f"grader={attempt.grader_path.as_posix()}"
+        )
+        if attempt.repair_brief_path is not None:
+            console.print(f"  repair_brief={attempt.repair_brief_path.as_posix()}")
 
 
 @stage_app.command("questions")
@@ -512,27 +643,52 @@ def stage_summary(
 def eval_run(
     scenario: Annotated[str, typer.Argument(help="Scenario path")],
     runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+    aidd_command: Annotated[
+        str,
+        typer.Option(
+            "--aidd-command",
+            help="Command used by harness to invoke AIDD, for example 'uv run aidd'.",
+        ),
+    ] = "uv run aidd",
 ) -> None:
     """Run an eval scenario."""
     scenario_path = Path(scenario)
     if not scenario_path.exists():
         raise typer.BadParameter(f"Scenario not found: {scenario}")
-
     try:
-        result = run_eval_scenario(
+        aidd_command_tokens = tuple(shlex.split(aidd_command.strip()))
+    except ValueError as exc:
+        raise typer.BadParameter(f"Invalid --aidd-command value: {aidd_command}") from exc
+    if not aidd_command_tokens:
+        raise typer.BadParameter("--aidd-command must not be empty.")
+
+    loaded = load_scenario(
+        scenario_path,
+        runtime_id=runtime,
+        workspace_root=root,
+    )
+    try:
+        outcome = run_eval_scenario(
             scenario_path=scenario_path,
             runtime_id=runtime,
-            workspace_root=Path(".aidd"),
+            workspace_root=root,
+            aidd_command=aidd_command_tokens,
         )
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
-    console.print(f"AIDD eval run: scenario={result.scenario_id} runtime={runtime}")
-    console.print(f"Status: {result.status}")
-    console.print(f"Run id: {result.run_id}")
-    console.print(f"Bundle root: {result.bundle_root.as_posix()}")
-    console.print(f"Verdict path: {result.verdict_path.as_posix()}")
-    console.print(f"Summary path: {result.summary_path.as_posix()}")
+    console.print(f"AIDD eval run: scenario={loaded.scenario_id} runtime={runtime}")
+    console.print(f"Task: {loaded.task}")
+    console.print(
+        f"Result: run_id={outcome.eval_run_id} status={outcome.verdict_status} "
+        f"failure_boundary={outcome.failure_boundary}"
+    )
+    console.print(f"Summary: {outcome.summary_path.as_posix()}")
+    console.print(f"Verdict: {outcome.verdict_path.as_posix()}")
 
 
 @eval_app.command("summary")
@@ -550,6 +706,68 @@ def eval_summary(
 
     console.print(f"Latest eval report: {summary_path.as_posix()}")
     console.print(summary_path.read_text(encoding="utf-8").rstrip())
+
+
+@migrate_app.command("import-v1")
+def migrate_import_v1(
+    source: Annotated[
+        Path,
+        typer.Argument(help="Path to the v1 repository root."),
+    ],
+    destination_root: Annotated[
+        Path,
+        typer.Option(
+            "--destination-root",
+            help="Destination repository root for imported assets.",
+        ),
+    ] = Path("."),
+    include: Annotated[
+        str,
+        typer.Option(
+            "--include",
+            help="Comma-separated categories: contracts,prompt-packs,scenarios.",
+        ),
+    ] = "contracts,prompt-packs,scenarios",
+    overwrite: Annotated[
+        bool,
+        typer.Option(
+            "--overwrite/--no-overwrite",
+            help="Overwrite destination files when they already exist.",
+        ),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run/--no-dry-run",
+            help="Report planned imports without copying files.",
+        ),
+    ] = False,
+) -> None:
+    """Import useful v1 contracts, prompt packs, and scenarios into this repository."""
+    try:
+        include_categories = _parse_include_categories(include)
+        summary = import_v1_assets(
+            source_root=source.resolve(strict=False),
+            destination_root=destination_root.resolve(strict=False),
+            include_categories=include_categories,
+            overwrite=overwrite,
+            dry_run=dry_run,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(
+        "v1 import summary: "
+        f"copied={len(summary.copied_paths)} "
+        f"skipped_existing={len(summary.skipped_existing_paths)} "
+        f"skipped_blocked={len(summary.skipped_blocked_paths)} "
+        f"skipped_extension={len(summary.skipped_extension_paths)}"
+    )
+    if not summary.copied_paths:
+        return
+    console.print("Imported paths:")
+    for imported_path in summary.copied_paths:
+        console.print(f"- {imported_path.as_posix()}")
 
 
 def main() -> None:

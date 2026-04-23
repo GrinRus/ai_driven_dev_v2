@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -13,6 +14,10 @@ from aidd.core.run_store import (
 )
 
 runner = CliRunner()
+
+
+def _strip_ansi(text: str) -> str:
+    return re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text)
 
 
 def test_run_show_prints_run_and_stage_metadata(tmp_path: Path) -> None:
@@ -143,7 +148,11 @@ def test_run_show_rejects_ambiguous_latest_run_selection(tmp_path: Path) -> None
     assert "run-002" in result.output
 
 
-def test_run_placeholder_still_requires_work_item() -> None:
+def test_run_without_args_exits_non_zero() -> None:
     result = runner.invoke(app, ["run"])
     assert result.exit_code != 0
-    assert "Missing option '--work-item'." in result.output
+    output = _strip_ansi(result.output)
+    assert (
+        "Missing option '--work-item'." in output
+        or "Usage: root run [OPTIONS] COMMAND [ARGS]..." in output
+    )

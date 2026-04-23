@@ -8,20 +8,17 @@ Use it when you need a repeatable local setup for:
 
 - checking runtime availability;
 - initializing a work item workspace;
-- validating the baseline toolchain before deeper scenario work.
+- running workflow, stage, and eval lanes with durable artifacts.
 
 ## 2. Scope and Current Product State
 
-AIDD is in bootstrap mode.
+As of April 23, 2026:
 
-Today:
-
-- `aidd doctor` is functional;
-- `aidd init` is functional;
-- `aidd run` and `aidd stage run` keep the final interface shape but are still placeholders;
-- `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle.
-
-Plan all operator usage with that constraint in mind.
+- `aidd doctor` probes configured runtimes and capability flags;
+- `aidd init` bootstraps workspace documents for a work item;
+- `aidd run` executes a workflow window through the orchestrator;
+- `aidd stage run` executes a single stage through the same orchestration APIs;
+- `aidd eval run` executes a harness scenario and writes eval verdict artifacts.
 
 ## 3. Prerequisites
 
@@ -32,7 +29,7 @@ Required:
 
 Optional:
 
-- runtime CLIs you want to probe (for example `claude`, `codex`, `opencode`)
+- runtime CLIs you want to run (for example `claude`, `codex`, `opencode`, `pi-mono`)
 
 Runtime binaries are external dependencies and are not bundled by AIDD.
 
@@ -69,6 +66,15 @@ command = "python"
 [runtime.claude_code]
 command = "claude"
 
+[runtime.codex]
+command = "codex"
+
+[runtime.opencode]
+command = "opencode"
+
+[runtime.pi_mono]
+command = "pi-mono"
+
 [logging]
 mode = "both"
 
@@ -76,15 +82,16 @@ mode = "both"
 max_attempts = 2
 ```
 
-Current config fields consumed by the bootstrap CLI:
+Current config fields consumed by the CLI:
 
 - `workspace.root`
 - `runtime.generic_cli.command`
 - `runtime.claude_code.command`
+- `runtime.codex.command`
+- `runtime.opencode.command`
+- `runtime.pi_mono.command`
 - `logging.mode`
 - `repair.max_attempts`
-
-`codex` and `opencode` probes currently use command discovery from the local PATH in `aidd doctor`.
 
 ## 6. First-Run Procedure
 
@@ -108,7 +115,28 @@ uv run aidd init --work-item WI-001
 
 This creates the `.aidd/` workspace tree and stage document scaffolding for the work item.
 
-### 6.3 Inspect generated workspace artifacts
+### 6.3 Prepare minimum stage inputs
+
+`aidd run` and `aidd stage run` validate required stage inputs. Before first execution,
+prepare the context files required by your selected stage window.
+
+Minimum example for `idea`:
+
+```bash
+cat > .aidd/workitems/WI-001/context/intake.md <<'EOF'
+# Intake
+
+Ship runtime-agnostic execution.
+EOF
+
+cat > .aidd/workitems/WI-001/context/user-request.md <<'EOF'
+# User request
+
+Need reproducible stage output validation.
+EOF
+```
+
+### 6.4 Inspect generated workspace artifacts
 
 Recommended quick checks:
 
@@ -119,21 +147,21 @@ find .aidd -maxdepth 4 -type f | sort | head -n 40
 Verify that:
 
 - work item directories were created;
-- stage document placeholders exist;
+- stage document scaffolding exists;
 - initialization is repeatable and deterministic for operator use.
 
-### 6.4 Validate execution surfaces
+### 6.5 Execute workflow, stage, and eval lanes
 
 ```bash
-uv run aidd run --work-item WI-001 --runtime claude-code
-uv run aidd stage run plan --work-item WI-001 --runtime generic-cli
+uv run aidd run --work-item WI-001 --runtime generic-cli --stage-start idea --stage-target idea
+uv run aidd stage run idea --work-item WI-001 --runtime generic-cli
 uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
 ```
 
-Expected behavior in current bootstrap state:
+Expected behavior:
 
-- `aidd run` and `aidd stage run` report placeholder execution behavior;
-- `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths.
+- `run` and `stage run` execute orchestration, validation, and repair/interview transitions;
+- `eval run` executes harness setup/run/verify/teardown and writes summary/verdict/grader artifacts.
 
 ## 7. Operational Notes
 

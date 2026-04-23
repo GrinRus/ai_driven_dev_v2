@@ -136,6 +136,9 @@ def write_harness_metadata(
     aidd_run_id: str | None = None,
     aidd_run_result: HarnessAiddRunResult | None = None,
     aidd_artifact_references: Mapping[str, str] | None = None,
+    scenario_manifest_path: str | None = None,
+    scenario_manifest_sha256: str | None = None,
+    execution_pin: Mapping[str, str | None] | None = None,
 ) -> Path:
     normalized_runtime_id = runtime_id.strip()
     normalized_work_item = work_item.strip()
@@ -162,6 +165,12 @@ def write_harness_metadata(
         "runtime_targets": list(scenario.runtime_targets),
         "aidd_artifact_references": dict(aidd_artifact_references or {}),
     }
+    if scenario_manifest_path is not None:
+        metadata_payload["scenario_manifest_path"] = scenario_manifest_path
+    if scenario_manifest_sha256 is not None:
+        metadata_payload["scenario_manifest_sha256"] = scenario_manifest_sha256
+    if execution_pin is not None:
+        metadata_payload["execution_pin"] = dict(execution_pin)
     if aidd_run_id is not None:
         metadata_payload["aidd_run_id"] = aidd_run_id
     if aidd_run_result is not None:

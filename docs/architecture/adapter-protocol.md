@@ -28,31 +28,31 @@ Adapters are not responsible for:
 
 ## 3. Conceptual interface
 
-An adapter should support these conceptual operations:
+The runtime adapter contract is defined as:
 
-### `probe(config) -> capability report`
+### `probe() -> RuntimeCapabilities`
 
-Checks whether the runtime binary or endpoint is available and returns capability information.
+Checks runtime availability and returns declared capabilities.
 
-### `run_stage(request) -> run handle`
+### `start(request) -> RuntimeStartResult`
 
-Starts a stage execution against a prepared workspace and returns a handle or session id for ongoing observation.
+Starts one stage attempt against a prepared workspace and returns execution outcome metadata.
 
-### `stream_events(handle) -> event stream`
+### `send(session_id, payload) -> None`
 
-Yields:
+Sends operator input to an active runtime session when interactive routing is supported.
 
-- raw stdout and stderr chunks,
-- normalized lifecycle events,
-- optional question or pause events.
+### `interrupt(session_id) -> None`
 
-### `resume(handle, answer_bundle)`
+Requests interruption for an active runtime session when interrupt support is declared.
 
-Resumes a paused run after user answers are available, if the runtime supports resume.
+### `stream_events(session_id) -> tuple[RuntimeEvent, ...]`
 
-### `cancel(handle)`
+Returns runtime event chunks for adapters that expose stream polling.
 
-Stops an active run and writes the correct final failure classification.
+### `stop(session_id) -> None`
+
+Stops runtime execution and finalizes adapter-side teardown.
 
 ## 4. Stage run request
 
@@ -64,16 +64,12 @@ A stage run request should include:
 - `work_item`
 - `stage`
 - `workspace_root`
-- `contract_path`
-- `prompt_pack_path`
-- `input_documents`
-- `target_output_documents`
-- `repair_mode`
-- `attempt_index`
-- `runtime_config`
-- `time_budget`
-- `permission_policy`
-- `log_mode`
+- `attempt_path`
+- `stage_brief_path`
+- `prompt_pack_paths`
+- `timeout_seconds`
+- `extra_env`
+- `repository_root`
 
 The request is core-owned. Adapters should not invent stage semantics.
 
@@ -84,11 +80,15 @@ Each adapter must declare a capability report with at least:
 - `runtime_id`
 - `available`
 - `version_text` when discoverable
+- `supports_tool_calls`
 - `supports_raw_log_stream`
 - `supports_structured_log_stream`
+- `supports_log_access`
 - `supports_questions`
 - `supports_resume`
+- `supports_interrupts`
 - `supports_subagents`
+- `supports_hooks`
 - `supports_non_interactive_mode`
 - `supports_working_directory_control`
 - `supports_env_injection`
@@ -139,7 +139,7 @@ The core then:
 1. shows the question in the CLI,
 2. writes `questions.md`,
 3. collects or waits for `answers.md`,
-4. calls adapter resume when supported.
+4. calls adapter `send()` when interactive continuation is supported, or reruns by policy when not.
 
 If resume is not supported, the adapter must say so explicitly.
 
@@ -187,18 +187,15 @@ Every adapter must eventually pass conformance checks for:
 
 ## 11. Maintained adapters
 
-The MVP maintained adapters are:
+Tier-1 maintained adapters are:
 
 - `generic-cli`
 - `claude-code`
-
-Planned adapters:
-
 - `codex`
+
+Tier-2 adapters:
+
 - `opencode`
-
-Future bridge target:
-
 - `pi-mono`
 
 ## 12. Summary

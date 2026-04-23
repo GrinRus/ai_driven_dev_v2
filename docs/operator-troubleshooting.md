@@ -8,7 +8,7 @@ This guide explains how to diagnose the most common operator-visible failures in
 - validator failures;
 - harness and eval failures.
 
-It is aligned with the current bootstrap behavior of AIDD as of April 22, 2026.
+It is aligned with the executable run/stage/eval behavior of AIDD as of April 23, 2026.
 
 ## 2. Fast Triage Flow
 
@@ -20,7 +20,7 @@ uv run aidd doctor
 
 2. Identify the failing lane:
 
-- workflow placeholder (`aidd run`, `aidd stage run`);
+- workflow execution (`aidd run`, `aidd stage run`);
 - stage artifacts and validator state (`aidd stage summary`, `aidd stage questions`);
 - eval lane (`aidd eval run`, `aidd eval summary`).
 
@@ -57,18 +57,20 @@ Actions:
 1. Verify the runtime binary works directly (`<runtime> --version`).
 2. If the runtime command succeeds but AIDD still shows `unknown`, treat this as a probe-parsing gap and capture the full `aidd doctor` output for maintainer triage.
 
-### 3.3 Workflow or stage execution is not yet implemented
+### 3.3 Workflow or stage execution fails early
 
 Symptoms:
 
-- `aidd run` prints: `Workflow execution is not implemented yet.`
-- `aidd stage run` prints: `Stage execution is not implemented yet.`
+- command fails with a validation error or runtime-availability error.
 
 Actions:
 
-1. Confirm this is expected bootstrap behavior.
-2. Track implementation progress in `docs/backlog/roadmap.md`.
-3. Use `aidd init`, `aidd doctor`, and read-only inspection commands while execution slices are still in progress.
+1. Check runtime availability via `uv run aidd doctor`.
+2. Ensure required input documents exist for the selected stage window.
+3. Inspect persisted artifacts:
+   - `uv run aidd run show --work-item <id>`
+   - `uv run aidd run artifacts --work-item <id> --stage <stage>`
+   - `uv run aidd run logs --work-item <id> --stage <stage> --tail --lines 80`
 
 ### 3.4 Run lookup errors in inspection commands
 
@@ -135,26 +137,21 @@ Actions:
 1. Use a repository-relative scenario path under `harness/scenarios/`.
 2. Confirm the path exists before running eval.
 
-### 5.2 Harness eval run reports `fail`, `blocked`, or `infra-fail`
+### 5.2 Harness execution fails during setup/verify
 
 Symptoms:
 
-- `aidd eval run` exits non-zero;
-- or completes with `Status: fail`, `Status: blocked`, or `Status: infra-fail`.
+- `aidd eval run` exits non-zero and verdict status is `fail`/`blocked`.
 
 Actions:
 
-1. Capture the printed `Run id` and `Bundle root`.
-2. Open bundle artifacts first:
-   - `runtime.log`
-   - `validator-report.md`
-   - `verdict.md`
-   - `log-analysis.md`
-3. Classify failure source:
-   - `infra-fail`: setup/teardown/repo-prep issue;
-   - `blocked`: interview lane is waiting for required answers evidence;
-   - `fail`: verification or run command failed.
-4. Re-run the same scenario/runtime after fixing the first failure boundary.
+1. Open the latest eval bundle:
+   - `.aidd/reports/evals/<run-id>/summary.md`
+   - `.aidd/reports/evals/<run-id>/verdict.md`
+   - `.aidd/reports/evals/<run-id>/log-analysis.md`
+   - `.aidd/reports/evals/<run-id>/grader.json`
+2. Check `harness-metadata.json` for execution pin and runtime details.
+3. Confirm scenario repository pin (`repo.revision`) and local toolchain availability for setup/verify commands.
 
 ### 5.3 Eval summary is missing
 
@@ -166,7 +163,7 @@ Actions:
 
 1. Confirm `.aidd/reports/evals/` exists.
 2. Confirm at least one `summary.md` was produced by an eval-capable run.
-3. Run `uv run aidd eval run <scenario> --runtime <runtime>` once, then retry summary.
+3. If `eval run` finished but no summary is present, treat it as a defect and attach full command output.
 
 ## 6. Evidence Checklist for Escalation
 

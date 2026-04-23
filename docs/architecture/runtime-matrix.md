@@ -14,9 +14,9 @@ The project distinguishes between:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `generic-cli` | MVP maintained | subprocess CLI | yes, if the wrapped tool emits them | adapter-defined | usually no | no | baseline portability adapter |
 | `claude-code` | MVP maintained | CLI-first, optional richer SDK path later | yes | yes when available | yes when available | yes | first-class maintained runtime |
-| `codex` | Planned | CLI-first | yes | partial/adapter-defined | adapter-defined | yes | second-wave maintained runtime |
-| `opencode` | Planned | CLI / backend attach | yes | adapter-defined | adapter-defined | yes | third-wave runtime |
-| `pi-mono` | Future / experimental | external bridge | adapter-defined | adapter-defined | adapter-defined | adapter-defined | treat as compatibility target first |
+| `codex` | MVP maintained | CLI-first | yes | partial/adapter-defined | adapter-defined | yes | tier-1 maintained runtime |
+| `opencode` | Tier-2 maintained | CLI / backend attach | yes | adapter-defined | adapter-defined | yes | tier-2 runtime after conformance rollout |
+| `pi-mono` | Tier-2 maintained | CLI-first bridge | yes | adapter-defined | adapter-defined | adapter-defined | tier-2 bridge runtime after conformance rollout |
 
 ## Capability principle
 
@@ -28,5 +28,6 @@ The repository must ship working support for:
 
 - `generic-cli`
 - `claude-code`
+- `codex`
 
 before additional runtimes are considered stable.

@@ -8,7 +8,7 @@ This document defines:
 - what information is required for actionable issue reports;
 - how maintainers triage incoming operator issues.
 
-As of April 22, 2026, AIDD is still in bootstrap mode and support scope follows that product state.
+As of April 23, 2026, AIDD exposes executable `run`, `stage run`, and `eval run` surfaces.
 
 ## 2. Support Scope
 
@@ -19,19 +19,19 @@ Maintainers currently provide best-effort support for:
 - installation and environment bootstrap (`uv sync --extra dev`);
 - runtime discovery and probe diagnostics (`uv run aidd doctor`);
 - workspace initialization (`uv run aidd init --work-item <id>`);
-- run/stage placeholder signaling and eval lifecycle execution behavior;
+- workflow and stage orchestration behavior (`aidd run`, `aidd stage run`);
+- harness/eval execution behavior (`aidd eval run`, `aidd eval summary`);
 - run-inspection commands (`aidd run show`, `aidd run logs`, `aidd run artifacts`);
-- stage and eval read-only summaries (`aidd stage summary`, `aidd stage questions`, `aidd eval summary`).
+- stage summaries and question routing (`aidd stage summary`, `aidd stage questions`).
 
 ### 2.2 Out-of-scope requests (current phase)
 
 The following are not treated as defects unless roadmap status changes:
 
-- full workflow execution through `aidd run`;
-- full stage orchestration through `aidd stage run`;
-- full stage-level resume/orchestration parity through `aidd run` dependencies used by eval scenarios.
-
-These commands intentionally expose stable CLI shape before full implementation is complete.
+- defects in third-party runtime binaries themselves (outside adapter behavior);
+- failures caused by missing runtime auth/session state outside AIDD control;
+- network/provider outages for live repository or package infrastructure;
+- custom local scenario scripts that are not reproducible from committed manifests.
 
 ## 3. Issue Types and Triage Intent
 
@@ -41,7 +41,7 @@ Use one primary issue type:
 - `runtime-probe`: runtime detection/version/capability mismatches in `aidd doctor`;
 - `run-inspection`: `run show/logs/artifacts` metadata lookup, path resolution, or log retrieval failures;
 - `validator-state`: stage summary, validator counts, report linkage, or blocking-question handling;
-- `harness-eval`: scenario loading, lifecycle execution, verdict generation, or eval-summary/reporting drift;
+- `harness-eval`: scenario loading, eval execution, verdict generation, or grader/log-analysis drift;
 - `documentation`: operator docs are missing, stale, or contradictory.
 
 ## 4. Issue Reporting Instructions
@@ -114,13 +114,13 @@ Issues are handled in this order:
 
 1. reproducibility and missing-information check;
 2. scope check against current roadmap state;
-3. classification into defect, expected placeholder behavior, docs gap, or follow-up roadmap work.
+3. classification into defect, expected behavior, docs gap, or follow-up roadmap work.
 
 Maintainers may close issues as:
 
 - `resolved` (fix landed);
 - `needs-info` (missing required diagnostics);
-- `expected-current-behavior` (matches documented bootstrap limits);
+- `expected-current-behavior` (matches documented behavior and support scope);
 - `not-reproducible` (cannot reproduce with provided data);
 - `duplicate` (covered by an existing issue).
 

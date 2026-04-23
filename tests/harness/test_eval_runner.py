@@ -38,7 +38,12 @@ def _write_scenario_manifest(
     interview_required: bool,
     runtime_targets: tuple[str, ...] = ("opencode",),
     work_item: str = "WI-EVAL-RUNNER",
+    aidd_command: tuple[str, ...] | None = None,
 ) -> None:
+    aidd_invocation: dict[str, object] = {"work_item": work_item}
+    if aidd_command is not None:
+        aidd_invocation["command"] = list(aidd_command)
+
     payload = {
         "id": "AIDD-TEST-EVAL-RUNNER",
         "task": "exercise eval orchestration",
@@ -47,9 +52,24 @@ def _write_scenario_manifest(
         "verify": {"commands": list(verify_commands)},
         "interview": {"required": interview_required},
         "runtime_targets": list(runtime_targets),
-        "aidd_invocation": {"work_item": work_item},
+        "aidd_invocation": aidd_invocation,
     }
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+
+def _write_fake_aidd(path: Path) -> None:
+    path.write_text(
+        "\n".join(
+            (
+                "#!/bin/sh",
+                "printf 'fake aidd\\n'",
+                "exit 0",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
 
 
 def _assert_bundle_basics(bundle_root: Path) -> None:
@@ -70,6 +90,8 @@ def test_eval_runner_pass_status(tmp_path: Path) -> None:
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     scenario_path = tmp_path / "scenario-pass.yaml"
+    fake_aidd = tmp_path / "fake-aidd"
+    _write_fake_aidd(fake_aidd)
     _write_scenario_manifest(
         path=scenario_path,
         repo_url=source_repo.as_uri(),
@@ -77,6 +99,7 @@ def test_eval_runner_pass_status(tmp_path: Path) -> None:
         verify_commands=("printf 'verify\\n' > verify.log",),
         interview_required=False,
         work_item="WI-EVAL-PASS",
+        aidd_command=(fake_aidd.as_posix(),),
     )
 
     result = run_eval_scenario(
@@ -96,6 +119,8 @@ def test_eval_runner_fail_status_for_verification_non_zero(tmp_path: Path) -> No
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     scenario_path = tmp_path / "scenario-fail.yaml"
+    fake_aidd = tmp_path / "fake-aidd"
+    _write_fake_aidd(fake_aidd)
     _write_scenario_manifest(
         path=scenario_path,
         repo_url=source_repo.as_uri(),
@@ -103,6 +128,7 @@ def test_eval_runner_fail_status_for_verification_non_zero(tmp_path: Path) -> No
         verify_commands=("exit 9",),
         interview_required=False,
         work_item="WI-EVAL-FAIL",
+        aidd_command=(fake_aidd.as_posix(),),
     )
 
     result = run_eval_scenario(
@@ -121,6 +147,8 @@ def test_eval_runner_blocked_status_when_answers_file_missing(tmp_path: Path) ->
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     scenario_path = tmp_path / "scenario-blocked.yaml"
+    fake_aidd = tmp_path / "fake-aidd"
+    _write_fake_aidd(fake_aidd)
     _write_scenario_manifest(
         path=scenario_path,
         repo_url=source_repo.as_uri(),
@@ -130,6 +158,7 @@ def test_eval_runner_blocked_status_when_answers_file_missing(tmp_path: Path) ->
         ),
         interview_required=True,
         work_item="WI-EVAL-BLOCKED",
+        aidd_command=(fake_aidd.as_posix(),),
     )
 
     result = run_eval_scenario(
@@ -148,6 +177,8 @@ def test_eval_runner_infra_fail_status_for_setup_error(tmp_path: Path) -> None:
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     scenario_path = tmp_path / "scenario-infra.yaml"
+    fake_aidd = tmp_path / "fake-aidd"
+    _write_fake_aidd(fake_aidd)
     _write_scenario_manifest(
         path=scenario_path,
         repo_url=source_repo.as_uri(),
@@ -155,6 +186,7 @@ def test_eval_runner_infra_fail_status_for_setup_error(tmp_path: Path) -> None:
         verify_commands=("printf 'verify\\n' > verify.log",),
         interview_required=False,
         work_item="WI-EVAL-INFRA",
+        aidd_command=(fake_aidd.as_posix(),),
     )
 
     result = run_eval_scenario(

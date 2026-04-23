@@ -73,14 +73,11 @@ Maintained first:
 
 - `generic-cli`
 - `claude-code`
+- `codex`
 
 Planned next:
 
-- `codex`
 - `opencode`
-
-Future bridge target:
-
 - `pi-mono`
 
 ## Architecture in one sentence
@@ -110,15 +107,13 @@ This starter repository already includes:
 - CI and release workflow skeletons,
 - a minimal Python package and CLI bootstrap.
 
-The following parts are still intentionally skeletal:
+The repository now includes an executable runtime-agnostic vertical slice:
 
-- real stage execution logic,
-- real validator engine,
-- real repair and interview controllers,
-- real runtime adapters,
-- real harness runner and graders.
+- orchestrated `run` and `stage run` flows with validation and bounded repair,
+- adapter-backed runtime execution for generic-cli, Claude Code, Codex, OpenCode, and pi-mono,
+- harness-driven `eval run` with durable run bundles and verdict/summary artifacts.
 
-That is deliberate: this bundle is meant to be the **starting repository for implementation**, not a falsely complete system.
+Some areas remain in-progress (parity lanes, wider conformance coverage, and additional live baselines), but the CLI no longer relies on placeholder execution for the primary run surface.
 
 ## Installation from source
 
@@ -143,7 +138,7 @@ uv run pytest
 uv run aidd init --work-item WI-001
 ```
 
-This creates a local `.aidd/` workspace tree with stage directories and placeholder artifacts.
+This creates a local `.aidd/` workspace tree with stage directories and starter artifacts.
 
 ## Planned distribution channels
 
@@ -197,14 +192,17 @@ aidd init --work-item WI-001
 aidd run --work-item WI-001 --runtime claude-code
 aidd stage run plan --work-item WI-001 --runtime generic-cli
 aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml --runtime claude-code
+aidd migrate import-v1 /path/to/ai_driven_dev
 ```
 
 Today:
 
-- `doctor` is functional,
-- `init` is functional,
-- `run` and `stage run` are placeholders that preserve the final interface shape,
-- `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, and validator artifacts).
+- `doctor` probes configured runtimes and capabilities,
+- `init` bootstraps a work-item workspace,
+- `run` executes a staged workflow window,
+- `stage run` executes one stage with validation/repair handling,
+- `eval run` executes a harness scenario and writes verdict/summary artifacts,
+- `migrate import-v1` imports selected v1 contracts/prompt packs/scenarios with hook-path filtering.
 
 ## Operator documentation
 

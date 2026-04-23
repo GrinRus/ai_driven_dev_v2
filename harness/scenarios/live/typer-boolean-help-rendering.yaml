@@ -2,6 +2,7 @@ id: AIDD-LIVE-002
 repo:
   url: https://github.com/fastapi/typer
   default_branch: master
+  revision: 9ce8e30383ef419c490431caab5a515eca669b1b
 issue:
   id: 678
   title: boolean option help rendering

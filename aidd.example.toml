@@ -7,6 +7,15 @@ command = "python"
 [runtime.claude_code]
 command = "claude"
 
+[runtime.codex]
+command = "codex"
+
+[runtime.opencode]
+command = "opencode"
+
+[runtime.pi_mono]
+command = "pi-mono"
+
 [logging]
 mode = "both"
 

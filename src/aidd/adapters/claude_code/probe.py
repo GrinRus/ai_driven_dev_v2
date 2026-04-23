@@ -85,9 +85,17 @@ def discover_help_text(command_path: str) -> str | None:
 def detect_capability_flags(help_text: str) -> dict[str, bool]:
     normalized = help_text.lower()
     return {
+        "supports_tool_calls": _contains_any(
+            normalized,
+            ("tool", "mcp", "function call", "tool call"),
+        ),
         "supports_structured_log_stream": _contains_any(
             normalized,
             ("--json", "--jsonl", "jsonl", "structured output"),
+        ),
+        "supports_log_access": _contains_any(
+            normalized,
+            ("log", "trace", "--log-file", "stream"),
         ),
         "supports_questions": _contains_any(
             normalized,
@@ -97,9 +105,17 @@ def detect_capability_flags(help_text: str) -> dict[str, bool]:
             normalized,
             ("--resume", "resume run", "continue run"),
         ),
+        "supports_interrupts": _contains_any(
+            normalized,
+            ("interrupt", "cancel", "stop"),
+        ),
         "supports_subagents": _contains_any(
             normalized,
             ("subagent", "sub-agent"),
+        ),
+        "supports_hooks": _contains_any(
+            normalized,
+            ("hook", "hooks"),
         ),
         "supports_non_interactive_mode": _contains_any(
             normalized,
@@ -127,11 +143,15 @@ def probe(command: str) -> CapabilityReport:
         available=available,
         command=discovered or command,
         version_text=version_text,
+        supports_tool_calls=detected.get("supports_tool_calls", False),
         supports_raw_log_stream=available,
         supports_structured_log_stream=detected.get("supports_structured_log_stream", False),
+        supports_log_access=detected.get("supports_log_access", available),
         supports_questions=detected.get("supports_questions", False),
         supports_resume=detected.get("supports_resume", False),
+        supports_interrupts=detected.get("supports_interrupts", False),
         supports_subagents=detected.get("supports_subagents", False),
+        supports_hooks=detected.get("supports_hooks", False),
         supports_non_interactive_mode=detected.get("supports_non_interactive_mode", False),
         supports_working_directory_control=detected.get(
             "supports_working_directory_control",

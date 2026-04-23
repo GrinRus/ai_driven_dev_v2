@@ -203,9 +203,9 @@ Completed reference runs from the minimum set:
 
 Known parity gaps and adapter-specific limitations:
 
-- The `aidd run` command remains a roadmap placeholder for all runtimes, so current Codex parity is infrastructure-level (setup/run/verify contract) rather than full stage-execution parity.
+- The `aidd run`/`aidd eval run` pipeline is executable, but parity coverage is still partial because only smoke and interview baselines are archived.
 - Interview flow parity is incomplete: `AIDD-LIVE-006` fails because `.aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md` is not produced before the verify gate.
-- Current Codex probe capability report is limited to `raw-log` and `env-injection`; no validated support is declared for structured logs, native question events, resume, non-interactive mode, working-directory control, or subagents.
+- Current Codex conformance baseline validates at least `tool-calls`, `raw-log`, `log-access`, and `env-injection`; support for structured logs, native question events, resume, working-directory control, hooks, and subagents remains undeclared.
 - Docs-alignment lane (`AIDD-LIVE-004`) remains the next comparator for code/docs/example coherence after runtime-specific behavior differences.
 
 ## OpenCode Parity Snapshot (April 22, 2026)
@@ -218,9 +218,9 @@ Observed outcomes for the selected minimum set:
 Known parity gaps and adapter-specific limitations:
 
 - Interview flow parity is incomplete: `AIDD-LIVE-006` remains blocked because `.aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md` is not produced before the verify gate.
-- Current OpenCode probe capability report is limited to `raw-log`; no validated support is declared for structured logs, native question events, resume, non-interactive mode, working-directory control, env injection, or subagents.
-- `aidd doctor` currently reports OpenCode version as `unknown` in this environment, so parity tracking remains capability-level until runtime identity/version discovery is stabilized.
-- Docs-alignment lane (`AIDD-LIVE-004`) remains deferred until workflow/stage execution (`aidd run`, `aidd stage run`) moves beyond placeholder behavior.
+- Current OpenCode conformance baseline validates `raw-log` and `log-access`; support for structured logs, native question events, resume, non-interactive mode, working-directory control, env injection, hooks, and subagents remains undeclared.
+- Runtime version and capability details remain environment-dependent; use `uv run aidd doctor` before parity runs.
+- Docs-alignment lane (`AIDD-LIVE-004`) remains deferred until interview blocking parity is cleared.
 
 ## What a live E2E report must record
 

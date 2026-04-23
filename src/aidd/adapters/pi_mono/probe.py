@@ -118,7 +118,7 @@ def probe(command: str) -> CapabilityReport:
     detected = detect_capability_flags(discover_help_text(discovered) or "") if discovered else {}
 
     return CapabilityReport(
-        runtime_id="codex",
+        runtime_id="pi-mono",
         available=available,
         command=discovered or command,
         version_text=version_text,

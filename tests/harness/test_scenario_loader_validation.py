@@ -104,3 +104,55 @@ runtime_targets:
 
     with pytest.raises(ScenarioManifestError, match="missing required key: url"):
         load_scenario(manifest)
+
+
+def test_load_live_scenario_requires_pinned_repo_revision(tmp_path: Path) -> None:
+    live_root = tmp_path / "harness" / "scenarios" / "live"
+    live_root.mkdir(parents=True, exist_ok=True)
+    manifest = _write_manifest(
+        live_root / "scenario.yaml",
+        """
+id: AIDD-LIVE-TEST-001
+task: Example live task
+repo:
+  url: https://github.com/example/repo
+  default_branch: main
+setup:
+  commands:
+    - echo setup
+verify:
+  commands:
+    - echo verify
+runtime_targets:
+  - generic-cli
+""".strip()
+        + "\n",
+    )
+
+    with pytest.raises(ScenarioManifestError, match="must pin 'repo\\.revision'"):
+        load_scenario(manifest)
+
+
+def test_load_scenario_rejects_non_sha_repo_revision(tmp_path: Path) -> None:
+    manifest = _write_manifest(
+        tmp_path / "scenario.yaml",
+        """
+id: AIDD-TEST-002
+task: Example task
+repo:
+  url: https://github.com/example/repo
+  revision: not-a-sha
+setup:
+  commands:
+    - echo setup
+verify:
+  commands:
+    - echo verify
+runtime_targets:
+  - generic-cli
+""".strip()
+        + "\n",
+    )
+
+    with pytest.raises(ScenarioManifestError, match="40-character git commit sha"):
+        load_scenario(manifest)
