@@ -114,7 +114,7 @@ Issues are handled in this order:
 
 1. reproducibility and missing-information check;
 2. scope check against current roadmap state;
-3. classification into defect, expected placeholder behavior, docs gap, or follow-up roadmap work.
+3. classification into defect, expected current runtime-gate behavior, docs gap, or follow-up roadmap work.
 
 Maintainers may close issues as:
 

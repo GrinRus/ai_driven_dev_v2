@@ -120,7 +120,7 @@ This starter repository already includes:
 
 The following parts are still intentionally skeletal:
 
-- real stage execution logic,
+- non-generic runtime execution parity for `aidd run` and `aidd stage run`,
 - real validator engine,
 - real repair and interview controllers,
 - real runtime adapters,
@@ -211,7 +211,8 @@ Today:
 
 - `doctor` is functional,
 - `init` is functional,
-- `run` and `stage run` are placeholders that preserve the final interface shape,
+- `run` executes workflow progression for runtime `generic-cli` and fails fast for unsupported runtimes,
+- `stage run` executes single-stage orchestration for runtime `generic-cli` and rejects unsupported runtimes,
 - `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, and validator artifacts).
 
 ## Operator documentation
