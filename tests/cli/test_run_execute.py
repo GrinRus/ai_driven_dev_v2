@@ -6,7 +6,7 @@ from textwrap import dedent
 
 from typer.testing import CliRunner
 
-from aidd.cli.main import _prefix_stream_chunk, app
+from aidd.cli.main import app
 from aidd.core.workspace import WorkspaceBootstrapService
 
 runner = CliRunner()
@@ -16,11 +16,11 @@ def _write_required_stage_inputs(*, workspace_root: Path, work_item: str) -> Non
     context_root = workspace_root / "workitems" / work_item / "context"
     context_root.mkdir(parents=True, exist_ok=True)
     (context_root / "intake.md").write_text(
-        "# Intake\n\nTrack incident follow-up actions with durable ownership.\n",
+        "# Intake\n\nShip runtime-agnostic execution.\n",
         encoding="utf-8",
     )
     (context_root / "user-request.md").write_text(
-        "# User request\n\nNeed a governed stage flow with validation.\n",
+        "# User request\n\nNeed reproducible stage output validation.\n",
         encoding="utf-8",
     )
 
@@ -39,22 +39,16 @@ def _write_runtime_writer_script(path: Path) -> None:
 
         (stage_root / "idea-brief.md").write_text(
             "# Idea Brief\\n\\n"
-            "## Problem statement\\n\\n"
-            "Incident follow-up ownership is fragmented.\\n\\n"
-            "## Desired outcome\\n\\n"
-            "Create a durable tracker with owner and due date.\\n\\n"
-            "## Constraints\\n\\n"
-            "- Use markdown artifacts only.\\n\\n"
-            "## Open questions\\n\\n"
-            "- none\\n",
+            "## Problem statement\\n\\nNeed governed workflow portability.\\n\\n"
+            "## Desired outcome\\n\\nPass deterministic validator gates.\\n\\n"
+            "## Constraints\\n\\n- Keep Markdown as contract surface.\\n\\n"
+            "## Open questions\\n\\n- none\\n",
             encoding="utf-8",
         )
         (stage_root / "stage-result.md").write_text(
             "# Stage\\n\\nidea\\n\\n"
-            "## Attempt history\\n\\n"
-            "- Attempt `1` (`initial`) -> succeeded.\\n\\n"
-            "## Status\\n\\n"
-            "- `succeeded`\\n\\n"
+            "## Attempt history\\n\\n- Attempt `1` (`initial`) -> succeeded.\\n\\n"
+            "## Status\\n\\n- `succeeded`\\n\\n"
             "## Produced outputs\\n\\n"
             "- `workitems/WI-001/stages/idea/idea-brief.md`\\n"
             "- `workitems/WI-001/stages/idea/stage-result.md`\\n"
@@ -62,29 +56,20 @@ def _write_runtime_writer_script(path: Path) -> None:
             "- `workitems/WI-001/stages/idea/repair-brief.md`\\n"
             "- `workitems/WI-001/stages/idea/questions.md`\\n"
             "- `workitems/WI-001/stages/idea/answers.md`\\n\\n"
-            "## Validation summary\\n\\n"
-            "- Validator verdict: `pass`.\\n\\n"
-            "## Blockers\\n\\n"
-            "- none\\n\\n"
-            "## Next actions\\n\\n"
-            "- Advance to `research`.\\n\\n"
-            "## Terminal state notes\\n\\n"
-            "- Repair brief path retained: `repair-brief.md`.\\n",
+            "## Validation summary\\n\\n- Validator verdict: `pass`.\\n\\n"
+            "## Blockers\\n\\n- none\\n\\n"
+            "## Next actions\\n\\n- Advance to `research`.\\n\\n"
+            "## Terminal state notes\\n\\n- `repair-brief.md` kept.\\n",
             encoding="utf-8",
         )
         (stage_root / "validator-report.md").write_text(
             "# Validator Report\\n\\n"
-            "## Summary\\n\\n"
-            "- Total issues: 0\\n"
-            "- Blocking issues: no\\n"
-            "- Affected documents: none\\n"
-            "- Dominant failure categories: none\\n\\n"
+            "## Summary\\n\\n- Total issues: 0\\n- Blocking issues: no\\n"
+            "- Affected documents: none\\n- Dominant failure categories: none\\n\\n"
             "## Structural checks\\n\\n- none\\n\\n"
             "## Semantic checks\\n\\n- none\\n\\n"
             "## Cross-document checks\\n\\n- none\\n\\n"
-            "## Result\\n\\n"
-            "- Verdict: `pass`\\n"
-            "- Repair required for progression: no\\n",
+            "## Result\\n\\n- Verdict: `pass`\\n- Repair required for progression: no\\n",
             encoding="utf-8",
         )
         (stage_root / "repair-brief.md").write_text(
@@ -101,7 +86,7 @@ def _write_runtime_writer_script(path: Path) -> None:
         (stage_root / "answers.md").write_text(
             "# Answers\\n\\n- none\\n", encoding="utf-8"
         )
-        print("runtime-output-line")
+        print("workflow-stage-complete")
         """
     )
     path.write_text(script, encoding="utf-8")
@@ -138,7 +123,7 @@ def _write_config(path: Path, *, runtime_writer: Path, workspace_root: Path) -> 
     )
 
 
-def test_stage_run_executes_pipeline_and_reports_success(tmp_path: Path) -> None:
+def test_run_executes_workflow_window_to_target_stage(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     WorkspaceBootstrapService(root=workspace_root).bootstrap_work_item(work_item="WI-001")
     _write_required_stage_inputs(workspace_root=workspace_root, work_item="WI-001")
@@ -150,83 +135,24 @@ def test_stage_run_executes_pipeline_and_reports_success(tmp_path: Path) -> None
     result = runner.invoke(
         app,
         [
-            "stage",
             "run",
-            "idea",
             "--work-item",
             "WI-001",
             "--runtime",
             "generic-cli",
-            "--root",
-            str(workspace_root),
-            "--config",
-            str(config_path),
-            "--no-log-follow",
-        ],
-    )
-
-    assert result.exit_code == 0
-    assert "AIDD stage run: run_id=" in result.stdout
-    assert "stage=idea" in result.stdout
-    assert "Final state: succeeded | action=advance | attempts=1" in result.stdout
-    assert "runtime_exit=success" in result.stdout
-    assert "grader=" in result.stdout
-
-
-def test_stage_run_supports_live_log_follow_prefix(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-    WorkspaceBootstrapService(root=workspace_root).bootstrap_work_item(work_item="WI-001")
-    _write_required_stage_inputs(workspace_root=workspace_root, work_item="WI-001")
-    runtime_writer = tmp_path / "runtime_writer.py"
-    _write_runtime_writer_script(runtime_writer)
-    config_path = tmp_path / "aidd.toml"
-    _write_config(config_path, runtime_writer=runtime_writer, workspace_root=workspace_root)
-
-    result = runner.invoke(
-        app,
-        [
-            "stage",
-            "run",
+            "--stage-start",
             "idea",
-            "--work-item",
-            "WI-001",
-            "--runtime",
-            "generic-cli",
+            "--stage-target",
+            "idea",
             "--root",
             str(workspace_root),
             "--config",
             str(config_path),
-            "--log-follow",
         ],
     )
 
     assert result.exit_code == 0
-    assert "[generic-cli:idea:stdout] runtime-output-line" in result.stdout
-
-
-def test_prefix_stream_chunk_formats_multiline_follow_output() -> None:
-    formatted = _prefix_stream_chunk(
-        runtime="claude-code",
-        stage="plan",
-        stream="stdout",
-        chunk="line-1\nline-2\n",
-        multi_stream=True,
-    )
-
-    assert formatted == (
-        "[claude-code:plan:stdout] line-1\n"
-        "[claude-code:plan:stdout] line-2\n"
-    )
-
-
-def test_prefix_stream_chunk_leaves_single_stream_output_unchanged() -> None:
-    original = "plain-line\n"
-    formatted = _prefix_stream_chunk(
-        runtime="claude-code",
-        stage="plan",
-        stream="stderr",
-        chunk=original,
-        multi_stream=False,
-    )
-
-    assert formatted == original
+    assert "AIDD run: run_id=" in result.stdout
+    assert "final_state=succeeded" in result.stdout
+    assert "Executed stages: 1" in result.stdout
+    assert "- idea: state=succeeded attempts=1 action=advance" in result.stdout

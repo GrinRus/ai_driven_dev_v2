@@ -157,7 +157,18 @@ def invoke_aidd_run(
     if not aidd_command:
         raise ValueError("aidd_command must contain at least one token.")
 
-    command = (*aidd_command, "run", "--work-item", work_item, "--runtime", runtime_id)
+    command: tuple[str, ...] = (
+        *aidd_command,
+        "run",
+        "--work-item",
+        work_item,
+        "--runtime",
+        runtime_id,
+    )
+    if scenario.run.stage_start:
+        command = (*command, "--stage-start", scenario.run.stage_start)
+    if scenario.run.stage_end:
+        command = (*command, "--stage-target", scenario.run.stage_end)
     command_env = dict(os.environ)
     command_env.update(
         {

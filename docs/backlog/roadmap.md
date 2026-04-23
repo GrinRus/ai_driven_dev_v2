@@ -5,7 +5,6 @@ This file is the canonical implementation plan for AIDD.
 ## Status vocabulary
 
 - `done` — completed in the repo
-- `blocked` — accepted but currently stopped by an explicit dependency gap
 - `next` — the preferred immediate target
 - `planned` — accepted but not active
 - `later` — useful but intentionally deferred
@@ -1874,10 +1873,10 @@ Exit evidence:
 
 ## Wave 7 — runtime widening and release hardening (`later`)
 
-### Epic W7-E1 — `codex` adapter (`later`)
+### Epic W7-E1 — `codex` adapter (`done`)
 Linked stories: `US-01`, `US-08`, `US-12`, `US-13`
 
-#### Slice W7-E1-S1 — runtime probing (`later`)
+#### Slice W7-E1-S1 — runtime probing (`done`)
 Goal: detect Codex CLI availability and supported features.
 
 Primary outputs:
@@ -1908,7 +1907,7 @@ Exit evidence:
 
 - the Codex adapter can be discovered and reported without execution support yet being complete.
 
-#### Slice W7-E1-S2 — stage execution and logs (`later`)
+#### Slice W7-E1-S2 — stage execution and logs (`done`)
 Goal: implement document-first execution for Codex.
 
 Primary outputs:
@@ -1939,7 +1938,7 @@ Exit evidence:
 
 - Codex participates in the same execution contract as the first-wave adapters.
 
-#### Slice W7-E1-S3 — parity scenarios (`later`)
+#### Slice W7-E1-S3 — parity scenarios (`done`)
 Goal: prove Codex parity on selected harness scenarios.
 
 Primary outputs:
@@ -1968,10 +1967,10 @@ Exit evidence:
 
 - Codex can be compared to Claude Code and generic-cli on shared scenarios.
 
-### Epic W7-E2 — `opencode` adapter (`done`)
+### Epic W7-E2 — `opencode` adapter (`later`)
 Linked stories: `US-01`, `US-08`, `US-12`
 
-#### Slice W7-E2-S1 — runtime probing (`done`)
+#### Slice W7-E2-S1 — runtime probing (`later`)
 Goal: detect OpenCode CLI availability and supported features.
 
 Primary outputs:
@@ -2002,7 +2001,7 @@ Exit evidence:
 
 - the OpenCode adapter can be discovered and reported before execution support is added.
 
-#### Slice W7-E2-S2 — stage execution and logs (`done`)
+#### Slice W7-E2-S2 — stage execution and logs (`later`)
 Goal: implement document-first execution for OpenCode.
 
 Primary outputs:
@@ -2033,7 +2032,7 @@ Exit evidence:
 
 - OpenCode participates in the same execution contract as the first-wave adapters.
 
-#### Slice W7-E2-S3 — parity scenarios (`done`)
+#### Slice W7-E2-S3 — parity scenarios (`later`)
 Goal: prove OpenCode parity on selected harness scenarios.
 
 Primary outputs:
@@ -2061,6 +2060,104 @@ Local tasks:
 Exit evidence:
 
 - OpenCode can be compared to Claude Code, Codex, and generic-cli on shared scenarios.
+
+### Epic W7-E4 — `pi-mono` adapter (`done`)
+Linked stories: `US-01`, `US-08`, `US-12`
+
+#### Slice W7-E4-S1 — runtime probing and execution (`done`)
+Goal: add a tier-2 `pi-mono` adapter that participates in the same execution contract.
+
+Primary outputs:
+
+- `src/aidd/adapters/pi_mono/`
+- executor and config wiring
+- doctor integration
+- adapter tests
+
+Touched areas:
+
+- `src/aidd/adapters/pi_mono/`
+- `src/aidd/adapters/executor.py`
+- `src/aidd/config.py`
+- `src/aidd/cli/main.py`
+- `tests/adapters/`
+
+Dependencies:
+
+- `W3-E2-S2`
+- `W4-E2-S1`
+
+Local tasks:
+
+- `W7-E4-S1-T1` (done) Implement `pi-mono` command discovery and capability probing.
+- `W7-E4-S1-T2` (done) Implement `pi-mono` stage execution, log streaming, timeout, and cancellation handling.
+- `W7-E4-S1-T3` (done) Wire `pi-mono` into runtime command resolution and `aidd doctor`.
+- `W7-E4-S1-T4` (done) Add probe and runner tests for `pi-mono`.
+
+Exit evidence:
+
+- `pi-mono` can run through the same runtime execution entrypoint as other adapters.
+- capability differences are visible in `aidd doctor`.
+
+#### Slice W7-E4-S2 — adapter conformance contract tests (`done`)
+Goal: prove that runtime adapters satisfy a common protocol surface.
+
+Primary outputs:
+
+- adapter conformance tests
+
+Touched areas:
+
+- `tests/adapters/`
+
+Dependencies:
+
+- `W7-E1-S2`
+- `W7-E2-S2`
+- `W7-E4-S1`
+
+Local tasks:
+
+- `W7-E4-S2-T1` (done) Add a shared probe conformance test that verifies capability fields for each runtime.
+- `W7-E4-S2-T2` (done) Add a shared stage-execution conformance test that verifies raw-log capture and success classification for each runtime.
+
+Exit evidence:
+
+- each configured runtime adapter is validated through the same contract test surface.
+
+### Epic W7-E5 — v1 migration and cleanup (`done`)
+Linked stories: `US-01`, `US-02`, `US-10`
+
+#### Slice W7-E5-S1 — selective v1 asset import (`done`)
+Goal: import useful v1 assets without bringing runtime-hook-specific internals.
+
+Primary outputs:
+
+- `src/aidd/migrations/v1_assets.py`
+- `aidd migrate import-v1`
+- migration CLI tests
+
+Touched areas:
+
+- `src/aidd/migrations/`
+- `src/aidd/cli/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W2-E1`
+- `W5-E1`
+
+Local tasks:
+
+- `W7-E5-S1-T1` (done) Implement selective import rules for v1 contracts, prompt packs, and scenario manifests.
+- `W7-E5-S1-T2` (done) Add hook-path filtering and extension allowlisting to avoid runtime-specific carryover.
+- `W7-E5-S1-T3` (done) Expose `aidd migrate import-v1` with dry-run and overwrite controls.
+- `W7-E5-S1-T4` (done) Add CLI tests for copy behavior, blocked paths, and overwrite behavior.
+
+Exit evidence:
+
+- v1 artifacts can be imported into v2 deterministically without copying hook-specific internals.
 
 ### Epic W7-E3 — public release hardening (`later`)
 Linked stories: `US-07`, `US-09`, `US-10`
@@ -2149,7 +2246,7 @@ Dependencies:
 Local tasks:
 
 - `W7-E3-S3-T1` (done) Define the supported Python-version window and platform support policy.
-- `W7-E3-S3-T2` (done) Define runtime-support tiers for generic-cli, Claude Code, Codex, and OpenCode.
+- `W7-E3-S3-T2` (done) Define runtime-support tiers for generic-cli, Claude Code, Codex, OpenCode, and pi-mono.
 - `W7-E3-S3-T3` (done) Define the policy for refreshing live E2E scenario baselines and pinned revisions.
 - `W7-E3-S3-T4` (done) Define deprecation rules for contract changes, adapters, and scenario manifests.
 

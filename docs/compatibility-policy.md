@@ -44,8 +44,9 @@ Runtime support is tiered by release impact and maintenance expectation.
 | --- | --- | --- | --- |
 | `generic-cli` | Tier 1 (release-blocking maintained) | Regressions are release blockers. Compatibility and behavior drift must be fixed before release. | Baseline portability runtime. |
 | `claude-code` | Tier 1 (release-blocking maintained) | Regressions are release blockers. Adapter and operator flows must stay production-usable. | First-class maintained runtime. |
-| `codex` | Tier 2 (actively maintained, non-blocking) | Regressions should be fixed promptly but may ship with explicit caveats when Tier 1 remains healthy. | Parity and eval behavior are still being hardened. |
-| `opencode` | Tier 3 (planned/limited) | Best-effort support only. Known gaps are acceptable when documented. | Smoke/interview parity bundles are archived via `aidd eval run`; interview lane remains blocked on `answers.md` evidence flow. |
+| `codex` | Tier 1 (release-blocking maintained) | Regressions are release blockers. Adapter conformance and workflow execution must remain production-usable. | Tier-1 runtime with the same conformance contract as `generic-cli` and `claude-code`. |
+| `opencode` | Tier 2 (actively maintained, non-blocking) | Regressions should be fixed promptly but may ship with explicit caveats when Tier 1 remains healthy. | Tier-2 runtime after adapter conformance rollout. |
+| `pi-mono` | Tier 2 (actively maintained, non-blocking) | Regressions should be fixed promptly but may ship with explicit caveats when Tier 1 remains healthy. | Tier-2 bridge runtime after adapter conformance rollout. |
 
 Operational policy:
 
@@ -163,3 +164,18 @@ Applies to smoke/interview/live scenario manifests and associated catalog entrie
   - reason for deprecation;
   - removal target release.
 - Scenario removal must update `docs/e2e/live-e2e-catalog.md` and keep historical evidence discoverable in Git history.
+
+### 6.5 v1 Runtime-Specific Paths
+
+The v2 migration path does not preserve compatibility for v1 runtime-specific internals
+such as hook trees, slash command wiring, and runtime-host glue directories.
+
+Policy:
+
+- v1 runtime-specific paths are considered deprecated on import to v2.
+- only durable v1 assets are eligible for migration:
+  - contracts,
+  - prompt packs,
+  - harness scenario manifests.
+- migration tooling must continue filtering hook/slash/runtime-host-specific paths.
+- reintroducing v1 runtime-coupled paths into v2 core or adapter boundaries is not allowed.

@@ -78,6 +78,12 @@ Harness scenarios should be defined in YAML and describe:
 - grading rules,
 - timeout and budget limits.
 
+Determinism rules:
+
+- live scenarios must pin `repo.revision` to an immutable commit sha;
+- harness metadata must record scenario-manifest hash and resolved execution revision;
+- replay of a prior run must reuse the same scenario manifest and revision pin.
+
 ## 6. Eval run lifecycle
 
 1. Probe the requested adapter.
@@ -92,6 +98,12 @@ Harness scenarios should be defined in YAML and describe:
 10. Run log analysis.
 11. Write final verdict artifacts.
 
+Grader output must include three explicit lanes:
+
+- contract compliance,
+- process compliance,
+- task outcome.
+
 ## 7. Mandatory output artifacts
 
 Every eval run should aim to write:
@@ -104,6 +116,7 @@ Every eval run should aim to write:
 - `.aidd/reports/evals/<run_id>/log-analysis.md`
 - `.aidd/reports/evals/<run_id>/grader.json`
 - `.aidd/reports/evals/<run_id>/verdict.md`
+- `.aidd/reports/evals/<run_id>/harness-metadata.json` including scenario hash and execution pin.
 
 ## 8. Log analysis requirements
 

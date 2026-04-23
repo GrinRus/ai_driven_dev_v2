@@ -13,6 +13,7 @@ class ScenarioManifestError(ValueError):
 
 
 _PLACEHOLDER_PATTERN = re.compile(r"\$\{(?P<key>[a-zA-Z0-9_.-]+)\}")
+_GIT_REVISION_PATTERN = re.compile(r"^[0-9a-fA-F]{40}$")
 
 
 @dataclass(frozen=True)
@@ -147,6 +148,33 @@ def _to_repo_source(raw: Any) -> ScenarioRepoSource:
     return ScenarioRepoSource(url=url, default_branch=default_branch, revision=revision)
 
 
+def _is_live_scenario_manifest_path(path: Path) -> bool:
+    parent_name = path.parent.name.strip().lower()
+    if parent_name == "live":
+        return True
+
+    lowered_parts = tuple(part.strip().lower() for part in path.parts)
+    for index, part in enumerate(lowered_parts):
+        if part != "live":
+            continue
+        if index > 0 and lowered_parts[index - 1] == "scenarios":
+            return True
+    return False
+
+
+def _validate_repo_pinning(*, path: Path, repo: ScenarioRepoSource) -> None:
+    if repo.revision is not None and _GIT_REVISION_PATTERN.match(repo.revision) is None:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'repo.revision' must be a 40-character git commit sha "
+            f"when provided: {repo.revision!r}."
+        )
+
+    if _is_live_scenario_manifest_path(path) and repo.revision is None:
+        raise ScenarioManifestError(
+            "Live scenario manifests must pin 'repo.revision' for deterministic replay."
+        )
+
+
 def _to_command_steps(*, raw: Any, key: str) -> ScenarioCommandSteps:
     payload = _require_mapping(value=raw, key=key)
     commands_raw = payload.get("commands")
@@ -225,10 +253,13 @@ def load_scenario(
     scenario_id = _require_non_empty_string(payload=substituted, key="id")
     task = _require_non_empty_string(payload=substituted, key="task")
     run = _to_run_config(substituted)
+    repo = _to_repo_source(substituted.get("repo"))
+    _validate_repo_pinning(path=path, repo=repo)
+
     return Scenario(
         scenario_id=scenario_id,
         task=task,
-        repo=_to_repo_source(substituted.get("repo")),
+        repo=repo,
         setup=_to_command_steps(raw=substituted.get("setup"), key="setup"),
         run=run,
         verify=_to_command_steps(raw=substituted.get("verify"), key="verify"),

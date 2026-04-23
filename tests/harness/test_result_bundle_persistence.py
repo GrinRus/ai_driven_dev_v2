@@ -85,6 +85,14 @@ def test_write_harness_metadata_persists_references(tmp_path: Path) -> None:
                 "reports/runs/WI-100/run-100/stages/qa/attempts/attempt-0001/runtime.log"
             ),
         },
+        scenario_manifest_path="/tmp/scenario.yaml",
+        scenario_manifest_sha256="abc123",
+        execution_pin={
+            "repo_url": "https://github.com/example/repo",
+            "requested_revision": None,
+            "prepared_repository_revision": "deadbeef",
+            "working_copy_revision": "deadbeef",
+        },
     )
 
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -94,6 +102,9 @@ def test_write_harness_metadata_persists_references(tmp_path: Path) -> None:
     assert payload["aidd_run_id"] == "run-100"
     assert payload["aidd_run"]["exit_code"] == 0
     assert payload["aidd_artifact_references"]["stage_result"].endswith("stage-result.md")
+    assert payload["scenario_manifest_path"] == "/tmp/scenario.yaml"
+    assert payload["scenario_manifest_sha256"] == "abc123"
+    assert payload["execution_pin"]["working_copy_revision"] == "deadbeef"
 
 
 def test_write_command_transcripts_persists_all_step_transcripts(tmp_path: Path) -> None:

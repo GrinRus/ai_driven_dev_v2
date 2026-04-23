@@ -243,6 +243,33 @@ def resolve_expected_output_documents(
     )
 
 
+def resolve_prompt_pack_paths(
+    *,
+    stage: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[Path, ...]:
+    contract_path = stage_contract_path(stage=stage, contracts_root=contracts_root)
+    if not contract_path.exists():
+        raise StageManifestLoadError(f"Stage contract file not found: {contract_path}")
+    markdown_text = contract_path.read_text(encoding="utf-8")
+    prompt_pack_references = _extract_bullets(markdown_text=markdown_text, heading="Prompt pack")
+    if not prompt_pack_references:
+        raise StageManifestLoadError(
+            f"Stage contract does not declare prompt-pack paths: {contract_path}"
+        )
+
+    repository_root = contracts_root.parent.parent
+    resolved_paths: list[Path] = []
+    for prompt_reference in prompt_pack_references:
+        prompt_path = (repository_root / prompt_reference).resolve(strict=False)
+        if not prompt_path.exists():
+            raise StageManifestLoadError(
+                f"Missing prompt-pack path '{prompt_reference}' for stage '{stage}'."
+            )
+        resolved_paths.append(prompt_path)
+    return tuple(resolved_paths)
+
+
 def resolve_validator_targets(
     *,
     stage: str,

@@ -274,6 +274,36 @@ def _canonical_stage_documents(workspace_root: Path, work_item: str, stage: str)
     }
 
 
+def _canonical_attempt_documents(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> dict[str, str]:
+    attempt_path = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    documents: dict[str, str] = {}
+    optional_files = {
+        "grader_verdict": "grader.json",
+    }
+    for document_name, filename in optional_files.items():
+        candidate = attempt_path / filename
+        if not candidate.exists():
+            continue
+        documents[document_name] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=candidate,
+        )
+    return documents
+
+
 def _canonical_log_paths(
     workspace_root: Path,
     work_item: str,
@@ -281,19 +311,33 @@ def _canonical_log_paths(
     stage: str,
     attempt_number: int,
 ) -> dict[str, str]:
-    runtime_log = run_attempt_runtime_log_path(
+    attempt_path = run_attempt_root(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
         stage=stage,
         attempt_number=attempt_number,
     )
-    return {
+    runtime_log = attempt_path / RUN_RUNTIME_LOG_FILENAME
+    logs: dict[str, str] = {
         "runtime_log": _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=runtime_log,
         )
     }
+    optional_log_files = {
+        "events_jsonl": "events.jsonl",
+        "runtime_exit": "runtime-exit.json",
+    }
+    for log_name, filename in optional_log_files.items():
+        candidate = attempt_path / filename
+        if not candidate.exists():
+            continue
+        logs[log_name] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=candidate,
+        )
+    return logs
 
 
 def write_attempt_artifact_index(
@@ -324,6 +368,15 @@ def write_attempt_artifact_index(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
+    )
+    documents.update(
+        _canonical_attempt_documents(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
     )
     logs = _canonical_log_paths(
         workspace_root=workspace_root,

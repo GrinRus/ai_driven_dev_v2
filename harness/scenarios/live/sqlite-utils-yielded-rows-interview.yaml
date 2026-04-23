@@ -2,6 +2,7 @@ id: AIDD-LIVE-006
 repo:
   url: https://github.com/simonw/sqlite-utils
   default_branch: main
+  revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
 issue:
   id: 694
   title: yielded rows feature
