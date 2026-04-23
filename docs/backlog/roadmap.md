@@ -2438,6 +2438,10 @@ Dependencies:
 - `W8-E1-S1`
 - `W5-E2-S2`
 
+Blocker notes:
+
+- `2026-04-23` `W8-E2-S1-T1` is blocked until `W8-E1-S1-T2` and `W8-E1-S1-T3` complete under strict slice-dependency policy.
+
 Local tasks:
 
 - `W8-E2-S1-T1` (next) Add a guard that forbids `pass` verdicts when required stage output artifacts are missing.
