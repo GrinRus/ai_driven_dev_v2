@@ -2352,7 +2352,7 @@ Exit evidence:
 ### Epic W8-E1 — runtime execution parity (`next`)
 Linked stories: `US-01`, `US-06`, `US-08`
 
-#### Slice W8-E1-S1 — runtime execution contract hardening (`next`)
+#### Slice W8-E1-S1 — runtime execution contract hardening (`done`)
 Goal: eliminate success-without-execution behavior for unsupported runtimes.
 
 Primary outputs:
@@ -2418,10 +2418,10 @@ Exit evidence:
 - stage execution can be invoked through adapter-specific paths for maintained runtimes;
 - produced artifacts remain comparable across runtimes.
 
-### Epic W8-E2 — harness verdict robustness (`next`)
+### Epic W8-E2 — harness verdict robustness (`done`)
 Linked stories: `US-07`, `US-10`
 
-#### Slice W8-E2-S1 — no-op resistant eval verdicts (`next`)
+#### Slice W8-E2-S1 — no-op resistant eval verdicts (`done`)
 Goal: prevent eval verdicts from passing without verified stage outputs.
 
 Primary outputs:
@@ -2450,7 +2450,7 @@ Local tasks:
 
 - `W8-E2-S1-T1` (done) Add a guard that forbids `pass` verdicts when required stage output artifacts are missing.
 - `W8-E2-S1-T2` (done) Add a no-op execution detector and map it to fail/blocked classifications.
-- `W8-E2-S1-T3` (planned) Strengthen live scenario verification expectations so checks assert repository effects, not only command exit status.
+- `W8-E2-S1-T3` (done) Strengthen live scenario verification expectations so checks assert repository effects, not only command exit status.
 
 Exit evidence:
 

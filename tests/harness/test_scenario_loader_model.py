@@ -33,11 +33,16 @@ def test_live_scenario_exposes_repo_steps_and_run_config() -> None:
         "start": "plan",
         "end": "qa",
     }
-    assert scenario.verify.commands == ("uv run pytest -q || pytest -q",)
+    assert scenario.verify.commands == (
+        "uv run pytest -q || pytest -q",
+        "test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/stage-result.md",
+        "test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/validator-report.md",
+    )
     assert scenario.raw["verify"]["pass_conditions"] == [
         "Verification command exits with status 0.",
         "Pytest output reports all tests as passed.",
         "No new failing tests are introduced relative to baseline.",
+        "QA stage output artifacts exist for the selected work item.",
     ]
     assert scenario.raw["reference_run"]["run_id"] == "eval-live-001-reference-20260422T081401Z"
     assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
@@ -98,6 +103,7 @@ def test_httpx_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
         "Verification command exits with status 0.",
         "Pytest output reports all tests as passed.",
         "No new failing tests are introduced relative to baseline.",
+        "QA stage output artifacts exist for the selected work item.",
     ]
     assert scenario.raw["reference_run"]["run_id"] == "eval-live-003-reference-20260422T083406Z"
     assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
@@ -143,6 +149,7 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         "Verification command exits with status 0.",
         "Pytest output reports all tests as passed.",
         "No new failing tests are introduced relative to baseline.",
+        "QA stage output artifacts exist for the selected work item.",
     ]
     assert (
         scenario.raw["reference_run"]["run_id"]
@@ -202,6 +209,7 @@ def test_hono_smoke_scenario_exposes_pinned_revision_and_objective() -> None:
         "Verification commands exit with status 0.",
         "Bun test run reports no failing tests.",
         "TypeScript compile check reports no type errors.",
+        "QA stage output artifacts exist for the selected work item.",
     ]
     assert scenario.raw["reference_run"]["run_id"] == "eval-live-007-reference-20260422T092510Z"
     assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
@@ -266,11 +274,14 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
         "uv run aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW",
         "test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md",
         "uv run pytest -q || pytest -q",
+        "test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/stage-result.md",
+        "test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/validator-report.md",
     )
     assert scenario.raw["verify"]["pass_conditions"] == [
         "The first stage-questions check reports at least one pending blocking question.",
         "Answers file resolves each blocking question before stage rerun.",
         "Final verification command exits with status 0 after resume.",
+        "QA stage output artifacts exist after the resumed execution path.",
     ]
     assert scenario.raw["verify"]["flow_steps"] == [
         {
@@ -283,7 +294,7 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
         },
         {
             "step": "completed",
-            "evidence": "verification command succeeds after the resolved-answer rerun.",
+            "evidence": "verification command and QA output artifact checks succeed after rerun.",
         },
     ]
     assert (
@@ -367,11 +378,14 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
         "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md",
         "bun test",
         "bunx tsc --noEmit",
+        "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/qa/output/stage-result.md",
+        "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/qa/output/validator-report.md",
     )
     assert scenario.raw["verify"]["pass_conditions"] == [
         "The first stage-questions check reports at least one pending blocking question.",
         "Answers file resolves each blocking question before stage rerun.",
         "Verification commands exit with status 0 after resume.",
+        "QA stage output artifacts exist after the resumed execution path.",
     ]
     assert scenario.raw["verify"]["flow_steps"] == [
         {
@@ -384,7 +398,7 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
         },
         {
             "step": "completed",
-            "evidence": "verification commands succeed after the resolved-answer rerun.",
+            "evidence": "verification commands and QA output artifact checks succeed after rerun.",
         },
     ]
     assert scenario.raw["reference_run"]["run_id"] == "eval-live-008-reference-20260422T094912Z"

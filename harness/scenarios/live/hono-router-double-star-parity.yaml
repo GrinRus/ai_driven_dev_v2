@@ -13,23 +13,28 @@ stage_scope:
 setup:
   commands:
   - bun install
+aidd_invocation:
+  work_item: WI-LIVE-HONO-INTERVIEW
 verify:
   commands:
   - uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW
   - test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md
   - bun test
   - bunx tsc --noEmit
+  - test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/qa/output/stage-result.md
+  - test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/qa/output/validator-report.md
   pass_conditions:
   - The first stage-questions check reports at least one pending blocking question.
   - Answers file resolves each blocking question before stage rerun.
   - Verification commands exit with status 0 after resume.
+  - QA stage output artifacts exist after the resumed execution path.
   flow_steps:
   - step: blocked
     evidence: questions.md exists with at least one blocking question id.
   - step: resumed
     evidence: answers.md exists and marks each blocking question as resolved.
   - step: completed
-    evidence: verification commands succeed after the resolved-answer rerun.
+    evidence: verification commands and QA output artifact checks succeed after rerun.
 reference_run:
   run_id: eval-live-008-reference-20260422T094912Z
   recorded_at_utc: '2026-04-22T09:49:39Z'

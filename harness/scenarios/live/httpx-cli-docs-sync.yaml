@@ -13,9 +13,16 @@ stage_scope:
 setup:
   commands:
   - uv sync || pip install -e .[dev]
+aidd_invocation:
+  work_item: WI-LIVE-HTTPX-DOCS-SYNC
 verify:
   commands:
   - uv run pytest -q || pytest -q
+  - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md
+  - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/validator-report.md
+  pass_conditions:
+  - Verification commands exit with status 0.
+  - QA stage output artifacts exist for the selected work item.
 limits:
   patch_budget_files: 6
   timeout_minutes: 15

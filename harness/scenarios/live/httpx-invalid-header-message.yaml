@@ -34,10 +34,13 @@ aidd_invocation:
 verify:
   commands:
   - uv run pytest -q || pytest -q
+  - test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/stage-result.md
+  - test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/validator-report.md
   pass_conditions:
   - Verification command exits with status 0.
   - Pytest output reports all tests as passed.
   - No new failing tests are introduced relative to baseline.
+  - QA stage output artifacts exist for the selected work item.
 reference_run:
   run_id: eval-live-003-reference-20260422T083406Z
   recorded_at_utc: '2026-04-22T08:34:14Z'

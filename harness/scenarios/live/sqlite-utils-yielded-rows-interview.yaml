@@ -14,22 +14,27 @@ stage_scope:
 setup:
   commands:
   - uv sync || pip install -e .[dev]
+aidd_invocation:
+  work_item: WI-LIVE-SQLITE-INTERVIEW
 verify:
   commands:
   - uv run aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW
   - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md
   - uv run pytest -q || pytest -q
+  - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/stage-result.md
+  - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/validator-report.md
   pass_conditions:
   - The first stage-questions check reports at least one pending blocking question.
   - Answers file resolves each blocking question before stage rerun.
   - Final verification command exits with status 0 after resume.
+  - QA stage output artifacts exist after the resumed execution path.
   flow_steps:
   - step: blocked
     evidence: questions.md exists with at least one blocking question id.
   - step: resumed
     evidence: answers.md exists and marks each blocking question as resolved.
   - step: completed
-    evidence: verification command succeeds after the resolved-answer rerun.
+    evidence: verification command and QA output artifact checks succeed after rerun.
 reference_run:
   run_id: eval-live-006-codex-reference-20260422T123937Z
   recorded_at_utc: '2026-04-22T12:39:38Z'
