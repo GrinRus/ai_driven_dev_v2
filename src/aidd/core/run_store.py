@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import subprocess
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from aidd.core.models.run import RepairHistoryEntry, RunArtifactIndex, StageRunMetadata
+from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, resolve_prompt_pack_paths
 from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
     WORKSPACE_REPORTS_DIRNAME,
@@ -23,6 +26,7 @@ RUN_MANIFEST_FILENAME = "run-manifest.json"
 RUN_STAGE_METADATA_FILENAME = "stage-metadata.json"
 RUN_ARTIFACT_INDEX_FILENAME = "artifact-index.json"
 RUN_RUNTIME_LOG_FILENAME = "runtime.log"
+_GIT_SHA_LENGTH = 40
 
 
 def _format_utc_timestamp(timestamp: datetime | None = None) -> str:
@@ -36,6 +40,61 @@ def _workspace_relative_canonical_path(workspace_root: Path, path: Path) -> str:
     if not resolved_path.is_relative_to(resolved_workspace):
         raise ValueError(f"Path must stay inside workspace root: {resolved_path}")
     return resolved_path.relative_to(resolved_workspace).as_posix()
+
+
+def _resolve_repository_root(
+    *,
+    contracts_root: Path,
+    repository_root: Path | None,
+) -> Path:
+    if repository_root is not None:
+        return repository_root.resolve(strict=False)
+    return contracts_root.resolve(strict=False).parent.parent
+
+
+def _resolve_repository_git_sha(repository_root: Path) -> str | None:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repository_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return None
+
+    candidate = completed.stdout.strip()
+    if completed.returncode != 0 or len(candidate) != _GIT_SHA_LENGTH:
+        return None
+    if any(char not in "0123456789abcdef" for char in candidate.lower()):
+        return None
+    return candidate
+
+
+def _sha256_hex(path: Path) -> str:
+    digest = hashlib.sha256()
+    digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def _collect_prompt_pack_provenance(
+    *,
+    stage_target: str,
+    contracts_root: Path,
+    repository_root: Path,
+) -> list[dict[str, str]]:
+    prompt_pack_paths = resolve_prompt_pack_paths(
+        stage=stage_target,
+        contracts_root=contracts_root,
+    )
+    return [
+        {
+            "path": prompt_path,
+            "sha256": _sha256_hex(repository_root / prompt_path),
+        }
+        for prompt_path in prompt_pack_paths
+    ]
 
 
 def run_store_root(workspace_root: Path) -> Path:
@@ -516,6 +575,9 @@ def create_run_manifest(
     runtime_id: str,
     stage_target: str,
     config_snapshot: dict[str, Any],
+    *,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    repository_root: Path | None = None,
 ) -> Path:
     manifest_path = run_manifest_path(
         workspace_root=workspace_root,
@@ -533,6 +595,16 @@ def create_run_manifest(
     ).mkdir(parents=True, exist_ok=True)
 
     now = _format_utc_timestamp()
+    resolved_repository_root = _resolve_repository_root(
+        contracts_root=contracts_root,
+        repository_root=repository_root,
+    )
+    repository_git_sha = _resolve_repository_git_sha(resolved_repository_root)
+    prompt_pack_provenance = _collect_prompt_pack_provenance(
+        stage_target=stage_target,
+        contracts_root=contracts_root,
+        repository_root=resolved_repository_root,
+    )
     payload = {
         "schema_version": 1,
         "run_id": run_id,
@@ -540,6 +612,8 @@ def create_run_manifest(
         "runtime_id": runtime_id,
         "stage_target": stage_target,
         "config_snapshot": config_snapshot,
+        "repository_git_sha": repository_git_sha,
+        "prompt_pack_provenance": prompt_pack_provenance,
         "created_at_utc": now,
         "updated_at_utc": now,
     }
@@ -573,6 +647,9 @@ class RunStore:
         runtime_id: str,
         stage_target: str,
         config_snapshot: dict[str, Any],
+        *,
+        contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+        repository_root: Path | None = None,
     ) -> Path:
         return create_run_manifest(
             workspace_root=self.workspace_root,
@@ -581,6 +658,8 @@ class RunStore:
             runtime_id=runtime_id,
             stage_target=stage_target,
             config_snapshot=config_snapshot,
+            contracts_root=contracts_root,
+            repository_root=repository_root,
         )
 
     def create_next_attempt(self, stage: str) -> Path:

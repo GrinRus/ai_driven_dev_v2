@@ -179,6 +179,20 @@ def load_all_stage_manifests(
     }
 
 
+def resolve_prompt_pack_paths(
+    *,
+    stage: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[str, ...]:
+    # Reuse manifest validation so prompt-pack paths remain contract-backed.
+    load_stage_manifest(stage=stage, contracts_root=contracts_root)
+    contract_path = stage_contract_path(stage=stage, contracts_root=contracts_root)
+    return _extract_bullets(
+        markdown_text=contract_path.read_text(encoding="utf-8"),
+        heading="Prompt pack",
+    )
+
+
 def _resolve_declared_document_path(
     *,
     workspace_root: Path,

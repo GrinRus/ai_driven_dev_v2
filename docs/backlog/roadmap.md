@@ -684,7 +684,7 @@ Dependencies:
 
 Local tasks:
 
-- `W3-E1-S4-T1` Record repository Git SHA + prompt-pack paths + content hashes in `run-manifest.json` and expose them via `aidd run show`.
+- `W3-E1-S4-T1` (done) Record repository Git SHA + prompt-pack paths + content hashes in `run-manifest.json` and expose them via `aidd run show`.
 - `W3-E1-S4-T2` Persist per-attempt prompt-pack provenance in `artifact-index.json` (or a sibling artifact) for later eval reproducibility.
 
 Exit evidence:

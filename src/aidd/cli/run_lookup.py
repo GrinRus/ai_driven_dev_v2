@@ -59,11 +59,19 @@ class RunStageMetadataSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class PromptPackProvenance:
+    path: str
+    sha256: str
+
+
+@dataclass(frozen=True, slots=True)
 class RunMetadataSummary:
     run_id: str
     work_item: str
     runtime_id: str
     stage_target: str
+    repository_git_sha: str | None
+    prompt_pack_provenance: tuple[PromptPackProvenance, ...]
     created_at_utc: str
     updated_at_utc: str
     stages: tuple[RunStageMetadataSummary, ...]
@@ -236,6 +244,20 @@ def resolve_run_metadata_summary(
             "Run manifest stage_target is missing for work item "
             f"'{work_item}', run '{selected_run_id}'."
         )
+    repository_git_sha = str(manifest_payload.get("repository_git_sha", "")).strip() or None
+    raw_prompt_pack_provenance = manifest_payload.get("prompt_pack_provenance", [])
+    prompt_pack_provenance: list[PromptPackProvenance] = []
+    if isinstance(raw_prompt_pack_provenance, list):
+        for entry in raw_prompt_pack_provenance:
+            if not isinstance(entry, dict):
+                continue
+            path = str(entry.get("path", "")).strip()
+            sha256 = str(entry.get("sha256", "")).strip()
+            if not path or not sha256:
+                continue
+            prompt_pack_provenance.append(
+                PromptPackProvenance(path=path, sha256=sha256)
+            )
     created_at_utc = str(manifest_payload.get("created_at_utc", "")).strip()
     updated_at_utc = str(manifest_payload.get("updated_at_utc", "")).strip()
 
@@ -278,6 +300,8 @@ def resolve_run_metadata_summary(
         work_item=work_item,
         runtime_id=runtime_id,
         stage_target=stage_target,
+        repository_git_sha=repository_git_sha,
+        prompt_pack_provenance=tuple(prompt_pack_provenance),
         created_at_utc=created_at_utc,
         updated_at_utc=updated_at_utc,
         stages=tuple(stage_summaries),

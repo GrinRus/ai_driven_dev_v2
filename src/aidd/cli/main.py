@@ -231,6 +231,16 @@ def run_show(
     run_table.add_row("work item", summary.work_item)
     run_table.add_row("runtime", summary.runtime_id)
     run_table.add_row("stage target", summary.stage_target)
+    run_table.add_row("repository git sha", summary.repository_git_sha or "unknown")
+    run_table.add_row(
+        "prompt packs",
+        _path_summary(
+            tuple(
+                f"{entry.path} ({entry.sha256})"
+                for entry in summary.prompt_pack_provenance
+            )
+        ),
+    )
     run_table.add_row("created at (UTC)", summary.created_at_utc or "unknown")
     run_table.add_row("updated at (UTC)", summary.updated_at_utc or "unknown")
     console.print(run_table)

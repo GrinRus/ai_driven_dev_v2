@@ -65,6 +65,9 @@ def test_run_show_prints_run_and_stage_metadata(tmp_path: Path) -> None:
     assert "claude-code" in result.stdout
     assert "stage target" in result.stdout
     assert "plan" in result.stdout
+    assert "repository git sha" in result.stdout
+    assert "prompt packs" in result.stdout
+    assert "prompt-packs/stages/plan/system.md" in result.stdout
     assert "Run stages: run-123" in result.stdout
     assert "executing" in result.stdout
     assert "2" in result.stdout

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -95,6 +96,22 @@ def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: 
     assert payload["runtime_id"] == "generic-cli"
     assert payload["stage_target"] == "plan"
     assert payload["config_snapshot"] == {"log_mode": "both"}
+    assert "repository_git_sha" in payload
+    git_sha = payload["repository_git_sha"]
+    assert git_sha is None or (isinstance(git_sha, str) and len(git_sha) == 40)
+
+    prompt_pack_provenance = payload["prompt_pack_provenance"]
+    assert isinstance(prompt_pack_provenance, list)
+    assert prompt_pack_provenance
+    system_prompt = next(
+        entry
+        for entry in prompt_pack_provenance
+        if entry["path"] == "prompt-packs/stages/plan/system.md"
+    )
+    expected_hash = hashlib.sha256(
+        Path(system_prompt["path"]).read_bytes()
+    ).hexdigest()
+    assert system_prompt["sha256"] == expected_hash
     assert payload["schema_version"] == 1
 
 
