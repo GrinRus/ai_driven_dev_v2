@@ -2024,7 +2024,7 @@ Exit evidence:
 
 ---
 
-## Wave 7 — runtime widening and release hardening (`done`)
+## Wave 7 — runtime widening and release hardening (`next`)
 
 ### Epic W7-E1 — `codex` adapter (`done`)
 Linked stories: `US-01`, `US-08`
@@ -2214,7 +2214,7 @@ Exit evidence:
 
 - OpenCode can be compared to Claude Code, Codex, and generic-cli on shared scenarios.
 
-### Epic W7-E3 — public release hardening (`done`)
+### Epic W7-E3 — public release hardening (`next`)
 Linked stories: `US-07`, `US-09`, `US-10`
 
 #### Slice W7-E3-S1 — operator handbook (`done`)
@@ -2309,20 +2309,20 @@ Exit evidence:
 
 - contributors and operators know what support guarantees AIDD actually makes.
 
-#### Slice W7-E3-S4 — doc + planning consistency cleanup (`done`)
-Goal: remove planning and documentation drift and add lightweight consistency checks.
+#### Slice W7-E3-S4 — doc + planning consistency cleanup (`next`)
+Goal: remove the remaining runtime-support and planning drift before resuming broader implementation.
 
 Primary outputs:
 
 - `docs/backlog/roadmap.md`
-- `docs/architecture/runtime-matrix.md`
-- `docs/architecture/target-architecture.md`
-- a consistency check script or test
+- `docs/backlog/backlog.md`
+- `README.md`
+- operator-facing docs updated to runtime-gate reality
 
 Touched areas:
 
 - `docs/`
-- `tests/`
+- `docs/backlog/`
 
 Dependencies:
 
@@ -2330,13 +2330,148 @@ Dependencies:
 
 Local tasks:
 
-- `W7-E3-S4-T1` (done) Fix invalid `Linked stories` references in `docs/backlog/roadmap.md` so they reference only defined user story ids.
-- `W7-E3-S4-T2` (done) Align runtime support vocabulary between `docs/architecture/runtime-matrix.md` and `docs/compatibility-policy.md`.
-- `W7-E3-S4-T3` (done) Reconcile workspace layout + stage IO semantics in `docs/architecture/target-architecture.md` with `src/aidd/core/workspace.py` and the `output/` publishing model.
-- `W7-E3-S4-T4` (done) Add a lightweight consistency check (script or test) that fails on unknown user story ids in roadmap and missing prompt-pack paths in stage contracts.
+- `W7-E3-S4-T1` (next) Update runtime-support statements in `README.md` and operator docs so they do not contradict the current CLI runtime gate.
+- `W7-E3-S4-T2` (planned) Replace placeholder wording for `aidd run` and `aidd stage run` with the current implemented scope.
+- `W7-E3-S4-T3` (planned) Add an explicit temporary limitation note that workflow execution remains `generic-cli` only until parity slices complete.
+- `W7-E3-S4-T4` (planned) Add a traceable roadmap/backlog sync note that records the post-audit queue restoration.
 
 Exit evidence:
 
-- roadmap references only user story ids that exist in `docs/product/user-stories.md`;
-- docs do not contradict runtime tier policy and workspace IO semantics;
-- a consistency check catches future drift in CI.
+- docs do not claim runtime behavior that the CLI does not execute today;
+- backlog queue and roadmap narrative are synchronized and reviewable;
+- reopened planning work is explicit instead of hidden behind stale `done` labels.
+
+---
+
+## Wave 8 — readiness recovery and runtime parity (`next`)
+
+### Epic W8-E1 — runtime execution parity (`next`)
+Linked stories: `US-01`, `US-06`, `US-08`
+
+#### Slice W8-E1-S1 — runtime execution contract hardening (`next`)
+Goal: eliminate success-without-execution behavior for unsupported runtimes.
+
+Primary outputs:
+
+- CLI unsupported-runtime failure contract
+- harness runtime-status mapping update
+- regression tests for non-generic workflow paths
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `src/aidd/harness/`
+- `tests/cli/`
+- `tests/harness/`
+
+Dependencies:
+
+- `W4-E3-S5`
+- `W5-E2-S1`
+
+Local tasks:
+
+- `W8-E1-S1-T1` (next) Make `aidd run --runtime <unsupported>` fail fast with non-zero exit and explicit unsupported-runtime classification.
+- `W8-E1-S1-T2` (planned) Make harness status mapping treat unsupported-runtime/no-op execution as fail or blocked, never pass.
+- `W8-E1-S1-T3` (planned) Add regression tests that lock non-generic run-path behavior in CLI and harness.
+
+Exit evidence:
+
+- unsupported runtime workflow invocations cannot exit as successful no-op runs;
+- harness verdicts no longer report pass when stage execution was skipped.
+
+#### Slice W8-E1-S2 — runtime adapter dispatch parity (`planned`)
+Goal: route stage execution through runtime-specific adapters beyond `generic-cli`.
+
+Primary outputs:
+
+- runtime dispatcher in `stage run`
+- aligned runtime artifact persistence path
+- cross-runtime smoke scenario set
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `src/aidd/adapters/`
+- `tests/cli/`
+- `tests/adapters/`
+- `harness/scenarios/smoke/`
+
+Dependencies:
+
+- `W8-E1-S1`
+- `W7-E1-S2`
+- `W7-E2-S2`
+
+Local tasks:
+
+- `W8-E1-S2-T1` (planned) Add runtime dispatch in `aidd stage run` for `claude-code`, `codex`, and `opencode`.
+- `W8-E1-S2-T2` (planned) Unify runtime artifact persistence for new dispatch paths under the existing run-store layout.
+- `W8-E1-S2-T3` (planned) Add cross-runtime smoke scenarios that assert required stage output documents were produced.
+
+Exit evidence:
+
+- stage execution can be invoked through adapter-specific paths for maintained runtimes;
+- produced artifacts remain comparable across runtimes.
+
+### Epic W8-E2 — harness verdict robustness (`next`)
+Linked stories: `US-07`, `US-10`
+
+#### Slice W8-E2-S1 — no-op resistant eval verdicts (`next`)
+Goal: prevent eval verdicts from passing without verified stage outputs.
+
+Primary outputs:
+
+- stage-output guard in eval verdict flow
+- no-op detector in log-analysis/verdict pipeline
+- stronger verification expectations in scenario guidance
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `src/aidd/evals/`
+- `tests/harness/`
+- `tests/evals/`
+
+Dependencies:
+
+- `W8-E1-S1`
+- `W5-E2-S2`
+
+Local tasks:
+
+- `W8-E2-S1-T1` (next) Add a guard that forbids `pass` verdicts when required stage output artifacts are missing.
+- `W8-E2-S1-T2` (planned) Add a no-op execution detector and map it to fail/blocked classifications.
+- `W8-E2-S1-T3` (planned) Strengthen live scenario verification expectations so checks assert repository effects, not only command exit status.
+
+Exit evidence:
+
+- eval pass status always implies evidenced stage-output side effects;
+- no-op execution paths are classified and reported as non-pass outcomes.
+
+### Epic W8-E3 — planning governance recovery (`planned`)
+Linked stories: `US-10`
+
+#### Slice W8-E3-S1 — backlog restoration policy (`planned`)
+Goal: define and document how to reopen execution flow when roadmap slices were previously all marked done.
+
+Primary outputs:
+
+- queue-restoration policy note
+- planning workflow note for opening a new wave
+
+Touched areas:
+
+- `docs/backlog/`
+
+Dependencies:
+
+- none
+
+Local tasks:
+
+- `W8-E3-S1-T1` (planned) Document the policy for restoring actionable queue state when roadmap is fully done and backlog is empty.
+
+Exit evidence:
+
+- maintainers have a documented, repeatable procedure to reopen the next wave without governance drift.

@@ -6,12 +6,26 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
+- `W7-E3-S4-T1`
+- `W8-E1-S1-T1`
+- `W8-E2-S1-T1`
 
 ## Soon
 
+- `W7-E3-S4-T2`
+- `W7-E3-S4-T3`
+- `W7-E3-S4-T4`
+- `W8-E1-S1-T2`
+- `W8-E1-S1-T3`
+- `W8-E2-S1-T2`
+- `W8-E2-S1-T3`
 
 ## Parking lot
 
+- `W8-E1-S2-T1`
+- `W8-E1-S2-T2`
+- `W8-E1-S2-T3`
+- `W8-E3-S1-T1`
 
 ## Update rules
 
