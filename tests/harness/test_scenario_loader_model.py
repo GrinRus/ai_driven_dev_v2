@@ -44,6 +44,15 @@ def test_live_scenario_exposes_repo_steps_and_run_config() -> None:
         "No new failing tests are introduced relative to baseline.",
         "QA stage output artifacts exist for the selected work item.",
     ]
+    assert scenario.raw["workflow_bundle"] == {
+        "lane": "primary-non-generic-workflow-proof",
+        "maintained_runtime": "codex",
+        "required_artifacts": [
+            "stage-result.md",
+            "validator-report.md",
+            "runtime.log",
+        ],
+    }
     assert scenario.raw["reference_run"]["run_id"] == "eval-live-001-reference-20260422T081401Z"
     assert scenario.raw["reference_run"]["runtime"] == "generic-cli"
     assert scenario.raw["reference_run"]["status"] == "harness_fail"
@@ -175,8 +184,7 @@ def test_sqlite_utils_smoke_scenario_exposes_pinned_revision_and_objective() -> 
         scenario.raw["opencode_reference_run"]["bundle_root"]
         == ".aidd/reports/evals/eval-live-005-opencode-20260422T142733Z"
     )
-    assert "codex" in scenario.runtime_targets
-    assert "opencode" in scenario.runtime_targets
+    assert scenario.runtime_targets == ("codex", "opencode")
 
 
 def test_hono_smoke_scenario_exposes_pinned_revision_and_objective() -> None:

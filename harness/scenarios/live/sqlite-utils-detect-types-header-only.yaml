@@ -41,6 +41,13 @@ verify:
   - Pytest output reports all tests as passed.
   - No new failing tests are introduced relative to baseline.
   - QA stage output artifacts exist for the selected work item.
+workflow_bundle:
+  lane: primary-non-generic-workflow-proof
+  maintained_runtime: codex
+  required_artifacts:
+  - stage-result.md
+  - validator-report.md
+  - runtime.log
 reference_run:
   run_id: eval-live-005-codex-reference-20260422T123518Z
   recorded_at_utc: '2026-04-22T12:35:29Z'
@@ -63,7 +70,5 @@ limits:
 interview:
   required: false
 runtime_targets:
-- claude-code
-- generic-cli
 - codex
 - opencode

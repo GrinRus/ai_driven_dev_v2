@@ -93,12 +93,14 @@ Initial scenarios:
 
 - **AIDD-LIVE-005 — header-only CSV bugfix**  
   Based on issue `#705`. Prevent a crash when `--detect-types` is used on a CSV file that contains only a header row. Add a regression test.
-  First reference run on April 22, 2026 used runtime `generic-cli`, pinned revision
+  Primary non-generic workflow-proof reference run on April 22, 2026 used runtime
+  `codex`, pinned revision
   `8d74ffc93292c604d5827e2b44fffedca0c28c19`, and produced status `harness_pass`
-  with all setup, run, and verification commands succeeding.
-  Codex parity reference run on April 22, 2026 used runtime `codex`, pinned revision
-  `8d74ffc93292c604d5827e2b44fffedca0c28c19`, and produced status `harness_pass`
-  with all setup, run, and verification commands succeeding.
+  with setup, workflow execution, and verification commands succeeding.
+  OpenCode corroboration run on April 22, 2026 used runtime `opencode`, pinned
+  revision `8d74ffc93292c604d5827e2b44fffedca0c28c19`, and produced status
+  `harness_pass`. Required durable artifacts for this lane are
+  `stage-result.md`, `validator-report.md`, and `runtime.log`.
 - **AIDD-LIVE-006 — yielded rows feature with interview**  
   Based on issue `#694`. Add a CLI path for passing Python code or a Python file that yields rows to insert. This is explicitly an interview scenario: the system must ask the user about execution trust boundaries, accepted input form, and documentation expectations before implementation.
   First reference run on April 22, 2026 used runtime `generic-cli`, pinned revision
@@ -147,6 +149,13 @@ Use these for frequent cross-runtime checks:
 - AIDD-LIVE-003
 - AIDD-LIVE-005
 - AIDD-LIVE-007
+
+### Non-generic workflow-proof lane
+
+Use this to preserve one rerunnable public-repo workflow bundle on a maintained
+non-generic runtime:
+
+- AIDD-LIVE-005 (primary runtime `codex`, corroboration runtime `opencode`)
 
 ### Interview lane
 
@@ -203,7 +212,7 @@ Completed reference runs from the minimum set:
 
 Known parity gaps and adapter-specific limitations:
 
-- The `aidd run` command remains a roadmap placeholder for all runtimes, so current Codex parity is infrastructure-level (setup/run/verify contract) rather than full stage-execution parity.
+- Full workflow-path proof now exists for smoke lane `AIDD-LIVE-005`; remaining parity gaps are concentrated in interview handling and capability breadth.
 - Interview flow parity is incomplete: `AIDD-LIVE-006` fails because `.aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md` is not produced before the verify gate.
 - Current Codex probe capability report is limited to `raw-log` and `env-injection`; no validated support is declared for structured logs, native question events, resume, non-interactive mode, working-directory control, or subagents.
 - Docs-alignment lane (`AIDD-LIVE-004`) remains the next comparator for code/docs/example coherence after runtime-specific behavior differences.

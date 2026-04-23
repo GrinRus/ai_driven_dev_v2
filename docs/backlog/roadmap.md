@@ -2587,7 +2587,7 @@ Exit evidence:
 
 ---
 
-## Wave 10 — release confidence and external readiness (`next`)
+## Wave 10 — release confidence and external readiness (`done`)
 
 ### Epic W10-E0 — operator state sync (`done`)
 Linked stories: `US-09`, `US-10`
@@ -2704,10 +2704,10 @@ Exit evidence:
 
 - adding a runtime requires adapter-local changes plus one conformance entry, not scattered ad hoc checks.
 
-### Epic W10-E3 — live workflow proof (`next`)
+### Epic W10-E3 — live workflow proof (`done`)
 Linked stories: `US-01`, `US-06`, `US-07`
 
-#### Slice W10-E3-S1 — non-generic live workflow evidence (`next`)
+#### Slice W10-E3-S1 — non-generic live workflow evidence (`done`)
 Goal: produce one durable public-repo workflow bundle on a maintained non-generic runtime.
 
 Primary outputs:
@@ -2729,7 +2729,11 @@ Dependencies:
 
 Local tasks:
 
-- `W10-E3-S1-T1` (next) Promote one pinned live scenario to full workflow-path verification on a maintained non-generic runtime and require produced stage-output documents in the bundle.
+- `W10-E3-S1-T1` (done) Promote one pinned live scenario to full workflow-path verification on a maintained non-generic runtime and require produced stage-output documents in the bundle.
+
+Sync notes:
+
+- `2026-04-23` `W10-E3-S1-T1` completed: `AIDD-LIVE-005` now serves as the primary non-generic workflow-proof lane with explicit bundle artifact requirements and updated catalog guidance.
 
 Exit evidence:
 
