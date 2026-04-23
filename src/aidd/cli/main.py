@@ -280,8 +280,9 @@ def doctor(
 
     console.print(table)
     console.print(
-        "Bootstrap commands are functional. Stage execution, validators, adapters, and harness "
-        "orchestration are still roadmap work."
+        "Workflow and stage execution are available on maintained runtimes. "
+        "Remaining roadmap work focuses on release-channel verification and "
+        "durable non-generic live E2E evidence."
     )
 
 

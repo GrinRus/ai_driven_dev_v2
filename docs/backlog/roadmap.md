@@ -2589,10 +2589,10 @@ Exit evidence:
 
 ## Wave 10 — release confidence and external readiness (`next`)
 
-### Epic W10-E0 — operator state sync (`next`)
+### Epic W10-E0 — operator state sync (`done`)
 Linked stories: `US-09`, `US-10`
 
-#### Slice W10-E0-S1 — current-state messaging alignment (`next`)
+#### Slice W10-E0-S1 — current-state messaging alignment (`done`)
 Goal: align operator-facing status text with actual post-W9 behavior before further external-readiness work.
 
 Primary outputs:
@@ -2613,21 +2613,22 @@ Dependencies:
 Local tasks:
 
 - `W10-E0-S1-T1` (done) Rewrite README runtime-support and current-CLI sections to match maintained workflow and stage runtime behavior after Wave 9.
-- `W10-E0-S1-T2` (next) Replace the stale `aidd doctor` footer with wording that names the remaining release-proof and live-E2E gaps instead of calling implemented subsystems roadmap work.
+- `W10-E0-S1-T2` (done) Replace the stale `aidd doctor` footer with wording that names the remaining release-proof and live-E2E gaps instead of calling implemented subsystems roadmap work.
 
 Sync notes:
 
 - `2026-04-23` `W10-E0-S1-T1` completed: README runtime-support and current CLI sections now align with post-W9 workflow and stage runtime parity.
+- `2026-04-23` `W10-E0-S1-T2` completed: `aidd doctor` footer now reflects post-W9 runtime parity and calls out remaining release-channel and live-E2E proof work.
 
 Exit evidence:
 
 - `README.md` no longer contradicts runtime parity;
 - `uv run aidd doctor` prints current-state wording that matches post-W9 behavior.
 
-### Epic W10-E1 — published install verification (`planned`)
+### Epic W10-E1 — published install verification (`next`)
 Linked stories: `US-09`, `US-10`
 
-#### Slice W10-E1-S1 — release-channel verification (`planned`)
+#### Slice W10-E1-S1 — release-channel verification (`next`)
 Goal: turn `US-09` from documented intent into automated evidence against published artifacts.
 
 Primary outputs:
@@ -2649,7 +2650,7 @@ Dependencies:
 
 Local tasks:
 
-- `W10-E1-S1-T1` (planned) Add a post-publish PyPI verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged version is installable via `pipx`, then runs `aidd --version` and `aidd doctor`.
+- `W10-E1-S1-T1` (next) Add a post-publish PyPI verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged version is installable via `pipx`, then runs `aidd --version` and `aidd doctor`.
 - `W10-E1-S1-T2` (planned) Add a post-publish `uv tool install` verification job that retries up to 10 times with 30-second backoff until the tagged version is installable, then runs `aidd --version` and `aidd doctor`.
 - `W10-E1-S1-T3` (planned) Add a post-publish GHCR verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged image is pullable, then runs `aidd --version` and `aidd doctor` in the container.
 - `W10-E1-S1-T4` (planned) Update release documentation so the three verification jobs are required release evidence for tagged builds.
