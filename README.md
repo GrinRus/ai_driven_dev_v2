@@ -71,7 +71,7 @@ See `docs/product/user-stories.md` for the full set.
 
 Workflow and stage execution today:
 
-- `aidd run` supports runtime `generic-cli` only.
+- `aidd run` supports runtimes `generic-cli`, `claude-code`, `codex`, and `opencode`.
 - `aidd stage run` supports runtimes `generic-cli`, `claude-code`, `codex`, and `opencode`.
 
 Runtime probes in `aidd doctor`:
@@ -81,15 +81,9 @@ Runtime probes in `aidd doctor`:
 - `codex`
 - `opencode`
 
-Planned execution parity:
+Unsupported runtime handling:
 
-- `claude-code`
-- `codex`
-- `opencode`
-
-Temporary limitation:
-
-- Workflow execution remains intentionally `generic-cli` only until workflow parity slices beyond `W8-E1-S2` are complete.
+- `aidd run` and `aidd stage run` fail fast with non-zero exit and `unsupported-runtime` classification when the runtime id is unknown.
 
 Future bridge target:
 

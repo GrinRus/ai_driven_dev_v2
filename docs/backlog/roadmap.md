@@ -2568,10 +2568,14 @@ Dependencies:
 
 Local tasks:
 
-- `W9-E1-S1-T1` (planned) Implement runtime dispatch in `aidd run` for `claude-code`, `codex`, and `opencode`.
+- `W9-E1-S1-T1` (done) Implement runtime dispatch in `aidd run` for `claude-code`, `codex`, and `opencode`.
 - `W9-E1-S1-T2` (planned) Unify workflow run artifact persistence across runtimes under the existing run-store layout.
 - `W9-E1-S1-T3` (planned) Add workflow-path regressions for non-generic runtimes, including success, fail, no-op, and unsupported paths.
 - `W9-E1-S1-T4` (planned) Add cross-runtime smoke scenario checks that require produced stage output artifacts in workflow execution lane.
+
+Sync notes:
+
+- `2026-04-23` `W9-E1-S1-T1` completed: `aidd run` now dispatches workflow execution for `generic-cli`, `claude-code`, `codex`, and `opencode`; unsupported runtime ids remain fail-fast with explicit `unsupported-runtime` classification.
 
 Exit evidence:
 

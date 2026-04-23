@@ -163,7 +163,7 @@ def test_eval_runner_fail_status_for_verification_non_zero(tmp_path: Path) -> No
     assert "- Status: `fail`" in verdict_text
 
 
-def test_eval_runner_fails_for_unsupported_runtime_real_invocation(tmp_path: Path) -> None:
+def test_eval_runner_fails_for_non_generic_runtime_real_invocation(tmp_path: Path) -> None:
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     scenario_path = tmp_path / "scenario-runtime-gate.yaml"
@@ -185,7 +185,7 @@ def test_eval_runner_fails_for_unsupported_runtime_real_invocation(tmp_path: Pat
     assert result.status == "fail"
     verdict_text = result.verdict_path.read_text(encoding="utf-8")
     assert "- Status: `fail`" in verdict_text
-    assert "unsupported-runtime classification" in verdict_text
+    assert "AIDD run exited with non-zero status" in verdict_text
 
 
 def test_eval_runner_blocked_status_when_answers_file_missing(tmp_path: Path) -> None:

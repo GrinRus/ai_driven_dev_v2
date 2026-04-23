@@ -107,6 +107,7 @@ _STAGE_RUN_SUPPORTED_RUNTIMES: tuple[str, ...] = (
     "codex",
     "opencode",
 )
+_WORKFLOW_RUN_SUPPORTED_RUNTIMES: tuple[str, ...] = _STAGE_RUN_SUPPORTED_RUNTIMES
 
 app = typer.Typer(
     help="Runtime-agnostic orchestration for document-first AI software delivery.",
@@ -331,17 +332,19 @@ def run_callback(
     if work_item is None:
         raise typer.BadParameter("Missing option '--work-item'.")
 
-    if runtime != "generic-cli":
+    if runtime not in _WORKFLOW_RUN_SUPPORTED_RUNTIMES:
+        supported = ", ".join(_WORKFLOW_RUN_SUPPORTED_RUNTIMES)
         console.print(f"AIDD run: work_item={work_item} runtime={runtime}")
         console.print(
-            "Workflow execution is currently implemented for runtime 'generic-cli' only. "
-            "Use `aidd stage run` for stage-level execution on this runtime for now."
+            f"Unsupported runtime '{runtime}' for workflow execution. "
+            f"Supported runtimes: {supported}."
         )
         console.print("Failure classification: unsupported-runtime")
         raise typer.Exit(code=2)
 
     cfg = load_config(config)
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
+    runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
     run_id = _allocate_stage_run_id(workspace_root=workspace_root, work_item=work_item)
     create_run_manifest(
         workspace_root=workspace_root,
@@ -352,7 +355,7 @@ def run_callback(
         config_snapshot={
             "config_path": config.as_posix(),
             "workspace_root": workspace_root.as_posix(),
-            "runtime_command": cfg.generic_cli_command,
+            "runtime_command": runtime_command,
             "log_follow": log_follow,
             "mode": "workflow",
         },

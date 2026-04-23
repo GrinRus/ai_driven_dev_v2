@@ -153,7 +153,42 @@ def test_run_stops_when_stage_execution_returns_nonzero_exit(
     assert "- research: status=failed attempts=0" in result.stdout
 
 
-def test_run_rejects_unsupported_runtime_with_nonzero_exit() -> None:
+@pytest.mark.parametrize("selected_runtime", ("claude-code", "codex", "opencode"))
+def test_run_dispatches_workflow_for_supported_non_generic_runtimes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    selected_runtime: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = _write_config(tmp_path)
+    executed_stages: list[str] = []
+
+    def _fake_stage_run(
+        *,
+        stage: str,
+        work_item: str,
+        runtime: str,
+        run_id: str | None,
+        root: Path | None,
+        config: Path,
+        log_follow: bool,
+    ) -> None:
+        assert runtime == selected_runtime
+        assert run_id is not None
+        assert root is not None
+        assert config == config_path
+        _ = log_follow
+        executed_stages.append(stage)
+        persist_stage_status(
+            workspace_root=root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            status=StageState.SUCCEEDED.value,
+        )
+
+    monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
+
     result = runner.invoke(
         cli_main.app,
         [
@@ -161,11 +196,34 @@ def test_run_rejects_unsupported_runtime_with_nonzero_exit() -> None:
             "--work-item",
             "WI-012",
             "--runtime",
-            "opencode",
+            selected_runtime,
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert executed_stages == list(STAGES)
+    assert f"AIDD run: work_item=WI-012 runtime={selected_runtime}" in result.stdout
+    assert "Workflow run completed:" in result.stdout
+
+
+def test_run_rejects_unsupported_runtime_with_nonzero_exit() -> None:
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "run",
+            "--work-item",
+            "WI-013",
+            "--runtime",
+            "unsupported-runtime",
         ],
     )
 
     assert result.exit_code == 2, result.output
-    assert "AIDD run: work_item=WI-012 runtime=opencode" in result.stdout
-    assert "implemented for runtime 'generic-cli' only" in result.stdout
+    assert "AIDD run: work_item=WI-013 runtime=unsupported-runtime" in result.stdout
+    assert "Unsupported runtime 'unsupported-runtime' for workflow execution." in result.stdout
     assert "Failure classification: unsupported-runtime" in result.stdout
