@@ -46,6 +46,7 @@ Runtime support is tiered by release impact and maintenance expectation.
 | `claude-code` | Tier 1 (release-blocking maintained) | Regressions are release blockers. Adapter and operator flows must stay production-usable. | First-class maintained runtime. |
 | `codex` | Tier 2 (actively maintained, non-blocking) | Regressions should be fixed promptly but may ship with explicit caveats when Tier 1 remains healthy. | Parity and eval behavior are still being hardened. |
 | `opencode` | Tier 3 (planned/limited) | Best-effort support only. Known gaps are acceptable when documented. | Smoke/interview parity bundles are archived via `aidd eval run`; interview lane remains blocked on `answers.md` evidence flow. |
+| `pi-mono` | Future / experimental (outside current tiers) | No active compatibility commitment. Treat as bridge-target research until a maintained adapter lane is planned. | Track as a compatibility target first; do not treat regressions as release blockers. |
 
 Operational policy:
 
