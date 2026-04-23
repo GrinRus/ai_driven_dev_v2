@@ -5,6 +5,7 @@ import shlex
 import sys
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from aidd.cli.main import _prefix_stream_chunk, app
@@ -156,6 +157,9 @@ def _write_cli_config(
     *,
     tmp_path: Path,
     runtime_command: str,
+    claude_code_command: str = "claude",
+    codex_command: str = "codex",
+    opencode_command: str = "opencode",
     max_repair_attempts: int = 2,
 ) -> Path:
     config_path = tmp_path / "aidd.test.toml"
@@ -165,6 +169,12 @@ def _write_cli_config(
             "root = \".aidd\"\n\n"
             "[runtime.generic_cli]\n"
             f"command = \"{runtime_command}\"\n\n"
+            "[runtime.claude_code]\n"
+            f"command = \"{claude_code_command}\"\n\n"
+            "[runtime.codex]\n"
+            f"command = \"{codex_command}\"\n\n"
+            "[runtime.opencode]\n"
+            f"command = \"{opencode_command}\"\n\n"
             "[repair]\n"
             f"max_attempts = {max_repair_attempts}\n"
         ),
@@ -340,7 +350,74 @@ def test_stage_run_returns_nonzero_when_runtime_fails(tmp_path: Path) -> None:
     assert payload["status"] == "failed"
 
 
-def test_stage_run_rejects_non_generic_runtime() -> None:
+@pytest.mark.parametrize(
+    "runtime",
+    ("claude-code", "codex", "opencode"),
+)
+def test_stage_run_executes_supported_non_generic_runtime(
+    tmp_path: Path,
+    runtime: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-007")
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+        exit_code=0,
+    )
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    )
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=runtime_command,
+        claude_code_command=runtime_command,
+        codex_command=runtime_command,
+        opencode_command=runtime_command,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-007",
+            "--runtime",
+            runtime,
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (
+        f"AIDD stage run: stage=plan work_item=WI-007 runtime={runtime} "
+        in result.stdout
+    )
+    assert f"[{runtime}:plan:stdout] runtime-output-line" in result.stdout
+    run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-007")
+    runtime_log_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-007"
+        / run_id
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+        / RUN_RUNTIME_LOG_FILENAME
+    )
+    assert runtime_log_path.exists()
+    assert "runtime-output-line" in runtime_log_path.read_text(encoding="utf-8")
+
+
+def test_stage_run_rejects_unknown_runtime() -> None:
     result = runner.invoke(
         app,
         [
@@ -350,12 +427,12 @@ def test_stage_run_rejects_non_generic_runtime() -> None:
             "--work-item",
             "WI-001",
             "--runtime",
-            "claude-code",
+            "pi-mono",
         ],
     )
 
     assert result.exit_code != 0
-    assert "supports runtime 'generic-cli'" in result.output
+    assert "Unsupported runtime 'pi-mono'" in result.output
 
 
 def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Path) -> None:

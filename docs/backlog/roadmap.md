@@ -2384,7 +2384,7 @@ Exit evidence:
 - unsupported runtime workflow invocations cannot exit as successful no-op runs;
 - harness verdicts no longer report pass when stage execution was skipped.
 
-#### Slice W8-E1-S2 — runtime adapter dispatch parity (`planned`)
+#### Slice W8-E1-S2 — runtime adapter dispatch parity (`next`)
 Goal: route stage execution through runtime-specific adapters beyond `generic-cli`.
 
 Primary outputs:
@@ -2409,7 +2409,7 @@ Dependencies:
 
 Local tasks:
 
-- `W8-E1-S2-T1` (planned) Add runtime dispatch in `aidd stage run` for `claude-code`, `codex`, and `opencode`.
+- `W8-E1-S2-T1` (done) Add runtime dispatch in `aidd stage run` for `claude-code`, `codex`, and `opencode`.
 - `W8-E1-S2-T2` (planned) Unify runtime artifact persistence for new dispatch paths under the existing run-store layout.
 - `W8-E1-S2-T3` (planned) Add cross-runtime smoke scenarios that assert required stage output documents were produced.
 

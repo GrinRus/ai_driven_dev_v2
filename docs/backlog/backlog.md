@@ -10,7 +10,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Parking lot
 
-- `W8-E1-S2-T1`
 - `W8-E1-S2-T2`
 - `W8-E1-S2-T3`
 - `W8-E3-S1-T1`

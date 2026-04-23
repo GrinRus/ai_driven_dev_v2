@@ -12,7 +12,33 @@ from rich.table import Table
 from aidd import __version__
 from aidd.adapters.base import CapabilityReport
 from aidd.adapters.claude_code import probe as probe_claude_code
+from aidd.adapters.claude_code.runner import (
+    ClaudeCodeCommandContext,
+    ClaudeCodeExitClassification,
+)
+from aidd.adapters.claude_code.runner import (
+    build_subprocess_spec as build_claude_code_subprocess_spec,
+)
+from aidd.adapters.claude_code.runner import (
+    persist_attempt_runtime_log as persist_claude_code_runtime_log,
+)
+from aidd.adapters.claude_code.runner import (
+    run_subprocess_with_streaming as run_claude_code_subprocess_with_streaming,
+)
 from aidd.adapters.codex import probe as probe_codex
+from aidd.adapters.codex.runner import (
+    CodexCommandContext,
+    CodexExitClassification,
+)
+from aidd.adapters.codex.runner import (
+    build_subprocess_spec as build_codex_subprocess_spec,
+)
+from aidd.adapters.codex.runner import (
+    persist_attempt_runtime_log as persist_codex_runtime_log,
+)
+from aidd.adapters.codex.runner import (
+    run_subprocess_with_streaming as run_codex_subprocess_with_streaming,
+)
 from aidd.adapters.generic_cli import probe as probe_generic_cli
 from aidd.adapters.generic_cli.runner import (
     GenericCliExitClassification,
@@ -22,13 +48,26 @@ from aidd.adapters.generic_cli.runner import (
     run_subprocess_with_streaming,
 )
 from aidd.adapters.opencode import probe as probe_opencode
+from aidd.adapters.opencode.runner import (
+    OpenCodeCommandContext,
+    OpenCodeExitClassification,
+)
+from aidd.adapters.opencode.runner import (
+    build_subprocess_spec as build_opencode_subprocess_spec,
+)
+from aidd.adapters.opencode.runner import (
+    persist_attempt_runtime_log as persist_opencode_runtime_log,
+)
+from aidd.adapters.opencode.runner import (
+    run_subprocess_with_streaming as run_opencode_subprocess_with_streaming,
+)
 from aidd.cli.run_lookup import (
     resolve_run_artifacts_summary,
     resolve_run_log_summary,
     resolve_run_metadata_summary,
     resolve_stage_result_summary,
 )
-from aidd.config import load_config
+from aidd.config import AiddConfig, load_config
 from aidd.core.interview import (
     load_answers_document,
     load_questions_document,
@@ -57,10 +96,17 @@ from aidd.core.stage_runner import (
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.state_machine import StageState
 from aidd.core.workspace import WorkspaceBootstrapService
+from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
 from aidd.harness.eval_runner import run_eval_scenario
 
 console = Console(no_color=True)
+_STAGE_RUN_SUPPORTED_RUNTIMES: tuple[str, ...] = (
+    "generic-cli",
+    "claude-code",
+    "codex",
+    "opencode",
+)
 
 app = typer.Typer(
     help="Runtime-agnostic orchestration for document-first AI software delivery.",
@@ -95,6 +141,18 @@ def _path_summary(paths: tuple[str, ...]) -> str:
     if not paths:
         return "none"
     return "\n".join(paths)
+
+
+def _runtime_command_for_runtime(*, runtime: str, cfg: AiddConfig) -> str:
+    if runtime == "generic-cli":
+        return cfg.generic_cli_command
+    if runtime == "claude-code":
+        return cfg.claude_code_command
+    if runtime == "codex":
+        return cfg.codex_command
+    if runtime == "opencode":
+        return cfg.opencode_command
+    raise ValueError(f"Unsupported runtime id: {runtime}")
 
 
 def _tail_lines(text: str, *, line_count: int) -> str:
@@ -191,8 +249,8 @@ def doctor(
     cfg = load_config(config)
     generic = probe_generic_cli(cfg.generic_cli_command)
     claude = probe_claude_code(cfg.claude_code_command)
-    codex = probe_codex("codex")
-    opencode = probe_opencode("opencode")
+    codex = probe_codex(cfg.codex_command)
+    opencode = probe_opencode(cfg.opencode_command)
 
     table = Table(title="AIDD doctor")
     table.add_column("Check")
@@ -556,13 +614,15 @@ def stage_run(
     """Run a single AIDD stage."""
     if not is_valid_stage(stage):
         raise typer.BadParameter(f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}")
-    if runtime != "generic-cli":
+    if runtime not in _STAGE_RUN_SUPPORTED_RUNTIMES:
+        supported = ", ".join(_STAGE_RUN_SUPPORTED_RUNTIMES)
         raise typer.BadParameter(
-            "Stage run execution currently supports runtime 'generic-cli' only."
+            f"Unsupported runtime '{runtime}'. Supported runtimes: {supported}."
         )
 
     cfg = load_config(config)
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
+    runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
     repair_policy = RepairBudgetPolicy(default_max_repair_attempts=cfg.max_repair_attempts)
     selected_run_id: str | None = None
     if run_id is not None:
@@ -611,7 +671,7 @@ def stage_run(
         config_snapshot={
             "config_path": config.as_posix(),
             "workspace_root": workspace_root.as_posix(),
-            "runtime_command": cfg.generic_cli_command,
+            "runtime_command": runtime_command,
             "log_follow": log_follow,
         },
     )
@@ -648,46 +708,160 @@ def stage_run(
         invocation: AdapterInvocationBundle,
         execution_state: StageExecutionState,
     ) -> AdapterExecutionOutcome:
-        context = GenericCliStageContext(
-            stage=invocation.stage,
+        stage_documents_root = workspace_stage_root(
+            root=workspace_root,
             work_item=invocation.work_item,
-            run_id=invocation.run_id,
-            prompt_pack_path=prompt_pack_path,
+            stage=invocation.stage,
         )
-        spec = build_subprocess_spec(
-            configured_command=cfg.generic_cli_command,
-            workspace_root=workspace_root,
-            context=context,
-            base_env=dict(os.environ),
-            repository_root=Path.cwd(),
-        )
+        stage_documents_root.mkdir(parents=True, exist_ok=True)
+        stage_brief_path = stage_documents_root / "stage-brief.md"
+        stage_brief_path.write_text(invocation.stage_brief_markdown, encoding="utf-8")
+
+        def _on_stdout(chunk: str) -> None:
+            _stream_runtime_chunk(stream="stdout", chunk=chunk)
+
+        def _on_stderr(chunk: str) -> None:
+            _stream_runtime_chunk(stream="stderr", chunk=chunk)
+
+        on_stdout = _on_stdout if log_follow else None
+        on_stderr = _on_stderr if log_follow else None
         try:
-            run_result = run_subprocess_with_streaming(
-                spec=spec,
-                on_stdout=(
-                    lambda chunk: _stream_runtime_chunk(stream="stdout", chunk=chunk)
-                    if log_follow
-                    else None
-                ),
-                on_stderr=(
-                    lambda chunk: _stream_runtime_chunk(stream="stderr", chunk=chunk)
-                    if log_follow
-                    else None
-                ),
+            if runtime == "generic-cli":
+                generic_context = GenericCliStageContext(
+                    stage=invocation.stage,
+                    work_item=invocation.work_item,
+                    run_id=invocation.run_id,
+                    prompt_pack_path=prompt_pack_path,
+                )
+                generic_spec = build_subprocess_spec(
+                    configured_command=runtime_command,
+                    workspace_root=workspace_root,
+                    context=generic_context,
+                    base_env=dict(os.environ),
+                    repository_root=Path.cwd(),
+                )
+                generic_run_result = run_subprocess_with_streaming(
+                    spec=generic_spec,
+                    on_stdout=on_stdout,
+                    on_stderr=on_stderr,
+                )
+                persist_attempt_runtime_artifacts(
+                    attempt_path=execution_state.attempt_path,
+                    run_result=generic_run_result,
+                )
+                return AdapterExecutionOutcome(
+                    succeeded=(
+                        generic_run_result.exit_classification
+                        is GenericCliExitClassification.SUCCESS
+                    ),
+                    details=generic_run_result.exit_classification.value,
+                )
+
+            prompt_pack_paths_for_runtime = tuple(Path(path) for path in prompt_pack_paths)
+            if runtime == "claude-code":
+                claude_context = ClaudeCodeCommandContext(
+                    stage=invocation.stage,
+                    work_item=invocation.work_item,
+                    run_id=invocation.run_id,
+                    workspace_root=workspace_root,
+                    stage_brief_path=stage_brief_path,
+                    prompt_pack_paths=prompt_pack_paths_for_runtime,
+                )
+                claude_spec = build_claude_code_subprocess_spec(
+                    configured_command=runtime_command,
+                    context=claude_context,
+                    base_env=dict(os.environ),
+                    repository_root=Path.cwd(),
+                )
+                claude_run_result = run_claude_code_subprocess_with_streaming(
+                    spec=claude_spec,
+                    on_stdout=on_stdout,
+                    on_stderr=on_stderr,
+                )
+                persist_claude_code_runtime_log(
+                    attempt_path=execution_state.attempt_path,
+                    run_result=claude_run_result,
+                )
+                return AdapterExecutionOutcome(
+                    succeeded=(
+                        claude_run_result.exit_classification
+                        is ClaudeCodeExitClassification.SUCCESS
+                    ),
+                    details=claude_run_result.exit_classification.value,
+                )
+
+            if runtime == "codex":
+                codex_context = CodexCommandContext(
+                    stage=invocation.stage,
+                    work_item=invocation.work_item,
+                    run_id=invocation.run_id,
+                    workspace_root=workspace_root,
+                    stage_brief_path=stage_brief_path,
+                    prompt_pack_paths=prompt_pack_paths_for_runtime,
+                )
+                codex_spec = build_codex_subprocess_spec(
+                    configured_command=runtime_command,
+                    context=codex_context,
+                    base_env=dict(os.environ),
+                    repository_root=Path.cwd(),
+                )
+                codex_run_result = run_codex_subprocess_with_streaming(
+                    spec=codex_spec,
+                    on_stdout=on_stdout,
+                    on_stderr=on_stderr,
+                )
+                persist_codex_runtime_log(
+                    attempt_path=execution_state.attempt_path,
+                    run_result=codex_run_result,
+                )
+                return AdapterExecutionOutcome(
+                    succeeded=(
+                        codex_run_result.exit_classification is CodexExitClassification.SUCCESS
+                    ),
+                    details=codex_run_result.exit_classification.value,
+                )
+
+            if runtime == "opencode":
+                opencode_context = OpenCodeCommandContext(
+                    stage=invocation.stage,
+                    work_item=invocation.work_item,
+                    run_id=invocation.run_id,
+                    workspace_root=workspace_root,
+                    stage_brief_path=stage_brief_path,
+                    prompt_pack_paths=prompt_pack_paths_for_runtime,
+                )
+                opencode_spec = build_opencode_subprocess_spec(
+                    configured_command=runtime_command,
+                    context=opencode_context,
+                    base_env=dict(os.environ),
+                    repository_root=Path.cwd(),
+                )
+                opencode_run_result = run_opencode_subprocess_with_streaming(
+                    spec=opencode_spec,
+                    on_stdout=on_stdout,
+                    on_stderr=on_stderr,
+                )
+                persist_opencode_runtime_log(
+                    attempt_path=execution_state.attempt_path,
+                    run_result=opencode_run_result,
+                )
+                return AdapterExecutionOutcome(
+                    succeeded=(
+                        opencode_run_result.exit_classification
+                        is OpenCodeExitClassification.SUCCESS
+                    ),
+                    details=opencode_run_result.exit_classification.value,
+                )
+
+            return AdapterExecutionOutcome(
+                succeeded=False,
+                details=f"unsupported-runtime: {runtime}",
             )
         except OSError as exc:
             return AdapterExecutionOutcome(
                 succeeded=False,
                 details=f"runtime-launch-error: {exc}",
             )
-        persist_attempt_runtime_artifacts(
-            attempt_path=execution_state.attempt_path,
-            run_result=run_result,
-        )
-        return AdapterExecutionOutcome(
-            succeeded=run_result.exit_classification is GenericCliExitClassification.SUCCESS,
-            details=run_result.exit_classification.value,
-        )
 
     def _write_repair_brief_for_retry(
         *,

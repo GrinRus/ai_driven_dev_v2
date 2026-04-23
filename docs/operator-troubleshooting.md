@@ -63,14 +63,15 @@ Symptoms:
 
 - `aidd run --runtime <non-generic>` prints:
   `Workflow execution is currently implemented for runtime 'generic-cli' only.`
-- `aidd stage run --runtime <non-generic>` fails with:
-  `Stage run execution currently supports runtime 'generic-cli' only.`
+- `aidd stage run --runtime <unknown>` fails with:
+  `Unsupported runtime '<id>'.`
 
 Actions:
 
-1. Use `runtime=generic-cli` for workflow and stage execution commands.
-2. Use `aidd doctor` to verify probe availability for other runtimes.
-3. Track execution-parity progress in `docs/backlog/roadmap.md` before expecting non-generic execution.
+1. Use `runtime=generic-cli` for workflow execution commands.
+2. For stage execution, use one of: `generic-cli`, `claude-code`, `codex`, `opencode`.
+3. Use `aidd doctor` to verify probe availability and configured runtime commands.
+4. Track execution-parity progress in `docs/backlog/roadmap.md` before expecting non-generic workflow parity.
 
 ### 3.4 Run lookup errors in inspection commands
 

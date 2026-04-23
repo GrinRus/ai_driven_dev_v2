@@ -72,7 +72,7 @@ See `docs/product/user-stories.md` for the full set.
 Workflow and stage execution today:
 
 - `aidd run` supports runtime `generic-cli` only.
-- `aidd stage run` supports runtime `generic-cli` only.
+- `aidd stage run` supports runtimes `generic-cli`, `claude-code`, `codex`, and `opencode`.
 
 Runtime probes in `aidd doctor`:
 
@@ -89,7 +89,7 @@ Planned execution parity:
 
 Temporary limitation:
 
-- Workflow and stage execution are intentionally `generic-cli` only until runtime parity slices `W8-E1-S1` and `W8-E1-S2` are complete.
+- Workflow execution remains intentionally `generic-cli` only until workflow parity slices beyond `W8-E1-S2` are complete.
 
 Future bridge target:
 
@@ -124,7 +124,8 @@ This starter repository already includes:
 
 The following parts are still intentionally skeletal:
 
-- non-generic runtime execution parity for `aidd run` and `aidd stage run`,
+- non-generic runtime execution parity for `aidd run`,
+- stage-run parity hardening across adapters (artifact persistence and smoke verification),
 - real validator engine,
 - real repair and interview controllers,
 - real runtime adapters,
@@ -216,7 +217,7 @@ Today:
 - `doctor` is functional,
 - `init` is functional,
 - `run` executes workflow progression for runtime `generic-cli` and fails fast for unsupported runtimes,
-- `stage run` executes single-stage orchestration for runtime `generic-cli` and rejects unsupported runtimes,
+- `stage run` executes single-stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`,
 - `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, and validator artifacts).
 
 ## Operator documentation

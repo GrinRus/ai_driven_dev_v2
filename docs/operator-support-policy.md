@@ -19,7 +19,8 @@ Maintainers currently provide best-effort support for:
 - installation and environment bootstrap (`uv sync --extra dev`);
 - runtime discovery and probe diagnostics (`uv run aidd doctor`);
 - workspace initialization (`uv run aidd init --work-item <id>`);
-- workflow/stage execution support with runtime gate behavior (`generic-cli` execution lane);
+- workflow runtime-gate behavior (`aidd run` remains `generic-cli` lane);
+- stage execution support through `aidd stage run` on `generic-cli`, `claude-code`, `codex`, and `opencode`;
 - run-inspection commands (`aidd run show`, `aidd run logs`, `aidd run artifacts`);
 - stage and eval read-only summaries (`aidd stage summary`, `aidd stage questions`, `aidd eval summary`).
 
@@ -28,7 +29,6 @@ Maintainers currently provide best-effort support for:
 The following are not treated as defects unless roadmap status changes:
 
 - workflow execution through `aidd run` on runtimes other than `generic-cli`;
-- stage orchestration through `aidd stage run` on runtimes other than `generic-cli`;
 - full stage-level parity for eval scenarios that depend on non-generic runtime execution.
 
 Execution support is intentionally gated while runtime parity slices are in progress.

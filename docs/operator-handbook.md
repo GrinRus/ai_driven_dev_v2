@@ -19,9 +19,9 @@ Today:
 - `aidd doctor` is functional;
 - `aidd init` is functional;
 - `aidd run` executes workflow progression for runtime `generic-cli` only;
-- `aidd stage run` executes stage orchestration for runtime `generic-cli` only;
+- `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`;
 - `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle.
-- This runtime gate is a temporary limitation until parity slices `W8-E1-S1` and `W8-E1-S2` are complete.
+- Workflow runtime gating is a temporary limitation while parity work remains in progress.
 
 Plan all operator usage with that constraint in mind.
 
@@ -71,6 +71,12 @@ command = "python"
 [runtime.claude_code]
 command = "claude"
 
+[runtime.codex]
+command = "codex"
+
+[runtime.opencode]
+command = "opencode"
+
 [logging]
 mode = "both"
 
@@ -83,10 +89,10 @@ Current config fields consumed by the bootstrap CLI:
 - `workspace.root`
 - `runtime.generic_cli.command`
 - `runtime.claude_code.command`
+- `runtime.codex.command`
+- `runtime.opencode.command`
 - `logging.mode`
 - `repair.max_attempts`
-
-`codex` and `opencode` probes currently use command discovery from the local PATH in `aidd doctor`.
 
 ## 6. First-Run Procedure
 
@@ -139,7 +145,7 @@ Expected behavior in current bootstrap state:
 - `aidd run --runtime generic-cli` performs workflow execution;
 - `aidd run --runtime <non-generic>` prints the runtime gate notice and does not execute workflow stages;
 - `aidd stage run --runtime generic-cli` performs stage execution;
-- `aidd stage run --runtime <non-generic>` returns a runtime gate error;
+- `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
 - `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths.
 
 ## 7. Operational Notes
