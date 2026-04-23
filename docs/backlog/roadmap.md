@@ -2444,11 +2444,11 @@ Dependencies:
 
 Blocker notes:
 
-- `2026-04-23` `W8-E2-S1-T1` is blocked until `W8-E1-S1-T2` and `W8-E1-S1-T3` complete under strict slice-dependency policy.
+- `2026-04-23` `W8-E2-S1-T1` was blocked until `W8-E1-S1-T2` and `W8-E1-S1-T3` completed under strict slice-dependency policy; unblocked after `W8-E1-S1` closure.
 
 Local tasks:
 
-- `W8-E2-S1-T1` (next) Add a guard that forbids `pass` verdicts when required stage output artifacts are missing.
+- `W8-E2-S1-T1` (done) Add a guard that forbids `pass` verdicts when required stage output artifacts are missing.
 - `W8-E2-S1-T2` (planned) Add a no-op execution detector and map it to fail/blocked classifications.
 - `W8-E2-S1-T3` (planned) Strengthen live scenario verification expectations so checks assert repository effects, not only command exit status.
 

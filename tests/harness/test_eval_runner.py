@@ -34,13 +34,29 @@ def _write_fake_aidd(
     *,
     exit_code: int,
     stdout_lines: tuple[str, ...] = ("fake aidd",),
+    write_plan_outputs: bool = False,
 ) -> None:
     print_lines = tuple(f"printf '%s\\n' {line!r}" for line in stdout_lines)
+    write_outputs_lines: tuple[str, ...] = tuple()
+    if write_plan_outputs:
+        write_outputs_lines = (
+            "output_root=\".aidd/workitems/$AIDD_HARNESS_WORK_ITEM/stages/plan/output\"",
+            "mkdir -p \"$output_root\"",
+            (
+                "printf '# Stage result\\n\\n- status: succeeded\\n' "
+                "> \"$output_root/stage-result.md\""
+            ),
+            (
+                "printf '# Validator report\\n\\n## Result\\n\\n- Verdict: `pass`\\n' "
+                "> \"$output_root/validator-report.md\""
+            ),
+        )
     path.write_text(
         "\n".join(
             (
                 "#!/bin/sh",
                 *print_lines,
+                *write_outputs_lines,
                 f"exit {exit_code}",
             )
         ),
@@ -59,6 +75,8 @@ def _write_scenario_manifest(
     runtime_targets: tuple[str, ...] = ("opencode",),
     work_item: str = "WI-EVAL-RUNNER",
     aidd_command: tuple[str, ...] | None = None,
+    stage_start: str = "plan",
+    stage_end: str = "plan",
 ) -> None:
     aidd_invocation: dict[str, object] = {"work_item": work_item}
     if aidd_command is not None:
@@ -69,6 +87,7 @@ def _write_scenario_manifest(
         "repo": {"url": repo_url},
         "setup": {"commands": list(setup_commands)},
         "verify": {"commands": list(verify_commands)},
+        "stage_scope": {"start": stage_start, "end": stage_end},
         "interview": {"required": interview_required},
         "runtime_targets": list(runtime_targets),
         "aidd_invocation": aidd_invocation,
@@ -94,7 +113,7 @@ def test_eval_runner_pass_status(tmp_path: Path) -> None:
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd"
-    _write_fake_aidd(fake_aidd, exit_code=0)
+    _write_fake_aidd(fake_aidd, exit_code=0, write_plan_outputs=True)
     scenario_path = tmp_path / "scenario-pass.yaml"
     _write_scenario_manifest(
         path=scenario_path,
@@ -288,3 +307,33 @@ def test_eval_runner_fails_when_run_completes_as_noop(tmp_path: Path) -> None:
     verdict_text = result.verdict_path.read_text(encoding="utf-8")
     assert "- Status: `fail`" in verdict_text
     assert "no-op execution is non-pass" in verdict_text
+
+
+def test_eval_runner_fails_pass_status_when_required_outputs_are_missing(
+    tmp_path: Path,
+) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    fake_aidd = tmp_path / "fake-aidd-missing-outputs"
+    _write_fake_aidd(fake_aidd, exit_code=0)
+    scenario_path = tmp_path / "scenario-missing-outputs.yaml"
+    _write_scenario_manifest(
+        path=scenario_path,
+        repo_url=source_repo.as_uri(),
+        setup_commands=("printf 'setup\\n' > setup.log",),
+        verify_commands=("printf 'verify\\n' > verify.log",),
+        interview_required=False,
+        work_item="WI-EVAL-MISSING-OUTPUTS",
+        aidd_command=(fake_aidd.as_posix(),),
+    )
+
+    result = run_eval_scenario(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        workspace_root=tmp_path / ".aidd",
+    )
+
+    assert result.status == "fail"
+    verdict_text = result.verdict_path.read_text(encoding="utf-8")
+    assert "- Status: `fail`" in verdict_text
+    assert "Required stage output artifacts are missing" in verdict_text

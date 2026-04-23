@@ -32,12 +32,27 @@ def _init_source_repo(path: Path) -> None:
     _run(["git", "commit", "-m", "init"], cwd=path)
 
 
-def _write_fake_aidd(path: Path, *, exit_code: int) -> None:
+def _write_fake_aidd(path: Path, *, exit_code: int, write_plan_outputs: bool = False) -> None:
+    write_outputs_lines: tuple[str, ...] = tuple()
+    if write_plan_outputs:
+        write_outputs_lines = (
+            "output_root=\".aidd/workitems/$AIDD_HARNESS_WORK_ITEM/stages/plan/output\"",
+            "mkdir -p \"$output_root\"",
+            (
+                "printf '# Stage result\\n\\n- status: succeeded\\n' "
+                "> \"$output_root/stage-result.md\""
+            ),
+            (
+                "printf '# Validator report\\n\\n## Result\\n\\n- Verdict: `pass`\\n' "
+                "> \"$output_root/validator-report.md\""
+            ),
+        )
     path.write_text(
         "\n".join(
             (
                 "#!/bin/sh",
                 "printf 'fake aidd\\n'",
+                *write_outputs_lines,
                 f"exit {exit_code}",
             )
         ),
@@ -61,6 +76,7 @@ def _write_scenario_manifest(
         "repo": {"url": repo_url},
         "setup": {"commands": ["printf 'setup\\n' > setup.log"]},
         "verify": {"commands": ["printf 'verify\\n' > verify.log"]},
+        "stage_scope": {"start": "plan", "end": "plan"},
         "runtime_targets": ["opencode"],
         "interview": {"required": False},
         "aidd_invocation": aidd_invocation,
@@ -74,7 +90,7 @@ def test_eval_run_executes_harness_lifecycle_and_writes_bundle(
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd"
-    _write_fake_aidd(fake_aidd, exit_code=0)
+    _write_fake_aidd(fake_aidd, exit_code=0, write_plan_outputs=True)
     scenario_path = tmp_path / "scenario.yaml"
     _write_scenario_manifest(
         path=scenario_path,
