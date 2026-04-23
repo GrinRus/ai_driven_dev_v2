@@ -285,6 +285,53 @@ def test_prepare_working_copy_replaces_stale_non_git_path(tmp_path: Path) -> Non
     assert not stale_file.exists()
 
 
+def test_prepare_working_copy_uses_isolated_path_per_run_id(tmp_path: Path) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+    prepared_repository = prepare_scenario_repository(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+    )
+
+    first = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared_repository,
+        run_id="eval-run-1",
+    )
+    second = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared_repository,
+        run_id="eval-run-2",
+    )
+
+    assert first.action == "cloned"
+    assert second.action == "cloned"
+    assert first.working_copy_path != second.working_copy_path
+    assert first.resolved_revision == prepared_repository.resolved_revision
+    assert second.resolved_revision == prepared_repository.resolved_revision
+
+
+def test_prepare_working_copy_rejects_blank_run_id(tmp_path: Path) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+    prepared_repository = prepare_scenario_repository(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+    )
+
+    with pytest.raises(RuntimeError, match="run_id must be non-empty"):
+        prepare_working_copy(
+            cache_root=tmp_path / "cache",
+            scenario=scenario,
+            prepared_repository=prepared_repository,
+            run_id="   ",
+        )
+
+
 def test_prepare_scenario_repository_serializes_concurrent_access(
     tmp_path: Path, monkeypatch
 ) -> None:

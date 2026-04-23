@@ -377,6 +377,7 @@ def run_eval_scenario(
             cache_root=cache_root,
             scenario=scenario,
             prepared_repository=prepared_repository,
+            run_id=run_id,
         )
     except BaseException as exc:
         prep_error = exc

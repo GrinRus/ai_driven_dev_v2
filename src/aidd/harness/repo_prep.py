@@ -186,12 +186,21 @@ def prepare_working_copy(
     cache_root: Path,
     scenario: Scenario,
     prepared_repository: PreparedRepository,
+    run_id: str | None = None,
 ) -> PreparedWorkingCopy:
     working_copy_root = cache_root / "workdirs"
     working_copy_root.mkdir(parents=True, exist_ok=True)
     slug = _repo_slug(scenario.repo.url)
-    working_copy_path = working_copy_root / slug
-    workdir_lock_path = cache_root / ".locks" / f"workdir-{slug}.lock"
+    normalized_run_id = run_id.strip() if run_id is not None else None
+    if normalized_run_id == "":
+        raise RepoPreparationError("run_id must be non-empty when provided.")
+    working_copy_name = (
+        slug
+        if normalized_run_id is None
+        else f"{slug}__{normalized_run_id}"
+    )
+    working_copy_path = working_copy_root / working_copy_name
+    workdir_lock_path = cache_root / ".locks" / f"workdir-{working_copy_name}.lock"
 
     with _acquire_cache_lock(lock_path=workdir_lock_path):
         action = "reused"
