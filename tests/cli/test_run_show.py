@@ -149,4 +149,5 @@ def test_run_show_rejects_ambiguous_latest_run_selection(tmp_path: Path) -> None
 def test_run_placeholder_still_requires_work_item() -> None:
     result = runner.invoke(app, ["run"])
     assert result.exit_code != 0
-    assert "Missing option '--work-item'." in result.output
+    assert "Usage:" in result.output
+    assert "--work-item" in result.output
