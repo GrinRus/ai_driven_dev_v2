@@ -16,6 +16,10 @@ from aidd.harness.scenarios import (
 def _build_scenario(*, runtime_targets: tuple[str, ...]) -> Scenario:
     return Scenario(
         scenario_id="AIDD-TEST-RUNNER-INVOKE",
+        scenario_class="deterministic-workflow",
+        feature_size="small",
+        automation_lane="ci",
+        canonical_runtime="generic-cli",
         task="Run AIDD from harness",
         repo=ScenarioRepoSource(
             url="https://github.com/example/repo",

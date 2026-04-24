@@ -73,6 +73,10 @@ def _write_scenario_manifest(
         aidd_invocation["command"] = list(aidd_command)
     payload = {
         "id": "AIDD-TEST-EVAL-RUN-CLI",
+        "scenario_class": "deterministic-stage",
+        "feature_size": "small",
+        "automation_lane": "ci",
+        "canonical_runtime": "opencode",
         "task": "exercise eval cli command",
         "repo": {"url": repo_url},
         "setup": {"commands": ["printf 'setup\\n' > setup.log"]},
@@ -81,6 +85,13 @@ def _write_scenario_manifest(
         "runtime_targets": ["opencode"],
         "interview": {"required": False},
         "aidd_invocation": aidd_invocation,
+        "feature_source": {
+            "mode": "fixture-seed",
+            "selection_policy": "fixture-owned",
+            "fixture_path": "harness/fixtures/minimal-python",
+            "seed_id": "eval-run-cli-fixture",
+            "summary": "Use a deterministic local fixture seed for eval CLI tests.",
+        },
     }
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 

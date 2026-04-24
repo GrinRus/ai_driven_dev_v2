@@ -1,4 +1,8 @@
 id: AIDD-LIVE-008
+scenario_class: live-full-flow-interview
+feature_size: large
+automation_lane: manual
+canonical_runtime: opencode
 repo:
   url: https://github.com/honojs/hono
   default_branch: main
@@ -109,5 +113,4 @@ interview:
     - Resolve each blocking routing-semantic question with an explicit policy choice.
     - Keep compatibility and documentation commitments in the same answers file.
 runtime_targets:
-- claude-code
-- generic-cli
+- opencode

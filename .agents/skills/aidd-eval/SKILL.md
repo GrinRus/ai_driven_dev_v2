@@ -1,24 +1,17 @@
 ---
 name: aidd-eval
-description: Run harness and eval scenarios for ai_driven_dev_v2, validate document-first stage outputs, preserve runtime logs, analyze failures, and produce durable audit artifacts.
+description: Run harness and eval scenarios for ai_driven_dev_v2, validate document-first stage outputs, preserve runtime logs, analyze failures, and produce durable audit artifacts for deterministic and manual-live lanes.
 ---
 
 # aidd-eval
 
 ## Use when
 
-- You need to run a harness scenario against one of the maintained adapters.
+- You need to run a harness scenario against one of the maintained runtimes.
 - You need to validate stage outputs against Markdown document contracts.
 - You need to check self-repair behavior after validator failures.
 - You need to capture runtime logs, normalized events, and log-analysis artifacts.
-- You need to audit quality of generated artifacts and generated code after execution.
-- You need to convert a real failure into a regression case.
-
-## Do not use when
-
-- The task is ordinary feature implementation without scenario execution.
-- The task is architecture writing only.
-- The task is manual document review without runtime execution.
+- You need to audit generated artifacts and generated code after execution.
 
 ## Required reading
 
@@ -26,18 +19,15 @@ description: Run harness and eval scenarios for ai_driven_dev_v2, validate docum
 2. `docs/architecture/document-contracts.md`
 3. `docs/architecture/adapter-protocol.md`
 4. `docs/architecture/runtime-matrix.md`
-5. `docs/e2e/live-quality-rubric.md` for live scenarios
-6. the selected scenario under `harness/scenarios/`
-7. `.agents/skills/aidd-eval/references/e2e-flow-audit.md`
+5. `docs/e2e/scenario-matrix.md`
+6. `docs/e2e/live-quality-rubric.md` for live scenarios
+7. the selected scenario under `harness/scenarios/`
+8. `.agents/skills/aidd-eval/references/e2e-flow-audit.md`
 
-## Inputs
+## Lane split
 
-- adapter id
-- scenario id or scenario file
-- fixture workspace
-- work item id
-- interactive mode
-- timeout / budget policy
+- Deterministic scenarios use `feature_source.mode: fixture-seed` and may run in `ci` or `manual`.
+- Live scenarios use `feature_source.mode: curated-issue-pool`, must live under `harness/scenarios/live/`, and are manual-only.
 
 ## Hard rules
 
@@ -49,27 +39,28 @@ description: Run harness and eval scenarios for ai_driven_dev_v2, validate docum
 6. Always keep question/answer events as durable artifacts.
 7. Always generate log-analysis output.
 8. Keep infrastructure failures separate from model or document failures.
-9. For live scenarios, preserve install evidence for the AIDD artifact under test.
-10. For live scenarios, preserve issue-selection evidence and quality artifacts.
+9. For live scenarios, preserve install evidence, issue-selection evidence, and quality artifacts.
+10. Never mutate roadmap or backlog files as part of live quality auditing.
 
 ## Default procedure
 
-1. Load the scenario.
+1. Load the scenario and confirm the requested runtime is allowed.
 2. Probe the adapter and record capability information.
-3. Prepare or reset the fixture workspace.
+3. Prepare or reset the fixture workspace or target repository.
 4. Run the requested stage or flow through the harness.
-   For live scenarios, select the seeded issue, install the artifact under test first, and run AIDD from the target repository root.
+   For live scenarios, select the first curated issue, install the artifact under test first, and run AIDD from the target repository root.
 5. Capture:
    - install transcript and artifact identity for live scenarios,
    - issue-selection evidence for live scenarios,
+   - fixture-seed metadata for deterministic scenarios,
    - raw runtime logs,
    - structured runtime logs when available,
    - normalized events,
    - question/answer events,
    - validator outcomes,
-    - repair attempts.
+   - repair attempts.
 6. Validate all required output documents.
-7. Run live quality commands and score the resulting artifact/code quality when the scenario requires it.
+7. Run live quality commands and score artifact/code quality when the scenario requires it.
 8. Run graders.
 9. Run log analysis.
 10. Write the final audit artifacts.
@@ -109,20 +100,5 @@ Quality remains additive and must be reported separately as:
 ## Example command shape
 
 ```bash
-aidd eval run harness/scenarios/example-smoke.yaml --runtime claude-code
+aidd eval run harness/scenarios/smoke/plan-stagepack-smoke.yaml --runtime opencode
 ```
-
-## Final response format
-
-Status: <pass|fail|blocked|infra-fail>
-Scenario: <scenario id>
-Runtime: <runtime id>
-Adapter: <adapter id>
-Contracts: <validated documents>
-Repair: <none|attempt count>
-Questions: <none|count>
-Quality gate: <pass|warn|fail|none>
-Log analysis: <path>
-Artifacts updated: <paths>
-Failures: <none or concise list>
-Next actions: <one short list>

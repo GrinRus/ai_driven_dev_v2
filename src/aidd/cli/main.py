@@ -290,7 +290,7 @@ def doctor(
 
     console.print(table)
     console.print(
-        "Workflow, installed live E2E, and published-package release proof are "
+        "Workflow, deterministic eval lanes, and manual live E2E audits are "
         "available on maintained runtimes."
     )
 

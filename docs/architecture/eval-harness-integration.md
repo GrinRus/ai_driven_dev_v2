@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document defines how harness and eval capabilities are embedded into AIDD and how they relate to installed live E2E execution.
+This document defines how harness and eval capabilities are embedded into AIDD and how they relate to deterministic CI checks and manual live E2E audits.
 
 ## 2. Why harness is part of product architecture
 
@@ -73,9 +73,9 @@ This layer runs one stage or one bounded workflow subset and verifies:
 - log capture;
 - verdict correctness.
 
-### 4.4 Installed live operator layer
+### 4.4 Manual installed live operator layer
 
-This layer answers: can an operator install AIDD, enter a real repository, select a reproducible issue seed, run the governed flow from `idea` through `qa`, and prove both execution and quality?
+This layer answers: can an operator manually install AIDD, enter a real repository, select a reproducible issue seed, run the governed flow from `idea` through `qa`, and prove both execution and quality?
 
 Its contract is:
 
@@ -86,21 +86,18 @@ Its contract is:
 - AIDD runs from the target repository root;
 - `.aidd/` is rooted inside that repository;
 - the harness seeds a target-repository `aidd.example.toml` for the installed run;
-- install, setup, run, verify, quality, and teardown evidence is preserved.
-
-Development and CI should usually exercise this lane through a local wheel installed by `uv tool`.
-
-### 4.5 Published artifact release proof layer
-
-This layer answers: can the published release artifact complete at least one pinned live workflow scenario?
-
-It extends installability checks beyond `aidd --version` and `aidd doctor` to one real live workflow proof.
+- install, setup, run, verify, quality, and teardown evidence is preserved;
+- automation for this lane is manual-only and must not be treated as a CI or release gate.
 
 ## 5. Scenario model
 
 Harness scenarios are defined in YAML and describe:
 
 - scenario id;
+- scenario class;
+- feature size;
+- automation lane;
+- canonical runtime;
 - target repository and optional pin;
 - stage scope;
 - runtime targets;
@@ -121,12 +118,20 @@ Live scenarios additionally imply:
 - a live runtime config written into the prepared working copy, with optional command overrides from `AIDD_EVAL_<RUNTIME>_COMMAND`.
 - one post-verification quality phase that writes quality artifacts without mutating roadmap or backlog files.
 
+Deterministic scenarios additionally imply:
+
+- `feature_source.mode: fixture-seed`;
+- repo-local or fixture-local execution expectations;
+- CI eligibility only when `automation_lane: ci`.
+
 ## 6. Eval run lifecycle
 
 1. Load the scenario and validate runtime eligibility.
 2. Probe the requested adapter and record capabilities.
 3. Prepare or reset the pinned target repository working copy.
-4. Select and persist one issue seed from the scenario's curated issue pool.
+4. Resolve and persist the scenario feature seed:
+   - fixture-owned seed metadata for deterministic scenarios;
+   - the first curated issue for live scenarios.
 5. Prepare the AIDD artifact under test when the scenario uses the installed-live lane.
 6. Run setup commands in the target repository root.
 7. Launch AIDD from the target repository root with explicit workflow bounds.
@@ -209,11 +214,11 @@ This is how the project accumulates reliability instead of anecdote.
 
 Recommended layers:
 
-- pull request: lint, typecheck, unit tests, and one smoke or packaging regression;
-- main branch: wider smoke matrix and packaging/resource regressions;
-- nightly: adapter conformance and selected installed live runs;
-- release: installability checks plus one published-artifact live workflow proof.
+- pull request: lint, typecheck, unit tests, deterministic fixture regressions, and packaging checks;
+- main branch: the same deterministic checks or a widened deterministic matrix;
+- manual workflow dispatch: installed live external audits against curated public repositories;
+- release: build, publish, installability, and container verification only.
 
 ## 11. Summary
 
-Harness and eval make runtime agnosticism, installed-operator behavior, and release readiness measurable rather than aspirational.
+Harness and eval make runtime agnosticism, deterministic regression coverage, and manual installed-operator audits measurable rather than aspirational.

@@ -8,6 +8,10 @@ from aidd.harness.scenarios import load_scenario
 
 def _assert_live_contract(scenario) -> None:
     assert scenario.is_live is True
+    assert scenario.scenario_class in {"live-full-flow", "live-full-flow-interview"}
+    assert scenario.feature_size in {"small", "medium", "large"}
+    assert scenario.automation_lane == "manual"
+    assert scenario.canonical_runtime in scenario.runtime_targets
     assert scenario.run.stage_start == STAGES[0]
     assert scenario.run.stage_end == STAGES[-1]
     assert scenario.feature_source is not None
@@ -25,6 +29,10 @@ def test_live_scenario_exposes_full_flow_repo_steps_and_quality_contract() -> No
     scenario = load_scenario(Path("harness/scenarios/live/typer-styled-help-alignment.yaml"))
 
     assert scenario.scenario_id == "AIDD-LIVE-001"
+    assert scenario.scenario_class == "live-full-flow"
+    assert scenario.feature_size == "small"
+    assert scenario.automation_lane == "manual"
+    assert scenario.canonical_runtime == "codex"
     assert scenario.repo.url == "https://github.com/fastapi/typer"
     assert scenario.repo.default_branch == "master"
     assert scenario.repo.revision == "9ce8e30383ef419c490431caab5a515eca669b1b"
@@ -71,6 +79,9 @@ def test_sqlite_utils_canonical_live_scenario_declares_installed_full_flow_bundl
     )
 
     assert scenario.scenario_id == "AIDD-LIVE-005"
+    assert scenario.feature_size == "small"
+    assert scenario.automation_lane == "manual"
+    assert scenario.canonical_runtime == "codex"
     assert scenario.repo.url == "https://github.com/simonw/sqlite-utils"
     assert scenario.repo.default_branch == "main"
     assert scenario.repo.revision == "8d74ffc93292c604d5827e2b44fffedca0c28c19"
@@ -84,7 +95,7 @@ def test_sqlite_utils_canonical_live_scenario_declares_installed_full_flow_bundl
     }
     assert scenario.raw["workflow_bundle"]["lane"] == "installed-live-full-flow-audit"
     assert "quality-report.md" in scenario.raw["workflow_bundle"]["required_artifacts"]
-    assert scenario.runtime_targets == ("generic-cli", "codex", "opencode")
+    assert scenario.runtime_targets == ("codex", "opencode")
 
 
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:
@@ -94,6 +105,9 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
 
     _assert_live_contract(scenario)
     assert scenario.scenario_id == "AIDD-LIVE-006"
+    assert scenario.scenario_class == "live-full-flow-interview"
+    assert scenario.feature_size == "large"
+    assert scenario.canonical_runtime == "opencode"
     assert scenario.run.interview_required is True
     assert scenario.raw["interview"]["must_ask_at_least_one"] is True
     assert scenario.quality.require_review_status == "approved-with-conditions"
@@ -121,6 +135,9 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
 
     _assert_live_contract(scenario)
     assert scenario.scenario_id == "AIDD-LIVE-008"
+    assert scenario.scenario_class == "live-full-flow-interview"
+    assert scenario.feature_size == "large"
+    assert scenario.canonical_runtime == "opencode"
     assert scenario.run.interview_required is True
     assert scenario.feature_source.issues[0].issue_id == "4633"
     assert scenario.quality.require_review_status == "approved-with-conditions"
@@ -144,9 +161,17 @@ def test_smoke_plan_stagepack_scenario_declares_cross_runtime_output_checks() ->
 
     assert scenario.is_live is False
     assert scenario.scenario_id == "AIDD-STAGEPACK-PLAN-SMOKE-001"
+    assert scenario.scenario_class == "deterministic-stage"
+    assert scenario.feature_size == "medium"
+    assert scenario.automation_lane == "ci"
+    assert scenario.canonical_runtime == "opencode"
     assert scenario.raw["aidd_invocation"]["command"] == ["uv", "run", "aidd", "run"]
     assert scenario.run.stage_start == "plan"
     assert scenario.run.stage_end == "plan"
+    assert scenario.feature_source is not None
+    assert scenario.feature_source.mode == "fixture-seed"
+    assert scenario.feature_source.selection_policy == "fixture-owned"
+    assert scenario.feature_source.fixture_path == "harness/fixtures/minimal-python"
     assert scenario.runtime_targets == (
         "generic-cli",
         "claude-code",
@@ -158,3 +183,49 @@ def test_smoke_plan_stagepack_scenario_declares_cross_runtime_output_checks() ->
         "test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/stage-result.md",
         "test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/validator-report.md",
     )
+
+
+def test_minimal_fixture_smoke_scenario_declares_small_ci_fixture_seed() -> None:
+    scenario = load_scenario(Path("harness/scenarios/smoke/plan-stage-minimal-fixture.yaml"))
+
+    assert scenario.is_live is False
+    assert scenario.scenario_class == "deterministic-stage"
+    assert scenario.feature_size == "small"
+    assert scenario.automation_lane == "ci"
+    assert scenario.canonical_runtime == "generic-cli"
+    assert scenario.feature_source is not None
+    assert scenario.feature_source.mode == "fixture-seed"
+    assert scenario.feature_source.seed_id == "minimal-python-plan-stage"
+    assert scenario.run.stage_start == "plan"
+    assert scenario.run.stage_end == "plan"
+
+
+def test_deterministic_workflow_scenarios_cover_medium_ci_and_large_manual_buckets() -> None:
+    medium_ci = load_scenario(
+        Path("harness/scenarios/deterministic/minimal-python-bounded-workflow.yaml")
+    )
+    large_manual = load_scenario(
+        Path("harness/scenarios/deterministic/minimal-python-full-workflow.yaml")
+    )
+
+    assert medium_ci.is_live is False
+    assert medium_ci.scenario_class == "deterministic-workflow"
+    assert medium_ci.feature_size == "medium"
+    assert medium_ci.automation_lane == "ci"
+    assert medium_ci.canonical_runtime == "opencode"
+    assert medium_ci.feature_source is not None
+    assert medium_ci.feature_source.mode == "fixture-seed"
+    assert medium_ci.feature_source.selection_policy == "fixture-owned"
+    assert medium_ci.feature_source.fixture_path == "harness/fixtures/minimal-python"
+    assert medium_ci.run.stage_start == "plan"
+    assert medium_ci.run.stage_end == "tasklist"
+
+    assert large_manual.is_live is False
+    assert large_manual.scenario_class == "deterministic-workflow"
+    assert large_manual.feature_size == "large"
+    assert large_manual.automation_lane == "manual"
+    assert large_manual.canonical_runtime == "generic-cli"
+    assert large_manual.feature_source is not None
+    assert large_manual.feature_source.mode == "fixture-seed"
+    assert large_manual.run.stage_start == "idea"
+    assert large_manual.run.stage_end == "qa"

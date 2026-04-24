@@ -160,7 +160,12 @@ def _build_issue_selection_payload(
     selected_issue: ScenarioIssueSeed | None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
+        "automation_lane": scenario.automation_lane,
+        "canonical_runtime": scenario.canonical_runtime,
+        "feature_size": scenario.feature_size,
+        "fixture_seed": None,
         "scenario_id": scenario.scenario_id,
+        "scenario_class": scenario.scenario_class,
         "is_live": scenario.is_live,
         "mode": None if scenario.feature_source is None else scenario.feature_source.mode,
         "selection_policy": (
@@ -175,6 +180,12 @@ def _build_issue_selection_payload(
             "summary": selected_issue.summary,
             "title": selected_issue.title,
             "url": selected_issue.url,
+        }
+    if scenario.feature_source is not None and scenario.feature_source.mode == "fixture-seed":
+        payload["fixture_seed"] = {
+            "fixture_path": scenario.feature_source.fixture_path,
+            "seed_id": scenario.feature_source.seed_id,
+            "summary": scenario.feature_source.summary,
         }
     return payload
 

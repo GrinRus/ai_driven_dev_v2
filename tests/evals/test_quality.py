@@ -22,6 +22,10 @@ from aidd.harness.scenarios import (
 def _build_live_scenario() -> Scenario:
     return Scenario(
         scenario_id="AIDD-LIVE-TEST-QUALITY",
+        scenario_class="live-full-flow",
+        feature_size="small",
+        automation_lane="manual",
+        canonical_runtime="generic-cli",
         task="Exercise live quality scoring",
         repo=ScenarioRepoSource(
             url="https://github.com/example/repo",
@@ -50,6 +54,9 @@ def _build_live_scenario() -> Scenario:
                     labels=("bug",),
                 ),
             ),
+            fixture_path=None,
+            seed_id=None,
+            summary=None,
         ),
         quality=ScenarioQualityConfig(
             commands=("echo quality",),

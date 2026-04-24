@@ -1,6 +1,12 @@
 id: AIDD-SMOKE-001
-fixture:
-  path: harness/fixtures/minimal-python
+scenario_class: deterministic-stage
+feature_size: small
+automation_lane: ci
+canonical_runtime: generic-cli
+repo:
+  url: harness/fixtures/minimal-python
+objective: Keep the smallest deterministic stage lane local and reproducible by exercising
+  a single plan-stage run against the minimal fixture.
 task: Run the plan stage against the local minimal fixture and verify that required
   output files are produced.
 stage_scope:
@@ -9,6 +15,13 @@ stage_scope:
 setup:
   commands:
   - uv sync --extra dev
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: minimal-python-plan-stage
+  summary: Use the minimal-python fixture-owned plan-stage context to keep the smallest
+    deterministic lane reproducible and local.
 verify:
   commands:
   - uv run pytest -q tests/test_cli_smoke.py

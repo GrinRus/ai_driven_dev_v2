@@ -1,4 +1,8 @@
 id: AIDD-LIVE-003
+scenario_class: live-full-flow
+feature_size: small
+automation_lane: manual
+canonical_runtime: codex
 repo:
   url: https://github.com/encode/httpx
   default_branch: master
@@ -74,5 +78,4 @@ limits:
 interview:
   required: false
 runtime_targets:
-- claude-code
-- generic-cli
+- codex

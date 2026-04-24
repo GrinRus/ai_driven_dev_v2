@@ -1,4 +1,8 @@
 id: AIDD-STAGEPACK-PLAN-SMOKE-001
+scenario_class: deterministic-stage
+feature_size: medium
+automation_lane: ci
+canonical_runtime: opencode
 repo:
   url: harness/fixtures/minimal-python
 objective: Define a cross-runtime smoke lane for plan-stage execution and require
@@ -25,6 +29,13 @@ aidd_invocation:
   expected_stage_scope:
     start: plan
     end: plan
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: minimal-python-stagepack-plan
+  summary: Use the minimal-python fixture-owned plan-stage seed to exercise deterministic
+    cross-runtime artifact checks without an external repository.
 verify:
   commands:
   - test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/plan.md

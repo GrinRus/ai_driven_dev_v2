@@ -22,10 +22,17 @@ Today:
 - `aidd run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`;
 - `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`;
 - `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle;
-- live scenarios under `harness/scenarios/live/` prepare a pinned public-repository working copy, install a local AIDD wheel via `uv tool`, and run installed `aidd` from the target repository root.
-- tagged releases additionally verify one published-package live scenario on `AIDD-LIVE-005` with the deterministic `generic-cli` release-proof runtime.
+- live scenarios under `harness/scenarios/live/` are a manual external-audit lane: they prepare a pinned public-repository working copy, install a local AIDD wheel via `uv tool`, and run installed `aidd` from the target repository root.
 
 Smoke, conformance, and live operator proof are separate lanes. Do not treat them as interchangeable.
+
+For the GitHub Actions manual live lane, the selected live provider must be wired
+through a runner-available command override secret:
+
+- `AIDD_EVAL_CODEX_COMMAND`
+- `AIDD_EVAL_OPENCODE_COMMAND`
+
+Those values should point to wrapper commands that accept the AIDD adapter flags.
 
 ## 3. Prerequisites
 
@@ -37,6 +44,8 @@ Required:
 Optional:
 
 - runtime CLIs you want to probe in `aidd doctor` (for example `claude`, `codex`, `opencode`)
+- AIDD-compatible execution commands or wrapper commands for any runtime you want
+  to use with workflow, stage, or live eval execution
 
 Runtime binaries are external dependencies and are not bundled by AIDD.
 
@@ -70,16 +79,16 @@ Use this as the base operator config template:
 root = ".aidd"
 
 [runtime.generic_cli]
-command = "python"
+command = "python /path/to/aidd_generic_runtime_wrapper.py"
 
 [runtime.claude_code]
-command = "claude"
+command = "/path/to/aidd-claude-code-wrapper"
 
 [runtime.codex]
-command = "codex"
+command = "/path/to/aidd-codex-wrapper"
 
 [runtime.opencode]
-command = "opencode"
+command = "/path/to/aidd-opencode-wrapper"
 
 [logging]
 mode = "both"
@@ -87,6 +96,10 @@ mode = "both"
 [repair]
 max_attempts = 2
 ```
+
+These command values are execution-surface examples, not promises that the raw
+upstream provider binaries accept AIDD adapter flags directly. The configured
+command must be AIDD-compatible for the selected runtime.
 
 Current config fields consumed by the bootstrap CLI:
 
@@ -150,8 +163,9 @@ Expected behavior in current bootstrap state:
 - `aidd stage run --runtime generic-cli` performs stage execution;
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
 - `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths;
-- live `aidd eval run` installs a local wheel with `uv tool`, enters the pinned target repository, and keeps `.aidd/` inside that repository.
-- tagged-release live proof installs the published package via `uv tool` and runs `AIDD-LIVE-005` with the release-proof `generic-cli` runtime helper.
+- live `aidd eval run` is a manual external audit that installs a local wheel with `uv tool`, enters the pinned target repository, and keeps `.aidd/` inside that repository.
+- the GitHub `manual-live-e2e` workflow additionally requires the runtime-command
+  secret for the selected provider and fails fast before eval if it is missing.
 
 ## 7. Operational Notes
 

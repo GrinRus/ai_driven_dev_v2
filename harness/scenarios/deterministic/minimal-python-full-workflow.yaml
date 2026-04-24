@@ -1,0 +1,41 @@
+id: AIDD-DETERMINISTIC-002
+scenario_class: deterministic-workflow
+feature_size: large
+automation_lane: manual
+canonical_runtime: generic-cli
+repo:
+  url: harness/fixtures/minimal-python
+objective: Preserve a large deterministic full-workflow lane for manual operator
+  audits without depending on public repositories or live issue selection.
+task: Run a deterministic full workflow against the local minimal fixture and verify
+  the final QA-stage outputs are produced.
+stage_scope:
+  start: idea
+  end: qa
+setup:
+  commands:
+  - uv sync --extra dev
+aidd_invocation:
+  work_item: WI-DETERMINISTIC-FULL
+  expected_stage_scope:
+    start: idea
+    end: qa
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: minimal-python-full-workflow
+  summary: Use the local minimal-python fixture-owned full-workflow seed to cover
+    a large governed path without external live dependencies.
+verify:
+  commands:
+  - test -f .aidd/workitems/WI-DETERMINISTIC-FULL/stages/qa/output/qa-report.md
+  - test -f .aidd/workitems/WI-DETERMINISTIC-FULL/stages/qa/output/stage-result.md
+  - test -f .aidd/workitems/WI-DETERMINISTIC-FULL/stages/qa/output/validator-report.md
+limits:
+  timeout_minutes: 10
+interview:
+  required: false
+runtime_targets:
+- generic-cli
+- claude-code

@@ -11,7 +11,7 @@ from aidd.cli import main as cli_main
 runner = CliRunner()
 
 _CURRENT_DOCTOR_FOOTER = (
-    "Workflow, installed live E2E, and published-package release proof are "
+    "Workflow, deterministic eval lanes, and manual live E2E audits are "
     "available on maintained runtimes."
 )
 

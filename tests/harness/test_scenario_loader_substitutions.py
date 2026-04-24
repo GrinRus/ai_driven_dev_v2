@@ -15,6 +15,10 @@ def test_load_scenario_applies_runtime_workspace_and_scenario_parameters(
     manifest.write_text(
         """
 id: AIDD-TMP-001
+scenario_class: deterministic-stage
+feature_size: small
+automation_lane: ci
+canonical_runtime: ${runtime_id}
 parameters:
   repo_name: typer
 task: Run ${runtime_id} in ${workspace_root} for ${scenario.repo_name}
@@ -28,6 +32,15 @@ setup:
 verify:
   commands:
     - echo repo=${scenario.repo_name}
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: substitution-fixture-seed
+  summary: Use a deterministic fixture seed for substitution coverage.
+stage_scope:
+  start: plan
+  end: plan
 runtime_targets:
   - ${runtime_id}
 """.strip()
@@ -58,6 +71,10 @@ def test_load_scenario_rejects_unresolved_runtime_placeholder(tmp_path: Path) ->
     manifest.write_text(
         """
 id: AIDD-TMP-002
+scenario_class: deterministic-stage
+feature_size: small
+automation_lane: ci
+canonical_runtime: ${runtime_id}
 task: Run ${runtime_id}
 repo:
   url: https://github.com/fastapi/typer
@@ -67,6 +84,15 @@ setup:
 verify:
   commands:
     - echo verify
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: unresolved-runtime-seed
+  summary: Use a deterministic fixture seed for unresolved placeholder coverage.
+stage_scope:
+  start: plan
+  end: plan
 runtime_targets:
   - ${runtime_id}
 """.strip()
