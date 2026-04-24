@@ -1,0 +1,42 @@
+id: AIDD-DETERMINISTIC-001
+scenario_class: deterministic-workflow
+feature_size: medium
+automation_lane: ci
+canonical_runtime: opencode
+repo:
+  url: harness/fixtures/minimal-python
+objective: Keep a bounded deterministic workflow lane local by exercising a multi-stage
+  fixture-backed path without public repositories or live issue selection.
+task: Run a deterministic bounded workflow against the local minimal fixture and
+  verify the final tasklist-stage outputs are produced.
+stage_scope:
+  start: plan
+  end: tasklist
+setup:
+  commands:
+  - uv sync --extra dev
+aidd_invocation:
+  work_item: WI-DETERMINISTIC-WORKFLOW
+  expected_stage_scope:
+    start: plan
+    end: tasklist
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: minimal-python-bounded-workflow
+  summary: Use the local minimal-python fixture-owned workflow seed to cover a deterministic
+    multi-stage path through task decomposition.
+verify:
+  commands:
+  - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
+  - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/stage-result.md
+  - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/validator-report.md
+limits:
+  timeout_minutes: 5
+interview:
+  required: false
+runtime_targets:
+- generic-cli
+- claude-code
+- opencode

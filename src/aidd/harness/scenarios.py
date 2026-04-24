@@ -15,6 +15,16 @@ class ScenarioManifestError(ValueError):
 
 
 _PLACEHOLDER_PATTERN = re.compile(r"\$\{(?P<key>[a-zA-Z0-9_.-]+)\}")
+_SCENARIO_CLASSES = {
+    "deterministic-stage",
+    "deterministic-workflow",
+    "live-full-flow",
+    "live-full-flow-interview",
+}
+_LIVE_SCENARIO_CLASSES = {"live-full-flow", "live-full-flow-interview"}
+_FEATURE_SIZES = {"small", "medium", "large"}
+_AUTOMATION_LANES = {"ci", "manual"}
+_SUPPORTED_RUNTIME_IDS = {"generic-cli", "claude-code", "codex", "opencode"}
 
 
 @dataclass(frozen=True)
@@ -43,6 +53,9 @@ class ScenarioFeatureSource:
     mode: str
     selection_policy: str
     issues: tuple[ScenarioIssueSeed, ...]
+    fixture_path: str | None
+    seed_id: str | None
+    summary: str | None
 
 
 @dataclass(frozen=True)
@@ -67,6 +80,10 @@ class ScenarioRunConfig:
 @dataclass(frozen=True)
 class Scenario:
     scenario_id: str
+    scenario_class: str
+    feature_size: str
+    automation_lane: str
+    canonical_runtime: str
     task: str
     repo: ScenarioRepoSource
     setup: ScenarioCommandSteps
@@ -220,30 +237,49 @@ def _to_issue_seed(*, raw: Any, key: str) -> ScenarioIssueSeed:
 def _to_feature_source(raw: Any) -> ScenarioFeatureSource:
     payload = _require_mapping(value=raw, key="feature_source")
     mode = _require_non_empty_string(payload=payload, key="mode")
-    if mode != "curated-issue-pool":
-        raise ScenarioManifestError(
-            "Scenario manifest key 'feature_source.mode' must be "
-            "`curated-issue-pool` for live scenarios."
-        )
     selection_policy = _require_non_empty_string(payload=payload, key="selection_policy")
-    if selection_policy != "first-listed":
-        raise ScenarioManifestError(
-            "Scenario manifest key 'feature_source.selection_policy' must be "
-            "`first-listed` for live scenarios."
+
+    if mode == "curated-issue-pool":
+        if selection_policy != "first-listed":
+            raise ScenarioManifestError(
+                "Scenario manifest key 'feature_source.selection_policy' must be "
+                "`first-listed` for curated issue pools."
+            )
+        issues_raw = payload.get("issues")
+        if not isinstance(issues_raw, list) or not issues_raw:
+            raise ScenarioManifestError(
+                "Scenario manifest key 'feature_source.issues' must be a non-empty list."
+            )
+        issues = tuple(
+            _to_issue_seed(raw=item, key=f"feature_source.issues[{index}]")
+            for index, item in enumerate(issues_raw)
         )
-    issues_raw = payload.get("issues")
-    if not isinstance(issues_raw, list) or not issues_raw:
+        fixture_path = None
+        seed_id = None
+        summary = None
+    elif mode == "fixture-seed":
+        if selection_policy != "fixture-owned":
+            raise ScenarioManifestError(
+                "Scenario manifest key 'feature_source.selection_policy' must be "
+                "`fixture-owned` for deterministic fixture seeds."
+            )
+        issues = tuple()
+        fixture_path = _require_non_empty_string(payload=payload, key="fixture_path")
+        seed_id = _require_non_empty_string(payload=payload, key="seed_id")
+        summary = _require_non_empty_string(payload=payload, key="summary")
+    else:
         raise ScenarioManifestError(
-            "Scenario manifest key 'feature_source.issues' must be a non-empty list."
+            "Scenario manifest key 'feature_source.mode' must be either "
+            "`fixture-seed` or `curated-issue-pool`."
         )
-    issues = tuple(
-        _to_issue_seed(raw=item, key=f"feature_source.issues[{index}]")
-        for index, item in enumerate(issues_raw)
-    )
+
     return ScenarioFeatureSource(
         mode=mode,
         selection_policy=selection_policy,
         issues=issues,
+        fixture_path=fixture_path,
+        seed_id=seed_id,
+        summary=summary,
     )
 
 
@@ -346,25 +382,111 @@ def _is_live_scenario_path(path: Path) -> bool:
     )
 
 
-def _validate_live_scenario_contract(
+def _require_choice(*, payload: dict[str, Any], key: str, supported: set[str]) -> str:
+    value = _require_non_empty_string(payload=payload, key=key)
+    if value not in supported:
+        supported_values = ", ".join(sorted(supported))
+        raise ScenarioManifestError(
+            f"Scenario manifest key '{key}' must be one of: {supported_values}."
+        )
+    return value
+
+
+def _validate_scenario_contract(
     *,
     path: Path,
+    scenario_class: str,
+    feature_size: str,
+    automation_lane: str,
+    canonical_runtime: str,
     run: ScenarioRunConfig,
     feature_source: ScenarioFeatureSource | None,
     quality: ScenarioQualityConfig | None,
 ) -> None:
-    if run.stage_start != STAGES[0] or run.stage_end != STAGES[-1]:
+    if run.stage_start is None or run.stage_end is None:
         raise ScenarioManifestError(
-            "Live scenario manifests must declare explicit full-flow stage scope "
-            "`idea -> qa`."
+            "Scenario manifests must declare explicit `stage_scope.start` and "
+            "`stage_scope.end` values."
         )
+    unsupported_runtimes = sorted(set(run.runtime_targets) - _SUPPORTED_RUNTIME_IDS)
+    if unsupported_runtimes:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'runtime_targets' contains unsupported runtime ids: "
+            + ", ".join(unsupported_runtimes)
+            + "."
+        )
+    if canonical_runtime not in run.runtime_targets:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'canonical_runtime' must also appear in "
+            "'runtime_targets'."
+        )
+
+    is_live = scenario_class in _LIVE_SCENARIO_CLASSES
+    if _is_live_scenario_path(path) != is_live:
+        expected = "live" if is_live else "non-live"
+        raise ScenarioManifestError(
+            f"Scenario path '{path.as_posix()}' does not match declared {expected} "
+            "scenario class."
+        )
+
+    if feature_size == "large" and automation_lane == "ci":
+        raise ScenarioManifestError(
+            "Scenario manifests with `feature_size: large` cannot use `automation_lane: ci`."
+        )
+
+    if is_live:
+        if automation_lane != "manual":
+            raise ScenarioManifestError(
+                "Live scenario manifests must declare `automation_lane: manual`."
+            )
+        if run.stage_start != STAGES[0] or run.stage_end != STAGES[-1]:
+            raise ScenarioManifestError(
+                "Live scenario manifests must declare explicit full-flow stage scope "
+                "`idea -> qa`."
+            )
+        if feature_source is None:
+            raise ScenarioManifestError(
+                f"Live scenario manifest missing required key: feature_source ({path.as_posix()})."
+            )
+        if feature_source.mode != "curated-issue-pool":
+            raise ScenarioManifestError(
+                "Live scenario manifests must use `feature_source.mode: curated-issue-pool`."
+            )
+        if quality is None:
+            raise ScenarioManifestError(
+                f"Live scenario manifest missing required key: quality ({path.as_posix()})."
+            )
+        expects_interview = scenario_class == "live-full-flow-interview"
+        if run.interview_required is not expects_interview:
+            expected_value = "true" if expects_interview else "false"
+            raise ScenarioManifestError(
+                "Live scenario manifest interview contract mismatch: "
+                f"`interview.required` must be {expected_value} for "
+                f"`scenario_class: {scenario_class}`."
+            )
+        return
+
     if feature_source is None:
         raise ScenarioManifestError(
-            f"Live scenario manifest missing required key: feature_source ({path.as_posix()})."
+            "Deterministic scenario manifests must declare a `feature_source` block."
         )
-    if quality is None:
+    if feature_source.mode != "fixture-seed":
         raise ScenarioManifestError(
-            f"Live scenario manifest missing required key: quality ({path.as_posix()})."
+            "Deterministic scenario manifests must use `feature_source.mode: fixture-seed`."
+        )
+    if quality is not None:
+        raise ScenarioManifestError(
+            "Deterministic scenario manifests must not declare a live `quality` block."
+        )
+    if scenario_class == "deterministic-stage" and (
+        run.stage_start == STAGES[0] and run.stage_end == STAGES[-1]
+    ):
+        raise ScenarioManifestError(
+            "Deterministic stage scenarios cannot declare the full-flow `idea -> qa` range."
+        )
+    if scenario_class == "deterministic-stage" and run.stage_start != run.stage_end:
+        raise ScenarioManifestError(
+            "Deterministic stage scenarios must declare the same start and end stage."
         )
 
 
@@ -388,9 +510,29 @@ def load_scenario(
         raise ScenarioManifestError(f"Scenario manifest must be a mapping: {path.as_posix()}")
 
     scenario_id = _require_non_empty_string(payload=substituted, key="id")
+    scenario_class = _require_choice(
+        payload=substituted,
+        key="scenario_class",
+        supported=_SCENARIO_CLASSES,
+    )
+    feature_size = _require_choice(
+        payload=substituted,
+        key="feature_size",
+        supported=_FEATURE_SIZES,
+    )
+    automation_lane = _require_choice(
+        payload=substituted,
+        key="automation_lane",
+        supported=_AUTOMATION_LANES,
+    )
+    canonical_runtime = _require_choice(
+        payload=substituted,
+        key="canonical_runtime",
+        supported=_SUPPORTED_RUNTIME_IDS,
+    )
     task = _require_non_empty_string(payload=substituted, key="task")
     run = _to_run_config(substituted)
-    is_live = _is_live_scenario_path(path)
+    is_live = scenario_class in _LIVE_SCENARIO_CLASSES
     feature_source = (
         _to_feature_source(substituted.get("feature_source"))
         if substituted.get("feature_source") is not None
@@ -401,20 +543,30 @@ def load_scenario(
         if substituted.get("quality") is not None
         else None
     )
-    if is_live:
-        _validate_live_scenario_contract(
-            path=path,
-            run=run,
-            feature_source=feature_source,
-            quality=quality,
-        )
+    repo = _to_repo_source(substituted.get("repo"))
+    setup = _to_command_steps(raw=substituted.get("setup"), key="setup")
+    verify = _to_command_steps(raw=substituted.get("verify"), key="verify")
+    _validate_scenario_contract(
+        path=path,
+        scenario_class=scenario_class,
+        feature_size=feature_size,
+        automation_lane=automation_lane,
+        canonical_runtime=canonical_runtime,
+        run=run,
+        feature_source=feature_source,
+        quality=quality,
+    )
     return Scenario(
         scenario_id=scenario_id,
+        scenario_class=scenario_class,
+        feature_size=feature_size,
+        automation_lane=automation_lane,
+        canonical_runtime=canonical_runtime,
         task=task,
-        repo=_to_repo_source(substituted.get("repo")),
-        setup=_to_command_steps(raw=substituted.get("setup"), key="setup"),
+        repo=repo,
+        setup=setup,
         run=run,
-        verify=_to_command_steps(raw=substituted.get("verify"), key="verify"),
+        verify=verify,
         feature_source=feature_source,
         quality=quality,
         runtime_targets=run.runtime_targets,

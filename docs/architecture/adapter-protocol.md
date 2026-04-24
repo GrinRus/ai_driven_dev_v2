@@ -26,6 +26,14 @@ Adapters are not responsible for:
 - self-repair policy,
 - backlog or roadmap logic.
 
+Execution note:
+
+- probe may inspect a raw runtime binary or endpoint;
+- stage execution may use a configured wrapper command that accepts AIDD adapter
+  flags and then delegates to the underlying runtime.
+
+The probe target and the execution command do not have to be identical.
+
 ## 3. Conceptual interface
 
 An adapter should support these conceptual operations:

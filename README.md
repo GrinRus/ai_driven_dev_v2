@@ -52,7 +52,7 @@ AIDD separates:
   The CLI is designed to stream raw runtime logs as closely as possible to the runtime's own UX.
 
 - **Harness and eval built in**  
-  Smoke scenarios, live E2E scenarios, graders, and log analysis are part of the product architecture.
+  Deterministic scenarios, manual live E2E audits, graders, and log analysis are part of the product architecture.
 
 ## Primary user stories
 
@@ -63,7 +63,7 @@ The project is anchored in these outcomes:
 - invalid stage outputs are repaired before the workflow advances;
 - the system asks the user clarifying questions when the task is underspecified;
 - a maintainer can add a new runtime adapter without rewriting the core;
-- an evaluator can run smoke, regression, and live E2E scenarios with log analysis.
+- an evaluator can run deterministic and live E2E scenarios with log analysis.
 
 See `docs/product/user-stories.md` for the full set.
 
@@ -112,7 +112,7 @@ This starter repository already includes:
 - stage and document contract skeletons,
 - stage prompt-pack skeletons,
 - `.agents/skills/` for Codex-style development workflows,
-- live E2E scenario manifests built on public GitHub repositories,
+- deterministic and live scenario manifests,
 - CI and release workflow skeletons,
 - a minimal Python package and CLI bootstrap.
 
@@ -123,9 +123,7 @@ The following parts are still intentionally in-progress:
 
 That is deliberate: this bundle is meant to be the **starting repository for implementation**, not a falsely complete system.
 
-Tagged-release verification now includes one published-package live-scenario proof on
-`AIDD-LIVE-005` using the deterministic `generic-cli` release-proof runtime. Maintained-runtime
-task-completion evidence remains a separate development and nightly concern.
+Live E2E remains available as a manual external-audit system, but it is no longer part of CI or release gating.
 
 ## Installation from source
 
@@ -133,7 +131,9 @@ task-completion evidence remains a separate development and nightly concern.
 
 - Python 3.12+
 - `uv`
-- optional runtime binaries you want to integrate later, such as Claude Code
+- optional runtime binaries you want to probe in `aidd doctor`, such as Claude Code
+- AIDD-compatible execution commands for any runtime you want to use with `aidd run`,
+  `aidd stage run`, or manual live E2E
 
 ### Bootstrap the repo locally
 
@@ -163,7 +163,12 @@ The intended release channels are:
 
 Runtime binaries remain external dependencies. AIDD does not bundle Claude Code, Codex, OpenCode, or other runtimes.
 
-For live E2E in development and CI, the canonical operator-proof path is:
+For workflow or stage execution, the configured runtime command must accept the
+AIDD adapter flags for the selected runtime. In practice this may be a wrapper
+command around the upstream provider CLI rather than the raw provider binary
+itself.
+
+For manual live E2E, the canonical operator-audit path is:
 
 - build a local wheel from the current checkout;
 - install it with `uv tool`;
@@ -210,7 +215,7 @@ aidd doctor
 aidd init --work-item WI-001
 aidd run --work-item WI-001 --runtime generic-cli
 aidd stage run plan --work-item WI-001 --runtime generic-cli
-aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml --runtime generic-cli
+aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml --runtime codex
 ```
 
 Today:
@@ -221,7 +226,7 @@ Today:
 - `stage run` executes single-stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`,
 - `run` and `stage run` fail fast for unknown runtime ids with `unsupported-runtime` classification,
 - `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, and validator artifacts),
-- live `eval run` scenarios under `harness/scenarios/live/` install a local wheel via `uv tool` and run AIDD from the target repository root.
+- live `eval run` scenarios under `harness/scenarios/live/` install a local wheel via `uv tool`, run AIDD from the target repository root, and use maintained live providers only (`codex` and `opencode` in Wave 13).
 
 ## Operator documentation
 
@@ -235,7 +240,7 @@ For installation, diagnostics, and issue reporting workflows, use:
 
 The repository includes a curated live E2E set built on public GitHub repositories.
 
-In this repository, live E2E means installed operator proof, not the same thing as smoke or adapter conformance.
+In this repository, live E2E means a manual installed-operator audit, not a CI or release lane and not the same thing as smoke or adapter conformance.
 
 Repository set:
 
@@ -247,6 +252,7 @@ Repository set:
 See:
 
 - `docs/e2e/live-e2e-catalog.md`
+- `docs/e2e/scenario-matrix.md`
 - `harness/scenarios/live/`
 
 ## How to develop this project

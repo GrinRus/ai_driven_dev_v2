@@ -42,6 +42,10 @@ def _build_scenario(
 ) -> Scenario:
     return Scenario(
         scenario_id="AIDD-TEST-REPO-PREP",
+        scenario_class="deterministic-workflow",
+        feature_size="small",
+        automation_lane="ci",
+        canonical_runtime="generic-cli",
         task="Prepare repo",
         repo=ScenarioRepoSource(
             url=repo_url,

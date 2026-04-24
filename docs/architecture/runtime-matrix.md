@@ -23,6 +23,13 @@ The project distinguishes between:
 
 A runtime does not need every capability to participate, but the adapter must declare what is missing and the core must apply an explicit fallback.
 
+## Execution-command note
+
+For CLI-backed runtimes, `aidd doctor` may probe a raw provider binary while
+workflow or stage execution uses a configured AIDD-compatible command that
+accepts the adapter flags for that runtime. Do not assume the upstream provider
+binary alone is always the correct execution surface.
+
 ## Tier 1 commitment
 
 The repository must ship working support for:

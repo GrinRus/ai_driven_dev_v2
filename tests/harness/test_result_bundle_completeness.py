@@ -30,6 +30,10 @@ from aidd.harness.scenarios import (
 def _build_scenario() -> Scenario:
     return Scenario(
         scenario_id="AIDD-TEST-BUNDLE-COMPLETENESS",
+        scenario_class="deterministic-workflow",
+        feature_size="small",
+        automation_lane="ci",
+        canonical_runtime="generic-cli",
         task="Verify result-bundle completeness",
         repo=ScenarioRepoSource(
             url="https://github.com/example/repo",

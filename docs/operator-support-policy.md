@@ -21,7 +21,7 @@ Maintainers currently provide best-effort support for:
 - workspace initialization (`uv run aidd init --work-item <id>`);
 - workflow execution through maintained runtimes (`aidd run`);
 - stage execution support through `aidd stage run` on `generic-cli`, `claude-code`, `codex`, and `opencode`;
-- installed live E2E execution through `aidd eval run` on manifests under `harness/scenarios/live/`;
+- manual installed live E2E execution through `aidd eval run` on manifests under `harness/scenarios/live/`;
 - run-inspection commands (`aidd run show`, `aidd run logs`, `aidd run artifacts`);
 - stage and eval read-only summaries (`aidd stage summary`, `aidd stage questions`, `aidd eval summary`).
 

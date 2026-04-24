@@ -65,24 +65,13 @@ def test_release_workflow_has_uv_tool_install_verification_job() -> None:
     assert "aidd doctor" in run_blocks
 
 
-def test_release_workflow_has_published_live_e2e_job() -> None:
+def test_release_workflow_does_not_run_live_e2e() -> None:
     jobs = _release_workflow_jobs()
-    assert "verify-published-live-e2e" in jobs
+    assert "verify-published-live-e2e" not in jobs
 
-    verify_job = jobs["verify-published-live-e2e"]
-    assert "verify-uv-tool-install" in _normalize_needs(verify_job.get("needs"))
-
-    run_blocks = _job_run_blocks(verify_job)
-    assert "uv sync --extra dev" in run_blocks
-    assert "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC" in run_blocks
-    assert "sqlite-utils-detect-types-header-only.yaml" in run_blocks
-    assert "--runtime generic-cli" in run_blocks
-    env_text = "\n".join(
-        str(step.get("env", {}))
-        for step in verify_job.get("steps", [])
-        if isinstance(step, dict)
-    )
-    assert "release_live_proof_runtime.py" in env_text
+    serialized = yaml.safe_dump({"jobs": jobs}, sort_keys=False)
+    assert "harness/scenarios/live/" not in serialized
+    assert "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC" not in serialized
 
 
 def test_release_workflow_has_ghcr_verification_job() -> None:
@@ -93,7 +82,7 @@ def test_release_workflow_has_ghcr_verification_job() -> None:
     normalized_needs = _normalize_needs(verify_job.get("needs"))
     assert "publish-container" in normalized_needs
     assert "verify-uv-tool-install" in normalized_needs
-    assert "verify-published-live-e2e" in normalized_needs
+    assert "verify-published-live-e2e" not in normalized_needs
 
     run_blocks = _job_run_blocks(verify_job)
     assert "ATTEMPTS=10" in run_blocks

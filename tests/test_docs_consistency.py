@@ -18,7 +18,6 @@ _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
 _REQUIRED_RELEASE_VERIFICATION_JOB_IDS: tuple[str, ...] = (
     "verify-pypi-install",
     "verify-uv-tool-install",
-    "verify-published-live-e2e",
     "verify-ghcr-install",
 )
 
@@ -89,3 +88,32 @@ def test_release_checklist_requires_verification_job_evidence() -> None:
         f"{', '.join(missing_job_references)}"
     )
     assert "required release evidence for tagged builds" in release_checklist.lower()
+
+
+def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -> None:
+    readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
+    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
+        encoding="utf-8"
+    )
+    adapter_protocol = (
+        _repo_root() / "docs" / "architecture" / "adapter-protocol.md"
+    ).read_text(encoding="utf-8")
+    runtime_matrix = (_repo_root() / "docs" / "architecture" / "runtime-matrix.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml --runtime codex"
+        in readme
+    )
+    assert (
+        "aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml "
+        "--runtime generic-cli"
+        not in readme
+    )
+    assert "AIDD-compatible execution commands" in readme
+    assert "AIDD-compatible for the selected runtime" in operator_handbook
+    assert "/path/to/aidd-codex-wrapper" in operator_handbook
+    assert "/path/to/aidd-opencode-wrapper" in operator_handbook
+    assert "probe target and the execution command do not have to be identical" in adapter_protocol
+    assert "configured AIDD-compatible command" in runtime_matrix

@@ -16,6 +16,10 @@ from aidd.harness.scenarios import (
 def _build_scenario(*, setup_commands: tuple[str, ...]) -> Scenario:
     return Scenario(
         scenario_id="AIDD-TEST-RUNNER-SETUP",
+        scenario_class="deterministic-workflow",
+        feature_size="small",
+        automation_lane="ci",
+        canonical_runtime="generic-cli",
         task="Run setup commands",
         repo=ScenarioRepoSource(
             url="https://github.com/example/repo",

@@ -121,6 +121,10 @@ def _write_scenario_manifest(
         aidd_invocation["command"] = list(aidd_command)
     payload = {
         "id": "AIDD-TEST-EVAL-RUNNER",
+        "scenario_class": "live-full-flow" if live else "deterministic-stage",
+        "feature_size": "small",
+        "automation_lane": "manual" if live else "ci",
+        "canonical_runtime": runtime_targets[0],
         "task": (
             "Run the installed AIDD operator against the selected issue and preserve "
             "full-flow audit evidence."
@@ -157,6 +161,14 @@ def _write_scenario_manifest(
             "require_review_status": "approved",
             "allowed_qa_verdicts": ["ready", "ready-with-risks"],
             "code_review_required": True,
+        }
+    else:
+        payload["feature_source"] = {
+            "mode": "fixture-seed",
+            "selection_policy": "fixture-owned",
+            "fixture_path": "harness/fixtures/minimal-python",
+            "seed_id": "eval-runner-fixture-seed",
+            "summary": "Use a deterministic local fixture seed for eval runner tests.",
         }
     if workflow_bundle is not None:
         payload["workflow_bundle"] = workflow_bundle
@@ -256,6 +268,15 @@ def test_eval_runner_pass_status(tmp_path: Path) -> None:
     _assert_bundle_basics(result.bundle_root)
     verdict_text = result.verdict_path.read_text(encoding="utf-8")
     assert "- Status: `pass`" in verdict_text
+    issue_selection_payload = yaml.safe_load(
+        result.bundle_root.joinpath("issue-selection.json").read_text(encoding="utf-8")
+    )
+    assert issue_selection_payload["selected_issue"] is None
+    assert (
+        issue_selection_payload["fixture_seed"]["fixture_path"]
+        == "harness/fixtures/minimal-python"
+    )
+    assert issue_selection_payload["scenario_class"] == "deterministic-stage"
 
 
 def test_eval_runner_live_scenario_uses_installed_artifact_and_writes_install_metadata(

@@ -166,9 +166,14 @@ def write_harness_metadata(
         raise ValueError("status must be non-empty.")
 
     metadata_payload: dict[str, Any] = {
+        "automation_lane": scenario.automation_lane,
+        "canonical_runtime": scenario.canonical_runtime,
         "created_at_utc": _format_utc_timestamp(),
+        "feature_size": scenario.feature_size,
+        "is_live": scenario.is_live,
         "run_id": layout.run_root.name,
         "runtime_id": normalized_runtime_id,
+        "scenario_class": scenario.scenario_class,
         "scenario_id": scenario.scenario_id,
         "status": normalized_status,
         "task": scenario.task,

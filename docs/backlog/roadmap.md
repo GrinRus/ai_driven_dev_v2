@@ -3062,3 +3062,196 @@ Sync notes:
 
 - `2026-04-24` Wave 12 opened via `W8-E3-S1` queue-restoration policy for full-flow live E2E and quality-gate work.
 - `2026-04-24` Wave 12 completed: live manifests now require curated issue pools and quality inputs, `aidd run` enforces workflow bounds, eval bundles include issue selection plus quality artifacts, and full regression checks passed.
+
+## Wave 13 — scenario matrix and manual-only live audits (`done`)
+
+### Epic W13-E1 — scenario taxonomy and loader contract (`done`)
+Linked stories: `US-01`, `US-05`, `US-07`, `US-09`
+
+#### Slice W13-E1-S1 — scenario metadata taxonomy (`done`)
+Goal: add explicit scenario class, feature size, automation lane, and canonical runtime metadata to every scenario manifest and validate the combinations centrally.
+
+Primary outputs:
+
+- scenario metadata model
+- loader validation for class/size/lane/runtime
+- scenario-level contract tests
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `tests/harness/`
+
+Dependencies:
+
+- `W12-E2-S2`
+
+Local tasks:
+
+- `W13-E1-S1-T1` Define the scenario metadata model for `scenario_class`, `feature_size`, `automation_lane`, and `canonical_runtime` in the loader and scenario dataclass.
+- `W13-E1-S1-T2` Reject invalid class/size/lane/runtime combinations, including live-in-CI, large-in-CI, noncanonical runtimes, and invalid stage-scope pairings.
+
+Exit evidence:
+
+- every scenario manifest must declare explicit class, size, lane, and canonical runtime metadata;
+- invalid live or deterministic combinations fail during scenario loading before execution begins.
+
+#### Slice W13-E1-S2 — deterministic fixture seed support (`done`)
+Goal: split deterministic and live feature selection paths so fixture-owned seeds drive deterministic scenarios while curated issue pools remain live-only.
+
+Primary outputs:
+
+- `fixture-seed` feature-source contract
+- deterministic-scenario loader support
+- migrated deterministic manifests
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `harness/scenarios/`
+- `tests/harness/`
+
+Dependencies:
+
+- `W13-E1-S1`
+
+Local tasks:
+
+- `W13-E1-S2-T1` Implement `feature_source.mode=fixture-seed` for deterministic scenarios and require `curated-issue-pool` only for live scenarios.
+- `W13-E1-S2-T2` Migrate existing deterministic and live manifests to the new taxonomy metadata and feature-source split.
+
+Exit evidence:
+
+- deterministic scenarios no longer depend on curated issue pools;
+- live scenarios remain reproducible and deterministic through curated issue selection.
+
+### Epic W13-E2 — representative matrix and manual automation split (`done`)
+Linked stories: `US-05`, `US-07`, `US-09`, `US-10`
+
+#### Slice W13-E2-S1 — representative scenario matrix (`done`)
+Goal: classify the supported scenario set by class, size, and provider, and close any missing representative buckets without turning the matrix into a full cross-product.
+
+Primary outputs:
+
+- representative matrix source-of-truth doc
+- classified scenario catalog
+- deterministic large manual fixture workflow coverage
+
+Touched areas:
+
+- `docs/e2e/`
+- `harness/scenarios/`
+- `tests/`
+
+Dependencies:
+
+- `W13-E1-S2`
+
+Local tasks:
+
+- `W13-E2-S1-T1` Write the representative scenario matrix and classify every maintained scenario by class, size, lane, provider, and canonical runtime.
+- `W13-E2-S1-T2` Add or migrate scenarios so the required small, medium, and large representative buckets exist without external live dependency in CI.
+
+Exit evidence:
+
+- the maintained scenario set covers the required representative buckets;
+- provider and size expectations are visible in one repo-native source of truth.
+
+#### Slice W13-E2-S2 — manual-only live automation (`done`)
+Goal: keep CI and release automation deterministic while moving live external audits into a manual workflow-dispatch lane.
+
+Primary outputs:
+
+- manual live workflow
+- release workflow without live E2E
+- workflow regression tests
+
+Touched areas:
+
+- `.github/workflows/`
+- `tests/`
+
+Dependencies:
+
+- `W13-E1-S2`
+
+Local tasks:
+
+- `W13-E2-S2-T1` Remove live E2E from release automation and keep CI limited to deterministic project-code checks.
+- `W13-E2-S2-T2` Add a manual `workflow_dispatch` live workflow that filters scenarios by id, runtime, feature size, and scenario class and uploads eval bundle artifacts.
+
+Exit evidence:
+
+- branch and merge gates depend only on deterministic checks;
+- live audits run only through an explicitly manual workflow path.
+
+### Epic W13-E3 — docs, skills, and regression alignment (`done`)
+Linked stories: `US-01`, `US-05`, `US-07`, `US-09`, `US-10`
+
+#### Slice W13-E3-S1 — manual live documentation and skills (`done`)
+Goal: align product docs and operator skills with the manual-only live lane and the deterministic-vs-live scenario split.
+
+Primary outputs:
+
+- updated README and architecture docs
+- updated live and eval skills
+- scenario-catalog wording aligned to manual-only live audits
+
+Touched areas:
+
+- `README.md`
+- `docs/architecture/`
+- `docs/e2e/`
+- `.agents/skills/`
+
+Dependencies:
+
+- `W13-E2-S1`
+- `W13-E2-S2`
+
+Local tasks:
+
+- `W13-E3-S1-T1` Update README, eval architecture docs, and the live catalog to describe CI as deterministic-only and live E2E as a manual external audit system.
+- `W13-E3-S1-T2` Update the `live-e2e` and `aidd-eval` skills to explain scenario taxonomy, manual-only live execution, and `fixture-seed` versus `curated-issue-pool`.
+
+Exit evidence:
+
+- operator docs and skills no longer describe live E2E as a CI or release lane;
+- deterministic and live scenario selection rules match the loader contract.
+
+#### Slice W13-E3-S2 — regression and consistency coverage (`done`)
+Goal: lock the new scenario taxonomy and workflow separation behind deterministic repo-local tests.
+
+Primary outputs:
+
+- loader regression tests
+- docs/workflow consistency tests
+- scenario coverage checks
+
+Touched areas:
+
+- `tests/`
+
+Dependencies:
+
+- `W13-E1-S1`
+- `W13-E1-S2`
+- `W13-E2-S1`
+- `W13-E2-S2`
+- `W13-E3-S1`
+
+Local tasks:
+
+- `W13-E3-S2-T1` Add loader and workflow regressions for manual-only live rules, deterministic fixture seeds, and canonical runtime validation.
+- `W13-E3-S2-T2` Add docs and scenario consistency checks for representative matrix coverage, manual-only live scenarios, and deterministic CI eligibility.
+
+Exit evidence:
+
+- the scenario taxonomy, workflow split, and catalog coverage are enforced by repo-local deterministic tests;
+- future live-lane regressions surface without requiring an external live run in CI.
+
+Sync notes:
+
+- `2026-04-24` Wave 13 was opened via `W8-E3-S1` queue-restoration policy to separate deterministic CI checks from manual-only live audits and to classify maintained scenarios by class, size, and provider.
+- `2026-04-24` Initial Wave 13 queue restoration promotes `W13-E1-S1-T1` to `Next`, `W13-E1-S1-T2` and `W13-E1-S2-T1` to `Soon`, and `W13-E1-S2-T2`, `W13-E2-S1-T1`, `W13-E2-S1-T2`, `W13-E2-S2-T1`, `W13-E2-S2-T2`, `W13-E3-S1-T1`, `W13-E3-S1-T2`, `W13-E3-S2-T1`, and `W13-E3-S2-T2` to `Parking lot`.
+- `2026-04-24` Wave 13 completed: scenario manifests now carry explicit class/size/lane/runtime taxonomy, deterministic lanes use `fixture-seed`, live lanes are manual-only, release automation no longer runs live E2E, and the representative matrix plus regression coverage are synchronized.

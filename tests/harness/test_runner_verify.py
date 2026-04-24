@@ -21,6 +21,10 @@ from aidd.harness.scenarios import (
 def _build_scenario(*, verify_commands: tuple[str, ...]) -> Scenario:
     return Scenario(
         scenario_id="AIDD-TEST-RUNNER-VERIFY",
+        scenario_class="deterministic-workflow",
+        feature_size="small",
+        automation_lane="ci",
+        canonical_runtime="generic-cli",
         task="Run verify commands",
         repo=ScenarioRepoSource(
             url="https://github.com/example/repo",

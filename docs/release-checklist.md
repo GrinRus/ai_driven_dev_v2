@@ -62,16 +62,16 @@ aidd doctor
 
 - [ ] `verify-pypi-install` job passed and its logs include `aidd --version` and `aidd doctor`.
 - [ ] `verify-uv-tool-install` job passed and its logs include `aidd --version` and `aidd doctor`.
-- [ ] `verify-published-live-e2e` job passed and uploaded the published-package eval bundle for `AIDD-LIVE-005`.
 - [ ] `verify-ghcr-install` job passed and its logs include containerized `aidd --version` and `aidd doctor`.
-- [ ] These four jobs are required release evidence for tagged builds.
+- [ ] These three jobs are required release evidence for tagged builds.
 
-Published live-scenario release-proof notes:
+Manual live-audit notes:
 
-- This job installs the published package via `uv tool`.
-- It runs `AIDD-LIVE-005` from the pinned sqlite-utils repository root.
-- It uses the deterministic `generic-cli` release-proof runtime helper.
-- It proves install/cwd/workspace semantics for the published artifact and does not replace maintained-runtime bugfix proof.
+- Live E2E is no longer a release gate.
+- If maintainers want a post-release operator audit, run `manual-live-e2e` explicitly from GitHub Actions.
+- That manual workflow requires the selected provider's runtime-command secret:
+  `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND`.
+- That audit is separate from publish/installability evidence and must not block tagged releases.
 
 Suggested package-path verification:
 

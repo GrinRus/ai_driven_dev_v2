@@ -26,6 +26,10 @@ from aidd.harness.scenarios import (
 def _build_scenario() -> Scenario:
     return Scenario(
         scenario_id="AIDD-TEST-BUNDLE-PERSISTENCE",
+        scenario_class="deterministic-workflow",
+        feature_size="small",
+        automation_lane="ci",
+        canonical_runtime="generic-cli",
         task="Persist bundle artifacts",
         repo=ScenarioRepoSource(
             url="https://github.com/example/repo",
@@ -92,6 +96,10 @@ def test_write_harness_metadata_persists_references(tmp_path: Path) -> None:
 
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert payload["scenario_id"] == "AIDD-TEST-BUNDLE-PERSISTENCE"
+    assert payload["scenario_class"] == "deterministic-workflow"
+    assert payload["feature_size"] == "small"
+    assert payload["automation_lane"] == "ci"
+    assert payload["canonical_runtime"] == "generic-cli"
     assert payload["runtime_id"] == "generic-cli"
     assert payload["work_item"] == "WI-100"
     assert payload["aidd_run_id"] == "run-100"
