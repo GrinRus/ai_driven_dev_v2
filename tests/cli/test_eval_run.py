@@ -33,20 +33,21 @@ def _init_source_repo(path: Path) -> None:
 
 
 def _write_fake_aidd(path: Path, *, exit_code: int, write_plan_outputs: bool = False) -> None:
+    del write_plan_outputs
     write_outputs_lines: tuple[str, ...] = tuple()
-    if write_plan_outputs:
-        write_outputs_lines = (
-            "output_root=\".aidd/workitems/$AIDD_HARNESS_WORK_ITEM/stages/plan/output\"",
-            "mkdir -p \"$output_root\"",
-            (
-                "printf '# Stage result\\n\\n- status: succeeded\\n' "
-                "> \"$output_root/stage-result.md\""
-            ),
-            (
-                "printf '# Validator report\\n\\n## Result\\n\\n- Verdict: `pass`\\n' "
-                "> \"$output_root/validator-report.md\""
-            ),
-        )
+    write_outputs_lines = (
+        "output_root=\".aidd/workitems/$AIDD_HARNESS_WORK_ITEM/stages/plan/output\"",
+        "mkdir -p \"$output_root\"",
+        (
+            "printf '# Stage result\\n\\n- status: succeeded\\n' "
+            "> \"$output_root/stage-result.md\""
+        ),
+        (
+            "printf '# Validator report\\n\\n## Result\\n\\n- Verdict: `pass`\\n' "
+            "> \"$output_root/validator-report.md\""
+        ),
+        "printf '# Plan\\n\\n- generated\\n' > \"$output_root/plan.md\"",
+    )
     path.write_text(
         "\n".join(
             (
@@ -108,6 +109,7 @@ def test_eval_run_executes_harness_lifecycle_and_writes_bundle(
     assert result.exit_code == 0
     assert "AIDD eval run: scenario=AIDD-TEST-EVAL-RUN-CLI runtime=opencode" in result.stdout
     assert "Status: pass" in result.stdout
+    assert "Quality gate: none" in result.stdout
     assert "Bundle root:" in result.stdout
     assert ".aidd/reports/evals/eval-test-eval-run-cli-opencode-" in normalized_output
     assert "Harness execution is not implemented yet." not in result.stdout
@@ -130,3 +132,4 @@ def test_eval_run_reports_fail_for_unsupported_runtime_real_invocation(
     assert result.exit_code == 0
     assert "AIDD eval run: scenario=AIDD-TEST-EVAL-RUN-CLI runtime=opencode" in result.stdout
     assert "Status: fail" in result.stdout
+    assert "Quality gate: none" in result.stdout

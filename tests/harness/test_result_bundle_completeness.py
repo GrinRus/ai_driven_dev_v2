@@ -10,6 +10,7 @@ from aidd.harness.result_bundle import (
     ensure_result_bundle_layout,
     write_command_transcripts,
     write_harness_metadata,
+    write_issue_selection,
 )
 from aidd.harness.runner import (
     HarnessAiddRunResult,
@@ -45,7 +46,10 @@ def _build_scenario() -> Scenario:
             interview_required=False,
         ),
         verify=ScenarioCommandSteps(commands=("echo verify",)),
+        feature_source=None,
+        quality=None,
         runtime_targets=("generic-cli",),
+        is_live=False,
         raw={"id": "AIDD-TEST-BUNDLE-COMPLETENESS"},
     )
 
@@ -83,10 +87,13 @@ def _assert_required_bundle_files(layout_root: Path) -> None:
         "setup-transcript.json",
         "run-transcript.json",
         "verify-transcript.json",
+        "quality-transcript.json",
         "teardown-transcript.json",
+        "issue-selection.json",
         "runtime.log",
         "validator-report.md",
         "verdict.md",
+        "quality-report.md",
     )
     for artifact_name in required_artifact_names:
         artifact_path = layout_root / artifact_name
@@ -176,6 +183,11 @@ def test_result_bundle_completeness_for_terminal_outcomes(
         verification_result=verification_result,
         teardown_result=teardown_result,
     )
+    write_issue_selection(
+        layout=layout,
+        payload={"scenario_id": "AIDD-TEST-BUNDLE-COMPLETENESS", "selected_issue": None},
+    )
+    layout.quality_report_path.write_text("# Live Quality Report\n\n- none\n", encoding="utf-8")
     copy_or_link_run_artifacts(
         layout=layout,
         runtime_log_path=runtime_log_path,

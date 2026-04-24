@@ -2900,3 +2900,165 @@ Exit evidence:
 
 - tagged releases prove one published install path can complete a pinned live workflow scenario;
 - release docs require that evidence instead of stopping at `aidd doctor`.
+
+---
+
+## Wave 12 — live E2E full-flow and quality gate (`done`)
+
+### Epic W12-E1 — full-flow live operator audit (`done`)
+Linked stories: `US-01`, `US-05`, `US-07`, `US-09`, `US-10`
+
+#### Slice W12-E1-S1 — full-flow live contract (`done`)
+Goal: redefine live E2E as a deterministic installed-operator full-flow audit with curated issue selection and explicit quality inputs.
+
+Primary outputs:
+
+- full-flow live scenario contract
+- live manifest schema for `feature_source` and `quality`
+- updated live E2E docs and skills
+
+Touched areas:
+
+- `docs/e2e/`
+- `docs/architecture/`
+- `.agents/skills/`
+- `harness/scenarios/live/`
+
+Dependencies:
+
+- `W11-E2-S1`
+
+Local tasks:
+
+- `W12-E1-S1-T1` Define the full-flow live lane contract and update live E2E docs and skills to require installed `idea -> qa` execution plus quality artifacts.
+- `W12-E1-S1-T2` Add live manifest support for `feature_source` and `quality`, and reject live scenarios that are not explicit `idea -> qa`.
+
+Exit evidence:
+
+- live docs and skills describe one canonical installed full-flow audit lane;
+- live manifests cannot omit deterministic issue selection or quality inputs.
+
+#### Slice W12-E1-S2 — bounded workflow execution (`done`)
+Goal: make workflow bounds explicit so live runs execute only the requested stage window.
+
+Primary outputs:
+
+- `aidd run --from-stage/--to-stage`
+- bounded workflow stage selection
+- run-manifest support for workflow bounds
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `src/aidd/core/`
+- `tests/cli/`
+- `tests/core/`
+
+Dependencies:
+
+- `W12-E1-S1`
+
+Local tasks:
+
+- `W12-E1-S2-T1` Expose `--from-stage` and `--to-stage` on `aidd run` and persist workflow bounds in run metadata.
+- `W12-E1-S2-T2` Enforce workflow bounds in stage selection and workflow completion checks.
+
+Exit evidence:
+
+- workflow runs respect explicit stage bounds even when earlier or later stage metadata exists;
+- live harness can force `idea -> qa` without relying on implicit workspace state.
+
+#### Slice W12-E1-S3 — deterministic live issue selection (`done`)
+Goal: seed full-flow live runs from a curated issue pool and preserve selection evidence.
+
+Primary outputs:
+
+- curated-issue-pool loader support
+- selected issue snapshot and context seeding
+- migrated full-flow live manifests
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `harness/scenarios/live/`
+- `tests/harness/`
+
+Dependencies:
+
+- `W12-E1-S1`
+- `W12-E1-S2`
+
+Local tasks:
+
+- `W12-E1-S3-T1` Select the first issue from a manifest-curated issue pool and persist issue-selection artifacts in the target repo context and eval bundle.
+- `W12-E1-S3-T2` Migrate live scenarios to curated issue pools, full-flow scope, and repo-local quality commands.
+
+Exit evidence:
+
+- live runs derive `user-request.md` and selected-issue evidence from a deterministic issue pool;
+- canonical live manifests no longer rely on static implementation-task strings as the only seed.
+
+### Epic W12-E2 — live quality gate (`done`)
+Linked stories: `US-02`, `US-03`, `US-06`, `US-07`, `US-10`
+
+#### Slice W12-E2-S1 — quality scoring and artifacts (`done`)
+Goal: add a second eval layer that scores flow fidelity, artifact quality, and code quality without changing execution verdict taxonomy.
+
+Primary outputs:
+
+- quality verdict model
+- `quality-report.md`
+- expanded `grader.json`
+
+Touched areas:
+
+- `src/aidd/evals/`
+- `tests/evals/`
+
+Dependencies:
+
+- `W12-E1-S3`
+
+Local tasks:
+
+- `W12-E2-S1-T1` Implement the live quality rubric, verdict mapping, and report writer for flow fidelity, artifact quality, and code quality.
+- `W12-E2-S1-T2` Expand `grader.json` to include separate execution and quality sections with issue selection, scores, and blocking findings.
+
+Exit evidence:
+
+- eval bundles contain evidence-backed quality artifacts separate from `verdict.md`;
+- execution verdict remains stable while quality gate communicates `pass|warn|fail`.
+
+#### Slice W12-E2-S2 — harness quality phase integration (`done`)
+Goal: run repo-local quality checks after live verification and make weak code or weak artifacts fail the quality gate.
+
+Primary outputs:
+
+- quality command transcripts
+- harness-integrated quality scoring
+- updated live E2E bundle completeness rules
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `tests/harness/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W12-E2-S1`
+
+Local tasks:
+
+- `W12-E2-S2-T1` Run `quality.commands` after verification, capture `quality-transcript.json`, and feed the results into the live quality scorer.
+- `W12-E2-S2-T2` Require full-stage validated outputs plus quality artifacts before a live run is considered clean, and add regression coverage for weak code or weak artifacts escaping execution pass.
+
+Exit evidence:
+
+- no live run reports clean output without both full-flow stage artifacts and quality artifacts;
+- quality checks can downgrade or fail a run even when execution technically completed.
+
+Sync notes:
+
+- `2026-04-24` Wave 12 opened via `W8-E3-S1` queue-restoration policy for full-flow live E2E and quality-gate work.
+- `2026-04-24` Wave 12 completed: live manifests now require curated issue pools and quality inputs, `aidd run` enforces workflow bounds, eval bundles include issue selection plus quality artifacts, and full regression checks passed.

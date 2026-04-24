@@ -203,13 +203,21 @@ def _print_workflow_run_summary(
     workspace_root: Path,
     work_item: str,
     run_id: str,
+    stage_start: str | None = None,
+    stage_end: str | None = None,
 ) -> None:
     summary = resolve_run_metadata_summary(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
     )
-    console.print(f"Workflow summary: run_id={summary.run_id} runtime={summary.runtime_id}")
+    normalized_stage_start = stage_start or summary.workflow_stage_start or STAGES[0]
+    normalized_stage_end = stage_end or summary.workflow_stage_end or summary.stage_target
+    console.print(
+        "Workflow summary: "
+        f"run_id={summary.run_id} runtime={summary.runtime_id} "
+        f"stage_bounds={normalized_stage_start}->{normalized_stage_end}"
+    )
     if not summary.stages:
         console.print("- no stage metadata recorded")
         return
@@ -312,6 +320,14 @@ def run_callback(
         typer.Option("--work-item", help="Work item id"),
     ] = None,
     runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+    from_stage: Annotated[
+        str,
+        typer.Option("--from-stage", help="First stage to include in the workflow run."),
+    ] = STAGES[0],
+    to_stage: Annotated[
+        str,
+        typer.Option("--to-stage", help="Last stage to include in the workflow run."),
+    ] = STAGES[-1],
     root: Annotated[
         Path | None,
         typer.Option("--root", help="Root AIDD storage directory. Defaults to config value."),
@@ -333,6 +349,20 @@ def run_callback(
         return
     if work_item is None:
         raise typer.BadParameter("Missing option '--work-item'.")
+    if from_stage not in STAGES:
+        supported = ", ".join(STAGES)
+        raise typer.BadParameter(
+            f"Unknown stage '{from_stage}'. Expected one of: {supported}"
+        )
+    if to_stage not in STAGES:
+        supported = ", ".join(STAGES)
+        raise typer.BadParameter(
+            f"Unknown stage '{to_stage}'. Expected one of: {supported}"
+        )
+    if STAGES.index(from_stage) > STAGES.index(to_stage):
+        raise typer.BadParameter(
+            f"Option '--from-stage' ({from_stage}) must not come after '--to-stage' ({to_stage})."
+        )
 
     if runtime not in _WORKFLOW_RUN_SUPPORTED_RUNTIMES:
         supported = ", ".join(_WORKFLOW_RUN_SUPPORTED_RUNTIMES)
@@ -353,7 +383,7 @@ def run_callback(
         work_item=work_item,
         run_id=run_id,
         runtime_id=runtime,
-        stage_target=STAGES[-1],
+        stage_target=to_stage,
         config_snapshot={
             "config_path": config.as_posix(),
             "workspace_root": workspace_root.as_posix(),
@@ -361,8 +391,14 @@ def run_callback(
             "log_follow": log_follow,
             "mode": "workflow",
         },
+        workflow_stage_start=from_stage,
+        workflow_stage_end=to_stage,
     )
-    console.print(f"AIDD run: work_item={work_item} runtime={runtime} run_id={run_id}")
+    console.print(
+        "AIDD run: "
+        f"work_item={work_item} runtime={runtime} run_id={run_id} "
+        f"stage_bounds={from_stage}->{to_stage}"
+    )
 
     executed_stage_count = 0
     while True:
@@ -370,6 +406,8 @@ def run_callback(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
+            stage_start=from_stage,
+            stage_end=to_stage,
         )
         if next_stage is None:
             break
@@ -392,6 +430,8 @@ def run_callback(
                     workspace_root=workspace_root,
                     work_item=work_item,
                     run_id=run_id,
+                    stage_start=from_stage,
+                    stage_end=to_stage,
                 )
                 raise
         executed_stage_count += 1
@@ -401,6 +441,8 @@ def run_callback(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
+        stage_start=from_stage,
+        stage_end=to_stage,
     )
     incomplete = [
         summary for summary in advancement if summary.current_status != StageState.SUCCEEDED.value
@@ -413,6 +455,8 @@ def run_callback(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
+            stage_start=from_stage,
+            stage_end=to_stage,
         )
         raise typer.Exit(code=1)
 
@@ -420,6 +464,8 @@ def run_callback(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
+        stage_start=from_stage,
+        stage_end=to_stage,
     )
     console.print(
         "Workflow run completed: "
@@ -456,6 +502,11 @@ def run_show(
     run_table.add_row("work item", summary.work_item)
     run_table.add_row("runtime", summary.runtime_id)
     run_table.add_row("stage target", summary.stage_target)
+    run_table.add_row(
+        "workflow bounds",
+        f"{summary.workflow_stage_start or STAGES[0]} -> "
+        f"{summary.workflow_stage_end or summary.stage_target}",
+    )
     run_table.add_row("repository git sha", summary.repository_git_sha or "unknown")
     run_table.add_row(
         "prompt packs",
@@ -1080,9 +1131,11 @@ def eval_run(
 
     console.print(f"AIDD eval run: scenario={result.scenario_id} runtime={runtime}")
     console.print(f"Status: {result.status}")
+    console.print(f"Quality gate: {result.quality_gate}")
     console.print(f"Run id: {result.run_id}")
     console.print(f"Bundle root: {result.bundle_root.as_posix()}")
     console.print(f"Verdict path: {result.verdict_path.as_posix()}")
+    console.print(f"Quality report path: {result.quality_report_path.as_posix()}")
     console.print(f"Summary path: {result.summary_path.as_posix()}")
 
 

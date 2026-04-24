@@ -3,11 +3,23 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 from aidd.harness.eval_runner import run_eval_scenario
 from aidd.harness.install_artifact import HarnessInstallResult
 from aidd.harness.runner import HarnessCommandTranscript
+
+_PRIMARY_OUTPUTS: dict[str, str] = {
+    "idea": "idea-brief.md",
+    "research": "research-notes.md",
+    "plan": "plan.md",
+    "review-spec": "review-spec-report.md",
+    "tasklist": "tasklist.md",
+    "implement": "implementation-report.md",
+    "review": "review-report.md",
+    "qa": "qa-report.md",
+}
 
 
 def _run(args: list[str], *, cwd: Path | None = None) -> str:
@@ -36,22 +48,43 @@ def _write_fake_aidd(
     *,
     exit_code: int,
     stdout_lines: tuple[str, ...] = ("fake aidd",),
-    write_plan_outputs: bool = False,
+    write_stage_outputs: tuple[str, ...] = tuple(),
+    review_status: str = "approved",
+    qa_verdict: str = "ready",
 ) -> None:
     print_lines = tuple(f"printf '%s\\n' {line!r}" for line in stdout_lines)
-    write_outputs_lines: tuple[str, ...] = tuple()
-    if write_plan_outputs:
-        write_outputs_lines = (
-            "output_root=\".aidd/workitems/$AIDD_HARNESS_WORK_ITEM/stages/plan/output\"",
-            "mkdir -p \"$output_root\"",
+    write_outputs_lines: list[str] = []
+    for stage in write_stage_outputs:
+        output_root = f'.aidd/workitems/$AIDD_HARNESS_WORK_ITEM/stages/{stage}/output'
+        primary_filename = _PRIMARY_OUTPUTS[stage]
+        if stage == "review":
+            primary_content = (
+                "# Review Report\n\n"
+                f"- Review status: `{review_status}`\n"
+                "- Findings: none\n"
+            )
+        elif stage == "qa":
+            primary_content = (
+                "# QA Report\n\n"
+                f"- QA verdict: `{qa_verdict}`\n"
+                "- EV-001: runtime.log\n"
+            )
+        else:
+            primary_content = f"# {stage.title()} Output\n\n- generated for test coverage\n"
+        write_outputs_lines.extend(
             (
-                "printf '# Stage result\\n\\n- status: succeeded\\n' "
-                "> \"$output_root/stage-result.md\""
-            ),
-            (
-                "printf '# Validator report\\n\\n## Result\\n\\n- Verdict: `pass`\\n' "
-                "> \"$output_root/validator-report.md\""
-            ),
+                f'output_root="{output_root}"',
+                'mkdir -p "$output_root"',
+                (
+                    "printf '%b' '# Stage result\\n\\n- status: succeeded\\n' "
+                    '> "$output_root/stage-result.md"'
+                ),
+                (
+                    "printf '%b' '# Validator report\\n\\n## Result\\n\\n- Verdict: `pass`\\n' "
+                    '> "$output_root/validator-report.md"'
+                ),
+                f"printf '%b' {primary_content!r} > \"$output_root/{primary_filename}\"",
+            )
         )
     path.write_text(
         "\n".join(
@@ -80,13 +113,20 @@ def _write_scenario_manifest(
     stage_start: str = "plan",
     stage_end: str = "plan",
     workflow_bundle: dict[str, object] | None = None,
+    live: bool = False,
+    quality_commands: tuple[str, ...] | None = None,
 ) -> None:
     aidd_invocation: dict[str, object] = {"work_item": work_item}
     if aidd_command is not None:
         aidd_invocation["command"] = list(aidd_command)
     payload = {
         "id": "AIDD-TEST-EVAL-RUNNER",
-        "task": "exercise eval orchestration",
+        "task": (
+            "Run the installed AIDD operator against the selected issue and preserve "
+            "full-flow audit evidence."
+            if live
+            else "exercise eval orchestration"
+        ),
         "repo": {"url": repo_url},
         "setup": {"commands": list(setup_commands)},
         "verify": {"commands": list(verify_commands)},
@@ -95,6 +135,29 @@ def _write_scenario_manifest(
         "runtime_targets": list(runtime_targets),
         "aidd_invocation": aidd_invocation,
     }
+    if live:
+        payload["feature_source"] = {
+            "mode": "curated-issue-pool",
+            "selection_policy": "first-listed",
+            "issues": [
+                {
+                    "id": "123",
+                    "title": "exercise live issue selection",
+                    "url": "https://github.com/example/repo/issues/123",
+                    "summary": "Use the first curated issue as the deterministic full-flow seed.",
+                    "labels": ["bug", "live-e2e"],
+                }
+            ],
+        }
+        payload["quality"] = {
+            "commands": list(
+                quality_commands or ("printf 'quality\\n' > quality.log",)
+            ),
+            "rubric_profile": "live-full",
+            "require_review_status": "approved",
+            "allowed_qa_verdicts": ["ready", "ready-with-risks"],
+            "code_review_required": True,
+        }
     if workflow_bundle is not None:
         payload["workflow_bundle"] = workflow_bundle
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
@@ -106,10 +169,13 @@ def _assert_bundle_basics(bundle_root: Path) -> None:
     assert (bundle_root / "setup-transcript.json").exists()
     assert (bundle_root / "run-transcript.json").exists()
     assert (bundle_root / "verify-transcript.json").exists()
+    assert (bundle_root / "quality-transcript.json").exists()
     assert (bundle_root / "teardown-transcript.json").exists()
+    assert (bundle_root / "issue-selection.json").exists()
     assert (bundle_root / "runtime.log").exists()
     assert (bundle_root / "validator-report.md").exists()
     assert (bundle_root / "verdict.md").exists()
+    assert (bundle_root / "quality-report.md").exists()
     assert (bundle_root / "summary.md").exists()
     assert (bundle_root / "log-analysis.md").exists()
     assert (bundle_root / "grader.json").exists()
@@ -167,7 +233,7 @@ def test_eval_runner_pass_status(tmp_path: Path) -> None:
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd"
-    _write_fake_aidd(fake_aidd, exit_code=0, write_plan_outputs=True)
+    _write_fake_aidd(fake_aidd, exit_code=0, write_stage_outputs=("plan",))
     scenario_path = tmp_path / "scenario-pass.yaml"
     _write_scenario_manifest(
         path=scenario_path,
@@ -199,7 +265,11 @@ def test_eval_runner_live_scenario_uses_installed_artifact_and_writes_install_me
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd-live"
-    _write_fake_aidd(fake_aidd, exit_code=0, write_plan_outputs=True)
+    _write_fake_aidd(
+        fake_aidd,
+        exit_code=0,
+        write_stage_outputs=tuple(_PRIMARY_OUTPUTS),
+    )
     scenario_dir = tmp_path / "harness" / "scenarios" / "live"
     scenario_dir.mkdir(parents=True)
     scenario_path = scenario_dir / "scenario-live.yaml"
@@ -209,8 +279,13 @@ def test_eval_runner_live_scenario_uses_installed_artifact_and_writes_install_me
         setup_commands=("printf 'setup\\n' > setup.log",),
         verify_commands=("printf 'verify\\n' > verify.log",),
         interview_required=False,
+        runtime_targets=("opencode",),
         work_item="WI-EVAL-LIVE",
         aidd_command=("missing-live-command",),
+        stage_start="idea",
+        stage_end="qa",
+        live=True,
+        quality_commands=("printf 'quality\\n' > quality.log",),
     )
     monkeypatch.setattr(
         "aidd.harness.eval_runner.prepare_local_wheel_install",
@@ -237,6 +312,22 @@ def test_eval_runner_live_scenario_uses_installed_artifact_and_writes_install_me
     assert result.run_id in metadata_payload["execution_context"]["target_repository_cwd"]
     assert install_payload["step"] == "install"
     assert install_payload["command_count"] == 1
+    assert result.quality_gate == "pass"
+    assert result.quality_verdict == "ready"
+    issue_selection_payload = yaml.safe_load(
+        result.bundle_root.joinpath("issue-selection.json").read_text(encoding="utf-8")
+    )
+    assert issue_selection_payload["selected_issue"]["id"] == "123"
+    quality_transcript_payload = yaml.safe_load(
+        result.bundle_root.joinpath("quality-transcript.json").read_text(encoding="utf-8")
+    )
+    assert quality_transcript_payload["command_count"] == 1
+    grader_payload = yaml.safe_load(
+        result.bundle_root.joinpath("grader.json").read_text(encoding="utf-8")
+    )
+    assert grader_payload["execution"]["status"] == "pass"
+    assert grader_payload["quality"]["quality_gate"] == "pass"
+    assert grader_payload["quality"]["dimension_scores"]["flow_fidelity"]["score"] == 3
 
 
 def test_eval_runner_live_scenario_writes_runtime_config_for_published_package_run(
@@ -246,7 +337,11 @@ def test_eval_runner_live_scenario_writes_runtime_config_for_published_package_r
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd-live-published"
-    _write_fake_aidd(fake_aidd, exit_code=0, write_plan_outputs=True)
+    _write_fake_aidd(
+        fake_aidd,
+        exit_code=0,
+        write_stage_outputs=tuple(_PRIMARY_OUTPUTS),
+    )
     scenario_dir = tmp_path / "harness" / "scenarios" / "live"
     scenario_dir.mkdir(parents=True)
     scenario_path = scenario_dir / "scenario-live-published.yaml"
@@ -259,6 +354,9 @@ def test_eval_runner_live_scenario_writes_runtime_config_for_published_package_r
         runtime_targets=("generic-cli",),
         work_item="WI-EVAL-LIVE-PUBLISHED",
         aidd_command=("missing-live-command",),
+        stage_start="idea",
+        stage_end="qa",
+        live=True,
     )
     monkeypatch.setenv("AIDD_EVAL_PUBLISHED_PACKAGE_SPEC", "ai-driven-dev-v2==9.9.9")
     monkeypatch.setenv(
@@ -292,6 +390,56 @@ def test_eval_runner_live_scenario_writes_runtime_config_for_published_package_r
     assert 'command = "python /tmp/release-live-proof-runtime.py"' in live_config_text
 
 
+def test_eval_runner_live_quality_failure_does_not_change_execution_verdict(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    fake_aidd = tmp_path / "fake-aidd-live-quality-fail"
+    _write_fake_aidd(
+        fake_aidd,
+        exit_code=0,
+        write_stage_outputs=tuple(_PRIMARY_OUTPUTS),
+    )
+    scenario_dir = tmp_path / "harness" / "scenarios" / "live"
+    scenario_dir.mkdir(parents=True)
+    scenario_path = scenario_dir / "scenario-live-quality-fail.yaml"
+    _write_scenario_manifest(
+        path=scenario_path,
+        repo_url=source_repo.as_uri(),
+        setup_commands=("printf 'setup\\n' > setup.log",),
+        verify_commands=("printf 'verify\\n' > verify.log",),
+        interview_required=False,
+        runtime_targets=("opencode",),
+        work_item="WI-EVAL-LIVE-QUALITY-FAIL",
+        aidd_command=("missing-live-command",),
+        stage_start="idea",
+        stage_end="qa",
+        live=True,
+        quality_commands=("exit 11",),
+    )
+    monkeypatch.setattr(
+        "aidd.harness.eval_runner.prepare_local_wheel_install",
+        lambda *, workspace_root, run_id: _install_result_for_fake_aidd(fake_aidd),
+    )
+
+    result = run_eval_scenario(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        workspace_root=tmp_path / ".aidd",
+    )
+
+    assert result.status == "pass"
+    assert result.quality_gate == "fail"
+    quality_transcript_payload = yaml.safe_load(
+        result.bundle_root.joinpath("quality-transcript.json").read_text(encoding="utf-8")
+    )
+    assert quality_transcript_payload["command_count"] == 0
+    quality_report = result.quality_report_path.read_text(encoding="utf-8")
+    assert "quality commands failed" in quality_report
+
+
 def test_eval_runner_live_generic_cli_uses_release_proof_helper_by_default(
     tmp_path: Path,
     monkeypatch,
@@ -299,7 +447,11 @@ def test_eval_runner_live_generic_cli_uses_release_proof_helper_by_default(
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd-live-generic"
-    _write_fake_aidd(fake_aidd, exit_code=0, write_plan_outputs=True)
+    _write_fake_aidd(
+        fake_aidd,
+        exit_code=0,
+        write_stage_outputs=tuple(_PRIMARY_OUTPUTS),
+    )
     scenario_dir = tmp_path / "harness" / "scenarios" / "live"
     scenario_dir.mkdir(parents=True)
     scenario_path = scenario_dir / "scenario-live-generic.yaml"
@@ -311,6 +463,9 @@ def test_eval_runner_live_generic_cli_uses_release_proof_helper_by_default(
         interview_required=False,
         runtime_targets=("generic-cli",),
         work_item="WI-EVAL-LIVE-GENERIC",
+        stage_start="idea",
+        stage_end="qa",
+        live=True,
         workflow_bundle={"release_proof_runtime": "generic-cli"},
     )
     monkeypatch.setattr(
@@ -349,6 +504,9 @@ def test_eval_runner_live_generic_cli_requires_explicit_command_source(
         interview_required=False,
         runtime_targets=("generic-cli",),
         work_item="WI-EVAL-LIVE-GENERIC-MISSING",
+        stage_start="idea",
+        stage_end="qa",
+        live=True,
     )
 
     result = run_eval_scenario(
@@ -540,23 +698,36 @@ def test_eval_runner_fails_pass_status_when_required_outputs_are_missing(
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd-missing-outputs"
-    _write_fake_aidd(fake_aidd, exit_code=0)
-    scenario_path = tmp_path / "scenario-missing-outputs.yaml"
+    _write_fake_aidd(fake_aidd, exit_code=0, write_stage_outputs=("idea", "plan"))
+    scenario_dir = tmp_path / "harness" / "scenarios" / "live"
+    scenario_dir.mkdir(parents=True)
+    scenario_path = scenario_dir / "scenario-missing-outputs.yaml"
     _write_scenario_manifest(
         path=scenario_path,
         repo_url=source_repo.as_uri(),
         setup_commands=("printf 'setup\\n' > setup.log",),
         verify_commands=("printf 'verify\\n' > verify.log",),
         interview_required=False,
+        runtime_targets=("opencode",),
         work_item="WI-EVAL-MISSING-OUTPUTS",
-        aidd_command=(fake_aidd.as_posix(),),
+        aidd_command=("missing-live-command",),
+        stage_start="idea",
+        stage_end="qa",
+        live=True,
     )
-
-    result = run_eval_scenario(
-        scenario_path=scenario_path,
-        runtime_id="opencode",
-        workspace_root=tmp_path / ".aidd",
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(
+        "aidd.harness.eval_runner.prepare_local_wheel_install",
+        lambda *, workspace_root, run_id: _install_result_for_fake_aidd(fake_aidd),
     )
+    try:
+        result = run_eval_scenario(
+            scenario_path=scenario_path,
+            runtime_id="opencode",
+            workspace_root=tmp_path / ".aidd",
+        )
+    finally:
+        monkeypatch.undo()
 
     assert result.status == "fail"
     verdict_text = result.verdict_path.read_text(encoding="utf-8")

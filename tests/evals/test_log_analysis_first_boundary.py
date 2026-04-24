@@ -126,3 +126,22 @@ def test_select_first_failure_boundary_returns_none_when_no_signals() -> None:
         signal_line_number=None,
         reason="No failure signal detected.",
     )
+
+
+def test_select_first_failure_boundary_ignores_successful_adapter_outcome_lines() -> None:
+    selection = select_first_failure_boundary(
+        runtime_events=(
+            _runtime_event(
+                line_number=5,
+                category="info",
+                message="Adapter outcome: success",
+            ),
+        ),
+    )
+
+    assert selection == FailureBoundarySelection(
+        category="none",
+        signal_source="none",
+        signal_line_number=None,
+        reason="No failure signal detected.",
+    )

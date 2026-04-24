@@ -2,12 +2,10 @@ id: AIDD-LIVE-006
 repo:
   url: https://github.com/simonw/sqlite-utils
   default_branch: main
-issue:
-  id: 694
-  title: yielded rows feature
-task: Add a CLI path for passing Python code or a Python file that yields rows to
-  insert. Require an interview about trust boundaries, accepted input form, and documentation
-  expectations.
+objective: Keep sqlite-utils interview live coverage deterministic by using a curated
+  issue that still requires explicit requirement clarification.
+task: Run the installed AIDD full-flow live audit against the selected sqlite-utils
+  interview issue and preserve reviewable quality evidence.
 stage_scope:
   start: idea
   end: qa
@@ -16,6 +14,22 @@ setup:
   - uv sync || pip install -e .[dev]
 aidd_invocation:
   work_item: WI-LIVE-SQLITE-INTERVIEW
+  expected_stage_scope:
+    start: idea
+    end: qa
+feature_source:
+  mode: curated-issue-pool
+  selection_policy: first-listed
+  issues:
+  - id: '694'
+    title: yielded rows feature
+    url: https://github.com/simonw/sqlite-utils/issues/694
+    summary: Add a CLI path for passing Python code or a Python file that yields
+      rows to insert, and require an interview about trust boundaries, accepted input
+      form, and documentation expectations.
+    labels:
+    - feature
+    - interview
 verify:
   commands:
   - uv run aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW
@@ -35,6 +49,15 @@ verify:
     evidence: answers.md exists and marks each blocking question as resolved.
   - step: completed
     evidence: verification command and QA output artifact checks succeed after rerun.
+quality:
+  commands:
+  - uv run pytest -q || pytest -q
+  rubric_profile: live-full
+  require_review_status: approved-with-conditions
+  allowed_qa_verdicts:
+  - ready
+  - ready-with-risks
+  code_review_required: true
 reference_run:
   run_id: eval-live-006-codex-reference-20260422T123937Z
   recorded_at_utc: '2026-04-22T12:39:38Z'

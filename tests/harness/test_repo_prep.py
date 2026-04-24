@@ -58,7 +58,10 @@ def _build_scenario(
             interview_required=False,
         ),
         verify=ScenarioCommandSteps(commands=("echo verify",)),
+        feature_source=None,
+        quality=None,
         runtime_targets=("generic-cli",),
+        is_live=False,
         raw={"id": "AIDD-TEST-REPO-PREP"},
     )
 

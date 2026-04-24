@@ -32,7 +32,10 @@ def _build_scenario(*, setup_commands: tuple[str, ...]) -> Scenario:
             interview_required=False,
         ),
         verify=ScenarioCommandSteps(commands=("echo verify",)),
+        feature_source=None,
+        quality=None,
         runtime_targets=("generic-cli",),
+        is_live=False,
         raw={"id": "AIDD-TEST-RUNNER-SETUP"},
     )
 

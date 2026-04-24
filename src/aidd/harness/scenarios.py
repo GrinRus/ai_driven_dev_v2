@@ -7,6 +7,8 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from aidd.core.stages import STAGES
+
 
 class ScenarioManifestError(ValueError):
     """Raised when a scenario manifest is missing required fields or has invalid values."""
@@ -28,6 +30,31 @@ class ScenarioCommandSteps:
 
 
 @dataclass(frozen=True)
+class ScenarioIssueSeed:
+    issue_id: str
+    title: str
+    url: str
+    summary: str
+    labels: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ScenarioFeatureSource:
+    mode: str
+    selection_policy: str
+    issues: tuple[ScenarioIssueSeed, ...]
+
+
+@dataclass(frozen=True)
+class ScenarioQualityConfig:
+    commands: tuple[str, ...]
+    rubric_profile: str
+    require_review_status: str
+    allowed_qa_verdicts: tuple[str, ...]
+    code_review_required: bool
+
+
+@dataclass(frozen=True)
 class ScenarioRunConfig:
     stage_start: str | None
     stage_end: str | None
@@ -45,7 +72,10 @@ class Scenario:
     setup: ScenarioCommandSteps
     run: ScenarioRunConfig
     verify: ScenarioCommandSteps
+    feature_source: ScenarioFeatureSource | None
+    quality: ScenarioQualityConfig | None
     runtime_targets: tuple[str, ...]
+    is_live: bool
     raw: dict[str, Any]
 
 
@@ -162,6 +192,110 @@ def _to_command_steps(*, raw: Any, key: str) -> ScenarioCommandSteps:
     return ScenarioCommandSteps(commands=commands)
 
 
+def _to_issue_seed(*, raw: Any, key: str) -> ScenarioIssueSeed:
+    payload = _require_mapping(value=raw, key=key)
+    issue_id = _require_non_empty_string(payload=payload, key="id")
+    title = _require_non_empty_string(payload=payload, key="title")
+    url = _require_non_empty_string(payload=payload, key="url")
+    summary = _require_non_empty_string(payload=payload, key="summary")
+    labels_raw = payload.get("labels", [])
+    labels: tuple[str, ...]
+    if labels_raw is None:
+        labels = tuple()
+    elif isinstance(labels_raw, list):
+        labels = tuple(str(label).strip() for label in labels_raw if str(label).strip())
+    else:
+        raise ScenarioManifestError(
+            f"Scenario manifest key '{key}.labels' must be a list of strings when provided."
+        )
+    return ScenarioIssueSeed(
+        issue_id=issue_id,
+        title=title,
+        url=url,
+        summary=summary,
+        labels=labels,
+    )
+
+
+def _to_feature_source(raw: Any) -> ScenarioFeatureSource:
+    payload = _require_mapping(value=raw, key="feature_source")
+    mode = _require_non_empty_string(payload=payload, key="mode")
+    if mode != "curated-issue-pool":
+        raise ScenarioManifestError(
+            "Scenario manifest key 'feature_source.mode' must be "
+            "`curated-issue-pool` for live scenarios."
+        )
+    selection_policy = _require_non_empty_string(payload=payload, key="selection_policy")
+    if selection_policy != "first-listed":
+        raise ScenarioManifestError(
+            "Scenario manifest key 'feature_source.selection_policy' must be "
+            "`first-listed` for live scenarios."
+        )
+    issues_raw = payload.get("issues")
+    if not isinstance(issues_raw, list) or not issues_raw:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'feature_source.issues' must be a non-empty list."
+        )
+    issues = tuple(
+        _to_issue_seed(raw=item, key=f"feature_source.issues[{index}]")
+        for index, item in enumerate(issues_raw)
+    )
+    return ScenarioFeatureSource(
+        mode=mode,
+        selection_policy=selection_policy,
+        issues=issues,
+    )
+
+
+def _to_quality_config(raw: Any) -> ScenarioQualityConfig:
+    payload = _require_mapping(value=raw, key="quality")
+    commands = _to_command_steps(raw=payload, key="quality").commands
+    rubric_profile = _require_non_empty_string(payload=payload, key="rubric_profile")
+    if rubric_profile != "live-full":
+        raise ScenarioManifestError(
+            "Scenario manifest key 'quality.rubric_profile' must be `live-full` "
+            "for live scenarios."
+        )
+    require_review_status = _require_non_empty_string(payload=payload, key="require_review_status")
+    if require_review_status not in {"approved", "approved-with-conditions"}:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'quality.require_review_status' must be `approved` "
+            "or `approved-with-conditions`."
+        )
+    allowed_qa_verdicts_raw = payload.get("allowed_qa_verdicts")
+    if not isinstance(allowed_qa_verdicts_raw, list) or not allowed_qa_verdicts_raw:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'quality.allowed_qa_verdicts' must be a non-empty list."
+        )
+    allowed_qa_verdicts = tuple(
+        str(verdict).strip() for verdict in allowed_qa_verdicts_raw if str(verdict).strip()
+    )
+    if not allowed_qa_verdicts:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'quality.allowed_qa_verdicts' must contain non-empty values."
+        )
+    supported_qa_verdicts = {"ready", "ready-with-risks"}
+    unsupported = sorted(set(allowed_qa_verdicts) - supported_qa_verdicts)
+    if unsupported:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'quality.allowed_qa_verdicts' contains unsupported values: "
+            + ", ".join(unsupported)
+            + "."
+        )
+    code_review_required = payload.get("code_review_required")
+    if code_review_required is not True:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'quality.code_review_required' must be true for live scenarios."
+        )
+    return ScenarioQualityConfig(
+        commands=commands,
+        rubric_profile=rubric_profile,
+        require_review_status=require_review_status,
+        allowed_qa_verdicts=allowed_qa_verdicts,
+        code_review_required=True,
+    )
+
+
 def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
     stage_scope = raw.get("stage_scope")
     limits = raw.get("limits")
@@ -203,6 +337,37 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
     )
 
 
+def _is_live_scenario_path(path: Path) -> bool:
+    resolved = path.resolve(strict=False)
+    return (
+        resolved.parent.name == "live"
+        and resolved.parent.parent.name == "scenarios"
+        and resolved.suffix == ".yaml"
+    )
+
+
+def _validate_live_scenario_contract(
+    *,
+    path: Path,
+    run: ScenarioRunConfig,
+    feature_source: ScenarioFeatureSource | None,
+    quality: ScenarioQualityConfig | None,
+) -> None:
+    if run.stage_start != STAGES[0] or run.stage_end != STAGES[-1]:
+        raise ScenarioManifestError(
+            "Live scenario manifests must declare explicit full-flow stage scope "
+            "`idea -> qa`."
+        )
+    if feature_source is None:
+        raise ScenarioManifestError(
+            f"Live scenario manifest missing required key: feature_source ({path.as_posix()})."
+        )
+    if quality is None:
+        raise ScenarioManifestError(
+            f"Live scenario manifest missing required key: quality ({path.as_posix()})."
+        )
+
+
 def load_scenario(
     path: Path,
     *,
@@ -225,6 +390,24 @@ def load_scenario(
     scenario_id = _require_non_empty_string(payload=substituted, key="id")
     task = _require_non_empty_string(payload=substituted, key="task")
     run = _to_run_config(substituted)
+    is_live = _is_live_scenario_path(path)
+    feature_source = (
+        _to_feature_source(substituted.get("feature_source"))
+        if substituted.get("feature_source") is not None
+        else None
+    )
+    quality = (
+        _to_quality_config(substituted.get("quality"))
+        if substituted.get("quality") is not None
+        else None
+    )
+    if is_live:
+        _validate_live_scenario_contract(
+            path=path,
+            run=run,
+            feature_source=feature_source,
+            quality=quality,
+        )
     return Scenario(
         scenario_id=scenario_id,
         task=task,
@@ -232,6 +415,9 @@ def load_scenario(
         setup=_to_command_steps(raw=substituted.get("setup"), key="setup"),
         run=run,
         verify=_to_command_steps(raw=substituted.get("verify"), key="verify"),
+        feature_source=feature_source,
+        quality=quality,
         runtime_targets=run.runtime_targets,
+        is_live=is_live,
         raw=substituted,
     )

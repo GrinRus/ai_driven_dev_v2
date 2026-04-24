@@ -3,21 +3,18 @@ repo:
   url: https://github.com/honojs/hono
   default_branch: main
   revision: cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba
-issue:
-  id: 4708
-  title: non-Error throw handling
 objective: Keep Hono smoke lane deterministic by targeting the non-Error throw
   handling defect with bounded patch scope.
-task: Ensure thrown non-Error values from middleware still flow through onError instead
-  of causing an unhandled rejection.
+task: Run the installed AIDD full-flow live audit against the selected Hono issue
+  and preserve reviewable quality evidence.
 stage_scope:
-  start: plan
+  start: idea
   end: qa
 setup:
   commands:
   - bun install
   rationale:
-  - Install Hono development dependencies with Bun before the smoke run.
+  - Install Hono development dependencies with Bun before the live audit.
   - Confirm the repository workspace is ready for targeted middleware regression verification.
 aidd_invocation:
   command:
@@ -29,8 +26,20 @@ aidd_invocation:
   work_item_flag: --work-item
   runtime_flag: --runtime
   expected_stage_scope:
-    start: plan
+    start: idea
     end: qa
+feature_source:
+  mode: curated-issue-pool
+  selection_policy: first-listed
+  issues:
+  - id: '4708'
+    title: non-Error throw handling
+    url: https://github.com/honojs/hono/issues/4708
+    summary: Ensure thrown non-Error values from middleware still flow through onError
+      instead of causing an unhandled rejection.
+    labels:
+    - bug
+    - middleware
 verify:
   commands:
   - bun test
@@ -42,6 +51,16 @@ verify:
   - Bun test run reports no failing tests.
   - TypeScript compile check reports no type errors.
   - QA stage output artifacts exist for the selected work item.
+quality:
+  commands:
+  - bun test
+  - bunx tsc --noEmit
+  rubric_profile: live-full
+  require_review_status: approved
+  allowed_qa_verdicts:
+  - ready
+  - ready-with-risks
+  code_review_required: true
 reference_run:
   run_id: eval-live-007-reference-20260422T092510Z
   recorded_at_utc: '2026-04-22T09:36:09Z'

@@ -2,11 +2,10 @@ id: AIDD-LIVE-008
 repo:
   url: https://github.com/honojs/hono
   default_branch: main
-issue:
-  id: 4633
-  title: router parity with /** syntax
-task: Align router behavior or document the intended divergence. Ask the user if compatibility
-  risk is unclear.
+objective: Keep Hono interview live coverage deterministic by using a curated router
+  parity issue that still requires explicit compatibility clarification.
+task: Run the installed AIDD full-flow live audit against the selected Hono interview
+  issue and preserve reviewable quality evidence.
 stage_scope:
   start: idea
   end: qa
@@ -15,6 +14,21 @@ setup:
   - bun install
 aidd_invocation:
   work_item: WI-LIVE-HONO-INTERVIEW
+  expected_stage_scope:
+    start: idea
+    end: qa
+feature_source:
+  mode: curated-issue-pool
+  selection_policy: first-listed
+  issues:
+  - id: '4633'
+    title: router parity with /** syntax
+    url: https://github.com/honojs/hono/issues/4633
+    summary: Align router behavior or document the intended divergence, and require
+      an interview when compatibility risk is unclear.
+    labels:
+    - feature
+    - interview
 verify:
   commands:
   - uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW
@@ -35,6 +49,16 @@ verify:
     evidence: answers.md exists and marks each blocking question as resolved.
   - step: completed
     evidence: verification commands and QA output artifact checks succeed after rerun.
+quality:
+  commands:
+  - bun test
+  - bunx tsc --noEmit
+  rubric_profile: live-full
+  require_review_status: approved-with-conditions
+  allowed_qa_verdicts:
+  - ready
+  - ready-with-risks
+  code_review_required: true
 reference_run:
   run_id: eval-live-008-reference-20260422T094912Z
   recorded_at_utc: '2026-04-22T09:49:39Z'

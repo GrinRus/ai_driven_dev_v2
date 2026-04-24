@@ -3,27 +3,36 @@ repo:
   url: https://github.com/simonw/sqlite-utils
   default_branch: main
   revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
-issue:
-  id: 705
-  title: header-only CSV bugfix
 objective: Keep sqlite-utils smoke lane deterministic by targeting the header-only
   detect-types crash with bounded patch scope.
-task: Prevent a crash when --detect-types is used on a CSV file that contains only
-  a header row. Add regression coverage.
+task: Run the installed AIDD full-flow live audit against the selected sqlite-utils
+  issue and preserve reviewable quality evidence.
 stage_scope:
-  start: plan
+  start: idea
   end: qa
 setup:
   commands:
   - uv sync || pip install -e .[dev]
   rationale:
-  - Install sqlite-utils development dependencies before the smoke run.
+  - Install sqlite-utils development dependencies before the live audit.
   - Confirm the repository environment is ready for targeted regression verification.
 aidd_invocation:
   work_item: WI-LIVE-SQLITE-SMOKE
   expected_stage_scope:
-    start: plan
+    start: idea
     end: qa
+feature_source:
+  mode: curated-issue-pool
+  selection_policy: first-listed
+  issues:
+  - id: '705'
+    title: header-only CSV bugfix
+    url: https://github.com/simonw/sqlite-utils/issues/705
+    summary: Prevent a crash when `--detect-types` is used on a CSV file that contains
+      only a header row and add regression coverage.
+    labels:
+    - bug
+    - csv
 operator_execution:
   install_channel: uv-tool
   artifact_source: local-wheel
@@ -40,14 +49,24 @@ verify:
   - Pytest output reports all tests as passed.
   - No new failing tests are introduced relative to baseline.
   - QA stage output artifacts exist for the selected work item.
+quality:
+  commands:
+  - uv run pytest -q || pytest -q
+  rubric_profile: live-full
+  require_review_status: approved
+  allowed_qa_verdicts:
+  - ready
+  - ready-with-risks
+  code_review_required: true
 workflow_bundle:
-  lane: installed-live-operator-proof
+  lane: installed-live-full-flow-audit
   maintained_runtime: codex
   release_proof_runtime: generic-cli
   required_artifacts:
   - stage-result.md
   - validator-report.md
   - runtime.log
+  - quality-report.md
 reference_run:
   run_id: eval-live-005-codex-reference-20260422T123518Z
   recorded_at_utc: '2026-04-22T12:35:29Z'

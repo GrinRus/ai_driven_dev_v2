@@ -34,6 +34,7 @@ def test_release_live_proof_runtime_completes_generic_workflow(tmp_path: Path) -
         working_copy_path=tmp_path,
         scenario=scenario,
         work_item="WI-RELEASE-LIVE-PROOF",
+        selected_issue=scenario.feature_source.issues[0],
         resolved_revision="test-revision",
     )
     config_path.write_text(

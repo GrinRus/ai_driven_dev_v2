@@ -49,6 +49,38 @@ def stage_graph() -> tuple[str, ...]:
     return STAGES
 
 
+def _normalize_stage_bounds(
+    *,
+    stage_start: str | None,
+    stage_end: str | None,
+) -> tuple[int, int]:
+    normalized_start = stage_start or STAGES[0]
+    normalized_end = stage_end or STAGES[-1]
+    if normalized_start not in STAGES:
+        raise ValueError(f"Unknown stage_start '{normalized_start}'.")
+    if normalized_end not in STAGES:
+        raise ValueError(f"Unknown stage_end '{normalized_end}'.")
+    start_index = stage_index(normalized_start)
+    end_index = stage_index(normalized_end)
+    if start_index > end_index:
+        raise ValueError(
+            f"stage_start '{normalized_start}' must not come after stage_end '{normalized_end}'."
+        )
+    return start_index, end_index
+
+
+def bounded_stage_graph(
+    *,
+    stage_start: str | None = None,
+    stage_end: str | None = None,
+) -> tuple[str, ...]:
+    start_index, end_index = _normalize_stage_bounds(
+        stage_start=stage_start,
+        stage_end=stage_end,
+    )
+    return STAGES[start_index : end_index + 1]
+
+
 def _extract_upstream_stage(declaration_path: str) -> str | None:
     parts = Path(declaration_path).parts
     if len(parts) < 3:
@@ -165,9 +197,11 @@ def select_next_runnable_stage(
     workspace_root: Path,
     work_item: str,
     run_id: str,
+    stage_start: str | None = None,
+    stage_end: str | None = None,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> str | None:
-    for stage in stage_graph():
+    for stage in bounded_stage_graph(stage_start=stage_start, stage_end=stage_end):
         metadata = load_stage_metadata(
             workspace_root=workspace_root,
             work_item=work_item,
@@ -212,17 +246,21 @@ def summarize_workflow_advancement(
     workspace_root: Path,
     work_item: str,
     run_id: str,
+    stage_start: str | None = None,
+    stage_end: str | None = None,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> tuple[StageAdvancementSummary, ...]:
     next_runnable = select_next_runnable_stage(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
+        stage_start=stage_start,
+        stage_end=stage_end,
         contracts_root=contracts_root,
     )
     summaries: list[StageAdvancementSummary] = []
 
-    for stage in stage_graph():
+    for stage in bounded_stage_graph(stage_start=stage_start, stage_end=stage_end):
         metadata = load_stage_metadata(
             workspace_root=workspace_root,
             work_item=work_item,
