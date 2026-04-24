@@ -38,6 +38,10 @@ def _tool_bin_dir(*, install_home: Path) -> Path:
     return install_home / ".local" / "bin"
 
 
+def _uv_cache_dir(*, workspace_root: Path) -> Path:
+    return workspace_root / "harness-cache" / "uv-cache"
+
+
 def _run_command(
     *,
     command: tuple[str, ...],
@@ -71,7 +75,8 @@ def prepare_local_wheel_install(
     if not run_id.strip():
         raise ValueError("run_id must be non-empty.")
 
-    cache_root = workspace_root / "harness-cache" / "installs" / run_id
+    resolved_workspace_root = workspace_root.resolve(strict=False)
+    cache_root = resolved_workspace_root / "harness-cache" / "installs" / run_id
     dist_root = cache_root / "dist"
     install_home = cache_root / "home"
     dist_root.mkdir(parents=True, exist_ok=True)
@@ -100,7 +105,7 @@ def prepare_local_wheel_install(
     tool_bin_dir = _tool_bin_dir(install_home=install_home)
     install_env = dict(os.environ)
     install_env["HOME"] = install_home.as_posix()
-    install_env["UV_CACHE_DIR"] = (workspace_root / "harness-cache" / "uv-cache").as_posix()
+    install_env["UV_CACHE_DIR"] = _uv_cache_dir(workspace_root=resolved_workspace_root).as_posix()
     install_env["PATH"] = os.pathsep.join(
         [
             tool_bin_dir.as_posix(),
@@ -127,7 +132,7 @@ def prepare_local_wheel_install(
             f"{stderr or 'no command output'}"
         )
 
-    installed_binary = tool_bin_dir / "aidd"
+    installed_binary = (tool_bin_dir / "aidd").resolve(strict=False)
     if not installed_binary.exists():
         raise HarnessInstallError(
             "uv tool install completed but the installed AIDD binary was not found at "
@@ -162,14 +167,15 @@ def prepare_published_package_install(
     if not run_id.strip():
         raise ValueError("run_id must be non-empty.")
 
-    cache_root = workspace_root / "harness-cache" / "installs" / run_id
+    resolved_workspace_root = workspace_root.resolve(strict=False)
+    cache_root = resolved_workspace_root / "harness-cache" / "installs" / run_id
     install_home = cache_root / "home"
     install_home.mkdir(parents=True, exist_ok=True)
 
     tool_bin_dir = _tool_bin_dir(install_home=install_home)
     install_env = dict(os.environ)
     install_env["HOME"] = install_home.as_posix()
-    install_env["UV_CACHE_DIR"] = (workspace_root / "harness-cache" / "uv-cache").as_posix()
+    install_env["UV_CACHE_DIR"] = _uv_cache_dir(workspace_root=resolved_workspace_root).as_posix()
     install_env["PATH"] = os.pathsep.join(
         [
             tool_bin_dir.as_posix(),
@@ -196,7 +202,7 @@ def prepare_published_package_install(
             f"{stderr or 'no command output'}"
         )
 
-    installed_binary = tool_bin_dir / "aidd"
+    installed_binary = (tool_bin_dir / "aidd").resolve(strict=False)
     if not installed_binary.exists():
         raise HarnessInstallError(
             "uv tool install completed but the installed AIDD binary was not found at "

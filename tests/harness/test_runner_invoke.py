@@ -32,7 +32,10 @@ def _build_scenario(*, runtime_targets: tuple[str, ...]) -> Scenario:
             interview_required=False,
         ),
         verify=ScenarioCommandSteps(commands=("echo verify",)),
+        feature_source=None,
+        quality=None,
         runtime_targets=runtime_targets,
+        is_live=False,
         raw={"id": "AIDD-TEST-RUNNER-INVOKE"},
     )
 
@@ -103,6 +106,60 @@ def test_invoke_aidd_run_executes_with_runtime_and_work_item(tmp_path: Path) -> 
         (working_copy_path / "invoked-work-item.txt").read_text(encoding="utf-8").strip()
         == "WI-123"
     )
+
+
+def test_invoke_aidd_run_includes_stage_bounds_when_requested(tmp_path: Path) -> None:
+    working_copy_path = tmp_path / "working-copy"
+    working_copy_path.mkdir(parents=True, exist_ok=True)
+    fake_aidd = tmp_path / "fake-aidd"
+    _write_fake_aidd(fake_aidd, exit_code=0)
+    scenario = _build_scenario(runtime_targets=("generic-cli",))
+
+    result = invoke_aidd_run(
+        scenario=scenario,
+        working_copy_path=working_copy_path,
+        runtime_id="generic-cli",
+        work_item="WI-124",
+        aidd_command=(fake_aidd.as_posix(),),
+        stage_start="idea",
+        stage_end="qa",
+    )
+
+    assert result.command == (
+        fake_aidd.as_posix(),
+        "run",
+        "--work-item",
+        "WI-124",
+        "--runtime",
+        "generic-cli",
+        "--from-stage",
+        "idea",
+        "--to-stage",
+        "qa",
+    )
+
+
+def test_invoke_aidd_run_normalizes_config_path_to_absolute(tmp_path: Path, monkeypatch) -> None:
+    working_copy_path = tmp_path / "working-copy"
+    working_copy_path.mkdir(parents=True, exist_ok=True)
+    fake_aidd = tmp_path / "fake-aidd"
+    config_path = tmp_path / "configs" / "aidd.example.toml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text("[workspace]\nroot = \".aidd\"\n", encoding="utf-8")
+    _write_fake_aidd(fake_aidd, exit_code=0)
+    scenario = _build_scenario(runtime_targets=("generic-cli",))
+    monkeypatch.chdir(tmp_path)
+
+    result = invoke_aidd_run(
+        scenario=scenario,
+        working_copy_path=working_copy_path,
+        runtime_id="generic-cli",
+        work_item="WI-125",
+        aidd_command=(fake_aidd.as_posix(),),
+        config_path=Path("configs/aidd.example.toml"),
+    )
+
+    assert result.command[-2:] == ("--config", config_path.as_posix())
 
 
 def test_invoke_aidd_run_preserves_non_zero_exit(tmp_path: Path) -> None:

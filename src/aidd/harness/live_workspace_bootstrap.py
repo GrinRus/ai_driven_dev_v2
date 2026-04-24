@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from aidd.core.workspace import init_workspace
-from aidd.harness.scenarios import Scenario
+from aidd.harness.scenarios import Scenario, ScenarioIssueSeed
 
 
 def _write_text(path: Path, content: str) -> None:
@@ -20,6 +20,7 @@ def bootstrap_live_work_item(
     working_copy_path: Path,
     scenario: Scenario,
     work_item: str,
+    selected_issue: ScenarioIssueSeed,
     resolved_revision: str | None = None,
 ) -> Path:
     workspace_root = working_copy_path / ".aidd"
@@ -32,7 +33,13 @@ def bootstrap_live_work_item(
         or "unresolved-at-bootstrap"
     )
     target_task = scenario.task.strip()
+    selected_issue_summary = selected_issue.summary.strip()
     verify_commands = ", ".join(scenario.verify.commands)
+    selection_policy = (
+        scenario.feature_source.selection_policy
+        if scenario.feature_source is not None
+        else "n/a"
+    )
 
     context_documents = {
         "intake.md": _markdown(
@@ -41,12 +48,31 @@ def bootstrap_live_work_item(
             f"- Scenario: `{scenario.scenario_id}`",
             f"- Repository: `{scenario.repo.url}`",
             f"- Revision: `{repository_revision}`",
-            f"- Task: {target_task}",
+            f"- Operator objective: {target_task}",
+            f"- Selected issue: `#{selected_issue.issue_id}` {selected_issue.title}",
         ),
         "user-request.md": _markdown(
             "# User Request",
             "",
-            target_task,
+            f"Implement issue `#{selected_issue.issue_id}`: {selected_issue.title}",
+            "",
+            selected_issue_summary,
+        ),
+        "selected-issue.md": _markdown(
+            "# Selected Issue",
+            "",
+            f"- Issue id: `{selected_issue.issue_id}`",
+            f"- Title: {selected_issue.title}",
+            f"- URL: `{selected_issue.url}`",
+            f"- Summary: {selected_issue_summary}",
+            (
+                "- Labels: "
+                + (
+                    ", ".join(f"`{label}`" for label in selected_issue.labels)
+                    if selected_issue.labels
+                    else "`none`"
+                )
+            ),
         ),
         "repository-state.md": _markdown(
             "# Repository State",
@@ -74,6 +100,7 @@ def bootstrap_live_work_item(
                 f"`{scenario.run.stage_end or 'qa'}`"
             ),
             f"- Runtime targets: `{', '.join(scenario.runtime_targets)}`",
+            f"- Issue-selection policy: `{selection_policy}`",
         ),
         "review-context.md": _markdown(
             "# Review Context",
@@ -84,8 +111,8 @@ def bootstrap_live_work_item(
         "task-selection.md": _markdown(
             "# Task Selection",
             "",
-            "- Selected task id: `TL-2`",
-            f"- Selected task intent: {target_task}",
+            f"- Selected task id: `ISSUE-{selected_issue.issue_id}`",
+            f"- Selected task intent: Implement `{selected_issue.title}`",
         ),
         "allowed-write-scope.md": _markdown(
             "# Allowed Write Scope",

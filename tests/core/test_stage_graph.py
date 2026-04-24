@@ -9,6 +9,7 @@ from aidd.core.run_store import create_run_manifest, persist_stage_status
 from aidd.core.stage_graph import (
     StageAdvancementSummary,
     StageDependencyResolutionError,
+    bounded_stage_graph,
     evaluate_stage_eligibility,
     resolve_stage_dependencies,
     resolve_stage_dependency_graph,
@@ -184,6 +185,15 @@ def test_select_next_runnable_stage_returns_first_stage_for_new_run(tmp_path: Pa
     )
 
 
+def test_bounded_stage_graph_returns_requested_full_flow_slice() -> None:
+    assert bounded_stage_graph(stage_start="research", stage_end="tasklist") == (
+        "research",
+        "plan",
+        "review-spec",
+        "tasklist",
+    )
+
+
 def test_select_next_runnable_stage_skips_completed_stages(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     create_run_manifest(
@@ -209,6 +219,37 @@ def test_select_next_runnable_stage_skips_completed_stages(tmp_path: Path) -> No
             run_id="run-001",
         )
         == "research"
+    )
+
+
+def test_select_next_runnable_stage_respects_stage_bounds(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+    )
+    for stage in ("idea", "research", "plan"):
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage=stage,
+            status=StageState.SUCCEEDED.value,
+        )
+
+    assert (
+        select_next_runnable_stage(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage_start="review-spec",
+            stage_end="qa",
+        )
+        == "review-spec"
     )
 
 

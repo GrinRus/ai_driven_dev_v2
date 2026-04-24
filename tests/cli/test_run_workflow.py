@@ -94,6 +94,7 @@ def test_run_executes_runnable_stages_in_dependency_order(
 
     assert result.exit_code == 0, result.output
     assert executed_stages == list(STAGES)
+    assert "stage_bounds=idea->qa" in result.stdout
     assert "Workflow progress: stage=qa status=succeeded" in result.stdout
     assert "Workflow summary:" in result.stdout
     assert "- qa: status=succeeded attempts=0" in result.stdout
@@ -162,6 +163,7 @@ def test_run_stops_when_stage_execution_returns_nonzero_exit(
 
     assert result.exit_code == 1, result.output
     assert executed_stages == ["idea", "research"]
+    assert "stage_bounds=idea->qa" in result.stdout
     assert "Workflow stopped at stage 'research'." in result.stdout
     assert "Workflow summary:" in result.stdout
     assert "- research: status=failed attempts=0" in result.stdout
@@ -222,6 +224,7 @@ def test_run_dispatches_workflow_for_supported_non_generic_runtimes(
     assert result.exit_code == 0, result.output
     assert executed_stages == list(STAGES)
     assert f"AIDD run: work_item=WI-012 runtime={selected_runtime}" in result.stdout
+    assert "stage_bounds=idea->qa" in result.stdout
     assert "Workflow run completed:" in result.stdout
 
 
@@ -309,6 +312,7 @@ def test_run_manifest_persists_runtime_specific_command_snapshot(
         ).read_text(encoding="utf-8")
     )
     assert manifest["runtime_id"] == selected_runtime
+    assert manifest["workflow_bounds"] == {"start": "idea", "end": "qa"}
     assert manifest["config_snapshot"]["runtime_command"] == _RUNTIME_COMMANDS[selected_runtime]
 
 
@@ -373,6 +377,7 @@ def test_run_stops_for_non_generic_runtime_when_stage_execution_fails(
 
     assert result.exit_code == 1, result.output
     assert executed_stages == ["idea", "research"]
+    assert "stage_bounds=idea->qa" in result.stdout
     assert "Workflow stopped at stage 'research'." in result.stdout
     assert "Workflow summary:" in result.stdout
 
@@ -389,8 +394,10 @@ def test_run_reports_non_generic_noop_path_with_nonzero_exit(
         workspace_root: Path,
         work_item: str,
         run_id: str,
+        stage_start: str | None = None,
+        stage_end: str | None = None,
     ) -> str | None:
-        _ = workspace_root, work_item, run_id
+        _ = workspace_root, work_item, run_id, stage_start, stage_end
         return None
 
     def _fake_summarize_workflow_advancement(
@@ -398,8 +405,10 @@ def test_run_reports_non_generic_noop_path_with_nonzero_exit(
         workspace_root: Path,
         work_item: str,
         run_id: str,
+        stage_start: str | None = None,
+        stage_end: str | None = None,
     ) -> tuple[StageAdvancementSummary, ...]:
-        _ = workspace_root, work_item, run_id
+        _ = workspace_root, work_item, run_id, stage_start, stage_end
         return (
             StageAdvancementSummary(
                 stage="idea",
@@ -442,3 +451,59 @@ def test_run_reports_non_generic_noop_path_with_nonzero_exit(
     assert result.exit_code == 1, result.output
     assert "AIDD run: work_item=WI-016 runtime=opencode" in result.stdout
     assert "Workflow stopped: no runnable stage is currently available." in result.stdout
+
+
+def test_run_respects_custom_stage_bounds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = _write_config(tmp_path)
+    executed_stages: list[str] = []
+
+    def _fake_stage_run(
+        *,
+        stage: str,
+        work_item: str,
+        runtime: str,
+        run_id: str | None,
+        root: Path | None,
+        config: Path,
+        log_follow: bool,
+    ) -> None:
+        assert work_item == "WI-017"
+        assert runtime == "generic-cli"
+        assert run_id is not None
+        assert root is not None
+        assert config == config_path
+        _ = log_follow
+        executed_stages.append(stage)
+        persist_stage_status(
+            workspace_root=root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            status=StageState.SUCCEEDED.value,
+        )
+
+    monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "run",
+            "--work-item",
+            "WI-017",
+            "--runtime",
+            "generic-cli",
+            "--from-stage",
+            "idea",
+            "--to-stage",
+            "tasklist",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert executed_stages == ["idea", "research", "plan", "review-spec", "tasklist"]
+    assert "stage_bounds=idea->tasklist" in result.stdout

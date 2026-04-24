@@ -8,7 +8,10 @@ from aidd.harness.result_bundle import (
     EVENTS_JSONL_FILENAME,
     GRADER_FILENAME,
     HARNESS_METADATA_FILENAME,
+    ISSUE_SELECTION_FILENAME,
     LOG_ANALYSIS_FILENAME,
+    QUALITY_REPORT_FILENAME,
+    QUALITY_TRANSCRIPT_FILENAME,
     REPAIR_HISTORY_FILENAME,
     RUN_TRANSCRIPT_FILENAME,
     RUNTIME_JSONL_FILENAME,
@@ -32,7 +35,9 @@ def test_build_result_bundle_layout_uses_stable_artifact_names(tmp_path: Path) -
     assert layout.setup_transcript_path.name == SETUP_TRANSCRIPT_FILENAME
     assert layout.run_transcript_path.name == RUN_TRANSCRIPT_FILENAME
     assert layout.verify_transcript_path.name == VERIFY_TRANSCRIPT_FILENAME
+    assert layout.quality_transcript_path.name == QUALITY_TRANSCRIPT_FILENAME
     assert layout.teardown_transcript_path.name == TEARDOWN_TRANSCRIPT_FILENAME
+    assert layout.issue_selection_path.name == ISSUE_SELECTION_FILENAME
     assert layout.runtime_log_path.name == RUNTIME_LOG_FILENAME
     assert layout.runtime_jsonl_path.name == RUNTIME_JSONL_FILENAME
     assert layout.events_jsonl_path.name == EVENTS_JSONL_FILENAME
@@ -41,6 +46,7 @@ def test_build_result_bundle_layout_uses_stable_artifact_names(tmp_path: Path) -
     assert layout.log_analysis_path.name == LOG_ANALYSIS_FILENAME
     assert layout.grader_path.name == GRADER_FILENAME
     assert layout.verdict_path.name == VERDICT_FILENAME
+    assert layout.quality_report_path.name == QUALITY_REPORT_FILENAME
 
 
 def test_ensure_result_bundle_layout_creates_run_directory(tmp_path: Path) -> None:

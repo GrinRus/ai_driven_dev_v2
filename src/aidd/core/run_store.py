@@ -628,6 +628,8 @@ def create_run_manifest(
     stage_target: str,
     config_snapshot: dict[str, Any],
     *,
+    workflow_stage_start: str | None = None,
+    workflow_stage_end: str | None = None,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
 ) -> Path:
@@ -664,6 +666,10 @@ def create_run_manifest(
         "work_item_id": work_item,
         "runtime_id": runtime_id,
         "stage_target": stage_target,
+        "workflow_bounds": {
+            "start": workflow_stage_start,
+            "end": workflow_stage_end,
+        },
         "config_snapshot": config_snapshot,
         "repository_git_sha": repository_git_sha,
         "resource_source": resource_source,
@@ -703,6 +709,8 @@ class RunStore:
         stage_target: str,
         config_snapshot: dict[str, Any],
         *,
+        workflow_stage_start: str | None = None,
+        workflow_stage_end: str | None = None,
         contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
         repository_root: Path | None = None,
     ) -> Path:
@@ -713,6 +721,8 @@ class RunStore:
             runtime_id=runtime_id,
             stage_target=stage_target,
             config_snapshot=config_snapshot,
+            workflow_stage_start=workflow_stage_start,
+            workflow_stage_end=workflow_stage_end,
             contracts_root=contracts_root,
             repository_root=repository_root,
         )

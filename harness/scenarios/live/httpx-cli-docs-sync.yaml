@@ -2,19 +2,33 @@ id: AIDD-LIVE-004
 repo:
   url: https://github.com/encode/httpx
   default_branch: master
-issue:
-  id: null
-  title: CLI docs sync
-task: Update docs and examples after a small CLI behavior change and prove docs, examples,
-  and verification still align.
+objective: Keep HTTPX documentation-focused live coverage deterministic by using a
+  curated docs-sync issue instead of dynamic issue discovery.
+task: Run the installed AIDD full-flow live audit against the selected HTTPX documentation
+  issue and preserve reviewable quality evidence.
 stage_scope:
-  start: plan
+  start: idea
   end: qa
 setup:
   commands:
   - uv sync || pip install -e .[dev]
 aidd_invocation:
   work_item: WI-LIVE-HTTPX-DOCS-SYNC
+  expected_stage_scope:
+    start: idea
+    end: qa
+feature_source:
+  mode: curated-issue-pool
+  selection_policy: first-listed
+  issues:
+  - id: docs-sync-001
+    title: CLI docs sync
+    url: https://github.com/encode/httpx/issues
+    summary: Update docs and examples after a small CLI behavior change and prove
+      docs, examples, and verification still align.
+    labels:
+    - docs
+    - examples
 verify:
   commands:
   - uv run pytest -q || pytest -q
@@ -23,6 +37,15 @@ verify:
   pass_conditions:
   - Verification commands exit with status 0.
   - QA stage output artifacts exist for the selected work item.
+quality:
+  commands:
+  - uv run pytest -q || pytest -q
+  rubric_profile: live-full
+  require_review_status: approved
+  allowed_qa_verdicts:
+  - ready
+  - ready-with-risks
+  code_review_required: true
 limits:
   patch_budget_files: 6
   timeout_minutes: 15

@@ -3,21 +3,18 @@ repo:
   url: https://github.com/encode/httpx
   default_branch: master
   revision: b5addb64f0161ff6bfe94c124ef76f6a1fba5254
-issue:
-  id: 3400
-  title: invalid header error message
 objective: Keep HTTPX smoke lane deterministic by targeting the invalid-header
   diagnostics defect with bounded patch scope.
-task: Improve the invalid-header encoding error so the failing header name is visible
-  in the resulting exception or wrapper message.
+task: Run the installed AIDD full-flow live audit against the selected HTTPX issue
+  and preserve reviewable quality evidence.
 stage_scope:
-  start: plan
+  start: idea
   end: qa
 setup:
   commands:
   - uv sync || pip install -e .[dev]
   rationale:
-  - Install HTTPX development dependencies before the smoke run.
+  - Install HTTPX development dependencies before the live audit.
   - Confirm the repository environment is ready for targeted regression verification.
 aidd_invocation:
   command:
@@ -29,8 +26,20 @@ aidd_invocation:
   work_item_flag: --work-item
   runtime_flag: --runtime
   expected_stage_scope:
-    start: plan
+    start: idea
     end: qa
+feature_source:
+  mode: curated-issue-pool
+  selection_policy: first-listed
+  issues:
+  - id: '3400'
+    title: invalid header error message
+    url: https://github.com/encode/httpx/issues/3400
+    summary: Improve the invalid-header encoding error so the failing header name
+      is visible in the resulting exception or wrapper message.
+    labels:
+    - bug
+    - diagnostics
 verify:
   commands:
   - uv run pytest -q || pytest -q
@@ -41,6 +50,15 @@ verify:
   - Pytest output reports all tests as passed.
   - No new failing tests are introduced relative to baseline.
   - QA stage output artifacts exist for the selected work item.
+quality:
+  commands:
+  - uv run pytest -q || pytest -q
+  rubric_profile: live-full
+  require_review_status: approved
+  allowed_qa_verdicts:
+  - ready
+  - ready-with-risks
+  code_review_required: true
 reference_run:
   run_id: eval-live-003-reference-20260422T083406Z
   recorded_at_utc: '2026-04-22T08:34:14Z'

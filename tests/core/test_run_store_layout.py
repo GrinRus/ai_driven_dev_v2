@@ -90,6 +90,8 @@ def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: 
         runtime_id="generic-cli",
         stage_target="plan",
         config_snapshot={"log_mode": "both"},
+        workflow_stage_start="idea",
+        workflow_stage_end="plan",
     )
 
     assert manifest_path.name == RUN_MANIFEST_FILENAME
@@ -98,6 +100,7 @@ def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: 
     assert payload["work_item_id"] == "WI-001"
     assert payload["runtime_id"] == "generic-cli"
     assert payload["stage_target"] == "plan"
+    assert payload["workflow_bounds"] == {"start": "idea", "end": "plan"}
     assert payload["config_snapshot"] == {"log_mode": "both"}
     assert "repository_git_sha" in payload
     git_sha = payload["repository_git_sha"]

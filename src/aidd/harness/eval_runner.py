@@ -18,6 +18,11 @@ from aidd.evals.log_analysis import (
     parse_validator_report_failures_text,
     select_first_failure_boundary,
 )
+from aidd.evals.quality import (
+    LiveQualityAssessment,
+    build_live_quality_assessment,
+    write_live_quality_report_markdown,
+)
 from aidd.evals.reporting import (
     SUMMARY_REPORT_FILENAME,
     build_scenario_summary_row,
@@ -51,9 +56,12 @@ from aidd.harness.result_bundle import (
     ensure_result_bundle_layout,
     write_command_transcripts,
     write_harness_metadata,
+    write_issue_selection,
 )
 from aidd.harness.runner import (
     HarnessAiddRunResult,
+    HarnessQualityError,
+    HarnessQualityResult,
     HarnessSetupError,
     HarnessSetupResult,
     HarnessTeardownError,
@@ -61,26 +69,18 @@ from aidd.harness.runner import (
     HarnessVerificationError,
     HarnessVerificationResult,
     invoke_aidd_run,
+    run_quality_steps,
     run_setup_steps,
     run_teardown_steps,
     run_verification_steps,
 )
-from aidd.harness.scenarios import Scenario, load_scenario
+from aidd.harness.scenarios import Scenario, ScenarioIssueSeed, load_scenario
 
 _EXIT_CODE_PATTERN = re.compile(r"non-zero exit \((?P<code>\d+)\)")
 _PASS_GUARD_REQUIRED_OUTPUT_FILES: tuple[str, ...] = (
     "stage-result.md",
     "validator-report.md",
 )
-
-
-def _is_live_scenario_path(scenario_path: Path) -> bool:
-    resolved = scenario_path.resolve(strict=False)
-    return (
-        resolved.parent.name == "live"
-        and resolved.parent.parent.name == "scenarios"
-        and resolved.suffix == ".yaml"
-    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +92,10 @@ class EvalScenarioRunResult:
     bundle_root: Path
     verdict_path: Path
     summary_path: Path
+    quality_gate: str
+    quality_verdict: str
+    quality_report_path: Path
+    issue_selection_path: Path
     first_failure_boundary: FailureBoundarySelection
     first_failure_note: str | None
 
@@ -142,6 +146,37 @@ def _derive_teardown_commands(scenario: Scenario) -> tuple[str, ...]:
 
     commands = tuple(str(command).strip() for command in raw_commands if str(command).strip())
     return commands
+
+
+def _select_issue_seed(scenario: Scenario) -> ScenarioIssueSeed | None:
+    if scenario.feature_source is None or not scenario.feature_source.issues:
+        return None
+    return scenario.feature_source.issues[0]
+
+
+def _build_issue_selection_payload(
+    *,
+    scenario: Scenario,
+    selected_issue: ScenarioIssueSeed | None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "scenario_id": scenario.scenario_id,
+        "is_live": scenario.is_live,
+        "mode": None if scenario.feature_source is None else scenario.feature_source.mode,
+        "selection_policy": (
+            None if scenario.feature_source is None else scenario.feature_source.selection_policy
+        ),
+        "selected_issue": None,
+    }
+    if selected_issue is not None:
+        payload["selected_issue"] = {
+            "id": selected_issue.issue_id,
+            "labels": list(selected_issue.labels),
+            "summary": selected_issue.summary,
+            "title": selected_issue.title,
+            "url": selected_issue.url,
+        }
+    return payload
 
 
 def _extract_exit_code(error: BaseException | None) -> int | None:
@@ -324,12 +359,14 @@ def _render_runtime_log_source(
     setup_result: HarnessSetupResult | None,
     aidd_run_result: HarnessAiddRunResult | None,
     verification_result: HarnessVerificationResult | None,
+    quality_result: HarnessQualityResult | None,
     teardown_result: HarnessTeardownResult | None,
     prep_error: BaseException | None,
     install_error: BaseException | None,
     setup_error: BaseException | None,
     run_error: BaseException | None,
     verification_error: BaseException | None,
+    quality_error: BaseException | None,
     teardown_error: BaseException | None,
 ) -> str:
     lines = [
@@ -372,6 +409,8 @@ def _render_runtime_log_source(
             lines.extend(aidd_run_result.stderr_text.rstrip().splitlines())
     if verification_result is not None:
         lines.append(f"verification_commands={len(verification_result.command_transcripts)}")
+    if quality_result is not None:
+        lines.append(f"quality_commands={len(quality_result.command_transcripts)}")
     if teardown_result is not None:
         lines.append(f"teardown_commands={len(teardown_result.command_transcripts)}")
 
@@ -381,6 +420,7 @@ def _render_runtime_log_source(
         setup_error,
         run_error,
         verification_error,
+        quality_error,
         teardown_error,
     ):
         if error is not None:
@@ -480,6 +520,59 @@ def _write_source_artifacts(
     return runtime_log_source_path, validator_report_source_path, verdict_source_path
 
 
+def _workspace_root_for_quality(
+    prepared_working_copy: PreparedWorkingCopy | None,
+    workspace_root: Path,
+) -> Path:
+    if prepared_working_copy is not None:
+        return prepared_working_copy.working_copy_path / ".aidd"
+    return workspace_root
+
+
+def _grader_payload(
+    *,
+    scenario: Scenario,
+    run_id: str,
+    runtime_id: str,
+    status: VerdictStatus,
+    summary: str,
+    first_failure_boundary: FailureBoundarySelection,
+    selected_issue_payload: dict[str, object],
+    quality_assessment: LiveQualityAssessment,
+) -> dict[str, object]:
+    return {
+        "execution": {
+            "first_failure_boundary": {
+                "category": first_failure_boundary.category,
+                "reason": first_failure_boundary.reason,
+                "signal_line_number": first_failure_boundary.signal_line_number,
+                "signal_source": first_failure_boundary.signal_source,
+            },
+            "status": status,
+            "summary": summary,
+        },
+        "quality": {
+            "blocking_findings": list(quality_assessment.blocking_findings),
+            "dimension_scores": {
+                dimension.name: {
+                    "rationale": dimension.rationale,
+                    "score": dimension.score,
+                }
+                for dimension in quality_assessment.dimensions
+            },
+            "quality_gate": quality_assessment.gate,
+            "quality_verdict": quality_assessment.verdict,
+            "review_status": quality_assessment.review_status,
+            "suggested_follow_ups": list(quality_assessment.suggested_follow_ups),
+            "qa_verdict": quality_assessment.qa_verdict,
+        },
+        "run_id": run_id,
+        "runtime_id": runtime_id,
+        "scenario_id": scenario.scenario_id,
+        "selected_issue": selected_issue_payload.get("selected_issue"),
+    }
+
+
 def run_eval_scenario(
     *,
     scenario_path: Path,
@@ -492,11 +585,16 @@ def run_eval_scenario(
     prepare_workspace(workspace_root)
 
     cache_root = workspace_root / "harness-cache"
-    live_scenario = _is_live_scenario_path(scenario_path)
+    live_scenario = scenario.is_live
     published_package_spec = os.environ.get("AIDD_EVAL_PUBLISHED_PACKAGE_SPEC", "").strip() or None
     resource_layout = resolve_resource_layout()
     aidd_command: tuple[str, ...] | None = None if live_scenario else _derive_aidd_command(scenario)
     work_item = _derive_work_item(scenario)
+    selected_issue = _select_issue_seed(scenario)
+    issue_selection_payload = _build_issue_selection_payload(
+        scenario=scenario,
+        selected_issue=selected_issue,
+    )
     teardown_commands = _derive_teardown_commands(scenario)
 
     prep_error: BaseException | None = None
@@ -504,6 +602,7 @@ def run_eval_scenario(
     setup_error: BaseException | None = None
     run_error: BaseException | None = None
     verification_error: BaseException | None = None
+    quality_error: BaseException | None = None
     teardown_error: BaseException | None = None
 
     prepared_repository: PreparedRepository | None = None
@@ -512,10 +611,12 @@ def run_eval_scenario(
     setup_result: HarnessSetupResult | None = None
     aidd_run_result: HarnessAiddRunResult | None = None
     verification_result: HarnessVerificationResult | None = None
+    quality_result: HarnessQualityResult | None = None
     teardown_result: HarnessTeardownResult | None = None
     live_runtime_config_path: Path | None = None
 
     started = monotonic()
+    write_issue_selection(layout=layout, payload=issue_selection_payload)
     try:
         prepared_repository = prepare_scenario_repository(cache_root=cache_root, scenario=scenario)
         prepared_working_copy = prepare_working_copy(
@@ -529,10 +630,15 @@ def run_eval_scenario(
     else:
         try:
             if live_scenario:
+                if selected_issue is None:
+                    raise RuntimeError(
+                        "Live scenario is missing a selected issue even though the manifest loaded."
+                    )
                 bootstrap_live_work_item(
                     working_copy_path=prepared_working_copy.working_copy_path,
                     scenario=scenario,
                     work_item=work_item,
+                    selected_issue=selected_issue,
                     resolved_revision=prepared_working_copy.resolved_revision,
                 )
                 live_runtime_config_path = write_live_runtime_config(
@@ -564,6 +670,8 @@ def run_eval_scenario(
                 runtime_id=runtime_id,
                 work_item=work_item,
                 aidd_command=aidd_command,
+                stage_start=scenario.run.stage_start,
+                stage_end=scenario.run.stage_end,
                 config_path=live_runtime_config_path,
             )
             verification_result = run_verification_steps(
@@ -571,12 +679,18 @@ def run_eval_scenario(
                 working_copy_path=prepared_working_copy.working_copy_path,
                 aidd_run_result=aidd_run_result,
             )
+            quality_result = run_quality_steps(
+                scenario=scenario,
+                working_copy_path=prepared_working_copy.working_copy_path,
+            )
         except HarnessInstallError as exc:
             install_error = exc
         except HarnessSetupError as exc:
             setup_error = exc
         except HarnessVerificationError as exc:
             verification_error = exc
+        except HarnessQualityError as exc:
+            quality_error = exc
         except RuntimeError as exc:
             run_error = exc
         finally:
@@ -630,12 +744,14 @@ def run_eval_scenario(
         setup_result=setup_result,
         aidd_run_result=aidd_run_result,
         verification_result=verification_result,
+        quality_result=quality_result,
         teardown_result=teardown_result,
         prep_error=prep_error,
         install_error=install_error,
         setup_error=setup_error,
         run_error=run_error,
         verification_error=verification_error,
+        quality_error=quality_error,
         teardown_error=teardown_error,
     )
     validator_report_source = _render_validator_report_source(
@@ -742,6 +858,8 @@ def run_eval_scenario(
                     else install_result.artifact_path.as_posix()
                 )
             ),
+            "issue_selection_path": layout.issue_selection_path.as_posix(),
+            "quality_report_path": layout.quality_report_path.as_posix(),
             "working_copy_path": (
                 prepared_working_copy.working_copy_path.as_posix()
                 if prepared_working_copy is not None
@@ -760,6 +878,7 @@ def run_eval_scenario(
         setup_result=setup_result,
         aidd_run_result=aidd_run_result,
         verification_result=verification_result,
+        quality_result=quality_result,
         teardown_result=teardown_result,
     )
     copy_or_link_run_artifacts(
@@ -773,20 +892,50 @@ def run_eval_scenario(
         _render_log_analysis_markdown(status=status, boundary=first_failure_boundary),
         encoding="utf-8",
     )
+    quality_workspace_root = _workspace_root_for_quality(
+        prepared_working_copy=prepared_working_copy,
+        workspace_root=workspace_root,
+    )
+    review_report_path = workspace_stage_output_root(
+        root=quality_workspace_root,
+        work_item=work_item,
+        stage="review",
+    ) / "review-report.md"
+    qa_report_path = workspace_stage_output_root(
+        root=quality_workspace_root,
+        work_item=work_item,
+        stage="qa",
+    ) / "qa-report.md"
+    quality_assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=quality_workspace_root,
+        work_item=work_item,
+        execution_status=status,
+        selected_issue=selected_issue,
+        quality_result=quality_result,
+        quality_error=quality_error,
+    )
+    write_live_quality_report_markdown(
+        path=layout.quality_report_path,
+        scenario=scenario,
+        assessment=quality_assessment,
+        issue_selection_path=layout.issue_selection_path,
+        quality_transcript_path=layout.quality_transcript_path,
+        review_report_path=review_report_path if review_report_path.exists() else None,
+        qa_report_path=qa_report_path if qa_report_path.exists() else None,
+    )
     layout.grader_path.write_text(
         json.dumps(
-            {
-                "scenario_id": scenario.scenario_id,
-                "run_id": run_id,
-                "runtime_id": runtime_id,
-                "status": status,
-                "first_failure_boundary": {
-                    "category": first_failure_boundary.category,
-                    "signal_source": first_failure_boundary.signal_source,
-                    "signal_line_number": first_failure_boundary.signal_line_number,
-                    "reason": first_failure_boundary.reason,
-                },
-            },
+            _grader_payload(
+                scenario=scenario,
+                run_id=run_id,
+                runtime_id=runtime_id,
+                status=status,
+                summary=summary,
+                first_failure_boundary=first_failure_boundary,
+                selected_issue_payload=issue_selection_payload,
+                quality_assessment=quality_assessment,
+            ),
             indent=2,
             sort_keys=True,
         )
@@ -817,6 +966,10 @@ def run_eval_scenario(
         bundle_root=layout.run_root,
         verdict_path=layout.verdict_path,
         summary_path=summary_path,
+        quality_gate=quality_assessment.gate,
+        quality_verdict=quality_assessment.verdict,
+        quality_report_path=layout.quality_report_path,
+        issue_selection_path=layout.issue_selection_path,
         first_failure_boundary=first_failure_boundary,
         first_failure_note=first_failure_note,
     )

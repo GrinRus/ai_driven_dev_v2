@@ -298,8 +298,26 @@ def _is_environment_signal(message: str) -> bool:
 
 
 def _is_adapter_signal(message: str) -> bool:
-    normalized = message.lower()
-    return any(token in normalized for token in ("adapter", "protocol mismatch"))
+    normalized = message.lower().replace("_", " ").replace("-", " ")
+    if "protocol mismatch" in normalized:
+        return True
+    if "adapter" not in normalized:
+        return False
+    if "adapter outcome: success" in normalized:
+        return False
+    return any(
+        token in normalized
+        for token in (
+            "fail",
+            "failure",
+            "failed",
+            "error",
+            "mismatch",
+            "timeout",
+            "timed out",
+            "non zero",
+        )
+    )
 
 
 def _is_noop_signal(message: str) -> bool:
