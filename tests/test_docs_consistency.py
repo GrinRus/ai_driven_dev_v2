@@ -117,3 +117,31 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     assert "/path/to/aidd-opencode-wrapper" in operator_handbook
     assert "probe target and the execution command do not have to be identical" in adapter_protocol
     assert "configured AIDD-compatible command" in runtime_matrix
+
+
+def test_live_e2e_skill_describes_local_operator_contract() -> None:
+    live_e2e_skill = (_repo_root() / ".agents" / "skills" / "live-e2e" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    aidd_eval_skill = (_repo_root() / ".agents" / "skills" / "aidd-eval" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+
+    for needle in (
+        "prepared local **source checkout**",
+        "`AIDD_EVAL_CODEX_COMMAND`",
+        "`AIDD_EVAL_OPENCODE_COMMAND`",
+        "AIDD-compatible wrapper command",
+        (
+            "uv run aidd eval run "
+            "harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
+            "--runtime codex"
+        ),
+        "first listed issue",
+        "`idea -> qa`",
+        "`.aidd/reports/evals/<run_id>/`",
+        "does **not** provision runtime authentication, wrapper scripts, or provider setup",
+    ):
+        assert needle in live_e2e_skill
+
+    assert "For **local live-run operator guidance**, prefer `live-e2e`." in aidd_eval_skill

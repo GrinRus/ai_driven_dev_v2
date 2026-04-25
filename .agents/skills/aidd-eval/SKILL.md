@@ -13,6 +13,11 @@ description: Run harness and eval scenarios for ai_driven_dev_v2, validate docum
 - You need to capture runtime logs, normalized events, and log-analysis artifacts.
 - You need to audit generated artifacts and generated code after execution.
 
+For **local live-run operator guidance**, prefer `live-e2e`.
+Use `aidd-eval` when the main task is generic eval execution, artifact analysis,
+validation discipline, grading, and failure classification across deterministic
+and manual-live lanes.
+
 ## Required reading
 
 1. `docs/architecture/eval-harness-integration.md`

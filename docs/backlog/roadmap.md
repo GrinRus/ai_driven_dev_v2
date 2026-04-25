@@ -3255,3 +3255,216 @@ Sync notes:
 - `2026-04-24` Wave 13 was opened via `W8-E3-S1` queue-restoration policy to separate deterministic CI checks from manual-only live audits and to classify maintained scenarios by class, size, and provider.
 - `2026-04-24` Initial Wave 13 queue restoration promotes `W13-E1-S1-T1` to `Next`, `W13-E1-S1-T2` and `W13-E1-S2-T1` to `Soon`, and `W13-E1-S2-T2`, `W13-E2-S1-T1`, `W13-E2-S1-T2`, `W13-E2-S2-T1`, `W13-E2-S2-T2`, `W13-E3-S1-T1`, `W13-E3-S1-T2`, `W13-E3-S2-T1`, and `W13-E3-S2-T2` to `Parking lot`.
 - `2026-04-24` Wave 13 completed: scenario manifests now carry explicit class/size/lane/runtime taxonomy, deterministic lanes use `fixture-seed`, live lanes are manual-only, release automation no longer runs live E2E, and the representative matrix plus regression coverage are synchronized.
+
+## Wave 14 — self-sufficient local live skill (`done`)
+
+### Epic W14-E1 — local live operator skill usability (`done`)
+Linked stories: `US-07`, `US-09`, `US-10`
+
+#### Slice W14-E1-S1 — standalone local live runbook (`done`)
+Goal: turn the `live-e2e` skill into a self-sufficient local source-checkout playbook for prepared operators running manual live audits.
+
+Primary outputs:
+
+- rewritten `live-e2e` skill
+- `aidd-eval` positioning note
+- local-launch contract wording
+
+Touched areas:
+
+- `.agents/skills/`
+
+Dependencies:
+
+- `W13-E3-S1`
+- `W13-E3-S2`
+
+Local tasks:
+
+- `W14-E1-S1-T1` (done) Rewrite the `live-e2e` skill as a standalone local operator runbook with prerequisites, env vars, preflight, launch steps, validations, artifacts, and first-triage guidance.
+- `W14-E1-S1-T2` (done) Add a positioning note in `aidd-eval` that sends local live operators to `live-e2e` for launch guidance while keeping `aidd-eval` focused on generic eval and audit behavior.
+
+Exit evidence:
+
+- an operator can read `live-e2e` and understand what must already exist before a local live run will work;
+- the skill no longer depends on external docs to explain the basic local live execution path.
+
+#### Slice W14-E1-S2 — skill contract regression coverage (`done`)
+Goal: lock the new local operator contract behind deterministic repo-local docs tests.
+
+Primary outputs:
+
+- docs consistency assertions for `live-e2e`
+- skill split regression coverage
+
+Touched areas:
+
+- `tests/`
+
+Dependencies:
+
+- `W14-E1-S1`
+
+Local tasks:
+
+- `W14-E1-S2-T1` (done) Add docs consistency assertions that require `live-e2e` to document source-checkout prerequisites, runtime-command env vars, wrapper-command requirements, local launch examples, `idea -> qa` bounds, bundle location, and explicit non-provisioning limits.
+
+Exit evidence:
+
+- future edits cannot strip the local live operator contract out of `live-e2e` without failing repo-local tests.
+
+Sync notes:
+
+- `2026-04-24` Wave 14 was opened via `W8-E3-S1` queue-restoration policy to make the `live-e2e` skill self-sufficient for prepared local operator runs.
+- `2026-04-24` Initial Wave 14 queue restoration promotes `W14-E1-S1-T1` to `Next`, `W14-E1-S1-T2` to `Soon`, and `W14-E1-S2-T1` to `Parking lot`.
+- `2026-04-24` Wave 14 completed: `live-e2e` now documents local prerequisites, runtime-command setup, preflight, launch, validations, artifacts, and first-triage guidance directly in the skill; `aidd-eval` points local operators to it; and docs consistency tests lock the contract.
+
+## Wave 15 — readiness recovery and verification hygiene (`next`)
+
+### Epic W15-E0 — queue restoration governance (`done`)
+Linked stories: `US-09`, `US-10`
+
+#### Slice W15-E0-S1 — reopen actionable queue (`done`)
+Goal: reopen implementation work after the readiness audit found an all-done roadmap with no active backlog entries.
+
+Primary outputs:
+
+- Wave 15 roadmap lane
+- restored short backlog queue
+- dated sync note
+
+Touched areas:
+
+- `docs/backlog/`
+
+Dependencies:
+
+- `W8-E3-S1`
+- `W14-E1-S2`
+
+Local tasks:
+
+- `W15-E0-S1-T1` (done) Define the Wave 15 roadmap lane and promote concrete local task IDs into `Next`, `Soon`, and `Parking lot` so implementation can resume from a valid queue.
+
+Exit evidence:
+
+- `docs/backlog/backlog.md` no longer has an empty actionable queue;
+- every promoted backlog item exists as a local task in this Wave 15 roadmap section;
+- the sync note records that the empty backlog plus all-done roadmap was the readiness blocker being corrected.
+
+### Epic W15-E1 — deterministic local gate hygiene (`next`)
+Linked stories: `US-10`
+
+#### Slice W15-E1-S1 — lint gate recovery (`next`)
+Goal: make the deterministic local lint gate pass again without changing product behavior.
+
+Primary outputs:
+
+- line-length-compliant docs consistency test
+
+Touched areas:
+
+- `tests/`
+
+Dependencies:
+
+- `W15-E0-S1`
+
+Local tasks:
+
+- `W15-E1-S1-T1` Fix the long live-E2E docs consistency string literal without changing the asserted contract text.
+
+Exit evidence:
+
+- `uv run ruff check .` passes;
+- the live-E2E skill contract assertion still checks the same command text.
+
+### Epic W15-E2 — roadmap evidence hygiene (`planned`)
+Linked stories: `US-10`
+
+#### Slice W15-E2-S1 — historical done-marker normalization (`planned`)
+Goal: remove ambiguity in completed Wave 12 and Wave 13 local task evidence without changing their completed statuses.
+
+Primary outputs:
+
+- normalized local task done markers for Wave 12 and Wave 13
+
+Touched areas:
+
+- `docs/backlog/roadmap.md`
+
+Dependencies:
+
+- `W15-E1-S1`
+
+Local tasks:
+
+- `W15-E2-S1-T1` Add explicit `(done)` markers to completed Wave 12 and Wave 13 local task bullets where parent slices and sync notes already mark the work complete.
+
+Exit evidence:
+
+- Wave 12 and Wave 13 local task bullets no longer depend only on parent slice status or sync notes for completion evidence;
+- no roadmap status is changed from done to another state.
+
+### Epic W15-E3 — external evidence lanes (`later`)
+Linked stories: `US-07`, `US-09`, `US-10`
+
+#### Slice W15-E3-S1 — fresh manual live evidence (`later`)
+Goal: collect one current manual live E2E bundle after local governance and deterministic gates are green.
+
+Primary outputs:
+
+- fresh manual live eval bundle
+- captured runtime logs
+- operator verification notes
+
+Touched areas:
+
+- `.aidd/reports/evals/`
+- `reports/`
+
+Dependencies:
+
+- `W15-E1-S1`
+- prepared runtime authentication and wrapper command outside this repository
+
+Local tasks:
+
+- `W15-E3-S1-T1` Run one prepared manual live E2E scenario with a maintained runtime and preserve the eval artifacts for audit.
+
+Exit evidence:
+
+- a current `.aidd/reports/evals/<run_id>/` bundle exists for the selected live scenario;
+- the report distinguishes runtime, model, document, adapter, and environment evidence.
+
+#### Slice W15-E3-S2 — release-channel evidence capture (`later`)
+Goal: prove package release channels on the next release candidate without making live E2E part of release gating.
+
+Primary outputs:
+
+- release-channel verification transcript
+- package installation evidence
+- container smoke evidence
+
+Touched areas:
+
+- release artifacts
+- `reports/`
+
+Dependencies:
+
+- release candidate tag and publishing credentials
+
+Local tasks:
+
+- `W15-E3-S2-T1` Capture PyPI or TestPyPI, `uv tool`, `pipx`, and container smoke evidence for the next release candidate.
+
+Exit evidence:
+
+- release verification artifacts show install and CLI smoke behavior from published channels;
+- live E2E remains manual-only and outside release gating.
+
+Sync notes:
+
+- `2026-04-25` Wave 15 was opened via `W8-E3-S1` queue-restoration policy after readiness audit findings showed Wave 14 complete, no current `next` slice, and an empty backlog queue.
+- `2026-04-25` Initial Wave 15 queue restoration completes `W15-E0-S1-T1`, promotes `W15-E1-S1-T1` to `Next`, `W15-E2-S1-T1` to `Soon`, and parks `W15-E3-S1-T1` plus `W15-E3-S2-T1` for external-evidence work.
