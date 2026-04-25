@@ -3352,10 +3352,10 @@ Exit evidence:
 - every promoted backlog item exists as a local task in this Wave 15 roadmap section;
 - the sync note records that the empty backlog plus all-done roadmap was the readiness blocker being corrected.
 
-### Epic W15-E1 — deterministic local gate hygiene (`next`)
+### Epic W15-E1 — deterministic local gate hygiene (`done`)
 Linked stories: `US-10`
 
-#### Slice W15-E1-S1 — lint gate recovery (`next`)
+#### Slice W15-E1-S1 — lint gate recovery (`done`)
 Goal: make the deterministic local lint gate pass again without changing product behavior.
 
 Primary outputs:
@@ -3372,17 +3372,17 @@ Dependencies:
 
 Local tasks:
 
-- `W15-E1-S1-T1` Fix the long live-E2E docs consistency string literal without changing the asserted contract text.
+- `W15-E1-S1-T1` (done) Fix the long live-E2E docs consistency string literal without changing the asserted contract text.
 
 Exit evidence:
 
 - `uv run ruff check .` passes;
 - the live-E2E skill contract assertion still checks the same command text.
 
-### Epic W15-E2 — roadmap evidence hygiene (`planned`)
+### Epic W15-E2 — roadmap evidence hygiene (`next`)
 Linked stories: `US-10`
 
-#### Slice W15-E2-S1 — historical done-marker normalization (`planned`)
+#### Slice W15-E2-S1 — historical done-marker normalization (`next`)
 Goal: remove ambiguity in completed Wave 12 and Wave 13 local task evidence without changing their completed statuses.
 
 Primary outputs:
@@ -3468,3 +3468,4 @@ Sync notes:
 
 - `2026-04-25` Wave 15 was opened via `W8-E3-S1` queue-restoration policy after readiness audit findings showed Wave 14 complete, no current `next` slice, and an empty backlog queue.
 - `2026-04-25` Initial Wave 15 queue restoration completes `W15-E0-S1-T1`, promotes `W15-E1-S1-T1` to `Next`, `W15-E2-S1-T1` to `Soon`, and parks `W15-E3-S1-T1` plus `W15-E3-S2-T1` for external-evidence work.
+- `2026-04-25` `W15-E1-S1-T1` completed: the live-E2E docs consistency assertion remains contract-equivalent while the deterministic lint gate passes; backlog advanced `W15-E2-S1-T1` to `Next`.
