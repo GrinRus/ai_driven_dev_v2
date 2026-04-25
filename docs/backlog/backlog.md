@@ -6,7 +6,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W15-E3-S2-T1`
+- none
 
 ## Soon
 
@@ -58,3 +58,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-04-25` After completing `W15-E1-S1-T1`, backlog queue advanced with `W15-E2-S1-T1` promoted to `Next`; `W15-E3-S1-T1` and `W15-E3-S2-T1` remain in `Parking lot`.
 - `2026-04-25` After completing `W15-E2-S1-T1`, backlog queue advanced with `W15-E3-S1-T1` promoted from `Parking lot` to `Next`; `W15-E3-S2-T1` remains in `Parking lot`.
 - `2026-04-25` `W15-E3-S1-T1` is blocked because local preflight found no configured AIDD-compatible live runtime wrapper env var; backlog advanced with `W15-E3-S2-T1` promoted to `Next`.
+- `2026-04-25` `W15-E3-S2-T1` is blocked because local preflight found no release candidate tag or local publishing credentials; active backlog queue is empty.

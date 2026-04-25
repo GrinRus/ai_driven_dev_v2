@@ -3319,7 +3319,7 @@ Sync notes:
 - `2026-04-24` Initial Wave 14 queue restoration promotes `W14-E1-S1-T1` to `Next`, `W14-E1-S1-T2` to `Soon`, and `W14-E1-S2-T1` to `Parking lot`.
 - `2026-04-24` Wave 14 completed: `live-e2e` now documents local prerequisites, runtime-command setup, preflight, launch, validations, artifacts, and first-triage guidance directly in the skill; `aidd-eval` points local operators to it; and docs consistency tests lock the contract.
 
-## Wave 15 — readiness recovery and verification hygiene (`next`)
+## Wave 15 — readiness recovery and verification hygiene (`blocked`)
 
 ### Epic W15-E0 — queue restoration governance (`done`)
 Linked stories: `US-09`, `US-10`
@@ -3406,7 +3406,7 @@ Exit evidence:
 - Wave 12 and Wave 13 local task bullets no longer depend only on parent slice status or sync notes for completion evidence;
 - no roadmap status is changed from done to another state.
 
-### Epic W15-E3 — external evidence lanes (`next`)
+### Epic W15-E3 — external evidence lanes (`blocked`)
 Linked stories: `US-07`, `US-09`, `US-10`
 
 #### Slice W15-E3-S1 — fresh manual live evidence (`blocked`)
@@ -3441,7 +3441,7 @@ Exit evidence:
 - a current `.aidd/reports/evals/<run_id>/` bundle exists for the selected live scenario;
 - the report distinguishes runtime, model, document, adapter, and environment evidence.
 
-#### Slice W15-E3-S2 — release-channel evidence capture (`next`)
+#### Slice W15-E3-S2 — release-channel evidence capture (`blocked`)
 Goal: prove package release channels on the next release candidate without making live E2E part of release gating.
 
 Primary outputs:
@@ -3459,9 +3459,13 @@ Dependencies:
 
 - release candidate tag and publishing credentials
 
+Blocked reason:
+
+- `2026-04-25` Local preflight found no release tag pointing at `HEAD`, and no local PyPI or GitHub publishing token environment variables were set for release-channel verification.
+
 Local tasks:
 
-- `W15-E3-S2-T1` Capture PyPI or TestPyPI, `uv tool`, `pipx`, and container smoke evidence for the next release candidate.
+- `W15-E3-S2-T1` (blocked) Capture PyPI or TestPyPI, `uv tool`, `pipx`, and container smoke evidence for the next release candidate.
 
 Exit evidence:
 
@@ -3475,3 +3479,4 @@ Sync notes:
 - `2026-04-25` `W15-E1-S1-T1` completed: the live-E2E docs consistency assertion remains contract-equivalent while the deterministic lint gate passes; backlog advanced `W15-E2-S1-T1` to `Next`.
 - `2026-04-25` `W15-E2-S1-T1` completed: Wave 12 and Wave 13 local task bullets now carry explicit `(done)` markers without changing their completed parent statuses; backlog advanced `W15-E3-S1-T1` to `Next`.
 - `2026-04-25` `W15-E3-S1-T1` blocked: local preflight found maintained runtime binaries but no configured AIDD-compatible live runtime wrapper command in `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND`; backlog advanced `W15-E3-S2-T1` to `Next`.
+- `2026-04-25` `W15-E3-S2-T1` blocked: no release candidate tag points at `HEAD`, and no local PyPI or GitHub publishing token environment variables were set; backlog queue is empty with both external evidence tasks blocked.
