@@ -6,7 +6,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W15-E3-S1-T1`
+- `W15-E3-S2-T1`
 
 ## Soon
 
@@ -14,7 +14,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Parking lot
 
-- `W15-E3-S2-T1`
+- none
 
 
 ## Update rules
@@ -57,3 +57,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-04-25` Wave 15 was opened via `W8-E3-S1` queue-restoration policy after the readiness audit found an all-done roadmap and empty queue; completed `W15-E0-S1-T1`, promoted `W15-E1-S1-T1` to `Next`, `W15-E2-S1-T1` to `Soon`, and `W15-E3-S1-T1` plus `W15-E3-S2-T1` to `Parking lot`.
 - `2026-04-25` After completing `W15-E1-S1-T1`, backlog queue advanced with `W15-E2-S1-T1` promoted to `Next`; `W15-E3-S1-T1` and `W15-E3-S2-T1` remain in `Parking lot`.
 - `2026-04-25` After completing `W15-E2-S1-T1`, backlog queue advanced with `W15-E3-S1-T1` promoted from `Parking lot` to `Next`; `W15-E3-S2-T1` remains in `Parking lot`.
+- `2026-04-25` `W15-E3-S1-T1` is blocked because local preflight found no configured AIDD-compatible live runtime wrapper env var; backlog advanced with `W15-E3-S2-T1` promoted to `Next`.

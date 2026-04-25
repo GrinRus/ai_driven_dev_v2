@@ -3409,7 +3409,7 @@ Exit evidence:
 ### Epic W15-E3 — external evidence lanes (`next`)
 Linked stories: `US-07`, `US-09`, `US-10`
 
-#### Slice W15-E3-S1 — fresh manual live evidence (`next`)
+#### Slice W15-E3-S1 — fresh manual live evidence (`blocked`)
 Goal: collect one current manual live E2E bundle after local governance and deterministic gates are green.
 
 Primary outputs:
@@ -3428,16 +3428,20 @@ Dependencies:
 - `W15-E1-S1`
 - prepared runtime authentication and wrapper command outside this repository
 
+Blocked reason:
+
+- `2026-04-25` Local preflight found `AIDD_EVAL_CODEX_COMMAND` and `AIDD_EVAL_OPENCODE_COMMAND` unset, so no AIDD-compatible live runtime wrapper is available for a prepared manual live run in this environment.
+
 Local tasks:
 
-- `W15-E3-S1-T1` Run one prepared manual live E2E scenario with a maintained runtime and preserve the eval artifacts for audit.
+- `W15-E3-S1-T1` (blocked) Run one prepared manual live E2E scenario with a maintained runtime and preserve the eval artifacts for audit.
 
 Exit evidence:
 
 - a current `.aidd/reports/evals/<run_id>/` bundle exists for the selected live scenario;
 - the report distinguishes runtime, model, document, adapter, and environment evidence.
 
-#### Slice W15-E3-S2 — release-channel evidence capture (`later`)
+#### Slice W15-E3-S2 — release-channel evidence capture (`next`)
 Goal: prove package release channels on the next release candidate without making live E2E part of release gating.
 
 Primary outputs:
@@ -3470,3 +3474,4 @@ Sync notes:
 - `2026-04-25` Initial Wave 15 queue restoration completes `W15-E0-S1-T1`, promotes `W15-E1-S1-T1` to `Next`, `W15-E2-S1-T1` to `Soon`, and parks `W15-E3-S1-T1` plus `W15-E3-S2-T1` for external-evidence work.
 - `2026-04-25` `W15-E1-S1-T1` completed: the live-E2E docs consistency assertion remains contract-equivalent while the deterministic lint gate passes; backlog advanced `W15-E2-S1-T1` to `Next`.
 - `2026-04-25` `W15-E2-S1-T1` completed: Wave 12 and Wave 13 local task bullets now carry explicit `(done)` markers without changing their completed parent statuses; backlog advanced `W15-E3-S1-T1` to `Next`.
+- `2026-04-25` `W15-E3-S1-T1` blocked: local preflight found maintained runtime binaries but no configured AIDD-compatible live runtime wrapper command in `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND`; backlog advanced `W15-E3-S2-T1` to `Next`.
