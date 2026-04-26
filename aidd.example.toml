@@ -3,15 +3,19 @@ root = ".aidd"
 
 [runtime.generic_cli]
 command = "python"
+mode = "adapter-flags"
 
 [runtime.claude_code]
 command = "claude"
+mode = "adapter-flags"
 
 [runtime.codex]
-command = "codex"
+command = "codex exec --full-auto --skip-git-repo-check --json -"
+mode = "native"
 
 [runtime.opencode]
-command = "opencode"
+command = "opencode run --format json --dangerously-skip-permissions"
+mode = "native"
 
 [logging]
 mode = "both"

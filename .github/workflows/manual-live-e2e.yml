@@ -115,7 +115,7 @@ jobs:
           print(f"Requested runtime: {runtime_id}")
           PY
 
-      - name: Validate manual live runtime command
+      - name: Validate manual live runtime readiness
         env:
           RUNTIME_ID: ${{ inputs.runtime_id }}
         run: |
@@ -125,35 +125,26 @@ jobs:
           from __future__ import annotations
 
           import os
-          import shlex
-          import shutil
+          from pathlib import Path
+
+          from aidd.harness.live_runtime_config import validate_live_runtime_command
+          from aidd.harness.scenarios import load_scenario
 
           runtime_id = os.environ["RUNTIME_ID"].strip()
-          env_var_by_runtime = {
-              "codex": "AIDD_EVAL_CODEX_COMMAND",
-              "opencode": "AIDD_EVAL_OPENCODE_COMMAND",
-          }
-          env_var = env_var_by_runtime[runtime_id]
-          configured_command = os.environ.get(env_var, "").strip()
-          if not configured_command:
-              raise SystemExit(
-                  "Manual live E2E requires an explicit runtime-command override via GitHub "
-                  f"secret `{env_var}`. Configure it to a runner-available wrapper command "
-                  "that implements the AIDD adapter contract for the selected runtime."
-              )
-
-          tokens = shlex.split(configured_command)
-          if not tokens:
-              raise SystemExit(
-                  f"GitHub secret `{env_var}` must resolve to a non-empty command."
-              )
-          executable = tokens[0]
-          if shutil.which(executable) is None:
-              raise SystemExit(
-                  f"Executable `{executable}` from `{env_var}` is not available on this runner."
-              )
-
-          print(f"Validated runtime command from {env_var}: {configured_command}")
+          scenario = load_scenario(
+              Path(os.environ["SCENARIO_PATH"]),
+              runtime_id=runtime_id,
+              workspace_root=Path(".aidd"),
+          )
+          command_entry = validate_live_runtime_command(
+              runtime_id=runtime_id,
+              scenario=scenario,
+          )
+          print(
+              "Validated runtime readiness: "
+              f"runtime={runtime_id} mode={command_entry.execution_mode.value} "
+              f"source={command_entry.source} command={command_entry.command}"
+          )
           PY
 
       - name: Run manual live eval

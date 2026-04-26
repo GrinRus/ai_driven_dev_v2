@@ -14,6 +14,8 @@ from queue import Empty, Queue
 from typing import Literal, TextIO
 
 from aidd.adapters.runtime_artifacts import write_runtime_exit_metadata
+from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
+from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
@@ -44,19 +46,8 @@ class CodexCommandContext:
 
 
 @dataclass(frozen=True, slots=True)
-class CodexSubprocessSpec:
-    command: tuple[str, ...]
-    cwd: Path
-    env: dict[str, str]
-
-
-@dataclass(frozen=True, slots=True)
-class CodexRunResult:
-    exit_code: int
-    stdout_text: str
-    stderr_text: str
-    runtime_log_text: str
-    exit_classification: CodexExitClassification
+class CodexSubprocessSpec(RuntimeSubprocessSpec):
+    pass
 
 
 StreamTarget = Literal["stdout", "stderr"]
@@ -67,6 +58,11 @@ class CodexExitClassification(StrEnum):
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+
+
+@dataclass(frozen=True, slots=True)
+class CodexRunResult(RuntimeRunResult[CodexExitClassification]):
+    pass
 
 
 def _resolve_stage_brief_path_for_execution(
@@ -142,6 +138,94 @@ def assemble_command(
     return tuple(command)
 
 
+def _split_configured_command(*, configured_command: str, runtime_label: str) -> tuple[str, ...]:
+    stripped = configured_command.strip()
+    if not stripped:
+        raise ValueError(f"Configured {runtime_label} command must not be empty.")
+
+    try:
+        base_tokens = shlex.split(stripped)
+    except ValueError as exc:
+        raise ValueError(
+            f"Configured {runtime_label} command is not valid shell syntax: "
+            f"{configured_command!r}"
+        ) from exc
+    if not base_tokens:
+        raise ValueError(f"Configured {runtime_label} command must produce at least one token.")
+    return tuple(base_tokens)
+
+
+def _read_text_for_prompt(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return f"[missing file: {path.as_posix()}]\n"
+
+
+def _build_native_prompt_text(
+    *,
+    context: CodexCommandContext,
+    repository_root: Path | None,
+) -> str:
+    resolved_workspace_root = context.workspace_root.resolve(strict=False)
+    resolved_stage_brief_path = _resolve_stage_brief_path_for_execution(
+        stage_brief_path=context.stage_brief_path,
+        workspace_root=resolved_workspace_root,
+    )
+    resolved_prompt_pack_paths = _resolve_prompt_pack_paths_for_execution(
+        prompt_pack_paths=context.prompt_pack_paths,
+        repository_root=repository_root,
+    )
+
+    lines: list[str] = [
+        "# AIDD stage runtime request",
+        "",
+        "- Runtime: codex",
+        f"- Stage: {context.stage}",
+        f"- Work item: {context.work_item}",
+        f"- Run id: {context.run_id}",
+        f"- Workspace root: {resolved_workspace_root.as_posix()}",
+        f"- Stage brief: {resolved_stage_brief_path.as_posix()}",
+        "",
+        "## Stage brief",
+        "",
+        _read_text_for_prompt(resolved_stage_brief_path).rstrip(),
+    ]
+    for prompt_pack_path in resolved_prompt_pack_paths:
+        lines.extend(
+            (
+                "",
+                f"## Prompt pack: {prompt_pack_path.as_posix()}",
+                "",
+                _read_text_for_prompt(prompt_pack_path).rstrip(),
+            )
+        )
+    lines.extend(
+        (
+            "",
+            "## Execution contract",
+            "",
+            "Use the workspace documents as the source of truth. Write the required "
+            "stage output Markdown files under the AIDD workspace for this stage.",
+            "",
+        )
+    )
+    return "\n".join(lines)
+
+
+def assemble_native_command(
+    *,
+    configured_command: str,
+    context: CodexCommandContext,
+    repository_root: Path | None = None,
+) -> tuple[str, ...]:
+    _ = context, repository_root
+    return _split_configured_command(
+        configured_command=configured_command,
+        runtime_label="codex",
+    )
+
+
 def build_execution_environment(
     *,
     context: CodexCommandContext,
@@ -181,8 +265,29 @@ def build_subprocess_spec(
     context: CodexCommandContext,
     base_env: Mapping[str, str] | None = None,
     repository_root: Path | None = None,
+    execution_mode: str | RuntimeExecutionMode = RuntimeExecutionMode.ADAPTER_FLAGS,
 ) -> CodexSubprocessSpec:
     resolved_workspace_root = context.workspace_root.resolve(strict=False)
+    mode = normalize_execution_mode(runtime_id="codex", value=execution_mode)
+    if mode is RuntimeExecutionMode.NATIVE:
+        resolved_repository_root = (repository_root or Path.cwd()).resolve(strict=False)
+        return CodexSubprocessSpec(
+            command=assemble_native_command(
+                configured_command=configured_command,
+                context=context,
+                repository_root=repository_root,
+            ),
+            cwd=resolved_repository_root,
+            env=build_execution_environment(
+                context=context,
+                base_env=base_env,
+                repository_root=repository_root,
+            ),
+            stdin_text=_build_native_prompt_text(
+                context=context,
+                repository_root=repository_root,
+            ),
+        )
     return CodexSubprocessSpec(
         command=assemble_command(
             configured_command=configured_command,
@@ -261,11 +366,18 @@ def run_subprocess_with_streaming(
         spec.command,
         cwd=spec.cwd,
         env=spec.env,
+        stdin=subprocess.PIPE if spec.stdin_text is not None else None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         bufsize=1,
     )
+    if spec.stdin_text is not None and process.stdin is not None:
+        try:
+            process.stdin.write(spec.stdin_text)
+            process.stdin.close()
+        except BrokenPipeError:
+            pass
 
     queue: Queue[tuple[StreamTarget, str | None]] = Queue()
     reader_threads = (

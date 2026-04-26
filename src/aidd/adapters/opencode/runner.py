@@ -14,6 +14,8 @@ from queue import Empty, Queue
 from typing import Literal, TextIO
 
 from aidd.adapters.runtime_artifacts import write_runtime_exit_metadata
+from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
+from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
@@ -44,19 +46,8 @@ class OpenCodeCommandContext:
 
 
 @dataclass(frozen=True, slots=True)
-class OpenCodeSubprocessSpec:
-    command: tuple[str, ...]
-    cwd: Path
-    env: dict[str, str]
-
-
-@dataclass(frozen=True, slots=True)
-class OpenCodeRunResult:
-    exit_code: int
-    stdout_text: str
-    stderr_text: str
-    runtime_log_text: str
-    exit_classification: OpenCodeExitClassification
+class OpenCodeSubprocessSpec(RuntimeSubprocessSpec):
+    pass
 
 
 class OpenCodeExitClassification(StrEnum):
@@ -64,6 +55,11 @@ class OpenCodeExitClassification(StrEnum):
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+
+
+@dataclass(frozen=True, slots=True)
+class OpenCodeRunResult(RuntimeRunResult[OpenCodeExitClassification]):
+    pass
 
 
 StreamTarget = Literal["stdout", "stderr"]
@@ -171,6 +167,128 @@ def assemble_command(
     return tuple(command)
 
 
+def _split_configured_command(*, configured_command: str, runtime_label: str) -> tuple[str, ...]:
+    stripped = configured_command.strip()
+    if not stripped:
+        raise ValueError(f"Configured {runtime_label} command must not be empty.")
+
+    try:
+        base_tokens = shlex.split(stripped)
+    except ValueError as exc:
+        raise ValueError(
+            f"Configured {runtime_label} command is not valid shell syntax: "
+            f"{configured_command!r}"
+        ) from exc
+    if not base_tokens:
+        raise ValueError(f"Configured {runtime_label} command must produce at least one token.")
+    return tuple(base_tokens)
+
+
+def _read_text_for_prompt(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return f"[missing file: {path.as_posix()}]\n"
+
+
+def _build_native_prompt_text(
+    *,
+    context: OpenCodeCommandContext,
+    repository_root: Path | None,
+) -> str:
+    resolved_workspace_root = context.workspace_root.resolve(strict=False)
+    resolved_stage_brief_path = _resolve_stage_brief_path_for_execution(
+        stage_brief_path=context.stage_brief_path,
+        workspace_root=resolved_workspace_root,
+    )
+    resolved_prompt_pack_paths = _resolve_prompt_pack_paths_for_execution(
+        prompt_pack_paths=context.prompt_pack_paths,
+        repository_root=repository_root,
+    )
+
+    lines: list[str] = [
+        "# AIDD stage runtime request",
+        "",
+        "- Runtime: opencode",
+        f"- Stage: {context.stage}",
+        f"- Work item: {context.work_item}",
+        f"- Run id: {context.run_id}",
+        f"- Workspace root: {resolved_workspace_root.as_posix()}",
+        f"- Stage brief: {resolved_stage_brief_path.as_posix()}",
+        "",
+        "## Stage brief",
+        "",
+        _read_text_for_prompt(resolved_stage_brief_path).rstrip(),
+    ]
+    for prompt_pack_path in resolved_prompt_pack_paths:
+        lines.extend(
+            (
+                "",
+                f"## Prompt pack: {prompt_pack_path.as_posix()}",
+                "",
+                _read_text_for_prompt(prompt_pack_path).rstrip(),
+            )
+        )
+    lines.extend(
+        (
+            "",
+            "## Execution contract",
+            "",
+            "Use the workspace documents as the source of truth. Write the required "
+            "stage output Markdown files under the AIDD workspace for this stage.",
+            "",
+        )
+    )
+    return "\n".join(lines)
+
+
+def _write_native_prompt_file(
+    *,
+    context: OpenCodeCommandContext,
+    repository_root: Path | None,
+) -> Path:
+    prompt_dir = (
+        context.workspace_root.resolve(strict=False)
+        / "runtime-prompts"
+        / context.run_id
+        / context.stage
+    )
+    prompt_dir.mkdir(parents=True, exist_ok=True)
+    prompt_path = prompt_dir / "opencode-prompt.md"
+    prompt_path.write_text(
+        _build_native_prompt_text(context=context, repository_root=repository_root),
+        encoding="utf-8",
+    )
+    return prompt_path
+
+
+def assemble_native_command(
+    *,
+    configured_command: str,
+    context: OpenCodeCommandContext,
+    prompt_file_path: Path,
+    repository_root: Path | None = None,
+) -> tuple[str, ...]:
+    base_tokens = list(
+        _split_configured_command(
+            configured_command=configured_command,
+            runtime_label="opencode",
+        )
+    )
+    resolved_repository_root = (repository_root or Path.cwd()).resolve(strict=False)
+    base_tokens.extend(
+        (
+            "--dir",
+            resolved_repository_root.as_posix(),
+            "--file",
+            prompt_file_path.resolve(strict=False).as_posix(),
+            "Follow the attached AIDD stage request.",
+        )
+    )
+    _ = context
+    return tuple(base_tokens)
+
+
 def command_preview(
     *,
     configured_command: str,
@@ -226,8 +344,30 @@ def build_subprocess_spec(
     context: OpenCodeCommandContext,
     base_env: Mapping[str, str] | None = None,
     repository_root: Path | None = None,
+    execution_mode: str | RuntimeExecutionMode = RuntimeExecutionMode.ADAPTER_FLAGS,
 ) -> OpenCodeSubprocessSpec:
     resolved_workspace_root = context.workspace_root.resolve(strict=False)
+    mode = normalize_execution_mode(runtime_id="opencode", value=execution_mode)
+    if mode is RuntimeExecutionMode.NATIVE:
+        resolved_repository_root = (repository_root or Path.cwd()).resolve(strict=False)
+        prompt_file_path = _write_native_prompt_file(
+            context=context,
+            repository_root=repository_root,
+        )
+        return OpenCodeSubprocessSpec(
+            command=assemble_native_command(
+                configured_command=configured_command,
+                context=context,
+                prompt_file_path=prompt_file_path,
+                repository_root=repository_root,
+            ),
+            cwd=resolved_repository_root,
+            env=build_execution_environment(
+                context=context,
+                base_env=base_env,
+                repository_root=repository_root,
+            ),
+        )
     return OpenCodeSubprocessSpec(
         command=assemble_command(
             configured_command=configured_command,
@@ -276,11 +416,18 @@ def run_subprocess_with_streaming(
         spec.command,
         cwd=spec.cwd,
         env=spec.env,
+        stdin=subprocess.PIPE if spec.stdin_text is not None else None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         bufsize=1,
     )
+    if spec.stdin_text is not None and process.stdin is not None:
+        try:
+            process.stdin.write(spec.stdin_text)
+            process.stdin.close()
+        except BrokenPipeError:
+            pass
 
     queue: Queue[tuple[StreamTarget, str | None]] = Queue()
     reader_threads = (

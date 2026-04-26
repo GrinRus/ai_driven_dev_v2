@@ -18,6 +18,7 @@ from aidd.adapters.runtime_artifacts import (
 from aidd.adapters.runtime_artifacts import (
     write_runtime_exit_metadata,
 )
+from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
@@ -40,19 +41,8 @@ class GenericCliStageContext:
 
 
 @dataclass(frozen=True, slots=True)
-class GenericCliSubprocessSpec:
-    command: tuple[str, ...]
-    cwd: Path
-    env: dict[str, str]
-
-
-@dataclass(frozen=True, slots=True)
-class GenericCliRunResult:
-    exit_code: int
-    stdout_text: str
-    stderr_text: str
-    runtime_log_text: str
-    exit_classification: GenericCliExitClassification
+class GenericCliSubprocessSpec(RuntimeSubprocessSpec):
+    pass
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,8 +58,15 @@ class GenericCliExitClassification(StrEnum):
     CANCELLED = "cancelled"
 
 
+@dataclass(frozen=True, slots=True)
+class GenericCliRunResult(RuntimeRunResult[GenericCliExitClassification]):
+    pass
+
+
 StreamTarget = Literal["stdout", "stderr"]
 RUNTIME_EXIT_METADATA_FILENAME = _RUNTIME_EXIT_METADATA_FILENAME
+
+
 def _resolve_exit_classification(
     *,
     exit_code: int,

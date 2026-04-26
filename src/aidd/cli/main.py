@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import shlex
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
@@ -61,6 +63,14 @@ from aidd.adapters.opencode.runner import (
 from aidd.adapters.opencode.runner import (
     run_subprocess_with_streaming as run_opencode_subprocess_with_streaming,
 )
+from aidd.adapters.runtime_execution import StageRuntimeRequest
+from aidd.adapters.runtime_registry import (
+    RuntimeDefinition,
+    RuntimeExecutionMode,
+    get_runtime_definition,
+    runtime_definitions,
+    runtime_ids,
+)
 from aidd.cli.run_lookup import (
     resolve_run_artifacts_summary,
     resolve_run_log_summary,
@@ -101,14 +111,11 @@ from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
 from aidd.harness.eval_runner import run_eval_scenario
+from aidd.harness.live_runtime_config import validate_live_runtime_command
+from aidd.harness.scenarios import load_scenario
 
 console = Console(no_color=True)
-_STAGE_RUN_SUPPORTED_RUNTIMES: tuple[str, ...] = (
-    "generic-cli",
-    "claude-code",
-    "codex",
-    "opencode",
-)
+_STAGE_RUN_SUPPORTED_RUNTIMES: tuple[str, ...] = runtime_ids()
 _WORKFLOW_RUN_SUPPORTED_RUNTIMES: tuple[str, ...] = _STAGE_RUN_SUPPORTED_RUNTIMES
 
 app = typer.Typer(
@@ -156,6 +163,45 @@ def _runtime_command_for_runtime(*, runtime: str, cfg: AiddConfig) -> str:
     if runtime == "opencode":
         return cfg.opencode_command
     raise ValueError(f"Unsupported runtime id: {runtime}")
+
+
+def _runtime_execution_mode_for_runtime(
+    *,
+    runtime: str,
+    cfg: AiddConfig,
+) -> RuntimeExecutionMode:
+    if runtime == "generic-cli":
+        return cfg.generic_cli_execution_mode
+    if runtime == "claude-code":
+        return cfg.claude_code_execution_mode
+    if runtime == "codex":
+        return cfg.codex_execution_mode
+    if runtime == "opencode":
+        return cfg.opencode_execution_mode
+    raise ValueError(f"Unsupported runtime id: {runtime}")
+
+
+def _runtime_probe_report(
+    *,
+    definition: RuntimeDefinition,
+) -> CapabilityReport:
+    if definition.runtime_id == "generic-cli":
+        return probe_generic_cli(definition.probe_command)
+    if definition.runtime_id == "claude-code":
+        return probe_claude_code(definition.probe_command)
+    if definition.runtime_id == "codex":
+        return probe_codex(definition.probe_command)
+    if definition.runtime_id == "opencode":
+        return probe_opencode(definition.probe_command)
+    raise ValueError(f"Unsupported runtime id: {definition.runtime_id}")
+
+
+def _execution_command_available(command: str) -> bool:
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        return False
+    return bool(tokens) and shutil.which(tokens[0]) is not None
 
 
 def _tail_lines(text: str, *, line_count: int) -> str:
@@ -258,10 +304,6 @@ def doctor(
 ) -> None:
     """Inspect the local bootstrap environment."""
     cfg = load_config(config)
-    generic = probe_generic_cli(cfg.generic_cli_command)
-    claude = probe_claude_code(cfg.claude_code_command)
-    codex = probe_codex(cfg.codex_command)
-    opencode = probe_opencode(cfg.opencode_command)
 
     table = Table(title="AIDD doctor")
     table.add_column("Check")
@@ -269,29 +311,37 @@ def doctor(
     table.add_row("Version", __version__)
     table.add_row("Config path", str(config.resolve()))
     table.add_row("Workspace root", str(cfg.workspace_root))
-    table.add_row("generic-cli command", generic.command)
-    table.add_row("generic-cli available", "yes" if generic.available else "no")
-    table.add_row("generic-cli version", generic.version_text or "unknown")
-    table.add_row("generic-cli capabilities", _capability_summary(generic))
-    table.add_row("claude-code command", claude.command)
-    table.add_row("claude-code available", "yes" if claude.available else "no")
-    table.add_row("claude-code version", claude.version_text or "unknown")
-    table.add_row("claude-code capabilities", _capability_summary(claude))
-    table.add_row("codex command", codex.command)
-    table.add_row("codex available", "yes" if codex.available else "no")
-    table.add_row("codex version", codex.version_text or "unknown")
-    table.add_row("codex capabilities", _capability_summary(codex))
-    table.add_row("opencode command", opencode.command)
-    table.add_row("opencode available", "yes" if opencode.available else "no")
-    table.add_row("opencode version", opencode.version_text or "unknown")
-    table.add_row("opencode capabilities", _capability_summary(opencode))
+    for definition in runtime_definitions():
+        runtime_command = _runtime_command_for_runtime(runtime=definition.runtime_id, cfg=cfg)
+        execution_mode = _runtime_execution_mode_for_runtime(
+            runtime=definition.runtime_id,
+            cfg=cfg,
+        )
+        report = _runtime_probe_report(definition=definition)
+        table.add_row(f"{definition.runtime_id} support tier", definition.support_tier)
+        table.add_row(f"{definition.runtime_id} provider probe command", report.command)
+        table.add_row(
+            f"{definition.runtime_id} provider available",
+            "yes" if report.available else "no",
+        )
+        table.add_row(
+            f"{definition.runtime_id} execution command",
+            runtime_command,
+        )
+        table.add_row(f"{definition.runtime_id} execution mode", execution_mode.value)
+        table.add_row(
+            f"{definition.runtime_id} execution command available",
+            "yes" if _execution_command_available(runtime_command) else "no",
+        )
+        table.add_row(f"{definition.runtime_id} version", report.version_text or "unknown")
+        table.add_row(f"{definition.runtime_id} capabilities", _capability_summary(report))
     table.add_row("log mode", cfg.log_mode)
     table.add_row("max repair attempts", str(cfg.max_repair_attempts))
 
     console.print(table)
     console.print(
-        "Workflow, deterministic eval lanes, and manual live E2E audits are "
-        "available on maintained runtimes."
+        "Provider probe checks raw runtime availability; execution readiness checks "
+        "the configured AIDD command and mode."
     )
 
 
@@ -377,6 +427,7 @@ def run_callback(
     cfg = load_config(config)
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
     runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
+    runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
     run_id = _allocate_stage_run_id(workspace_root=workspace_root, work_item=work_item)
     create_run_manifest(
         workspace_root=workspace_root,
@@ -388,6 +439,7 @@ def run_callback(
             "config_path": config.as_posix(),
             "workspace_root": workspace_root.as_posix(),
             "runtime_command": runtime_command,
+            "runtime_execution_mode": runtime_execution_mode.value,
             "log_follow": log_follow,
             "mode": "workflow",
         },
@@ -679,6 +731,7 @@ def stage_run(
     cfg = load_config(config)
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
     runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
+    runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
     repair_policy = RepairBudgetPolicy(default_max_repair_attempts=cfg.max_repair_attempts)
     selected_run_id: str | None = None
     if run_id is not None:
@@ -728,6 +781,7 @@ def stage_run(
             "config_path": config.as_posix(),
             "workspace_root": workspace_root.as_posix(),
             "runtime_command": runtime_command,
+            "runtime_execution_mode": runtime_execution_mode.value,
             "log_follow": log_follow,
         },
     )
@@ -772,6 +826,17 @@ def stage_run(
         stage_documents_root.mkdir(parents=True, exist_ok=True)
         stage_brief_path = stage_documents_root / "stage-brief.md"
         stage_brief_path.write_text(invocation.stage_brief_markdown, encoding="utf-8")
+        runtime_request = StageRuntimeRequest(
+            runtime_id=runtime,
+            execution_mode=runtime_execution_mode,
+            stage=invocation.stage,
+            work_item=invocation.work_item,
+            run_id=invocation.run_id,
+            workspace_root=workspace_root,
+            stage_brief_path=stage_brief_path,
+            prompt_pack_paths=tuple(prompt_pack_file_paths),
+            repository_root=Path.cwd().resolve(strict=False),
+        )
 
         def _on_stdout(chunk: str) -> None:
             _stream_runtime_chunk(stream="stdout", chunk=chunk)
@@ -827,7 +892,7 @@ def stage_run(
                     configured_command=runtime_command,
                     context=claude_context,
                     base_env=dict(os.environ),
-                    repository_root=Path.cwd(),
+                    repository_root=runtime_request.repository_root,
                 )
                 claude_run_result = run_claude_code_subprocess_with_streaming(
                     spec=claude_spec,
@@ -859,7 +924,8 @@ def stage_run(
                     configured_command=runtime_command,
                     context=codex_context,
                     base_env=dict(os.environ),
-                    repository_root=Path.cwd(),
+                    repository_root=runtime_request.repository_root,
+                    execution_mode=runtime_request.execution_mode,
                 )
                 codex_run_result = run_codex_subprocess_with_streaming(
                     spec=codex_spec,
@@ -890,7 +956,8 @@ def stage_run(
                     configured_command=runtime_command,
                     context=opencode_context,
                     base_env=dict(os.environ),
-                    repository_root=Path.cwd(),
+                    repository_root=runtime_request.repository_root,
+                    execution_mode=runtime_request.execution_mode,
                 )
                 opencode_run_result = run_opencode_subprocess_with_streaming(
                     spec=opencode_spec,
@@ -1137,6 +1204,62 @@ def eval_run(
     console.print(f"Verdict path: {result.verdict_path.as_posix()}")
     console.print(f"Quality report path: {result.quality_report_path.as_posix()}")
     console.print(f"Summary path: {result.summary_path.as_posix()}")
+
+
+@eval_app.command("doctor")
+def eval_doctor(
+    scenario: Annotated[str, typer.Argument(help="Scenario path")],
+    runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+) -> None:
+    """Inspect eval runtime readiness for a scenario."""
+    scenario_path = Path(scenario)
+    if not scenario_path.exists():
+        raise typer.BadParameter(f"Scenario not found: {scenario}")
+
+    try:
+        loaded_scenario = load_scenario(
+            scenario_path,
+            runtime_id=runtime,
+            workspace_root=Path(".aidd"),
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    try:
+        definition = get_runtime_definition(runtime)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    report = _runtime_probe_report(definition=definition)
+    table = Table(title="AIDD eval doctor")
+    table.add_column("Check")
+    table.add_column("Value")
+    table.add_row("Scenario", loaded_scenario.scenario_id)
+    table.add_row("Scenario path", scenario_path.as_posix())
+    table.add_row("Runtime", runtime)
+    table.add_row("Runtime allowed", "yes" if runtime in loaded_scenario.runtime_targets else "no")
+    table.add_row("Runtime targets", ", ".join(loaded_scenario.runtime_targets))
+    table.add_row("Provider probe command", report.command)
+    table.add_row("Provider available", "yes" if report.available else "no")
+    table.add_row("Provider version", report.version_text or "unknown")
+
+    if loaded_scenario.is_live:
+        try:
+            command_entry = validate_live_runtime_command(
+                runtime_id=runtime,
+                scenario=loaded_scenario,
+            )
+        except RuntimeError as exc:
+            table.add_row("Execution readiness", "fail")
+            table.add_row("Execution issue", str(exc))
+        else:
+            table.add_row("Execution readiness", "pass")
+            table.add_row("Execution command", command_entry.command)
+            table.add_row("Execution mode", command_entry.execution_mode.value)
+            table.add_row("Execution command source", command_entry.source)
+    else:
+        table.add_row("Execution readiness", "not-live")
+        table.add_row("Execution mode", "scenario invocation")
+    console.print(table)
 
 
 @eval_app.command("summary")

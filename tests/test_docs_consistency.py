@@ -111,12 +111,13 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
         "--runtime generic-cli"
         not in readme
     )
-    assert "AIDD-compatible execution commands" in readme
-    assert "AIDD-compatible for the selected runtime" in operator_handbook
-    assert "/path/to/aidd-codex-wrapper" in operator_handbook
-    assert "/path/to/aidd-opencode-wrapper" in operator_handbook
+    assert "AIDD-compatible wrapper commands" in readme
+    assert "mode = \"native\"" in operator_handbook
+    assert "mode = \"adapter-flags\"" in operator_handbook
+    assert "codex exec --full-auto --skip-git-repo-check --json -" in operator_handbook
+    assert "opencode run --format json --dangerously-skip-permissions" in operator_handbook
     assert "probe target and the execution command do not have to be identical" in adapter_protocol
-    assert "configured AIDD-compatible command" in runtime_matrix
+    assert "`native` execution" in runtime_matrix
 
 
 def test_live_e2e_skill_describes_local_operator_contract() -> None:
@@ -131,7 +132,9 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "prepared local **source checkout**",
         "`AIDD_EVAL_CODEX_COMMAND`",
         "`AIDD_EVAL_OPENCODE_COMMAND`",
+        "native provider CLI",
         "AIDD-compatible wrapper command",
+        "aidd eval doctor",
         (
             "uv run aidd eval run "
             "harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "

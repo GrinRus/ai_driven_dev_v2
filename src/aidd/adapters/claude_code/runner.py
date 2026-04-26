@@ -17,6 +17,7 @@ from queue import Empty, Queue
 from typing import Literal, TextIO
 
 from aidd.adapters.runtime_artifacts import write_runtime_exit_metadata
+from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.core.interview import (
     AdapterQuestionEvent,
     QuestionPolicy,
@@ -86,19 +87,8 @@ class ClaudeCodeLaunchOptions:
 
 
 @dataclass(frozen=True, slots=True)
-class ClaudeCodeSubprocessSpec:
-    command: tuple[str, ...]
-    cwd: Path
-    env: dict[str, str]
-
-
-@dataclass(frozen=True, slots=True)
-class ClaudeCodeRunResult:
-    exit_code: int
-    stdout_text: str
-    stderr_text: str
-    runtime_log_text: str
-    exit_classification: ClaudeCodeExitClassification
+class ClaudeCodeSubprocessSpec(RuntimeSubprocessSpec):
+    pass
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +103,11 @@ class ClaudeCodeExitClassification(StrEnum):
     TIMEOUT = "timeout"
     USER_CANCELLED = "user_cancelled"
     ADAPTER_FAILURE = "adapter_failure"
+
+
+@dataclass(frozen=True, slots=True)
+class ClaudeCodeRunResult(RuntimeRunResult[ClaudeCodeExitClassification]):
+    pass
 
 
 StreamTarget = Literal["stdout", "stderr"]

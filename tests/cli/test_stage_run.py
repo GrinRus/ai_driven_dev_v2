@@ -154,6 +154,54 @@ def _write_runtime_writer_script(
     return script_path
 
 
+def _write_native_runtime_writer_script(
+    *,
+    tmp_path: Path,
+    runtime: str,
+    documents: dict[str, str],
+) -> Path:
+    script_path = tmp_path / f"native_{runtime}_writer.py"
+    script_lines = [
+        "import os",
+        "import sys",
+        "from pathlib import Path",
+        f"runtime = {runtime!r}",
+        f"documents = {documents!r}",
+        "args = sys.argv[1:]",
+        "if '--stage' in args or '--prompt-pack' in args:",
+        "    print('unexpected adapter flag', file=sys.stderr)",
+        "    raise SystemExit(31)",
+        "if runtime == 'codex':",
+        "    stdin_text = sys.stdin.read()",
+        "    if '# AIDD stage runtime request' not in stdin_text:",
+        "        print('missing stdin stage request', file=sys.stderr)",
+        "        raise SystemExit(32)",
+        "    if '-' not in args:",
+        "        print('missing stdin sentinel', file=sys.stderr)",
+        "        raise SystemExit(33)",
+        "elif runtime == 'opencode':",
+        "    if '--dir' not in args or '--file' not in args:",
+        "        print('missing native opencode flags', file=sys.stderr)",
+        "        raise SystemExit(34)",
+        "    prompt_file = Path(args[args.index('--file') + 1])",
+        "    prompt_text = prompt_file.read_text(encoding='utf-8')",
+        "    if '# AIDD stage runtime request' not in prompt_text:",
+        "        print('missing prompt-file stage request', file=sys.stderr)",
+        "        raise SystemExit(35)",
+        "root = Path(os.environ['AIDD_WORKSPACE_ROOT'])",
+        (
+            "stage_root = root / 'workitems' / os.environ['AIDD_WORK_ITEM'] / "
+            "'stages' / os.environ['AIDD_STAGE']"
+        ),
+        "stage_root.mkdir(parents=True, exist_ok=True)",
+        "for name, content in documents.items():",
+        "    (stage_root / name).write_text(content, encoding='utf-8')",
+        "print('native-runtime-ok')",
+    ]
+    script_path.write_text("\n".join(script_lines) + "\n", encoding="utf-8")
+    return script_path
+
+
 def _write_cli_config(
     *,
     tmp_path: Path,
@@ -178,6 +226,34 @@ def _write_cli_config(
             f"command = \"{opencode_command}\"\n\n"
             "[repair]\n"
             f"max_attempts = {max_repair_attempts}\n"
+        ),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_native_runtime_cli_config(
+    *,
+    tmp_path: Path,
+    runtime: str,
+    runtime_command: str,
+) -> Path:
+    config_path = tmp_path / f"aidd.{runtime}.native.toml"
+    runtime_section = "codex" if runtime == "codex" else "opencode"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[workspace]",
+                'root = ".aidd"',
+                "",
+                f"[runtime.{runtime_section}]",
+                f"command = {json.dumps(runtime_command)}",
+                'mode = "native"',
+                "",
+                "[repair]",
+                "max_attempts = 2",
+                "",
+            )
         ),
         encoding="utf-8",
     )
@@ -464,6 +540,59 @@ def test_stage_run_executes_supported_non_generic_runtime(
     assert runtime_exit_metadata["schema_version"] == 1
     assert runtime_exit_metadata["exit_code"] == 0
     assert runtime_exit_metadata["runtime_log_char_count"] >= len("runtime-output-line\n")
+
+
+@pytest.mark.parametrize("runtime", ("codex", "opencode"))
+def test_stage_run_executes_native_provider_mode_without_adapter_flags(
+    tmp_path: Path,
+    runtime: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-017")
+    writer_script = _write_native_runtime_writer_script(
+        tmp_path=tmp_path,
+        runtime=runtime,
+        documents=_valid_plan_output_documents(),
+    )
+    if runtime == "codex":
+        runtime_command = (
+            f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())} "
+            "exec --full-auto --skip-git-repo-check --json -"
+        )
+    else:
+        runtime_command = (
+            f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())} "
+            "run --format json --dangerously-skip-permissions"
+        )
+    config_path = _write_native_runtime_cli_config(
+        tmp_path=tmp_path,
+        runtime=runtime,
+        runtime_command=runtime_command,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-017",
+            "--runtime",
+            runtime,
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert f"[{runtime}:plan:stdout] native-runtime-ok" in result.stdout
+    assert (
+        workspace_root / "workitems" / "WI-017" / "stages" / "plan" / "output" / "plan.md"
+    ).exists()
 
 
 def test_stage_run_rejects_unknown_runtime() -> None:

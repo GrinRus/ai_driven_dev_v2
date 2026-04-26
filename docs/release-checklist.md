@@ -69,8 +69,9 @@ Manual live-audit notes:
 
 - Live E2E is no longer a release gate.
 - If maintainers want a post-release operator audit, run `manual-live-e2e` explicitly from GitHub Actions.
-- That manual workflow requires the selected provider's runtime-command secret:
-  `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND`.
+- That manual workflow validates the selected provider command before clone/install;
+  `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND` are optional wrapper
+  overrides for `adapter-flags` mode.
 - That audit is separate from publish/installability evidence and must not block tagged releases.
 
 Suggested package-path verification:

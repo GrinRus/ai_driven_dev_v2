@@ -19,6 +19,7 @@ from aidd.adapters.opencode.runner import (
     run_subprocess_with_streaming,
 )
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
+from aidd.adapters.runtime_registry import RuntimeExecutionMode, get_runtime_definition
 
 
 def _context(tmp_path: Path) -> OpenCodeCommandContext:
@@ -131,6 +132,37 @@ def test_build_subprocess_spec_uses_workspace_as_cwd(tmp_path: Path) -> None:
     assert spec.command[0] == "opencode"
     assert spec.env["BASE_FLAG"] == "1"
     assert spec.env["AIDD_RUNTIME_ID"] == "opencode"
+
+
+def test_build_native_subprocess_spec_uses_prompt_file_without_adapter_flags(
+    tmp_path: Path,
+) -> None:
+    context = _context(tmp_path)
+    stage_brief_path = context.workspace_root / context.stage_brief_path
+    stage_brief_path.parent.mkdir(parents=True)
+    stage_brief_path.write_text("# Stage brief\n\nRun the stage.\n", encoding="utf-8")
+
+    spec = build_subprocess_spec(
+        configured_command=get_runtime_definition("opencode").default_command,
+        context=context,
+        base_env={"BASE_FLAG": "1"},
+        repository_root=tmp_path,
+        execution_mode=RuntimeExecutionMode.NATIVE,
+    )
+
+    assert spec.cwd == tmp_path.resolve(strict=False)
+    assert spec.command[:4] == ("opencode", "run", "--format", "json")
+    assert "--dangerously-skip-permissions" in spec.command
+    assert "--stage" not in spec.command
+    assert "--prompt-pack" not in spec.command
+    assert "--dir" in spec.command
+    assert spec.command[spec.command.index("--dir") + 1] == tmp_path.resolve(
+        strict=False
+    ).as_posix()
+    assert "--file" in spec.command
+    prompt_path = Path(spec.command[spec.command.index("--file") + 1])
+    assert prompt_path.exists()
+    assert "# AIDD stage runtime request" in prompt_path.read_text(encoding="utf-8")
 
 
 def test_run_subprocess_with_streaming_captures_output_and_callbacks(tmp_path: Path) -> None:
