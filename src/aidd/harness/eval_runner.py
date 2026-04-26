@@ -41,7 +41,10 @@ from aidd.harness.install_artifact import (
     prepare_local_wheel_install,
     prepare_published_package_install,
 )
-from aidd.harness.live_runtime_config import write_live_runtime_config
+from aidd.harness.live_runtime_config import (
+    validate_live_runtime_command,
+    write_live_runtime_config,
+)
 from aidd.harness.live_workspace_bootstrap import bootstrap_live_work_item
 from aidd.harness.repo_prep import (
     PreparedRepository,
@@ -628,90 +631,101 @@ def run_eval_scenario(
 
     started = monotonic()
     write_issue_selection(layout=layout, payload=issue_selection_payload)
-    try:
-        prepared_repository = prepare_scenario_repository(cache_root=cache_root, scenario=scenario)
-        prepared_working_copy = prepare_working_copy(
-            cache_root=cache_root,
-            scenario=scenario,
-            prepared_repository=prepared_repository,
-            run_id=run_id,
-        )
-    except BaseException as exc:
-        prep_error = exc
-    else:
+    if live_scenario:
         try:
-            if live_scenario:
-                if selected_issue is None:
-                    raise RuntimeError(
-                        "Live scenario is missing a selected issue even though the manifest loaded."
-                    )
-                bootstrap_live_work_item(
-                    working_copy_path=prepared_working_copy.working_copy_path,
-                    scenario=scenario,
-                    work_item=work_item,
-                    selected_issue=selected_issue,
-                    resolved_revision=prepared_working_copy.resolved_revision,
-                )
-                live_runtime_config_path = write_live_runtime_config(
-                    working_copy_path=prepared_working_copy.working_copy_path,
-                    runtime_id=runtime_id,
-                    scenario=scenario,
-                )
-                if published_package_spec is not None:
-                    install_result = prepare_published_package_install(
-                        workspace_root=workspace_root,
-                        run_id=run_id,
-                        package_spec=published_package_spec,
-                    )
-                else:
-                    install_result = prepare_local_wheel_install(
-                        workspace_root=workspace_root,
-                        run_id=run_id,
-                    )
-                aidd_command = install_result.installed_command
-            if aidd_command is None:
-                raise RuntimeError("Failed to derive an AIDD command for harness execution.")
-            setup_result = run_setup_steps(
-                scenario=scenario,
-                working_copy_path=prepared_working_copy.working_copy_path,
-            )
-            aidd_run_result = invoke_aidd_run(
-                scenario=scenario,
-                working_copy_path=prepared_working_copy.working_copy_path,
-                runtime_id=runtime_id,
-                work_item=work_item,
-                aidd_command=aidd_command,
-                stage_start=scenario.run.stage_start,
-                stage_end=scenario.run.stage_end,
-                config_path=live_runtime_config_path,
-            )
-            verification_result = run_verification_steps(
-                scenario=scenario,
-                working_copy_path=prepared_working_copy.working_copy_path,
-                aidd_run_result=aidd_run_result,
-            )
-            quality_result = run_quality_steps(
-                scenario=scenario,
-                working_copy_path=prepared_working_copy.working_copy_path,
-            )
-        except HarnessInstallError as exc:
-            install_error = exc
-        except HarnessSetupError as exc:
-            setup_error = exc
-        except HarnessVerificationError as exc:
-            verification_error = exc
-        except HarnessQualityError as exc:
-            quality_error = exc
+            validate_live_runtime_command(runtime_id=runtime_id, scenario=scenario)
         except RuntimeError as exc:
             run_error = exc
-        finally:
+
+    if run_error is None:
+        try:
+            prepared_repository = prepare_scenario_repository(
+                cache_root=cache_root,
+                scenario=scenario,
+            )
+            prepared_working_copy = prepare_working_copy(
+                cache_root=cache_root,
+                scenario=scenario,
+                prepared_repository=prepared_repository,
+                run_id=run_id,
+            )
+        except BaseException as exc:
+            prep_error = exc
+        else:
             try:
-                teardown_result = run_teardown_steps(
-                    teardown_commands=teardown_commands,
+                if live_scenario:
+                    if selected_issue is None:
+                        raise RuntimeError(
+                            "Live scenario is missing a selected issue even though "
+                            "the manifest loaded."
+                        )
+                    bootstrap_live_work_item(
+                        working_copy_path=prepared_working_copy.working_copy_path,
+                        scenario=scenario,
+                        work_item=work_item,
+                        selected_issue=selected_issue,
+                        resolved_revision=prepared_working_copy.resolved_revision,
+                    )
+                    live_runtime_config_path = write_live_runtime_config(
+                        working_copy_path=prepared_working_copy.working_copy_path,
+                        runtime_id=runtime_id,
+                        scenario=scenario,
+                    )
+                    if published_package_spec is not None:
+                        install_result = prepare_published_package_install(
+                            workspace_root=workspace_root,
+                            run_id=run_id,
+                            package_spec=published_package_spec,
+                        )
+                    else:
+                        install_result = prepare_local_wheel_install(
+                            workspace_root=workspace_root,
+                            run_id=run_id,
+                        )
+                    aidd_command = install_result.installed_command
+                if aidd_command is None:
+                    raise RuntimeError("Failed to derive an AIDD command for harness execution.")
+                setup_result = run_setup_steps(
+                    scenario=scenario,
                     working_copy_path=prepared_working_copy.working_copy_path,
                 )
-            except HarnessTeardownError as exc:
-                teardown_error = exc
+                aidd_run_result = invoke_aidd_run(
+                    scenario=scenario,
+                    working_copy_path=prepared_working_copy.working_copy_path,
+                    runtime_id=runtime_id,
+                    work_item=work_item,
+                    aidd_command=aidd_command,
+                    stage_start=scenario.run.stage_start,
+                    stage_end=scenario.run.stage_end,
+                    config_path=live_runtime_config_path,
+                )
+                verification_result = run_verification_steps(
+                    scenario=scenario,
+                    working_copy_path=prepared_working_copy.working_copy_path,
+                    aidd_run_result=aidd_run_result,
+                )
+                quality_result = run_quality_steps(
+                    scenario=scenario,
+                    working_copy_path=prepared_working_copy.working_copy_path,
+                )
+            except HarnessInstallError as exc:
+                install_error = exc
+            except HarnessSetupError as exc:
+                setup_error = exc
+            except HarnessVerificationError as exc:
+                verification_error = exc
+            except HarnessQualityError as exc:
+                quality_error = exc
+            except RuntimeError as exc:
+                run_error = exc
+            finally:
+                try:
+                    teardown_result = run_teardown_steps(
+                        teardown_commands=teardown_commands,
+                        working_copy_path=prepared_working_copy.working_copy_path,
+                    )
+                except HarnessTeardownError as exc:
+                    teardown_error = exc
 
     status, summary, blocked_by_questions, infrastructure_failure, verification_failed = (
         _classify_status(

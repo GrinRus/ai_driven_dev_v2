@@ -172,6 +172,5 @@ def test_manual_live_workflow_dispatch_is_manual_only() -> None:
     assert "harness/scenarios/live" in run_blocks
     assert 'scenario.automation_lane != "manual"' in run_blocks
     assert "uv run aidd eval run \"$SCENARIO_PATH\" --runtime" in run_blocks
-    assert "AIDD_EVAL_CODEX_COMMAND" in run_blocks
-    assert "AIDD_EVAL_OPENCODE_COMMAND" in run_blocks
-    assert "Manual live E2E requires an explicit runtime-command override" in run_blocks
+    assert "validate_live_runtime_command" in run_blocks
+    assert "Validated runtime readiness" in run_blocks

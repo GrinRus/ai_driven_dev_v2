@@ -36,13 +36,14 @@ Live E2E is not defined by source-checkout execution from the AIDD repository it
 
 - `automation_lane` for every live scenario is `manual`.
 - The only supported automation entrypoint is `.github/workflows/manual-live-e2e.yml`.
-- That workflow requires an explicit GitHub secret override for the selected live
-  provider command:
+- That workflow supports optional GitHub secret overrides for custom wrapper
+  commands:
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`
   - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
-- The secret value must point to a runner-available wrapper command that accepts
-  the AIDD adapter contract flags; raw provider binaries are not assumed to be
-  sufficient.
+- When no override is set, the harness validates the default native provider
+  command on the runner before cloning or installing artifacts.
+- Secret override values must point to runner-available wrapper commands that
+  accept the AIDD adapter contract flags.
 - CI must not reference `harness/scenarios/live/`.
 - Release automation must not run live scenarios or require live-eval artifacts.
 

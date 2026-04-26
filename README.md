@@ -131,9 +131,9 @@ Live E2E remains available as a manual external-audit system, but it is no longe
 
 - Python 3.12+
 - `uv`
-- optional runtime binaries you want to probe in `aidd doctor`, such as Claude Code
-- AIDD-compatible execution commands for any runtime you want to use with `aidd run`,
-  `aidd stage run`, or manual live E2E
+- provider CLIs you want to run or probe, such as Claude Code, Codex, or OpenCode
+- provider authentication already configured outside AIDD
+- optional AIDD-compatible wrapper commands for advanced `adapter-flags` mode
 
 ### Bootstrap the repo locally
 
@@ -161,12 +161,12 @@ The intended release channels are:
 - container images such as `ghcr.io/grinrus/ai-driven-dev-v2`
 - source checkout for contributors and CI
 
-Runtime binaries remain external dependencies. AIDD does not bundle Claude Code, Codex, OpenCode, or other runtimes.
+Runtime binaries remain external dependencies. AIDD does not bundle Claude Code,
+Codex, OpenCode, or other runtimes.
 
-For workflow or stage execution, the configured runtime command must accept the
-AIDD adapter flags for the selected runtime. In practice this may be a wrapper
-command around the upstream provider CLI rather than the raw provider binary
-itself.
+For workflow or stage execution, Codex and OpenCode default to native provider
+CLI execution. Advanced operators can still configure an AIDD-compatible wrapper
+command with `mode = "adapter-flags"` when they need a custom execution surface.
 
 For manual live E2E, the canonical operator-audit path is:
 

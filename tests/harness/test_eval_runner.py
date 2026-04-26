@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -98,6 +99,28 @@ def _write_fake_aidd(
         encoding="utf-8",
     )
     path.chmod(0o755)
+
+
+def _put_fake_provider_on_path(
+    *,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    executable_name: str,
+) -> Path:
+    bin_dir = tmp_path / "provider-bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    executable_path = bin_dir / executable_name
+    executable_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    executable_path.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir.as_posix()}:{os.environ.get('PATH', '')}")
+    return executable_path
+
+
+def _clear_live_runtime_command_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AIDD_EVAL_CLAUDE_CODE_COMMAND", raising=False)
+    monkeypatch.delenv("AIDD_EVAL_CODEX_COMMAND", raising=False)
+    monkeypatch.delenv("AIDD_EVAL_GENERIC_CLI_COMMAND", raising=False)
+    monkeypatch.delenv("AIDD_EVAL_OPENCODE_COMMAND", raising=False)
 
 
 def _write_scenario_manifest(
@@ -283,6 +306,12 @@ def test_eval_runner_live_scenario_uses_installed_artifact_and_writes_install_me
     tmp_path: Path,
     monkeypatch,
 ) -> None:
+    _clear_live_runtime_command_env(monkeypatch)
+    _put_fake_provider_on_path(
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        executable_name="opencode",
+    )
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd-live"
@@ -351,6 +380,110 @@ def test_eval_runner_live_scenario_uses_installed_artifact_and_writes_install_me
     assert grader_payload["quality"]["dimension_scores"]["flow_fidelity"]["score"] == 3
 
 
+def test_eval_runner_live_codex_native_default_passes_without_env_override(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _clear_live_runtime_command_env(monkeypatch)
+    _put_fake_provider_on_path(
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        executable_name="codex",
+    )
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    fake_aidd = tmp_path / "fake-aidd-live-codex"
+    _write_fake_aidd(
+        fake_aidd,
+        exit_code=0,
+        write_stage_outputs=tuple(_PRIMARY_OUTPUTS),
+    )
+    scenario_dir = tmp_path / "harness" / "scenarios" / "live"
+    scenario_dir.mkdir(parents=True)
+    scenario_path = scenario_dir / "scenario-live-codex.yaml"
+    _write_scenario_manifest(
+        path=scenario_path,
+        repo_url=source_repo.as_uri(),
+        setup_commands=("printf 'setup\\n' > setup.log",),
+        verify_commands=("printf 'verify\\n' > verify.log",),
+        interview_required=False,
+        runtime_targets=("codex",),
+        work_item="WI-EVAL-LIVE-CODEX",
+        aidd_command=("missing-live-command",),
+        stage_start="idea",
+        stage_end="qa",
+        live=True,
+        quality_commands=("printf 'quality\\n' > quality.log",),
+    )
+    monkeypatch.setattr(
+        "aidd.harness.eval_runner.prepare_local_wheel_install",
+        lambda *, workspace_root, run_id: _install_result_for_fake_aidd(fake_aidd),
+    )
+
+    result = run_eval_scenario(
+        scenario_path=scenario_path,
+        runtime_id="codex",
+        workspace_root=tmp_path / ".aidd",
+    )
+
+    assert result.status == "pass"
+    metadata_payload = yaml.safe_load(
+        result.bundle_root.joinpath("harness-metadata.json").read_text(encoding="utf-8")
+    )
+    working_copy_path = Path(metadata_payload["execution_context"]["target_repository_cwd"])
+    live_config_text = (working_copy_path / "aidd.example.toml").read_text(encoding="utf-8")
+    assert 'command = "codex exec --full-auto --skip-git-repo-check --json -"' in live_config_text
+    assert 'mode = "native"' in live_config_text
+
+
+def test_eval_runner_live_missing_native_provider_fails_before_repo_prep(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _clear_live_runtime_command_env(monkeypatch)
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    monkeypatch.setenv("PATH", "")
+    scenario_dir = tmp_path / "harness" / "scenarios" / "live"
+    scenario_dir.mkdir(parents=True)
+    scenario_path = scenario_dir / "scenario-live-missing-provider.yaml"
+    _write_scenario_manifest(
+        path=scenario_path,
+        repo_url=source_repo.as_uri(),
+        setup_commands=("printf 'setup\\n' > setup.log",),
+        verify_commands=("printf 'verify\\n' > verify.log",),
+        interview_required=False,
+        runtime_targets=("codex",),
+        work_item="WI-EVAL-LIVE-MISSING-PROVIDER",
+        aidd_command=("missing-live-command",),
+        stage_start="idea",
+        stage_end="qa",
+        live=True,
+    )
+    repo_prep_called = False
+
+    def _unexpected_repo_prep(**_: object) -> object:
+        nonlocal repo_prep_called
+        repo_prep_called = True
+        raise AssertionError("repo prep should not run when provider preflight fails")
+
+    monkeypatch.setattr(
+        "aidd.harness.eval_runner.prepare_scenario_repository",
+        _unexpected_repo_prep,
+    )
+
+    result = run_eval_scenario(
+        scenario_path=scenario_path,
+        runtime_id="codex",
+        workspace_root=tmp_path / ".aidd",
+    )
+
+    assert result.status == "fail"
+    assert repo_prep_called is False
+    verdict_text = result.verdict_path.read_text(encoding="utf-8")
+    assert "Live runtime command executable is not available" in verdict_text
+
+
 def test_eval_runner_live_scenario_writes_runtime_config_for_published_package_run(
     tmp_path: Path,
     monkeypatch,
@@ -415,6 +548,12 @@ def test_eval_runner_live_quality_failure_does_not_change_execution_verdict(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
+    _clear_live_runtime_command_env(monkeypatch)
+    _put_fake_provider_on_path(
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        executable_name="opencode",
+    )
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd-live-quality-fail"
@@ -465,6 +604,7 @@ def test_eval_runner_live_generic_cli_uses_release_proof_helper_by_default(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
+    _clear_live_runtime_command_env(monkeypatch)
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd-live-generic"
@@ -511,7 +651,9 @@ def test_eval_runner_live_generic_cli_uses_release_proof_helper_by_default(
 
 def test_eval_runner_live_generic_cli_requires_explicit_command_source(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _clear_live_runtime_command_env(monkeypatch)
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     scenario_dir = tmp_path / "harness" / "scenarios" / "live"
@@ -529,6 +671,17 @@ def test_eval_runner_live_generic_cli_requires_explicit_command_source(
         stage_end="qa",
         live=True,
     )
+    repo_prep_called = False
+
+    def _unexpected_repo_prep(**_: object) -> object:
+        nonlocal repo_prep_called
+        repo_prep_called = True
+        raise AssertionError("repo prep should not run when live preflight fails")
+
+    monkeypatch.setattr(
+        "aidd.harness.eval_runner.prepare_scenario_repository",
+        _unexpected_repo_prep,
+    )
 
     result = run_eval_scenario(
         scenario_path=scenario_path,
@@ -537,6 +690,7 @@ def test_eval_runner_live_generic_cli_requires_explicit_command_source(
     )
 
     assert result.status == "fail"
+    assert repo_prep_called is False
     verdict_text = result.verdict_path.read_text(encoding="utf-8")
     assert "AIDD_EVAL_GENERIC_CLI_COMMAND" in verdict_text
 
@@ -737,6 +891,12 @@ def test_eval_runner_fails_pass_status_when_required_outputs_are_missing(
         live=True,
     )
     monkeypatch = pytest.MonkeyPatch()
+    _clear_live_runtime_command_env(monkeypatch)
+    _put_fake_provider_on_path(
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        executable_name="opencode",
+    )
     monkeypatch.setattr(
         "aidd.harness.eval_runner.prepare_local_wheel_install",
         lambda *, workspace_root, run_id: _install_result_for_fake_aidd(fake_aidd),

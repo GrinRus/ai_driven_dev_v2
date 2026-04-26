@@ -40,25 +40,29 @@ external prerequisites to already be true:
 - the requested runtime appears in the scenario's `runtime_targets`;
 - the machine has network access to clone the pinned public target repository;
 - the selected provider is already authenticated and runnable on the machine;
-- you already have an **AIDD-compatible wrapper command** for the chosen live runtime.
+- the selected provider CLI is available, or you have an AIDD-compatible wrapper
+  command override for the chosen live runtime.
 
 This skill does **not** provision runtime authentication, wrapper scripts, or provider setup for you.
 
 ## Runtime-command contract
 
-For local manual live runs, you must provide a runtime-command override through environment variables:
+For local manual live runs, `codex` and `opencode` use native provider CLI
+commands by default. You may provide a runtime-command override through
+environment variables when you need a custom wrapper:
 
 - `AIDD_EVAL_CODEX_COMMAND` for `codex`
 - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
 
-The value must point to an **AIDD-compatible wrapper command**:
+When set, the value must point to an **AIDD-compatible wrapper command**:
 
 - it must be invokable from the shell on the current machine;
 - it must accept the adapter flags AIDD passes for that runtime;
 - it may be a wrapper around the upstream provider CLI rather than the raw provider binary;
-- `aidd doctor` probing a provider binary does **not** prove the configured execution command is valid for live execution.
+- `aidd doctor` distinguishes provider probe readiness from execution command readiness.
 
-There are no repo-local wrapper templates in this wave. The operator must already have a working execution surface.
+There are no repo-local wrapper templates in this wave. The operator must already
+have provider auth and a working provider CLI or wrapper execution surface.
 
 ## Local preflight checklist
 
@@ -70,20 +74,21 @@ Before the live run, confirm all of these:
 4. the scenario has `automation_lane: manual`
 5. the scenario forces `stage_scope: idea -> qa`
 6. the runtime you plan to use appears in `runtime_targets`
-7. the matching runtime-command env var is exported in the current shell
-8. the runtime command resolves on the machine and uses the expected auth state
+7. `uv run aidd eval doctor <manifest> --runtime <runtime>` reports execution readiness
+8. any wrapper env var you choose to set resolves on the machine and uses the expected auth state
 
 Recommended local preflight:
 
 ```bash
 uv sync --extra dev
 uv run aidd doctor
-export AIDD_EVAL_CODEX_COMMAND='<aidd-compatible codex wrapper>'
+uv run aidd eval doctor harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
 ```
 
-or:
+Optional wrapper override:
 
 ```bash
+export AIDD_EVAL_CODEX_COMMAND='<aidd-compatible codex wrapper>'
 export AIDD_EVAL_OPENCODE_COMMAND='<aidd-compatible opencode wrapper>'
 ```
 
@@ -113,7 +118,7 @@ During a successful local live run, the harness will:
 4. select the **first listed issue** from the curated issue pool;
 5. write issue-selection evidence to the eval bundle and target-repo context;
 6. seed `.aidd/` inside the target repository;
-7. write a live `aidd.example.toml` with the runtime command for the chosen provider;
+7. write a live `aidd.example.toml` with the runtime command and execution mode for the chosen provider;
 8. build and install the AIDD artifact under test with `uv tool`;
 9. run installed `aidd` from the target repository root with explicit workflow bounds `idea -> qa`;
 10. run setup, verify, and quality commands and write the final audit artifacts.
@@ -169,8 +174,9 @@ A live run is only "clean" when execution evidence exists, verification output i
 
 ## First triage for common failures
 
-- Missing runtime-command env var: export `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND` before rerunning.
-- Runtime launches but immediately fails: the configured command is probably not an AIDD-compatible wrapper command.
+- Provider executable missing: install/login to the selected provider CLI, or export `AIDD_EVAL_CODEX_COMMAND` / `AIDD_EVAL_OPENCODE_COMMAND` for a wrapper.
+- Runtime launches but immediately fails in native mode: inspect provider auth, model selection, and sandbox permissions.
+- Runtime launches but immediately fails in `adapter-flags` mode: the configured command is probably not an AIDD-compatible wrapper command.
 - `unsupported-runtime`: the runtime is not declared in the scenario's `runtime_targets`.
 - `blocked`: inspect `questions.md` / `answers.md` expectations for interview scenarios.
 - `fail` after run success: inspect `verify-transcript.json`, `quality-transcript.json`, and the stage-local validator reports.
@@ -179,8 +185,8 @@ A live run is only "clean" when execution evidence exists, verification output i
 ## Procedure
 
 1. Confirm the selected scenario is in `harness/scenarios/live/`, has `automation_lane: manual`, and declares the requested runtime in `runtime_targets`.
-2. Export the matching local runtime-command env var and confirm it points to an AIDD-compatible wrapper command.
-3. Run the local preflight checks from this skill.
+2. Run the local preflight checks from this skill, including `aidd eval doctor`.
+3. Export a wrapper env var only when you intentionally want `adapter-flags` mode.
 4. Launch `uv run aidd eval run <manifest> --runtime <runtime>`.
 5. Preserve the resulting bundle and inspect `verdict.md`, `grader.json`, `quality-report.md`, and transcripts before judging the run.
 6. If the setup, provider coverage, size classification, quality recipe, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
@@ -189,7 +195,7 @@ A live run is only "clean" when execution evidence exists, verification output i
 
 - Never treat live E2E as a CI or release lane.
 - Never assume this skill provisions runtime auth, wrappers, or provider setup.
-- Never dispatch the manual GitHub workflow without the runtime-command secret for the selected provider.
+- Never dispatch the manual GitHub workflow without provider execution readiness for the selected runtime.
 - Never run a live scenario without storing the resolved repo pin.
 - Never run a live scenario without storing the selected issue snapshot.
 - Never treat a live scenario as canonical unless it executes `idea -> qa`.

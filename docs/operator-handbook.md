@@ -26,13 +26,15 @@ Today:
 
 Smoke, conformance, and live operator proof are separate lanes. Do not treat them as interchangeable.
 
-For the GitHub Actions manual live lane, the selected live provider must be wired
-through a runner-available command override secret:
+For the GitHub Actions manual live lane, Codex and OpenCode use native provider
+commands by default. A runner-available command override secret is optional when
+the operator wants a custom wrapper:
 
 - `AIDD_EVAL_CODEX_COMMAND`
 - `AIDD_EVAL_OPENCODE_COMMAND`
 
-Those values should point to wrapper commands that accept the AIDD adapter flags.
+Those values should point to wrapper commands that accept the AIDD adapter flags;
+when they are unset, the harness validates the default native provider command.
 
 ## 3. Prerequisites
 
@@ -44,8 +46,8 @@ Required:
 Optional:
 
 - runtime CLIs you want to probe in `aidd doctor` (for example `claude`, `codex`, `opencode`)
-- AIDD-compatible execution commands or wrapper commands for any runtime you want
-  to use with workflow, stage, or live eval execution
+- provider auth for the runtimes you want to execute
+- AIDD-compatible wrapper commands for advanced `adapter-flags` execution mode
 
 Runtime binaries are external dependencies and are not bundled by AIDD.
 
@@ -80,15 +82,19 @@ root = ".aidd"
 
 [runtime.generic_cli]
 command = "python /path/to/aidd_generic_runtime_wrapper.py"
+mode = "adapter-flags"
 
 [runtime.claude_code]
 command = "/path/to/aidd-claude-code-wrapper"
+mode = "adapter-flags"
 
 [runtime.codex]
-command = "/path/to/aidd-codex-wrapper"
+command = "codex exec --full-auto --skip-git-repo-check --json -"
+mode = "native"
 
 [runtime.opencode]
-command = "/path/to/aidd-opencode-wrapper"
+command = "opencode run --format json --dangerously-skip-permissions"
+mode = "native"
 
 [logging]
 mode = "both"
@@ -97,9 +103,9 @@ mode = "both"
 max_attempts = 2
 ```
 
-These command values are execution-surface examples, not promises that the raw
-upstream provider binaries accept AIDD adapter flags directly. The configured
-command must be AIDD-compatible for the selected runtime.
+Codex and OpenCode native mode adapts AIDD stage briefs and prompt packs to the
+raw provider CLI. Use `mode = "adapter-flags"` only for wrapper commands that
+accept AIDD adapter flags directly.
 
 Current config fields consumed by the bootstrap CLI:
 
@@ -108,6 +114,7 @@ Current config fields consumed by the bootstrap CLI:
 - `runtime.claude_code.command`
 - `runtime.codex.command`
 - `runtime.opencode.command`
+- `runtime.<provider>.mode`
 - `logging.mode`
 - `repair.max_attempts`
 

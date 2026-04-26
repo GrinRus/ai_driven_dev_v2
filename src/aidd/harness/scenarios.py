@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from aidd.adapters.runtime_registry import runtime_ids
 from aidd.core.stages import STAGES
 
 
@@ -24,7 +25,7 @@ _SCENARIO_CLASSES = {
 _LIVE_SCENARIO_CLASSES = {"live-full-flow", "live-full-flow-interview"}
 _FEATURE_SIZES = {"small", "medium", "large"}
 _AUTOMATION_LANES = {"ci", "manual"}
-_SUPPORTED_RUNTIME_IDS = {"generic-cli", "claude-code", "codex", "opencode"}
+_SUPPORTED_RUNTIME_IDS = set(runtime_ids())
 
 
 @dataclass(frozen=True)

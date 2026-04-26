@@ -33,6 +33,7 @@ from aidd.adapters.opencode.runner import OpenCodeCommandContext, OpenCodeExitCl
 from aidd.adapters.opencode.runner import (
     build_subprocess_spec as build_opencode_subprocess_spec,
 )
+from aidd.adapters.runtime_registry import runtime_ids
 from aidd.harness.conformance_matrix import (
     RuntimeConformanceMatrix,
     RuntimeConformanceRow,
@@ -131,7 +132,7 @@ def _build_opencode_spec(workspace_root: Path) -> Any:
     )
 
 
-_ADAPTER_CONFORMANCE_SURFACES: dict[str, _AdapterConformanceSurface] = {
+_SURFACES_BY_RUNTIME: dict[str, _AdapterConformanceSurface] = {
     "generic-cli": _AdapterConformanceSurface(
         probe=probe_generic_cli,
         build_subprocess_spec=_build_generic_cli_spec,
@@ -152,6 +153,9 @@ _ADAPTER_CONFORMANCE_SURFACES: dict[str, _AdapterConformanceSurface] = {
         build_subprocess_spec=_build_opencode_spec,
         exit_classification_enum=OpenCodeExitClassification,
     ),
+}
+_ADAPTER_CONFORMANCE_SURFACES: dict[str, _AdapterConformanceSurface] = {
+    runtime_id: _SURFACES_BY_RUNTIME[runtime_id] for runtime_id in runtime_ids()
 }
 
 

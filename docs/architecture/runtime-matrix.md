@@ -25,10 +25,11 @@ A runtime does not need every capability to participate, but the adapter must de
 
 ## Execution-command note
 
-For CLI-backed runtimes, `aidd doctor` may probe a raw provider binary while
-workflow or stage execution uses a configured AIDD-compatible command that
-accepts the adapter flags for that runtime. Do not assume the upstream provider
-binary alone is always the correct execution surface.
+For CLI-backed runtimes, `aidd doctor` separates provider probing from execution
+readiness. Codex and OpenCode default to `native` execution, where AIDD adapts
+stage briefs and prompt packs to the raw provider CLI. Advanced operators may
+configure `adapter-flags` execution with an AIDD-compatible wrapper command that
+accepts the adapter flags for that runtime.
 
 ## Tier 1 commitment
 

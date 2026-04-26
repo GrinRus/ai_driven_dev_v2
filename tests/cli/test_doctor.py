@@ -11,8 +11,8 @@ from aidd.cli import main as cli_main
 runner = CliRunner()
 
 _CURRENT_DOCTOR_FOOTER = (
-    "Workflow, deterministic eval lanes, and manual live E2E audits are "
-    "available on maintained runtimes."
+    "Provider probe checks raw runtime availability; execution readiness checks "
+    "the configured AIDD command and mode."
 )
 
 
