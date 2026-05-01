@@ -1030,6 +1030,10 @@ def test_run_single_stage_orchestration_forces_failed_status_on_exhausted_repair
         "## Status",
         "# Status",
     )
+    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
+        "## Validation summary\n\n- structural: pass\n\n",
+        "## Validation summary\n\n- Validator verdict: pass\n- structural: pass\n\n",
+    )
     command = _write_runtime_writer_command(
         tmp_path=tmp_path,
         documents=runtime_documents,
@@ -1087,6 +1091,8 @@ def test_run_single_stage_orchestration_forces_failed_status_on_exhausted_repair
     assert "Repair budget status: `repair-budget-exhausted`" in stage_result_text
     assert "Canonical AIDD validation found open findings" in stage_result_text
     assert "Validator verdict: `pass`" not in stage_result_text
+    assert "Validator verdict: pass" not in stage_result_text
+    assert "Validator verdict: fail" in stage_result_text
     assert "CROSS-REPAIR-BUDGET-EXHAUSTED" in validator_report_text
     assert not (stage_root / "output" / "stage-result.md").exists()
 

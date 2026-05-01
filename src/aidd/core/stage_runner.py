@@ -245,7 +245,7 @@ _TERMINAL_NOTES_PATTERN = re.compile(
 )
 _TERMINAL_STATUS_PATTERN = re.compile(r"\b(succeeded|failed|blocked|needs-input)\b")
 _VALIDATOR_PASS_CLAIM_PATTERN = re.compile(
-    r"(validator(?: report)? verdict\s*[:(][^`\n]*`)pass(`)",
+    r"(validator(?: report)? verdict\s*[:(][^`\n]*`?)pass\b(`?)",
     re.IGNORECASE,
 )
 _VALIDATION_PASS_LINE_PATTERN = re.compile(r"(validation\s+`)pass(`)", re.IGNORECASE)
@@ -1235,6 +1235,7 @@ def run_single_stage_orchestration(
         workspace_root=workspace_root,
         preparation_bundle=preparation_bundle,
         execution_state=execution_state,
+        contracts_root=contracts_root,
     )
     try:
         adapter_outcome = adapter_executor(adapter_invocation, execution_state)
