@@ -14,6 +14,7 @@ Always prefer:
 Non-negotiable rules:
 
 - write Markdown artifacts only; do not switch to JSON schema output,
+- do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - ground material claims in cited sources (`[S1]`, `[S2]`, ...),
 - maintain an explicit evidence trace from findings to citations,
 - do not hide uncertainty; record it in `Trade-offs` or `Open questions`,

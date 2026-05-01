@@ -15,6 +15,7 @@ Always prefer:
 Non-negotiable rules:
 
 - write Markdown artifacts only; do not switch to JSON schema output,
+- do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - keep milestone ordering deterministic and dependency-aware,
 - tie risks to mitigation intent and verification notes,
 - do not hide unresolved scope or acceptance ambiguity,

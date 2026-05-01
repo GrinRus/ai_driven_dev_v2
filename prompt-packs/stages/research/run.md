@@ -34,6 +34,11 @@ uncertainty is visible.
 - `stage-result.md`
 - `validator-report.md`
 
+## System-owned control artifacts
+
+- Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
+  read-only to repair attempts.
+
 ## Citation and uncertainty discipline
 
 1. Every material claim in `Findings` must reference citation ids declared in `Sources`.

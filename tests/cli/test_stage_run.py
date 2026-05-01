@@ -28,7 +28,12 @@ def _materialize_plan_inputs(*, workspace_root: Path, work_item: str) -> None:
         path.write_text(f"# Input {index}\n\nPrepared.\n", encoding="utf-8")
 
 
-def _valid_plan_output_documents(*, include_repair_brief: bool = True) -> dict[str, str]:
+def _valid_plan_output_documents(
+    *,
+    include_repair_brief: bool = False,
+    repair_trace: bool = False,
+) -> dict[str, str]:
+    repair_trace_line = "- repaired against `repair-brief.md`\n" if repair_trace else ""
     documents = {
         "plan.md": (
             "# Plan\n\n"
@@ -47,8 +52,8 @@ def _valid_plan_output_documents(*, include_repair_brief: bool = True) -> dict[s
             "## Stage\n\nplan\n\n"
             "## Attempt history\n\n- attempt-0001\n\n"
             "## Status\n\nsucceeded\n\n"
-            "## Produced outputs\n\n- plan.md\n- repair-brief.md (no repair needed)\n\n"
-            "## Validation summary\n\n- structural: pass\n\n"
+            "## Produced outputs\n\n- plan.md\n\n"
+            f"## Validation summary\n\n- structural: pass\n{repair_trace_line}\n"
             "## Blockers\n\n- none\n\n"
             "## Next actions\n\n- advance\n\n"
             "## Terminal state notes\n\nReady.\n"
@@ -619,7 +624,7 @@ def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Pat
     writer_script = _write_runtime_writer_script(
         tmp_path=tmp_path,
         documents=_repair_trigger_plan_output_documents(),
-        next_documents=_valid_plan_output_documents(include_repair_brief=False),
+        next_documents=_valid_plan_output_documents(repair_trace=True),
         exit_code=0,
     )
     runtime_command = (

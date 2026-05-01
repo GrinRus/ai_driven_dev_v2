@@ -15,6 +15,7 @@ Always prefer:
 Non-negotiable rules:
 
 - write Markdown artifacts only; do not switch to JSON schema output,
+- do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - keep task entries uniquely identified and imperative,
 - keep one dominant output artifact per task and avoid hidden prerequisite work,
 - include explicit dependencies (`none` or concrete upstream ids) and one primary verification signal per task,

@@ -33,7 +33,11 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
 ## Conditional outputs
 
 - `questions.md` and `answers.md` when blocking clarification is required
-- `repair-brief.md` only after validation failure
+
+## System-owned control artifacts
+
+- Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
+  read-only to repair attempts.
 
 ## Implementation discipline
 

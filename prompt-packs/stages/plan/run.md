@@ -38,6 +38,11 @@ signals are mapped to planned increments.
 - `stage-result.md`
 - `validator-report.md`
 
+## System-owned control artifacts
+
+- Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
+  read-only to repair attempts.
+
 ## Planning discipline
 
 1. `Milestones` must be dependency-ordered execution increments, not unordered wishes.

@@ -28,6 +28,11 @@ sign-off state is coherent with required changes.
 - `stage-result.md`
 - `validator-report.md`
 
+## System-owned control artifacts
+
+- Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
+  read-only to repair attempts.
+
 ## Review discipline
 
 1. Every issue must be concrete, scoped, severity-tagged, and rationale-backed.

@@ -39,7 +39,11 @@ question state is visible.
 
 - `questions.md` when clarification is required.
 - `answers.md` only when user answers are provided for recorded questions.
-- `repair-brief.md` only when validation fails and another repair attempt is required.
+
+## System-owned control artifacts
+
+- Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
+  read-only to repair attempts.
 
 ## Execution instructions
 

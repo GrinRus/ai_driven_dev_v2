@@ -297,7 +297,6 @@ def test_resolve_expected_output_documents_and_validator_targets(tmp_path: Path)
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "idea-brief.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "stage-result.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "validator-report.md",
-        workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "repair-brief.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "questions.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "answers.md",
     )

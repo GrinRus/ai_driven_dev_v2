@@ -14,6 +14,7 @@ Always prefer:
 Non-negotiable rules:
 
 - write Markdown documents only; do not switch to JSON schemas,
+- do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - keep required sections complete and non-placeholder (`TBD`, `TODO`, `N/A`, `...` are invalid in required fields),
 - do not invent constraints or outcomes that are not supportable from inputs,
 - when clarification is required, write durable questions with `[blocking]` / `[non-blocking]` markers instead of guessing.
