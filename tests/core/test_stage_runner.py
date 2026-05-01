@@ -96,7 +96,7 @@ def _valid_plan_output_documents() -> dict[str, str]:
             "## Stage\n\nplan\n\n"
             "## Attempt history\n\n- attempt-0001\n\n"
             "## Status\n\nsucceeded\n\n"
-            "## Produced outputs\n\n- plan.md\n- repair-brief.md (no repair needed)\n\n"
+            "## Produced outputs\n\n- plan.md\n\n"
             "## Validation summary\n\n- structural: pass\n\n"
             "## Blockers\n\n- none\n\n"
             "## Next actions\n\n- advance\n\n"
@@ -109,11 +109,6 @@ def _valid_plan_output_documents() -> dict[str, str]:
             "## Semantic checks\n\n- none\n\n"
             "## Cross-document checks\n\n- none\n\n"
             "## Result\n\n- Verdict: `pass`\n"
-        ),
-        "repair-brief.md": (
-            "# Failed checks\n\n- none\n\n"
-            "## Required corrections\n\n- none\n\n"
-            "## Relevant upstream docs\n\n- none\n"
         ),
         "questions.md": "# Questions\n\n- none\n",
         "answers.md": "# Answers\n\n- none\n",
@@ -192,7 +187,6 @@ def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Pat
         / "implementation-report.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "stage-result.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "validator-report.md",
-        workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "repair-brief.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "questions.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "answers.md",
     )
@@ -325,6 +319,50 @@ def test_prepare_adapter_invocation_initial_attempt_has_no_repair_context(
     assert invocation.stage_brief_markdown == preparation_bundle.stage_brief_markdown
 
 
+def test_prepare_adapter_invocation_initial_attempt_removes_stale_repair_brief(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    stale_repair_brief_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md"
+    )
+    stale_repair_brief_path.parent.mkdir(parents=True, exist_ok=True)
+    stale_repair_brief_path.write_text(
+        "# Repair brief\n\nNo repair requested yet.\n",
+        encoding="utf-8",
+    )
+
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+
+    assert invocation.repair_mode is False
+    assert invocation.repair_brief_path is None
+    assert not stale_repair_brief_path.exists()
+
+
 def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     create_run_manifest(
@@ -346,6 +384,13 @@ def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_pa
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
     )
     second_attempt = persist_execution_state(
         workspace_root=workspace_root,
@@ -424,6 +469,13 @@ def test_restore_core_owned_repair_brief_reverts_runtime_overwrite(
         run_id="run-001",
         stage="plan",
     )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
+    )
     second_attempt = persist_execution_state(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -454,6 +506,50 @@ def test_restore_core_owned_repair_brief_reverts_runtime_overwrite(
     assert repair_brief_path.read_text(encoding="utf-8") == original_brief
 
 
+def test_restore_core_owned_repair_brief_removes_model_created_initial_brief(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    repair_brief_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md"
+    )
+    repair_brief_path.parent.mkdir(parents=True, exist_ok=True)
+    repair_brief_path.write_text("# Runtime-created repair brief\n", encoding="utf-8")
+
+    removed_path = restore_core_owned_repair_brief(
+        invocation_bundle=invocation,
+        workspace_root=workspace_root,
+    )
+
+    assert removed_path == repair_brief_path
+    assert not repair_brief_path.exists()
+
+
 def test_run_single_stage_orchestration_restores_repair_brief_when_adapter_raises(
     tmp_path: Path,
 ) -> None:
@@ -477,6 +573,13 @@ def test_run_single_stage_orchestration_restores_repair_brief_when_adapter_raise
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
     )
     stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
     repair_brief_path = stage_root / "repair-brief.md"
@@ -798,6 +901,87 @@ def test_run_single_stage_orchestration_executes_generic_cli_happy_path(
     assert metadata_payload["status"] == StageState.SUCCEEDED.value
 
 
+def test_run_single_stage_orchestration_removes_model_authored_initial_repair_brief(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
+        "## Status",
+        "# Status",
+    )
+    runtime_documents["repair-brief.md"] = (
+        "# Runtime-authored repair summary\n\n"
+        "This document must not become validation input on an initial attempt.\n"
+    )
+    command = _write_runtime_writer_command(
+        tmp_path=tmp_path,
+        documents=runtime_documents,
+        exit_code=0,
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        context = GenericCliStageContext(
+            stage=invocation.stage,
+            work_item=invocation.work_item,
+            run_id=invocation.run_id,
+            prompt_pack_path=Path("prompt-packs/stages/plan/system.md"),
+        )
+        spec = build_subprocess_spec(
+            configured_command=command,
+            workspace_root=workspace_root,
+            context=context,
+            base_env=dict(os.environ),
+            repository_root=Path.cwd(),
+        )
+        run_result = run_subprocess_with_streaming(spec=spec)
+        persist_attempt_runtime_artifacts(
+            attempt_path=execution_state.attempt_path,
+            run_result=run_result,
+        )
+        return AdapterExecutionOutcome(
+            succeeded=run_result.exit_classification is GenericCliExitClassification.SUCCESS,
+            details=run_result.exit_classification.value,
+        )
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    repair_brief_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md"
+    )
+    validator_report_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "validator-report.md"
+    )
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.PASS
+    assert not repair_brief_path.exists()
+    assert "repair-brief.md" not in validator_report_path.read_text(encoding="utf-8")
+
+
 def test_run_single_stage_orchestration_forces_failed_status_on_exhausted_repair_budget(
     tmp_path: Path,
 ) -> None:
@@ -822,6 +1006,13 @@ def test_run_single_stage_orchestration_forces_failed_status_on_exhausted_repair
         run_id="run-001",
         stage="plan",
     )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
+    )
     stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     (stage_root / "repair-brief.md").write_text(
@@ -838,6 +1029,10 @@ def test_run_single_stage_orchestration_forces_failed_status_on_exhausted_repair
     runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
         "## Status",
         "# Status",
+    )
+    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
+        "## Validation summary\n\n- structural: pass\n\n",
+        "## Validation summary\n\n- Validator verdict: pass\n- structural: pass\n\n",
     )
     command = _write_runtime_writer_command(
         tmp_path=tmp_path,
@@ -896,6 +1091,8 @@ def test_run_single_stage_orchestration_forces_failed_status_on_exhausted_repair
     assert "Repair budget status: `repair-budget-exhausted`" in stage_result_text
     assert "Canonical AIDD validation found open findings" in stage_result_text
     assert "Validator verdict: `pass`" not in stage_result_text
+    assert "Validator verdict: pass" not in stage_result_text
+    assert "Validator verdict: fail" in stage_result_text
     assert "CROSS-REPAIR-BUDGET-EXHAUSTED" in validator_report_text
     assert not (stage_root / "output" / "stage-result.md").exists()
 
@@ -1169,6 +1366,13 @@ def test_prepare_adapter_invocation_repair_attempt_requires_repair_brief(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
     )
     second_attempt = persist_execution_state(
         workspace_root=workspace_root,

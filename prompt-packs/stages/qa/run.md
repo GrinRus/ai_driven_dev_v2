@@ -39,7 +39,11 @@ The stage is complete only when verdict, recommendation, and evidence are cohere
 ## Conditional outputs
 
 - `questions.md` and `answers.md` when clarification is needed
-- `repair-brief.md` only when validation fails and repair is required
+
+## System-owned control artifacts
+
+- Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
+  read-only to repair attempts.
 
 ## QA discipline
 

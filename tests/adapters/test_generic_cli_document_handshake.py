@@ -155,7 +155,7 @@ def _valid_output_documents(*, unresolved_question: bool = False) -> dict[str, s
             "## Stage\n\nplan\n\n"
             "## Attempt history\n\n- attempt-0001\n\n"
             "## Status\n\nsucceeded\n\n"
-            "## Produced outputs\n\n- plan.md\n- repair-brief.md (no repair needed)\n\n"
+            "## Produced outputs\n\n- plan.md\n\n"
             "## Validation summary\n\n- structural: pass\n\n"
             "## Blockers\n\n- none\n\n"
             "## Next actions\n\n- advance\n\n"
@@ -168,11 +168,6 @@ def _valid_output_documents(*, unresolved_question: bool = False) -> dict[str, s
             "## Semantic checks\n\n- none\n\n"
             "## Cross-document checks\n\n- none\n\n"
             "## Result\n\n- Verdict: `pass`\n"
-        ),
-        "repair-brief.md": (
-            "# Failed checks\n\n- none\n\n"
-            "## Required corrections\n\n- none\n\n"
-            "## Relevant upstream docs\n\n- none\n"
         ),
         "questions.md": f"# Questions\n\n{questions_block}",
         "answers.md": f"# Answers\n\n{answers_block}",

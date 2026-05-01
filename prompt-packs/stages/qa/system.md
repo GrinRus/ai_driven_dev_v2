@@ -16,6 +16,7 @@ Always prefer:
 Non-negotiable rules:
 
 - write Markdown artifacts only; do not switch to JSON schema output,
+- do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - do not issue `ready` or `proceed` conclusions without evidence references for material claims,
 - keep quality verdict (`ready`, `ready-with-risks`, `not-ready`) coherent with unresolved findings and verification status,
 - keep release recommendation (`proceed`, `proceed-with-conditions`, `hold`) coherent with verdict and residual-risk severity,

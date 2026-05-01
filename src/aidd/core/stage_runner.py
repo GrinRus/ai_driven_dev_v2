@@ -245,7 +245,7 @@ _TERMINAL_NOTES_PATTERN = re.compile(
 )
 _TERMINAL_STATUS_PATTERN = re.compile(r"\b(succeeded|failed|blocked|needs-input)\b")
 _VALIDATOR_PASS_CLAIM_PATTERN = re.compile(
-    r"(validator(?: report)? verdict\s*[:(][^`\n]*`)pass(`)",
+    r"(validator(?: report)? verdict\s*[:(][^`\n]*`?)pass\b(`?)",
     re.IGNORECASE,
 )
 _VALIDATION_PASS_LINE_PATTERN = re.compile(r"(validation\s+`)pass(`)", re.IGNORECASE)
@@ -619,6 +619,27 @@ def _write_attempt_repair_context(
     return repair_context_path
 
 
+def _previous_stage_status_before_current_attempt(
+    *,
+    workspace_root: Path,
+    execution_state: StageExecutionState,
+) -> str | None:
+    stage_metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=execution_state.work_item,
+        run_id=execution_state.run_id,
+        stage=execution_state.stage,
+    )
+    if stage_metadata is None:
+        return None
+    status_history = stage_metadata.status_history
+    if len(status_history) < 2:
+        return None
+    if status_history[-1].status == StageState.EXECUTING.value:
+        return status_history[-2].status
+    return status_history[-1].status
+
+
 def prepare_adapter_invocation(
     *,
     workspace_root: Path,
@@ -637,20 +658,25 @@ def prepare_adapter_invocation(
             f"{preparation_bundle.work_item} != {execution_state.work_item}"
         )
 
-    repair_mode = execution_state.attempt_number > 1
+    stage_documents_root = workspace_stage_root(
+        root=workspace_root,
+        work_item=execution_state.work_item,
+        stage=execution_state.stage,
+    )
+    candidate_repair_brief_path = stage_documents_root / "repair-brief.md"
+    previous_status = _previous_stage_status_before_current_attempt(
+        workspace_root=workspace_root,
+        execution_state=execution_state,
+    )
+    repair_mode = execution_state.attempt_number > 1 and (
+        previous_status == StageState.REPAIR_NEEDED.value
+    )
     repair_brief_path: Path | None = None
     repair_brief_markdown: str | None = None
     repair_context_markdown: str | None = None
 
     if repair_mode:
-        repair_brief_path = (
-            workspace_stage_root(
-                root=workspace_root,
-                work_item=execution_state.work_item,
-                stage=execution_state.stage,
-            )
-            / "repair-brief.md"
-        )
+        repair_brief_path = candidate_repair_brief_path
         if not repair_brief_path.exists():
             raise FileNotFoundError(
                 "Repair rerun requires an existing repair brief: "
@@ -674,6 +700,8 @@ def prepare_adapter_invocation(
             repair_context_markdown=repair_context_markdown,
             contracts_root=contracts_root,
         )
+    elif candidate_repair_brief_path.exists():
+        candidate_repair_brief_path.unlink()
 
     input_bundle_path, input_bundle_markdown = _prepare_attempt_input_bundle(
         workspace_root=workspace_root,
@@ -701,11 +729,25 @@ def prepare_adapter_invocation(
 def restore_core_owned_repair_brief(
     *,
     invocation_bundle: AdapterInvocationBundle,
+    workspace_root: Path | None = None,
 ) -> Path | None:
     if (
         invocation_bundle.repair_brief_path is None
         or invocation_bundle.repair_brief_markdown is None
     ):
+        if workspace_root is None or invocation_bundle.repair_mode:
+            return None
+        model_authored_repair_brief_path = (
+            workspace_stage_root(
+                root=workspace_root,
+                work_item=invocation_bundle.work_item,
+                stage=invocation_bundle.stage,
+            )
+            / "repair-brief.md"
+        )
+        if model_authored_repair_brief_path.exists():
+            model_authored_repair_brief_path.unlink()
+            return model_authored_repair_brief_path
         return None
 
     current_text = None
@@ -1193,11 +1235,15 @@ def run_single_stage_orchestration(
         workspace_root=workspace_root,
         preparation_bundle=preparation_bundle,
         execution_state=execution_state,
+        contracts_root=contracts_root,
     )
     try:
         adapter_outcome = adapter_executor(adapter_invocation, execution_state)
     finally:
-        restore_core_owned_repair_brief(invocation_bundle=adapter_invocation)
+        restore_core_owned_repair_brief(
+            invocation_bundle=adapter_invocation,
+            workspace_root=workspace_root,
+        )
 
     if not adapter_outcome.succeeded:
         failed_metadata_path = persist_stage_status(

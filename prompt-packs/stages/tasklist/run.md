@@ -29,6 +29,11 @@ notes, and a concrete verification signal.
 - `stage-result.md`
 - `validator-report.md`
 
+## System-owned control artifacts
+
+- Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
+  read-only to repair attempts.
+
 ## Decomposition discipline
 
 1. Use stable task ids and imperative task titles.

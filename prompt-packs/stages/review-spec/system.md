@@ -15,6 +15,7 @@ Always prefer:
 Non-negotiable rules:
 
 - write Markdown artifacts only; do not switch to JSON schema output,
+- do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - keep issue severity and rationale explicit for each material concern,
 - keep recommendations actionable and ordered by impact,
 - make sign-off status (`approved`, `approved-with-conditions`, `rejected`) consistent with readiness and issue severity.
