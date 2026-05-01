@@ -63,6 +63,10 @@ VALIDATOR_VERDICT_PATTERN = re.compile(r"^- Verdict:\s*`(?P<verdict>pass|fail)`\
 def _classify_runtime_log_line(line: str) -> RuntimeEventCategory:
     normalized = line.strip()
     lower = normalized.lower()
+    if lower.startswith("stage run result:"):
+        return "stage"
+    if "validator" in lower or "validation" in lower:
+        return "validator"
     if any(token in lower for token in ("error", "exception", "traceback", "failed")):
         return "error"
     if "warning" in lower:
@@ -380,6 +384,13 @@ def classify_failure_taxonomy(
                 reason=f"no-op execution signal: {normalized_event.event_kind}",
             )
 
+    validation_signals = (*stage_metadata_failures, *validator_failures)
+    if validation_signals:
+        return FailureTaxonomyResult(
+            category="validation",
+            reason=f"validation signal: {validation_signals[0].message}",
+        )
+
     if aidd_exit_code not in (None, 0):
         return FailureTaxonomyResult(
             category="runtime",
@@ -391,13 +402,6 @@ def classify_failure_taxonomy(
                 category="runtime",
                 reason=f"runtime error signal: {event.message}",
             )
-
-    validation_signals = (*validator_failures, *stage_metadata_failures)
-    if validation_signals:
-        return FailureTaxonomyResult(
-            category="validation",
-            reason=f"validation signal: {validation_signals[0].message}",
-        )
 
     if verification_exit_code not in (None, 0):
         return FailureTaxonomyResult(
@@ -472,7 +476,7 @@ def select_first_failure_boundary(
             )
         elif event.category == "error":
             _push_candidate(
-                rank=2,
+                rank=4,
                 line_number=event.line_number,
                 selection=FailureBoundarySelection(
                     category="runtime",
@@ -521,7 +525,7 @@ def select_first_failure_boundary(
             for token in ("error", "fail", "exception", "timeout")
         ):
             _push_candidate(
-                rank=2,
+                rank=4,
                 line_number=normalized_event.line_number,
                 selection=FailureBoundarySelection(
                     category="runtime",
@@ -531,13 +535,25 @@ def select_first_failure_boundary(
                 ),
             )
 
-    for event in (*validator_failures, *stage_metadata_failures):
+    for event in stage_metadata_failures:
+        _push_candidate(
+            rank=2,
+            line_number=event.line_number,
+            selection=FailureBoundarySelection(
+                category="validation",
+                signal_source="stage-metadata",
+                signal_line_number=event.line_number,
+                reason=event.message,
+            ),
+        )
+
+    for event in validator_failures:
         _push_candidate(
             rank=3,
             line_number=event.line_number,
             selection=FailureBoundarySelection(
                 category="validation",
-                signal_source="validator-or-stage-metadata",
+                signal_source="validator-report",
                 signal_line_number=event.line_number,
                 reason=event.message,
             ),
@@ -545,7 +561,7 @@ def select_first_failure_boundary(
 
     if aidd_exit_code not in (None, 0):
         _push_candidate(
-            rank=2,
+            rank=4,
             line_number=None,
             selection=FailureBoundarySelection(
                 category="runtime",
@@ -557,7 +573,7 @@ def select_first_failure_boundary(
 
     if verification_exit_code not in (None, 0):
         _push_candidate(
-            rank=4,
+            rank=5,
             line_number=None,
             selection=FailureBoundarySelection(
                 category="scenario-verification",

@@ -49,7 +49,7 @@ The maintained set must cover these buckets without turning the matrix into a fu
 - `generic-cli` is the deterministic baseline provider.
 - `codex` is the primary canonical runtime for maintained small and medium live lanes.
 - `opencode` must cover at least one live lane and one deterministic workflow lane.
-- `claude-code` remains on deterministic lanes only in this wave.
+- `claude-code` remains deterministic by default and is enabled only for the `AIDD-LIVE-005` small smoke lane.
 - Live manifests must not be scheduled in `ci` or release automation.
 
 ## Maintained scenario set
@@ -64,7 +64,7 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | `AIDD-LIVE-002` | `harness/scenarios/live/typer-boolean-help-rendering.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex` | `curated-issue-pool` |
 | `AIDD-LIVE-003` | `harness/scenarios/live/httpx-invalid-header-message.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex` | `curated-issue-pool` |
 | `AIDD-LIVE-004` | `harness/scenarios/live/httpx-cli-docs-sync.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex` | `curated-issue-pool` |
-| `AIDD-LIVE-005` | `harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex`, `opencode` | `curated-issue-pool` |
+| `AIDD-LIVE-005` | `harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex`, `opencode`, `claude-code` | `curated-issue-pool` |
 | `AIDD-LIVE-006` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `live-full-flow-interview` | `large` | `manual` | `opencode` | `codex`, `opencode` | `curated-issue-pool` |
 | `AIDD-LIVE-007` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex` | `curated-issue-pool` |
 | `AIDD-LIVE-008` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `live-full-flow-interview` | `large` | `manual` | `opencode` | `opencode` | `curated-issue-pool` |

@@ -27,6 +27,10 @@ EVENTS_JSONL_FILENAME = "events.jsonl"
 VALIDATOR_REPORT_FILENAME = "validator-report.md"
 REPAIR_HISTORY_FILENAME = "repair-history.md"
 LOG_ANALYSIS_FILENAME = "log-analysis.md"
+STAGE_TIMING_JSON_FILENAME = "stage-timing.json"
+STAGE_TIMING_MARKDOWN_FILENAME = "stage-timing.md"
+SELF_REPAIR_MATRIX_JSON_FILENAME = "self-repair-matrix.json"
+SELF_REPAIR_MATRIX_FILENAME = "self-repair-matrix.md"
 GRADER_FILENAME = "grader.json"
 VERDICT_FILENAME = "verdict.md"
 QUALITY_REPORT_FILENAME = "quality-report.md"
@@ -57,6 +61,10 @@ class ResultBundleLayout:
     validator_report_path: Path
     repair_history_path: Path
     log_analysis_path: Path
+    stage_timing_json_path: Path
+    stage_timing_markdown_path: Path
+    self_repair_matrix_json_path: Path
+    self_repair_matrix_path: Path
     grader_path: Path
     verdict_path: Path
     quality_report_path: Path
@@ -93,6 +101,10 @@ def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBu
         validator_report_path=run_root / VALIDATOR_REPORT_FILENAME,
         repair_history_path=run_root / REPAIR_HISTORY_FILENAME,
         log_analysis_path=run_root / LOG_ANALYSIS_FILENAME,
+        stage_timing_json_path=run_root / STAGE_TIMING_JSON_FILENAME,
+        stage_timing_markdown_path=run_root / STAGE_TIMING_MARKDOWN_FILENAME,
+        self_repair_matrix_json_path=run_root / SELF_REPAIR_MATRIX_JSON_FILENAME,
+        self_repair_matrix_path=run_root / SELF_REPAIR_MATRIX_FILENAME,
         grader_path=run_root / GRADER_FILENAME,
         verdict_path=run_root / VERDICT_FILENAME,
         quality_report_path=run_root / QUALITY_REPORT_FILENAME,
@@ -123,6 +135,8 @@ def _command_transcript_payload(transcript: HarnessCommandTranscript) -> dict[st
         "exit_code": transcript.exit_code,
         "stderr_text": transcript.stderr_text,
         "stdout_text": transcript.stdout_text,
+        "timed_out": transcript.timed_out,
+        "timeout_seconds": transcript.timeout_seconds,
     }
 
 
@@ -214,6 +228,8 @@ def write_harness_metadata(
             "duration_seconds": aidd_run_result.duration_seconds,
             "exit_code": aidd_run_result.exit_code,
             "runtime_id": aidd_run_result.runtime_id,
+            "timed_out": aidd_run_result.timed_out,
+            "timeout_seconds": aidd_run_result.timeout_seconds,
             "work_item": aidd_run_result.work_item,
         }
     return _write_json(layout.harness_metadata_path, metadata_payload)
@@ -262,6 +278,8 @@ def write_command_transcripts(
             "exit_code": None if aidd_run_result is None else aidd_run_result.exit_code,
             "runtime_id": None if aidd_run_result is None else aidd_run_result.runtime_id,
             "step": "run",
+            "timed_out": False if aidd_run_result is None else aidd_run_result.timed_out,
+            "timeout_seconds": None if aidd_run_result is None else aidd_run_result.timeout_seconds,
             "work_item": None if aidd_run_result is None else aidd_run_result.work_item,
         },
     )

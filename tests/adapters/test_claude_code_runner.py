@@ -36,6 +36,7 @@ from aidd.adapters.claude_code.runner import (
     run_subprocess_with_streaming,
 )
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
+from aidd.adapters.runtime_registry import RuntimeExecutionMode, get_runtime_definition
 from aidd.core.interview import (
     AdapterQuestionEvent,
     QuestionPolicy,
@@ -266,6 +267,53 @@ def test_build_subprocess_spec_sets_command_cwd_and_env(tmp_path: Path) -> None:
     assert spec.env["AIDD_WORKSPACE_ROOT"] == workspace_root.resolve(strict=False).as_posix()
 
 
+def test_build_native_subprocess_spec_uses_stdin_prompt_without_adapter_flags(
+    tmp_path: Path,
+) -> None:
+    repository_root = tmp_path / "repo"
+    workspace_root = repository_root / ".aidd" / "workitems" / "WI-001"
+    stage_brief_path = workspace_root / "stages/plan/stage-brief.md"
+    stage_brief_path.parent.mkdir(parents=True)
+    stage_brief_path.write_text("# Stage brief\n\nRun the stage.\n", encoding="utf-8")
+    prompt_pack_path = repository_root / "prompt-packs/stages/plan/system.md"
+    prompt_pack_path.parent.mkdir(parents=True)
+    prompt_pack_path.write_text("# System\n\nUse the contracts.\n", encoding="utf-8")
+    context = ClaudeCodeCommandContext(
+        stage="plan",
+        work_item="WI-001",
+        run_id="run-001",
+        workspace_root=workspace_root,
+        stage_brief_path=Path("stages/plan/stage-brief.md"),
+        prompt_pack_paths=(Path("prompt-packs/stages/plan/system.md"),),
+    )
+
+    spec = build_subprocess_spec(
+        configured_command=get_runtime_definition("claude-code").default_command,
+        context=context,
+        base_env={"BASE_FLAG": "1"},
+        repository_root=repository_root,
+        execution_mode=RuntimeExecutionMode.NATIVE,
+    )
+
+    assert spec.cwd == repository_root.resolve(strict=False)
+    assert spec.command == (
+        "claude",
+        "-p",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--dangerously-skip-permissions",
+    )
+    assert "--stage" not in spec.command
+    assert "--prompt-pack" not in spec.command
+    assert spec.stdin_text is not None
+    assert "- Runtime: claude-code" in spec.stdin_text
+    assert "# Stage brief" in spec.stdin_text
+    assert "# System" in spec.stdin_text
+    assert spec.env["BASE_FLAG"] == "1"
+    assert spec.env["AIDD_RUNTIME_ID"] == "claude-code"
+
+
 def test_resolve_exit_classification_prefers_stop_reason_over_exit_code() -> None:
     timeout_classification = _resolve_exit_classification(
         exit_code=0,
@@ -340,6 +388,24 @@ def test_run_subprocess_with_streaming_classifies_runtime_non_zero_exit(tmp_path
     assert result.exit_classification is ClaudeCodeExitClassification.RUNTIME_NON_ZERO_EXIT
     assert "out-before-exit\n" in result.stdout_text
     assert "err-before-exit\n" in result.stderr_text
+
+
+def test_run_subprocess_with_streaming_writes_stdin_text(tmp_path: Path) -> None:
+    spec = ClaudeCodeSubprocessSpec(
+        command=(
+            sys.executable,
+            "-c",
+            "import sys; print('stdin=' + sys.stdin.read())",
+        ),
+        cwd=tmp_path,
+        env=dict(os.environ),
+        stdin_text="native prompt\n",
+    )
+
+    result = run_subprocess_with_streaming(spec=spec)
+
+    assert result.exit_classification is ClaudeCodeExitClassification.SUCCESS
+    assert "stdin=native prompt\n" in result.stdout_text
 
 
 def test_run_subprocess_with_streaming_classifies_cancellation(tmp_path: Path) -> None:

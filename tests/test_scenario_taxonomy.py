@@ -100,9 +100,12 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
     assert all(
         "generic-cli" not in scenario.runtime_targets for scenario in live
     ), "Live rollout must remain off generic-cli in Wave 13."
-    assert all(
-        "claude-code" not in scenario.runtime_targets for scenario in live
-    ), "Live rollout must remain off Claude Code in Wave 13."
+    claude_live_targets = [
+        scenario.scenario_id for scenario in live if "claude-code" in scenario.runtime_targets
+    ]
+    assert claude_live_targets == [
+        "AIDD-LIVE-005"
+    ], "Claude Code live rollout must remain limited to the small smoke lane."
 
 
 def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:
@@ -136,6 +139,7 @@ def test_live_catalog_mentions_manual_matrix_coverage() -> None:
         "`live-full-flow-interview`",
         "`codex`",
         "`opencode`",
+        "AIDD_EVAL_CLAUDE_CODE_COMMAND",
         "AIDD_EVAL_CODEX_COMMAND",
         "AIDD_EVAL_OPENCODE_COMMAND",
     ):
@@ -161,11 +165,15 @@ def test_manual_live_workflow_dispatch_is_manual_only() -> None:
     assert set(trigger_block) == {"workflow_dispatch"}
     inputs = trigger_block["workflow_dispatch"]["inputs"]
     assert set(inputs) == {"scenario_id", "runtime_id", "feature_size", "scenario_class"}
-    assert inputs["runtime_id"]["options"] == ["codex", "opencode"]
+    assert inputs["runtime_id"]["options"] == ["codex", "opencode", "claude-code"]
 
     job_env = workflow["jobs"]["manual-live-e2e"]["env"]
     assert job_env["AIDD_EVAL_CODEX_COMMAND"] == "${{ secrets.AIDD_EVAL_CODEX_COMMAND }}"
     assert job_env["AIDD_EVAL_OPENCODE_COMMAND"] == "${{ secrets.AIDD_EVAL_OPENCODE_COMMAND }}"
+    assert (
+        job_env["AIDD_EVAL_CLAUDE_CODE_COMMAND"]
+        == "${{ secrets.AIDD_EVAL_CLAUDE_CODE_COMMAND }}"
+    )
 
     steps = workflow["jobs"]["manual-live-e2e"]["steps"]
     run_blocks = "\n".join(step.get("run", "") for step in steps if isinstance(step, dict))

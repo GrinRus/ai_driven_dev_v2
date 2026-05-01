@@ -114,6 +114,10 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     assert "AIDD-compatible wrapper commands" in readme
     assert "mode = \"native\"" in operator_handbook
     assert "mode = \"adapter-flags\"" in operator_handbook
+    assert (
+        "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
+        in operator_handbook
+    )
     assert "codex exec --full-auto --skip-git-repo-check --json -" in operator_handbook
     assert "opencode run --format json --dangerously-skip-permissions" in operator_handbook
     assert "probe target and the execution command do not have to be identical" in adapter_protocol
@@ -130,6 +134,7 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
 
     for needle in (
         "prepared local **source checkout**",
+        "`AIDD_EVAL_CLAUDE_CODE_COMMAND`",
         "`AIDD_EVAL_CODEX_COMMAND`",
         "`AIDD_EVAL_OPENCODE_COMMAND`",
         "native provider CLI",

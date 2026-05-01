@@ -47,10 +47,11 @@ This skill does **not** provision runtime authentication, wrapper scripts, or pr
 
 ## Runtime-command contract
 
-For local manual live runs, `codex` and `opencode` use native provider CLI
+For local manual live runs, `claude-code`, `codex`, and `opencode` use native provider CLI
 commands by default. You may provide a runtime-command override through
 environment variables when you need a custom wrapper:
 
+- `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
 - `AIDD_EVAL_CODEX_COMMAND` for `codex`
 - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
 
@@ -90,6 +91,7 @@ Optional wrapper override:
 ```bash
 export AIDD_EVAL_CODEX_COMMAND='<aidd-compatible codex wrapper>'
 export AIDD_EVAL_OPENCODE_COMMAND='<aidd-compatible opencode wrapper>'
+export AIDD_EVAL_CLAUDE_CODE_COMMAND='<aidd-compatible claude-code wrapper>'
 ```
 
 ## Canonical local launch
@@ -104,6 +106,12 @@ or:
 
 ```bash
 uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode
+```
+
+or:
+
+```bash
+uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime claude-code
 ```
 
 The GitHub `manual-live-e2e` workflow is a secondary alternate entrypoint, not the primary flow described by this skill.

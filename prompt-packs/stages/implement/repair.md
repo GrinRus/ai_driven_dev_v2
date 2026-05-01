@@ -18,6 +18,9 @@ scope safety, verification truthfulness, and cross-document status consistency.
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
 
+`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
+any repair summary in `stage-result.md`.
+
 ## Finding-to-fix mapping
 
 For each finding:
@@ -51,6 +54,10 @@ Use concrete repair actions:
 4. Do not claim commands/checks that were not executed in this attempt.
 5. If no-op is retained, include justification, evidence, and next action; otherwise no-op is invalid.
 6. Keep `stage-result.md` attempt status truthful for the current repair attempt.
+7. Use exact required headings from document contracts; do not rename or qualify headings.
+8. Read the repair budget section in `repair-brief.md` before declaring terminal status.
+9. If `repair-brief.md` says `repair-budget-exhausted` or `Rerun allowed after this attempt: no`, `stage-result.md` status must be `failed`; do not claim `succeeded`.
+10. Do not claim success unless required headings, validator verdict, stage-result status, touched files, and verification evidence are mutually consistent.
 
 ## Repair exit checks
 
@@ -58,4 +65,5 @@ Use concrete repair actions:
 - selected task id, change summary, touched-files list, and verification notes are mutually consistent,
 - touched-files entries stay within allowed write scope and match observed edits,
 - no-op outcomes (if any) include evidence-backed rationale and actionable next step,
+- repair-budget exhaustion cannot coexist with `stage-result.md` status `succeeded`,
 - no status drift remains between `implementation-report.md`, `validator-report.md`, and `stage-result.md`.

@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
-from aidd.harness.runner import invoke_aidd_run
+from aidd.harness.runner import (
+    HarnessAiddRunResult,
+    HarnessCommandTranscript,
+    HarnessVerificationError,
+    invoke_aidd_run,
+    run_verification_steps,
+)
 from aidd.harness.scenarios import (
     Scenario,
     ScenarioCommandSteps,
@@ -13,7 +21,11 @@ from aidd.harness.scenarios import (
 )
 
 
-def _build_scenario(*, runtime_targets: tuple[str, ...]) -> Scenario:
+def _build_scenario(
+    *,
+    runtime_targets: tuple[str, ...],
+    timeout_minutes: int | None = None,
+) -> Scenario:
     return Scenario(
         scenario_id="AIDD-TEST-RUNNER-INVOKE",
         scenario_class="deterministic-workflow",
@@ -32,7 +44,7 @@ def _build_scenario(*, runtime_targets: tuple[str, ...]) -> Scenario:
             stage_end=None,
             runtime_targets=runtime_targets,
             patch_budget_files=None,
-            timeout_minutes=None,
+            timeout_minutes=timeout_minutes,
             interview_required=False,
         ),
         verify=ScenarioCommandSteps(commands=("echo verify",)),
@@ -187,6 +199,29 @@ def test_invoke_aidd_run_preserves_non_zero_exit(tmp_path: Path) -> None:
     assert result.command_transcript.exit_code == 17
 
 
+def test_invoke_aidd_run_marks_manifest_timeout(tmp_path: Path) -> None:
+    working_copy_path = tmp_path / "working-copy"
+    working_copy_path.mkdir(parents=True, exist_ok=True)
+    fake_aidd = tmp_path / "fake-aidd-slow"
+    fake_aidd.write_text("#!/bin/sh\nsleep 5\n", encoding="utf-8")
+    fake_aidd.chmod(0o755)
+    scenario = _build_scenario(runtime_targets=("generic-cli",), timeout_minutes=0)
+
+    result = invoke_aidd_run(
+        scenario=scenario,
+        working_copy_path=working_copy_path,
+        runtime_id="generic-cli",
+        work_item="WI-TIMEOUT",
+        aidd_command=(fake_aidd.as_posix(),),
+    )
+
+    assert result.exit_code == 124
+    assert result.timed_out is True
+    assert result.timeout_seconds == 0
+    assert result.command_transcript.timed_out is True
+    assert "timed out" in result.stderr_text
+
+
 def test_invoke_aidd_run_rejects_unsupported_runtime(tmp_path: Path) -> None:
     working_copy_path = tmp_path / "working-copy"
     working_copy_path.mkdir(parents=True, exist_ok=True)
@@ -204,3 +239,45 @@ def test_invoke_aidd_run_rejects_unsupported_runtime(tmp_path: Path) -> None:
         )
 
     assert not (working_copy_path / "invoked-args.txt").exists()
+
+
+def test_run_verification_steps_preserves_partial_transcript_on_failure(
+    tmp_path: Path,
+) -> None:
+    working_copy_path = tmp_path / "working-copy"
+    working_copy_path.mkdir(parents=True, exist_ok=True)
+    scenario = _build_scenario(runtime_targets=("generic-cli",))
+    scenario = replace(
+        scenario,
+        verify=ScenarioCommandSteps(
+            commands=("printf 'first\\n'", "printf 'second\\n'; exit 2")
+        ),
+    )
+    aidd_run_result = HarnessAiddRunResult(
+        command=("aidd", "run"),
+        runtime_id="generic-cli",
+        work_item="WI-VERIFY",
+        exit_code=0,
+        stdout_text="",
+        stderr_text="",
+        duration_seconds=0.1,
+        command_transcript=HarnessCommandTranscript(
+            command="aidd run",
+            exit_code=0,
+            stdout_text="",
+            stderr_text="",
+            duration_seconds=0.1,
+        ),
+    )
+
+    with pytest.raises(HarnessVerificationError) as exc_info:
+        run_verification_steps(
+            scenario=scenario,
+            working_copy_path=working_copy_path,
+            aidd_run_result=aidd_run_result,
+        )
+
+    transcripts = cast(Any, exc_info.value).command_transcripts
+    assert len(transcripts) == 2
+    assert transcripts[0].exit_code == 0
+    assert transcripts[1].exit_code == 2

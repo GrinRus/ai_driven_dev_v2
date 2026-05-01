@@ -4,6 +4,10 @@
 
 Describe what failed validation and what the repair attempt must correct.
 
+`repair-brief.md` is AIDD-owned repair control evidence. Runtime adapters and model
+providers may read it as input, but must not rewrite it. Model-authored repair summaries
+belong in `stage-result.md` or a future `repair-notes.md`, not in this control artifact.
+
 ## Required sections
 
 - `Failed checks`
@@ -27,6 +31,7 @@ Describe what failed validation and what the repair attempt must correct.
 - Must include current attempt index and remaining repair attempts.
 - Must state whether another rerun is allowed after this repair attempt.
 - Must declare `repair-budget-exhausted` when no attempts remain.
+- `repair-budget-exhausted` means the repaired stage terminal status must be `failed`.
 - Must not instruct indefinite retries.
 
 ## Fix-plan rules
@@ -38,6 +43,7 @@ Describe what failed validation and what the repair attempt must correct.
 
 ## Authoring rules
 
+- Only AIDD core writes this document; runtime/model attempts treat it as read-only input.
 - Keep remediation steps deterministic and stage-scoped.
 - Use backticked workspace-relative paths for all document references.
 - Keep one correction item per bullet to preserve auditability.

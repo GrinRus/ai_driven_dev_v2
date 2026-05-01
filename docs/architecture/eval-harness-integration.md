@@ -155,6 +155,10 @@ Every eval run should aim to write:
 - `.aidd/reports/evals/<run_id>/validator-report.md`
 - `.aidd/reports/evals/<run_id>/repair-history.md`
 - `.aidd/reports/evals/<run_id>/log-analysis.md`
+- `.aidd/reports/evals/<run_id>/stage-timing.json`
+- `.aidd/reports/evals/<run_id>/stage-timing.md`
+- `.aidd/reports/evals/<run_id>/self-repair-matrix.json`
+- `.aidd/reports/evals/<run_id>/self-repair-matrix.md`
 - `.aidd/reports/evals/<run_id>/grader.json`
 - `.aidd/reports/evals/<run_id>/verdict.md`
 - `.aidd/reports/evals/<run_id>/quality-report.md`
@@ -164,6 +168,14 @@ Every eval run should aim to write:
 - `.aidd/reports/evals/<run_id>/run-transcript.json`
 - `.aidd/reports/evals/<run_id>/verify-transcript.json`
 - `.aidd/reports/evals/<run_id>/quality-transcript.json`
+
+`self-repair-matrix.json` and `.md` include the deterministic repair-probe catalog for
+all stages from `idea` to `qa`. Each probe row records the observed initial verdict,
+repair success, attempts used, final failure code, and terminal document consistency
+from the run artifacts when that stage was reached.
+Repair attempts also persist per-attempt `repair-context.md` under the run attempt
+directory so timing reports can attribute the repair reason to the exact retry rather
+than the final `repair-brief.md` state.
 - `.aidd/reports/evals/<run_id>/teardown-transcript.json`
 
 Installed live runs should additionally preserve install provenance in harness metadata:

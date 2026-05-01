@@ -46,7 +46,7 @@ def test_select_first_failure_boundary_uses_smallest_line_within_same_rank() -> 
     assert selection.reason == "runtime failed earlier"
 
 
-def test_select_first_failure_boundary_prioritizes_runtime_over_validation() -> None:
+def test_select_first_failure_boundary_prioritizes_validation_over_generic_runtime() -> None:
     selection = select_first_failure_boundary(
         runtime_events=(
             _runtime_event(line_number=4, category="error", message="runtime crashed"),
@@ -60,7 +60,7 @@ def test_select_first_failure_boundary_prioritizes_runtime_over_validation() -> 
         ),
     )
 
-    assert selection.category == "runtime"
+    assert selection.category == "validation"
 
 
 def test_select_first_failure_boundary_prioritizes_validation_over_verification() -> None:

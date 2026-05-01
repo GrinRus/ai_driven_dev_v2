@@ -14,6 +14,7 @@ on:
         options:
           - codex
           - opencode
+          - claude-code
       feature_size:
         description: Optional feature-size filter to enforce during selection
         required: false
@@ -34,6 +35,7 @@ jobs:
     env:
       AIDD_EVAL_CODEX_COMMAND: ${{ secrets.AIDD_EVAL_CODEX_COMMAND }}
       AIDD_EVAL_OPENCODE_COMMAND: ${{ secrets.AIDD_EVAL_OPENCODE_COMMAND }}
+      AIDD_EVAL_CLAUDE_CODE_COMMAND: ${{ secrets.AIDD_EVAL_CLAUDE_CODE_COMMAND }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v5

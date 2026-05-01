@@ -432,6 +432,57 @@ def test_validate_cross_document_consistency_reports_exhausted_repair_budget(
     )
 
 
+def test_validate_cross_document_consistency_allows_failed_exhausted_repair_budget(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "stage-result.md").write_text(
+        (
+            "# Stage\n\nreview\n\n"
+            "## Status\n\n"
+            "- `failed`\n\n"
+            "## Terminal state notes\n\n"
+            "- Repair budget status: `repair-budget-exhausted`; see `repair-brief.md`.\n"
+        ),
+        encoding="utf-8",
+    )
+    (stage_root / "repair-brief.md").write_text(
+        "# Failed checks\n\n"
+        "- `SEM-PLACEHOLDER-CONTENT` (`high`) in `workitems/WI-001/stages/review/plan.md`.\n\n"
+        "## Required corrections\n\n"
+        "- Remove placeholder text and rerun checks.\n\n"
+        "## Relevant upstream docs\n\n"
+        "- `questions.md`\n\n"
+        "repair-budget-exhausted\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == tuple()
+
+
 def test_validate_cross_document_consistency_avoids_false_positive_on_answered_bundle(
     tmp_path: Path,
 ) -> None:

@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from aidd.harness.scenarios import Scenario
 
@@ -34,6 +34,8 @@ class HarnessCommandTranscript:
     stdout_text: str
     stderr_text: str
     duration_seconds: float
+    timed_out: bool = False
+    timeout_seconds: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +55,8 @@ class HarnessAiddRunResult:
     stderr_text: str
     duration_seconds: float
     command_transcript: HarnessCommandTranscript
+    timed_out: bool = False
+    timeout_seconds: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,13 +115,21 @@ def _run_shell_commands(
             stderr_text=completed.stderr,
             duration_seconds=duration_seconds,
         )
+        command_transcripts.append(transcript)
         if completed.returncode != 0:
             stderr = completed.stderr.strip() or completed.stdout.strip() or "no command output"
-            raise error_type(
+            error = error_type(
                 f"{error_label} command failed with non-zero exit "
                 f"({completed.returncode}): {command}\n{stderr}"
             )
-        command_transcripts.append(transcript)
+            annotated_error = cast(Any, error)
+            annotated_error.command_transcripts = tuple(command_transcripts)
+            annotated_error.failed_command = command
+            annotated_error.failed_exit_code = completed.returncode
+            annotated_error.duration_seconds = sum(
+                item.duration_seconds for item in command_transcripts
+            )
+            raise error
     return tuple(command_transcripts)
 
 
@@ -145,6 +157,14 @@ def run_setup_steps(
         command_transcripts=command_transcripts,
         duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
     )
+
+
+def _timeout_output_to_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
 
 
 def invoke_aidd_run(
@@ -197,32 +217,58 @@ def invoke_aidd_run(
     if environment is not None:
         command_env.update(environment)
 
-    start = time.monotonic()
-    completed = subprocess.run(
-        command,
-        cwd=working_copy_path,
-        env=command_env,
-        capture_output=True,
-        text=True,
-        check=False,
+    timeout_seconds = (
+        float(scenario.run.timeout_minutes * 60)
+        if scenario.run.timeout_minutes is not None
+        else None
     )
+    start = time.monotonic()
+    timed_out = False
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=working_copy_path,
+            env=command_env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout_seconds,
+        )
+        exit_code = completed.returncode
+        stdout_text = completed.stdout
+        stderr_text = completed.stderr
+    except subprocess.TimeoutExpired as exc:
+        timed_out = True
+        exit_code = 124
+        stdout_text = _timeout_output_to_text(exc.stdout)
+        stderr_text = _timeout_output_to_text(exc.stderr)
+        timeout_message = (
+            f"AIDD run timed out after {timeout_seconds:.3f}s."
+            if timeout_seconds is not None
+            else "AIDD run timed out."
+        )
+        stderr_text = f"{stderr_text.rstrip()}\n{timeout_message}\n".lstrip()
     duration_seconds = time.monotonic() - start
     command_transcript = HarnessCommandTranscript(
         command=" ".join(command),
-        exit_code=completed.returncode,
-        stdout_text=completed.stdout,
-        stderr_text=completed.stderr,
+        exit_code=exit_code,
+        stdout_text=stdout_text,
+        stderr_text=stderr_text,
         duration_seconds=duration_seconds,
+        timed_out=timed_out,
+        timeout_seconds=timeout_seconds,
     )
     return HarnessAiddRunResult(
         command=command,
         runtime_id=runtime_id,
         work_item=work_item,
-        exit_code=completed.returncode,
-        stdout_text=completed.stdout,
-        stderr_text=completed.stderr,
+        exit_code=exit_code,
+        stdout_text=stdout_text,
+        stderr_text=stderr_text,
         duration_seconds=duration_seconds,
         command_transcript=command_transcript,
+        timed_out=timed_out,
+        timeout_seconds=timeout_seconds,
     )
 
 

@@ -165,6 +165,7 @@ Recommended shape:
               attempts/
                 attempt-0001/
                   input-bundle.md
+                  repair-context.md  # repair attempts only
                   runtime.log
                   artifact-index.json
     evals/

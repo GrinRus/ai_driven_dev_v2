@@ -18,6 +18,9 @@ severity/disposition coherence, and approval-decision correctness.
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
 
+`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
+any repair summary in `stage-result.md`.
+
 ## Finding-to-fix mapping
 
 For each finding:
@@ -50,6 +53,10 @@ Use concrete repair actions:
 3. Do not mark stage `succeeded` while unresolved `must-fix` findings remain.
 4. Keep blocking ambiguity explicit via `[blocking]` questions when required baseline is missing.
 5. Keep `stage-result.md` attempt status truthful for the current repair attempt.
+6. Use exact required headings from document contracts; do not rename or qualify headings.
+7. Read the repair budget section in `repair-brief.md` before declaring terminal status.
+8. If `repair-brief.md` says `repair-budget-exhausted` or `Rerun allowed after this attempt: no`, `stage-result.md` status must be `failed`; do not claim `succeeded`.
+9. Do not claim success unless required headings, validator verdict, stage-result status, approval status, and unresolved findings are mutually consistent.
 
 ## Repair exit checks
 
@@ -57,4 +64,5 @@ Use concrete repair actions:
 - no unsupported or evidence-free finding remains active,
 - approval status is coherent with unresolved `must-fix` findings,
 - required changes are explicit for non-approved outcomes,
+- repair-budget exhaustion cannot coexist with `stage-result.md` status `succeeded`,
 - no conflict remains between `review-report.md`, `validator-report.md`, and `stage-result.md`.

@@ -36,10 +36,15 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
         runtime_id="claude-code",
         config_section="claude_code",
         support_tier="tier-1",
-        default_command="claude",
+        default_command=(
+            "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
+        ),
         probe_command="claude",
-        default_execution_mode=RuntimeExecutionMode.ADAPTER_FLAGS,
-        supported_execution_modes=(RuntimeExecutionMode.ADAPTER_FLAGS,),
+        default_execution_mode=RuntimeExecutionMode.NATIVE,
+        supported_execution_modes=(
+            RuntimeExecutionMode.NATIVE,
+            RuntimeExecutionMode.ADAPTER_FLAGS,
+        ),
         live_command_env_var="AIDD_EVAL_CLAUDE_CODE_COMMAND",
     ),
     "codex": RuntimeDefinition(
@@ -116,4 +121,3 @@ def normalize_execution_mode(
             f"Supported modes: {supported}."
         )
     return mode
-

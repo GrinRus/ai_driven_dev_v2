@@ -4,6 +4,10 @@
 
 Describe structural, semantic, and cross-document validation findings.
 
+The canonical report is written by AIDD after post-runtime validation. Any
+model-authored `validator-report.md` content produced during runtime execution is treated
+as draft evidence and may be replaced by the canonical AIDD validator report.
+
 ## Required sections
 
 - `Summary`
@@ -41,6 +45,7 @@ Use stable, uppercase codes with subsystem prefixes:
 - `SEM-UNSUPPORTED-CLAIM` for assertions without evidence required by the contract.
 - `CROSS-REFERENCE-MISMATCH` for broken or contradictory document references.
 - `CROSS-BLOCKING-UNANSWERED` for unresolved blocking questions that prevent progression.
+- `CROSS-REPAIR-BUDGET-EXHAUSTED` for terminal repair-budget exhaustion that stops progression.
 
 ## Severity rules
 
@@ -60,6 +65,7 @@ Use stable, uppercase codes with subsystem prefixes:
 - Include workspace-relative document paths in backticks for every finding.
 - Do not omit severity for any listed issue.
 - Do not report `pass` when any `critical` issue remains unresolved.
+- Do not report `pass` when any canonical AIDD validator finding remains unresolved.
 - Keep wording diagnostic and actionable; avoid generic statements such as `bad output`.
 
 ## Validation cues
