@@ -89,9 +89,10 @@ opencode_reference_run:
   first_failure_signal: none (setup, aidd invocation, and verification all passed).
 limits:
   patch_budget_files: 8
-  timeout_minutes: 20
+  timeout_minutes: 90
 interview:
   required: false
 runtime_targets:
 - codex
 - opencode
+- claude-code

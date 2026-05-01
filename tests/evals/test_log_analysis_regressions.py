@@ -66,6 +66,12 @@ def test_regression_empty_runtime_log_inputs_remain_stable() -> None:
     assert selection.category == "none"
 
 
+def test_regression_stage_run_failed_line_is_not_runtime_error() -> None:
+    runtime_events = parse_runtime_log_text("Stage run result: action=stop state=failed\n")
+
+    assert runtime_events[0].category == "stage"
+
+
 def test_regression_empty_events_jsonl_inputs_remain_stable() -> None:
     normalized_events = parse_events_jsonl_text("")
     selection = select_first_failure_boundary(normalized_events=normalized_events)

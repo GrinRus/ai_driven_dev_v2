@@ -85,16 +85,26 @@ command = "python /path/to/aidd_generic_runtime_wrapper.py"
 mode = "adapter-flags"
 
 [runtime.claude_code]
-command = "/path/to/aidd-claude-code-wrapper"
-mode = "adapter-flags"
+command = "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
+mode = "native"
+# Optional per-attempt runtime subprocess budget.
+# timeout_seconds = 1200
+
+# Optional stage-specific overrides. Stage values take precedence over
+# runtime.<provider>.timeout_seconds.
+# [runtime.claude_code.stage_timeouts]
+# research = 1500
+# implement = 1800
 
 [runtime.codex]
 command = "codex exec --full-auto --skip-git-repo-check --json -"
 mode = "native"
+# timeout_seconds = 900
 
 [runtime.opencode]
 command = "opencode run --format json --dangerously-skip-permissions"
 mode = "native"
+# timeout_seconds = 900
 
 [logging]
 mode = "both"
@@ -103,9 +113,9 @@ mode = "both"
 max_attempts = 2
 ```
 
-Codex and OpenCode native mode adapts AIDD stage briefs and prompt packs to the
-raw provider CLI. Use `mode = "adapter-flags"` only for wrapper commands that
-accept AIDD adapter flags directly.
+Claude Code, Codex, and OpenCode native mode adapt AIDD stage briefs and prompt
+packs to the raw provider CLI. Use `mode = "adapter-flags"` only for wrapper
+commands that accept AIDD adapter flags directly.
 
 Current config fields consumed by the bootstrap CLI:
 
@@ -115,6 +125,8 @@ Current config fields consumed by the bootstrap CLI:
 - `runtime.codex.command`
 - `runtime.opencode.command`
 - `runtime.<provider>.mode`
+- `runtime.<provider>.timeout_seconds`
+- `runtime.<provider>.stage_timeouts.<stage>`
 - `logging.mode`
 - `repair.max_attempts`
 
@@ -171,8 +183,13 @@ Expected behavior in current bootstrap state:
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
 - `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths;
 - live `aidd eval run` is a manual external audit that installs a local wheel with `uv tool`, enters the pinned target repository, and keeps `.aidd/` inside that repository.
-- the GitHub `manual-live-e2e` workflow additionally requires the runtime-command
-  secret for the selected provider and fails fast before eval if it is missing.
+- live eval bundles include `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`,
+  and `self-repair-matrix.md` for per-step duration, deterministic repair-probe coverage,
+  and terminal document consistency audit.
+- repair retries persist `repair-context.md` in the run attempt directory, which lets
+  operators trace the exact validator findings that caused each retry.
+- the GitHub `manual-live-e2e` workflow uses native provider commands by default and forwards
+  runtime-command secrets only when an adapter-compatible wrapper override is needed.
 
 ## 7. Operational Notes
 

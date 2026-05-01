@@ -165,6 +165,9 @@ def test_create_next_attempt_directory_uses_monotonic_numbering(tmp_path: Path) 
         .relative_to(workspace_root)
         .as_posix()
     )
+    assert payload["documents"]["input_bundle"].endswith(
+        "/attempts/attempt-0004/input-bundle.md"
+    )
 
 
 def test_attempt_artifact_index_records_canonical_stage_document_paths(tmp_path: Path) -> None:
@@ -191,6 +194,7 @@ def test_attempt_artifact_index_records_canonical_stage_document_paths(tmp_path:
         name.removesuffix(".md").replace("-", "_")
         for name in RESERVED_STAGE_FILENAMES
     }
+    expected_doc_keys.add("input_bundle")
     assert set(payload["documents"]) == expected_doc_keys
 
     for filename in RESERVED_STAGE_FILENAMES:
@@ -199,6 +203,9 @@ def test_attempt_artifact_index_records_canonical_stage_document_paths(tmp_path:
             workspace_root / "workitems" / "WI-001" / "stages" / "plan" / filename
         ).relative_to(workspace_root)
         assert payload["documents"][key] == expected_path.as_posix()
+    assert payload["documents"]["input_bundle"].endswith(
+        "/attempts/attempt-0001/input-bundle.md"
+    )
 
     assert payload["logs"] == {
         "runtime_log": (

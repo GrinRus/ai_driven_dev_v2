@@ -13,6 +13,7 @@ ExitClassificationT = TypeVar("ExitClassificationT")
 class StageRuntimeRequest:
     runtime_id: str
     execution_mode: RuntimeExecutionMode
+    timeout_seconds: float | None
     stage: str
     work_item: str
     run_id: str
@@ -20,6 +21,11 @@ class StageRuntimeRequest:
     stage_brief_path: Path
     prompt_pack_paths: tuple[Path, ...]
     repository_root: Path
+    attempt_number: int = 1
+    repair_mode: bool = False
+    input_bundle_path: Path | None = None
+    repair_brief_path: Path | None = None
+    repair_context_markdown: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

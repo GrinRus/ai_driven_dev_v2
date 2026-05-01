@@ -13,6 +13,7 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
 
+from aidd.adapters.native_prompt import build_native_prompt_text as compile_native_prompt_text
 from aidd.adapters.runtime_artifacts import write_runtime_exit_metadata
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
@@ -27,6 +28,11 @@ class OpenCodeCommandContext:
     workspace_root: Path
     stage_brief_path: Path
     prompt_pack_paths: tuple[Path, ...]
+    attempt_number: int = 1
+    repair_mode: bool = False
+    input_bundle_path: Path | None = None
+    repair_brief_path: Path | None = None
+    repair_context_markdown: str | None = None
 
     def __post_init__(self) -> None:
         if not self.stage.strip():
@@ -43,6 +49,12 @@ class OpenCodeCommandContext:
             raise ValueError("Stage context requires at least one prompt-pack path.")
         if any(str(path).strip() == "" for path in self.prompt_pack_paths):
             raise ValueError("Stage context prompt-pack paths must not be empty.")
+        if self.attempt_number < 1:
+            raise ValueError("Stage context attempt number must be greater than zero.")
+        if self.input_bundle_path is not None and str(self.input_bundle_path).strip() == "":
+            raise ValueError("Stage context input bundle path must not be empty.")
+        if self.repair_brief_path is not None and str(self.repair_brief_path).strip() == "":
+            raise ValueError("Stage context repair brief path must not be empty.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -196,50 +208,21 @@ def _build_native_prompt_text(
     context: OpenCodeCommandContext,
     repository_root: Path | None,
 ) -> str:
-    resolved_workspace_root = context.workspace_root.resolve(strict=False)
-    resolved_stage_brief_path = _resolve_stage_brief_path_for_execution(
+    return compile_native_prompt_text(
+        runtime_id="opencode",
+        stage=context.stage,
+        work_item=context.work_item,
+        run_id=context.run_id,
+        workspace_root=context.workspace_root,
         stage_brief_path=context.stage_brief_path,
-        workspace_root=resolved_workspace_root,
-    )
-    resolved_prompt_pack_paths = _resolve_prompt_pack_paths_for_execution(
         prompt_pack_paths=context.prompt_pack_paths,
         repository_root=repository_root,
+        attempt_number=context.attempt_number,
+        repair_mode=context.repair_mode,
+        input_bundle_path=context.input_bundle_path,
+        repair_brief_path=context.repair_brief_path,
+        repair_context_markdown=context.repair_context_markdown,
     )
-
-    lines: list[str] = [
-        "# AIDD stage runtime request",
-        "",
-        "- Runtime: opencode",
-        f"- Stage: {context.stage}",
-        f"- Work item: {context.work_item}",
-        f"- Run id: {context.run_id}",
-        f"- Workspace root: {resolved_workspace_root.as_posix()}",
-        f"- Stage brief: {resolved_stage_brief_path.as_posix()}",
-        "",
-        "## Stage brief",
-        "",
-        _read_text_for_prompt(resolved_stage_brief_path).rstrip(),
-    ]
-    for prompt_pack_path in resolved_prompt_pack_paths:
-        lines.extend(
-            (
-                "",
-                f"## Prompt pack: {prompt_pack_path.as_posix()}",
-                "",
-                _read_text_for_prompt(prompt_pack_path).rstrip(),
-            )
-        )
-    lines.extend(
-        (
-            "",
-            "## Execution contract",
-            "",
-            "Use the workspace documents as the source of truth. Write the required "
-            "stage output Markdown files under the AIDD workspace for this stage.",
-            "",
-        )
-    )
-    return "\n".join(lines)
 
 
 def _write_native_prompt_file(
@@ -328,6 +311,8 @@ def build_execution_environment(
             "AIDD_STAGE": context.stage,
             "AIDD_WORK_ITEM": context.work_item,
             "AIDD_RUN_ID": context.run_id,
+            "AIDD_ATTEMPT_NUMBER": str(context.attempt_number),
+            "AIDD_REPAIR_MODE": "true" if context.repair_mode else "false",
             "AIDD_STAGE_BRIEF_PATH": resolved_stage_brief_path.as_posix(),
             "AIDD_PROMPT_PACK_PATHS": os.pathsep.join(
                 path.as_posix() for path in resolved_prompt_pack_paths
@@ -335,6 +320,14 @@ def build_execution_environment(
             "AIDD_RUNTIME_ID": "opencode",
         }
     )
+    if context.input_bundle_path is not None:
+        env["AIDD_INPUT_BUNDLE_PATH"] = context.input_bundle_path.resolve(
+            strict=False
+        ).as_posix()
+    if context.repair_brief_path is not None:
+        env["AIDD_REPAIR_BRIEF_PATH"] = context.repair_brief_path.resolve(
+            strict=False
+        ).as_posix()
     return env
 
 

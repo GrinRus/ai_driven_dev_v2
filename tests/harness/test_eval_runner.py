@@ -213,6 +213,10 @@ def _assert_bundle_basics(bundle_root: Path) -> None:
     assert (bundle_root / "quality-report.md").exists()
     assert (bundle_root / "summary.md").exists()
     assert (bundle_root / "log-analysis.md").exists()
+    assert (bundle_root / "stage-timing.json").exists()
+    assert (bundle_root / "stage-timing.md").exists()
+    assert (bundle_root / "self-repair-matrix.json").exists()
+    assert (bundle_root / "self-repair-matrix.md").exists()
     assert (bundle_root / "grader.json").exists()
 
 
@@ -595,7 +599,8 @@ def test_eval_runner_live_quality_failure_does_not_change_execution_verdict(
     quality_transcript_payload = yaml.safe_load(
         result.bundle_root.joinpath("quality-transcript.json").read_text(encoding="utf-8")
     )
-    assert quality_transcript_payload["command_count"] == 0
+    assert quality_transcript_payload["command_count"] == 1
+    assert quality_transcript_payload["commands"][0]["exit_code"] == 11
     quality_report = result.quality_report_path.read_text(encoding="utf-8")
     assert "quality commands failed" in quality_report
 
@@ -703,7 +708,7 @@ def test_eval_runner_fail_status_for_verification_non_zero(tmp_path: Path) -> No
         path=scenario_path,
         repo_url=source_repo.as_uri(),
         setup_commands=("printf 'setup\\n' > setup.log",),
-        verify_commands=("exit 9",),
+        verify_commands=("printf 'verify-before-fail\\n'", "exit 9"),
         interview_required=False,
         work_item="WI-EVAL-FAIL",
     )
@@ -717,7 +722,13 @@ def test_eval_runner_fail_status_for_verification_non_zero(tmp_path: Path) -> No
     assert result.status == "fail"
     _assert_bundle_basics(result.bundle_root)
     verdict_text = result.verdict_path.read_text(encoding="utf-8")
+    verify_transcript = yaml.safe_load(
+        result.bundle_root.joinpath("verify-transcript.json").read_text(encoding="utf-8")
+    )
     assert "- Status: `fail`" in verdict_text
+    assert verify_transcript["command_count"] == 2
+    assert verify_transcript["commands"][0]["exit_code"] == 0
+    assert verify_transcript["commands"][1]["exit_code"] == 9
 
 
 def test_eval_runner_fails_for_non_generic_runtime_real_invocation(tmp_path: Path) -> None:

@@ -29,7 +29,7 @@ def discover_version(command_path: str) -> str | None:
             capture_output=True,
             check=False,
             text=True,
-            timeout=2,
+            timeout=5,
         )
     except (FileNotFoundError, PermissionError, OSError, subprocess.TimeoutExpired):
         return None

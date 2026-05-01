@@ -152,6 +152,9 @@ Actions:
    - `validator-report.md`
    - `verdict.md`
    - `log-analysis.md`
+   - `stage-timing.md`
+   - `self-repair-matrix.json`
+   - `self-repair-matrix.md`
 3. Classify failure source:
    - `infra-fail`: setup/teardown/repo-prep issue;
    - `blocked`: interview lane is waiting for required answers evidence;

@@ -29,6 +29,9 @@ Every live E2E run must follow the installed full-flow operator model:
 7. Run installed `aidd` from that repository root with explicit workflow bounds `idea -> qa`.
 8. Keep `.aidd/` rooted inside the target repository.
 9. Preserve install, setup, run, verify, quality, and teardown evidence in the eval bundle.
+10. Preserve `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`, and
+    `self-repair-matrix.md` so operators can audit step duration, per-attempt runtime windows,
+    deterministic repair-probe coverage, terminal document consistency, and repair behavior.
 
 Live E2E is not defined by source-checkout execution from the AIDD repository itself, and it is not a merge gate.
 
@@ -38,6 +41,7 @@ Live E2E is not defined by source-checkout execution from the AIDD repository it
 - The only supported automation entrypoint is `.github/workflows/manual-live-e2e.yml`.
 - That workflow supports optional GitHub secret overrides for custom wrapper
   commands:
+  - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`
   - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
 - When no override is set, the harness validates the default native provider
@@ -83,14 +87,14 @@ For live scenarios in this wave:
 
 - `codex` is the primary canonical runtime for maintained small and medium live lanes;
 - `opencode` covers at least one live lane;
-- `claude-code` is not yet rolled out for live lanes;
+- `claude-code` is enabled only for the `AIDD-LIVE-005` small smoke lane;
 - `generic-cli` remains a deterministic baseline provider and is not a maintained live provider in this wave.
 
 Representative matrix coverage for the live lane:
 
 | Scenario class | Feature size | Maintained provider | Representative scenarios |
 | --- | --- | --- | --- |
-| `live-full-flow` | `small` | `codex` | `AIDD-LIVE-001`, `AIDD-LIVE-003`, `AIDD-LIVE-005` |
+| `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-001`, `AIDD-LIVE-003`, `AIDD-LIVE-005` |
 | `live-full-flow` | `medium` | `codex` | `AIDD-LIVE-002`, `AIDD-LIVE-004`, `AIDD-LIVE-007` |
 | `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006`, `AIDD-LIVE-008` |
 
@@ -118,6 +122,10 @@ Every live eval bundle must aim to contain:
 - `validator-report.md`
 - `repair-history.md`
 - `log-analysis.md`
+- `stage-timing.json`
+- `stage-timing.md`
+- `self-repair-matrix.json`
+- `self-repair-matrix.md`
 - `grader.json`
 - `verdict.md`
 - `quality-report.md`

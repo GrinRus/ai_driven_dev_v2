@@ -98,6 +98,10 @@ def _assert_required_bundle_files(layout_root: Path) -> None:
         "validator-report.md",
         "verdict.md",
         "quality-report.md",
+        "stage-timing.json",
+        "stage-timing.md",
+        "self-repair-matrix.json",
+        "self-repair-matrix.md",
     )
     for artifact_name in required_artifact_names:
         artifact_path = layout_root / artifact_name
@@ -192,6 +196,10 @@ def test_result_bundle_completeness_for_terminal_outcomes(
         payload={"scenario_id": "AIDD-TEST-BUNDLE-COMPLETENESS", "selected_issue": None},
     )
     layout.quality_report_path.write_text("# Live Quality Report\n\n- none\n", encoding="utf-8")
+    layout.stage_timing_json_path.write_text("{}\n", encoding="utf-8")
+    layout.stage_timing_markdown_path.write_text("# Stage Timing\n", encoding="utf-8")
+    layout.self_repair_matrix_json_path.write_text("{}\n", encoding="utf-8")
+    layout.self_repair_matrix_path.write_text("# Self-Repair Matrix\n", encoding="utf-8")
     copy_or_link_run_artifacts(
         layout=layout,
         runtime_log_path=runtime_log_path,

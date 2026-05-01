@@ -181,6 +181,41 @@ def _runtime_execution_mode_for_runtime(
     raise ValueError(f"Unsupported runtime id: {runtime}")
 
 
+def _runtime_timeout_for_runtime(
+    *,
+    runtime: str,
+    cfg: AiddConfig,
+    stage: str | None = None,
+) -> float | None:
+    if runtime == "generic-cli":
+        if stage is not None and stage in cfg.generic_cli_stage_timeout_seconds:
+            return cfg.generic_cli_stage_timeout_seconds[stage]
+        return cfg.generic_cli_timeout_seconds
+    if runtime == "claude-code":
+        if stage is not None and stage in cfg.claude_code_stage_timeout_seconds:
+            return cfg.claude_code_stage_timeout_seconds[stage]
+        return cfg.claude_code_timeout_seconds
+    if runtime == "codex":
+        if stage is not None and stage in cfg.codex_stage_timeout_seconds:
+            return cfg.codex_stage_timeout_seconds[stage]
+        return cfg.codex_timeout_seconds
+    if runtime == "opencode":
+        if stage is not None and stage in cfg.opencode_stage_timeout_seconds:
+            return cfg.opencode_stage_timeout_seconds[stage]
+        return cfg.opencode_timeout_seconds
+    raise ValueError(f"Unsupported runtime id: {runtime}")
+
+
+def _active_prompt_pack_paths(
+    *,
+    prompt_pack_paths: tuple[Path, ...],
+    repair_mode: bool,
+) -> tuple[Path, ...]:
+    if repair_mode:
+        return prompt_pack_paths
+    return tuple(path for path in prompt_pack_paths if path.name != "repair.md")
+
+
 def _runtime_probe_report(
     *,
     definition: RuntimeDefinition,
@@ -732,6 +767,11 @@ def stage_run(
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
     runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
     runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
+    runtime_timeout_seconds = _runtime_timeout_for_runtime(
+        runtime=runtime,
+        cfg=cfg,
+        stage=stage,
+    )
     repair_policy = RepairBudgetPolicy(default_max_repair_attempts=cfg.max_repair_attempts)
     selected_run_id: str | None = None
     if run_id is not None:
@@ -782,6 +822,7 @@ def stage_run(
             "workspace_root": workspace_root.as_posix(),
             "runtime_command": runtime_command,
             "runtime_execution_mode": runtime_execution_mode.value,
+            "runtime_timeout_seconds": runtime_timeout_seconds,
             "log_follow": log_follow,
         },
     )
@@ -826,16 +867,26 @@ def stage_run(
         stage_documents_root.mkdir(parents=True, exist_ok=True)
         stage_brief_path = stage_documents_root / "stage-brief.md"
         stage_brief_path.write_text(invocation.stage_brief_markdown, encoding="utf-8")
+        prompt_pack_paths_for_runtime = _active_prompt_pack_paths(
+            prompt_pack_paths=tuple(prompt_pack_file_paths),
+            repair_mode=invocation.repair_mode,
+        )
         runtime_request = StageRuntimeRequest(
             runtime_id=runtime,
             execution_mode=runtime_execution_mode,
+            timeout_seconds=runtime_timeout_seconds,
             stage=invocation.stage,
             work_item=invocation.work_item,
             run_id=invocation.run_id,
             workspace_root=workspace_root,
             stage_brief_path=stage_brief_path,
-            prompt_pack_paths=tuple(prompt_pack_file_paths),
+            prompt_pack_paths=prompt_pack_paths_for_runtime,
             repository_root=Path.cwd().resolve(strict=False),
+            attempt_number=invocation.attempt_number,
+            repair_mode=invocation.repair_mode,
+            input_bundle_path=invocation.input_bundle_path,
+            repair_brief_path=invocation.repair_brief_path,
+            repair_context_markdown=invocation.repair_context_markdown,
         )
 
         def _on_stdout(chunk: str) -> None:
@@ -865,6 +916,7 @@ def stage_run(
                     spec=generic_spec,
                     on_stdout=on_stdout,
                     on_stderr=on_stderr,
+                    timeout_seconds=runtime_request.timeout_seconds,
                 )
                 persist_attempt_runtime_artifacts(
                     attempt_path=execution_state.attempt_path,
@@ -878,7 +930,6 @@ def stage_run(
                     details=generic_run_result.exit_classification.value,
                 )
 
-            prompt_pack_paths_for_runtime = tuple(prompt_pack_file_paths)
             if runtime == "claude-code":
                 claude_context = ClaudeCodeCommandContext(
                     stage=invocation.stage,
@@ -886,18 +937,25 @@ def stage_run(
                     run_id=invocation.run_id,
                     workspace_root=workspace_root,
                     stage_brief_path=stage_brief_path,
-                    prompt_pack_paths=prompt_pack_paths_for_runtime,
+                    prompt_pack_paths=runtime_request.prompt_pack_paths,
+                    attempt_number=runtime_request.attempt_number,
+                    repair_mode=runtime_request.repair_mode,
+                    input_bundle_path=runtime_request.input_bundle_path,
+                    repair_brief_path=runtime_request.repair_brief_path,
+                    repair_context_markdown=runtime_request.repair_context_markdown,
                 )
                 claude_spec = build_claude_code_subprocess_spec(
                     configured_command=runtime_command,
                     context=claude_context,
                     base_env=dict(os.environ),
                     repository_root=runtime_request.repository_root,
+                    execution_mode=runtime_request.execution_mode,
                 )
                 claude_run_result = run_claude_code_subprocess_with_streaming(
                     spec=claude_spec,
                     on_stdout=on_stdout,
                     on_stderr=on_stderr,
+                    timeout_seconds=runtime_request.timeout_seconds,
                 )
                 persist_claude_code_runtime_log(
                     attempt_path=execution_state.attempt_path,
@@ -918,7 +976,12 @@ def stage_run(
                     run_id=invocation.run_id,
                     workspace_root=workspace_root,
                     stage_brief_path=stage_brief_path,
-                    prompt_pack_paths=prompt_pack_paths_for_runtime,
+                    prompt_pack_paths=runtime_request.prompt_pack_paths,
+                    attempt_number=runtime_request.attempt_number,
+                    repair_mode=runtime_request.repair_mode,
+                    input_bundle_path=runtime_request.input_bundle_path,
+                    repair_brief_path=runtime_request.repair_brief_path,
+                    repair_context_markdown=runtime_request.repair_context_markdown,
                 )
                 codex_spec = build_codex_subprocess_spec(
                     configured_command=runtime_command,
@@ -931,6 +994,7 @@ def stage_run(
                     spec=codex_spec,
                     on_stdout=on_stdout,
                     on_stderr=on_stderr,
+                    timeout_seconds=runtime_request.timeout_seconds,
                 )
                 persist_codex_runtime_log(
                     attempt_path=execution_state.attempt_path,
@@ -950,7 +1014,12 @@ def stage_run(
                     run_id=invocation.run_id,
                     workspace_root=workspace_root,
                     stage_brief_path=stage_brief_path,
-                    prompt_pack_paths=prompt_pack_paths_for_runtime,
+                    prompt_pack_paths=runtime_request.prompt_pack_paths,
+                    attempt_number=runtime_request.attempt_number,
+                    repair_mode=runtime_request.repair_mode,
+                    input_bundle_path=runtime_request.input_bundle_path,
+                    repair_brief_path=runtime_request.repair_brief_path,
+                    repair_context_markdown=runtime_request.repair_context_markdown,
                 )
                 opencode_spec = build_opencode_subprocess_spec(
                     configured_command=runtime_command,
@@ -963,6 +1032,7 @@ def stage_run(
                     spec=opencode_spec,
                     on_stdout=on_stdout,
                     on_stderr=on_stderr,
+                    timeout_seconds=runtime_request.timeout_seconds,
                 )
                 persist_opencode_runtime_log(
                     attempt_path=execution_state.attempt_path,

@@ -16,8 +16,10 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
 
+from aidd.adapters.native_prompt import build_native_prompt_text as compile_native_prompt_text
 from aidd.adapters.runtime_artifacts import write_runtime_exit_metadata
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
+from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
 from aidd.core.interview import (
     AdapterQuestionEvent,
     QuestionPolicy,
@@ -38,6 +40,11 @@ class ClaudeCodeCommandContext:
     workspace_root: Path
     stage_brief_path: Path
     prompt_pack_paths: tuple[Path, ...]
+    attempt_number: int = 1
+    repair_mode: bool = False
+    input_bundle_path: Path | None = None
+    repair_brief_path: Path | None = None
+    repair_context_markdown: str | None = None
 
     def __post_init__(self) -> None:
         if not self.stage.strip():
@@ -54,6 +61,12 @@ class ClaudeCodeCommandContext:
             raise ValueError("Stage context requires at least one prompt-pack path.")
         if any(str(path).strip() == "" for path in self.prompt_pack_paths):
             raise ValueError("Stage context prompt-pack paths must not be empty.")
+        if self.attempt_number < 1:
+            raise ValueError("Stage context attempt number must be greater than zero.")
+        if self.input_bundle_path is not None and str(self.input_bundle_path).strip() == "":
+            raise ValueError("Stage context input bundle path must not be empty.")
+        if self.repair_brief_path is not None and str(self.repair_brief_path).strip() == "":
+            raise ValueError("Stage context repair brief path must not be empty.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,6 +228,66 @@ def assemble_command(
     return tuple(command)
 
 
+def _split_configured_command(*, configured_command: str, runtime_label: str) -> tuple[str, ...]:
+    stripped = configured_command.strip()
+    if not stripped:
+        raise ValueError(f"Configured {runtime_label} command must not be empty.")
+
+    try:
+        base_tokens = shlex.split(stripped)
+    except ValueError as exc:
+        raise ValueError(
+            f"Configured {runtime_label} command is not valid shell syntax: "
+            f"{configured_command!r}"
+        ) from exc
+    if not base_tokens:
+        raise ValueError(f"Configured {runtime_label} command must produce at least one token.")
+    return tuple(base_tokens)
+
+
+def _read_text_for_prompt(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return f"[missing file: {path.as_posix()}]\n"
+
+
+def _build_native_prompt_text(
+    *,
+    context: ClaudeCodeCommandContext,
+    repository_root: Path | None,
+) -> str:
+    return compile_native_prompt_text(
+        runtime_id="claude-code",
+        stage=context.stage,
+        work_item=context.work_item,
+        run_id=context.run_id,
+        workspace_root=context.workspace_root,
+        stage_brief_path=context.stage_brief_path,
+        prompt_pack_paths=context.prompt_pack_paths,
+        repository_root=repository_root,
+        attempt_number=context.attempt_number,
+        repair_mode=context.repair_mode,
+        input_bundle_path=context.input_bundle_path,
+        repair_brief_path=context.repair_brief_path,
+        repair_context_markdown=context.repair_context_markdown,
+    )
+
+
+def assemble_native_command(
+    *,
+    configured_command: str,
+    context: ClaudeCodeCommandContext,
+    launch_options: ClaudeCodeLaunchOptions | None = None,
+    repository_root: Path | None = None,
+) -> tuple[str, ...]:
+    _ = context, launch_options, repository_root
+    return _split_configured_command(
+        configured_command=configured_command,
+        runtime_label="claude-code",
+    )
+
+
 def build_execution_environment(
     *,
     context: ClaudeCodeCommandContext,
@@ -238,6 +311,8 @@ def build_execution_environment(
             "AIDD_STAGE": context.stage,
             "AIDD_WORK_ITEM": context.work_item,
             "AIDD_RUN_ID": context.run_id,
+            "AIDD_ATTEMPT_NUMBER": str(context.attempt_number),
+            "AIDD_REPAIR_MODE": "true" if context.repair_mode else "false",
             "AIDD_STAGE_BRIEF_PATH": resolved_stage_brief_path.as_posix(),
             "AIDD_PROMPT_PACK_PATHS": os.pathsep.join(
                 path.as_posix() for path in resolved_prompt_pack_paths
@@ -245,6 +320,14 @@ def build_execution_environment(
             "AIDD_RUNTIME_ID": "claude-code",
         }
     )
+    if context.input_bundle_path is not None:
+        env["AIDD_INPUT_BUNDLE_PATH"] = context.input_bundle_path.resolve(
+            strict=False
+        ).as_posix()
+    if context.repair_brief_path is not None:
+        env["AIDD_REPAIR_BRIEF_PATH"] = context.repair_brief_path.resolve(
+            strict=False
+        ).as_posix()
     return env
 
 
@@ -255,8 +338,30 @@ def build_subprocess_spec(
     launch_options: ClaudeCodeLaunchOptions | None = None,
     base_env: Mapping[str, str] | None = None,
     repository_root: Path | None = None,
+    execution_mode: str | RuntimeExecutionMode = RuntimeExecutionMode.ADAPTER_FLAGS,
 ) -> ClaudeCodeSubprocessSpec:
     resolved_workspace_root = context.workspace_root.resolve(strict=False)
+    mode = normalize_execution_mode(runtime_id="claude-code", value=execution_mode)
+    if mode is RuntimeExecutionMode.NATIVE:
+        resolved_repository_root = (repository_root or Path.cwd()).resolve(strict=False)
+        return ClaudeCodeSubprocessSpec(
+            command=assemble_native_command(
+                configured_command=configured_command,
+                context=context,
+                launch_options=launch_options,
+                repository_root=repository_root,
+            ),
+            cwd=resolved_repository_root,
+            env=build_execution_environment(
+                context=context,
+                base_env=base_env,
+                repository_root=repository_root,
+            ),
+            stdin_text=_build_native_prompt_text(
+                context=context,
+                repository_root=repository_root,
+            ),
+        )
     return ClaudeCodeSubprocessSpec(
         command=assemble_command(
             configured_command=configured_command,
@@ -337,6 +442,7 @@ def run_subprocess_with_streaming(
             spec.command,
             cwd=spec.cwd,
             env=spec.env,
+            stdin=subprocess.PIPE if spec.stdin_text is not None else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -351,6 +457,12 @@ def run_subprocess_with_streaming(
             runtime_log_text=message,
             exit_classification=ClaudeCodeExitClassification.ADAPTER_FAILURE,
         )
+    if spec.stdin_text is not None and process.stdin is not None:
+        try:
+            process.stdin.write(spec.stdin_text)
+            process.stdin.close()
+        except BrokenPipeError:
+            pass
 
     queue: Queue[tuple[StreamTarget, str | None]] = Queue()
     reader_threads = (

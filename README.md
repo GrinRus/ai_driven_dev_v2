@@ -225,8 +225,8 @@ Today:
 - `run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`,
 - `stage run` executes single-stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`,
 - `run` and `stage run` fail fast for unknown runtime ids with `unsupported-runtime` classification,
-- `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, and validator artifacts),
-- live `eval run` scenarios under `harness/scenarios/live/` install a local wheel via `uv tool`, run AIDD from the target repository root, and use maintained live providers only (`codex` and `opencode` in Wave 13).
+- `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, validator artifacts, `stage-timing.md`, and `self-repair-matrix.md`),
+- live `eval run` scenarios under `harness/scenarios/live/` install a local wheel via `uv tool`, run AIDD from the target repository root, and use maintained live providers only (`codex`, `opencode`, and the `claude-code` smoke lane in Wave 13).
 
 ## Operator documentation
 

@@ -6,16 +6,26 @@ command = "python"
 mode = "adapter-flags"
 
 [runtime.claude_code]
-command = "claude"
-mode = "adapter-flags"
+command = "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
+mode = "native"
+# Optional per-attempt runtime subprocess timeout.
+# timeout_seconds = 1200
+
+# Optional stage-specific overrides. Stage values take precedence over
+# runtime.<provider>.timeout_seconds.
+# [runtime.claude_code.stage_timeouts]
+# research = 1500
+# implement = 1800
 
 [runtime.codex]
 command = "codex exec --full-auto --skip-git-repo-check --json -"
 mode = "native"
+# timeout_seconds = 900
 
 [runtime.opencode]
 command = "opencode run --format json --dangerously-skip-permissions"
 mode = "native"
+# timeout_seconds = 900
 
 [logging]
 mode = "both"

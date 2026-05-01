@@ -16,6 +16,9 @@ contracts consistent.
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
 
+`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
+any repair summary in `stage-result.md`.
+
 ## Finding-to-fix mapping
 
 For each finding in `validator-report.md`, apply this sequence:
@@ -44,10 +47,15 @@ Use these concrete repair actions:
 3. Never mark stage status `succeeded` when validator verdict is `fail`.
 4. Do not hide unresolved blockers; record them explicitly under `Blockers`.
 5. Ensure attempt history reflects this repair attempt truthfully.
+6. Use exact required headings from document contracts; do not rename or qualify headings.
+7. Read the repair budget section in `repair-brief.md` before declaring terminal status.
+8. If `repair-brief.md` says `repair-budget-exhausted` or `Rerun allowed after this attempt: no`, `stage-result.md` status must be `failed`; do not claim `succeeded`.
+9. Do not claim success unless required headings, validator verdict, stage-result status, and blockers are mutually consistent.
 
 ## Repair exit checks
 
 - every finding is resolved or explicitly retained as an active blocker,
 - required sections are complete and non-placeholder,
 - `validator-report.md` verdict and `stage-result.md` status are consistent,
+- repair-budget exhaustion cannot coexist with `stage-result.md` status `succeeded`,
 - unresolved `[blocking]` questions still prevent `succeeded`.

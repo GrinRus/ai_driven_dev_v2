@@ -60,6 +60,22 @@ def test_classify_failure_taxonomy_detects_validation_failures() -> None:
     assert "STRUCT-001" in result.reason
 
 
+def test_classify_failure_taxonomy_prioritizes_validation_over_aidd_exit() -> None:
+    result = classify_failure_taxonomy(
+        aidd_exit_code=1,
+        stage_metadata_failures=(
+            CoarseRuntimeEvent(
+                line_number=301,
+                category="validator",
+                message="stage `plan` attempt `3` validator `failed`",
+            ),
+        ),
+    )
+
+    assert result.category == "validation"
+    assert "plan" in result.reason
+
+
 def test_classify_failure_taxonomy_detects_scenario_verification_failures() -> None:
     result = classify_failure_taxonomy(
         aidd_exit_code=0,

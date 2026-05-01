@@ -13,6 +13,7 @@ from aidd.core.resources import resolve_resource_layout
 from aidd.core.stages import STAGES
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.evals.log_analysis import (
+    CoarseRuntimeEvent,
     FailureBoundarySelection,
     parse_runtime_log_text,
     parse_validator_report_failures_text,
@@ -27,6 +28,11 @@ from aidd.evals.reporting import (
     SUMMARY_REPORT_FILENAME,
     build_scenario_summary_row,
     write_eval_summary_markdown,
+)
+from aidd.evals.stage_timing import (
+    build_stage_timing_payload,
+    render_stage_timing_markdown,
+    write_stage_timing_artifacts,
 )
 from aidd.evals.verdicts import (
     HarnessOutcome,
@@ -63,6 +69,7 @@ from aidd.harness.result_bundle import (
 )
 from aidd.harness.runner import (
     HarnessAiddRunResult,
+    HarnessCommandTranscript,
     HarnessQualityError,
     HarnessQualityResult,
     HarnessSetupError,
@@ -196,9 +203,127 @@ def _build_issue_selection_payload(
 def _extract_exit_code(error: BaseException | None) -> int | None:
     if error is None:
         return None
+    failed_exit_code = getattr(error, "failed_exit_code", None)
+    if isinstance(failed_exit_code, int):
+        return failed_exit_code
     if match := _EXIT_CODE_PATTERN.search(str(error)):
         return int(match.group("code"))
     return None
+
+
+def _command_transcripts_from_error(
+    error: BaseException,
+) -> tuple[HarnessCommandTranscript, ...]:
+    raw_transcripts = getattr(error, "command_transcripts", ())
+    if not isinstance(raw_transcripts, tuple):
+        return tuple()
+    return tuple(
+        transcript
+        for transcript in raw_transcripts
+        if isinstance(transcript, HarnessCommandTranscript)
+    )
+
+
+def _transcript_duration(
+    transcripts: tuple[HarnessCommandTranscript, ...],
+) -> float:
+    return sum(transcript.duration_seconds for transcript in transcripts)
+
+
+def _partial_setup_result(error: BaseException) -> HarnessSetupResult | None:
+    transcripts = _command_transcripts_from_error(error)
+    if not transcripts:
+        return None
+    return HarnessSetupResult(
+        executed_commands=tuple(transcript.command for transcript in transcripts),
+        command_transcripts=transcripts,
+        duration_seconds=_transcript_duration(transcripts),
+    )
+
+
+def _partial_verification_result(
+    *,
+    error: BaseException,
+    aidd_run_result: HarnessAiddRunResult | None,
+) -> HarnessVerificationResult | None:
+    transcripts = _command_transcripts_from_error(error)
+    if not transcripts:
+        return None
+    return HarnessVerificationResult(
+        executed_commands=tuple(transcript.command for transcript in transcripts),
+        aidd_exit_code=-1 if aidd_run_result is None else aidd_run_result.exit_code,
+        command_transcripts=transcripts,
+        duration_seconds=_transcript_duration(transcripts),
+    )
+
+
+def _partial_quality_result(error: BaseException) -> HarnessQualityResult | None:
+    transcripts = _command_transcripts_from_error(error)
+    if not transcripts:
+        return None
+    return HarnessQualityResult(
+        executed_commands=tuple(transcript.command for transcript in transcripts),
+        command_transcripts=transcripts,
+        duration_seconds=_transcript_duration(transcripts),
+    )
+
+
+def _partial_teardown_result(error: BaseException) -> HarnessTeardownResult | None:
+    transcripts = _command_transcripts_from_error(error)
+    if not transcripts:
+        return None
+    return HarnessTeardownResult(
+        executed_commands=tuple(transcript.command for transcript in transcripts),
+        command_transcripts=transcripts,
+        duration_seconds=_transcript_duration(transcripts),
+    )
+
+
+def _stage_failure_events_from_timing_payload(
+    payload: dict[str, object],
+) -> tuple[CoarseRuntimeEvent, ...]:
+    raw_stages = payload.get("stages", [])
+    if not isinstance(raw_stages, list):
+        return tuple()
+
+    events: list[CoarseRuntimeEvent] = []
+    for stage_index, raw_stage in enumerate(raw_stages, start=1):
+        if not isinstance(raw_stage, dict):
+            continue
+        stage = str(raw_stage.get("stage") or "unknown")
+        stage_status = str(raw_stage.get("status") or "unknown")
+        if stage_status not in {"failed", "blocked"}:
+            continue
+        raw_attempts = raw_stage.get("attempts")
+        attempts = raw_attempts if isinstance(raw_attempts, list) else []
+        for attempt_index, raw_attempt in enumerate(attempts, start=1):
+            if not isinstance(raw_attempt, dict):
+                continue
+            validation_result = str(raw_attempt.get("validation_result") or "unknown")
+            terminal_status = str(raw_attempt.get("terminal_status") or stage_status)
+            runtime_exit = raw_attempt.get("runtime_exit_classification")
+            failed_validation = validation_result in {"failed", "blocked"}
+            failed_terminal = (
+                attempt_index == len(attempts) and terminal_status in {"failed", "blocked"}
+            )
+            failed_runtime = runtime_exit not in (None, "success")
+            if not (failed_validation or failed_terminal or failed_runtime):
+                continue
+            attempt_number = raw_attempt.get("attempt", attempt_index)
+            repair_reason = str(raw_attempt.get("repair_reason") or "n/a")
+            events.append(
+                CoarseRuntimeEvent(
+                    line_number=(stage_index * 100) + attempt_index,
+                    category="validator",
+                    message=(
+                        f"stage `{stage}` attempt `{attempt_number}` validator "
+                        f"`{validation_result}`; terminal status `{terminal_status}`; "
+                        f"runtime exit `{runtime_exit or 'unknown'}`; repair reason: "
+                        f"{repair_reason}"
+                    ),
+                )
+            )
+    return tuple(events)
 
 
 def _is_missing_answers_failure(error: BaseException | None) -> bool:
@@ -324,6 +449,20 @@ def _classify_status(
             False,
             False,
             True,
+        )
+
+    if aidd_run_result is not None and aidd_run_result.timed_out:
+        timeout = (
+            f"{aidd_run_result.timeout_seconds:.3f}s"
+            if aidd_run_result.timeout_seconds is not None
+            else "the configured timeout"
+        )
+        return (
+            "fail",
+            f"Installed AIDD run timed out after {timeout}.",
+            False,
+            False,
+            False,
         )
 
     if verification_error is not None:
@@ -499,13 +638,14 @@ def _render_log_analysis_markdown(
     *,
     status: VerdictStatus,
     boundary: FailureBoundarySelection,
+    stage_timing_markdown: str | None = None,
 ) -> str:
     signal_line = (
         str(boundary.signal_line_number)
         if boundary.signal_line_number is not None
         else "n/a"
     )
-    return (
+    base = (
         "# Log Analysis\n\n"
         f"- Status: `{status}`\n"
         f"- First Failure Boundary: `{boundary.category}`\n"
@@ -513,6 +653,9 @@ def _render_log_analysis_markdown(
         f"- Signal Line: `{signal_line}`\n"
         f"- Reason: {boundary.reason}\n"
     )
+    if stage_timing_markdown is None:
+        return base
+    return f"{base}\n{stage_timing_markdown}"
 
 
 def _write_source_artifacts(
@@ -712,10 +855,16 @@ def run_eval_scenario(
                 install_error = exc
             except HarnessSetupError as exc:
                 setup_error = exc
+                setup_result = _partial_setup_result(exc)
             except HarnessVerificationError as exc:
                 verification_error = exc
+                verification_result = _partial_verification_result(
+                    error=exc,
+                    aidd_run_result=aidd_run_result,
+                )
             except HarnessQualityError as exc:
                 quality_error = exc
+                quality_result = _partial_quality_result(exc)
             except RuntimeError as exc:
                 run_error = exc
             finally:
@@ -726,6 +875,7 @@ def run_eval_scenario(
                     )
                 except HarnessTeardownError as exc:
                     teardown_error = exc
+                    teardown_result = _partial_teardown_result(exc)
 
     status, summary, blocked_by_questions, infrastructure_failure, verification_failed = (
         _classify_status(
@@ -789,11 +939,32 @@ def run_eval_scenario(
         verification_error=verification_error,
         teardown_error=teardown_error,
     )
+    stage_timing_payload = build_stage_timing_payload(
+        scenario=scenario,
+        run_id=run_id,
+        runtime_id=runtime_id,
+        work_item=work_item,
+        workspace_root=(
+            None
+            if prepared_working_copy is None
+            else prepared_working_copy.working_copy_path / ".aidd"
+        ),
+        total_duration_seconds=max(monotonic() - started, 0.0),
+        install_result=install_result,
+        setup_result=setup_result,
+        aidd_run_result=aidd_run_result,
+        verification_result=verification_result,
+        quality_result=quality_result,
+        teardown_result=teardown_result,
+    )
 
     verification_exit_code = _extract_exit_code(verification_error)
     first_failure_boundary = select_first_failure_boundary(
         runtime_events=parse_runtime_log_text(runtime_log_source),
         validator_failures=parse_validator_report_failures_text(validator_report_source),
+        stage_metadata_failures=_stage_failure_events_from_timing_payload(
+            stage_timing_payload
+        ),
         aidd_exit_code=None if aidd_run_result is None else aidd_run_result.exit_code,
         verification_exit_code=verification_exit_code,
     )
@@ -913,8 +1084,14 @@ def run_eval_scenario(
         verdict_path=verdict_source_path,
     )
 
+    write_stage_timing_artifacts(layout=layout, payload=stage_timing_payload)
+    rendered_stage_timing = render_stage_timing_markdown(stage_timing_payload)
     layout.log_analysis_path.write_text(
-        _render_log_analysis_markdown(status=status, boundary=first_failure_boundary),
+        _render_log_analysis_markdown(
+            status=status,
+            boundary=first_failure_boundary,
+            stage_timing_markdown=rendered_stage_timing,
+        ),
         encoding="utf-8",
     )
     quality_workspace_root = _workspace_root_for_quality(
@@ -981,6 +1158,12 @@ def run_eval_scenario(
     summary_path = write_eval_summary_markdown(
         path=layout.run_root / SUMMARY_REPORT_FILENAME,
         scenario_rows=(scenario_row,),
+    )
+    summary_path.write_text(
+        summary_path.read_text(encoding="utf-8")
+        + "\n"
+        + rendered_stage_timing,
+        encoding="utf-8",
     )
 
     return EvalScenarioRunResult(

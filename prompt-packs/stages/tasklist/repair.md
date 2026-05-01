@@ -17,6 +17,9 @@ dependency clarity, and reviewability of each task item.
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
 
+`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
+any repair summary in `stage-result.md`.
+
 ## Finding-to-fix mapping
 
 For each finding:
@@ -47,6 +50,10 @@ Use concrete repair actions:
 3. Do not mark `succeeded` while unresolved `[blocking]` questions remain.
 4. Keep dependency references resolvable to listed task ids or explicit upstream artifacts.
 5. Keep `stage-result.md` attempt status truthful for the current repair attempt.
+6. Use exact required headings from document contracts; do not rename or qualify headings.
+7. Read the repair budget section in `repair-brief.md` before declaring terminal status.
+8. If `repair-brief.md` says `repair-budget-exhausted` or `Rerun allowed after this attempt: no`, `stage-result.md` status must be `failed`; do not claim `succeeded`.
+9. Do not claim success unless required headings, validator verdict, stage-result status, and task dependencies are mutually consistent.
 
 ## Repair exit checks
 
@@ -54,4 +61,5 @@ Use concrete repair actions:
 - dependencies are explicit and ordering is executable,
 - every task has at least one concrete verification note,
 - unresolved blocking ambiguity is represented in questions/blockers,
+- repair-budget exhaustion cannot coexist with `stage-result.md` status `succeeded`,
 - `tasklist.md`, `validator-report.md`, and `stage-result.md` are status-consistent.

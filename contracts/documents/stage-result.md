@@ -43,6 +43,7 @@ validation state, blockers, and next actions.
 - `Terminal state notes`
   - Must explain why the stage ended in the declared terminal status.
   - Must include repair-budget outcome when repair logic was used.
+  - If `repair-brief.md` declares `repair-budget-exhausted`, status must be `failed`.
 
 ## Authoring rules
 
@@ -50,6 +51,8 @@ validation state, blockers, and next actions.
 - Keep document paths and artifact references workspace-relative and wrapped in backticks.
 - Keep attempt numbering monotonic and contiguous within the document.
 - Do not claim success when required outputs or validation evidence are missing.
+- Do not claim `Validator verdict: pass` when the canonical AIDD validator report lists
+  findings.
 - Use explicit `- none` markers instead of leaving required sections empty.
 
 ## Validation cues

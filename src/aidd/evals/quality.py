@@ -306,6 +306,24 @@ def render_live_quality_report_markdown(
         if not assessment.blocking_findings
         else [f"- {finding}" for finding in assessment.blocking_findings]
     )
+    root_failure_lines = [
+        f"- {finding}"
+        for finding in assessment.blocking_findings
+        if (
+            "execution verdict" in finding
+            or "quality commands failed" in finding
+            or "selected issue" in finding
+        )
+    ]
+    downstream_lines = [
+        f"- {finding}"
+        for finding in assessment.blocking_findings
+        if finding not in {line[2:] for line in root_failure_lines}
+    ]
+    if not root_failure_lines:
+        root_failure_lines = ["- none"]
+    if not downstream_lines:
+        downstream_lines = ["- none"]
     follow_up_lines = (
         ["- none"]
         if not assessment.suggested_follow_ups
@@ -346,6 +364,12 @@ def render_live_quality_report_markdown(
         )
     lines.extend(
         (
+            "## Root Failure",
+            *root_failure_lines,
+            "",
+            "## Downstream Artifact Effects",
+            *downstream_lines,
+            "",
             "## Blocking Findings",
             *blocking_lines,
             "",

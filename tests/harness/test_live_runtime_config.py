@@ -93,6 +93,17 @@ def test_resolve_live_runtime_command_entries_defaults_codex_to_native() -> None
     assert entries["codex"].source == "default-native"
 
 
+def test_resolve_live_runtime_command_entries_defaults_claude_code_to_native() -> None:
+    entries = resolve_live_runtime_command_entries(
+        environment=_empty_live_command_env(),
+        scenario=_scenario(runtime_targets=("claude-code",)),
+    )
+
+    assert entries["claude-code"].execution_mode is RuntimeExecutionMode.NATIVE
+    assert entries["claude-code"].command.startswith("claude -p")
+    assert entries["claude-code"].source == "default-native"
+
+
 def test_resolve_live_runtime_command_entries_uses_env_override_as_adapter_flags() -> None:
     entries = resolve_live_runtime_command_entries(
         environment={
@@ -107,6 +118,20 @@ def test_resolve_live_runtime_command_entries_uses_env_override_as_adapter_flags
     assert entries["codex"].source == "environment"
 
 
+def test_resolve_live_runtime_command_entries_uses_claude_env_override_as_adapter_flags() -> None:
+    entries = resolve_live_runtime_command_entries(
+        environment={
+            **_empty_live_command_env(),
+            "AIDD_EVAL_CLAUDE_CODE_COMMAND": "/tmp/aidd-claude-wrapper",
+        },
+        scenario=_scenario(runtime_targets=("claude-code",)),
+    )
+
+    assert entries["claude-code"].execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
+    assert entries["claude-code"].command == "/tmp/aidd-claude-wrapper"
+    assert entries["claude-code"].source == "environment"
+
+
 def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     config_path = write_live_runtime_config(
         working_copy_path=tmp_path,
@@ -116,11 +141,22 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     )
 
     config_text = config_path.read_text(encoding="utf-8")
+    assert "[runtime.claude_code]" in config_text
+    assert (
+        'command = "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"'
+        in config_text
+    )
+    assert 'mode = "native"' in config_text
     assert "[runtime.codex]" in config_text
     assert 'command = "codex exec --full-auto --skip-git-repo-check --json -"' in config_text
     assert 'mode = "native"' in config_text
     assert "[runtime.opencode]" in config_text
     assert 'command = "opencode run --format json --dangerously-skip-permissions"' in config_text
+    assert "timeout_seconds = 1200" in config_text
+    assert config_text.count("timeout_seconds = 900") == 2
+    assert "[runtime.claude_code.stage_timeouts]" in config_text
+    assert "research = 1500" in config_text
+    assert "implement = 1800" in config_text
 
 
 def test_write_live_runtime_config_records_env_override_as_adapter_flags(
@@ -162,6 +198,30 @@ def test_validate_live_runtime_command_checks_native_executable(
     )
 
     assert entry.execution_mode is RuntimeExecutionMode.NATIVE
+
+
+def test_validate_live_runtime_command_checks_claude_native_executable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    claude = bin_dir / "claude"
+    claude.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    claude.chmod(0o755)
+    monkeypatch.setenv("PATH", "")
+
+    entry = validate_live_runtime_command(
+        runtime_id="claude-code",
+        scenario=_scenario(runtime_targets=("claude-code",)),
+        environment={
+            **_empty_live_command_env(),
+            "PATH": bin_dir.as_posix(),
+        },
+    )
+
+    assert entry.execution_mode is RuntimeExecutionMode.NATIVE
+    assert entry.command.startswith("claude -p")
 
 
 def test_validate_live_runtime_command_fails_before_repo_prep_when_missing(

@@ -26,6 +26,8 @@ RUN_ATTEMPT_PREFIX = "attempt-"
 RUN_MANIFEST_FILENAME = "run-manifest.json"
 RUN_STAGE_METADATA_FILENAME = "stage-metadata.json"
 RUN_ARTIFACT_INDEX_FILENAME = "artifact-index.json"
+RUN_ATTEMPT_INPUT_BUNDLE_FILENAME = "input-bundle.md"
+RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME = "repair-context.md"
 RUN_RUNTIME_LOG_FILENAME = "runtime.log"
 RUN_RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
 _GIT_SHA_LENGTH = 40
@@ -354,6 +356,35 @@ def _canonical_stage_documents(workspace_root: Path, work_item: str, stage: str)
     }
 
 
+def _canonical_attempt_documents(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> dict[str, str]:
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    documents = {
+        "input_bundle": _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=attempt_root / RUN_ATTEMPT_INPUT_BUNDLE_FILENAME,
+        )
+    }
+    repair_context_path = attempt_root / RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME
+    if repair_context_path.exists():
+        documents["repair_context"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=repair_context_path,
+        )
+    return documents
+
+
 def _canonical_log_paths(
     workspace_root: Path,
     work_item: str,
@@ -419,6 +450,15 @@ def write_attempt_artifact_index(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
+    )
+    documents.update(
+        _canonical_attempt_documents(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
     )
     logs = _canonical_log_paths(
         workspace_root=workspace_root,

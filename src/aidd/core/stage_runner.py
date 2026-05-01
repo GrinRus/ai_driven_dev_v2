@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,11 +17,14 @@ from aidd.core.interview import (
 )
 from aidd.core.repair import RepairBudgetPolicy, evaluate_stage_repair_counter
 from aidd.core.run_store import (
+    RUN_ATTEMPT_INPUT_BUNDLE_FILENAME,
     RUN_ATTEMPT_PREFIX,
+    RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME,
     create_next_attempt_directory,
     load_stage_metadata,
     persist_stage_status,
     run_stage_metadata_path,
+    write_attempt_artifact_index,
 )
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
@@ -35,7 +39,7 @@ from aidd.validators.cross_document import (
     BLOCKING_UNANSWERED_CODE,
     validate_cross_document_consistency,
 )
-from aidd.validators.models import ValidationFinding
+from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.reports import write_validator_report
 from aidd.validators.semantic import validate_semantic_outputs
 from aidd.validators.structural import (
@@ -73,6 +77,7 @@ class AdapterInvocationBundle:
     stage_brief_markdown: str
     repair_context_markdown: str | None
     repair_brief_path: Path | None
+    repair_brief_markdown: str | None
     input_bundle_path: Path
     input_bundle_markdown: str
     expected_input_bundle: tuple[Path, ...]
@@ -226,7 +231,24 @@ class StageOrchestrationResult:
     transition: PostValidationTransition
 
 
-ATTEMPT_INPUT_BUNDLE_FILENAME = "input-bundle.md"
+ATTEMPT_INPUT_BUNDLE_FILENAME = RUN_ATTEMPT_INPUT_BUNDLE_FILENAME
+ATTEMPT_REPAIR_CONTEXT_FILENAME = RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME
+_REPAIR_BUDGET_EXHAUSTED_TOKEN = "repair-budget-exhausted"
+_RERUN_DISALLOWED_TOKEN = "rerun allowed after this attempt: `no`"
+_STATUS_SECTION_PATTERN = re.compile(
+    r"(?P<prefix>#{1,6}\s+Status\s*\n+)(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
+    re.IGNORECASE | re.DOTALL,
+)
+_TERMINAL_NOTES_PATTERN = re.compile(
+    r"(?P<prefix>#{1,6}\s+Terminal state notes\s*\n+)(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
+    re.IGNORECASE | re.DOTALL,
+)
+_TERMINAL_STATUS_PATTERN = re.compile(r"\b(succeeded|failed|blocked|needs-input)\b")
+_VALIDATOR_PASS_CLAIM_PATTERN = re.compile(
+    r"(validator(?: report)? verdict\s*[:(][^`\n]*`)pass(`)",
+    re.IGNORECASE,
+)
+_VALIDATION_PASS_LINE_PATTERN = re.compile(r"(validation\s+`)pass(`)", re.IGNORECASE)
 
 
 def _to_workspace_relative_paths(workspace_root: Path, paths: tuple[Path, ...]) -> tuple[str, ...]:
@@ -238,6 +260,167 @@ def _to_workspace_relative_paths(workspace_root: Path, paths: tuple[Path, ...]) 
 
 def _workspace_relative_path(workspace_root: Path, path: Path) -> str:
     return path.resolve(strict=False).relative_to(workspace_root.resolve(strict=False)).as_posix()
+
+
+def _text_exhausts_terminal_budget(text: str) -> bool:
+    normalized = text.lower()
+    return (
+        _REPAIR_BUDGET_EXHAUSTED_TOKEN in normalized
+        or _RERUN_DISALLOWED_TOKEN in normalized
+        or "rerun allowed after this attempt: no" in normalized
+    )
+
+
+def _repair_brief_exhausts_terminal_budget(
+    *,
+    repair_brief_path: Path | None,
+    repair_context_markdown: str | None,
+) -> bool:
+    if repair_context_markdown is not None and _text_exhausts_terminal_budget(
+        repair_context_markdown
+    ):
+        return True
+    if repair_brief_path is None or not repair_brief_path.exists():
+        return False
+    text = repair_brief_path.read_text(encoding="utf-8", errors="replace")
+    return _text_exhausts_terminal_budget(text)
+
+
+def _ensure_repair_brief_records_exhausted_budget(repair_brief_path: Path | None) -> None:
+    if repair_brief_path is None or not repair_brief_path.exists():
+        return
+    text = repair_brief_path.read_text(encoding="utf-8", errors="replace")
+    if _REPAIR_BUDGET_EXHAUSTED_TOKEN in text.lower():
+        return
+    repair_brief_path.write_text(
+        text.rstrip() + "\n\nRepair budget status: `repair-budget-exhausted`.\n",
+        encoding="utf-8",
+    )
+
+
+def _replace_or_add_status_section(markdown: str) -> str:
+    match = _STATUS_SECTION_PATTERN.search(markdown)
+    if match is None:
+        return markdown.rstrip() + "\n\n## Status\n\nfailed\n"
+
+    body = match.group("body")
+    replacement_body = _TERMINAL_STATUS_PATTERN.sub("failed", body, count=1)
+    if replacement_body == body:
+        replacement_body = "- `failed`\n"
+    return (
+        markdown[: match.start("body")]
+        + replacement_body
+        + markdown[match.end("body") :]
+    )
+
+
+def _append_exhausted_budget_terminal_note(markdown: str) -> str:
+    note = (
+        "\n\n- Repair budget status: `repair-budget-exhausted`; terminal status is "
+        "`failed` because no rerun is allowed after this attempt.\n"
+    )
+    if _REPAIR_BUDGET_EXHAUSTED_TOKEN in markdown.lower():
+        return markdown
+
+    match = _TERMINAL_NOTES_PATTERN.search(markdown)
+    if match is None:
+        return markdown.rstrip() + "\n\n## Terminal state notes" + note
+
+    return markdown[: match.end("body")] + note + markdown[match.end("body") :]
+
+
+def _replace_success_claims_for_exhausted_budget(markdown: str) -> str:
+    updated = _VALIDATOR_PASS_CLAIM_PATTERN.sub(r"\1fail\2", markdown)
+    return _VALIDATION_PASS_LINE_PATTERN.sub(r"\1fail\2", updated)
+
+
+def _append_validator_failure_terminal_note(markdown: str) -> str:
+    note = (
+        "\n\n- Canonical AIDD validation found open findings; terminal status and "
+        "validator verdict claims must not remain `succeeded` or `pass`.\n"
+    )
+    if "canonical aidd validation found open findings" in markdown.lower():
+        return markdown
+
+    match = _TERMINAL_NOTES_PATTERN.search(markdown)
+    if match is None:
+        return markdown.rstrip() + "\n\n## Terminal state notes" + note
+
+    return markdown[: match.end("body")] + note + markdown[match.end("body") :]
+
+
+def _strip_stage_result_success_claims_for_validator_findings(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> Path | None:
+    stage_result_path = (
+        workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
+        / "stage-result.md"
+    )
+    if not stage_result_path.exists():
+        return None
+
+    text = stage_result_path.read_text(encoding="utf-8", errors="replace")
+    updated = _replace_success_claims_for_exhausted_budget(
+        _append_validator_failure_terminal_note(_replace_or_add_status_section(text))
+    )
+    if updated == text:
+        return stage_result_path
+
+    stage_result_path.write_text(updated, encoding="utf-8")
+    return stage_result_path
+
+
+def _force_stage_result_failed_for_exhausted_budget(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> Path:
+    stage_result_path = (
+        workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
+        / "stage-result.md"
+    )
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    if stage_result_path.exists():
+        text = stage_result_path.read_text(encoding="utf-8", errors="replace")
+    else:
+        text = (
+            "# Stage result\n\n"
+            f"## Stage\n\n{stage}\n\n"
+            "## Attempt history\n\n- unavailable\n\n"
+            "## Status\n\nfailed\n\n"
+            "## Produced outputs\n\n- missing required outputs; repair budget exhausted\n\n"
+            "## Validation summary\n\n- validation stopped after repair budget exhaustion\n\n"
+            "## Blockers\n\n- repair budget exhausted\n\n"
+            "## Next actions\n\n- inspect validator report and reopen manually if appropriate\n\n"
+            "## Terminal state notes\n\n"
+        )
+    updated = _replace_success_claims_for_exhausted_budget(
+        _append_exhausted_budget_terminal_note(_replace_or_add_status_section(text))
+    )
+    stage_result_path.write_text(updated, encoding="utf-8")
+    return stage_result_path
+
+
+def _exhausted_budget_validation_finding(
+    *,
+    workspace_root: Path,
+    stage_result_path: Path,
+) -> ValidationFinding:
+    return ValidationFinding(
+        code="CROSS-REPAIR-BUDGET-EXHAUSTED",
+        severity="critical",
+        message=(
+            "Repair budget is exhausted for this attempt; stage progression is stopped "
+            "with terminal status `failed`."
+        ),
+        location=ValidationIssueLocation(
+            workspace_relative_path=_workspace_relative_path(workspace_root, stage_result_path)
+        ),
+    )
 
 
 def _render_stage_brief(
@@ -411,11 +594,37 @@ def _prepare_attempt_input_bundle(
     return input_bundle_path, input_bundle_markdown
 
 
+def _write_attempt_repair_context(
+    *,
+    workspace_root: Path,
+    execution_state: StageExecutionState,
+    repair_context_markdown: str | None,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> Path | None:
+    if repair_context_markdown is None or not repair_context_markdown.strip():
+        return None
+    repair_context_path = execution_state.attempt_path / ATTEMPT_REPAIR_CONTEXT_FILENAME
+    repair_context_path.write_text(
+        repair_context_markdown.rstrip() + "\n",
+        encoding="utf-8",
+    )
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=execution_state.work_item,
+        run_id=execution_state.run_id,
+        stage=execution_state.stage,
+        attempt_number=execution_state.attempt_number,
+        contracts_root=contracts_root,
+    )
+    return repair_context_path
+
+
 def prepare_adapter_invocation(
     *,
     workspace_root: Path,
     preparation_bundle: StagePreparationBundle,
     execution_state: StageExecutionState,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> AdapterInvocationBundle:
     if preparation_bundle.stage != execution_state.stage:
         raise ValueError(
@@ -430,6 +639,7 @@ def prepare_adapter_invocation(
 
     repair_mode = execution_state.attempt_number > 1
     repair_brief_path: Path | None = None
+    repair_brief_markdown: str | None = None
     repair_context_markdown: str | None = None
 
     if repair_mode:
@@ -446,8 +656,8 @@ def prepare_adapter_invocation(
                 "Repair rerun requires an existing repair brief: "
                 f"{_workspace_relative_path(workspace_root, repair_brief_path)}"
             )
-        repair_brief_markdown = repair_brief_path.read_text(encoding="utf-8").strip()
-        if not repair_brief_markdown:
+        repair_brief_markdown = repair_brief_path.read_text(encoding="utf-8")
+        if not repair_brief_markdown.strip():
             raise ValueError(
                 "Repair rerun requires a non-empty repair brief: "
                 f"{_workspace_relative_path(workspace_root, repair_brief_path)}"
@@ -456,7 +666,13 @@ def prepare_adapter_invocation(
             workspace_root=workspace_root,
             attempt_number=execution_state.attempt_number,
             repair_brief_path=repair_brief_path,
-            repair_brief_markdown=repair_brief_markdown,
+            repair_brief_markdown=repair_brief_markdown.strip(),
+        )
+        _write_attempt_repair_context(
+            workspace_root=workspace_root,
+            execution_state=execution_state,
+            repair_context_markdown=repair_context_markdown,
+            contracts_root=contracts_root,
         )
 
     input_bundle_path, input_bundle_markdown = _prepare_attempt_input_bundle(
@@ -474,11 +690,36 @@ def prepare_adapter_invocation(
         stage_brief_markdown=preparation_bundle.stage_brief_markdown,
         repair_context_markdown=repair_context_markdown,
         repair_brief_path=repair_brief_path,
+        repair_brief_markdown=repair_brief_markdown,
         input_bundle_path=input_bundle_path,
         input_bundle_markdown=input_bundle_markdown,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
         expected_output_documents=preparation_bundle.expected_output_documents,
     )
+
+
+def restore_core_owned_repair_brief(
+    *,
+    invocation_bundle: AdapterInvocationBundle,
+) -> Path | None:
+    if (
+        invocation_bundle.repair_brief_path is None
+        or invocation_bundle.repair_brief_markdown is None
+    ):
+        return None
+
+    current_text = None
+    if invocation_bundle.repair_brief_path.exists():
+        current_text = invocation_bundle.repair_brief_path.read_text(encoding="utf-8")
+    if current_text == invocation_bundle.repair_brief_markdown:
+        return invocation_bundle.repair_brief_path
+
+    invocation_bundle.repair_brief_path.parent.mkdir(parents=True, exist_ok=True)
+    invocation_bundle.repair_brief_path.write_text(
+        invocation_bundle.repair_brief_markdown,
+        encoding="utf-8",
+    )
+    return invocation_bundle.repair_brief_path
 
 
 def discover_stage_markdown_outputs(
@@ -907,6 +1148,7 @@ def prepare_stage_resume_after_answers(
         workspace_root=workspace_root,
         preparation_bundle=preparation_bundle,
         execution_state=execution_state,
+        contracts_root=contracts_root,
     )
     return StageResumeResult(
         stage=stage,
@@ -952,7 +1194,10 @@ def run_single_stage_orchestration(
         preparation_bundle=preparation_bundle,
         execution_state=execution_state,
     )
-    adapter_outcome = adapter_executor(adapter_invocation, execution_state)
+    try:
+        adapter_outcome = adapter_executor(adapter_invocation, execution_state)
+    finally:
+        restore_core_owned_repair_brief(invocation_bundle=adapter_invocation)
 
     if not adapter_outcome.succeeded:
         failed_metadata_path = persist_stage_status(
@@ -1000,11 +1245,48 @@ def run_single_stage_orchestration(
         execution_state=execution_state,
         invocation_bundle=adapter_invocation,
     )
+    exhausted_repair_budget = _repair_brief_exhausts_terminal_budget(
+        repair_brief_path=adapter_invocation.repair_brief_path,
+        repair_context_markdown=adapter_invocation.repair_context_markdown,
+    )
+    exhausted_stage_result_path: Path | None = None
+    if exhausted_repair_budget:
+        _ensure_repair_brief_records_exhausted_budget(adapter_invocation.repair_brief_path)
+        exhausted_stage_result_path = _force_stage_result_failed_for_exhausted_budget(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
     validation_result = run_structural_validation_after_output_discovery(
         workspace_root=workspace_root,
         discovery=discovery,
         contracts_root=contracts_root,
     )
+    if exhausted_repair_budget and exhausted_stage_result_path is not None:
+        findings = validation_result.findings
+        if not any(finding.code == "CROSS-REPAIR-BUDGET-EXHAUSTED" for finding in findings):
+            findings = (
+                *findings,
+                _exhausted_budget_validation_finding(
+                    workspace_root=workspace_root,
+                    stage_result_path=exhausted_stage_result_path,
+                ),
+            )
+        write_validator_report(path=validation_result.validator_report_path, findings=findings)
+        validation_result = StageStructuralValidationResult(
+            stage=validation_result.stage,
+            work_item=validation_result.work_item,
+            run_id=validation_result.run_id,
+            attempt_number=validation_result.attempt_number,
+            validator_report_path=validation_result.validator_report_path,
+            findings=findings,
+        )
+    if validation_result.findings:
+        _strip_stage_result_success_claims_for_validator_findings(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
     interview_routing = route_stage_questions_to_interview(
         workspace_root=workspace_root,
         discovery=discovery,
