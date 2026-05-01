@@ -37,7 +37,6 @@ _STAGE_FILE_TEMPLATES: dict[str, str] = {
     "questions.md": "# Questions\n\nNo questions yet.\n",
     "answers.md": "# Answers\n\nNo answers yet.\n",
     "validator-report.md": "# Validator report\n\nNo validator output yet.\n",
-    "repair-brief.md": "# Repair brief\n\nNo repair requested yet.\n",
     "stage-result.md": "# Stage result\n\nStage not run yet.\n",
 }
 

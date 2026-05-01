@@ -55,7 +55,7 @@ def test_workspace_helpers_follow_canonical_layout(tmp_path: Path) -> None:
     assert stage_output_root(root, work_item, stage) == expected_output_root
 
 
-def test_reserved_stage_filenames_are_seeded_by_init(tmp_path: Path) -> None:
+def test_init_workspace_seeds_non_control_stage_files(tmp_path: Path) -> None:
     root = tmp_path / ".aidd"
     work_item = "WI-001"
 
@@ -63,7 +63,10 @@ def test_reserved_stage_filenames_are_seeded_by_init(tmp_path: Path) -> None:
     plan_stage_root = item_root / WORKITEM_STAGES_DIRNAME / "plan"
 
     for filename in RESERVED_STAGE_FILENAMES:
+        if filename == "repair-brief.md":
+            continue
         assert (plan_stage_root / filename).exists()
+    assert not (plan_stage_root / "repair-brief.md").exists()
 
 
 def test_init_workspace_seeds_default_contract_references(tmp_path: Path) -> None:
