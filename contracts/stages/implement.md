@@ -45,6 +45,12 @@ Optional context documents may improve implementation quality, but they must not
   - a touched-files list with file path and short change intent per entry,
   - verification notes naming the primary checks executed and their outcomes,
   - follow-up notes for known residual risks or deferred non-blocking items.
+- touched-files validation is based on top-level file entries; nested bullets and fenced diffs may
+  provide supporting detail, but each top-level file entry must include a backticked path and a short
+  intent using a clear separator such as `-`, `:`, or `->`.
+- verification notes may be grouped by task or evidence heading; executed command/check entries must
+  pair command evidence with an observed outcome such as `-> pass`, `exit 0`, `exit code 0`, or a
+  captured tool summary.
 - touched-files entries must stay within `context/allowed-write-scope.md`.
 - `stage-result.md` and `validator-report.md` must remain consistent with declared verification outcomes.
 

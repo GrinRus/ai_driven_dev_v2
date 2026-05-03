@@ -6,15 +6,19 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- none
+- `W16-E1-S1-T1`
 
 ## Soon
 
-- none
+- `W16-E1-S1-T2`
+- `W16-E2-S1-T1`
 
 ## Parking lot
 
-- none
+- `W16-E1-S1-T3`
+- `W16-E2-S2-T1`
+- `W16-E3-S1-T1`
+- `W16-E4-S1-T1`
 
 
 ## Update rules
@@ -59,3 +63,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-04-25` After completing `W15-E2-S1-T1`, backlog queue advanced with `W15-E3-S1-T1` promoted from `Parking lot` to `Next`; `W15-E3-S2-T1` remains in `Parking lot`.
 - `2026-04-25` `W15-E3-S1-T1` is blocked because local preflight found no configured AIDD-compatible live runtime wrapper env var; backlog advanced with `W15-E3-S2-T1` promoted to `Next`.
 - `2026-04-25` `W15-E3-S2-T1` is blocked because local preflight found no release candidate tag or local publishing credentials; active backlog queue is empty.
+- `2026-05-03` Wave 16 was opened for complexity reduction after the project-wide complexity audit identified semantic validation, eval/harness orchestration, quality assessment, CLI/adapters, and complexity reporting as maintainability hotspots; `W16-E1-S1-T1` was promoted to `Next`.

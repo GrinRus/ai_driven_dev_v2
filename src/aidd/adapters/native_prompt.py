@@ -145,6 +145,11 @@ def build_native_prompt_text(
             "Use the workspace documents as the source of truth. Write the required "
             "stage output Markdown files under the AIDD workspace for this stage.",
             "",
+            "Write each required document to the exact path listed in the Stage brief "
+            "`Expected output documents` section. Do not place required documents only "
+            "under an `output/` subdirectory; AIDD publishes `output/` after canonical "
+            "validation passes.",
+            "",
             "`repair-brief.md` is AIDD-owned read-only repair control evidence. "
             "Read it when present, but do not rewrite it.",
             "",
@@ -153,6 +158,20 @@ def build_native_prompt_text(
             "",
             "Do not claim validator pass or stage success unless the artifacts you "
             "write resolve the active findings and remain internally consistent.",
+            "",
+            "Interview document format is strict. `questions.md` bullets use "
+            "`- Q1 [blocking|non-blocking] ...`; `answers.md` bullets must reuse "
+            "the same question id with `[resolved|partial|deferred]`, for example "
+            "`- Q1 [resolved] ...`. Do not invent `A1`/`A2` answer ids. Render "
+            "assumptions or metadata as non-bullet continuation prose.",
+            "",
+            "During repair attempts, do not inspect AIDD validator implementation "
+            "files, installed package files, or bundled examples. Use the provided "
+            "validator report, repair brief, stage brief, input bundle, and active "
+            "prompt pack as the repair scope.",
+            "",
+            "After updating the required documents and checking consistency, stop. "
+            "Do not keep exploring repository internals or running unrelated diagnostics.",
             "",
         )
     )

@@ -36,7 +36,8 @@ notes, and a concrete verification signal.
 
 ## Decomposition discipline
 
-1. Use stable task ids and imperative task titles.
+1. Use stable task ids and imperative task titles. Use one id style consistently, such as
+   `T1`, `T2`, ... or `TL-1`, `TL-2`, ....
 2. Keep one dominant output artifact per task so each item can be implemented and reviewed in one pass.
 3. Record explicit dependencies for every task (`none` or concrete task/upstream ids).
 4. Keep task ordering executable in dependency order, not only grouped by topic.

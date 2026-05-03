@@ -6,6 +6,7 @@ from pathlib import Path
 from aidd.evals.stage_timing import (
     build_self_repair_matrix_payload,
     build_stage_timing_payload,
+    render_repair_history_markdown,
     render_self_repair_matrix_markdown,
     render_stage_timing_markdown,
 )
@@ -155,6 +156,9 @@ def test_stage_timing_payload_reports_attempt_windows_and_harness_steps(tmp_path
     matrix_markdown = render_self_repair_matrix_markdown(matrix)
     assert "## Deterministic Probe Coverage" in matrix_markdown
     assert "`idea-placeholder-content`" in matrix_markdown
+    repair_history_markdown = render_repair_history_markdown(payload)
+    assert "| `idea` | 2 | `succeeded` | `repair-needed` |" in repair_history_markdown
+    assert "STRUCT-MISSING-REQUIRED-SECTION" in repair_history_markdown
 
 
 def test_stage_timing_marks_terminal_doc_mismatch(tmp_path: Path) -> None:
@@ -215,3 +219,87 @@ def test_stage_timing_marks_terminal_doc_mismatch(tmp_path: Path) -> None:
     plan_stage = next(item for item in stages if item["stage"] == "plan")
     assert plan_stage["terminal_docs_consistent"] is False
     assert plan_stage["final_failure_code"] == "SEM-PLACEHOLDER-CONTENT"
+
+
+def test_stage_timing_allows_successful_final_repair_attempt_docs(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_root = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-001"
+        / "run-20260426T100000Z"
+        / "stages"
+        / "tasklist"
+    )
+    stage_root.mkdir(parents=True)
+    (stage_root / "stage-metadata.json").write_text(
+        json.dumps(
+            {
+                "status": "succeeded",
+                "status_history": [
+                    {"status": "executing", "changed_at_utc": "2026-04-26T10:00:00Z"},
+                    {"status": "validating", "changed_at_utc": "2026-04-26T10:01:00Z"},
+                    {"status": "repair-needed", "changed_at_utc": "2026-04-26T10:01:01Z"},
+                    {"status": "executing", "changed_at_utc": "2026-04-26T10:01:01Z"},
+                    {"status": "validating", "changed_at_utc": "2026-04-26T10:02:00Z"},
+                    {"status": "succeeded", "changed_at_utc": "2026-04-26T10:02:01Z"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    work_item_stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "tasklist"
+    work_item_stage_root.mkdir(parents=True)
+    (work_item_stage_root / "stage-result.md").write_text(
+        "# Stage Result\n\n## Status\n\n- `succeeded`\n\n"
+        "## Validation summary\n\n- Validator verdict: `pass`\n",
+        encoding="utf-8",
+    )
+    (work_item_stage_root / "validator-report.md").write_text(
+        "# Validator Report\n\n## Result\n\n"
+        "- Verdict: `pass`\n"
+        "- Repair required for progression: no\n",
+        encoding="utf-8",
+    )
+    (work_item_stage_root / "repair-brief.md").write_text(
+        "# Repair context\n\n"
+        "Repair attempt context: attempt `2` of max `2`; remaining retries after this "
+        "attempt: `0`.\n"
+        "Rerun allowed after this attempt: `no`.\n"
+        "Repair budget status: `repair-budget-final-attempt`.\n",
+        encoding="utf-8",
+    )
+
+    payload = build_stage_timing_payload(
+        scenario=_scenario(),
+        run_id="eval-run",
+        runtime_id="claude-code",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        total_duration_seconds=65.0,
+    )
+
+    stages = payload["stages"]
+    assert isinstance(stages, list)
+    tasklist_stage = next(item for item in stages if item["stage"] == "tasklist")
+    assert tasklist_stage["terminal_docs_consistent"] is True
+    matrix = build_self_repair_matrix_payload(payload)
+    matrix_rows = matrix["matrix"]
+    tasklist_row = next(item for item in matrix_rows if item["stage"] == "tasklist")
+    assert tasklist_row["terminal_docs_consistent"] is True
+
+
+def test_repair_history_markdown_reports_no_repair_attempts(tmp_path: Path) -> None:
+    payload = build_stage_timing_payload(
+        scenario=_scenario(),
+        run_id="eval-run",
+        runtime_id="claude-code",
+        work_item="WI-001",
+        workspace_root=tmp_path / ".aidd",
+        total_duration_seconds=1.0,
+    )
+
+    assert "- No stage repair attempts recorded." in render_repair_history_markdown(payload)

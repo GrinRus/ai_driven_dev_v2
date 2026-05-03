@@ -242,6 +242,51 @@ def test_validate_cross_document_consistency_reports_duplicate_ids(tmp_path: Pat
     )
 
 
+def test_validate_cross_document_consistency_ignores_inline_answer_references(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n- `Q1` `[non-blocking]` Confirm scope.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        (
+            "# Answers\n\n"
+            "- `Q1` `[resolved]` Scope is confirmed.\n"
+            "  The prior plan-stage `Q1 [resolved]` answer remains "
+            "the source of truth.\n"
+        ),
+        encoding="utf-8",
+    )
+    (stage_root / "stage-result.md").write_text("# Stage\n\nreview\n", encoding="utf-8")
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_cross_document_consistency_reports_repair_mismatch_cases(
     tmp_path: Path,
 ) -> None:

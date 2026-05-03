@@ -178,6 +178,93 @@ def test_build_live_quality_assessment_returns_warn_for_bounded_quality_risks(
     assert "Resolve review conditions" in report
 
 
+def test_build_live_quality_assessment_ignores_negated_must_fix_mentions(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-NEGATED-MUST-FIX"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready-with-risks",
+    )
+    review_root = stage_output_root(root=tmp_path, work_item=work_item, stage="review")
+    review_root.joinpath("review-report.md").write_text(
+        "# Review Report\n\n"
+        "- Review status: `approved`\n\n"
+        "## Verdict\n\n"
+        "- approval status: `approved`\n"
+        "- rationale: No `must-fix` findings remain.\n\n"
+        "## Required changes\n\n"
+        "None. Approval is unconditional; no findings carry `must-fix`.\n",
+        encoding="utf-8",
+    )
+    qa_root = stage_output_root(root=tmp_path, work_item=work_item, stage="qa")
+    qa_root.joinpath("qa-report.md").write_text(
+        "# QA Report\n\n"
+        "- QA verdict: `ready-with-risks`\n"
+        "- `EV-1` - runtime.log\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_issue=scenario.feature_source.issues[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "warn"
+    assert "review report still contains unresolved must-fix findings (2)" not in (
+        assessment.blocking_findings
+    )
+    assert assessment.blocking_findings == tuple()
+    assert assessment.dimensions[1].score == 2
+
+
+def test_build_live_quality_assessment_fails_for_actual_must_fix_disposition(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-MUST-FIX"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    review_root = stage_output_root(root=tmp_path, work_item=work_item, stage="review")
+    review_root.joinpath("review-report.md").write_text(
+        "# Review Report\n\n"
+        "- Review status: `approved`\n\n"
+        "## Findings\n\n"
+        "### REV-1\n\n"
+        "- title: Missing regression coverage.\n"
+        "- disposition: `must-fix`\n"
+        "- severity: `high`\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_issue=scenario.feature_source.issues[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "fail"
+    assert assessment.blocking_findings == (
+        "review report still contains unresolved must-fix findings (1)",
+    )
+
+
 def test_build_live_quality_assessment_returns_fail_when_quality_commands_fail(
     tmp_path: Path,
 ) -> None:

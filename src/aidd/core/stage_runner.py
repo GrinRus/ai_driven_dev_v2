@@ -47,6 +47,8 @@ from aidd.validators.structural import (
     validate_required_sections,
 )
 
+MALFORMED_INTERVIEW_DOCUMENT_CODE = "INTERVIEW-MALFORMED-DOCUMENT"
+
 
 @dataclass(frozen=True, slots=True)
 class StagePreparationBundle:
@@ -234,7 +236,6 @@ class StageOrchestrationResult:
 ATTEMPT_INPUT_BUNDLE_FILENAME = RUN_ATTEMPT_INPUT_BUNDLE_FILENAME
 ATTEMPT_REPAIR_CONTEXT_FILENAME = RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME
 _REPAIR_BUDGET_EXHAUSTED_TOKEN = "repair-budget-exhausted"
-_RERUN_DISALLOWED_TOKEN = "rerun allowed after this attempt: `no`"
 _STATUS_SECTION_PATTERN = re.compile(
     r"(?P<prefix>#{1,6}\s+Status\s*\n+)(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
     re.IGNORECASE | re.DOTALL,
@@ -264,11 +265,7 @@ def _workspace_relative_path(workspace_root: Path, path: Path) -> str:
 
 def _text_exhausts_terminal_budget(text: str) -> bool:
     normalized = text.lower()
-    return (
-        _REPAIR_BUDGET_EXHAUSTED_TOKEN in normalized
-        or _RERUN_DISALLOWED_TOKEN in normalized
-        or "rerun allowed after this attempt: no" in normalized
-    )
+    return _REPAIR_BUDGET_EXHAUSTED_TOKEN in normalized
 
 
 def _repair_brief_exhausts_terminal_budget(
@@ -764,6 +761,56 @@ def restore_core_owned_repair_brief(
     return invocation_bundle.repair_brief_path
 
 
+def _stage_root_for_expected_output(expected_output_path: Path) -> Path:
+    if expected_output_path.parent.name == "output":
+        return expected_output_path.parent.parent
+    return expected_output_path.parent
+
+
+def _should_promote_misplaced_stage_output(
+    *,
+    source_path: Path,
+    destination_path: Path,
+) -> bool:
+    if not source_path.exists():
+        return False
+    if not destination_path.exists():
+        return True
+    try:
+        destination_text = destination_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        destination_text = ""
+    if destination_text in {
+        "# Questions\n\nNo questions yet.",
+        "# Answers\n\nNo answers yet.",
+        "# Validator report\n\nNo validator output yet.",
+        "# Stage result\n\nStage not run yet.",
+    }:
+        return True
+    try:
+        return source_path.stat().st_mtime_ns > destination_path.stat().st_mtime_ns
+    except OSError:
+        return False
+
+
+def _promote_misplaced_stage_output_documents(
+    *,
+    expected_markdown_documents: tuple[Path, ...],
+) -> None:
+    for destination_path in expected_markdown_documents:
+        stage_root = _stage_root_for_expected_output(destination_path)
+        misplaced_output_path = stage_root / "output" / destination_path.name
+        if misplaced_output_path.resolve(strict=False) == destination_path.resolve(strict=False):
+            continue
+        if not _should_promote_misplaced_stage_output(
+            source_path=misplaced_output_path,
+            destination_path=destination_path,
+        ):
+            continue
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        copy2(misplaced_output_path, destination_path)
+
+
 def discover_stage_markdown_outputs(
     *,
     execution_state: StageExecutionState,
@@ -794,6 +841,9 @@ def discover_stage_markdown_outputs(
         path
         for path in invocation_bundle.expected_output_documents
         if path.suffix.lower() == ".md"
+    )
+    _promote_misplaced_stage_output_documents(
+        expected_markdown_documents=expected_markdown_documents
     )
     discovered_markdown_documents = tuple(
         path for path in expected_markdown_documents if path.exists()
@@ -971,6 +1021,59 @@ def route_stage_questions_to_interview(
         unresolved_blocking_question_ids=unresolved_ids,
         requires_interview=bool(unresolved_ids),
     )
+
+
+def _route_stage_questions_to_interview_with_validation(
+    *,
+    workspace_root: Path,
+    discovery: StageOutputDiscovery,
+) -> tuple[StageInterviewRouting, tuple[ValidationFinding, ...]]:
+    try:
+        return (
+            route_stage_questions_to_interview(
+                workspace_root=workspace_root,
+                discovery=discovery,
+            ),
+            (),
+        )
+    except ValueError as exc:
+        document_name = "answers.md" if "answer" in str(exc).lower() else "questions.md"
+        stage_documents_root = workspace_stage_root(
+            root=workspace_root,
+            work_item=discovery.work_item,
+            stage=discovery.stage,
+        )
+        line_match = re.search(r"line\s+(\d+)", str(exc))
+        line_number = int(line_match.group(1)) if line_match is not None else None
+        routing = StageInterviewRouting(
+            stage=discovery.stage,
+            work_item=discovery.work_item,
+            run_id=discovery.run_id,
+            attempt_number=discovery.attempt_number,
+            questions_path=stage_documents_root / "questions.md",
+            answers_path=stage_documents_root / "answers.md",
+            unresolved_blocking_question_ids=(),
+            requires_interview=False,
+        )
+        finding = ValidationFinding(
+            code=MALFORMED_INTERVIEW_DOCUMENT_CODE,
+            message=(
+                f"Malformed interview document `{document_name}`: {exc}. "
+                "Use `- <QID> [blocking|non-blocking] <text>` for questions, "
+                "`- <QID> [resolved|partial|deferred] <text>` for answers, "
+                "or `- none` when there are no entries. Use non-bullet continuation "
+                "prose for explanatory metadata."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=_workspace_relative_path(
+                    workspace_root,
+                    stage_documents_root / document_name,
+                ),
+                line_number=line_number,
+            ),
+        )
+        return routing, (finding,)
 
 
 def persist_validation_state(
@@ -1327,16 +1430,27 @@ def run_single_stage_orchestration(
             validator_report_path=validation_result.validator_report_path,
             findings=findings,
         )
+    interview_routing, interview_findings = _route_stage_questions_to_interview_with_validation(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+    if interview_findings:
+        findings = (*validation_result.findings, *interview_findings)
+        write_validator_report(path=validation_result.validator_report_path, findings=findings)
+        validation_result = StageStructuralValidationResult(
+            stage=validation_result.stage,
+            work_item=validation_result.work_item,
+            run_id=validation_result.run_id,
+            attempt_number=validation_result.attempt_number,
+            validator_report_path=validation_result.validator_report_path,
+            findings=findings,
+        )
     if validation_result.findings:
         _strip_stage_result_success_claims_for_validator_findings(
             workspace_root=workspace_root,
             work_item=work_item,
             stage=stage,
         )
-    interview_routing = route_stage_questions_to_interview(
-        workspace_root=workspace_root,
-        discovery=discovery,
-    )
     verdict = derive_validation_verdict(
         findings=validation_result.findings,
         interview_routing=interview_routing,

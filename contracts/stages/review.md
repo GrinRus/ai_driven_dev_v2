@@ -44,6 +44,8 @@ Optional context documents may improve review depth, but they must not replace i
   - rationale tied to implementation evidence and acceptance criteria,
   - an explicit approval status suitable for go/no-go decision (`approved`, `approved-with-conditions`, `rejected`),
   - summary of required changes when approval status is not `approved`.
+- Findings may be written as top-level bullets or as `### RV-*` / `### REV-*` subsections.
+- Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - `stage-result.md` and `validator-report.md` must remain consistent with findings and approval status.
 

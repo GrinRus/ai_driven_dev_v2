@@ -96,6 +96,7 @@ def test_sqlite_utils_canonical_live_scenario_declares_installed_full_flow_bundl
     assert scenario.raw["workflow_bundle"]["lane"] == "installed-live-full-flow-audit"
     assert "quality-report.md" in scenario.raw["workflow_bundle"]["required_artifacts"]
     assert scenario.runtime_targets == ("codex", "opencode", "claude-code")
+    assert scenario.run.timeout_minutes == 240
 
 
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:

@@ -30,8 +30,9 @@ belong in `stage-result.md` or a future `repair-notes.md`, not in this control a
 
 - Must include current attempt index and remaining repair attempts.
 - Must state whether another rerun is allowed after this repair attempt.
-- Must declare `repair-budget-exhausted` when no attempts remain.
-- `repair-budget-exhausted` means the repaired stage terminal status must be `failed`.
+- Must declare `repair-budget-final-attempt` when this repair attempt is the last allowed attempt.
+- `repair-budget-final-attempt` means no further rerun is allowed after this attempt, but the stage may still pass if the repaired outputs validate.
+- `repair-budget-exhausted` is terminal failure state after the final allowed attempt still has validation findings.
 - Must not instruct indefinite retries.
 
 ## Fix-plan rules

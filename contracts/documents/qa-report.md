@@ -7,6 +7,7 @@ Summarize verification evidence, remaining risks, and release readiness.
 ## Required sections
 
 - `Verification summary`
+- `Release recommendation`
 - `Evidence`
 - `Known issues`
 - `Readiness`
@@ -16,6 +17,9 @@ Summarize verification evidence, remaining risks, and release readiness.
 - the file exists in the expected stage directory,
 - the required headings are present,
 - the content is non-placeholder and stage-relevant,
+- `Release recommendation` declares exactly one supported state:
+  `proceed`, `proceed-with-conditions`, or `hold`,
+- material evidence entries use stable `EV-N` ids and/or backticked artifact paths,
 - upstream references are present when the stage requires them.
 
 ## Notes

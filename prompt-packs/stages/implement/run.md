@@ -56,7 +56,11 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
 3. Produce `implementation-report.md` with selected task id, scoped change summary, touched-files list,
    verification notes, and residual risk/deferred notes when applicable.
 4. Keep touched-files entries bounded to allowed scope and aligned with observable repository changes.
-5. Record verification using concrete commands/checks and outcomes; do not imply execution that did not happen.
+   Use top-level bullets for each file, with a backticked path plus short intent (`path` - intent,
+   `path`: intent, or `path` -> intent). Put line-level details under that file entry.
+5. Record verification using concrete commands/checks and outcomes; include observed results such as
+   `-> pass`, `exit 0`, `exit code 0`, or the captured tool summary. Do not imply execution that did
+   not happen.
 6. If required inputs are missing or scope/task constraints conflict, raise a `[blocking]` question
    instead of inventing assumptions.
 7. Update `validator-report.md` and `stage-result.md` so readiness, blockers, and next actions remain

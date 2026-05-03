@@ -156,7 +156,10 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert config_text.count("timeout_seconds = 900") == 2
     assert "[runtime.claude_code.stage_timeouts]" in config_text
     assert "research = 1500" in config_text
+    assert "tasklist = 1800" in config_text
     assert "implement = 1800" in config_text
+    assert "review = 1800" in config_text
+    assert "qa = 1800" in config_text
 
 
 def test_write_live_runtime_config_records_env_override_as_adapter_flags(
