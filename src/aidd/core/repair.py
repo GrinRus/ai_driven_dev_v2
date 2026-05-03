@@ -286,7 +286,7 @@ def render_repair_brief(
         f"`{'yes' if rerun_allowed_after_this_attempt else 'no'}`."
     )
     if remaining_after_this_attempt == 0:
-        lines.append("Repair budget status: `repair-budget-exhausted`.")
+        lines.append("Repair budget status: `repair-budget-final-attempt`.")
     else:
         lines.append("Repair budget status: `repair-budget-available`.")
     lines.append("")

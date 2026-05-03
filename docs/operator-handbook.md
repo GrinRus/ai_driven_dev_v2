@@ -94,7 +94,10 @@ mode = "native"
 # runtime.<provider>.timeout_seconds.
 # [runtime.claude_code.stage_timeouts]
 # research = 1500
+# tasklist = 1800
 # implement = 1800
+# review = 1800
+# qa = 1800
 
 [runtime.codex]
 command = "codex exec --full-auto --skip-git-repo-check --json -"

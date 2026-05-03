@@ -14,8 +14,12 @@ REPAIR_BRIEF_NOT_REFERENCED_CODE = "CROSS-REPAIR-BRIEF-NOT-REFERENCED"
 BLOCKING_UNANSWERED_CODE = "CROSS-BLOCKING-UNANSWERED"
 REPAIR_BUDGET_EXHAUSTED_CODE = "CROSS-REPAIR-BUDGET-EXHAUSTED"
 
-_QUESTION_ID_PATTERN = re.compile(r"`?(Q[\w-]+)`?\s+`?\[(blocking|non-blocking)\]`?")
-_ANSWER_ID_PATTERN = re.compile(r"`?(Q[\w-]+)`?\s+`?\[(resolved|partial|deferred)\]`?")
+_QUESTION_ID_PATTERN = re.compile(
+    r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(blocking|non-blocking)\]`?"
+)
+_ANSWER_ID_PATTERN = re.compile(
+    r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(resolved|partial|deferred)\]`?"
+)
 _REPAIR_BUDGET_EXHAUSTED_TOKEN = "repair-budget-exhausted"
 _STAGE_STATUS_PATTERN = re.compile(r"`?(succeeded|failed|blocked|needs-input)`?", re.IGNORECASE)
 

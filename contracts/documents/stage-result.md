@@ -25,6 +25,7 @@ validation state, blockers, and next actions.
   - Must list attempts in chronological order.
   - Each attempt must include at minimum: attempt number, trigger (`initial` or `repair`), and outcome.
   - Failed attempts must reference validator or runtime evidence when available.
+  - Repair attempts must reference `repair-brief.md` by workspace-relative path when it exists.
 - `Status`
   - Must contain one terminal stage status for this run (`succeeded`, `failed`, `blocked`, or `needs-input`).
   - Must not use ambiguous states such as `done-ish` or `in progress`.
@@ -43,12 +44,15 @@ validation state, blockers, and next actions.
 - `Terminal state notes`
   - Must explain why the stage ended in the declared terminal status.
   - Must include repair-budget outcome when repair logic was used.
-  - If `repair-brief.md` declares `repair-budget-exhausted`, status must be `failed`.
+  - If `repair-brief.md` declares `repair-budget-final-attempt`, status must reflect the actual validation outcome of that attempt, not fail solely because no later rerun is available.
+  - If AIDD records `repair-budget-exhausted` after a failed final attempt, status must be `failed`.
 
 ## Authoring rules
 
 - Use required heading names exactly; do not collapse `Attempt history` into `Status`.
 - Keep document paths and artifact references workspace-relative and wrapped in backticks.
+- When `repair-brief.md` exists, include a backticked workspace-relative reference to it in
+  `Attempt history`, `Validation summary`, or `Terminal state notes`.
 - Keep attempt numbering monotonic and contiguous within the document.
 - Do not claim success when required outputs or validation evidence are missing.
 - Do not claim `Validator verdict: pass` when the canonical AIDD validator report lists

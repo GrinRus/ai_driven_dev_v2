@@ -217,7 +217,7 @@ def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_p
     assert "Repair budget status: `repair-budget-available`." in repair_brief
 
 
-def test_render_repair_brief_marks_exhausted_budget() -> None:
+def test_render_repair_brief_marks_final_repair_attempt() -> None:
     report_markdown = render_validator_report(
         findings=(
             ValidationFinding(
@@ -241,7 +241,8 @@ def test_render_repair_brief_marks_exhausted_budget() -> None:
 
     assert "remaining retries after this attempt: `0`" in repair_brief
     assert "Rerun allowed after this attempt: `no`." in repair_brief
-    assert "Repair budget status: `repair-budget-exhausted`." in repair_brief
+    assert "Repair budget status: `repair-budget-final-attempt`." in repair_brief
+    assert "repair-budget-exhausted" not in repair_brief
 
 
 def test_generate_and_write_repair_brief_roundtrip(tmp_path: Path) -> None:

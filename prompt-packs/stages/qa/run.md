@@ -58,13 +58,18 @@ The stage is complete only when verdict, recommendation, and evidence are cohere
 
 1. Read all required upstream artifacts and `contracts/stages/qa.md` before drafting outputs.
 2. Verify upstream `review` outcome is not `rejected` and is consistent with implementation status.
-3. Build `qa-report.md` with explicit quality verdict, residual risks, and release recommendation.
-4. Tie verdict and recommendation claims to `verification-output.md` and/or
+3. Build `qa-report.md` with these exact H2 sections:
+   `Verification summary`, `Release recommendation`, `Evidence`, `Known issues`, and `Readiness`.
+4. In `Release recommendation`, put exactly one supported state on its own bullet:
+   `proceed`, `proceed-with-conditions`, or `hold`.
+5. In `Evidence`, label material evidence entries as `EV-1`, `EV-2`, ... and include command
+   outcomes or artifact paths in backticks.
+6. Tie verdict and recommendation claims to `verification-output.md` and/or
    `verification-artifacts.md` references.
-5. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
-6. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
+7. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
+8. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
    instead of inventing assumptions.
-7. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
+9. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
 
 ## Completion checklist
 

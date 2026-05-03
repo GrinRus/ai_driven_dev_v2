@@ -39,7 +39,8 @@ Optional context documents may improve task decomposition quality, but they must
 ## Tasklist output expectations
 
 - `tasklist.md` must include:
-  - an ordered decomposition of implementation tasks with stable task ids and imperative titles,
+  - an ordered decomposition of implementation tasks with stable task ids and imperative titles
+    (for example `T1`, `T2` or `TL-1`, `TL-2`; use one style consistently),
   - one dominant output artifact per task so each item remains reviewable as a standalone unit,
   - explicit dependency notes per task (upstream task ids or `none`),
   - verification notes per task naming the primary check, test, or scenario proving completion.

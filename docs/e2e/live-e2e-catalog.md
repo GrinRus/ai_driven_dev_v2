@@ -87,7 +87,11 @@ For live scenarios in this wave:
 
 - `codex` is the primary canonical runtime for maintained small and medium live lanes;
 - `opencode` covers at least one live lane;
-- `claude-code` is enabled only for the `AIDD-LIVE-005` small smoke lane;
+- `claude-code` is enabled only for the `AIDD-LIVE-005` small smoke lane, where the
+  manual timeout budget is intentionally extended to 240 minutes because native
+  Claude Code full-flow attempts can run materially longer than Codex/OpenCode
+  attempts; its generated live runtime config also extends long-running
+  `research`, `tasklist`, `implement`, `review`, and `qa` stage attempts;
 - `generic-cli` remains a deterministic baseline provider and is not a maintained live provider in this wave.
 
 Representative matrix coverage for the live lane:

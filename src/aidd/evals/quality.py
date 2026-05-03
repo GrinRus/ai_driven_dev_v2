@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -62,13 +63,26 @@ def _extract_backticked_value(text: str | None, *, allowed: tuple[str, ...]) -> 
 def _count_must_fix_findings(text: str | None) -> int:
     if text is None:
         return 0
-    return text.count("`must-fix`")
+    count = 0
+    finding_item_pattern = re.compile(
+        r"^\s*[-*]\s*`?(?:REV|RV|I|FINDING|QA)-?\d+\b.*\bmust-fix\b",
+        flags=re.IGNORECASE,
+    )
+    disposition_pattern = re.compile(
+        r"^\s*[-*]?\s*(?:disposition|status)\s*:\s*`?must-fix`?\b",
+        flags=re.IGNORECASE,
+    )
+    for line in text.splitlines():
+        if disposition_pattern.search(line) or finding_item_pattern.search(line):
+            count += 1
+    return count
 
 
 def _count_evidence_references(text: str | None) -> int:
     if text is None:
         return 0
-    return sum(1 for line in text.splitlines() if line.strip().startswith("- EV-"))
+    evidence_pattern = re.compile(r"^\s*[-*]\s*`?EV-\d+\b", flags=re.IGNORECASE)
+    return sum(1 for line in text.splitlines() if evidence_pattern.search(line))
 
 
 def _required_stage_paths(*, workspace_root: Path, work_item: str) -> tuple[Path, ...]:

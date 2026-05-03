@@ -13,13 +13,23 @@ scope safety, verification truthfulness, and cross-document status consistency.
 4. `contracts/documents/implementation-report.md`,
    `contracts/documents/validator-report.md`,
    `contracts/documents/stage-result.md`
-5. current outputs:
+5. `contracts/documents/questions.md` and `contracts/documents/answers.md`
+6. current outputs:
    - `implementation-report.md`
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
 
 `repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
-any repair summary in `stage-result.md`.
+any repair summary in `stage-result.md` and reference `repair-brief.md` by path for traceability.
+
+Do not inspect AIDD validator implementation files, installed package files, or bundled examples
+during repair. Use `validator-report.md`, `repair-brief.md`, and the named contracts as the repair
+scope. After updating the required documents and checking consistency, stop.
+
+Interview document format is strict. `questions.md` bullets use `- Q1 [blocking|non-blocking] ...`;
+`answers.md` bullets must reuse the same question id with `[resolved|partial|deferred]`, for example
+`- Q1 [resolved] ...`. Do not invent `A1`/`A2` answer ids. Render assumptions or metadata as
+non-bullet continuation prose.
 
 ## Finding-to-fix mapping
 
@@ -33,7 +43,11 @@ For each finding:
    - cross-document status drift;
 2. patch only the smallest affected section(s) of `implementation-report.md`;
 3. re-check touched-files entries against observable repository changes and allowed write scope;
-4. re-check `stage-result.md` and `validator-report.md` for status/blocker consistency.
+   each top-level entry needs a backticked file path plus short intent, while nested bullets may hold
+   line-level details;
+4. re-check verification entries for concrete command/check evidence plus observed outcome
+   (`-> pass`, `exit 0`, `exit code 0`, or captured tool summary);
+5. re-check `stage-result.md` and `validator-report.md` for status/blocker consistency.
 
 Use concrete repair actions:
 
@@ -56,8 +70,10 @@ Use concrete repair actions:
 6. Keep `stage-result.md` attempt status truthful for the current repair attempt.
 7. Use exact required headings from document contracts; do not rename or qualify headings.
 8. Read the repair budget section in `repair-brief.md` before declaring terminal status.
-9. If `repair-brief.md` says `repair-budget-exhausted` or `Rerun allowed after this attempt: no`, `stage-result.md` status must be `failed`; do not claim `succeeded`.
-10. Do not claim success unless required headings, validator verdict, stage-result status, touched files, and verification evidence are mutually consistent.
+9. If `repair-brief.md` says `repair-budget-final-attempt` or `Rerun allowed after this attempt: no`, still repair the listed findings and set `stage-result.md` status from the actual repaired output state; do not fail solely because no later rerun is available.
+10. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
+11. Do not claim success unless required headings, validator verdict, stage-result status, touched files, and verification evidence are mutually consistent.
+12. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
 
 ## Repair exit checks
 
@@ -65,5 +81,6 @@ Use concrete repair actions:
 - selected task id, change summary, touched-files list, and verification notes are mutually consistent,
 - touched-files entries stay within allowed write scope and match observed edits,
 - no-op outcomes (if any) include evidence-backed rationale and actionable next step,
-- repair-budget exhaustion cannot coexist with `stage-result.md` status `succeeded`,
+- `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
+- `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no status drift remains between `implementation-report.md`, `validator-report.md`, and `stage-result.md`.

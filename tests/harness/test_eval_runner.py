@@ -7,7 +7,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-from aidd.harness.eval_runner import run_eval_scenario
+from aidd.harness.eval_runner import (
+    _stage_failure_events_from_timing_payload,
+    run_eval_scenario,
+)
 from aidd.harness.install_artifact import HarnessInstallResult
 from aidd.harness.runner import HarnessCommandTranscript
 
@@ -42,6 +45,35 @@ def _init_source_repo(path: Path) -> None:
     (path / "README.md").write_text("repo\n", encoding="utf-8")
     _run(["git", "add", "README.md"], cwd=path)
     _run(["git", "commit", "-m", "init"], cwd=path)
+
+
+def test_stage_failure_events_report_terminal_failure_code() -> None:
+    events = _stage_failure_events_from_timing_payload(
+        {
+            "stages": [
+                {
+                    "stage": "implement",
+                    "status": "failed",
+                    "final_failure_code": "SEM-UNVERIFIABLE-CHECK-CLAIM",
+                    "attempts": [
+                        {
+                            "attempt": 3,
+                            "validation_result": "failed",
+                            "terminal_status": "failed",
+                            "runtime_exit_classification": "success",
+                            "repair_reason": (
+                                "- `SEM-INCOMPLETE-SECTION`: stale repair brief reason"
+                            ),
+                        }
+                    ],
+                }
+            ]
+        }
+    )
+
+    assert len(events) == 1
+    assert "final failure code `SEM-UNVERIFIABLE-CHECK-CLAIM`" in events[0].message
+    assert "preceding repair reason" in events[0].message
 
 
 def _write_fake_aidd(

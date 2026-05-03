@@ -12,6 +12,7 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     prompt_path = Path("prompt-packs") / "stages" / stage / "repair.md"
     prompt_text = prompt_path.read_text(encoding="utf-8")
 
+    assert "repair-budget-final-attempt" in prompt_text
     assert "repair-budget-exhausted" in prompt_text
     assert "Rerun allowed after this attempt: no" in prompt_text
     assert "stage-result.md" in prompt_text
@@ -23,6 +24,12 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     assert "consistent" in prompt_text.lower()
     assert "AIDD-owned read-only repair control evidence" in prompt_text
     assert "Do not rewrite it" in prompt_text
+    assert "Do not inspect AIDD validator implementation files" in prompt_text
+    assert "After updating the required documents and checking consistency, stop" in prompt_text
+    assert "contracts/documents/questions.md" in prompt_text
+    assert "contracts/documents/answers.md" in prompt_text
+    assert "Do not invent `A1`/`A2` answer ids" in prompt_text
+    assert "`- Q1 [resolved] ...`" in prompt_text
 
 
 @pytest.mark.parametrize("stage", STAGES)

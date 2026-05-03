@@ -36,19 +36,24 @@ sign-off state is coherent with required changes.
 ## Review discipline
 
 1. Every issue must be concrete, scoped, severity-tagged, and rationale-backed.
-2. Recommendation summary must map remediation steps to identified issues where applicable.
-3. Recommendations must be prioritized and explicit enough for downstream execution.
-4. Sign-off decision must be explicit (`approved`, `approved-with-conditions`, or `rejected`) and
+2. Use either top-level bullets or `### I<N> - ...` subsections for the `Issue list`; each issue
+   item/subsection must include explicit `Severity` and `Rationale` text.
+   If no material issue exists, write `No material issues identified.` or a no-defect item with
+   `Severity: none`; do not invent advisory issues just to satisfy format.
+3. Recommendation summary must use prioritized Markdown list items (ordered or unordered) and map
+   remediation steps to identified issues where applicable.
+4. Recommendations must be prioritized and explicit enough for downstream execution.
+5. Sign-off decision must be explicit (`approved`, `approved-with-conditions`, or `rejected`) and
    consistent with readiness state and required changes.
-5. Blocking uncertainty must be turned into questions instead of implied assumptions.
+6. Blocking uncertainty must be turned into questions instead of implied assumptions.
 
 ## Execution instructions
 
 1. Read required plan artifacts, review context, and `contracts/stages/review-spec.md` before
    drafting outputs.
 2. If required plan artifacts are missing or inconsistent, do not mark stage as `succeeded`.
-3. Draft `review-spec-report.md` with explicit sections for issue list, recommendation summary,
-   readiness state, required changes, and decision/sign-off.
+3. Draft `review-spec-report.md` with explicit sections for strengths, issue list, recommendation
+   summary, readiness state, required changes, and decision/sign-off.
 4. Keep issue wording tied to observable plan gaps or risks, not generic quality statements.
 5. Map recommended actions to issue ids/severity where possible so remediation order is clear.
 6. If contradictory constraints or missing decision authority block sign-off, raise a `[blocking]`
@@ -58,8 +63,9 @@ sign-off state is coherent with required changes.
 
 ## Completion checklist
 
-- issue list is concrete, severity-tagged, and rationale-backed,
-- recommendations are prioritized and mapped to identified issues,
+- issue list is concrete, severity-tagged, and rationale-backed in either bullet or `### I<N>`
+  subsection form,
+- recommendations are prioritized Markdown list items and mapped to identified issues,
 - readiness state, required changes, and sign-off decision are coherent,
 - unresolved blocking ambiguity is captured as explicit questions,
 - stage status and validator verdict agree with report outcome.

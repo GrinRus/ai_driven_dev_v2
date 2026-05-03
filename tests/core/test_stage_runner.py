@@ -702,6 +702,71 @@ def test_discover_stage_markdown_outputs_returns_discovered_and_missing_document
     assert discovery.missing_markdown_documents == preparation_bundle.expected_output_documents[2:]
 
 
+def test_discover_stage_markdown_outputs_promotes_misplaced_output_documents(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="claude-code",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    stage_root = preparation_bundle.expected_output_documents[0].parent
+    misplaced_output_root = stage_root / "output"
+    misplaced_output_root.mkdir(parents=True)
+    valid_documents = _valid_plan_output_documents()
+    for expected_output in preparation_bundle.expected_output_documents:
+        (misplaced_output_root / expected_output.name).write_text(
+            valid_documents[expected_output.name],
+            encoding="utf-8",
+        )
+    (stage_root / "stage-result.md").write_text(
+        "# Stage result\n\nStage not run yet.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "validator-report.md").write_text(
+        "# Validator report\n\nNo validator output yet.\n",
+        encoding="utf-8",
+    )
+
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+    structural_validation = run_structural_validation_after_output_discovery(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+
+    assert discovery.discovered_markdown_documents == preparation_bundle.expected_output_documents
+    assert discovery.missing_markdown_documents == ()
+    assert (stage_root / "plan.md").read_text(encoding="utf-8") == valid_documents["plan.md"]
+    assert (stage_root / "stage-result.md").read_text(encoding="utf-8") == (
+        valid_documents["stage-result.md"]
+    )
+    assert structural_validation.findings == ()
+
+
 def test_discover_stage_markdown_outputs_rejects_mismatched_execution_context(
     tmp_path: Path,
 ) -> None:
@@ -980,6 +1045,178 @@ def test_run_single_stage_orchestration_removes_model_authored_initial_repair_br
     assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.PASS
     assert not repair_brief_path.exists()
     assert "repair-brief.md" not in validator_report_path.read_text(encoding="utf-8")
+
+
+def test_run_single_stage_orchestration_repairs_malformed_questions_document(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
+        "## Status",
+        "# Status",
+    )
+    runtime_documents["questions.md"] = (
+        "# Questions\n\n"
+        "## Q1 [non-blocking]\n\n"
+        "Which behavior should header-only imports preserve?\n\n"
+        "Candidate outcomes:\n\n"
+        "- (a) create an empty table.\n"
+        "- (b) create no table and exit successfully.\n"
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        stage_root = (
+            workspace_root
+            / "workitems"
+            / invocation.work_item
+            / "stages"
+            / invocation.stage
+        )
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.REPAIR
+    assert orchestration.validation_result is not None
+    assert any(
+        finding.code == "INTERVIEW-MALFORMED-DOCUMENT"
+        for finding in orchestration.validation_result.findings
+    )
+    validator_report_text = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "validator-report.md"
+    ).read_text(encoding="utf-8")
+    assert "`INTERVIEW-MALFORMED-DOCUMENT`" in validator_report_text
+    assert "Invalid question entry at line 9" in validator_report_text
+    assert "`- <QID> [resolved|partial|deferred] <text>` for answers" in validator_report_text
+
+
+def test_run_single_stage_orchestration_allows_final_repair_attempt_to_pass(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "repair-brief.md").write_text(
+        "# Failed checks\n\n- `SEM-PLACEHOLDER-CONTENT` `high` in `plan.md`: fix.\n\n"
+        "# Required corrections\n\n## Mandatory fixes\n\n- fix\n\n"
+        "# Relevant upstream docs\n\n- `context/intake.md`\n\n"
+        "Repair attempt context: attempt `2` of max `2`; remaining retries after this "
+        "attempt: `0`.\n"
+        "Rerun allowed after this attempt: `no`.\n"
+        "Repair budget status: `repair-budget-final-attempt`.\n",
+        encoding="utf-8",
+    )
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
+        "Ready.\n",
+        "Ready after resolving findings from `repair-brief.md`.\n",
+    )
+    command = _write_runtime_writer_command(
+        tmp_path=tmp_path,
+        documents=runtime_documents,
+        exit_code=0,
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        context = GenericCliStageContext(
+            stage=invocation.stage,
+            work_item=invocation.work_item,
+            run_id=invocation.run_id,
+            prompt_pack_path=Path("prompt-packs/stages/plan/system.md"),
+        )
+        spec = build_subprocess_spec(
+            configured_command=command,
+            workspace_root=workspace_root,
+            context=context,
+            base_env=dict(os.environ),
+            repository_root=Path.cwd(),
+        )
+        run_result = run_subprocess_with_streaming(spec=spec)
+        persist_attempt_runtime_artifacts(
+            attempt_path=execution_state.attempt_path,
+            run_result=run_result,
+        )
+        return AdapterExecutionOutcome(
+            succeeded=run_result.exit_classification is GenericCliExitClassification.SUCCESS,
+            details=run_result.exit_classification.value,
+        )
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+        repair_policy=RepairBudgetPolicy(default_max_repair_attempts=1),
+    )
+
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert orchestration.transition.next_state is StageState.SUCCEEDED
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.PASS
+    assert orchestration.validation_transition.budget_exhausted is False
+    validator_report_text = (stage_root / "validator-report.md").read_text(encoding="utf-8")
+    assert "CROSS-REPAIR-BUDGET-EXHAUSTED" not in validator_report_text
+    assert (stage_root / "output" / "stage-result.md").exists()
 
 
 def test_run_single_stage_orchestration_forces_failed_status_on_exhausted_repair_budget(

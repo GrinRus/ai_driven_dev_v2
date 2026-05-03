@@ -3480,3 +3480,187 @@ Sync notes:
 - `2026-04-25` `W15-E2-S1-T1` completed: Wave 12 and Wave 13 local task bullets now carry explicit `(done)` markers without changing their completed parent statuses; backlog advanced `W15-E3-S1-T1` to `Next`.
 - `2026-04-25` `W15-E3-S1-T1` blocked: local preflight found maintained runtime binaries but no configured AIDD-compatible live runtime wrapper command in `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND`; backlog advanced `W15-E3-S2-T1` to `Next`.
 - `2026-04-25` `W15-E3-S2-T1` blocked: no release candidate tag points at `HEAD`, and no local PyPI or GitHub publishing token environment variables were set; backlog queue is empty with both external evidence tasks blocked.
+
+## Wave 16 — complexity reduction and maintainability recovery (`next`)
+
+### Epic W16-E0 — queue restoration governance (`done`)
+Linked stories: `US-10`
+
+#### Slice W16-E0-S1 — reopen complexity-reduction queue (`done`)
+Goal: reopen implementation work for maintainability after the project-wide complexity audit found concrete hotspots and the active backlog queue was empty.
+
+Primary outputs:
+
+- Wave 16 roadmap lane
+- restored short backlog queue for complexity work
+- dated sync note
+
+Touched areas:
+
+- `docs/backlog/`
+
+Dependencies:
+
+- `W8-E3-S1`
+
+Local tasks:
+
+- `W16-E0-S1-T1` (done) Define the Wave 16 complexity-reduction lane and promote concrete local task IDs into `Next`, `Soon`, and `Parking lot`.
+
+Exit evidence:
+
+- `docs/backlog/backlog.md` has an actionable complexity-reduction queue;
+- every promoted backlog item exists as a local task in this Wave 16 roadmap section;
+- Wave 15 remains blocked on external evidence lanes and is not required for Wave 16 work.
+
+### Epic W16-E1 — semantic validator complexity reduction (`next`)
+Linked stories: `US-02`, `US-03`, `US-10`
+
+#### Slice W16-E1-S1 — stage-specific semantic validator decomposition (`next`)
+Goal: reduce `validate_semantic_outputs` complexity while preserving existing Markdown contract behavior and semantic validation findings.
+
+Primary outputs:
+
+- shared semantic validation context helpers
+- stage-specific semantic validation functions
+- focused validator regression coverage
+
+Touched areas:
+
+- `src/aidd/validators/semantic.py`
+- `tests/validators/test_semantic.py`
+
+Dependencies:
+
+- `W16-E0-S1`
+
+Local tasks:
+
+- `W16-E1-S1-T1` (next) Extract shared semantic validation context helpers from `validate_semantic_outputs` without changing validator behavior.
+- `W16-E1-S1-T2` (planned) Split high-risk stage-specific semantic checks into dedicated internal functions for `implement`, `review`, and `qa`.
+- `W16-E1-S1-T3` (planned) Split remaining stage-specific semantic checks for `idea`, `research`, `plan`, `review-spec`, and `tasklist`.
+
+Exit evidence:
+
+- `uv run pytest tests/validators/test_semantic.py -q` passes after each local task;
+- full `tests/validators/` coverage passes after stage-specific extraction;
+- validator output codes, severities, and documented contract behavior remain unchanged.
+
+### Epic W16-E2 — eval and harness orchestration decomposition (`planned`)
+Linked stories: `US-07`, `US-10`
+
+#### Slice W16-E2-S1 — live quality rule extraction (`planned`)
+Goal: make live quality verdict policy easier to review by splitting the current assessment function into small rule evaluators.
+
+Primary outputs:
+
+- live quality rule evaluators
+- unchanged quality verdict payloads
+
+Touched areas:
+
+- `src/aidd/evals/quality.py`
+- `tests/evals/test_quality.py`
+
+Dependencies:
+
+- `W16-E0-S1`
+
+Local tasks:
+
+- `W16-E2-S1-T1` (planned) Split live quality assessment into small rule evaluators while preserving existing quality verdicts.
+
+Exit evidence:
+
+- `uv run pytest tests/evals/test_quality.py -q` passes;
+- representative live quality reports keep the same gate and verdict decisions for existing fixtures.
+
+#### Slice W16-E2-S2 — eval runner step extraction (`planned`)
+Goal: make eval scenario execution easier to reason about by separating execution, artifact collection, grading, and reporting steps.
+
+Primary outputs:
+
+- eval runner step helpers
+- unchanged eval bundle structure
+
+Touched areas:
+
+- `src/aidd/harness/eval_runner.py`
+- `tests/harness/test_eval_runner.py`
+
+Dependencies:
+
+- `W16-E0-S1`
+
+Local tasks:
+
+- `W16-E2-S2-T1` (planned) Split eval scenario orchestration into explicit execution, artifact, grading, and reporting steps.
+
+Exit evidence:
+
+- `uv run pytest tests/harness/test_eval_runner.py -q` passes;
+- existing eval bundle files and grader payload fields remain compatible.
+
+### Epic W16-E3 — adapter subprocess maintainability (`planned`)
+Linked stories: `US-01`, `US-06`, `US-08`, `US-10`
+
+#### Slice W16-E3-S1 — shared native subprocess streaming skeleton (`planned`)
+Goal: reduce duplicated subprocess streaming control flow across native runtime adapters without moving runtime-specific policy into core.
+
+Primary outputs:
+
+- adapter-local shared subprocess streaming helper
+- preserved runtime-specific command and event handling
+
+Touched areas:
+
+- `src/aidd/adapters/`
+- `tests/adapters/`
+
+Dependencies:
+
+- `W16-E0-S1`
+
+Local tasks:
+
+- `W16-E3-S1-T1` (planned) Extract shared subprocess streaming behavior for native runtime adapters without moving runtime-specific policy into core.
+
+Exit evidence:
+
+- adapter runner tests pass for `generic-cli`, `codex`, `opencode`, and `claude-code`;
+- adapter conformance tests still prove runtime-specific behavior stays adapter-local.
+
+### Epic W16-E4 — complexity visibility (`planned`)
+Linked stories: `US-10`
+
+#### Slice W16-E4-S1 — non-blocking complexity audit report (`planned`)
+Goal: make complexity hotspots visible to maintainers without turning complexity rules into a CI or release gate before baseline cleanup is complete.
+
+Primary outputs:
+
+- deterministic complexity audit command or script
+- documented non-gating report behavior
+
+Touched areas:
+
+- repo tooling
+- tests
+- docs
+
+Dependencies:
+
+- `W16-E1-S1`
+- `W16-E2-S1`
+
+Local tasks:
+
+- `W16-E4-S1-T1` (planned) Add a non-blocking complexity audit command or script that reports current hotspots without making complexity a CI gate.
+
+Exit evidence:
+
+- the audit report lists current hotspots deterministically;
+- tests prove report generation without failing the default deterministic gate.
+
+Sync notes:
+
+- `2026-05-03` Wave 16 was opened for complexity reduction after the project-wide complexity audit identified semantic validation, eval/harness orchestration, quality assessment, CLI/adapters, and complexity reporting as maintainability hotspots; `W16-E1-S1-T1` was promoted to `Next`.

@@ -12,13 +12,23 @@ recommendation actionability, and sign-off consistency.
 3. `contracts/stages/review-spec.md`
 4. `contracts/documents/review-spec-report.md`, `contracts/documents/validator-report.md`,
    `contracts/documents/stage-result.md`
-5. current outputs:
+5. `contracts/documents/questions.md` and `contracts/documents/answers.md`
+6. current outputs:
    - `review-spec-report.md`
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
 
 `repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
-any repair summary in `stage-result.md`.
+any repair summary in `stage-result.md` and reference `repair-brief.md` by path for traceability.
+
+Do not inspect AIDD validator implementation files, installed package files, or bundled examples
+during repair. Use `validator-report.md`, `repair-brief.md`, and the named contracts as the repair
+scope. After updating the required documents and checking consistency, stop.
+
+Interview document format is strict. `questions.md` bullets use `- Q1 [blocking|non-blocking] ...`;
+`answers.md` bullets must reuse the same question id with `[resolved|partial|deferred]`, for example
+`- Q1 [resolved] ...`. Do not invent `A1`/`A2` answer ids. Render assumptions or metadata as
+non-bullet continuation prose.
 
 ## Finding-to-fix mapping
 
@@ -34,9 +44,12 @@ For each finding:
 Use concrete repair actions:
 
 - weak issue quality: rewrite issues with explicit scope, severity, and rationale linked to plan
-  risks/gaps;
+  risks/gaps; `Issue list` may use top-level bullets or `### I<N> - ...` subsections, but each
+  issue item/subsection must include explicit `Severity` and `Rationale` text; if no material issue
+  exists, use an explicit no-issue marker or `Severity: none` no-defect item instead of inventing
+  artificial advisory issues;
 - weak recommendation actionability: rewrite recommendation summary with prioritized, concrete
-  remediation steps tied to issues;
+  Markdown list items tied to issues;
 - sign-off inconsistency: align readiness state, decision, and required changes so go/no-go status
   is unambiguous;
 - contradiction in review context: keep/add a blocking question instead of forcing approval;
@@ -51,13 +64,18 @@ Use concrete repair actions:
 5. Keep `stage-result.md` attempt history and terminal status truthful for this repair attempt.
 6. Use exact required headings from document contracts; do not rename or qualify headings.
 7. Read the repair budget section in `repair-brief.md` before declaring terminal status.
-8. If `repair-brief.md` says `repair-budget-exhausted` or `Rerun allowed after this attempt: no`, `stage-result.md` status must be `failed`; do not claim `succeeded`.
-9. Do not claim success unless required headings, validator verdict, stage-result status, and sign-off decision are mutually consistent.
+8. If `repair-brief.md` says `repair-budget-final-attempt` or `Rerun allowed after this attempt: no`, still repair the listed findings and set `stage-result.md` status from the actual repaired output state; do not fail solely because no later rerun is available.
+9. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
+10. Do not claim success unless required headings, validator verdict, stage-result status, and sign-off decision are mutually consistent.
+11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
 
 ## Repair exit checks
 
 - every blocking finding is resolved or explicitly retained as active blocker,
-- issue list and recommendation summary are concrete, prioritized, and traceable,
+- issue list accepts either bullet or `### I<N>` subsection issue blocks and every material issue
+  block includes severity and rationale; explicit no-issue/no-defect markers are allowed,
+- recommendation summary uses prioritized Markdown list items that are concrete and traceable,
 - readiness state, required changes, and sign-off decision are coherent,
-- repair-budget exhaustion cannot coexist with `stage-result.md` status `succeeded`,
+- `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
+- `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no blocking inconsistency remains between report, validator result, and stage status.

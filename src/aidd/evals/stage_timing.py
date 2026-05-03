@@ -200,11 +200,7 @@ def _terminal_docs_consistent(work_item_stage_root: Path | None) -> bool | None:
             return False
 
     repair_brief_normalized = repair_brief_text.lower()
-    if (
-        "repair-budget-exhausted" in repair_brief_normalized
-        or "rerun allowed after this attempt: `no`" in repair_brief_normalized
-        or "rerun allowed after this attempt: no" in repair_brief_normalized
-    ) and stage_status != "failed":
+    if "repair-budget-exhausted" in repair_brief_normalized and stage_status != "failed":
         return False
 
     return True
@@ -479,6 +475,51 @@ def render_stage_timing_markdown(payload: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
+def render_repair_history_markdown(payload: dict[str, object]) -> str:
+    lines = ["# Repair history", ""]
+    raw_stages = payload.get("stages", [])
+    stage_items = raw_stages if isinstance(raw_stages, list) else []
+    repair_rows: list[tuple[str, dict[str, object]]] = []
+    for raw_stage in stage_items:
+        if not isinstance(raw_stage, dict):
+            continue
+        raw_attempts = raw_stage.get("attempts")
+        attempts = raw_attempts if isinstance(raw_attempts, list) else []
+        for raw_attempt in attempts:
+            if not isinstance(raw_attempt, dict):
+                continue
+            attempt_number = raw_attempt.get("attempt")
+            is_repair_attempt = isinstance(attempt_number, int) and attempt_number > 1
+            repair_reason = raw_attempt.get("repair_reason")
+            has_repair_reason = bool(repair_reason and str(repair_reason).strip() != "n/a")
+            if is_repair_attempt or has_repair_reason:
+                repair_rows.append((str(raw_stage.get("stage", "unknown")), raw_attempt))
+
+    if not repair_rows:
+        lines.append("- No stage repair attempts recorded.")
+        lines.append("")
+        return "\n".join(lines)
+
+    lines.extend(
+        (
+            "| Stage | Attempt | Validation Result | Terminal Status | Repair Reason |",
+            "| --- | ---: | --- | --- | --- |",
+        )
+    )
+    for stage_name, raw_attempt in repair_rows:
+        repair_reason = str(raw_attempt.get("repair_reason") or "n/a").replace("|", "\\|")
+        lines.append(
+            "| "
+            f"`{stage_name}` | "
+            f"{raw_attempt.get('attempt', 'n/a')} | "
+            f"`{raw_attempt.get('validation_result', 'unknown')}` | "
+            f"`{raw_attempt.get('terminal_status', 'unknown')}` | "
+            f"{repair_reason} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def render_self_repair_matrix_markdown(payload: dict[str, object]) -> str:
     matrix_payload = (
         payload
@@ -667,6 +708,7 @@ def write_stage_timing_artifacts(
 __all__ = [
     "build_stage_timing_payload",
     "build_self_repair_matrix_payload",
+    "render_repair_history_markdown",
     "render_self_repair_matrix_markdown",
     "render_stage_timing_markdown",
     "write_stage_timing_artifacts",

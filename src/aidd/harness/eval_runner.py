@@ -31,6 +31,7 @@ from aidd.evals.reporting import (
 )
 from aidd.evals.stage_timing import (
     build_stage_timing_payload,
+    render_repair_history_markdown,
     render_stage_timing_markdown,
     write_stage_timing_artifacts,
 )
@@ -294,6 +295,7 @@ def _stage_failure_events_from_timing_payload(
         stage_status = str(raw_stage.get("status") or "unknown")
         if stage_status not in {"failed", "blocked"}:
             continue
+        final_failure_code = str(raw_stage.get("final_failure_code") or "").strip()
         raw_attempts = raw_stage.get("attempts")
         attempts = raw_attempts if isinstance(raw_attempts, list) else []
         for attempt_index, raw_attempt in enumerate(attempts, start=1):
@@ -311,6 +313,13 @@ def _stage_failure_events_from_timing_payload(
                 continue
             attempt_number = raw_attempt.get("attempt", attempt_index)
             repair_reason = str(raw_attempt.get("repair_reason") or "n/a")
+            failure_detail = f"repair reason: {repair_reason}"
+            if attempt_index == len(attempts) and final_failure_code:
+                failure_detail = f"final failure code `{final_failure_code}`"
+                if repair_reason != "n/a":
+                    failure_detail = (
+                        f"{failure_detail}; preceding repair reason: {repair_reason}"
+                    )
             events.append(
                 CoarseRuntimeEvent(
                     line_number=(stage_index * 100) + attempt_index,
@@ -318,8 +327,8 @@ def _stage_failure_events_from_timing_payload(
                     message=(
                         f"stage `{stage}` attempt `{attempt_number}` validator "
                         f"`{validation_result}`; terminal status `{terminal_status}`; "
-                        f"runtime exit `{runtime_exit or 'unknown'}`; repair reason: "
-                        f"{repair_reason}"
+                        f"runtime exit `{runtime_exit or 'unknown'}`; "
+                        f"{failure_detail}"
                     ),
                 )
             )
@@ -1145,7 +1154,7 @@ def run_eval_scenario(
         encoding="utf-8",
     )
     layout.repair_history_path.write_text(
-        "# Repair history\n\n- No repair loop executed by harness eval runner.\n",
+        render_repair_history_markdown(stage_timing_payload),
         encoding="utf-8",
     )
 

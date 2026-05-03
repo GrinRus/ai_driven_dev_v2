@@ -49,7 +49,7 @@ The maintained set must cover these buckets without turning the matrix into a fu
 - `generic-cli` is the deterministic baseline provider.
 - `codex` is the primary canonical runtime for maintained small and medium live lanes.
 - `opencode` must cover at least one live lane and one deterministic workflow lane.
-- `claude-code` remains deterministic by default and is enabled only for the `AIDD-LIVE-005` small smoke lane.
+- `claude-code` remains deterministic by default and is enabled only for the `AIDD-LIVE-005` small smoke lane; that lane uses a 240-minute manual timeout budget plus extended native Claude Code per-stage budgets for long-running `research`, `tasklist`, `implement`, `review`, and `qa` attempts.
 - Live manifests must not be scheduled in `ci` or release automation.
 
 ## Maintained scenario set

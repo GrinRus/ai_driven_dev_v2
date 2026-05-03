@@ -43,6 +43,9 @@ coherent, and approval status matches unresolved `must-fix` items.
 
 1. Findings must have stable ids, explicit severity, explicit disposition, and rationale tied to
    implementation evidence or acceptance-criteria mismatch.
+   Use either top-level bullet findings or `### RV-*` / `### REV-*` finding subsections; when using
+   subsections, keep severity, disposition, rationale, and evidence as nested metadata under that
+   finding.
 2. Severity and disposition labels must stay consistent between detailed findings and summary
    sections.
 3. `must-fix` findings block `approved` status until resolved.
