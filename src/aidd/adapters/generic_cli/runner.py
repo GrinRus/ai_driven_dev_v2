@@ -7,15 +7,18 @@ from enum import StrEnum
 from pathlib import Path
 
 from aidd.adapters.path_resolution import resolve_prompt_pack_path_for_execution
+from aidd.adapters.runner_support import (
+    build_aidd_execution_environment,
+    persist_runtime_log_artifacts,
+    resolve_exit_classification,
+    split_configured_command,
+    validate_stage_command_context,
+)
 from aidd.adapters.runtime_artifacts import (
     RUNTIME_EXIT_METADATA_FILENAME as _RUNTIME_EXIT_METADATA_FILENAME,
 )
-from aidd.adapters.runtime_artifacts import (
-    write_runtime_exit_metadata,
-)
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
-from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,14 +29,12 @@ class GenericCliStageContext:
     prompt_pack_path: Path
 
     def __post_init__(self) -> None:
-        if not self.stage.strip():
-            raise ValueError("Stage context requires a non-empty stage id.")
-        if not self.work_item.strip():
-            raise ValueError("Stage context requires a non-empty work item id.")
-        if not self.run_id.strip():
-            raise ValueError("Stage context requires a non-empty run id.")
-        if str(self.prompt_pack_path).strip() == "":
-            raise ValueError("Stage context requires a prompt-pack path.")
+        validate_stage_command_context(
+            stage=self.stage,
+            work_item=self.work_item,
+            run_id=self.run_id,
+            prompt_pack_path=self.prompt_pack_path,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,11 +68,12 @@ def _resolve_exit_classification(
     exit_code: int,
     stop_reason: GenericCliExitClassification | None,
 ) -> GenericCliExitClassification:
-    if stop_reason is not None:
-        return stop_reason
-    if exit_code == 0:
-        return GenericCliExitClassification.SUCCESS
-    return GenericCliExitClassification.NON_ZERO_EXIT
+    return resolve_exit_classification(
+        exit_code=exit_code,
+        stop_reason=stop_reason,
+        success_value=GenericCliExitClassification.SUCCESS,
+        non_zero_value=GenericCliExitClassification.NON_ZERO_EXIT,
+    )
 
 
 def assemble_command(
@@ -79,19 +81,10 @@ def assemble_command(
     configured_command: str,
     context: GenericCliStageContext,
 ) -> tuple[str, ...]:
-    stripped = configured_command.strip()
-    if not stripped:
-        raise ValueError("Configured generic-cli command must not be empty.")
-
-    try:
-        base_tokens = shlex.split(stripped)
-    except ValueError as exc:
-        raise ValueError(
-            f"Configured generic-cli command is not valid shell syntax: {configured_command!r}"
-        ) from exc
-
-    if not base_tokens:
-        raise ValueError("Configured generic-cli command must produce at least one token.")
+    base_tokens = split_configured_command(
+        configured_command=configured_command,
+        runtime_label="generic-cli",
+    )
 
     return (
         *base_tokens,
@@ -123,18 +116,15 @@ def build_execution_environment(
     context: GenericCliStageContext,
     base_env: Mapping[str, str] | None = None,
 ) -> dict[str, str]:
-    env = dict(base_env or {})
-    env.update(
-        {
-            "AIDD_WORKSPACE_ROOT": workspace_root.as_posix(),
-            "AIDD_STAGE": context.stage,
-            "AIDD_WORK_ITEM": context.work_item,
-            "AIDD_RUN_ID": context.run_id,
-            "AIDD_PROMPT_PACK_PATH": context.prompt_pack_path.as_posix(),
-            "AIDD_RUNTIME_ID": "generic-cli",
-        }
+    return build_aidd_execution_environment(
+        runtime_id="generic-cli",
+        workspace_root=workspace_root,
+        stage=context.stage,
+        work_item=context.work_item,
+        run_id=context.run_id,
+        base_env=base_env,
+        prompt_pack_path=context.prompt_pack_path,
     )
-    return env
 
 
 def build_subprocess_spec(
@@ -207,10 +197,7 @@ def persist_attempt_runtime_artifacts(
 ) -> GenericCliRuntimeArtifacts:
     attempt_path.mkdir(parents=True, exist_ok=True)
 
-    runtime_log_path = attempt_path / RUN_RUNTIME_LOG_FILENAME
-    runtime_log_path.write_text(run_result.runtime_log_text, encoding="utf-8")
-
-    runtime_exit_metadata_path = write_runtime_exit_metadata(
+    paths = persist_runtime_log_artifacts(
         attempt_path=attempt_path,
         exit_code=run_result.exit_code,
         exit_classification=run_result.exit_classification.value,
@@ -220,6 +207,6 @@ def persist_attempt_runtime_artifacts(
     )
 
     return GenericCliRuntimeArtifacts(
-        runtime_log_path=runtime_log_path,
-        runtime_exit_metadata_path=runtime_exit_metadata_path,
+        runtime_log_path=paths.runtime_log_path,
+        runtime_exit_metadata_path=paths.runtime_exit_metadata_path,
     )

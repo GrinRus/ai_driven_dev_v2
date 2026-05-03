@@ -14,6 +14,101 @@ from aidd.core.markdown import (
 )
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.validators.models import SeverityLevel, ValidationFinding, ValidationIssueLocation
+from aidd.validators.semantic_rules.blocks import (
+    extract_bullet_items as extract_bullet_items,
+)
+from aidd.validators.semantic_rules.blocks import (
+    extract_implementation_verification_blocks as extract_implementation_verification_blocks,
+)
+from aidd.validators.semantic_rules.blocks import (
+    extract_markdown_list_items as extract_markdown_list_items,
+)
+from aidd.validators.semantic_rules.blocks import (
+    extract_markdown_table_rows as extract_markdown_table_rows,
+)
+from aidd.validators.semantic_rules.blocks import (
+    extract_risk_blocks as extract_risk_blocks,
+)
+from aidd.validators.semantic_rules.blocks import (
+    extract_subheading_blocks as extract_subheading_blocks,
+)
+from aidd.validators.semantic_rules.blocks import (
+    extract_top_level_bullet_blocks as extract_top_level_bullet_blocks,
+)
+from aidd.validators.semantic_rules.blocks import (
+    has_bullet_items as has_bullet_items,
+)
+from aidd.validators.semantic_rules.blocks import (
+    is_markdown_table_separator as is_markdown_table_separator,
+)
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_ARTIFACT_REFERENCE_PATTERN as IMPLEMENT_ARTIFACT_REFERENCE_PATTERN,
+)
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_COMMAND_PATTERN as IMPLEMENT_COMMAND_PATTERN,
+)
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_COMPLETION_CLAIM_PATTERN as IMPLEMENT_COMPLETION_CLAIM_PATTERN,
+)
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_DEFERRED_VERIFICATION_PATTERN as IMPLEMENT_DEFERRED_VERIFICATION_PATTERN,
+)
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_FILE_ENTRY_PATTERN as IMPLEMENT_FILE_ENTRY_PATTERN,
+)
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_NOOP_JUSTIFICATION_PATTERN as IMPLEMENT_NOOP_JUSTIFICATION_PATTERN,
+)
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_RESULT_PATTERN as IMPLEMENT_RESULT_PATTERN,
+)
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN as IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN,
+)
+from aidd.validators.semantic_rules.evidence import (
+    has_implementation_command_evidence as has_implementation_command_evidence,
+)
+from aidd.validators.semantic_rules.evidence import (
+    is_deferred_implementation_verification as is_deferred_implementation_verification,
+)
+from aidd.validators.semantic_rules.findings import validation_finding
+from aidd.validators.semantic_rules.ids import (
+    CITATION_ID_PATTERN as CITATION_ID_PATTERN,
+)
+from aidd.validators.semantic_rules.ids import (
+    MILESTONE_ID_PATTERN as MILESTONE_ID_PATTERN,
+)
+from aidd.validators.semantic_rules.ids import (
+    TASKLIST_TASK_ID_PATTERN as TASKLIST_TASK_ID_PATTERN,
+)
+from aidd.validators.semantic_rules.ids import (
+    extract_citation_ids as extract_citation_ids,
+)
+from aidd.validators.semantic_rules.ids import (
+    extract_milestone_ids as extract_milestone_ids,
+)
+from aidd.validators.semantic_rules.ids import (
+    extract_tasklist_task_ids as extract_tasklist_task_ids,
+)
+from aidd.validators.semantic_rules.placeholders import contains_placeholder_content
+from aidd.validators.semantic_rules.risks import (
+    QA_EVIDENCE_ID_PATTERN as QA_EVIDENCE_ID_PATTERN,
+)
+from aidd.validators.semantic_rules.risks import (
+    QA_OWNER_PATTERN as QA_OWNER_PATTERN,
+)
+from aidd.validators.semantic_rules.risks import (
+    QA_RISK_SEVERITY_PATTERN as QA_RISK_SEVERITY_PATTERN,
+)
+from aidd.validators.semantic_rules.risks import (
+    RISK_MITIGATION_PATTERN as RISK_MITIGATION_PATTERN,
+)
+from aidd.validators.semantic_rules.risks import (
+    is_empty_risk_entry as is_empty_risk_entry,
+)
+from aidd.validators.semantic_rules.risks import (
+    is_risk_metadata_entry as is_risk_metadata_entry,
+)
 
 INCOMPLETE_SECTION_CODE = "SEM-INCOMPLETE-SECTION"
 UNSUPPORTED_CLAIM_CODE = "SEM-UNSUPPORTED-CLAIM"
@@ -26,28 +121,12 @@ UNSUPPORTED_VERDICT_CODE = "SEM-UNSUPPORTED-VERDICT"
 MISSING_EVIDENCE_REF_CODE = "SEM-MISSING-EVIDENCE-REF"
 RISK_UNDERREPORT_CODE = "SEM-RISK-UNDERREPORT"
 
-INLINE_CODE_PATTERN = re.compile(r"(?<!`)`(?!`)(.*?)(?<!`)`(?!`)", flags=re.DOTALL)
 STAGE_HEADING_REQUIREMENT_PATTERN = re.compile(
     r"required heading coverage in\s+`([^`]+)`\s*\((.+)\)",
     flags=re.IGNORECASE,
 )
-PLACEHOLDER_PATTERN = re.compile(r"\b(TBD|TODO|TBA|N/A)\b|\.{3}", flags=re.IGNORECASE)
-PLACEHOLDER_EXAMPLE_CONTEXT_PATTERN = re.compile(
-    r"\b(placeholder|literal|token|sentinel|example|marker|entr(?:y|ies)|value)s?\b",
-    flags=re.IGNORECASE,
-)
-PLACEHOLDER_NEGATED_EXAMPLE_PATTERN = re.compile(
-    r"\b(no|not|none|without|free of)\b",
-    flags=re.IGNORECASE,
-)
 UNSUPPORTED_CLAIM_PATTERN = re.compile(
     r"\b(always|never|guarantee(?:d|s)?|proven|certain(?:ly)?)\b",
-    flags=re.IGNORECASE,
-)
-CITATION_ID_PATTERN = re.compile(r"\[(S\d+)\]")
-MILESTONE_ID_PATTERN = re.compile(r"\b(M\d+)\b", flags=re.IGNORECASE)
-RISK_MITIGATION_PATTERN = re.compile(
-    r"\b(mitigation|mitigate|fallback|retry|reduce|avoid|monitor)\b",
     flags=re.IGNORECASE,
 )
 REVIEW_SPEC_READINESS_PATTERN = re.compile(
@@ -72,12 +151,6 @@ INLINE_FINDING_SEVERITY_PATTERN = re.compile(
     r")",
     flags=re.IGNORECASE,
 )
-QA_RISK_SEVERITY_PATTERN = re.compile(
-    r"\bseverity\s*:?\s*(?:`|\*\*)?(critical|high|medium|low)(?:`|\*\*)?\b|"
-    r"\(`?(critical|high|medium|low)`?\)|"
-    r"\b(critical|high|medium|low)\s+severity\b",
-    flags=re.IGNORECASE,
-)
 REVIEW_SPEC_NO_ISSUE_SEVERITY_PATTERN = re.compile(
     r"\bseverity\s*:\s*`?none`?\b",
     flags=re.IGNORECASE,
@@ -89,63 +162,6 @@ REVIEW_SPEC_NO_ISSUES_PATTERN = re.compile(
 REVIEW_SPEC_SEVERITY_PATTERN = QA_RISK_SEVERITY_PATTERN
 REVIEW_SPEC_RATIONALE_PATTERN = re.compile(
     r"\b(rationale|because)\b",
-    flags=re.IGNORECASE,
-)
-TASKLIST_TASK_ID_PATTERN = re.compile(
-    r"\b([A-Z][A-Z0-9]{0,15}-\d+|T\d+)\b",
-)
-IMPLEMENT_FILE_ENTRY_PATTERN = re.compile(r"`(?=[^`\n]*(?:/|\.))[^\n`]+`")
-IMPLEMENT_COMMAND_PATTERN = re.compile(
-    r"(\$ [^\n]+|\.venv/bin/[^\s`]+|\b("
-    r"uv run|pytest|ruff|mypy|python -m|npm|pnpm|yarn|go test|cargo test|"
-    r"make|git|grep|echo|printf|flake8|black|ty check|sqlite-utils"
-    r")\b|`(?:insert|upsert|memory)\b[^`\n]*`)",
-    flags=re.IGNORECASE,
-)
-IMPLEMENT_RESULT_PATTERN = re.compile(
-    r"("
-    r"->\s*(pass|fail|ok|error|empty|no output|`?\d+`?|exit\s*`?\d+`?)|"
-    r"->\s*[^.\n]*(?:\bonly\b|\bshows?\b|\bempty\b|\bno output\b)|"
-    r"\b(pass(?:ed)?|fail(?:ed)?|succeeded|error|exit code|exited with status|returned)\b|"
-    r"\bexit\s*`?\d+`?|"
-    r"`?\bexit[_\s-]?code\b`?\s*(?:==|=|:)?\s*`?\d+`?|"
-    r"\b\d+\s+passed\b|"
-    r"\bSuccess:|"
-    r"\bFound\s+\d+\s+diagnostics\b|"
-    r"\bshows?\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|no)\b|"
-    r"\bexactly\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+matches\b|"
-    r"\b\d+\s+(?:production\s+)?matches\b|"
-    r"\b\d+\s+files?\s+changed\b|"
-    r"\bzero\s+differences\b|"
-    r"\bobserved\s*:|"
-    r"\b(?:does|do)\s+not\s+exist\b|"
-    r"\bexists\(\)\s+is\s+(?:true|false)\b|"
-    r"\btable_names\(\)\s*(?:==|is)\s*\[\]|"
-    r"\bno\s+(?:stderr|exception|output|traceback)\b|"
-    r"\bprinted\s+`?OK`?\b|"
-    r"\bmatches\s+expected\b"
-    r")",
-    flags=re.IGNORECASE,
-)
-IMPLEMENT_ARTIFACT_REFERENCE_PATTERN = re.compile(
-    r"`[^`]+(?:\.md|\.json|\.log|\.txt)`",
-    flags=re.IGNORECASE,
-)
-IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN = re.compile(
-    r"\b(same\s+)?stash/pop\s+procedure\b|"
-    r"\bsame\b.{0,80}\b(?:procedure|command|check|run)\b.{0,80}\bas\s+`?(?:T\d+|TL-\d+)`?",
-    flags=re.IGNORECASE | re.DOTALL,
-)
-IMPLEMENT_DEFERRED_VERIFICATION_PATTERN = re.compile(
-    r"\b(?:not\s+(?:run|executed)|skipped|deferred|hand[- ]off)\b",
-    flags=re.IGNORECASE,
-)
-IMPLEMENT_COMPLETION_CLAIM_PATTERN = re.compile(
-    r"\b(completed|fully|done|implemented|finished)\b",
-    flags=re.IGNORECASE,
-)
-IMPLEMENT_NOOP_JUSTIFICATION_PATTERN = re.compile(
-    r"\b(no-op|already (satisfied|implemented)|blocked|external constraint|out of scope)\b",
     flags=re.IGNORECASE,
 )
 REVIEW_FINDING_ID_PATTERN = re.compile(r"\b(?:RV|REV)-\d+\b", flags=re.IGNORECASE)
@@ -167,8 +183,6 @@ QA_RELEASE_RECOMMENDATION_PATTERN = re.compile(
     r"\b(proceed-with-conditions|hold|proceed)\b",
     flags=re.IGNORECASE,
 )
-QA_EVIDENCE_ID_PATTERN = re.compile(r"\bEV-\d+\b", flags=re.IGNORECASE)
-QA_OWNER_PATTERN = re.compile(r"\bowner\b", flags=re.IGNORECASE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -354,21 +368,6 @@ def section_content_for_heading(
     return "\n".join(markdown_lines[start_index:end_index]).strip()
 
 
-def validation_finding(
-    *,
-    code: str,
-    message: str,
-    severity: SeverityLevel = "high",
-    location: ValidationIssueLocation | None = None,
-) -> ValidationFinding:
-    return ValidationFinding(
-        code=code,
-        message=message,
-        severity=severity,
-        location=location,
-    )
-
-
 def validate_placeholder_sections(
     context: SemanticDocumentContext,
 ) -> tuple[ValidationFinding, ...]:
@@ -389,322 +388,6 @@ def validate_placeholder_sections(
     return tuple(findings)
 
 
-def has_non_placeholder_text(text: str) -> bool:
-    return not contains_placeholder_content(text)
-
-
-def contains_placeholder_content(text: str) -> bool:
-    placeholder_matches = tuple(PLACEHOLDER_PATTERN.finditer(text))
-    if not placeholder_matches:
-        return False
-
-    inline_code_matches = tuple(INLINE_CODE_PATTERN.finditer(text))
-    placeholder_requires_context = False
-    for placeholder_match in placeholder_matches:
-        inline_code_match = inline_code_match_for_placeholder(
-            placeholder_match=placeholder_match,
-            inline_code_matches=inline_code_matches,
-        )
-        if inline_code_match is None:
-            if placeholder_outside_inline_code_is_content(text, placeholder_match):
-                return True
-            continue
-
-        if inline_placeholder_requires_context(placeholder_match, inline_code_match):
-            placeholder_requires_context = True
-
-    if not placeholder_requires_context:
-        return False
-
-    return inline_placeholder_context_is_content(text)
-
-
-def inline_code_match_for_placeholder(
-    *,
-    placeholder_match: re.Match[str],
-    inline_code_matches: tuple[re.Match[str], ...],
-) -> re.Match[str] | None:
-    return next(
-        (
-            code_match
-            for code_match in inline_code_matches
-            if code_match.start() <= placeholder_match.start()
-            and placeholder_match.end() <= code_match.end()
-        ),
-        None,
-    )
-
-
-def placeholder_outside_inline_code_is_content(
-    text: str,
-    placeholder_match: re.Match[str],
-) -> bool:
-    if (
-        placeholder_match.group(0) == "..."
-        and not is_standalone_ellipsis_placeholder(text, placeholder_match)
-    ):
-        return False
-    if is_negated_placeholder_example_line(text, placeholder_match):
-        return False
-    return True
-
-
-def inline_placeholder_requires_context(
-    placeholder_match: re.Match[str],
-    inline_code_match: re.Match[str],
-) -> bool:
-    inline_code_text = inline_code_match.group(1).strip()
-    return placeholder_match.group(0) != "..." or inline_code_text == "..."
-
-
-def inline_placeholder_context_is_content(text: str) -> bool:
-    text_without_inline_code = INLINE_CODE_PATTERN.sub("", text)
-    if not text_without_inline_code.strip():
-        return True
-
-    return PLACEHOLDER_EXAMPLE_CONTEXT_PATTERN.search(text_without_inline_code) is None
-
-
-def is_negated_placeholder_example_line(
-    text: str,
-    placeholder_match: re.Match[str],
-) -> bool:
-    line_start = text.rfind("\n", 0, placeholder_match.start()) + 1
-    line_end = text.find("\n", placeholder_match.end())
-    if line_end == -1:
-        line_end = len(text)
-    line = text[line_start:line_end]
-
-    for candidate in (line, placeholder_sentence_context(text, placeholder_match)):
-        if PLACEHOLDER_EXAMPLE_CONTEXT_PATTERN.search(candidate) is None:
-            continue
-        if PLACEHOLDER_NEGATED_EXAMPLE_PATTERN.search(candidate) is None:
-            continue
-
-        candidate_without_placeholders = PLACEHOLDER_PATTERN.sub("", candidate)
-        if re.search(r"[A-Za-z]{4,}", candidate_without_placeholders):
-            return True
-
-    return False
-
-
-def placeholder_sentence_context(text: str, placeholder_match: re.Match[str]) -> str:
-    sentence_start = 0
-    for marker in ("\n\n", ". ", ".\n", "! ", "!\n", "? ", "?\n"):
-        marker_index = text.rfind(marker, 0, placeholder_match.start())
-        if marker_index != -1:
-            sentence_start = max(sentence_start, marker_index + len(marker))
-
-    sentence_end = len(text)
-    for marker in ("\n\n", ". ", ".\n", "! ", "!\n", "? ", "?\n"):
-        marker_index = text.find(marker, placeholder_match.end())
-        if marker_index != -1:
-            sentence_end = min(sentence_end, marker_index + len(marker.rstrip()))
-
-    return text[sentence_start:sentence_end]
-
-
-def is_standalone_ellipsis_placeholder(
-    text: str,
-    placeholder_match: re.Match[str],
-) -> bool:
-    line_start = text.rfind("\n", 0, placeholder_match.start()) + 1
-    line_end = text.find("\n", placeholder_match.end())
-    if line_end == -1:
-        line_end = len(text)
-
-    line = text[line_start:line_end]
-    match_start = placeholder_match.start() - line_start
-    match_end = placeholder_match.end() - line_start
-    before = line[:match_start].strip(" \t-*_`\"'")
-    after = line[match_end:].strip(" \t-*_`\"'")
-
-    if before and after:
-        return False
-
-    normalized_line = line.strip()
-    if re.fullmatch(r"[-*]?\s*`?\.{3}`?", normalized_line):
-        return True
-
-    return bool(
-        re.search(
-            r"\b(placeholder|fill|details|content|unknown|later|todo|tbd)\b",
-            line,
-            flags=re.IGNORECASE,
-        )
-    )
-
-
-def has_bullet_items(section_content: str) -> bool:
-    return any(line.strip().startswith("- ") for line in section_content.splitlines())
-
-
-def extract_bullet_items(section_content: str) -> tuple[str, ...]:
-    return tuple(
-        line.strip()[2:].strip()
-        for line in section_content.splitlines()
-        if line.strip().startswith("- ")
-    )
-
-
-def extract_markdown_list_items(section_content: str) -> tuple[str, ...]:
-    items: list[str] = []
-    for line in section_content.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("- "):
-            items.append(stripped[2:].strip())
-            continue
-        ordered_match = re.match(r"\d+[.)]\s+(.+)", stripped)
-        if ordered_match is not None:
-            items.append(ordered_match.group(1).strip())
-    return tuple(items)
-
-
-def extract_top_level_bullet_blocks(section_content: str) -> tuple[str, ...]:
-    blocks: list[list[str]] = []
-    current_block: list[str] | None = None
-    in_fenced_code = False
-
-    for line in section_content.splitlines():
-        stripped = line.strip()
-        if stripped.startswith(("```", "~~~")):
-            in_fenced_code = not in_fenced_code
-            if current_block is not None:
-                current_block.append(stripped)
-            continue
-
-        if in_fenced_code:
-            if current_block is not None:
-                current_block.append(stripped)
-            continue
-
-        if line.startswith("- "):
-            current_block = [line[2:].strip()]
-            blocks.append(current_block)
-            continue
-
-        if current_block is not None:
-            current_block.append(line.strip())
-
-    return tuple(
-        "\n".join(line for line in block if line).strip()
-        for block in blocks
-        if any(line.strip() for line in block)
-    )
-
-
-def extract_subheading_blocks(section_content: str, *, level: int) -> tuple[str, ...]:
-    marker = f"{'#' * level} "
-    blocks: list[list[str]] = []
-    current_block: list[str] | None = None
-
-    for line in section_content.splitlines():
-        if line.startswith(marker):
-            current_block = [line.strip()]
-            blocks.append(current_block)
-            continue
-
-        if current_block is not None:
-            current_block.append(line.strip())
-
-    return tuple(
-        "\n".join(line for line in block if line).strip()
-        for block in blocks
-        if any(line.strip() for line in block)
-    )
-
-
-def is_markdown_table_separator(cells: list[str]) -> bool:
-    return bool(cells) and all(
-        re.fullmatch(r":?-{3,}:?", cell.replace(" ", "")) is not None for cell in cells
-    )
-
-
-def extract_markdown_table_rows(section_content: str) -> tuple[str, ...]:
-    rows: list[str] = []
-    headers: list[str] | None = None
-    for line in section_content.splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("|") or not stripped.endswith("|"):
-            headers = None
-            continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-        if len(cells) < 2:
-            continue
-        if is_markdown_table_separator(cells):
-            continue
-        if headers is None:
-            headers = cells
-            continue
-        labeled_cells: list[str] = []
-        for index, cell in enumerate(cells):
-            if not cell:
-                continue
-            header = (
-                headers[index]
-                if index < len(headers) and headers[index]
-                else f"Column {index + 1}"
-            )
-            labeled_cells.append(f"{header}: {cell}")
-        if labeled_cells:
-            rows.append(" | ".join(labeled_cells))
-    return tuple(rows)
-
-
-def extract_risk_blocks(section_content: str) -> tuple[str, ...]:
-    subsection_blocks = extract_subheading_blocks(section_content, level=3)
-    if subsection_blocks:
-        return subsection_blocks
-    bullet_blocks = extract_top_level_bullet_blocks(section_content)
-    if bullet_blocks:
-        return bullet_blocks
-    return extract_markdown_table_rows(section_content)
-
-
-def extract_implementation_verification_blocks(section_content: str) -> tuple[str, ...]:
-    subsection_blocks = extract_subheading_blocks(section_content, level=3)
-    if subsection_blocks:
-        return subsection_blocks
-    return extract_top_level_bullet_blocks(section_content)
-
-
-def is_deferred_implementation_verification(verification_item: str) -> bool:
-    return IMPLEMENT_DEFERRED_VERIFICATION_PATTERN.search(verification_item) is not None
-
-
-def has_implementation_command_evidence(verification_item: str) -> bool:
-    return (
-        IMPLEMENT_COMMAND_PATTERN.search(verification_item) is not None
-        or IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(verification_item) is not None
-    )
-
-
-def is_empty_risk_entry(risk_block: str) -> bool:
-    normalized = re.sub(r"[`*_]", "", risk_block).strip().lower()
-    normalized = normalized.strip(" .:-")
-    return normalized in {
-        "none",
-        "none recorded",
-        "no known issues",
-        "no residual risks",
-        "no residual risk remains",
-    }
-
-
-def is_risk_metadata_entry(risk_block: str) -> bool:
-    first_line = next(
-        (line.strip() for line in risk_block.splitlines() if line.strip()),
-        "",
-    )
-    return bool(
-        re.match(
-            r"^(severity|mitigation|owner|ownership|disposition|description|evidence)\s*:",
-            first_line,
-            flags=re.IGNORECASE,
-        )
-    )
-
-
 def extract_review_finding_blocks(section_content: str) -> tuple[str, ...]:
     subsection_blocks = extract_subheading_blocks(section_content, level=3)
     if subsection_blocks:
@@ -717,14 +400,6 @@ def extract_review_spec_issue_blocks(section_content: str) -> tuple[str, ...]:
     if subsection_blocks:
         return subsection_blocks
     return extract_top_level_bullet_blocks(section_content)
-
-
-def extract_citation_ids(text: str) -> set[str]:
-    return {match.group(1) for match in CITATION_ID_PATTERN.finditer(text)}
-
-
-def extract_milestone_ids(text: str) -> set[str]:
-    return {match.group(1).upper() for match in MILESTONE_ID_PATTERN.finditer(text)}
 
 
 def extract_review_spec_readiness_state(text: str) -> str | None:
@@ -790,14 +465,3 @@ def extract_qa_release_recommendation(text: str) -> str | None:
     if match is None:
         return None
     return match.group(1).lower()
-
-
-def extract_tasklist_task_ids(text: str) -> set[str]:
-    task_ids = {match.group(1).upper() for match in TASKLIST_TASK_ID_PATTERN.finditer(text)}
-    tl_ids = {task_id for task_id in task_ids if task_id.startswith("TL-")}
-    if tl_ids:
-        return tl_ids
-    compact_t_ids = {task_id for task_id in task_ids if re.fullmatch(r"T\d+", task_id)}
-    if compact_t_ids:
-        return compact_t_ids
-    return task_ids

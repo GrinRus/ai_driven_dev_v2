@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -20,6 +21,33 @@ if TYPE_CHECKING:
         HarnessVerificationResult,
     )
     from aidd.harness.scenarios import Scenario
+
+
+@dataclass(frozen=True, slots=True)
+class EvalStepEvidence:
+    name: str
+    duration_seconds: float
+    status: str
+    command_count: int = 0
+    exit_code: int | None = None
+    timed_out: bool = False
+    timeout_seconds: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class StageTimingEvidence:
+    scenario: Scenario
+    run_id: str
+    runtime_id: str
+    work_item: str
+    workspace_root: Path | None
+    total_duration_seconds: float
+    install_result: HarnessInstallResult | None = None
+    setup_result: HarnessSetupResult | None = None
+    aidd_run_result: HarnessAiddRunResult | None = None
+    verification_result: HarnessVerificationResult | None = None
+    quality_result: HarnessQualityResult | None = None
+    teardown_result: HarnessTeardownResult | None = None
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -77,6 +105,72 @@ def _step_payload(
         "timed_out": timed_out,
         "timeout_seconds": timeout_seconds,
     }
+
+
+def _step_payload_from_evidence(evidence: EvalStepEvidence) -> dict[str, object]:
+    return _step_payload(
+        name=evidence.name,
+        duration_seconds=evidence.duration_seconds,
+        status=evidence.status,
+        command_count=evidence.command_count,
+        exit_code=evidence.exit_code,
+        timed_out=evidence.timed_out,
+        timeout_seconds=evidence.timeout_seconds,
+    )
+
+
+def _eval_step_evidence(
+    *,
+    install_result: HarnessInstallResult | None,
+    setup_result: HarnessSetupResult | None,
+    aidd_run_result: HarnessAiddRunResult | None,
+    verification_result: HarnessVerificationResult | None,
+    quality_result: HarnessQualityResult | None,
+    teardown_result: HarnessTeardownResult | None,
+) -> tuple[EvalStepEvidence, ...]:
+    return (
+        EvalStepEvidence(
+            name="install",
+            duration_seconds=install_result.duration_seconds if install_result else 0.0,
+            status="completed" if install_result else "skipped",
+            command_count=len(install_result.command_transcripts) if install_result else 0,
+        ),
+        EvalStepEvidence(
+            name="setup",
+            duration_seconds=setup_result.duration_seconds if setup_result else 0.0,
+            status="completed" if setup_result else "skipped",
+            command_count=len(setup_result.command_transcripts) if setup_result else 0,
+        ),
+        EvalStepEvidence(
+            name="run",
+            duration_seconds=aidd_run_result.duration_seconds if aidd_run_result else 0.0,
+            status="completed" if aidd_run_result else "skipped",
+            command_count=1 if aidd_run_result else 0,
+            exit_code=aidd_run_result.exit_code if aidd_run_result else None,
+            timed_out=aidd_run_result.timed_out if aidd_run_result else False,
+            timeout_seconds=aidd_run_result.timeout_seconds if aidd_run_result else None,
+        ),
+        EvalStepEvidence(
+            name="verify",
+            duration_seconds=verification_result.duration_seconds if verification_result else 0.0,
+            status="completed" if verification_result else "skipped",
+            command_count=(
+                len(verification_result.command_transcripts) if verification_result else 0
+            ),
+        ),
+        EvalStepEvidence(
+            name="quality",
+            duration_seconds=quality_result.duration_seconds if quality_result else 0.0,
+            status="completed" if quality_result else "skipped",
+            command_count=len(quality_result.command_transcripts) if quality_result else 0,
+        ),
+        EvalStepEvidence(
+            name="teardown",
+            duration_seconds=teardown_result.duration_seconds if teardown_result else 0.0,
+            status="completed" if teardown_result else "skipped",
+            command_count=len(teardown_result.command_transcripts) if teardown_result else 0,
+        ),
+    )
 
 
 def _latest_run_root(*, workspace_root: Path | None, work_item: str) -> Path | None:
@@ -284,17 +378,42 @@ def build_stage_timing_payload(
     quality_result: HarnessQualityResult | None = None,
     teardown_result: HarnessTeardownResult | None = None,
 ) -> dict[str, object]:
-    latest_run_root = _latest_run_root(workspace_root=workspace_root, work_item=work_item)
+    return _build_stage_timing_payload_from_evidence(
+        StageTimingEvidence(
+            scenario=scenario,
+            run_id=run_id,
+            runtime_id=runtime_id,
+            work_item=work_item,
+            workspace_root=workspace_root,
+            total_duration_seconds=total_duration_seconds,
+            install_result=install_result,
+            setup_result=setup_result,
+            aidd_run_result=aidd_run_result,
+            verification_result=verification_result,
+            quality_result=quality_result,
+            teardown_result=teardown_result,
+        )
+    )
+
+
+def _build_stage_timing_payload_from_evidence(
+    evidence: StageTimingEvidence,
+) -> dict[str, object]:
+    latest_run_root = _latest_run_root(
+        workspace_root=evidence.workspace_root,
+        work_item=evidence.work_item,
+    )
     stage_payloads: list[dict[str, object]] = []
     stage_attempt_counts: dict[str, int] = {}
-    for stage in _stage_scope(scenario):
+    stage_scope = _stage_scope(evidence.scenario)
+    for stage in stage_scope:
         stage_root = None if latest_run_root is None else latest_run_root / "stages" / stage
         metadata_path = None if stage_root is None else stage_root / "stage-metadata.json"
         metadata = _read_json(metadata_path) if metadata_path is not None else {}
         work_item_stage_root = (
             None
-            if workspace_root is None
-            else workspace_root / "workitems" / work_item / "stages" / stage
+            if evidence.workspace_root is None
+            else evidence.workspace_root / "workitems" / evidence.work_item / "stages" / stage
         )
         stage_reached = bool(metadata)
         attempts = (
@@ -332,64 +451,28 @@ def build_stage_timing_payload(
         )
 
     return {
-        "run_id": run_id,
-        "runtime_id": runtime_id,
-        "scenario_id": scenario.scenario_id,
-        "stage_scope": list(_stage_scope(scenario)),
+        "run_id": evidence.run_id,
+        "runtime_id": evidence.runtime_id,
+        "scenario_id": evidence.scenario.scenario_id,
+        "stage_scope": list(stage_scope),
         "stages": stage_payloads,
         "steps": [
-            _step_payload(
-                name="install",
-                duration_seconds=install_result.duration_seconds if install_result else 0.0,
-                status="completed" if install_result else "skipped",
-                command_count=len(install_result.command_transcripts) if install_result else 0,
-            ),
-            _step_payload(
-                name="setup",
-                duration_seconds=setup_result.duration_seconds if setup_result else 0.0,
-                status="completed" if setup_result else "skipped",
-                command_count=len(setup_result.command_transcripts) if setup_result else 0,
-            ),
-            _step_payload(
-                name="run",
-                duration_seconds=aidd_run_result.duration_seconds if aidd_run_result else 0.0,
-                status="completed" if aidd_run_result else "skipped",
-                command_count=1 if aidd_run_result else 0,
-                exit_code=aidd_run_result.exit_code if aidd_run_result else None,
-                timed_out=aidd_run_result.timed_out if aidd_run_result else False,
-                timeout_seconds=aidd_run_result.timeout_seconds if aidd_run_result else None,
-            ),
-            _step_payload(
-                name="verify",
-                duration_seconds=(
-                    verification_result.duration_seconds if verification_result else 0.0
-                ),
-                status="completed" if verification_result else "skipped",
-                command_count=(
-                    len(verification_result.command_transcripts)
-                    if verification_result
-                    else 0
-                ),
-            ),
-            _step_payload(
-                name="quality",
-                duration_seconds=quality_result.duration_seconds if quality_result else 0.0,
-                status="completed" if quality_result else "skipped",
-                command_count=len(quality_result.command_transcripts) if quality_result else 0,
-            ),
-            _step_payload(
-                name="teardown",
-                duration_seconds=teardown_result.duration_seconds if teardown_result else 0.0,
-                status="completed" if teardown_result else "skipped",
-                command_count=len(teardown_result.command_transcripts) if teardown_result else 0,
-            ),
+            _step_payload_from_evidence(step_evidence)
+            for step_evidence in _eval_step_evidence(
+                install_result=evidence.install_result,
+                setup_result=evidence.setup_result,
+                aidd_run_result=evidence.aidd_run_result,
+                verification_result=evidence.verification_result,
+                quality_result=evidence.quality_result,
+                teardown_result=evidence.teardown_result,
+            )
         ],
         "summary": {
             "stage_attempt_counts": stage_attempt_counts,
-            "total_duration_seconds": total_duration_seconds,
+            "total_duration_seconds": evidence.total_duration_seconds,
             "workspace_run_root": None if latest_run_root is None else latest_run_root.as_posix(),
         },
-        "work_item": work_item,
+        "work_item": evidence.work_item,
     }
 
 

@@ -75,9 +75,9 @@ Use these defaults unless a nested `AGENTS.md` says otherwise:
 
 ```bash
 uv sync --extra dev
-uv run ruff check .
-uv run mypy src
-uv run pytest
+uv run --extra dev ruff check .
+uv run --extra dev python -m mypy src
+uv run --extra dev pytest -q
 ```
 
 Useful bootstrap commands:
