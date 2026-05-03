@@ -3481,186 +3481,348 @@ Sync notes:
 - `2026-04-25` `W15-E3-S1-T1` blocked: local preflight found maintained runtime binaries but no configured AIDD-compatible live runtime wrapper command in `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND`; backlog advanced `W15-E3-S2-T1` to `Next`.
 - `2026-04-25` `W15-E3-S2-T1` blocked: no release candidate tag points at `HEAD`, and no local PyPI or GitHub publishing token environment variables were set; backlog queue is empty with both external evidence tasks blocked.
 
-## Wave 16 — complexity reduction and maintainability recovery (`next`)
+---
 
-### Epic W16-E0 — queue restoration governance (`done`)
-Linked stories: `US-10`
+## Wave 16 — complexity reduction and legacy isolation (`done`)
 
-#### Slice W16-E0-S1 — reopen complexity-reduction queue (`done`)
-Goal: reopen implementation work for maintainability after the project-wide complexity audit found concrete hotspots and the active backlog queue was empty.
+### Epic W16-E1 — validator complexity reduction (`done`)
+Linked stories: `US-02`, `US-03`, `US-04`, `US-10`
+
+#### Slice W16-E1-S1 — shared Markdown parsing (`done`)
+Goal: remove duplicated Markdown heading and section parsing across core and validators.
 
 Primary outputs:
 
-- Wave 16 roadmap lane
-- restored short backlog queue for complexity work
-- dated sync note
+- `MarkdownSectionIndex`
+- shared contract section extraction helpers
+- structural and semantic validator adoption
 
 Touched areas:
 
-- `docs/backlog/`
+- `src/aidd/core/`
+- `src/aidd/validators/`
 
 Dependencies:
 
-- `W8-E3-S1`
+- Wave 15 deterministic gates
 
 Local tasks:
 
-- `W16-E0-S1-T1` (done) Define the Wave 16 complexity-reduction lane and promote concrete local task IDs into `Next`, `Soon`, and `Parking lot`.
+- `W16-E1-S1-T1` (done) Add shared Markdown section indexing and replace duplicated section extraction in stage registry and validators.
 
 Exit evidence:
 
-- `docs/backlog/backlog.md` has an actionable complexity-reduction queue;
-- every promoted backlog item exists as a local task in this Wave 16 roadmap section;
-- Wave 15 remains blocked on external evidence lanes and is not required for Wave 16 work.
+- structural and semantic validator tests pass;
+- stage registry tests pass.
 
-### Epic W16-E1 — semantic validator complexity reduction (`next`)
-Linked stories: `US-02`, `US-03`, `US-10`
-
-#### Slice W16-E1-S1 — stage-specific semantic validator decomposition (`next`)
-Goal: reduce `validate_semantic_outputs` complexity while preserving existing Markdown contract behavior and semantic validation findings.
+#### Slice W16-E1-S2 — semantic validator plumbing (`done`)
+Goal: reduce public semantic validator plumbing while preserving import compatibility.
 
 Primary outputs:
 
-- shared semantic validation context helpers
-- stage-specific semantic validation functions
-- focused validator regression coverage
+- semantic API facade
+- `SemanticDocumentContext`
+- common `ValidationFinding` helpers
 
 Touched areas:
 
-- `src/aidd/validators/semantic.py`
-- `tests/validators/test_semantic.py`
-
-Dependencies:
-
-- `W16-E0-S1`
-
-Local tasks:
-
-- `W16-E1-S1-T1` (next) Extract shared semantic validation context helpers from `validate_semantic_outputs` without changing validator behavior.
-- `W16-E1-S1-T2` (planned) Split high-risk stage-specific semantic checks into dedicated internal functions for `implement`, `review`, and `qa`.
-- `W16-E1-S1-T3` (planned) Split remaining stage-specific semantic checks for `idea`, `research`, `plan`, `review-spec`, and `tasklist`.
-
-Exit evidence:
-
-- `uv run pytest tests/validators/test_semantic.py -q` passes after each local task;
-- full `tests/validators/` coverage passes after stage-specific extraction;
-- validator output codes, severities, and documented contract behavior remain unchanged.
-
-### Epic W16-E2 — eval and harness orchestration decomposition (`planned`)
-Linked stories: `US-07`, `US-10`
-
-#### Slice W16-E2-S1 — live quality rule extraction (`planned`)
-Goal: make live quality verdict policy easier to review by splitting the current assessment function into small rule evaluators.
-
-Primary outputs:
-
-- live quality rule evaluators
-- unchanged quality verdict payloads
-
-Touched areas:
-
-- `src/aidd/evals/quality.py`
-- `tests/evals/test_quality.py`
-
-Dependencies:
-
-- `W16-E0-S1`
-
-Local tasks:
-
-- `W16-E2-S1-T1` (planned) Split live quality assessment into small rule evaluators while preserving existing quality verdicts.
-
-Exit evidence:
-
-- `uv run pytest tests/evals/test_quality.py -q` passes;
-- representative live quality reports keep the same gate and verdict decisions for existing fixtures.
-
-#### Slice W16-E2-S2 — eval runner step extraction (`planned`)
-Goal: make eval scenario execution easier to reason about by separating execution, artifact collection, grading, and reporting steps.
-
-Primary outputs:
-
-- eval runner step helpers
-- unchanged eval bundle structure
-
-Touched areas:
-
-- `src/aidd/harness/eval_runner.py`
-- `tests/harness/test_eval_runner.py`
-
-Dependencies:
-
-- `W16-E0-S1`
-
-Local tasks:
-
-- `W16-E2-S2-T1` (planned) Split eval scenario orchestration into explicit execution, artifact, grading, and reporting steps.
-
-Exit evidence:
-
-- `uv run pytest tests/harness/test_eval_runner.py -q` passes;
-- existing eval bundle files and grader payload fields remain compatible.
-
-### Epic W16-E3 — adapter subprocess maintainability (`planned`)
-Linked stories: `US-01`, `US-06`, `US-08`, `US-10`
-
-#### Slice W16-E3-S1 — shared native subprocess streaming skeleton (`planned`)
-Goal: reduce duplicated subprocess streaming control flow across native runtime adapters without moving runtime-specific policy into core.
-
-Primary outputs:
-
-- adapter-local shared subprocess streaming helper
-- preserved runtime-specific command and event handling
-
-Touched areas:
-
-- `src/aidd/adapters/`
-- `tests/adapters/`
-
-Dependencies:
-
-- `W16-E0-S1`
-
-Local tasks:
-
-- `W16-E3-S1-T1` (planned) Extract shared subprocess streaming behavior for native runtime adapters without moving runtime-specific policy into core.
-
-Exit evidence:
-
-- adapter runner tests pass for `generic-cli`, `codex`, `opencode`, and `claude-code`;
-- adapter conformance tests still prove runtime-specific behavior stays adapter-local.
-
-### Epic W16-E4 — complexity visibility (`planned`)
-Linked stories: `US-10`
-
-#### Slice W16-E4-S1 — non-blocking complexity audit report (`planned`)
-Goal: make complexity hotspots visible to maintainers without turning complexity rules into a CI or release gate before baseline cleanup is complete.
-
-Primary outputs:
-
-- deterministic complexity audit command or script
-- documented non-gating report behavior
-
-Touched areas:
-
-- repo tooling
-- tests
-- docs
+- `src/aidd/validators/`
 
 Dependencies:
 
 - `W16-E1-S1`
+
+Local tasks:
+
+- `W16-E1-S2-T1` (done) Move shared semantic document plumbing behind `validators.semantic_rules.common` and keep `validators.semantic` as the stable public facade.
+
+Exit evidence:
+
+- `tests/validators/test_semantic.py` passes without fixture changes.
+
+#### Slice W16-E1-S3 — semantic stage rule modules (`done`)
+Goal: split semantic validation rules by stage/document while preserving the public `validate_semantic_outputs(...)` API.
+
+Primary outputs:
+
+- `SemanticRule` registry keyed by `(stage, document_name)`
+- stage-specific rule modules for `idea`, `research`, `plan`, `review-spec`, `tasklist`, `implement`, `review`, and `qa`
+
+Touched areas:
+
+- `src/aidd/validators/semantic_rules/`
+
+Dependencies:
+
+- `W16-E1-S2`
+
+Local tasks:
+
+- `W16-E1-S3-T1` (done) Delegate semantic validation through stage/document rule modules behind the stable facade.
+
+Exit evidence:
+
+- `tests/validators/test_semantic.py` passes without fixture changes.
+
+### Epic W16-E2 — adapter duplication reduction (`done`)
+Linked stories: `US-01`, `US-06`, `US-08`
+
+#### Slice W16-E2-S1 — shared adapter probes (`done`)
+Goal: remove duplicated runtime probe helpers while keeping runtime-specific capability reports.
+
+Primary outputs:
+
+- shared probe support helpers
+- runtime probe modules as compatibility wrappers
+
+Touched areas:
+
+- `src/aidd/adapters/`
+
+Dependencies:
+
+- none
+
+Local tasks:
+
+- `W16-E2-S1-T1` (done) Deduplicate command discovery, version probing, help probing, and capability marker detection across runtime probes.
+
+Exit evidence:
+
+- adapter probe tests pass.
+
+#### Slice W16-E2-S2 — shared subprocess streaming (`done`)
+Goal: centralize stdout/stderr streaming, timeout, cancellation, and runtime-log assembly.
+
+Primary outputs:
+
+- shared streamed subprocess runner
+- thin runtime-specific run result wrappers
+
+Touched areas:
+
+- `src/aidd/adapters/`
+
+Dependencies:
+
 - `W16-E2-S1`
 
 Local tasks:
 
-- `W16-E4-S1-T1` (planned) Add a non-blocking complexity audit command or script that reports current hotspots without making complexity a CI gate.
+- `W16-E2-S2-T1` (done) Replace duplicated adapter streaming loops with a shared streaming helper while preserving runtime result types.
 
 Exit evidence:
 
-- the audit report lists current hotspots deterministically;
-- tests prove report generation without failing the default deterministic gate.
+- adapter runner tests pass.
+
+#### Slice W16-E2-S3 — adapter surface registry (`done`)
+Goal: make CLI and harness dispatch runtime behavior through one adapter surface.
+
+Primary outputs:
+
+- `RuntimeAdapterSurface`
+- CLI stage execution dispatch through the surface
+- harness conformance lookup through the surface
+
+Touched areas:
+
+- `src/aidd/adapters/`
+- `src/aidd/cli/`
+- `src/aidd/harness/`
+
+Dependencies:
+
+- `W16-E2-S2`
+
+Local tasks:
+
+- `W16-E2-S3-T1` (done) Add runtime adapter surface registry and route CLI plus harness conformance through it.
+
+Exit evidence:
+
+- adapter and conformance tests pass.
+
+#### Slice W16-E2-S4 — shared adapter path resolution (`done`)
+Goal: remove duplicated adapter prompt-pack and stage-brief path resolution helpers.
+
+Primary outputs:
+
+- shared adapter execution path resolver
+- native prompt and runtime runners using the shared resolver
+
+Touched areas:
+
+- `src/aidd/adapters/`
+
+Dependencies:
+
+- `W16-E2-S2`
+
+Local tasks:
+
+- `W16-E2-S4-T1` (done) Deduplicate adapter prompt-pack and stage-brief path resolution without changing runtime command shapes.
+
+Exit evidence:
+
+- adapter and conformance tests pass.
+
+### Epic W16-E3 — configuration and CLI complexity (`done`)
+Linked stories: `US-01`, `US-08`, `US-09`
+
+#### Slice W16-E3-S1 — runtime config map (`done`)
+Goal: make runtime-specific configuration addressable by runtime id while preserving old field access.
+
+Primary outputs:
+
+- `RuntimeConfig`
+- `AiddConfig.runtime_configs`
+- compatibility access through existing config fields
+
+Touched areas:
+
+- `src/aidd/config.py`
+- `src/aidd/cli/`
+
+Dependencies:
+
+- `W16-E2-S3`
+
+Local tasks:
+
+- `W16-E3-S1-T1` (done) Add runtime config map lookup and switch CLI runtime helper functions to it.
+
+Exit evidence:
+
+- config tests and runtime timeout tests pass.
+
+#### Slice W16-E3-S2 — CLI command module split (`done`)
+Goal: reduce `cli/main.py` to app assembly and move command handlers into narrow modules.
+
+Primary outputs:
+
+- separate CLI command modules for doctor, run, stage, and eval
+
+Touched areas:
+
+- `src/aidd/cli/`
+
+Dependencies:
+
+- `W16-E3-S1`
+
+Local tasks:
+
+- `W16-E3-S2-T1` (done) Move command handlers out of `cli/main.py` while preserving Typer command names and callback behavior.
+
+Exit evidence:
+
+- CLI tests pass with unchanged command surfaces.
+
+### Epic W16-E4 — eval runner decomposition (`done`)
+Linked stories: `US-07`, `US-10`
+
+#### Slice W16-E4-S1 — eval phase extraction (`done`)
+Goal: split scenario evaluation into preparation, execution, classification, and persistence phases.
+
+Primary outputs:
+
+- typed phase helpers for `run_eval_scenario`
+
+Touched areas:
+
+- `src/aidd/harness/eval_runner.py`
+
+Dependencies:
+
+- `W16-E2-S3`
+
+Local tasks:
+
+- `W16-E4-S1-T1` (done) Extract eval runner preparation, execution, classification, and artifact-writing phases without changing bundle layout.
+
+Exit evidence:
+
+- `tests/harness/test_eval_runner.py` passes.
+
+#### Slice W16-E4-S2 — eval renderer cleanup (`done`)
+Goal: simplify stage timing and live quality rendering helpers without changing output shape.
+
+Primary outputs:
+
+- smaller typed eval payload/render helpers
+
+Touched areas:
+
+- `src/aidd/evals/`
+
+Dependencies:
+
+- `W16-E4-S1`
+
+Local tasks:
+
+- `W16-E4-S2-T1` (done) Split stage timing and live quality renderer internals while preserving JSON and Markdown output.
+
+Exit evidence:
+
+- eval tests pass.
+
+### Epic W16-E5 — compatibility shim isolation (`done`)
+Linked stories: `US-09`, `US-10`
+
+#### Slice W16-E5-S1 — legacy shim inventory (`done`)
+Goal: make retained legacy behavior explicit and removable only through compatibility policy.
+
+Primary outputs:
+
+- compatibility shim inventory
+- config shim extraction
+- artifact-index shim extraction
+
+Touched areas:
+
+- `src/aidd/`
+- `docs/compatibility-policy.md`
+
+Dependencies:
+
+- none
+
+Local tasks:
+
+- `W16-E5-S1-T1` (done) Isolate raw provider command upgrade and missing prompt provenance fallback behind named compatibility helpers.
+
+Exit evidence:
+
+- config and run-store compatibility tests pass;
+- compatibility policy lists retained shims.
+
+#### Slice W16-E5-S2 — legacy removal window decision (`done`)
+Goal: decide whether retained legacy shims are removed now or kept behind a documented deprecation path.
+
+Primary outputs:
+
+- explicit retained-shim decision in compatibility policy
+- removal milestone rule for future compatibility-removal work
+
+Touched areas:
+
+- `docs/compatibility-policy.md`
+- `docs/backlog/roadmap.md`
+
+Dependencies:
+
+- `W16-E5-S1`
+
+Local tasks:
+
+- `W16-E5-S2-T1` (done) Keep isolated legacy shims and document the future removal window instead of deleting compatibility behavior in this refactor.
+
+Exit evidence:
+
+- compatibility policy names the retained shims and the earliest removal path.
 
 Sync notes:
 
-- `2026-05-03` Wave 16 was opened for complexity reduction after the project-wide complexity audit identified semantic validation, eval/harness orchestration, quality assessment, CLI/adapters, and complexity reporting as maintainability hotspots; `W16-E1-S1-T1` was promoted to `Next`.
+- `2026-05-03` Wave 16 was opened after a complexity audit found monolithic validator, adapter, CLI, and eval-runner hotspots while Wave 15 external evidence lanes remained blocked.
+- `2026-05-03` Wave 16 completed: semantic validation delegates through stage/document rule modules; adapter probe, streaming, and path-resolution helpers are shared; CLI handlers are split into command modules; eval runner phases and eval render helpers are extracted; retained legacy shims have an explicit future removal path.

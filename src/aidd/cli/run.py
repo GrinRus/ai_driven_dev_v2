@@ -1,0 +1,374 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated, Any
+
+import typer
+from rich.table import Table
+
+from aidd.cli.run_lookup import (
+    resolve_run_artifacts_summary,
+    resolve_run_log_summary,
+    resolve_run_metadata_summary,
+)
+from aidd.cli.support import (
+    _WORKFLOW_RUN_SUPPORTED_RUNTIMES,
+    _allocate_stage_run_id,
+    _path_summary,
+    _print_workflow_run_summary,
+    _runtime_command_for_runtime,
+    _runtime_execution_mode_for_runtime,
+    _tail_lines,
+    console,
+)
+from aidd.config import load_config
+from aidd.core.run_store import create_run_manifest
+from aidd.core.stage_graph import StageAdvancementSummary
+from aidd.core.stages import STAGES
+from aidd.core.state_machine import StageState
+
+
+def _invoke_stage_run(**kwargs: Any) -> None:
+    from aidd.cli import main as cli_main
+
+    cli_main.stage_run(**kwargs)
+
+
+def _select_next_runnable_stage(**kwargs: Any) -> str | None:
+    from aidd.cli import main as cli_main
+
+    return cli_main.select_next_runnable_stage(**kwargs)
+
+
+def _summarize_workflow_advancement(**kwargs: Any) -> tuple[StageAdvancementSummary, ...]:
+    from aidd.cli import main as cli_main
+
+    return cli_main.summarize_workflow_advancement(**kwargs)
+
+
+def run_callback(
+    ctx: typer.Context,
+    work_item: Annotated[
+        str | None,
+        typer.Option("--work-item", help="Work item id"),
+    ] = None,
+    runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+    from_stage: Annotated[
+        str,
+        typer.Option("--from-stage", help="First stage to include in the workflow run."),
+    ] = STAGES[0],
+    to_stage: Annotated[
+        str,
+        typer.Option("--to-stage", help="Last stage to include in the workflow run."),
+    ] = STAGES[-1],
+    root: Annotated[
+        Path | None,
+        typer.Option("--root", help="Root AIDD storage directory. Defaults to config value."),
+    ] = None,
+    config: Annotated[
+        Path,
+        typer.Option("--config", help="Path to an AIDD TOML config file."),
+    ] = Path("aidd.example.toml"),
+    log_follow: Annotated[
+        bool,
+        typer.Option(
+            "--log-follow/--no-log-follow",
+            help="Enable explicit live-log follow mode for each stage run.",
+        ),
+    ] = False,
+) -> None:
+    """Run the AIDD workflow for a work item."""
+    if ctx.invoked_subcommand is not None:
+        return
+    if work_item is None:
+        raise typer.BadParameter("Missing option '--work-item'.")
+    if from_stage not in STAGES:
+        supported = ", ".join(STAGES)
+        raise typer.BadParameter(
+            f"Unknown stage '{from_stage}'. Expected one of: {supported}"
+        )
+    if to_stage not in STAGES:
+        supported = ", ".join(STAGES)
+        raise typer.BadParameter(
+            f"Unknown stage '{to_stage}'. Expected one of: {supported}"
+        )
+    if STAGES.index(from_stage) > STAGES.index(to_stage):
+        raise typer.BadParameter(
+            f"Option '--from-stage' ({from_stage}) must not come after '--to-stage' ({to_stage})."
+        )
+
+    if runtime not in _WORKFLOW_RUN_SUPPORTED_RUNTIMES:
+        supported = ", ".join(_WORKFLOW_RUN_SUPPORTED_RUNTIMES)
+        console.print(f"AIDD run: work_item={work_item} runtime={runtime}")
+        console.print(
+            f"Unsupported runtime '{runtime}' for workflow execution. "
+            f"Supported runtimes: {supported}."
+        )
+        console.print("Failure classification: unsupported-runtime")
+        raise typer.Exit(code=2)
+
+    cfg = load_config(config)
+    workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
+    runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
+    runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
+    run_id = _allocate_stage_run_id(workspace_root=workspace_root, work_item=work_item)
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id=runtime,
+        stage_target=to_stage,
+        config_snapshot={
+            "config_path": config.as_posix(),
+            "workspace_root": workspace_root.as_posix(),
+            "runtime_command": runtime_command,
+            "runtime_execution_mode": runtime_execution_mode.value,
+            "log_follow": log_follow,
+            "mode": "workflow",
+        },
+        workflow_stage_start=from_stage,
+        workflow_stage_end=to_stage,
+    )
+    console.print(
+        "AIDD run: "
+        f"work_item={work_item} runtime={runtime} run_id={run_id} "
+        f"stage_bounds={from_stage}->{to_stage}"
+    )
+
+    executed_stage_count = 0
+    while True:
+        next_stage = _select_next_runnable_stage(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage_start=from_stage,
+            stage_end=to_stage,
+        )
+        if next_stage is None:
+            break
+
+        console.print(f"Workflow next stage: {next_stage}")
+        try:
+            _invoke_stage_run(
+                stage=next_stage,
+                work_item=work_item,
+                runtime=runtime,
+                run_id=run_id,
+                root=workspace_root,
+                config=config,
+                log_follow=log_follow,
+            )
+        except typer.Exit as exc:
+            if exc.exit_code not in (None, 0):
+                console.print(f"Workflow stopped at stage '{next_stage}'.")
+                _print_workflow_run_summary(
+                    workspace_root=workspace_root,
+                    work_item=work_item,
+                    run_id=run_id,
+                    stage_start=from_stage,
+                    stage_end=to_stage,
+                )
+                raise
+        executed_stage_count += 1
+        console.print(f"Workflow progress: stage={next_stage} status=succeeded")
+
+    advancement = _summarize_workflow_advancement(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage_start=from_stage,
+        stage_end=to_stage,
+    )
+    incomplete = [
+        summary for summary in advancement if summary.current_status != StageState.SUCCEEDED.value
+    ]
+    if incomplete:
+        console.print("Workflow stopped: no runnable stage is currently available.")
+        for summary in incomplete[:3]:
+            console.print(f"- {summary.stage}: {summary.reason}")
+        _print_workflow_run_summary(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage_start=from_stage,
+            stage_end=to_stage,
+        )
+        raise typer.Exit(code=1)
+
+    _print_workflow_run_summary(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage_start=from_stage,
+        stage_end=to_stage,
+    )
+    console.print(
+        "Workflow run completed: "
+        f"run_id={run_id} stages_executed={executed_stage_count}"
+    )
+
+
+def run_show(
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Optional run id; defaults to the latest run."),
+    ] = None,
+) -> None:
+    """Show stored metadata for a run and its stages."""
+    try:
+        summary = resolve_run_metadata_summary(
+            workspace_root=root,
+            work_item=work_item,
+            run_id=run_id,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    run_table = Table(title=f"Run metadata: {summary.run_id} / {summary.work_item}")
+    run_table.add_column("Field")
+    run_table.add_column("Value")
+    run_table.add_row("run id", summary.run_id)
+    run_table.add_row("work item", summary.work_item)
+    run_table.add_row("runtime", summary.runtime_id)
+    run_table.add_row("stage target", summary.stage_target)
+    run_table.add_row(
+        "workflow bounds",
+        f"{summary.workflow_stage_start or STAGES[0]} -> "
+        f"{summary.workflow_stage_end or summary.stage_target}",
+    )
+    run_table.add_row("repository git sha", summary.repository_git_sha or "unknown")
+    run_table.add_row(
+        "prompt packs",
+        _path_summary(
+            tuple(
+                f"{entry.path} ({entry.sha256})"
+                for entry in summary.prompt_pack_provenance
+            )
+        ),
+    )
+    run_table.add_row("created at (UTC)", summary.created_at_utc or "unknown")
+    run_table.add_row("updated at (UTC)", summary.updated_at_utc or "unknown")
+    console.print(run_table)
+
+    stage_table = Table(title=f"Run stages: {summary.run_id}")
+    stage_table.add_column("Stage")
+    stage_table.add_column("Status")
+    stage_table.add_column("Attempts")
+    stage_table.add_column("Updated at (UTC)")
+    if summary.stages:
+        for stage_summary in summary.stages:
+            stage_table.add_row(
+                stage_summary.stage,
+                stage_summary.status,
+                str(stage_summary.attempt_count),
+                stage_summary.updated_at_utc or "unknown",
+            )
+    else:
+        stage_table.add_row("none", "none", "0", "none")
+    console.print(stage_table)
+
+
+def run_logs(
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    stage: Annotated[str, typer.Option("--stage", help="Stage id, for example plan")],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Optional run id; defaults to the latest run."),
+    ] = None,
+    attempt: Annotated[
+        int | None,
+        typer.Option("--attempt", help="Optional attempt number; defaults to the latest attempt."),
+    ] = None,
+    tail: Annotated[
+        bool,
+        typer.Option("--tail/--no-tail", help="Print only the last N lines of the runtime log."),
+    ] = False,
+    lines: Annotated[
+        int,
+        typer.Option("--lines", help="Number of lines to print with --tail."),
+    ] = 40,
+) -> None:
+    """Print or tail the persisted runtime log for a selected run attempt."""
+    if lines <= 0:
+        raise typer.BadParameter("--lines must be greater than zero.")
+
+    try:
+        summary = resolve_run_log_summary(
+            workspace_root=root,
+            work_item=work_item,
+            stage=stage,
+            run_id=run_id,
+            attempt_number=attempt,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    log_text = summary.runtime_log_path.read_text(encoding="utf-8")
+    if tail:
+        log_text = _tail_lines(log_text, line_count=lines)
+
+    console.print(
+        "Run log: "
+        f"run_id={summary.run_id} stage={summary.stage} attempt={summary.attempt_number}"
+    )
+    console.print(f"Path: {summary.runtime_log_path.as_posix()}")
+    if not log_text:
+        console.print("(empty runtime log)")
+        return
+    console.print(log_text, end="")
+
+
+def run_artifacts(
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    stage: Annotated[str, typer.Option("--stage", help="Stage id, for example plan")],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Optional run id; defaults to the latest run."),
+    ] = None,
+    attempt: Annotated[
+        int | None,
+        typer.Option("--attempt", help="Optional attempt number; defaults to the latest attempt."),
+    ] = None,
+) -> None:
+    """List document and log artifact paths for a selected run attempt."""
+    try:
+        summary = resolve_run_artifacts_summary(
+            workspace_root=root,
+            work_item=work_item,
+            stage=stage,
+            run_id=run_id,
+            attempt_number=attempt,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(
+        "Run artifacts: "
+        f"run_id={summary.run_id} stage={summary.stage} attempt={summary.attempt_number}"
+    )
+    console.print("Document artifacts:")
+    if summary.documents:
+        for name, path in summary.documents.items():
+            console.print(f"- {name}: {path}")
+    else:
+        console.print("- none")
+
+    console.print("Log artifacts:")
+    if summary.logs:
+        for name, path in summary.logs.items():
+            console.print(f"- {name}: {path}")
+    else:
+        console.print("- none")

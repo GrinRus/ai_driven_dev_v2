@@ -1,39 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
 
 from aidd.adapters.base import CapabilityReport
-from aidd.adapters.claude_code import probe as probe_claude_code
-from aidd.adapters.claude_code.runner import (
-    ClaudeCodeCommandContext,
-    ClaudeCodeExitClassification,
-)
-from aidd.adapters.claude_code.runner import (
-    build_subprocess_spec as build_claude_code_subprocess_spec,
-)
-from aidd.adapters.codex import probe as probe_codex
-from aidd.adapters.codex.runner import CodexCommandContext, CodexExitClassification
-from aidd.adapters.codex.runner import (
-    build_subprocess_spec as build_codex_subprocess_spec,
-)
-from aidd.adapters.generic_cli import probe as probe_generic_cli
-from aidd.adapters.generic_cli.runner import (
-    GenericCliExitClassification,
-    GenericCliStageContext,
-)
-from aidd.adapters.generic_cli.runner import (
-    build_subprocess_spec as build_generic_cli_subprocess_spec,
-)
-from aidd.adapters.opencode import probe as probe_opencode
-from aidd.adapters.opencode.runner import OpenCodeCommandContext, OpenCodeExitClassification
-from aidd.adapters.opencode.runner import (
-    build_subprocess_spec as build_opencode_subprocess_spec,
-)
 from aidd.adapters.runtime_registry import runtime_ids
+from aidd.adapters.surface import RuntimeAdapterSurface, get_runtime_adapter_surface
 from aidd.harness.conformance_matrix import (
     RuntimeConformanceMatrix,
     RuntimeConformanceRow,
@@ -41,9 +14,6 @@ from aidd.harness.conformance_matrix import (
 )
 
 _CONFORMANCE_PROBE_COMMAND = "aidd-conformance-missing-runtime-binary"
-_CONFORMANCE_STAGE = "idea"
-_CONFORMANCE_WORK_ITEM = "WI-CONFORMANCE"
-_CONFORMANCE_RUN_ID = "run-conformance"
 
 
 @dataclass(frozen=True)
@@ -62,100 +32,8 @@ class RuntimeConformanceResult:
         )
 
 
-@dataclass(frozen=True)
-class _AdapterConformanceSurface:
-    probe: Callable[[str], CapabilityReport]
-    build_subprocess_spec: Callable[[Path], Any]
-    exit_classification_enum: type[StrEnum]
-
-
-def _build_generic_cli_spec(workspace_root: Path) -> Any:
-    context = GenericCliStageContext(
-        stage=_CONFORMANCE_STAGE,
-        work_item=_CONFORMANCE_WORK_ITEM,
-        run_id=_CONFORMANCE_RUN_ID,
-        prompt_pack_path=workspace_root / "prompt-pack.md",
-    )
-    return build_generic_cli_subprocess_spec(
-        configured_command="generic-cli-conformance",
-        workspace_root=workspace_root,
-        context=context,
-        repository_root=workspace_root,
-    )
-
-
-def _build_claude_code_spec(workspace_root: Path) -> Any:
-    context = ClaudeCodeCommandContext(
-        stage=_CONFORMANCE_STAGE,
-        work_item=_CONFORMANCE_WORK_ITEM,
-        run_id=_CONFORMANCE_RUN_ID,
-        workspace_root=workspace_root,
-        stage_brief_path=workspace_root / "stage-brief.md",
-        prompt_pack_paths=(workspace_root / "prompt-pack.md",),
-    )
-    return build_claude_code_subprocess_spec(
-        configured_command="claude-code-conformance",
-        context=context,
-        repository_root=workspace_root,
-    )
-
-
-def _build_codex_spec(workspace_root: Path) -> Any:
-    context = CodexCommandContext(
-        stage=_CONFORMANCE_STAGE,
-        work_item=_CONFORMANCE_WORK_ITEM,
-        run_id=_CONFORMANCE_RUN_ID,
-        workspace_root=workspace_root,
-        stage_brief_path=workspace_root / "stage-brief.md",
-        prompt_pack_paths=(workspace_root / "prompt-pack.md",),
-    )
-    return build_codex_subprocess_spec(
-        configured_command="codex-conformance",
-        context=context,
-        repository_root=workspace_root,
-    )
-
-
-def _build_opencode_spec(workspace_root: Path) -> Any:
-    context = OpenCodeCommandContext(
-        stage=_CONFORMANCE_STAGE,
-        work_item=_CONFORMANCE_WORK_ITEM,
-        run_id=_CONFORMANCE_RUN_ID,
-        workspace_root=workspace_root,
-        stage_brief_path=workspace_root / "stage-brief.md",
-        prompt_pack_paths=(workspace_root / "prompt-pack.md",),
-    )
-    return build_opencode_subprocess_spec(
-        configured_command="opencode-conformance",
-        context=context,
-        repository_root=workspace_root,
-    )
-
-
-_SURFACES_BY_RUNTIME: dict[str, _AdapterConformanceSurface] = {
-    "generic-cli": _AdapterConformanceSurface(
-        probe=probe_generic_cli,
-        build_subprocess_spec=_build_generic_cli_spec,
-        exit_classification_enum=GenericCliExitClassification,
-    ),
-    "claude-code": _AdapterConformanceSurface(
-        probe=probe_claude_code,
-        build_subprocess_spec=_build_claude_code_spec,
-        exit_classification_enum=ClaudeCodeExitClassification,
-    ),
-    "codex": _AdapterConformanceSurface(
-        probe=probe_codex,
-        build_subprocess_spec=_build_codex_spec,
-        exit_classification_enum=CodexExitClassification,
-    ),
-    "opencode": _AdapterConformanceSurface(
-        probe=probe_opencode,
-        build_subprocess_spec=_build_opencode_spec,
-        exit_classification_enum=OpenCodeExitClassification,
-    ),
-}
-_ADAPTER_CONFORMANCE_SURFACES: dict[str, _AdapterConformanceSurface] = {
-    runtime_id: _SURFACES_BY_RUNTIME[runtime_id] for runtime_id in runtime_ids()
+_ADAPTER_CONFORMANCE_SURFACES: dict[str, RuntimeAdapterSurface] = {
+    runtime_id: get_runtime_adapter_surface(runtime_id) for runtime_id in runtime_ids()
 }
 
 
@@ -214,11 +92,11 @@ def evaluate_conformance_matrix_model(
 def _collect_observed_dimensions(
     *,
     runtime_id: str,
-    surface: _AdapterConformanceSurface,
+    surface: RuntimeAdapterSurface,
     workspace_root: Path,
 ) -> dict[str, bool]:
     report = surface.probe(_CONFORMANCE_PROBE_COMMAND)
-    subprocess_spec = surface.build_subprocess_spec(workspace_root)
+    subprocess_spec = surface.build_conformance_subprocess_spec(workspace_root)
     workspace_root_text = workspace_root.as_posix()
 
     return {

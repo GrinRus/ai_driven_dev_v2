@@ -1,98 +1,26 @@
 from __future__ import annotations
 
-import shlex
-import shutil
-import subprocess
-
 from aidd.adapters.base import CapabilityReport
+from aidd.adapters.probe_support import (
+    detect_capability_flags,
+    discover_command,
+)
+from aidd.adapters.probe_support import (
+    discover_help_text as _discover_help_text,
+)
+from aidd.adapters.probe_support import (
+    discover_version as _discover_version,
+)
 
-
-def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
-    return any(marker in text for marker in markers)
-
-
-def discover_command(command: str) -> str | None:
-    stripped = command.strip()
-    if not stripped:
-        return None
-
-    try:
-        tokens = shlex.split(stripped)
-    except ValueError:
-        return None
-    if not tokens:
-        return None
-
-    return shutil.which(tokens[0])
+_PROBE_TIMEOUT_SECONDS = 5
 
 
 def discover_version(command_path: str) -> str | None:
-    try:
-        result = subprocess.run(
-            [command_path, "--version"],
-            capture_output=True,
-            check=False,
-            text=True,
-            timeout=2,
-        )
-    except (FileNotFoundError, PermissionError, OSError, subprocess.TimeoutExpired):
-        return None
-
-    output = result.stdout.strip() or result.stderr.strip()
-    if not output:
-        return None
-
-    return output.splitlines()[0].strip() or None
+    return _discover_version(command_path, timeout_seconds=_PROBE_TIMEOUT_SECONDS)
 
 
 def discover_help_text(command_path: str) -> str | None:
-    try:
-        result = subprocess.run(
-            [command_path, "--help"],
-            capture_output=True,
-            check=False,
-            text=True,
-            timeout=2,
-        )
-    except (FileNotFoundError, PermissionError, OSError, subprocess.TimeoutExpired):
-        return None
-
-    output = result.stdout.strip() or result.stderr.strip()
-    return output or None
-
-
-def detect_capability_flags(help_text: str) -> dict[str, bool]:
-    normalized = help_text.lower()
-    return {
-        "supports_structured_log_stream": _contains_any(
-            normalized,
-            ("--json", "--jsonl", "jsonl", "structured output"),
-        ),
-        "supports_questions": _contains_any(
-            normalized,
-            ("question", "ask-user", "prompt for input"),
-        ),
-        "supports_resume": _contains_any(
-            normalized,
-            ("--resume", "resume run", "continue run"),
-        ),
-        "supports_subagents": _contains_any(
-            normalized,
-            ("subagent", "sub-agent"),
-        ),
-        "supports_non_interactive_mode": _contains_any(
-            normalized,
-            ("--non-interactive", "--ci", "--yes"),
-        ),
-        "supports_working_directory_control": _contains_any(
-            normalized,
-            ("--cwd", "--workdir", "--working-directory"),
-        ),
-        "supports_env_injection": _contains_any(
-            normalized,
-            ("--env", "--set-env", "environment variable"),
-        ),
-    }
+    return _discover_help_text(command_path, timeout_seconds=_PROBE_TIMEOUT_SECONDS)
 
 
 def probe(command: str) -> CapabilityReport:

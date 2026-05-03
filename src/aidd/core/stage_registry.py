@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from aidd.core.markdown import extract_bullets, extract_paragraph
 from aidd.core.resources import (
     default_document_contracts_root,
     default_stage_contracts_root,
@@ -30,49 +31,6 @@ def stage_contract_path(stage: str, contracts_root: Path = DEFAULT_STAGE_CONTRAC
     if not is_valid_stage(stage):
         raise StageManifestLoadError(f"Unknown stage: {stage}")
     return contracts_root / f"{stage}.md"
-
-
-def _extract_section_lines(markdown_text: str, heading: str) -> list[str]:
-    target_heading = f"## {heading}".lower()
-    in_section = False
-    section_lines: list[str] = []
-
-    for raw_line in markdown_text.splitlines():
-        stripped = raw_line.strip()
-        if stripped.startswith("## "):
-            if in_section:
-                break
-            in_section = stripped.lower() == target_heading
-            continue
-        if in_section:
-            section_lines.append(raw_line)
-
-    return section_lines
-
-
-def _extract_bullets(markdown_text: str, heading: str) -> tuple[str, ...]:
-    items: list[str] = []
-    for line in _extract_section_lines(markdown_text=markdown_text, heading=heading):
-        stripped = line.strip()
-        if not stripped.startswith("- "):
-            continue
-        bullet_body = stripped.removeprefix("- ").strip()
-        inline_code_paths = [match.strip() for match in re.findall(r"`([^`]+)`", bullet_body)]
-        if inline_code_paths:
-            items.extend(path for path in inline_code_paths if path)
-            continue
-        fallback_item = bullet_body.strip("`")
-        if fallback_item:
-            items.append(fallback_item)
-    return tuple(items)
-
-
-def _extract_paragraph(markdown_text: str, heading: str) -> str | None:
-    lines = _extract_section_lines(markdown_text=markdown_text, heading=heading)
-    parts = [line.strip() for line in lines if line.strip()]
-    if not parts:
-        return None
-    return " ".join(parts)
 
 
 def _extract_declared_stage_id(markdown_text: str) -> str | None:
@@ -136,10 +94,10 @@ def load_stage_manifest(
             f"expected '{stage}', declared '{declared_stage}'."
         )
 
-    required_inputs = _extract_bullets(markdown_text=markdown_text, heading="Required inputs")
-    required_outputs = _extract_bullets(markdown_text=markdown_text, heading="Primary output")
-    prompt_pack_paths = _extract_bullets(markdown_text=markdown_text, heading="Prompt pack")
-    purpose = _extract_paragraph(markdown_text=markdown_text, heading="Purpose")
+    required_inputs = extract_bullets(markdown_text=markdown_text, heading="Required inputs")
+    required_outputs = extract_bullets(markdown_text=markdown_text, heading="Primary output")
+    prompt_pack_paths = extract_bullets(markdown_text=markdown_text, heading="Prompt pack")
+    purpose = extract_paragraph(markdown_text=markdown_text, heading="Purpose")
 
     _validate_stage_contract_references(
         required_inputs=required_inputs,
@@ -196,7 +154,7 @@ def resolve_prompt_pack_paths(
     # Reuse manifest validation so prompt-pack paths remain contract-backed.
     load_stage_manifest(stage=stage, contracts_root=contracts_root)
     contract_path = stage_contract_path(stage=stage, contracts_root=contracts_root)
-    return _extract_bullets(
+    return extract_bullets(
         markdown_text=contract_path.read_text(encoding="utf-8"),
         heading="Prompt pack",
     )
