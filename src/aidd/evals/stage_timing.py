@@ -403,12 +403,8 @@ def _format_optional(value: object) -> str:
     return "n/a" if value is None else str(value)
 
 
-def render_stage_timing_markdown(payload: dict[str, object]) -> str:
+def _render_stage_timing_step_rows(payload: dict[str, object]) -> list[str]:
     lines = [
-        "# Stage Timing",
-        "",
-        "## Harness Steps",
-        "",
         "| Step | Status | Duration (s) | Commands | Exit Code | Timeout (s) |",
         "| --- | --- | ---: | ---: | ---: | ---: |",
     ]
@@ -426,19 +422,17 @@ def render_stage_timing_markdown(payload: dict[str, object]) -> str:
             f"{raw_step.get('exit_code', 'n/a')} | "
             f"{_format_seconds(raw_step.get('timeout_seconds'))} |"
         )
+    return lines
 
-    lines.extend(
+
+def _render_stage_timing_attempt_rows(payload: dict[str, object]) -> list[str]:
+    lines = [
         (
-            "",
-            "## Stage Attempts",
-            "",
-            (
-                "| Stage | Attempt | Runtime (s) | Runtime Exit | Timeout | "
-                "Validation Result | Repair Reason | Terminal Status | Terminal Docs |"
-            ),
-            "| --- | ---: | ---: | --- | --- | --- | --- | --- | --- |",
-        )
-    )
+            "| Stage | Attempt | Runtime (s) | Runtime Exit | Timeout | "
+            "Validation Result | Repair Reason | Terminal Status | Terminal Docs |"
+        ),
+        "| --- | ---: | ---: | --- | --- | --- | --- | --- | --- |",
+    ]
     raw_stages = payload.get("stages", [])
     stage_items = raw_stages if isinstance(raw_stages, list) else []
     for raw_stage in stage_items:
@@ -471,7 +465,22 @@ def render_stage_timing_markdown(payload: dict[str, object]) -> str:
                 f"`{raw_attempt.get('terminal_status', 'unknown')}` | "
                 f"`{_format_optional(raw_stage.get('terminal_docs_consistent'))}` |"
             )
-    lines.append("")
+    return lines
+
+
+def render_stage_timing_markdown(payload: dict[str, object]) -> str:
+    lines = [
+        "# Stage Timing",
+        "",
+        "## Harness Steps",
+        "",
+        *_render_stage_timing_step_rows(payload),
+        "",
+        "## Stage Attempts",
+        "",
+        *_render_stage_timing_attempt_rows(payload),
+        "",
+    ]
     return "\n".join(lines)
 
 
@@ -520,23 +529,8 @@ def render_repair_history_markdown(payload: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
-def render_self_repair_matrix_markdown(payload: dict[str, object]) -> str:
-    matrix_payload = (
-        payload
-        if isinstance(payload.get("matrix"), list)
-        else build_self_repair_matrix_payload(payload)
-    )
-    lines = [
-        "# Self-Repair Matrix",
-        "",
-        (
-            "| Stage | Attempts Used | Initial Result | Repair Success | "
-            "Avg Runtime (s) | Final Status | Final Failure | Terminal Docs |"
-        ),
-        "| --- | ---: | --- | --- | ---: | --- | --- | --- |",
-    ]
-    raw_rows = matrix_payload.get("matrix", [])
-    row_items = raw_rows if isinstance(raw_rows, list) else []
+def _render_self_repair_matrix_rows(row_items: list[object]) -> list[str]:
+    lines: list[str] = []
     for raw_row in row_items:
         if not isinstance(raw_row, dict):
             continue
@@ -553,19 +547,11 @@ def render_self_repair_matrix_markdown(payload: dict[str, object]) -> str:
             f"`{_format_optional(raw_row.get('final_failure_code'))}` | "
             f"`{_format_optional(raw_row.get('terminal_docs_consistent'))}` |"
         )
+    return lines
 
-    lines.extend(
-        (
-            "",
-            "## Deterministic Probe Coverage",
-            "",
-            (
-                "| Stage | Probe | Initial Verdict | Repair Success | Attempts Used | "
-                "Final Failure | Terminal Docs | Evaluation Source | Description |"
-            ),
-            "| --- | --- | --- | --- | ---: | --- | --- | --- | --- |",
-        )
-    )
+
+def _render_self_repair_probe_rows(row_items: list[object]) -> list[str]:
+    lines: list[str] = []
     for raw_row in row_items:
         if not isinstance(raw_row, dict):
             continue
@@ -587,6 +573,41 @@ def render_self_repair_matrix_markdown(payload: dict[str, object]) -> str:
                 f"`{raw_probe.get('evaluation_source', 'unknown')}` | "
                 f"{description} |"
             )
+    return lines
+
+
+def render_self_repair_matrix_markdown(payload: dict[str, object]) -> str:
+    matrix_payload = (
+        payload
+        if isinstance(payload.get("matrix"), list)
+        else build_self_repair_matrix_payload(payload)
+    )
+    lines = [
+        "# Self-Repair Matrix",
+        "",
+        (
+            "| Stage | Attempts Used | Initial Result | Repair Success | "
+            "Avg Runtime (s) | Final Status | Final Failure | Terminal Docs |"
+        ),
+        "| --- | ---: | --- | --- | ---: | --- | --- | --- |",
+    ]
+    raw_rows = matrix_payload.get("matrix", [])
+    row_items = raw_rows if isinstance(raw_rows, list) else []
+    lines.extend(_render_self_repair_matrix_rows(row_items))
+
+    lines.extend(
+        (
+            "",
+            "## Deterministic Probe Coverage",
+            "",
+            (
+                "| Stage | Probe | Initial Verdict | Repair Success | Attempts Used | "
+                "Final Failure | Terminal Docs | Evaluation Source | Description |"
+            ),
+            "| --- | --- | --- | --- | ---: | --- | --- | --- | --- |",
+        )
+    )
+    lines.extend(_render_self_repair_probe_rows(row_items))
     lines.append("")
     return "\n".join(lines)
 

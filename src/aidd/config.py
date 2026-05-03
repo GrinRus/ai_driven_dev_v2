@@ -9,33 +9,257 @@ from aidd.adapters.runtime_registry import (
     RuntimeExecutionMode,
     get_runtime_definition,
     normalize_execution_mode,
+    runtime_ids,
 )
+from aidd.compatibility import should_upgrade_legacy_raw_provider_command
 from aidd.core.stages import STAGES, is_valid_stage
 
 
 @dataclass(frozen=True)
+class RuntimeConfig:
+    command: str
+    execution_mode: RuntimeExecutionMode
+    timeout_seconds: float | None
+    stage_timeout_seconds: dict[str, float]
+
+
+@dataclass(frozen=True, init=False)
 class AiddConfig:
     workspace_root: Path
-    generic_cli_command: str
-    claude_code_command: str
-    codex_command: str
-    opencode_command: str
-    generic_cli_execution_mode: RuntimeExecutionMode
-    claude_code_execution_mode: RuntimeExecutionMode
-    codex_execution_mode: RuntimeExecutionMode
-    opencode_execution_mode: RuntimeExecutionMode
-    generic_cli_timeout_seconds: float | None
-    claude_code_timeout_seconds: float | None
-    codex_timeout_seconds: float | None
-    opencode_timeout_seconds: float | None
-    generic_cli_stage_timeout_seconds: dict[str, float]
-    claude_code_stage_timeout_seconds: dict[str, float]
-    codex_stage_timeout_seconds: dict[str, float]
-    opencode_stage_timeout_seconds: dict[str, float]
     log_mode: str
     max_repair_attempts: int
+    runtime_configs: dict[str, RuntimeConfig]
+
+    def __init__(
+        self,
+        *,
+        workspace_root: Path,
+        log_mode: str,
+        max_repair_attempts: int,
+        runtime_configs: dict[str, RuntimeConfig] | None = None,
+        generic_cli_command: str | None = None,
+        claude_code_command: str | None = None,
+        codex_command: str | None = None,
+        opencode_command: str | None = None,
+        generic_cli_execution_mode: RuntimeExecutionMode | None = None,
+        claude_code_execution_mode: RuntimeExecutionMode | None = None,
+        codex_execution_mode: RuntimeExecutionMode | None = None,
+        opencode_execution_mode: RuntimeExecutionMode | None = None,
+        generic_cli_timeout_seconds: float | None = None,
+        claude_code_timeout_seconds: float | None = None,
+        codex_timeout_seconds: float | None = None,
+        opencode_timeout_seconds: float | None = None,
+        generic_cli_stage_timeout_seconds: dict[str, float] | None = None,
+        claude_code_stage_timeout_seconds: dict[str, float] | None = None,
+        codex_stage_timeout_seconds: dict[str, float] | None = None,
+        opencode_stage_timeout_seconds: dict[str, float] | None = None,
+    ) -> None:
+        object.__setattr__(self, "workspace_root", workspace_root)
+        object.__setattr__(self, "log_mode", log_mode)
+        object.__setattr__(self, "max_repair_attempts", max_repair_attempts)
+        object.__setattr__(
+            self,
+            "runtime_configs",
+            _normalize_runtime_configs(
+                runtime_configs=runtime_configs,
+                generic_cli_command=generic_cli_command,
+                claude_code_command=claude_code_command,
+                codex_command=codex_command,
+                opencode_command=opencode_command,
+                generic_cli_execution_mode=generic_cli_execution_mode,
+                claude_code_execution_mode=claude_code_execution_mode,
+                codex_execution_mode=codex_execution_mode,
+                opencode_execution_mode=opencode_execution_mode,
+                generic_cli_timeout_seconds=generic_cli_timeout_seconds,
+                claude_code_timeout_seconds=claude_code_timeout_seconds,
+                codex_timeout_seconds=codex_timeout_seconds,
+                opencode_timeout_seconds=opencode_timeout_seconds,
+                generic_cli_stage_timeout_seconds=generic_cli_stage_timeout_seconds,
+                claude_code_stage_timeout_seconds=claude_code_stage_timeout_seconds,
+                codex_stage_timeout_seconds=codex_stage_timeout_seconds,
+                opencode_stage_timeout_seconds=opencode_stage_timeout_seconds,
+            ),
+        )
+
+    def runtime_config(self, runtime_id: str) -> RuntimeConfig:
+        try:
+            return self.runtime_configs[runtime_id]
+        except KeyError as exc:
+            supported = ", ".join(self.runtime_configs)
+            message = f"Unsupported runtime id: {runtime_id}. Supported: {supported}."
+            raise ValueError(message) from exc
+
+    @property
+    def generic_cli_command(self) -> str:
+        return self.runtime_config("generic-cli").command
+
+    @property
+    def claude_code_command(self) -> str:
+        return self.runtime_config("claude-code").command
+
+    @property
+    def codex_command(self) -> str:
+        return self.runtime_config("codex").command
+
+    @property
+    def opencode_command(self) -> str:
+        return self.runtime_config("opencode").command
+
+    @property
+    def generic_cli_execution_mode(self) -> RuntimeExecutionMode:
+        return self.runtime_config("generic-cli").execution_mode
+
+    @property
+    def claude_code_execution_mode(self) -> RuntimeExecutionMode:
+        return self.runtime_config("claude-code").execution_mode
+
+    @property
+    def codex_execution_mode(self) -> RuntimeExecutionMode:
+        return self.runtime_config("codex").execution_mode
+
+    @property
+    def opencode_execution_mode(self) -> RuntimeExecutionMode:
+        return self.runtime_config("opencode").execution_mode
+
+    @property
+    def generic_cli_timeout_seconds(self) -> float | None:
+        return self.runtime_config("generic-cli").timeout_seconds
+
+    @property
+    def claude_code_timeout_seconds(self) -> float | None:
+        return self.runtime_config("claude-code").timeout_seconds
+
+    @property
+    def codex_timeout_seconds(self) -> float | None:
+        return self.runtime_config("codex").timeout_seconds
+
+    @property
+    def opencode_timeout_seconds(self) -> float | None:
+        return self.runtime_config("opencode").timeout_seconds
+
+    @property
+    def generic_cli_stage_timeout_seconds(self) -> dict[str, float]:
+        return dict(self.runtime_config("generic-cli").stage_timeout_seconds)
+
+    @property
+    def claude_code_stage_timeout_seconds(self) -> dict[str, float]:
+        return dict(self.runtime_config("claude-code").stage_timeout_seconds)
+
+    @property
+    def codex_stage_timeout_seconds(self) -> dict[str, float]:
+        return dict(self.runtime_config("codex").stage_timeout_seconds)
+
+    @property
+    def opencode_stage_timeout_seconds(self) -> dict[str, float]:
+        return dict(self.runtime_config("opencode").stage_timeout_seconds)
 
 
+def _require_runtime_value[T](runtime_id: str, field_name: str, value: T | None) -> T:
+    if value is None:
+        raise ValueError(
+            f"Missing legacy AiddConfig constructor value for {runtime_id}: {field_name}."
+        )
+    return value
+
+
+def _copy_runtime_configs(
+    runtime_configs: dict[str, RuntimeConfig],
+) -> dict[str, RuntimeConfig]:
+    supported_runtime_ids = set(runtime_ids())
+    configured_runtime_ids = set(runtime_configs)
+    missing_runtime_ids = sorted(supported_runtime_ids - configured_runtime_ids)
+    unknown_runtime_ids = sorted(configured_runtime_ids - supported_runtime_ids)
+    if missing_runtime_ids or unknown_runtime_ids:
+        problems: list[str] = []
+        if missing_runtime_ids:
+            problems.append(f"missing runtime configs: {', '.join(missing_runtime_ids)}")
+        if unknown_runtime_ids:
+            problems.append(f"unknown runtime configs: {', '.join(unknown_runtime_ids)}")
+        raise ValueError("; ".join(problems))
+
+    return {
+        runtime_id: RuntimeConfig(
+            command=runtime_config.command,
+            execution_mode=runtime_config.execution_mode,
+            timeout_seconds=runtime_config.timeout_seconds,
+            stage_timeout_seconds=dict(runtime_config.stage_timeout_seconds),
+        )
+        for runtime_id, runtime_config in runtime_configs.items()
+    }
+
+
+def _normalize_runtime_configs(
+    *,
+    runtime_configs: dict[str, RuntimeConfig] | None,
+    generic_cli_command: str | None,
+    claude_code_command: str | None,
+    codex_command: str | None,
+    opencode_command: str | None,
+    generic_cli_execution_mode: RuntimeExecutionMode | None,
+    claude_code_execution_mode: RuntimeExecutionMode | None,
+    codex_execution_mode: RuntimeExecutionMode | None,
+    opencode_execution_mode: RuntimeExecutionMode | None,
+    generic_cli_timeout_seconds: float | None,
+    claude_code_timeout_seconds: float | None,
+    codex_timeout_seconds: float | None,
+    opencode_timeout_seconds: float | None,
+    generic_cli_stage_timeout_seconds: dict[str, float] | None,
+    claude_code_stage_timeout_seconds: dict[str, float] | None,
+    codex_stage_timeout_seconds: dict[str, float] | None,
+    opencode_stage_timeout_seconds: dict[str, float] | None,
+) -> dict[str, RuntimeConfig]:
+    if runtime_configs is not None:
+        return _copy_runtime_configs(runtime_configs)
+
+    def runtime_config_from_legacy(
+        *,
+        runtime_id: str,
+        command: str | None,
+        execution_mode: RuntimeExecutionMode | None,
+        timeout_seconds: float | None,
+        stage_timeout_seconds: dict[str, float] | None,
+    ) -> RuntimeConfig:
+        return RuntimeConfig(
+            command=_require_runtime_value(runtime_id, "command", command),
+            execution_mode=_require_runtime_value(
+                runtime_id,
+                "execution_mode",
+                execution_mode,
+            ),
+            timeout_seconds=timeout_seconds,
+            stage_timeout_seconds=dict(stage_timeout_seconds or {}),
+        )
+
+    return {
+        "generic-cli": runtime_config_from_legacy(
+            runtime_id="generic-cli",
+            command=generic_cli_command,
+            execution_mode=generic_cli_execution_mode,
+            timeout_seconds=generic_cli_timeout_seconds,
+            stage_timeout_seconds=generic_cli_stage_timeout_seconds,
+        ),
+        "claude-code": runtime_config_from_legacy(
+            runtime_id="claude-code",
+            command=claude_code_command,
+            execution_mode=claude_code_execution_mode,
+            timeout_seconds=claude_code_timeout_seconds,
+            stage_timeout_seconds=claude_code_stage_timeout_seconds,
+        ),
+        "codex": runtime_config_from_legacy(
+            runtime_id="codex",
+            command=codex_command,
+            execution_mode=codex_execution_mode,
+            timeout_seconds=codex_timeout_seconds,
+            stage_timeout_seconds=codex_stage_timeout_seconds,
+        ),
+        "opencode": runtime_config_from_legacy(
+            runtime_id="opencode",
+            command=opencode_command,
+            execution_mode=opencode_execution_mode,
+            timeout_seconds=opencode_timeout_seconds,
+            stage_timeout_seconds=opencode_stage_timeout_seconds,
+        ),
+    }
 def _runtime_section(data: dict[str, Any], runtime_id: str) -> dict[str, Any]:
     definition = get_runtime_definition(runtime_id)
     raw_section = data.get("runtime", {}).get(definition.config_section, {})
@@ -46,10 +270,12 @@ def _runtime_command(data: dict[str, Any], runtime_id: str) -> str:
     definition = get_runtime_definition(runtime_id)
     section = _runtime_section(data, runtime_id)
     command = str(section.get("command", definition.default_command)).strip()
-    if (
-        "mode" not in section
-        and command == definition.probe_command
-        and definition.default_execution_mode is RuntimeExecutionMode.NATIVE
+    if should_upgrade_legacy_raw_provider_command(
+        section=section,
+        command=command,
+        probe_command=definition.probe_command,
+        default_execution_mode=definition.default_execution_mode,
+        native_mode=RuntimeExecutionMode.NATIVE,
     ):
         return definition.default_command
     return command or definition.default_command
@@ -136,43 +362,21 @@ def load_config(path: Path) -> AiddConfig:
             data = tomllib.load(file_obj)
 
     workspace_root = Path(data.get("workspace", {}).get("root", ".aidd"))
-    generic_cli_command = _runtime_command(data, "generic-cli")
-    claude_code_command = _runtime_command(data, "claude-code")
-    codex_command = _runtime_command(data, "codex")
-    opencode_command = _runtime_command(data, "opencode")
-    generic_cli_execution_mode = _runtime_execution_mode(data, "generic-cli")
-    claude_code_execution_mode = _runtime_execution_mode(data, "claude-code")
-    codex_execution_mode = _runtime_execution_mode(data, "codex")
-    opencode_execution_mode = _runtime_execution_mode(data, "opencode")
-    generic_cli_timeout_seconds = _runtime_timeout_seconds(data, "generic-cli")
-    claude_code_timeout_seconds = _runtime_timeout_seconds(data, "claude-code")
-    codex_timeout_seconds = _runtime_timeout_seconds(data, "codex")
-    opencode_timeout_seconds = _runtime_timeout_seconds(data, "opencode")
-    generic_cli_stage_timeout_seconds = _runtime_stage_timeout_seconds(data, "generic-cli")
-    claude_code_stage_timeout_seconds = _runtime_stage_timeout_seconds(data, "claude-code")
-    codex_stage_timeout_seconds = _runtime_stage_timeout_seconds(data, "codex")
-    opencode_stage_timeout_seconds = _runtime_stage_timeout_seconds(data, "opencode")
+    runtime_configs = {
+        runtime_id: RuntimeConfig(
+            command=_runtime_command(data, runtime_id),
+            execution_mode=_runtime_execution_mode(data, runtime_id),
+            timeout_seconds=_runtime_timeout_seconds(data, runtime_id),
+            stage_timeout_seconds=_runtime_stage_timeout_seconds(data, runtime_id),
+        )
+        for runtime_id in runtime_ids()
+    }
     log_mode = data.get("logging", {}).get("mode", "both")
     max_repair_attempts = int(data.get("repair", {}).get("max_attempts", 2))
 
     return AiddConfig(
         workspace_root=workspace_root,
-        generic_cli_command=generic_cli_command,
-        claude_code_command=claude_code_command,
-        codex_command=codex_command,
-        opencode_command=opencode_command,
-        generic_cli_execution_mode=generic_cli_execution_mode,
-        claude_code_execution_mode=claude_code_execution_mode,
-        codex_execution_mode=codex_execution_mode,
-        opencode_execution_mode=opencode_execution_mode,
-        generic_cli_timeout_seconds=generic_cli_timeout_seconds,
-        claude_code_timeout_seconds=claude_code_timeout_seconds,
-        codex_timeout_seconds=codex_timeout_seconds,
-        opencode_timeout_seconds=opencode_timeout_seconds,
-        generic_cli_stage_timeout_seconds=generic_cli_stage_timeout_seconds,
-        claude_code_stage_timeout_seconds=claude_code_stage_timeout_seconds,
-        codex_stage_timeout_seconds=codex_stage_timeout_seconds,
-        opencode_stage_timeout_seconds=opencode_stage_timeout_seconds,
         log_mode=log_mode,
         max_repair_attempts=max_repair_attempts,
+        runtime_configs=runtime_configs,
     )

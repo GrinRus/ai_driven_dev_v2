@@ -2,15 +2,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from aidd.adapters.path_resolution import (
+    resolve_prompt_pack_paths_for_execution,
+    resolve_stage_brief_path_for_execution,
+)
+
 
 def resolve_stage_brief_path_for_native_prompt(
     *,
     stage_brief_path: Path,
     workspace_root: Path,
 ) -> Path:
-    if stage_brief_path.is_absolute():
-        return stage_brief_path.resolve(strict=False)
-    return (workspace_root / stage_brief_path).resolve(strict=False)
+    return resolve_stage_brief_path_for_execution(
+        stage_brief_path=stage_brief_path,
+        workspace_root=workspace_root,
+    )
 
 
 def resolve_prompt_pack_paths_for_native_prompt(
@@ -18,14 +24,10 @@ def resolve_prompt_pack_paths_for_native_prompt(
     prompt_pack_paths: tuple[Path, ...],
     repository_root: Path | None,
 ) -> tuple[Path, ...]:
-    base_dir = (repository_root or Path.cwd()).resolve(strict=False)
-    resolved: list[Path] = []
-    for prompt_path in prompt_pack_paths:
-        if prompt_path.is_absolute():
-            resolved.append(prompt_path.resolve(strict=False))
-            continue
-        resolved.append((base_dir / prompt_path).resolve(strict=False))
-    return tuple(resolved)
+    return resolve_prompt_pack_paths_for_execution(
+        prompt_pack_paths=prompt_pack_paths,
+        repository_root=repository_root,
+    )
 
 
 def _resolve_workspace_path(

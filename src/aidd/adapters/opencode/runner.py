@@ -2,21 +2,20 @@ from __future__ import annotations
 
 import os
 import shlex
-import subprocess
-import threading
-import time
-from collections import deque
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from queue import Empty, Queue
-from typing import Literal, TextIO
 
 from aidd.adapters.native_prompt import build_native_prompt_text as compile_native_prompt_text
+from aidd.adapters.path_resolution import (
+    resolve_prompt_pack_paths_for_execution,
+    resolve_stage_brief_path_for_execution,
+)
 from aidd.adapters.runtime_artifacts import write_runtime_exit_metadata
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
+from aidd.adapters.subprocess_streaming import run_streamed_subprocess
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
@@ -74,9 +73,6 @@ class OpenCodeRunResult(RuntimeRunResult[OpenCodeExitClassification]):
     pass
 
 
-StreamTarget = Literal["stdout", "stderr"]
-
-
 def _resolve_exit_classification(
     *,
     exit_code: int,
@@ -87,49 +83,6 @@ def _resolve_exit_classification(
     if exit_code == 0:
         return OpenCodeExitClassification.SUCCESS
     return OpenCodeExitClassification.NON_ZERO_EXIT
-
-
-def _request_subprocess_stop(process: subprocess.Popen[str]) -> None:
-    if process.poll() is not None:
-        return
-
-    try:
-        process.terminate()
-    except (OSError, ProcessLookupError):
-        return
-
-    try:
-        process.wait(timeout=0.5)
-    except subprocess.TimeoutExpired:
-        try:
-            process.kill()
-        except (OSError, ProcessLookupError):
-            return
-
-
-def _resolve_stage_brief_path_for_execution(
-    *,
-    stage_brief_path: Path,
-    workspace_root: Path,
-) -> Path:
-    if stage_brief_path.is_absolute():
-        return stage_brief_path.resolve(strict=False)
-    return (workspace_root / stage_brief_path).resolve(strict=False)
-
-
-def _resolve_prompt_pack_paths_for_execution(
-    *,
-    prompt_pack_paths: tuple[Path, ...],
-    repository_root: Path | None,
-) -> tuple[Path, ...]:
-    base_dir = (repository_root or Path.cwd()).resolve(strict=False)
-    resolved: list[Path] = []
-    for prompt_path in prompt_pack_paths:
-        if prompt_path.is_absolute():
-            resolved.append(prompt_path.resolve(strict=False))
-            continue
-        resolved.append((base_dir / prompt_path).resolve(strict=False))
-    return tuple(resolved)
 
 
 def assemble_command(
@@ -152,11 +105,11 @@ def assemble_command(
         raise ValueError("Configured opencode command must produce at least one token.")
 
     resolved_workspace_root = context.workspace_root.resolve(strict=False)
-    resolved_stage_brief_path = _resolve_stage_brief_path_for_execution(
+    resolved_stage_brief_path = resolve_stage_brief_path_for_execution(
         stage_brief_path=context.stage_brief_path,
         workspace_root=resolved_workspace_root,
     )
-    resolved_prompt_pack_paths = _resolve_prompt_pack_paths_for_execution(
+    resolved_prompt_pack_paths = resolve_prompt_pack_paths_for_execution(
         prompt_pack_paths=context.prompt_pack_paths,
         repository_root=repository_root,
     )
@@ -295,11 +248,11 @@ def build_execution_environment(
     repository_root: Path | None = None,
 ) -> dict[str, str]:
     resolved_workspace_root = context.workspace_root.resolve(strict=False)
-    resolved_stage_brief_path = _resolve_stage_brief_path_for_execution(
+    resolved_stage_brief_path = resolve_stage_brief_path_for_execution(
         stage_brief_path=context.stage_brief_path,
         workspace_root=resolved_workspace_root,
     )
-    resolved_prompt_pack_paths = _resolve_prompt_pack_paths_for_execution(
+    resolved_prompt_pack_paths = resolve_prompt_pack_paths_for_execution(
         prompt_pack_paths=context.prompt_pack_paths,
         repository_root=repository_root,
     )
@@ -376,24 +329,6 @@ def build_subprocess_spec(
     )
 
 
-def _stream_reader(
-    *,
-    target: StreamTarget,
-    pipe: TextIO | None,
-    queue: Queue[tuple[StreamTarget, str | None]],
-) -> None:
-    if pipe is None:
-        queue.put((target, None))
-        return
-
-    try:
-        for chunk in iter(pipe.readline, ""):
-            queue.put((target, chunk))
-    finally:
-        pipe.close()
-        queue.put((target, None))
-
-
 def run_subprocess_with_streaming(
     *,
     spec: OpenCodeSubprocessSpec,
@@ -402,90 +337,24 @@ def run_subprocess_with_streaming(
     timeout_seconds: float | None = None,
     cancel_requested: Callable[[], bool] | None = None,
 ) -> OpenCodeRunResult:
-    if timeout_seconds is not None and timeout_seconds <= 0:
-        raise ValueError("timeout_seconds must be greater than zero when provided.")
-
-    process = subprocess.Popen(
-        spec.command,
-        cwd=spec.cwd,
-        env=spec.env,
-        stdin=subprocess.PIPE if spec.stdin_text is not None else None,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1,
+    streamed_result = run_streamed_subprocess(
+        spec=spec,
+        on_stdout=on_stdout,
+        on_stderr=on_stderr,
+        timeout_seconds=timeout_seconds,
+        cancel_requested=cancel_requested,
+        timeout_stop_reason=OpenCodeExitClassification.TIMEOUT,
+        cancel_stop_reason=OpenCodeExitClassification.CANCELLED,
     )
-    if spec.stdin_text is not None and process.stdin is not None:
-        try:
-            process.stdin.write(spec.stdin_text)
-            process.stdin.close()
-        except BrokenPipeError:
-            pass
-
-    queue: Queue[tuple[StreamTarget, str | None]] = Queue()
-    reader_threads = (
-        threading.Thread(
-            target=_stream_reader,
-            kwargs={"target": "stdout", "pipe": process.stdout, "queue": queue},
-            daemon=True,
-        ),
-        threading.Thread(
-            target=_stream_reader,
-            kwargs={"target": "stderr", "pipe": process.stderr, "queue": queue},
-            daemon=True,
-        ),
-    )
-    for thread in reader_threads:
-        thread.start()
-
-    stdout_chunks: deque[str] = deque()
-    stderr_chunks: deque[str] = deque()
-    runtime_log_chunks: deque[str] = deque()
-    deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None else None
-    stop_reason: OpenCodeExitClassification | None = None
-    completed_readers = 0
-    while completed_readers < 2:
-        if stop_reason is None:
-            if cancel_requested is not None and cancel_requested():
-                stop_reason = OpenCodeExitClassification.CANCELLED
-                _request_subprocess_stop(process)
-            elif deadline is not None and time.monotonic() >= deadline:
-                stop_reason = OpenCodeExitClassification.TIMEOUT
-                _request_subprocess_stop(process)
-
-        try:
-            target, chunk = queue.get(timeout=0.1)
-        except Empty:
-            continue
-
-        if chunk is None:
-            completed_readers += 1
-            continue
-
-        runtime_log_chunks.append(chunk)
-        if target == "stdout":
-            stdout_chunks.append(chunk)
-            if on_stdout is not None:
-                on_stdout(chunk)
-            continue
-
-        stderr_chunks.append(chunk)
-        if on_stderr is not None:
-            on_stderr(chunk)
-
-    for thread in reader_threads:
-        thread.join(timeout=0.5)
-
-    exit_code = process.wait()
     exit_classification = _resolve_exit_classification(
-        exit_code=exit_code,
-        stop_reason=stop_reason,
+        exit_code=streamed_result.exit_code,
+        stop_reason=streamed_result.stop_reason,
     )
     return OpenCodeRunResult(
-        exit_code=exit_code,
-        stdout_text="".join(stdout_chunks),
-        stderr_text="".join(stderr_chunks),
-        runtime_log_text="".join(runtime_log_chunks),
+        exit_code=streamed_result.exit_code,
+        stdout_text=streamed_result.stdout_text,
+        stderr_text=streamed_result.stderr_text,
+        runtime_log_text=streamed_result.runtime_log_text,
         exit_classification=exit_classification,
     )
 

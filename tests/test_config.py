@@ -1,9 +1,39 @@
 from __future__ import annotations
 
+from dataclasses import fields
 from pathlib import Path
 
 from aidd.adapters.runtime_registry import RuntimeExecutionMode
-from aidd.config import load_config
+from aidd.config import AiddConfig, RuntimeConfig, load_config
+
+
+def _runtime_configs() -> dict[str, RuntimeConfig]:
+    return {
+        "generic-cli": RuntimeConfig(
+            command="python",
+            execution_mode=RuntimeExecutionMode.ADAPTER_FLAGS,
+            timeout_seconds=None,
+            stage_timeout_seconds={},
+        ),
+        "claude-code": RuntimeConfig(
+            command="claude",
+            execution_mode=RuntimeExecutionMode.NATIVE,
+            timeout_seconds=1200,
+            stage_timeout_seconds={"research": 1500},
+        ),
+        "codex": RuntimeConfig(
+            command="codex",
+            execution_mode=RuntimeExecutionMode.NATIVE,
+            timeout_seconds=900,
+            stage_timeout_seconds={},
+        ),
+        "opencode": RuntimeConfig(
+            command="opencode",
+            execution_mode=RuntimeExecutionMode.NATIVE,
+            timeout_seconds=900,
+            stage_timeout_seconds={},
+        ),
+    }
 
 
 def test_load_config_defaults_native_providers_to_native(tmp_path: Path) -> None:
@@ -25,6 +55,70 @@ def test_load_config_defaults_native_providers_to_native(tmp_path: Path) -> None
     assert cfg.claude_code_stage_timeout_seconds == {}
     assert cfg.codex_stage_timeout_seconds == {}
     assert cfg.opencode_stage_timeout_seconds == {}
+
+
+def test_runtime_configs_are_primary_config_storage(tmp_path: Path) -> None:
+    cfg = load_config(tmp_path / "missing.toml")
+
+    field_names = {field.name for field in fields(AiddConfig)}
+    assert "runtime_configs" in field_names
+    assert "codex_command" not in field_names
+    assert cfg.runtime_config("codex").command == cfg.codex_command
+    assert cfg.runtime_config("codex").execution_mode is cfg.codex_execution_mode
+
+
+def test_legacy_runtime_properties_are_read_only_map_shims() -> None:
+    cfg = AiddConfig(
+        workspace_root=Path(".aidd"),
+        log_mode="both",
+        max_repair_attempts=2,
+        runtime_configs=_runtime_configs(),
+    )
+
+    assert cfg.claude_code_command == "claude"
+    assert cfg.claude_code_stage_timeout_seconds == {"research": 1500}
+    stage_timeout_copy = cfg.claude_code_stage_timeout_seconds
+    stage_timeout_copy["qa"] = 10
+    assert cfg.claude_code_stage_timeout_seconds == {"research": 1500}
+
+
+def test_runtime_config_map_requires_all_supported_runtime_ids() -> None:
+    runtime_configs = _runtime_configs()
+    runtime_configs.pop("codex")
+
+    try:
+        AiddConfig(
+            workspace_root=Path(".aidd"),
+            log_mode="both",
+            max_repair_attempts=2,
+            runtime_configs=runtime_configs,
+        )
+    except ValueError as exc:
+        assert "missing runtime configs: codex" in str(exc)
+    else:  # pragma: no cover - assertion clarity
+        raise AssertionError("Expected ValueError for incomplete runtime config map.")
+
+
+def test_runtime_config_map_rejects_unknown_runtime_ids() -> None:
+    runtime_configs = _runtime_configs()
+    runtime_configs["unknown"] = RuntimeConfig(
+        command="unknown",
+        execution_mode=RuntimeExecutionMode.ADAPTER_FLAGS,
+        timeout_seconds=None,
+        stage_timeout_seconds={},
+    )
+
+    try:
+        AiddConfig(
+            workspace_root=Path(".aidd"),
+            log_mode="both",
+            max_repair_attempts=2,
+            runtime_configs=runtime_configs,
+        )
+    except ValueError as exc:
+        assert "unknown runtime configs: unknown" in str(exc)
+    else:  # pragma: no cover - assertion clarity
+        raise AssertionError("Expected ValueError for unknown runtime config id.")
 
 
 def test_load_config_upgrades_legacy_raw_provider_commands_to_native(

@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from aidd.compatibility import legacy_prompt_pack_provenance_payload
+
 
 @dataclass(frozen=True, slots=True)
 class StageStatusChange:
@@ -290,16 +292,14 @@ class RunArtifactIndex:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> RunArtifactIndex:
-        raw_prompt_pack_provenance = payload.get("prompt_pack_provenance", [])
         prompt_pack_provenance: list[RunArtifactIndex.PromptPackProvenanceEntry] = []
-        if isinstance(raw_prompt_pack_provenance, list):
-            for entry in raw_prompt_pack_provenance:
-                if not isinstance(entry, dict):
-                    continue
-                parsed_entry = RunArtifactIndex.PromptPackProvenanceEntry.from_dict(entry)
-                if parsed_entry is None:
-                    continue
-                prompt_pack_provenance.append(parsed_entry)
+        for entry in legacy_prompt_pack_provenance_payload(payload):
+            if not isinstance(entry, dict):
+                continue
+            parsed_entry = RunArtifactIndex.PromptPackProvenanceEntry.from_dict(entry)
+            if parsed_entry is None:
+                continue
+            prompt_pack_provenance.append(parsed_entry)
         return cls(
             schema_version=int(payload.get("schema_version", 1)),
             run_id=str(payload["run_id"]),

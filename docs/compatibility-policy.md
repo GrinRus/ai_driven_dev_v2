@@ -164,3 +164,21 @@ Applies to smoke/interview/live scenario manifests and associated catalog entrie
   - reason for deprecation;
   - removal target release.
 - Scenario removal must update `docs/e2e/live-e2e-catalog.md` and keep historical evidence discoverable in Git history.
+
+### 6.5 Current compatibility shims
+
+These shims are intentionally isolated in `src/aidd/compatibility.py`. The Wave 16
+decision is to retain them for compatibility instead of deleting legacy behavior
+in the complexity-reduction refactor. They are covered by config and run-store
+compatibility tests.
+
+- `legacy-raw-provider-command-upgrade` keeps older config files working when a
+  provider runtime command is set to the raw probe binary, such as `codex`,
+  without an explicit execution mode.
+- `legacy-artifact-index-without-prompt-provenance` keeps older run artifact
+  indexes readable when they predate prompt-pack provenance metadata.
+
+Removal window: either shim may only be removed by a future compatibility-removal
+wave after release notes announce the deprecation and at least one minor release
+keeps the shim available. That future task must update this policy, migration
+guidance, and the compatibility tests in the same change.
