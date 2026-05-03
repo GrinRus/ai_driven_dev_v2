@@ -141,7 +141,7 @@ Live E2E remains available as a manual external-audit system, but it is no longe
 uv sync --extra dev
 uv run aidd --help
 uv run aidd doctor
-uv run pytest
+uv run --extra dev pytest -q
 ```
 
 ### Create a starter workspace
@@ -203,7 +203,7 @@ uv run aidd init --work-item WI-001
 sed -n '1,200p' docs/backlog/roadmap.md
 
 # Run the smoke tests
-uv run pytest
+uv run --extra dev pytest -q
 ```
 
 ## Current CLI surface
@@ -270,9 +270,9 @@ Then use the standard loop:
 
 ```bash
 uv sync --extra dev
-uv run ruff check .
-uv run mypy src
-uv run pytest
+uv run --extra dev ruff check .
+uv run --extra dev python -m mypy src
+uv run --extra dev pytest -q
 ```
 
 ## Repository map

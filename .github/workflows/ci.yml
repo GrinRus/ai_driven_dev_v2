@@ -31,13 +31,13 @@ jobs:
         run: uv sync --extra dev
 
       - name: Lint
-        run: uv run ruff check .
+        run: uv run --extra dev ruff check .
 
       - name: Type check
-        run: uv run mypy src
+        run: uv run --extra dev python -m mypy src
 
       - name: Test
-        run: uv run pytest -q
+        run: uv run --extra dev pytest -q
 
   adapter-conformance:
     needs: lint-type-test
@@ -57,7 +57,7 @@ jobs:
         run: uv sync --extra dev
 
       - name: Adapter conformance lane
-        run: uv run pytest -vv tests/harness/test_adapter_conformance_lane.py
+        run: uv run --extra dev pytest -vv tests/harness/test_adapter_conformance_lane.py
 
   build:
     needs:

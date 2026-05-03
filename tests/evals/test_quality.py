@@ -178,6 +178,100 @@ def test_build_live_quality_assessment_returns_warn_for_bounded_quality_risks(
     assert "Resolve review conditions" in report
 
 
+def test_build_live_quality_assessment_scores_flow_fidelity_independently(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-FLOW-FIDELITY"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="fail",
+        selected_issue=scenario.feature_source.issues[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert [dimension.name for dimension in assessment.dimensions] == [
+        "flow_fidelity",
+        "artifact_quality",
+        "code_quality",
+    ]
+    assert [dimension.score for dimension in assessment.dimensions] == [0, 3, 3]
+    assert assessment.gate == "fail"
+
+
+def test_build_live_quality_assessment_scores_artifact_quality_independently(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-ARTIFACT-QUALITY"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    qa_report_path = (
+        stage_output_root(root=tmp_path, work_item=work_item, stage="qa")
+        / "qa-report.md"
+    )
+    qa_report_path.write_text(
+        "# QA Report\n\n- QA verdict: `ready`\n- Evidence: none recorded\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_issue=scenario.feature_source.issues[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert [dimension.score for dimension in assessment.dimensions] == [3, 1, 3]
+    assert assessment.gate == "warn"
+    assert assessment.suggested_follow_ups == (
+        "Strengthen QA evidence references so verdict claims cite concrete artifacts.",
+    )
+
+
+def test_build_live_quality_assessment_scores_code_quality_independently(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-CODE-QUALITY"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_issue=scenario.feature_source.issues[0],
+        quality_result=None,
+        quality_error=None,
+    )
+
+    assert [dimension.score for dimension in assessment.dimensions] == [3, 3, 0]
+    assert assessment.gate == "fail"
+
+
 def test_build_live_quality_assessment_ignores_negated_must_fix_mentions(
     tmp_path: Path,
 ) -> None:

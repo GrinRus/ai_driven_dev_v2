@@ -3376,7 +3376,7 @@ Local tasks:
 
 Exit evidence:
 
-- `uv run ruff check .` passes;
+- `uv run --extra dev ruff check .` passes;
 - the live-E2E skill contract assertion still checks the same command text.
 
 ### Epic W15-E2 — roadmap evidence hygiene (`done`)
@@ -3826,3 +3826,339 @@ Sync notes:
 
 - `2026-05-03` Wave 16 was opened after a complexity audit found monolithic validator, adapter, CLI, and eval-runner hotspots while Wave 15 external evidence lanes remained blocked.
 - `2026-05-03` Wave 16 completed: semantic validation delegates through stage/document rule modules; adapter probe, streaming, and path-resolution helpers are shared; CLI handlers are split into command modules; eval runner phases and eval render helpers are extracted; retained legacy shims have an explicit future removal path.
+
+---
+
+## Wave 17 — complexity reduction pass 2 (`done`)
+
+### Epic W17-E0 — developer loop determinism (`done`)
+Linked stories: `US-09`, `US-10`
+
+#### Slice W17-E0-S1 — deterministic local checks (`done`)
+Goal: make contributor checks run through the configured dev environment instead of relying on ambient Python state.
+
+Primary outputs:
+
+- deterministic Makefile check commands
+- documented dev-extra check commands
+- ignored incidental local lockfile artifact
+
+Touched areas:
+
+- root developer docs
+- root tooling files
+
+Dependencies:
+
+- Wave 16 complexity baseline
+
+Local tasks:
+
+- `W17-E0-S1-T1` (done) Stabilize local check commands so lint, typecheck, and test use the dev-extra environment consistently.
+
+Exit evidence:
+
+- `uv run --extra dev ruff check .` passes;
+- `uv run --extra dev python -m mypy src` passes;
+- `uv run --extra dev pytest -q` passes.
+
+### Epic W17-E1 — core and CLI orchestration reduction (`done`)
+Linked stories: `US-01`, `US-03`, `US-04`, `US-05`, `US-06`, `US-10`
+
+#### Slice W17-E1-S1 — stage-run CLI helper extraction (`done`)
+Goal: keep the Typer command surface stable while moving runtime setup, adapter execution, repair retries, and reporting out of the command handler.
+
+Primary outputs:
+
+- internal stage-run options object
+- internal stage-run executor
+- thinner `cli/stage.py`
+
+Touched areas:
+
+- `src/aidd/cli/`
+
+Dependencies:
+
+- `W17-E0-S1`
+
+Local tasks:
+
+- `W17-E1-S1-T1` (done) Extract `aidd stage run` execution support into internal CLI helpers while preserving command behavior.
+
+Exit evidence:
+
+- CLI stage tests pass.
+
+#### Slice W17-E1-S2 — repair-budget terminal helper extraction (`done`)
+Goal: reduce `core/stage_runner.py` by moving terminal repair-budget result rewriting into a narrow helper without changing the public facade.
+
+Primary outputs:
+
+- focused repair budget terminal-output helper
+- direct helper characterization tests
+- stable public orchestration facade
+
+Touched areas:
+
+- `src/aidd/core/`
+
+Dependencies:
+
+- `W17-E1-S1`
+
+Local tasks:
+
+- `W17-E1-S2-T1` (done) Extract repair-budget terminal-result rewriting from stage orchestration into a focused core helper.
+
+Exit evidence:
+
+- core stage-runner and repair-flow tests pass.
+
+#### Slice W17-E1-S3 — stage orchestration phase modules (`done`)
+Goal: keep `run_single_stage_orchestration(...)` stable while moving preparation, invocation, output discovery, validation, repair-budget transitions, and interview routing into focused internal phase modules.
+
+Primary outputs:
+
+- stage preparation and invocation modules
+- stage output discovery/publication module
+- stage validation transition module
+- stage interview-routing module
+- shared stage orchestration model objects
+
+Touched areas:
+
+- `src/aidd/core/`
+
+Dependencies:
+
+- `W17-E1-S2`
+
+Local tasks:
+
+- `W17-E1-S3-T1` (done) Split stage orchestration phases out of `core/stage_runner.py` while preserving the public facade and compatibility aliases.
+
+Exit evidence:
+
+- core stage-runner, repair-flow, stage-terminal, and CLI stage tests pass.
+
+### Epic W17-E2 — adapter surface cleanup (`done`)
+Linked stories: `US-01`, `US-06`, `US-08`
+
+#### Slice W17-E2-S1 — shared adapter command helpers (`done`)
+Goal: remove remaining runtime-runner duplication while keeping runtime-specific command differences local.
+
+Primary outputs:
+
+- shared configured-command parsing
+- shared AIDD execution environment builder
+- shared runtime log persistence helper
+
+Touched areas:
+
+- `src/aidd/adapters/`
+
+Dependencies:
+
+- `W17-E0-S1`
+
+Local tasks:
+
+- `W17-E2-S1-T1` (done) Add shared adapter command, environment, and runtime-artifact helpers used by maintained runtime runners.
+
+Exit evidence:
+
+- adapter runner tests pass.
+
+#### Slice W17-E2-S2 — adapter context validation boundary (`done`)
+Goal: remove repeated command-context validation from runtime runners and keep reusable interview persistence behind an explicit core-owned adapter boundary.
+
+Primary outputs:
+
+- shared stage command-context validation helper
+- explicit core adapter interview persistence boundary
+- stable runtime-specific command construction in adapter modules
+
+Touched areas:
+
+- `src/aidd/adapters/`
+- `src/aidd/core/`
+
+Dependencies:
+
+- `W17-E2-S1`
+
+Local tasks:
+
+- `W17-E2-S2-T1` (done) Consolidate adapter context validation and route reusable interview persistence through a core-owned adapter boundary.
+
+Exit evidence:
+
+- adapter tests pass.
+
+### Epic W17-E3 — validator helper reduction (`done`)
+Linked stories: `US-02`, `US-03`, `US-04`, `US-10`
+
+#### Slice W17-E3-S1 — semantic helper module split (`done`)
+Goal: reduce the common semantic validator module by moving reusable parsing and placeholder helpers into focused internal modules.
+
+Primary outputs:
+
+- placeholder helper module
+- Markdown block extraction helper module
+- stable `validators.semantic` facade
+
+Touched areas:
+
+- `src/aidd/validators/semantic_rules/`
+
+Dependencies:
+
+- `W17-E0-S1`
+
+Local tasks:
+
+- `W17-E3-S1-T1` (done) Split common semantic placeholder and Markdown extraction helpers into focused internal modules.
+
+Exit evidence:
+
+- semantic validator tests pass.
+
+#### Slice W17-E3-S2 — semantic rule helper and stage-rule split (`done`)
+Goal: continue reducing common semantic-rule complexity by moving id extraction, evidence parsing, risk parsing, and finding factories into focused modules, then convert the largest stage validators into ordered small rule functions.
+
+Primary outputs:
+
+- task/citation/milestone id extraction helper module
+- implementation evidence helper module
+- risk and QA metadata helper module
+- validation finding factory module
+- ordered helper functions for implementation, tasklist, QA, and review validators
+
+Touched areas:
+
+- `src/aidd/validators/semantic_rules/`
+
+Dependencies:
+
+- `W17-E3-S1`
+
+Local tasks:
+
+- `W17-E3-S2-T1` (done) Split remaining common semantic helpers and decompose large stage validators without changing fixture formats or report shape.
+
+Exit evidence:
+
+- semantic validator tests pass.
+
+### Epic W17-E4 — eval and harness reporting reduction (`done`)
+Linked stories: `US-07`, `US-10`
+
+#### Slice W17-E4-S1 — eval scoring helper extraction (`done`)
+Goal: reduce branching in live quality and timing payload construction while preserving report output shape.
+
+Primary outputs:
+
+- live quality scoring helpers
+- stage timing evidence model and step-evidence helper
+
+Touched areas:
+
+- `src/aidd/evals/`
+
+Dependencies:
+
+- `W17-E0-S1`
+
+Local tasks:
+
+- `W17-E4-S1-T1` (done) Extract eval quality scoring and timing step payload helpers without changing generated artifacts.
+
+Exit evidence:
+
+- eval quality and stage-timing tests pass.
+
+#### Slice W17-E4-S2 — eval runner report context (`done`)
+Goal: reduce high-arity eval report persistence by grouping stable report inputs into typed context objects.
+
+Primary outputs:
+
+- eval report persistence context
+- runtime log source context
+
+Touched areas:
+
+- `src/aidd/harness/`
+
+Dependencies:
+
+- `W17-E4-S1`
+
+Local tasks:
+
+- `W17-E4-S2-T1` (done) Introduce typed eval report persistence context while preserving result bundle layout.
+
+Exit evidence:
+
+- harness eval-runner tests pass.
+
+#### Slice W17-E4-S3 — eval runner phase modules (`done`)
+Goal: keep `run_eval_scenario(...)` and result bundle shape stable while moving preparation, execution, classification, source-artifact rendering, report persistence, and grader payload construction into focused internal modules.
+
+Primary outputs:
+
+- eval run model objects
+- eval preparation module
+- eval execution module
+- eval classification module
+- eval report persistence and grader-payload module
+- compatibility aliases for existing white-box tests and local debug scripts
+
+Touched areas:
+
+- `src/aidd/harness/`
+
+Dependencies:
+
+- `W17-E4-S2`
+
+Local tasks:
+
+- `W17-E4-S3-T1` (done) Decompose `harness/eval_runner.py` into phase modules while preserving `run_eval_scenario(...)` behavior and artifact layout.
+
+Exit evidence:
+
+- harness eval-runner and eval scoring tests pass.
+
+### Epic W17-E5 — retained compatibility cleanup (`done`)
+Linked stories: `US-09`, `US-10`
+
+#### Slice W17-E5-S1 — config compatibility constructor isolation (`done`)
+Goal: keep documented compatibility shims while reducing legacy constructor noise in configuration loading.
+
+Primary outputs:
+
+- named legacy runtime-config normalization helper
+- stable read-only legacy config properties
+
+Touched areas:
+
+- `src/aidd/config.py`
+
+Dependencies:
+
+- `W17-E0-S1`
+
+Local tasks:
+
+- `W17-E5-S1-T1` (done) Move legacy `AiddConfig` constructor field normalization behind a named compatibility helper.
+
+Exit evidence:
+
+- config and run-store compatibility tests pass.
+
+Sync notes:
+
+- `2026-05-03` Wave 17 opened as a second complexity-reduction pass after the Wave 16 refactor left concentrated complexity in stage orchestration, CLI stage execution, adapter runners, semantic helpers, and eval reporting.
+- `2026-05-03` Wave 17 completed with deterministic dev-extra checks, a thin CLI stage handler, shared adapter runner helpers, focused repair-budget terminal helpers, semantic placeholder/block helper modules, eval scoring/report contexts, and isolated config compatibility normalization.
+- `2026-05-03` Wave 17 corrective audit completed the remaining planned decomposition: stage orchestration phase modules, shared adapter context validation, deeper semantic helper/stage-rule split, stage-timing evidence modeling, and eval runner phase modules.

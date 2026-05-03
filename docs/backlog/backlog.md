@@ -6,16 +6,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- none
-
 ## Soon
 
-- none
-
 ## Parking lot
-
-- none
-
 
 ## Update rules
 
@@ -60,3 +53,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-04-25` `W15-E3-S1-T1` is blocked because local preflight found no configured AIDD-compatible live runtime wrapper env var; backlog advanced with `W15-E3-S2-T1` promoted to `Next`.
 - `2026-04-25` `W15-E3-S2-T1` is blocked because local preflight found no release candidate tag or local publishing credentials; active backlog queue is empty.
 - `2026-05-03` Wave 16 complexity-reduction work completed shared Markdown parsing, semantic facade/plumbing extraction, stage-specific semantic rule modules, adapter probe/streaming/path-resolution dedupe, adapter surface registry, CLI command module split, runtime config map, eval phase/render extraction, and documented compatibility shim retention; backlog queue is empty again.
+- `2026-05-03` Wave 17 opened as a second complexity-reduction pass; promoted `W17-E0-S1-T1` to `Next`, `W17-E1-S1-T1` and `W17-E2-S1-T1` to `Soon`, and the remaining Wave 17 local tasks to `Parking lot`.
+- `2026-05-03` Wave 17 completed; backlog queue is empty again and the next implementation wave should be opened via the queue-restoration policy before further changes.
+- `2026-05-03` Wave 17 corrective audit closed the remaining decomposition gaps in roadmap tasks `W17-E1-S3-T1`, `W17-E2-S2-T1`, `W17-E3-S2-T1`, and `W17-E4-S3-T1`; backlog queue remains empty.

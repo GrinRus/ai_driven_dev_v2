@@ -22,12 +22,12 @@ from aidd.validators.semantic_rules.common import (
     UNVERIFIABLE_CHECK_CLAIM_CODE,
     SemanticDocumentContext,
     SemanticRule,
-    has_non_placeholder_text,
     required_sections_for_document,
     validate_placeholder_sections,
 )
 from aidd.validators.semantic_rules.idea import RULES as IDEA_RULES
 from aidd.validators.semantic_rules.implement import RULES as IMPLEMENT_RULES
+from aidd.validators.semantic_rules.placeholders import has_non_placeholder_text
 from aidd.validators.semantic_rules.plan import RULES as PLAN_RULES
 from aidd.validators.semantic_rules.qa import RULES as QA_RULES
 from aidd.validators.semantic_rules.research import RULES as RESEARCH_RULES

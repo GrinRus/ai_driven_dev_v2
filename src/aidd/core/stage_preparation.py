@@ -1,0 +1,131 @@
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+
+from aidd.core.run_store import (
+    RUN_ATTEMPT_PREFIX,
+    create_next_attempt_directory,
+    persist_stage_status,
+)
+from aidd.core.stage_models import StageExecutionState, StagePreparationBundle
+from aidd.core.stage_paths import workspace_relative_paths
+from aidd.core.stage_registry import (
+    DEFAULT_STAGE_CONTRACTS_ROOT,
+    load_stage_manifest,
+    resolve_expected_output_documents,
+    resolve_required_input_documents,
+)
+from aidd.core.state_machine import StageState
+
+
+def render_stage_brief(
+    *,
+    stage: str,
+    purpose: str | None,
+    expected_input_bundle: tuple[str, ...],
+    expected_output_documents: tuple[str, ...],
+) -> str:
+    lines = [
+        "# Stage",
+        "",
+        stage,
+        "",
+        "# Purpose",
+        "",
+        purpose or "No purpose provided in stage contract.",
+        "",
+        "# Expected input bundle",
+        "",
+    ]
+    lines.extend(f"- `{path}`" for path in expected_input_bundle)
+    lines.extend(["", "# Expected output documents", ""])
+    lines.extend(f"- `{path}`" for path in expected_output_documents)
+    lines.append("")
+    return "\n".join(lines)
+
+
+def prepare_stage_bundle(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> StagePreparationBundle:
+    manifest = load_stage_manifest(stage=stage, contracts_root=contracts_root)
+    expected_inputs = resolve_required_input_documents(
+        stage=stage,
+        work_item=work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+    expected_outputs = resolve_expected_output_documents(
+        stage=stage,
+        work_item=work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+    stage_brief = render_stage_brief(
+        stage=stage,
+        purpose=manifest.purpose,
+        expected_input_bundle=workspace_relative_paths(workspace_root, expected_inputs),
+        expected_output_documents=workspace_relative_paths(workspace_root, expected_outputs),
+    )
+    return StagePreparationBundle(
+        stage=stage,
+        work_item=work_item,
+        stage_brief_markdown=stage_brief,
+        expected_input_bundle=expected_inputs,
+        expected_output_documents=expected_outputs,
+    )
+
+
+def attempt_number_from_path(attempt_path: Path) -> int:
+    if not attempt_path.name.startswith(RUN_ATTEMPT_PREFIX):
+        raise ValueError(f"Invalid attempt directory name: {attempt_path.name}")
+    suffix = attempt_path.name.removeprefix(RUN_ATTEMPT_PREFIX)
+    if not suffix.isdigit():
+        raise ValueError(f"Invalid attempt directory suffix: {attempt_path.name}")
+    return int(suffix)
+
+
+def persist_execution_state(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    changed_at_utc: datetime | None = None,
+) -> StageExecutionState:
+    attempt_path = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        contracts_root=contracts_root,
+    )
+    stage_metadata_path = persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        status=StageState.EXECUTING.value,
+        changed_at_utc=changed_at_utc,
+    )
+    return StageExecutionState(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        attempt_number=attempt_number_from_path(attempt_path),
+        attempt_path=attempt_path,
+        stage_metadata_path=stage_metadata_path,
+    )
+
+
+__all__ = [
+    "attempt_number_from_path",
+    "persist_execution_state",
+    "prepare_stage_bundle",
+    "render_stage_brief",
+]

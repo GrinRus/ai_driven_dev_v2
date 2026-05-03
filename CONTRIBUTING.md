@@ -41,7 +41,7 @@ You can help by:
 uv sync --extra dev
 uv run aidd --help
 uv run aidd doctor
-uv run pytest
+uv run --extra dev pytest -q
 ```
 
 ## Operator docs
@@ -113,9 +113,9 @@ Rules for new planning items:
 Before opening a PR, run the smallest relevant checks:
 
 ```bash
-uv run ruff check .
-uv run mypy src
-uv run pytest
+uv run --extra dev ruff check .
+uv run --extra dev python -m mypy src
+uv run --extra dev pytest -q
 ```
 
 If your change affects contracts, prompts, adapters, harness behavior, or eval logic, also update the matching docs and scenario/manifests.

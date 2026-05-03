@@ -63,9 +63,9 @@ uv run aidd --help
 Recommended baseline verification:
 
 ```bash
-uv run ruff check .
-uv run mypy src
-uv run pytest
+uv run --extra dev ruff check .
+uv run --extra dev python -m mypy src
+uv run --extra dev pytest -q
 ```
 
 ## 5. Configuration

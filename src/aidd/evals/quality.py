@@ -157,6 +157,187 @@ def _collect_live_quality_evidence(
     )
 
 
+def _blocking_findings_for_live_quality(
+    *,
+    evidence: LiveQualityEvidence,
+    execution_status: str,
+    selected_issue: ScenarioIssueSeed | None,
+    quality_error: BaseException | None,
+) -> list[str]:
+    blocking_findings: list[str] = []
+    if selected_issue is None:
+        blocking_findings.append("selected issue snapshot is missing")
+    if execution_status != "pass":
+        blocking_findings.append(
+            "execution verdict is not pass, so the full-flow live audit is not clean"
+        )
+    if evidence.missing_stage_paths:
+        missing_preview = ", ".join(path.name for path in evidence.missing_stage_paths[:4])
+        blocking_findings.append(
+            f"required full-flow stage artifacts are missing ({missing_preview})"
+        )
+    if quality_error is not None:
+        blocking_findings.append(f"quality commands failed: {quality_error}")
+    if evidence.unresolved_must_fix_count > 0:
+        blocking_findings.append(
+            "review report still contains unresolved must-fix findings "
+            f"({evidence.unresolved_must_fix_count})"
+        )
+    if evidence.qa_verdict == "not-ready":
+        blocking_findings.append("QA report declares `not-ready`")
+    if evidence.review_status is None:
+        blocking_findings.append("review approval status is missing from review-report.md")
+    if evidence.qa_verdict is None:
+        blocking_findings.append("QA verdict is missing from qa-report.md")
+    return blocking_findings
+
+
+def _score_flow_fidelity(
+    *,
+    evidence: LiveQualityEvidence,
+    execution_status: str,
+    selected_issue: ScenarioIssueSeed | None,
+    quality_error: BaseException | None,
+) -> QualityDimensionScore:
+    if (
+        quality_error is not None
+        or selected_issue is None
+        or evidence.missing_stage_paths
+        or execution_status != "pass"
+    ):
+        return QualityDimensionScore(
+            name="flow_fidelity",
+            score=0,
+            rationale="Full-flow contract evidence is incomplete or execution did not pass.",
+        )
+    return QualityDimensionScore(
+        name="flow_fidelity",
+        score=3,
+        rationale=(
+            "Installed live run preserved selected issue evidence and complete "
+            "`idea -> qa` artifacts."
+        ),
+    )
+
+
+def _score_artifact_quality(
+    *,
+    evidence: LiveQualityEvidence,
+    follow_ups: list[str],
+) -> QualityDimensionScore:
+    if (
+        evidence.missing_stage_paths
+        or evidence.review_status is None
+        or evidence.qa_verdict is None
+    ):
+        return QualityDimensionScore(
+            name="artifact_quality",
+            score=0,
+            rationale="Required stage artifacts or review/QA decisions are missing.",
+        )
+    if evidence.evidence_reference_count == 0:
+        follow_ups.append(
+            "Strengthen QA evidence references so verdict claims cite concrete artifacts."
+        )
+        return QualityDimensionScore(
+            name="artifact_quality",
+            score=1,
+            rationale="QA artifacts exist but evidence references are weak or absent.",
+        )
+    if (
+        evidence.review_status == "approved-with-conditions"
+        or evidence.qa_verdict == "ready-with-risks"
+    ):
+        return QualityDimensionScore(
+            name="artifact_quality",
+            score=2,
+            rationale=(
+                "Artifacts are valid and usable, but review or QA still carries "
+                "bounded caveats."
+            ),
+        )
+    return QualityDimensionScore(
+        name="artifact_quality",
+        score=3,
+        rationale="Artifacts are complete, validated, and evidence-backed.",
+    )
+
+
+def _score_code_quality(
+    *,
+    evidence: LiveQualityEvidence,
+    quality_result: HarnessQualityResult | None,
+    quality_error: BaseException | None,
+    follow_ups: list[str],
+) -> QualityDimensionScore:
+    if (
+        quality_error is not None
+        or evidence.unresolved_must_fix_count > 0
+        or evidence.qa_verdict == "not-ready"
+    ):
+        return QualityDimensionScore(
+            name="code_quality",
+            score=0,
+            rationale=(
+                "Quality checks failed or review/QA evidence says the code result "
+                "is not ready."
+            ),
+        )
+    if (
+        evidence.review_status == "approved-with-conditions"
+        or evidence.qa_verdict == "ready-with-risks"
+    ):
+        follow_ups.append(
+            "Resolve review conditions and residual QA risks before treating the run "
+            "as clean."
+        )
+        return QualityDimensionScore(
+            name="code_quality",
+            score=1,
+            rationale="Code result is usable but still carries explicit review or QA conditions.",
+        )
+    if quality_result is None:
+        return QualityDimensionScore(
+            name="code_quality",
+            score=0,
+            rationale="No quality command evidence was recorded for the live run.",
+        )
+    return QualityDimensionScore(
+        name="code_quality",
+        score=3,
+        rationale="Quality commands passed and review/QA do not report blocking code concerns.",
+    )
+
+
+def _quality_verdict_from_evidence(evidence: LiveQualityEvidence) -> QualityVerdict:
+    if evidence.qa_verdict == "not-ready":
+        return "not-ready"
+    if evidence.qa_verdict == "ready-with-risks":
+        return "ready-with-risks"
+    if evidence.qa_verdict == "ready":
+        return "ready"
+    return "not-ready"
+
+
+def _quality_gate_for_dimensions(
+    *,
+    evidence: LiveQualityEvidence,
+    dimensions: tuple[QualityDimensionScore, ...],
+    quality_verdict: QualityVerdict,
+) -> QualityGate:
+    any_zero = any(dimension.score == 0 for dimension in dimensions)
+    any_one = any(dimension.score == 1 for dimension in dimensions)
+    if any_zero:
+        return "fail"
+    if (
+        any_one
+        or evidence.review_status == "approved-with-conditions"
+        or quality_verdict == "ready-with-risks"
+    ):
+        return "warn"
+    return "pass"
+
+
 def build_live_quality_assessment(
     *,
     scenario: Scenario,
@@ -183,155 +364,34 @@ def build_live_quality_assessment(
         work_item=work_item,
     )
 
-    blocking_findings: list[str] = []
     follow_ups: list[str] = []
-
-    if selected_issue is None:
-        blocking_findings.append("selected issue snapshot is missing")
-    if execution_status != "pass":
-        blocking_findings.append(
-            "execution verdict is not pass, so the full-flow live audit is not clean"
-        )
-    if evidence.missing_stage_paths:
-        missing_preview = ", ".join(path.name for path in evidence.missing_stage_paths[:4])
-        blocking_findings.append(
-            f"required full-flow stage artifacts are missing ({missing_preview})"
-        )
-    if quality_error is not None:
-        blocking_findings.append(f"quality commands failed: {quality_error}")
-    if evidence.unresolved_must_fix_count > 0:
-        blocking_findings.append(
-            "review report still contains unresolved must-fix findings "
-            f"({evidence.unresolved_must_fix_count})"
-        )
-    if evidence.qa_verdict == "not-ready":
-        blocking_findings.append("QA report declares `not-ready`")
-    if evidence.review_status is None:
-        blocking_findings.append("review approval status is missing from review-report.md")
-    if evidence.qa_verdict is None:
-        blocking_findings.append("QA verdict is missing from qa-report.md")
-
-    if (
-        quality_error is not None
-        or selected_issue is None
-        or evidence.missing_stage_paths
-        or execution_status != "pass"
-    ):
-        flow_fidelity = QualityDimensionScore(
-            name="flow_fidelity",
-            score=0,
-            rationale="Full-flow contract evidence is incomplete or execution did not pass.",
-        )
-    else:
-        flow_fidelity = QualityDimensionScore(
-            name="flow_fidelity",
-            score=3,
-            rationale=(
-                "Installed live run preserved selected issue evidence and complete "
-                "`idea -> qa` artifacts."
-            ),
-        )
-
-    if (
-        evidence.missing_stage_paths
-        or evidence.review_status is None
-        or evidence.qa_verdict is None
-    ):
-        artifact_quality = QualityDimensionScore(
-            name="artifact_quality",
-            score=0,
-            rationale="Required stage artifacts or review/QA decisions are missing.",
-        )
-    elif evidence.evidence_reference_count == 0:
-        artifact_quality = QualityDimensionScore(
-            name="artifact_quality",
-            score=1,
-            rationale="QA artifacts exist but evidence references are weak or absent.",
-        )
-        follow_ups.append(
-            "Strengthen QA evidence references so verdict claims cite concrete artifacts."
-        )
-    elif (
-        evidence.review_status == "approved-with-conditions"
-        or evidence.qa_verdict == "ready-with-risks"
-    ):
-        artifact_quality = QualityDimensionScore(
-            name="artifact_quality",
-            score=2,
-            rationale=(
-                "Artifacts are valid and usable, but review or QA still carries "
-                "bounded caveats."
-            ),
-        )
-    else:
-        artifact_quality = QualityDimensionScore(
-            name="artifact_quality",
-            score=3,
-            rationale="Artifacts are complete, validated, and evidence-backed.",
-        )
-
-    if (
-        quality_error is not None
-        or evidence.unresolved_must_fix_count > 0
-        or evidence.qa_verdict == "not-ready"
-    ):
-        code_quality = QualityDimensionScore(
-            name="code_quality",
-            score=0,
-            rationale=(
-                "Quality checks failed or review/QA evidence says the code result "
-                "is not ready."
-            ),
-        )
-    elif (
-        evidence.review_status == "approved-with-conditions"
-        or evidence.qa_verdict == "ready-with-risks"
-    ):
-        code_quality = QualityDimensionScore(
-            name="code_quality",
-            score=1,
-            rationale="Code result is usable but still carries explicit review or QA conditions.",
-        )
-        follow_ups.append(
-            "Resolve review conditions and residual QA risks before treating the run "
-            "as clean."
-        )
-    elif quality_result is None:
-        code_quality = QualityDimensionScore(
-            name="code_quality",
-            score=0,
-            rationale="No quality command evidence was recorded for the live run.",
-        )
-    else:
-        code_quality = QualityDimensionScore(
-            name="code_quality",
-            score=3,
-            rationale="Quality commands passed and review/QA do not report blocking code concerns.",
-        )
-
-    dimensions = (flow_fidelity, artifact_quality, code_quality)
-    any_zero = any(dimension.score == 0 for dimension in dimensions)
-    any_one = any(dimension.score == 1 for dimension in dimensions)
-
-    if evidence.qa_verdict == "not-ready":
-        quality_verdict: QualityVerdict = "not-ready"
-    elif evidence.qa_verdict == "ready-with-risks":
-        quality_verdict = "ready-with-risks"
-    elif evidence.qa_verdict == "ready":
-        quality_verdict = "ready"
-    else:
-        quality_verdict = "not-ready"
-
-    if any_zero:
-        gate: QualityGate = "fail"
-    elif (
-        any_one
-        or evidence.review_status == "approved-with-conditions"
-        or quality_verdict == "ready-with-risks"
-    ):
-        gate = "warn"
-    else:
-        gate = "pass"
+    blocking_findings = _blocking_findings_for_live_quality(
+        evidence=evidence,
+        execution_status=execution_status,
+        selected_issue=selected_issue,
+        quality_error=quality_error,
+    )
+    dimensions = (
+        _score_flow_fidelity(
+            evidence=evidence,
+            execution_status=execution_status,
+            selected_issue=selected_issue,
+            quality_error=quality_error,
+        ),
+        _score_artifact_quality(evidence=evidence, follow_ups=follow_ups),
+        _score_code_quality(
+            evidence=evidence,
+            quality_result=quality_result,
+            quality_error=quality_error,
+            follow_ups=follow_ups,
+        ),
+    )
+    quality_verdict = _quality_verdict_from_evidence(evidence)
+    gate = _quality_gate_for_dimensions(
+        evidence=evidence,
+        dimensions=dimensions,
+        quality_verdict=quality_verdict,
+    )
 
     if gate == "fail" and not follow_ups:
         follow_ups.append("Fix the blocking quality findings before re-running the live scenario.")

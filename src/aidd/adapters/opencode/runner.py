@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -12,11 +11,16 @@ from aidd.adapters.path_resolution import (
     resolve_prompt_pack_paths_for_execution,
     resolve_stage_brief_path_for_execution,
 )
-from aidd.adapters.runtime_artifacts import write_runtime_exit_metadata
+from aidd.adapters.runner_support import (
+    build_aidd_execution_environment,
+    persist_runtime_log_artifacts,
+    resolve_exit_classification,
+    split_configured_command,
+    validate_stage_command_context,
+)
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
-from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,26 +38,17 @@ class OpenCodeCommandContext:
     repair_context_markdown: str | None = None
 
     def __post_init__(self) -> None:
-        if not self.stage.strip():
-            raise ValueError("Stage context requires a non-empty stage id.")
-        if not self.work_item.strip():
-            raise ValueError("Stage context requires a non-empty work item id.")
-        if not self.run_id.strip():
-            raise ValueError("Stage context requires a non-empty run id.")
-        if str(self.workspace_root).strip() == "":
-            raise ValueError("Stage context requires a workspace root path.")
-        if str(self.stage_brief_path).strip() == "":
-            raise ValueError("Stage context requires a stage brief path.")
-        if not self.prompt_pack_paths:
-            raise ValueError("Stage context requires at least one prompt-pack path.")
-        if any(str(path).strip() == "" for path in self.prompt_pack_paths):
-            raise ValueError("Stage context prompt-pack paths must not be empty.")
-        if self.attempt_number < 1:
-            raise ValueError("Stage context attempt number must be greater than zero.")
-        if self.input_bundle_path is not None and str(self.input_bundle_path).strip() == "":
-            raise ValueError("Stage context input bundle path must not be empty.")
-        if self.repair_brief_path is not None and str(self.repair_brief_path).strip() == "":
-            raise ValueError("Stage context repair brief path must not be empty.")
+        validate_stage_command_context(
+            stage=self.stage,
+            work_item=self.work_item,
+            run_id=self.run_id,
+            workspace_root=self.workspace_root,
+            stage_brief_path=self.stage_brief_path,
+            prompt_pack_paths=self.prompt_pack_paths,
+            attempt_number=self.attempt_number,
+            input_bundle_path=self.input_bundle_path,
+            repair_brief_path=self.repair_brief_path,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,11 +73,12 @@ def _resolve_exit_classification(
     exit_code: int,
     stop_reason: OpenCodeExitClassification | None,
 ) -> OpenCodeExitClassification:
-    if stop_reason is not None:
-        return stop_reason
-    if exit_code == 0:
-        return OpenCodeExitClassification.SUCCESS
-    return OpenCodeExitClassification.NON_ZERO_EXIT
+    return resolve_exit_classification(
+        exit_code=exit_code,
+        stop_reason=stop_reason,
+        success_value=OpenCodeExitClassification.SUCCESS,
+        non_zero_value=OpenCodeExitClassification.NON_ZERO_EXIT,
+    )
 
 
 def assemble_command(
@@ -91,18 +87,10 @@ def assemble_command(
     context: OpenCodeCommandContext,
     repository_root: Path | None = None,
 ) -> tuple[str, ...]:
-    stripped = configured_command.strip()
-    if not stripped:
-        raise ValueError("Configured opencode command must not be empty.")
-
-    try:
-        base_tokens = shlex.split(stripped)
-    except ValueError as exc:
-        raise ValueError(
-            f"Configured opencode command is not valid shell syntax: {configured_command!r}"
-        ) from exc
-    if not base_tokens:
-        raise ValueError("Configured opencode command must produce at least one token.")
+    base_tokens = split_configured_command(
+        configured_command=configured_command,
+        runtime_label="opencode",
+    )
 
     resolved_workspace_root = context.workspace_root.resolve(strict=False)
     resolved_stage_brief_path = resolve_stage_brief_path_for_execution(
@@ -133,20 +121,10 @@ def assemble_command(
 
 
 def _split_configured_command(*, configured_command: str, runtime_label: str) -> tuple[str, ...]:
-    stripped = configured_command.strip()
-    if not stripped:
-        raise ValueError(f"Configured {runtime_label} command must not be empty.")
-
-    try:
-        base_tokens = shlex.split(stripped)
-    except ValueError as exc:
-        raise ValueError(
-            f"Configured {runtime_label} command is not valid shell syntax: "
-            f"{configured_command!r}"
-        ) from exc
-    if not base_tokens:
-        raise ValueError(f"Configured {runtime_label} command must produce at least one token.")
-    return tuple(base_tokens)
+    return split_configured_command(
+        configured_command=configured_command,
+        runtime_label=runtime_label,
+    )
 
 
 def _read_text_for_prompt(path: Path) -> str:
@@ -257,31 +235,20 @@ def build_execution_environment(
         repository_root=repository_root,
     )
 
-    env = dict(base_env or {})
-    env.update(
-        {
-            "AIDD_WORKSPACE_ROOT": resolved_workspace_root.as_posix(),
-            "AIDD_STAGE": context.stage,
-            "AIDD_WORK_ITEM": context.work_item,
-            "AIDD_RUN_ID": context.run_id,
-            "AIDD_ATTEMPT_NUMBER": str(context.attempt_number),
-            "AIDD_REPAIR_MODE": "true" if context.repair_mode else "false",
-            "AIDD_STAGE_BRIEF_PATH": resolved_stage_brief_path.as_posix(),
-            "AIDD_PROMPT_PACK_PATHS": os.pathsep.join(
-                path.as_posix() for path in resolved_prompt_pack_paths
-            ),
-            "AIDD_RUNTIME_ID": "opencode",
-        }
+    return build_aidd_execution_environment(
+        runtime_id="opencode",
+        workspace_root=resolved_workspace_root,
+        stage=context.stage,
+        work_item=context.work_item,
+        run_id=context.run_id,
+        base_env=base_env,
+        stage_brief_path=resolved_stage_brief_path,
+        prompt_pack_paths=resolved_prompt_pack_paths,
+        attempt_number=context.attempt_number,
+        repair_mode=context.repair_mode,
+        input_bundle_path=context.input_bundle_path,
+        repair_brief_path=context.repair_brief_path,
     )
-    if context.input_bundle_path is not None:
-        env["AIDD_INPUT_BUNDLE_PATH"] = context.input_bundle_path.resolve(
-            strict=False
-        ).as_posix()
-    if context.repair_brief_path is not None:
-        env["AIDD_REPAIR_BRIEF_PATH"] = context.repair_brief_path.resolve(
-            strict=False
-        ).as_posix()
-    return env
 
 
 def build_subprocess_spec(
@@ -365,9 +332,7 @@ def persist_attempt_runtime_log(
     run_result: OpenCodeRunResult,
 ) -> Path:
     attempt_path.mkdir(parents=True, exist_ok=True)
-    runtime_log_path = attempt_path / RUN_RUNTIME_LOG_FILENAME
-    runtime_log_path.write_text(run_result.runtime_log_text, encoding="utf-8")
-    write_runtime_exit_metadata(
+    paths = persist_runtime_log_artifacts(
         attempt_path=attempt_path,
         exit_code=run_result.exit_code,
         exit_classification=run_result.exit_classification.value,
@@ -375,4 +340,4 @@ def persist_attempt_runtime_log(
         stderr_text=run_result.stderr_text,
         runtime_log_text=run_result.runtime_log_text,
     )
-    return runtime_log_path
+    return paths.runtime_log_path

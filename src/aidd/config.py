@@ -23,6 +23,26 @@ class RuntimeConfig:
     stage_timeout_seconds: dict[str, float]
 
 
+@dataclass(frozen=True)
+class LegacyRuntimeConfigFields:
+    generic_cli_command: str | None
+    claude_code_command: str | None
+    codex_command: str | None
+    opencode_command: str | None
+    generic_cli_execution_mode: RuntimeExecutionMode | None
+    claude_code_execution_mode: RuntimeExecutionMode | None
+    codex_execution_mode: RuntimeExecutionMode | None
+    opencode_execution_mode: RuntimeExecutionMode | None
+    generic_cli_timeout_seconds: float | None
+    claude_code_timeout_seconds: float | None
+    codex_timeout_seconds: float | None
+    opencode_timeout_seconds: float | None
+    generic_cli_stage_timeout_seconds: dict[str, float] | None
+    claude_code_stage_timeout_seconds: dict[str, float] | None
+    codex_stage_timeout_seconds: dict[str, float] | None
+    opencode_stage_timeout_seconds: dict[str, float] | None
+
+
 @dataclass(frozen=True, init=False)
 class AiddConfig:
     workspace_root: Path
@@ -62,22 +82,24 @@ class AiddConfig:
             "runtime_configs",
             _normalize_runtime_configs(
                 runtime_configs=runtime_configs,
-                generic_cli_command=generic_cli_command,
-                claude_code_command=claude_code_command,
-                codex_command=codex_command,
-                opencode_command=opencode_command,
-                generic_cli_execution_mode=generic_cli_execution_mode,
-                claude_code_execution_mode=claude_code_execution_mode,
-                codex_execution_mode=codex_execution_mode,
-                opencode_execution_mode=opencode_execution_mode,
-                generic_cli_timeout_seconds=generic_cli_timeout_seconds,
-                claude_code_timeout_seconds=claude_code_timeout_seconds,
-                codex_timeout_seconds=codex_timeout_seconds,
-                opencode_timeout_seconds=opencode_timeout_seconds,
-                generic_cli_stage_timeout_seconds=generic_cli_stage_timeout_seconds,
-                claude_code_stage_timeout_seconds=claude_code_stage_timeout_seconds,
-                codex_stage_timeout_seconds=codex_stage_timeout_seconds,
-                opencode_stage_timeout_seconds=opencode_stage_timeout_seconds,
+                legacy_fields=LegacyRuntimeConfigFields(
+                    generic_cli_command=generic_cli_command,
+                    claude_code_command=claude_code_command,
+                    codex_command=codex_command,
+                    opencode_command=opencode_command,
+                    generic_cli_execution_mode=generic_cli_execution_mode,
+                    claude_code_execution_mode=claude_code_execution_mode,
+                    codex_execution_mode=codex_execution_mode,
+                    opencode_execution_mode=opencode_execution_mode,
+                    generic_cli_timeout_seconds=generic_cli_timeout_seconds,
+                    claude_code_timeout_seconds=claude_code_timeout_seconds,
+                    codex_timeout_seconds=codex_timeout_seconds,
+                    opencode_timeout_seconds=opencode_timeout_seconds,
+                    generic_cli_stage_timeout_seconds=generic_cli_stage_timeout_seconds,
+                    claude_code_stage_timeout_seconds=claude_code_stage_timeout_seconds,
+                    codex_stage_timeout_seconds=codex_stage_timeout_seconds,
+                    opencode_stage_timeout_seconds=opencode_stage_timeout_seconds,
+                ),
             ),
         )
 
@@ -191,26 +213,17 @@ def _copy_runtime_configs(
 def _normalize_runtime_configs(
     *,
     runtime_configs: dict[str, RuntimeConfig] | None,
-    generic_cli_command: str | None,
-    claude_code_command: str | None,
-    codex_command: str | None,
-    opencode_command: str | None,
-    generic_cli_execution_mode: RuntimeExecutionMode | None,
-    claude_code_execution_mode: RuntimeExecutionMode | None,
-    codex_execution_mode: RuntimeExecutionMode | None,
-    opencode_execution_mode: RuntimeExecutionMode | None,
-    generic_cli_timeout_seconds: float | None,
-    claude_code_timeout_seconds: float | None,
-    codex_timeout_seconds: float | None,
-    opencode_timeout_seconds: float | None,
-    generic_cli_stage_timeout_seconds: dict[str, float] | None,
-    claude_code_stage_timeout_seconds: dict[str, float] | None,
-    codex_stage_timeout_seconds: dict[str, float] | None,
-    opencode_stage_timeout_seconds: dict[str, float] | None,
+    legacy_fields: LegacyRuntimeConfigFields,
 ) -> dict[str, RuntimeConfig]:
     if runtime_configs is not None:
         return _copy_runtime_configs(runtime_configs)
 
+    return _legacy_runtime_configs_from_constructor_fields(legacy_fields)
+
+
+def _legacy_runtime_configs_from_constructor_fields(
+    legacy_fields: LegacyRuntimeConfigFields,
+) -> dict[str, RuntimeConfig]:
     def runtime_config_from_legacy(
         *,
         runtime_id: str,
@@ -233,33 +246,35 @@ def _normalize_runtime_configs(
     return {
         "generic-cli": runtime_config_from_legacy(
             runtime_id="generic-cli",
-            command=generic_cli_command,
-            execution_mode=generic_cli_execution_mode,
-            timeout_seconds=generic_cli_timeout_seconds,
-            stage_timeout_seconds=generic_cli_stage_timeout_seconds,
+            command=legacy_fields.generic_cli_command,
+            execution_mode=legacy_fields.generic_cli_execution_mode,
+            timeout_seconds=legacy_fields.generic_cli_timeout_seconds,
+            stage_timeout_seconds=legacy_fields.generic_cli_stage_timeout_seconds,
         ),
         "claude-code": runtime_config_from_legacy(
             runtime_id="claude-code",
-            command=claude_code_command,
-            execution_mode=claude_code_execution_mode,
-            timeout_seconds=claude_code_timeout_seconds,
-            stage_timeout_seconds=claude_code_stage_timeout_seconds,
+            command=legacy_fields.claude_code_command,
+            execution_mode=legacy_fields.claude_code_execution_mode,
+            timeout_seconds=legacy_fields.claude_code_timeout_seconds,
+            stage_timeout_seconds=legacy_fields.claude_code_stage_timeout_seconds,
         ),
         "codex": runtime_config_from_legacy(
             runtime_id="codex",
-            command=codex_command,
-            execution_mode=codex_execution_mode,
-            timeout_seconds=codex_timeout_seconds,
-            stage_timeout_seconds=codex_stage_timeout_seconds,
+            command=legacy_fields.codex_command,
+            execution_mode=legacy_fields.codex_execution_mode,
+            timeout_seconds=legacy_fields.codex_timeout_seconds,
+            stage_timeout_seconds=legacy_fields.codex_stage_timeout_seconds,
         ),
         "opencode": runtime_config_from_legacy(
             runtime_id="opencode",
-            command=opencode_command,
-            execution_mode=opencode_execution_mode,
-            timeout_seconds=opencode_timeout_seconds,
-            stage_timeout_seconds=opencode_stage_timeout_seconds,
+            command=legacy_fields.opencode_command,
+            execution_mode=legacy_fields.opencode_execution_mode,
+            timeout_seconds=legacy_fields.opencode_timeout_seconds,
+            stage_timeout_seconds=legacy_fields.opencode_stage_timeout_seconds,
         ),
     }
+
+
 def _runtime_section(data: dict[str, Any], runtime_id: str) -> dict[str, Any]:
     definition = get_runtime_definition(runtime_id)
     raw_section = data.get("runtime", {}).get(definition.config_section, {})
