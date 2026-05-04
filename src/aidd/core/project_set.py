@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.config import ProjectConfig, ProjectSetConfig
+from aidd.core.workspace import work_item_context_root
+
+PROJECT_SET_CONTEXT_FILENAME = "project-set.md"
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,3 +93,50 @@ def resolve_project_set(
         repository_root=resolved_repository_root,
         projects=tuple(resolved_projects),
     )
+
+
+def render_project_set_context(project_set: ResolvedProjectSet) -> str:
+    lines = [
+        "# Project set",
+        "",
+        "Declared local project roots for this governed workflow.",
+        "",
+        "- Repository root: `.`",
+        f"- Project count: `{len(project_set.projects)}`",
+        "",
+        "## Projects",
+        "",
+        "| Project id | Root | Role |",
+        "| --- | --- | --- |",
+    ]
+    for project in project_set.projects:
+        role = project.role or "unspecified"
+        lines.append(f"| `{project.id}` | `{project.relative_root}` | `{role}` |")
+    lines.extend(
+        [
+            "",
+            "## Rules",
+            "",
+            "- Project ids are stable references for stage outputs and artifact summaries.",
+            "- Roots are repository-relative and stay inside the declared repository root.",
+            "- Runtime-specific discovery remains owned by the selected adapter.",
+            "- Multi-repository orchestration is out of scope for this project-set context.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def persist_project_set_context(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    project_set: ResolvedProjectSet,
+) -> Path:
+    context_path = work_item_context_root(
+        root=workspace_root,
+        work_item=work_item,
+    ) / PROJECT_SET_CONTEXT_FILENAME
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(render_project_set_context(project_set), encoding="utf-8")
+    return context_path

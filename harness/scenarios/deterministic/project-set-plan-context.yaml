@@ -1,0 +1,42 @@
+id: AIDD-DETERMINISTIC-003
+scenario_class: deterministic-stage
+feature_size: medium
+automation_lane: ci
+canonical_runtime: generic-cli
+repo:
+  url: harness/fixtures/minimal-python
+objective: Keep project-set stage preparation deterministic by exercising a
+  monorepo-style fixture with two declared local roots.
+task: Run a deterministic plan-stage project-set context pass and verify that
+  both declared roots remain visible in workspace evidence.
+stage_scope:
+  start: plan
+  end: plan
+setup:
+  commands:
+  - mkdir -p services/api apps/web
+  - printf '%s\n' '[workspace]' 'root = ".aidd"' '' '[[project_set.projects]]' 'id = "api"' 'root = "services/api"' 'role = "primary"' '' '[[project_set.projects]]' 'id = "web"' 'root = "apps/web"' > aidd.example.toml
+aidd_invocation:
+  work_item: WI-DETERMINISTIC-PROJECT-SET
+  expected_stage_scope:
+    start: plan
+    end: plan
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: minimal-python-project-set-plan-context
+  summary: Use a local fixture with declared api and web roots to cover
+    project-set stage context evidence.
+verify:
+  commands:
+  - test -f .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md
+  - grep -q '`api`' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md
+  - grep -q '`web`' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md
+  - grep -q 'workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/stages/plan/stage-brief.md
+limits:
+  timeout_minutes: 5
+interview:
+  required: false
+runtime_targets:
+- generic-cli

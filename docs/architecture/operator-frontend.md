@@ -106,3 +106,14 @@ The foundation implementation exposes UI-neutral Python services for run
 metadata, stage summaries, logs, artifacts, question status, and answer writes.
 The first UI shell must use those services instead of parsing CLI tables or
 writing workflow documents directly.
+
+Current W20 implementation status:
+
+- workflow run/start/resume orchestration lives in a reusable core service, with
+  the CLI delegating to it;
+- `aidd ui --work-item <id> --root <path> --config <path> --host 127.0.0.1 --port 0`
+  starts a local-only Python-packaged web UI;
+- private JSON endpoints expose run, stage, questions, answer writes, logs,
+  artifacts, and workflow run requests over the operator services;
+- the UI shell serves static HTML, CSS, and JavaScript from the Python package,
+  without a Node or Vite dependency.

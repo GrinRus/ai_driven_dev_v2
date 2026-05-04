@@ -4,6 +4,7 @@ from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
+from aidd.core.project_set import ResolvedProjectSet
 from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
 from aidd.core.run_store import (
     load_stage_metadata,
@@ -175,6 +176,7 @@ def run_single_stage_orchestration(
     ],
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repair_policy: RepairBudgetPolicy | None = None,
+    project_set: ResolvedProjectSet | None = None,
     changed_at_utc: datetime | None = None,
 ) -> StageOrchestrationResult:
     preparation_bundle = prepare_stage_bundle(
@@ -182,6 +184,7 @@ def run_single_stage_orchestration(
         work_item=work_item,
         stage=stage,
         contracts_root=contracts_root,
+        project_set=project_set,
     )
     execution_state = persist_execution_state(
         workspace_root=workspace_root,

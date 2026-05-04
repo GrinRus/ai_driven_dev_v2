@@ -17,6 +17,8 @@ from aidd.adapters.generic_cli.runner import (
     persist_attempt_runtime_artifacts,
     run_subprocess_with_streaming,
 )
+from aidd.config import ProjectConfig, ProjectSetConfig
+from aidd.core.project_set import resolve_project_set
 from aidd.core.repair import RepairBudgetPolicy
 from aidd.core.run_store import (
     create_run_manifest,
@@ -208,6 +210,43 @@ def test_prepare_stage_bundle_renders_stage_brief_with_relative_paths(tmp_path: 
     assert "`workitems/WI-001/stages/research/output/research-notes.md`" in content
     assert "# Expected output documents" in content
     assert "`workitems/WI-001/stages/plan/plan.md`" in content
+
+
+def test_prepare_stage_bundle_persists_project_set_context_when_declared(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "services" / "api").mkdir(parents=True)
+    (tmp_path / "apps" / "web").mkdir(parents=True)
+    workspace_root = tmp_path / ".aidd"
+    project_set = resolve_project_set(
+        repository_root=tmp_path,
+        project_set=ProjectSetConfig(
+            projects=(
+                ProjectConfig(id="api", root=Path("services/api"), role="primary"),
+                ProjectConfig(id="web", root=Path("apps/web")),
+            )
+        ),
+    )
+
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-PROJECT-SET",
+        stage="plan",
+        project_set=project_set,
+    )
+
+    context_path = (
+        workspace_root / "workitems" / "WI-PROJECT-SET" / "context" / "project-set.md"
+    )
+    assert bundle.project_set_context_path == context_path
+    assert context_path in bundle.expected_input_bundle
+    assert "`workitems/WI-PROJECT-SET/context/project-set.md`" in (
+        bundle.stage_brief_markdown
+    )
+    assert "- Project ids: `api`, `web`" in bundle.stage_brief_markdown
+    assert "| `api` | `services/api` | `primary` |" in context_path.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_persist_execution_state_creates_attempt_and_sets_executing_status(tmp_path: Path) -> None:

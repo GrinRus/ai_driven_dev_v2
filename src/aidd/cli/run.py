@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 import typer
 from rich.table import Table
 
 from aidd.cli.support import (
     _WORKFLOW_RUN_SUPPORTED_RUNTIMES,
-    _allocate_stage_run_id,
     _path_summary,
     _print_workflow_run_summary,
     _runtime_command_for_runtime,
@@ -22,28 +21,116 @@ from aidd.core.run_inspection import (
     resolve_run_log_summary,
     resolve_run_metadata_summary,
 )
-from aidd.core.run_store import create_run_manifest
 from aidd.core.stage_graph import StageAdvancementSummary
 from aidd.core.stages import STAGES
-from aidd.core.state_machine import StageState
+from aidd.core.workflow_service import (
+    WorkflowRunEvent,
+    WorkflowRunRequest,
+    WorkflowStageExecutionError,
+    WorkflowStageExecutionRequest,
+    run_workflow,
+)
 
 
-def _invoke_stage_run(**kwargs: Any) -> None:
+def _invoke_stage_run(
+    *,
+    stage: str,
+    work_item: str,
+    runtime: str,
+    run_id: str,
+    root: Path,
+    config: Path,
+    log_follow: bool,
+) -> None:
     from aidd.cli import main as cli_main
 
-    cli_main.stage_run(**kwargs)
+    cli_main.stage_run(
+        stage=stage,
+        work_item=work_item,
+        runtime=runtime,
+        run_id=run_id,
+        root=root,
+        config=config,
+        log_follow=log_follow,
+    )
 
 
-def _select_next_runnable_stage(**kwargs: Any) -> str | None:
+def _select_next_runnable_stage(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage_start: str,
+    stage_end: str,
+) -> str | None:
     from aidd.cli import main as cli_main
 
-    return cli_main.select_next_runnable_stage(**kwargs)
+    return cli_main.select_next_runnable_stage(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage_start=stage_start,
+        stage_end=stage_end,
+    )
 
 
-def _summarize_workflow_advancement(**kwargs: Any) -> tuple[StageAdvancementSummary, ...]:
+def _summarize_workflow_advancement(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage_start: str,
+    stage_end: str,
+) -> tuple[StageAdvancementSummary, ...]:
     from aidd.cli import main as cli_main
 
-    return cli_main.summarize_workflow_advancement(**kwargs)
+    return cli_main.summarize_workflow_advancement(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage_start=stage_start,
+        stage_end=stage_end,
+    )
+
+
+def _run_stage_from_workflow(request: WorkflowStageExecutionRequest) -> None:
+    try:
+        _invoke_stage_run(
+            stage=request.stage,
+            work_item=request.work_item,
+            runtime=request.runtime_id,
+            run_id=request.run_id,
+            root=request.workspace_root,
+            config=request.config_path,
+            log_follow=request.log_follow,
+        )
+    except typer.Exit as exc:
+        if exc.exit_code in (None, 0):
+            return
+        raise WorkflowStageExecutionError(
+            stage=request.stage,
+            exit_code=int(exc.exit_code),
+        ) from exc
+
+
+def _print_workflow_event(
+    event: WorkflowRunEvent,
+    *,
+    work_item: str,
+    runtime: str,
+    from_stage: str,
+    to_stage: str,
+) -> None:
+    if event.kind == "started":
+        console.print(
+            "AIDD run: "
+            f"work_item={work_item} runtime={runtime} run_id={event.run_id} "
+            f"stage_bounds={from_stage}->{to_stage}"
+        )
+    elif event.kind == "next-stage" and event.stage is not None:
+        console.print(f"Workflow next stage: {event.stage}")
+    elif event.kind == "stage-succeeded" and event.stage is not None:
+        console.print(f"Workflow progress: stage={event.stage} status=succeeded")
+    elif event.kind == "stopped" and event.stage is not None:
+        console.print(f"Workflow stopped at stage '{event.stage}'.")
 
 
 def run_callback(
@@ -111,100 +198,70 @@ def run_callback(
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
     runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
     runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
-    run_id = _allocate_stage_run_id(workspace_root=workspace_root, work_item=work_item)
-    create_run_manifest(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        runtime_id=runtime,
-        stage_target=to_stage,
-        config_snapshot={
-            "config_path": config.as_posix(),
-            "workspace_root": workspace_root.as_posix(),
-            "runtime_command": runtime_command,
-            "runtime_execution_mode": runtime_execution_mode.value,
-            "log_follow": log_follow,
-            "mode": "workflow",
-        },
-        workflow_stage_start=from_stage,
-        workflow_stage_end=to_stage,
-    )
-    console.print(
-        "AIDD run: "
-        f"work_item={work_item} runtime={runtime} run_id={run_id} "
-        f"stage_bounds={from_stage}->{to_stage}"
+    config_snapshot = {
+        "config_path": config.as_posix(),
+        "workspace_root": workspace_root.as_posix(),
+        "runtime_command": runtime_command,
+        "runtime_execution_mode": runtime_execution_mode.value,
+        "log_follow": log_follow,
+        "mode": "workflow",
+    }
+    result = run_workflow(
+        request=WorkflowRunRequest(
+            work_item=work_item,
+            runtime_id=runtime,
+            workspace_root=workspace_root,
+            config_path=config,
+            config_snapshot=config_snapshot,
+            stage_start=from_stage,
+            stage_end=to_stage,
+            log_follow=log_follow,
+        ),
+        stage_executor=_run_stage_from_workflow,
+        emit=lambda event: _print_workflow_event(
+            event,
+            work_item=work_item,
+            runtime=runtime,
+            from_stage=from_stage,
+            to_stage=to_stage,
+        ),
+        stage_selector=_select_next_runnable_stage,
+        advancement_summarizer=_summarize_workflow_advancement,
     )
 
-    executed_stage_count = 0
-    while True:
-        next_stage = _select_next_runnable_stage(
+    if result.stopped_stage is not None:
+        _print_workflow_run_summary(
             workspace_root=workspace_root,
             work_item=work_item,
-            run_id=run_id,
+            run_id=result.run_id,
             stage_start=from_stage,
             stage_end=to_stage,
         )
-        if next_stage is None:
-            break
+        raise typer.Exit(code=result.exit_code)
 
-        console.print(f"Workflow next stage: {next_stage}")
-        try:
-            _invoke_stage_run(
-                stage=next_stage,
-                work_item=work_item,
-                runtime=runtime,
-                run_id=run_id,
-                root=workspace_root,
-                config=config,
-                log_follow=log_follow,
-            )
-        except typer.Exit as exc:
-            if exc.exit_code not in (None, 0):
-                console.print(f"Workflow stopped at stage '{next_stage}'.")
-                _print_workflow_run_summary(
-                    workspace_root=workspace_root,
-                    work_item=work_item,
-                    run_id=run_id,
-                    stage_start=from_stage,
-                    stage_end=to_stage,
-                )
-                raise
-        executed_stage_count += 1
-        console.print(f"Workflow progress: stage={next_stage} status=succeeded")
-
-    advancement = _summarize_workflow_advancement(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage_start=from_stage,
-        stage_end=to_stage,
-    )
-    incomplete = [
-        summary for summary in advancement if summary.current_status != StageState.SUCCEEDED.value
-    ]
-    if incomplete:
+    if not result.completed:
         console.print("Workflow stopped: no runnable stage is currently available.")
-        for summary in incomplete[:3]:
+        for summary in result.incomplete[:3]:
             console.print(f"- {summary.stage}: {summary.reason}")
         _print_workflow_run_summary(
             workspace_root=workspace_root,
             work_item=work_item,
-            run_id=run_id,
+            run_id=result.run_id,
             stage_start=from_stage,
             stage_end=to_stage,
         )
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=result.exit_code)
 
     _print_workflow_run_summary(
         workspace_root=workspace_root,
         work_item=work_item,
-        run_id=run_id,
+        run_id=result.run_id,
         stage_start=from_stage,
         stage_end=to_stage,
     )
     console.print(
         "Workflow run completed: "
-        f"run_id={run_id} stages_executed={executed_stage_count}"
+        f"run_id={result.run_id} stages_executed={result.executed_stage_count}"
     )
 
 

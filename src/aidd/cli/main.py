@@ -23,6 +23,7 @@ from aidd.cli.support import (
     _tail_lines,
     console,
 )
+from aidd.cli.ui import ui_command
 from aidd.core.stage_graph import select_next_runnable_stage, summarize_workflow_advancement
 
 __all__ = [
@@ -56,6 +57,7 @@ __all__ = [
     "stage_run",
     "stage_summary",
     "summarize_workflow_advancement",
+    "ui_command",
 ]
 
 probe_generic_cli = get_runtime_adapter_surface("generic-cli").probe
@@ -100,6 +102,7 @@ def main_callback(
 
 app.command()(doctor)
 app.command()(init)
+app.command("ui")(ui_command)
 run_app.callback(invoke_without_command=True)(run_callback)
 run_app.command("show")(run_show)
 run_app.command("logs")(run_logs)

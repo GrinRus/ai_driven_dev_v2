@@ -52,9 +52,10 @@ Rules:
 - missing roots are preflight failures unless an explicit future mode allows planned roots.
 
 The first resolver implementation parses this declaration and validates that each
-root exists inside the repository root. A later stage-integration slice should
-persist the resolved project set in the work-item context so later stages can
-cite the same roots without rediscovery.
+root exists inside the repository root. The stage-integration slice persists the
+resolved project set in the work-item context as
+`.aidd/workitems/<id>/context/project-set.md` and includes that document in stage
+briefs and attempt input bundles when a config declares projects.
 
 ## 4. Artifact ownership
 
@@ -100,3 +101,8 @@ Project-set support is not complete until harness coverage proves:
 - runtime-specific discovery does not change the declared project set.
 
 Live E2E coverage can be added after deterministic project-set coverage exists.
+
+Current deterministic coverage includes
+`harness/scenarios/deterministic/project-set-plan-context.yaml`, which declares
+two local roots and verifies that both project ids remain visible in project-set
+context and stage-brief evidence.

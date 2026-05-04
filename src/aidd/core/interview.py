@@ -136,7 +136,10 @@ def parse_questions_markdown(markdown_text: str) -> tuple[InterviewQuestion, ...
     parsed: list[InterviewQuestion] = []
     seen_ids: set[str] = set()
 
-    for line_number, line in enumerate(markdown_text.splitlines(), start=1):
+    for line_number, line in _interview_section_lines(
+        markdown_text=markdown_text,
+        section_heading="Questions",
+    ):
         stripped = line.strip()
         if not stripped.startswith("- "):
             continue
@@ -165,6 +168,29 @@ def parse_questions_markdown(markdown_text: str) -> tuple[InterviewQuestion, ...
     return tuple(parsed)
 
 
+def _interview_section_lines(
+    *,
+    markdown_text: str,
+    section_heading: str,
+) -> tuple[tuple[int, str], ...]:
+    lines = markdown_text.splitlines()
+    marker = f"## {section_heading}".lower()
+    start_index: int | None = None
+    for index, line in enumerate(lines):
+        if line.strip().lower() == marker:
+            start_index = index + 1
+            break
+    if start_index is None:
+        return tuple(enumerate(lines, start=1))
+
+    section_lines: list[tuple[int, str]] = []
+    for index, line in enumerate(lines[start_index:], start=start_index + 1):
+        if line.strip().startswith("#"):
+            break
+        section_lines.append((index, line))
+    return tuple(section_lines)
+
+
 def render_questions_markdown(questions: Iterable[InterviewQuestion]) -> str:
     ordered = tuple(questions)
     lines = ["# Questions", "", "## Questions", ""]
@@ -183,7 +209,10 @@ def parse_answers_markdown(markdown_text: str) -> tuple[InterviewAnswer, ...]:
     parsed: list[InterviewAnswer] = []
     seen_ids: set[str] = set()
 
-    for line_number, line in enumerate(markdown_text.splitlines(), start=1):
+    for line_number, line in _interview_section_lines(
+        markdown_text=markdown_text,
+        section_heading="Answers",
+    ):
         stripped = line.strip()
         if not stripped.startswith("- "):
             continue

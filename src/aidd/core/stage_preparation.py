@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from aidd.core.project_set import ResolvedProjectSet, persist_project_set_context
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     create_next_attempt_directory,
@@ -25,6 +26,8 @@ def render_stage_brief(
     purpose: str | None,
     expected_input_bundle: tuple[str, ...],
     expected_output_documents: tuple[str, ...],
+    project_set: ResolvedProjectSet | None = None,
+    project_set_context_path: str | None = None,
 ) -> str:
     lines = [
         "# Stage",
@@ -39,6 +42,18 @@ def render_stage_brief(
         "",
     ]
     lines.extend(f"- `{path}`" for path in expected_input_bundle)
+    if project_set is not None and project_set_context_path is not None:
+        lines.extend(
+            [
+                "",
+                "# Declared project set",
+                "",
+                f"- Project context: `{project_set_context_path}`",
+                "- Project ids: "
+                + ", ".join(f"`{project.id}`" for project in project_set.projects),
+                "- Stage outputs may cite these project ids when work spans declared roots.",
+            ]
+        )
     lines.extend(["", "# Expected output documents", ""])
     lines.extend(f"- `{path}`" for path in expected_output_documents)
     lines.append("")
@@ -51,6 +66,7 @@ def prepare_stage_bundle(
     work_item: str,
     stage: str,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    project_set: ResolvedProjectSet | None = None,
 ) -> StagePreparationBundle:
     manifest = load_stage_manifest(stage=stage, contracts_root=contracts_root)
     expected_inputs = resolve_required_input_documents(
@@ -65,11 +81,26 @@ def prepare_stage_bundle(
         workspace_root=workspace_root,
         contracts_root=contracts_root,
     )
+    project_set_context_path: Path | None = None
+    if project_set is not None and project_set.projects:
+        project_set_context_path = persist_project_set_context(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            project_set=project_set,
+        )
+        expected_inputs = (*expected_inputs, project_set_context_path)
+
     stage_brief = render_stage_brief(
         stage=stage,
         purpose=manifest.purpose,
         expected_input_bundle=workspace_relative_paths(workspace_root, expected_inputs),
         expected_output_documents=workspace_relative_paths(workspace_root, expected_outputs),
+        project_set=project_set,
+        project_set_context_path=(
+            None
+            if project_set_context_path is None
+            else workspace_relative_paths(workspace_root, (project_set_context_path,))[0]
+        ),
     )
     return StagePreparationBundle(
         stage=stage,
@@ -77,6 +108,7 @@ def prepare_stage_bundle(
         stage_brief_markdown=stage_brief,
         expected_input_bundle=expected_inputs,
         expected_output_documents=expected_outputs,
+        project_set_context_path=project_set_context_path,
     )
 
 

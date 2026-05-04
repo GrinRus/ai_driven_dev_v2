@@ -111,6 +111,28 @@ def test_parse_and_render_questions_markdown_round_trip() -> None:
     assert parsed == questions
 
 
+def test_parse_questions_ignores_summary_bullets_outside_questions_section() -> None:
+    parsed = parse_questions_markdown(
+        "\n".join(
+            (
+                "# Questions",
+                "",
+                "## Questions",
+                "",
+                "- none",
+                "",
+                "## Summary",
+                "",
+                "- Blocking questions: 0",
+                "- Non-blocking questions: 0",
+                "",
+            )
+        )
+    )
+
+    assert parsed == ()
+
+
 def test_persist_questions_document_uses_stage_output_when_provided(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     stage_output = (
@@ -209,6 +231,28 @@ def test_parse_and_render_answers_markdown_round_trip() -> None:
     parsed = parse_answers_markdown(rendered)
 
     assert parsed == answers
+
+
+def test_parse_answers_ignores_summary_bullets_outside_answers_section() -> None:
+    parsed = parse_answers_markdown(
+        "\n".join(
+            (
+                "# Answers",
+                "",
+                "## Answers",
+                "",
+                "- none",
+                "",
+                "## Summary",
+                "",
+                "- Resolved questions: 0",
+                "- Deferred questions: 0",
+                "",
+            )
+        )
+    )
+
+    assert parsed == ()
 
 
 def test_persist_answers_document_merges_without_losing_prior_answers(tmp_path: Path) -> None:
