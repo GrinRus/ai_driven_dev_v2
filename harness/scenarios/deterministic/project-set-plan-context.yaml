@@ -1,0 +1,87 @@
+id: AIDD-DETERMINISTIC-003
+scenario_class: deterministic-workflow
+feature_size: medium
+automation_lane: ci
+canonical_runtime: generic-cli
+repo:
+  url: harness/fixtures/minimal-python
+objective: Keep project-set stage preparation deterministic by exercising a
+  monorepo-style fixture with two declared local roots.
+task: Run a deterministic idea-to-plan project-set context pass and verify that
+  both declared roots remain visible in plan-stage workspace evidence.
+stage_scope:
+  start: idea
+  end: plan
+setup:
+  commands:
+  - mkdir -p services/api apps/web .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context
+  - |-
+    printf '%s\n' '# Intake' '' \
+      'Coordinate a bounded project-set plan across the declared api and web roots.' \
+      > .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/intake.md
+  - |-
+    printf '%s\n' '# User request' '' \
+      'Prepare implementation planning evidence for the declared project set without leaving the local workspace.' \
+      > .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/user-request.md
+  - |-
+    printf '%s\n' '# Repository state' '' '- Fixture roots: `services/api`, `apps/web`.' \
+      > .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/repository-state.md
+  - |-
+    cat > aidd.example.toml <<'TOML'
+    [workspace]
+    root = ".aidd"
+
+    [runtime.generic_cli]
+    command = "python ../aidd_fixture_runtime.py"
+
+    [[project_set.projects]]
+    id = "api"
+    root = "services/api"
+    role = "primary"
+
+    [[project_set.projects]]
+    id = "web"
+    root = "apps/web"
+    TOML
+aidd_invocation:
+  work_item: WI-DETERMINISTIC-PROJECT-SET
+  expected_stage_scope:
+    start: idea
+    end: plan
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: minimal-python-project-set-plan-context
+  summary: Use a local fixture with declared api and web roots to cover
+    project-set stage context evidence.
+verify:
+  commands:
+  - test -f .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md
+  - grep -q '`api`' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md
+  - grep -q '`web`' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md
+  - grep -q 'workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/stages/plan/stage-brief.md
+  - |-
+    python - <<'PY'
+    import json
+    from pathlib import Path
+
+    runs_root = Path(".aidd/reports/runs/WI-DETERMINISTIC-PROJECT-SET")
+    runs = sorted(path for path in runs_root.glob("run-*") if path.is_dir())
+    assert runs, "missing run evidence"
+    attempt_root = runs[-1] / "stages/plan/attempts/attempt-0001"
+    artifact_index = json.loads((attempt_root / "artifact-index.json").read_text())
+    project_context = "workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md"
+    assert artifact_index["documents"]["project_set_context"] == project_context
+
+    input_bundle = (attempt_root / "input-bundle.md").read_text()
+    assert f"## `{project_context}`" in input_bundle
+    assert "`api`" in input_bundle
+    assert "`web`" in input_bundle
+    PY
+limits:
+  timeout_minutes: 5
+interview:
+  required: false
+runtime_targets:
+- generic-cli

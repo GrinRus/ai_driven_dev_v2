@@ -98,6 +98,11 @@ Recommended release flow:
 
 Operator-oriented step-by-step release execution lives in `docs/release-checklist.md`.
 
+Install evidence is valid only for a concrete release candidate or tagged release. A source
+checkout can refresh prerequisites, workflow shape, and local tool availability, but it must
+record missing tags, registry credentials, or container access as blockers instead of claiming
+package-channel evidence.
+
 ## 9. Container image tagging rules
 
 Container images are published to `ghcr.io/<owner>/ai-driven-dev-v2` from release tags that

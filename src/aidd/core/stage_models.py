@@ -15,6 +15,7 @@ class StagePreparationBundle:
     stage_brief_markdown: str
     expected_input_bundle: tuple[Path, ...]
     expected_output_documents: tuple[Path, ...]
+    project_set_context_path: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)

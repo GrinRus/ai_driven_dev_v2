@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import shlex
 import shutil
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
@@ -10,10 +9,10 @@ from rich.console import Console
 
 from aidd.adapters.base import CapabilityReport
 from aidd.adapters.runtime_registry import RuntimeExecutionMode, runtime_ids
-from aidd.cli.run_lookup import resolve_run_metadata_summary
 from aidd.config import AiddConfig
-from aidd.core.run_store import work_item_runs_root
+from aidd.core.run_inspection import resolve_run_metadata_summary
 from aidd.core.stages import STAGES
+from aidd.core.workflow_service import allocate_workflow_run_id
 
 console = Console(no_color=True)
 _STAGE_RUN_SUPPORTED_RUNTIMES: tuple[str, ...] = runtime_ids()
@@ -113,14 +112,7 @@ def _prefix_stream_chunk(
 
 
 def _allocate_stage_run_id(*, workspace_root: Path, work_item: str) -> str:
-    base_run_id = f"run-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
-    runs_root = work_item_runs_root(workspace_root=workspace_root, work_item=work_item)
-    candidate = base_run_id
-    suffix = 2
-    while (runs_root / candidate).exists():
-        candidate = f"{base_run_id}-{suffix:02d}"
-        suffix += 1
-    return candidate
+    return allocate_workflow_run_id(workspace_root=workspace_root, work_item=work_item)
 
 
 def _print_workflow_run_summary(

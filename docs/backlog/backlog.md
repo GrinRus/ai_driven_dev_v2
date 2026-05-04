@@ -6,9 +6,32 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
+- `W20-E1-S6-T1`
+
 ## Soon
 
+- `W20-E1-S6-T2`
+- `W20-E1-S6-T3`
+- `W20-E1-S7-T1`
+- `W20-E1-S7-T2`
+- `W20-E2-S5-T1`
+- `W20-E2-S5-T2`
+- `W20-E2-S6-T1`
+- `W20-E4-S1-T1`
+- `W20-E4-S1-T2`
+
 ## Parking lot
+
+- `W20-E1-S4-T3`
+- `W20-E1-S2-T2`
+- `W20-E1-S6-T4`
+- `W20-E1-S7-T3`
+- `W20-E2-S5-T3`
+- `W20-E2-S5-T4`
+- `W20-E2-S6-T2`
+- `W20-E2-S6-T3`
+- `W20-E4-S2-T1`
+- `W20-E4-S2-T2`
 
 ## Update rules
 
@@ -60,3 +83,15 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-04` Wave 18 completed; architecture/current-state docs, artifact ownership wording, archival snapshot markers, and docs consistency regressions are in place, and the backlog queue is empty again.
 - `2026-05-04` Wave 19 was opened via `W8-E3-S1` queue-restoration policy for user-story implementation closure; promoted `W19-E1-S1-T1` to `Next`, `W19-E1-S1-T2`, `W19-E1-S1-T3`, `W19-E2-S1-T1`, and `W19-E3-S1-T1` to `Soon`, and parked compatibility/live evidence tasks until the event, repair, and eval closures landed.
 - `2026-05-04` Wave 19 completed; native structured question/event routing, optional JSONL attempt and eval artifacts, repair-history finalization, and Python 3.12-3.14 CI alignment are in place, and the backlog queue is empty again.
+- `2026-05-04` Wave 20 was opened via `W8-E3-S1` queue-restoration policy for gap intake and product-scope expansion; promoted `W20-E1-S1-T1` to `Next`, `W20-E1-S1-T2`, `W20-E1-S2-T1`, `W20-E2-S1-T1`, and `W20-E3-S1-T1` to `Soon`, and parked release evidence capture plus frontend/project-set implementation tasks.
+- `2026-05-04` W20 evidence-and-contract pass completed `W20-E1-S1-T1`, `W20-E1-S1-T2`, `W20-E1-S2-T1`, `W20-E2-S1-T1`, and `W20-E3-S1-T1`; `W20-E1-S2-T2` remains parked as blocked by missing release candidate tag and publishing credentials, and frontend/project-set implementation tasks remain parked for explicit promotion.
+- `2026-05-04` W20 foundation pass completed live failure triage plus the OpenCode native command regression, frontend read/write service foundation, and project-set config/resolver foundation; release evidence, fresh clean live rerun, frontend UI, and project-set stage/harness integration remain parked follow-ups.
+- `2026-05-04` W20 implementation pass completed project-set stage/harness integration and the first local frontend UI surface; OpenCode rerun `W20-E1-S3-T3` found an AIDD-owned interview parser boundary, `W20-E1-S3-T4` fixed it with regression coverage, and `W20-E1-S3-T5` is next for the post-parser-fix live rerun.
+- `2026-05-04` W20 closure-and-hardening pass completed frontend smoke hardening and project-set artifact evidence tightening; post-parser-fix OpenCode live rerun `W20-E1-S3-T5` is blocked by runtime/provider timeout evidence, and `W20-E1-S2-T2` remains parked until a release candidate tag and registry credentials exist.
+- `2026-05-04` W20 live timeout-profile pass completed `W20-E1-S4-T1`; backlog advanced `W20-E1-S4-T2` to `Next`, parked Codex fallback `W20-E1-S4-T3`, and kept release/install evidence `W20-E1-S2-T2` parked until a release candidate tag and registry credentials exist.
+- `2026-05-04` `W20-E1-S4-T2` is blocked by live model-output validation evidence, not provider/runtime timeout; `W20-E1-S4-T3` remains parked and unpromoted because Codex fallback is reserved for provider/runtime timeout blockers.
+- `2026-05-04` W20 comparative live-flow diagnosis opened `W20-E1-S5`; promoted `W20-E1-S5-T1` to `Next`, `W20-E1-S5-T2` and `W20-E1-S5-T3` to `Soon`, and left Codex fallback plus release/install evidence parked.
+- `2026-05-04` `W20-E1-S5-T1` completed the forensic matrix baseline; backlog advanced `W20-E1-S5-T2` to `Next` and kept `W20-E1-S5-T3` in `Soon`.
+- `2026-05-04` `W20-E1-S5-T2` ran Claude control rerun `eval-live-005-claude-code-20260504T152414Z`; status `fail`, quality gate `fail`, first boundary `adapter`, and first signal `Adapter outcome: timeout`.
+- `2026-05-04` `W20-E1-S5-T3` completed the comparison decision: fresh Claude timeout does not match latest OpenCode validation formatting failure, so no AIDD-owned core regression is proven; active W20 queue is empty except parked Codex fallback and release/install evidence.
+- `2026-05-04` Remaining W20 gap tasks were added for OpenCode contract-compliance hardening, Claude timeout/profile diagnosis, local-project operator UI evidence, frontend provider readiness, and local operator adoption; `W20-E1-S6-T1` is promoted to `Next`, near-term hardening/evidence/adoption tasks are in `Soon`, and rerun/manual-smoke/release tasks remain parked.

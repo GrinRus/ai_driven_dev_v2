@@ -32,6 +32,8 @@ Store durable answers to the questions raised during a stage.
 - Keep answers specific and auditable; avoid placeholders such as `TBD` or `decide later` without context.
 - When an answer changes, append the updated answer in place and keep the latest marker truthful.
 - Keep one decision per bullet to avoid mixing unrelated outcomes.
+- Only bullets inside the `Answers` section are interpreted as answer entries;
+  use noncanonical sections only for non-authoritative prose metadata.
 
 ## Validation cues
 

@@ -237,6 +237,37 @@ def test_attempt_artifact_index_records_canonical_stage_document_paths(tmp_path:
     assert system_prompt["sha256"] == expected_hash
 
 
+def test_attempt_artifact_index_records_project_set_context_when_present(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    project_set_context = (
+        workspace_root / "workitems" / "WI-001" / "context" / "project-set.md"
+    )
+    project_set_context.parent.mkdir(parents=True)
+    project_set_context.write_text("# Project set\n\n- `api`\n", encoding="utf-8")
+
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    )
+    payload = json.loads(artifact_index_path.read_text(encoding="utf-8"))
+
+    assert payload["documents"]["project_set_context"] == (
+        "workitems/WI-001/context/project-set.md"
+    )
+
+
 def test_load_attempt_artifact_index_supports_legacy_payload_without_prompt_provenance(
     tmp_path: Path,
 ) -> None:

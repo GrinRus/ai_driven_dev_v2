@@ -15,6 +15,7 @@ from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
     WORKSPACE_REPORTS_DIRNAME,
     WORKSPACE_REPORTS_RUNS_DIRNAME,
+    work_item_context_root,
 )
 from aidd.core.workspace import (
     stage_root as work_item_stage_root,
@@ -349,13 +350,22 @@ def _canonical_stage_documents(workspace_root: Path, work_item: str, stage: str)
         work_item=work_item,
         stage=stage,
     )
-    return {
+    documents = {
         filename.removesuffix(".md").replace("-", "_"): _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=stage_documents_root / filename,
         )
         for filename in RESERVED_STAGE_FILENAMES
     }
+    project_set_context = (
+        work_item_context_root(root=workspace_root, work_item=work_item) / "project-set.md"
+    )
+    if project_set_context.exists():
+        documents["project_set_context"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=project_set_context,
+        )
+    return documents
 
 
 def _canonical_attempt_documents(

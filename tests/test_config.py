@@ -55,6 +55,7 @@ def test_load_config_defaults_native_providers_to_native(tmp_path: Path) -> None
     assert cfg.claude_code_stage_timeout_seconds == {}
     assert cfg.codex_stage_timeout_seconds == {}
     assert cfg.opencode_stage_timeout_seconds == {}
+    assert cfg.project_set.projects == ()
 
 
 def test_runtime_configs_are_primary_config_storage(tmp_path: Path) -> None:
@@ -270,3 +271,71 @@ def test_load_config_rejects_invalid_stage_timeout_key(tmp_path: Path) -> None:
         assert "unknown stage" in str(exc)
     else:  # pragma: no cover - assertion clarity
         raise AssertionError("Expected ValueError for invalid stage timeout.")
+
+
+def test_load_config_parses_project_set_projects(tmp_path: Path) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[[project_set.projects]]",
+                'id = "api"',
+                'root = "services/api"',
+                'role = "primary"',
+                "",
+                "[[project_set.projects]]",
+                'id = "web"',
+                'root = "apps/web"',
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(config_path)
+
+    assert tuple(project.id for project in cfg.project_set.projects) == ("api", "web")
+    assert cfg.project_set.projects[0].root == Path("services/api")
+    assert cfg.project_set.projects[0].role == "primary"
+    assert cfg.project_set.projects[1].role is None
+
+
+def test_load_config_rejects_duplicate_project_set_ids(tmp_path: Path) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[[project_set.projects]]",
+                'id = "api"',
+                'root = "services/api"',
+                "",
+                "[[project_set.projects]]",
+                'id = "api"',
+                'root = "services/api-copy"',
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "Duplicate project_set project id: api" in str(exc)
+    else:  # pragma: no cover - assertion clarity
+        raise AssertionError("Expected ValueError for duplicate project id.")
+
+
+def test_load_config_rejects_project_set_missing_required_fields(tmp_path: Path) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(("[[project_set.projects]]", 'id = "api"')),
+        encoding="utf-8",
+    )
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "project_set.projects[1].root is required" in str(exc)
+    else:  # pragma: no cover - assertion clarity
+        raise AssertionError("Expected ValueError for missing project root.")

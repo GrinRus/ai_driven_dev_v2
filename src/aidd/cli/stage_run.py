@@ -21,6 +21,7 @@ from aidd.cli.support import (
     console,
 )
 from aidd.config import load_config
+from aidd.core.project_set import ResolvedProjectSet, resolve_project_set
 from aidd.core.repair import (
     RepairBudgetPolicy,
     generate_repair_brief,
@@ -62,10 +63,12 @@ class StageRunOptions:
 @dataclass(frozen=True, slots=True)
 class StageRunRuntimeConfig:
     workspace_root: Path
+    repository_root: Path
     runtime_command: str
     runtime_execution_mode: RuntimeExecutionMode
     runtime_timeout_seconds: float | None
     repair_policy: RepairBudgetPolicy
+    project_set: ResolvedProjectSet | None
 
 
 def _validate_stage_run_options(options: StageRunOptions) -> None:
@@ -85,8 +88,18 @@ def _resolve_stage_run_config(options: StageRunOptions) -> StageRunRuntimeConfig
     workspace_root = (
         options.root if options.root is not None else cfg.workspace_root
     ).resolve(strict=False)
+    repository_root = Path.cwd().resolve(strict=True)
+    project_set = (
+        resolve_project_set(
+            repository_root=repository_root,
+            project_set=cfg.project_set,
+        )
+        if cfg.project_set.projects
+        else None
+    )
     return StageRunRuntimeConfig(
         workspace_root=workspace_root,
+        repository_root=repository_root,
         runtime_command=_runtime_command_for_runtime(runtime=options.runtime, cfg=cfg),
         runtime_execution_mode=_runtime_execution_mode_for_runtime(
             runtime=options.runtime,
@@ -98,6 +111,7 @@ def _resolve_stage_run_config(options: StageRunOptions) -> StageRunRuntimeConfig
             stage=options.stage,
         ),
         repair_policy=RepairBudgetPolicy(default_max_repair_attempts=cfg.max_repair_attempts),
+        project_set=project_set,
     )
 
 
@@ -198,7 +212,7 @@ def _execute_adapter_invocation(
         workspace_root=runtime_config.workspace_root,
         stage_brief_path=stage_brief_path,
         prompt_pack_paths=prompt_pack_paths_for_runtime,
-        repository_root=Path.cwd().resolve(strict=False),
+        repository_root=runtime_config.repository_root,
         attempt_number=invocation.attempt_number,
         repair_mode=invocation.repair_mode,
         input_bundle_path=invocation.input_bundle_path,
@@ -326,6 +340,7 @@ def _run_stage_attempts(
                     execution_state=execution_state,
                 ),
                 repair_policy=runtime_config.repair_policy,
+                project_set=runtime_config.project_set,
             )
         except (FileNotFoundError, ValueError) as exc:
             raise typer.BadParameter(str(exc)) from exc

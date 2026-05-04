@@ -30,6 +30,8 @@ Store user-facing clarification questions raised during a stage.
 - Do not fabricate answers inside this document; answers belong in `answers.md`.
 - When assumptions are acceptable, still record the question with `[non-blocking]`.
 - Preserve question ids across revisions to keep durable cross-references stable.
+- Only bullets inside the `Questions` section are interpreted as question entries;
+  use noncanonical sections only for non-authoritative prose metadata.
 
 ## Validation cues
 

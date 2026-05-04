@@ -99,6 +99,31 @@ def test_prepare_scenario_repository_clones_repository(tmp_path: Path) -> None:
     )
 
 
+def test_prepare_scenario_repository_materializes_local_non_git_fixture(
+    tmp_path: Path,
+) -> None:
+    fixture = tmp_path / "fixture"
+    fixture.mkdir()
+    (fixture / "pyproject.toml").write_text("[project]\nname = 'fixture'\n", encoding="utf-8")
+    (fixture / "README.md").write_text("fixture\n", encoding="utf-8")
+    scenario = _build_scenario(fixture.as_posix())
+
+    prepared = prepare_scenario_repository(cache_root=tmp_path / "cache", scenario=scenario)
+    working_copy = prepare_working_copy(
+        cache_root=tmp_path / "cache",
+        scenario=scenario,
+        prepared_repository=prepared,
+    )
+
+    assert prepared.action == "materialized"
+    assert (prepared.repo_path / ".git").exists()
+    assert prepared.resolved_revision
+    assert _run(["git", "status", "--porcelain"], cwd=prepared.repo_path) == ""
+    assert (working_copy.working_copy_path / "README.md").read_text(encoding="utf-8") == (
+        "fixture\n"
+    )
+
+
 def test_prepare_scenario_repository_fetches_existing_clone(tmp_path: Path) -> None:
     source_repo = tmp_path / "source"
     branch, _ = _init_source_repo(source_repo)
