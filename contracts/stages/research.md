@@ -12,6 +12,10 @@ Required outputs for every `research` attempt:
 - `stage-result.md`
 - `validator-report.md`
 
+`research-notes.md` is the primary runtime-authored content artifact. `stage-result.md`
+is a runtime-authored summary draft that AIDD may normalize after validation, and
+`validator-report.md` is canonical only after AIDD writes the post-runtime validation report.
+
 Conditional outputs:
 
 - `questions.md` / `answers.md` when clarification is required

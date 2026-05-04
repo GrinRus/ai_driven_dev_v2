@@ -2,8 +2,10 @@
 
 Runtime-agnostic orchestration for document-first AI software delivery.
 
-> Status: bootstrap repository + executable scaffold.  
-> This archive is a **complete, consistent starting repository** for `ai_driven_dev_v2`: it includes architecture, roadmap, contracts, prompt packs, Codex-compatible skills, live E2E manifests, contributor workflows, and an installable Python CLI with packaged runtime resources.
+> Status: implemented local orchestration system with active architecture, contracts, adapters,
+> validators, harness/eval tooling, and an installable Python CLI.
+> Current known gaps are documented as roadmap work or explicit manual live/release evidence
+> prerequisites, not as hidden bootstrap assumptions.
 
 ## What this project is
 
@@ -104,24 +106,24 @@ The key architecture documents are:
 
 ## What is in this repository today
 
-This starter repository already includes:
+This repository includes:
 
 - root product and contributor documentation,
-- a second-pass-decomposed roadmap,
-- active backlog files,
-- stage and document contract skeletons,
-- stage prompt-pack skeletons,
+- a wave/epic/slice/local-task roadmap and active backlog queue,
+- stage and document contracts,
+- stage prompt packs,
 - `.agents/skills/` for Codex-style development workflows,
 - deterministic and live scenario manifests,
-- CI and release workflow skeletons,
-- a minimal Python package and CLI bootstrap.
+- CI and release workflows,
+- an installable Python package and CLI,
+- runtime adapters, validators, core orchestration, run inspection, harnesses, and eval reports.
 
 The following parts are still intentionally in-progress:
 
 - live interview parity on installed public-repository scenarios,
 - broader installed live lane coverage beyond the first canonical scenario.
 
-That is deliberate: this bundle is meant to be the **starting repository for implementation**, not a falsely complete system.
+Those gaps are deliberate current scope boundaries, not absent foundations.
 
 Live E2E remains available as a manual external-audit system, but it is no longer part of CI or release gating.
 
@@ -208,7 +210,7 @@ uv run --extra dev pytest -q
 
 ## Current CLI surface
 
-The bootstrap CLI already exposes the intended product shape:
+The CLI exposes the current product surface:
 
 ```bash
 aidd doctor
@@ -277,7 +279,7 @@ uv run --extra dev pytest -q
 
 ## Repository map
 
-- `src/aidd/` — Python package skeleton
+- `src/aidd/` — Python package with core orchestration, adapters, validators, CLI, harness, and evals
 - `contracts/` — stage and document contracts
 - `prompt-packs/` — file-based stage prompts
 - `docs/product/` — product framing and user stories
@@ -286,8 +288,8 @@ uv run --extra dev pytest -q
 - `docs/backlog/` — roadmap and active backlog
 - `harness/scenarios/` — smoke and live scenario manifests
 - `.agents/skills/` — reusable team skills for Codex-style development
-- `tests/` — bootstrap smoke tests
-- `MANIFEST.md` — archive contents summary
+- `tests/` — deterministic unit, integration, docs, adapter, harness, and eval checks
+- `MANIFEST.md` — historical archive contents snapshot, not the current source-of-truth inventory
 
 ## Roadmap
 

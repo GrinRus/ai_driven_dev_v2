@@ -11,7 +11,12 @@ from typer.testing import CliRunner
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.cli.main import _prefix_stream_chunk, app
 from aidd.core.run_lookup import latest_run_id
-from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
+from aidd.core.run_store import (
+    RUN_EVENTS_JSONL_FILENAME,
+    RUN_RUNTIME_JSONL_FILENAME,
+    RUN_RUNTIME_LOG_FILENAME,
+    run_attempt_artifact_index_path,
+)
 from aidd.core.stage_runner import prepare_stage_bundle
 
 runner = CliRunner()
@@ -121,6 +126,7 @@ def _write_runtime_writer_script(
     documents: dict[str, str],
     exit_code: int,
     next_documents: dict[str, str] | None = None,
+    extra_stdout_lines: tuple[str, ...] = (),
 ) -> Path:
     script_path = tmp_path / f"runtime_writer_{exit_code}.py"
     script_lines = [
@@ -152,6 +158,7 @@ def _write_runtime_writer_script(
         "for name, content in documents.items():",
         "    (stage_root / name).write_text(content, encoding='utf-8')",
         "print('runtime-output-line')",
+        *[f"print({line!r})" for line in extra_stdout_lines],
         "print('runtime-error-line', file=sys.stderr)",
         f"raise SystemExit({exit_code})",
     ]
@@ -329,6 +336,12 @@ def test_stage_run_executes_generic_cli_stage_and_streams_with_log_follow(
     runtime_log = runtime_log_path.read_text(encoding="utf-8")
     assert "runtime-output-line" in runtime_log
     assert "runtime-error-line" in runtime_log
+    metadata_path = (
+        workspace_root / "reports" / "runs" / "WI-001" / run_id / "stages" / "plan"
+        / "stage-metadata.json"
+    )
+    metadata_payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata_payload["repair_history"] == []
 
 
 def test_stage_run_without_log_follow_omits_stream_prefixes(tmp_path: Path) -> None:
@@ -681,6 +694,17 @@ def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Pat
     assert (
         workspace_root / "workitems" / "WI-004" / "stages" / "plan" / "output" / "plan.md"
     ).exists()
+    stage_result_text = (
+        workspace_root
+        / "workitems"
+        / "WI-004"
+        / "stages"
+        / "plan"
+        / "output"
+        / "stage-result.md"
+    ).read_text(encoding="utf-8")
+    assert "- Attempt `1` (`initial`) -> failed validation." in stage_result_text
+    assert "- Attempt `2` (`repair`) -> succeeded." in stage_result_text
 
 
 def test_stage_run_stops_when_repair_budget_is_exhausted(tmp_path: Path) -> None:
@@ -735,6 +759,107 @@ def test_stage_run_stops_when_repair_budget_is_exhausted(tmp_path: Path) -> None
     )
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert payload["status"] == "failed"
+    assert [entry["outcome"] for entry in payload["repair_history"]] == [
+        "failed validation",
+        "failed validation",
+    ]
+
+
+def test_stage_run_blocks_on_runtime_native_question_event(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-QUESTION")
+    question_event = json.dumps(
+        {
+            "event": "question_raised",
+            "question_id": "Q1",
+            "question": "Confirm the rollout owner.",
+            "policy": "blocking",
+        }
+    )
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents.pop("answers.md")
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=runtime_documents,
+        exit_code=0,
+        extra_stdout_lines=(question_event,),
+    )
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    )
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command="python",
+        claude_code_command=runtime_command,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-QUESTION",
+            "--runtime",
+            "claude-code",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "Stage run result: action=wait state=blocked" in result.stdout
+    assert "Blocking questions are unresolved." in result.stdout
+    assert "Questions:" in result.stdout
+    assert "Answers:" in result.stdout
+    run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-QUESTION")
+    questions_text = (
+        workspace_root
+        / "workitems"
+        / "WI-QUESTION"
+        / "stages"
+        / "plan"
+        / "questions.md"
+    ).read_text(encoding="utf-8")
+    assert "Confirm the rollout owner." in questions_text
+    answers_text = (
+        workspace_root
+        / "workitems"
+        / "WI-QUESTION"
+        / "stages"
+        / "plan"
+        / "answers.md"
+    ).read_text(encoding="utf-8")
+    assert "- none" in answers_text
+
+    attempt_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-QUESTION"
+        / run_id
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+    )
+    assert (attempt_path / RUN_RUNTIME_JSONL_FILENAME).exists()
+    assert (attempt_path / RUN_EVENTS_JSONL_FILENAME).exists()
+    artifact_index = json.loads(
+        run_attempt_artifact_index_path(
+            workspace_root=workspace_root,
+            work_item="WI-QUESTION",
+            run_id=run_id,
+            stage="plan",
+            attempt_number=1,
+        ).read_text(encoding="utf-8")
+    )
+    assert artifact_index["logs"]["runtime_jsonl"].endswith("/attempt-0001/runtime.jsonl")
+    assert artifact_index["logs"]["events_jsonl"].endswith("/attempt-0001/events.jsonl")
 
 
 def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Path) -> None:

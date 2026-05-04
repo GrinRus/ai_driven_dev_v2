@@ -4,8 +4,12 @@ from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
-from aidd.core.repair import RepairBudgetPolicy
-from aidd.core.run_store import persist_stage_status
+from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
+from aidd.core.run_store import (
+    load_stage_metadata,
+    persist_stage_status,
+    write_attempt_artifact_index,
+)
 from aidd.core.stage_interview_routing import (
     MALFORMED_INTERVIEW_DOCUMENT_CODE,
     route_stage_questions_to_interview,
@@ -120,6 +124,45 @@ def _fail_after_adapter_error(
     )
 
 
+def _repair_history_trigger(attempt_number: int) -> str:
+    return "initial" if attempt_number == 1 else "repair"
+
+
+def _repair_history_outcome(
+    *,
+    validation_transition: RepairBudgetValidationTransition,
+) -> str:
+    if validation_transition.resolved_verdict is ValidationVerdict.PASS:
+        return "succeeded"
+    if validation_transition.resolved_verdict is ValidationVerdict.BLOCKED:
+        return "blocked by questions"
+    if validation_transition.requested_verdict is ValidationVerdict.REPAIR:
+        return "failed validation"
+    return "failed"
+
+
+def _should_persist_terminal_repair_history(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+    validation_transition: RepairBudgetValidationTransition,
+) -> bool:
+    if validation_transition.requested_verdict is ValidationVerdict.REPAIR:
+        return validation_transition.resolved_verdict is ValidationVerdict.FAIL
+    if attempt_number > 1:
+        return True
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    return metadata is not None and bool(metadata.repair_history)
+
+
 def run_single_stage_orchestration(
     *,
     workspace_root: Path,
@@ -160,6 +203,14 @@ def run_single_stage_orchestration(
         restore_core_owned_repair_brief(
             invocation_bundle=adapter_invocation,
             workspace_root=workspace_root,
+        )
+        write_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=execution_state.attempt_number,
+            contracts_root=contracts_root,
         )
 
     if not adapter_outcome.succeeded:
@@ -259,6 +310,27 @@ def run_single_stage_orchestration(
         from_state=StageState.VALIDATING,
         changed_at_utc=changed_at_utc,
     )
+    if _should_persist_terminal_repair_history(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=execution_state.attempt_number,
+        validation_transition=validation_transition,
+    ):
+        persist_repair_history_snapshot(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=execution_state.attempt_number,
+            trigger=_repair_history_trigger(execution_state.attempt_number),
+            outcome=_repair_history_outcome(validation_transition=validation_transition),
+            stage_status=validation_transition.validation_state.next_state.value,
+            validator_report_path=validation_result.validator_report_path,
+            repair_brief_path=adapter_invocation.repair_brief_path,
+            changed_at_utc=changed_at_utc,
+        )
     transition = decide_post_validation_transition(
         validation_transition.validation_state,
         workspace_root=workspace_root,

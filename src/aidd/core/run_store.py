@@ -29,6 +29,8 @@ RUN_ARTIFACT_INDEX_FILENAME = "artifact-index.json"
 RUN_ATTEMPT_INPUT_BUNDLE_FILENAME = "input-bundle.md"
 RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME = "repair-context.md"
 RUN_RUNTIME_LOG_FILENAME = "runtime.log"
+RUN_RUNTIME_JSONL_FILENAME = "runtime.jsonl"
+RUN_EVENTS_JSONL_FILENAME = "events.jsonl"
 RUN_RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
 _GIT_SHA_LENGTH = 40
 
@@ -416,6 +418,30 @@ def _canonical_log_paths(
         logs["runtime_exit_metadata"] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=runtime_exit_metadata,
+        )
+    runtime_jsonl = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    ) / RUN_RUNTIME_JSONL_FILENAME
+    if runtime_jsonl.exists():
+        logs["runtime_jsonl"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=runtime_jsonl,
+        )
+    events_jsonl = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    ) / RUN_EVENTS_JSONL_FILENAME
+    if events_jsonl.exists():
+        logs["events_jsonl"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=events_jsonl,
         )
     return logs
 

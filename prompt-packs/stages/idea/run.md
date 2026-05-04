@@ -35,6 +35,10 @@ question state is visible.
 - `stage-result.md`
   - include attempt summary, status, produced outputs, validation summary, blockers, and next actions.
 
+Treat `validator-report.md` as draft evidence: AIDD writes the canonical validator report after
+post-runtime validation. Treat `stage-result.md` as a truthful summary draft that AIDD may
+normalize if canonical validation proves the terminal status inconsistent.
+
 ## Conditional outputs
 
 - `questions.md` when clarification is required.

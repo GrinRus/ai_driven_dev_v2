@@ -30,6 +30,10 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
 - `stage-result.md`
 - `validator-report.md`
 
+Treat `validator-report.md` as draft evidence: AIDD writes the canonical validator report after
+post-runtime validation. Treat `stage-result.md` as a truthful summary draft that AIDD may
+normalize if canonical validation proves the terminal status inconsistent.
+
 ## Conditional outputs
 
 - `questions.md` and `answers.md` when blocking clarification is required

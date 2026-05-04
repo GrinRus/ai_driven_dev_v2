@@ -787,6 +787,15 @@ def test_persist_surfaced_questions_writes_questions_and_stage_metadata(
     assert persistence.questions_path.exists()
     questions_text = persistence.questions_path.read_text(encoding="utf-8")
     assert "`Q1` `[blocking]` Need repository URL?" in questions_text
+    answers_text = (
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "plan"
+        / "answers.md"
+    ).read_text(encoding="utf-8")
+    assert "- none" in answers_text
 
     metadata_payload = json.loads(persistence.stage_metadata_path.read_text(encoding="utf-8"))
     assert metadata_payload["claude_question_artifact"] == {

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import re
+from dataclasses import fields
 from pathlib import Path
 
 import pytest
 
+from aidd.adapters.runtime_registry import runtime_definitions, runtime_ids
+from aidd.adapters.surface import RuntimeAdapterExecutionResult
 from aidd.core.contracts import repo_root_from
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
@@ -20,10 +23,126 @@ _REQUIRED_RELEASE_VERIFICATION_JOB_IDS: tuple[str, ...] = (
     "verify-uv-tool-install",
     "verify-ghcr-install",
 )
+_CURRENT_CANONICAL_DOCS: tuple[str, ...] = (
+    "README.md",
+    "docs/operator-handbook.md",
+    "docs/operator-troubleshooting.md",
+    "docs/operator-support-policy.md",
+    "docs/compatibility-policy.md",
+    "docs/architecture/adapter-protocol.md",
+    "docs/architecture/document-contracts.md",
+    "docs/architecture/runtime-matrix.md",
+    "docs/architecture/target-architecture.md",
+)
+_STALE_CURRENT_DOC_WORDING: tuple[str, ...] = (
+    "bootstrap repository",
+    "executable scaffold",
+    "complete, consistent starting repository",
+    "starter repository",
+    "starting repository",
+    "python package skeleton",
+    "bootstrap smoke tests",
+    "bootstrap cli",
+    "bootstrap behavior",
+    "bootstrap mode",
+    "mvp maintained adapters",
+    "planned adapters",
+    "planned/limited",
+    "as of april 22, 2026",
+)
 
 
 def _repo_root() -> Path:
     return repo_root_from(Path(__file__).resolve())
+
+
+def test_current_docs_do_not_reintroduce_bootstrap_or_planned_adapter_wording() -> None:
+    repo_root = _repo_root()
+    stale_matches: list[str] = []
+
+    for relative_path in _CURRENT_CANONICAL_DOCS:
+        text = (repo_root / relative_path).read_text(encoding="utf-8").lower()
+        for stale_wording in _STALE_CURRENT_DOC_WORDING:
+            if stale_wording in text:
+                stale_matches.append(f"{relative_path}:{stale_wording}")
+
+    assert not stale_matches, (
+        "Current canonical docs contain stale bootstrap or planned-adapter wording: "
+        f"{', '.join(stale_matches)}"
+    )
+
+
+def test_runtime_support_docs_name_registered_runtimes_and_tiers() -> None:
+    repo_root = _repo_root()
+    adapter_protocol = (
+        repo_root / "docs" / "architecture" / "adapter-protocol.md"
+    ).read_text(encoding="utf-8")
+    runtime_matrix = (
+        repo_root / "docs" / "architecture" / "runtime-matrix.md"
+    ).read_text(encoding="utf-8")
+    readme = (repo_root / "README.md").read_text(encoding="utf-8")
+
+    for runtime_id in runtime_ids():
+        assert f"`{runtime_id}`" in adapter_protocol
+        assert f"`{runtime_id}`" in runtime_matrix
+        assert runtime_id in readme
+
+    for definition in runtime_definitions():
+        expected_tier = definition.support_tier.replace("tier-", "Tier ")
+        assert expected_tier in runtime_matrix
+
+
+def test_adapter_protocol_documents_current_execution_result_surface() -> None:
+    repo_root = _repo_root()
+    adapter_protocol = (
+        repo_root / "docs" / "architecture" / "adapter-protocol.md"
+    ).read_text(encoding="utf-8")
+    result_fields = {field.name for field in fields(RuntimeAdapterExecutionResult)}
+
+    assert result_fields == {
+        "details",
+        "events_jsonl_path",
+        "questions_path",
+        "runtime_jsonl_path",
+        "succeeded",
+    }
+    for expected_text in (
+        "whether the runtime invocation succeeded",
+        "a normalized details string",
+        "`runtime.jsonl` and `events.jsonl`",
+        "`questions.md`",
+        "in-memory workflow semantics",
+    ):
+        assert expected_text in adapter_protocol
+
+
+def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
+    repo_root = _repo_root()
+    document_contracts = (
+        repo_root / "docs" / "architecture" / "document-contracts.md"
+    ).read_text(encoding="utf-8")
+    stage_result_contract = (
+        repo_root / "contracts" / "documents" / "stage-result.md"
+    ).read_text(encoding="utf-8")
+
+    assert "`validator-report.md` is AIDD-canonical" in document_contracts
+    assert "`repair-brief.md` is not runtime-authored" in document_contracts
+    assert "AIDD treats it as the\nworkflow-facing summary" in stage_result_contract
+
+    for stage in STAGES:
+        stage_contract = (
+            repo_root / "contracts" / "stages" / f"{stage}.md"
+        ).read_text(encoding="utf-8")
+        run_prompt = (
+            repo_root / "prompt-packs" / "stages" / stage / "run.md"
+        ).read_text(encoding="utf-8")
+
+        assert "runtime-authored summary draft" in stage_contract
+        assert "canonical only after AIDD writes the post-runtime validation report" in (
+            stage_contract
+        )
+        assert "Treat `validator-report.md` as draft evidence" in run_prompt
+        assert "Treat `stage-result.md` as a truthful summary draft" in run_prompt
 
 
 def test_roadmap_references_only_existing_user_story_ids() -> None:

@@ -72,6 +72,10 @@ def test_release_workflow_does_not_run_live_e2e() -> None:
     serialized = yaml.safe_dump({"jobs": jobs}, sort_keys=False)
     assert "harness/scenarios/live/" not in serialized
     assert "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC" not in serialized
+    assert "aidd eval run" not in serialized
+    assert "AIDD_EVAL_CLAUDE_CODE_COMMAND" not in serialized
+    assert "AIDD_EVAL_CODEX_COMMAND" not in serialized
+    assert "AIDD_EVAL_OPENCODE_COMMAND" not in serialized
 
 
 def test_release_workflow_has_ghcr_verification_job() -> None:

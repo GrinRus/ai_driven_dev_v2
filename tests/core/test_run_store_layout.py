@@ -10,8 +10,10 @@ import pytest
 from aidd.core.run_store import (
     RUN_ARTIFACT_INDEX_FILENAME,
     RUN_ATTEMPTS_DIRNAME,
+    RUN_EVENTS_JSONL_FILENAME,
     RUN_MANIFEST_FILENAME,
     RUN_RUNTIME_EXIT_METADATA_FILENAME,
+    RUN_RUNTIME_JSONL_FILENAME,
     RUN_RUNTIME_LOG_FILENAME,
     RUN_STAGE_METADATA_FILENAME,
     RUN_STAGES_DIRNAME,
@@ -353,6 +355,47 @@ def test_attempt_artifact_index_records_runtime_exit_metadata_when_present(
     assert payload["logs"]["runtime_exit_metadata"].endswith(
         "/attempt-0001/runtime-exit.json"
     )
+
+
+def test_attempt_artifact_index_records_optional_jsonl_logs_when_present(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    attempt_path = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    (attempt_path / RUN_RUNTIME_LOG_FILENAME).write_text("runtime-log\n", encoding="utf-8")
+    (attempt_path / RUN_RUNTIME_JSONL_FILENAME).write_text(
+        '{"payload":{"event":"runtime"},"source":"stdout"}\n',
+        encoding="utf-8",
+    )
+    (attempt_path / RUN_EVENTS_JSONL_FILENAME).write_text(
+        '{"event":"runtime","source":"stdout"}\n',
+        encoding="utf-8",
+    )
+
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    )
+    payload = json.loads(
+        run_attempt_artifact_index_path(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_number=1,
+        ).read_text(encoding="utf-8")
+    )
+
+    assert payload["logs"]["runtime_jsonl"].endswith("/attempt-0001/runtime.jsonl")
+    assert payload["logs"]["events_jsonl"].endswith("/attempt-0001/events.jsonl")
 
 
 def test_stage_metadata_write_is_atomic_on_interrupted_replace(

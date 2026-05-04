@@ -5,10 +5,16 @@ import re
 from pathlib import Path
 from time import monotonic
 
+from aidd.core.run_store import (
+    RUN_EVENTS_JSONL_FILENAME,
+    RUN_RUNTIME_JSONL_FILENAME,
+    work_item_runs_root,
+)
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.evals.log_analysis import (
     CoarseRuntimeEvent,
     FailureBoundarySelection,
+    parse_events_jsonl_text,
     parse_runtime_log_text,
     parse_validator_report_failures_text,
     select_first_failure_boundary,
@@ -51,6 +57,48 @@ from aidd.harness.result_bundle import (
 from aidd.harness.scenarios import Scenario
 
 EXIT_CODE_PATTERN = re.compile(r"non-zero exit \((?P<code>\d+)\)")
+
+
+def _collect_attempt_jsonl_artifacts(
+    *,
+    workspace_root: Path | None,
+    work_item: str,
+    filename: str,
+) -> tuple[Path, ...]:
+    if workspace_root is None:
+        return tuple()
+    runs_root = work_item_runs_root(workspace_root=workspace_root, work_item=work_item)
+    if not runs_root.exists():
+        return tuple()
+    return tuple(
+        sorted(
+            path
+            for path in runs_root.glob(f"*/stages/*/attempts/attempt-*/{filename}")
+            if path.is_file()
+        )
+    )
+
+
+def _write_concatenated_jsonl_source(
+    *,
+    layout: ResultBundleLayout,
+    filename: str,
+    source_paths: tuple[Path, ...],
+) -> Path | None:
+    if not source_paths:
+        return None
+    sources_root = layout.run_root / "_sources"
+    sources_root.mkdir(parents=True, exist_ok=True)
+    destination_path = sources_root / filename
+    lines: list[str] = []
+    for source_path in source_paths:
+        source_text = source_path.read_text(encoding="utf-8").strip()
+        if source_text:
+            lines.extend(source_text.splitlines())
+    if not lines:
+        return None
+    destination_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return destination_path
 
 
 def extract_exit_code(error: BaseException | None) -> int | None:
@@ -386,10 +434,39 @@ def persist_eval_reports(
         quality_result=state.quality_result,
         teardown_result=state.teardown_result,
     )
+    aidd_workspace_root = (
+        None
+        if state.prepared_working_copy is None
+        else state.prepared_working_copy.working_copy_path / ".aidd"
+    )
+    runtime_jsonl_source_path = _write_concatenated_jsonl_source(
+        layout=layout,
+        filename=RUN_RUNTIME_JSONL_FILENAME,
+        source_paths=_collect_attempt_jsonl_artifacts(
+            workspace_root=aidd_workspace_root,
+            work_item=work_item,
+            filename=RUN_RUNTIME_JSONL_FILENAME,
+        ),
+    )
+    events_jsonl_source_path = _write_concatenated_jsonl_source(
+        layout=layout,
+        filename=RUN_EVENTS_JSONL_FILENAME,
+        source_paths=_collect_attempt_jsonl_artifacts(
+            workspace_root=aidd_workspace_root,
+            work_item=work_item,
+            filename=RUN_EVENTS_JSONL_FILENAME,
+        ),
+    )
+    normalized_events = (
+        tuple()
+        if events_jsonl_source_path is None
+        else parse_events_jsonl_text(events_jsonl_source_path.read_text(encoding="utf-8"))
+    )
 
     verification_exit_code = extract_exit_code(state.verification_error)
     first_failure_boundary = select_first_failure_boundary(
         runtime_events=parse_runtime_log_text(runtime_log_source),
+        normalized_events=normalized_events,
         validator_failures=parse_validator_report_failures_text(
             validator_report_source
         ),
@@ -477,6 +554,14 @@ def persist_eval_reports(
             "runtime_log_source": runtime_log_source_path.as_posix(),
             "validator_report_source": validator_report_source_path.as_posix(),
             "verdict_source": verdict_source_path.as_posix(),
+            "runtime_jsonl_source": (
+                "n/a"
+                if runtime_jsonl_source_path is None
+                else runtime_jsonl_source_path.as_posix()
+            ),
+            "events_jsonl_source": (
+                "n/a" if events_jsonl_source_path is None else events_jsonl_source_path.as_posix()
+            ),
             "resource_source": (
                 "packaged"
                 if state.install_result is not None
@@ -519,6 +604,8 @@ def persist_eval_reports(
         runtime_log_path=runtime_log_source_path,
         validator_report_path=validator_report_source_path,
         verdict_path=verdict_source_path,
+        runtime_jsonl_path=runtime_jsonl_source_path,
+        events_jsonl_path=events_jsonl_source_path,
     )
 
     write_stage_timing_artifacts(layout=layout, payload=stage_timing_payload)

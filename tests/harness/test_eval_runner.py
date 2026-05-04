@@ -82,6 +82,7 @@ def _write_fake_aidd(
     exit_code: int,
     stdout_lines: tuple[str, ...] = ("fake aidd",),
     write_stage_outputs: tuple[str, ...] = tuple(),
+    write_attempt_jsonl_artifacts: bool = False,
     review_status: str = "approved",
     qa_verdict: str = "ready",
 ) -> None:
@@ -119,12 +120,34 @@ def _write_fake_aidd(
                 f"printf '%b' {primary_content!r} > \"$output_root/{primary_filename}\"",
             )
         )
+    write_jsonl_lines: list[str] = []
+    if write_attempt_jsonl_artifacts:
+        write_jsonl_lines.extend(
+            (
+                'attempt_root=".aidd/reports/runs/$AIDD_HARNESS_WORK_ITEM/run-fake/stages/plan/attempts/attempt-0001"',
+                'mkdir -p "$attempt_root"',
+                (
+                    "printf '%s\\n' "
+                    "'{"
+                    '"payload":{"event":"adapter_error","message":"adapter failed"},'
+                    '"source":"stdout"'
+                    "}' "
+                    '> "$attempt_root/runtime.jsonl"'
+                ),
+                (
+                    "printf '%s\\n' "
+                    '\'{"event":"adapter_error","message":"adapter failed","source":"stdout"}\' '
+                    '> "$attempt_root/events.jsonl"'
+                ),
+            )
+        )
     path.write_text(
         "\n".join(
             (
                 "#!/bin/sh",
                 *print_lines,
                 *write_outputs_lines,
+                *write_jsonl_lines,
                 f"exit {exit_code}",
             )
         ),
@@ -336,6 +359,50 @@ def test_eval_runner_pass_status(tmp_path: Path) -> None:
         == "harness/fixtures/minimal-python"
     )
     assert issue_selection_payload["scenario_class"] == "deterministic-stage"
+
+
+def test_eval_runner_copies_attempt_jsonl_artifacts_and_uses_events_boundary(
+    tmp_path: Path,
+) -> None:
+    source_repo = tmp_path / "source"
+    _init_source_repo(source_repo)
+    fake_aidd = tmp_path / "fake-aidd-jsonl"
+    _write_fake_aidd(
+        fake_aidd,
+        exit_code=1,
+        write_stage_outputs=("plan",),
+        write_attempt_jsonl_artifacts=True,
+    )
+    scenario_path = tmp_path / "scenario-jsonl.yaml"
+    _write_scenario_manifest(
+        path=scenario_path,
+        repo_url=source_repo.as_uri(),
+        setup_commands=("printf 'setup\\n' > setup.log",),
+        verify_commands=("exit 9",),
+        interview_required=False,
+        work_item="WI-EVAL-JSONL",
+        aidd_command=(fake_aidd.as_posix(),),
+    )
+
+    result = run_eval_scenario(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        workspace_root=tmp_path / ".aidd",
+    )
+
+    assert result.status == "fail"
+    assert result.first_failure_boundary.signal_source == "events.jsonl"
+    assert (result.bundle_root / "runtime.jsonl").exists()
+    assert (result.bundle_root / "events.jsonl").exists()
+    assert "adapter_error" in (result.bundle_root / "events.jsonl").read_text(
+        encoding="utf-8"
+    )
+    metadata_payload = yaml.safe_load(
+        result.bundle_root.joinpath("harness-metadata.json").read_text(encoding="utf-8")
+    )
+    assert metadata_payload["aidd_artifact_references"]["events_jsonl_source"].endswith(
+        "_sources/events.jsonl"
+    )
 
 
 def test_eval_runner_live_scenario_uses_installed_artifact_and_writes_install_metadata(

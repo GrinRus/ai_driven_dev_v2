@@ -13,7 +13,9 @@ Use it when you need a repeatable local setup for:
 
 ## 2. Scope and Current Product State
 
-AIDD is in bootstrap mode.
+AIDD has an implemented local CLI, stage orchestration core, maintained runtime adapters,
+validators, and harness/eval tooling. Live public-repository E2E remains a manual installed
+operator audit lane, not a CI or release gate.
 
 Today:
 
@@ -120,7 +122,7 @@ Claude Code, Codex, and OpenCode native mode adapt AIDD stage briefs and prompt
 packs to the raw provider CLI. Use `mode = "adapter-flags"` only for wrapper
 commands that accept AIDD adapter flags directly.
 
-Current config fields consumed by the bootstrap CLI:
+Current config fields consumed by the CLI:
 
 - `workspace.root`
 - `runtime.generic_cli.command`
@@ -179,7 +181,7 @@ uv run aidd stage run plan --work-item WI-001 --runtime opencode
 uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
 ```
 
-Expected behavior in current bootstrap state:
+Expected behavior in the current local implementation:
 
 - `aidd run --runtime <maintained-runtime>` performs workflow execution through the selected adapter;
 - `aidd stage run --runtime generic-cli` performs stage execution;

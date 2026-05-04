@@ -156,6 +156,14 @@ def test_ci_workflow_does_not_reference_live_scenarios() -> None:
     assert "verify-published-live-e2e" not in ci_workflow
 
 
+def test_ci_python_matrix_matches_compatibility_window() -> None:
+    workflow_path = _repo_root() / ".github" / "workflows" / "ci.yml"
+    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    matrix = workflow["jobs"]["lint-type-test"]["strategy"]["matrix"]
+
+    assert matrix["python-version"] == ["3.12", "3.13", "3.14"]
+
+
 def test_manual_live_workflow_dispatch_is_manual_only() -> None:
     workflow_path = _repo_root() / ".github" / "workflows" / "manual-live-e2e.yml"
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))

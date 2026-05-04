@@ -5,6 +5,10 @@
 Summarize a completed or halted stage attempt with durable status, output evidence,
 validation state, blockers, and next actions.
 
+The runtime writes this Markdown summary as a draft stage output. AIDD treats it as the
+workflow-facing summary only after post-runtime validation, and may normalize terminal status
+or validation wording when the canonical validator report proves the draft inconsistent.
+
 ## Required sections
 
 - `Stage`

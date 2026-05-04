@@ -12,8 +12,9 @@ Policy:
 
 Validation policy:
 
-- Release-blocking CI must pass on the baseline interpreter (currently 3.12).
-- Regressions on 3.13 and 3.14 are treated as compatibility defects and should be fixed in normal maintenance.
+- Release-blocking CI must pass on the supported interpreter matrix: 3.12, 3.13, and 3.14.
+- Regressions on any supported interpreter are compatibility defects and should be fixed in
+  normal maintenance.
 - Adding a new Python minor version to the support window requires:
   - updating project metadata (`requires-python`);
   - updating CI/runtime checks;
@@ -45,7 +46,7 @@ Runtime support is tiered by release impact and maintenance expectation.
 | `generic-cli` | Tier 1 (release-blocking maintained) | Regressions are release blockers. Compatibility and behavior drift must be fixed before release. | Baseline portability runtime. |
 | `claude-code` | Tier 1 (release-blocking maintained) | Regressions are release blockers. Adapter and operator flows must stay production-usable. | First-class maintained runtime. |
 | `codex` | Tier 2 (actively maintained, non-blocking) | Regressions should be fixed promptly but may ship with explicit caveats when Tier 1 remains healthy. | Parity and eval behavior are still being hardened. |
-| `opencode` | Tier 3 (planned/limited) | Best-effort support only. Known gaps are acceptable when documented. | Smoke/interview parity bundles are archived via `aidd eval run`; interview lane remains blocked on `answers.md` evidence flow. |
+| `opencode` | Tier 3 (limited maintained, best-effort) | Best-effort registered runtime support. Known gaps are acceptable when documented. | `aidd run`, `aidd stage run`, `aidd doctor`, and conformance coverage include this runtime; parity gaps remain non-release-blocking. |
 | `pi-mono` | Future / experimental (outside current tiers) | No active compatibility commitment. Treat as bridge-target research until a maintained adapter lane is planned. | Track as a compatibility target first; do not treat regressions as release blockers. |
 
 Operational policy:

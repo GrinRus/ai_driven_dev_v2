@@ -1,5 +1,8 @@
 # User Story Traceability
 
+> Historical readiness snapshot from the Wave 15 audit. It is retained as audit evidence, not as
+> the current user-story readiness source of truth.
+
 | Story ID | Story summary | Expected evidence | Found evidence | Status | Gaps | Recommended action |
 | --- | --- | --- | --- | --- | --- | --- |
 | US-01 | Runtime portability across maintained runtimes | Same stage graph across maintained runtimes, adapter isolation, comparable artifacts | CLI/runtime dispatch, adapter tests, conformance tests, and full deterministic pytest pass. | evidenced | Fresh public live parity was not run in this pass. | Keep deterministic conformance green; use `W15-E3-S1-T1` once wrapper prerequisites exist. |
