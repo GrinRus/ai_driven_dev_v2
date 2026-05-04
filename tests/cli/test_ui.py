@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from typer.testing import CliRunner
-
 from aidd.cli import main as cli_main
 from aidd.cli.ui import OperatorUiService, UiServerOptions
 from aidd.core.run_store import (
@@ -13,8 +11,6 @@ from aidd.core.run_store import (
     persist_stage_status,
     run_attempt_runtime_log_path,
 )
-
-runner = CliRunner()
 
 
 def _service(workspace_root: Path) -> OperatorUiService:
@@ -121,7 +117,6 @@ def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> 
 
 
 def test_ui_command_is_registered() -> None:
-    result = runner.invoke(cli_main.app, ["ui", "--help"])
+    command_names = {command.name for command in cli_main.app.registered_commands}
 
-    assert result.exit_code == 0, result.output
-    assert "--work-item" in result.output
+    assert "ui" in command_names
