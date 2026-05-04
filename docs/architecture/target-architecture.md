@@ -181,6 +181,10 @@ The exact layout may evolve, but the model is fixed:
 - upstream-facing handoff documents are published to `workitems/<id>/stages/<stage>/output/`,
 - reports and traces are system-owned,
 - runtime-facing artifacts remain local to the repository.
+- normal stage attempts currently persist raw runtime logs and runtime exit metadata under
+  `reports/runs/.../attempts/`;
+- eval lanes derive additional timing and quality reports from those run artifacts and scenario
+  execution evidence.
 
 ## 7. Stage model
 
@@ -214,25 +218,27 @@ For every stage run:
 3. Run preflight checks for missing or invalid prerequisites.
 4. Build a **stage brief** in Markdown for the runtime.
 5. Launch the runtime through the selected adapter.
-6. Stream raw and normalized logs to the CLI and trace sinks.
-7. If the runtime asks questions:
-   - show them in the CLI,
+6. Stream raw runtime logs when the adapter can expose them, and persist raw attempt logs.
+7. Persist structured `runtime.jsonl` and normalized `events.jsonl` attempt artifacts when
+   the selected adapter observes structured JSONL runtime output.
+8. If the runtime or stage documents raise questions:
+   - surface them through the CLI or durable stage documents,
    - persist them as `questions.md`,
-   - collect answers or pause the run,
-   - persist answers as `answers.md`,
-   - resume if allowed.
-8. After the runtime finishes, validate the declared output documents.
-9. If validation passes:
-   - write/update `stage-result.md` and `validator-report.md` in the stage root,
+   - collect or wait for `answers.md`,
+   - resume stage execution after answers when the run state allows it.
+9. After the runtime finishes, validate the declared output documents.
+10. If validation passes:
+   - write the canonical AIDD `validator-report.md` in the stage root,
+   - preserve or update `stage-result.md` so it agrees with validation state,
    - publish upstream-facing outputs to `workitems/<id>/stages/<stage>/output/`
      (declared primary outputs plus `stage-result.md` and `validator-report.md`),
    - update run state,
    - advance to the next stage if requested.
-10. If validation fails:
+11. If validation fails:
     - write a repair brief in Markdown,
     - archive validator findings,
     - rerun the stage in repair mode if the attempt budget remains.
-11. If repair budget is exhausted:
+12. If repair budget is exhausted:
     - mark the stage as failed or waiting for human input,
     - persist the failure and stop progression.
 
@@ -262,7 +268,7 @@ Markdown contracts make the system:
 - more portable across runtimes,
 - less dependent on model-perfect JSON formatting.
 
-## 10. Stage result model
+## 10. Stage result and artifact ownership model
 
 Every stage produces a Markdown `stage-result.md` document in the stage root and
 publishes it to the stage `output/` directory for downstream consumption.
@@ -279,6 +285,17 @@ It includes:
 - links to runtime logs and report artifacts.
 
 This is the canonical stage summary for workflow progression.
+
+Artifact ownership is explicit:
+
+- primary stage content documents such as `plan.md`, `tasklist.md`, and
+  `implementation-report.md` are runtime-authored Markdown outputs;
+- runtime-authored `stage-result.md` content is accepted as the stage summary draft, then the
+  AIDD core may normalize terminal status when canonical validation proves the draft wrong;
+- `validator-report.md` is canonical only after AIDD validation writes it. Runtime-authored
+  validator text is draft evidence and may be replaced;
+- `repair-brief.md` is AIDD-owned control evidence. Runtimes read it during repair attempts but
+  must not create or rewrite it.
 
 ## 11. Validation architecture
 
@@ -300,6 +317,11 @@ Checks consistency between stage outputs and upstream documents.
 
 For execution-heavy stages, checks evidence such as test logs or command results.
 
+Current implementation note: environment evidence is primarily validated through semantic
+checks, implementation/QA document rules, and eval quality reports. A separate environment
+validator layer is a target capability and should be added only with matching contracts,
+validators, prompts, and scenarios.
+
 ## 12. Self-repair architecture
 
 Validation failure does not mean immediate stage failure.
@@ -310,7 +332,8 @@ Instead, the core:
 2. summarizes validator findings,
 3. reruns the stage with the same document targets,
 4. records the attempt number,
-5. preserves previous invalid snapshots for audit,
+5. preserves repair context and repair history in stage metadata and the final
+   `stage-result.md` whenever repair is used,
 6. stops only when:
    - validation passes,
    - budget is exhausted,
@@ -327,6 +350,10 @@ The system supports two paths:
 ### 13.1 Interactive path
 
 The CLI displays the runtime question immediately and collects the answer.
+
+This is target behavior for runtimes that expose fully interactive question events. Current
+runtime-native support maps structured question/pause events into durable question documents;
+it does not yet collect answers through a live interactive prompt.
 
 ### 13.2 Durable document path
 
@@ -347,6 +374,10 @@ It is optional but supported for:
 - implement,
 - review,
 - qa.
+
+Current implementation note: AIDD validates durable `questions.md` / `answers.md`, blocks
+unanswered `[blocking]` questions, resumes blocked stages after answers are available, and
+maps adapter-observed structured question/pause events into the same durable question path.
 
 ## 14. Adapter architecture
 
@@ -378,10 +409,15 @@ The CLI should support three log modes:
 Every run stores:
 
 - raw runtime text log,
-- structured runtime log when the runtime supports it,
-- normalized events,
-- stage timing,
-- validation and repair history.
+- structured runtime log when the adapter observes JSONL runtime output,
+- normalized events when structured runtime events are emitted,
+- per-attempt runtime exit metadata,
+- validation state and validator reports,
+- repair context and repair history when repair is used.
+
+Eval result bundles additionally store `stage-timing.*`, quality/verdict reports, and
+self-repair matrices for scenario evidence. Those eval reports are not the same contract as
+normal stage-run attempt artifacts.
 
 ## 16. Prompt provenance architecture
 

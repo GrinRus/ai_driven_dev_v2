@@ -4162,3 +4162,248 @@ Sync notes:
 - `2026-05-03` Wave 17 opened as a second complexity-reduction pass after the Wave 16 refactor left concentrated complexity in stage orchestration, CLI stage execution, adapter runners, semantic helpers, and eval reporting.
 - `2026-05-03` Wave 17 completed with deterministic dev-extra checks, a thin CLI stage handler, shared adapter runner helpers, focused repair-budget terminal helpers, semantic placeholder/block helper modules, eval scoring/report contexts, and isolated config compatibility normalization.
 - `2026-05-03` Wave 17 corrective audit completed the remaining planned decomposition: stage orchestration phase modules, shared adapter context validation, deeper semantic helper/stage-rule split, stage-timing evidence modeling, and eval runner phase modules.
+
+---
+
+## Wave 18 — architecture and documentation conformance closure (`done`)
+
+### Epic W18-E1 — architecture truth baseline (`done`)
+Linked stories: `US-01`, `US-02`, `US-03`, `US-04`, `US-05`, `US-06`, `US-07`, `US-08`, `US-09`, `US-10`
+
+#### Slice W18-E1-S1 — implemented architecture alignment (`done`)
+Goal: make architecture and contract documentation describe the implemented runtime, observability, interview, repair, and artifact-ownership boundaries without overstating incomplete target behavior.
+
+Primary outputs:
+
+- current-state architecture corrections
+- adapter protocol/runtime matrix alignment
+- artifact ownership clarifications
+
+Touched areas:
+
+- `docs/architecture/`
+- `contracts/`
+- `prompt-packs/stages/`
+
+Dependencies:
+
+- Wave 17 architecture and code decomposition baseline
+
+Local tasks:
+
+- `W18-E1-S1-T1` (done) Align architecture protocol docs with the implemented runtime request/result shape, runtime tiers, observability state, and failure taxonomy.
+- `W18-E1-S1-T2` (done) Clarify stage contract and prompt-pack ownership wording for runtime-authored drafts and AIDD-owned final/control artifacts.
+
+Exit evidence:
+
+- architecture docs no longer describe `codex` or `opencode` as merely planned adapters;
+- target architecture distinguishes implemented behavior from follow-up targets for normalized events, question loops, repair history, and stage timing;
+- contract and prompt-pack wording consistently identifies `repair-brief.md` as AIDD-owned and `validator-report.md` as AIDD-canonical after validation.
+
+### Epic W18-E2 — root and operator documentation refresh (`done`)
+Linked stories: `US-01`, `US-06`, `US-07`, `US-09`, `US-10`
+
+#### Slice W18-E2-S1 — current repository status refresh (`done`)
+Goal: remove bootstrap-era wording from current operator-facing documents and mark historical inventory/report files so they cannot be mistaken for the present source of truth.
+
+Primary outputs:
+
+- refreshed README and operator docs
+- historical markers for archival manifests/reports
+- compatibility wording aligned with runtime tiers
+
+Touched areas:
+
+- `README.md`
+- `docs/operator-*.md`
+- `docs/compatibility-policy.md`
+- `MANIFEST.md`
+- `reports/repo-readiness/`
+- `docs/backlog/rebuild-plan.md`
+
+Dependencies:
+
+- `W18-E1-S1`
+
+Local tasks:
+
+- `W18-E2-S1-T1` (done) Refresh README, operator support, troubleshooting, and compatibility docs to current CLI/runtime state.
+- `W18-E2-S1-T2` (done) Mark stale generated manifests, readiness reports, and rebuild plan as historical snapshots when they are not maintained as live inventory.
+
+Exit evidence:
+
+- current docs do not describe the repo as a bootstrap skeleton or starter repository;
+- historical files explicitly warn readers not to use their counts, Wave status, or test totals as current evidence.
+
+### Epic W18-E3 — documentation drift regression checks (`done`)
+Linked stories: `US-08`, `US-10`
+
+#### Slice W18-E3-S1 — architecture documentation consistency tests (`done`)
+Goal: keep the corrected architecture and README language from drifting back to stale bootstrap or planned-adapter claims.
+
+Primary outputs:
+
+- docs consistency regression tests
+
+Touched areas:
+
+- `tests/test_docs_consistency.py`
+
+Dependencies:
+
+- `W18-E1-S1`
+- `W18-E2-S1`
+
+Local tasks:
+
+- `W18-E3-S1-T1` (done) Add docs consistency checks for stale bootstrap wording, runtime tier alignment, and artifact-ownership statements.
+
+Exit evidence:
+
+- targeted docs consistency tests fail when canonical docs reintroduce obsolete bootstrap/starter wording or planned-adapter claims for registered runtimes.
+
+Sync notes:
+
+- `2026-05-04` Wave 18 was opened via `W8-E3-S1` queue-restoration policy after an architecture/documentation audit found docs lagging behind the implemented runtime surface and Wave 16/17 refactors. Initial queue restoration promotes `W18-E1-S1-T1` to `Next`, `W18-E1-S1-T2` and `W18-E2-S1-T1` to `Soon`, and `W18-E2-S1-T2` plus `W18-E3-S1-T1` to `Parking lot`.
+- `2026-05-04` Wave 18 completed: architecture docs now describe the implemented request/result adapter boundary, runtime tiers, observability state, question/repair limits, and failure taxonomy; contracts and prompt packs clarify artifact ownership; README/operator docs no longer describe the repo as bootstrap; historical snapshots are labeled archival; docs consistency tests cover the drift checks.
+
+---
+
+## Wave 19 — user-story implementation closure (`done`)
+
+### Epic W19-E1 — runtime-native question and event closure (`done`)
+Linked stories: `US-01`, `US-05`, `US-06`, `US-07`, `US-08`, `US-10`
+
+#### Slice W19-E1-S1 — structured event and native question bridge (`done`)
+Goal: map adapter-observed structured runtime events into durable attempt artifacts and route native question/pause events through the existing interview documents.
+
+Primary outputs:
+
+- runtime JSONL/event artifact persistence
+- native question event bridge to `questions.md`
+- CLI regression coverage for native-question blocking
+
+Touched areas:
+
+- `src/aidd/adapters/`
+- `src/aidd/core/`
+- `tests/cli/`
+
+Dependencies:
+
+- Wave 18 current-state architecture baseline
+
+Local tasks:
+
+- `W19-E1-S1-T1` (done) Wire adapter-detected question and pause events into the standard `questions.md` persistence path for structured-event-capable adapters.
+- `W19-E1-S1-T2` (done) Persist emitted structured runtime events as optional attempt-level `runtime.jsonl` and `events.jsonl` artifacts.
+- `W19-E1-S1-T3` (done) Add CLI regression coverage proving unresolved native questions block progression like document-authored blocking questions.
+
+Exit evidence:
+
+- adapter-emitted JSONL question events create durable `questions.md`;
+- unresolved native questions produce a blocked stage transition;
+- attempt artifact indexes include optional JSONL logs when those files exist.
+
+### Epic W19-E2 — repair history and final artifact accountability (`done`)
+Linked stories: `US-04`, `US-10`
+
+#### Slice W19-E2-S1 — normal stage-run repair history finalization (`done`)
+Goal: preserve repair attempts in stage metadata and the final `stage-result.md` during ordinary CLI stage runs.
+
+Primary outputs:
+
+- repair-history snapshot calls in the normal stage-run path
+- final successful repair publication with repair attempts preserved
+- exhausted-budget regression coverage
+
+Touched areas:
+
+- `src/aidd/core/`
+- `src/aidd/cli/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W19-E1-S1`
+
+Local tasks:
+
+- `W19-E2-S1-T1` (done) Make normal stage-run finalization write repair history into stage metadata and `stage-result.md` when repair is used.
+- `W19-E2-S1-T2` (done) Add regression coverage for successful repair-after-invalid-output, exhausted repair budget, and no-repair happy path metadata.
+
+Exit evidence:
+
+- final published `stage-result.md` records initial failure and repair success when repair succeeds;
+- exhausted repair budget records failed validation attempts in stage metadata;
+- no-repair happy path leaves repair history empty.
+
+### Epic W19-E3 — harness/eval artifact propagation (`done`)
+Linked stories: `US-06`, `US-07`, `US-10`
+
+#### Slice W19-E3-S1 — optional JSONL propagation into eval bundles (`done`)
+Goal: include emitted structured runtime/event JSONL in durable eval bundles and failure-boundary analysis without changing existing bundle compatibility.
+
+Primary outputs:
+
+- eval bundle copying for optional `runtime.jsonl` and `events.jsonl`
+- normalized-event failure-boundary input
+- harness regression coverage
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `tests/harness/`
+
+Dependencies:
+
+- `W19-E1-S1`
+
+Local tasks:
+
+- `W19-E3-S1-T1` (done) Copy emitted attempt-level `runtime.jsonl` and `events.jsonl` into eval result bundles when present.
+- `W19-E3-S1-T2` (done) Extend eval regression coverage so emitted events can drive first-failure boundary selection and durable bundle metadata.
+
+Exit evidence:
+
+- eval bundles include optional JSONL artifacts only when source attempts emitted them;
+- log analysis can select `events.jsonl` as the first decisive failure signal.
+
+### Epic W19-E4 — release/install and compatibility evidence (`done`)
+Linked stories: `US-07`, `US-09`, `US-10`
+
+#### Slice W19-E4-S1 — compatibility and install evidence alignment (`done`)
+Goal: align automated compatibility checks with the documented Python support window and keep installed-operator evidence lanes explicit.
+
+Primary outputs:
+
+- Python 3.14 CI matrix coverage
+- compatibility-policy alignment
+- release/live evidence lane retained as manual or release-specific evidence
+
+Touched areas:
+
+- `.github/workflows/`
+- `docs/compatibility-policy.md`
+- `tests/`
+
+Dependencies:
+
+- Wave 18 operator documentation baseline
+
+Local tasks:
+
+- `W19-E4-S1-T1` (done) Align CI compatibility checks with the documented Python 3.12 through 3.14 support window.
+- `W19-E4-S1-T2` (done) Preserve installed-package smoke proof coverage through existing release and release-live-proof tests without adding a live provider CI gate.
+- `W19-E4-S2-T1` (done) Keep manual live E2E evidence separated from provider/env blockers through the existing manual live workflow and runtime preflight tests.
+
+Exit evidence:
+
+- CI matrix lists Python 3.12, 3.13, and 3.14;
+- release installability tests still cover `pipx`, `uv tool`, and container verification workflow shape;
+- manual live runtime preflight tests continue to classify missing provider/env setup before repository prep.
+
+Sync notes:
+
+- `2026-05-04` Wave 19 opened via `W8-E3-S1` queue-restoration policy after the user-story coverage audit found implementation gaps in native question/event routing, repair-history finalization, eval JSONL propagation, and compatibility evidence.
+- `2026-05-04` Wave 19 completed: structured adapter JSONL is persisted as optional attempt artifacts; native question/pause events route into `questions.md`; normal repair runs preserve repair history in final `stage-result.md`; eval bundles copy optional JSONL artifacts and use `events.jsonl` in failure-boundary analysis; CI now covers Python 3.12 through 3.14.

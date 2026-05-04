@@ -6,7 +6,7 @@ The project distinguishes between:
 
 - **Tier 1 (release-blocking maintained)**
 - **Tier 2 (actively maintained, non-blocking)**
-- **Tier 3 (planned/limited)**
+- **Tier 3 (limited maintained, best-effort)**
 - **Future / experimental (outside current tiers)**
 
 ## Runtime table
@@ -15,8 +15,8 @@ The project distinguishes between:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `generic-cli` | Tier 1 (release-blocking maintained) | subprocess CLI | yes, if the wrapped tool emits them | adapter-defined | usually no | no | baseline portability adapter |
 | `claude-code` | Tier 1 (release-blocking maintained) | CLI-first, optional richer SDK path later | yes | yes when available | yes when available | yes | first-class maintained runtime |
-| `codex` | Tier 2 (actively maintained, non-blocking) | CLI-first | yes | partial/adapter-defined | adapter-defined | yes | second-wave maintained runtime |
-| `opencode` | Tier 3 (planned/limited) | CLI / backend attach | yes | adapter-defined | adapter-defined | yes | third-wave runtime |
+| `codex` | Tier 2 (actively maintained, non-blocking) | CLI-first | yes | yes when JSONL is emitted | yes when JSONL question events are emitted | yes | second-wave maintained runtime |
+| `opencode` | Tier 3 (limited maintained, best-effort) | CLI-first / backend attach later | yes | yes when JSONL is emitted | yes when JSONL question events are emitted | yes | third-wave registered runtime |
 | `pi-mono` | Future / experimental (outside current tiers) | external bridge | adapter-defined | adapter-defined | adapter-defined | adapter-defined | treat as compatibility target first |
 
 ## Capability principle
@@ -31,11 +31,15 @@ AIDD adapts stage briefs and prompt packs to the raw provider CLI. Advanced
 operators may configure `adapter-flags` execution with an AIDD-compatible wrapper
 command that accepts the adapter flags for that runtime.
 
-## Tier 1 commitment
+## Tier commitments
 
 The repository must ship working support for:
 
 - `generic-cli`
 - `claude-code`
 
-before additional runtimes are considered stable.
+before additional runtimes are considered release-blocking.
+
+`codex` and `opencode` are registered execution runtimes for `aidd run`,
+`aidd stage run`, `aidd doctor`, and maintained conformance coverage. Their lower
+tiers describe release impact and parity expectations, not whether the adapters exist.

@@ -21,7 +21,12 @@ from aidd.cli.support import (
     console,
 )
 from aidd.config import load_config
-from aidd.core.repair import RepairBudgetPolicy, generate_repair_brief, write_repair_brief
+from aidd.core.repair import (
+    RepairBudgetPolicy,
+    generate_repair_brief,
+    persist_repair_history_snapshot,
+    write_repair_brief,
+)
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
@@ -254,6 +259,22 @@ def _write_repair_brief_for_retry(
         workspace_root=runtime_config.workspace_root,
     )
     write_repair_brief(path=repair_brief_path, repair_brief_markdown=repair_brief)
+    persist_repair_history_snapshot(
+        workspace_root=runtime_config.workspace_root,
+        work_item=orchestration.work_item,
+        run_id=orchestration.run_id,
+        stage=orchestration.stage,
+        attempt_number=orchestration.execution_state.attempt_number,
+        trigger=(
+            "initial"
+            if orchestration.execution_state.attempt_number == 1
+            else "repair"
+        ),
+        outcome="failed validation",
+        stage_status=orchestration.transition.next_state.value,
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+    )
     return repair_brief_path
 
 
@@ -387,6 +408,31 @@ def _print_stage_run_result(
         )
     if orchestration.adapter_outcome.details:
         console.print(f"Adapter outcome: {orchestration.adapter_outcome.details}")
+    if orchestration.transition.next_state is StageState.BLOCKED:
+        questions_path = _expected_stage_document_path(
+            orchestration=orchestration,
+            document_name="questions.md",
+        )
+        answers_path = _expected_stage_document_path(
+            orchestration=orchestration,
+            document_name="answers.md",
+        )
+        console.print("Blocking questions are unresolved.")
+        if questions_path is not None:
+            console.print(f"Questions: {questions_path.as_posix()}")
+        if answers_path is not None:
+            console.print(f"Answers: {answers_path.as_posix()}")
+
+
+def _expected_stage_document_path(
+    *,
+    orchestration: StageOrchestrationResult,
+    document_name: str,
+) -> Path | None:
+    for path in orchestration.adapter_invocation.expected_output_documents:
+        if path.name == document_name:
+            return path
+    return None
 
 
 def run_stage_command(options: StageRunOptions) -> None:

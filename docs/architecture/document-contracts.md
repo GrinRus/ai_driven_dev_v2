@@ -48,6 +48,16 @@ Examples:
 - `answers.md`
 - `stage-result.md`
 
+`stage-result.md` is runtime-facing as a draft and workflow-facing as the final stage summary:
+the runtime writes the Markdown summary, and the AIDD core may correct terminal status when
+canonical validation proves the draft inconsistent.
+
+`validator-report.md` is different. A runtime may draft it as evidence, but the canonical
+report is the one AIDD writes after validation.
+
+`repair-brief.md` is not runtime-authored. It is AIDD-owned control evidence that runtimes may
+read during repair attempts.
+
 ### System-facing artifacts
 
 JSON / JSONL / text allowed.
@@ -144,6 +154,18 @@ This document records:
 
 It is the durable checkpoint for workflow progression.
 
+The runtime-authored version is a draft until post-runtime validation finishes. AIDD must not
+advance a stage solely because the draft claims success; the canonical validator state decides
+whether the draft may be published downstream.
+
+## 7.1 Validator report ownership
+
+`validator-report.md` is AIDD-canonical after the validator coordinator runs. Runtime-authored
+content with the same filename is treated as draft evidence and can be overwritten by the
+canonical validator report.
+
+The report must not claim `pass` when canonical findings remain open.
+
 ## 8. Question and answer documents
 
 When a stage needs clarification, the system should write:
@@ -160,8 +182,8 @@ These documents must be durable because:
 
 When validation fails:
 
-1. archive the failed attempt snapshot,
-2. write a repair brief in Markdown,
+1. preserve the failed attempt evidence available to the run store,
+2. write an AIDD-owned repair brief in Markdown,
 3. rerun the stage against the same target documents,
 4. validate again,
 5. repeat within the repair budget.

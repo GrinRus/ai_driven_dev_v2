@@ -1,5 +1,9 @@
 # Rebuild Plan
 
+> Historical bootstrap plan. This document explains the original rebuild sequence and may use
+> earlier-phase terms such as scaffold or skeleton. Use `docs/backlog/roadmap.md` and
+> `docs/backlog/backlog.md` for current work selection.
+
 ## Intent
 
 Build AIDD as a clean, runtime-agnostic system with document-first contracts, maintained adapters for `generic-cli` and `claude-code`, and harness/eval support from the first working slice.

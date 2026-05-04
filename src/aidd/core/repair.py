@@ -405,6 +405,7 @@ def render_stage_result_with_repair_history(
             "",
             "## Validation summary",
             "",
+            f"- Validator verdict: {'pass' if normalized_status == 'succeeded' else 'fail'}",
             (
                 f"- Validator findings: see `{normalized_validator_report_path}`."
                 if normalized_validator_report_path is not None
@@ -442,6 +443,13 @@ def render_stage_result_with_repair_history(
             f"- Repair history entries recorded: `{len(history_entries)}`.",
         ]
     )
+    if normalized_status == "failed" and history_entries:
+        lines.append("- Repair budget status: `repair-budget-exhausted`.")
+    if normalized_status != "succeeded" and normalized_validator_report_path is not None:
+        lines.append(
+            "- Canonical AIDD validation found open findings; terminal status and "
+            "validator verdict claims must not remain `succeeded` or `pass`."
+        )
     if normalized_repair_brief_path is not None:
         lines.append(
             f"- Repair decision context recorded in `{normalized_repair_brief_path}`."

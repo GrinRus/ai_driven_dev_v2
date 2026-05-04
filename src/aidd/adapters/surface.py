@@ -48,6 +48,12 @@ from aidd.adapters.opencode.runner import (
 from aidd.adapters.opencode.runner import (
     run_subprocess_with_streaming as run_opencode_subprocess_with_streaming,
 )
+from aidd.adapters.runtime_events import (
+    detect_question_or_pause_events,
+    normalize_structured_events,
+    persist_adapter_question_events,
+    persist_runtime_event_artifacts,
+)
 from aidd.adapters.runtime_execution import StageRuntimeRequest
 from aidd.adapters.runtime_registry import RuntimeExecutionMode, runtime_ids
 
@@ -60,6 +66,9 @@ _CONFORMANCE_RUN_ID = "run-conformance"
 class RuntimeAdapterExecutionResult:
     succeeded: bool
     details: str
+    runtime_jsonl_path: Path | None = None
+    events_jsonl_path: Path | None = None
+    questions_path: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -258,12 +267,28 @@ def _execute_claude_code(
         timeout_seconds=request.timeout_seconds,
     )
     persist_claude_code_runtime_log(attempt_path=attempt_path, run_result=run_result)
+    event_artifacts = persist_runtime_event_artifacts(
+        attempt_path=attempt_path,
+        run_result=run_result,
+    )
+    question_detection = detect_question_or_pause_events(
+        normalized_events=normalize_structured_events(run_result=run_result),
+    )
+    questions_path = persist_adapter_question_events(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        stage=request.stage,
+        adapter_question_events=question_detection.question_events,
+    )
     return RuntimeAdapterExecutionResult(
         succeeded=_success_result(
             run_result.exit_classification,
             ClaudeCodeExitClassification.SUCCESS,
         ),
         details=run_result.exit_classification.value,
+        runtime_jsonl_path=event_artifacts.runtime_jsonl_path,
+        events_jsonl_path=event_artifacts.events_jsonl_path,
+        questions_path=questions_path,
     )
 
 
@@ -303,9 +328,25 @@ def _execute_codex(
         timeout_seconds=request.timeout_seconds,
     )
     persist_codex_runtime_log(attempt_path=attempt_path, run_result=run_result)
+    event_artifacts = persist_runtime_event_artifacts(
+        attempt_path=attempt_path,
+        run_result=run_result,
+    )
+    question_detection = detect_question_or_pause_events(
+        normalized_events=normalize_structured_events(run_result=run_result),
+    )
+    questions_path = persist_adapter_question_events(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        stage=request.stage,
+        adapter_question_events=question_detection.question_events,
+    )
     return RuntimeAdapterExecutionResult(
         succeeded=_success_result(run_result.exit_classification, CodexExitClassification.SUCCESS),
         details=run_result.exit_classification.value,
+        runtime_jsonl_path=event_artifacts.runtime_jsonl_path,
+        events_jsonl_path=event_artifacts.events_jsonl_path,
+        questions_path=questions_path,
     )
 
 
@@ -345,12 +386,28 @@ def _execute_opencode(
         timeout_seconds=request.timeout_seconds,
     )
     persist_opencode_runtime_log(attempt_path=attempt_path, run_result=run_result)
+    event_artifacts = persist_runtime_event_artifacts(
+        attempt_path=attempt_path,
+        run_result=run_result,
+    )
+    question_detection = detect_question_or_pause_events(
+        normalized_events=normalize_structured_events(run_result=run_result),
+    )
+    questions_path = persist_adapter_question_events(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        stage=request.stage,
+        adapter_question_events=question_detection.question_events,
+    )
     return RuntimeAdapterExecutionResult(
         succeeded=_success_result(
             run_result.exit_classification,
             OpenCodeExitClassification.SUCCESS,
         ),
         details=run_result.exit_classification.value,
+        runtime_jsonl_path=event_artifacts.runtime_jsonl_path,
+        events_jsonl_path=event_artifacts.events_jsonl_path,
+        questions_path=questions_path,
     )
 
 

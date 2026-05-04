@@ -1,5 +1,8 @@
 # Repository Readiness Report
 
+> Historical readiness snapshot from the Wave 15 audit. It is retained as audit evidence, not as
+> the current repository status, test count, or active backlog source of truth.
+
 ## 1. Executive summary
 
 The repository is locally healthy for deterministic development: lint, typecheck, targeted docs tests, and the full pytest suite pass. Wave 15 is no longer an unstarted readiness-recovery wave: `W15-E1-S1-T1` and `W15-E2-S1-T1` are complete and committed, while the two external evidence tasks are correctly blocked by missing non-repository prerequisites. Overall readiness level: **3/4**. Ready for the current next slice: **No active local slice remains; Wave 15 is blocked only on external live/release prerequisites**.

@@ -1,5 +1,8 @@
 # Blockers and Next Actions
 
+> Historical readiness snapshot from the Wave 15 audit. It is retained as audit evidence, not as
+> the current active blocker list.
+
 ## Critical blockers
 
 1. **`W15-E3-S1-T1` is blocked by missing live wrapper configuration.**

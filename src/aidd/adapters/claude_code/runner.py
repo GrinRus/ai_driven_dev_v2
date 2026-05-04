@@ -29,6 +29,7 @@ from aidd.core.adapter_interview import (
     QuestionPolicy,
     load_answers_document,
     load_questions_document,
+    persist_answers_document,
     persist_questions_document,
     resolved_question_ids,
     unresolved_blocking_questions,
@@ -595,6 +596,15 @@ def persist_surfaced_questions(
         stage_output_questions_markdown=stage_output_questions_markdown,
         adapter_question_events=adapter_question_events,
     )
+    stage_root = workspace_root / "workitems" / work_item / "stages" / stage
+    answers_path = stage_root / "answers.md"
+    misplaced_answers_path = stage_root / "output" / "answers.md"
+    if not answers_path.exists() and not misplaced_answers_path.exists():
+        persist_answers_document(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
     questions = load_questions_document(
         workspace_root=workspace_root,
         work_item=work_item,

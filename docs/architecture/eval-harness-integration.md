@@ -135,8 +135,8 @@ Deterministic scenarios additionally imply:
 5. Prepare the AIDD artifact under test when the scenario uses the installed-live lane.
 6. Run setup commands in the target repository root.
 7. Launch AIDD from the target repository root with explicit workflow bounds.
-8. Capture raw runtime logs and structured logs when supported.
-9. Capture normalized events.
+8. Capture raw runtime logs and emitted structured logs when supported.
+9. Capture emitted normalized events and include them in first-failure boundary analysis.
 10. Capture question and answer artifacts when used.
 11. Capture validator outcomes and repair attempts.
 12. Run scenario verification commands.
@@ -150,8 +150,8 @@ Deterministic scenarios additionally imply:
 Every eval run should aim to write:
 
 - `.aidd/reports/evals/<run_id>/runtime.log`
-- `.aidd/reports/evals/<run_id>/runtime.jsonl` when supported
-- `.aidd/reports/evals/<run_id>/events.jsonl` when supported
+- `.aidd/reports/evals/<run_id>/runtime.jsonl` when attempts emitted structured JSONL
+- `.aidd/reports/evals/<run_id>/events.jsonl` when attempts emitted normalized JSONL
 - `.aidd/reports/evals/<run_id>/validator-report.md`
 - `.aidd/reports/evals/<run_id>/repair-history.md`
 - `.aidd/reports/evals/<run_id>/log-analysis.md`

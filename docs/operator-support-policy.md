@@ -8,7 +8,8 @@ This document defines:
 - what information is required for actionable issue reports;
 - how maintainers triage incoming operator issues.
 
-As of April 22, 2026, AIDD is still in bootstrap mode and support scope follows that product state.
+As of May 4, 2026, AIDD support covers the implemented local CLI, maintained runtime adapters,
+validators, run-inspection commands, and manual installed live E2E audit lane described below.
 
 ## 2. Support Scope
 
@@ -121,7 +122,7 @@ Maintainers may close issues as:
 
 - `resolved` (fix landed);
 - `needs-info` (missing required diagnostics);
-- `expected-current-behavior` (matches documented bootstrap limits);
+- `expected-current-behavior` (matches documented current limits);
 - `not-reproducible` (cannot reproduce with provided data);
 - `duplicate` (covered by an existing issue).
 

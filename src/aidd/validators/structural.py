@@ -99,6 +99,19 @@ def _section_has_meaningful_content(
     return section_index.section_has_meaningful_content(heading_index)
 
 
+def _effective_required_section_matches(
+    *,
+    section: str,
+    matches: tuple[tuple[int, MarkdownHeading], ...],
+) -> tuple[tuple[int, MarkdownHeading], ...]:
+    if len(matches) <= 1:
+        return matches
+    first_heading = matches[0][1]
+    if first_heading.level == 1 and first_heading.title.strip().casefold() == section.casefold():
+        return matches[1:]
+    return matches
+
+
 def validate_required_document_existence(
     *,
     stage: str,
@@ -165,6 +178,7 @@ def validate_required_sections(
 
         for section in required_sections:
             matches = section_index.matches(section)
+            matches = _effective_required_section_matches(section=section, matches=matches)
             if not matches:
                 findings.append(
                     ValidationFinding(

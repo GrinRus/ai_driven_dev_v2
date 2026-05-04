@@ -8,7 +8,8 @@ This guide explains how to diagnose the most common operator-visible failures in
 - validator failures;
 - harness and eval failures.
 
-It is aligned with the current bootstrap behavior of AIDD as of April 22, 2026.
+It is aligned with the current local AIDD CLI, adapter, validator, and harness behavior as of
+May 4, 2026.
 
 ## 2. Fast Triage Flow
 

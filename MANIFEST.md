@@ -1,5 +1,8 @@
 # Repository Manifest
 
+> Historical snapshot. This file records an earlier archive inventory and is not the current
+> source-of-truth repository file count. Use `rg --files` for live inventory.
+
 Total files: **262**
 
 ## Top-level counts

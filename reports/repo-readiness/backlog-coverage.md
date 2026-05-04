@@ -1,5 +1,8 @@
 # Backlog Coverage
 
+> Historical readiness snapshot from the Wave 15 audit. It is retained as audit evidence, not as
+> the current roadmap/backlog source of truth.
+
 Current planning baseline:
 
 - `docs/backlog/backlog.md` has `none` under `Next`, `Soon`, and `Parking lot`.
