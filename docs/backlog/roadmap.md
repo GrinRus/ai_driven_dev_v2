@@ -4532,6 +4532,56 @@ Exit evidence:
 - the fresh rerun records a later AIDD-owned validation/parser boundary;
 - the post-parser-fix rerun is preserved as explicit runtime/provider timeout evidence rather than a clean live audit.
 
+#### Slice W20-E1-S4 — live timeout policy and clean evidence rerun (`blocked`)
+Goal: make the live OpenCode timeout policy explicit, then attempt one clean `AIDD-LIVE-005` evidence rerun before falling back to the canonical Codex lane.
+
+Primary outputs:
+
+- generated OpenCode live stage-timeout profile
+- post-timeout-profile OpenCode live rerun evidence
+- optional Codex fallback rerun evidence if OpenCode remains provider/runtime blocked
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `tests/harness/`
+- `docs/backlog/`
+- `harness/scenarios/live/`
+
+Dependencies:
+
+- `W20-E1-S3`
+
+Blocked reason:
+
+- `2026-05-04` Post-timeout-profile OpenCode rerun `eval-live-005-opencode-20260504T143938Z` no longer failed from adapter timeout, but the live audit still is not clean. The first failure boundary moved to `validation`: `idea` attempt 3 exited successfully from the runtime but failed validation with `SEM-INCOMPLETE-SECTION` because `Open questions` was not rendered as bullet items after the repair budget was exhausted.
+
+Local tasks:
+
+- `W20-E1-S4-T1` (done) Update generated live runtime config so OpenCode has an explicit timeout profile: `timeout_seconds = 1200`, `idea = 1500`, `research = 1500`, `plan = 1500`, `review-spec = 1500`, `tasklist = 1800`, `implement = 1800`, `review = 1800`, and `qa = 1800`.
+- `W20-E1-S4-T2` (blocked) Rerun `AIDD-LIVE-005` on OpenCode after the timeout-profile fix and record run id, verdict, quality gate, first failure boundary, and bundle path.
+- `W20-E1-S4-T3` (later) Rerun `AIDD-LIVE-005` on canonical Codex only if OpenCode remains provider/runtime timeout blocked without an AIDD-owned defect.
+
+Evidence:
+
+- `2026-05-04` `uv run --extra dev pytest tests/harness/test_live_runtime_config.py -q` passed after adding the OpenCode live timeout profile to generated `aidd.example.toml`.
+- `2026-05-04` OpenCode preflight passed with `/opt/homebrew/bin/opencode`, version `1.4.10`, native command `opencode run --format json --dangerously-skip-permissions`.
+- `2026-05-04` The generated installed-live `aidd.example.toml` for `eval-live-005-opencode-20260504T143938Z` contains `runtime.opencode.timeout_seconds = 1200` and explicit stage timeouts for `idea`, `research`, `plan`, `review-spec`, `tasklist`, `implement`, `review`, and `qa`.
+- `2026-05-04` Post-timeout-profile rerun `eval-live-005-opencode-20260504T143938Z` produced status `fail`, quality gate `fail`, first failure boundary `validation`, first failure note `stage-metadata: stage idea attempt 3 validator failed`, and bundle path `.aidd/reports/evals/eval-live-005-opencode-20260504T143938Z`.
+- `2026-05-04` The rerun proves the timeout-profile change removed the prior provider/runtime timeout symptom: all three `idea` attempts exited `success`/`0` with `Timeout = False`. The remaining blocker is model-output validation after repair exhaustion: `SEM-INCOMPLETE-SECTION` for non-bullet `Open questions` in `idea-brief.md`.
+- `2026-05-04` Codex fallback `W20-E1-S4-T3` was not promoted because the decision rule allows fallback only for provider/runtime timeout, and this rerun failed at validation.
+
+Decision rules:
+
+- If `W20-E1-S4-T2` passes with quality gate pass, close the live evidence blocker and leave only `W20-E1-S2-T2` blocked.
+- If `W20-E1-S4-T2` fails with an AIDD-owned validation, parser, adapter, or harness defect, add a focused fix task before any further rerun.
+- If `W20-E1-S4-T2` fails with provider/runtime timeout, record the blocker and promote `W20-E1-S4-T3`.
+- If `W20-E1-S4-T2` fails from scenario-quality or model-output limitations without an AIDD-owned boundary, close it with explicit blocker evidence rather than repeating reruns.
+
+Exit evidence:
+
+- maintainers can tell the OpenCode timeout policy is no longer the current blocker, but the remaining `US-07` clean live evidence gap is blocked by live model-output validation failure.
+
 ### Epic W20-E2 — operator workflow frontend (`done`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`
 
@@ -4821,3 +4871,4 @@ Sync notes:
 - `2026-05-04` W20 foundation pass triaged the OpenCode live failure to an AIDD-owned native command assembly defect, added an OpenCode command regression, moved run inspection into reusable core services, added frontend-ready operator read/write services, and added optional project-set config plus bounded project-root resolution. Fresh clean live evidence and UI/project-set harness integration remain follow-up tasks.
 - `2026-05-04` W20 implementation pass added project-set stage context and deterministic scenario coverage, extracted workflow orchestration into core, and added the first local `aidd ui` surface over reusable operator services. Release/install evidence remains blocked by missing release candidate tag and registry credentials.
 - `2026-05-04` W20 closure-and-hardening pass completed frontend escaping, workflow-run endpoint seam coverage, local UI smoke evidence, project-set artifact-index/input-bundle verification, and operator project-set artifact visibility. Post-parser-fix OpenCode live rerun `eval-live-005-opencode-20260504T135544Z` remains blocked by runtime/provider timeout evidence, and release/install evidence remains blocked by missing release candidate tag and registry credentials.
+- `2026-05-04` W20 timeout-profile pass added explicit OpenCode live stage timeouts and reran `AIDD-LIVE-005` as `eval-live-005-opencode-20260504T143938Z`. The timeout blocker moved to a validation/model-output blocker after repair budget exhaustion, so Codex fallback remains parked and unpromoted under the provider-timeout-only fallback rule.
