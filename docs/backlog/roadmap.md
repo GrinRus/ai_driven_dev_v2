@@ -4410,7 +4410,7 @@ Sync notes:
 
 ---
 
-## Wave 20 — gap intake and product-scope expansion (`planned`)
+## Wave 20 — gap intake and product-scope expansion (`blocked`)
 
 ### Epic W20-E1 — evidence closure (`blocked`)
 Linked stories: `US-07`, `US-09`, `US-10`
@@ -4480,7 +4480,7 @@ Exit evidence:
 - maintainers can tell whether current `US-09` install evidence exists for supported delivery channels;
 - missing release candidate, registry access, or publishing credentials are explicit blockers.
 
-#### Slice W20-E1-S3 — live eval failure triage (`planned`)
+#### Slice W20-E1-S3 — live eval failure triage (`blocked`)
 Goal: turn the current failing live evidence into an owned fix or an explicit external blocker before requesting another live audit.
 
 Primary outputs:
@@ -4502,13 +4502,17 @@ Dependencies:
 
 - `W20-E1-S1`
 
+Blocked reason:
+
+- `2026-05-04` Post-parser-fix OpenCode live rerun `eval-live-005-opencode-20260504T135544Z` reached the `idea` repair attempt and produced repaired documents, but the native OpenCode process hit the configured adapter timeout before AIDD could record a successful stage outcome. The run is blocked as runtime/provider timeout evidence, not a clean `US-07` live audit.
+
 Local tasks:
 
 - `W20-E1-S3-T1` (done) Triage the `AIDD-LIVE-005` OpenCode audit bundle and partial Codex bundle, recording the first owned failure boundary and reproduction command.
 - `W20-E1-S3-T2` (done) Add a focused OpenCode native command regression for the AIDD-owned live failure.
 - `W20-E1-S3-T3` (done) Rerun `AIDD-LIVE-005` after the OpenCode native command fix and preserve a clean audit bundle or updated blocker.
 - `W20-E1-S3-T4` (done) Add a focused interview document parser regression and fix for the AIDD-owned plan-stage malformed `answers.md` failure found by the rerun.
-- `W20-E1-S3-T5` (later) Rerun `AIDD-LIVE-005` after the interview document parser fix and preserve a clean audit bundle or updated blocker.
+- `W20-E1-S3-T5` (blocked) Rerun `AIDD-LIVE-005` after the interview document parser fix and preserve a clean audit bundle or updated blocker.
 
 Evidence:
 
@@ -4518,14 +4522,17 @@ Evidence:
 - `2026-05-04` OpenCode preflight passed for `AIDD-LIVE-005` after the native command fix: `/opt/homebrew/bin/opencode`, version `1.4.10`, native execution command `opencode run --format json --dangerously-skip-permissions`.
 - `2026-05-04` Fresh rerun `eval-live-005-opencode-20260504T130401Z` failed at validation, not adapter launch: runtime exited successfully through `idea`, `research`, and `plan` attempts, but `plan` attempt 3 ended `failed` with `INTERVIEW-MALFORMED-DOCUMENT` in `answers.md`.
 - `2026-05-04` The first owned failure boundary is AIDD interview parsing: extra summary bullets outside the canonical `Answers` section were interpreted as answer entries. `src/aidd/core/interview.py` now parses only the canonical `Questions` or `Answers` section when present, with regression coverage in `tests/core/test_interview.py`.
+- `2026-05-04` Post-parser-fix preflight passed with `uv run aidd eval doctor harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode`.
+- `2026-05-04` Post-parser-fix rerun `eval-live-005-opencode-20260504T135544Z` produced status `fail`, quality gate `fail`, first failure boundary `adapter`, first failure note `runtime.log: Adapter outcome: timeout`, and bundle path `.aidd/reports/evals/eval-live-005-opencode-20260504T135544Z`.
+- `2026-05-04` The failed rerun shows `idea` attempt 1 exited successfully but needed repair; `idea` attempt 2 timed out. The worktree artifacts show the repair attempt wrote a valid `stage-result.md` and `validator-report.md`, but the adapter recorded `timeout`/`-15`, so AIDD stopped before `research` and the live quality gate correctly failed.
 
 Exit evidence:
 
 - the original OpenCode live failure has an AIDD-owned regression rather than an ambiguous provider blocker;
 - the fresh rerun records a later AIDD-owned validation/parser boundary;
-- the next live evidence step is a rerun after the interview parser fix, not another OpenCode command triage pass.
+- the post-parser-fix rerun is preserved as explicit runtime/provider timeout evidence rather than a clean live audit.
 
-### Epic W20-E2 — operator workflow frontend (`planned`)
+### Epic W20-E2 — operator workflow frontend (`done`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`
 
 #### Slice W20-E2-S1 — frontend operator flow contract (`done`)
@@ -4630,7 +4637,41 @@ Exit evidence:
 
 - the frontend can operate the documented minimum flow without bypassing CLI-equivalent provenance.
 
-### Epic W20-E3 — project-set workflow scope (`planned`)
+#### Slice W20-E2-S4 — frontend smoke and browser-safety hardening (`done`)
+Goal: make the first local UI smoke-ready without expanding the frontend beyond the private operator surface.
+
+Primary outputs:
+
+- escaped rendering for dynamic UI text
+- private workflow-run endpoint coverage through an internal seam
+- local UI smoke evidence
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W20-E2-S3`
+
+Local tasks:
+
+- `W20-E2-S4-T1` (done) Escape all dynamic UI-rendered text from questions, stage metadata, artifact labels and paths, and runtime-derived values while preserving escaped log rendering.
+- `W20-E2-S4-T2` (done) Add private `/api/workflow/run` endpoint coverage through an internal test seam, without invoking real runtimes or changing the public `aidd ui` command.
+- `W20-E2-S4-T3` (done) Capture local UI smoke evidence for page load, blocking answer persistence, log and artifact rendering, and workflow-run service reachability.
+
+Evidence:
+
+- `src/aidd/cli/ui.py` now routes question text, stage labels, stage metadata, artifact labels and paths, runtime-derived values, and log text through escaped client-side rendering.
+- `tests/cli/test_ui.py` covers the private workflow-run endpoint through an injected workflow service seam and asserts the operator script keeps dynamic markup escaped.
+- `2026-05-04` Local UI smoke passed with page load, blocking answer persistence to `answers.md`, log and artifact reads, and workflow-run delegation through the internal service seam. The temporary smoke workspace was `/var/folders/0y/qkpd1n592qjgm3w3rcl_gs6m0000gn/T/aidd-ui-smoke-x5yvauzo/.aidd`; no `.aidd/` evidence was committed.
+
+Exit evidence:
+
+- the first frontend surface is smoke-ready for local operator use without direct artifact mutation or unescaped runtime/UI text.
+
+### Epic W20-E3 — project-set workflow scope (`done`)
 Linked stories: `US-01`, `US-02`, `US-03`, `US-07`, `US-10`, `US-12`
 
 #### Slice W20-E3-S1 — project-set workspace contract (`done`)
@@ -4736,9 +4777,47 @@ Exit evidence:
 
 - harness coverage proves project ownership is preserved in artifacts and validation evidence.
 
+#### Slice W20-E3-S4 — project-set artifact evidence tightening (`done`)
+Goal: tighten deterministic and frontend-facing evidence so project-set context is visible beyond the generated Markdown document alone.
+
+Primary outputs:
+
+- deterministic scenario verification for artifact-index and input-bundle evidence
+- operator artifact-view coverage for project-set context
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `harness/scenarios/`
+- `docs/e2e/`
+- `tests/`
+
+Dependencies:
+
+- `W20-E3-S3`
+
+Local tasks:
+
+- `W20-E3-S4-T1` (done) Extend the deterministic project-set scenario so verification checks artifact-index and input-bundle evidence for `project_set_context` and both project ids, not only `project-set.md` and `stage-brief.md`.
+- `W20-E3-S4-T2` (done) Add operator artifact-view coverage proving frontend consumers can see `project_set_context` when a work item has declared project roots.
+
+Evidence:
+
+- `harness/scenarios/deterministic/project-set-plan-context.yaml` now runs as a deterministic workflow from `idea` through `plan`, declares `api` and `web` roots, and verifies `artifact-index.json` plus `input-bundle.md` preserve `project_set_context` and both project ids.
+- `src/aidd/harness/repo_prep.py` can materialize local non-git fixture directories into temporary git repositories, which keeps deterministic fixture scenarios self-contained without committing nested fixture repositories.
+- `harness/fixtures/minimal-python/aidd_fixture_runtime.py` provides the deterministic `generic-cli` fixture runtime used by the project-set scenario.
+- `tests/harness/test_repo_prep.py` and `tests/harness/test_scenario_loader_model.py` cover local fixture materialization and the widened deterministic workflow scenario contract.
+- `tests/core/test_operator_frontend.py` covers artifact view visibility for `project_set_context`.
+- `2026-05-04` Deterministic project-set eval `eval-deterministic-003-generic-cli-20260504T141138Z` passed with quality gate `none`; bundle path `.aidd/reports/evals/eval-deterministic-003-generic-cli-20260504T141138Z`.
+
+Exit evidence:
+
+- deterministic and operator-facing evidence both expose project-set context for declared local project roots.
+
 Sync notes:
 
 - `2026-05-04` Wave 20 opened via `W8-E3-S1` queue-restoration policy after the gap analysis found missing frontend and project-set product stories plus fresh live E2E and release/install evidence gaps. Initial queue restoration promotes `W20-E1-S1-T1` to `Next`; `W20-E1-S1-T2`, `W20-E1-S2-T1`, `W20-E2-S1-T1`, and `W20-E3-S1-T1` to `Soon`; and `W20-E1-S2-T2`, `W20-E2-S2-T1`, `W20-E2-S2-T2`, `W20-E3-S2-T1`, and `W20-E3-S2-T2` to `Parking lot`.
 - `2026-05-04` W20 evidence-and-contract pass completed: live preflight is current, fallback live eval bundle `eval-live-005-opencode-20260504T121644Z` is preserved with failing adapter-boundary evidence, release-channel evidence capture is blocked by missing candidate tag and credentials, operator frontend and project-set contracts are documented, and implementation tasks remain parked until explicitly promoted.
 - `2026-05-04` W20 foundation pass triaged the OpenCode live failure to an AIDD-owned native command assembly defect, added an OpenCode command regression, moved run inspection into reusable core services, added frontend-ready operator read/write services, and added optional project-set config plus bounded project-root resolution. Fresh clean live evidence and UI/project-set harness integration remain follow-up tasks.
 - `2026-05-04` W20 implementation pass added project-set stage context and deterministic scenario coverage, extracted workflow orchestration into core, and added the first local `aidd ui` surface over reusable operator services. Release/install evidence remains blocked by missing release candidate tag and registry credentials.
+- `2026-05-04` W20 closure-and-hardening pass completed frontend escaping, workflow-run endpoint seam coverage, local UI smoke evidence, project-set artifact-index/input-bundle verification, and operator project-set artifact visibility. Post-parser-fix OpenCode live rerun `eval-live-005-opencode-20260504T135544Z` remains blocked by runtime/provider timeout evidence, and release/install evidence remains blocked by missing release candidate tag and registry credentials.

@@ -113,6 +113,39 @@ def test_operator_read_models_expose_run_stage_logs_artifacts_and_questions(
     )
 
 
+def test_operator_artifacts_view_exposes_project_set_context(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="codex",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    project_context_path = workspace_root / "workitems" / "WI-UI" / "context" / "project-set.md"
+    project_context_path.parent.mkdir(parents=True)
+    project_context_path.write_text("# Project Set\n\n- Project id: `api`\n", encoding="utf-8")
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+    )
+
+    artifacts_view = resolve_operator_artifacts_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+        attempt_number=1,
+    )
+
+    assert artifacts_view.documents["project_set_context"] == (
+        "workitems/WI-UI/context/project-set.md"
+    )
+
+
 def test_persist_operator_answer_writes_standard_answers_document(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_questions(workspace_root)

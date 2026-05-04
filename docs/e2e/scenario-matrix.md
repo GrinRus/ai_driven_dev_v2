@@ -38,7 +38,7 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | Bucket | Required coverage | Maintained scenarios |
 | --- | --- | --- |
 | deterministic stage | `small + ci` | `AIDD-SMOKE-001` |
-| deterministic workflow | `medium + ci` | `AIDD-DETERMINISTIC-001` |
+| deterministic workflow | `medium + ci` | `AIDD-DETERMINISTIC-001`, `AIDD-DETERMINISTIC-003` |
 | deterministic workflow | `large + manual` | `AIDD-DETERMINISTIC-002` |
 | live full flow | `small + manual` | `AIDD-LIVE-001`, `AIDD-LIVE-003`, `AIDD-LIVE-005` |
 | live full flow | `medium + manual` | `AIDD-LIVE-002`, `AIDD-LIVE-004`, `AIDD-LIVE-007` |
@@ -60,7 +60,7 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | `AIDD-STAGEPACK-PLAN-SMOKE-001` | `harness/scenarios/smoke/plan-stagepack-smoke.yaml` | `deterministic-stage` | `medium` | `ci` | `opencode` | `generic-cli`, `claude-code`, `codex`, `opencode` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-001` | `harness/scenarios/deterministic/minimal-python-bounded-workflow.yaml` | `deterministic-workflow` | `medium` | `ci` | `opencode` | `generic-cli`, `claude-code`, `opencode` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-002` | `harness/scenarios/deterministic/minimal-python-full-workflow.yaml` | `deterministic-workflow` | `large` | `manual` | `generic-cli` | `generic-cli`, `claude-code` | `fixture-seed` |
-| `AIDD-DETERMINISTIC-003` | `harness/scenarios/deterministic/project-set-plan-context.yaml` | `deterministic-stage` | `medium` | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
+| `AIDD-DETERMINISTIC-003` | `harness/scenarios/deterministic/project-set-plan-context.yaml` | `deterministic-workflow` | `medium` | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
 | `AIDD-LIVE-001` | `harness/scenarios/live/typer-styled-help-alignment.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex` | `curated-issue-pool` |
 | `AIDD-LIVE-002` | `harness/scenarios/live/typer-boolean-help-rendering.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex` | `curated-issue-pool` |
 | `AIDD-LIVE-003` | `harness/scenarios/live/httpx-invalid-header-message.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex` | `curated-issue-pool` |

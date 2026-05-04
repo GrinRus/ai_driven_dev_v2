@@ -8,6 +8,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 from aidd.harness.scenarios import Scenario
 
@@ -96,6 +97,58 @@ def _cleanup_transient_git_files(repo_path: Path) -> None:
                 ) from exc
 
 
+def _local_directory_source(repo_url: str) -> Path | None:
+    parsed = urlparse(repo_url)
+    if parsed.scheme == "file":
+        candidate = Path(unquote(parsed.path)).expanduser()
+    elif parsed.scheme:
+        return None
+    else:
+        candidate = Path(repo_url).expanduser()
+
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    resolved = candidate.resolve(strict=False)
+    if not resolved.is_dir():
+        return None
+    return resolved
+
+
+def _is_standalone_git_worktree(path: Path) -> bool:
+    return (path / ".git").exists()
+
+
+def _materialize_local_directory_repository(
+    *,
+    source_path: Path,
+    repo_path: Path,
+) -> PreparedRepository:
+    if repo_path.exists():
+        _remove_tree(repo_path)
+    try:
+        shutil.copytree(
+            source_path,
+            repo_path,
+            ignore=shutil.ignore_patterns(".git", ".aidd", ".pytest_cache", "__pycache__"),
+        )
+    except OSError as exc:
+        raise RepoPreparationError(
+            "Failed to materialize local fixture repository "
+            f"'{source_path.as_posix()}': {exc}"
+        ) from exc
+
+    _run_git(["init"], cwd=repo_path)
+    _run_git(["config", "user.email", "aidd-fixture@example.invalid"], cwd=repo_path)
+    _run_git(["config", "user.name", "AIDD Fixture"], cwd=repo_path)
+    _run_git(["add", "."], cwd=repo_path)
+    _run_git(["commit", "-m", "fixture baseline"], cwd=repo_path)
+    return PreparedRepository(
+        repo_path=repo_path,
+        action="materialized",
+        resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=repo_path),
+    )
+
+
 @contextmanager
 def _acquire_cache_lock(*, lock_path: Path) -> Iterator[None]:
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -157,8 +210,18 @@ def prepare_scenario_repository(*, cache_root: Path, scenario: Scenario) -> Prep
     slug = _repo_slug(scenario.repo.url)
     repo_path = repo_cache_root / slug
     repo_lock_path = cache_root / ".locks" / f"repo-{slug}.lock"
+    local_source_path = _local_directory_source(scenario.repo.url)
 
     with _acquire_cache_lock(lock_path=repo_lock_path):
+        if (
+            local_source_path is not None
+            and not _is_standalone_git_worktree(local_source_path)
+        ):
+            return _materialize_local_directory_repository(
+                source_path=local_source_path,
+                repo_path=repo_path,
+            )
+
         if repo_path.exists():
             if not (repo_path / ".git").exists():
                 _remove_tree(repo_path)

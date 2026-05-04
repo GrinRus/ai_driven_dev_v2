@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from aidd.cli import main as cli_main
 from aidd.cli.ui import OperatorUiService, UiServerOptions
@@ -11,17 +12,25 @@ from aidd.core.run_store import (
     persist_stage_status,
     run_attempt_runtime_log_path,
 )
+from aidd.core.workflow_service import WorkflowRunRequest, WorkflowRunResult
 
 
-def _service(workspace_root: Path) -> OperatorUiService:
+def _service(
+    workspace_root: Path,
+    *,
+    workflow_runner: Any | None = None,
+) -> OperatorUiService:
+    options = UiServerOptions(
+        work_item="WI-UI",
+        root=workspace_root,
+        config=Path("aidd.test.toml"),
+        host="127.0.0.1",
+        port=0,
+    )
+    if workflow_runner is not None:
+        return OperatorUiService(options, workflow_runner=workflow_runner)
     return OperatorUiService(
-        UiServerOptions(
-            work_item="WI-UI",
-            root=workspace_root,
-            config=Path("aidd.test.toml"),
-            host="127.0.0.1",
-            port=0,
-        )
+        options
     )
 
 
@@ -114,6 +123,61 @@ def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> 
     assert payload["unresolved_blocking_question_ids"] == []
     answers_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "answers.md"
     assert "Release target is 0.2.0." in answers_path.read_text(encoding="utf-8")
+
+
+def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    captured: dict[str, object] = {}
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        captured.update(kwargs)
+        request = kwargs["request"]
+        assert isinstance(request, WorkflowRunRequest)
+        return WorkflowRunResult(
+            run_id="run-ui-seam",
+            executed_stage_count=1,
+            completed=True,
+            incomplete=(),
+        )
+
+    service = _service(workspace_root, workflow_runner=fake_workflow_runner)
+
+    response = service.handle_post(
+        "/api/workflow/run",
+        {
+            "runtime": "generic-cli",
+            "from_stage": "research",
+            "to_stage": "plan",
+            "log_follow": True,
+        },
+    )
+
+    payload = _payload(response)
+    request = captured["request"]
+    assert isinstance(request, WorkflowRunRequest)
+    assert payload["run_id"] == "run-ui-seam"
+    assert payload["completed"] is True
+    assert request.work_item == "WI-UI"
+    assert request.runtime_id == "generic-cli"
+    assert request.stage_start == "research"
+    assert request.stage_end == "plan"
+    assert request.log_follow is True
+    assert "stage_executor" in captured
+
+
+def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    response = service.handle_get("/operator.js", {})
+    script = response.body.decode("utf-8")
+
+    assert "function escapeHtml(value)" in script
+    assert "${escapeHtml(question.text)}" in script
+    assert "`<span>${escapeHtml(item)}</span>`" in script
+    assert "`<pre>${escapeHtml(view.text)}</pre>`" in script
+    assert "${escapeHtml(key)}: ${escapeHtml(value)}" in script
 
 
 def test_ui_command_is_registered() -> None:

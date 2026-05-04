@@ -2,6 +2,7 @@ from __future__ import annotations
 
 # ruff: noqa: E501
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, fields, is_dataclass
 from enum import Enum
 from http import HTTPStatus
@@ -31,10 +32,13 @@ from aidd.core.operator_frontend import (
 from aidd.core.stages import STAGES
 from aidd.core.workflow_service import (
     WorkflowRunRequest,
+    WorkflowRunResult,
     WorkflowStageExecutionError,
     WorkflowStageExecutionRequest,
     run_workflow,
 )
+
+WorkflowRunner = Callable[..., WorkflowRunResult]
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,8 +110,14 @@ def _runtime_from_payload(payload: dict[str, Any]) -> str:
 
 
 class OperatorUiService:
-    def __init__(self, options: UiServerOptions) -> None:
+    def __init__(
+        self,
+        options: UiServerOptions,
+        *,
+        workflow_runner: WorkflowRunner = run_workflow,
+    ) -> None:
         self.options = options
+        self._workflow_runner = workflow_runner
 
     @property
     def workspace_root(self) -> Path:
@@ -251,7 +261,7 @@ class OperatorUiService:
                     exit_code=int(exc.exit_code),
                 ) from exc
 
-        return run_workflow(
+        return self._workflow_runner(
             request=WorkflowRunRequest(
                 work_item=self.options.work_item,
                 runtime_id=runtime,
@@ -510,6 +520,16 @@ const stages = ["idea", "research", "plan", "review-spec", "tasklist", "implemen
 let activeStage = "idea";
 let activeTab = "questions";
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, options);
   const payload = await response.json();
@@ -529,11 +549,11 @@ async function loadRun() {
     const statusByStage = Object.fromEntries(metadata.stages.map((stage) => [stage.stage, stage]));
     document.getElementById("stages").innerHTML = stages.map((stage) => {
       const status = statusByStage[stage]?.status || "pending";
-      return `<button class="stage-button ${stage === activeStage ? "active" : ""}" data-stage="${stage}" type="button"><span>${stage}</span><span class="stage-status">${status}</span></button>`;
+      return `<button class="stage-button ${stage === activeStage ? "active" : ""}" data-stage="${escapeHtml(stage)}" type="button"><span>${escapeHtml(stage)}</span><span class="stage-status">${escapeHtml(status)}</span></button>`;
     }).join("");
   } catch (error) {
     setText("runLine", error.message);
-    document.getElementById("stages").innerHTML = stages.map((stage) => `<button class="stage-button ${stage === activeStage ? "active" : ""}" data-stage="${stage}" type="button">${stage}</button>`).join("");
+    document.getElementById("stages").innerHTML = stages.map((stage) => `<button class="stage-button ${stage === activeStage ? "active" : ""}" data-stage="${escapeHtml(stage)}" type="button">${escapeHtml(stage)}</button>`).join("");
   }
 }
 
@@ -546,7 +566,7 @@ async function loadStage() {
       `state: ${result.final_state}`,
       `attempts: ${result.attempt_count}`,
       `validator pass/fail: ${result.validator_pass_count}/${result.validator_fail_count}`
-    ].map((item) => `<span>${item}</span>`).join("");
+    ].map((item) => `<span>${escapeHtml(item)}</span>`).join("");
   } catch (error) {
     document.getElementById("stageMeta").textContent = error.message;
   }
@@ -560,23 +580,23 @@ async function loadQuestions() {
   }
   document.getElementById("content").innerHTML = view.questions.map((question) => `
     <div class="question">
-      <strong>${question.question_id} / ${question.status}</strong>
-      <div>${question.text}</div>
-      <textarea data-question="${question.question_id}" ${question.status === "resolved" ? "disabled" : ""}></textarea>
-      <button class="answer" data-question="${question.question_id}" type="button">Answer</button>
+      <strong>${escapeHtml(question.question_id)} / ${escapeHtml(question.status)}</strong>
+      <div>${escapeHtml(question.text)}</div>
+      <textarea data-question="${escapeHtml(question.question_id)}" ${question.status === "resolved" ? "disabled" : ""}></textarea>
+      <button class="answer" data-question="${escapeHtml(question.question_id)}" type="button">Answer</button>
     </div>
   `).join("");
 }
 
 async function loadLogs() {
   const view = await api(`/api/logs?stage=${encodeURIComponent(activeStage)}`);
-  document.getElementById("content").innerHTML = `<pre>${view.text.replace(/[&<>]/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[char]))}</pre>`;
+  document.getElementById("content").innerHTML = `<pre>${escapeHtml(view.text)}</pre>`;
 }
 
 async function loadArtifacts() {
   const view = await api(`/api/artifacts?stage=${encodeURIComponent(activeStage)}`);
-  const docs = Object.entries(view.documents).map(([key, value]) => `<li>${key}: ${value}</li>`).join("");
-  const logs = Object.entries(view.logs).map(([key, value]) => `<li>${key}: ${value}</li>`).join("");
+  const docs = Object.entries(view.documents).map(([key, value]) => `<li>${escapeHtml(key)}: ${escapeHtml(value)}</li>`).join("");
+  const logs = Object.entries(view.logs).map(([key, value]) => `<li>${escapeHtml(key)}: ${escapeHtml(value)}</li>`).join("");
   document.getElementById("content").innerHTML = `<h2>Documents</h2><ul class="list">${docs}</ul><h2>Logs</h2><ul class="list">${logs}</ul>`;
 }
 
@@ -609,7 +629,8 @@ document.addEventListener("click", async (event) => {
   const answerButton = event.target.closest(".answer");
   if (answerButton) {
     const questionId = answerButton.dataset.question;
-    const textarea = document.querySelector(`textarea[data-question="${questionId}"]`);
+    const textarea = answerButton.closest(".question")?.querySelector("textarea");
+    if (!questionId || !textarea) return;
     await api("/api/answers", {
       method: "POST",
       headers: {"Content-Type": "application/json"},

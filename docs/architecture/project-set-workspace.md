@@ -105,4 +105,6 @@ Live E2E coverage can be added after deterministic project-set coverage exists.
 Current deterministic coverage includes
 `harness/scenarios/deterministic/project-set-plan-context.yaml`, which declares
 two local roots and verifies that both project ids remain visible in project-set
-context and stage-brief evidence.
+context, stage-brief evidence, attempt artifact indexes, and input bundles. The
+operator artifact read model also exposes `project_set_context` so frontend
+consumers can link the project-set context document without parsing stage briefs.

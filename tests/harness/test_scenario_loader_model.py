@@ -239,11 +239,13 @@ def test_project_set_deterministic_scenario_declares_two_root_context_checks() -
 
     assert scenario.scenario_id == "AIDD-DETERMINISTIC-003"
     assert scenario.is_live is False
-    assert scenario.scenario_class == "deterministic-stage"
+    assert scenario.scenario_class == "deterministic-workflow"
     assert scenario.feature_source is not None
     assert scenario.feature_source.seed_id == "minimal-python-project-set-plan-context"
-    assert scenario.run.stage_start == "plan"
+    assert scenario.run.stage_start == "idea"
     assert scenario.run.stage_end == "plan"
     assert any("[[project_set.projects]]" in command for command in scenario.setup.commands)
     assert any("`api`" in command for command in scenario.verify.commands)
     assert any("`web`" in command for command in scenario.verify.commands)
+    assert any("artifact-index.json" in command for command in scenario.verify.commands)
+    assert any("input-bundle.md" in command for command in scenario.verify.commands)

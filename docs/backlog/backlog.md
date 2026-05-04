@@ -6,8 +6,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W20-E1-S3-T5`
-
 ## Soon
 
 ## Parking lot
@@ -68,3 +66,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-04` W20 evidence-and-contract pass completed `W20-E1-S1-T1`, `W20-E1-S1-T2`, `W20-E1-S2-T1`, `W20-E2-S1-T1`, and `W20-E3-S1-T1`; `W20-E1-S2-T2` remains parked as blocked by missing release candidate tag and publishing credentials, and frontend/project-set implementation tasks remain parked for explicit promotion.
 - `2026-05-04` W20 foundation pass completed live failure triage plus the OpenCode native command regression, frontend read/write service foundation, and project-set config/resolver foundation; release evidence, fresh clean live rerun, frontend UI, and project-set stage/harness integration remain parked follow-ups.
 - `2026-05-04` W20 implementation pass completed project-set stage/harness integration and the first local frontend UI surface; OpenCode rerun `W20-E1-S3-T3` found an AIDD-owned interview parser boundary, `W20-E1-S3-T4` fixed it with regression coverage, and `W20-E1-S3-T5` is next for the post-parser-fix live rerun.
+- `2026-05-04` W20 closure-and-hardening pass completed frontend smoke hardening and project-set artifact evidence tightening; post-parser-fix OpenCode live rerun `W20-E1-S3-T5` is blocked by runtime/provider timeout evidence, and `W20-E1-S2-T2` remains parked until a release candidate tag and registry credentials exist.

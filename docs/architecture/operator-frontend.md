@@ -116,4 +116,9 @@ Current W20 implementation status:
 - private JSON endpoints expose run, stage, questions, answer writes, logs,
   artifacts, and workflow run requests over the operator services;
 - the UI shell serves static HTML, CSS, and JavaScript from the Python package,
-  without a Node or Vite dependency.
+  without a Node or Vite dependency;
+- dynamic question text, stage metadata, artifact labels and paths, runtime-derived
+  values, and logs are rendered through escaped UI text paths;
+- local smoke evidence covers page load, blocking answer persistence to
+  `answers.md`, log and artifact reads, and workflow-run delegation through the
+  internal service seam.
