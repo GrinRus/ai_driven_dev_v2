@@ -78,6 +78,7 @@ As an **evaluator**, I want harness scenarios, graders, and log analysis built i
 Success signals:
 
 - smoke, regression, and live E2E scenarios exist,
+- live E2E evidence can be refreshed as auditable bundles or explicit environment blockers,
 - every run produces durable audit artifacts,
 - failure classification separates model, document, adapter, and environment failures.
 
@@ -99,6 +100,7 @@ Success signals:
 
 - the project ships as a Python CLI package,
 - the tool works with `pipx`, `uv tool install`, and container images,
+- release and install evidence is captured for supported delivery channels,
 - runtime binaries stay external and replaceable.
 
 ### US-10 — prompt and workflow change accountability
@@ -111,11 +113,32 @@ Success signals:
 - runs record the prompt file paths, Git commit SHA, and content hashes used,
 - evals can be re-run against the same scenario to compare outcomes.
 
+### US-11 — operator workflow frontend
+
+As an **operator**, I want a frontend for the governed delivery flow so that I can run each stage, answer questions, inspect artifacts, and view runner logs without losing the CLI's workflow semantics.
+
+Success signals:
+
+- the frontend can start and resume the full `idea -> qa` flow and individual stages,
+- blocking questions can be answered in the frontend and persist to the standard question and answer documents,
+- runtime logs, validation reports, repair history, and stage artifacts are visible with CLI-equivalent provenance.
+
+### US-12 — project-set workflow
+
+As an **operator**, I want one governed flow to cover a monorepo or a defined set of related project roots so that cross-project work stays coordinated without losing per-project ownership and validation evidence.
+
+Success signals:
+
+- project or package roots are declared before execution and remain visible in run artifacts,
+- stage artifacts, questions, logs, and validation evidence preserve project ownership and cross-project links,
+- execution stays bounded to the declared project set while runtime-specific discovery remains outside core workflow semantics.
+
 ## Out of scope for the first release
 
 The first release is not trying to:
 
 - bundle third-party runtimes,
 - guarantee cloud orchestration for every runtime,
+- guarantee multi-repository orchestration beyond explicitly declared local project roots,
 - replace human product ownership,
 - hide runtime differences when those differences matter for capabilities.

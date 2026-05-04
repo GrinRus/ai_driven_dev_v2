@@ -4407,3 +4407,178 @@ Sync notes:
 
 - `2026-05-04` Wave 19 opened via `W8-E3-S1` queue-restoration policy after the user-story coverage audit found implementation gaps in native question/event routing, repair-history finalization, eval JSONL propagation, and compatibility evidence.
 - `2026-05-04` Wave 19 completed: structured adapter JSONL is persisted as optional attempt artifacts; native question/pause events route into `questions.md`; normal repair runs preserve repair history in final `stage-result.md`; eval bundles copy optional JSONL artifacts and use `events.jsonl` in failure-boundary analysis; CI now covers Python 3.12 through 3.14.
+
+---
+
+## Wave 20 — gap intake and product-scope expansion (`next`)
+
+### Epic W20-E1 — evidence closure (`next`)
+Linked stories: `US-07`, `US-09`, `US-10`
+
+#### Slice W20-E1-S1 — live E2E evidence refresh (`next`)
+Goal: produce a current live E2E readiness decision and either preserve a fresh audit bundle or document the exact provider/environment blocker.
+
+Primary outputs:
+
+- live E2E preflight decision
+- manual live E2E audit bundle or explicit blocker note
+
+Touched areas:
+
+- `docs/e2e/`
+- `harness/scenarios/live/`
+
+Dependencies:
+
+- Wave 19 compatibility and eval artifact baseline
+
+Local tasks:
+
+- `W20-E1-S1-T1` (next) Refresh the live E2E preflight and current evidence decision for one maintained runtime.
+- `W20-E1-S1-T2` (planned) Run one maintained-runtime manual live E2E and preserve the audit bundle, or document the explicit provider/env blocker if preflight fails.
+
+Exit evidence:
+
+- maintainers can tell whether fresh live E2E evidence exists for `US-07`;
+- missing provider or environment setup is recorded as a blocker, not hidden as an implementation gap.
+
+#### Slice W20-E1-S2 — release and install evidence refresh (`planned`)
+Goal: produce a current release/install evidence decision for the supported delivery channels without making live E2E a release gate.
+
+Primary outputs:
+
+- release/install prerequisite decision
+- candidate install evidence or explicit release-channel blocker
+
+Touched areas:
+
+- `docs/release-checklist.md`
+- `docs/architecture/distribution-and-development.md`
+
+Dependencies:
+
+- Wave 19 compatibility and release workflow baseline
+
+Local tasks:
+
+- `W20-E1-S2-T1` (planned) Refresh release/install evidence prerequisites for the next candidate across PyPI or TestPyPI, `pipx`, `uv tool`, and container paths.
+- `W20-E1-S2-T2` (later) Capture PyPI or TestPyPI, `pipx`, `uv tool`, and container smoke evidence for the next release candidate.
+
+Exit evidence:
+
+- maintainers can tell whether current `US-09` install evidence exists for supported delivery channels;
+- missing release candidate, registry access, or publishing credentials are explicit blockers.
+
+### Epic W20-E2 — operator workflow frontend (`planned`)
+Linked stories: `US-05`, `US-06`, `US-10`, `US-11`
+
+#### Slice W20-E2-S1 — frontend operator flow contract (`planned`)
+Goal: define the frontend workflow boundary before any UI implementation starts.
+
+Primary outputs:
+
+- frontend operator flow contract
+- CLI parity and artifact visibility boundaries
+
+Touched areas:
+
+- `docs/product/`
+- `docs/architecture/`
+
+Dependencies:
+
+- `US-11`
+
+Local tasks:
+
+- `W20-E2-S1-T1` (planned) Define the frontend operator flow for stage execution, question answering, runner-log viewing, artifact browsing, and CLI parity boundaries.
+
+Exit evidence:
+
+- frontend scope is documented as an operator surface over existing AIDD semantics;
+- question, log, validation, repair, and artifact visibility expectations are reviewable before code starts.
+
+#### Slice W20-E2-S2 — first frontend implementation surface (`later`)
+Goal: add the first frontend surface only after the operator flow contract is approved.
+
+Primary outputs:
+
+- first frontend run-control surface
+- frontend question, log, and artifact views
+
+Touched areas:
+
+- frontend application surface
+
+Dependencies:
+
+- `W20-E2-S1`
+
+Local tasks:
+
+- `W20-E2-S2-T1` (later) Implement the first frontend run-control surface for starting and resuming a documented work-item flow.
+- `W20-E2-S2-T2` (later) Render frontend views for blocking questions, runner logs, validation reports, repair history, and stage artifacts.
+
+Exit evidence:
+
+- the frontend can operate the documented minimum flow without bypassing CLI-equivalent provenance.
+
+### Epic W20-E3 — project-set workflow scope (`planned`)
+Linked stories: `US-01`, `US-02`, `US-03`, `US-07`, `US-10`, `US-12`
+
+#### Slice W20-E3-S1 — project-set workspace contract (`planned`)
+Goal: define how monorepo package roots and related local project roots are declared, bounded, and represented in AIDD artifacts.
+
+Primary outputs:
+
+- project-set workspace contract
+- artifact ownership and cross-project link rules
+
+Touched areas:
+
+- `docs/product/`
+- `docs/architecture/`
+
+Dependencies:
+
+- `US-12`
+
+Local tasks:
+
+- `W20-E3-S1-T1` (planned) Define the project-set and monorepo workspace contract, including declared roots, artifact ownership, validation evidence, and execution bounds.
+
+Exit evidence:
+
+- maintainers can distinguish supported monorepo/project-set behavior from unsupported implicit multi-repository orchestration;
+- downstream implementation can preserve document-first artifacts and validation evidence per declared project root.
+
+#### Slice W20-E3-S2 — project-set implementation and coverage (`later`)
+Goal: implement project-set execution only after the workspace contract is explicit.
+
+Primary outputs:
+
+- project-set workspace resolution
+- monorepo/project-set harness coverage
+
+Touched areas:
+
+- `src/aidd/core/`
+- `src/aidd/harness/`
+
+Dependencies:
+
+- `W20-E3-S1`
+
+Local tasks:
+
+- `W20-E3-S2-T1` (later) Implement project-set workspace resolution from the approved workspace contract.
+- `W20-E3-S2-T2` (later) Add harness coverage for declared monorepo roots and cross-project artifact ownership.
+
+Exit evidence:
+
+- declared project roots are resolved deterministically;
+- harness coverage proves project ownership is preserved in artifacts and validation evidence.
+
+Sync notes:
+
+- `2026-05-04` Wave 20 opened via `W8-E3-S1` queue-restoration policy after the gap analysis found missing frontend and project-set product stories plus fresh live E2E and release/install evidence gaps. Initial queue restoration promotes `W20-E1-S1-T1` to `Next`; `W20-E1-S1-T2`, `W20-E1-S2-T1`, `W20-E2-S1-T1`, and `W20-E3-S1-T1` to `Soon`; and `W20-E1-S2-T2`, `W20-E2-S2-T1`, `W20-E2-S2-T2`, `W20-E3-S2-T1`, and `W20-E3-S2-T2` to `Parking lot`.
