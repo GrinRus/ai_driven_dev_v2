@@ -27,6 +27,12 @@ command = "opencode run --format json --dangerously-skip-permissions"
 mode = "native"
 # timeout_seconds = 900
 
+# Optional local project-set roots for monorepos or related in-workspace projects.
+# [[project_set.projects]]
+# id = "api"
+# root = "services/api"
+# role = "primary"
+
 [logging]
 mode = "both"
 

@@ -6,22 +6,16 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W20-E1-S1-T1`
-
 ## Soon
-
-- `W20-E1-S1-T2`
-- `W20-E1-S2-T1`
-- `W20-E2-S1-T1`
-- `W20-E3-S1-T1`
 
 ## Parking lot
 
 - `W20-E1-S2-T2`
-- `W20-E2-S2-T1`
-- `W20-E2-S2-T2`
-- `W20-E3-S2-T1`
-- `W20-E3-S2-T2`
+- `W20-E1-S3-T3`
+- `W20-E2-S3-T1`
+- `W20-E2-S3-T2`
+- `W20-E3-S3-T1`
+- `W20-E3-S3-T2`
 
 ## Update rules
 
@@ -74,3 +68,5 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-04` Wave 19 was opened via `W8-E3-S1` queue-restoration policy for user-story implementation closure; promoted `W19-E1-S1-T1` to `Next`, `W19-E1-S1-T2`, `W19-E1-S1-T3`, `W19-E2-S1-T1`, and `W19-E3-S1-T1` to `Soon`, and parked compatibility/live evidence tasks until the event, repair, and eval closures landed.
 - `2026-05-04` Wave 19 completed; native structured question/event routing, optional JSONL attempt and eval artifacts, repair-history finalization, and Python 3.12-3.14 CI alignment are in place, and the backlog queue is empty again.
 - `2026-05-04` Wave 20 was opened via `W8-E3-S1` queue-restoration policy for gap intake and product-scope expansion; promoted `W20-E1-S1-T1` to `Next`, `W20-E1-S1-T2`, `W20-E1-S2-T1`, `W20-E2-S1-T1`, and `W20-E3-S1-T1` to `Soon`, and parked release evidence capture plus frontend/project-set implementation tasks.
+- `2026-05-04` W20 evidence-and-contract pass completed `W20-E1-S1-T1`, `W20-E1-S1-T2`, `W20-E1-S2-T1`, `W20-E2-S1-T1`, and `W20-E3-S1-T1`; `W20-E1-S2-T2` remains parked as blocked by missing release candidate tag and publishing credentials, and frontend/project-set implementation tasks remain parked for explicit promotion.
+- `2026-05-04` W20 foundation pass completed live failure triage plus the OpenCode native command regression, frontend read/write service foundation, and project-set config/resolver foundation; release evidence, fresh clean live rerun, frontend UI, and project-set stage/harness integration remain parked follow-ups.

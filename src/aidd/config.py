@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,8 @@ from aidd.adapters.runtime_registry import (
 from aidd.compatibility import should_upgrade_legacy_raw_provider_command
 from aidd.core.stages import STAGES, is_valid_stage
 
+_PROJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
+
 
 @dataclass(frozen=True)
 class RuntimeConfig:
@@ -21,6 +24,18 @@ class RuntimeConfig:
     execution_mode: RuntimeExecutionMode
     timeout_seconds: float | None
     stage_timeout_seconds: dict[str, float]
+
+
+@dataclass(frozen=True)
+class ProjectConfig:
+    id: str
+    root: Path
+    role: str | None = None
+
+
+@dataclass(frozen=True)
+class ProjectSetConfig:
+    projects: tuple[ProjectConfig, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -49,6 +64,7 @@ class AiddConfig:
     log_mode: str
     max_repair_attempts: int
     runtime_configs: dict[str, RuntimeConfig]
+    project_set: ProjectSetConfig
 
     def __init__(
         self,
@@ -57,6 +73,7 @@ class AiddConfig:
         log_mode: str,
         max_repair_attempts: int,
         runtime_configs: dict[str, RuntimeConfig] | None = None,
+        project_set: ProjectSetConfig | None = None,
         generic_cli_command: str | None = None,
         claude_code_command: str | None = None,
         codex_command: str | None = None,
@@ -77,6 +94,7 @@ class AiddConfig:
         object.__setattr__(self, "workspace_root", workspace_root)
         object.__setattr__(self, "log_mode", log_mode)
         object.__setattr__(self, "max_repair_attempts", max_repair_attempts)
+        object.__setattr__(self, "project_set", project_set or ProjectSetConfig())
         object.__setattr__(
             self,
             "runtime_configs",
@@ -370,6 +388,55 @@ def _runtime_stage_timeout_seconds(data: dict[str, Any], runtime_id: str) -> dic
     return stage_timeouts
 
 
+def _parse_project_set(data: dict[str, Any]) -> ProjectSetConfig:
+    raw_project_set = data.get("project_set", {})
+    if raw_project_set is None:
+        return ProjectSetConfig()
+    if not isinstance(raw_project_set, dict):
+        raise ValueError("[project_set] must be a table when provided.")
+
+    raw_projects = raw_project_set.get("projects", ())
+    if raw_projects in (None, ()):
+        return ProjectSetConfig()
+    if not isinstance(raw_projects, list):
+        raise ValueError("[[project_set.projects]] must be an array of tables.")
+
+    projects: list[ProjectConfig] = []
+    seen_ids: set[str] = set()
+    for index, raw_project in enumerate(raw_projects, start=1):
+        if not isinstance(raw_project, dict):
+            raise ValueError(
+                f"project_set.projects[{index}] must be a table when provided."
+            )
+        project_id = str(raw_project.get("id", "")).strip()
+        if not project_id:
+            raise ValueError(f"project_set.projects[{index}].id is required.")
+        if _PROJECT_ID_PATTERN.match(project_id) is None:
+            raise ValueError(
+                f"project_set.projects[{index}].id must use letters, numbers, "
+                "underscores, or hyphens and start with a letter or number."
+            )
+        if project_id in seen_ids:
+            raise ValueError(f"Duplicate project_set project id: {project_id}.")
+        seen_ids.add(project_id)
+
+        raw_root = str(raw_project.get("root", "")).strip()
+        if not raw_root:
+            raise ValueError(f"project_set.projects[{index}].root is required.")
+
+        raw_role = raw_project.get("role")
+        role = str(raw_role).strip() if raw_role is not None else None
+        projects.append(
+            ProjectConfig(
+                id=project_id,
+                root=Path(raw_root),
+                role=role or None,
+            )
+        )
+
+    return ProjectSetConfig(projects=tuple(projects))
+
+
 def load_config(path: Path) -> AiddConfig:
     data: dict[str, Any] = {}
     if path.exists():
@@ -394,4 +461,5 @@ def load_config(path: Path) -> AiddConfig:
         log_mode=log_mode,
         max_repair_attempts=max_repair_attempts,
         runtime_configs=runtime_configs,
+        project_set=_parse_project_set(data),
     )

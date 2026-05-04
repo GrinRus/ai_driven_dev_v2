@@ -10,8 +10,8 @@ from rich.console import Console
 
 from aidd.adapters.base import CapabilityReport
 from aidd.adapters.runtime_registry import RuntimeExecutionMode, runtime_ids
-from aidd.cli.run_lookup import resolve_run_metadata_summary
 from aidd.config import AiddConfig
+from aidd.core.run_inspection import resolve_run_metadata_summary
 from aidd.core.run_store import work_item_runs_root
 from aidd.core.stages import STAGES
 

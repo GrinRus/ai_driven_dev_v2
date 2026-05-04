@@ -4410,12 +4410,12 @@ Sync notes:
 
 ---
 
-## Wave 20 — gap intake and product-scope expansion (`next`)
+## Wave 20 — gap intake and product-scope expansion (`planned`)
 
-### Epic W20-E1 — evidence closure (`next`)
+### Epic W20-E1 — evidence closure (`blocked`)
 Linked stories: `US-07`, `US-09`, `US-10`
 
-#### Slice W20-E1-S1 — live E2E evidence refresh (`next`)
+#### Slice W20-E1-S1 — live E2E evidence refresh (`done`)
 Goal: produce a current live E2E readiness decision and either preserve a fresh audit bundle or document the exact provider/environment blocker.
 
 Primary outputs:
@@ -4434,15 +4434,22 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E1-S1-T1` (next) Refresh the live E2E preflight and current evidence decision for one maintained runtime.
-- `W20-E1-S1-T2` (planned) Run one maintained-runtime manual live E2E and preserve the audit bundle, or document the explicit provider/env blocker if preflight fails.
+- `W20-E1-S1-T1` (done) Refresh the live E2E preflight and current evidence decision for one maintained runtime.
+- `W20-E1-S1-T2` (done) Run one maintained-runtime manual live E2E and preserve the audit bundle, or document the explicit provider/env blocker if preflight fails.
+
+Evidence:
+
+- `2026-05-04` Local `uv run aidd doctor` reported `codex` and `opencode` provider and execution command readiness.
+- `2026-05-04` `uv run aidd eval doctor harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex` passed for `AIDD-LIVE-005` with default native Codex command `codex exec --full-auto --skip-git-repo-check --json -`.
+- `2026-05-04` Fallback `opencode` run `eval-live-005-opencode-20260504T121644Z` produced a durable eval bundle at `.aidd/reports/evals/eval-live-005-opencode-20260504T121644Z` with status `fail`, quality gate `fail`, and first failure boundary `adapter` / `non_zero_exit` at the `idea` stage.
+- `2026-05-04` Default `codex` attempt `eval-live-005-codex-20260504T120734Z` did not finalize beyond partial issue-selection evidence before it was stopped; do not use that partial bundle as a clean live audit.
 
 Exit evidence:
 
 - maintainers can tell whether fresh live E2E evidence exists for `US-07`;
 - missing provider or environment setup is recorded as a blocker, not hidden as an implementation gap.
 
-#### Slice W20-E1-S2 — release and install evidence refresh (`planned`)
+#### Slice W20-E1-S2 — release and install evidence refresh (`blocked`)
 Goal: produce a current release/install evidence decision for the supported delivery channels without making live E2E a release gate.
 
 Primary outputs:
@@ -4459,20 +4466,59 @@ Dependencies:
 
 - Wave 19 compatibility and release workflow baseline
 
+Blocked reason:
+
+- `2026-05-04` Local prerequisite refresh found no release candidate tag pointing at `HEAD` and no local PyPI/TestPyPI/GHCR token environment variables (`PYPI_API_TOKEN`, `TEST_PYPI_API_TOKEN`, `TWINE_USERNAME`, `TWINE_PASSWORD`, `GITHUB_TOKEN`, `GHCR_TOKEN`, `CR_PAT`) set for release-channel evidence capture.
+
 Local tasks:
 
-- `W20-E1-S2-T1` (planned) Refresh release/install evidence prerequisites for the next candidate across PyPI or TestPyPI, `pipx`, `uv tool`, and container paths.
-- `W20-E1-S2-T2` (later) Capture PyPI or TestPyPI, `pipx`, `uv tool`, and container smoke evidence for the next release candidate.
+- `W20-E1-S2-T1` (done) Refresh release/install evidence prerequisites for the next candidate across PyPI or TestPyPI, `pipx`, `uv tool`, and container paths.
+- `W20-E1-S2-T2` (blocked) Capture PyPI or TestPyPI, `pipx`, `uv tool`, and container smoke evidence for the next release candidate.
 
 Exit evidence:
 
 - maintainers can tell whether current `US-09` install evidence exists for supported delivery channels;
 - missing release candidate, registry access, or publishing credentials are explicit blockers.
 
+#### Slice W20-E1-S3 — live eval failure triage (`done`)
+Goal: turn the current failing live evidence into an owned fix or an explicit external blocker before requesting another live audit.
+
+Primary outputs:
+
+- live eval failure triage note
+- focused regression for any AIDD-owned failure found during triage
+
+Touched areas:
+
+- `docs/backlog/`
+- `src/aidd/adapters/opencode/`
+- `tests/adapters/`
+
+Dependencies:
+
+- `W20-E1-S1`
+
+Local tasks:
+
+- `W20-E1-S3-T1` (done) Triage the `AIDD-LIVE-005` OpenCode audit bundle and partial Codex bundle, recording the first owned failure boundary and reproduction command.
+- `W20-E1-S3-T2` (done) Add a focused OpenCode native command regression for the AIDD-owned live failure.
+- `W20-E1-S3-T3` (later) Rerun `AIDD-LIVE-005` after the OpenCode native command fix and preserve a clean audit bundle or updated runtime/provider blocker.
+
+Evidence:
+
+- `2026-05-04` Triage inspected `.aidd/reports/evals/eval-live-005-opencode-20260504T121644Z` and found an AIDD-owned OpenCode native command assembly defect: the operator message followed `--file`, and the current `opencode run` parser treated `Follow the attached AIDD stage request.` as a second file path.
+- `2026-05-04` Reproduction command remains `uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode`; the failing bundle records `adapter` / `non_zero_exit` at `idea`.
+- `2026-05-04` The Codex run `eval-live-005-codex-20260504T120734Z` still has only partial issue-selection evidence and is not a clean audit.
+
+Exit evidence:
+
+- the OpenCode live failure has an AIDD-owned regression rather than an ambiguous provider blocker;
+- the next live evidence step is a rerun, not another triage pass.
+
 ### Epic W20-E2 — operator workflow frontend (`planned`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`
 
-#### Slice W20-E2-S1 — frontend operator flow contract (`planned`)
+#### Slice W20-E2-S1 — frontend operator flow contract (`done`)
 Goal: define the frontend workflow boundary before any UI implementation starts.
 
 Primary outputs:
@@ -4491,15 +4537,53 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E2-S1-T1` (planned) Define the frontend operator flow for stage execution, question answering, runner-log viewing, artifact browsing, and CLI parity boundaries.
+- `W20-E2-S1-T1` (done) Define the frontend operator flow for stage execution, question answering, runner-log viewing, artifact browsing, and CLI parity boundaries.
+
+Evidence:
+
+- `docs/architecture/operator-frontend.md` defines frontend source-of-truth, required operator flows, question answering, runner-log viewing, artifact browsing, write boundaries, runtime/adapter boundaries, and the minimum implementation surface.
 
 Exit evidence:
 
 - frontend scope is documented as an operator surface over existing AIDD semantics;
 - question, log, validation, repair, and artifact visibility expectations are reviewable before code starts.
 
-#### Slice W20-E2-S2 — first frontend implementation surface (`later`)
-Goal: add the first frontend surface only after the operator flow contract is approved.
+#### Slice W20-E2-S2 — frontend foundation services (`done`)
+Goal: expose frontend-ready read and answer-write services before adding a UI shell.
+
+Primary outputs:
+
+- reusable run, stage, log, artifact, and question read models
+- standard `answers.md` write service for operator answers
+
+Touched areas:
+
+- `src/aidd/core/`
+- `src/aidd/cli/`
+- `tests/core/`
+
+Dependencies:
+
+- `W20-E2-S1`
+
+Local tasks:
+
+- `W20-E2-S2-T1` (done) Extract frontend-ready run, stage, log, artifact, and question read models into reusable core application services.
+- `W20-E2-S2-T2` (done) Add an operator answer persistence service that writes resolved, partial, or deferred answers through the standard `answers.md` path.
+
+Evidence:
+
+- `src/aidd/core/run_inspection.py` now owns the run and stage inspection summaries previously used only by the CLI.
+- `src/aidd/core/operator_frontend.py` exposes UI-neutral operator read models and answer persistence over existing AIDD artifacts.
+- `tests/core/test_operator_frontend.py` covers run metadata, stage status, runtime log lookup, artifact lookup, question status, answer writes, partial-answer semantics, and unknown-question rejection.
+
+Exit evidence:
+
+- frontend code can consume AIDD state without parsing CLI output;
+- operator answer writes preserve the existing question/answer document contract.
+
+#### Slice W20-E2-S3 — first frontend implementation surface (`later`)
+Goal: add the first frontend surface after the foundation services exist.
 
 Primary outputs:
 
@@ -4512,12 +4596,12 @@ Touched areas:
 
 Dependencies:
 
-- `W20-E2-S1`
+- `W20-E2-S2`
 
 Local tasks:
 
-- `W20-E2-S2-T1` (later) Implement the first frontend run-control surface for starting and resuming a documented work-item flow.
-- `W20-E2-S2-T2` (later) Render frontend views for blocking questions, runner logs, validation reports, repair history, and stage artifacts.
+- `W20-E2-S3-T1` (later) Implement the first local frontend shell for starting and resuming a documented work-item flow through the reusable operator services.
+- `W20-E2-S3-T2` (later) Render frontend views for blocking questions, runner logs, validation reports, repair history, and stage artifacts through the reusable operator services.
 
 Exit evidence:
 
@@ -4526,7 +4610,7 @@ Exit evidence:
 ### Epic W20-E3 — project-set workflow scope (`planned`)
 Linked stories: `US-01`, `US-02`, `US-03`, `US-07`, `US-10`, `US-12`
 
-#### Slice W20-E3-S1 — project-set workspace contract (`planned`)
+#### Slice W20-E3-S1 — project-set workspace contract (`done`)
 Goal: define how monorepo package roots and related local project roots are declared, bounded, and represented in AIDD artifacts.
 
 Primary outputs:
@@ -4545,20 +4629,58 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E3-S1-T1` (planned) Define the project-set and monorepo workspace contract, including declared roots, artifact ownership, validation evidence, and execution bounds.
+- `W20-E3-S1-T1` (done) Define the project-set and monorepo workspace contract, including declared roots, artifact ownership, validation evidence, and execution bounds.
+
+Evidence:
+
+- `docs/architecture/project-set-workspace.md` defines the local-only project-set model, supported `[[project_set.projects]]` declaration shape, root bounds, artifact ownership, execution limits, and harness/eval expectations.
 
 Exit evidence:
 
 - maintainers can distinguish supported monorepo/project-set behavior from unsupported implicit multi-repository orchestration;
 - downstream implementation can preserve document-first artifacts and validation evidence per declared project root.
 
-#### Slice W20-E3-S2 — project-set implementation and coverage (`later`)
-Goal: implement project-set execution only after the workspace contract is explicit.
+#### Slice W20-E3-S2 — project-set config and resolver (`done`)
+Goal: make declared local project roots parseable and resolvable before stage or harness integration.
 
 Primary outputs:
 
-- project-set workspace resolution
-- monorepo/project-set harness coverage
+- optional project-set config model
+- bounded project-root resolver and preflight checks
+
+Touched areas:
+
+- `src/aidd/config.py`
+- `src/aidd/core/`
+- `tests/`
+
+Dependencies:
+
+- `W20-E3-S1`
+
+Local tasks:
+
+- `W20-E3-S2-T1` (done) Add optional `[[project_set.projects]]` config parsing with stable ids, repo-relative roots, and descriptive roles.
+- `W20-E3-S2-T2` (done) Add project-set workspace resolution that rejects missing roots, absolute roots, parent escapes, symlink escapes, and duplicate resolved roots.
+
+Evidence:
+
+- `src/aidd/config.py` now parses optional project-set declarations while preserving empty project-set defaults.
+- `src/aidd/core/project_set.py` resolves declared local roots and enforces repository-bound ownership.
+- `tests/test_config.py` and `tests/core/test_project_set.py` cover valid declarations plus duplicate id/root, missing root, absolute root, `..` escape, and symlink escape cases.
+
+Exit evidence:
+
+- declared project roots are resolved deterministically;
+- absent project-set config preserves the existing single-workspace behavior.
+
+#### Slice W20-E3-S3 — project-set stage and harness integration (`later`)
+Goal: propagate resolved project-set context into stage evidence and deterministic harness coverage.
+
+Primary outputs:
+
+- project-set context in stage briefs or work-item context
+- deterministic monorepo/project-set harness coverage
 
 Touched areas:
 
@@ -4567,18 +4689,19 @@ Touched areas:
 
 Dependencies:
 
-- `W20-E3-S1`
+- `W20-E3-S2`
 
 Local tasks:
 
-- `W20-E3-S2-T1` (later) Implement project-set workspace resolution from the approved workspace contract.
-- `W20-E3-S2-T2` (later) Add harness coverage for declared monorepo roots and cross-project artifact ownership.
+- `W20-E3-S3-T1` (later) Persist resolved project-set context into the work-item or stage-brief context without changing adapter workflow semantics.
+- `W20-E3-S3-T2` (later) Add harness coverage for declared monorepo roots and cross-project artifact ownership.
 
 Exit evidence:
 
-- declared project roots are resolved deterministically;
 - harness coverage proves project ownership is preserved in artifacts and validation evidence.
 
 Sync notes:
 
 - `2026-05-04` Wave 20 opened via `W8-E3-S1` queue-restoration policy after the gap analysis found missing frontend and project-set product stories plus fresh live E2E and release/install evidence gaps. Initial queue restoration promotes `W20-E1-S1-T1` to `Next`; `W20-E1-S1-T2`, `W20-E1-S2-T1`, `W20-E2-S1-T1`, and `W20-E3-S1-T1` to `Soon`; and `W20-E1-S2-T2`, `W20-E2-S2-T1`, `W20-E2-S2-T2`, `W20-E3-S2-T1`, and `W20-E3-S2-T2` to `Parking lot`.
+- `2026-05-04` W20 evidence-and-contract pass completed: live preflight is current, fallback live eval bundle `eval-live-005-opencode-20260504T121644Z` is preserved with failing adapter-boundary evidence, release-channel evidence capture is blocked by missing candidate tag and credentials, operator frontend and project-set contracts are documented, and implementation tasks remain parked until explicitly promoted.
+- `2026-05-04` W20 foundation pass triaged the OpenCode live failure to an AIDD-owned native command assembly defect, added an OpenCode command regression, moved run inspection into reusable core services, added frontend-ready operator read/write services, and added optional project-set config plus bounded project-root resolution. Fresh clean live evidence and UI/project-set harness integration remain follow-up tasks.

@@ -103,6 +103,8 @@ The key architecture documents are:
 - `docs/architecture/runtime-matrix.md`
 - `docs/architecture/eval-harness-integration.md`
 - `docs/architecture/distribution-and-development.md`
+- `docs/architecture/operator-frontend.md`
+- `docs/architecture/project-set-workspace.md`
 
 ## What is in this repository today
 

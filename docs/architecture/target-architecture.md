@@ -73,7 +73,7 @@ The runtime reads and writes Markdown documents in the repository workspace. The
 ## 5. System layers
 
 ```text
-operator CLI
+operator CLI / operator frontend
   |
   v
 core orchestrator
@@ -185,6 +185,15 @@ The exact layout may evolve, but the model is fixed:
   `reports/runs/.../attempts/`;
 - eval lanes derive additional timing and quality reports from those run artifacts and scenario
   execution evidence.
+
+Planned operator frontend and project-set workflow support must preserve this ownership model:
+
+- the frontend is an operator surface over the same core workflow and artifacts, not a separate
+  workflow engine;
+- project-set flows use declared local project roots while keeping one governed `.aidd/`
+  workspace and traceable per-project evidence.
+
+Detailed contracts live in `operator-frontend.md` and `project-set-workspace.md`.
 
 ## 7. Stage model
 

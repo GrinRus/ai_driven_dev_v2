@@ -192,11 +192,11 @@ def assemble_native_command(
     resolved_repository_root = (repository_root or Path.cwd()).resolve(strict=False)
     base_tokens.extend(
         (
+            "Follow the attached AIDD stage request.",
             "--dir",
             resolved_repository_root.as_posix(),
             "--file",
             prompt_file_path.resolve(strict=False).as_posix(),
-            "Follow the attached AIDD stage request.",
         )
     )
     _ = context

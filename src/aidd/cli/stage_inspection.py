@@ -6,7 +6,6 @@ from pathlib import Path
 import typer
 from rich.table import Table
 
-from aidd.cli.run_lookup import resolve_stage_result_summary
 from aidd.cli.support import _path_summary, console
 from aidd.core.interview import (
     load_answers_document,
@@ -14,6 +13,7 @@ from aidd.core.interview import (
     resolved_question_ids,
     stage_has_unresolved_blocking_questions,
 )
+from aidd.core.run_inspection import resolve_stage_result_summary
 from aidd.core.stages import STAGES, is_valid_stage
 
 

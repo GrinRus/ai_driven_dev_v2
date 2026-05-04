@@ -155,6 +155,9 @@ def test_build_native_subprocess_spec_uses_prompt_file_without_adapter_flags(
     assert "--dangerously-skip-permissions" in spec.command
     assert "--stage" not in spec.command
     assert "--prompt-pack" not in spec.command
+    assert spec.command.index("Follow the attached AIDD stage request.") < spec.command.index(
+        "--file"
+    )
     assert "--dir" in spec.command
     assert spec.command[spec.command.index("--dir") + 1] == tmp_path.resolve(
         strict=False

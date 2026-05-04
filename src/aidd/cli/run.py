@@ -6,11 +6,6 @@ from typing import Annotated, Any
 import typer
 from rich.table import Table
 
-from aidd.cli.run_lookup import (
-    resolve_run_artifacts_summary,
-    resolve_run_log_summary,
-    resolve_run_metadata_summary,
-)
 from aidd.cli.support import (
     _WORKFLOW_RUN_SUPPORTED_RUNTIMES,
     _allocate_stage_run_id,
@@ -22,6 +17,11 @@ from aidd.cli.support import (
     console,
 )
 from aidd.config import load_config
+from aidd.core.run_inspection import (
+    resolve_run_artifacts_summary,
+    resolve_run_log_summary,
+    resolve_run_metadata_summary,
+)
 from aidd.core.run_store import create_run_manifest
 from aidd.core.stage_graph import StageAdvancementSummary
 from aidd.core.stages import STAGES

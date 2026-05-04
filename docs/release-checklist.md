@@ -65,6 +65,14 @@ aidd doctor
 - [ ] `verify-ghcr-install` job passed and its logs include containerized `aidd --version` and `aidd doctor`.
 - [ ] These three jobs are required release evidence for tagged builds.
 
+Prerequisite refresh before evidence capture:
+
+- a release candidate tag must point at the commit under test;
+- PyPI or TestPyPI publishing credentials must be available to the release workflow;
+- GHCR publishing credentials and Docker access must be available for container verification;
+- if any prerequisite is missing, record an explicit blocker instead of treating release
+  evidence as refreshed.
+
 Manual live-audit notes:
 
 - Live E2E is no longer a release gate.
