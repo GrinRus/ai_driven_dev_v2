@@ -74,6 +74,28 @@ A manual installed UI smoke should use a disposable local fixture project:
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`
 state stays local to the fixture project.
 
+## Source-Install Fixture Smoke
+
+`harness/scenarios/smoke/installed-local-project-fixture.yaml` records the
+source-install smoke path for local projects. It uses the existing
+`harness/fixtures/minimal-python` fixture as the target project and keeps the
+execution cwd as that fixture root.
+
+The scenario uses `uv tool run --from /path/to/ai_driven_dev_v2 aidd` to model
+installing or running AIDD from repository source. Operators replace
+`/path/to/ai_driven_dev_v2` with the source checkout under test. The target
+project remains the local fixture; public GitHub repositories and GitHub issue
+URLs are not inputs.
+
+The smoke path covers:
+
+- `aidd doctor` against the fixture config;
+- `aidd init --work-item <id> --root .aidd`;
+- a bounded `aidd run` from `idea` to `plan` with `generic-cli`;
+- `aidd run show`, `aidd run logs`, and `aidd run artifacts`;
+- standard `questions.md` / `answers.md` inspection through `aidd stage questions`;
+- `.aidd/` rooted inside the local fixture project.
+
 ## Out Of Scope
 
 - `aidd init --github-issue <url>` is not part of this lane.

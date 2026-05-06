@@ -1,0 +1,97 @@
+id: AIDD-INSTALLED-LOCAL-001
+scenario_class: deterministic-workflow
+feature_size: small
+automation_lane: manual
+canonical_runtime: generic-cli
+repo:
+  url: harness/fixtures/minimal-python
+objective: Prove the installed/source AIDD operator path against a local fixture
+  project without public GitHub issue intake.
+task: Install or run AIDD from source, enter the local fixture project root,
+  initialize `.aidd/`, run a bounded workflow, and inspect logs, artifacts, and
+  answers from that same local project.
+stage_scope:
+  start: idea
+  end: plan
+setup:
+  commands:
+  - |-
+    cat > aidd.example.toml <<'TOML'
+    [workspace]
+    root = ".aidd"
+
+    [runtime.generic_cli]
+    command = "python ../aidd_fixture_runtime.py"
+    mode = "adapter-flags"
+    TOML
+  - uv tool run --from /path/to/ai_driven_dev_v2 aidd doctor --config aidd.example.toml
+  - uv tool run --from /path/to/ai_driven_dev_v2 aidd init --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd
+  - |-
+    mkdir -p .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/context
+    printf '%s\n' '# Intake' '' \
+      'Run the installed local-project smoke path against the minimal fixture.' \
+      > .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/context/intake.md
+    printf '%s\n' '# User request' '' \
+      'Prepare a bounded local-project plan and keep all AIDD state under .aidd/.' \
+      > .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/context/user-request.md
+    printf '%s\n' '# Repository state' '' '- Target project: local minimal-python fixture.' \
+      > .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/context/repository-state.md
+aidd_invocation:
+  command:
+  - uv
+  - tool
+  - run
+  - --from
+  - /path/to/ai_driven_dev_v2
+  - aidd
+  - run
+  work_item: WI-INSTALLED-LOCAL-SMOKE
+  expected_stage_scope:
+    start: idea
+    end: plan
+operator_execution:
+  install_channel: uv-tool-run
+  artifact_source: source-checkout
+  source_checkout_path: /path/to/ai_driven_dev_v2
+  execution_cwd: local-fixture-root
+  workspace_root: .aidd
+  github_issue_intake: false
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: installed-local-project-smoke
+  summary: Use the local minimal-python fixture to prove source-installed AIDD
+    keeps workflow state inside the target project.
+verify:
+  commands:
+  - test -d .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE
+  - test -f .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/stages/plan/output/plan.md
+  - test -f .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/stages/plan/output/stage-result.md
+  - test -f .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/stages/plan/output/validator-report.md
+  - uv tool run --from /path/to/ai_driven_dev_v2 aidd run show --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd
+  - uv tool run --from /path/to/ai_driven_dev_v2 aidd run logs --work-item WI-INSTALLED-LOCAL-SMOKE --stage plan --root .aidd --tail --lines 20
+  - uv tool run --from /path/to/ai_driven_dev_v2 aidd run artifacts --work-item WI-INSTALLED-LOCAL-SMOKE --stage plan --root .aidd
+  - |-
+    cat > .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/stages/plan/questions.md <<'MD'
+    # Questions
+
+    ## Questions
+
+    - `Q1` `[blocking]` Confirm the local target project stayed local.
+    MD
+    cat > .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/stages/plan/answers.md <<'MD'
+    # Answers
+
+    ## Answers
+
+    - `Q1` `[resolved]` The target project is the local fixture and `.aidd/` stays inside it.
+    MD
+    uv tool run --from /path/to/ai_driven_dev_v2 aidd stage questions plan --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd
+    grep -q 'target project is the local fixture' .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/stages/plan/answers.md
+limits:
+  timeout_minutes: 10
+interview:
+  required: false
+runtime_targets:
+- generic-cli

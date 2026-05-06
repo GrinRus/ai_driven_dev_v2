@@ -56,6 +56,11 @@ blocking answer persistence, runtime logs, artifact and validation visibility,
 repair-history links, and declared project-set root visibility. Public GitHub
 repositories remain live E2E inputs only.
 
+The installed/source local-project smoke path is tracked as
+`AIDD-INSTALLED-LOCAL-001` in
+`harness/scenarios/smoke/installed-local-project-fixture.yaml`. It remains a
+manual fixture smoke and does not use public GitHub issue intake.
+
 ## Provider rollout policy
 
 - `generic-cli` is the deterministic baseline provider.
@@ -70,6 +75,7 @@ repositories remain live E2E inputs only.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `AIDD-SMOKE-001` | `harness/scenarios/smoke/plan-stage-minimal-fixture.yaml` | `deterministic-stage` | `small` | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
 | `AIDD-STAGEPACK-PLAN-SMOKE-001` | `harness/scenarios/smoke/plan-stagepack-smoke.yaml` | `deterministic-stage` | `medium` | `ci` | `opencode` | `generic-cli`, `claude-code`, `codex`, `opencode` | `fixture-seed` |
+| `AIDD-INSTALLED-LOCAL-001` | `harness/scenarios/smoke/installed-local-project-fixture.yaml` | `deterministic-workflow` | `small` | `manual` | `generic-cli` | `generic-cli` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-001` | `harness/scenarios/deterministic/minimal-python-bounded-workflow.yaml` | `deterministic-workflow` | `medium` | `ci` | `opencode` | `generic-cli`, `claude-code`, `opencode` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-002` | `harness/scenarios/deterministic/minimal-python-full-workflow.yaml` | `deterministic-workflow` | `large` | `manual` | `generic-cli` | `generic-cli`, `claude-code` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-003` | `harness/scenarios/deterministic/project-set-plan-context.yaml` | `deterministic-workflow` | `medium` | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |

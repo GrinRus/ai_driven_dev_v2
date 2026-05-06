@@ -6,11 +6,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W20-E4-S2-T1`
 
 ## Soon
 
-- `W20-E4-S2-T2`
 
 ## Parking lot
 
@@ -85,3 +83,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-06` `W20-E2-S5` completed the separate operator-UI local-project E2E lane, deterministic service/CLI coverage, manual installed UI smoke against a disposable local fixture project, and project-set root visibility evidence. `W20-E2-S6-T1` is promoted to `Next`.
 - `2026-05-06` `W20-E2-S6` completed runtime readiness read model, private UI endpoint/panel, and escaping/source-of-truth tests. `W20-E4-S1-T1` is promoted to `Next`; `W20-E4-S1-T2` remains in `Soon`.
 - `2026-05-06` `W20-E4-S1` completed local operator path docs and the GitHub issue-intake scope guard. `W20-E4-S2-T1` is promoted to `Next`; `W20-E4-S2-T2` is promoted to `Soon`.
+- `2026-05-06` `W20-E4-S2` completed the source-installed local fixture smoke path. No unblocked Wave 20 local tasks remain; `W20-E1-S2-T2` and `W20-E1-S4-T3` stay parked behind their documented external conditions.

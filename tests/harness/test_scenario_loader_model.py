@@ -201,6 +201,59 @@ def test_minimal_fixture_smoke_scenario_declares_small_ci_fixture_seed() -> None
     assert scenario.run.stage_end == "plan"
 
 
+def test_installed_local_project_smoke_scenario_uses_source_install_and_local_fixture() -> None:
+    scenario = load_scenario(
+        Path("harness/scenarios/smoke/installed-local-project-fixture.yaml")
+    )
+
+    assert scenario.scenario_id == "AIDD-INSTALLED-LOCAL-001"
+    assert scenario.is_live is False
+    assert scenario.scenario_class == "deterministic-workflow"
+    assert scenario.feature_size == "small"
+    assert scenario.automation_lane == "manual"
+    assert scenario.canonical_runtime == "generic-cli"
+    assert scenario.repo.url == "harness/fixtures/minimal-python"
+    assert scenario.run.stage_start == "idea"
+    assert scenario.run.stage_end == "plan"
+    assert scenario.feature_source is not None
+    assert scenario.feature_source.mode == "fixture-seed"
+    assert scenario.feature_source.fixture_path == "harness/fixtures/minimal-python"
+    assert scenario.raw["operator_execution"] == {
+        "install_channel": "uv-tool-run",
+        "artifact_source": "source-checkout",
+        "source_checkout_path": "/path/to/ai_driven_dev_v2",
+        "execution_cwd": "local-fixture-root",
+        "workspace_root": ".aidd",
+        "github_issue_intake": False,
+    }
+    assert scenario.raw["aidd_invocation"]["command"] == [
+        "uv",
+        "tool",
+        "run",
+        "--from",
+        "/path/to/ai_driven_dev_v2",
+        "aidd",
+        "run",
+    ]
+    setup_commands = "\n".join(scenario.setup.commands)
+    verify_commands = "\n".join(scenario.verify.commands)
+    assert "aidd doctor --config aidd.example.toml" in setup_commands
+    assert "aidd init --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd" in setup_commands
+    assert "aidd run show --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd" in (
+        verify_commands
+    )
+    assert "aidd run logs --work-item WI-INSTALLED-LOCAL-SMOKE --stage plan" in (
+        verify_commands
+    )
+    assert "aidd run artifacts --work-item WI-INSTALLED-LOCAL-SMOKE --stage plan" in (
+        verify_commands
+    )
+    assert "aidd stage questions plan --work-item WI-INSTALLED-LOCAL-SMOKE" in (
+        verify_commands
+    )
+    assert "answers.md" in verify_commands
+
+
 def test_deterministic_workflow_scenarios_cover_medium_ci_and_large_manual_buckets() -> None:
     medium_ci = load_scenario(
         Path("harness/scenarios/deterministic/minimal-python-bounded-workflow.yaml")

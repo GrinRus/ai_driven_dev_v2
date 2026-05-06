@@ -5143,7 +5143,7 @@ Exit evidence:
 
 - deterministic and operator-facing evidence both expose project-set context for declared local project roots.
 
-### Epic W20-E4 — local project operator adoption (`active`)
+### Epic W20-E4 — local project operator adoption (`done`)
 Linked stories: `US-09`, `US-11`, `US-12`
 
 #### Slice W20-E4-S1 — local operator path documentation (`done`)
@@ -5184,7 +5184,7 @@ Exit evidence:
 - operators can identify the intended local-project adoption path without reading the roadmap;
 - maintainers have an explicit scope guard against adding GitHub issue intake as a product feature.
 
-#### Slice W20-E4-S2 — installed local-project smoke evidence (`later`)
+#### Slice W20-E4-S2 — installed local-project smoke evidence (`done`)
 Goal: add installed local-project smoke evidence that uses fixture projects rather than public GitHub issues.
 
 Primary outputs:
@@ -5207,8 +5207,16 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E4-S2-T1` (later) Add an installed local-project smoke scenario that uses a fixture project, not a public GitHub issue, and proves `aidd init`, `aidd run` or `aidd ui`, logs, artifacts, and answers work from a local project root.
-- `W20-E4-S2-T2` (later) Add a source or GitHub-install smoke note or harness path for installing AIDD itself from repository source while keeping the target project local.
+- `W20-E4-S2-T1` (done) Add an installed local-project smoke scenario that uses a fixture project, not a public GitHub issue, and proves `aidd init`, `aidd run` or `aidd ui`, logs, artifacts, and answers work from a local project root.
+- `W20-E4-S2-T2` (done) Add a source or GitHub-install smoke note or harness path for installing AIDD itself from repository source while keeping the target project local.
+
+Evidence:
+
+- `harness/scenarios/smoke/installed-local-project-fixture.yaml` adds `AIDD-INSTALLED-LOCAL-001`, a manual deterministic fixture smoke that uses `harness/fixtures/minimal-python` as the target local project and `uv tool run --from /path/to/ai_driven_dev_v2 aidd` as the source-install AIDD command form.
+- The smoke path covers `aidd doctor`, `aidd init --work-item ... --root .aidd`, a bounded `generic-cli` workflow run from `idea` to `plan`, `aidd run show`, `aidd run logs`, `aidd run artifacts`, and standard `questions.md` / `answers.md` inspection through `aidd stage questions`.
+- `docs/e2e/operator-ui-local-project.md` documents the source-install fixture smoke path and keeps the target project local. `docs/e2e/scenario-matrix.md` lists `AIDD-INSTALLED-LOCAL-001` as a manual fixture smoke, not a live public-repository manifest.
+- `tests/harness/test_scenario_loader_model.py` covers the manifest source-install metadata, local fixture target, expected setup commands, evidence commands, and answer-inspection command. `tests/test_scenario_taxonomy.py` keeps the scenario matrix documentation synchronized.
+- `2026-05-06` Manual source-installed local fixture smoke passed in disposable project `/tmp/aidd-source-local-smoke-V7bHSd`: `uv tool run --from <repo> aidd doctor`, `aidd init`, bounded `aidd run --from-stage idea --to-stage plan`, `aidd run show`, `aidd run logs`, `aidd run artifacts`, and `aidd stage questions` all succeeded; the temp project was removed and no `.aidd/` artifacts were committed.
 
 Exit evidence:
 
@@ -5226,3 +5234,4 @@ Sync notes:
 - `2026-05-04` W20 comparative live-flow diagnosis completed: the fresh Claude control rerun `eval-live-005-claude-code-20260504T152414Z` failed at an `adapter` timeout on `idea` attempt 1, not at the OpenCode `SEM-INCOMPLETE-SECTION` validation boundary. The diagnosis does not prove an AIDD-owned core regression; clean live evidence remains blocked by runtime/model-output behavior.
 - `2026-05-04` Remaining W20 gap intake added OpenCode contract-compliance hardening, Claude timeout/profile diagnosis, separate local-project operator UI evidence, frontend provider-readiness visibility, and local operator adoption documentation tasks. Public GitHub repositories remain live E2E eval targets only, while the product adoption path stays local installation plus local project execution.
 - `2026-05-06` `W20-E4-S1` completed the local operator path documentation and GitHub issue-intake scope guard. The next actionable evidence task is `W20-E4-S2-T1`.
+- `2026-05-06` `W20-E4-S2` completed the source-installed local fixture smoke path. The remaining Wave 20 queue contains only conditional parked items: release/install evidence (`W20-E1-S2-T2`) waiting on a release candidate tag and publishing credentials, and Codex fallback (`W20-E1-S4-T3`) reserved for a provider/runtime timeout blocker.
