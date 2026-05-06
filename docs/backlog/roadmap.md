@@ -4469,11 +4469,23 @@ Dependencies:
 Blocked reason:
 
 - `2026-05-04` Local prerequisite refresh found no release candidate tag pointing at `HEAD` and no local PyPI/TestPyPI/GHCR token environment variables (`PYPI_API_TOKEN`, `TEST_PYPI_API_TOKEN`, `TWINE_USERNAME`, `TWINE_PASSWORD`, `GITHUB_TOKEN`, `GHCR_TOKEN`, `CR_PAT`) set for release-channel evidence capture.
+- `2026-05-06` Tagged release attempt `v0.1.0a0` reached GitHub Actions but `publish-pypi` failed with PyPI Trusted Publishing `invalid-publisher`; package install verification did not run, so release/install evidence remains blocked until the PyPI trusted publisher is configured for repository `GrinRus/ai_driven_dev_v2`, workflow `.github/workflows/release.yml`, environment `pypi`, and package `ai-driven-dev-v2`.
 
 Local tasks:
 
 - `W20-E1-S2-T1` (done) Refresh release/install evidence prerequisites for the next candidate across PyPI or TestPyPI, `pipx`, `uv tool`, and container paths.
 - `W20-E1-S2-T2` (blocked) Capture PyPI or TestPyPI, `pipx`, `uv tool`, and container smoke evidence for the next release candidate.
+- `W20-E1-S2-T3` (done) Disable automatic GHCR `latest` image tagging for prerelease tags and cover the release-workflow tag policy with regression tests.
+
+Evidence:
+
+- `2026-05-06` PR `#13` was merged into `main` as `aa3655998227e6da2a979b06d2c87543adbf4734`; local `main` was fast-forwarded to `origin/main`, `pyproject.toml` version was confirmed as `0.1.0a0`, and `v0.1.0a0` did not exist locally or on `origin` before tagging.
+- `2026-05-06` Pre-tag deterministic gate passed on `aa3655998227e6da2a979b06d2c87543adbf4734`: `uv run --extra dev ruff check .`, `uv run --extra dev python -m mypy src`, and `uv run --extra dev pytest -q` (`749 passed`).
+- `2026-05-06` Annotated tag `v0.1.0a0` was pushed to `aa3655998227e6da2a979b06d2c87543adbf4734`; release workflow run `25437182363` (`https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/25437182363`) completed with overall `failure`.
+- `2026-05-06` Release jobs: `build` passed, `publish-container` passed, `publish-pypi` failed, `verify-pypi-install` skipped, `verify-uv-tool-install` skipped, and `verify-ghcr-install` skipped because the PyPI publish dependency failed.
+- `2026-05-06` PyPI failure evidence: `publish-pypi` failed during Trusted Publishing token exchange with `invalid-publisher`; rendered claims included `sub=repo:GrinRus/ai_driven_dev_v2:environment:pypi`, `workflow_ref=GrinRus/ai_driven_dev_v2/.github/workflows/release.yml@refs/tags/v0.1.0a0`, and `environment=pypi`.
+- `2026-05-06` Partial GHCR evidence: `publish-container` pushed `ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a0`, `ghcr.io/grinrus/ai-driven-dev-v2:sha-aa36559`, and `ghcr.io/grinrus/ai-driven-dev-v2:latest` with digest `sha256:994a1134a2b10e6c68c7abccfc3c0a4e470e1ec51143979dd9c7e8a9ac408918`; this is not accepted install evidence because `verify-ghcr-install` was skipped.
+- `2026-05-06` The release workflow now sets `docker/metadata-action` `flavor: latest=false` and keeps `latest` behind the explicit stable-tag raw-tag condition so future prerelease tags do not get `latest` from metadata-action defaults; `uv run --extra dev pytest tests/test_release_workflow.py -q` passed.
 
 Exit evidence:
 
@@ -4560,7 +4572,7 @@ Local tasks:
 
 - `W20-E1-S4-T1` (done) Update generated live runtime config so OpenCode has an explicit timeout profile: `timeout_seconds = 1200`, `idea = 1500`, `research = 1500`, `plan = 1500`, `review-spec = 1500`, `tasklist = 1800`, `implement = 1800`, `review = 1800`, and `qa = 1800`.
 - `W20-E1-S4-T2` (blocked) Rerun `AIDD-LIVE-005` on OpenCode after the timeout-profile fix and record run id, verdict, quality gate, first failure boundary, and bundle path.
-- `W20-E1-S4-T3` (later) Rerun `AIDD-LIVE-005` on canonical Codex only if OpenCode remains provider/runtime timeout blocked without an AIDD-owned defect.
+- `W20-E1-S4-T3` (done; not applicable) Rerun `AIDD-LIVE-005` on canonical Codex only if OpenCode remains provider/runtime timeout blocked without an AIDD-owned defect.
 
 Evidence:
 
@@ -4570,6 +4582,10 @@ Evidence:
 - `2026-05-04` Post-timeout-profile rerun `eval-live-005-opencode-20260504T143938Z` produced status `fail`, quality gate `fail`, first failure boundary `validation`, first failure note `stage-metadata: stage idea attempt 3 validator failed`, and bundle path `.aidd/reports/evals/eval-live-005-opencode-20260504T143938Z`.
 - `2026-05-04` The rerun proves the timeout-profile change removed the prior provider/runtime timeout symptom: all three `idea` attempts exited `success`/`0` with `Timeout = False`. The remaining blocker is model-output validation after repair exhaustion: `SEM-INCOMPLETE-SECTION` for non-bullet `Open questions` in `idea-brief.md`.
 - `2026-05-04` Codex fallback `W20-E1-S4-T3` was not promoted because the decision rule allows fallback only for provider/runtime timeout, and this rerun failed at validation.
+- `2026-05-06` Fresh OpenCode preflight for the fallback gate passed: `uv run aidd doctor` reported OpenCode `/opt/homebrew/bin/opencode`, version `1.14.30`, provider available `yes`, execution command available `yes`; `uv run aidd eval doctor harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode` reported execution readiness `pass`.
+- `2026-05-06` Fresh OpenCode gate run `eval-live-005-opencode-20260506T131037Z` completed with status `fail`, quality gate `fail`, first failure boundary `validation`, first failure note `stage qa attempt 3 validator failed`, final failure code `SEM-RISK-UNDERREPORT`, and bundle path `.aidd/reports/evals/eval-live-005-opencode-20260506T131037Z`.
+- `2026-05-06` The fresh gate is not a provider/runtime timeout: every stage attempt recorded runtime exit `success`/`0`, every timeout column was `False`, `log-analysis.md` reported `Timeout Stage/Budget: none`, and the harness run completed under the `14400s` run timeout.
+- `2026-05-06` Codex fallback was not run. `W20-E1-S4-T3` is closed as not applicable because the fallback condition was false: OpenCode failed after QA validation repair exhaustion, not before validation at a provider/runtime timeout boundary.
 
 Decision rules:
 
@@ -4581,6 +4597,7 @@ Decision rules:
 Exit evidence:
 
 - maintainers can tell the OpenCode timeout policy is no longer the current blocker, but the remaining `US-07` clean live evidence gap is blocked by live model-output validation failure.
+- maintainers can tell Codex fallback is reserved for provider/runtime timeout only and was deliberately skipped for the latest validation-boundary failure.
 
 #### Slice W20-E1-S5 — comparative live flow diagnosis and Claude control rerun (`done`)
 Goal: decide whether the current `AIDD-LIVE-005` flow failure is AIDD-owned, runtime/model-output specific, scenario-quality owned, or environment/provider blocked by comparing preserved bundles with a fresh Claude control run.
@@ -5235,3 +5252,5 @@ Sync notes:
 - `2026-05-04` Remaining W20 gap intake added OpenCode contract-compliance hardening, Claude timeout/profile diagnosis, separate local-project operator UI evidence, frontend provider-readiness visibility, and local operator adoption documentation tasks. Public GitHub repositories remain live E2E eval targets only, while the product adoption path stays local installation plus local project execution.
 - `2026-05-06` `W20-E4-S1` completed the local operator path documentation and GitHub issue-intake scope guard. The next actionable evidence task is `W20-E4-S2-T1`.
 - `2026-05-06` `W20-E4-S2` completed the source-installed local fixture smoke path. The remaining Wave 20 queue contains only conditional parked items: release/install evidence (`W20-E1-S2-T2`) waiting on a release candidate tag and publishing credentials, and Codex fallback (`W20-E1-S4-T3`) reserved for a provider/runtime timeout blocker.
+- `2026-05-06` Release candidate tag `v0.1.0a0` was pushed to merged `main` commit `aa3655998227e6da2a979b06d2c87543adbf4734`; release run `25437182363` built successfully and published the container, but PyPI Trusted Publishing failed with `invalid-publisher`, so `W20-E1-S2-T2` remains blocked. Discovered prerelease `latest` image tagging was fixed as `W20-E1-S2-T3`.
+- `2026-05-06` Fresh OpenCode fallback gate `eval-live-005-opencode-20260506T131037Z` failed at validation (`qa` attempt 3 `SEM-RISK-UNDERREPORT`) with no timeout signals. Codex fallback was not run; `W20-E1-S4-T3` is closed as not applicable and removed from the backlog parking lot.

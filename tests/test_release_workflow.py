@@ -34,6 +34,13 @@ def _job_run_blocks(job: dict[str, Any]) -> str:
     )
 
 
+def _job_step_by_name(job: dict[str, Any], name: str) -> dict[str, Any]:
+    for step in job.get("steps", []):
+        if isinstance(step, dict) and step.get("name") == name:
+            return step
+    raise AssertionError(f"Missing workflow step: {name}")
+
+
 def test_release_workflow_has_pypi_install_verification_job() -> None:
     jobs = _release_workflow_jobs()
     assert "verify-pypi-install" in jobs
@@ -95,3 +102,21 @@ def test_release_workflow_has_ghcr_verification_job() -> None:
     assert "docker run --rm" in run_blocks
     assert "--version" in run_blocks
     assert "doctor" in run_blocks
+
+
+def test_release_workflow_disables_automatic_latest_container_tag() -> None:
+    jobs = _release_workflow_jobs()
+    publish_job = jobs["publish-container"]
+    metadata_step = _job_step_by_name(publish_job, "Derive image tags and labels")
+
+    metadata_inputs = metadata_step.get("with", {})
+    assert isinstance(metadata_inputs, dict)
+    assert "latest=false" in metadata_inputs.get("flavor", "")
+
+    tags_input = metadata_inputs.get("tags", "")
+    assert "type=raw,value=latest,enable=${{" in tags_input
+    assert "contains(github.ref_name, 'a')" in tags_input
+    assert "contains(github.ref_name, 'b')" in tags_input
+    assert "contains(github.ref_name, 'rc')" in tags_input
+    assert "contains(github.ref_name, '.dev')" in tags_input
+    assert "contains(github.ref_name, '.post')" in tags_input
