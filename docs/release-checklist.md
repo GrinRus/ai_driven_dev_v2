@@ -120,6 +120,20 @@ docker run --rm ghcr.io/<owner>/ai-driven-dev-v2:<tag> aidd doctor
 - [ ] Open follow-up issues for any deferred release defects.
 - [ ] Announce release with links to package, container image, and notes.
 
+## Release attempt evidence log
+
+### `v0.1.0a0` attempt on 2026-05-06
+
+- Tag: `v0.1.0a0`
+- Commit: `aa3655998227e6da2a979b06d2c87543adbf4734`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/25437182363`
+- Result: blocked, not accepted release/install evidence.
+- Job results: `build` passed, `publish-container` passed, `publish-pypi` failed, `verify-pypi-install` skipped, `verify-uv-tool-install` skipped, `verify-ghcr-install` skipped.
+- PyPI blocker: Trusted Publishing token exchange failed with `invalid-publisher`; claims included `sub=repo:GrinRus/ai_driven_dev_v2:environment:pypi`, workflow `.github/workflows/release.yml`, and environment `pypi`.
+- Required unblock: configure the PyPI trusted publisher for repository `GrinRus/ai_driven_dev_v2`, workflow `.github/workflows/release.yml`, environment `pypi`, and package `ai-driven-dev-v2`, then rerun release verification without changing the tag/version ad hoc.
+- Partial GHCR output: `ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a0`, `ghcr.io/grinrus/ai-driven-dev-v2:sha-aa36559`, and `ghcr.io/grinrus/ai-driven-dev-v2:latest` were pushed with digest `sha256:994a1134a2b10e6c68c7abccfc3c0a4e470e1ec51143979dd9c7e8a9ac408918`; treat this as partial publish evidence only because `verify-ghcr-install` was skipped.
+- Follow-up applied after the attempt: release workflow now disables docker/metadata-action automatic `latest` tagging (`flavor: latest=false`) so prerelease tags depend only on the explicit stable-tag `latest` condition.
+
 ## Related references
 
 - [Distribution and Development](./architecture/distribution-and-development.md)
