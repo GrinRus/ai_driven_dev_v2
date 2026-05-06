@@ -4960,14 +4960,14 @@ Exit evidence:
 - UI evidence stays separate from manual public-repository live E2E and can be reviewed without real runtime execution;
 - installed local-project UI smoke evidence now covers page/API access against a disposable fixture project.
 
-#### Slice W20-E2-S6 — frontend provider readiness visibility (`active`)
+#### Slice W20-E2-S6 — frontend provider readiness visibility (`done`)
 Goal: expose provider readiness to the frontend so operators can distinguish unavailable providers, ready providers, timeout/profile risk, and latest-run failure.
 
 Primary outputs:
 
 - frontend-ready runtime readiness read model
-- deferred private UI endpoint and panel for runtime readiness
-- deferred UI escaping and source-of-truth tests for readiness data
+- private UI endpoint and panel for runtime readiness
+- UI escaping and source-of-truth tests for readiness data
 
 Touched areas:
 
@@ -4983,9 +4983,17 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E2-S6-T1` (soon) Add a frontend-ready runtime readiness read model that exposes registered runtimes, command source, execution mode, provider availability, provider version, and configured timeout budgets.
-- `W20-E2-S6-T2` (later) Add a private UI endpoint and UI panel for runtime readiness so operators can distinguish provider unavailable, provider ready, timeout/profile risk, and latest run failed.
-- `W20-E2-S6-T3` (later) Add UI tests proving readiness data renders escaped and does not become workflow source of truth.
+- `W20-E2-S6-T1` (done) Add a frontend-ready runtime readiness read model that exposes registered runtimes, command source, execution mode, provider availability, provider version, execution command availability, and configured timeout budgets.
+- `W20-E2-S6-T2` (done) Add a private UI endpoint and UI panel for runtime readiness so operators can distinguish provider unavailable, provider ready, timeout/profile risk, and latest run failed.
+- `W20-E2-S6-T3` (done) Add UI tests proving readiness data renders escaped and does not become workflow source of truth.
+
+Evidence:
+
+- `src/aidd/core/runtime_readiness.py` adds a UI-neutral runtime readiness read model built only from `AiddConfig`, runtime definitions, command-source metadata, and probe reports supplied by the caller. Core does not invoke adapter probes or execution-command discovery.
+- `src/aidd/cli/ui.py` adds `GET /api/runtime-readiness` and a Readiness tab. The CLI/UI layer collects adapter provider probes and execution command availability, then passes those reports into the core read model.
+- The readiness panel shows runtime id, support tier, command source (`default` or `config`), command, execution mode, provider availability, provider version, provider probe command, execution command availability, default timeout, and stage timeout profile. Latest-run failure remains visible through the existing run/stage read models, keeping readiness observational rather than workflow state.
+- `tests/core/test_operator_frontend.py` covers read-model assembly from supplied probe reports and config timeouts. `tests/cli/test_ui.py` covers the private readiness endpoint, escaped rendering for readiness fields, and proves workflow runs continue to use the config snapshot rather than readiness probe output.
+- `2026-05-06` Focused local checks passed: `uv run --extra dev pytest tests/core/test_operator_frontend.py tests/cli/test_ui.py -q` reported `16 passed`.
 
 Exit evidence:
 

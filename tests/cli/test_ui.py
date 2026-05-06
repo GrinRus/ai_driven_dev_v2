@@ -12,26 +12,30 @@ from aidd.core.run_store import (
     persist_stage_status,
     run_attempt_runtime_log_path,
 )
+from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
 from aidd.core.workflow_service import WorkflowRunRequest, WorkflowRunResult
 
 
 def _service(
     workspace_root: Path,
     *,
+    config: Path | None = None,
     workflow_runner: Any | None = None,
+    readiness_probe_provider: Any | None = None,
 ) -> OperatorUiService:
     options = UiServerOptions(
         work_item="WI-UI",
         root=workspace_root,
-        config=Path("aidd.test.toml"),
+        config=config or Path("aidd.test.toml"),
         host="127.0.0.1",
         port=0,
     )
+    kwargs: dict[str, Any] = {}
     if workflow_runner is not None:
-        return OperatorUiService(options, workflow_runner=workflow_runner)
-    return OperatorUiService(
-        options
-    )
+        kwargs["workflow_runner"] = workflow_runner
+    if readiness_probe_provider is not None:
+        kwargs["readiness_probe_provider"] = readiness_probe_provider
+    return OperatorUiService(options, **kwargs)
 
 
 def _payload(response) -> dict[str, object]:
@@ -185,6 +189,122 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     assert "stage_executor" in captured
 
 
+def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[runtime.generic_cli]",
+                'command = "python -m fixture_runtime"',
+                'mode = "adapter-flags"',
+                "timeout_seconds = 42",
+                "",
+                "[runtime.generic_cli.stage_timeouts]",
+                "plan = 90",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    calls: list[object] = []
+
+    def fake_readiness_probe_provider(cfg: object) -> dict[str, RuntimeReadinessProbeReport]:
+        calls.append(cfg)
+        return {
+            "generic-cli": RuntimeReadinessProbeReport(
+                provider_available=True,
+                execution_command_available=False,
+                provider_version="Python <3>",
+                provider_command="/usr/bin/python",
+            )
+        }
+
+    service = _service(
+        workspace_root,
+        config=config_path,
+        readiness_probe_provider=fake_readiness_probe_provider,
+    )
+
+    payload = _payload(service.handle_get("/api/runtime-readiness", {}))
+
+    runtimes = {
+        str(runtime["runtime_id"]): runtime
+        for runtime in payload["runtimes"]
+        if isinstance(runtime, dict)
+    }
+    generic_cli = runtimes["generic-cli"]
+    assert calls
+    assert generic_cli["support_tier"] == "tier-1"
+    assert generic_cli["command_source"] == "config"
+    assert generic_cli["command"] == "python -m fixture_runtime"
+    assert generic_cli["execution_mode"] == "adapter-flags"
+    assert generic_cli["provider_available"] is True
+    assert generic_cli["provider_version"] == "Python <3>"
+    assert generic_cli["provider_command"] == "/usr/bin/python"
+    assert generic_cli["execution_command_available"] is False
+    assert generic_cli["default_timeout_seconds"] == 42
+    assert generic_cli["stage_timeout_seconds"] == {"plan": 90}
+    assert runtimes["codex"]["command_source"] == "default"
+
+
+def test_ui_runtime_readiness_is_not_workflow_source_of_truth(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[runtime.generic_cli]",
+                'command = "python -m trusted_runtime"',
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    captured: dict[str, object] = {}
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        captured.update(kwargs)
+        return WorkflowRunResult(
+            run_id="run-ui-source",
+            executed_stage_count=1,
+            completed=True,
+            incomplete=(),
+        )
+
+    def forbidden_readiness_probe_provider(
+        cfg: object,
+    ) -> dict[str, RuntimeReadinessProbeReport]:
+        raise AssertionError("workflow run must not call readiness probes")
+
+    service = _service(
+        workspace_root,
+        config=config_path,
+        workflow_runner=fake_workflow_runner,
+        readiness_probe_provider=forbidden_readiness_probe_provider,
+    )
+
+    response = service.handle_post(
+        "/api/workflow/run",
+        {
+            "runtime": "generic-cli",
+            "from_stage": "idea",
+            "to_stage": "plan",
+        },
+    )
+
+    payload = _payload(response)
+    request = captured["request"]
+    assert isinstance(request, WorkflowRunRequest)
+    assert payload["run_id"] == "run-ui-source"
+    assert request.config_snapshot["runtime_command"] == "python -m trusted_runtime"
+    assert request.config_snapshot["mode"] == "ui-workflow"
+
+
 def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     tmp_path: Path,
 ) -> None:
@@ -297,6 +417,9 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "`<span>${escapeHtml(item)}</span>`" in script
     assert "`<pre>${escapeHtml(view.text)}</pre>`" in script
     assert "${escapeHtml(key)}: ${escapeHtml(value)}" in script
+    assert "${escapeHtml(runtime.command)}" in script
+    assert "${escapeHtml(runtime.provider_version || \"unknown\")}" in script
+    assert "${escapeHtml(stageTimeoutSummary(runtime.stage_timeout_seconds))}" in script
 
 
 def test_ui_command_is_registered() -> None:
