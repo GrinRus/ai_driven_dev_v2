@@ -156,6 +156,38 @@ uv run aidd init --work-item WI-001
 
 This creates a local `.aidd/` workspace tree with stage directories and placeholder artifacts.
 
+## Supported Local Operator Path
+
+The product operator path starts from a local project root. Install or run AIDD locally, then
+enter the target project directory before creating workflow state.
+
+From an installed command:
+
+```bash
+cd /path/to/local-project
+aidd doctor --config /path/to/aidd.example.toml
+aidd init --work-item WI-001 --root .aidd
+aidd run --work-item WI-001 --runtime generic-cli --root .aidd --config /path/to/aidd.example.toml
+aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
+```
+
+From a source checkout without installing globally, replace `aidd` with
+`uv tool run --from /path/to/ai_driven_dev_v2 aidd`.
+
+Inspect local workflow evidence with either the UI or the CLI:
+
+```bash
+aidd run show --work-item WI-001 --root .aidd
+aidd run logs --work-item WI-001 --stage plan --root .aidd
+aidd run artifacts --work-item WI-001 --stage plan --root .aidd
+```
+
+The `.aidd/` directory stays inside the local project root. Treat it as project-local
+operator state and do not commit it unless a separate repository policy explicitly says so.
+
+`aidd init --github-issue <url>` is out of product scope. Public GitHub repositories are live
+E2E targets and support/reporting evidence sources only, not a product intake path.
+
 ## Planned distribution channels
 
 The intended release channels are:

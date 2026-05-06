@@ -243,6 +243,33 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     assert "`native` execution" in runtime_matrix
 
 
+def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> None:
+    readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
+    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
+        encoding="utf-8"
+    )
+    operator_ui_lane = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
+    ).read_text(encoding="utf-8")
+    live_catalog = (_repo_root() / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
+        encoding="utf-8"
+    )
+
+    for document in (readme, operator_handbook, operator_ui_lane):
+        assert "local project root" in document
+        assert "aidd doctor" in document
+        assert "aidd init --work-item" in document
+        assert "aidd ui --work-item" in document
+        assert ".aidd/" in document
+
+    for document in (readme, operator_handbook, operator_ui_lane, live_catalog):
+        assert "aidd init --github-issue <url>" in document
+        assert "out of product scope" in document
+
+    assert "Public GitHub repositories are live" in readme
+    assert "Public GitHub repositories are live E2E targets" in live_catalog
+
+
 def test_live_e2e_skill_describes_local_operator_contract() -> None:
     live_e2e_skill = (_repo_root() / ".agents" / "skills" / "live-e2e" / "SKILL.md").read_text(
         encoding="utf-8"

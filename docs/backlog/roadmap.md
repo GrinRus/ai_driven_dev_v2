@@ -5146,7 +5146,7 @@ Exit evidence:
 ### Epic W20-E4 — local project operator adoption (`active`)
 Linked stories: `US-09`, `US-11`, `US-12`
 
-#### Slice W20-E4-S1 — local operator path documentation (`active`)
+#### Slice W20-E4-S1 — local operator path documentation (`done`)
 Goal: document the supported product path as local installation plus local project execution, while keeping public GitHub repositories limited to live E2E eval and support/reporting contexts.
 
 Primary outputs:
@@ -5169,8 +5169,15 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E4-S1-T1` (soon) Document the supported local operator path: install AIDD locally, enter a local project root, run `aidd doctor`, initialize a work item, run CLI or `aidd ui`, inspect logs and artifacts, and keep `.aidd/` local to that project.
-- `W20-E4-S1-T2` (soon) Explicitly document that `aidd init --github-issue <url>` is out of product scope and public GitHub repositories are only live E2E eval targets.
+- `W20-E4-S1-T1` (done) Document the supported local operator path: install AIDD locally, enter a local project root, run `aidd doctor`, initialize a work item, run CLI or `aidd ui`, inspect logs and artifacts, and keep `.aidd/` local to that project.
+- `W20-E4-S1-T2` (done) Explicitly document that `aidd init --github-issue <url>` is out of product scope and public GitHub repositories are only live E2E eval targets.
+
+Evidence:
+
+- `README.md` now has a Supported Local Operator Path section showing installed and source-checkout command forms, `aidd doctor`, `aidd init --work-item ... --root .aidd`, `aidd run`, `aidd ui`, and CLI log/artifact inspection from a target local project root.
+- `docs/operator-handbook.md` now makes local-project operation the product path, including local install/run, project-root entry, `doctor`, workspace initialization, CLI/UI execution, log/artifact inspection, and `.aidd/` ownership inside the local project.
+- `docs/e2e/operator-ui-local-project.md` and `docs/e2e/live-e2e-catalog.md` now separate the local-project operator lane from public-repository live E2E. Public GitHub repositories are live E2E targets and support/reporting evidence sources only.
+- `tests/test_docs_consistency.py` now asserts the local operator docs describe the local project path and explicitly mark `aidd init --github-issue <url>` as out of product scope.
 
 Exit evidence:
 
@@ -5218,3 +5225,4 @@ Sync notes:
 - `2026-05-04` W20 timeout-profile pass added explicit OpenCode live stage timeouts and reran `AIDD-LIVE-005` as `eval-live-005-opencode-20260504T143938Z`. The timeout blocker moved to a validation/model-output blocker after repair budget exhaustion, so Codex fallback remains parked and unpromoted under the provider-timeout-only fallback rule.
 - `2026-05-04` W20 comparative live-flow diagnosis completed: the fresh Claude control rerun `eval-live-005-claude-code-20260504T152414Z` failed at an `adapter` timeout on `idea` attempt 1, not at the OpenCode `SEM-INCOMPLETE-SECTION` validation boundary. The diagnosis does not prove an AIDD-owned core regression; clean live evidence remains blocked by runtime/model-output behavior.
 - `2026-05-04` Remaining W20 gap intake added OpenCode contract-compliance hardening, Claude timeout/profile diagnosis, separate local-project operator UI evidence, frontend provider-readiness visibility, and local operator adoption documentation tasks. Public GitHub repositories remain live E2E eval targets only, while the product adoption path stays local installation plus local project execution.
+- `2026-05-06` `W20-E4-S1` completed the local operator path documentation and GitHub issue-intake scope guard. The next actionable evidence task is `W20-E4-S2-T1`.

@@ -14,6 +14,20 @@ Operator UI E2E answers one question:
 This lane does not use GitHub issue intake. Public GitHub repositories remain inputs for
 manual live E2E evals only.
 
+## Supported Operator Path
+
+The local-project UI lane follows the product operator path:
+
+1. Install or run AIDD locally.
+2. Change into the target local project root.
+3. Run `aidd doctor` with the intended config.
+4. Run `aidd init --work-item <id> --root .aidd`.
+5. Run the workflow through `aidd run` or continue through `aidd ui`.
+6. Inspect logs and artifacts through the UI or `aidd run logs` / `aidd run artifacts`.
+7. Keep `.aidd/` inside the local project root.
+
+`aidd init --github-issue <url>` is out of product scope for this lane.
+
 ## Scope
 
 The maintained operator UI lane covers:
@@ -49,12 +63,13 @@ A manual installed UI smoke should use a disposable local fixture project:
 
 1. Install or run the AIDD artifact under test locally.
 2. Change into the local fixture project root.
-3. Run `aidd init --work-item <id>` so `.aidd/` is created inside the fixture project.
-4. Seed or execute a local deterministic work item.
-5. Start `aidd ui --work-item <id> --root .aidd --host 127.0.0.1 --port <port>`.
-6. Verify the page loads, `/api/workflow/run` is reachable, blocking answers persist,
+3. Run `aidd doctor` with the fixture config.
+4. Run `aidd init --work-item <id> --root .aidd` so `.aidd/` is created inside the fixture project.
+5. Seed or execute a local deterministic work item through `aidd run`.
+6. Start `aidd ui --work-item <id> --root .aidd --host 127.0.0.1 --port <port>`.
+7. Verify the page loads, `/api/workflow/run` is reachable, blocking answers persist,
    logs and artifacts render, validation state is visible, and repair evidence is linked.
-7. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
+8. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
 
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`
 state stays local to the fixture project.
