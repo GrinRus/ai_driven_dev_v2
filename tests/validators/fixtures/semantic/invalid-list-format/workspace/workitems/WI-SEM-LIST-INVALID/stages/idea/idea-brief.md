@@ -10,8 +10,8 @@ Capture stable handoff expectations so research and planning can proceed with le
 
 ## Constraints
 
-Keep scope within one release wave and avoid introducing new authentication dependencies.
+- Keep scope within one release wave and avoid introducing new authentication dependencies.
 
 ## Open questions
 
-- none
+No open questions. All required information is available from the intake and user request documents.

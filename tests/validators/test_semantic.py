@@ -591,7 +591,7 @@ def test_validate_semantic_outputs_flags_invalid_list_format_fixture_bundle() ->
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Required section `Constraints` must use bullet items "
+                "Required section `Open questions` must use bullet items "
                 "(or `- none`) so downstream stages can parse constraints "
                 "and open questions deterministically."
             ),
@@ -600,7 +600,7 @@ def test_validate_semantic_outputs_flags_invalid_list_format_fixture_bundle() ->
                 workspace_relative_path=(
                     "workitems/WI-SEM-LIST-INVALID/stages/idea/idea-brief.md"
                 ),
-                line_number=11,
+                line_number=15,
             ),
         ),
     )

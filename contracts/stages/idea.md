@@ -47,8 +47,9 @@ Validators for `idea` should check:
 - minimum completeness of `idea-brief.md`:
   - `Problem statement` states the core user or business problem and affected scope;
   - `Desired outcome` states a concrete target result or acceptance signal;
-  - `Constraints` lists actionable boundaries or explicitly records `- none`;
-  - `Open questions` lists unresolved decisions or explicitly records `- none`,
+  - `Constraints` lists actionable boundaries as Markdown bullet items or explicitly records `- none`;
+  - `Open questions` lists unresolved decisions as Markdown bullet items or explicitly records `- none`;
+  - prose-only text such as `No open questions.` is invalid under list-required sections,
 - no unresolved placeholder content in required sections (for example `TBD`, `TODO`, `N/A`, `...`, or equivalent filler),
 - consistency between `idea-brief.md` and required inputs (`context/intake.md`, `context/user-request.md`) for goals and constraints,
 - `validator-report.md` issue codes and severities follow the shared `validator-report.md` contract vocabulary,

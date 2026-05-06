@@ -6,14 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W20-E1-S6-T1`
+- `W20-E1-S7-T1`
 
 ## Soon
 
-- `W20-E1-S6-T2`
-- `W20-E1-S6-T3`
-- `W20-E1-S7-T1`
 - `W20-E1-S7-T2`
+- `W20-E1-S8-T1`
+- `W20-E1-S8-T2`
+- `W20-E1-S8-T3`
 - `W20-E2-S5-T1`
 - `W20-E2-S5-T2`
 - `W20-E2-S6-T1`
@@ -24,8 +24,8 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 - `W20-E1-S4-T3`
 - `W20-E1-S2-T2`
-- `W20-E1-S6-T4`
 - `W20-E1-S7-T3`
+- `W20-E1-S8-T4`
 - `W20-E2-S5-T3`
 - `W20-E2-S5-T4`
 - `W20-E2-S6-T2`
@@ -95,3 +95,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-04` `W20-E1-S5-T2` ran Claude control rerun `eval-live-005-claude-code-20260504T152414Z`; status `fail`, quality gate `fail`, first boundary `adapter`, and first signal `Adapter outcome: timeout`.
 - `2026-05-04` `W20-E1-S5-T3` completed the comparison decision: fresh Claude timeout does not match latest OpenCode validation formatting failure, so no AIDD-owned core regression is proven; active W20 queue is empty except parked Codex fallback and release/install evidence.
 - `2026-05-04` Remaining W20 gap tasks were added for OpenCode contract-compliance hardening, Claude timeout/profile diagnosis, local-project operator UI evidence, frontend provider readiness, and local operator adoption; `W20-E1-S6-T1` is promoted to `Next`, near-term hardening/evidence/adoption tasks are in `Soon`, and rerun/manual-smoke/release tasks remain parked.
+- `2026-05-06` `W20-E1-S6` completed idea-stage OpenCode contract-compliance hardening and post-hardening rerun evidence; old `Open questions` list-format blocker is closed, new review-stage evidence-reference blocker was added as `W20-E1-S8`, `W20-E1-S7-T1` is promoted to `Next`, and `W20-E1-S8-T4` is parked until local review hardening lands.

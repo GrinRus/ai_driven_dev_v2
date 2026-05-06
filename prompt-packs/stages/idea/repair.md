@@ -24,6 +24,10 @@ Do not inspect AIDD validator implementation files, installed package files, or 
 during repair. Use `validator-report.md`, `repair-brief.md`, and the named contracts as the repair
 scope. After updating the required documents and checking consistency, stop.
 
+`idea-brief.md` list sections are strict. `Constraints` and `Open questions` must use top-level
+Markdown bullet items; if there are no constraints or no open questions, write exactly `- none`
+under that heading. Prose such as `No open questions.` is still invalid.
+
 Interview document format is strict. `questions.md` bullets use `- Q1 [blocking|non-blocking] ...`;
 `answers.md` bullets must reuse the same question id with `[resolved|partial|deferred]`, for example
 `- Q1 [resolved] ...`. Do not invent `A1`/`A2` answer ids. Render assumptions or metadata as
@@ -46,6 +50,8 @@ Use these concrete repair actions:
 - `STRUCT-MISSING-DOCUMENT`: create the missing required Markdown document with contract headings.
 - `STRUCT-MISSING-HEADING` / `STRUCT-EMPTY-SECTION`: add or complete the exact required heading content.
 - `SEM-PLACEHOLDER-CONTENT`: replace placeholders with concrete, supportable statements.
+- `SEM-INCOMPLETE-SECTION` for `Constraints` or `Open questions`: convert the section to top-level
+  Markdown bullet items, or use exactly `- none` when there are no entries.
 - `SEM-UNSUPPORTED-CLAIM`: remove unsupported claim or restate it as an explicit assumption.
 - `CROSS-REFERENCE-MISMATCH`: align conflicting references and artifact paths.
 - `CROSS-BLOCKING-UNANSWERED`: keep stage terminal status blocked until matching resolved answers exist.

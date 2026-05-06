@@ -4643,7 +4643,7 @@ Exit evidence:
 - no runtime-specific core logic is added from this diagnosis;
 - the next action is either prompt/contract hardening for OpenCode-style Markdown compliance, or provider/runtime remediation for the current Claude lane, before another live rerun.
 
-#### Slice W20-E1-S6 — OpenCode contract-compliance hardening (`active`)
+#### Slice W20-E1-S6 — OpenCode contract-compliance hardening (`done`)
 Goal: make the current OpenCode live validation blocker actionable before another live rerun, without adding provider-specific core workflow logic.
 
 Primary outputs:
@@ -4667,10 +4667,19 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E1-S6-T1` (next) Inspect `eval-live-005-opencode-20260504T143938Z` and record the exact prompt, repair, and contract boundary for the `Open questions` list-format failure.
-- `W20-E1-S6-T2` (soon) Harden the `idea` stage prompt and repair guidance so `Open questions` must render as bullet items or `- none`, without adding OpenCode-specific core logic.
-- `W20-E1-S6-T3` (soon) Add focused regression coverage proving malformed list-format output produces actionable repair guidance and remains blocked if not fixed.
-- `W20-E1-S6-T4` (later) Rerun `AIDD-LIVE-005` on OpenCode after hardening and record run id, verdict, quality gate, first failure boundary, and bundle path.
+- `W20-E1-S6-T1` (done) Inspect `eval-live-005-opencode-20260504T143938Z` and record the exact prompt, repair, and contract boundary for the `Open questions` list-format failure.
+- `W20-E1-S6-T2` (done) Harden the `idea` stage prompt and repair guidance so `Open questions` must render as bullet items or `- none`, without adding OpenCode-specific core logic.
+- `W20-E1-S6-T3` (done) Add focused regression coverage proving malformed list-format output produces actionable repair guidance and remains blocked if not fixed.
+- `W20-E1-S6-T4` (done) Rerun `AIDD-LIVE-005` on OpenCode after hardening and record run id, verdict, quality gate, first failure boundary, and bundle path.
+
+Evidence:
+
+- `2026-05-06` Forensic inspection of `eval-live-005-opencode-20260504T143938Z` found the exact old boundary: `contracts/stages/idea.md` and the semantic validator already required `Open questions` to use bullet items or `- none`, but `prompt-packs/stages/idea/run.md` and `repair.md` did not state strongly enough that prose such as `No open questions.` is invalid.
+- `2026-05-06` The `idea` prompt and repair guidance now require `Constraints` and `Open questions` to render as top-level Markdown bullet items, or exactly `- none` when empty. The generated repair brief now adds an actionable generic hint for list-format `SEM-INCOMPLETE-SECTION` findings without adding OpenCode-specific core workflow logic.
+- `2026-05-06` Focused local checks passed: `uv run --extra dev pytest tests/validators/test_semantic.py tests/core/test_repair.py tests/test_prompt_quality.py -q` reported `88 passed`.
+- `2026-05-06` OpenCode preflight passed for `AIDD-LIVE-005`: provider `/opt/homebrew/bin/opencode`, version `1.14.30`, native execution command `opencode run --format json --dangerously-skip-permissions`.
+- `2026-05-06` Post-hardening rerun `eval-live-005-opencode-20260506T054902Z` produced status `fail`, quality gate `fail`, first failure boundary `validation`, first failure note `stage-metadata: stage review attempt 3 validator failed`, and bundle path `.aidd/reports/evals/eval-live-005-opencode-20260506T054902Z`.
+- `2026-05-06` The rerun proves the old `idea` `Open questions` list-format blocker is closed for this live lane: `idea`, `research`, `plan`, `review-spec`, `tasklist`, and `implement` all reached `succeeded` with runtime exits `success`/`0` and no timeout. The new blocker is a later `review` model-output contract failure: final validator code `SEM-UNSUPPORTED-CLAIM` because a review finding lacked evidence reference to implementation output or acceptance criteria.
 
 Exit evidence:
 
@@ -4709,6 +4718,42 @@ Exit evidence:
 
 - fresh Claude failures can be classified from audit artifacts without guessing whether the model, provider, timeout profile, or AIDD workflow boundary owned the stop;
 - another Claude live rerun is deferred until the timeout/profile evidence path is explicit.
+
+#### Slice W20-E1-S8 — OpenCode review evidence-reference hardening (`active`)
+Goal: make the new post-`W20-E1-S6` OpenCode review validation blocker actionable before any further OpenCode live rerun.
+
+Primary outputs:
+
+- exact prompt, repair, and contract boundary for review findings missing evidence references
+- review prompt or repair-guidance hardening for evidence-backed findings
+- focused regression proving malformed review findings produce actionable repair guidance and remain blocked if not fixed
+- deferred OpenCode rerun evidence after review hardening
+
+Touched areas:
+
+- `docs/backlog/`
+- `contracts/stages/`
+- `prompt-packs/`
+- `tests/validators/`
+- `tests/core/`
+- `harness/scenarios/live/`
+
+Dependencies:
+
+- `W20-E1-S6`
+
+Local tasks:
+
+- `W20-E1-S8-T1` (soon) Inspect `eval-live-005-opencode-20260506T054902Z` and record the exact prompt, repair, and contract boundary for the review finding evidence-reference failure.
+- `W20-E1-S8-T2` (soon) Harden the `review` stage prompt and repair guidance so every finding includes stable id, severity, disposition, rationale, and evidence reference to implementation output or acceptance criteria.
+- `W20-E1-S8-T3` (soon) Add focused regression coverage proving malformed review finding output produces actionable repair guidance and remains blocked if not fixed.
+- `W20-E1-S8-T4` (later) Rerun `AIDD-LIVE-005` on OpenCode after review hardening and record run id, verdict, quality gate, first failure boundary, and bundle path.
+
+Exit evidence:
+
+- maintainers can explain why the old idea-stage blocker is closed while clean OpenCode live evidence remains blocked later in the flow;
+- review-stage contract compliance is hardened without provider-specific core logic;
+- another OpenCode live rerun is deferred until local review-stage regression evidence exists.
 
 ### Epic W20-E2 — operator workflow frontend (`active`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`

@@ -47,3 +47,15 @@ def test_stage_run_and_system_prompts_forbid_model_authored_repair_brief(
     assert "AIDD generates it after validation fails" in run_prompt
     assert "do not create or edit `repair-brief.md`" in system_prompt
     assert "AIDD-owned repair control evidence" in system_prompt
+
+
+def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
+    run_prompt = Path("prompt-packs/stages/idea/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/idea/repair.md").read_text(encoding="utf-8")
+
+    assert "`Open questions` as Markdown bullet items, or exactly `- none`" in run_prompt
+    assert "prose-only text is invalid" in run_prompt
+    assert "Prose such as `No open questions.` is still invalid" in repair_prompt
+    assert (
+        "`SEM-INCOMPLETE-SECTION` for `Constraints` or `Open questions`" in repair_prompt
+    )

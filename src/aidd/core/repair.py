@@ -191,10 +191,28 @@ def _render_correction_items(findings: Iterable[ValidatorReportFinding]) -> list
             if finding.source_path is not None
             else "affected stage docs"
         )
-        lines.append(f"- [`{finding.code}`] Update {target} to resolve: {finding.message}")
+        hint = _repair_hint_for_finding(finding)
+        suffix = f" {hint}" if hint else ""
+        lines.append(
+            f"- [`{finding.code}`] Update {target} to resolve: {finding.message}{suffix}"
+        )
     if not lines:
         lines.append("- none")
     return lines
+
+
+def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
+    normalized_message = finding.message.lower()
+    if (
+        finding.code == "SEM-INCOMPLETE-SECTION"
+        and "must use bullet items" in normalized_message
+        and "`- none`" in finding.message
+    ):
+        return (
+            "Render the section as top-level Markdown bullet items; if there are no entries, "
+            "write exactly `- none`."
+        )
+    return ""
 
 
 def _render_relevant_upstream_docs(

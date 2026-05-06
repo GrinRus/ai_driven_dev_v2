@@ -27,8 +27,8 @@ question state is visible.
   - include complete sections:
     - `Problem statement`
     - `Desired outcome`
-    - `Constraints`
-    - `Open questions`
+    - `Constraints` as Markdown bullet items, or exactly `- none`
+    - `Open questions` as Markdown bullet items, or exactly `- none`
 - `validator-report.md`
   - include structural, semantic, and cross-document findings;
   - end with terminal verdict (`pass` or `fail`).
@@ -53,6 +53,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 1. Read all required inputs and `contracts/stages/idea.md` before drafting outputs.
 2. Write `idea-brief.md` using only supportable statements from inputs plus explicit assumptions.
+   In `Constraints` and `Open questions`, prose-only text is invalid; write one
+   top-level bullet per item, and when there are no items write exactly `- none`.
 3. Replace ambiguity with durable questions in `questions.md` using stable ids and
    `[blocking]` / `[non-blocking]` markers.
 4. Treat unresolved `[blocking]` questions as stage blockers; do not mark the stage as `succeeded`.
