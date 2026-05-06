@@ -2,340 +2,247 @@
 
 Runtime-agnostic orchestration for document-first AI software delivery.
 
-> Status: implemented local orchestration system with active architecture, contracts, adapters,
-> validators, harness/eval tooling, and an installable Python CLI.
-> Current known gaps are documented as roadmap work or explicit manual live/release evidence
-> prerequisites, not as hidden bootstrap assumptions.
-
-## What this project is
-
-`ai_driven_dev_v2` (AIDD) is a stage-based workflow system for governed AI-assisted software work.
-
-It rebuilds the useful parts of `ai_driven_dev` so they are **not coupled to a single runtime**. The project keeps:
-
-- explicit workflow stages,
-- durable Markdown artifacts,
-- validator gates,
-- self-repair after invalid stage outputs,
-- user interview loops,
-- native runtime log visibility,
-- harness and eval support from the beginning.
+AIDD runs a governed staged workflow over a local project. It asks a runtime such as
+Claude Code, Codex, OpenCode, or a generic CLI to produce Markdown stage artifacts, then
+validates those artifacts before the workflow can advance.
 
 The canonical stage flow is:
 
-`idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`
-
-## Why AIDD exists
-
-Most agentic coding systems become tightly bound to one host runtime, one prompt surface, or one plugin API. That makes them harder to port, harder to debug, and harder to evaluate.
-
-AIDD separates:
-
-- **core workflow semantics** from runtime integration,
-- **document contracts** from model formatting habits,
-- **operator experience** from any one runtime CLI,
-- **harness/eval** from ad hoc prompt experimentation.
-
-## What makes AIDD different
-
-- **Runtime-agnostic core**  
-  The core never assumes Claude Code, Codex, OpenCode, or any other runtime-specific API.
-
-- **Markdown-first stage IO**  
-  Stages read and write human-reviewable Markdown documents. Validation happens after generation.
-
-- **Validation and self-repair**  
-  Invalid outputs do not silently pass. The system validates, writes a repair brief, and reruns within a bounded budget.
-
-- **Interview-aware execution**  
-  If a stage needs clarification, the runtime can ask the user through the CLI and/or durable `questions.md` / `answers.md` files.
-
-- **Native runtime log visibility**  
-  The CLI is designed to stream raw runtime logs as closely as possible to the runtime's own UX.
-
-- **Harness and eval built in**  
-  Deterministic scenarios, manual live E2E audits, graders, and log analysis are part of the product architecture.
-
-## Primary user stories
-
-The project is anchored in these outcomes:
-
-- an operator can run the same governed flow on different runtimes;
-- a team can inspect and edit stage artifacts as Markdown files;
-- invalid stage outputs are repaired before the workflow advances;
-- the system asks the user clarifying questions when the task is underspecified;
-- a maintainer can add a new runtime adapter without rewriting the core;
-- an evaluator can run deterministic and live E2E scenarios with log analysis.
-
-See `docs/product/user-stories.md` for the full set.
-
-## Runtime support (current)
-
-Workflow and stage execution today:
-
-- `aidd run` supports runtimes `generic-cli`, `claude-code`, `codex`, and `opencode`.
-- `aidd stage run` supports runtimes `generic-cli`, `claude-code`, `codex`, and `opencode`.
-
-Runtime probes in `aidd doctor`:
-
-- `generic-cli`
-- `claude-code`
-- `codex`
-- `opencode`
-
-Unsupported runtime handling:
-
-- `aidd run` and `aidd stage run` fail fast with non-zero exit and `unsupported-runtime` classification when the runtime id is unknown.
-
-Future bridge target:
-
-- `pi-mono`
-
-## Architecture in one sentence
-
-`operator CLI -> AIDD core -> adapter -> runtime -> workspace documents`
-
-The key architecture documents are:
-
-- `docs/architecture/target-architecture.md`
-- `docs/architecture/adapter-protocol.md`
-- `docs/architecture/document-contracts.md`
-- `docs/architecture/runtime-matrix.md`
-- `docs/architecture/eval-harness-integration.md`
-- `docs/architecture/distribution-and-development.md`
-- `docs/architecture/operator-frontend.md`
-- `docs/architecture/project-set-workspace.md`
-
-## What is in this repository today
-
-This repository includes:
-
-- root product and contributor documentation,
-- a wave/epic/slice/local-task roadmap and active backlog queue,
-- stage and document contracts,
-- stage prompt packs,
-- `.agents/skills/` for Codex-style development workflows,
-- deterministic and live scenario manifests,
-- CI and release workflows,
-- an installable Python package and CLI,
-- runtime adapters, validators, core orchestration, run inspection, harnesses, and eval reports.
-
-The following parts are still intentionally in-progress:
-
-- live interview parity on installed public-repository scenarios,
-- broader installed live lane coverage beyond the first canonical scenario.
-
-Those gaps are deliberate current scope boundaries, not absent foundations.
-
-Live E2E remains available as a manual external-audit system, but it is no longer part of CI or release gating.
-
-## Installation from source
-
-### Prerequisites
-
-- Python 3.12+
-- `uv`
-- provider CLIs you want to run or probe, such as Claude Code, Codex, or OpenCode
-- provider authentication already configured outside AIDD
-- optional AIDD-compatible wrapper commands for advanced `adapter-flags` mode
-
-### Bootstrap the repo locally
-
-```bash
-uv sync --extra dev
-uv run aidd --help
-uv run aidd doctor
-uv run --extra dev pytest -q
+```text
+idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 ```
 
-### Create a starter workspace
+## What is AIDD?
+
+`ai_driven_dev_v2` (AIDD) is for teams that want AI-assisted software work to leave
+inspectable evidence instead of only chat transcripts or opaque runtime state.
+
+AIDD provides:
+
+- a runtime-agnostic core with adapter-based runtime integration;
+- Markdown-first stage inputs and outputs;
+- validator gates before stage progression;
+- bounded self-repair after invalid outputs;
+- durable questions, answers, logs, validation reports, and run artifacts;
+- a CLI and local operator UI over the same repository-local `.aidd/` workspace;
+- deterministic harnesses and manual live E2E evaluation support.
+
+AIDD does not bundle third-party runtime binaries. Operators install and authenticate
+Claude Code, Codex, OpenCode, or other runtime CLIs separately.
+
+## Install
+
+Current published prerelease: `0.1.0a2`.
+
+Install with `pipx`:
 
 ```bash
-uv run aidd init --work-item WI-001
+pipx install "ai-driven-dev-v2==0.1.0a2"
+aidd --version
+aidd doctor
 ```
 
-This creates a local `.aidd/` workspace tree with stage directories and placeholder artifacts.
+Install with `uv tool`:
 
-## Supported Local Operator Path
+```bash
+uv tool install "ai-driven-dev-v2==0.1.0a2"
+aidd --version
+aidd doctor
+```
 
-The product operator path starts from a local project root. Install or run AIDD locally, then
-enter the target project directory before creating workflow state.
+Run the container image:
 
-From an installed command:
+```bash
+docker run --rm ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a2 --version
+docker run --rm ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a2 doctor
+```
+
+The `v0.1.0a2` release evidence passed PyPI publish, `pipx`, `uv tool`, container
+publish, and GHCR verification. Published GHCR tags are:
+
+- `ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a2`
+- `ghcr.io/grinrus/ai-driven-dev-v2:sha-92c893d`
+
+`latest` is published only for stable releases, not prerelease tags.
+
+## Run your first local workflow
+
+Start from the local project root that should receive AIDD workflow state:
 
 ```bash
 cd /path/to/local-project
-aidd doctor --config /path/to/aidd.example.toml
+aidd doctor
 aidd init --work-item WI-001 --root .aidd
-aidd run --work-item WI-001 --runtime generic-cli --root .aidd --config /path/to/aidd.example.toml
-aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
+aidd run --work-item WI-001 --runtime generic-cli --from-stage idea --to-stage plan --root .aidd
+aidd run show --work-item WI-001 --root .aidd
 ```
 
-From a source checkout without installing globally, replace `aidd` with
-`uv tool run --from /path/to/ai_driven_dev_v2 aidd`.
+This creates `.aidd/` inside the local project. Treat `.aidd/` as project-local
+operator state and do not commit it unless your repository policy explicitly says so.
 
-Inspect local workflow evidence with either the UI or the CLI:
+From a source checkout without installing globally, replace `aidd` with:
+
+```bash
+uv tool run --from /path/to/ai_driven_dev_v2 aidd
+```
+
+The product operator path starts from a local project root. `aidd init --github-issue <url>`
+is out of product scope. Public GitHub repositories are live E2E targets and
+support/reporting evidence sources only, not a product intake path.
+
+## Choose a runtime
+
+Use `aidd doctor` to check provider availability, configured execution commands, support
+tiers, and default timeout settings.
+
+| Runtime | External dependency | Default execution mode | Typical use |
+| --- | --- | --- | --- |
+| `generic-cli` | Python | `adapter-flags` | Local smoke path and deterministic checks |
+| `claude-code` | Authenticated `claude` CLI | `native` | Claude Code-backed workflow runs |
+| `codex` | Authenticated `codex` CLI | `native` | Codex-backed workflow runs and live evals |
+| `opencode` | Authenticated `opencode` CLI | `native` | OpenCode-backed workflow runs and live evals |
+
+Workflow and stage execution support the same runtime ids:
+
+```bash
+aidd run --work-item WI-001 --runtime codex --root .aidd
+aidd stage run plan --work-item WI-001 --runtime opencode --root .aidd
+```
+
+Codex, OpenCode, and Claude Code default to native provider CLI execution. Advanced
+operators can configure AIDD-compatible wrapper commands with `mode = "adapter-flags"`
+when they need a custom execution surface.
+
+Unknown runtime ids fail fast with `unsupported-runtime` classification.
+
+## Inspect artifacts and logs
+
+AIDD stores workflow evidence under `.aidd/`:
 
 ```bash
 aidd run show --work-item WI-001 --root .aidd
 aidd run logs --work-item WI-001 --stage plan --root .aidd
 aidd run artifacts --work-item WI-001 --stage plan --root .aidd
+aidd stage questions idea --work-item WI-001 --root .aidd
 ```
 
-The `.aidd/` directory stays inside the local project root. Treat it as project-local
-operator state and do not commit it unless a separate repository policy explicitly says so.
+Stage documents, runtime logs, validator reports, repair briefs, questions, and answers
+remain ordinary files in the local workspace. The core treats Markdown documents as the
+contract surface; runtime-authored JSON schemas are not the primary stage output format.
 
-`aidd init --github-issue <url>` is out of product scope. Public GitHub repositories are live
-E2E targets and support/reporting evidence sources only, not a product intake path.
+## Operator UI
 
-## Planned distribution channels
-
-The intended release channels are:
-
-- PyPI for `pipx install ai-driven-dev-v2`
-- `uv tool install ai-driven-dev-v2`
-- container images such as `ghcr.io/grinrus/ai-driven-dev-v2`
-- source checkout for contributors and CI
-
-Runtime binaries remain external dependencies. AIDD does not bundle Claude Code,
-Codex, OpenCode, or other runtimes.
-
-For workflow or stage execution, Codex and OpenCode default to native provider
-CLI execution. Advanced operators can still configure an AIDD-compatible wrapper
-command with `mode = "adapter-flags"` when they need a custom execution surface.
-
-For manual live E2E, the canonical operator-audit path is:
-
-- build a local wheel from the current checkout;
-- install it with `uv tool`;
-- enter the pinned target repository;
-- run installed `aidd` there with `.aidd/` rooted inside that repository.
-
-Container image tagging rules for release tags:
-
-- publish `vX.Y.Z`, `vX.Y`, and `vX`;
-- publish `sha-<git-sha>` for traceability;
-- publish `latest` only for stable tags without prerelease suffixes.
-
-PyPI publishing tag rules:
-
-- tag format must be `v<major>.<minor>.<patch>` with optional PEP 440 suffix (`aN`, `bN`, `rcN`, `.postN`, `.devN`);
-- release tag must exactly match `v<project.version>` from `pyproject.toml`;
-- tag-triggered publish jobs fail fast when tag format or tag/version alignment is invalid.
-
-## Quickstart
+Start the local UI for an initialized work item:
 
 ```bash
-# Install the local development environment
+aidd ui --work-item WI-001 --root .aidd
+```
+
+The UI reads the same `.aidd/` state as the CLI. It can show stage status, stage artifacts,
+runtime logs, questions, repair history, and runtime readiness details without introducing a
+separate workflow engine.
+
+For the local UI evidence lane, see `docs/e2e/operator-ui-local-project.md`.
+
+## How AIDD works
+
+Architecture in one line:
+
+```text
+operator CLI / UI -> AIDD core -> adapter -> runtime -> workspace documents
+```
+
+Key design rules:
+
+- the core owns workflow semantics, stage order, validation, repair, and workspace policy;
+- adapters own runtime process launch, streaming, and runtime-specific command behavior;
+- stage inputs and outputs are Markdown documents;
+- validation failures trigger repair or an explicit stop;
+- questions and answers are persisted as documents;
+- runtime logs are streamed when possible and saved for replay and eval analysis.
+
+Primary architecture docs:
+
+- `docs/architecture/target-architecture.md`
+- `docs/architecture/adapter-protocol.md`
+- `docs/architecture/document-contracts.md`
+- `docs/architecture/runtime-matrix.md`
+- `docs/architecture/operator-frontend.md`
+- `docs/architecture/project-set-workspace.md`
+- `docs/architecture/distribution-and-development.md`
+
+## Development from source
+
+Prerequisites:
+
+- Python 3.12+
+- `uv`
+- optional provider CLIs for runtime-specific development
+- provider authentication configured outside AIDD
+
+Bootstrap and check the repository:
+
+```bash
 uv sync --extra dev
-
-# Inspect runtime availability from local config
+uv run aidd --version
 uv run aidd doctor
-
-# Create a work-item workspace
-uv run aidd init --work-item WI-001
-
-# Read the roadmap before implementing
-sed -n '1,200p' docs/backlog/roadmap.md
-
-# Run the smoke tests
+uv run --extra dev ruff check .
+uv run --extra dev python -m mypy src
 uv run --extra dev pytest -q
 ```
 
-## Current CLI surface
+Contributor workflow:
 
-The CLI exposes the current product surface:
+1. Read `AGENTS.md`.
+2. Read `docs/product/user-stories.md`.
+3. Pick a local task from `docs/backlog/backlog.md`.
+4. Use `docs/backlog/roadmap.md` for the full wave/epic/slice/task hierarchy.
+5. Keep the core runtime-agnostic and update docs/contracts/prompts when behavior changes.
+
+## Eval and release evidence
+
+AIDD includes deterministic harness checks and manual live E2E scenarios. Live E2E is a
+manual installed-operator audit, not CI and not a release gate.
+
+Example live eval command:
 
 ```bash
-aidd doctor
-aidd init --work-item WI-001
-aidd run --work-item WI-001 --runtime generic-cli
-aidd stage run plan --work-item WI-001 --runtime generic-cli
 aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml --runtime codex
 ```
 
-Today:
+Manual live E2E scenarios install AIDD through an isolated `uv tool` path, run from the
+target repository root, and preserve audit bundles under `.aidd/reports/evals/`.
 
-- `doctor` is functional,
-- `init` is functional,
-- `run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`,
-- `stage run` executes single-stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`,
-- `run` and `stage run` fail fast for unknown runtime ids with `unsupported-runtime` classification,
-- `eval run` executes the harness lifecycle and writes result bundles (`summary.md`, `verdict.md`, `runtime.log`, validator artifacts, `stage-timing.md`, and `self-repair-matrix.md`),
-- live `eval run` scenarios under `harness/scenarios/live/` install a local wheel via `uv tool`, run AIDD from the target repository root, and use maintained live providers only (`codex`, `opencode`, and the `claude-code` smoke lane in Wave 13).
-
-## Operator documentation
-
-For installation, diagnostics, and issue reporting workflows, use:
-
-- `docs/operator-handbook.md`
-- `docs/operator-troubleshooting.md`
-- `docs/operator-support-policy.md`
-
-## Live E2E catalog
-
-The repository includes a curated live E2E set built on public GitHub repositories.
-
-In this repository, live E2E means a manual installed-operator audit, not a CI or release lane and not the same thing as smoke or adapter conformance.
-
-Repository set:
-
-- `fastapi/typer`
-- `encode/httpx`
-- `simonw/sqlite-utils`
-- `honojs/hono`
-
-See:
+Public GitHub repositories are live E2E targets for evaluator evidence only. See:
 
 - `docs/e2e/live-e2e-catalog.md`
 - `docs/e2e/scenario-matrix.md`
 - `harness/scenarios/live/`
 
-## How to develop this project
+Release and install evidence for PyPI, `pipx`, `uv tool`, and GHCR is recorded in
+`docs/release-checklist.md`.
 
-Read in this order:
+## Docs map
 
-1. `AGENTS.md`
-2. `docs/product/user-stories.md`
-3. `docs/backlog/roadmap.md`
-4. `docs/architecture/target-architecture.md`
-5. the nearest nested `AGENTS.md`
-6. the relevant skill in `.agents/skills/`
-
-Then use the standard loop:
-
-```bash
-uv sync --extra dev
-uv run --extra dev ruff check .
-uv run --extra dev python -m mypy src
-uv run --extra dev pytest -q
-```
+- `docs/operator-handbook.md` — operator install, config, and runtime guidance
+- `docs/operator-troubleshooting.md` — diagnostics and common failure modes
+- `docs/operator-support-policy.md` — support and evidence expectations
+- `docs/product/user-stories.md` — product outcomes and scope boundaries
+- `docs/architecture/` — stable architecture decisions and protocols
+- `docs/e2e/` — manual live E2E and local operator UI evidence
+- `docs/backlog/roadmap.md` — canonical plan
+- `docs/backlog/backlog.md` — short actionable queue
+- `docs/compatibility-policy.md` — Python and platform compatibility
 
 ## Repository map
 
 - `src/aidd/` — Python package with core orchestration, adapters, validators, CLI, harness, and evals
 - `contracts/` — stage and document contracts
 - `prompt-packs/` — file-based stage prompts
-- `docs/product/` — product framing and user stories
-- `docs/architecture/` — fixed technical decisions and protocols
-- `docs/e2e/` — live E2E catalog
-- `docs/backlog/` — roadmap and active backlog
 - `harness/scenarios/` — smoke and live scenario manifests
 - `.agents/skills/` — reusable team skills for Codex-style development
 - `tests/` — deterministic unit, integration, docs, adapter, harness, and eval checks
 - `MANIFEST.md` — historical archive contents snapshot, not the current source-of-truth inventory
-
-## Roadmap
-
-The canonical plan lives in `docs/backlog/roadmap.md`.
-
-The short actionable queue lives in `docs/backlog/backlog.md`.
-
-## Compatibility policy
-
-Compatibility guarantees for Python versions and operating platforms live in:
-
-- `docs/compatibility-policy.md`
 
 ## Contributing
 
@@ -343,11 +250,10 @@ See `CONTRIBUTING.md`.
 
 The short version:
 
-- pick a local task from the backlog,
-- keep the change aligned with the user stories,
-- update docs/contracts/prompts when behavior changes,
-- keep the core runtime-agnostic,
-- run the smallest relevant checks before opening a PR.
+- keep changes aligned with the user stories;
+- keep runtime-specific logic inside adapters;
+- update docs, contracts, prompts, scenarios, and tests when behavior changes;
+- run the narrowest useful checks locally before opening a PR.
 
 ## License
 
