@@ -178,6 +178,61 @@ def test_build_live_quality_assessment_returns_warn_for_bounded_quality_risks(
     assert "Resolve review conditions" in report
 
 
+def test_build_live_quality_assessment_accepts_contract_verdict_and_bold_evidence(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-CONTRACT-VERDICT"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    review_root = stage_output_root(root=tmp_path, work_item=work_item, stage="review")
+    review_root.joinpath("review-report.md").write_text(
+        "# Review Report\n\n"
+        "## Findings\n\n"
+        "### REV-001\n\n"
+        "- Severity: `low`\n"
+        "- Disposition: `accepted-risk`\n"
+        "- Evidence: `implementation-report.md`\n"
+        "- Rationale: because the risk is explicitly bounded.\n\n"
+        "## Verdict\n\n"
+        "**approved**\n\n"
+        "## Required follow-up\n\n"
+        "- None.\n",
+        encoding="utf-8",
+    )
+    qa_root = stage_output_root(root=tmp_path, work_item=work_item, stage="qa")
+    qa_root.joinpath("qa-report.md").write_text(
+        "# QA Report\n\n"
+        "## Evidence\n\n"
+        "- **EV-1** Implementation report verification passed.\n\n"
+        "## Readiness\n\n"
+        "- **Verdict:** `ready-with-risks`\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_issue=scenario.feature_source.issues[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.review_status == "approved"
+    assert assessment.qa_verdict == "ready-with-risks"
+    assert assessment.gate == "warn"
+    assert "review approval status is missing from review-report.md" not in (
+        assessment.blocking_findings
+    )
+    assert [dimension.score for dimension in assessment.dimensions] == [3, 2, 1]
+
+
 def test_build_live_quality_assessment_scores_flow_fidelity_independently(
     tmp_path: Path,
 ) -> None:

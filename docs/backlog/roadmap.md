@@ -4730,7 +4730,7 @@ Exit evidence:
 - the old fresh Claude `idea` timeout blocker is closed by a successful full-flow rerun with explicit timeout/profile diagnostics;
 - the remaining Claude lane quality risk is artifact evidence strength, not provider/runtime timeout.
 
-#### Slice W20-E1-S8 — OpenCode review evidence-reference hardening (`active`)
+#### Slice W20-E1-S8 — OpenCode review evidence-reference hardening (`done`)
 Goal: make the new post-`W20-E1-S6` OpenCode review validation blocker actionable before any further OpenCode live rerun.
 
 Primary outputs:
@@ -4745,8 +4745,10 @@ Touched areas:
 - `docs/backlog/`
 - `contracts/stages/`
 - `prompt-packs/`
+- `src/aidd/evals/`
 - `tests/validators/`
 - `tests/core/`
+- `tests/evals/`
 - `harness/scenarios/live/`
 
 Dependencies:
@@ -4755,16 +4757,25 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E1-S8-T1` (soon) Inspect `eval-live-005-opencode-20260506T054902Z` and record the exact prompt, repair, and contract boundary for the review finding evidence-reference failure.
-- `W20-E1-S8-T2` (soon) Harden the `review` stage prompt and repair guidance so every finding includes stable id, severity, disposition, rationale, and evidence reference to implementation output or acceptance criteria.
-- `W20-E1-S8-T3` (soon) Add focused regression coverage proving malformed review finding output produces actionable repair guidance and remains blocked if not fixed.
-- `W20-E1-S8-T4` (later) Rerun `AIDD-LIVE-005` on OpenCode after review hardening and record run id, verdict, quality gate, first failure boundary, and bundle path.
+- `W20-E1-S8-T1` (done) Inspect `eval-live-005-opencode-20260506T054902Z` and record the exact prompt, repair, and contract boundary for the review finding evidence-reference failure.
+- `W20-E1-S8-T2` (done) Harden the `review` stage prompt and repair guidance so every finding includes stable id, severity, disposition, rationale, and evidence reference to implementation output or acceptance criteria.
+- `W20-E1-S8-T3` (done) Add focused regression coverage proving malformed review finding output produces actionable repair guidance and remains blocked if not fixed.
+- `W20-E1-S8-T4` (done) Rerun `AIDD-LIVE-005` on OpenCode after review hardening and record run id, verdict, quality gate, first failure boundary, and bundle path.
+
+Evidence:
+
+- `2026-05-06` Forensic inspection of `eval-live-005-opencode-20260506T054902Z` found the exact boundary: the `review` validator already rejected findings without implementation-output or acceptance-criteria evidence, but the final repair brief only repeated the generic stable id/severity/disposition/rationale requirement. The failing `review-report.md` had `REV-*` findings with severity, disposition, and rationale, but no per-finding evidence references.
+- `2026-05-06` `contracts/stages/review.md`, `prompt-packs/stages/review/run.md`, and `prompt-packs/stages/review/repair.md` now make `Evidence:` metadata or equivalent inline implementation/`AC-*` evidence explicit for every finding. The generated repair brief now adds an actionable `SEM-UNSUPPORTED-CLAIM` hint that tells the runtime to add `Evidence:` or remove/mark unsupported findings invalid.
+- `2026-05-06` Focused local checks passed after hardening and quality-parser follow-up: `uv run --extra dev pytest tests/evals/test_quality.py tests/validators/test_semantic.py tests/core/test_repair.py tests/test_prompt_quality.py -q` reported `100 passed`.
+- `2026-05-06` OpenCode preflight passed for `AIDD-LIVE-005`: provider `/opt/homebrew/bin/opencode`, version `1.14.30`, native execution command `opencode run --format json --dangerously-skip-permissions`.
+- `2026-05-06` Post-hardening rerun `eval-live-005-opencode-20260506T094747Z` produced status `pass`, first failure boundary `none`, and bundle path `.aidd/reports/evals/eval-live-005-opencode-20260506T094747Z`. The run reached `idea -> qa`, and `review` succeeded after one repair for a missing `Verdict` section; the previous `SEM-UNSUPPORTED-CLAIM` blocker did not recur.
+- `2026-05-06` The generated live `quality-report.md` still recorded quality gate `fail` because the local quality evaluator only recognized backticked `Review status` lines and missed the contract-valid `## Verdict` / `**approved**` output. That AIDD-owned parser mismatch was fixed in `src/aidd/evals/quality.py`; recomputing the assessment against the same bundle now yields gate `warn`, verdict `ready-with-risks`, review status `approved`, QA verdict `ready-with-risks`, no blocking findings, and scores `flow_fidelity=3`, `artifact_quality=2`, `code_quality=1`. Generated `.aidd/` artifacts were not edited.
 
 Exit evidence:
 
-- maintainers can explain why the old idea-stage blocker is closed while clean OpenCode live evidence remains blocked later in the flow;
+- maintainers can explain why the old idea-stage blocker and the later review evidence-reference blocker are both closed for OpenCode;
 - review-stage contract compliance is hardened without provider-specific core logic;
-- another OpenCode live rerun is deferred until local review-stage regression evidence exists.
+- OpenCode live execution now reaches status `pass`; remaining quality caveat is a bounded `ready-with-risks` artifact/code-quality warning, not a runtime timeout or validation blocker.
 
 ### Epic W20-E2 — operator workflow frontend (`active`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`

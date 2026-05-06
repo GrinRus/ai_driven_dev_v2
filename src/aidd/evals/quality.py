@@ -78,6 +78,53 @@ def _extract_backticked_value(text: str | None, *, allowed: tuple[str, ...]) -> 
     return None
 
 
+def _normalized_status_line_value(line: str) -> str:
+    normalized = line.strip()
+    normalized = re.sub(r"^\s*[-*]\s+", "", normalized)
+    normalized = normalized.replace("**", "")
+    normalized = normalized.strip("` \t.")
+    label_match = re.match(
+        r"^(?:review status|approval status|qa verdict|verdict|status)\s*:\s*(?P<value>.+)$",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    if label_match is not None:
+        normalized = label_match.group("value").strip("` \t.")
+    return normalized.lower()
+
+
+def _extract_markdown_status_value(
+    text: str | None,
+    *,
+    allowed: tuple[str, ...],
+    section_candidates: tuple[str, ...],
+) -> str | None:
+    backticked = _extract_backticked_value(text, allowed=allowed)
+    if backticked is not None:
+        return backticked
+    if text is None:
+        return None
+
+    allowed_by_length = sorted(allowed, key=len, reverse=True)
+    in_target_section = False
+    for raw_line in text.splitlines():
+        stripped = raw_line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            heading = stripped.lstrip("#").strip().lower()
+            in_target_section = heading in section_candidates
+            continue
+
+        normalized = _normalized_status_line_value(stripped)
+        for value in allowed_by_length:
+            if normalized == value:
+                return value
+        if in_target_section:
+            return None
+    return None
+
+
 def _count_must_fix_findings(text: str | None) -> int:
     if text is None:
         return 0
@@ -99,7 +146,10 @@ def _count_must_fix_findings(text: str | None) -> int:
 def _count_evidence_references(text: str | None) -> int:
     if text is None:
         return 0
-    evidence_pattern = re.compile(r"^\s*[-*]\s*`?EV-\d+\b", flags=re.IGNORECASE)
+    evidence_pattern = re.compile(
+        r"^\s*[-*]\s*(?:`|\*\*)?EV-\d+\b",
+        flags=re.IGNORECASE,
+    )
     return sum(1 for line in text.splitlines() if evidence_pattern.search(line))
 
 
@@ -144,13 +194,15 @@ def _collect_live_quality_evidence(
     qa_report_text = _read_text_if_exists(qa_report_path)
     return LiveQualityEvidence(
         missing_stage_paths=missing_stage_paths,
-        review_status=_extract_backticked_value(
+        review_status=_extract_markdown_status_value(
             review_report_text,
             allowed=_REVIEW_STATUS_VALUES,
+            section_candidates=("verdict", "approval status", "approval decision"),
         ),
-        qa_verdict=_extract_backticked_value(
+        qa_verdict=_extract_markdown_status_value(
             qa_report_text,
             allowed=_QA_VERDICT_VALUES,
+            section_candidates=("readiness", "verdict"),
         ),
         unresolved_must_fix_count=_count_must_fix_findings(review_report_text),
         evidence_reference_count=_count_evidence_references(qa_report_text),

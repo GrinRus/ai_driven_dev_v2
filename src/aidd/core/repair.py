@@ -212,6 +212,16 @@ def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
             "Render the section as top-level Markdown bullet items; if there are no entries, "
             "write exactly `- none`."
         )
+    if (
+        finding.code == "SEM-UNSUPPORTED-CLAIM"
+        and "evidence reference to implementation output" in normalized_message
+    ):
+        return (
+            "Add an explicit `Evidence:` line under each affected review finding that cites "
+            "`implementation-report.md`, a changed implementation file path, or an "
+            "acceptance-criteria id such as `AC-1`; remove or mark the finding `invalid` "
+            "if no such evidence exists."
+        )
     return ""
 
 

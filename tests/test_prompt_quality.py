@@ -59,3 +59,14 @@ def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     assert (
         "`SEM-INCOMPLETE-SECTION` for `Constraints` or `Open questions`" in repair_prompt
     )
+
+
+def test_review_prompts_make_finding_evidence_reference_explicit() -> None:
+    run_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/review/repair.md").read_text(encoding="utf-8")
+
+    assert "Every finding must include an explicit `Evidence:`" in run_prompt
+    assert "A plausible rationale without this evidence reference is invalid" in run_prompt
+    assert "`Evidence: implementation-report.md ...`" in run_prompt
+    assert "add an explicit `Evidence:` line" in repair_prompt
+    assert "if no such evidence exists, mark the finding `invalid` or remove it" in repair_prompt

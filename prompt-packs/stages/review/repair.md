@@ -52,7 +52,9 @@ not split those metadata bullets into standalone findings.
 Use concrete repair actions:
 
 - unsupported finding: remove claim or rewrite with explicit evidence from implement artifacts or
-  acceptance-criteria mismatch;
+  acceptance-criteria mismatch; add an explicit `Evidence:` line that cites
+  `implementation-report.md`, a changed file path, or an acceptance-criteria id such as `AC-1`;
+  if no such evidence exists, mark the finding `invalid` or remove it;
 - missing severity: assign explicit severity (`critical`, `high`, `medium`, `low`) per finding;
 - missing disposition: assign explicit disposition (`must-fix`, `follow-up`, `accepted-risk`,
   `invalid`);
@@ -77,6 +79,8 @@ Use concrete repair actions:
 ## Repair exit checks
 
 - every remaining finding has stable id, severity, disposition, and rationale,
+- every remaining finding has explicit `Evidence:` metadata or equivalent inline evidence tied to
+  implementation output or acceptance criteria,
 - no unsupported or evidence-free finding remains active,
 - approval status is coherent with unresolved `must-fix` findings,
 - required changes are explicit for non-approved outcomes,
