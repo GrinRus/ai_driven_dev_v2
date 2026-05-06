@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
 
+from aidd.adapters.runtime_registry import get_runtime_definition
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_JSONL_FILENAME,
@@ -14,10 +17,12 @@ from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.evals.log_analysis import (
     CoarseRuntimeEvent,
     FailureBoundarySelection,
+    NormalizedRuntimeEvent,
     parse_events_jsonl_text,
     parse_runtime_log_text,
     parse_validator_report_failures_text,
     select_first_failure_boundary,
+    summarize_runtime_provider_diagnostics,
 )
 from aidd.evals.quality import (
     LiveQualityAssessment,
@@ -57,6 +62,20 @@ from aidd.harness.result_bundle import (
 from aidd.harness.scenarios import Scenario
 
 EXIT_CODE_PATTERN = re.compile(r"non-zero exit \((?P<code>\d+)\)")
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeTimeoutAttempt:
+    stage: str
+    attempt: str
+    runtime_exit_classification: str
+    runtime_exit_code: str
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeTimeoutConfig:
+    default_timeout_seconds: float | None
+    stage_timeout_seconds: dict[str, float]
 
 
 def _collect_attempt_jsonl_artifacts(
@@ -296,6 +315,7 @@ def render_log_analysis_markdown(
     *,
     status: VerdictStatus,
     boundary: FailureBoundarySelection,
+    runtime_diagnostics_markdown: str | None = None,
     stage_timing_markdown: str | None = None,
 ) -> str:
     signal_line = (
@@ -311,9 +331,185 @@ def render_log_analysis_markdown(
         f"- Signal Line: `{signal_line}`\n"
         f"- Reason: {boundary.reason}\n"
     )
-    if stage_timing_markdown is None:
-        return base
-    return f"{base}\n{stage_timing_markdown}"
+    sections = [base.rstrip()]
+    if runtime_diagnostics_markdown is not None:
+        sections.append(runtime_diagnostics_markdown.rstrip())
+    if stage_timing_markdown is not None:
+        sections.append(stage_timing_markdown.rstrip())
+    return "\n\n".join(sections) + "\n"
+
+
+def _format_timeout_seconds(value: float | None) -> str:
+    if value is None:
+        return "n/a"
+    return f"{value:.3f}s"
+
+
+def _float_config_value(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    return None
+
+
+def _runtime_timeout_config(
+    *,
+    runtime_id: str,
+    runtime_config_path: Path | None,
+) -> RuntimeTimeoutConfig:
+    if runtime_config_path is None or not runtime_config_path.exists():
+        return RuntimeTimeoutConfig(
+            default_timeout_seconds=None,
+            stage_timeout_seconds={},
+        )
+
+    try:
+        data = tomllib.loads(runtime_config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return RuntimeTimeoutConfig(
+            default_timeout_seconds=None,
+            stage_timeout_seconds={},
+        )
+
+    runtime_section = data.get("runtime")
+    if not isinstance(runtime_section, dict):
+        return RuntimeTimeoutConfig(
+            default_timeout_seconds=None,
+            stage_timeout_seconds={},
+        )
+
+    runtime_definition = get_runtime_definition(runtime_id)
+    raw_runtime_config = runtime_section.get(runtime_definition.config_section)
+    if not isinstance(raw_runtime_config, dict):
+        return RuntimeTimeoutConfig(
+            default_timeout_seconds=None,
+            stage_timeout_seconds={},
+        )
+
+    raw_stage_timeouts = raw_runtime_config.get("stage_timeouts")
+    stage_timeouts: dict[str, float] = {}
+    if isinstance(raw_stage_timeouts, dict):
+        for raw_stage, raw_value in raw_stage_timeouts.items():
+            if not isinstance(raw_stage, str):
+                continue
+            timeout_seconds = _float_config_value(raw_value)
+            if timeout_seconds is not None:
+                stage_timeouts[raw_stage] = timeout_seconds
+
+    return RuntimeTimeoutConfig(
+        default_timeout_seconds=_float_config_value(raw_runtime_config.get("timeout_seconds")),
+        stage_timeout_seconds=stage_timeouts,
+    )
+
+
+def _timed_out_stage_attempts(
+    stage_timing_payload: dict[str, object],
+) -> tuple[RuntimeTimeoutAttempt, ...]:
+    raw_stages = stage_timing_payload.get("stages", [])
+    stage_items = raw_stages if isinstance(raw_stages, list) else []
+    attempts: list[RuntimeTimeoutAttempt] = []
+    for raw_stage in stage_items:
+        if not isinstance(raw_stage, dict):
+            continue
+        stage = str(raw_stage.get("stage") or "unknown")
+        raw_attempts = raw_stage.get("attempts")
+        attempt_items = raw_attempts if isinstance(raw_attempts, list) else []
+        for raw_attempt in attempt_items:
+            if not isinstance(raw_attempt, dict):
+                continue
+            runtime_exit_classification = str(
+                raw_attempt.get("runtime_exit_classification") or "unknown"
+            )
+            timed_out = (
+                bool(raw_attempt.get("timed_out"))
+                or runtime_exit_classification == "timeout"
+            )
+            if not timed_out:
+                continue
+            attempts.append(
+                RuntimeTimeoutAttempt(
+                    stage=stage,
+                    attempt=str(raw_attempt.get("attempt") or "n/a"),
+                    runtime_exit_classification=runtime_exit_classification,
+                    runtime_exit_code=str(raw_attempt.get("runtime_exit_code") or "n/a"),
+                )
+            )
+    return tuple(attempts)
+
+
+def _signal_summary(items: tuple[str, ...]) -> str:
+    if not items:
+        return "`none`"
+    first = items[0].replace("`", "'")
+    if len(items) == 1:
+        return first
+    return f"{first} ({len(items)} total; first shown)"
+
+
+def _stage_timeout_summary(stage_timeouts: dict[str, float]) -> str:
+    if not stage_timeouts:
+        return "`none`"
+    return ", ".join(
+        f"`{stage}`={_format_timeout_seconds(timeout_seconds)}"
+        for stage, timeout_seconds in stage_timeouts.items()
+    )
+
+
+def render_runtime_diagnostics_markdown(
+    *,
+    normalized_events: tuple[NormalizedRuntimeEvent, ...],
+    stage_timing_payload: dict[str, object],
+    runtime_id: str,
+    runtime_config_path: Path | None,
+    harness_timeout_seconds: float | None,
+) -> str:
+    provider_diagnostics = summarize_runtime_provider_diagnostics(normalized_events)
+    timeout_config = _runtime_timeout_config(
+        runtime_id=runtime_id,
+        runtime_config_path=runtime_config_path,
+    )
+    timed_out_attempts = _timed_out_stage_attempts(stage_timing_payload)
+    if timed_out_attempts:
+        timeout_attempt_lines = []
+        for attempt in timed_out_attempts:
+            stage_budget = timeout_config.stage_timeout_seconds.get(
+                attempt.stage,
+                timeout_config.default_timeout_seconds,
+            )
+            timeout_attempt_lines.append(
+                "`"
+                f"{attempt.stage}` attempt `{attempt.attempt}` "
+                f"runtime exit `{attempt.runtime_exit_classification}`/"
+                f"`{attempt.runtime_exit_code}`, stage budget "
+                f"`{_format_timeout_seconds(stage_budget)}`"
+            )
+        timeout_stage_budget = "; ".join(timeout_attempt_lines)
+    else:
+        timeout_stage_budget = "`none`"
+
+    config_source = (
+        "`n/a`"
+        if runtime_config_path is None
+        else f"`{runtime_config_path.as_posix()}`"
+    )
+    default_timeout = _format_timeout_seconds(timeout_config.default_timeout_seconds)
+    stage_timeout_profile = _stage_timeout_summary(timeout_config.stage_timeout_seconds)
+    return "\n".join(
+        (
+            "## Runtime Diagnostics",
+            "",
+            f"- Runtime ID: `{runtime_id}`",
+            f"- Model/Profile Evidence: {_signal_summary(provider_diagnostics.model_profiles)}",
+            f"- Retry Signals: {_signal_summary(provider_diagnostics.retry_signals)}",
+            f"- Rate-Limit Signals: {_signal_summary(provider_diagnostics.rate_limit_signals)}",
+            f"- Timeout Stage/Budget: {timeout_stage_budget}",
+            f"- Default Runtime Timeout: `{default_timeout}`",
+            f"- Stage Timeout Profile: {stage_timeout_profile}",
+            f"- Harness Run Timeout: `{_format_timeout_seconds(harness_timeout_seconds)}`",
+            f"- Timeout Config Source: {config_source}",
+        )
+    )
 
 
 def write_source_artifacts(
@@ -614,6 +810,17 @@ def persist_eval_reports(
         render_log_analysis_markdown(
             status=status,
             boundary=first_failure_boundary,
+            runtime_diagnostics_markdown=render_runtime_diagnostics_markdown(
+                normalized_events=normalized_events,
+                stage_timing_payload=stage_timing_payload,
+                runtime_id=runtime_id,
+                runtime_config_path=state.live_runtime_config_path,
+                harness_timeout_seconds=(
+                    None
+                    if state.aidd_run_result is None
+                    else state.aidd_run_result.timeout_seconds
+                ),
+            ),
             stage_timing_markdown=rendered_stage_timing,
         ),
         encoding="utf-8",

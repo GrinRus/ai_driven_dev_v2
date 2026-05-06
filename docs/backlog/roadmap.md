@@ -4687,7 +4687,7 @@ Exit evidence:
 - OpenCode-specific behavior remains outside core workflow semantics;
 - another OpenCode live rerun is attempted only after prompt or repair hardening has local regression evidence.
 
-#### Slice W20-E1-S7 — Claude live timeout/profile diagnosis (`active`)
+#### Slice W20-E1-S7 — Claude live timeout/profile diagnosis (`done`)
 Goal: make Claude live timeout evidence explicit enough to distinguish provider/runtime blockage from AIDD workflow failure.
 
 Primary outputs:
@@ -4710,14 +4710,25 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E1-S7-T1` (soon) Update generated Claude live runtime config to include explicit `idea` timeout coverage because the fresh control run timed out on `idea` before validation.
-- `W20-E1-S7-T2` (soon) Improve eval and log-analysis evidence for Claude runs so model profile, provider retry or rate-limit signals, timeout stage, and timeout budget are visible in the audit summary.
-- `W20-E1-S7-T3` (later) Rerun `AIDD-LIVE-005` on Claude only after timeout/profile evidence is explicit; if it still fails before validation, close it as provider/runtime blocked.
+- `W20-E1-S7-T1` (done) Update generated Claude live runtime config to include explicit `idea` timeout coverage because the fresh control run timed out on `idea` before validation.
+- `W20-E1-S7-T2` (done) Improve eval and log-analysis evidence for Claude runs so model profile, provider retry or rate-limit signals, timeout stage, and timeout budget are visible in the audit summary.
+- `W20-E1-S7-T3` (done) Rerun `AIDD-LIVE-005` on Claude only after timeout/profile evidence is explicit; if it still fails before validation, close it as provider/runtime blocked.
+
+Evidence:
+
+- `2026-05-06` Generated Claude live config now includes `[runtime.claude_code.stage_timeouts].idea = 1500` alongside existing `research = 1500`, `tasklist = 1800`, `implement = 1800`, `review = 1800`, and `qa = 1800`.
+- `2026-05-06` Eval `log-analysis.md` now includes a `Runtime Diagnostics` section with runtime id, model/profile evidence, retry signals, rate-limit signals, timeout stage/budget, default runtime timeout, stage timeout profile, harness run timeout, and timeout config source. The rate-limit signal extraction was tightened after inspection so long thinking text no longer masks the real `api_retry`/`rate_limit`/`429` event.
+- `2026-05-06` Focused local checks passed: `uv run --extra dev pytest tests/harness/test_live_runtime_config.py tests/evals/test_log_analysis_runtime_log.py tests/evals/test_reporting_markdown_summary.py -q` reported `21 passed`.
+- `2026-05-06` Claude preflight passed for `AIDD-LIVE-005`: provider `/Users/griogrii_riabov/.local/bin/claude`, version `2.1.85 (Claude Code)`, native execution command `claude -p --output-format stream-json --verbose --dangerously-skip-permissions`.
+- `2026-05-06` Post-evidence Claude rerun `eval-live-005-claude-code-20260506T074233Z` produced status `pass`, quality gate `warn`, first failure boundary `none`, and bundle path `.aidd/reports/evals/eval-live-005-claude-code-20260506T074233Z`.
+- `2026-05-06` The rerun proves the prior fresh Claude `idea` timeout did not reproduce under the explicit evidence path: every stage from `idea` through `qa` reached `succeeded`, every runtime exit was `success`/`0`, and every stage timeout column was `False`. The quality gate remains `warn` because review/QA artifacts are `ready-with-risks` and evidence references should be strengthened before treating the run as clean release evidence.
+- `2026-05-06` Final local gates passed before commit: `uv run --extra dev ruff check .`, `uv run --extra dev python -m mypy src`, and `uv run --extra dev pytest -q` (`738 passed`).
 
 Exit evidence:
 
 - fresh Claude failures can be classified from audit artifacts without guessing whether the model, provider, timeout profile, or AIDD workflow boundary owned the stop;
-- another Claude live rerun is deferred until the timeout/profile evidence path is explicit.
+- the old fresh Claude `idea` timeout blocker is closed by a successful full-flow rerun with explicit timeout/profile diagnostics;
+- the remaining Claude lane quality risk is artifact evidence strength, not provider/runtime timeout.
 
 #### Slice W20-E1-S8 — OpenCode review evidence-reference hardening (`active`)
 Goal: make the new post-`W20-E1-S6` OpenCode review validation blocker actionable before any further OpenCode live rerun.

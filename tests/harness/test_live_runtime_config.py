@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -155,11 +156,14 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert config_text.count("timeout_seconds = 1200") == 2
     assert config_text.count("timeout_seconds = 900") == 1
     assert "[runtime.claude_code.stage_timeouts]" in config_text
-    assert "research = 1500" in config_text
-    assert "tasklist = 1800" in config_text
-    assert "implement = 1800" in config_text
-    assert "review = 1800" in config_text
-    assert "qa = 1800" in config_text
+    config = tomllib.loads(config_text)
+    claude_stage_timeouts = config["runtime"]["claude_code"]["stage_timeouts"]
+    assert claude_stage_timeouts["idea"] == 1500
+    assert claude_stage_timeouts["research"] == 1500
+    assert claude_stage_timeouts["tasklist"] == 1800
+    assert claude_stage_timeouts["implement"] == 1800
+    assert claude_stage_timeouts["review"] == 1800
+    assert claude_stage_timeouts["qa"] == 1800
     assert "[runtime.opencode.stage_timeouts]" in config_text
     assert "idea = 1500" in config_text
     assert "plan = 1500" in config_text

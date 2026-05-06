@@ -41,6 +41,13 @@ class NormalizedRuntimeEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class RuntimeProviderDiagnosticSummary:
+    model_profiles: tuple[str, ...]
+    retry_signals: tuple[str, ...]
+    rate_limit_signals: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class FailureTaxonomyResult:
     category: FailureTaxonomyCategory
     reason: str
@@ -58,6 +65,153 @@ VALIDATOR_FINDING_PATTERN = re.compile(
     r"^- `(?P<code>[^`]+)` \(`(?P<severity>[^`]+)`\) in (?P<location>.+?): (?P<message>.+)$"
 )
 VALIDATOR_VERDICT_PATTERN = re.compile(r"^- Verdict:\s*`(?P<verdict>pass|fail)`\s*$")
+PROFILE_KEY_LABELS = {
+    "claudecodeversion": "runtime_version",
+    "model": "model",
+    "modelid": "model",
+    "modelname": "model",
+    "outputstyle": "output_style",
+    "profile": "profile",
+    "profileid": "profile",
+    "provider": "provider",
+    "providerid": "provider",
+    "runtimeversion": "runtime_version",
+    "version": "runtime_version",
+}
+PROFILE_LABEL_ORDER = ("provider", "model", "profile", "output_style", "runtime_version")
+SIGNAL_KEY_LABELS = {
+    "attempt": "attempt",
+    "error": "error",
+    "errorstatus": "error_status",
+    "event": "event",
+    "maxretries": "max_retries",
+    "retrydelayms": "retry_delay_ms",
+    "stopreason": "stop_reason",
+    "subtype": "subtype",
+    "type": "type",
+}
+
+
+def _normalize_payload_key(key: str) -> str:
+    return key.replace("_", "").replace("-", "").strip().lower()
+
+
+def _scalar_text(value: object) -> str | None:
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped or None
+    if isinstance(value, bool):
+        return str(value).lower()
+    if isinstance(value, int | float):
+        return str(value)
+    return None
+
+
+def _walk_payload_items(value: object) -> tuple[tuple[str, object], ...]:
+    items: list[tuple[str, object]] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if isinstance(key, str):
+                items.append((key, child))
+            items.extend(_walk_payload_items(child))
+    elif isinstance(value, list):
+        for child in value:
+            items.extend(_walk_payload_items(child))
+    return tuple(items)
+
+
+def _single_line(value: str, *, limit: int = 240) -> str:
+    normalized = " ".join(value.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 3].rstrip() + "..."
+
+
+def _profile_signal_for_event(event: NormalizedRuntimeEvent) -> str | None:
+    values: dict[str, str] = {}
+    for key, value in _walk_payload_items(event.payload):
+        label = PROFILE_KEY_LABELS.get(_normalize_payload_key(key))
+        scalar = _scalar_text(value)
+        if label is not None and scalar is not None and label not in values:
+            values[label] = scalar
+    if "model" not in values and "provider" not in values and "profile" not in values:
+        return None
+
+    parts = [
+        f"{label}={values[label]}"
+        for label in PROFILE_LABEL_ORDER
+        if label in values
+    ]
+    return f"line {event.line_number}: {_single_line('; '.join(parts))}"
+
+
+def _event_signal_for_event(event: NormalizedRuntimeEvent) -> str:
+    values: dict[str, str] = {}
+    if event.source is not None:
+        values["source"] = event.source
+    for key, value in _walk_payload_items(event.payload):
+        label = SIGNAL_KEY_LABELS.get(_normalize_payload_key(key))
+        scalar = _scalar_text(value)
+        if label is not None and scalar is not None and label not in values:
+            values[label] = scalar
+    if not values:
+        values["event"] = event.event_kind
+    signal = "; ".join(f"{key}={value}" for key, value in values.items())
+    return f"line {event.line_number}: {_single_line(signal)}"
+
+
+def _event_contains_signal(event: NormalizedRuntimeEvent, tokens: tuple[str, ...]) -> bool:
+    normalized_kind = event.event_kind.replace("-", "_").lower()
+    if any(token in normalized_kind for token in tokens):
+        return True
+    for key, value in _walk_payload_items(event.payload):
+        key_text = _normalize_payload_key(key)
+        if key_text not in SIGNAL_KEY_LABELS and not any(
+            token in key_text for token in tokens
+        ):
+            continue
+        scalar = _scalar_text(value)
+        value_text = "" if scalar is None else scalar[:300].replace("-", "_").lower()
+        haystack = f"{key_text} {value_text}"
+        if any(token in haystack for token in tokens):
+            return True
+    return False
+
+
+def _append_distinct_limited(items: list[str], value: str, *, limit: int = 5) -> None:
+    if value in items or len(items) >= limit:
+        return
+    items.append(value)
+
+
+def summarize_runtime_provider_diagnostics(
+    normalized_events: tuple[NormalizedRuntimeEvent, ...],
+) -> RuntimeProviderDiagnosticSummary:
+    model_profiles: list[str] = []
+    retry_signals: list[str] = []
+    rate_limit_signals: list[str] = []
+
+    for event in normalized_events:
+        if profile_signal := _profile_signal_for_event(event):
+            _append_distinct_limited(model_profiles, profile_signal)
+
+        event_signal = _event_signal_for_event(event)
+        if _event_contains_signal(
+            event,
+            ("retry", "api_retry", "maxretries", "retrydelayms"),
+        ):
+            _append_distinct_limited(retry_signals, event_signal)
+        if _event_contains_signal(
+            event,
+            ("rate_limit", "ratelimit", "rate limit", "429"),
+        ):
+            _append_distinct_limited(rate_limit_signals, event_signal)
+
+    return RuntimeProviderDiagnosticSummary(
+        model_profiles=tuple(model_profiles),
+        retry_signals=tuple(retry_signals),
+        rate_limit_signals=tuple(rate_limit_signals),
+    )
 
 
 def _classify_runtime_log_line(line: str) -> RuntimeEventCategory:
