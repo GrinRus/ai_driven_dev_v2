@@ -4449,7 +4449,7 @@ Exit evidence:
 - maintainers can tell whether fresh live E2E evidence exists for `US-07`;
 - missing provider or environment setup is recorded as a blocker, not hidden as an implementation gap.
 
-#### Slice W20-E1-S2 — release and install evidence refresh (`blocked`)
+#### Slice W20-E1-S2 — release and install evidence refresh (`done`)
 Goal: produce a current release/install evidence decision for the supported delivery channels without making live E2E a release gate.
 
 Primary outputs:
@@ -4466,15 +4466,16 @@ Dependencies:
 
 - Wave 19 compatibility and release workflow baseline
 
-Blocked reason:
+Historical blockers:
 
 - `2026-05-04` Local prerequisite refresh found no release candidate tag pointing at `HEAD` and no local PyPI/TestPyPI/GHCR token environment variables (`PYPI_API_TOKEN`, `TEST_PYPI_API_TOKEN`, `TWINE_USERNAME`, `TWINE_PASSWORD`, `GITHUB_TOKEN`, `GHCR_TOKEN`, `CR_PAT`) set for release-channel evidence capture.
 - `2026-05-06` Tagged release attempt `v0.1.0a0` reached GitHub Actions but `publish-pypi` failed with PyPI Trusted Publishing `invalid-publisher`; package install verification did not run, so release/install evidence remains blocked until the PyPI trusted publisher is configured for repository `GrinRus/ai_driven_dev_v2`, workflow `.github/workflows/release.yml`, environment `pypi`, and package `ai-driven-dev-v2`.
+- `2026-05-06` Tagged release attempt `v0.1.0a1` passed PyPI publish, `pipx`, `uv tool`, and container publish jobs, but `verify-ghcr-install` failed because the Docker pull reference used uppercase owner `GrinRus`; the same run exposed a stale CLI version source where installed package `0.1.0a1` reported `aidd 0.1.0a0`.
 
 Local tasks:
 
 - `W20-E1-S2-T1` (done) Refresh release/install evidence prerequisites for the next candidate across PyPI or TestPyPI, `pipx`, `uv tool`, and container paths.
-- `W20-E1-S2-T2` (blocked) Capture PyPI or TestPyPI, `pipx`, `uv tool`, and container smoke evidence for the next release candidate.
+- `W20-E1-S2-T2` (done) Capture PyPI or TestPyPI, `pipx`, `uv tool`, and container smoke evidence for the next release candidate.
 - `W20-E1-S2-T3` (done) Disable automatic GHCR `latest` image tagging for prerelease tags and cover the release-workflow tag policy with regression tests.
 
 Evidence:
@@ -4486,11 +4487,20 @@ Evidence:
 - `2026-05-06` PyPI failure evidence: `publish-pypi` failed during Trusted Publishing token exchange with `invalid-publisher`; rendered claims included `sub=repo:GrinRus/ai_driven_dev_v2:environment:pypi`, `workflow_ref=GrinRus/ai_driven_dev_v2/.github/workflows/release.yml@refs/tags/v0.1.0a0`, and `environment=pypi`.
 - `2026-05-06` Partial GHCR evidence: `publish-container` pushed `ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a0`, `ghcr.io/grinrus/ai-driven-dev-v2:sha-aa36559`, and `ghcr.io/grinrus/ai-driven-dev-v2:latest` with digest `sha256:994a1134a2b10e6c68c7abccfc3c0a4e470e1ec51143979dd9c7e8a9ac408918`; this is not accepted install evidence because `verify-ghcr-install` was skipped.
 - `2026-05-06` The release workflow now sets `docker/metadata-action` `flavor: latest=false` and keeps `latest` behind the explicit stable-tag raw-tag condition so future prerelease tags do not get `latest` from metadata-action defaults; `uv run --extra dev pytest tests/test_release_workflow.py -q` passed.
+- `2026-05-06` Annotated tag `v0.1.0a1` was pushed to `a58edc0d0267a5ca528efab3f4caaf8e7b9854c6`; release workflow run `25446909468` (`https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/25446909468`) completed with overall `failure`.
+- `2026-05-06` `v0.1.0a1` job results: `build`, `publish-pypi`, `verify-pypi-install`, `verify-uv-tool-install`, and `publish-container` passed; `verify-ghcr-install` failed after 10 attempts because `docker pull ghcr.io/GrinRus/ai-driven-dev-v2:v0.1.0a1` is an invalid uppercase Docker repository reference.
+- `2026-05-06` `v0.1.0a1` partial evidence: PyPI published `https://pypi.org/project/ai-driven-dev-v2/0.1.0a1/`; container publish produced `ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a1` and `ghcr.io/grinrus/ai-driven-dev-v2:sha-a58edc0` without `latest`, digest `sha256:b4d8d247288a340801b80458db5fa1a3804a5d79fb939ae687d5f86bd507e32c`; evidence was rejected because GHCR verification failed and installed CLI output still reported `0.1.0a0`.
+- `2026-05-06` PR `#16` fixed the GHCR verification reference by lowercasing the owner, moved CLI version reporting to package metadata with a source-tree fallback, added regressions, and bumped the next release candidate to `0.1.0a2`; CI passed for Python 3.12, 3.13, 3.14, adapter conformance, and build.
+- `2026-05-06` Pre-tag deterministic gate passed on merged `main` commit `92c893dbd830292ecab5b684a0a4044ef61a67d6`: `uv run --extra dev ruff check .`, `uv run --extra dev python -m mypy src`, and `uv run --extra dev pytest -q` (`751 passed`).
+- `2026-05-06` Annotated tag `v0.1.0a2` was pushed to `92c893dbd830292ecab5b684a0a4044ef61a67d6`; release workflow run `25448551936` (`https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/25448551936`) completed with overall `success`.
+- `2026-05-06` Accepted `v0.1.0a2` job results: `build`, `publish-pypi`, `verify-pypi-install`, `verify-uv-tool-install`, `publish-container`, and `verify-ghcr-install` all passed. PyPI version: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a2/`.
+- `2026-05-06` `v0.1.0a2` install verification: `pipx` installed `ai-driven-dev-v2==0.1.0a2`, `aidd --version` returned `aidd 0.1.0a2`, and `aidd doctor` reported `Version 0.1.0a2`; `uv tool` produced the same version and doctor evidence.
+- `2026-05-06` `v0.1.0a2` GHCR verification pulled `ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a2`, then containerized `aidd --version` and `aidd doctor` both reported `0.1.0a2`. Published GHCR tags were `v0.1.0a2` and `sha-92c893d`; no `latest` tag was produced for this prerelease. Container digest: `sha256:fc344386c4909d0dcfc74753583fc32c469621212e133f52fce2fbd39147d45d`.
 
 Exit evidence:
 
-- maintainers can tell whether current `US-09` install evidence exists for supported delivery channels;
-- missing release candidate, registry access, or publishing credentials are explicit blockers.
+- current `US-09` install evidence exists for PyPI, `pipx`, `uv tool`, and GHCR container paths;
+- prior missing release candidate, trusted publisher, and GHCR verification issues are recorded as historical blockers.
 
 #### Slice W20-E1-S3 — live eval failure triage (`blocked`)
 Goal: turn the current failing live evidence into an owned fix or an explicit external blocker before requesting another live audit.

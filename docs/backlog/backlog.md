@@ -12,8 +12,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Parking lot
 
-- `W20-E1-S2-T2`
-
 ## Update rules
 
 - Keep `roadmap.md` as the canonical plan and `backlog.md` as the short queue.
@@ -85,3 +83,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-06` `W20-E4-S2` completed the source-installed local fixture smoke path. No unblocked Wave 20 local tasks remain; `W20-E1-S2-T2` and `W20-E1-S4-T3` stay parked behind their documented external conditions.
 - `2026-05-06` Release candidate tag `v0.1.0a0` was pushed to merged `main` commit `aa3655998227e6da2a979b06d2c87543adbf4734`; release run `25437182363` failed at PyPI Trusted Publishing `invalid-publisher`, so `W20-E1-S2-T2` remains parked. The discovered prerelease GHCR `latest` tagging defect was fixed as completed roadmap task `W20-E1-S2-T3`.
 - `2026-05-06` Fresh OpenCode fallback gate `eval-live-005-opencode-20260506T131037Z` failed at validation (`qa` attempt 3 `SEM-RISK-UNDERREPORT`) with no timeout signals, so Codex fallback was not run and `W20-E1-S4-T3` was removed from `Parking lot` as not applicable.
+- `2026-05-06` Release/install evidence closed with accepted tag `v0.1.0a2` on commit `92c893dbd830292ecab5b684a0a4044ef61a67d6`; release run `25448551936` passed build, PyPI publish, `pipx`, `uv tool`, container publish, and GHCR verification. `W20-E1-S2-T2` is done and removed from the parking lot; the active backlog queue is empty.
