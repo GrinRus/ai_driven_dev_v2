@@ -44,6 +44,18 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | live full flow | `medium + manual` | `AIDD-LIVE-002`, `AIDD-LIVE-004`, `AIDD-LIVE-007` |
 | live full flow interview | `large + manual` | `AIDD-LIVE-006`, `AIDD-LIVE-008` |
 
+## Operator UI local-project lane
+
+Operator UI evidence is tracked separately from the scenario-class matrix because it is a
+local product UI lane, not a provider/runtime eval manifest. The lane is documented in
+[`Operator UI Local-Project E2E Lane`](./operator-ui-local-project.md) and is covered by
+deterministic `OperatorUiService` and CLI tests rather than a new harness scenario class.
+
+The lane proves local-project behavior: page load, workflow-run request delegation,
+blocking answer persistence, runtime logs, artifact and validation visibility,
+repair-history links, and declared project-set root visibility. Public GitHub
+repositories remain live E2E inputs only.
+
 ## Provider rollout policy
 
 - `generic-cli` is the deterministic baseline provider.

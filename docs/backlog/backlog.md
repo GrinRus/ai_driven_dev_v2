@@ -6,12 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W20-E2-S5-T1`
+- `W20-E2-S6-T1`
 
 ## Soon
 
-- `W20-E2-S5-T2`
-- `W20-E2-S6-T1`
 - `W20-E4-S1-T1`
 - `W20-E4-S1-T2`
 
@@ -19,8 +17,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 - `W20-E1-S4-T3`
 - `W20-E1-S2-T2`
-- `W20-E2-S5-T3`
-- `W20-E2-S5-T4`
 - `W20-E2-S6-T2`
 - `W20-E2-S6-T3`
 - `W20-E4-S2-T1`
@@ -91,3 +87,4 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-06` `W20-E1-S6` completed idea-stage OpenCode contract-compliance hardening and post-hardening rerun evidence; old `Open questions` list-format blocker is closed, new review-stage evidence-reference blocker was added as `W20-E1-S8`, `W20-E1-S7-T1` is promoted to `Next`, and `W20-E1-S8-T4` is parked until local review hardening lands.
 - `2026-05-06` `W20-E1-S7` completed Claude timeout/profile diagnosis; post-evidence Claude rerun `eval-live-005-claude-code-20260506T074233Z` passed with quality gate `warn`, first failure boundary `none`, and no stage timeouts. `W20-E1-S8-T1` is promoted to `Next`; `W20-E1-S8-T4` remains parked until review-stage hardening lands.
 - `2026-05-06` `W20-E1-S8` completed OpenCode review evidence-reference hardening and rerun evidence. `eval-live-005-opencode-20260506T094747Z` passed with first failure boundary `none`; generated quality gate was `fail` due to an AIDD-owned quality parser mismatch, now fixed and covered locally as `warn`/`ready-with-risks`. `W20-E2-S5-T1` is promoted to `Next`.
+- `2026-05-06` `W20-E2-S5` completed the separate operator-UI local-project E2E lane, deterministic service/CLI coverage, manual installed UI smoke against a disposable local fixture project, and project-set root visibility evidence. `W20-E2-S6-T1` is promoted to `Next`.

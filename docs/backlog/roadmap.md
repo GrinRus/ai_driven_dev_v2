@@ -4916,7 +4916,7 @@ Exit evidence:
 
 - the first frontend surface is smoke-ready for local operator use without direct artifact mutation or unescaped runtime/UI text.
 
-#### Slice W20-E2-S5 — operator UI E2E evidence lane (`active`)
+#### Slice W20-E2-S5 — operator UI E2E evidence lane (`done`)
 Goal: define and seed a separate operator-UI evidence lane for installed local-project behavior, without folding UI proof into public-repository live E2E.
 
 Primary outputs:
@@ -4941,15 +4941,24 @@ Dependencies:
 
 Local tasks:
 
-- `W20-E2-S5-T1` (soon) Define a separate operator-UI E2E lane in `docs/e2e/` that proves installed local-project UI behavior and stays separate from the public-repository live E2E lane.
-- `W20-E2-S5-T2` (soon) Add a deterministic local-project UI scenario covering page load, workflow-run request, blocking answer persistence, logs, artifacts, validation, and repair-history visibility.
-- `W20-E2-S5-T3` (later) Add manual installed UI smoke evidence using local AIDD install against a local fixture project; record the summary in roadmap and do not commit `.aidd/`.
-- `W20-E2-S5-T4` (later) Extend the UI scenario to include declared project-set roots so frontend evidence proves local monorepo and project-set visibility end to end.
+- `W20-E2-S5-T1` (done) Define a separate operator-UI E2E lane in `docs/e2e/` that proves installed local-project UI behavior and stays separate from the public-repository live E2E lane.
+- `W20-E2-S5-T2` (done) Add a deterministic local-project UI scenario covering page load, workflow-run request, blocking answer persistence, logs, artifacts, validation, and repair-history visibility.
+- `W20-E2-S5-T3` (done) Add manual installed UI smoke evidence using local AIDD install against a local fixture project; record the summary in roadmap and do not commit `.aidd/`.
+- `W20-E2-S5-T4` (done) Extend the UI scenario to include declared project-set roots so frontend evidence proves local monorepo and project-set visibility end to end.
+
+Evidence:
+
+- `docs/e2e/operator-ui-local-project.md` now defines the local-project operator UI E2E lane separately from the public-repository live E2E catalog. `docs/e2e/scenario-matrix.md` links the lane as service-level UI evidence rather than a new harness scenario class, and `docs/e2e/live-e2e-catalog.md` keeps public repositories scoped to live eval manifests.
+- `tests/cli/test_ui.py` now includes a deterministic local-project UI lane over `OperatorUiService`: page load, workflow-run request delegation through the core service seam, blocking answer persistence, runtime logs, artifact paths, validator report visibility, validator pass/fail counts, and repair-brief path visibility.
+- `tests/cli/test_ui.py` also proves declared project-set root visibility by exposing `workitems/WI-UI/context/project-set.md` through `/api/artifacts` and checking the local `api` / `web` roots in the context document.
+- `2026-05-06` Focused local checks passed: `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q` reported `13 passed`.
+- `2026-05-06` Manual installed UI smoke passed in disposable local fixture project `/tmp/aidd-ui-smoke-0hxJYa`: `uv tool run --from <repo> aidd init` created `.aidd/` inside the fixture project, `uv tool run --from <repo> aidd run --runtime generic-cli --from-stage idea --to-stage plan` completed three fixture-backed stages, `aidd ui` served `http://127.0.0.1:8765/`, and HTTP checks confirmed page load plus `/api/run`, `/api/stage?stage=plan`, `/api/artifacts?stage=plan`, and `/api/logs?stage=plan`. The fixture project declared `api` and `web` roots; `.aidd/workitems/WI-UI-SMOKE/context/project-set.md` preserved both. The temp project was removed and no `.aidd/` artifacts were committed.
 
 Exit evidence:
 
 - UI proof is based on the product's local-project operator path, not on GitHub issue intake;
-- UI evidence stays separate from manual public-repository live E2E and can be reviewed without real runtime execution.
+- UI evidence stays separate from manual public-repository live E2E and can be reviewed without real runtime execution;
+- installed local-project UI smoke evidence now covers page/API access against a disposable fixture project.
 
 #### Slice W20-E2-S6 — frontend provider readiness visibility (`active`)
 Goal: expose provider readiness to the frontend so operators can distinguish unavailable providers, ready providers, timeout/profile risk, and latest-run failure.
