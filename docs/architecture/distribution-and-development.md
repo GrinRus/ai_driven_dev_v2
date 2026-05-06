@@ -108,6 +108,10 @@ package-channel evidence.
 Container images are published to `ghcr.io/<owner>/ai-driven-dev-v2` from release tags that
 start with `v`.
 
+Docker image references used for publish and verification must be lowercase, including the
+GitHub owner segment. Workflows must normalize owner casing before `docker pull` or
+`docker run`.
+
 Tag set:
 
 - exact release tag, for example `v1.4.2`;
