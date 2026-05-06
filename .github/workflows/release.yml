@@ -234,10 +234,11 @@ jobs:
       - name: Verify GHCR image pullability and CLI behavior
         env:
           RELEASE_TAG: ${{ github.ref_name }}
-          IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/ai-driven-dev-v2
+          IMAGE_REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
+          IMAGE_REPOSITORY="ghcr.io/${IMAGE_REPOSITORY_OWNER,,}/ai-driven-dev-v2"
           IMAGE_REF="${IMAGE_REPOSITORY}:${RELEASE_TAG}"
           ATTEMPTS=10
           BACKOFF_SECONDS=30

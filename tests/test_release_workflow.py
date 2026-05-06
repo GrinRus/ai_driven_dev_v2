@@ -102,6 +102,8 @@ def test_release_workflow_has_ghcr_verification_job() -> None:
     assert "docker run --rm" in run_blocks
     assert "--version" in run_blocks
     assert "doctor" in run_blocks
+    assert "IMAGE_REPOSITORY_OWNER" in run_blocks
+    assert "${IMAGE_REPOSITORY_OWNER,,}" in run_blocks
 
 
 def test_release_workflow_disables_automatic_latest_container_tag() -> None:
