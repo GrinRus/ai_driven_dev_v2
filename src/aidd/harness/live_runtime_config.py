@@ -207,6 +207,7 @@ def write_live_runtime_config(
                 "timeout_seconds = 1200",
                 "",
                 "[runtime.claude_code.stage_timeouts]",
+                "idea = 1500",
                 "research = 1500",
                 "tasklist = 1800",
                 "implement = 1800",

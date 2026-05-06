@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from aidd.config import load_config
 from aidd.core.interview import AnswerResolution
 from aidd.core.operator_frontend import (
     persist_operator_answer,
@@ -18,6 +19,10 @@ from aidd.core.run_store import (
     create_run_manifest,
     persist_stage_status,
     run_attempt_runtime_log_path,
+)
+from aidd.core.runtime_readiness import (
+    RuntimeReadinessProbeReport,
+    resolve_runtime_readiness,
 )
 
 
@@ -205,3 +210,58 @@ def test_resolve_operator_questions_rejects_unknown_stage(tmp_path: Path) -> Non
             work_item="WI-UI",
             stage="unknown",
         )
+
+
+def test_runtime_readiness_view_uses_config_and_passed_probe_reports(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[runtime.generic_cli]",
+                'command = "python -m fixture_runtime"',
+                'mode = "adapter-flags"',
+                "timeout_seconds = 42",
+                "",
+                "[runtime.generic_cli.stage_timeouts]",
+                "plan = 90",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    cfg = load_config(config_path)
+
+    view = resolve_runtime_readiness(
+        config=cfg,
+        probe_reports={
+            "generic-cli": RuntimeReadinessProbeReport(
+                provider_available=True,
+                execution_command_available=False,
+                provider_version="Python 3.12.0",
+                provider_command="/usr/bin/python",
+            )
+        },
+        command_sources={
+            "generic-cli": "config",
+            "claude-code": "default",
+            "codex": "default",
+            "opencode": "default",
+        },
+    )
+
+    runtimes = {runtime.runtime_id: runtime for runtime in view.runtimes}
+    generic_cli = runtimes["generic-cli"]
+    assert generic_cli.support_tier == "tier-1"
+    assert generic_cli.command_source == "config"
+    assert generic_cli.command == "python -m fixture_runtime"
+    assert generic_cli.execution_mode == "adapter-flags"
+    assert generic_cli.provider_available is True
+    assert generic_cli.provider_version == "Python 3.12.0"
+    assert generic_cli.provider_command == "/usr/bin/python"
+    assert generic_cli.execution_command_available is False
+    assert generic_cli.default_timeout_seconds == 42
+    assert generic_cli.stage_timeout_seconds == {"plan": 90}
+    assert runtimes["codex"].provider_available is False
+    assert runtimes["codex"].command_source == "default"

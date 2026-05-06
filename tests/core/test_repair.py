@@ -217,6 +217,78 @@ def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_p
     assert "Repair budget status: `repair-budget-available`." in repair_brief
 
 
+def test_render_repair_brief_adds_actionable_list_format_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="SEM-INCOMPLETE-SECTION",
+                message=(
+                    "Required section `Open questions` must use bullet items "
+                    "(or `- none`) so downstream stages can parse constraints "
+                    "and open questions deterministically."
+                ),
+                severity="medium",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/idea/idea-brief.md"
+                    ),
+                    line_number=20,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/idea/validator-report.md",
+        prior_stage_artifacts=(),
+        stage_attempt_count=2,
+        max_repair_attempts=2,
+    )
+
+    assert "Required section `Open questions` must use bullet items" in repair_brief
+    assert "Render the section as top-level Markdown bullet items" in repair_brief
+    assert "write exactly `- none`" in repair_brief
+
+
+def test_render_repair_brief_adds_review_evidence_reference_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="SEM-UNSUPPORTED-CLAIM",
+                message=(
+                    "Finding is missing evidence reference to implementation output "
+                    "or acceptance criteria."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/review/review-report.md"
+                    ),
+                    line_number=9,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+        prior_stage_artifacts=(
+            "workitems/WI-001/stages/implement/output/implementation-report.md",
+            "workitems/WI-001/context/acceptance-criteria.md",
+        ),
+        stage_attempt_count=2,
+        max_repair_attempts=2,
+    )
+
+    assert "Finding is missing evidence reference" in repair_brief
+    assert "Add an explicit `Evidence:` line" in repair_brief
+    assert "`implementation-report.md`" in repair_brief
+    assert "acceptance-criteria id such as `AC-1`" in repair_brief
+    assert "remove or mark the finding `invalid`" in repair_brief
+
+
 def test_render_repair_brief_marks_final_repair_attempt() -> None:
     report_markdown = render_validator_report(
         findings=(

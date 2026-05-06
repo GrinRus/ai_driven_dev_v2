@@ -35,6 +35,18 @@ Every live E2E run must follow the installed full-flow operator model:
 
 Live E2E is not defined by source-checkout execution from the AIDD repository itself, and it is not a merge gate.
 
+The local operator UI has a separate E2E evidence lane in
+[`Operator UI Local-Project E2E Lane`](./operator-ui-local-project.md). That lane uses
+local fixture projects and service-level UI tests, not public-repository live manifests.
+
+## Product Scope Boundary
+
+Public GitHub repositories are live E2E targets and support/reporting evidence sources.
+They are not the supported local operator intake path. The product does not expose
+`aidd init --github-issue <url>` because that command is out of product scope; local
+operators initialize work items from the target project root with
+`aidd init --work-item <id> --root .aidd`.
+
 ## Manual-only automation policy
 
 - `automation_lane` for every live scenario is `manual`.

@@ -115,6 +115,7 @@ def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:
 
     for needle in (
         "AIDD-SMOKE-001",
+        "AIDD-INSTALLED-LOCAL-001",
         "AIDD-DETERMINISTIC-001",
         "AIDD-DETERMINISTIC-002",
         "AIDD-LIVE-001",

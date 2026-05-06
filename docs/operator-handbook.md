@@ -8,6 +8,7 @@ Use it when you need a repeatable local setup for:
 
 - checking runtime availability;
 - initializing a work item workspace;
+- running AIDD from a target local project root;
 - validating the baseline toolchain before deeper scenario work;
 - understanding the installed live E2E operator path.
 
@@ -27,6 +28,12 @@ Today:
 - live scenarios under `harness/scenarios/live/` are a manual external-audit lane: they prepare a pinned public-repository working copy, install a local AIDD wheel via `uv tool`, and run installed `aidd` from the target repository root.
 
 Smoke, conformance, and live operator proof are separate lanes. Do not treat them as interchangeable.
+
+The supported product path is local-project operation: install or run AIDD locally,
+enter the target project root, create `.aidd/` there, and inspect artifacts from
+that same project. `aidd init --github-issue <url>` is out of product scope.
+Public GitHub repositories are used by live E2E eval manifests and support evidence,
+not by a product issue-intake command.
 
 For the GitHub Actions manual live lane, Codex and OpenCode use native provider
 commands by default. A runner-available command override secret is optional when
@@ -137,10 +144,18 @@ Current config fields consumed by the CLI:
 
 ## 6. First-Run Procedure
 
+Run product commands from the target local project root, not from the AIDD source
+checkout, unless the source checkout is also the project under test. If AIDD is
+not installed globally, prefix each command with:
+
+```bash
+uv tool run --from /path/to/ai_driven_dev_v2 aidd
+```
+
 ### 6.1 Probe local environment
 
 ```bash
-uv run aidd doctor
+aidd doctor --config /path/to/aidd.example.toml
 ```
 
 Confirm:
@@ -148,14 +163,16 @@ Confirm:
 - the expected config path is loaded;
 - workspace root is correct;
 - each runtime availability result matches your machine state.
+- the command is being executed from the intended local project root.
 
 ### 6.2 Initialize a work item workspace
 
 ```bash
-uv run aidd init --work-item WI-001
+aidd init --work-item WI-001 --root .aidd
 ```
 
-This creates the `.aidd/` workspace tree and stage document scaffolding for the work item.
+This creates the `.aidd/` workspace tree inside the current local project and
+adds stage document scaffolding for the work item.
 
 ### 6.3 Inspect generated workspace artifacts
 
@@ -170,15 +187,16 @@ Verify that:
 - work item directories were created;
 - stage document placeholders exist;
 - initialization is repeatable and deterministic for operator use.
+- `.aidd/` is rooted inside the local project, not beside it.
 
 ### 6.4 Validate execution surfaces
 
 ```bash
-uv run aidd run --work-item WI-001 --runtime generic-cli
-uv run aidd run --work-item WI-001 --runtime claude-code
-uv run aidd stage run plan --work-item WI-001 --runtime generic-cli
-uv run aidd stage run plan --work-item WI-001 --runtime opencode
-uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
+aidd run --work-item WI-001 --runtime generic-cli --root .aidd --config /path/to/aidd.example.toml
+aidd run --work-item WI-001 --runtime claude-code --root .aidd --config /path/to/aidd.example.toml
+aidd stage run plan --work-item WI-001 --runtime generic-cli --root .aidd --config /path/to/aidd.example.toml
+aidd stage run plan --work-item WI-001 --runtime opencode --root .aidd --config /path/to/aidd.example.toml
+aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
 ```
 
 Expected behavior in the current local implementation:
@@ -196,12 +214,39 @@ Expected behavior in the current local implementation:
 - the GitHub `manual-live-e2e` workflow uses native provider commands by default and forwards
   runtime-command secrets only when an adapter-compatible wrapper override is needed.
 
+### 6.5 Inspect logs and artifacts
+
+Use either the local UI or CLI read commands:
+
+```bash
+aidd run show --work-item WI-001 --root .aidd
+aidd run logs --work-item WI-001 --stage plan --root .aidd
+aidd run artifacts --work-item WI-001 --stage plan --root .aidd
+```
+
+The UI uses the same `.aidd/` root:
+
+```bash
+aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
+```
+
+Keep generated `.aidd/` state inside the local project. Do not move it into the
+AIDD source checkout or commit it unless the target repository has its own policy
+for committed operator artifacts.
+
+### 6.6 Product scope boundary
+
+There is no supported `aidd init --github-issue <url>` product command. GitHub
+issue URLs may appear in live E2E manifests, issue-selection evidence, or support
+reports, but they are not a local operator intake surface.
+
 ## 7. Operational Notes
 
 - Prefer absolute paths for config and workspace roots in automation scripts.
 - Treat `doctor` output as the canonical machine-readiness snapshot before live scenario work.
 - Record the exact command outputs for reproducible environment triage.
 - For live E2E, distinguish the AIDD artifact root from the target repository cwd.
+- For local product operation, keep `.aidd/` inside the target local project root.
 - Keep runtime authentication state and secrets outside the repository.
 
 ## 8. Related References

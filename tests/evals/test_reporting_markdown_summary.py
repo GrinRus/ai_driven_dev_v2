@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from aidd.evals.log_analysis import parse_events_jsonl_text
 from aidd.evals.reporting import (
     ScenarioSummaryRow,
     render_eval_summary_markdown,
     write_eval_summary_markdown,
 )
+from aidd.harness.eval_reports import render_runtime_diagnostics_markdown
 
 
 def test_render_eval_summary_markdown_includes_runtime_and_scenario_tables() -> None:
@@ -98,3 +100,66 @@ def test_write_eval_summary_markdown_persists_rendered_report(tmp_path: Path) ->
         "| `AIDD-LIVE-010` | `eval-run-010` | `generic-cli` | `infra-fail` | 1.000 | "
         "`environment` |" in content
     )
+
+
+def test_render_runtime_diagnostics_markdown_includes_timeout_profile(
+    tmp_path: Path,
+) -> None:
+    runtime_config_path = tmp_path / "aidd.example.toml"
+    runtime_config_path.write_text(
+        "\n".join(
+            (
+                "[runtime.claude_code]",
+                "timeout_seconds = 1200",
+                "",
+                "[runtime.claude_code.stage_timeouts]",
+                "idea = 1500",
+            )
+        ),
+        encoding="utf-8",
+    )
+    normalized_events = parse_events_jsonl_text(
+        "\n".join(
+            (
+                (
+                    '{"source":"stdout","type":"system","subtype":"init",'
+                    '"model":"kimi-for-coding","claude_code_version":"2.1.85"}'
+                ),
+                (
+                    '{"source":"stdout","type":"system","subtype":"api_retry",'
+                    '"error":"rate_limit","error_status":429,"attempt":1}'
+                ),
+            )
+        )
+    )
+    stage_timing_payload = {
+        "stages": [
+            {
+                "stage": "idea",
+                "attempts": [
+                    {
+                        "attempt": 1,
+                        "runtime_exit_classification": "timeout",
+                        "runtime_exit_code": 143,
+                        "timed_out": True,
+                    }
+                ],
+            }
+        ]
+    }
+
+    markdown = render_runtime_diagnostics_markdown(
+        normalized_events=normalized_events,
+        stage_timing_payload=stage_timing_payload,
+        runtime_id="claude-code",
+        runtime_config_path=runtime_config_path,
+        harness_timeout_seconds=14400,
+    )
+
+    assert "- Runtime ID: `claude-code`" in markdown
+    assert "model=kimi-for-coding" in markdown
+    assert "error=rate_limit" in markdown
+    assert "Timeout Stage/Budget: `idea` attempt `1` runtime exit `timeout`/`143`" in markdown
+    assert "stage budget `1500.000s`" in markdown
+    assert "- Default Runtime Timeout: `1200.000s`" in markdown
+    assert "- Harness Run Timeout: `14400.000s`" in markdown

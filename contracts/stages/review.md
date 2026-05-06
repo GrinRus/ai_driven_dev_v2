@@ -46,11 +46,16 @@ Optional context documents may improve review depth, but they must not replace i
 - `review-report.md` must include:
   - findings with stable ids, explicit severity, and disposition per finding,
   - rationale tied to implementation evidence and acceptance criteria,
+  - an explicit evidence reference per finding, written as `Evidence:` metadata or
+    equivalent inline text that cites `implementation-report.md`, a changed file path,
+    or an acceptance-criteria id such as `AC-1`,
   - an explicit approval status suitable for go/no-go decision (`approved`, `approved-with-conditions`, `rejected`),
   - summary of required changes when approval status is not `approved`.
 - Findings may be written as top-level bullets or as `### RV-*` / `### REV-*` subsections.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
+- Prose-only rationale is not an evidence reference; findings without explicit implementation
+  output, file-path, or acceptance-criteria evidence must be removed or marked `invalid`.
 - `stage-result.md` and `validator-report.md` must remain consistent with findings and approval status.
 
 ## Validation focus

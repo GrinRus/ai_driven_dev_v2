@@ -591,7 +591,7 @@ def test_validate_semantic_outputs_flags_invalid_list_format_fixture_bundle() ->
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Required section `Constraints` must use bullet items "
+                "Required section `Open questions` must use bullet items "
                 "(or `- none`) so downstream stages can parse constraints "
                 "and open questions deterministically."
             ),
@@ -600,7 +600,7 @@ def test_validate_semantic_outputs_flags_invalid_list_format_fixture_bundle() ->
                 workspace_relative_path=(
                     "workitems/WI-SEM-LIST-INVALID/stages/idea/idea-brief.md"
                 ),
-                line_number=11,
+                line_number=15,
             ),
         ),
     )
@@ -2206,6 +2206,53 @@ def test_validate_semantic_outputs_does_not_infer_review_severity_from_prose(
         finding.code == INCOMPLETE_SECTION_CODE
         and "explicit severity" in finding.message
         for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_requires_review_finding_evidence_reference(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_report(
+        workspace_root,
+        "WI-SEM-REVIEW-NO-EVIDENCE",
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Status: `approved`\n\n"
+            "## Findings\n\n"
+            "### RV-1 - Plausible but uncited claim\n\n"
+            "- Severity: `low`\n"
+            "- Disposition: `accepted-risk`\n"
+            "- Rationale: because the implementation appears small and bounded.\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item="WI-SEM-REVIEW-NO-EVIDENCE",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=UNSUPPORTED_CLAIM_CODE,
+            message=(
+                "Finding is missing evidence reference to implementation output "
+                "or acceptance criteria."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-NO-EVIDENCE/stages/review/review-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
     )
 
 

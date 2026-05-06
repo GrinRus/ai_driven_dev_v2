@@ -50,6 +50,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    Use either top-level bullet findings or `### RV-*` / `### REV-*` finding subsections; when using
    subsections, keep severity, disposition, rationale, and evidence as nested metadata under that
    finding.
+   Every finding must include an explicit `Evidence:` metadata item or equivalent inline evidence
+   text that cites `implementation-report.md`, a changed file path, or an acceptance-criteria id
+   such as `AC-1`. A plausible rationale without this evidence reference is invalid.
 2. Severity and disposition labels must stay consistent between detailed findings and summary
    sections.
 3. `must-fix` findings block `approved` status until resolved.
@@ -64,7 +67,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    `fail`.
 3. Draft `review-report.md` with sections for findings, approval decision, and required changes.
 4. Keep every finding tied to observable evidence from `implementation-report.md` and/or explicit
-   acceptance-criteria mismatch.
+   acceptance-criteria mismatch. For subsection findings, use this metadata shape:
+   - `Severity: low|medium|high|critical|info|none`
+   - `Disposition: must-fix|follow-up|accepted-risk|invalid`
+   - `Evidence: implementation-report.md ...`, changed file path, or `AC-*`
+   - `Rationale: ...`
 5. Use allowed dispositions (`must-fix`, `follow-up`, `accepted-risk`, `invalid`) and keep wording
    unambiguous for downstream QA.
 6. If contradictions in baseline prevent defensible decision, ask a `[blocking]` question instead
@@ -75,7 +82,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 ## Completion checklist
 
 - findings are uniquely identified with severity and disposition labels,
-- each finding is evidence-backed or tied to acceptance-criteria mismatch,
+- each finding has explicit `Evidence:` metadata or inline evidence tied to implementation output
+  or acceptance-criteria mismatch,
 - approval status is explicit and consistent with unresolved `must-fix` findings,
 - required changes map to concrete findings for non-approved outcomes,
 - blocking ambiguity is surfaced via explicit questions,

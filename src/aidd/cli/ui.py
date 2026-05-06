@@ -2,7 +2,8 @@ from __future__ import annotations
 
 # ruff: noqa: E501
 import json
-from collections.abc import Callable
+import tomllib
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields, is_dataclass
 from enum import Enum
 from http import HTTPStatus
@@ -13,13 +14,16 @@ from urllib.parse import parse_qs, urlparse
 
 import typer
 
+from aidd.adapters.runtime_registry import runtime_definitions
+from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.cli.stage_run import StageRunOptions, run_stage_command
 from aidd.cli.support import (
+    _execution_command_available,
     _runtime_command_for_runtime,
     _runtime_execution_mode_for_runtime,
     console,
 )
-from aidd.config import load_config
+from aidd.config import AiddConfig, load_config
 from aidd.core.interview import AnswerResolution
 from aidd.core.operator_frontend import (
     persist_operator_answer,
@@ -28,6 +32,11 @@ from aidd.core.operator_frontend import (
     resolve_operator_run_log_view,
     resolve_operator_run_view,
     resolve_operator_stage_view,
+)
+from aidd.core.runtime_readiness import (
+    RuntimeCommandSource,
+    RuntimeReadinessProbeReport,
+    resolve_runtime_readiness,
 )
 from aidd.core.stages import STAGES
 from aidd.core.workflow_service import (
@@ -39,6 +48,7 @@ from aidd.core.workflow_service import (
 )
 
 WorkflowRunner = Callable[..., WorkflowRunResult]
+ReadinessProbeProvider = Callable[[AiddConfig], Mapping[str, RuntimeReadinessProbeReport]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,15 +119,51 @@ def _runtime_from_payload(payload: dict[str, Any]) -> str:
     return runtime or "generic-cli"
 
 
+def _runtime_command_sources_from_config(path: Path) -> dict[str, RuntimeCommandSource]:
+    data: dict[str, Any] = {}
+    if path.exists():
+        with path.open("rb") as file_obj:
+            data = tomllib.load(file_obj)
+
+    raw_runtime = data.get("runtime", {})
+    runtime_table = raw_runtime if isinstance(raw_runtime, dict) else {}
+    sources: dict[str, RuntimeCommandSource] = {}
+    for definition in runtime_definitions():
+        raw_section = runtime_table.get(definition.config_section, {})
+        section = raw_section if isinstance(raw_section, dict) else {}
+        sources[definition.runtime_id] = "config" if "command" in section else "default"
+    return sources
+
+
+def _collect_runtime_readiness_probe_reports(
+    cfg: AiddConfig,
+) -> dict[str, RuntimeReadinessProbeReport]:
+    reports: dict[str, RuntimeReadinessProbeReport] = {}
+    for definition in runtime_definitions():
+        provider_report = get_runtime_adapter_surface(definition.runtime_id).probe(
+            definition.probe_command
+        )
+        runtime_config = cfg.runtime_config(definition.runtime_id)
+        reports[definition.runtime_id] = RuntimeReadinessProbeReport(
+            provider_available=provider_report.available,
+            execution_command_available=_execution_command_available(runtime_config.command),
+            provider_version=provider_report.version_text,
+            provider_command=provider_report.command,
+        )
+    return reports
+
+
 class OperatorUiService:
     def __init__(
         self,
         options: UiServerOptions,
         *,
         workflow_runner: WorkflowRunner = run_workflow,
+        readiness_probe_provider: ReadinessProbeProvider = _collect_runtime_readiness_probe_reports,
     ) -> None:
         self.options = options
         self._workflow_runner = workflow_runner
+        self._readiness_probe_provider = readiness_probe_provider
 
     @property
     def workspace_root(self) -> Path:
@@ -151,6 +197,8 @@ class OperatorUiService:
                         run_id=_first_param(params, "run_id"),
                     )
                 )
+            if path == "/api/runtime-readiness":
+                return _json_response(self._runtime_readiness())
             if path == "/api/stage":
                 stage = _first_param(params, "stage", STAGES[0])
                 assert stage is not None
@@ -282,6 +330,14 @@ class OperatorUiService:
             stage_executor=_stage_executor,
         )
 
+    def _runtime_readiness(self) -> object:
+        cfg = load_config(self.options.config)
+        return resolve_runtime_readiness(
+            config=cfg,
+            probe_reports=self._readiness_probe_provider(cfg),
+            command_sources=_runtime_command_sources_from_config(self.options.config),
+        )
+
 
 def _read_json_body(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
     raw_length = handler.headers.get("Content-Length", "0")
@@ -396,6 +452,7 @@ _INDEX_HTML = """<!doctype html>
         <button data-tab="questions" class="active" type="button">Questions</button>
         <button data-tab="logs" type="button">Logs</button>
         <button data-tab="artifacts" type="button">Artifacts</button>
+        <button data-tab="readiness" type="button">Readiness</button>
       </div>
       <div id="stageMeta" class="meta"></div>
       <div id="content" class="content"></div>
@@ -507,6 +564,33 @@ pre {
   white-space: pre-wrap;
 }
 .list { margin: 0; padding-left: 18px; }
+.readiness-table {
+  border-collapse: collapse;
+  min-width: 960px;
+  width: 100%;
+}
+.readiness-table th,
+.readiness-table td {
+  border-bottom: 1px solid #d8ddd2;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.readiness-table th {
+  color: #4d584f;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.readiness-scroll { overflow-x: auto; }
+.runtime-command {
+  background: #eef1ea;
+  border-radius: 4px;
+  display: inline-block;
+  max-width: 360px;
+  overflow-wrap: anywhere;
+  padding: 2px 4px;
+}
 @media (max-width: 780px) {
   .layout { grid-template-columns: 1fr; }
   .stages { border-right: 0; border-bottom: 1px solid #d8ddd2; }
@@ -600,10 +684,66 @@ async function loadArtifacts() {
   document.getElementById("content").innerHTML = `<h2>Documents</h2><ul class="list">${docs}</ul><h2>Logs</h2><ul class="list">${logs}</ul>`;
 }
 
+function timeoutSummary(value) {
+  return value === null || value === undefined ? "none" : `${value}s`;
+}
+
+function stageTimeoutSummary(stageTimeouts) {
+  const entries = Object.entries(stageTimeouts || {});
+  if (!entries.length) return "none";
+  return entries.map(([stage, seconds]) => `${stage}: ${timeoutSummary(seconds)}`).join(", ");
+}
+
+async function loadReadiness() {
+  const view = await api("/api/runtime-readiness");
+  const rows = view.runtimes.map((runtime) => `
+    <tr>
+      <td>${escapeHtml(runtime.runtime_id)}</td>
+      <td>${escapeHtml(runtime.support_tier)}</td>
+      <td>${escapeHtml(runtime.command_source)}</td>
+      <td><code class="runtime-command">${escapeHtml(runtime.command)}</code></td>
+      <td>${escapeHtml(runtime.execution_mode)}</td>
+      <td>${escapeHtml(runtime.provider_available ? "available" : "unavailable")}</td>
+      <td>${escapeHtml(runtime.provider_version || "unknown")}</td>
+      <td>${escapeHtml(runtime.provider_command || "unknown")}</td>
+      <td>${escapeHtml(runtime.execution_command_available ? "available" : "unavailable")}</td>
+      <td>${escapeHtml(timeoutSummary(runtime.default_timeout_seconds))}</td>
+      <td>${escapeHtml(stageTimeoutSummary(runtime.stage_timeout_seconds))}</td>
+    </tr>
+  `).join("");
+  document.getElementById("content").innerHTML = `
+    <div class="readiness-scroll">
+      <table class="readiness-table">
+        <thead>
+          <tr>
+            <th>Runtime</th>
+            <th>Tier</th>
+            <th>Source</th>
+            <th>Command</th>
+            <th>Mode</th>
+            <th>Provider</th>
+            <th>Version</th>
+            <th>Probe</th>
+            <th>Exec</th>
+            <th>Timeout</th>
+            <th>Stage timeouts</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
 async function refresh() {
   await loadRun();
-  await loadStage();
   try {
+    if (activeTab === "readiness") {
+      document.getElementById("stageMeta").innerHTML = `<span>${escapeHtml("runtime readiness")}</span>`;
+      await loadReadiness();
+      return;
+    }
+    await loadStage();
     if (activeTab === "questions") await loadQuestions();
     if (activeTab === "logs") await loadLogs();
     if (activeTab === "artifacts") await loadArtifacts();
