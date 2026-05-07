@@ -72,13 +72,14 @@ Start from the local project root that should receive AIDD workflow state:
 ```bash
 cd /path/to/local-project
 aidd doctor
-aidd init --work-item WI-001 --root .aidd
-aidd run --work-item WI-001 --runtime generic-cli --from-stage idea --to-stage plan --root .aidd
+aidd init --work-item WI-001 --request "Implement a small, specific task" --root .aidd
+aidd run --work-item WI-001 --runtime codex --from-stage idea --to-stage plan --root .aidd
 aidd run show --work-item WI-001 --root .aidd
 ```
 
-This creates `.aidd/` inside the local project. Treat `.aidd/` as project-local
-operator state and do not commit it unless your repository policy explicitly says so.
+This creates `.aidd/` inside the local project and seeds the required intake context
+documents for the first stage. Treat `.aidd/` as project-local operator state and do
+not commit it unless your repository policy explicitly says so.
 
 From a source checkout without installing globally, replace `aidd` with:
 
@@ -97,21 +98,22 @@ tiers, and default timeout settings.
 
 | Runtime | External dependency | Default execution mode | Typical use |
 | --- | --- | --- | --- |
-| `generic-cli` | Python | `adapter-flags` | Local smoke path and deterministic checks |
+| `generic-cli` | Python | `adapter-flags` | Advanced AIDD-compatible wrapper and deterministic checks |
 | `claude-code` | Authenticated `claude` CLI | `native` | Claude Code-backed workflow runs |
 | `codex` | Authenticated `codex` CLI | `native` | Codex-backed workflow runs and live evals |
 | `opencode` | Authenticated `opencode` CLI | `native` | OpenCode-backed workflow runs and live evals |
 
-Workflow and stage execution support the same runtime ids:
+Product workflow and stage execution require an explicit runtime id:
 
 ```bash
 aidd run --work-item WI-001 --runtime codex --root .aidd
 aidd stage run plan --work-item WI-001 --runtime opencode --root .aidd
 ```
 
-Codex, OpenCode, and Claude Code default to native provider CLI execution. Advanced
-operators can configure AIDD-compatible wrapper commands with `mode = "adapter-flags"`
-when they need a custom execution surface.
+Codex, OpenCode, and Claude Code default to native provider CLI execution. `generic-cli`
+is not the default product onboarding runtime; use it when you intentionally configure an
+AIDD-compatible wrapper command with `mode = "adapter-flags"` for a deterministic or
+custom execution surface.
 
 Unknown runtime ids fail fast with `unsupported-runtime` classification.
 
@@ -207,11 +209,18 @@ manual installed-operator audit, not CI and not a release gate.
 Example live eval command:
 
 ```bash
-aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml --runtime codex
+aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
 ```
 
 Manual live E2E scenarios install AIDD through an isolated `uv tool` path, run from the
 target repository root, and preserve audit bundles under `.aidd/reports/evals/`.
+By default, live eval builds a local wheel from the source checkout containing the scenario
+manifest. To test an already published package instead, set:
+
+```bash
+AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a2" \
+  aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
+```
 
 Public GitHub repositories are live E2E targets for evaluator evidence only. See:
 

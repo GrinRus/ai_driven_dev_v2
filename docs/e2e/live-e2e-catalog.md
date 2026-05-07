@@ -34,6 +34,10 @@ Every live E2E run must follow the installed full-flow operator model:
     deterministic repair-probe coverage, terminal document consistency, and repair behavior.
 
 Live E2E is not defined by source-checkout execution from the AIDD repository itself, and it is not a merge gate.
+Local-wheel live evals build from the source checkout containing the scenario manifest. To
+test an already published package, set `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` to the exact
+package spec, for example `ai-driven-dev-v2==0.1.0a2`; published-package mode must not
+require a source checkout root.
 
 The local operator UI has a separate E2E evidence lane in
 [`Operator UI Local-Project E2E Lane`](./operator-ui-local-project.md). That lane uses
@@ -67,7 +71,7 @@ operators initialize work items from the target project root with
 
 ### `fastapi/typer`
 
-- `AIDD-LIVE-001` — styled help alignment bugfix
+- `AIDD-LIVE-001` — styled help alignment bugfix (`setup-blocked`; not a canonical README smoke until repinned or fixed)
 - `AIDD-LIVE-002` — boolean option help rendering
 
 ### `encode/httpx`
@@ -110,9 +114,14 @@ Representative matrix coverage for the live lane:
 
 | Scenario class | Feature size | Maintained provider | Representative scenarios |
 | --- | --- | --- | --- |
-| `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-001`, `AIDD-LIVE-003`, `AIDD-LIVE-005` |
+| `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005` |
 | `live-full-flow` | `medium` | `codex` | `AIDD-LIVE-002`, `AIDD-LIVE-004`, `AIDD-LIVE-007` |
 | `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006`, `AIDD-LIVE-008` |
+
+`AIDD-LIVE-001` remains in the maintained set for historical evidence, but its current
+Typer pin is setup-blocked before the runtime boundary. Use `AIDD-LIVE-005` as the
+canonical installed live smoke until `AIDD-LIVE-001` is repinned or its setup baseline is
+fixed.
 
 ## Live-scenario contract
 

@@ -10,6 +10,7 @@ from aidd.adapters.runtime_registry import get_runtime_definition
 from aidd.cli.doctor import _runtime_probe_report
 from aidd.cli.support import console
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
+from aidd.harness.eval_preparation import derive_source_repository_root
 from aidd.harness.eval_runner import run_eval_scenario
 from aidd.harness.live_runtime_config import validate_live_runtime_command
 from aidd.harness.scenarios import load_scenario
@@ -83,6 +84,7 @@ def eval_doctor(
             command_entry = validate_live_runtime_command(
                 runtime_id=runtime,
                 scenario=loaded_scenario,
+                source_repository_root=derive_source_repository_root(scenario_path),
             )
         except RuntimeError as exc:
             table.add_row("Execution readiness", "fail")

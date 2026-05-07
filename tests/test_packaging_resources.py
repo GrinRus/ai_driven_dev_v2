@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
 from aidd.core.contracts import repo_root_from
+from aidd.core.stages import STAGES
 
 
 def _repo_root() -> Path:
@@ -27,6 +29,35 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
     with zipfile.ZipFile(wheel_paths[0]) as archive:
         archive_names = set(archive.namelist())
 
-    assert "aidd/_resources/contracts/stages/plan.md" in archive_names
+    for stage in STAGES:
+        assert f"aidd/_resources/contracts/stages/{stage}.md" in archive_names
     assert "aidd/_resources/contracts/documents/stage-result.md" in archive_names
     assert "aidd/_resources/prompt-packs/stages/plan/system.md" in archive_names
+
+    installed_check = subprocess.run(
+        [
+            "uv",
+            "run",
+            "--isolated",
+            "--no-cache",
+            "--python",
+            sys.executable,
+            "--with",
+            wheel_paths[0].as_posix(),
+            "python",
+            "-c",
+            (
+                "from aidd.core.resources import default_stage_contracts_root; "
+                "from aidd.core.stages import STAGES; "
+                "root = default_stage_contracts_root(); "
+                "missing = [stage for stage in STAGES if not (root / f'{stage}.md').exists()]; "
+                "raise SystemExit(f'missing stage contracts: {missing}' if missing else 0)"
+            ),
+        ],
+        cwd=_repo_root(),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert installed_check.returncode == 0, installed_check.stderr or installed_check.stdout

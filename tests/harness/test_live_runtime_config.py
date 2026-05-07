@@ -31,7 +31,11 @@ def _empty_live_command_env() -> dict[str, str]:
     }
 
 
-def _scenario(*, runtime_targets: tuple[str, ...] = ("codex", "opencode")) -> Scenario:
+def _scenario(
+    *,
+    runtime_targets: tuple[str, ...] = ("codex", "opencode"),
+    raw: dict[str, object] | None = None,
+) -> Scenario:
     return Scenario(
         scenario_id="AIDD-LIVE-TEST",
         scenario_class="live-full-flow",
@@ -79,7 +83,7 @@ def _scenario(*, runtime_targets: tuple[str, ...] = ("codex", "opencode")) -> Sc
         ),
         runtime_targets=runtime_targets,
         is_live=True,
-        raw={},
+        raw={} if raw is None else raw,
     )
 
 
@@ -255,3 +259,24 @@ def test_validate_live_runtime_command_rejects_default_generic_cli() -> None:
             scenario=_scenario(runtime_targets=("generic-cli",)),
             environment=_empty_live_command_env(),
         )
+
+
+def test_release_proof_helper_uses_explicit_source_repository_root(tmp_path: Path) -> None:
+    source_root = tmp_path / "aidd-source"
+    helper_path = source_root / "scripts" / "release_live_proof_runtime.py"
+    helper_path.parent.mkdir(parents=True)
+    helper_path.write_text("print('ok')\n", encoding="utf-8")
+    scenario = _scenario(
+        runtime_targets=("generic-cli",),
+        raw={"workflow_bundle": {"release_proof_runtime": "generic-cli"}},
+    )
+
+    entries = resolve_live_runtime_command_entries(
+        environment=_empty_live_command_env(),
+        scenario=scenario,
+        source_repository_root=source_root,
+    )
+
+    assert entries["generic-cli"].source == "release-proof-helper"
+    assert entries["generic-cli"].execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
+    assert helper_path.as_posix() in entries["generic-cli"].command

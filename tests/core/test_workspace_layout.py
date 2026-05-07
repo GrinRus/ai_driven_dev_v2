@@ -6,6 +6,7 @@ from pathlib import Path
 from aidd.core.stages import STAGES
 from aidd.core.workspace import (
     DEFAULT_CONTRACT_REFERENCES_FILENAME,
+    REQUEST_CONTEXT_FILENAMES,
     RESERVED_STAGE_FILENAMES,
     STAGE_INPUT_DIRNAME,
     STAGE_OUTPUT_DIRNAME,
@@ -23,6 +24,7 @@ from aidd.core.workspace import (
     WorkspaceBootstrapService,
     create_workspace_tree,
     init_workspace,
+    seed_work_item_context,
     stage_input_root,
     stage_output_root,
     stage_root,
@@ -169,3 +171,68 @@ def test_init_workspace_recovers_partially_initialized_workspace(tmp_path: Path)
     assert (partial_stage_root / STAGE_OUTPUT_DIRNAME).exists()
     assert (partial_stage_root / "stage-brief.md").exists()
     assert existing_stage_result.read_text(encoding="utf-8") == "# Stage result\n\npre-existing\n"
+
+
+def test_seed_work_item_context_writes_request_documents(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    work_item = "WI-REQ"
+    init_workspace(root=root, work_item=work_item)
+
+    result = seed_work_item_context(
+        root=root,
+        work_item=work_item,
+        request_text="Implement CSV import validation.",
+        project_root=tmp_path,
+    )
+
+    context_root = work_item_context_root(root=root, work_item=work_item)
+    assert result.paths == tuple(context_root / filename for filename in REQUEST_CONTEXT_FILENAMES)
+    assert result.overwritten is False
+    assert "Implement CSV import validation." in result.intake_path.read_text(encoding="utf-8")
+    assert "Implement CSV import validation." in result.user_request_path.read_text(
+        encoding="utf-8"
+    )
+    assert tmp_path.as_posix() in result.repository_state_path.read_text(encoding="utf-8")
+
+
+def test_seed_work_item_context_preserves_existing_docs_without_force(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / ".aidd"
+    work_item = "WI-REQ"
+    init_workspace(root=root, work_item=work_item)
+    context_root = work_item_context_root(root=root, work_item=work_item)
+    intake_path = context_root / "intake.md"
+    intake_path.write_text("# Intake\n\nExisting.\n", encoding="utf-8")
+
+    try:
+        seed_work_item_context(
+            root=root,
+            work_item=work_item,
+            request_text="Replace existing intake.",
+        )
+    except FileExistsError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("Expected FileExistsError for existing context docs.")
+
+    assert "Use --force-context" in message
+    assert intake_path.read_text(encoding="utf-8") == "# Intake\n\nExisting.\n"
+
+
+def test_seed_work_item_context_overwrites_existing_docs_with_force(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    work_item = "WI-REQ"
+    init_workspace(root=root, work_item=work_item)
+    intake_path = work_item_context_root(root=root, work_item=work_item) / "intake.md"
+    intake_path.write_text("# Intake\n\nExisting.\n", encoding="utf-8")
+
+    result = seed_work_item_context(
+        root=root,
+        work_item=work_item,
+        request_text="Replace existing intake.",
+        force=True,
+    )
+
+    assert result.overwritten is True
+    assert "Replace existing intake." in intake_path.read_text(encoding="utf-8")

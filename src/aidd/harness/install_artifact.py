@@ -4,10 +4,12 @@ import os
 import subprocess
 import sys
 import time
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.core.contracts import repo_root_from
+from aidd.core.stages import STAGES
 from aidd.harness.runner import HarnessCommandTranscript
 
 
@@ -28,8 +30,33 @@ class HarnessInstallResult:
     duration_seconds: float
 
 
-def _aidd_repository_root() -> Path:
-    return repo_root_from(Path(__file__).resolve())
+def _source_repository_root_from_cwd() -> Path | None:
+    try:
+        return repo_root_from(Path.cwd().resolve(strict=False))
+    except FileNotFoundError:
+        return None
+
+
+def _validate_local_wheel_repository_root(repository_root: Path | None) -> Path:
+    if repository_root is None:
+        raise HarnessInstallError(
+            "Local-wheel live eval requires a source checkout containing "
+            "`pyproject.toml` and `contracts/`. Could not locate that checkout from "
+            "the scenario path or current working directory. Run the eval from a "
+            "source checkout, pass a scenario path inside the source checkout, or set "
+            "`AIDD_EVAL_PUBLISHED_PACKAGE_SPEC=ai-driven-dev-v2==<version>` to test "
+            "an already published package."
+        )
+    resolved_repository_root = repository_root.resolve(strict=False)
+    if not (resolved_repository_root / "pyproject.toml").exists() or not (
+        resolved_repository_root / "contracts"
+    ).exists():
+        raise HarnessInstallError(
+            "Local-wheel live eval requires a source checkout containing "
+            "`pyproject.toml` and `contracts/`. Received "
+            f"{resolved_repository_root.as_posix()}."
+        )
+    return resolved_repository_root
 
 
 def _tool_bin_dir(*, install_home: Path) -> Path:
@@ -67,10 +94,38 @@ def _run_command(
     )
 
 
+def _validate_built_wheel_resources(wheel_path: Path) -> None:
+    expected_stage_contracts = {
+        f"aidd/_resources/contracts/stages/{stage}.md" for stage in STAGES
+    }
+    expected_document_contracts = {
+        "aidd/_resources/contracts/documents/stage-result.md",
+        "aidd/_resources/contracts/documents/validator-report.md",
+    }
+    try:
+        with zipfile.ZipFile(wheel_path) as archive:
+            archive_names = set(archive.namelist())
+    except zipfile.BadZipFile as exc:
+        raise HarnessInstallError(
+            f"Built local AIDD wheel is not a valid wheel archive: {wheel_path.as_posix()}."
+        ) from exc
+
+    missing_resources = sorted(
+        (expected_stage_contracts | expected_document_contracts) - archive_names
+    )
+    if missing_resources:
+        missing = ", ".join(missing_resources)
+        raise HarnessInstallError(
+            "Built local AIDD wheel is missing packaged runtime resources required "
+            f"for installed live execution: {missing}."
+        )
+
+
 def prepare_local_wheel_install(
     *,
     workspace_root: Path,
     run_id: str,
+    repository_root: Path | None = None,
 ) -> HarnessInstallResult:
     if not run_id.strip():
         raise ValueError("run_id must be non-empty.")
@@ -82,7 +137,9 @@ def prepare_local_wheel_install(
     dist_root.mkdir(parents=True, exist_ok=True)
     install_home.mkdir(parents=True, exist_ok=True)
 
-    repository_root = _aidd_repository_root()
+    repository_root = _validate_local_wheel_repository_root(
+        repository_root or _source_repository_root_from_cwd()
+    )
     build_transcript = _run_command(
         command=("uv", "build", "--wheel", "--out-dir", dist_root.as_posix()),
         cwd=repository_root,
@@ -101,6 +158,7 @@ def prepare_local_wheel_install(
             f"Local wheel build produced no wheel artifacts in {dist_root.as_posix()}."
         )
     wheel_path = wheel_paths[-1]
+    _validate_built_wheel_resources(wheel_path)
 
     tool_bin_dir = _tool_bin_dir(install_home=install_home)
     install_env = dict(os.environ)
@@ -118,6 +176,8 @@ def prepare_local_wheel_install(
             "tool",
             "install",
             "--force",
+            "--reinstall",
+            "--refresh",
             "--python",
             sys.executable,
             wheel_path.as_posix(),
@@ -170,6 +230,7 @@ def prepare_published_package_install(
     resolved_workspace_root = workspace_root.resolve(strict=False)
     cache_root = resolved_workspace_root / "harness-cache" / "installs" / run_id
     install_home = cache_root / "home"
+    resolved_workspace_root.mkdir(parents=True, exist_ok=True)
     install_home.mkdir(parents=True, exist_ok=True)
 
     tool_bin_dir = _tool_bin_dir(install_home=install_home)
@@ -192,7 +253,7 @@ def prepare_published_package_install(
             sys.executable,
             normalized_package_spec,
         ),
-        cwd=_aidd_repository_root(),
+        cwd=resolved_workspace_root,
         env=install_env,
     )
     if install_transcript.exit_code != 0:

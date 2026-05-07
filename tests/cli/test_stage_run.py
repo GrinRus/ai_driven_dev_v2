@@ -631,6 +631,49 @@ def test_stage_run_rejects_unknown_runtime() -> None:
     assert "Unsupported runtime 'pi-mono'" in result.output
 
 
+def test_stage_run_requires_explicit_runtime() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-001",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Missing option '--runtime'" in result.output
+    assert "explicit runtime id" in result.output
+
+
+def test_stage_run_reports_actionable_missing_intake_context(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = _write_cli_config(tmp_path=tmp_path, runtime_command="python missing.py")
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "idea",
+            "--work-item",
+            "WI-MISSING-INTAKE",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Intake context is missing" in result.output
+    assert "aidd init --work-item <id> --request" in result.output
+
+
 def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-004")

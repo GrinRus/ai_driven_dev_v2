@@ -25,17 +25,11 @@ setup:
     mode = "adapter-flags"
     TOML
   - uv tool run --from /path/to/ai_driven_dev_v2 aidd doctor --config aidd.example.toml
-  - uv tool run --from /path/to/ai_driven_dev_v2 aidd init --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd
-  - |-
-    mkdir -p .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/context
-    printf '%s\n' '# Intake' '' \
-      'Run the installed local-project smoke path against the minimal fixture.' \
-      > .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/context/intake.md
-    printf '%s\n' '# User request' '' \
-      'Prepare a bounded local-project plan and keep all AIDD state under .aidd/.' \
-      > .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/context/user-request.md
-    printf '%s\n' '# Repository state' '' '- Target project: local minimal-python fixture.' \
-      > .aidd/workitems/WI-INSTALLED-LOCAL-SMOKE/context/repository-state.md
+  - >-
+    uv tool run --from /path/to/ai_driven_dev_v2 aidd init
+    --work-item WI-INSTALLED-LOCAL-SMOKE
+    --request "Prepare a bounded local-project plan and keep all AIDD state under .aidd/."
+    --root .aidd
 aidd_invocation:
   command:
   - uv

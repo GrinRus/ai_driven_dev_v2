@@ -22,6 +22,20 @@ ATTEMPT_INPUT_BUNDLE_FILENAME = RUN_ATTEMPT_INPUT_BUNDLE_FILENAME
 ATTEMPT_REPAIR_CONTEXT_FILENAME = RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME
 
 
+def _missing_input_document_message(relative_path: str) -> str:
+    message = (
+        "Input bundle preparation requires an existing input document: "
+        f"{relative_path}"
+    )
+    if relative_path.endswith("/context/intake.md"):
+        return (
+            f"{message}. Intake context is missing; initialize the work item with "
+            "`aidd init --work-item <id> --request \"...\" --root <root>` "
+            "or create the required context documents before running a stage."
+        )
+    return message
+
+
 def _render_repair_context(
     *,
     workspace_root: Path,
@@ -58,10 +72,7 @@ def _render_input_bundle_markdown(
     for document_path in expected_input_bundle:
         relative_path = workspace_relative_path(workspace_root, document_path)
         if not document_path.exists():
-            raise FileNotFoundError(
-                "Input bundle preparation requires an existing input document: "
-                f"{relative_path}"
-            )
+            raise FileNotFoundError(_missing_input_document_message(relative_path))
         document_content = document_path.read_text(encoding="utf-8").strip()
         lines.extend(
             [

@@ -15,7 +15,7 @@ stage_scope:
   end: qa
 setup:
   commands:
-  - uv sync || pip install -e .[dev]
+  - uv sync
 aidd_invocation:
   work_item: WI-LIVE-SQLITE-INTERVIEW
   expected_stage_scope:
@@ -38,7 +38,7 @@ verify:
   commands:
   - uv run aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW
   - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md
-  - uv run pytest -q || pytest -q
+  - uv run pytest -q
   - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/validator-report.md
   pass_conditions:
@@ -55,7 +55,7 @@ verify:
     evidence: verification command and QA output artifact checks succeed after rerun.
 quality:
   commands:
-  - uv run pytest -q || pytest -q
+  - uv run pytest -q
   rubric_profile: live-full
   require_review_status: approved-with-conditions
   allowed_qa_verdicts:

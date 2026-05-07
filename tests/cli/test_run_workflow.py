@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shlex
+import sys
 from pathlib import Path
 
 import pytest
@@ -40,6 +42,139 @@ def _write_config(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return config_path
+
+
+def _write_black_box_runtime_script(tmp_path: Path) -> Path:
+    documents = {
+        "idea": {
+            "idea-brief.md": (
+                "# Idea Brief\n\n"
+                "## Problem statement\n\n"
+                "The operator needs a bounded local workflow smoke.\n\n"
+                "## Desired outcome\n\n"
+                "Produce a small implementation plan with durable AIDD evidence.\n\n"
+                "## Constraints\n\n"
+                "- Keep workflow state inside `.aidd/`.\n\n"
+                "## Open questions\n\n"
+                "- none\n"
+            ),
+            "stage-result.md": (
+                "# Stage result\n\n"
+                "## Stage\n\nidea\n\n"
+                "## Attempt history\n\n- attempt-0001\n\n"
+                "## Status\n\nsucceeded\n\n"
+                "## Produced outputs\n\n- idea-brief.md\n\n"
+                "## Validation summary\n\n- structural: pass\n\n"
+                "## Blockers\n\n- none\n\n"
+                "## Next actions\n\n- advance\n\n"
+                "## Terminal state notes\n\nReady.\n"
+            ),
+            "validator-report.md": (
+                "# Validator Report\n\n"
+                "## Summary\n\n- Total issues: 0\n\n"
+                "## Structural checks\n\n- none\n\n"
+                "## Semantic checks\n\n- none\n\n"
+                "## Cross-document checks\n\n- none\n\n"
+                "## Result\n\n- Verdict: `pass`\n"
+            ),
+            "questions.md": "# Questions\n\n- none\n",
+            "answers.md": "# Answers\n\n- none\n",
+        },
+        "plan": {
+            "plan.md": (
+                "# Plan\n\n"
+                "## Goals\n\n- Deliver a reviewable local workflow smoke plan.\n\n"
+                "## Out of scope\n\n- Provider setup changes are excluded.\n\n"
+                "## Milestones\n\n- M1: Run the bounded workflow.\n\n"
+                "## Implementation strategy\n\n"
+                "- Use request-aware init and explicit runtime execution.\n\n"
+                "## Risks\n\n- Risk: missing provider; mitigation: use configured wrapper lane.\n\n"
+                "## Dependencies\n\n- Idea stage output.\n\n"
+                "## Verification approach\n\n- Inspect run metadata, logs, and artifacts.\n\n"
+                "## Verification notes\n\n"
+                "- M1: Validate CLI inspection commands.\n"
+            ),
+            "stage-result.md": (
+                "# Stage result\n\n"
+                "## Stage\n\nplan\n\n"
+                "## Attempt history\n\n- attempt-0001\n\n"
+                "## Status\n\nsucceeded\n\n"
+                "## Produced outputs\n\n- plan.md\n\n"
+                "## Validation summary\n\n- structural: pass\n\n"
+                "## Blockers\n\n- none\n\n"
+                "## Next actions\n\n- advance\n\n"
+                "## Terminal state notes\n\nReady.\n"
+            ),
+            "validator-report.md": (
+                "# Validator Report\n\n"
+                "## Summary\n\n- Total issues: 0\n\n"
+                "## Structural checks\n\n- none\n\n"
+                "## Semantic checks\n\n- none\n\n"
+                "## Cross-document checks\n\n- none\n\n"
+                "## Result\n\n- Verdict: `pass`\n"
+            ),
+            "questions.md": "# Questions\n\n- none\n",
+            "answers.md": "# Answers\n\n- none\n",
+        },
+        "research": {
+            "research-notes.md": (
+                "# Research Notes\n\n"
+                "## Scope\n\n"
+                "Evaluate the deterministic local workflow smoke path.\n\n"
+                "## Sources\n\n"
+                "- [S1] Local request context (`context/intake.md`), access date: 2026-05-07.\n\n"
+                "## Findings\n\n"
+                "- Request-aware init provides the required first-stage context ([S1]).\n\n"
+                "## Trade-offs\n\n"
+                "- A wrapper runtime keeps this regression deterministic.\n\n"
+                "## Evidence trace\n\n"
+                "- Init context finding -> [S1]\n\n"
+                "## Open questions\n\n"
+                "- none\n"
+            ),
+            "stage-result.md": (
+                "# Stage result\n\n"
+                "## Stage\n\nresearch\n\n"
+                "## Attempt history\n\n- attempt-0001\n\n"
+                "## Status\n\nsucceeded\n\n"
+                "## Produced outputs\n\n- research-notes.md\n\n"
+                "## Validation summary\n\n- structural: pass\n\n"
+                "## Blockers\n\n- none\n\n"
+                "## Next actions\n\n- advance\n\n"
+                "## Terminal state notes\n\nReady.\n"
+            ),
+            "validator-report.md": (
+                "# Validator Report\n\n"
+                "## Summary\n\n- Total issues: 0\n\n"
+                "## Structural checks\n\n- none\n\n"
+                "## Semantic checks\n\n- none\n\n"
+                "## Cross-document checks\n\n- none\n\n"
+                "## Result\n\n- Verdict: `pass`\n"
+            ),
+            "questions.md": "# Questions\n\n- none\n",
+            "answers.md": "# Answers\n\n- none\n",
+        },
+    }
+    script_path = tmp_path / "black_box_runtime.py"
+    script_path.write_text(
+        "\n".join(
+            (
+                "import os",
+                "from pathlib import Path",
+                f"documents_by_stage = {documents!r}",
+                "stage = os.environ['AIDD_STAGE']",
+                "root = Path(os.environ['AIDD_WORKSPACE_ROOT'])",
+                "stage_root = root / 'workitems' / os.environ['AIDD_WORK_ITEM'] / 'stages' / stage",
+                "stage_root.mkdir(parents=True, exist_ok=True)",
+                "for name, content in documents_by_stage[stage].items():",
+                "    (stage_root / name).write_text(content, encoding='utf-8')",
+                "print(f'black-box-runtime stage={stage}')",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return script_path
 
 
 def test_run_executes_runnable_stages_in_dependency_order(
@@ -244,6 +379,142 @@ def test_run_rejects_unsupported_runtime_with_nonzero_exit() -> None:
     assert "AIDD run: work_item=WI-013 runtime=unsupported-runtime" in result.stdout
     assert "Unsupported runtime 'unsupported-runtime' for workflow execution." in result.stdout
     assert "Failure classification: unsupported-runtime" in result.stdout
+
+
+def test_run_requires_explicit_runtime_for_product_execution() -> None:
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "run",
+            "--work-item",
+            "WI-013",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Missing option '--runtime'" in result.output
+    assert "explicit runtime id" in result.output
+
+
+def test_run_reports_actionable_missing_intake_context(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = _write_config(tmp_path)
+
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "run",
+            "--work-item",
+            "WI-MISSING-INTAKE",
+            "--runtime",
+            "generic-cli",
+            "--from-stage",
+            "idea",
+            "--to-stage",
+            "idea",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Intake context is missing" in result.output
+    assert "aidd init --work-item <id> --request" in result.output
+
+
+def test_run_black_box_local_project_from_request_init_through_inspection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    local_project = tmp_path / "local-project"
+    local_project.mkdir()
+    runtime_script = _write_black_box_runtime_script(tmp_path)
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(runtime_script.as_posix())}"
+    )
+    config_path = _write_config(local_project)
+    config_text = config_path.read_text(encoding="utf-8")
+    config_path.write_text(
+        config_text.replace(_RUNTIME_COMMANDS["generic-cli"], runtime_command),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(local_project)
+
+    init_result = runner.invoke(
+        cli_main.app,
+        [
+            "init",
+            "--work-item",
+            "WI-BLACKBOX",
+            "--request",
+            "Implement a deterministic local workflow smoke.",
+            "--root",
+            ".aidd",
+        ],
+    )
+    assert init_result.exit_code == 0, init_result.output
+
+    run_result = runner.invoke(
+        cli_main.app,
+        [
+            "run",
+            "--work-item",
+            "WI-BLACKBOX",
+            "--runtime",
+            "generic-cli",
+            "--from-stage",
+            "idea",
+            "--to-stage",
+            "plan",
+            "--root",
+            ".aidd",
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+    assert run_result.exit_code == 0, run_result.output
+
+    for command in (
+        ["run", "show", "--work-item", "WI-BLACKBOX", "--root", ".aidd"],
+        [
+            "run",
+            "logs",
+            "--work-item",
+            "WI-BLACKBOX",
+            "--stage",
+            "plan",
+            "--root",
+            ".aidd",
+        ],
+        [
+            "run",
+            "artifacts",
+            "--work-item",
+            "WI-BLACKBOX",
+            "--stage",
+            "plan",
+            "--root",
+            ".aidd",
+        ],
+    ):
+        inspect_result = runner.invoke(cli_main.app, command)
+        assert inspect_result.exit_code == 0, inspect_result.output
+
+    assert (local_project / ".aidd" / "workitems" / "WI-BLACKBOX").exists()
+    assert (
+        local_project
+        / ".aidd"
+        / "workitems"
+        / "WI-BLACKBOX"
+        / "stages"
+        / "plan"
+        / "output"
+        / "plan.md"
+    ).exists()
 
 
 @pytest.mark.parametrize("selected_runtime", ("generic-cli", "claude-code", "codex", "opencode"))

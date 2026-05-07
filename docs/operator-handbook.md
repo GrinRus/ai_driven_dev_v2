@@ -21,7 +21,7 @@ operator audit lane, not a CI or release gate.
 Today:
 
 - `aidd doctor` is functional;
-- `aidd init` is functional;
+- `aidd init` is functional and can seed first-stage intake context from `--request` or `--request-file`;
 - `aidd run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`;
 - `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`;
 - `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle;
@@ -168,11 +168,22 @@ Confirm:
 ### 6.2 Initialize a work item workspace
 
 ```bash
-aidd init --work-item WI-001 --root .aidd
+aidd init --work-item WI-001 --request "Implement a small, specific task" --root .aidd
 ```
 
 This creates the `.aidd/` workspace tree inside the current local project and
-adds stage document scaffolding for the work item.
+adds stage document scaffolding plus the first-stage context documents:
+
+- `.aidd/workitems/WI-001/context/intake.md`
+- `.aidd/workitems/WI-001/context/user-request.md`
+- `.aidd/workitems/WI-001/context/repository-state.md`
+
+Use `--request-file <path>` when the operator request already lives in a file. Existing
+generated context docs are preserved by default; pass `--force-context` only when you
+intentionally want to overwrite `intake.md`, `user-request.md`, and `repository-state.md`.
+
+Running `aidd init` without a request still initializes the workspace tree, but the work
+item is not runnable until the intake context exists.
 
 ### 6.3 Inspect generated workspace artifacts
 
@@ -192,9 +203,8 @@ Verify that:
 ### 6.4 Validate execution surfaces
 
 ```bash
-aidd run --work-item WI-001 --runtime generic-cli --root .aidd --config /path/to/aidd.example.toml
+aidd run --work-item WI-001 --runtime codex --root .aidd --config /path/to/aidd.example.toml
 aidd run --work-item WI-001 --runtime claude-code --root .aidd --config /path/to/aidd.example.toml
-aidd stage run plan --work-item WI-001 --runtime generic-cli --root .aidd --config /path/to/aidd.example.toml
 aidd stage run plan --work-item WI-001 --runtime opencode --root .aidd --config /path/to/aidd.example.toml
 aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
 ```
@@ -202,8 +212,9 @@ aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
 Expected behavior in the current local implementation:
 
 - `aidd run --runtime <maintained-runtime>` performs workflow execution through the selected adapter;
-- `aidd stage run --runtime generic-cli` performs stage execution;
+- `aidd run` and `aidd stage run` require an explicit `--runtime`;
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
+- `generic-cli` is an advanced wrapper/test lane, not the default product onboarding runtime;
 - `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths;
 - live `aidd eval run` is a manual external audit that installs a local wheel with `uv tool`, enters the pinned target repository, and keeps `.aidd/` inside that repository.
 - live eval bundles include `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`,
@@ -213,6 +224,10 @@ Expected behavior in the current local implementation:
   operators trace the exact validator findings that caused each retry.
 - the GitHub `manual-live-e2e` workflow uses native provider commands by default and forwards
   runtime-command secrets only when an adapter-compatible wrapper override is needed.
+- published-package live evals use `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`, for example
+  `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a2" aidd eval run ...`;
+  local-wheel live evals require the scenario manifest to live in, or be run from, an
+  AIDD source checkout.
 
 ### 6.5 Inspect logs and artifacts
 

@@ -62,6 +62,8 @@ Actions:
 
 Symptoms:
 
+- `aidd run --work-item <id>` fails with `Missing option '--runtime'`.
+- `aidd stage run <stage> --work-item <id>` fails with `Missing option '--runtime'`.
 - `aidd run --runtime <unknown>` fails with:
   `Unsupported runtime '<id>' for workflow execution.`
 - `aidd stage run --runtime <unknown>` fails with:
@@ -72,8 +74,26 @@ Actions:
 1. Use one of: `generic-cli`, `claude-code`, `codex`, `opencode`.
 2. Use `aidd doctor` to verify probe availability and configured runtime commands.
 3. If the runtime id is not in the supported list, treat it as unsupported until roadmap adds explicit adapter support.
+4. For product onboarding, prefer a real configured runtime such as `codex`, `claude-code`, or `opencode`; use `generic-cli` only for an explicit AIDD-compatible wrapper/test lane.
 
-### 3.4 Run lookup errors in inspection commands
+### 3.4 Intake context is missing
+
+Symptoms:
+
+- `aidd run` or `aidd stage run idea` fails with:
+  `Input bundle preparation requires an existing input document: .../context/intake.md`.
+
+Actions:
+
+1. If this is a new work item, rerun init with request input:
+   `aidd init --work-item WI-001 --request "Implement <specific task>" --root .aidd`.
+2. If the request lives in a file, use:
+   `aidd init --work-item WI-001 --request-file /path/to/request.md --root .aidd`.
+3. If context docs already exist and should be replaced, add `--force-context`.
+4. Confirm these files exist before rerunning:
+   `context/intake.md`, `context/user-request.md`, and `context/repository-state.md`.
+
+### 3.5 Run lookup errors in inspection commands
 
 Symptoms:
 
@@ -138,7 +158,21 @@ Actions:
 1. Use a repository-relative scenario path under `harness/scenarios/`.
 2. Confirm the path exists before running eval.
 
-### 5.2 Harness eval run reports `fail`, `blocked`, or `infra-fail`
+### 5.2 Local-wheel live eval cannot locate source checkout
+
+Symptoms:
+
+- installed `aidd eval run harness/scenarios/live/... --runtime <runtime>` fails before setup with a local-wheel install error.
+- the error says local-wheel live eval requires a source checkout containing `pyproject.toml` and `contracts/`.
+
+Actions:
+
+1. Run the command from an AIDD source checkout or pass a scenario path inside that checkout.
+2. If you are testing an already published artifact, set:
+   `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==<version>"`.
+3. Do not copy only the installed package's `site-packages` path into the scenario command; live local-wheel mode needs the source checkout to build the wheel.
+
+### 5.3 Harness eval run reports `fail`, `blocked`, or `infra-fail`
 
 Symptoms:
 
@@ -162,7 +196,7 @@ Actions:
    - `fail`: verification or run command failed.
 4. Re-run the same scenario/runtime after fixing the first failure boundary.
 
-### 5.3 Eval summary is missing
+### 5.4 Eval summary is missing
 
 Symptoms:
 
