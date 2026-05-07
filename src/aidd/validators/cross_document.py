@@ -13,6 +13,7 @@ REPAIR_MENTION_WITHOUT_BRIEF_CODE = "CROSS-REPAIR-MENTION-WITHOUT-BRIEF"
 REPAIR_BRIEF_NOT_REFERENCED_CODE = "CROSS-REPAIR-BRIEF-NOT-REFERENCED"
 BLOCKING_UNANSWERED_CODE = "CROSS-BLOCKING-UNANSWERED"
 REPAIR_BUDGET_EXHAUSTED_CODE = "CROSS-REPAIR-BUDGET-EXHAUSTED"
+PROJECT_SET_EVIDENCE_MISSING_CODE = "CROSS-PROJECT-SET-EVIDENCE-MISSING"
 
 _QUESTION_ID_PATTERN = re.compile(
     r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(blocking|non-blocking)\]`?"
@@ -22,6 +23,7 @@ _ANSWER_ID_PATTERN = re.compile(
 )
 _REPAIR_BUDGET_EXHAUSTED_TOKEN = "repair-budget-exhausted"
 _STAGE_STATUS_PATTERN = re.compile(r"`?(succeeded|failed|blocked|needs-input)`?", re.IGNORECASE)
+_PROJECT_SET_ROW_PATTERN = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|")
 
 
 def _stage_root(*, workspace_root: Path, work_item: str, stage: str) -> Path:
@@ -53,6 +55,17 @@ def _extract_section_lines(markdown_text: str, heading: str) -> list[tuple[int, 
             section_lines.append((line_number, line))
 
     return section_lines
+
+
+def _heading_line_number(markdown_text: str, heading: str) -> int | None:
+    target = heading.strip().lower()
+    for line_number, line in enumerate(markdown_text.splitlines(), start=1):
+        match = re.match(r"^(#{1,6})\s+(.+?)\s*$", line.strip())
+        if match is None:
+            continue
+        if match.group(2).strip().lower() == target:
+            return line_number
+    return None
 
 
 def _extract_stage_status(stage_result_text: str) -> tuple[str | None, int | None]:
@@ -146,6 +159,87 @@ def _workspace_relative(path: Path, workspace_root: Path) -> str:
     return path.resolve(strict=False).relative_to(workspace_root.resolve(strict=False)).as_posix()
 
 
+def _extract_project_set_entries(project_set_text: str) -> tuple[tuple[str, str], ...]:
+    entries: list[tuple[str, str]] = []
+    for line in project_set_text.splitlines():
+        match = _PROJECT_SET_ROW_PATTERN.match(line.strip())
+        if match is None:
+            continue
+        entries.append((match.group(1), match.group(2)))
+    return tuple(entries)
+
+
+def _validate_project_set_stage_result_evidence(
+    *,
+    workspace_root: Path,
+    project_set_path: Path,
+    project_set_text: str,
+    stage_result_path: Path,
+    stage_result_text: str,
+) -> tuple[ValidationFinding, ...]:
+    findings: list[ValidationFinding] = []
+    project_set_relative_path = _workspace_relative(project_set_path, workspace_root)
+    stage_result_relative_path = _workspace_relative(stage_result_path, workspace_root)
+    evidence_line = _heading_line_number(stage_result_text, "Project-set evidence")
+
+    if evidence_line is None:
+        findings.append(
+            ValidationFinding(
+                code=PROJECT_SET_EVIDENCE_MISSING_CODE,
+                message=(
+                    "stage-result.md must include `Project-set evidence` when "
+                    f"`{project_set_relative_path}` exists."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=stage_result_relative_path,
+                ),
+            )
+        )
+
+    if f"`{project_set_relative_path}`" not in stage_result_text:
+        findings.append(
+            ValidationFinding(
+                code=PROJECT_SET_EVIDENCE_MISSING_CODE,
+                message=(
+                    "Project-set evidence must reference the project-set context path "
+                    f"`{project_set_relative_path}`."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=stage_result_relative_path,
+                    line_number=evidence_line,
+                ),
+            )
+        )
+
+    for project_id, project_root in _extract_project_set_entries(project_set_text):
+        missing_parts: list[str] = []
+        if f"`{project_id}`" not in stage_result_text:
+            missing_parts.append(f"project id `{project_id}`")
+        if f"`{project_root}`" not in stage_result_text:
+            missing_parts.append(f"project root `{project_root}`")
+        if not missing_parts:
+            continue
+        findings.append(
+            ValidationFinding(
+                code=PROJECT_SET_EVIDENCE_MISSING_CODE,
+                message=(
+                    "Project-set evidence must cite declared "
+                    + " and ".join(missing_parts)
+                    + "."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=stage_result_relative_path,
+                    line_number=evidence_line,
+                ),
+            )
+        )
+
+    return tuple(findings)
+
+
 def validate_cross_document_consistency(
     *,
     stage: str,
@@ -161,6 +255,7 @@ def validate_cross_document_consistency(
     answers_path = stage_root / "answers.md"
     repair_brief_path = stage_root / "repair-brief.md"
     stage_result_path = stage_root / "stage-result.md"
+    project_set_path = workspace_root / "workitems" / work_item / "context" / "project-set.md"
 
     findings: list[ValidationFinding] = []
 
@@ -168,6 +263,7 @@ def validate_cross_document_consistency(
     answers_text = _read_optional(answers_path)
     stage_result_text = _read_optional(stage_result_path)
     repair_brief_text = _read_optional(repair_brief_path)
+    project_set_text = _read_optional(project_set_path)
 
     question_ids: dict[str, int] = {}
     answer_ids: dict[str, int] = {}
@@ -303,6 +399,17 @@ def validate_cross_document_consistency(
                     workspace_relative_path=_workspace_relative(stage_result_path, workspace_root),
                     line_number=stage_status_line,
                 ),
+            )
+        )
+
+    if project_set_text is not None and stage_result_text is not None:
+        findings.extend(
+            _validate_project_set_stage_result_evidence(
+                workspace_root=workspace_root,
+                project_set_path=project_set_path,
+                project_set_text=project_set_text,
+                stage_result_path=stage_result_path,
+                stage_result_text=stage_result_text,
             )
         )
 

@@ -301,6 +301,7 @@ def run_show(
     run_table.add_row("run id", summary.run_id)
     run_table.add_row("work item", summary.work_item)
     run_table.add_row("runtime", summary.runtime_id)
+    run_table.add_row("adapter", summary.adapter_id or summary.runtime_id)
     run_table.add_row("stage target", summary.stage_target)
     run_table.add_row(
         "workflow bounds",
@@ -308,6 +309,7 @@ def run_show(
         f"{summary.workflow_stage_end or summary.stage_target}",
     )
     run_table.add_row("repository git sha", summary.repository_git_sha or "unknown")
+    run_table.add_row("resource revision", summary.resource_revision or "unknown")
     run_table.add_row(
         "prompt packs",
         _path_summary(

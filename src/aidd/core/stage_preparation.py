@@ -51,7 +51,13 @@ def render_stage_brief(
                 f"- Project context: `{project_set_context_path}`",
                 "- Project ids: "
                 + ", ".join(f"`{project.id}`" for project in project_set.projects),
-                "- Stage outputs may cite these project ids when work spans declared roots.",
+                "- Project roots: "
+                + ", ".join(f"`{project.relative_root}`" for project in project_set.projects),
+                (
+                    "- `stage-result.md` must include a `Project-set evidence` section that "
+                    "cites the project context path plus every declared project id and root, "
+                    "or marks an unaffected project explicitly."
+                ),
             ]
         )
     lines.extend(["", "# Expected output documents", ""])

@@ -50,6 +50,12 @@ or validation wording when the canonical validator report proves the draft incon
   - Must include repair-budget outcome when repair logic was used.
   - If `repair-brief.md` declares `repair-budget-final-attempt`, status must reflect the actual validation outcome of that attempt, not fail solely because no later rerun is available.
   - If AIDD records `repair-budget-exhausted` after a failed final attempt, status must be `failed`.
+- `Project-set evidence` (conditional)
+  - Required only when the work item has `workitems/<id>/context/project-set.md`.
+  - Must cite that project-set context path.
+  - Must cite every declared project id and repository-relative root from the context document.
+  - Must state how the stage evidence preserves per-project ownership, or explicitly mark a
+    project as unaffected for this stage.
 
 ## Authoring rules
 
@@ -57,6 +63,9 @@ or validation wording when the canonical validator report proves the draft incon
 - Keep document paths and artifact references workspace-relative and wrapped in backticks.
 - When `repair-brief.md` exists, include a backticked workspace-relative reference to it in
   `Attempt history`, `Validation summary`, or `Terminal state notes`.
+- When project-set context exists, include a `Project-set evidence` section before
+  `Terminal state notes` and keep project ids and roots backticked exactly as declared in
+  `project-set.md`.
 - Keep attempt numbering monotonic and contiguous within the document.
 - Do not claim success when required outputs or validation evidence are missing.
 - Do not claim `Validator verdict: pass` when the canonical AIDD validator report lists
@@ -70,6 +79,8 @@ or validation wording when the canonical validator report proves the draft incon
 - attempt history is ordered and references attempt outcomes,
 - produced outputs and validation state agree with each other,
 - terminal state notes justify why the run stopped.
+- when project-set context exists, `stage-result.md` has `Project-set evidence` that references
+  every declared project id and root.
 
 ## Notes
 

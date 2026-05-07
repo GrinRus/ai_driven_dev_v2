@@ -45,13 +45,13 @@ from aidd.evals.verdicts import (
     ScenarioVerdict,
     VerdictStatus,
     build_scenario_verdict_from_harness_outcome,
-    write_scenario_verdict_markdown,
 )
 from aidd.harness.eval_models import (
     EvalReportPersistenceContext,
     EvalRuntimeLogSourceContext,
     EvalScenarioRunResult,
 )
+from aidd.harness.eval_report_writers import write_eval_source_artifacts
 from aidd.harness.repo_prep import PreparedWorkingCopy
 from aidd.harness.result_bundle import (
     ResultBundleLayout,
@@ -519,16 +519,12 @@ def write_source_artifacts(
     validator_report_source: str,
     verdict: ScenarioVerdict,
 ) -> tuple[Path, Path, Path]:
-    sources_root = layout.run_root / "_sources"
-    sources_root.mkdir(parents=True, exist_ok=True)
-    runtime_log_source_path = sources_root / "runtime.log"
-    validator_report_source_path = sources_root / "validator-report.md"
-    verdict_source_path = sources_root / "verdict.md"
-
-    runtime_log_source_path.write_text(runtime_log_source, encoding="utf-8")
-    validator_report_source_path.write_text(validator_report_source, encoding="utf-8")
-    write_scenario_verdict_markdown(path=verdict_source_path, verdict=verdict)
-    return runtime_log_source_path, validator_report_source_path, verdict_source_path
+    return write_eval_source_artifacts(
+        layout=layout,
+        runtime_log_source=runtime_log_source,
+        validator_report_source=validator_report_source,
+        verdict=verdict,
+    )
 
 
 def workspace_root_for_quality(

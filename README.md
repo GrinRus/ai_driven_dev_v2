@@ -142,7 +142,9 @@ aidd ui --work-item WI-001 --root .aidd
 
 The UI reads the same `.aidd/` state as the CLI. It can show stage status, stage artifacts,
 runtime logs, questions, repair history, and runtime readiness details without introducing a
-separate workflow engine.
+separate workflow engine. Workflow launches from the UI require an explicit runtime selection;
+there is no hidden `generic-cli` fallback. The UI is a local no-auth operator surface: the
+default host is loopback, and non-loopback binds print a warning.
 
 For the local UI evidence lane, see `docs/e2e/operator-ui-local-project.md`.
 

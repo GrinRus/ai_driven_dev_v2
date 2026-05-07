@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 import json
+from http import HTTPStatus
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 from aidd.cli import main as cli_main
-from aidd.cli.ui import OperatorUiService, UiServerOptions
+from aidd.cli.ui import (
+    OperatorUiService,
+    UiRequestBodyTooLarge,
+    UiServerOptions,
+    _is_loopback_host,
+    _read_json_body,
+)
 from aidd.core.run_store import (
     create_next_attempt_directory,
     create_run_manifest,
@@ -41,6 +49,17 @@ def _service(
 def _payload(response) -> dict[str, object]:
     assert response.status == 200
     return json.loads(response.body.decode("utf-8"))
+
+
+def _error_payload(response) -> dict[str, object]:
+    assert response.status >= 400
+    return json.loads(response.body.decode("utf-8"))
+
+
+class _BodyHandler:
+    def __init__(self, body: bytes, *, content_length: str | None = None) -> None:
+        self.headers = {"Content-Length": content_length or str(len(body))}
+        self.rfile = BytesIO(body)
 
 
 def _prepare_run(workspace_root: Path) -> None:
@@ -169,7 +188,7 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     response = service.handle_post(
         "/api/workflow/run",
         {
-            "runtime": "generic-cli",
+            "runtime": "codex",
             "from_stage": "research",
             "to_stage": "plan",
             "log_follow": True,
@@ -182,11 +201,27 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     assert payload["run_id"] == "run-ui-seam"
     assert payload["completed"] is True
     assert request.work_item == "WI-UI"
-    assert request.runtime_id == "generic-cli"
+    assert request.runtime_id == "codex"
     assert request.stage_start == "research"
     assert request.stage_end == "plan"
     assert request.log_follow is True
     assert "stage_executor" in captured
+
+
+def test_ui_workflow_run_endpoint_requires_runtime(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    response = service.handle_post(
+        "/api/workflow/run",
+        {
+            "from_stage": "idea",
+            "to_stage": "plan",
+        },
+    )
+
+    payload = _error_payload(response)
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert payload["error"] == "runtime is required."
 
 
 def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
@@ -326,7 +361,10 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
 
     page = service.handle_get("/", {})
     assert page.status == 200
-    assert "AIDD Operator" in page.body.decode("utf-8")
+    html = page.body.decode("utf-8")
+    assert "AIDD Operator" in html
+    assert 'id="runtimeSelect"' in html
+    assert '<button id="runButton" type="button" disabled>Run</button>' in html
 
     run_response = service.handle_post(
         "/api/workflow/run",
@@ -420,6 +458,37 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "${escapeHtml(runtime.command)}" in script
     assert "${escapeHtml(runtime.provider_version || \"unknown\")}" in script
     assert "${escapeHtml(stageTimeoutSummary(runtime.stage_timeout_seconds))}" in script
+    assert "function renderRuntimeSelector(runtimes)" in script
+    assert "body: JSON.stringify({runtime: selectedRuntime})" in script
+    assert 'body: JSON.stringify({runtime: "generic-cli"})' not in script
+
+
+def test_ui_json_body_reader_rejects_oversized_payload() -> None:
+    handler = _BodyHandler(b"x" * (64 * 1024 + 1))
+
+    try:
+        _read_json_body(handler)  # type: ignore[arg-type]
+    except UiRequestBodyTooLarge as exc:
+        assert "64 KiB" in str(exc)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("expected oversized body to be rejected")
+
+
+def test_ui_json_body_reader_rejects_non_object_json() -> None:
+    handler = _BodyHandler(b'["not", "object"]')
+
+    try:
+        _read_json_body(handler)  # type: ignore[arg-type]
+    except ValueError as exc:
+        assert str(exc) == "Request body must be a JSON object."
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("expected non-object JSON to be rejected")
+
+
+def test_ui_loopback_detection_for_warn_only_bind_policy() -> None:
+    assert _is_loopback_host("127.0.0.1") is True
+    assert _is_loopback_host("localhost") is True
+    assert _is_loopback_host("0.0.0.0") is False
 
 
 def test_ui_command_is_registered() -> None:

@@ -61,6 +61,9 @@ _CONFORMANCE_STAGE = "idea"
 _CONFORMANCE_WORK_ITEM = "WI-CONFORMANCE"
 _CONFORMANCE_RUN_ID = "run-conformance"
 
+StageRequestExecutor = Callable[..., "RuntimeAdapterExecutionResult"]
+ConformanceSpecBuilder = Callable[[Path], object]
+
 
 @dataclass(frozen=True, slots=True)
 class RuntimeAdapterExecutionResult:
@@ -77,6 +80,9 @@ class RuntimeAdapterSurface:
     probe: Callable[[str], CapabilityReport]
     exit_classification_enum: type[StrEnum]
     success_value: StrEnum
+    execute_stage_request_fn: StageRequestExecutor
+    conformance_spec_builder: ConformanceSpecBuilder
+    default_execution_mode: RuntimeExecutionMode
 
     def execute_stage_request(
         self,
@@ -88,108 +94,84 @@ class RuntimeAdapterSurface:
         on_stdout: Callable[[str], None] | None = None,
         on_stderr: Callable[[str], None] | None = None,
     ) -> RuntimeAdapterExecutionResult:
-        if self.runtime_id == "generic-cli":
-            return _execute_generic_cli(
-                configured_command=configured_command,
-                request=request,
-                attempt_path=attempt_path,
-                base_env=base_env,
-                on_stdout=on_stdout,
-                on_stderr=on_stderr,
-            )
-        if self.runtime_id == "claude-code":
-            return _execute_claude_code(
-                configured_command=configured_command,
-                request=request,
-                attempt_path=attempt_path,
-                base_env=base_env,
-                on_stdout=on_stdout,
-                on_stderr=on_stderr,
-            )
-        if self.runtime_id == "codex":
-            return _execute_codex(
-                configured_command=configured_command,
-                request=request,
-                attempt_path=attempt_path,
-                base_env=base_env,
-                on_stdout=on_stdout,
-                on_stderr=on_stderr,
-            )
-        if self.runtime_id == "opencode":
-            return _execute_opencode(
-                configured_command=configured_command,
-                request=request,
-                attempt_path=attempt_path,
-                base_env=base_env,
-                on_stdout=on_stdout,
-                on_stderr=on_stderr,
-            )
-        return RuntimeAdapterExecutionResult(
-            succeeded=False,
-            details=f"unsupported-runtime: {self.runtime_id}",
+        return self.execute_stage_request_fn(
+            configured_command=configured_command,
+            request=request,
+            attempt_path=attempt_path,
+            base_env=base_env,
+            on_stdout=on_stdout,
+            on_stderr=on_stderr,
         )
 
     def build_conformance_subprocess_spec(self, workspace_root: Path) -> object:
-        if self.runtime_id == "generic-cli":
-            generic_context = GenericCliStageContext(
-                stage=_CONFORMANCE_STAGE,
-                work_item=_CONFORMANCE_WORK_ITEM,
-                run_id=_CONFORMANCE_RUN_ID,
-                prompt_pack_path=workspace_root / "prompt-pack.md",
-            )
-            return build_generic_cli_spec(
-                configured_command="generic-cli-conformance",
-                workspace_root=workspace_root,
-                context=generic_context,
-                repository_root=workspace_root,
-            )
-        if self.runtime_id == "claude-code":
-            claude_context = ClaudeCodeCommandContext(
-                stage=_CONFORMANCE_STAGE,
-                work_item=_CONFORMANCE_WORK_ITEM,
-                run_id=_CONFORMANCE_RUN_ID,
-                workspace_root=workspace_root,
-                stage_brief_path=workspace_root / "stage-brief.md",
-                prompt_pack_paths=(workspace_root / "prompt-pack.md",),
-            )
-            return build_claude_code_subprocess_spec(
-                configured_command="claude-code-conformance",
-                context=claude_context,
-                repository_root=workspace_root,
-            )
-        if self.runtime_id == "codex":
-            codex_context = CodexCommandContext(
-                stage=_CONFORMANCE_STAGE,
-                work_item=_CONFORMANCE_WORK_ITEM,
-                run_id=_CONFORMANCE_RUN_ID,
-                workspace_root=workspace_root,
-                stage_brief_path=workspace_root / "stage-brief.md",
-                prompt_pack_paths=(workspace_root / "prompt-pack.md",),
-            )
-            return build_codex_subprocess_spec(
-                configured_command="codex-conformance",
-                context=codex_context,
-                repository_root=workspace_root,
-            )
-        if self.runtime_id == "opencode":
-            opencode_context = OpenCodeCommandContext(
-                stage=_CONFORMANCE_STAGE,
-                work_item=_CONFORMANCE_WORK_ITEM,
-                run_id=_CONFORMANCE_RUN_ID,
-                workspace_root=workspace_root,
-                stage_brief_path=workspace_root / "stage-brief.md",
-                prompt_pack_paths=(workspace_root / "prompt-pack.md",),
-            )
-            return build_opencode_subprocess_spec(
-                configured_command="opencode-conformance",
-                context=opencode_context,
-                repository_root=workspace_root,
-            )
-        raise ValueError(f"No conformance builder registered for runtime: {self.runtime_id}")
+        return self.conformance_spec_builder(workspace_root)
 
 
 def _success_result(exit_classification: StrEnum, success_value: StrEnum) -> bool:
     return exit_classification is success_value
+
+
+def _build_generic_cli_conformance_spec(workspace_root: Path) -> object:
+    generic_context = GenericCliStageContext(
+        stage=_CONFORMANCE_STAGE,
+        work_item=_CONFORMANCE_WORK_ITEM,
+        run_id=_CONFORMANCE_RUN_ID,
+        prompt_pack_path=workspace_root / "prompt-pack.md",
+    )
+    return build_generic_cli_spec(
+        configured_command="generic-cli-conformance",
+        workspace_root=workspace_root,
+        context=generic_context,
+        repository_root=workspace_root,
+    )
+
+
+def _build_claude_code_conformance_spec(workspace_root: Path) -> object:
+    claude_context = ClaudeCodeCommandContext(
+        stage=_CONFORMANCE_STAGE,
+        work_item=_CONFORMANCE_WORK_ITEM,
+        run_id=_CONFORMANCE_RUN_ID,
+        workspace_root=workspace_root,
+        stage_brief_path=workspace_root / "stage-brief.md",
+        prompt_pack_paths=(workspace_root / "prompt-pack.md",),
+    )
+    return build_claude_code_subprocess_spec(
+        configured_command="claude-code-conformance",
+        context=claude_context,
+        repository_root=workspace_root,
+    )
+
+
+def _build_codex_conformance_spec(workspace_root: Path) -> object:
+    codex_context = CodexCommandContext(
+        stage=_CONFORMANCE_STAGE,
+        work_item=_CONFORMANCE_WORK_ITEM,
+        run_id=_CONFORMANCE_RUN_ID,
+        workspace_root=workspace_root,
+        stage_brief_path=workspace_root / "stage-brief.md",
+        prompt_pack_paths=(workspace_root / "prompt-pack.md",),
+    )
+    return build_codex_subprocess_spec(
+        configured_command="codex-conformance",
+        context=codex_context,
+        repository_root=workspace_root,
+    )
+
+
+def _build_opencode_conformance_spec(workspace_root: Path) -> object:
+    opencode_context = OpenCodeCommandContext(
+        stage=_CONFORMANCE_STAGE,
+        work_item=_CONFORMANCE_WORK_ITEM,
+        run_id=_CONFORMANCE_RUN_ID,
+        workspace_root=workspace_root,
+        stage_brief_path=workspace_root / "stage-brief.md",
+        prompt_pack_paths=(workspace_root / "prompt-pack.md",),
+    )
+    return build_opencode_subprocess_spec(
+        configured_command="opencode-conformance",
+        context=opencode_context,
+        repository_root=workspace_root,
+    )
 
 
 def _execute_generic_cli(
@@ -417,24 +399,36 @@ _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
         probe=probe_generic_cli,
         exit_classification_enum=GenericCliExitClassification,
         success_value=GenericCliExitClassification.SUCCESS,
+        execute_stage_request_fn=_execute_generic_cli,
+        conformance_spec_builder=_build_generic_cli_conformance_spec,
+        default_execution_mode=RuntimeExecutionMode.ADAPTER_FLAGS,
     ),
     "claude-code": RuntimeAdapterSurface(
         runtime_id="claude-code",
         probe=probe_claude_code,
         exit_classification_enum=ClaudeCodeExitClassification,
         success_value=ClaudeCodeExitClassification.SUCCESS,
+        execute_stage_request_fn=_execute_claude_code,
+        conformance_spec_builder=_build_claude_code_conformance_spec,
+        default_execution_mode=RuntimeExecutionMode.NATIVE,
     ),
     "codex": RuntimeAdapterSurface(
         runtime_id="codex",
         probe=probe_codex,
         exit_classification_enum=CodexExitClassification,
         success_value=CodexExitClassification.SUCCESS,
+        execute_stage_request_fn=_execute_codex,
+        conformance_spec_builder=_build_codex_conformance_spec,
+        default_execution_mode=RuntimeExecutionMode.NATIVE,
     ),
     "opencode": RuntimeAdapterSurface(
         runtime_id="opencode",
         probe=probe_opencode,
         exit_classification_enum=OpenCodeExitClassification,
         success_value=OpenCodeExitClassification.SUCCESS,
+        execute_stage_request_fn=_execute_opencode,
+        conformance_spec_builder=_build_opencode_conformance_spec,
+        default_execution_mode=RuntimeExecutionMode.NATIVE,
     ),
 }
 RUNTIME_ADAPTER_SURFACES: dict[str, RuntimeAdapterSurface] = {
@@ -459,6 +453,4 @@ def runtime_adapter_surface_ids() -> tuple[str, ...]:
 
 
 def default_execution_mode_for_surface(surface: RuntimeAdapterSurface) -> RuntimeExecutionMode:
-    if surface.runtime_id == "generic-cli":
-        return RuntimeExecutionMode.ADAPTER_FLAGS
-    return RuntimeExecutionMode.NATIVE
+    return surface.default_execution_mode
