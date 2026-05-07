@@ -72,7 +72,12 @@ app = typer.Typer(
 )
 stage_app = typer.Typer(help="Stage-level commands.", add_completion=False)
 eval_app = typer.Typer(help="Eval and harness commands.", add_completion=False)
-run_app = typer.Typer(help="Run-level commands.", add_completion=False, invoke_without_command=True)
+run_app = typer.Typer(
+    help="Run-level commands.",
+    add_completion=False,
+    invoke_without_command=True,
+    no_args_is_help=False,
+)
 
 app.add_typer(stage_app, name="stage")
 app.add_typer(eval_app, name="eval")

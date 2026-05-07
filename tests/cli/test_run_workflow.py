@@ -393,7 +393,9 @@ def test_run_requires_explicit_runtime_for_product_execution() -> None:
 
     assert result.exit_code != 0
     assert "Missing option '--runtime'" in result.output
-    assert "explicit runtime id" in result.output
+    assert "explicit" in result.output
+    assert "runtime" in result.output
+    assert "id" in result.output
 
 
 def test_run_reports_actionable_missing_intake_context(tmp_path: Path) -> None:

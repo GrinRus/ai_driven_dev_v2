@@ -168,14 +168,16 @@ def run_callback(
     if ctx.invoked_subcommand is not None:
         return
     if work_item is None:
-        raise typer.BadParameter("Missing option '--work-item'.")
+        console.print("Error: Missing option '--work-item'.")
+        raise typer.Exit(code=2)
     if runtime is None:
         supported = ", ".join(_WORKFLOW_RUN_SUPPORTED_RUNTIMES)
-        raise typer.BadParameter(
+        console.print(
             "Missing option '--runtime'. Product workflow execution requires an "
             f"explicit runtime id. Supported runtimes: {supported}. Run `aidd doctor` "
             "to check runtime readiness."
         )
+        raise typer.Exit(code=2)
     if from_stage not in STAGES:
         supported = ", ".join(STAGES)
         raise typer.BadParameter(

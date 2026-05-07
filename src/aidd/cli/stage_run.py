@@ -343,7 +343,8 @@ def _run_stage_attempts(
                 project_set=runtime_config.project_set,
             )
         except (FileNotFoundError, ValueError) as exc:
-            raise typer.BadParameter(str(exc)) from exc
+            console.print(f"Error: {exc}")
+            raise typer.Exit(code=2) from exc
 
         stage_attempt_count += 1
         if orchestration.transition.action is not PostValidationAction.REPAIR:

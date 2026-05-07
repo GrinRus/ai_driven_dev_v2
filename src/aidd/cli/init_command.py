@@ -71,7 +71,8 @@ def init(
             force=force_context,
         )
     except (FileExistsError, ValueError) as exc:
-        raise typer.BadParameter(str(exc)) from exc
+        console.print(f"Error: {exc}")
+        raise typer.Exit(code=2) from exc
 
     action = "Updated" if seeded.overwritten else "Seeded"
     console.print(f"{action} request context:")
