@@ -1,121 +1,36 @@
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
 
-from aidd.adapters.runtime_execution import RuntimeRunResult
 from aidd.core.adapter_interview import (
     AdapterQuestionEvent,
     QuestionPolicy,
     persist_answers_document,
     persist_questions_document,
 )
-from aidd.core.run_store import RUN_EVENTS_JSONL_FILENAME, RUN_RUNTIME_JSONL_FILENAME
+from aidd.runtime_logs.events import (
+    RuntimeEventArtifacts as RuntimeEventArtifacts,
+)
+from aidd.runtime_logs.events import (
+    normalize_structured_events as normalize_structured_events,
+)
+from aidd.runtime_logs.events import (
+    persist_runtime_event_artifacts as persist_runtime_event_artifacts,
+)
+from aidd.runtime_logs.events import (
+    structured_runtime_events as structured_runtime_events,
+)
 
-StreamSource = Literal["stdout", "stderr"]
 _QUESTION_ID_PATTERN = re.compile(r"^Q[\w-]*$")
-
-
-@dataclass(frozen=True, slots=True)
-class RuntimeEventArtifacts:
-    runtime_jsonl_path: Path | None
-    events_jsonl_path: Path | None
 
 
 @dataclass(frozen=True, slots=True)
 class RuntimeQuestionDetection:
     question_events: tuple[AdapterQuestionEvent, ...]
     pause_detected: bool
-
-
-def _structured_stream_events(
-    *,
-    stream_text: str,
-    source: StreamSource,
-) -> list[dict[str, object]]:
-    events: list[dict[str, object]] = []
-    for line in stream_text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            parsed = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-
-        events.append({"payload": parsed, "source": source})
-    return events
-
-
-def structured_runtime_events(
-    *,
-    run_result: RuntimeRunResult[Any],
-) -> tuple[dict[str, object], ...]:
-    stdout_events = _structured_stream_events(
-        stream_text=run_result.stdout_text,
-        source="stdout",
-    )
-    stderr_events = _structured_stream_events(
-        stream_text=run_result.stderr_text,
-        source="stderr",
-    )
-    return tuple((*stdout_events, *stderr_events))
-
-
-def _normalized_event_from_structured_event(
-    event: Mapping[str, object],
-) -> dict[str, object]:
-    payload = event.get("payload")
-    source = event.get("source")
-    if isinstance(payload, dict):
-        return {**payload, "source": source}
-    return {"payload": payload, "source": source}
-
-
-def normalize_structured_events(
-    *,
-    run_result: RuntimeRunResult[Any],
-) -> tuple[dict[str, object], ...]:
-    return tuple(
-        _normalized_event_from_structured_event(event)
-        for event in structured_runtime_events(run_result=run_result)
-    )
-
-
-def _write_jsonl(path: Path, rows: tuple[Mapping[str, object], ...]) -> Path | None:
-    if not rows:
-        return None
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        "\n".join(json.dumps(dict(row), sort_keys=True) for row in rows) + "\n",
-        encoding="utf-8",
-    )
-    return path
-
-
-def persist_runtime_event_artifacts(
-    *,
-    attempt_path: Path,
-    run_result: RuntimeRunResult[Any],
-) -> RuntimeEventArtifacts:
-    structured_events = structured_runtime_events(run_result=run_result)
-    normalized_events = tuple(
-        _normalized_event_from_structured_event(event) for event in structured_events
-    )
-    return RuntimeEventArtifacts(
-        runtime_jsonl_path=_write_jsonl(
-            attempt_path / RUN_RUNTIME_JSONL_FILENAME,
-            structured_events,
-        ),
-        events_jsonl_path=_write_jsonl(
-            attempt_path / RUN_EVENTS_JSONL_FILENAME,
-            normalized_events,
-        ),
-    )
 
 
 def _question_policy_from_event(event: Mapping[str, object]) -> QuestionPolicy:
@@ -242,3 +157,14 @@ def _ensure_empty_answers_document_for_native_questions(
         work_item=work_item,
         stage=stage,
     )
+
+
+__all__ = [
+    "RuntimeEventArtifacts",
+    "RuntimeQuestionDetection",
+    "detect_question_or_pause_events",
+    "normalize_structured_events",
+    "persist_adapter_question_events",
+    "persist_runtime_event_artifacts",
+    "structured_runtime_events",
+]

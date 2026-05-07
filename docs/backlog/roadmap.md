@@ -5264,3 +5264,189 @@ Sync notes:
 - `2026-05-06` `W20-E4-S2` completed the source-installed local fixture smoke path. The remaining Wave 20 queue contains only conditional parked items: release/install evidence (`W20-E1-S2-T2`) waiting on a release candidate tag and publishing credentials, and Codex fallback (`W20-E1-S4-T3`) reserved for a provider/runtime timeout blocker.
 - `2026-05-06` Release candidate tag `v0.1.0a0` was pushed to merged `main` commit `aa3655998227e6da2a979b06d2c87543adbf4734`; release run `25437182363` built successfully and published the container, but PyPI Trusted Publishing failed with `invalid-publisher`, so `W20-E1-S2-T2` remains blocked. Discovered prerelease `latest` image tagging was fixed as `W20-E1-S2-T3`.
 - `2026-05-06` Fresh OpenCode fallback gate `eval-live-005-opencode-20260506T131037Z` failed at validation (`qa` attempt 3 `SEM-RISK-UNDERREPORT`) with no timeout signals. Codex fallback was not run; `W20-E1-S4-T3` is closed as not applicable and removed from the backlog parking lot.
+
+---
+
+## Wave 21 — audit closure and production hardening (`done`)
+
+Goal: close the full-audit findings by removing hidden operator runtime defaults, tightening project-set evidence, completing adapter/provenance/log ownership, and reducing the highest-risk module complexity without changing the public stage chain or `.aidd/` artifact layout.
+
+### Epic W21-E1 — operator UI runtime and safety closure (`done`)
+Linked stories: `US-01`, `US-06`, `US-09`, `US-11`
+
+#### Slice W21-E1-S1 — explicit UI runtime launch contract (`done`)
+Goal: make `aidd ui` workflow launches require an explicit operator-selected runtime while keeping readiness observational.
+
+Primary outputs:
+
+- UI runtime selector backed by `/api/runtime-readiness`
+- `/api/workflow/run` required-runtime validation
+- UI/API regression coverage for non-generic runtime payloads
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `tests/cli/`
+- `docs/backlog/`
+
+Dependencies:
+
+- `W20-E2-S6`
+
+Local tasks:
+
+- `W21-E1-S1-T1` (done) Require explicit runtime selection for UI workflow launches and prove a non-generic runtime reaches `WorkflowRunRequest`.
+
+Evidence:
+
+- `src/aidd/cli/ui.py` requires `runtime` in `/api/workflow/run`; missing or empty runtime now returns `400` instead of defaulting to `generic-cli`.
+- `src/aidd/cli/ui_assets.py` renders a runtime selector from `/api/runtime-readiness`, keeps `Run` disabled until selection, and posts the selected runtime.
+- `tests/cli/test_ui.py` proves non-generic runtime propagation, missing-runtime rejection, disabled initial run state, and no hardcoded `generic-cli` workflow launch payload.
+
+Exit evidence:
+
+- UI launches no longer fall back to `generic-cli`;
+- readiness display remains read-only and does not change workflow source of truth.
+
+#### Slice W21-E1-S2 — warn-only UI request safety (`done`)
+Goal: harden the private local UI request boundary without adding authentication in this wave.
+
+Primary outputs:
+
+- bounded JSON request body handling
+- non-loopback local-only warning
+- operator documentation for no-auth local UI behavior
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `docs/operator-handbook.md`
+- `tests/cli/`
+
+Dependencies:
+
+- `W21-E1-S1`
+
+Local tasks:
+
+- `W21-E1-S2-T1` (done) Limit UI JSON request bodies and map invalid body shapes to deterministic HTTP errors.
+- `W21-E1-S2-T2` (done) Warn when `aidd ui` binds outside loopback and document the no-auth local UI model.
+
+Evidence:
+
+- `src/aidd/cli/ui_http.py` owns UI JSON response/body helpers and caps request bodies at 64 KiB.
+- `src/aidd/cli/ui.py` warns on non-loopback bind while preserving the existing public `aidd ui` options.
+- `README.md`, `docs/operator-handbook.md`, and `docs/architecture/operator-frontend.md` document explicit runtime selection and warn-only no-auth local UI behavior.
+
+Exit evidence:
+
+- oversized UI POST bodies return `413`;
+- malformed or non-object JSON returns `400`;
+- non-loopback bind remains allowed but visibly warned as local-only/no-auth.
+
+### Epic W21-E2 — project-set evidence closure (`done`)
+Linked stories: `US-02`, `US-03`, `US-07`, `US-10`, `US-12`
+
+#### Slice W21-E2-S1 — conditional project-set stage-result evidence (`done`)
+Goal: make declared project ids and roots validator-visible in `stage-result.md` whenever a work item has project-set context.
+
+Primary outputs:
+
+- `stage-result.md` contract wording for conditional project-set evidence
+- project-set-aware cross-document validator
+- deterministic scenario evidence for project ids and roots in validated stage results
+
+Touched areas:
+
+- `contracts/documents/`
+- `src/aidd/core/`
+- `src/aidd/validators/`
+- `harness/scenarios/deterministic/`
+- `harness/fixtures/`
+- `tests/validators/`
+
+Dependencies:
+
+- `W20-E3-S4`
+
+Local tasks:
+
+- `W21-E2-S1-T1` (done) Define conditional `Project-set evidence` rules in `stage-result.md` and stage brief guidance.
+- `W21-E2-S1-T2` (done) Validate that project-set stage results cite every declared project id and root.
+- `W21-E2-S1-T3` (done) Extend the deterministic project-set scenario and fixture runtime to prove validated per-project evidence.
+
+Evidence:
+
+- `contracts/documents/stage-result.md` now defines conditional `Project-set evidence` requirements when `workitems/<id>/context/project-set.md` exists.
+- `src/aidd/core/stage_preparation.py` instructs runtime attempts to cite the project context path plus all declared project ids and roots in `stage-result.md`.
+- `src/aidd/validators/cross_document.py` reports `CROSS-PROJECT-SET-EVIDENCE-MISSING` when project-set context exists but final stage evidence omits the section, context path, ids, or roots.
+- `harness/fixtures/minimal-python/aidd_fixture_runtime.py` and `harness/scenarios/deterministic/project-set-plan-context.yaml` now prove validated per-project evidence in `stage-result.md`.
+- `tests/validators/test_cross_document.py` covers passing and failing project-set evidence bundles.
+
+Exit evidence:
+
+- project-set context cannot be present while final stage evidence omits declared project ownership.
+
+### Epic W21-E3 — adapter, provenance, and runtime-log ownership (`done`)
+Linked stories: `US-01`, `US-06`, `US-08`, `US-10`
+
+#### Slice W21-E3-S1 — registry-owned adapter dispatch (`done`)
+Goal: move runtime execution dispatch from runtime-id branching to registered adapter surface callables.
+
+Local tasks:
+
+- `W21-E3-S1-T1` (done) Register per-runtime execution and conformance builders on `RuntimeAdapterSurface` without changing runtime ids or CLI behavior.
+
+Evidence:
+
+- `src/aidd/adapters/surface.py` now stores registered execution and conformance builder callables on `RuntimeAdapterSurface`; method bodies delegate to those callables instead of branching on runtime id.
+- `tests/adapters/test_surface.py` proves maintained runtimes register execution and conformance callables and retain the same default execution modes.
+
+#### Slice W21-E3-S2 — manifest provenance completion (`done`)
+Goal: record explicit adapter id and resource revision in run manifests while preserving legacy manifest loading.
+
+Local tasks:
+
+- `W21-E3-S2-T1` (done) Add `adapter_id` and `resource_revision` to new run manifests and run-show summaries with backward-compatible defaults.
+
+Evidence:
+
+- `src/aidd/core/run_store.py` writes `adapter_id` and `resource_revision` for new run manifests while preserving existing manifest layout and legacy load behavior.
+- `src/aidd/core/run_provenance.py` owns resource-source, Git SHA, packaged revision, and prompt-pack hash collection helpers.
+- `src/aidd/core/run_inspection.py` and `src/aidd/cli/run.py` expose adapter and resource revision in run summaries.
+- `tests/core/test_run_store_layout.py` covers repository and packaged-resource provenance.
+
+#### Slice W21-E3-S3 — runtime-log schema ownership (`done`)
+Goal: make `src/aidd/runtime_logs/` own normalized runtime event data structures and JSONL parsing helpers.
+
+Local tasks:
+
+- `W21-E3-S3-T1` (done) Move structured/normalized runtime event helpers into `runtime_logs` and keep adapters/evals as consumers.
+
+Evidence:
+
+- `src/aidd/runtime_logs/events.py` owns structured JSONL extraction, normalized event shaping, and runtime event artifact persistence.
+- `src/aidd/adapters/runtime_events.py` re-exports the runtime-log helpers for adapter compatibility and keeps adapter question persistence local.
+- `src/aidd/adapters/claude_code/runner.py` delegates normalized event parsing to `runtime_logs`.
+- `tests/adapters/test_runtime_events.py` proves runtime-log-owned parsing semantics.
+
+### Epic W21-E4 — maintainability closure (`done`)
+Linked stories: `US-07`, `US-08`, `US-10`, `US-11`
+
+#### Slice W21-E4-S1 — highest-risk module decomposition (`done`)
+Goal: reduce module complexity in UI, run-store, eval reporting, and legacy eval runner seams without changing behavior or artifact filenames.
+
+Local tasks:
+
+- `W21-E4-S1-T1` (done) Split UI assets and HTTP helpers out of `src/aidd/cli/ui.py` while preserving the public `aidd ui` command.
+- `W21-E4-S1-T2` (done) Extract run manifest/provenance/stage-status helpers from `run_store` while preserving `.aidd` layout.
+- `W21-E4-S1-T3` (done) Extract eval report writer helpers while preserving result bundle filenames.
+- `W21-E4-S1-T4` (done) Isolate legacy eval runner patch points behind an explicit compatibility module.
+
+Evidence:
+
+- `src/aidd/cli/ui_assets.py` and `src/aidd/cli/ui_http.py` split UI assets and HTTP helpers away from `OperatorUiService`.
+- `src/aidd/core/run_provenance.py` removes provenance collection from `run_store` while preserving run manifest and artifact paths.
+- `src/aidd/harness/eval_report_writers.py` owns eval source artifact writes behind the existing `write_source_artifacts` compatibility function.
+- `src/aidd/harness/eval_runner_compat.py` owns legacy module patch helpers used by `run_eval_scenario`.
+- Focused checks passed: `uv run --extra dev pytest -q tests/cli/test_ui.py tests/core/test_operator_frontend.py tests/core/test_run_store_layout.py tests/adapters/test_surface.py tests/adapters/test_runtime_events.py tests/adapters/test_claude_code_runner.py tests/harness/test_eval_runner.py tests/harness/test_result_bundle_persistence.py tests/validators/test_cross_document.py`.

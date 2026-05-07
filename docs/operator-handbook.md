@@ -213,6 +213,8 @@ Expected behavior in the current local implementation:
 
 - `aidd run --runtime <maintained-runtime>` performs workflow execution through the selected adapter;
 - `aidd run` and `aidd stage run` require an explicit `--runtime`;
+- `aidd ui` also requires the operator to select a runtime in the browser before
+  launching a workflow; the UI does not silently default to `generic-cli`;
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
 - `generic-cli` is an advanced wrapper/test lane, not the default product onboarding runtime;
 - `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths;
@@ -244,6 +246,13 @@ The UI uses the same `.aidd/` root:
 ```bash
 aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
 ```
+
+The local UI has no authentication in this release. The default bind host is
+`127.0.0.1`; binding to `0.0.0.0`, a LAN address, or another non-loopback host is
+allowed for local operator experiments but prints a warning and should not be used
+on an untrusted network. The private JSON API rejects oversized request bodies and
+malformed JSON, but it is still a local operator surface rather than a hardened
+multi-user web service.
 
 Keep generated `.aidd/` state inside the local project. Do not move it into the
 AIDD source checkout or commit it unless the target repository has its own policy

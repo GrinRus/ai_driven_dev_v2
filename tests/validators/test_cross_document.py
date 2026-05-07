@@ -8,6 +8,7 @@ from aidd.validators.cross_document import (
     BLOCKING_UNANSWERED_CODE,
     DUPLICATE_ANSWER_ID_CODE,
     DUPLICATE_QUESTION_ID_CODE,
+    PROJECT_SET_EVIDENCE_MISSING_CODE,
     REPAIR_BRIEF_NOT_REFERENCED_CODE,
     REPAIR_BUDGET_EXHAUSTED_CODE,
     REPAIR_MENTION_WITHOUT_BRIEF_CODE,
@@ -71,6 +72,20 @@ def _stage_root(workspace_root: Path) -> Path:
     return workspace_root / "workitems" / "WI-001" / "stages" / "review"
 
 
+def _write_project_set_context(workspace_root: Path) -> None:
+    project_set_path = workspace_root / "workitems" / "WI-001" / "context" / "project-set.md"
+    project_set_path.parent.mkdir(parents=True, exist_ok=True)
+    project_set_path.write_text(
+        "# Project set\n\n"
+        "## Projects\n\n"
+        "| Project id | Root | Role |\n"
+        "| --- | --- | --- |\n"
+        "| `api` | `services/api` | `primary` |\n"
+        "| `web` | `apps/web` | `unspecified` |\n",
+        encoding="utf-8",
+    )
+
+
 def _copy_example_bundle(
     *,
     example_root: Path,
@@ -123,6 +138,92 @@ def test_validate_cross_document_consistency_passes_for_consistent_bundle(tmp_pa
     )
 
     assert findings == ()
+
+
+def test_validate_cross_document_consistency_passes_for_project_set_evidence(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_project_set_context(workspace_root)
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "stage-result.md").write_text(
+        "# Stage\n\nreview\n\n"
+        "## Attempt history\n\n- Attempt `1` (`initial`) -> succeeded.\n\n"
+        "## Project-set evidence\n\n"
+        "- Context: `workitems/WI-001/context/project-set.md`\n"
+        "- `api` at `services/api` retained review evidence.\n"
+        "- `web` at `apps/web` was unaffected by this review stage.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_cross_document_consistency_requires_project_set_evidence(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_project_set_context(workspace_root)
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "stage-result.md").write_text(
+        "# Stage\n\nreview\n\n## Attempt history\n\n- Attempt `1` (`initial`) -> succeeded.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert [finding.code for finding in findings] == [
+        PROJECT_SET_EVIDENCE_MISSING_CODE,
+        PROJECT_SET_EVIDENCE_MISSING_CODE,
+        PROJECT_SET_EVIDENCE_MISSING_CODE,
+        PROJECT_SET_EVIDENCE_MISSING_CODE,
+    ]
+    assert "Project-set evidence" in findings[0].message
+    assert "project-set context path" in findings[1].message
+    assert "project id `api` and project root `services/api`" in findings[2].message
+    assert "project id `web` and project root `apps/web`" in findings[3].message
 
 
 def test_validate_cross_document_consistency_reports_answer_without_question(

@@ -23,7 +23,7 @@ from aidd.adapters.runner_support import (
 )
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
-from aidd.adapters.subprocess_streaming import StreamTarget, run_streamed_subprocess
+from aidd.adapters.subprocess_streaming import run_streamed_subprocess
 from aidd.core.adapter_interview import (
     AdapterQuestionEvent,
     QuestionPolicy,
@@ -35,6 +35,7 @@ from aidd.core.adapter_interview import (
     unresolved_blocking_questions,
 )
 from aidd.core.run_store import run_stage_metadata_path
+from aidd.runtime_logs.events import normalize_structured_events as normalize_runtime_log_events
 
 
 @dataclass(frozen=True, slots=True)
@@ -381,42 +382,11 @@ def persist_attempt_runtime_log(
     )
 
 
-def _normalize_stream_events(
-    *,
-    stream_text: str,
-    source: StreamTarget,
-) -> list[dict[str, object]]:
-    normalized: list[dict[str, object]] = []
-    for line in stream_text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            parsed = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-
-        if isinstance(parsed, dict):
-            normalized.append({**parsed, "source": source})
-            continue
-
-        normalized.append({"payload": parsed, "source": source})
-    return normalized
-
-
 def normalize_structured_events(
     *,
     run_result: ClaudeCodeRunResult,
 ) -> tuple[dict[str, object], ...]:
-    stdout_events = _normalize_stream_events(
-        stream_text=run_result.stdout_text,
-        source="stdout",
-    )
-    stderr_events = _normalize_stream_events(
-        stream_text=run_result.stderr_text,
-        source="stderr",
-    )
-    return tuple((*stdout_events, *stderr_events))
+    return normalize_runtime_log_events(run_result=run_result)
 
 
 @dataclass(frozen=True, slots=True)

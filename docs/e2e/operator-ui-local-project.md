@@ -34,6 +34,7 @@ The maintained operator UI lane covers:
 
 - page load for the local UI shell;
 - workflow-run request delegation through the same core service used by the CLI;
+- explicit runtime selection before workflow-run request dispatch;
 - blocking answer persistence to `answers.md`;
 - runtime log rendering from attempt artifacts;
 - artifact index rendering for stage documents and logs;
@@ -67,8 +68,9 @@ A manual installed UI smoke should use a disposable local fixture project:
 4. Run `aidd init --work-item <id> --request "<task>" --root .aidd` so `.aidd/` and intake context are created inside the fixture project.
 5. Seed request context with `--request` or `--request-file`, then execute a local deterministic work item through `aidd run --runtime <runtime>`.
 6. Start `aidd ui --work-item <id> --root .aidd --host 127.0.0.1 --port <port>`.
-7. Verify the page loads, `/api/workflow/run` is reachable, blocking answers persist,
-   logs and artifacts render, validation state is visible, and repair evidence is linked.
+7. Verify the page loads, runtime selection is required before `/api/workflow/run`
+   dispatch, blocking answers persist, logs and artifacts render, validation state
+   is visible, and repair evidence is linked.
 8. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
 
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`

@@ -101,12 +101,14 @@ def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: 
     assert payload["run_id"] == "run-001"
     assert payload["work_item_id"] == "WI-001"
     assert payload["runtime_id"] == "generic-cli"
+    assert payload["adapter_id"] == "generic-cli"
     assert payload["stage_target"] == "plan"
     assert payload["workflow_bounds"] == {"start": "idea", "end": "plan"}
     assert payload["config_snapshot"] == {"log_mode": "both"}
     assert "repository_git_sha" in payload
     git_sha = payload["repository_git_sha"]
     assert git_sha is None or (isinstance(git_sha, str) and len(git_sha) == 40)
+    assert payload["resource_revision"] == git_sha
 
     prompt_pack_provenance = payload["prompt_pack_provenance"]
     assert isinstance(prompt_pack_provenance, list)
@@ -121,6 +123,51 @@ def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: 
     ).hexdigest()
     assert system_prompt["sha256"] == expected_hash
     assert payload["schema_version"] == 1
+
+
+def test_create_run_manifest_records_packaged_resource_revision_and_adapter_id(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    resource_root = tmp_path / "_resources"
+    contracts_root = resource_root / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    (resource_root / "contracts" / "documents").mkdir(parents=True)
+    (resource_root / "contracts" / "documents" / "stage-result.md").write_text(
+        "# Stage Result\n",
+        encoding="utf-8",
+    )
+    prompt_path = resource_root / "prompt-packs" / "stages" / "plan" / "system.md"
+    prompt_path.parent.mkdir(parents=True)
+    prompt_path.write_text("# Plan prompt\n", encoding="utf-8")
+    (resource_root / "RESOURCE_REVISION").write_text("pkg-rev-test\n", encoding="utf-8")
+    (contracts_root / "plan.md").write_text(
+        "# Stage Contract: `plan`\n\n"
+        "## Purpose\n\nPlan work.\n\n"
+        "## Primary output\n\n- `stage-result.md`\n\n"
+        "## Required inputs\n\n- `context/intake.md`\n\n"
+        "## Prompt pack\n\n- `prompt-packs/stages/plan/system.md`\n",
+        encoding="utf-8",
+    )
+
+    manifest_path = create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-packaged",
+        runtime_id="codex",
+        adapter_id="codex-adapter",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+        contracts_root=contracts_root,
+        repository_root=resource_root,
+    )
+
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert payload["runtime_id"] == "codex"
+    assert payload["adapter_id"] == "codex-adapter"
+    assert payload["resource_source"] == "packaged"
+    assert payload["resource_revision"] == "pkg-rev-test"
+    assert payload["repository_git_sha"] is None
 
 
 def test_next_attempt_number_starts_from_one_when_attempts_missing(tmp_path: Path) -> None:

@@ -1,12 +1,30 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from aidd.adapters.runtime_events import (
     detect_question_or_pause_events,
     persist_adapter_question_events,
 )
 from aidd.core.adapter_interview import AdapterQuestionEvent, QuestionPolicy
+from aidd.runtime_logs.events import normalize_structured_events, structured_runtime_events
+
+
+def test_runtime_log_events_own_structured_and_normalized_jsonl_parsing() -> None:
+    run_result = SimpleNamespace(
+        stdout_text='{"event":"run_started","id":"abc"}\nnot-json\n',
+        stderr_text='["structured", "array"]\n',
+    )
+
+    assert structured_runtime_events(run_result=run_result) == (
+        {"payload": {"event": "run_started", "id": "abc"}, "source": "stdout"},
+        {"payload": ["structured", "array"], "source": "stderr"},
+    )
+    assert normalize_structured_events(run_result=run_result) == (
+        {"event": "run_started", "id": "abc", "source": "stdout"},
+        {"payload": ["structured", "array"], "source": "stderr"},
+    )
 
 
 def test_detect_question_or_pause_events_ignores_invalid_runtime_question_ids() -> None:

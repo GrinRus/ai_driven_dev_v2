@@ -66,6 +66,9 @@ Required behavior:
 
 - stage briefs must state the declared project set when a flow uses one;
 - stage outputs that affect a project should name the relevant project id;
+- `stage-result.md` must include `Project-set evidence` when
+  `workitems/<id>/context/project-set.md` exists, citing the context path plus
+  every declared project id and repository-relative root;
 - validation evidence should preserve which project root was checked;
 - runtime logs should keep the current runtime/adapter provenance and may add
   project labels only as metadata;

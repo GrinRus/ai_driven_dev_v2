@@ -61,6 +61,9 @@ verify:
   - grep -q '`api`' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md
   - grep -q '`web`' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md
   - grep -q 'workitems/WI-DETERMINISTIC-PROJECT-SET/context/project-set.md' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/stages/plan/stage-brief.md
+  - grep -q '## Project-set evidence' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/stages/plan/output/stage-result.md
+  - grep -q '`api` at `services/api`' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/stages/plan/output/stage-result.md
+  - grep -q '`web` at `apps/web`' .aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/stages/plan/output/stage-result.md
   - |-
     python - <<'PY'
     import json
@@ -78,6 +81,10 @@ verify:
     assert f"## `{project_context}`" in input_bundle
     assert "`api`" in input_bundle
     assert "`web`" in input_bundle
+    stage_result = Path(".aidd/workitems/WI-DETERMINISTIC-PROJECT-SET/stages/plan/output/stage-result.md").read_text()
+    assert project_context in stage_result
+    assert "`api`" in stage_result and "`services/api`" in stage_result
+    assert "`web`" in stage_result and "`apps/web`" in stage_result
     PY
 limits:
   timeout_minutes: 5

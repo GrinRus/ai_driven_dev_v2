@@ -113,6 +113,11 @@ Current W20 implementation status:
   the CLI delegating to it;
 - `aidd ui --work-item <id> --root <path> --config <path> --host 127.0.0.1 --port 0`
   starts a local-only Python-packaged web UI;
+- workflow launch requests require an explicit operator-selected runtime and do not
+  fall back to `generic-cli`;
+- the private local JSON API enforces a small request-body limit and deterministic
+  malformed-body errors; non-loopback binds remain allowed but warn because this
+  release has no UI authentication;
 - private JSON endpoints expose run, stage, questions, answer writes, logs,
   artifacts, and workflow run requests over the operator services;
 - the UI shell serves static HTML, CSS, and JavaScript from the Python package,

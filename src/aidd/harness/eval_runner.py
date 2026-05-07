@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from pathlib import Path
 from time import monotonic
 
@@ -77,6 +76,7 @@ from aidd.harness.eval_reports import (
     workspace_root_for_quality,
     write_source_artifacts,
 )
+from aidd.harness.eval_runner_compat import patch_module_values
 from aidd.harness.install_artifact import (
     prepare_local_wheel_install,
     prepare_published_package_install,
@@ -108,20 +108,8 @@ from aidd.harness.runner import (
 from aidd.harness.scenarios import load_scenario
 
 
-def _patch_module_value(module: object, name: str, value: object) -> None:
-    setattr(module, name, value)
-
-
-def _patch_module_values(
-    module: object,
-    values: Iterable[tuple[str, object]],
-) -> None:
-    for name, value in values:
-        _patch_module_value(module, name, value)
-
-
 def _sync_legacy_patch_points() -> None:
-    _patch_module_values(
+    patch_module_values(
         _eval_preparation,
         (
             ("ensure_result_bundle_layout", ensure_result_bundle_layout),
@@ -130,7 +118,7 @@ def _sync_legacy_patch_points() -> None:
             ("resolve_resource_layout", resolve_resource_layout),
         ),
     )
-    _patch_module_values(
+    patch_module_values(
         _eval_execution,
         (
             ("bootstrap_live_work_item", bootstrap_live_work_item),
@@ -148,7 +136,7 @@ def _sync_legacy_patch_points() -> None:
             ("write_live_runtime_config", write_live_runtime_config),
         ),
     )
-    _patch_module_values(
+    patch_module_values(
         _eval_reports,
         (
             ("build_live_quality_assessment", build_live_quality_assessment),

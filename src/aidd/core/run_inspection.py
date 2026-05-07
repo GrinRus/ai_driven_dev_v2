@@ -69,10 +69,12 @@ class RunMetadataSummary:
     run_id: str
     work_item: str
     runtime_id: str
+    adapter_id: str | None
     stage_target: str
     workflow_stage_start: str | None
     workflow_stage_end: str | None
     repository_git_sha: str | None
+    resource_revision: str | None
     prompt_pack_provenance: tuple[PromptPackProvenance, ...]
     created_at_utc: str
     updated_at_utc: str
@@ -253,6 +255,8 @@ def resolve_run_metadata_summary(
         workflow_stage_start = str(workflow_bounds.get("start", "")).strip() or None
         workflow_stage_end = str(workflow_bounds.get("end", "")).strip() or None
     repository_git_sha = str(manifest_payload.get("repository_git_sha", "")).strip() or None
+    adapter_id = str(manifest_payload.get("adapter_id", "")).strip() or runtime_id
+    resource_revision = str(manifest_payload.get("resource_revision", "")).strip() or None
     raw_prompt_pack_provenance = manifest_payload.get("prompt_pack_provenance", [])
     prompt_pack_provenance: list[PromptPackProvenance] = []
     if isinstance(raw_prompt_pack_provenance, list):
@@ -307,10 +311,12 @@ def resolve_run_metadata_summary(
         run_id=selected_run_id,
         work_item=work_item,
         runtime_id=runtime_id,
+        adapter_id=adapter_id,
         stage_target=stage_target,
         workflow_stage_start=workflow_stage_start,
         workflow_stage_end=workflow_stage_end,
         repository_git_sha=repository_git_sha,
+        resource_revision=resource_revision,
         prompt_pack_provenance=tuple(prompt_pack_provenance),
         created_at_utc=created_at_utc,
         updated_at_utc=updated_at_utc,

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import hashlib
 import json
-import subprocess
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,7 +8,13 @@ from typing import Any
 
 from aidd.core.models.run import RepairHistoryEntry, RunArtifactIndex, StageRunMetadata
 from aidd.core.resources import resolve_resource_layout_from_contracts_root
-from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, resolve_prompt_pack_paths
+from aidd.core.run_provenance import (
+    classify_resource_source,
+    collect_prompt_pack_provenance,
+    resolve_repository_git_sha,
+    resolve_resource_revision,
+)
+from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
     WORKSPACE_REPORTS_DIRNAME,
@@ -33,7 +37,6 @@ RUN_RUNTIME_LOG_FILENAME = "runtime.log"
 RUN_RUNTIME_JSONL_FILENAME = "runtime.jsonl"
 RUN_EVENTS_JSONL_FILENAME = "events.jsonl"
 RUN_RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
-_GIT_SHA_LENGTH = 40
 
 
 def _format_utc_timestamp(timestamp: datetime | None = None) -> str:
@@ -57,61 +60,6 @@ def _resolve_repository_root(
     if repository_root is not None:
         return repository_root.resolve(strict=False)
     return resolve_resource_layout_from_contracts_root(contracts_root).root
-
-
-def _classify_resource_source(resource_root: Path) -> str:
-    if resource_root.name == "_resources":
-        return "packaged"
-    if (resource_root / "contracts").is_dir() and (resource_root / "prompt-packs").is_dir():
-        if (resource_root / "pyproject.toml").exists():
-            return "repository"
-        return "custom"
-    return "custom"
-
-
-def _resolve_repository_git_sha(repository_root: Path) -> str | None:
-    try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repository_root,
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-    except OSError:
-        return None
-
-    candidate = completed.stdout.strip()
-    if completed.returncode != 0 or len(candidate) != _GIT_SHA_LENGTH:
-        return None
-    if any(char not in "0123456789abcdef" for char in candidate.lower()):
-        return None
-    return candidate
-
-
-def _sha256_hex(path: Path) -> str:
-    digest = hashlib.sha256()
-    digest.update(path.read_bytes())
-    return digest.hexdigest()
-
-
-def _collect_prompt_pack_provenance(
-    *,
-    stage_target: str,
-    contracts_root: Path,
-    resource_root: Path,
-) -> tuple[RunArtifactIndex.PromptPackProvenanceEntry, ...]:
-    prompt_pack_paths = resolve_prompt_pack_paths(
-        stage=stage_target,
-        contracts_root=contracts_root,
-    )
-    return tuple(
-        RunArtifactIndex.PromptPackProvenanceEntry(
-            path=prompt_path,
-            sha256=_sha256_hex((resource_root / prompt_path).resolve(strict=False)),
-        )
-        for prompt_path in prompt_pack_paths
-    )
 
 
 def run_store_root(workspace_root: Path) -> Path:
@@ -507,8 +455,8 @@ def write_attempt_artifact_index(
         contracts_root=contracts_root,
         repository_root=repository_root,
     )
-    resource_source = _classify_resource_source(resolved_repository_root)
-    prompt_pack_provenance = _collect_prompt_pack_provenance(
+    resource_source = classify_resource_source(resolved_repository_root)
+    prompt_pack_provenance = collect_prompt_pack_provenance(
         stage_target=stage,
         contracts_root=contracts_root,
         resource_root=resolved_repository_root,
@@ -708,6 +656,7 @@ def create_run_manifest(
     workflow_stage_end: str | None = None,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
+    adapter_id: str | None = None,
 ) -> Path:
     manifest_path = run_manifest_path(
         workspace_root=workspace_root,
@@ -729,9 +678,14 @@ def create_run_manifest(
         contracts_root=contracts_root,
         repository_root=repository_root,
     )
-    resource_source = _classify_resource_source(resolved_repository_root)
-    repository_git_sha = _resolve_repository_git_sha(resolved_repository_root)
-    prompt_pack_provenance = _collect_prompt_pack_provenance(
+    resource_source = classify_resource_source(resolved_repository_root)
+    repository_git_sha = resolve_repository_git_sha(resolved_repository_root)
+    resource_revision = resolve_resource_revision(
+        resource_root=resolved_repository_root,
+        resource_source=resource_source,
+        repository_git_sha=repository_git_sha,
+    )
+    prompt_pack_provenance = collect_prompt_pack_provenance(
         stage_target=stage_target,
         contracts_root=contracts_root,
         resource_root=resolved_repository_root,
@@ -741,6 +695,7 @@ def create_run_manifest(
         "run_id": run_id,
         "work_item_id": work_item,
         "runtime_id": runtime_id,
+        "adapter_id": adapter_id or runtime_id,
         "stage_target": stage_target,
         "workflow_bounds": {
             "start": workflow_stage_start,
@@ -749,6 +704,7 @@ def create_run_manifest(
         "config_snapshot": config_snapshot,
         "repository_git_sha": repository_git_sha,
         "resource_source": resource_source,
+        "resource_revision": resource_revision,
         "resource_root": resolved_repository_root.as_posix(),
         "prompt_pack_provenance": [entry.to_dict() for entry in prompt_pack_provenance],
         "created_at_utc": now,
@@ -789,6 +745,7 @@ class RunStore:
         workflow_stage_end: str | None = None,
         contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
         repository_root: Path | None = None,
+        adapter_id: str | None = None,
     ) -> Path:
         return create_run_manifest(
             workspace_root=self.workspace_root,
@@ -801,6 +758,7 @@ class RunStore:
             workflow_stage_end=workflow_stage_end,
             contracts_root=contracts_root,
             repository_root=repository_root,
+            adapter_id=adapter_id,
         )
 
     def create_next_attempt(

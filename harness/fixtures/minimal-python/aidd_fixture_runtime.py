@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 VALIDATOR_REPORT = """# Validator Report
@@ -28,7 +29,7 @@ QUESTIONS = "# Questions\n\n## Questions\n\n- none\n"
 ANSWERS = "# Answers\n\n## Answers\n\n- none\n"
 
 
-def _stage_result(stage: str, primary_output: str) -> str:
+def _stage_result(stage: str, primary_output: str, project_set_evidence: str = "") -> str:
     return f"""# Stage result
 
 ## Stage
@@ -60,13 +61,35 @@ succeeded
 
 - advance
 
+{project_set_evidence}
 ## Terminal state notes
 
 Ready.
 """
 
 
-def _idea_documents() -> dict[str, str]:
+def _project_set_evidence(workspace_root: Path, work_item: str) -> str:
+    project_set_path = workspace_root / "workitems" / work_item / "context" / "project-set.md"
+    if not project_set_path.exists():
+        return ""
+    project_set_relative_path = f"workitems/{work_item}/context/project-set.md"
+    lines = [
+        "## Project-set evidence",
+        "",
+        f"- Context: `{project_set_relative_path}`",
+    ]
+    for line in project_set_path.read_text(encoding="utf-8").splitlines():
+        match = re.match(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|", line.strip())
+        if match is None:
+            continue
+        lines.append(
+            f"- `{match.group(1)}` at `{match.group(2)}` retained deterministic stage evidence."
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _idea_documents(project_set_evidence: str) -> dict[str, str]:
     return {
         "idea-brief.md": """# Idea Brief
 
@@ -88,14 +111,14 @@ Produce bounded idea, research, and plan evidence for the declared `api` and `we
 
 - none
 """,
-        "stage-result.md": _stage_result("idea", "idea-brief.md"),
+        "stage-result.md": _stage_result("idea", "idea-brief.md", project_set_evidence),
         "validator-report.md": VALIDATOR_REPORT,
         "questions.md": QUESTIONS,
         "answers.md": ANSWERS,
     }
 
 
-def _research_documents() -> dict[str, str]:
+def _research_documents(project_set_evidence: str) -> dict[str, str]:
     return {
         "research-notes.md": """# Research Notes
 
@@ -123,14 +146,14 @@ def _research_documents() -> dict[str, str]:
 
 - none
 """,
-        "stage-result.md": _stage_result("research", "research-notes.md"),
+        "stage-result.md": _stage_result("research", "research-notes.md", project_set_evidence),
         "validator-report.md": VALIDATOR_REPORT,
         "questions.md": QUESTIONS,
         "answers.md": ANSWERS,
     }
 
 
-def _plan_documents() -> dict[str, str]:
+def _plan_documents(project_set_evidence: str) -> dict[str, str]:
     return {
         "plan.md": """# Plan
 
@@ -168,7 +191,7 @@ def _plan_documents() -> dict[str, str]:
 - M1: verify `project-set.md` lists both declared project ids.
 - M2: verify `artifact-index.json` and `input-bundle.md` preserve project-set context.
 """,
-        "stage-result.md": _stage_result("plan", "plan.md"),
+        "stage-result.md": _stage_result("plan", "plan.md", project_set_evidence),
         "validator-report.md": VALIDATOR_REPORT,
         "questions.md": QUESTIONS,
         "answers.md": ANSWERS,
@@ -181,6 +204,7 @@ def main() -> None:
     work_item = os.environ["AIDD_WORK_ITEM"]
     stage_root = workspace_root / "workitems" / work_item / "stages" / stage
     stage_root.mkdir(parents=True, exist_ok=True)
+    project_set_evidence = _project_set_evidence(workspace_root, work_item)
 
     documents_by_stage = {
         "idea": _idea_documents,
@@ -188,10 +212,10 @@ def main() -> None:
         "plan": _plan_documents,
     }
     try:
-        documents = documents_by_stage[stage]()
+        documents = documents_by_stage[stage](project_set_evidence)
     except KeyError:
         documents = {
-            "stage-result.md": _stage_result(stage, "stage-result.md"),
+            "stage-result.md": _stage_result(stage, "stage-result.md", project_set_evidence),
             "validator-report.md": VALIDATOR_REPORT,
             "questions.md": QUESTIONS,
             "answers.md": ANSWERS,
