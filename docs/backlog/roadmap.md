@@ -3319,7 +3319,7 @@ Sync notes:
 - `2026-04-24` Initial Wave 14 queue restoration promotes `W14-E1-S1-T1` to `Next`, `W14-E1-S1-T2` to `Soon`, and `W14-E1-S2-T1` to `Parking lot`.
 - `2026-04-24` Wave 14 completed: `live-e2e` now documents local prerequisites, runtime-command setup, preflight, launch, validations, artifacts, and first-triage guidance directly in the skill; `aidd-eval` points local operators to it; and docs consistency tests lock the contract.
 
-## Wave 15 — readiness recovery and verification hygiene (`blocked`)
+## Wave 15 — readiness recovery and verification hygiene (`done`)
 
 ### Epic W15-E0 — queue restoration governance (`done`)
 Linked stories: `US-09`, `US-10`
@@ -3406,10 +3406,10 @@ Exit evidence:
 - Wave 12 and Wave 13 local task bullets no longer depend only on parent slice status or sync notes for completion evidence;
 - no roadmap status is changed from done to another state.
 
-### Epic W15-E3 — external evidence lanes (`blocked`)
+### Epic W15-E3 — external evidence lanes (`done`)
 Linked stories: `US-07`, `US-09`, `US-10`
 
-#### Slice W15-E3-S1 — fresh manual live evidence (`blocked`)
+#### Slice W15-E3-S1 — fresh manual live evidence (`done`)
 Goal: collect one current manual live E2E bundle after local governance and deterministic gates are green.
 
 Primary outputs:
@@ -3428,20 +3428,26 @@ Dependencies:
 - `W15-E1-S1`
 - prepared runtime authentication and wrapper command outside this repository
 
-Blocked reason:
+Historical blocker:
 
 - `2026-04-25` Local preflight found `AIDD_EVAL_CODEX_COMMAND` and `AIDD_EVAL_OPENCODE_COMMAND` unset, so no AIDD-compatible live runtime wrapper is available for a prepared manual live run in this environment.
 
 Local tasks:
 
-- `W15-E3-S1-T1` (blocked) Run one prepared manual live E2E scenario with a maintained runtime and preserve the eval artifacts for audit.
+- `W15-E3-S1-T1` (done) Run one prepared manual live E2E scenario with a maintained runtime and preserve the eval artifacts for audit.
+
+Closure evidence:
+
+- `2026-05-06` Later live evidence superseded the original `2026-04-25` wrapper blocker: `eval-live-005-claude-code-20260506T074233Z` completed `AIDD-LIVE-005` with status `pass`, quality gate `warn`, first failure boundary `none`, and no stage timeouts.
+- `2026-05-06` Additional maintained-runtime evidence exists for OpenCode: `eval-live-005-opencode-20260506T094747Z` completed `AIDD-LIVE-005` with status `pass` and first failure boundary `none`; the generated quality parser mismatch found during that run was fixed and locally reclassified as `warn` / `ready-with-risks`.
+- `2026-05-07` W22 reconciliation preflight confirmed current `aidd doctor` and `aidd eval doctor harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime claude-code|opencode` both report execution readiness `pass`; no new manual live run was required for backlog reconciliation.
 
 Exit evidence:
 
 - a current `.aidd/reports/evals/<run_id>/` bundle exists for the selected live scenario;
 - the report distinguishes runtime, model, document, adapter, and environment evidence.
 
-#### Slice W15-E3-S2 — release-channel evidence capture (`blocked`)
+#### Slice W15-E3-S2 — release-channel evidence capture (`done`)
 Goal: prove package release channels on the next release candidate without making live E2E part of release gating.
 
 Primary outputs:
@@ -3459,13 +3465,18 @@ Dependencies:
 
 - release candidate tag and publishing credentials
 
-Blocked reason:
+Historical blocker:
 
 - `2026-04-25` Local preflight found no release tag pointing at `HEAD`, and no local PyPI or GitHub publishing token environment variables were set for release-channel verification.
 
 Local tasks:
 
-- `W15-E3-S2-T1` (blocked) Capture PyPI or TestPyPI, `uv tool`, `pipx`, and container smoke evidence for the next release candidate.
+- `W15-E3-S2-T1` (done) Capture PyPI or TestPyPI, `uv tool`, `pipx`, and container smoke evidence for the next release candidate.
+
+Closure evidence:
+
+- `2026-05-06` Later release evidence superseded the original missing-tag/credential blocker: accepted tag `v0.1.0a2` on commit `92c893dbd830292ecab5b684a0a4044ef61a67d6` passed release workflow run `25448551936`.
+- `2026-05-06` Accepted release jobs covered `build`, `publish-pypi`, `verify-pypi-install`, `verify-uv-tool-install`, `publish-container`, and `verify-ghcr-install`; installed `pipx`, `uv tool`, and containerized `aidd doctor` all reported `0.1.0a2`.
 
 Exit evidence:
 
@@ -3480,6 +3491,7 @@ Sync notes:
 - `2026-04-25` `W15-E2-S1-T1` completed: Wave 12 and Wave 13 local task bullets now carry explicit `(done)` markers without changing their completed parent statuses; backlog advanced `W15-E3-S1-T1` to `Next`.
 - `2026-04-25` `W15-E3-S1-T1` blocked: local preflight found maintained runtime binaries but no configured AIDD-compatible live runtime wrapper command in `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND`; backlog advanced `W15-E3-S2-T1` to `Next`.
 - `2026-04-25` `W15-E3-S2-T1` blocked: no release candidate tag points at `HEAD`, and no local PyPI or GitHub publishing token environment variables were set; backlog queue is empty with both external evidence tasks blocked.
+- `2026-05-07` W22 reconciliation closed the stale Wave 15 external-evidence blockers using later accepted evidence: live `AIDD-LIVE-005` bundles from `2026-05-06` satisfy `W15-E3-S1-T1`, and release tag `v0.1.0a2` satisfies `W15-E3-S2-T1`.
 
 ---
 
@@ -4410,9 +4422,9 @@ Sync notes:
 
 ---
 
-## Wave 20 — gap intake and product-scope expansion (`active`)
+## Wave 20 — gap intake and product-scope expansion (`done`)
 
-### Epic W20-E1 — evidence closure (`active`)
+### Epic W20-E1 — evidence closure (`done`)
 Linked stories: `US-07`, `US-09`, `US-10`
 
 #### Slice W20-E1-S1 — live E2E evidence refresh (`done`)
@@ -4502,7 +4514,7 @@ Exit evidence:
 - current `US-09` install evidence exists for PyPI, `pipx`, `uv tool`, and GHCR container paths;
 - prior missing release candidate, trusted publisher, and GHCR verification issues are recorded as historical blockers.
 
-#### Slice W20-E1-S3 — live eval failure triage (`blocked`)
+#### Slice W20-E1-S3 — live eval failure triage (`done`)
 Goal: turn the current failing live evidence into an owned fix or an explicit external blocker before requesting another live audit.
 
 Primary outputs:
@@ -4524,7 +4536,7 @@ Dependencies:
 
 - `W20-E1-S1`
 
-Blocked reason:
+Historical blocker:
 
 - `2026-05-04` Post-parser-fix OpenCode live rerun `eval-live-005-opencode-20260504T135544Z` reached the `idea` repair attempt and produced repaired documents, but the native OpenCode process hit the configured adapter timeout before AIDD could record a successful stage outcome. The run is blocked as runtime/provider timeout evidence, not a clean `US-07` live audit.
 
@@ -4534,7 +4546,7 @@ Local tasks:
 - `W20-E1-S3-T2` (done) Add a focused OpenCode native command regression for the AIDD-owned live failure.
 - `W20-E1-S3-T3` (done) Rerun `AIDD-LIVE-005` after the OpenCode native command fix and preserve a clean audit bundle or updated blocker.
 - `W20-E1-S3-T4` (done) Add a focused interview document parser regression and fix for the AIDD-owned plan-stage malformed `answers.md` failure found by the rerun.
-- `W20-E1-S3-T5` (blocked) Rerun `AIDD-LIVE-005` after the interview document parser fix and preserve a clean audit bundle or updated blocker.
+- `W20-E1-S3-T5` (done) Rerun `AIDD-LIVE-005` after the interview document parser fix and preserve a clean audit bundle or updated blocker.
 
 Evidence:
 
@@ -4547,6 +4559,7 @@ Evidence:
 - `2026-05-04` Post-parser-fix preflight passed with `uv run aidd eval doctor harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode`.
 - `2026-05-04` Post-parser-fix rerun `eval-live-005-opencode-20260504T135544Z` produced status `fail`, quality gate `fail`, first failure boundary `adapter`, first failure note `runtime.log: Adapter outcome: timeout`, and bundle path `.aidd/reports/evals/eval-live-005-opencode-20260504T135544Z`.
 - `2026-05-04` The failed rerun shows `idea` attempt 1 exited successfully but needed repair; `idea` attempt 2 timed out. The worktree artifacts show the repair attempt wrote a valid `stage-result.md` and `validator-report.md`, but the adapter recorded `timeout`/`-15`, so AIDD stopped before `research` and the live quality gate correctly failed.
+- `2026-05-07` W22 reconciliation closed `W20-E1-S3-T5` as completed by its own preserved rerun evidence: the task required either a clean bundle or an updated blocker, and `eval-live-005-opencode-20260504T135544Z` recorded the updated timeout blocker later addressed by `W20-E1-S4`.
 
 Exit evidence:
 
@@ -4554,7 +4567,7 @@ Exit evidence:
 - the fresh rerun records a later AIDD-owned validation/parser boundary;
 - the post-parser-fix rerun is preserved as explicit runtime/provider timeout evidence rather than a clean live audit.
 
-#### Slice W20-E1-S4 — live timeout policy and clean evidence rerun (`blocked`)
+#### Slice W20-E1-S4 — live timeout policy and clean evidence rerun (`done`)
 Goal: make the live OpenCode timeout policy explicit, then attempt one clean `AIDD-LIVE-005` evidence rerun before falling back to the canonical Codex lane.
 
 Primary outputs:
@@ -4574,14 +4587,14 @@ Dependencies:
 
 - `W20-E1-S3`
 
-Blocked reason:
+Historical blocker:
 
 - `2026-05-04` Post-timeout-profile OpenCode rerun `eval-live-005-opencode-20260504T143938Z` no longer failed from adapter timeout, but the live audit still is not clean. The first failure boundary moved to `validation`: `idea` attempt 3 exited successfully from the runtime but failed validation with `SEM-INCOMPLETE-SECTION` because `Open questions` was not rendered as bullet items after the repair budget was exhausted.
 
 Local tasks:
 
 - `W20-E1-S4-T1` (done) Update generated live runtime config so OpenCode has an explicit timeout profile: `timeout_seconds = 1200`, `idea = 1500`, `research = 1500`, `plan = 1500`, `review-spec = 1500`, `tasklist = 1800`, `implement = 1800`, `review = 1800`, and `qa = 1800`.
-- `W20-E1-S4-T2` (blocked) Rerun `AIDD-LIVE-005` on OpenCode after the timeout-profile fix and record run id, verdict, quality gate, first failure boundary, and bundle path.
+- `W20-E1-S4-T2` (done) Rerun `AIDD-LIVE-005` on OpenCode after the timeout-profile fix and record run id, verdict, quality gate, first failure boundary, and bundle path.
 - `W20-E1-S4-T3` (done; not applicable) Rerun `AIDD-LIVE-005` on canonical Codex only if OpenCode remains provider/runtime timeout blocked without an AIDD-owned defect.
 
 Evidence:
@@ -4596,6 +4609,7 @@ Evidence:
 - `2026-05-06` Fresh OpenCode gate run `eval-live-005-opencode-20260506T131037Z` completed with status `fail`, quality gate `fail`, first failure boundary `validation`, first failure note `stage qa attempt 3 validator failed`, final failure code `SEM-RISK-UNDERREPORT`, and bundle path `.aidd/reports/evals/eval-live-005-opencode-20260506T131037Z`.
 - `2026-05-06` The fresh gate is not a provider/runtime timeout: every stage attempt recorded runtime exit `success`/`0`, every timeout column was `False`, `log-analysis.md` reported `Timeout Stage/Budget: none`, and the harness run completed under the `14400s` run timeout.
 - `2026-05-06` Codex fallback was not run. `W20-E1-S4-T3` is closed as not applicable because the fallback condition was false: OpenCode failed after QA validation repair exhaustion, not before validation at a provider/runtime timeout boundary.
+- `2026-05-07` W22 reconciliation closed `W20-E1-S4-T2` as completed by preserved post-timeout-profile and fresh gate evidence. The current OpenCode live-quality caveat is model-output/scenario-quality evidence strength, not an unworked local code task.
 
 Decision rules:
 
@@ -4804,7 +4818,7 @@ Exit evidence:
 - review-stage contract compliance is hardened without provider-specific core logic;
 - OpenCode live execution now reaches status `pass`; remaining quality caveat is a bounded `ready-with-risks` artifact/code-quality warning, not a runtime timeout or validation blocker.
 
-### Epic W20-E2 — operator workflow frontend (`active`)
+### Epic W20-E2 — operator workflow frontend (`done`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`
 
 #### Slice W20-E2-S1 — frontend operator flow contract (`done`)
@@ -5450,3 +5464,57 @@ Evidence:
 - `src/aidd/harness/eval_report_writers.py` owns eval source artifact writes behind the existing `write_source_artifacts` compatibility function.
 - `src/aidd/harness/eval_runner_compat.py` owns legacy module patch helpers used by `run_eval_scenario`.
 - Focused checks passed: `uv run --extra dev pytest -q tests/cli/test_ui.py tests/core/test_operator_frontend.py tests/core/test_run_store_layout.py tests/adapters/test_surface.py tests/adapters/test_runtime_events.py tests/adapters/test_claude_code_runner.py tests/harness/test_eval_runner.py tests/harness/test_result_bundle_persistence.py tests/validators/test_cross_document.py`.
+
+## Wave 22 — backlog blocker reconciliation and delivery loop (`done`)
+
+Goal: reconcile the empty active backlog with historical blocked local tasks, close stale blockers using accepted later evidence, and leave a repeatable slice-by-slice delivery loop for future backlog restoration.
+
+### Epic W22-E0 — blocked-task reconciliation (`done`)
+Linked stories: `US-07`, `US-09`, `US-10`
+
+#### Slice W22-E0-S1 — authoritative closure decision (`done`)
+Goal: make the roadmap and short backlog agree about whether any open local task still requires implementation.
+
+Primary outputs:
+
+- authoritative closure decisions for the four historical blocked local tasks
+- critical analytical note for the reconciliation slice
+- empty synchronized active backlog after the slice closes
+
+Touched areas:
+
+- `docs/backlog/`
+- `docs/analysis/`
+
+Dependencies:
+
+- `W8-E3-S1`
+- `W21-E4-S1`
+
+Per-slice work plan:
+
+- Output: close or explicitly preserve each stale blocker with evidence-backed reasoning.
+- Dominant touched area: planning and analysis documents only.
+- Verification: `rg` checks prove no roadmap local task remains `blocked`, `active`, `planned`, `next`, or `later`; local gates remain green.
+- Compatibility: no runtime ids, `.aidd` artifact layout, stage contracts, prompt packs, adapters, or public CLI behavior change.
+
+Local tasks:
+
+- `W22-E0-S1-T1` (done) Reconcile the empty active backlog with historical blocked local tasks and record authoritative closure decisions.
+
+Evidence:
+
+- `2026-05-07` Active `docs/backlog/backlog.md` had no task ids in `Next`, `Soon`, or `Parking lot`; roadmap search found exactly four stale blocked local tasks: `W15-E3-S1-T1`, `W15-E3-S2-T1`, `W20-E1-S3-T5`, and `W20-E1-S4-T2`.
+- `2026-05-07` `W15-E3-S1-T1` is closed by later maintained-runtime live evidence: `eval-live-005-claude-code-20260506T074233Z` passed `AIDD-LIVE-005` with quality gate `warn`, first failure boundary `none`, and no stage timeouts.
+- `2026-05-07` `W15-E3-S2-T1` is closed by accepted `v0.1.0a2` release/install evidence: release run `25448551936` passed PyPI publish, `pipx`, `uv tool`, container publish, and GHCR verification.
+- `2026-05-07` `W20-E1-S3-T5` is closed because its required rerun occurred as `eval-live-005-opencode-20260504T135544Z` and preserved an updated timeout blocker later addressed by `W20-E1-S4`.
+- `2026-05-07` `W20-E1-S4-T2` is closed because post-timeout-profile rerun evidence was preserved, later hardening slices closed the AIDD-owned list-format and review-evidence blockers, and the remaining OpenCode caveat is live model-output/scenario-quality evidence strength rather than an unworked local implementation task.
+- `2026-05-07` Preflight evidence was refreshed without running a manual live audit: `uv run aidd doctor`, `uv run aidd eval doctor harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode`, and the same eval doctor command for `claude-code` all reported execution readiness `pass`.
+- `docs/analysis/w22-e0-s1-critical-analysis.md` records the critical analytical review for this reconciliation slice and found no unresolved Critical or High defects.
+- `2026-05-07` Final local gates passed: roadmap open-task searches returned no stale non-done local tasks or active/blocked headings; `uv run --extra dev ruff check .`, `uv run --extra dev python -m mypy src`, `uv run --extra dev pytest -q` (`781 passed`), and `uv run aidd doctor` all passed.
+
+Exit evidence:
+
+- no active backlog queue entries remain;
+- no roadmap local task remains in a non-done status;
+- external live/release evidence remains conditional for future audits, not a hidden code defect.
