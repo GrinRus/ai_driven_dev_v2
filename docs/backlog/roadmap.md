@@ -4611,17 +4611,18 @@ Evidence:
 - `2026-05-06` Codex fallback was not run. `W20-E1-S4-T3` is closed as not applicable because the fallback condition was false: OpenCode failed after QA validation repair exhaustion, not before validation at a provider/runtime timeout boundary.
 - `2026-05-07` W22 reconciliation closed `W20-E1-S4-T2` as completed by preserved post-timeout-profile and fresh gate evidence. The current OpenCode live-quality caveat is model-output/scenario-quality evidence strength, not an unworked local code task.
 
-Decision rules:
+Decision outcome:
 
-- If `W20-E1-S4-T2` passes with quality gate pass, close the live evidence blocker and leave only `W20-E1-S2-T2` blocked.
-- If `W20-E1-S4-T2` fails with an AIDD-owned validation, parser, adapter, or harness defect, add a focused fix task before any further rerun.
-- If `W20-E1-S4-T2` fails with provider/runtime timeout, record the blocker and promote `W20-E1-S4-T3`.
-- If `W20-E1-S4-T2` fails from scenario-quality or model-output limitations without an AIDD-owned boundary, close it with explicit blocker evidence rather than repeating reruns.
+- `W20-E1-S4-T2` did not prove a provider/runtime timeout after the timeout profile landed, so `W20-E1-S4-T3` stayed not applicable.
+- The AIDD-owned validation follow-ups discovered by this lane were handled by later focused hardening slices `W20-E1-S6` and `W20-E1-S8`.
+- Release/install evidence was closed separately by `W20-E1-S2-T2` with accepted `v0.1.0a2` publish and install evidence.
+- Remaining OpenCode live-quality caveats are recorded as model-output or scenario-quality evidence strength, not as an active local implementation blocker.
 
 Exit evidence:
 
-- maintainers can tell the OpenCode timeout policy is no longer the current blocker, but the remaining `US-07` clean live evidence gap is blocked by live model-output validation failure.
-- maintainers can tell Codex fallback is reserved for provider/runtime timeout only and was deliberately skipped for the latest validation-boundary failure.
+- maintainers can tell the OpenCode timeout policy was no longer the decisive blocker after `W20-E1-S4`;
+- maintainers can tell Codex fallback is reserved for provider/runtime timeout only and was deliberately skipped for validation-boundary failures;
+- maintainers can distinguish completed live rerun evidence from the remaining optional desire for cleaner `pass` plus quality-gate evidence in a future manual audit.
 
 #### Slice W20-E1-S5 — comparative live flow diagnosis and Claude control rerun (`done`)
 Goal: decide whether the current `AIDD-LIVE-005` flow failure is AIDD-owned, runtime/model-output specific, scenario-quality owned, or environment/provider blocked by comparing preserved bundles with a fresh Claude control run.

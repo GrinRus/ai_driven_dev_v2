@@ -55,6 +55,11 @@ Residual Low risks:
 
 No Medium, High, or Critical defects were found.
 
+Follow-up verification on `2026-05-07` found one Low documentation defect: `W20-E1-S4`
+still used future-tense decision rules after `W20-E1-S4-T2`, `W20-E1-S4-T3`, and
+`W20-E1-S2-T2` had already been closed. The roadmap now records those rules as a
+historical decision outcome instead of active future guidance.
+
 ## Verification evidence
 
 Preflight commands run during the slice:
