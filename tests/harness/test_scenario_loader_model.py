@@ -43,11 +43,11 @@ def test_live_scenario_exposes_full_flow_repo_steps_and_quality_contract() -> No
     )
     assert scenario.task.startswith("Run the installed AIDD full-flow live audit")
     assert scenario.setup.commands == (
-        "uv sync --group tests || uv sync",
-        "uv run pytest -q || pytest -q",
+        "uv sync --group tests",
+        "uv run pytest -q",
     )
     assert scenario.verify.commands == (
-        "uv run pytest -q || pytest -q",
+        "uv run pytest -q",
         "test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/stage-result.md",
         "test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/validator-report.md",
     )
@@ -57,7 +57,7 @@ def test_live_scenario_exposes_full_flow_repo_steps_and_quality_contract() -> No
     assert first_issue.title == "styled help alignment bugfix"
     assert first_issue.url == "https://github.com/fastapi/typer/issues/1159"
     assert "regression coverage" in first_issue.summary
-    assert scenario.quality.commands == ("uv run pytest -q || pytest -q",)
+    assert scenario.quality.commands == ("uv run pytest -q",)
     assert scenario.quality.require_review_status == "approved"
 
 
@@ -125,7 +125,7 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
     assert scenario.verify.commands == (
         "uv run aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW",
         "test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md",
-        "uv run pytest -q || pytest -q",
+        "uv run pytest -q",
         "test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/stage-result.md",
         "test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/validator-report.md",
     )
@@ -238,7 +238,9 @@ def test_installed_local_project_smoke_scenario_uses_source_install_and_local_fi
     setup_commands = "\n".join(scenario.setup.commands)
     verify_commands = "\n".join(scenario.verify.commands)
     assert "aidd doctor --config aidd.example.toml" in setup_commands
-    assert "aidd init --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd" in setup_commands
+    assert "aidd init --work-item WI-INSTALLED-LOCAL-SMOKE" in setup_commands
+    assert "--request" in setup_commands
+    assert "--root .aidd" in setup_commands
     assert "aidd run show --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd" in (
         verify_commands
     )

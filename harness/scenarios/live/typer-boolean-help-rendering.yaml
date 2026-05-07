@@ -15,7 +15,7 @@ stage_scope:
   end: qa
 setup:
   commands:
-  - uv sync --group tests || uv sync
+  - uv sync --group tests
 aidd_invocation:
   work_item: WI-LIVE-TYPER-BOOLEAN
   expected_stage_scope:
@@ -35,7 +35,7 @@ feature_source:
     - cli
 verify:
   commands:
-  - uv run pytest -q || pytest -q
+  - uv run pytest -q
   - test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/validator-report.md
   pass_conditions:
@@ -43,7 +43,7 @@ verify:
   - QA stage output artifacts exist for the selected work item.
 quality:
   commands:
-  - uv run pytest -q || pytest -q
+  - uv run pytest -q
   rubric_profile: live-full
   require_review_status: approved
   allowed_qa_verdicts:

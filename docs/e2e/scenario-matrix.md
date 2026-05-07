@@ -44,6 +44,10 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | live full flow | `medium + manual` | `AIDD-LIVE-002`, `AIDD-LIVE-004`, `AIDD-LIVE-007` |
 | live full flow interview | `large + manual` | `AIDD-LIVE-006`, `AIDD-LIVE-008` |
 
+`AIDD-LIVE-001` is currently setup-blocked on its pinned Typer baseline and is not the
+canonical README smoke. Use `AIDD-LIVE-005` for installed live smoke evidence until
+`AIDD-LIVE-001` is repinned or fixed.
+
 ## Operator UI local-project lane
 
 Operator UI evidence is tracked separately from the scenario-class matrix because it is a
@@ -79,7 +83,7 @@ manual fixture smoke and does not use public GitHub issue intake.
 | `AIDD-DETERMINISTIC-001` | `harness/scenarios/deterministic/minimal-python-bounded-workflow.yaml` | `deterministic-workflow` | `medium` | `ci` | `opencode` | `generic-cli`, `claude-code`, `opencode` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-002` | `harness/scenarios/deterministic/minimal-python-full-workflow.yaml` | `deterministic-workflow` | `large` | `manual` | `generic-cli` | `generic-cli`, `claude-code` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-003` | `harness/scenarios/deterministic/project-set-plan-context.yaml` | `deterministic-workflow` | `medium` | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
-| `AIDD-LIVE-001` | `harness/scenarios/live/typer-styled-help-alignment.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex` | `curated-issue-pool` |
+| `AIDD-LIVE-001` | `harness/scenarios/live/typer-styled-help-alignment.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex` | `curated-issue-pool` (`setup-blocked`) |
 | `AIDD-LIVE-002` | `harness/scenarios/live/typer-boolean-help-rendering.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex` | `curated-issue-pool` |
 | `AIDD-LIVE-003` | `harness/scenarios/live/httpx-invalid-header-message.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex` | `curated-issue-pool` |
 | `AIDD-LIVE-004` | `harness/scenarios/live/httpx-cli-docs-sync.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex` | `curated-issue-pool` |

@@ -45,6 +45,7 @@ class EvalRunPreparation:
     run_id: str
     runtime_id: str
     workspace_root: Path
+    source_repository_root: Path | None
     layout: ResultBundleLayout
     cache_root: Path
     live_scenario: bool

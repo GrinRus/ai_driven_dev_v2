@@ -9,6 +9,10 @@ repo:
   revision: 9ce8e30383ef419c490431caab5a515eca669b1b
 objective: Keep Typer smoke lane deterministic by targeting the styled help alignment
   defect with bounded patch scope and regression coverage.
+health:
+  status: setup-blocked
+  note: Current pinned Typer baseline fails during setup before the runtime boundary;
+    keep this lane non-canonical until it is repinned or fixed.
 task: Run the installed AIDD full-flow live audit against the selected Typer issue
   and preserve reviewable quality evidence.
 stage_scope:
@@ -16,8 +20,8 @@ stage_scope:
   end: qa
 setup:
   commands:
-  - uv sync --group tests || uv sync
-  - uv run pytest -q || pytest -q
+  - uv sync --group tests
+  - uv run pytest -q
   rationale:
   - Install Typer dependencies and test extras before the live audit.
   - Confirm a clean baseline test pass before AIDD applies changes.
@@ -47,7 +51,7 @@ feature_source:
     - cli
 verify:
   commands:
-  - uv run pytest -q || pytest -q
+  - uv run pytest -q
   - test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/validator-report.md
   pass_conditions:
@@ -57,7 +61,7 @@ verify:
   - QA stage output artifacts exist for the selected work item.
 quality:
   commands:
-  - uv run pytest -q || pytest -q
+  - uv run pytest -q
   rubric_profile: live-full
   require_review_status: approved
   allowed_qa_verdicts:
@@ -71,7 +75,7 @@ reference_run:
   status: harness_fail
   resolved_revision: 9ce8e30383ef419c490431caab5a515eca669b1b
   bundle_root: .aidd/reports/evals/eval-live-001-reference-20260422T081401Z
-  first_failure_signal: Setup command `uv run pytest -q || pytest -q` exited with
+  first_failure_signal: Setup command `uv run pytest -q` exited with
     status 2 because uv ignored the active virtual environment in setup.
 limits:
   patch_budget_files: 8

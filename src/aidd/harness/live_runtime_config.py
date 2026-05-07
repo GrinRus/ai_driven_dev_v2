@@ -31,11 +31,18 @@ def _toml_string(value: str) -> str:
     return f'"{escaped}"'
 
 
-def _aidd_repository_root() -> Path:
-    return repo_root_from(Path(__file__).resolve())
+def _source_repository_root_from_cwd() -> Path | None:
+    try:
+        return repo_root_from(Path.cwd().resolve(strict=False))
+    except FileNotFoundError:
+        return None
 
 
-def _release_proof_generic_cli_command(*, scenario: Scenario | None) -> str | None:
+def _release_proof_generic_cli_command(
+    *,
+    scenario: Scenario | None,
+    source_repository_root: Path | None = None,
+) -> str | None:
     if scenario is None:
         return None
     workflow_bundle = scenario.raw.get("workflow_bundle")
@@ -44,7 +51,10 @@ def _release_proof_generic_cli_command(*, scenario: Scenario | None) -> str | No
     if str(workflow_bundle.get("release_proof_runtime", "")).strip() != "generic-cli":
         return None
 
-    helper_path = _aidd_repository_root() / "scripts" / "release_live_proof_runtime.py"
+    repository_root = source_repository_root or _source_repository_root_from_cwd()
+    if repository_root is None:
+        return None
+    helper_path = repository_root / "scripts" / "release_live_proof_runtime.py"
     if not helper_path.exists():
         return None
 
@@ -55,12 +65,14 @@ def resolve_live_runtime_commands(
     *,
     environment: Mapping[str, str] | None = None,
     scenario: Scenario | None = None,
+    source_repository_root: Path | None = None,
 ) -> dict[str, str]:
     return {
         runtime_id: entry.command
         for runtime_id, entry in resolve_live_runtime_command_entries(
             environment=environment,
             scenario=scenario,
+            source_repository_root=source_repository_root,
         ).items()
     }
 
@@ -69,12 +81,16 @@ def resolve_live_runtime_command_entries(
     *,
     environment: Mapping[str, str] | None = None,
     scenario: Scenario | None = None,
+    source_repository_root: Path | None = None,
 ) -> dict[str, LiveRuntimeCommand]:
     source = dict(os.environ)
     if environment is not None:
         source.update(environment)
 
-    release_proof_command = _release_proof_generic_cli_command(scenario=scenario)
+    release_proof_command = _release_proof_generic_cli_command(
+        scenario=scenario,
+        source_repository_root=source_repository_root,
+    )
     entries: dict[str, LiveRuntimeCommand] = {}
     for definition in runtime_definitions():
         command_env = definition.live_command_env_var
@@ -114,6 +130,7 @@ def validate_live_runtime_command(
     runtime_id: str,
     scenario: Scenario,
     environment: Mapping[str, str] | None = None,
+    source_repository_root: Path | None = None,
 ) -> LiveRuntimeCommand:
     source = dict(os.environ)
     if environment is not None:
@@ -129,6 +146,7 @@ def validate_live_runtime_command(
         command_entry = resolve_live_runtime_command_entries(
             environment=environment,
             scenario=scenario,
+            source_repository_root=source_repository_root,
         )[runtime_id]
     except KeyError as exc:
         raise RuntimeError(f"Unsupported live runtime: {runtime_id}") from exc
@@ -163,6 +181,7 @@ def write_live_runtime_config(
     runtime_id: str,
     scenario: Scenario,
     environment: Mapping[str, str] | None = None,
+    source_repository_root: Path | None = None,
 ) -> Path:
     source = dict(os.environ)
     if environment is not None:
@@ -175,7 +194,10 @@ def write_live_runtime_config(
         if generic_cli_env_var is not None
         else ""
     )
-    generic_cli_release_proof = _release_proof_generic_cli_command(scenario=scenario)
+    generic_cli_release_proof = _release_proof_generic_cli_command(
+        scenario=scenario,
+        source_repository_root=source_repository_root,
+    )
     if (
         runtime_id == "generic-cli"
         and not generic_cli_override
@@ -189,6 +211,7 @@ def write_live_runtime_config(
     runtime_entries = resolve_live_runtime_command_entries(
         environment=environment,
         scenario=scenario,
+        source_repository_root=source_repository_root,
     )
     config_path = working_copy_path / "aidd.example.toml"
     config_path.write_text(

@@ -16,7 +16,7 @@ stage_scope:
   end: qa
 setup:
   commands:
-  - uv sync || pip install -e .[dev]
+  - uv sync
   rationale:
   - Install HTTPX development dependencies before the live audit.
   - Confirm the repository environment is ready for targeted regression verification.
@@ -46,7 +46,7 @@ feature_source:
     - diagnostics
 verify:
   commands:
-  - uv run pytest -q || pytest -q
+  - uv run pytest -q
   - test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/validator-report.md
   pass_conditions:
@@ -56,7 +56,7 @@ verify:
   - QA stage output artifacts exist for the selected work item.
 quality:
   commands:
-  - uv run pytest -q || pytest -q
+  - uv run pytest -q
   rubric_profile: live-full
   require_review_status: approved
   allowed_qa_verdicts:
@@ -70,7 +70,7 @@ reference_run:
   status: harness_fail
   resolved_revision: b5addb64f0161ff6bfe94c124ef76f6a1fba5254
   bundle_root: .aidd/reports/evals/eval-live-003-reference-20260422T083406Z
-  first_failure_signal: Verification command `uv run pytest -q || pytest -q` exited
+  first_failure_signal: Verification command `uv run pytest -q` exited
     with status 4.
 limits:
   patch_budget_files: 8

@@ -107,7 +107,11 @@ def execute_eval_scenario(prep: EvalRunPreparation) -> EvalExecutionState:
 
     if prep.live_scenario:
         try:
-            validate_live_runtime_command(runtime_id=prep.runtime_id, scenario=prep.scenario)
+            validate_live_runtime_command(
+                runtime_id=prep.runtime_id,
+                scenario=prep.scenario,
+                source_repository_root=prep.source_repository_root,
+            )
         except RuntimeError as exc:
             state.run_error = exc
 
@@ -148,6 +152,7 @@ def execute_eval_scenario(prep: EvalRunPreparation) -> EvalExecutionState:
                 working_copy_path=state.prepared_working_copy.working_copy_path,
                 runtime_id=prep.runtime_id,
                 scenario=prep.scenario,
+                source_repository_root=prep.source_repository_root,
             )
             if prep.published_package_spec is not None:
                 state.install_result = prepare_published_package_install(
@@ -159,6 +164,7 @@ def execute_eval_scenario(prep: EvalRunPreparation) -> EvalExecutionState:
                 state.install_result = prepare_local_wheel_install(
                     workspace_root=prep.workspace_root,
                     run_id=prep.run_id,
+                    repository_root=prep.source_repository_root,
                 )
             aidd_command = state.install_result.installed_command
 

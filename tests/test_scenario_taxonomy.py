@@ -44,6 +44,27 @@ def test_live_scenarios_are_manual_only() -> None:
             }, path.as_posix()
 
 
+def test_live_scenarios_do_not_mask_setup_or_pytest_failures_with_shell_fallbacks() -> None:
+    def _commands(section_name: str, scenario: Scenario) -> tuple[str, ...]:
+        section = scenario.raw.get(section_name)
+        if not isinstance(section, dict):
+            return tuple()
+        raw_commands = section.get("commands", [])
+        if not isinstance(raw_commands, list):
+            return tuple()
+        return tuple(str(command) for command in raw_commands)
+
+    for path, scenario in _scenario_entries():
+        if not scenario.is_live:
+            continue
+        commands = (
+            *_commands("setup", scenario),
+            *_commands("verify", scenario),
+            *_commands("quality", scenario),
+        )
+        assert all("||" not in command for command in commands), path.as_posix()
+
+
 def test_ci_eligible_scenarios_are_deterministic_only() -> None:
     for path, scenario in _scenario_entries():
         if scenario.automation_lane == "ci":
@@ -143,6 +164,8 @@ def test_live_catalog_mentions_manual_matrix_coverage() -> None:
         "AIDD_EVAL_CLAUDE_CODE_COMMAND",
         "AIDD_EVAL_CODEX_COMMAND",
         "AIDD_EVAL_OPENCODE_COMMAND",
+        "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC",
+        "setup-blocked",
     ):
         assert needle in catalog_doc
 

@@ -222,7 +222,8 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     )
 
     assert (
-        "aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml --runtime codex"
+        "aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
+        "--runtime codex"
         in readme
     )
     assert (
@@ -230,7 +231,8 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
         "--runtime generic-cli"
         not in readme
     )
-    assert "AIDD-compatible wrapper commands" in readme
+    assert "AIDD-compatible wrapper command" in readme
+    assert "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC" in readme
     assert "mode = \"native\"" in operator_handbook
     assert "mode = \"adapter-flags\"" in operator_handbook
     assert (
@@ -259,6 +261,7 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
         assert "local project root" in document
         assert "aidd doctor" in document
         assert "aidd init --work-item" in document
+        assert "--request" in document
         assert "aidd ui --work-item" in document
         assert ".aidd/" in document
 
@@ -268,6 +271,24 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
 
     assert "Public GitHub repositories are live" in readme
     assert "Public GitHub repositories are live E2E targets" in live_catalog
+
+
+def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None:
+    readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
+
+    assert (
+        'aidd init --work-item WI-001 --request "Implement a small, specific task" '
+        "--root .aidd"
+    ) in readme
+    assert (
+        "aidd run --work-item WI-001 --runtime codex --from-stage idea "
+        "--to-stage plan --root .aidd"
+    ) in readme
+    assert (
+        "aidd run --work-item WI-001 --runtime generic-cli --from-stage idea "
+        "--to-stage plan --root .aidd"
+    ) not in readme
+    assert "is not the default product onboarding runtime" in readme
 
 
 def test_live_e2e_skill_describes_local_operator_contract() -> None:

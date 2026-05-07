@@ -12,12 +12,13 @@ from aidd.cli.stage_inspection import (
     show_stage_summary,
 )
 from aidd.cli.stage_run import StageRunOptions, run_stage_command
+from aidd.cli.support import console
 
 
 def stage_run(
     stage: Annotated[str, typer.Argument(help="Stage name")],
     work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
-    runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
+    runtime: Annotated[str | None, typer.Option("--runtime", help="Runtime id")] = None,
     run_id: Annotated[
         str | None,
         typer.Option("--run-id", help="Optional run id; defaults to latest blocked or new run."),
@@ -39,6 +40,12 @@ def stage_run(
     ] = False,
 ) -> None:
     """Run a single AIDD stage."""
+    if runtime is None:
+        console.print(
+            "Missing option '--runtime'. Product stage execution requires an explicit "
+            "runtime id. Run `aidd doctor` to check runtime readiness."
+        )
+        raise typer.Exit(code=2)
     run_stage_command(
         StageRunOptions(
             stage=stage,

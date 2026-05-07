@@ -5,6 +5,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+from aidd.core.contracts import repo_root_from
 from aidd.core.resources import resolve_resource_layout
 from aidd.harness.eval_models import EvalRunPreparation
 from aidd.harness.repo_prep import prepare_workspace
@@ -69,6 +70,16 @@ def select_issue_seed(scenario: Scenario) -> ScenarioIssueSeed | None:
     return scenario.feature_source.issues[0]
 
 
+def derive_source_repository_root(scenario_path: Path) -> Path | None:
+    try:
+        return repo_root_from(scenario_path.resolve(strict=False))
+    except FileNotFoundError:
+        try:
+            return repo_root_from(Path.cwd().resolve(strict=False))
+        except FileNotFoundError:
+            return None
+
+
 def build_issue_selection_payload(
     *,
     scenario: Scenario,
@@ -129,6 +140,7 @@ def prepare_eval_run(
         run_id=run_id,
         runtime_id=runtime_id,
         workspace_root=workspace_root,
+        source_repository_root=derive_source_repository_root(scenario_path),
         layout=layout,
         cache_root=workspace_root / "harness-cache",
         live_scenario=scenario.is_live,

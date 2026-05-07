@@ -44,6 +44,8 @@ external prerequisites to already be true:
   command override for the chosen live runtime.
 
 This skill does **not** provision runtime authentication, wrapper scripts, or provider setup for you.
+If you are testing an already published AIDD artifact rather than a local source wheel,
+set `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` to the exact package spec before launch.
 
 ## Runtime-command contract
 
@@ -94,6 +96,12 @@ export AIDD_EVAL_OPENCODE_COMMAND='<aidd-compatible opencode wrapper>'
 export AIDD_EVAL_CLAUDE_CODE_COMMAND='<aidd-compatible claude-code wrapper>'
 ```
 
+Optional published package under test:
+
+```bash
+export AIDD_EVAL_PUBLISHED_PACKAGE_SPEC='ai-driven-dev-v2==0.1.0a2'
+```
+
 ## Canonical local launch
 
 The primary execution path for this skill is a local run from the AIDD source checkout:
@@ -127,7 +135,8 @@ During a successful local live run, the harness will:
 5. write issue-selection evidence to the eval bundle and target-repo context;
 6. seed `.aidd/` inside the target repository;
 7. write a live `aidd.example.toml` with the runtime command and execution mode for the chosen provider;
-8. build and install the AIDD artifact under test with `uv tool`;
+8. build and install the local AIDD source wheel with `uv tool`, or install the
+   package specified by `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`;
 9. run installed `aidd` from the target repository root with explicit workflow bounds `idea -> qa`;
 10. run setup, verify, and quality commands and write the final audit artifacts.
 

@@ -18,6 +18,9 @@ WORKSPACE_TRACES_REPLAYS_DIRNAME = "replays"
 
 WORKITEM_CONTEXT_DIRNAME = "context"
 WORKITEM_STAGES_DIRNAME = "stages"
+WORKITEM_CONTEXT_INTAKE_FILENAME = "intake.md"
+WORKITEM_CONTEXT_USER_REQUEST_FILENAME = "user-request.md"
+WORKITEM_CONTEXT_REPOSITORY_STATE_FILENAME = "repository-state.md"
 
 STAGE_INPUT_DIRNAME = "input"
 STAGE_OUTPUT_DIRNAME = "output"
@@ -31,6 +34,11 @@ RESERVED_STAGE_FILENAMES: tuple[str, ...] = (
     "validator-report.md",
     "repair-brief.md",
     "stage-result.md",
+)
+REQUEST_CONTEXT_FILENAMES: tuple[str, ...] = (
+    WORKITEM_CONTEXT_INTAKE_FILENAME,
+    WORKITEM_CONTEXT_USER_REQUEST_FILENAME,
+    WORKITEM_CONTEXT_REPOSITORY_STATE_FILENAME,
 )
 
 _STAGE_FILE_TEMPLATES: dict[str, str] = {
@@ -179,6 +187,115 @@ def seed_work_item_metadata(root: Path, work_item: str) -> Path:
     return metadata_path
 
 
+@dataclass(frozen=True, slots=True)
+class WorkItemContextSeedResult:
+    intake_path: Path
+    user_request_path: Path
+    repository_state_path: Path
+    overwritten: bool
+
+    @property
+    def paths(self) -> tuple[Path, Path, Path]:
+        return (
+            self.intake_path,
+            self.user_request_path,
+            self.repository_state_path,
+        )
+
+
+def _normalized_request_text(request_text: str) -> str:
+    normalized = request_text.strip()
+    if not normalized:
+        raise ValueError("Request text must be non-empty.")
+    return normalized
+
+
+def _relative_workspace_path(root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _render_intake_markdown(*, work_item: str, request_text: str) -> str:
+    return (
+        "# Intake\n\n"
+        "## Work item\n\n"
+        f"- `{work_item}`\n\n"
+        "## Operator request\n\n"
+        f"{request_text}\n\n"
+        "## Context documents\n\n"
+        "- `user-request.md` preserves the original request text.\n"
+        "- `repository-state.md` captures the local project root observed during init.\n"
+    )
+
+
+def _render_user_request_markdown(*, request_text: str) -> str:
+    return "# User request\n\n" f"{request_text}\n"
+
+
+def _render_repository_state_markdown(
+    *,
+    project_root: Path | None,
+    workspace_root: Path,
+) -> str:
+    project_root_line = (
+        "- Project root: not recorded\n"
+        if project_root is None
+        else f"- Project root: `{project_root.resolve(strict=False).as_posix()}`\n"
+    )
+    return (
+        "# Repository state\n\n"
+        "## Init snapshot\n\n"
+        f"{project_root_line}"
+        f"- AIDD workspace root: `{workspace_root.resolve(strict=False).as_posix()}`\n"
+        "- Source: `aidd init --request` or `aidd init --request-file`\n"
+    )
+
+
+def seed_work_item_context(
+    *,
+    root: Path,
+    work_item: str,
+    request_text: str,
+    project_root: Path | None = None,
+    force: bool = False,
+) -> WorkItemContextSeedResult:
+    normalized_request = _normalized_request_text(request_text)
+    context_root = work_item_context_root(root=root, work_item=work_item)
+    context_root.mkdir(parents=True, exist_ok=True)
+    target_paths = tuple(context_root / filename for filename in REQUEST_CONTEXT_FILENAMES)
+    existing_paths = tuple(path for path in target_paths if path.exists())
+    if existing_paths and not force:
+        existing = ", ".join(_relative_workspace_path(root, path) for path in existing_paths)
+        raise FileExistsError(
+            "Request context documents already exist for work item "
+            f"'{work_item}': {existing}. Use --force-context to overwrite them."
+        )
+
+    intake_path = context_root / WORKITEM_CONTEXT_INTAKE_FILENAME
+    user_request_path = context_root / WORKITEM_CONTEXT_USER_REQUEST_FILENAME
+    repository_state_path = context_root / WORKITEM_CONTEXT_REPOSITORY_STATE_FILENAME
+    intake_path.write_text(
+        _render_intake_markdown(work_item=work_item, request_text=normalized_request),
+        encoding="utf-8",
+    )
+    user_request_path.write_text(
+        _render_user_request_markdown(request_text=normalized_request),
+        encoding="utf-8",
+    )
+    repository_state_path.write_text(
+        _render_repository_state_markdown(project_root=project_root, workspace_root=root),
+        encoding="utf-8",
+    )
+    return WorkItemContextSeedResult(
+        intake_path=intake_path,
+        user_request_path=user_request_path,
+        repository_state_path=repository_state_path,
+        overwritten=bool(existing_paths),
+    )
+
+
 def init_workspace(root: Path, work_item: str) -> Path:
     item_root = create_workspace_tree(root=root, work_item=work_item)
     seed_work_item_metadata(root=root, work_item=work_item)
@@ -200,3 +317,19 @@ class WorkspaceBootstrapService:
 
     def bootstrap_work_item(self, work_item: str) -> Path:
         return init_workspace(root=self.root, work_item=work_item)
+
+    def seed_request_context(
+        self,
+        *,
+        work_item: str,
+        request_text: str,
+        project_root: Path | None = None,
+        force: bool = False,
+    ) -> WorkItemContextSeedResult:
+        return seed_work_item_context(
+            root=self.root,
+            work_item=work_item,
+            request_text=request_text,
+            project_root=project_root,
+            force=force,
+        )

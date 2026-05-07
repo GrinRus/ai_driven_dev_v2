@@ -21,8 +21,8 @@ The local-project UI lane follows the product operator path:
 1. Install or run AIDD locally.
 2. Change into the target local project root.
 3. Run `aidd doctor` with the intended config.
-4. Run `aidd init --work-item <id> --root .aidd`.
-5. Run the workflow through `aidd run` or continue through `aidd ui`.
+4. Run `aidd init --work-item <id> --request "<task>" --root .aidd`.
+5. Run the workflow through `aidd run --runtime <runtime>` or continue through `aidd ui`.
 6. Inspect logs and artifacts through the UI or `aidd run logs` / `aidd run artifacts`.
 7. Keep `.aidd/` inside the local project root.
 
@@ -64,8 +64,8 @@ A manual installed UI smoke should use a disposable local fixture project:
 1. Install or run the AIDD artifact under test locally.
 2. Change into the local fixture project root.
 3. Run `aidd doctor` with the fixture config.
-4. Run `aidd init --work-item <id> --root .aidd` so `.aidd/` is created inside the fixture project.
-5. Seed or execute a local deterministic work item through `aidd run`.
+4. Run `aidd init --work-item <id> --request "<task>" --root .aidd` so `.aidd/` and intake context are created inside the fixture project.
+5. Seed request context with `--request` or `--request-file`, then execute a local deterministic work item through `aidd run --runtime <runtime>`.
 6. Start `aidd ui --work-item <id> --root .aidd --host 127.0.0.1 --port <port>`.
 7. Verify the page loads, `/api/workflow/run` is reachable, blocking answers persist,
    logs and artifacts render, validation state is visible, and repair evidence is linked.
@@ -90,7 +90,7 @@ URLs are not inputs.
 The smoke path covers:
 
 - `aidd doctor` against the fixture config;
-- `aidd init --work-item <id> --root .aidd`;
+- `aidd init --work-item <id> --request ... --root .aidd`;
 - a bounded `aidd run` from `idea` to `plan` with `generic-cli`;
 - `aidd run show`, `aidd run logs`, and `aidd run artifacts`;
 - standard `questions.md` / `answers.md` inspection through `aidd stage questions`;
