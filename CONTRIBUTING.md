@@ -38,7 +38,7 @@ You can help by:
 ### Local setup
 
 ```bash
-uv sync --extra dev
+uv sync --locked --extra dev
 uv run aidd --help
 uv run aidd doctor
 uv run --extra dev pytest -q

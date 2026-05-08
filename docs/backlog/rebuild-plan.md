@@ -3,6 +3,8 @@
 > Historical bootstrap plan. This document explains the original rebuild sequence and may use
 > earlier-phase terms such as scaffold or skeleton. Use `docs/backlog/roadmap.md` and
 > `docs/backlog/backlog.md` for current work selection.
+> Container references in this historical plan are not current alpha support. The supported
+> alpha install paths are PyPI via `pipx`, `uv tool`, and source checkout.
 
 ## Intent
 
@@ -133,7 +135,7 @@ Build AIDD as a clean, runtime-agnostic system with document-first contracts, ma
 ### Deliverables
 
 - operator handbook
-- install docs for PyPI, `pipx`, `uv`, and containers
+- install docs for PyPI, `pipx`, `uv`, and then-planned containers
 - CI scenario matrix
 - support and maintenance policy
 

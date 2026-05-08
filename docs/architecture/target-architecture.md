@@ -486,9 +486,11 @@ The core must never assume that a runtime's permission system is identical to an
 
 Initial supported delivery channels:
 
-- PyPI package for CLI installation,
-- container image for CI and reproducible automation,
-- source checkout for contributors.
+- PyPI package for CLI installation through `pipx` or `uv tool`,
+- source checkout for contributors and local development.
+
+Container images are not supported during the alpha phase. They may be reconsidered after
+the runtime permission model, release provenance, and operator workflows stabilize.
 
 Runtime binaries are installed and authenticated separately.
 

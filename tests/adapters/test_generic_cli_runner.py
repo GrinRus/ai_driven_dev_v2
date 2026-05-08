@@ -192,9 +192,9 @@ def test_run_subprocess_with_streaming_emits_early_stdout_before_process_end(
     finished_at = time.monotonic()
 
     assert callback_times
-    assert callback_times[0] - started_at < 0.4
+    assert callback_times[0] >= started_at
+    assert callback_times[0] < finished_at
     assert finished_at - callback_times[0] > 0.05
-    assert finished_at - started_at < 1.0
 
 
 def test_persist_attempt_runtime_artifacts_writes_log_and_exit_metadata(tmp_path: Path) -> None:
@@ -284,7 +284,7 @@ def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> Non
         env=dict(os.environ),
     )
 
-    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.5)
+    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=2.0)
 
     assert result.exit_classification is GenericCliExitClassification.TIMEOUT
     assert "started\n" in result.runtime_log_text

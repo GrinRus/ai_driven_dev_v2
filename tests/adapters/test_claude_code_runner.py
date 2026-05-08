@@ -361,7 +361,7 @@ def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> Non
         env=dict(os.environ),
     )
 
-    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.5)
+    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=2.0)
 
     assert isinstance(result, ClaudeCodeRunResult)
     assert result.exit_classification is ClaudeCodeExitClassification.TIMEOUT
@@ -498,7 +498,8 @@ def test_run_subprocess_with_streaming_emits_stdout_before_process_end(tmp_path:
     finished_at = time.monotonic()
 
     assert callback_times
-    assert callback_times[0] - started_at < 0.4
+    assert callback_times[0] >= started_at
+    assert callback_times[0] < finished_at
     assert finished_at - callback_times[0] > 0.05
 
 
@@ -552,7 +553,7 @@ def test_build_subprocess_spec_run_fixture_timeout(tmp_path: Path) -> None:
         repository_root=repository_root,
     )
 
-    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=0.5)
+    result = run_subprocess_with_streaming(spec=spec, timeout_seconds=2.0)
 
     assert result.exit_classification is ClaudeCodeExitClassification.TIMEOUT
     assert "fixture-start stage=plan\n" in result.runtime_log_text

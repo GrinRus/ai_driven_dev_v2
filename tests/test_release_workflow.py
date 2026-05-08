@@ -34,13 +34,6 @@ def _job_run_blocks(job: dict[str, Any]) -> str:
     )
 
 
-def _job_step_by_name(job: dict[str, Any], name: str) -> dict[str, Any]:
-    for step in job.get("steps", []):
-        if isinstance(step, dict) and step.get("name") == name:
-            return step
-    raise AssertionError(f"Missing workflow step: {name}")
-
-
 def test_release_workflow_has_pypi_install_verification_job() -> None:
     jobs = _release_workflow_jobs()
     assert "verify-pypi-install" in jobs
@@ -72,6 +65,20 @@ def test_release_workflow_has_uv_tool_install_verification_job() -> None:
     assert "aidd doctor" in run_blocks
 
 
+def test_release_workflow_does_not_publish_container_images_for_alpha() -> None:
+    jobs = _release_workflow_jobs()
+    assert "publish-container" not in jobs
+    assert "verify-ghcr-install" not in jobs
+
+    serialized = yaml.safe_dump({"jobs": jobs}, sort_keys=False)
+    assert "docker/login-action" not in serialized
+    assert "docker/metadata-action" not in serialized
+    assert "docker/build-push-action" not in serialized
+    assert "docker pull" not in serialized
+    assert "docker run" not in serialized
+    assert "ghcr.io" not in serialized
+
+
 def test_release_workflow_does_not_run_live_e2e() -> None:
     jobs = _release_workflow_jobs()
     assert "verify-published-live-e2e" not in jobs
@@ -83,42 +90,3 @@ def test_release_workflow_does_not_run_live_e2e() -> None:
     assert "AIDD_EVAL_CLAUDE_CODE_COMMAND" not in serialized
     assert "AIDD_EVAL_CODEX_COMMAND" not in serialized
     assert "AIDD_EVAL_OPENCODE_COMMAND" not in serialized
-
-
-def test_release_workflow_has_ghcr_verification_job() -> None:
-    jobs = _release_workflow_jobs()
-    assert "verify-ghcr-install" in jobs
-
-    verify_job = jobs["verify-ghcr-install"]
-    normalized_needs = _normalize_needs(verify_job.get("needs"))
-    assert "publish-container" in normalized_needs
-    assert "verify-uv-tool-install" in normalized_needs
-    assert "verify-published-live-e2e" not in normalized_needs
-
-    run_blocks = _job_run_blocks(verify_job)
-    assert "ATTEMPTS=10" in run_blocks
-    assert "BACKOFF_SECONDS=30" in run_blocks
-    assert "docker pull" in run_blocks
-    assert "docker run --rm" in run_blocks
-    assert "--version" in run_blocks
-    assert "doctor" in run_blocks
-    assert "IMAGE_REPOSITORY_OWNER" in run_blocks
-    assert "${IMAGE_REPOSITORY_OWNER,,}" in run_blocks
-
-
-def test_release_workflow_disables_automatic_latest_container_tag() -> None:
-    jobs = _release_workflow_jobs()
-    publish_job = jobs["publish-container"]
-    metadata_step = _job_step_by_name(publish_job, "Derive image tags and labels")
-
-    metadata_inputs = metadata_step.get("with", {})
-    assert isinstance(metadata_inputs, dict)
-    assert "latest=false" in metadata_inputs.get("flavor", "")
-
-    tags_input = metadata_inputs.get("tags", "")
-    assert "type=raw,value=latest,enable=${{" in tags_input
-    assert "contains(github.ref_name, 'a')" in tags_input
-    assert "contains(github.ref_name, 'b')" in tags_input
-    assert "contains(github.ref_name, 'rc')" in tags_input
-    assert "contains(github.ref_name, '.dev')" in tags_input
-    assert "contains(github.ref_name, '.post')" in tags_input

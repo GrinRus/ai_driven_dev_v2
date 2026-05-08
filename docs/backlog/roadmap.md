@@ -2635,7 +2635,7 @@ Primary outputs:
 
 - PyPI install verification
 - `uv tool install` verification
-- GHCR verification
+- historical GHCR verification evidence from the pre-no-container alpha policy
 - release-checklist evidence requirements
 
 Touched areas:
@@ -2652,19 +2652,23 @@ Local tasks:
 
 - `W10-E1-S1-T1` (done) Add a post-publish PyPI verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged version is installable via `pipx`, then runs `aidd --version` and `aidd doctor`.
 - `W10-E1-S1-T2` (done) Add a post-publish `uv tool install` verification job that retries up to 10 times with 30-second backoff until the tagged version is installable, then runs `aidd --version` and `aidd doctor`.
-- `W10-E1-S1-T3` (done) Add a post-publish GHCR verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged image is pullable, then runs `aidd --version` and `aidd doctor` in the container.
+- `W10-E1-S1-T3` (done, historical) Add a post-publish GHCR verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged image is pullable, then runs `aidd --version` and `aidd doctor` in the container.
 - `W10-E1-S1-T4` (done) Update release documentation so the three verification jobs are required release evidence for tagged builds.
 
 Sync notes:
 
 - `2026-04-23` `W10-E1-S1-T1` completed: release workflow now includes a post-publish PyPI verification job with bounded retries and explicit `aidd --version`/`aidd doctor` checks.
 - `2026-04-23` `W10-E1-S1-T2` completed: release workflow now includes a post-publish `uv tool install` verification job with bounded retries and explicit `aidd --version`/`aidd doctor` checks.
-- `2026-04-23` `W10-E1-S1-T3` completed: release workflow now includes a post-publish GHCR verification job with bounded pull retries and containerized `aidd --version`/`aidd doctor` checks.
-- `2026-04-23` `W10-E1-S1-T4` completed: release checklist now names the three post-publish verification jobs as required tagged-release evidence.
+- `2026-04-23` `W10-E1-S1-T3` completed under the then-current release policy: release workflow included a post-publish GHCR verification job with bounded pull retries and containerized `aidd --version`/`aidd doctor` checks.
+- `2026-04-23` `W10-E1-S1-T4` completed under the then-current release policy: release checklist named the three post-publish verification jobs as required tagged-release evidence.
+- Later alpha distribution policy removed Docker/GHCR from the supported release contract; this
+  W10 evidence is historical only.
 
 Exit evidence:
 
-- a tagged release produces visible pass/fail evidence for `pipx`, `uv tool install`, and GHCR install paths.
+- current tagged alpha releases require visible pass/fail evidence for `pipx` and
+  `uv tool install`;
+- GHCR install-path evidence is retained only as historical pre-policy traceability.
 
 ### Epic W10-E2 — adapter conformance (`done`)
 Linked stories: `US-07`, `US-08`
@@ -3454,7 +3458,7 @@ Primary outputs:
 
 - release-channel verification transcript
 - package installation evidence
-- container smoke evidence
+- historical container smoke evidence from the pre-no-container alpha policy
 
 Touched areas:
 
@@ -3471,12 +3475,12 @@ Historical blocker:
 
 Local tasks:
 
-- `W15-E3-S2-T1` (done) Capture PyPI or TestPyPI, `uv tool`, `pipx`, and container smoke evidence for the next release candidate.
+- `W15-E3-S2-T1` (done) Capture PyPI or TestPyPI, `uv tool`, `pipx`, and then-required container smoke evidence for the next release candidate.
 
 Closure evidence:
 
 - `2026-05-06` Later release evidence superseded the original missing-tag/credential blocker: accepted tag `v0.1.0a2` on commit `92c893dbd830292ecab5b684a0a4044ef61a67d6` passed release workflow run `25448551936`.
-- `2026-05-06` Accepted release jobs covered `build`, `publish-pypi`, `verify-pypi-install`, `verify-uv-tool-install`, `publish-container`, and `verify-ghcr-install`; installed `pipx`, `uv tool`, and containerized `aidd doctor` all reported `0.1.0a2`.
+- `2026-05-06` Accepted release jobs covered `build`, `publish-pypi`, `verify-pypi-install`, `verify-uv-tool-install`, `publish-container`, and `verify-ghcr-install`; installed `pipx`, `uv tool`, and containerized `aidd doctor` all reported `0.1.0a2`. Container evidence is historical only after the later alpha no-container policy.
 
 Exit evidence:
 
@@ -4412,7 +4416,7 @@ Local tasks:
 Exit evidence:
 
 - CI matrix lists Python 3.12, 3.13, and 3.14;
-- release installability tests still cover `pipx`, `uv tool`, and container verification workflow shape;
+- release installability tests cover the current supported `pipx` and `uv tool` workflow shape;
 - manual live runtime preflight tests continue to classify missing provider/env setup before repository prep.
 
 Sync notes:
@@ -4487,7 +4491,7 @@ Historical blockers:
 Local tasks:
 
 - `W20-E1-S2-T1` (done) Refresh release/install evidence prerequisites for the next candidate across PyPI or TestPyPI, `pipx`, `uv tool`, and container paths.
-- `W20-E1-S2-T2` (done) Capture PyPI or TestPyPI, `pipx`, `uv tool`, and container smoke evidence for the next release candidate.
+- `W20-E1-S2-T2` (done) Capture PyPI or TestPyPI, `pipx`, `uv tool`, and then-required container smoke evidence for the next release candidate.
 - `W20-E1-S2-T3` (done) Disable automatic GHCR `latest` image tagging for prerelease tags and cover the release-workflow tag policy with regression tests.
 
 Evidence:
@@ -4511,7 +4515,9 @@ Evidence:
 
 Exit evidence:
 
-- current `US-09` install evidence exists for PyPI, `pipx`, `uv tool`, and GHCR container paths;
+- current `US-09` alpha install evidence exists for PyPI, `pipx`, and `uv tool`;
+- GHCR/container evidence from earlier prerelease attempts is retained as historical traceability
+  only and is no longer part of the supported alpha distribution contract;
 - prior missing release candidate, trusted publisher, and GHCR verification issues are recorded as historical blockers.
 
 #### Slice W20-E1-S3 — live eval failure triage (`done`)
@@ -5507,7 +5513,7 @@ Evidence:
 
 - `2026-05-07` Active `docs/backlog/backlog.md` had no task ids in `Next`, `Soon`, or `Parking lot`; roadmap search found exactly four stale blocked local tasks: `W15-E3-S1-T1`, `W15-E3-S2-T1`, `W20-E1-S3-T5`, and `W20-E1-S4-T2`.
 - `2026-05-07` `W15-E3-S1-T1` is closed by later maintained-runtime live evidence: `eval-live-005-claude-code-20260506T074233Z` passed `AIDD-LIVE-005` with quality gate `warn`, first failure boundary `none`, and no stage timeouts.
-- `2026-05-07` `W15-E3-S2-T1` is closed by accepted `v0.1.0a2` release/install evidence: release run `25448551936` passed PyPI publish, `pipx`, `uv tool`, container publish, and GHCR verification.
+- `2026-05-07` `W15-E3-S2-T1` is closed by accepted `v0.1.0a2` release/install evidence: release run `25448551936` passed PyPI publish, `pipx`, and `uv tool` verification; container/GHCR evidence from that run is historical only after the later alpha no-container policy.
 - `2026-05-07` `W20-E1-S3-T5` is closed because its required rerun occurred as `eval-live-005-opencode-20260504T135544Z` and preserved an updated timeout blocker later addressed by `W20-E1-S4`.
 - `2026-05-07` `W20-E1-S4-T2` is closed because post-timeout-profile rerun evidence was preserved, later hardening slices closed the AIDD-owned list-format and review-evidence blockers, and the remaining OpenCode caveat is live model-output/scenario-quality evidence strength rather than an unworked local implementation task.
 - `2026-05-07` Preflight evidence was refreshed without running a manual live audit: `uv run aidd doctor`, `uv run aidd eval doctor harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode`, and the same eval doctor command for `claude-code` all reported execution readiness `pass`.

@@ -31,7 +31,7 @@ Planning impact:
 | Task | Previous state | Decision | Evidence |
 | --- | --- | --- | --- |
 | `W15-E3-S1-T1` | `blocked` | Closed as done by later maintained-runtime live evidence. | `eval-live-005-claude-code-20260506T074233Z` passed with quality gate `warn`, first failure boundary `none`, and no timeouts. |
-| `W15-E3-S2-T1` | `blocked` | Closed as done by later accepted release/install evidence. | Release tag `v0.1.0a2`, workflow run `25448551936`, PyPI, `pipx`, `uv tool`, container publish, and GHCR verification passed. |
+| `W15-E3-S2-T1` | `blocked` | Closed as done by later accepted release/install evidence. | Release tag `v0.1.0a2`, workflow run `25448551936`, PyPI, `pipx`, and `uv tool` verification passed; container/GHCR evidence from that run is historical only after the later alpha no-container policy. |
 | `W20-E1-S3-T5` | `blocked` | Closed as done because the task required a rerun with either clean evidence or an updated blocker, and that rerun exists. | `eval-live-005-opencode-20260504T135544Z` recorded the updated timeout blocker later addressed by `W20-E1-S4`. |
 | `W20-E1-S4-T2` | `blocked` | Closed as done because the post-timeout rerun evidence exists and later W20 hardening slices addressed the AIDD-owned follow-up blockers. | `eval-live-005-opencode-20260504T143938Z`, `eval-live-005-opencode-20260506T094747Z`, and `eval-live-005-opencode-20260506T131037Z` classify the remaining caveat as model-output or scenario-quality evidence strength, not an unworked local implementation task. |
 

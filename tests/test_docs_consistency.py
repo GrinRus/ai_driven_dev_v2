@@ -21,7 +21,6 @@ _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
 _REQUIRED_RELEASE_VERIFICATION_JOB_IDS: tuple[str, ...] = (
     "verify-pypi-install",
     "verify-uv-tool-install",
-    "verify-ghcr-install",
 )
 _CURRENT_CANONICAL_DOCS: tuple[str, ...] = (
     "README.md",
@@ -206,7 +205,10 @@ def test_release_checklist_requires_verification_job_evidence() -> None:
         "Release checklist is missing required verification job references: "
         f"{', '.join(missing_job_references)}"
     )
-    assert "required release evidence for tagged builds" in release_checklist.lower()
+    assert "required release evidence for tagged alpha builds" in release_checklist.lower()
+    assert "does not publish or support docker/ghcr images during the alpha phase" in (
+        release_checklist.lower()
+    )
 
 
 def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -> None:
