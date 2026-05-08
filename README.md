@@ -12,6 +12,20 @@ The canonical stage flow is:
 idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 ```
 
+## Alpha status and safety
+
+Current published prerelease: `0.1.0a2`.
+Current development version on `main`: `0.1.0a3.dev0`.
+
+AIDD is alpha software for local evaluation and controlled operator trials. It is not
+ready for unattended production automation. AIDD launches external runtime CLIs against a
+local working tree; review runtime commands before execution and prefer a disposable branch,
+workspace, or sandboxed checkout for trials.
+
+Do not commit `.aidd/` unless your repository policy explicitly allows it. The workspace can
+contain raw runtime logs, prompts, repository context, operator answers, and other sensitive
+evidence.
+
 ## What is AIDD?
 
 `ai_driven_dev_v2` (AIDD) is for teams that want AI-assisted software work to leave
@@ -30,11 +44,9 @@ AIDD provides:
 AIDD does not bundle third-party runtime binaries. Operators install and authenticate
 Claude Code, Codex, OpenCode, or other runtime CLIs separately.
 
-## Install
+## Install with pipx
 
-Current published prerelease: `0.1.0a2`.
-
-Install with `pipx`:
+Install the current published prerelease:
 
 ```bash
 pipx install "ai-driven-dev-v2==0.1.0a2"
@@ -42,7 +54,9 @@ aidd --version
 aidd doctor
 ```
 
-Install with `uv tool`:
+## Install with uv tool
+
+Install the current published prerelease:
 
 ```bash
 uv tool install "ai-driven-dev-v2==0.1.0a2"
@@ -50,20 +64,26 @@ aidd --version
 aidd doctor
 ```
 
-Run the container image:
+## Container support
+
+AIDD does not publish or support Docker/GHCR images during the alpha phase.
+The supported alpha installation paths are PyPI via pipx, uv tool, and source checkout.
+
+Container support may be reconsidered after the runtime permission model, release
+provenance, and operator workflows stabilize.
+
+## Source checkout
 
 ```bash
-docker run --rm ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a2 --version
-docker run --rm ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a2 doctor
+git clone https://github.com/GrinRus/ai_driven_dev_v2.git
+cd ai_driven_dev_v2
+uv sync --locked --extra dev
+uv run aidd --version
+uv run aidd doctor
 ```
 
-The `v0.1.0a2` release evidence passed PyPI publish, `pipx`, `uv tool`, container
-publish, and GHCR verification. Published GHCR tags are:
-
-- `ghcr.io/grinrus/ai-driven-dev-v2:v0.1.0a2`
-- `ghcr.io/grinrus/ai-driven-dev-v2:sha-92c893d`
-
-`latest` is published only for stable releases, not prerelease tags.
+The `v0.1.0a2` release evidence passed PyPI publish plus `pipx` and `uv tool`
+install verification.
 
 ## Run your first local workflow
 
@@ -78,8 +98,9 @@ aidd run show --work-item WI-001 --root .aidd
 ```
 
 This creates `.aidd/` inside the local project and seeds the required intake context
-documents for the first stage. Treat `.aidd/` as project-local operator state and do
-not commit it unless your repository policy explicitly says so.
+documents for the first stage. Treat `.aidd/` as project-local operator state that may
+include sensitive raw runtime logs, prompts, repository context, questions, answers, and
+validation evidence.
 
 From a source checkout without installing globally, replace `aidd` with:
 
@@ -187,7 +208,7 @@ Prerequisites:
 Bootstrap and check the repository:
 
 ```bash
-uv sync --extra dev
+uv sync --locked --extra dev
 uv run aidd --version
 uv run aidd doctor
 uv run --extra dev ruff check .
@@ -230,8 +251,9 @@ Public GitHub repositories are live E2E targets for evaluator evidence only. See
 - `docs/e2e/scenario-matrix.md`
 - `harness/scenarios/live/`
 
-Release and install evidence for PyPI, `pipx`, `uv tool`, and GHCR is recorded in
-`docs/release-checklist.md`.
+Release and install evidence for PyPI, `pipx`, and `uv tool` is recorded in
+`docs/release-checklist.md`. Docker/GHCR is intentionally outside the alpha release
+contract.
 
 ## Docs map
 
@@ -265,6 +287,12 @@ The short version:
 - keep runtime-specific logic inside adapters;
 - update docs, contracts, prompts, scenarios, and tests when behavior changes;
 - run the narrowest useful checks locally before opening a PR.
+
+## Security and support
+
+Use `SECURITY.md` for vulnerability reporting and `SUPPORT.md` for operator support scope.
+Do not file public issues containing secrets, private repository contents, provider logs, or
+tokens. Release notes and user-visible changes are tracked in `CHANGELOG.md`.
 
 ## License
 

@@ -65,7 +65,7 @@ Runtime binaries are external dependencies and are not bundled by AIDD.
 From a repository checkout root:
 
 ```bash
-uv sync --extra dev
+uv sync --locked --extra dev
 uv run aidd --help
 ```
 

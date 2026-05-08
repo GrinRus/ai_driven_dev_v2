@@ -229,7 +229,7 @@ Recommended layers:
 - pull request: lint, typecheck, unit tests, deterministic fixture regressions, and packaging checks;
 - main branch: the same deterministic checks or a widened deterministic matrix;
 - manual workflow dispatch: installed live external audits against curated public repositories;
-- release: build, publish, installability, and container verification only.
+- release: build, publish, and PyPI installability verification only.
 
 ## 11. Summary
 

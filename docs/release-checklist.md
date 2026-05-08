@@ -6,10 +6,12 @@ Use this checklist for tagged releases of `ai_driven_dev_v2`.
 
 - [ ] Working tree is clean and scoped to intended release changes.
 - [ ] `pyproject.toml` `project.version` is set to the intended release version.
+- [ ] If the previous version was already published, `main` has first moved to the next
+  development version and the release branch/tag uses a unique unpublished version.
 - [ ] Local quality gate passes:
 
 ```bash
-uv sync --extra dev
+uv sync --locked --extra dev
 uv run --extra dev ruff check .
 uv run --extra dev python -m mypy src
 uv run --extra dev pytest -q
@@ -47,29 +49,26 @@ aidd --version
 aidd doctor
 ```
 
-## 4. Container publish checklist (GHCR)
+## 4. Container support
 
-- [ ] `publish-container` job passed.
-- [ ] Container image is available at:
-  `ghcr.io/<owner>/ai-driven-dev-v2:<tag>`
-- [ ] Required image tags were produced:
-  - exact release tag (`vX.Y.Z` or release prerelease tag);
-  - immutable `sha-<git-sha>`;
-  - semver aliases (`vX.Y`, `vX`) when applicable;
-  - `latest` only for stable releases.
+AIDD does not publish or support Docker/GHCR images during the alpha phase.
+
+- [ ] Release notes do not advertise Docker or GHCR as supported alpha channels.
+- [ ] Owner cleanup task is tracked for stale public GHCR tags from earlier prerelease
+  attempts, especially any stale `latest` tag.
+- [ ] Reintroducing container support is tracked as a future design/release task, not a
+  hidden part of the current release.
 
 ## 5. Release verification evidence requirements
 
 - [ ] `verify-pypi-install` job passed and its logs include `aidd --version` and `aidd doctor`.
 - [ ] `verify-uv-tool-install` job passed and its logs include `aidd --version` and `aidd doctor`.
-- [ ] `verify-ghcr-install` job passed and its logs include containerized `aidd --version` and `aidd doctor`.
-- [ ] These three jobs are required release evidence for tagged builds.
+- [ ] These two jobs are required release evidence for tagged alpha builds.
 
 Prerequisite refresh before evidence capture:
 
 - a release candidate tag must point at the commit under test;
 - PyPI or TestPyPI publishing credentials must be available to the release workflow;
-- GHCR publishing credentials and Docker access must be available for container verification;
 - if any prerequisite is missing, record an explicit blocker instead of treating release
   evidence as refreshed.
 
@@ -100,13 +99,6 @@ aidd doctor
 uv tool uninstall ai-driven-dev-v2
 ```
 
-Suggested container-path verification:
-
-```bash
-docker run --rm ghcr.io/<owner>/ai-driven-dev-v2:<tag> aidd --version
-docker run --rm ghcr.io/<owner>/ai-driven-dev-v2:<tag> aidd doctor
-```
-
 ## 6. Changelog and release notes checklist
 
 - [ ] Summarize user-visible changes for this release.
@@ -118,9 +110,13 @@ docker run --rm ghcr.io/<owner>/ai-driven-dev-v2:<tag> aidd doctor
 
 - [ ] Confirm roadmap/backlog status reflects shipped work.
 - [ ] Open follow-up issues for any deferred release defects.
-- [ ] Announce release with links to package, container image, and notes.
+- [ ] Announce release with links to package and notes.
 
 ## Release attempt evidence log
+
+Historical release attempts below may mention GHCR because earlier alpha candidates
+temporarily published container images. That evidence is retained for traceability only and
+does not make Docker/GHCR a supported alpha distribution channel.
 
 ### `v0.1.0a0` attempt on 2026-05-06
 

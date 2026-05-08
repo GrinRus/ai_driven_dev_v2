@@ -4,13 +4,37 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-driven-dev-v2"
-version = "0.1.0a2"
+version = "0.1.0a3.dev0"
 description = "Runtime-agnostic, document-first orchestration for AI-driven software delivery."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 authors = [
   { name = "GrinRus" }
+]
+keywords = [
+  "ai",
+  "cli",
+  "developer-tools",
+  "evaluation",
+  "orchestration",
+  "runtime-adapters",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Utilities",
 ]
 dependencies = [
   "typer>=0.12.3",
@@ -40,6 +64,9 @@ aidd = "aidd.cli.main:app"
 Homepage = "https://github.com/GrinRus/ai_driven_dev_v2"
 Repository = "https://github.com/GrinRus/ai_driven_dev_v2"
 Issues = "https://github.com/GrinRus/ai_driven_dev_v2/issues"
+Documentation = "https://github.com/GrinRus/ai_driven_dev_v2/tree/main/docs"
+Changelog = "https://github.com/GrinRus/ai_driven_dev_v2/blob/main/CHANGELOG.md"
+Security = "https://github.com/GrinRus/ai_driven_dev_v2/blob/main/SECURITY.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aidd"]

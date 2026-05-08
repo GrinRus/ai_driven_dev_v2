@@ -94,12 +94,12 @@ Success signals:
 
 ### US-09 — installable operator experience
 
-As a **platform engineer**, I want to install and run AIDD through standard delivery channels so that teams can adopt it in local development, CI, and containerized environments.
+As a **platform engineer**, I want to install and run AIDD through standard Python delivery channels so that teams can adopt it in local development and controlled CI environments.
 
 Success signals:
 
 - the project ships as a Python CLI package,
-- the tool works with `pipx`, `uv tool install`, and container images,
+- the tool works with PyPI, `pipx`, `uv tool install`, and source checkout,
 - release and install evidence is captured for supported delivery channels,
 - runtime binaries stay external and replaceable.
 

@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a reproducible AIDD defect.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, private repository contents, provider tokens, or unredacted raw runtime logs.
+  - type: input
+    id: version
+    attributes:
+      label: AIDD version
+      description: Output from `aidd --version`.
+      placeholder: "aidd 0.1.0a2"
+    validations:
+      required: true
+  - type: dropdown
+    id: install_path
+    attributes:
+      label: Installation path
+      options:
+        - pipx
+        - uv tool
+        - source checkout
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: Runtime id
+      placeholder: "codex, claude-code, opencode, generic-cli, or N/A"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Include commands and expected vs actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Paste only redacted CLI output or `.aidd/` excerpts needed for diagnosis.
+    validations:
+      required: false

@@ -17,7 +17,7 @@ validators, run-inspection commands, and manual installed live E2E audit lane de
 
 Maintainers currently provide best-effort support for:
 
-- installation and environment bootstrap (`uv sync --extra dev`);
+- installation and environment bootstrap (`uv sync --locked --extra dev`);
 - runtime discovery and probe diagnostics (`uv run aidd doctor`);
 - workspace initialization (`uv run aidd init --work-item <id>`);
 - workflow execution through maintained runtimes (`aidd run`);
