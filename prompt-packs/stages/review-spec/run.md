@@ -32,6 +32,19 @@ Treat `validator-report.md` as draft evidence: AIDD writes the canonical validat
 post-runtime validation. Treat `stage-result.md` as a truthful summary draft that AIDD may
 normalize if canonical validation proves the terminal status inconsistent.
 
+`review-spec-report.md` must use these exact top-level section headings:
+
+- `## Readiness state`
+- `## Issue list`
+- `## Strengths`
+- `## Recommendation summary`
+- `## Required changes`
+- `## Decision`
+
+Write sign-off status under `## Decision`. Do not rename that section to aliases such as
+`## Decision/sign-off`, `## Sign-off`, or `## Recommendation decision`; those headings are
+structurally invalid even when the prose is semantically correct.
+
 ## System-owned control artifacts
 
 - Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
@@ -56,8 +69,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 1. Read required plan artifacts, review context, and `contracts/stages/review-spec.md` before
    drafting outputs.
 2. If required plan artifacts are missing or inconsistent, do not mark stage as `succeeded`.
-3. Draft `review-spec-report.md` with explicit sections for strengths, issue list, recommendation
-   summary, readiness state, required changes, and decision/sign-off.
+3. Draft `review-spec-report.md` with the exact required headings: `Readiness state`,
+   `Issue list`, `Strengths`, `Recommendation summary`, `Required changes`, and `Decision`.
 4. Keep issue wording tied to observable plan gaps or risks, not generic quality statements.
 5. Map recommended actions to issue ids/severity where possible so remediation order is clear.
 6. If contradictory constraints or missing decision authority block sign-off, raise a `[blocking]`

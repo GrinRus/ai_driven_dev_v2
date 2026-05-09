@@ -26,6 +26,12 @@ manifest with explicit acceptance criteria and verification intent.
 
 - `AIDD-LIVE-004` is intentionally `tiny`; its expected output is documentation-only, so a
   broad implementation patch would be a quality smell.
+- `AIDD-LIVE-002` was re-audited locally on `2026-05-09` with Codex. The run reached
+  `review-spec` repair but timed out at the 20-minute harness boundary before `tasklist`;
+  this proved the medium Codex full-flow budget was too small for the installed operator
+  lane. The Typer full-suite verification also failed on the pinned baseline with current
+  dependencies, so this lane now uses a 90-minute budget and focused boolean/help-rendering
+  verification in Rich/default and `TYPER_USE_RICH=0` modes.
 - `AIDD-LIVE-008` is intentionally `xlarge`; router wildcard semantics are API-sensitive and
   should not be treated as an ordinary large feature.
 - Interview scenarios must keep top-level `interview.required: true` plus authored task

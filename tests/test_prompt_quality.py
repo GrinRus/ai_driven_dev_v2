@@ -70,3 +70,21 @@ def test_review_prompts_make_finding_evidence_reference_explicit() -> None:
     assert "`Evidence: implementation-report.md ...`" in run_prompt
     assert "add an explicit `Evidence:` line" in repair_prompt
     assert "if no such evidence exists, mark the finding `invalid` or remove it" in repair_prompt
+
+
+def test_review_spec_prompts_require_exact_decision_heading() -> None:
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "- `## Decision`" in run_prompt
+    assert "sign-off status under `## Decision`" in run_prompt
+    assert "`## Decision/sign-off`" in run_prompt
+    assert "structurally invalid" in run_prompt
+    assert "exact top-level heading `## Decision`" in repair_prompt
+    assert "`## Decision/sign-off`" in repair_prompt
+    assert "aliases do not" in repair_prompt
+    assert "satisfy the document contract" in repair_prompt

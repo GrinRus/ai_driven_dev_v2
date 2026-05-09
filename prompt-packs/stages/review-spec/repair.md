@@ -18,6 +18,11 @@ recommendation actionability, and sign-off consistency.
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
 
+`review-spec-report.md` must contain the exact top-level heading `## Decision`. Put the
+sign-off status under that heading. Do not keep or introduce aliases such as
+`## Decision/sign-off`, `## Sign-off`, or `## Recommendation decision`; these aliases do not
+satisfy the document contract even if they contain an approval status.
+
 `repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
 any repair summary in `stage-result.md` and reference `repair-brief.md` by path for traceability.
 
