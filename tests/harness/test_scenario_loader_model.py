@@ -61,6 +61,38 @@ def test_live_scenario_exposes_full_flow_repo_steps_and_quality_contract() -> No
     assert scenario.quality.require_review_status == "approved"
 
 
+def test_typer_boolean_live_scenario_uses_extended_budget_and_focused_help_checks() -> None:
+    scenario = load_scenario(Path("harness/scenarios/live/typer-boolean-help-rendering.yaml"))
+
+    _assert_live_contract(scenario)
+    assert scenario.scenario_id == "AIDD-LIVE-002"
+    assert scenario.feature_size == "medium"
+    assert scenario.canonical_runtime == "codex"
+    assert scenario.run.timeout_minutes == 90
+    focused_help_pytest = (
+        "uv run pytest -q tests/test_tutorial/test_parameter_types/test_bool "
+        "tests/test_tutorial/test_options/test_help/test_tutorial003.py "
+        "tests/test_tutorial/test_options/test_help/test_tutorial004.py"
+    )
+    focused_help_pytest_no_rich = (
+        "TYPER_USE_RICH=0 uv run pytest -q tests/test_tutorial/test_parameter_types/test_bool "
+        "tests/test_tutorial/test_options/test_help/test_tutorial003.py "
+        "tests/test_tutorial/test_options/test_help/test_tutorial004.py"
+    )
+    assert scenario.feature_source.tasks[0].verification == (
+        focused_help_pytest,
+        focused_help_pytest_no_rich,
+        "test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/stage-result.md",
+        "test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/validator-report.md",
+    )
+    assert scenario.verify.commands == scenario.feature_source.tasks[0].verification
+    assert scenario.quality.commands == (
+        focused_help_pytest,
+        focused_help_pytest_no_rich,
+    )
+    assert scenario.quality.require_review_status == "approved"
+
+
 def test_all_live_scenarios_load_as_valid_full_flow_manifests() -> None:
     live_root = Path("harness/scenarios/live")
     scenario_files = sorted(live_root.glob("*.yaml"))
