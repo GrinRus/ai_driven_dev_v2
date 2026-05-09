@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.harness.runner import HarnessQualityResult
-from aidd.harness.scenarios import Scenario, ScenarioIssueSeed
+from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask
 
 QualityGate = Literal["pass", "warn", "fail", "none"]
 QualityVerdict = Literal["ready", "ready-with-risks", "not-ready", "none"]
@@ -51,6 +52,9 @@ class LiveQualityEvidence:
     qa_verdict: str | None
     unresolved_must_fix_count: int
     evidence_reference_count: int
+    repair_attempt_count: int
+    changed_file_count: int | None
+    weak_doc_example_count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,6 +157,80 @@ def _count_evidence_references(text: str | None) -> int:
     return sum(1 for line in text.splitlines() if evidence_pattern.search(line))
 
 
+def _repo_root_from_workspace(workspace_root: Path) -> Path | None:
+    if workspace_root.name == ".aidd":
+        return workspace_root.parent
+    return None
+
+
+def _git_output(*, repo_root: Path, args: tuple[str, ...]) -> str | None:
+    if not (repo_root / ".git").exists():
+        return None
+    try:
+        completed = subprocess.run(
+            ("git", *args),
+            cwd=repo_root,
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    return completed.stdout
+
+
+def _changed_repository_files(workspace_root: Path) -> tuple[str, ...] | None:
+    repo_root = _repo_root_from_workspace(workspace_root)
+    if repo_root is None:
+        return None
+    output = _git_output(repo_root=repo_root, args=("diff", "--name-only", "HEAD", "--"))
+    if output is None:
+        return None
+    return tuple(
+        line.strip()
+        for line in output.splitlines()
+        if line.strip() and not line.strip().startswith(".aidd/")
+    )
+
+
+def _count_weak_doc_examples(workspace_root: Path) -> int:
+    repo_root = _repo_root_from_workspace(workspace_root)
+    if repo_root is None:
+        return 0
+    output = _git_output(
+        repo_root=repo_root,
+        args=("diff", "--", "*.md", "docs", "README.md"),
+    )
+    if not output:
+        return 0
+    weak_patterns = (
+        "https://example.org",
+        "https://example.com",
+        "http://example.org",
+        "http://example.com",
+        "placeholder",
+        "todo",
+    )
+    normalized = output.lower()
+    return sum(normalized.count(pattern) for pattern in weak_patterns)
+
+
+def _count_repair_attempt_signals(*, workspace_root: Path, work_item: str) -> int:
+    count = 0
+    for stage in _FULL_FLOW_PRIMARY_OUTPUTS:
+        output_root = workspace_stage_output_root(
+            root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
+        stage_result_text = _read_text_if_exists(output_root / "stage-result.md") or ""
+        count += len(re.findall(r"\brepair\b|attempt-000[2-9]", stage_result_text, re.I))
+    return count
+
+
 def _required_stage_paths(*, workspace_root: Path, work_item: str) -> tuple[Path, ...]:
     paths: list[Path] = []
     for stage, filename in _FULL_FLOW_PRIMARY_OUTPUTS.items():
@@ -192,6 +270,7 @@ def _collect_live_quality_evidence(
     ) / "qa-report.md"
     review_report_text = _read_text_if_exists(review_report_path)
     qa_report_text = _read_text_if_exists(qa_report_path)
+    changed_files = _changed_repository_files(workspace_root)
     return LiveQualityEvidence(
         missing_stage_paths=missing_stage_paths,
         review_status=_extract_markdown_status_value(
@@ -206,6 +285,12 @@ def _collect_live_quality_evidence(
         ),
         unresolved_must_fix_count=_count_must_fix_findings(review_report_text),
         evidence_reference_count=_count_evidence_references(qa_report_text),
+        repair_attempt_count=_count_repair_attempt_signals(
+            workspace_root=workspace_root,
+            work_item=work_item,
+        ),
+        changed_file_count=None if changed_files is None else len(changed_files),
+        weak_doc_example_count=_count_weak_doc_examples(workspace_root),
     )
 
 
@@ -213,12 +298,12 @@ def _blocking_findings_for_live_quality(
     *,
     evidence: LiveQualityEvidence,
     execution_status: str,
-    selected_issue: ScenarioIssueSeed | None,
+    selected_task: ScenarioAuthoredTask | None,
     quality_error: BaseException | None,
 ) -> list[str]:
     blocking_findings: list[str] = []
-    if selected_issue is None:
-        blocking_findings.append("selected issue snapshot is missing")
+    if selected_task is None:
+        blocking_findings.append("selected authored task snapshot is missing")
     if execution_status != "pass":
         blocking_findings.append(
             "execution verdict is not pass, so the full-flow live audit is not clean"
@@ -241,6 +326,11 @@ def _blocking_findings_for_live_quality(
         blocking_findings.append("review approval status is missing from review-report.md")
     if evidence.qa_verdict is None:
         blocking_findings.append("QA verdict is missing from qa-report.md")
+    if evidence.weak_doc_example_count > 0:
+        blocking_findings.append(
+            "documentation examples include placeholder or non-runnable example endpoints "
+            f"({evidence.weak_doc_example_count})"
+        )
     return blocking_findings
 
 
@@ -248,12 +338,12 @@ def _score_flow_fidelity(
     *,
     evidence: LiveQualityEvidence,
     execution_status: str,
-    selected_issue: ScenarioIssueSeed | None,
+    selected_task: ScenarioAuthoredTask | None,
     quality_error: BaseException | None,
 ) -> QualityDimensionScore:
     if (
         quality_error is not None
-        or selected_issue is None
+        or selected_task is None
         or evidence.missing_stage_paths
         or execution_status != "pass"
     ):
@@ -266,7 +356,7 @@ def _score_flow_fidelity(
         name="flow_fidelity",
         score=3,
         rationale=(
-            "Installed live run preserved selected issue evidence and complete "
+            "Installed live run preserved selected authored task evidence and complete "
             "`idea -> qa` artifacts."
         ),
     )
@@ -299,7 +389,12 @@ def _score_artifact_quality(
     if (
         evidence.review_status == "approved-with-conditions"
         or evidence.qa_verdict == "ready-with-risks"
+        or evidence.repair_attempt_count >= 3
     ):
+        if evidence.repair_attempt_count >= 3:
+            follow_ups.append(
+                "Reduce repair burden by tightening stage skeleton guidance or task context."
+            )
         return QualityDimensionScore(
             name="artifact_quality",
             score=2,
@@ -317,6 +412,7 @@ def _score_artifact_quality(
 
 def _score_code_quality(
     *,
+    scenario: Scenario,
     evidence: LiveQualityEvidence,
     quality_result: HarnessQualityResult | None,
     quality_error: BaseException | None,
@@ -333,6 +429,30 @@ def _score_code_quality(
             rationale=(
                 "Quality checks failed or review/QA evidence says the code result "
                 "is not ready."
+            ),
+        )
+    suspiciously_small = (
+        evidence.changed_file_count is not None
+        and scenario.feature_size in {"medium", "large", "xlarge"}
+        and evidence.changed_file_count < 2
+    )
+    if suspiciously_small or evidence.weak_doc_example_count > 0:
+        if suspiciously_small:
+            follow_ups.append(
+                "Inspect why the implementation changed fewer files than the authored "
+                "task scope implies."
+            )
+        if evidence.weak_doc_example_count > 0:
+            follow_ups.append(
+                "Replace placeholder documentation examples with runnable, target-relevant "
+                "examples."
+            )
+        return QualityDimensionScore(
+            name="code_quality",
+            score=1,
+            rationale=(
+                "Code or docs result passed basic gates but quality heuristics flagged "
+                "scope or example weakness."
             ),
         )
     if (
@@ -396,7 +516,7 @@ def build_live_quality_assessment(
     workspace_root: Path,
     work_item: str,
     execution_status: str,
-    selected_issue: ScenarioIssueSeed | None,
+    selected_task: ScenarioAuthoredTask | None,
     quality_result: HarnessQualityResult | None,
     quality_error: BaseException | None,
 ) -> LiveQualityAssessment:
@@ -420,18 +540,19 @@ def build_live_quality_assessment(
     blocking_findings = _blocking_findings_for_live_quality(
         evidence=evidence,
         execution_status=execution_status,
-        selected_issue=selected_issue,
+        selected_task=selected_task,
         quality_error=quality_error,
     )
     dimensions = (
         _score_flow_fidelity(
             evidence=evidence,
             execution_status=execution_status,
-            selected_issue=selected_issue,
+            selected_task=selected_task,
             quality_error=quality_error,
         ),
         _score_artifact_quality(evidence=evidence, follow_ups=follow_ups),
         _score_code_quality(
+            scenario=scenario,
             evidence=evidence,
             quality_result=quality_result,
             quality_error=quality_error,
@@ -467,7 +588,7 @@ def build_live_quality_assessment(
 def _build_live_quality_report_sections(
     *,
     assessment: LiveQualityAssessment,
-    issue_selection_path: Path | None,
+    feature_selection_path: Path | None,
     quality_transcript_path: Path | None,
     review_report_path: Path | None,
     qa_report_path: Path | None,
@@ -483,7 +604,8 @@ def _build_live_quality_report_sections(
         if (
             "execution verdict" in finding
             or "quality commands failed" in finding
-            or "selected issue" in finding
+            or "selected authored task" in finding
+            or "documentation examples include" in finding
         )
     )
     downstream_lines = tuple(
@@ -497,8 +619,8 @@ def _build_live_quality_report_sections(
         else tuple(f"- {item}" for item in assessment.suggested_follow_ups)
     )
     evidence_lines: list[str] = []
-    if issue_selection_path is not None:
-        evidence_lines.append(f"- Issue selection: `{issue_selection_path.as_posix()}`")
+    if feature_selection_path is not None:
+        evidence_lines.append(f"- Feature selection: `{feature_selection_path.as_posix()}`")
     if quality_transcript_path is not None:
         evidence_lines.append(f"- Quality transcript: `{quality_transcript_path.as_posix()}`")
     if review_report_path is not None:
@@ -518,14 +640,14 @@ def render_live_quality_report_markdown(
     *,
     scenario: Scenario,
     assessment: LiveQualityAssessment,
-    issue_selection_path: Path | None = None,
+    feature_selection_path: Path | None = None,
     quality_transcript_path: Path | None = None,
     review_report_path: Path | None = None,
     qa_report_path: Path | None = None,
 ) -> str:
     report_sections = _build_live_quality_report_sections(
         assessment=assessment,
-        issue_selection_path=issue_selection_path,
+        feature_selection_path=feature_selection_path,
         quality_transcript_path=quality_transcript_path,
         review_report_path=review_report_path,
         qa_report_path=qa_report_path,
@@ -579,7 +701,7 @@ def write_live_quality_report_markdown(
     path: Path,
     scenario: Scenario,
     assessment: LiveQualityAssessment,
-    issue_selection_path: Path | None = None,
+    feature_selection_path: Path | None = None,
     quality_transcript_path: Path | None = None,
     review_report_path: Path | None = None,
     qa_report_path: Path | None = None,
@@ -589,7 +711,7 @@ def write_live_quality_report_markdown(
         render_live_quality_report_markdown(
             scenario=scenario,
             assessment=assessment,
-            issue_selection_path=issue_selection_path,
+            feature_selection_path=feature_selection_path,
             quality_transcript_path=quality_transcript_path,
             review_report_path=review_report_path,
             qa_report_path=qa_report_path,

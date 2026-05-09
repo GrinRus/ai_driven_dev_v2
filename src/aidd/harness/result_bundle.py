@@ -35,7 +35,7 @@ GRADER_FILENAME = "grader.json"
 VERDICT_FILENAME = "verdict.md"
 QUALITY_REPORT_FILENAME = "quality-report.md"
 HARNESS_METADATA_FILENAME = "harness-metadata.json"
-ISSUE_SELECTION_FILENAME = "issue-selection.json"
+FEATURE_SELECTION_FILENAME = "feature-selection.json"
 INSTALL_TRANSCRIPT_FILENAME = "install-transcript.json"
 SETUP_TRANSCRIPT_FILENAME = "setup-transcript.json"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
@@ -54,7 +54,7 @@ class ResultBundleLayout:
     verify_transcript_path: Path
     quality_transcript_path: Path
     teardown_transcript_path: Path
-    issue_selection_path: Path
+    feature_selection_path: Path
     runtime_log_path: Path
     runtime_jsonl_path: Path
     events_jsonl_path: Path
@@ -94,7 +94,7 @@ def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBu
         verify_transcript_path=run_root / VERIFY_TRANSCRIPT_FILENAME,
         quality_transcript_path=run_root / QUALITY_TRANSCRIPT_FILENAME,
         teardown_transcript_path=run_root / TEARDOWN_TRANSCRIPT_FILENAME,
-        issue_selection_path=run_root / ISSUE_SELECTION_FILENAME,
+        feature_selection_path=run_root / FEATURE_SELECTION_FILENAME,
         runtime_log_path=run_root / RUNTIME_LOG_FILENAME,
         runtime_jsonl_path=run_root / RUNTIME_JSONL_FILENAME,
         events_jsonl_path=run_root / EVENTS_JSONL_FILENAME,
@@ -322,8 +322,8 @@ def write_command_transcripts(
     return install_path, setup_path, run_path, verify_path, quality_path, teardown_path
 
 
-def write_issue_selection(*, layout: ResultBundleLayout, payload: Mapping[str, Any]) -> Path:
-    return _write_json(layout.issue_selection_path, dict(payload))
+def write_feature_selection(*, layout: ResultBundleLayout, payload: Mapping[str, Any]) -> Path:
+    return _write_json(layout.feature_selection_path, dict(payload))
 
 
 def _copy_or_link_file(*, source_path: Path, destination_path: Path) -> Path:

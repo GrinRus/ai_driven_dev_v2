@@ -18,8 +18,15 @@ on:
       feature_size:
         description: Optional feature-size filter to enforce during selection
         required: false
-        default: ""
-        type: string
+        default: any
+        type: choice
+        options:
+          - any
+          - tiny
+          - small
+          - medium
+          - large
+          - xlarge
       scenario_class:
         description: Optional scenario-class filter to enforce during selection
         required: false
@@ -79,6 +86,8 @@ jobs:
           scenario_id = os.environ["SCENARIO_ID"].strip()
           runtime_id = os.environ["RUNTIME_ID"].strip()
           feature_size = os.environ["FEATURE_SIZE"].strip()
+          if feature_size == "any":
+              feature_size = ""
           scenario_class = os.environ["SCENARIO_CLASS"].strip()
 
           matches: list[tuple[Path, object]] = []

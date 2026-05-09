@@ -12,7 +12,7 @@ from aidd.harness.live_runtime_config import (
 )
 from aidd.harness.live_workspace_bootstrap import bootstrap_live_work_item
 from aidd.harness.repo_prep import prepare_scenario_repository, prepare_working_copy
-from aidd.harness.result_bundle import write_issue_selection
+from aidd.harness.result_bundle import write_feature_selection
 from aidd.harness.runner import (
     HarnessAiddRunResult,
     HarnessCommandTranscript,
@@ -102,7 +102,7 @@ def partial_teardown_result(error: BaseException) -> HarnessTeardownResult | Non
 
 def execute_eval_scenario(prep: EvalRunPreparation) -> EvalExecutionState:
     state = EvalExecutionState()
-    write_issue_selection(layout=prep.layout, payload=prep.issue_selection_payload)
+    write_feature_selection(layout=prep.layout, payload=prep.feature_selection_payload)
     aidd_command = prep.aidd_command
 
     if prep.live_scenario:
@@ -136,16 +136,16 @@ def execute_eval_scenario(prep: EvalRunPreparation) -> EvalExecutionState:
     assert state.prepared_working_copy is not None
     try:
         if prep.live_scenario:
-            if prep.selected_issue is None:
+            if prep.selected_task is None:
                 raise RuntimeError(
-                    "Live scenario is missing a selected issue even though "
+                    "Live scenario is missing a selected authored task even though "
                     "the manifest loaded."
                 )
             bootstrap_live_work_item(
                 working_copy_path=state.prepared_working_copy.working_copy_path,
                 scenario=prep.scenario,
                 work_item=prep.work_item,
-                selected_issue=prep.selected_issue,
+                selected_task=prep.selected_task,
                 resolved_revision=state.prepared_working_copy.resolved_revision,
             )
             state.live_runtime_config_path = write_live_runtime_config(

@@ -1,15 +1,15 @@
 id: AIDD-LIVE-008
 scenario_class: live-full-flow-interview
-feature_size: large
+feature_size: xlarge
 automation_lane: manual
 canonical_runtime: opencode
 repo:
   url: https://github.com/honojs/hono
   default_branch: main
-objective: Keep Hono interview live coverage deterministic by using a curated router
-  parity issue that still requires explicit compatibility clarification.
+objective: Keep Hono interview live coverage deterministic with an authored router
+  parity task that requires explicit compatibility clarification.
 task: Run the installed AIDD full-flow live audit against the selected Hono interview
-  issue and preserve reviewable quality evidence.
+  task and preserve reviewable quality evidence.
 stage_scope:
   start: idea
   end: qa
@@ -22,17 +22,37 @@ aidd_invocation:
     start: idea
     end: qa
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-  - id: '4633'
+  tasks:
+  - id: TASK-LIVE-HONO-ROUTER-DOUBLE-STAR
     title: router parity with /** syntax
-    url: https://github.com/honojs/hono/issues/4633
     summary: Align router behavior or document the intended divergence, and require
       an interview when compatibility risk is unclear.
-    labels:
-    - feature
-    - interview
+    intent: Decide and implement the expected `/**` route matching semantics across
+      maintained Hono router behavior.
+    target_change: Implement router parity for `/**` when compatibility answers choose
+      parity, or document and test an intentional divergence when answers choose that path.
+    expected_scope: Router matching behavior, compatibility tests, type checks, and
+      release-facing documentation for the selected policy.
+    acceptance_criteria:
+    - Blocking questions capture the parity-versus-divergence policy before planning.
+    - The selected policy is reflected in router tests and documentation.
+    - Existing wildcard and catch-all route behavior remains compatible unless answers
+      explicitly approve a breaking change.
+    verification:
+    - uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW
+    - test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md
+    - bun test
+    - bunx tsc --noEmit
+    quality_bar: The result must be compatibility-explicit, tested across router variants,
+      and free of silent routing semantic drift.
+    size_rationale: Xlarge because the task is API-sensitive, interview-gated, and may
+      affect router compatibility plus documentation across multiple surfaces.
+    interview:
+    - Expected `/**` behavior relative to existing wildcard routing semantics.
+    - Whether router parity should be implemented or explicitly documented as an intentional divergence.
+    - Required compatibility notes and release-facing documentation updates for the chosen behavior.
 verify:
   commands:
   - uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW
@@ -63,18 +83,9 @@ quality:
   - ready
   - ready-with-risks
   code_review_required: true
-reference_run:
-  run_id: eval-live-008-reference-20260422T094912Z
-  recorded_at_utc: '2026-04-22T09:49:39Z'
-  runtime: generic-cli
-  status: harness_fail
-  resolved_revision: cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba
-  bundle_root: .aidd/reports/evals/eval-live-008-reference-20260422T094912Z
-  first_failure_signal: Verification command `test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md`
-    exited with status 1.
 limits:
-  patch_budget_files: 10
-  timeout_minutes: 25
+  patch_budget_files: 12
+  timeout_minutes: 60
 interview:
   required: true
   must_ask_at_least_one: true
@@ -108,7 +119,7 @@ interview:
     - --work-item
     - WI-LIVE-HONO-INTERVIEW
     - --runtime
-    - generic-cli
+    - opencode
     answer_requirements:
     - Resolve each blocking routing-semantic question with an explicit policy choice.
     - Keep compatibility and documentation commitments in the same answers file.

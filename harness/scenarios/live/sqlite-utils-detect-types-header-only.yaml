@@ -10,7 +10,7 @@ repo:
 objective: Keep sqlite-utils smoke lane deterministic by targeting the header-only
   detect-types crash with bounded patch scope.
 task: Run the installed AIDD full-flow live audit against the selected sqlite-utils
-  issue and preserve reviewable quality evidence.
+  authored task and preserve reviewable quality evidence.
 stage_scope:
   start: idea
   end: qa
@@ -26,17 +26,29 @@ aidd_invocation:
     start: idea
     end: qa
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-  - id: '705'
+  tasks:
+  - id: TASK-LIVE-SQLITE-DETECT-TYPES-HEADER-ONLY
     title: header-only CSV bugfix
-    url: https://github.com/simonw/sqlite-utils/issues/705
     summary: Prevent a crash when `--detect-types` is used on a CSV file that contains
       only a header row and add regression coverage.
-    labels:
-    - bug
-    - csv
+    intent: Keep CSV import robust when type detection sees headers without data rows.
+    target_change: Fix the header-only `--detect-types` crash path and add a targeted
+      regression test.
+    expected_scope: Localized CSV import behavior plus test coverage.
+    acceptance_criteria:
+    - Header-only CSV input with `--detect-types` completes without crashing.
+    - The resulting table schema remains sensible for header-only input.
+    - Regression coverage exercises the CLI or nearest stable import surface.
+    verification:
+    - uv run pytest -q
+    - test -f .aidd/workitems/WI-LIVE-SQLITE-SMOKE/stages/qa/output/stage-result.md
+    - test -f .aidd/workitems/WI-LIVE-SQLITE-SMOKE/stages/qa/output/validator-report.md
+    quality_bar: The patch should stay small, cover the edge case, and avoid broad CSV
+      import rewrites.
+    size_rationale: Small because the expected fix is a localized bugfix with one or
+      more focused tests.
 operator_execution:
   install_channel: uv-tool
   artifact_source: local-wheel
@@ -69,26 +81,8 @@ workflow_bundle:
   - validator-report.md
   - runtime.log
   - quality-report.md
-reference_run:
-  run_id: eval-live-005-codex-reference-20260422T123518Z
-  recorded_at_utc: '2026-04-22T12:35:29Z'
-  runtime: codex
-  status: harness_pass
-  resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
-  bundle_root: .aidd/reports/evals/eval-live-005-codex-reference-20260422T123518Z
-  execution_model: legacy-source-checkout
-  first_failure_signal: none (setup, aidd invocation, and verification all passed).
-opencode_reference_run:
-  run_id: eval-live-005-opencode-20260422T142733Z
-  recorded_at_utc: '2026-04-22T14:28:06Z'
-  runtime: opencode
-  status: harness_pass
-  resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
-  bundle_root: .aidd/reports/evals/eval-live-005-opencode-20260422T142733Z
-  execution_model: legacy-source-checkout
-  first_failure_signal: none (setup, aidd invocation, and verification all passed).
 limits:
-  patch_budget_files: 8
+  patch_budget_files: 4
   timeout_minutes: 240
 interview:
   required: false

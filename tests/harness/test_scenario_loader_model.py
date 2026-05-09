@@ -9,15 +9,15 @@ from aidd.harness.scenarios import load_scenario
 def _assert_live_contract(scenario) -> None:
     assert scenario.is_live is True
     assert scenario.scenario_class in {"live-full-flow", "live-full-flow-interview"}
-    assert scenario.feature_size in {"small", "medium", "large"}
+    assert scenario.feature_size in {"tiny", "small", "medium", "large", "xlarge"}
     assert scenario.automation_lane == "manual"
     assert scenario.canonical_runtime in scenario.runtime_targets
     assert scenario.run.stage_start == STAGES[0]
     assert scenario.run.stage_end == STAGES[-1]
     assert scenario.feature_source is not None
-    assert scenario.feature_source.mode == "curated-issue-pool"
+    assert scenario.feature_source.mode == "authored-task-pool"
     assert scenario.feature_source.selection_policy == "first-listed"
-    assert scenario.feature_source.issues
+    assert scenario.feature_source.tasks
     assert scenario.quality is not None
     assert scenario.quality.rubric_profile == "live-full"
     assert scenario.quality.code_review_required is True
@@ -52,11 +52,11 @@ def test_live_scenario_exposes_full_flow_repo_steps_and_quality_contract() -> No
         "test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/validator-report.md",
     )
     _assert_live_contract(scenario)
-    first_issue = scenario.feature_source.issues[0]
-    assert first_issue.issue_id == "1159"
-    assert first_issue.title == "styled help alignment bugfix"
-    assert first_issue.url == "https://github.com/fastapi/typer/issues/1159"
-    assert "regression coverage" in first_issue.summary
+    first_task = scenario.feature_source.tasks[0]
+    assert first_task.task_id == "TASK-LIVE-TYPER-STYLED-HELP-ALIGNMENT"
+    assert first_task.title == "styled help alignment bugfix"
+    assert "regression coverage" in first_task.summary
+    assert first_task.acceptance_criteria
     assert scenario.quality.commands == ("uv run pytest -q",)
     assert scenario.quality.require_review_status == "approved"
 
@@ -71,6 +71,25 @@ def test_all_live_scenarios_load_as_valid_full_flow_manifests() -> None:
         assert scenario.scenario_id
         assert scenario.task
         _assert_live_contract(scenario)
+
+
+def test_httpx_docs_sync_live_scenario_uses_extended_runtime_budget_and_requirements() -> None:
+    scenario = load_scenario(Path("harness/scenarios/live/httpx-cli-docs-sync.yaml"))
+
+    _assert_live_contract(scenario)
+    assert scenario.scenario_id == "AIDD-LIVE-004"
+    assert scenario.feature_size == "tiny"
+    assert scenario.canonical_runtime == "codex"
+    assert scenario.run.timeout_minutes == 240
+    full_requirements_pytest = (
+        "UV_CACHE_DIR=.aidd/uv-cache uv run --with-requirements requirements.txt pytest -q"
+    )
+    assert scenario.verify.commands == (
+        full_requirements_pytest,
+        "test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md",
+        "test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/validator-report.md",
+    )
+    assert scenario.quality.commands == (full_requirements_pytest,)
 
 
 def test_sqlite_utils_canonical_live_scenario_declares_installed_full_flow_bundle() -> None:
@@ -112,7 +131,8 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
     assert scenario.run.interview_required is True
     assert scenario.raw["interview"]["must_ask_at_least_one"] is True
     assert scenario.quality.require_review_status == "approved-with-conditions"
-    assert scenario.feature_source.issues[0].issue_id == "694"
+    assert scenario.feature_source.tasks[0].task_id == "TASK-LIVE-SQLITE-YIELDED-ROWS"
+    assert scenario.feature_source.tasks[0].interview
     assert scenario.raw["interview"]["blocking_question_topics"] == [
         "Execution trust boundary for user-provided Python code.",
         "Accepted input form (inline expression, file, or both).",
@@ -137,10 +157,11 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
     _assert_live_contract(scenario)
     assert scenario.scenario_id == "AIDD-LIVE-008"
     assert scenario.scenario_class == "live-full-flow-interview"
-    assert scenario.feature_size == "large"
+    assert scenario.feature_size == "xlarge"
     assert scenario.canonical_runtime == "opencode"
     assert scenario.run.interview_required is True
-    assert scenario.feature_source.issues[0].issue_id == "4633"
+    assert scenario.feature_source.tasks[0].task_id == "TASK-LIVE-HONO-ROUTER-DOUBLE-STAR"
+    assert scenario.feature_source.tasks[0].interview
     assert scenario.quality.require_review_status == "approved-with-conditions"
     assert scenario.raw["interview"]["must_ask_at_least_one"] is True
     assert (

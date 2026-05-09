@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 from aidd.core.workspace import stage_output_root
@@ -10,9 +12,9 @@ from aidd.evals.quality import (
 from aidd.harness.runner import HarnessCommandTranscript, HarnessQualityResult
 from aidd.harness.scenarios import (
     Scenario,
+    ScenarioAuthoredTask,
     ScenarioCommandSteps,
     ScenarioFeatureSource,
-    ScenarioIssueSeed,
     ScenarioQualityConfig,
     ScenarioRepoSource,
     ScenarioRunConfig,
@@ -43,15 +45,21 @@ def _build_live_scenario() -> Scenario:
         ),
         verify=ScenarioCommandSteps(commands=("echo verify",)),
         feature_source=ScenarioFeatureSource(
-            mode="curated-issue-pool",
+            mode="authored-task-pool",
             selection_policy="first-listed",
-            issues=(
-                ScenarioIssueSeed(
-                    issue_id="101",
-                    title="Example issue",
-                    url="https://github.com/example/repo/issues/101",
+            tasks=(
+                ScenarioAuthoredTask(
+                    task_id="TASK-101",
+                    title="Example task",
                     summary="Example summary",
-                    labels=("bug",),
+                    intent="Exercise live quality scoring.",
+                    target_change="Produce a bounded implementation.",
+                    expected_scope="Localized test fixture change.",
+                    acceptance_criteria=("The change is ready.",),
+                    verification=("echo verify",),
+                    quality_bar="Quality evidence is complete.",
+                    size_rationale="Small test fixture.",
+                    interview=tuple(),
                 ),
             ),
             fixture_path=None,
@@ -84,6 +92,33 @@ def _quality_result() -> HarnessQualityResult:
             ),
         ),
         duration_seconds=0.2,
+    )
+
+
+def _init_git_repo(path: Path) -> None:
+    subprocess.run(("git", "init"), cwd=path, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ("git", "config", "user.email", "tests@example.com"),
+        cwd=path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ("git", "config", "user.name", "AIDD Tests"),
+        cwd=path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    (path / "README.md").write_text("baseline\n", encoding="utf-8")
+    subprocess.run(("git", "add", "README.md"), cwd=path, check=True, capture_output=True)
+    subprocess.run(
+        ("git", "commit", "-m", "baseline"),
+        cwd=path,
+        check=True,
+        capture_output=True,
+        text=True,
     )
 
 
@@ -139,7 +174,7 @@ def test_build_live_quality_assessment_returns_pass_for_clean_full_flow(tmp_path
         workspace_root=tmp_path,
         work_item=work_item,
         execution_status="pass",
-        selected_issue=scenario.feature_source.issues[0],
+        selected_task=scenario.feature_source.tasks[0],
         quality_result=_quality_result(),
         quality_error=None,
     )
@@ -166,7 +201,7 @@ def test_build_live_quality_assessment_returns_warn_for_bounded_quality_risks(
         workspace_root=tmp_path,
         work_item=work_item,
         execution_status="pass",
-        selected_issue=scenario.feature_source.issues[0],
+        selected_task=scenario.feature_source.tasks[0],
         quality_result=_quality_result(),
         quality_error=None,
     )
@@ -219,7 +254,7 @@ def test_build_live_quality_assessment_accepts_contract_verdict_and_bold_evidenc
         workspace_root=tmp_path,
         work_item=work_item,
         execution_status="pass",
-        selected_issue=scenario.feature_source.issues[0],
+        selected_task=scenario.feature_source.tasks[0],
         quality_result=_quality_result(),
         quality_error=None,
     )
@@ -250,7 +285,7 @@ def test_build_live_quality_assessment_scores_flow_fidelity_independently(
         workspace_root=tmp_path,
         work_item=work_item,
         execution_status="fail",
-        selected_issue=scenario.feature_source.issues[0],
+        selected_task=scenario.feature_source.tasks[0],
         quality_result=_quality_result(),
         quality_error=None,
     )
@@ -289,7 +324,7 @@ def test_build_live_quality_assessment_scores_artifact_quality_independently(
         workspace_root=tmp_path,
         work_item=work_item,
         execution_status="pass",
-        selected_issue=scenario.feature_source.issues[0],
+        selected_task=scenario.feature_source.tasks[0],
         quality_result=_quality_result(),
         quality_error=None,
     )
@@ -318,13 +353,109 @@ def test_build_live_quality_assessment_scores_code_quality_independently(
         workspace_root=tmp_path,
         work_item=work_item,
         execution_status="pass",
-        selected_issue=scenario.feature_source.issues[0],
+        selected_task=scenario.feature_source.tasks[0],
         quality_result=None,
         quality_error=None,
     )
 
     assert [dimension.score for dimension in assessment.dimensions] == [3, 3, 0]
     assert assessment.gate == "fail"
+
+
+def test_build_live_quality_assessment_accounts_for_repair_burden(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-REPAIR-BURDEN"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    for stage in ("idea", "research", "plan"):
+        stage_result = stage_output_root(
+            root=tmp_path,
+            work_item=work_item,
+            stage=stage,
+        ) / "stage-result.md"
+        stage_result.write_text(
+            "# Stage result\n\n- repair attempt-0002 resolved contract drift\n",
+            encoding="utf-8",
+        )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.dimensions[1].score == 2
+    assert any("Reduce repair burden" in item for item in assessment.suggested_follow_ups)
+
+
+def test_build_live_quality_assessment_flags_small_patch_for_medium_scope(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    workspace_root = tmp_path / ".aidd"
+    scenario = replace(_build_live_scenario(), feature_size="medium")
+    work_item = "WI-QUALITY-SMALL-PATCH"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.dimensions[2].score == 1
+    assert any("fewer files" in item for item in assessment.suggested_follow_ups)
+
+
+def test_build_live_quality_assessment_flags_placeholder_doc_examples(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "README.md").write_text(
+        "Use https://example.org/echo as the endpoint.\n",
+        encoding="utf-8",
+    )
+    workspace_root = tmp_path / ".aidd"
+    scenario = replace(_build_live_scenario(), feature_size="medium")
+    work_item = "WI-QUALITY-WEAK-DOC-EXAMPLE"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.dimensions[2].score == 1
+    assert any("placeholder" in finding for finding in assessment.blocking_findings)
 
 
 def test_build_live_quality_assessment_ignores_negated_must_fix_mentions(
@@ -362,7 +493,7 @@ def test_build_live_quality_assessment_ignores_negated_must_fix_mentions(
         workspace_root=tmp_path,
         work_item=work_item,
         execution_status="pass",
-        selected_issue=scenario.feature_source.issues[0],
+        selected_task=scenario.feature_source.tasks[0],
         quality_result=_quality_result(),
         quality_error=None,
     )
@@ -403,7 +534,7 @@ def test_build_live_quality_assessment_fails_for_actual_must_fix_disposition(
         workspace_root=tmp_path,
         work_item=work_item,
         execution_status="pass",
-        selected_issue=scenario.feature_source.issues[0],
+        selected_task=scenario.feature_source.tasks[0],
         quality_result=_quality_result(),
         quality_error=None,
     )
@@ -431,7 +562,7 @@ def test_build_live_quality_assessment_returns_fail_when_quality_commands_fail(
         workspace_root=tmp_path,
         work_item=work_item,
         execution_status="pass",
-        selected_issue=scenario.feature_source.issues[0],
+        selected_task=scenario.feature_source.tasks[0],
         quality_result=None,
         quality_error=RuntimeError("quality command failed"),
     )

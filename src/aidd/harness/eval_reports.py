@@ -544,7 +544,7 @@ def grader_payload(
     status: VerdictStatus,
     summary: str,
     first_failure_boundary: FailureBoundarySelection,
-    selected_issue_payload: dict[str, object],
+    feature_selection_payload: dict[str, object],
     quality_assessment: LiveQualityAssessment,
 ) -> dict[str, object]:
     return {
@@ -576,7 +576,7 @@ def grader_payload(
         "run_id": run_id,
         "runtime_id": runtime_id,
         "scenario_id": scenario.scenario_id,
-        "selected_issue": selected_issue_payload.get("selected_issue"),
+        "selected_task": feature_selection_payload.get("selected_task"),
     }
 
 
@@ -768,7 +768,7 @@ def persist_eval_reports(
                     else state.install_result.artifact_path.as_posix()
                 )
             ),
-            "issue_selection_path": layout.issue_selection_path.as_posix(),
+            "feature_selection_path": layout.feature_selection_path.as_posix(),
             "quality_report_path": layout.quality_report_path.as_posix(),
             "working_copy_path": (
                 state.prepared_working_copy.working_copy_path.as_posix()
@@ -846,7 +846,7 @@ def persist_eval_reports(
         workspace_root=quality_workspace_root,
         work_item=work_item,
         execution_status=status,
-        selected_issue=prep.selected_issue,
+        selected_task=prep.selected_task,
         quality_result=state.quality_result,
         quality_error=state.quality_error,
     )
@@ -854,7 +854,7 @@ def persist_eval_reports(
         path=layout.quality_report_path,
         scenario=scenario,
         assessment=quality_assessment,
-        issue_selection_path=layout.issue_selection_path,
+        feature_selection_path=layout.feature_selection_path,
         quality_transcript_path=layout.quality_transcript_path,
         review_report_path=review_report_path if review_report_path.exists() else None,
         qa_report_path=qa_report_path if qa_report_path.exists() else None,
@@ -868,7 +868,7 @@ def persist_eval_reports(
                 status=status,
                 summary=summary,
                 first_failure_boundary=first_failure_boundary,
-                selected_issue_payload=prep.issue_selection_payload,
+                feature_selection_payload=prep.feature_selection_payload,
                 quality_assessment=quality_assessment,
             ),
             indent=2,
@@ -908,7 +908,7 @@ def persist_eval_reports(
         quality_gate=quality_assessment.gate,
         quality_verdict=quality_assessment.verdict,
         quality_report_path=layout.quality_report_path,
-        issue_selection_path=layout.issue_selection_path,
+        feature_selection_path=layout.feature_selection_path,
         first_failure_boundary=first_failure_boundary,
         first_failure_note=first_failure_note,
     )

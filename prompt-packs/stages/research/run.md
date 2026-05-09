@@ -63,6 +63,13 @@ normalize if canonical validation proves the terminal status inconsistent.
    question artifacts.
 7. If a critical decision is still unclear, raise a question instead of inventing an answer.
 
+## Common output skeleton discipline
+
+- Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
+- Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
+- If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
+- Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
+
 ## Completion checklist
 
 - required outputs exist and are Markdown,

@@ -84,9 +84,11 @@ def test_representative_matrix_buckets_exist_in_manifest_set() -> None:
         ("deterministic-stage", "small", "ci"),
         ("deterministic-workflow", "medium", "ci"),
         ("deterministic-workflow", "large", "manual"),
+        ("live-full-flow", "tiny", "manual"),
         ("live-full-flow", "small", "manual"),
         ("live-full-flow", "medium", "manual"),
         ("live-full-flow-interview", "large", "manual"),
+        ("live-full-flow-interview", "xlarge", "manual"),
     }
     assert required.issubset(observed)
 
@@ -144,7 +146,9 @@ def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:
         "AIDD-LIVE-006",
         "live-full-flow-interview",
         "fixture-seed",
-        "curated-issue-pool",
+        "authored-task-pool",
+        "`tiny`",
+        "`xlarge`",
     ):
         assert needle in matrix_doc
 
@@ -198,6 +202,14 @@ def test_manual_live_workflow_dispatch_is_manual_only() -> None:
     inputs = trigger_block["workflow_dispatch"]["inputs"]
     assert set(inputs) == {"scenario_id", "runtime_id", "feature_size", "scenario_class"}
     assert inputs["runtime_id"]["options"] == ["codex", "opencode", "claude-code"]
+    assert inputs["feature_size"]["options"] == [
+        "any",
+        "tiny",
+        "small",
+        "medium",
+        "large",
+        "xlarge",
+    ]
 
     job_env = workflow["jobs"]["manual-live-e2e"]["env"]
     assert job_env["AIDD_EVAL_CODEX_COMMAND"] == "${{ secrets.AIDD_EVAL_CODEX_COMMAND }}"

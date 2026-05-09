@@ -16,6 +16,35 @@ as draft evidence and may be replaced by the canonical AIDD validator report.
 - `Cross-document checks`
 - `Result`
 
+## Required skeleton
+
+```md
+# Validator Report
+
+## Summary
+
+- Total issues: `<number>`
+- Blocking issues: `<yes|no>`
+- Affected documents: `<workspace-relative paths or none>`
+
+## Structural checks
+
+- none
+
+## Semantic checks
+
+- none
+
+## Cross-document checks
+
+- none
+
+## Result
+
+- Validator verdict: `<pass|fail>`
+- Repair required: `<yes|no>`
+```
+
 ## Field notes
 
 - `Summary`

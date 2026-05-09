@@ -32,7 +32,7 @@ and manual-live lanes.
 ## Lane split
 
 - Deterministic scenarios use `feature_source.mode: fixture-seed` and may run in `ci` or `manual`.
-- Live scenarios use `feature_source.mode: curated-issue-pool`, must live under `harness/scenarios/live/`, and are manual-only.
+- Live scenarios use `feature_source.mode: authored-task-pool`, must live under `harness/scenarios/live/`, and are manual-only.
 
 ## Hard rules
 
@@ -44,7 +44,7 @@ and manual-live lanes.
 6. Always keep question/answer events as durable artifacts.
 7. Always generate log-analysis output.
 8. Keep infrastructure failures separate from model or document failures.
-9. For live scenarios, preserve install evidence, issue-selection evidence, and quality artifacts.
+9. For live scenarios, preserve install evidence, feature-selection evidence, and quality artifacts.
 10. Never mutate roadmap or backlog files as part of live quality auditing.
 
 ## Default procedure
@@ -53,10 +53,10 @@ and manual-live lanes.
 2. Probe the adapter and record capability information.
 3. Prepare or reset the fixture workspace or target repository.
 4. Run the requested stage or flow through the harness.
-   For live scenarios, select the first curated issue, install the artifact under test first, and run AIDD from the target repository root.
+   For live scenarios, select the first authored task, install the artifact under test first, and run AIDD from the target repository root.
 5. Capture:
    - install transcript and artifact identity for live scenarios,
-   - issue-selection evidence for live scenarios,
+   - feature-selection evidence for live scenarios,
    - fixture-seed metadata for deterministic scenarios,
    - raw runtime logs,
    - structured runtime logs when available,
@@ -77,7 +77,7 @@ and manual-live lanes.
 - `.aidd/reports/evals/<run_id>/runtime.jsonl` when supported
 - `.aidd/reports/evals/<run_id>/events.jsonl` when supported
 - `.aidd/reports/evals/<run_id>/install-transcript.json`
-- `.aidd/reports/evals/<run_id>/issue-selection.json`
+- `.aidd/reports/evals/<run_id>/feature-selection.json`
 - `.aidd/reports/evals/<run_id>/validator-report.md`
 - `.aidd/reports/evals/<run_id>/repair-history.md`
 - `.aidd/reports/evals/<run_id>/log-analysis.md`

@@ -7,8 +7,8 @@ repo:
   url: https://github.com/fastapi/typer
   default_branch: master
 objective: Keep Typer full-flow live coverage deterministic by targeting the boolean
-  help rendering issue through the installed operator path.
-task: Run the installed AIDD full-flow live audit against the selected Typer issue
+  help rendering authored task through the installed operator path.
+task: Run the installed AIDD full-flow live audit against the selected Typer authored task
   and preserve reviewable quality evidence.
 stage_scope:
   start: idea
@@ -22,17 +22,29 @@ aidd_invocation:
     start: idea
     end: qa
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-  - id: '678'
+  tasks:
+  - id: TASK-LIVE-TYPER-BOOLEAN-HELP
     title: boolean option help rendering
-    url: https://github.com/fastapi/typer/issues/678
     summary: Improve `--help` rendering for boolean options while preserving clarity
       of type and default details.
-    labels:
-    - enhancement
-    - cli
+    intent: Make boolean option help output clear and stable for Typer CLI users.
+    target_change: Adjust help rendering for boolean options and add regression coverage
+      for the displayed option/default details.
+    expected_scope: Help formatting behavior, tests, and any narrowly required docs fixture
+      updates.
+    acceptance_criteria:
+    - Boolean option help output is easier to read and preserves default/type clarity.
+    - Existing non-boolean option help rendering remains stable.
+    - Regression tests assert the rendered help text.
+    verification:
+    - uv run pytest -q
+    - test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/stage-result.md
+    - test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/validator-report.md
+    quality_bar: The result should improve CLI output without broad Rich/help rendering churn.
+    size_rationale: Medium because help rendering can cross formatting code and snapshot-like
+      test expectations even when the user-facing change is narrow.
 verify:
   commands:
   - uv run pytest -q

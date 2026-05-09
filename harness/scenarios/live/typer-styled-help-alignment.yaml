@@ -13,7 +13,7 @@ health:
   status: setup-blocked
   note: Current pinned Typer baseline fails during setup before the runtime boundary;
     keep this lane non-canonical until it is repinned or fixed.
-task: Run the installed AIDD full-flow live audit against the selected Typer issue
+task: Run the installed AIDD full-flow live audit against the selected Typer authored task
   and preserve reviewable quality evidence.
 stage_scope:
   start: idea
@@ -38,17 +38,29 @@ aidd_invocation:
     start: idea
     end: qa
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-  - id: '1159'
+  tasks:
+  - id: TASK-LIVE-TYPER-STYLED-HELP-ALIGNMENT
     title: styled help alignment bugfix
-    url: https://github.com/fastapi/typer/issues/1159
     summary: Fix help-line width calculation when styled help text is present and
       add regression coverage.
-    labels:
-    - bug
-    - cli
+    intent: Preserve Typer help alignment when styled text is present in command help.
+    target_change: Correct styled help width calculation and add a regression test that
+      fails on the pinned baseline.
+    expected_scope: Localized help formatting behavior plus test coverage.
+    acceptance_criteria:
+    - Styled help text aligns with unstyled help lines at the configured width.
+    - The regression test demonstrates the styled-width case.
+    - Existing unstyled help rendering remains unchanged.
+    verification:
+    - uv run pytest -q
+    - test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/stage-result.md
+    - test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/validator-report.md
+    quality_bar: The patch should be a focused help-rendering fix with regression evidence,
+      not a broad formatter rewrite.
+    size_rationale: Small because the expected behavior change is localized, but it
+      requires test coverage.
 verify:
   commands:
   - uv run pytest -q
@@ -68,17 +80,8 @@ quality:
   - ready
   - ready-with-risks
   code_review_required: true
-reference_run:
-  run_id: eval-live-001-reference-20260422T081401Z
-  recorded_at_utc: '2026-04-22T08:14:01Z'
-  runtime: generic-cli
-  status: harness_fail
-  resolved_revision: 9ce8e30383ef419c490431caab5a515eca669b1b
-  bundle_root: .aidd/reports/evals/eval-live-001-reference-20260422T081401Z
-  first_failure_signal: Setup command `uv run pytest -q` exited with
-    status 2 because uv ignored the active virtual environment in setup.
 limits:
-  patch_budget_files: 8
+  patch_budget_files: 4
   timeout_minutes: 20
 interview:
   required: false

@@ -1,6 +1,6 @@
 ---
 name: live-e2e
-description: Run or prepare a manual full-flow live end-to-end scenario against a public GitHub repository with repository pinning, curated issue selection, quality checks, and full log capture.
+description: Run or prepare a manual full-flow live end-to-end scenario against a public GitHub repository with repository pinning, authored task selection, quality checks, and full log capture.
 ---
 
 # live-e2e
@@ -131,8 +131,8 @@ During a successful local live run, the harness will:
 1. load the selected scenario and validate the live-lane contract;
 2. resolve and record the pinned target repository commit;
 3. prepare a clean working copy of the target repository;
-4. select the **first listed issue** from the curated issue pool;
-5. write issue-selection evidence to the eval bundle and target-repo context;
+4. select the **first listed authored task** from the manifest task pool;
+5. write feature-selection evidence to the eval bundle and target-repo context;
 6. seed `.aidd/` inside the target repository;
 7. write a live `aidd.example.toml` with the runtime command and execution mode for the chosen provider;
 8. build and install the local AIDD source wheel with `uv tool`, or install the
@@ -176,7 +176,7 @@ The canonical eval bundle for a local live run lives under:
 
 Expected live artifacts include:
 
-- `issue-selection.json`
+- `feature-selection.json`
 - `install-transcript.json`
 - `runtime.log`
 - `validator-report.md`
@@ -214,7 +214,7 @@ A live run is only "clean" when execution evidence exists, verification output i
 - Never assume this skill provisions runtime auth, wrappers, or provider setup.
 - Never dispatch the manual GitHub workflow without provider execution readiness for the selected runtime.
 - Never run a live scenario without storing the resolved repo pin.
-- Never run a live scenario without storing the selected issue snapshot.
+- Never run a live scenario without storing the selected authored task snapshot.
 - Never treat a live scenario as canonical unless it executes `idea -> qa`.
 - Never treat a live scenario as passed without install evidence and verification output.
 - Never treat a live scenario as clean without `quality-report.md` and `quality-transcript.json`.

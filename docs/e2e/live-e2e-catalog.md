@@ -1,6 +1,6 @@
 # Live End-to-End Catalog
 
-This catalog defines the curated public-repository scenarios used for manual live E2E audits.
+This catalog defines the authored public-repository scenarios used for manual live E2E audits.
 
 ## Purpose
 
@@ -16,7 +16,7 @@ That makes live E2E different from the deterministic lanes:
 
 Live E2E is no longer part of CI or release automation. It is a manual external-audit lane only.
 
-## Canonical execution model
+## Canonical Execution Model
 
 Every live E2E run must follow the installed full-flow operator model:
 
@@ -25,7 +25,7 @@ Every live E2E run must follow the installed full-flow operator model:
 3. Prepare a working copy of that repository.
 4. Install the AIDD artifact under test with `uv tool`.
 5. Change into the target repository root.
-6. Select the first issue from the scenario's curated issue pool.
+6. Select the first authored task from the scenario's `authored-task-pool`.
 7. Run installed `aidd` from that repository root with explicit workflow bounds `idea -> qa`.
 8. Keep `.aidd/` rooted inside the target repository.
 9. Preserve install, setup, run, verify, quality, and teardown evidence in the eval bundle.
@@ -51,7 +51,7 @@ They are not the supported local operator intake path. The product does not expo
 operators initialize work items from the target project root with
 `aidd init --work-item <id> --root .aidd`.
 
-## Manual-only automation policy
+## Manual-Only Automation Policy
 
 - `automation_lane` for every live scenario is `manual`.
 - The only supported automation entrypoint is `.github/workflows/manual-live-e2e.yml`.
@@ -67,29 +67,29 @@ operators initialize work items from the target project root with
 - CI must not reference `harness/scenarios/live/`.
 - Release automation must not run live scenarios or require live-eval artifacts.
 
-## Maintained repository set
+## Maintained Repository Set
 
 ### `fastapi/typer`
 
-- `AIDD-LIVE-001` — styled help alignment bugfix (`setup-blocked`; not a canonical README smoke until repinned or fixed)
-- `AIDD-LIVE-002` — boolean option help rendering
+- `AIDD-LIVE-001` - authored styled help alignment bugfix (`setup-blocked`; not a canonical README smoke until repinned or fixed)
+- `AIDD-LIVE-002` - authored boolean option help rendering task
 
 ### `encode/httpx`
 
-- `AIDD-LIVE-003` — invalid header error message
-- `AIDD-LIVE-004` — CLI docs sync
+- `AIDD-LIVE-003` - authored invalid header error message task
+- `AIDD-LIVE-004` - authored CLI docs sync task
 
 ### `simonw/sqlite-utils`
 
-- `AIDD-LIVE-005` — header-only CSV bugfix
-- `AIDD-LIVE-006` — yielded rows feature with interview
+- `AIDD-LIVE-005` - authored header-only CSV bugfix task
+- `AIDD-LIVE-006` - authored yielded rows feature with interview
 
 ### `honojs/hono`
 
-- `AIDD-LIVE-007` — non-Error throw handling
-- `AIDD-LIVE-008` — router parity with `/**` syntax interview
+- `AIDD-LIVE-007` - authored non-Error throw handling task
+- `AIDD-LIVE-008` - authored router parity with `/**` syntax interview
 
-## Matrix source of truth
+## Matrix Source Of Truth
 
 Use [`Scenario Matrix`](./scenario-matrix.md) as the source of truth for:
 
@@ -101,7 +101,7 @@ Use [`Scenario Matrix`](./scenario-matrix.md) as the source of truth for:
 
 For live scenarios in this wave:
 
-- `codex` is the primary canonical runtime for maintained small and medium live lanes;
+- `codex` is the primary canonical runtime for maintained tiny, small, and medium live lanes;
 - `opencode` covers at least one live lane;
 - `claude-code` is enabled only for the `AIDD-LIVE-005` small smoke lane, where the
   manual timeout budget is intentionally extended to 240 minutes because native
@@ -114,16 +114,18 @@ Representative matrix coverage for the live lane:
 
 | Scenario class | Feature size | Maintained provider | Representative scenarios |
 | --- | --- | --- | --- |
+| `live-full-flow` | `tiny` | `codex` | `AIDD-LIVE-004` |
 | `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005` |
-| `live-full-flow` | `medium` | `codex` | `AIDD-LIVE-002`, `AIDD-LIVE-004`, `AIDD-LIVE-007` |
-| `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006`, `AIDD-LIVE-008` |
+| `live-full-flow` | `medium` | `codex` | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
+| `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006` |
+| `live-full-flow-interview` | `xlarge` | `opencode` | `AIDD-LIVE-008` |
 
 `AIDD-LIVE-001` remains in the maintained set for historical evidence, but its current
 Typer pin is setup-blocked before the runtime boundary. Use `AIDD-LIVE-005` as the
 canonical installed live smoke until `AIDD-LIVE-001` is repinned or its setup baseline is
 fixed.
 
-## Live-scenario contract
+## Live-Scenario Contract
 
 Every maintained live scenario must:
 
@@ -132,14 +134,17 @@ Every maintained live scenario must:
 - declare `feature_size`;
 - declare `automation_lane: manual`;
 - declare `canonical_runtime` that also appears in `runtime_targets`;
-- use `feature_source.mode: curated-issue-pool`;
-- select the first listed issue deterministically;
+- use `feature_source.mode: authored-task-pool`;
+- select the first listed authored task deterministically;
+- define authored task `id`, `title`, `summary`, `intent`, `target_change`, `expected_scope`,
+  `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
+- define authored task `interview` guidance only for `live-full-flow-interview` scenarios;
 - force full-flow `idea -> qa`;
 - run repo-local verification commands;
 - run repo-local quality commands;
-- preserve issue-selection, validator, log-analysis, verdict, and quality artifacts.
+- preserve feature-selection, validator, log-analysis, verdict, and quality artifacts.
 
-## Expected artifacts
+## Expected Artifacts
 
 Every live eval bundle must aim to contain:
 
@@ -154,7 +159,7 @@ Every live eval bundle must aim to contain:
 - `grader.json`
 - `verdict.md`
 - `quality-report.md`
-- `issue-selection.json`
+- `feature-selection.json`
 - `install-transcript.json`
 - `setup-transcript.json`
 - `run-transcript.json`
@@ -162,16 +167,17 @@ Every live eval bundle must aim to contain:
 - `quality-transcript.json`
 - `teardown-transcript.json`
 
-## Interview scenarios
+## Interview Scenarios
 
 The maintained interview scenarios are:
 
 - `AIDD-LIVE-006`
 - `AIDD-LIVE-008`
 
-These scenarios must block when questions are unresolved and resume only after `answers.md` is present in the expected target-repository workspace path.
+These scenarios must block when questions are unresolved and resume only after `answers.md`
+is present in the expected target-repository workspace path.
 
-## Related references
+## Related References
 
 - [`Scenario Matrix`](./scenario-matrix.md)
 - [`Live Quality Rubric`](./live-quality-rubric.md)

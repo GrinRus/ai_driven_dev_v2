@@ -1,15 +1,15 @@
 id: AIDD-LIVE-004
 scenario_class: live-full-flow
-feature_size: medium
+feature_size: tiny
 automation_lane: manual
 canonical_runtime: codex
 repo:
   url: https://github.com/encode/httpx
   default_branch: master
-objective: Keep HTTPX documentation-focused live coverage deterministic by using a
-  curated docs-sync issue instead of dynamic issue discovery.
+objective: Keep HTTPX documentation-focused live coverage deterministic with an
+  authored docs-sync task instead of dynamic external task discovery.
 task: Run the installed AIDD full-flow live audit against the selected HTTPX documentation
-  issue and preserve reviewable quality evidence.
+  task and preserve reviewable quality evidence.
 stage_scope:
   start: idea
   end: qa
@@ -22,20 +22,34 @@ aidd_invocation:
     start: idea
     end: qa
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-  - id: docs-sync-001
+  tasks:
+  - id: TASK-LIVE-HTTPX-CLI-DOCS-SYNC
     title: CLI docs sync
-    url: https://github.com/encode/httpx/issues
     summary: Update docs and examples after a small CLI behavior change and prove
       docs, examples, and verification still align.
-    labels:
-    - docs
-    - examples
+    intent: Improve the HTTPX CLI documentation with a concrete, runnable example
+      that remains consistent with current command behavior.
+    target_change: Update the CLI-facing documentation surfaces only; no runtime HTTPX
+      behavior change is expected.
+    expected_scope: Documentation-only change in one or two Markdown files.
+    acceptance_criteria:
+    - CLI documentation includes a concrete example that uses a real inspectable endpoint
+      or explains any local test server requirement.
+    - README and docs index content stay consistent if both mention CLI behavior.
+    - The change does not introduce placeholder URLs as if they were runnable examples.
+    verification:
+    - UV_CACHE_DIR=.aidd/uv-cache uv run --with-requirements requirements.txt pytest -q
+    - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md
+    - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/validator-report.md
+    quality_bar: The documentation should be minimal, truthful, runnable or clearly
+      labeled, and should not require source changes.
+    size_rationale: Tiny because this is docs-only, expected to touch one or two files
+      without runtime behavior changes.
 verify:
   commands:
-  - uv run pytest -q
+  - "UV_CACHE_DIR=.aidd/uv-cache uv run --with-requirements requirements.txt pytest -q"
   - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/validator-report.md
   pass_conditions:
@@ -43,7 +57,7 @@ verify:
   - QA stage output artifacts exist for the selected work item.
 quality:
   commands:
-  - uv run pytest -q
+  - "UV_CACHE_DIR=.aidd/uv-cache uv run --with-requirements requirements.txt pytest -q"
   rubric_profile: live-full
   require_review_status: approved
   allowed_qa_verdicts:
@@ -51,8 +65,8 @@ quality:
   - ready-with-risks
   code_review_required: true
 limits:
-  patch_budget_files: 6
-  timeout_minutes: 15
+  patch_budget_files: 3
+  timeout_minutes: 240
 interview:
   required: false
 runtime_targets:

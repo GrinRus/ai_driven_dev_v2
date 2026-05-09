@@ -6,10 +6,10 @@ canonical_runtime: opencode
 repo:
   url: https://github.com/simonw/sqlite-utils
   default_branch: main
-objective: Keep sqlite-utils interview live coverage deterministic by using a curated
-  issue that still requires explicit requirement clarification.
+objective: Keep sqlite-utils interview live coverage deterministic with an authored
+  yielded-rows task that requires explicit requirement clarification.
 task: Run the installed AIDD full-flow live audit against the selected sqlite-utils
-  interview issue and preserve reviewable quality evidence.
+  interview task and preserve reviewable quality evidence.
 stage_scope:
   start: idea
   end: qa
@@ -22,18 +22,39 @@ aidd_invocation:
     start: idea
     end: qa
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-  - id: '694'
+  tasks:
+  - id: TASK-LIVE-SQLITE-YIELDED-ROWS
     title: yielded rows feature
-    url: https://github.com/simonw/sqlite-utils/issues/694
     summary: Add a CLI path for passing Python code or a Python file that yields
       rows to insert, and require an interview about trust boundaries, accepted input
       form, and documentation expectations.
-    labels:
-    - feature
-    - interview
+    intent: Explore a governed implementation path for inserting rows yielded by
+      user-provided Python while making execution boundaries explicit.
+    target_change: Implement the answered input form and trust-boundary policy, plus
+      tests and documentation for the selected behavior.
+    expected_scope: CLI option design, execution safety checks, insertion behavior,
+      tests, and documentation.
+    acceptance_criteria:
+    - Blocking answers define the accepted input form and execution trust boundary.
+    - The implemented behavior matches those answers without silently broadening scope.
+    - Tests cover successful yielded-row insertion and at least one invalid or unsafe input.
+    - Documentation explains the selected form and trust caveats.
+    verification:
+    - uv run aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW
+    - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md
+    - uv run pytest -q
+    - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/stage-result.md
+    - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/validator-report.md
+    quality_bar: The result must be explicit about code execution risk, covered by tests,
+      and documented without implying a broader security guarantee.
+    size_rationale: Large because it is a new CLI feature gated by interview decisions
+      and requires behavior, tests, and documentation.
+    interview:
+    - Execution trust boundary for user-provided Python code.
+    - Accepted input form (inline expression, file, or both).
+    - Required documentation updates and examples for the selected form.
 verify:
   commands:
   - uv run aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW
@@ -62,27 +83,9 @@ quality:
   - ready
   - ready-with-risks
   code_review_required: true
-reference_run:
-  run_id: eval-live-006-codex-reference-20260422T123937Z
-  recorded_at_utc: '2026-04-22T12:39:38Z'
-  runtime: codex
-  status: harness_fail
-  resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
-  bundle_root: .aidd/reports/evals/eval-live-006-codex-reference-20260422T123937Z
-  first_failure_signal: Verification command `test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md`
-    exited with status 1.
-opencode_reference_run:
-  run_id: eval-live-006-opencode-20260422T142812Z
-  recorded_at_utc: '2026-04-22T14:28:19Z'
-  runtime: opencode
-  status: harness_blocked
-  resolved_revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
-  bundle_root: .aidd/reports/evals/eval-live-006-opencode-20260422T142812Z
-  first_failure_signal: Verification command `test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md`
-    exited with status 1.
 limits:
-  patch_budget_files: 10
-  timeout_minutes: 25
+  patch_budget_files: 12
+  timeout_minutes: 45
 interview:
   required: true
   must_ask_at_least_one: true
@@ -116,7 +119,7 @@ interview:
     - --work-item
     - WI-LIVE-SQLITE-INTERVIEW
     - --runtime
-    - generic-cli
+    - opencode
     answer_requirements:
     - Resolve every blocking question with explicit policy choices.
     - Keep accepted input-form decisions and documentation obligations in the same answers file.

@@ -75,13 +75,13 @@ This layer runs one stage or one bounded workflow subset and verifies:
 
 ### 4.4 Manual installed live operator layer
 
-This layer answers: can an operator manually install AIDD, enter a real repository, select a reproducible issue seed, run the governed flow from `idea` through `qa`, and prove both execution and quality?
+This layer answers: can an operator manually install AIDD, enter a real repository, select a reproducible authored task, run the governed flow from `idea` through `qa`, and prove both execution and quality?
 
 Its contract is:
 
 - the target repository is a pinned public repository from the live catalog;
 - the artifact under test is an installed AIDD CLI, not a source-checkout shortcut;
-- the selected issue comes from the scenario's curated issue pool;
+- the selected task comes from the scenario's authored task pool;
 - live workflow bounds are explicit and fixed to `idea -> qa`;
 - AIDD runs from the target repository root;
 - `.aidd/` is rooted inside that repository;
@@ -112,7 +112,7 @@ Live scenarios additionally imply:
 
 - install channel;
 - artifact source and identity;
-- deterministic issue selection from a curated issue pool;
+- deterministic authored task selection from the manifest task pool;
 - target repository cwd as the operator execution root;
 - `.aidd` workspace rooted inside that target repository.
 - a live runtime config written into the prepared working copy, with optional command overrides from `AIDD_EVAL_<RUNTIME>_COMMAND`.
@@ -131,7 +131,7 @@ Deterministic scenarios additionally imply:
 3. Prepare or reset the pinned target repository working copy.
 4. Resolve and persist the scenario feature seed:
    - fixture-owned seed metadata for deterministic scenarios;
-   - the first curated issue for live scenarios.
+   - the first authored task for live scenarios.
 5. Prepare the AIDD artifact under test when the scenario uses the installed-live lane.
 6. Run setup commands in the target repository root.
 7. Launch AIDD from the target repository root with explicit workflow bounds.
@@ -163,7 +163,7 @@ Every eval run should aim to write:
 - `.aidd/reports/evals/<run_id>/verdict.md`
 - `.aidd/reports/evals/<run_id>/quality-report.md`
 - `.aidd/reports/evals/<run_id>/summary.md`
-- `.aidd/reports/evals/<run_id>/issue-selection.json`
+- `.aidd/reports/evals/<run_id>/feature-selection.json`
 - `.aidd/reports/evals/<run_id>/setup-transcript.json`
 - `.aidd/reports/evals/<run_id>/run-transcript.json`
 - `.aidd/reports/evals/<run_id>/verify-transcript.json`

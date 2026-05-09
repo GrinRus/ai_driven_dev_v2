@@ -27,7 +27,7 @@ Each dimension uses a fixed integer score from `0` to `3`.
 What it measures:
 
 - the run stayed inside the installed live contract;
-- the selected issue seed was recorded;
+- the selected authored task was recorded;
 - workflow bounds stayed `idea -> qa`;
 - question, repair, and verification behavior remained truthful;
 - the run did not silently skip required stages or artifacts.
@@ -47,6 +47,7 @@ What it measures:
 - review and QA documents are evidence-backed;
 - cross-stage consistency is preserved;
 - required findings, risks, and recommendations are explicit and usable.
+- repair burden is bounded and does not show repeated first-pass contract misses.
 
 Interpretation:
 
@@ -60,10 +61,12 @@ Interpretation:
 What it measures:
 
 - repo-local quality commands passed;
-- verification is adequate for the selected issue;
+- verification is adequate for the selected authored task;
 - unresolved `must-fix` review findings are absent;
 - QA did not conclude `not-ready`;
 - the resulting change remains bounded and reviewable.
+- implementation size is plausible for the authored task's declared scope.
+- documentation examples avoid placeholder or non-runnable endpoints presented as runnable.
 
 Interpretation:
 
