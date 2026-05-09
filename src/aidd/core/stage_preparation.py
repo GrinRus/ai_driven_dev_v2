@@ -19,6 +19,93 @@ from aidd.core.stage_registry import (
 )
 from aidd.core.state_machine import StageState
 
+_STAGE_RESULT_SKELETON = """```md
+# Stage Result
+
+## Stage
+
+- Stage: `<canonical-stage-id>`
+
+## Attempt history
+
+- Attempt 1 (`initial`): <outcome and evidence>
+
+## Status
+
+- Status: `<succeeded|failed|blocked|needs-input>`
+
+## Produced outputs
+
+- `<workspace-relative-path>`
+
+## Validation summary
+
+- Validator verdict: `<pass|fail|not-run>`
+- Validator report: `workitems/<id>/stages/<stage>/validator-report.md`
+
+## Blockers
+
+- none
+
+## Next actions
+
+- <operator or downstream action>
+
+## Terminal state notes
+
+- <why the stage ended in the declared status>
+```"""
+
+_VALIDATOR_REPORT_SKELETON = """```md
+# Validator Report
+
+## Summary
+
+- Total issues: `<number>`
+- Blocking issues: `<yes|no>`
+- Affected documents: `<workspace-relative paths or none>`
+
+## Structural checks
+
+- none
+
+## Semantic checks
+
+- none
+
+## Cross-document checks
+
+- none
+
+## Result
+
+- Validator verdict: `<pass|fail>`
+- Repair required: `<yes|no>`
+```"""
+
+
+def _append_common_output_skeletons(
+    *,
+    lines: list[str],
+    expected_output_documents: tuple[str, ...],
+) -> None:
+    expected_names = {Path(path).name for path in expected_output_documents}
+    if not {"stage-result.md", "validator-report.md"} & expected_names:
+        return
+
+    lines.extend(
+        [
+            "",
+            "# Required common output skeletons",
+            "",
+            "Use these exact section headings when writing the common output documents.",
+        ]
+    )
+    if "stage-result.md" in expected_names:
+        lines.extend(["", "## `stage-result.md`", "", _STAGE_RESULT_SKELETON])
+    if "validator-report.md" in expected_names:
+        lines.extend(["", "## `validator-report.md`", "", _VALIDATOR_REPORT_SKELETON])
+
 
 def render_stage_brief(
     *,
@@ -62,6 +149,10 @@ def render_stage_brief(
         )
     lines.extend(["", "# Expected output documents", ""])
     lines.extend(f"- `{path}`" for path in expected_output_documents)
+    _append_common_output_skeletons(
+        lines=lines,
+        expected_output_documents=expected_output_documents,
+    )
     lines.append("")
     return "\n".join(lines)
 

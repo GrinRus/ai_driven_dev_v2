@@ -20,6 +20,45 @@ or validation wording when the canonical validator report proves the draft incon
 - `Next actions`
 - `Terminal state notes`
 
+## Required skeleton
+
+```md
+# Stage Result
+
+## Stage
+
+- Stage: `<canonical-stage-id>`
+
+## Attempt history
+
+- Attempt 1 (`initial`): <outcome and evidence>
+
+## Status
+
+- Status: `<succeeded|failed|blocked|needs-input>`
+
+## Produced outputs
+
+- `<workspace-relative-path>`
+
+## Validation summary
+
+- Validator verdict: `<pass|fail|not-run>`
+- Validator report: `workitems/<id>/stages/<stage>/validator-report.md`
+
+## Blockers
+
+- none
+
+## Next actions
+
+- <operator or downstream action>
+
+## Terminal state notes
+
+- <why the stage ended in the declared status>
+```
+
 ## Field notes
 
 - `Stage`

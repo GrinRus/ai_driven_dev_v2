@@ -204,7 +204,7 @@ def _write_scenario_manifest(
         "automation_lane": "manual" if live else "ci",
         "canonical_runtime": runtime_targets[0],
         "task": (
-            "Run the installed AIDD operator against the selected issue and preserve "
+            "Run the installed AIDD operator against the selected authored task and preserve "
             "full-flow audit evidence."
             if live
             else "exercise eval orchestration"
@@ -219,15 +219,22 @@ def _write_scenario_manifest(
     }
     if live:
         payload["feature_source"] = {
-            "mode": "curated-issue-pool",
+            "mode": "authored-task-pool",
             "selection_policy": "first-listed",
-            "issues": [
+            "tasks": [
                 {
-                    "id": "123",
-                    "title": "exercise live issue selection",
-                    "url": "https://github.com/example/repo/issues/123",
-                    "summary": "Use the first curated issue as the deterministic full-flow seed.",
-                    "labels": ["bug", "live-e2e"],
+                    "id": "TASK-123",
+                    "title": "exercise live authored task selection",
+                    "summary": (
+                        "Use the first authored task as the deterministic full-flow seed."
+                    ),
+                    "intent": "Exercise live task selection.",
+                    "target_change": "Produce a small test implementation.",
+                    "expected_scope": "Test fixture only.",
+                    "acceptance_criteria": ["The fake AIDD run completes."],
+                    "verification": ["printf 'verify\\n' > verify.log"],
+                    "quality_bar": "Quality evidence is complete.",
+                    "size_rationale": "Small test fixture.",
                 }
             ],
         }
@@ -261,7 +268,7 @@ def _assert_bundle_basics(bundle_root: Path) -> None:
     assert (bundle_root / "verify-transcript.json").exists()
     assert (bundle_root / "quality-transcript.json").exists()
     assert (bundle_root / "teardown-transcript.json").exists()
-    assert (bundle_root / "issue-selection.json").exists()
+    assert (bundle_root / "feature-selection.json").exists()
     assert (bundle_root / "runtime.log").exists()
     assert (bundle_root / "validator-report.md").exists()
     assert (bundle_root / "verdict.md").exists()
@@ -350,15 +357,15 @@ def test_eval_runner_pass_status(tmp_path: Path) -> None:
     _assert_bundle_basics(result.bundle_root)
     verdict_text = result.verdict_path.read_text(encoding="utf-8")
     assert "- Status: `pass`" in verdict_text
-    issue_selection_payload = yaml.safe_load(
-        result.bundle_root.joinpath("issue-selection.json").read_text(encoding="utf-8")
+    feature_selection_payload = yaml.safe_load(
+        result.bundle_root.joinpath("feature-selection.json").read_text(encoding="utf-8")
     )
-    assert issue_selection_payload["selected_issue"] is None
+    assert feature_selection_payload["selected_task"] is None
     assert (
-        issue_selection_payload["fixture_seed"]["fixture_path"]
+        feature_selection_payload["fixture_seed"]["fixture_path"]
         == "harness/fixtures/minimal-python"
     )
-    assert issue_selection_payload["scenario_class"] == "deterministic-stage"
+    assert feature_selection_payload["scenario_class"] == "deterministic-stage"
 
 
 def test_eval_runner_copies_attempt_jsonl_artifacts_and_uses_events_boundary(
@@ -465,14 +472,26 @@ def test_eval_runner_live_scenario_uses_installed_artifact_and_writes_install_me
     assert metadata_payload["aidd_install"]["artifact_source"] == "local-wheel"
     assert metadata_payload["execution_context"]["resource_source"] == "packaged"
     assert result.run_id in metadata_payload["execution_context"]["target_repository_cwd"]
+    working_copy_path = Path(metadata_payload["execution_context"]["target_repository_cwd"])
+    context_root = working_copy_path / ".aidd" / "workitems" / "WI-EVAL-LIVE" / "context"
+    assert (context_root / "selected-task.md").exists()
+    assert not (context_root / "selected-issue.md").exists()
+    assert "Selected task id: `TASK-123`" in (
+        context_root / "task-selection.md"
+    ).read_text(encoding="utf-8")
+    verification_output = (context_root / "verification-output.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## Authored Task Verification Intent" in verification_output
+    assert "- `printf 'verify\\n' > verify.log`" in verification_output
     assert install_payload["step"] == "install"
     assert install_payload["command_count"] == 1
     assert result.quality_gate == "pass"
     assert result.quality_verdict == "ready"
-    issue_selection_payload = yaml.safe_load(
-        result.bundle_root.joinpath("issue-selection.json").read_text(encoding="utf-8")
+    feature_selection_payload = yaml.safe_load(
+        result.bundle_root.joinpath("feature-selection.json").read_text(encoding="utf-8")
     )
-    assert issue_selection_payload["selected_issue"]["id"] == "123"
+    assert feature_selection_payload["selected_task"]["id"] == "TASK-123"
     quality_transcript_payload = yaml.safe_load(
         result.bundle_root.joinpath("quality-transcript.json").read_text(encoding="utf-8")
     )

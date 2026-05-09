@@ -10,7 +10,7 @@ from aidd.core.resources import resolve_resource_layout
 from aidd.harness.eval_models import EvalRunPreparation
 from aidd.harness.repo_prep import prepare_workspace
 from aidd.harness.result_bundle import ensure_result_bundle_layout
-from aidd.harness.scenarios import Scenario, ScenarioIssueSeed, load_scenario
+from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask, load_scenario
 
 
 def derive_run_id(*, scenario_id: str, runtime_id: str) -> str:
@@ -64,10 +64,10 @@ def derive_teardown_commands(scenario: Scenario) -> tuple[str, ...]:
     )
 
 
-def select_issue_seed(scenario: Scenario) -> ScenarioIssueSeed | None:
-    if scenario.feature_source is None or not scenario.feature_source.issues:
+def select_authored_task(scenario: Scenario) -> ScenarioAuthoredTask | None:
+    if scenario.feature_source is None or not scenario.feature_source.tasks:
         return None
-    return scenario.feature_source.issues[0]
+    return scenario.feature_source.tasks[0]
 
 
 def derive_source_repository_root(scenario_path: Path) -> Path | None:
@@ -80,10 +80,10 @@ def derive_source_repository_root(scenario_path: Path) -> Path | None:
             return None
 
 
-def build_issue_selection_payload(
+def build_feature_selection_payload(
     *,
     scenario: Scenario,
-    selected_issue: ScenarioIssueSeed | None,
+    selected_task: ScenarioAuthoredTask | None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "automation_lane": scenario.automation_lane,
@@ -99,15 +99,21 @@ def build_issue_selection_payload(
             if scenario.feature_source is None
             else scenario.feature_source.selection_policy
         ),
-        "selected_issue": None,
+        "selected_task": None,
     }
-    if selected_issue is not None:
-        payload["selected_issue"] = {
-            "id": selected_issue.issue_id,
-            "labels": list(selected_issue.labels),
-            "summary": selected_issue.summary,
-            "title": selected_issue.title,
-            "url": selected_issue.url,
+    if selected_task is not None:
+        payload["selected_task"] = {
+            "acceptance_criteria": list(selected_task.acceptance_criteria),
+            "expected_scope": selected_task.expected_scope,
+            "id": selected_task.task_id,
+            "intent": selected_task.intent,
+            "interview": list(selected_task.interview),
+            "quality_bar": selected_task.quality_bar,
+            "size_rationale": selected_task.size_rationale,
+            "summary": selected_task.summary,
+            "target_change": selected_task.target_change,
+            "title": selected_task.title,
+            "verification": list(selected_task.verification),
         }
     if scenario.feature_source is not None and scenario.feature_source.mode == "fixture-seed":
         payload["fixture_seed"] = {
@@ -133,7 +139,7 @@ def prepare_eval_run(
     layout = ensure_result_bundle_layout(workspace_root=workspace_root, run_id=run_id)
     prepare_workspace(workspace_root)
 
-    selected_issue = select_issue_seed(scenario)
+    selected_task = select_authored_task(scenario)
     return EvalRunPreparation(
         scenario_path=scenario_path,
         scenario=scenario,
@@ -152,10 +158,10 @@ def prepare_eval_run(
         resource_layout=resolve_resource_layout(),
         aidd_command=None if scenario.is_live else derive_aidd_command(scenario),
         work_item=derive_work_item(scenario),
-        selected_issue=selected_issue,
-        issue_selection_payload=build_issue_selection_payload(
+        selected_task=selected_task,
+        feature_selection_payload=build_feature_selection_payload(
             scenario=scenario,
-            selected_issue=selected_issue,
+            selected_task=selected_task,
         ),
         teardown_commands=derive_teardown_commands(scenario),
     )

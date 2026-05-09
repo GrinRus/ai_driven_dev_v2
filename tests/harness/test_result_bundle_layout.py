@@ -6,9 +6,9 @@ import pytest
 
 from aidd.harness.result_bundle import (
     EVENTS_JSONL_FILENAME,
+    FEATURE_SELECTION_FILENAME,
     GRADER_FILENAME,
     HARNESS_METADATA_FILENAME,
-    ISSUE_SELECTION_FILENAME,
     LOG_ANALYSIS_FILENAME,
     QUALITY_REPORT_FILENAME,
     QUALITY_TRANSCRIPT_FILENAME,
@@ -37,7 +37,7 @@ def test_build_result_bundle_layout_uses_stable_artifact_names(tmp_path: Path) -
     assert layout.verify_transcript_path.name == VERIFY_TRANSCRIPT_FILENAME
     assert layout.quality_transcript_path.name == QUALITY_TRANSCRIPT_FILENAME
     assert layout.teardown_transcript_path.name == TEARDOWN_TRANSCRIPT_FILENAME
-    assert layout.issue_selection_path.name == ISSUE_SELECTION_FILENAME
+    assert layout.feature_selection_path.name == FEATURE_SELECTION_FILENAME
     assert layout.runtime_log_path.name == RUNTIME_LOG_FILENAME
     assert layout.runtime_jsonl_path.name == RUNTIME_JSONL_FILENAME
     assert layout.events_jsonl_path.name == EVENTS_JSONL_FILENAME

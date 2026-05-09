@@ -27,15 +27,20 @@ def _write_live_scenario(path: Path) -> None:
         "runtime_targets": ["codex"],
         "interview": {"required": False},
         "feature_source": {
-            "mode": "curated-issue-pool",
+            "mode": "authored-task-pool",
             "selection_policy": "first-listed",
-            "issues": [
+            "tasks": [
                 {
-                    "id": "123",
-                    "title": "issue",
-                    "url": "https://example.invalid/issues/123",
-                    "summary": "issue",
-                    "labels": [],
+                    "id": "TASK-123",
+                    "title": "task",
+                    "summary": "task",
+                    "intent": "exercise eval doctor",
+                    "target_change": "validate runtime readiness",
+                    "expected_scope": "test fixture only",
+                    "acceptance_criteria": ["doctor passes"],
+                    "verification": ["true"],
+                    "quality_bar": "doctor evidence is clear",
+                    "size_rationale": "small test fixture",
                 }
             ],
         },

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         HarnessTeardownResult,
         HarnessVerificationResult,
     )
-    from aidd.harness.scenarios import Scenario, ScenarioIssueSeed
+    from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +33,7 @@ class EvalScenarioRunResult:
     quality_gate: str
     quality_verdict: str
     quality_report_path: Path
-    issue_selection_path: Path
+    feature_selection_path: Path
     first_failure_boundary: FailureBoundarySelection
     first_failure_note: str | None
 
@@ -53,8 +53,8 @@ class EvalRunPreparation:
     resource_layout: ResourceLayout
     aidd_command: tuple[str, ...] | None
     work_item: str
-    selected_issue: ScenarioIssueSeed | None
-    issue_selection_payload: dict[str, object]
+    selected_task: ScenarioAuthoredTask | None
+    feature_selection_payload: dict[str, object]
     teardown_commands: tuple[str, ...]
 
 

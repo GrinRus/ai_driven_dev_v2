@@ -56,13 +56,13 @@ from aidd.harness.eval_models import (
     EvalScenarioRunResult,
 )
 from aidd.harness.eval_preparation import (
-    build_issue_selection_payload,
+    build_feature_selection_payload,
     derive_aidd_command,
     derive_run_id,
     derive_teardown_commands,
     derive_work_item,
     prepare_eval_run,
-    select_issue_seed,
+    select_authored_task,
 )
 from aidd.harness.eval_reports import (
     EXIT_CODE_PATTERN,
@@ -95,8 +95,8 @@ from aidd.harness.result_bundle import (
     copy_or_link_run_artifacts,
     ensure_result_bundle_layout,
     write_command_transcripts,
+    write_feature_selection,
     write_harness_metadata,
-    write_issue_selection,
 )
 from aidd.harness.runner import (
     invoke_aidd_run,
@@ -132,7 +132,7 @@ def _sync_legacy_patch_points() -> None:
             ("run_teardown_steps", run_teardown_steps),
             ("run_verification_steps", run_verification_steps),
             ("validate_live_runtime_command", validate_live_runtime_command),
-            ("write_issue_selection", write_issue_selection),
+            ("write_feature_selection", write_feature_selection),
             ("write_live_runtime_config", write_live_runtime_config),
         ),
     )
@@ -193,7 +193,7 @@ def run_eval_scenario(
 # Compatibility aliases for older white-box tests and local debug scripts.
 _EXIT_CODE_PATTERN = EXIT_CODE_PATTERN
 _PASS_GUARD_REQUIRED_OUTPUT_FILES = PASS_GUARD_REQUIRED_OUTPUT_FILES
-_build_issue_selection_payload = build_issue_selection_payload
+_build_feature_selection_payload = build_feature_selection_payload
 _classify_eval_execution = classify_eval_execution
 _classify_status = classify_status
 _combined_run_output = combined_run_output
@@ -218,7 +218,7 @@ _render_log_analysis_markdown = render_log_analysis_markdown
 _render_runtime_log_source = render_runtime_log_source
 _render_validator_report_source = render_validator_report_source
 _resolve_stage_scope_for_pass_guard = resolve_stage_scope_for_pass_guard
-_select_issue_seed = select_issue_seed
+_select_authored_task = select_authored_task
 _stage_failure_events_from_timing_payload = stage_failure_events_from_timing_payload
 _transcript_duration = transcript_duration
 _workspace_root_for_quality = workspace_root_for_quality

@@ -9,7 +9,7 @@ repo:
   revision: cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba
 objective: Keep Hono smoke lane deterministic by targeting the non-Error throw
   handling defect with bounded patch scope.
-task: Run the installed AIDD full-flow live audit against the selected Hono issue
+task: Run the installed AIDD full-flow live audit against the selected Hono authored task
   and preserve reviewable quality evidence.
 stage_scope:
   start: idea
@@ -33,17 +33,31 @@ aidd_invocation:
     start: idea
     end: qa
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-  - id: '4708'
+  tasks:
+  - id: TASK-LIVE-HONO-NON-ERROR-THROW
     title: non-Error throw handling
-    url: https://github.com/honojs/hono/issues/4708
     summary: Ensure thrown non-Error values from middleware still flow through onError
       instead of causing an unhandled rejection.
-    labels:
-    - bug
-    - middleware
+    intent: Preserve Hono middleware error handling semantics when application code
+      throws strings, plain objects, or other non-Error values.
+    target_change: Normalize non-Error thrown values at the error boundary and add
+      regression coverage for the middleware/onError path.
+    expected_scope: Localized runtime behavior plus tests in the Hono middleware or
+      request dispatch path.
+    acceptance_criteria:
+    - Non-Error thrown values are delivered to configured onError handling instead of
+      surfacing as unhandled promise rejections.
+    - Existing Error object handling remains unchanged.
+    - Regression tests cover at least one primitive thrown value and one object thrown value.
+    verification:
+    - bun test
+    - bunx tsc --noEmit
+    quality_bar: The patch is localized, typed, regression-covered, and does not weaken
+      existing Error handling behavior.
+    size_rationale: Medium because the behavioral fix touches runtime error handling and
+      type-checked tests, but should remain within one subsystem.
 verify:
   commands:
   - bun test
@@ -65,14 +79,6 @@ quality:
   - ready
   - ready-with-risks
   code_review_required: true
-reference_run:
-  run_id: eval-live-007-reference-20260422T092510Z
-  recorded_at_utc: '2026-04-22T09:36:09Z'
-  runtime: generic-cli
-  status: harness_fail
-  resolved_revision: cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba
-  bundle_root: .aidd/reports/evals/eval-live-007-reference-20260422T092510Z
-  first_failure_signal: Verification command `bun test` exited with status 1.
 limits:
   patch_budget_files: 8
   timeout_minutes: 20

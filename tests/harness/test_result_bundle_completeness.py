@@ -9,8 +9,8 @@ from aidd.harness.result_bundle import (
     copy_or_link_run_artifacts,
     ensure_result_bundle_layout,
     write_command_transcripts,
+    write_feature_selection,
     write_harness_metadata,
-    write_issue_selection,
 )
 from aidd.harness.runner import (
     HarnessAiddRunResult,
@@ -93,7 +93,7 @@ def _assert_required_bundle_files(layout_root: Path) -> None:
         "verify-transcript.json",
         "quality-transcript.json",
         "teardown-transcript.json",
-        "issue-selection.json",
+        "feature-selection.json",
         "runtime.log",
         "validator-report.md",
         "verdict.md",
@@ -191,9 +191,9 @@ def test_result_bundle_completeness_for_terminal_outcomes(
         verification_result=verification_result,
         teardown_result=teardown_result,
     )
-    write_issue_selection(
+    write_feature_selection(
         layout=layout,
-        payload={"scenario_id": "AIDD-TEST-BUNDLE-COMPLETENESS", "selected_issue": None},
+        payload={"scenario_id": "AIDD-TEST-BUNDLE-COMPLETENESS", "selected_task": None},
     )
     layout.quality_report_path.write_text("# Live Quality Report\n\n- none\n", encoding="utf-8")
     layout.stage_timing_json_path.write_text("{}\n", encoding="utf-8")

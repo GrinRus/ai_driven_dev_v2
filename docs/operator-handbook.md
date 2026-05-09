@@ -261,8 +261,9 @@ for committed operator artifacts.
 ### 6.6 Product scope boundary
 
 There is no supported `aidd init --github-issue <url>` product command. GitHub
-issue URLs may appear in live E2E manifests, issue-selection evidence, or support
-reports, but they are not a local operator intake surface.
+issue URLs may appear in historical live E2E reports or support reports, but current
+live E2E manifests use authored tasks and `feature-selection.json`; GitHub issues are
+not a local operator intake surface.
 
 ## 7. Operational Notes
 

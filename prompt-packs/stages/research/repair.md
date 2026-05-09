@@ -47,6 +47,12 @@ Use concrete repair actions:
 - weak freshness handling: add access date or stale-risk note with follow-up action;
 - unresolved research ambiguity: keep or add blocking question instead of inventing facts.
 
+## Targeted repair discipline
+
+- Fix only the sections named by validator findings unless cross-document consistency requires a narrow companion edit.
+- Preserve valid sections and stable ids; do not rewrite complete documents just to satisfy one failed heading.
+- Re-copy the `stage-result.md` and `validator-report.md` skeleton headings from `stage-brief.md` or the document contracts when a common output is malformed.
+
 ## Repair rules
 
 1. Keep citation ids and question ids stable where possible.

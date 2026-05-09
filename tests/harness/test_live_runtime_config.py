@@ -13,9 +13,9 @@ from aidd.harness.live_runtime_config import (
 )
 from aidd.harness.scenarios import (
     Scenario,
+    ScenarioAuthoredTask,
     ScenarioCommandSteps,
     ScenarioFeatureSource,
-    ScenarioIssueSeed,
     ScenarioQualityConfig,
     ScenarioRepoSource,
     ScenarioRunConfig,
@@ -59,15 +59,21 @@ def _scenario(
         ),
         verify=ScenarioCommandSteps(commands=tuple()),
         feature_source=ScenarioFeatureSource(
-            mode="curated-issue-pool",
+            mode="authored-task-pool",
             selection_policy="first-listed",
-            issues=(
-                ScenarioIssueSeed(
-                    issue_id="123",
-                    title="issue",
-                    url="https://example.invalid/issues/123",
-                    summary="issue",
-                    labels=tuple(),
+            tasks=(
+                ScenarioAuthoredTask(
+                    task_id="TASK-123",
+                    title="task",
+                    summary="task",
+                    intent="exercise runtime config",
+                    target_change="write config",
+                    expected_scope="test helper only",
+                    acceptance_criteria=("config is written",),
+                    verification=("true",),
+                    quality_bar="config remains valid",
+                    size_rationale="small test helper",
+                    interview=tuple(),
                 ),
             ),
             fixture_path=None,
@@ -158,7 +164,6 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert "[runtime.opencode]" in config_text
     assert 'command = "opencode run --format json --dangerously-skip-permissions"' in config_text
     assert config_text.count("timeout_seconds = 1200") == 2
-    assert config_text.count("timeout_seconds = 900") == 1
     assert "[runtime.claude_code.stage_timeouts]" in config_text
     config = tomllib.loads(config_text)
     claude_stage_timeouts = config["runtime"]["claude_code"]["stage_timeouts"]
@@ -168,6 +173,18 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert claude_stage_timeouts["implement"] == 1800
     assert claude_stage_timeouts["review"] == 1800
     assert claude_stage_timeouts["qa"] == 1800
+    assert config["runtime"]["codex"]["timeout_seconds"] == 1800
+    codex_stage_timeouts = config["runtime"]["codex"]["stage_timeouts"]
+    assert codex_stage_timeouts == {
+        "idea": 1800,
+        "research": 2400,
+        "plan": 1800,
+        "review-spec": 1800,
+        "tasklist": 2400,
+        "implement": 2400,
+        "review": 1800,
+        "qa": 1800,
+    }
     assert "[runtime.opencode.stage_timeouts]" in config_text
     assert "idea = 1500" in config_text
     assert "plan = 1500" in config_text

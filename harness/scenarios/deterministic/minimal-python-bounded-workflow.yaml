@@ -6,7 +6,7 @@ canonical_runtime: opencode
 repo:
   url: harness/fixtures/minimal-python
 objective: Keep a bounded deterministic workflow lane local by exercising a multi-stage
-  fixture-backed path without public repositories or live issue selection.
+  fixture-backed path without public repositories or live task selection.
 task: Run a deterministic bounded workflow against the local minimal fixture and
   verify the final tasklist-stage outputs are produced.
 stage_scope:

@@ -23,7 +23,7 @@ _SCENARIO_CLASSES = {
     "live-full-flow-interview",
 }
 _LIVE_SCENARIO_CLASSES = {"live-full-flow", "live-full-flow-interview"}
-_FEATURE_SIZES = {"small", "medium", "large"}
+_FEATURE_SIZES = {"tiny", "small", "medium", "large", "xlarge"}
 _AUTOMATION_LANES = {"ci", "manual"}
 _SUPPORTED_RUNTIME_IDS = set(runtime_ids())
 
@@ -41,19 +41,25 @@ class ScenarioCommandSteps:
 
 
 @dataclass(frozen=True)
-class ScenarioIssueSeed:
-    issue_id: str
+class ScenarioAuthoredTask:
+    task_id: str
     title: str
-    url: str
     summary: str
-    labels: tuple[str, ...]
+    intent: str
+    target_change: str
+    expected_scope: str
+    acceptance_criteria: tuple[str, ...]
+    verification: tuple[str, ...]
+    quality_bar: str
+    size_rationale: str
+    interview: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class ScenarioFeatureSource:
     mode: str
     selection_policy: str
-    issues: tuple[ScenarioIssueSeed, ...]
+    tasks: tuple[ScenarioAuthoredTask, ...]
     fixture_path: str | None
     seed_id: str | None
     summary: str | None
@@ -210,28 +216,70 @@ def _to_command_steps(*, raw: Any, key: str) -> ScenarioCommandSteps:
     return ScenarioCommandSteps(commands=commands)
 
 
-def _to_issue_seed(*, raw: Any, key: str) -> ScenarioIssueSeed:
-    payload = _require_mapping(value=raw, key=key)
-    issue_id = _require_non_empty_string(payload=payload, key="id")
-    title = _require_non_empty_string(payload=payload, key="title")
-    url = _require_non_empty_string(payload=payload, key="url")
-    summary = _require_non_empty_string(payload=payload, key="summary")
-    labels_raw = payload.get("labels", [])
-    labels: tuple[str, ...]
-    if labels_raw is None:
-        labels = tuple()
-    elif isinstance(labels_raw, list):
-        labels = tuple(str(label).strip() for label in labels_raw if str(label).strip())
-    else:
+def _to_non_empty_string_tuple(
+    *,
+    payload: dict[str, Any],
+    key: str,
+    parent_key: str,
+    required: bool = True,
+) -> tuple[str, ...]:
+    raw_items = payload.get(key)
+    if raw_items is None:
+        if required:
+            raise ScenarioManifestError(
+                f"Scenario manifest missing required key: {parent_key}.{key}."
+            )
+        return tuple()
+    if not isinstance(raw_items, list):
         raise ScenarioManifestError(
-            f"Scenario manifest key '{key}.labels' must be a list of strings when provided."
+            f"Scenario manifest key '{parent_key}.{key}' must be a non-empty list of strings."
         )
-    return ScenarioIssueSeed(
-        issue_id=issue_id,
+    items = tuple(str(item).strip() for item in raw_items if str(item).strip())
+    if required and not items:
+        raise ScenarioManifestError(
+            f"Scenario manifest key '{parent_key}.{key}' must be a non-empty list of strings."
+        )
+    return items
+
+
+def _to_authored_task(*, raw: Any, key: str) -> ScenarioAuthoredTask:
+    payload = _require_mapping(value=raw, key=key)
+    task_id = _require_non_empty_string(payload=payload, key="id")
+    title = _require_non_empty_string(payload=payload, key="title")
+    summary = _require_non_empty_string(payload=payload, key="summary")
+    intent = _require_non_empty_string(payload=payload, key="intent")
+    target_change = _require_non_empty_string(payload=payload, key="target_change")
+    expected_scope = _require_non_empty_string(payload=payload, key="expected_scope")
+    acceptance_criteria = _to_non_empty_string_tuple(
+        payload=payload,
+        key="acceptance_criteria",
+        parent_key=key,
+    )
+    verification = _to_non_empty_string_tuple(
+        payload=payload,
+        key="verification",
+        parent_key=key,
+    )
+    quality_bar = _require_non_empty_string(payload=payload, key="quality_bar")
+    size_rationale = _require_non_empty_string(payload=payload, key="size_rationale")
+    interview = _to_non_empty_string_tuple(
+        payload=payload,
+        key="interview",
+        parent_key=key,
+        required=False,
+    )
+    return ScenarioAuthoredTask(
+        task_id=task_id,
         title=title,
-        url=url,
         summary=summary,
-        labels=labels,
+        intent=intent,
+        target_change=target_change,
+        expected_scope=expected_scope,
+        acceptance_criteria=acceptance_criteria,
+        verification=verification,
+        quality_bar=quality_bar,
+        size_rationale=size_rationale,
+        interview=interview,
     )
 
 
@@ -240,20 +288,20 @@ def _to_feature_source(raw: Any) -> ScenarioFeatureSource:
     mode = _require_non_empty_string(payload=payload, key="mode")
     selection_policy = _require_non_empty_string(payload=payload, key="selection_policy")
 
-    if mode == "curated-issue-pool":
+    if mode == "authored-task-pool":
         if selection_policy != "first-listed":
             raise ScenarioManifestError(
                 "Scenario manifest key 'feature_source.selection_policy' must be "
-                "`first-listed` for curated issue pools."
+                "`first-listed` for authored task pools."
             )
-        issues_raw = payload.get("issues")
-        if not isinstance(issues_raw, list) or not issues_raw:
+        tasks_raw = payload.get("tasks")
+        if not isinstance(tasks_raw, list) or not tasks_raw:
             raise ScenarioManifestError(
-                "Scenario manifest key 'feature_source.issues' must be a non-empty list."
+                "Scenario manifest key 'feature_source.tasks' must be a non-empty list."
             )
-        issues = tuple(
-            _to_issue_seed(raw=item, key=f"feature_source.issues[{index}]")
-            for index, item in enumerate(issues_raw)
+        tasks = tuple(
+            _to_authored_task(raw=item, key=f"feature_source.tasks[{index}]")
+            for index, item in enumerate(tasks_raw)
         )
         fixture_path = None
         seed_id = None
@@ -264,20 +312,20 @@ def _to_feature_source(raw: Any) -> ScenarioFeatureSource:
                 "Scenario manifest key 'feature_source.selection_policy' must be "
                 "`fixture-owned` for deterministic fixture seeds."
             )
-        issues = tuple()
+        tasks = tuple()
         fixture_path = _require_non_empty_string(payload=payload, key="fixture_path")
         seed_id = _require_non_empty_string(payload=payload, key="seed_id")
         summary = _require_non_empty_string(payload=payload, key="summary")
     else:
         raise ScenarioManifestError(
             "Scenario manifest key 'feature_source.mode' must be either "
-            "`fixture-seed` or `curated-issue-pool`."
+            "`fixture-seed` or `authored-task-pool`."
         )
 
     return ScenarioFeatureSource(
         mode=mode,
         selection_policy=selection_policy,
-        issues=issues,
+        tasks=tasks,
         fixture_path=fixture_path,
         seed_id=seed_id,
         summary=summary,
@@ -430,9 +478,10 @@ def _validate_scenario_contract(
             "scenario class."
         )
 
-    if feature_size == "large" and automation_lane == "ci":
+    if feature_size in {"large", "xlarge"} and automation_lane == "ci":
         raise ScenarioManifestError(
-            "Scenario manifests with `feature_size: large` cannot use `automation_lane: ci`."
+            "Scenario manifests with `feature_size: large` or `feature_size: xlarge` "
+            "cannot use `automation_lane: ci`."
         )
 
     if is_live:
@@ -449,9 +498,9 @@ def _validate_scenario_contract(
             raise ScenarioManifestError(
                 f"Live scenario manifest missing required key: feature_source ({path.as_posix()})."
             )
-        if feature_source.mode != "curated-issue-pool":
+        if feature_source.mode != "authored-task-pool":
             raise ScenarioManifestError(
-                "Live scenario manifests must use `feature_source.mode: curated-issue-pool`."
+                "Live scenario manifests must use `feature_source.mode: authored-task-pool`."
             )
         if quality is None:
             raise ScenarioManifestError(
@@ -465,6 +514,17 @@ def _validate_scenario_contract(
                 f"`interview.required` must be {expected_value} for "
                 f"`scenario_class: {scenario_class}`."
             )
+        for index, task in enumerate(feature_source.tasks):
+            if expects_interview and not task.interview:
+                raise ScenarioManifestError(
+                    "Live interview scenario authored tasks must include "
+                    f"`feature_source.tasks[{index}].interview` guidance."
+                )
+            if not expects_interview and task.interview:
+                raise ScenarioManifestError(
+                    "Non-interview live scenario authored tasks must not declare "
+                    f"`feature_source.tasks[{index}].interview`."
+                )
         return
 
     if feature_source is None:

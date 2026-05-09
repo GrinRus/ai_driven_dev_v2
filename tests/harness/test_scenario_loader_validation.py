@@ -185,13 +185,21 @@ verify:
   commands:
     - echo verify
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-    - id: 1
-      title: Example issue
-      url: https://github.com/example/repo/issues/1
+  tasks:
+    - id: TASK-1
+      title: Example task
       summary: Example summary
+      intent: Exercise validation.
+      target_change: Change test fixture behavior.
+      expected_scope: Test fixture only.
+      acceptance_criteria:
+        - Fixture criteria pass.
+      verification:
+        - echo verify
+      quality_bar: Test quality bar.
+      size_rationale: Small test fixture.
 quality:
   commands:
     - echo quality
@@ -235,13 +243,21 @@ verify:
   commands:
     - echo verify
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-    - id: 1
-      title: Example issue
-      url: https://github.com/example/repo/issues/1
+  tasks:
+    - id: TASK-1
+      title: Example task
       summary: Example summary
+      intent: Exercise validation.
+      target_change: Change test fixture behavior.
+      expected_scope: Test fixture only.
+      acceptance_criteria:
+        - Fixture criteria pass.
+      verification:
+        - echo verify
+      quality_bar: Test quality bar.
+      size_rationale: Small test fixture.
 quality:
   commands:
     - echo quality
@@ -284,13 +300,21 @@ verify:
   commands:
     - echo verify
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-    - id: 1
-      title: Example issue
-      url: https://github.com/example/repo/issues/1
+  tasks:
+    - id: TASK-1
+      title: Example task
       summary: Example summary
+      intent: Exercise validation.
+      target_change: Change test fixture behavior.
+      expected_scope: Test fixture only.
+      acceptance_criteria:
+        - Fixture criteria pass.
+      verification:
+        - echo verify
+      quality_bar: Test quality bar.
+      size_rationale: Small test fixture.
 quality:
   commands:
     - echo quality
@@ -369,13 +393,21 @@ verify:
   commands:
     - echo verify
 feature_source:
-  mode: curated-issue-pool
+  mode: authored-task-pool
   selection_policy: first-listed
-  issues:
-    - id: 1
-      title: Example issue
-      url: https://github.com/example/repo/issues/1
+  tasks:
+    - id: TASK-1
+      title: Example task
       summary: Example summary
+      intent: Exercise validation.
+      target_change: Change test fixture behavior.
+      expected_scope: Test fixture only.
+      acceptance_criteria:
+        - Fixture criteria pass.
+      verification:
+        - echo verify
+      quality_bar: Test quality bar.
+      size_rationale: Small test fixture.
 stage_scope:
   start: plan
   end: tasklist
@@ -389,7 +421,7 @@ runtime_targets:
         load_scenario(manifest)
 
 
-def test_load_scenario_rejects_live_manifest_without_curated_issue_pool(tmp_path: Path) -> None:
+def test_load_scenario_rejects_live_manifest_without_authored_task_pool(tmp_path: Path) -> None:
     live_root = tmp_path / "harness" / "scenarios" / "live"
     live_root.mkdir(parents=True)
     manifest = _write_manifest(
@@ -433,7 +465,66 @@ runtime_targets:
         + "\n",
     )
 
-    with pytest.raises(ScenarioManifestError, match="curated-issue-pool"):
+    with pytest.raises(ScenarioManifestError, match="authored-task-pool"):
+        load_scenario(manifest)
+
+
+def test_load_scenario_rejects_authored_task_missing_required_fields(
+    tmp_path: Path,
+) -> None:
+    live_root = tmp_path / "harness" / "scenarios" / "live"
+    live_root.mkdir(parents=True)
+    manifest = _write_manifest(
+        live_root / "scenario.yaml",
+        """
+id: AIDD-LIVE-TEST-006
+scenario_class: live-full-flow
+feature_size: tiny
+automation_lane: manual
+canonical_runtime: generic-cli
+task: Exercise authored task validation
+repo:
+  url: https://github.com/example/repo
+setup:
+  commands:
+    - echo setup
+verify:
+  commands:
+    - echo verify
+feature_source:
+  mode: authored-task-pool
+  selection_policy: first-listed
+  tasks:
+    - id: TASK-1
+      title: Example task
+      summary: Example summary
+      intent: Exercise validation.
+      target_change: Change test fixture behavior.
+      expected_scope: Test fixture only.
+      acceptance_criteria:
+        - Fixture criteria pass.
+      verification:
+        - echo verify
+      size_rationale: Tiny test fixture.
+quality:
+  commands:
+    - echo quality
+  rubric_profile: live-full
+  require_review_status: approved
+  allowed_qa_verdicts:
+    - ready
+    - ready-with-risks
+  code_review_required: true
+stage_scope:
+  start: idea
+  end: qa
+runtime_targets:
+  - generic-cli
+""".strip()
+        + "\n",
+    )
+
+    with pytest.raises(ScenarioManifestError, match="quality_bar"):
         load_scenario(manifest)
 
 

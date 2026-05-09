@@ -101,6 +101,6 @@ The smoke path covers:
 ## Out Of Scope
 
 - `aidd init --github-issue <url>` is not part of this lane.
-- Public-repository issue selection belongs to live E2E manifests under
+- Public-repository authored task selection belongs to live E2E manifests under
   `harness/scenarios/live/`.
 - Provider readiness panels are covered separately by the runtime readiness slice.

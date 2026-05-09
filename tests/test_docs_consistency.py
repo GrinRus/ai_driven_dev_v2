@@ -314,7 +314,7 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
             "harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
             "--runtime codex"
         ),
-        "first listed issue",
+        "first listed authored task",
         "`idea -> qa`",
         "`.aidd/reports/evals/<run_id>/`",
         "does **not** provision runtime authentication, wrapper scripts, or provider setup",

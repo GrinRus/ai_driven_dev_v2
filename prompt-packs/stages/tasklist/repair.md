@@ -53,6 +53,12 @@ Use concrete repair actions:
 - stage/validator drift: align blocker list, terminal status, and next actions with validator
   outcome.
 
+## Targeted repair discipline
+
+- Fix only the sections named by validator findings unless cross-document consistency requires a narrow companion edit.
+- Preserve valid sections and stable ids; do not rewrite complete documents just to satisfy one failed heading.
+- Re-copy the `stage-result.md` and `validator-report.md` skeleton headings from `stage-brief.md` or the document contracts when a common output is malformed.
+
 ## Repair rules
 
 1. Preserve valid tasks; do not rewrite unaffected sections.

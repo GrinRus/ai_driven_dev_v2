@@ -55,6 +55,12 @@ Use concrete repair actions:
 - contradiction in review context: keep/add a blocking question instead of forcing approval;
 - cross-document drift: align `stage-result.md` blockers/next actions with validator/report outcome.
 
+## Targeted repair discipline
+
+- Fix only the sections named by validator findings unless cross-document consistency requires a narrow companion edit.
+- Preserve valid sections and stable ids; do not rewrite complete documents just to satisfy one failed heading.
+- Re-copy the `stage-result.md` and `validator-report.md` skeleton headings from `stage-brief.md` or the document contracts when a common output is malformed.
+
 ## Repair rules
 
 1. Preserve valid findings and recommendations; do not rewrite unaffected sections.
