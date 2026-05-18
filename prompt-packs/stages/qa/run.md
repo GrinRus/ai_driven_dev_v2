@@ -21,6 +21,7 @@ The stage is complete only when verdict, recommendation, and evidence are cohere
   - `../review/output/review-report.md`
   - `../review/output/stage-result.md`
   - `../review/output/validator-report.md`
+  - `context/selected-task.md`
   - `context/verification-output.md`
   - `context/verification-artifacts.md`
 - optional context when available:
@@ -57,11 +58,17 @@ normalize if canonical validation proves the terminal status inconsistent.
 3. Every material verdict/recommendation claim must point to concrete verification evidence.
 4. Residual risks must include severity and explicit mitigation/ownership notes.
 5. Blocking uncertainty must become a `[blocking]` question with release recommendation `hold`.
+6. The selected task and `context/verification-output.md` define the authored verification
+   boundary. Do not downgrade to `ready-with-risks` or `proceed-with-conditions` only because
+   optional broader checks outside that boundary were not run or were blocked by local sandbox
+   policy, unless they reveal a concrete defect or contradict acceptance criteria/review evidence.
 
 ## Execution instructions
 
 1. Read all required upstream artifacts and `contracts/stages/qa.md` before drafting outputs.
 2. Verify upstream `review` outcome is not `rejected` and is consistent with implementation status.
+   Read `context/selected-task.md` and use its expected scope, quality bar, and acceptance context
+   to separate required scenario evidence from optional exploratory checks.
 3. Build `qa-report.md` with these exact H2 sections:
    `Verification summary`, `Release recommendation`, `Evidence`, `Known issues`, and `Readiness`.
 4. In `Release recommendation`, put exactly one supported state on its own bullet:
@@ -76,7 +83,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 8. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
 9. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
    instead of inventing assumptions.
-10. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
+10. Keep optional broader-check limitations as non-blocking notes when authored verification,
+   review, and acceptance criteria are clean.
+11. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
 
 ## Common output skeleton discipline
 
@@ -92,4 +101,6 @@ normalize if canonical validation proves the terminal status inconsistent.
 - release recommendation is actionable and consistent with verdict,
 - material claims reference concrete verification evidence,
 - unresolved critical uncertainty is surfaced as blocking question with `hold`,
+- optional checks outside the authored verification boundary are not treated as release
+  conditions unless they expose a concrete defect,
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.

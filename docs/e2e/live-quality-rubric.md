@@ -67,6 +67,8 @@ What it measures:
 - the resulting change remains bounded and reviewable.
 - implementation size is plausible for the authored task's declared scope.
 - documentation examples avoid placeholder or non-runnable endpoints presented as runnable.
+- optional broader checks outside the authored task's verification boundary do not become
+  release conditions unless they expose a concrete defect or contradict acceptance criteria.
 
 Interpretation:
 

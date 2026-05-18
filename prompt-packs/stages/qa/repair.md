@@ -14,7 +14,9 @@ verdict/recommendation coherence, and truthful stage status.
    `contracts/documents/validator-report.md`,
    `contracts/documents/stage-result.md`
 5. `contracts/documents/questions.md` and `contracts/documents/answers.md`
-6. current outputs:
+6. stage input bundle for this attempt, especially `context/selected-task.md`,
+   `context/verification-output.md`, and `context/verification-artifacts.md`
+7. current outputs:
    - `qa-report.md`
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
@@ -55,6 +57,9 @@ Use concrete repair actions:
   critical-check availability;
 - risk gaps: add residual risk entries with severity plus mitigation/ownership; keep
   `Known issues: none.` only as an empty known-defect marker, not as a residual risk item;
+- optional-check overreach: if authored verification, acceptance criteria, and review are clean,
+  do not turn a non-required broader check into `ready-with-risks` or
+  `proceed-with-conditions` unless it reveals a concrete defect;
 - status drift: align validator verdict, stage status, blockers, and next actions.
 
 ## Targeted repair discipline
@@ -70,13 +75,15 @@ Use concrete repair actions:
 3. Use only allowed recommendation values: `proceed`, `proceed-with-conditions`, `hold`.
    Put the selected value in a dedicated `## Release recommendation` section.
 4. Keep blocking uncertainty explicit via `[blocking]` questions and `hold` recommendation.
-5. Keep `stage-result.md` attempt status truthful for the current repair attempt.
-6. Use exact required headings from document contracts; do not rename or qualify headings.
-7. Read the repair budget section in `repair-brief.md` before declaring terminal status.
-8. If `repair-brief.md` says `repair-budget-final-attempt` or `Rerun allowed after this attempt: no`, still repair the listed findings and set `stage-result.md` status from the actual repaired output state; do not fail solely because no later rerun is available.
-9. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
-10. Do not claim success unless required headings, validator verdict, stage-result status, QA verdict, and verification evidence are mutually consistent.
-11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+5. Keep optional broader-check limitations as non-blocking notes when authored verification,
+   review, and acceptance criteria are clean.
+6. Keep `stage-result.md` attempt status truthful for the current repair attempt.
+7. Use exact required headings from document contracts; do not rename or qualify headings.
+8. Read the repair budget section in `repair-brief.md` before declaring terminal status.
+9. If `repair-brief.md` says `repair-budget-final-attempt` or `Rerun allowed after this attempt: no`, still repair the listed findings and set `stage-result.md` status from the actual repaired output state; do not fail solely because no later rerun is available.
+10. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
+11. Do not claim success unless required headings, validator verdict, stage-result status, QA verdict, and verification evidence are mutually consistent.
+12. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
 
 ## Repair exit checks
 
@@ -85,6 +92,8 @@ Use concrete repair actions:
 - residual risks include severity plus mitigation/ownership where needed,
 - empty known-issue markers such as `Known issues: none.` are not the only risk evidence when
   the report also declares residual risk,
+- optional checks outside the authored verification boundary are not treated as release
+  conditions unless they expose a concrete defect,
 - no evidence-free material claim remains,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

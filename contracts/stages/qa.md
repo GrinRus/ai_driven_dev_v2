@@ -27,6 +27,7 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `../review/output/review-report.md`
 - `../review/output/stage-result.md`
 - `../review/output/validator-report.md`
+- `context/selected-task.md`
 - `context/verification-output.md`
 - `context/verification-artifacts.md`
 
@@ -43,6 +44,8 @@ Optional context documents may improve QA depth, but they must not replace imple
 - `qa` depends on artifacts from the latest completed `review` attempt.
 - `qa` must not declare `succeeded` when review status is unresolved or review decision is `rejected`.
 - `qa` must not declare `succeeded` when verification output or verification artifacts are missing.
+- `qa` must treat `context/selected-task.md` and `context/verification-output.md` as the
+  authored verification boundary for the selected task.
 
 ## QA output expectations
 
@@ -55,6 +58,9 @@ Optional context documents may improve QA depth, but they must not replace imple
 - `Known issues` may use an explicit empty marker such as `- Known issues: none.`;
   validators must not treat that marker as a residual risk entry. Any separate residual
   risk item must include explicit severity plus mitigation or ownership.
+- Optional exploratory checks outside the selected task's authored verification boundary
+  must not force `ready-with-risks` or `proceed-with-conditions` unless they reveal a
+  concrete defect, contradict acceptance criteria, or are required by review findings.
 - evidence entries must use stable ids in the `EV-1`, `EV-2`, ... style and/or backticked
   artifact paths so validators can trace claims mechanically.
 - `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.
