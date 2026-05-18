@@ -31,7 +31,9 @@ manifest with explicit acceptance criteria and verification intent.
   this proved the medium Codex full-flow budget was too small for the installed operator
   lane. The Typer full-suite verification also failed on the pinned baseline with current
   dependencies, so this lane now uses a 90-minute budget and focused boolean/help-rendering
-  verification in Rich/default and `TYPER_USE_RICH=0` modes.
+  verification in Rich/default and `TYPER_USE_RICH=0` modes. The authored task explicitly
+  covers false-only boolean declarations so quality review does not leave leading separator
+  behavior as a residual follow-up.
 - `AIDD-LIVE-008` is intentionally `xlarge`; router wildcard semantics are API-sensitive and
   should not be treated as an ordinary large feature.
 - Interview scenarios must keep top-level `interview.required: true` plus authored task

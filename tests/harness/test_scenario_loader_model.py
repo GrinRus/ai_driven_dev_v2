@@ -74,6 +74,13 @@ def test_typer_boolean_live_scenario_uses_extended_budget_and_focused_help_check
     assert scenario.feature_size == "medium"
     assert scenario.canonical_runtime == "codex"
     assert scenario.run.timeout_minutes == 90
+    task = scenario.feature_source.tasks[0]
+    assert "false-only boolean options" in task.target_change
+    assert any(
+        "False-only boolean declarations" in criterion
+        for criterion in task.acceptance_criteria
+    )
+    assert "false-only boolean CLI output" in task.quality_bar
     focused_help_pytest = (
         "uv run pytest -q tests/test_tutorial/test_parameter_types/test_bool "
         "tests/test_tutorial/test_options/test_help/test_tutorial003.py "
@@ -84,13 +91,13 @@ def test_typer_boolean_live_scenario_uses_extended_budget_and_focused_help_check
         "tests/test_tutorial/test_options/test_help/test_tutorial003.py "
         "tests/test_tutorial/test_options/test_help/test_tutorial004.py"
     )
-    assert scenario.feature_source.tasks[0].verification == (
+    assert task.verification == (
         focused_help_pytest,
         focused_help_pytest_no_rich,
         "test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/stage-result.md",
         "test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/validator-report.md",
     )
-    assert scenario.verify.commands == scenario.feature_source.tasks[0].verification
+    assert scenario.verify.commands == task.verification
     assert scenario.quality.commands == (
         focused_help_pytest,
         focused_help_pytest_no_rich,
