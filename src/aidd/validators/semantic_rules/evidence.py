@@ -6,8 +6,8 @@ IMPLEMENT_FILE_ENTRY_PATTERN = re.compile(r"`(?=[^`\n]*(?:/|\.))[^\n`]+`")
 IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"(\$ [^\n]+|\.venv/bin/[^\s`]+|\b("
     r"uv run|pytest|ruff|mypy|python -m|npm|pnpm|yarn|go test|cargo test|"
-    r"make|git|grep|echo|printf|flake8|black|ty check|sqlite-utils"
-    r")\b|`(?:insert|upsert|memory)\b[^`\n]*`)",
+    r"make|git|grep|rg|echo|printf|flake8|black|ty check|sqlite-utils"
+    r")\b|`test\s+[^`\n]+`|`(?:insert|upsert|memory)\b[^`\n]*`)",
     flags=re.IGNORECASE,
 )
 IMPLEMENT_RESULT_PATTERN = re.compile(

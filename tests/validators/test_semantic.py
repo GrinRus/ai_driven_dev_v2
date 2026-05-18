@@ -1924,6 +1924,45 @@ def test_validate_semantic_outputs_accepts_flat_live_verification_evidence(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_rg_verification_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-RG-EVIDENCE",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task id\n\n"
+            "- `TASK-123`, decomposed into tasklist item `TL-2`.\n\n"
+            "## Summary\n\n"
+            "Implemented the scoped task and used command readback to confirm "
+            "the repaired document shape and stage status.\n\n"
+            "## Touched files\n\n"
+            "- `src/example.py` - apply the selected scoped change.\n\n"
+            "## Verification\n\n"
+            "- Repair readback: `rg -n '^## (Summary|Verification)$|Status:' "
+            ".aidd/workitems/WI-123/stages/implement` -> exit code 0; "
+            "confirmed expected headings and status markers.\n"
+            "- Downstream artifact check: `test -f "
+            ".aidd/workitems/WI-123/stages/qa/output/stage-result.md` -> "
+            "exit code 1; expected because QA output is downstream of implement.\n\n"
+            "## Risks\n\n"
+            "- No residual risk remains for the selected task.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-RG-EVIDENCE",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_live_noop_blocker_evidence(
     tmp_path: Path,
 ) -> None:
