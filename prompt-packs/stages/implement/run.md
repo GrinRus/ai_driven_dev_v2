@@ -47,11 +47,13 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Implementation discipline
 
-1. Selected task id from `context/task-selection.md` must exist in upstream `tasklist.md`.
+1. Selected task id from `context/task-selection.md` must be explicit in the implementation
+   report. If upstream `tasklist.md` decomposes that selected task into local ids such as `T1` or
+   `TL-1`, use those local ids to structure touched-file and verification evidence where practical.
 2. `context/allowed-write-scope.md` is a hard boundary for touched files.
 3. `context/acceptance-criteria.md` and `context/verification-output.md` define the
    authored live acceptance and verification baseline for the implementation.
-4. Change summary must describe what changed, why it changed, and how it maps to selected task id.
+4. Change summary must describe what changed, why it changed, and how it maps to the selected task id.
 5. Touched-files list must include concrete path + short intent per entry and never claim unobserved edits.
 6. Verification notes must list actual checks run (or explicitly not run) with observed outcomes.
 7. No-op outcomes require explicit evidence-based justification plus next action; otherwise no-op is invalid.

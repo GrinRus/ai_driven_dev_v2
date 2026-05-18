@@ -71,7 +71,8 @@ Use concrete repair actions:
 ## Repair rules
 
 1. Preserve valid evidence-backed sections; do not rewrite unaffected parts.
-2. Keep selected task id and scope constraints explicit after every edit.
+2. Keep the selected task id from `context/task-selection.md`, any local tasklist ids used for
+   verification, and scope constraints explicit after every edit.
 3. Rework touched-files list and verification notes together whenever implementation claims change.
 4. Do not claim commands/checks that were not executed in this attempt; if
    `context/verification-output.md` lists authored or scenario verification commands, record each

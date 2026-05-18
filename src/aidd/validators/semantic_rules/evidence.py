@@ -45,7 +45,7 @@ IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN = re.compile(
     flags=re.IGNORECASE | re.DOTALL,
 )
 IMPLEMENT_DEFERRED_VERIFICATION_PATTERN = re.compile(
-    r"\b(?:not\s+(?:run|executed)|skipped|deferred|hand[- ]off)\b",
+    r"\b(?:not[-\s]+(?:run|executed)|skipped|deferred|hand[- ]off)\b",
     flags=re.IGNORECASE,
 )
 IMPLEMENT_COMPLETION_CLAIM_PATTERN = re.compile(

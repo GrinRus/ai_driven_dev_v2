@@ -41,7 +41,10 @@ Optional context documents may improve implementation quality, but they must not
 ## Upstream dependency rule
 
 - `implement` depends on artifacts from the latest completed `tasklist` attempt.
-- `implement` must not declare `succeeded` when selected task id is missing from `tasklist.md`.
+- `implement` must not declare `succeeded` when the selected task id from
+  `context/task-selection.md` is missing from the implementation report. When upstream
+  `tasklist.md` decomposes that selected task into local task ids such as `T1` or `TL-1`, the
+  report must trace implementation and verification evidence to those local ids where practical.
 - `implement` must not declare `succeeded` when edits exceed `context/allowed-write-scope.md` or the scope definition is missing.
 - `implement` must not declare `succeeded` when authored verification commands in
   `context/verification-output.md` were skipped without an explicit not-run reason.
@@ -49,7 +52,9 @@ Optional context documents may improve implementation quality, but they must not
 ## Implementation output expectations
 
 - `implementation-report.md` must include:
-  - an explicit change summary mapped to the selected task id,
+  - an explicit change summary mapped to the selected task id from `context/task-selection.md`,
+  - local tasklist ids such as `T1` or `TL-1` in verification notes when the upstream tasklist
+    uses them to structure implementation work,
   - a touched-files list with file path and short change intent per entry,
   - verification notes naming the primary checks executed and their outcomes,
   - explicit status for verification commands from `context/verification-output.md`

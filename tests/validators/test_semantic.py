@@ -1963,6 +1963,54 @@ def test_validate_semantic_outputs_accepts_rg_verification_evidence(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-LIVE-TASK-ID",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Work item: `WI-LIVE-TYPER-BOOLEAN`\n"
+            "- Stable selected task id: `TASK-LIVE-TYPER-BOOLEAN-HELP`\n"
+            "- Selected task title: boolean option help rendering\n\n"
+            "## Summary\n\n"
+            "Implemented the selected live task by changing the Rich help label "
+            "rendering and adding focused regression coverage for grouped "
+            "boolean option labels while preserving default details.\n\n"
+            "## Touched files\n\n"
+            "- `typer/rich_utils.py` - group boolean option labels when secondary flags exist.\n"
+            "- `tests/test_tutorial/test_parameter_types/test_bool/test_tutorial003.py` - add "
+            "Rich label and default preservation assertions.\n\n"
+            "## Verification\n\n"
+            "- Authored Rich-mode command `uv run pytest -q "
+            "tests/test_tutorial/test_parameter_types/test_bool` -> blocked before pytest: "
+            "`error: failed to open file /Users/example/.cache/uv/sdists-v9/.git: "
+            "Operation not permitted (os error 1)`.\n"
+            "- Sandbox-compatible Rich command `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q "
+            "tests/test_tutorial/test_parameter_types/test_bool` -> pass, `43 passed in 1.95s`.\n"
+            "- QA output existence check `test -f "
+            ".aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/stage-result.md` "
+            "-> not-run, targets a downstream QA-stage artifact that is not produced by "
+            "the implement stage.\n\n"
+            "## Risks\n\n"
+            "- No residual risk remains for the selected task.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-LIVE-TASK-ID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_live_noop_blocker_evidence(
     tmp_path: Path,
 ) -> None:
