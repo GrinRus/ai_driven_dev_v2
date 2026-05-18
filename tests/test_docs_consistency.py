@@ -224,15 +224,12 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     )
 
     assert (
-        "aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
+        "python -m aidd.harness.live_e2e_black_box "
+        "harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
         "--runtime codex"
         in readme
     )
-    assert (
-        "aidd eval run harness/scenarios/live/typer-styled-help-alignment.yaml "
-        "--runtime generic-cli"
-        not in readme
-    )
+    assert "typer-styled-help-alignment.yaml --runtime generic-cli" not in readme
     assert "AIDD-compatible wrapper command" in readme
     assert "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC" in readme
     assert "mode = \"native\"" in operator_handbook
@@ -310,10 +307,12 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "AIDD-compatible wrapper command",
         "aidd eval doctor",
         (
-            "uv run aidd eval run "
+            "uv run python -m aidd.harness.live_e2e_black_box "
             "harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
             "--runtime codex"
         ),
+        "plan step, execute through public operator surfaces, inspect artifacts",
+        "frontend-checkpoints.json",
         "first listed authored task",
         "`idea -> qa`",
         "`.aidd/reports/evals/<run_id>/`",
@@ -322,3 +321,23 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         assert needle in live_e2e_skill
 
     assert "For **local live-run operator guidance**, prefer `live-e2e`." in aidd_eval_skill
+
+
+def test_docs_do_not_reference_removed_eval_run_command() -> None:
+    searched_roots = [
+        _repo_root() / "README.md",
+        _repo_root() / "docs",
+        _repo_root() / ".agents" / "skills",
+        _repo_root() / ".github" / "workflows",
+    ]
+    offenders: list[str] = []
+    for root in searched_roots:
+        paths = [root] if root.is_file() else list(root.rglob("*"))
+        for path in paths:
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8")
+            if "aidd eval run" in text:
+                offenders.append(path.relative_to(_repo_root()).as_posix())
+
+    assert offenders == []

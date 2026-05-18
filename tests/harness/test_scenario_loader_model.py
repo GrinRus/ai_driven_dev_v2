@@ -23,6 +23,11 @@ def _assert_live_contract(scenario) -> None:
     assert scenario.quality.code_review_required is True
     assert "ready" in scenario.quality.allowed_qa_verdicts
     assert "ready-with-risks" in scenario.quality.allowed_qa_verdicts
+    assert scenario.live_flow is not None
+    assert scenario.live_flow.driver == "stepwise-black-box"
+    assert scenario.live_flow.checkpoint_policy == "after-each-step"
+    assert scenario.live_flow.answer_policy in {"none", "agent-decides"}
+    assert scenario.live_flow.frontend_checkpoints is True
 
 
 def test_live_scenario_exposes_full_flow_repo_steps_and_quality_contract() -> None:
@@ -161,6 +166,8 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
     assert scenario.feature_size == "large"
     assert scenario.canonical_runtime == "opencode"
     assert scenario.run.interview_required is True
+    assert scenario.live_flow is not None
+    assert scenario.live_flow.answer_policy == "agent-decides"
     assert scenario.raw["interview"]["must_ask_at_least_one"] is True
     assert scenario.quality.require_review_status == "approved-with-conditions"
     assert scenario.feature_source.tasks[0].task_id == "TASK-LIVE-SQLITE-YIELDED-ROWS"
@@ -192,6 +199,8 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
     assert scenario.feature_size == "xlarge"
     assert scenario.canonical_runtime == "opencode"
     assert scenario.run.interview_required is True
+    assert scenario.live_flow is not None
+    assert scenario.live_flow.answer_policy == "agent-decides"
     assert scenario.feature_source.tasks[0].task_id == "TASK-LIVE-HONO-ROUTER-DOUBLE-STAR"
     assert scenario.feature_source.tasks[0].interview
     assert scenario.quality.require_review_status == "approved-with-conditions"

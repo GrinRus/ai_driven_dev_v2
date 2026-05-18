@@ -44,6 +44,7 @@ def _scenario() -> Scenario:
         verify=ScenarioCommandSteps(commands=("echo verify",)),
         feature_source=None,
         quality=None,
+        live_flow=None,
         runtime_targets=("claude-code",),
         is_live=True,
         raw={"id": "AIDD-TEST-STAGE-TIMING"},

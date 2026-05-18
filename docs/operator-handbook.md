@@ -24,8 +24,12 @@ Today:
 - `aidd init` is functional and can seed first-stage intake context from `--request` or `--request-file`;
 - `aidd run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`;
 - `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`;
-- `aidd eval run` executes setup/run/verify/teardown lifecycle and writes a result bundle;
-- live scenarios under `harness/scenarios/live/` are a manual external-audit lane: they prepare a pinned public-repository working copy, install a local AIDD wheel via `uv tool`, and run installed `aidd` from the target repository root.
+- `python -m aidd.harness.live_e2e_black_box` executes the manual black-box
+  live E2E evaluator and writes a result bundle;
+- live scenarios under `harness/scenarios/live/` are a manual external-audit lane:
+  they prepare a pinned public-repository working copy, install a local AIDD wheel via
+  `uv tool`, and drive installed `aidd` from the target repository root through public
+  stage and inspection commands.
 
 Smoke, conformance, and live operator proof are separate lanes. Do not treat them as interchangeable.
 
@@ -217,8 +221,11 @@ Expected behavior in the current local implementation:
   launching a workflow; the UI does not silently default to `generic-cli`;
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
 - `generic-cli` is an advanced wrapper/test lane, not the default product onboarding runtime;
-- `aidd eval run` executes the harness lifecycle and prints status, run id, and bundle paths;
-- live `aidd eval run` is a manual external audit that installs a local wheel with `uv tool`, enters the pinned target repository, and keeps `.aidd/` inside that repository.
+- `python -m aidd.harness.live_e2e_black_box` executes the black-box evaluator
+  lifecycle and prints status, run id, and bundle paths;
+- live black-box E2E is a manual external audit that installs a local wheel with
+  `uv tool`, enters the pinned target repository, and keeps `.aidd/` inside that
+  repository while invoking only public AIDD CLI surfaces.
 - live eval bundles include `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`,
   and `self-repair-matrix.md` for per-step duration, deterministic repair-probe coverage,
   and terminal document consistency audit.
@@ -227,7 +234,7 @@ Expected behavior in the current local implementation:
 - the GitHub `manual-live-e2e` workflow uses native provider commands by default and forwards
   runtime-command secrets only when an adapter-compatible wrapper override is needed.
 - published-package live evals use `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`, for example
-  `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a2" aidd eval run ...`;
+  `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a2" python -m aidd.harness.live_e2e_black_box ...`;
   local-wheel live evals require the scenario manifest to live in, or be run from, an
   AIDD source checkout.
 

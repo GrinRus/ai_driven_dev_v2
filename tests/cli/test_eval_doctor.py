@@ -25,6 +25,12 @@ def _write_live_scenario(path: Path) -> None:
         "verify": {"commands": ["true"]},
         "stage_scope": {"start": "idea", "end": "qa"},
         "runtime_targets": ["codex"],
+        "live_flow": {
+            "driver": "stepwise-black-box",
+            "checkpoint_policy": "after-each-step",
+            "answer_policy": "none",
+            "frontend_checkpoints": True,
+        },
         "interview": {"required": False},
         "feature_source": {
             "mode": "authored-task-pool",

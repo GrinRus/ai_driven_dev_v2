@@ -42,6 +42,16 @@ def test_live_scenarios_are_manual_only() -> None:
                 "live-full-flow",
                 "live-full-flow-interview",
             }, path.as_posix()
+            assert scenario.live_flow is not None, path.as_posix()
+            assert scenario.live_flow.driver == "stepwise-black-box", path.as_posix()
+            assert scenario.live_flow.checkpoint_policy == "after-each-step", path.as_posix()
+            assert scenario.live_flow.frontend_checkpoints is True, path.as_posix()
+            expected_answer_policy = (
+                "agent-decides"
+                if scenario.scenario_class == "live-full-flow-interview"
+                else "none"
+            )
+            assert scenario.live_flow.answer_policy == expected_answer_policy, path.as_posix()
 
 
 def test_live_scenarios_do_not_mask_setup_or_pytest_failures_with_shell_fallbacks() -> None:
@@ -223,6 +233,7 @@ def test_manual_live_workflow_dispatch_is_manual_only() -> None:
     run_blocks = "\n".join(step.get("run", "") for step in steps if isinstance(step, dict))
     assert "harness/scenarios/live" in run_blocks
     assert 'scenario.automation_lane != "manual"' in run_blocks
-    assert "uv run aidd eval run \"$SCENARIO_PATH\" --runtime" in run_blocks
+    assert "uv run python -m aidd.harness.live_e2e_black_box" in run_blocks
+    assert "aidd eval run" not in run_blocks
     assert "validate_live_runtime_command" in run_blocks
     assert "Validated runtime readiness" in run_blocks

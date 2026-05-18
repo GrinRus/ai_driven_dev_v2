@@ -90,3 +90,8 @@ runtime_targets:
 - codex
 - opencode
 - claude-code
+live_flow:
+  driver: stepwise-black-box
+  checkpoint_policy: after-each-step
+  answer_policy: none
+  frontend_checkpoints: true

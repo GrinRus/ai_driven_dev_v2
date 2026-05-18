@@ -107,26 +107,26 @@ export AIDD_EVAL_PUBLISHED_PACKAGE_SPEC='ai-driven-dev-v2==0.1.0a2'
 The primary execution path for this skill is a local run from the AIDD source checkout:
 
 ```bash
-uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
+uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
 ```
 
 or:
 
 ```bash
-uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode
+uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode
 ```
 
 or:
 
 ```bash
-uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime claude-code
+uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime claude-code
 ```
 
 The GitHub `manual-live-e2e` workflow is a secondary alternate entrypoint, not the primary flow described by this skill.
 
 ## What the harness will do
 
-During a successful local live run, the harness will:
+During a successful local live run, the evaluator will:
 
 1. load the selected scenario and validate the live-lane contract;
 2. resolve and record the pinned target repository commit;
@@ -137,8 +137,10 @@ During a successful local live run, the harness will:
 7. write a live `aidd.example.toml` with the runtime command and execution mode for the chosen provider;
 8. build and install the local AIDD source wheel with `uv tool`, or install the
    package specified by `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`;
-9. run installed `aidd` from the target repository root with explicit workflow bounds `idea -> qa`;
-10. run setup, verify, and quality commands and write the final audit artifacts.
+9. plan step, execute through public operator surfaces, inspect artifacts/UI/API/logs,
+   classify, and decide the next step for every stage from `idea -> qa`;
+10. run setup, verify, quality, and teardown commands and write final audit artifacts
+    from the recorded step evidence.
 
 ## Validations and blockers
 
@@ -176,6 +178,12 @@ The canonical eval bundle for a local live run lives under:
 
 Expected live artifacts include:
 
+- `flow-state.json`
+- `flow-steps.json`
+- `flow-report.md`
+- `operator-actions.jsonl`
+- `frontend-checkpoints.json`
+- `frontend-checkpoints.md`
 - `feature-selection.json`
 - `install-transcript.json`
 - `runtime.log`
@@ -204,7 +212,7 @@ A live run is only "clean" when execution evidence exists, verification output i
 1. Confirm the selected scenario is in `harness/scenarios/live/`, has `automation_lane: manual`, and declares the requested runtime in `runtime_targets`.
 2. Run the local preflight checks from this skill, including `aidd eval doctor`.
 3. Export a wrapper env var only when you intentionally want `adapter-flags` mode.
-4. Launch `uv run aidd eval run <manifest> --runtime <runtime>`.
+4. Launch `uv run python -m aidd.harness.live_e2e_black_box <manifest> --runtime <runtime>`.
 5. Preserve the resulting bundle and inspect `verdict.md`, `grader.json`, `quality-report.md`, and transcripts before judging the run.
 6. If the setup, provider coverage, size classification, quality recipe, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
 

@@ -5,6 +5,7 @@ from pathlib import Path
 from aidd.harness.scenarios import (
     Scenario,
     ScenarioCommandSteps,
+    ScenarioLiveFlowConfig,
     ScenarioManifestError,
     ScenarioRepoSource,
     ScenarioRunConfig,
@@ -15,6 +16,7 @@ __all__ = [
     "Path",
     "Scenario",
     "ScenarioCommandSteps",
+    "ScenarioLiveFlowConfig",
     "ScenarioManifestError",
     "ScenarioRepoSource",
     "ScenarioRunConfig",

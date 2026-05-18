@@ -35,7 +35,7 @@
 ## Implementation-ready next steps
 
 1. **`Wave 15 -> external evidence lanes -> fresh manual live evidence -> W15-E3-S1-T1`**
-   Export a valid `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND`, confirm provider auth, then run `uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime <runtime>`.
+   Export a valid `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND`, confirm provider auth, then run `uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime <runtime>`.
 
 2. **`Wave 15 -> external evidence lanes -> release-channel evidence capture -> W15-E3-S2-T1`**
    Create a release candidate tag matching `pyproject.toml`, run the release workflow, and preserve `verify-pypi-install`, `verify-uv-tool-install`, and `verify-ghcr-install` logs.

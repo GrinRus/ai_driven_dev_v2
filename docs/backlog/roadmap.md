@@ -3742,11 +3742,11 @@ Goal: split scenario evaluation into preparation, execution, classification, and
 
 Primary outputs:
 
-- typed phase helpers for `run_eval_scenario`
+- typed phase helpers for the legacy scenario evaluator
 
 Touched areas:
 
-- `src/aidd/harness/eval_runner.py`
+- legacy harness evaluator module
 
 Dependencies:
 
@@ -3758,7 +3758,7 @@ Local tasks:
 
 Exit evidence:
 
-- `tests/harness/test_eval_runner.py` passes.
+- legacy harness evaluator tests pass.
 
 #### Slice W16-E4-S2 — eval renderer cleanup (`done`)
 Goal: simplify stage timing and live quality rendering helpers without changing output shape.
@@ -4119,7 +4119,7 @@ Exit evidence:
 - harness eval-runner tests pass.
 
 #### Slice W17-E4-S3 — eval runner phase modules (`done`)
-Goal: keep `run_eval_scenario(...)` and result bundle shape stable while moving preparation, execution, classification, source-artifact rendering, report persistence, and grader payload construction into focused internal modules.
+Goal: keep the legacy evaluator result bundle shape stable while moving preparation, execution, classification, source-artifact rendering, report persistence, and grader payload construction into focused internal modules.
 
 Primary outputs:
 
@@ -4140,7 +4140,7 @@ Dependencies:
 
 Local tasks:
 
-- `W17-E4-S3-T1` (done) Decompose `harness/eval_runner.py` into phase modules while preserving `run_eval_scenario(...)` behavior and artifact layout.
+- `W17-E4-S3-T1` (done) Decompose the legacy harness evaluator into phase modules while preserving behavior and artifact layout.
 
 Exit evidence:
 
@@ -4557,7 +4557,7 @@ Local tasks:
 Evidence:
 
 - `2026-05-04` Triage inspected `.aidd/reports/evals/eval-live-005-opencode-20260504T121644Z` and found an AIDD-owned OpenCode native command assembly defect: the operator message followed `--file`, and the current `opencode run` parser treated `Follow the attached AIDD stage request.` as a second file path.
-- `2026-05-04` Reproduction command remains `uv run aidd eval run harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode`; the failing bundle records `adapter` / `non_zero_exit` at `idea`.
+- `2026-05-04` Reproduction used the then-current live evaluator command for `harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode`; the failing bundle records `adapter` / `non_zero_exit` at `idea`.
 - `2026-05-04` The Codex run `eval-live-005-codex-20260504T120734Z` still has only partial issue-selection evidence and is not a clean audit.
 - `2026-05-04` OpenCode preflight passed for `AIDD-LIVE-005` after the native command fix: `/opt/homebrew/bin/opencode`, version `1.4.10`, native execution command `opencode run --format json --dangerously-skip-permissions`.
 - `2026-05-04` Fresh rerun `eval-live-005-opencode-20260504T130401Z` failed at validation, not adapter launch: runtime exited successfully through `idea`, `research`, and `plan` attempts, but `plan` attempt 3 ended `failed` with `INTERVIEW-MALFORMED-DOCUMENT` in `answers.md`.
@@ -5469,8 +5469,8 @@ Evidence:
 - `src/aidd/cli/ui_assets.py` and `src/aidd/cli/ui_http.py` split UI assets and HTTP helpers away from `OperatorUiService`.
 - `src/aidd/core/run_provenance.py` removes provenance collection from `run_store` while preserving run manifest and artifact paths.
 - `src/aidd/harness/eval_report_writers.py` owns eval source artifact writes behind the existing `write_source_artifacts` compatibility function.
-- `src/aidd/harness/eval_runner_compat.py` owns legacy module patch helpers used by `run_eval_scenario`.
-- Focused checks passed: `uv run --extra dev pytest -q tests/cli/test_ui.py tests/core/test_operator_frontend.py tests/core/test_run_store_layout.py tests/adapters/test_surface.py tests/adapters/test_runtime_events.py tests/adapters/test_claude_code_runner.py tests/harness/test_eval_runner.py tests/harness/test_result_bundle_persistence.py tests/validators/test_cross_document.py`.
+- The legacy evaluator compatibility module owned module patch helpers before the black-box live E2E replacement.
+- Focused checks passed: `uv run --extra dev pytest -q tests/cli/test_ui.py tests/core/test_operator_frontend.py tests/core/test_run_store_layout.py tests/adapters/test_surface.py tests/adapters/test_runtime_events.py tests/adapters/test_claude_code_runner.py tests/harness/test_result_bundle_persistence.py tests/validators/test_cross_document.py`.
 
 ## Wave 22 — backlog blocker reconciliation and delivery loop (`done`)
 
@@ -5525,3 +5525,65 @@ Exit evidence:
 - no active backlog queue entries remain;
 - no roadmap local task remains in a non-done status;
 - external live/release evidence remains conditional for future audits, not a hidden code defect.
+
+## Wave 23 — black-box live E2E evaluator (`done`)
+
+Goal: replace report-first live E2E execution with a stepwise black-box evaluator
+that drives installed AIDD through public operator surfaces and removes the legacy
+product `eval run` command without backward compatibility.
+
+### Epic W23-E1 — live E2E black-box execution (`done`)
+Linked stories: `US-07`, `US-10`, `US-11`
+
+#### Slice W23-E1-S1 — evaluator replacement and legacy removal (`done`)
+Goal: make manual live E2E plan, execute, inspect, classify, and decide after each
+flow step while deleting the legacy monolithic eval-run path.
+
+Primary outputs:
+
+- black-box live E2E evaluator module
+- persisted `flow-state.json`, `flow-steps.json`, `flow-report.md`, and
+  `operator-actions.jsonl`
+- operator action request artifacts for blocking questions
+- live manifest `live_flow` contract
+- manual workflow and local skill entrypoint using the evaluator module
+- removed product eval-run command and legacy runner compatibility path
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `src/aidd/harness/`
+- `harness/scenarios/live/`
+- `.github/workflows/manual-live-e2e.yml`
+- `.agents/skills/`
+- `docs/`
+- `tests/`
+
+Local tasks:
+
+- `W23-E1-S1-T1` (done) Replace legacy live eval-run execution with the black-box
+  live E2E evaluator and remove backward-compatible eval-run surfaces.
+
+Evidence:
+
+- `src/aidd/harness/live_e2e_black_box.py` drives installed AIDD through
+  `aidd stage run`, `aidd stage summary`, `aidd stage questions`, `aidd run show`,
+  `aidd run logs`, and `aidd run artifacts`.
+- `src/aidd/cli/main.py` no longer registers the legacy eval-run command; `aidd eval doctor`
+  and `aidd eval summary` remain read-only support surfaces.
+- Legacy eval runner, execution, classification, and compatibility
+  patch modules were removed.
+- Live manifests now declare `live_flow.driver: stepwise-black-box`,
+  `checkpoint_policy: after-each-step`, and explicit answer policy.
+- `.github/workflows/manual-live-e2e.yml` invokes
+  `uv run python -m aidd.harness.live_e2e_black_box`.
+- Focused and full local gates passed on 2026-05-18:
+  `uv run --extra dev ruff check .`,
+  `uv run --extra dev python -m mypy src`,
+  and `uv run --extra dev pytest -q` (`782 passed`).
+
+Exit evidence:
+
+- no live docs, skills, or manual workflow instruct operators to run the legacy eval-run command;
+- live E2E remains manual-only and outside CI/release gates;
+- final audit artifacts are derived from per-step black-box evidence.

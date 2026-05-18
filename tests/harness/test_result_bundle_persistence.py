@@ -48,6 +48,7 @@ def _build_scenario() -> Scenario:
         verify=ScenarioCommandSteps(commands=("echo verify",)),
         feature_source=None,
         quality=None,
+        live_flow=None,
         runtime_targets=("generic-cli",),
         is_live=False,
         raw={"id": "AIDD-TEST-BUNDLE-PERSISTENCE"},

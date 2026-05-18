@@ -125,3 +125,8 @@ interview:
     - Keep compatibility and documentation commitments in the same answers file.
 runtime_targets:
 - opencode
+live_flow:
+  driver: stepwise-black-box
+  checkpoint_policy: after-each-step
+  answer_policy: agent-decides
+  frontend_checkpoints: true

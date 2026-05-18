@@ -49,6 +49,7 @@ def _build_scenario(
         verify=ScenarioCommandSteps(commands=verify_commands),
         feature_source=None,
         quality=None,
+        live_flow=None,
         runtime_targets=("generic-cli",),
         is_live=False,
         raw={"id": "AIDD-TEST-RUNNER-INTEGRATION"},

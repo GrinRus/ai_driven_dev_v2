@@ -54,18 +54,23 @@ operators initialize work items from the target project root with
 ## Manual-Only Automation Policy
 
 - `automation_lane` for every live scenario is `manual`.
-- The only supported automation entrypoint is `.github/workflows/manual-live-e2e.yml`.
+- The only supported automation entrypoint is `.github/workflows/manual-live-e2e.yml`,
+  which invokes the black-box evaluator module instead of a product CLI command.
 - That workflow supports optional GitHub secret overrides for custom wrapper
   commands:
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`
   - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
-- When no override is set, the harness validates the default native provider
+- When no override is set, the evaluator validates the default native provider
   command on the runner before cloning or installing artifacts.
 - Secret override values must point to runner-available wrapper commands that
   accept the AIDD adapter contract flags.
 - CI must not reference `harness/scenarios/live/`.
 - Release automation must not run live scenarios or require live-eval artifacts.
+- Live manifests must declare `live_flow.driver: stepwise-black-box`,
+  `live_flow.checkpoint_policy: after-each-step`, and
+  `live_flow.frontend_checkpoints: true` so every live run inspects the public
+  CLI, UI, and UI/API surfaces after each stage.
 
 ## Maintained Repository Set
 

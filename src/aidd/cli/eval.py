@@ -9,39 +9,20 @@ from rich.table import Table
 from aidd.adapters.runtime_registry import get_runtime_definition
 from aidd.cli.doctor import _runtime_probe_report
 from aidd.cli.support import console
+from aidd.core.contracts import repo_root_from
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
-from aidd.harness.eval_preparation import derive_source_repository_root
-from aidd.harness.eval_runner import run_eval_scenario
 from aidd.harness.live_runtime_config import validate_live_runtime_command
 from aidd.harness.scenarios import load_scenario
 
 
-def eval_run(
-    scenario: Annotated[str, typer.Argument(help="Scenario path")],
-    runtime: Annotated[str, typer.Option("--runtime", help="Runtime id")] = "generic-cli",
-) -> None:
-    """Run an eval scenario."""
-    scenario_path = Path(scenario)
-    if not scenario_path.exists():
-        raise typer.BadParameter(f"Scenario not found: {scenario}")
-
+def _derive_source_repository_root(scenario_path: Path) -> Path | None:
     try:
-        result = run_eval_scenario(
-            scenario_path=scenario_path,
-            runtime_id=runtime,
-            workspace_root=Path(".aidd"),
-        )
-    except ValueError as exc:
-        raise typer.BadParameter(str(exc)) from exc
-
-    console.print(f"AIDD eval run: scenario={result.scenario_id} runtime={runtime}")
-    console.print(f"Status: {result.status}")
-    console.print(f"Quality gate: {result.quality_gate}")
-    console.print(f"Run id: {result.run_id}")
-    console.print(f"Bundle root: {result.bundle_root.as_posix()}")
-    console.print(f"Verdict path: {result.verdict_path.as_posix()}")
-    console.print(f"Quality report path: {result.quality_report_path.as_posix()}")
-    console.print(f"Summary path: {result.summary_path.as_posix()}")
+        return repo_root_from(scenario_path.resolve(strict=False))
+    except FileNotFoundError:
+        try:
+            return repo_root_from(Path.cwd().resolve(strict=False))
+        except FileNotFoundError:
+            return None
 
 
 def eval_doctor(
@@ -84,7 +65,7 @@ def eval_doctor(
             command_entry = validate_live_runtime_command(
                 runtime_id=runtime,
                 scenario=loaded_scenario,
-                source_repository_root=derive_source_repository_root(scenario_path),
+                source_repository_root=_derive_source_repository_root(scenario_path),
             )
         except RuntimeError as exc:
             table.add_row("Execution readiness", "fail")

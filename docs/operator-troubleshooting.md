@@ -23,7 +23,7 @@ uv run aidd doctor
 
 - workflow/stage runtime gate (`aidd run`, `aidd stage run`);
 - stage artifacts and validator state (`aidd stage summary`, `aidd stage questions`);
-- eval lane (`aidd eval run`, `aidd eval summary`).
+- eval lane (`python -m aidd.harness.live_e2e_black_box`, `aidd eval summary`).
 
 3. Collect run and stage evidence before changing anything:
 
@@ -151,7 +151,7 @@ If status is `pending-blocking`:
 
 Symptoms:
 
-- `aidd eval run` fails with `Scenario not found: <path>`.
+- `python -m aidd.harness.live_e2e_black_box` fails with `Scenario not found: <path>`.
 
 Actions:
 
@@ -162,7 +162,7 @@ Actions:
 
 Symptoms:
 
-- installed `aidd eval run harness/scenarios/live/... --runtime <runtime>` fails before setup with a local-wheel install error.
+- installed black-box live E2E fails before setup with a local-wheel install error.
 - the error says local-wheel live eval requires a source checkout containing `pyproject.toml` and `contracts/`.
 
 Actions:
@@ -172,11 +172,11 @@ Actions:
    `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==<version>"`.
 3. Do not copy only the installed package's `site-packages` path into the scenario command; live local-wheel mode needs the source checkout to build the wheel.
 
-### 5.3 Harness eval run reports `fail`, `blocked`, or `infra-fail`
+### 5.3 Black-box live E2E reports `fail`, `blocked`, or `infra-fail`
 
 Symptoms:
 
-- `aidd eval run` exits non-zero;
+- `python -m aidd.harness.live_e2e_black_box` exits non-zero;
 - or completes with `Status: fail`, `Status: blocked`, or `Status: infra-fail`.
 
 Actions:
@@ -206,7 +206,8 @@ Actions:
 
 1. Confirm `.aidd/reports/evals/` exists.
 2. Confirm at least one `summary.md` was produced by an eval-capable run.
-3. Run `uv run aidd eval run <scenario> --runtime <runtime>` once, then retry summary.
+3. Run `uv run python -m aidd.harness.live_e2e_black_box <scenario> --runtime <runtime>`
+   once, then retry summary.
 
 ## 6. Evidence Checklist for Escalation
 
