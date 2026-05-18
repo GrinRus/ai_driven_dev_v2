@@ -236,7 +236,8 @@ For every stage run:
    - collect or wait for `answers.md`,
    - resume stage execution after answers when the run state allows it,
    - include existing same-stage question, answer, and draft output documents in the resume
-     attempt input bundle so the runtime can update the blocked stage from answered context.
+     attempt input bundle for both direct stage resume helpers and workflow-driven resume,
+     so the runtime can update the blocked stage from answered context.
 9. After the runtime finishes, validate the declared output documents.
 10. If validation passes:
    - write the canonical AIDD `validator-report.md` in the stage root,

@@ -1007,6 +1007,81 @@ def test_run_single_stage_orchestration_executes_generic_cli_happy_path(
     assert metadata_payload["status"] == StageState.SUCCEEDED.value
 
 
+def test_run_single_stage_orchestration_includes_answers_after_blocked_resume(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approval is recorded.\n",
+        encoding="utf-8",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.BLOCKED.value,
+    )
+    unblock_state = update_stage_unblock_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert unblock_state.unblocked is True
+    assert unblock_state.next_state is StageState.PREPARING
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
+        "## Status",
+        "# Status",
+    )
+    seen_input_bundle: list[str] = []
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        seen_input_bundle.append(invocation.input_bundle_markdown)
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert seen_input_bundle
+    assert "`workitems/WI-001/stages/plan/questions.md`" in seen_input_bundle[0]
+    assert "`workitems/WI-001/stages/plan/answers.md`" in seen_input_bundle[0]
+    assert "Release owner approval is recorded." in seen_input_bundle[0]
+
+
 def test_run_single_stage_orchestration_removes_model_authored_initial_repair_brief(
     tmp_path: Path,
 ) -> None:
