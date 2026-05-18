@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from aidd.validators.models import ValidationFinding
 from aidd.validators.semantic_rules.common import (
     IMPLEMENT_FILE_ENTRY_PATTERN,
@@ -17,6 +19,15 @@ from aidd.validators.semantic_rules.common import (
     extract_review_spec_decision,
     has_explicit_severity,
     validate_placeholder_sections,
+)
+
+NO_REVIEW_FINDINGS_PATTERN = re.compile(
+    r"\b(?:"
+    r"no\s+(?:material\s+)?(?:review\s+)?(?:findings?|issues?|defects?)"
+    r"(?:\s+(?:were\s+)?(?:identified|found|observed))?|"
+    r"findings?\s*:\s*none"
+    r")\b",
+    flags=re.IGNORECASE,
 )
 
 
@@ -112,12 +123,28 @@ def _validate_finding_entry(
     return unresolved_must_fix_count, tuple(findings)
 
 
+def _declares_no_review_findings(text: str) -> bool:
+    normalized = text.strip().strip("`").strip().rstrip(".").strip()
+    normalized = re.sub(r"^[-*]\s+", "", normalized).strip()
+    if not normalized:
+        return False
+    if normalized.lower() == "none":
+        return True
+    return NO_REVIEW_FINDINGS_PATTERN.search(normalized) is not None
+
+
 def _validate_findings_section(
     *,
     context: SemanticDocumentContext,
     findings_section: SemanticSection,
 ) -> tuple[int, tuple[ValidationFinding, ...]]:
     finding_items = extract_review_finding_blocks(findings_section.content)
+    if _declares_no_review_findings(findings_section.content) and (
+        not finding_items
+        or all(_declares_no_review_findings(finding_item) for finding_item in finding_items)
+    ):
+        return 0, tuple()
+
     if not finding_items:
         return 0, (
             context.finding(

@@ -179,6 +179,8 @@ def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Pat
         workspace_root / "workitems" / "WI-001" / "context" / "repository-state.md",
         workspace_root / "workitems" / "WI-001" / "context" / "task-selection.md",
         workspace_root / "workitems" / "WI-001" / "context" / "allowed-write-scope.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "acceptance-criteria.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "verification-output.md",
     )
     assert bundle.expected_output_documents == (
         workspace_root

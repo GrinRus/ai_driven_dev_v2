@@ -2099,6 +2099,65 @@ def test_validate_semantic_outputs_accepts_valid_review_fixture_bundle() -> None
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_explicit_no_review_findings(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_report(
+        workspace_root,
+        "WI-SEM-REVIEW-NO-FINDINGS",
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Status: `approved`\n\n"
+            "## Findings\n\n"
+            "No review findings were identified.\n\n"
+            "Evidence: `implementation-report.md` records AC-1 and AC-2 coverage.\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item="WI-SEM-REVIEW-NO-FINDINGS",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_none_review_findings_bullet(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_report(
+        workspace_root,
+        "WI-SEM-REVIEW-NONE-FINDINGS-BULLET",
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Status: `approved`\n\n"
+            "## Findings\n\n"
+            "- none\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item="WI-SEM-REVIEW-NONE-FINDINGS-BULLET",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_review_subheading_findings(
     tmp_path: Path,
 ) -> None:

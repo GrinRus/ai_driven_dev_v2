@@ -44,7 +44,8 @@ Optional context documents may improve review depth, but they must not replace i
 ## Review output expectations
 
 - `review-report.md` must include:
-  - findings with stable ids, explicit severity, and disposition per finding,
+  - findings with stable ids, explicit severity, and disposition per finding, or an
+    explicit no-findings declaration when no review findings remain,
   - rationale tied to implementation evidence and acceptance criteria,
   - an explicit evidence reference per finding, written as `Evidence:` metadata or
     equivalent inline text that cites `implementation-report.md`, a changed file path,
@@ -52,6 +53,8 @@ Optional context documents may improve review depth, but they must not replace i
   - an explicit approval status suitable for go/no-go decision (`approved`, `approved-with-conditions`, `rejected`),
   - summary of required changes when approval status is not `approved`.
 - Findings may be written as top-level bullets or as `### RV-*` / `### REV-*` subsections.
+- No-findings declarations must be explicit, for example `- none` or
+  `No review findings were identified.`
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation
@@ -72,6 +75,7 @@ Validators for `review` should check:
   - summary and approval status must remain coherent with finding severities,
 - absent disposition:
   - each finding must include disposition (`must-fix`, `follow-up`, `accepted-risk`, or `invalid`),
+  - an explicit no-findings declaration is valid only when no active finding entries are present,
   - approval status must not be `approved` when unresolved `must-fix` findings remain,
 - cross-document consistency between review findings, validator result, and terminal status in `stage-result.md`.
 
