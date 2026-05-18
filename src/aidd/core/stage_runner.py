@@ -61,6 +61,7 @@ from aidd.core.stage_preparation import (
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stage_terminal import (
     ensure_repair_brief_records_exhausted_budget,
+    ensure_stage_result_references_repair_brief,
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
     repair_brief_exhausts_terminal_budget,
@@ -265,6 +266,12 @@ def run_single_stage_orchestration(
             work_item=work_item,
             stage=stage,
         )
+    ensure_stage_result_references_repair_brief(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        repair_brief_path=adapter_invocation.repair_brief_path,
+    )
     validation_result = run_structural_validation_after_output_discovery(
         workspace_root=workspace_root,
         discovery=discovery,

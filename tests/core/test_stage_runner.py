@@ -1260,6 +1260,85 @@ def test_run_single_stage_orchestration_allows_final_repair_attempt_to_pass(
     assert (stage_root / "output" / "stage-result.md").exists()
 
 
+def test_run_single_stage_orchestration_normalizes_missing_repair_brief_trace(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "repair-brief.md").write_text(
+        "# Failed checks\n\n- `SEM-PLACEHOLDER-CONTENT` `high` in `plan.md`: fix.\n\n"
+        "# Required corrections\n\n## Mandatory fixes\n\n- fix\n\n"
+        "# Relevant upstream docs\n\n- `context/intake.md`\n\n"
+        "Repair attempt context: attempt `2` of max `3`; remaining retries after this "
+        "attempt: `1`.\n"
+        "Rerun allowed after this attempt: `yes`.\n"
+        "Repair budget status: `repair-budget-available`.\n",
+        encoding="utf-8",
+    )
+    runtime_documents = _valid_plan_output_documents()
+    assert "repair-brief.md" not in runtime_documents["stage-result.md"]
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        stage_documents_root = (
+            workspace_root
+            / "workitems"
+            / invocation.work_item
+            / "stages"
+            / invocation.stage
+        )
+        stage_documents_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_documents_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    stage_result_text = (stage_root / "stage-result.md").read_text(encoding="utf-8")
+    validator_report_text = (stage_root / "validator-report.md").read_text(encoding="utf-8")
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.PASS
+    assert "`workitems/WI-001/stages/plan/repair-brief.md`" in stage_result_text
+    assert "CROSS-REPAIR-BRIEF-NOT-REFERENCED" not in validator_report_text
+
+
 def test_run_single_stage_orchestration_forces_failed_status_on_exhausted_repair_budget(
     tmp_path: Path,
 ) -> None:

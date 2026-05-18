@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import signal
 import subprocess
 import threading
 import time
@@ -25,6 +27,21 @@ class StreamedSubprocessResult[ExitClassificationT: StrEnum]:
 
 
 def request_subprocess_stop(process: subprocess.Popen[str]) -> None:
+    process_group_terminated = _request_process_group_stop(process, signal.SIGTERM)
+    if process_group_terminated:
+        deadline = time.monotonic() + 0.5
+        while time.monotonic() < deadline:
+            if not _process_group_exists(process.pid):
+                return
+            time.sleep(0.05)
+        _request_process_group_stop(process, signal.SIGKILL)
+        if process.poll() is None:
+            try:
+                process.kill()
+            except (OSError, ProcessLookupError):
+                pass
+        return
+
     if process.poll() is not None:
         return
 
@@ -40,6 +57,28 @@ def request_subprocess_stop(process: subprocess.Popen[str]) -> None:
             process.kill()
         except (OSError, ProcessLookupError):
             return
+
+
+def _request_process_group_stop(process: subprocess.Popen[str], sig: signal.Signals) -> bool:
+    if os.name == "nt":
+        return False
+    try:
+        os.killpg(process.pid, sig)
+    except (OSError, ProcessLookupError):
+        return False
+    return True
+
+
+def _process_group_exists(pid: int) -> bool:
+    if os.name == "nt":
+        return False
+    try:
+        os.killpg(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 def stream_reader(
@@ -86,6 +125,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
+            start_new_session=os.name != "nt",
         )
     except (FileNotFoundError, PermissionError, OSError) as exc:
         if launch_failure_stop_reason is None:
