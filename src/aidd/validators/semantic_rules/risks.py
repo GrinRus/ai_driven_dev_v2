@@ -19,13 +19,22 @@ QA_OWNER_PATTERN = re.compile(r"\bowner\b", flags=re.IGNORECASE)
 def is_empty_risk_entry(risk_block: str) -> bool:
     normalized = re.sub(r"[`*_]", "", risk_block).strip().lower()
     normalized = normalized.strip(" .:-")
-    return normalized in {
+    if normalized in {
         "none",
         "none recorded",
         "no known issues",
+        "no known issues remain",
         "no residual risks",
         "no residual risk remains",
-    }
+    }:
+        return True
+    return (
+        re.fullmatch(
+            r"(?:known issues?|residual risks?)\s*:\s*(?:none|none recorded)",
+            normalized,
+        )
+        is not None
+    )
 
 
 def is_risk_metadata_entry(risk_block: str) -> bool:

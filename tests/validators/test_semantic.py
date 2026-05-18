@@ -2612,6 +2612,49 @@ def test_validate_semantic_outputs_accepts_flat_known_issue_metadata(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_ignores_known_issues_none_marker(
+    tmp_path: Path,
+) -> None:
+    work_item = "WI-SEM-QA-KNOWN-ISSUES-NONE-MARKER"
+    _write_qa_report(
+        tmp_path,
+        work_item,
+        """# QA Report
+
+## Verification summary
+
+- Quality verdict: `ready`.
+- Verification passed with residual risk tracked by `EV-1`.
+
+## Release recommendation
+
+- proceed
+
+## Evidence
+
+- EV-1: `context/verification-output.md` reports full test pass.
+
+## Known issues
+
+- Known issues: none.
+- Residual risk RR-1: Severity: low. Verification is focused rather than full-suite.
+  Mitigation/ownership: release operator may run the broader suite if policy requires it.
+
+## Readiness
+
+- Ready because `EV-1` is clean and the residual risk has low severity and owner coverage.
+""",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item=work_item,
+        workspace_root=tmp_path,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_flags_known_issue_block_missing_severity(
     tmp_path: Path,
 ) -> None:

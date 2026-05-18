@@ -70,10 +70,13 @@ normalize if canonical validation proves the terminal status inconsistent.
    outcomes or artifact paths in backticks.
 6. Tie verdict and recommendation claims to `verification-output.md` and/or
    `verification-artifacts.md` references.
-7. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
-8. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
+7. In `Known issues`, use `- Known issues: none.` only as an empty known-defect marker.
+   Put residual risks in separate bullets such as
+   `- Residual risk RR-1: Severity: low. ... Mitigation/ownership: ...`.
+8. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
+9. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
    instead of inventing assumptions.
-9. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
+10. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
 
 ## Common output skeleton discipline
 

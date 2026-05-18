@@ -53,7 +53,8 @@ Use concrete repair actions:
   evidence ids and/or backticked artifact paths;
 - verdict mismatch: align verdict and release recommendation with unresolved findings and
   critical-check availability;
-- risk gaps: add residual risk entries with severity plus mitigation/ownership;
+- risk gaps: add residual risk entries with severity plus mitigation/ownership; keep
+  `Known issues: none.` only as an empty known-defect marker, not as a residual risk item;
 - status drift: align validator verdict, stage status, blockers, and next actions.
 
 ## Targeted repair discipline
@@ -82,6 +83,8 @@ Use concrete repair actions:
 - quality verdict is evidence-backed and explicitly stated,
 - release recommendation is actionable and coherent with verdict/risk profile,
 - residual risks include severity plus mitigation/ownership where needed,
+- empty known-issue markers such as `Known issues: none.` are not the only risk evidence when
+  the report also declares residual risk,
 - no evidence-free material claim remains,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

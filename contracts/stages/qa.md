@@ -52,6 +52,9 @@ Optional context documents may improve QA depth, but they must not replace imple
   - a dedicated `Release recommendation` section aligned to verdict and risk profile,
   - evidence references linking verdict claims to verification artifacts.
 - release recommendation must be actionable (for example: `proceed`, `proceed-with-conditions`, `hold`).
+- `Known issues` may use an explicit empty marker such as `- Known issues: none.`;
+  validators must not treat that marker as a residual risk entry. Any separate residual
+  risk item must include explicit severity plus mitigation or ownership.
 - evidence entries must use stable ids in the `EV-1`, `EV-2`, ... style and/or backticked
   artifact paths so validators can trace claims mechanically.
 - `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.
