@@ -164,6 +164,7 @@ def prepare_stage_bundle(
     stage: str,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     project_set: ResolvedProjectSet | None = None,
+    include_existing_stage_outputs: bool = False,
 ) -> StagePreparationBundle:
     manifest = load_stage_manifest(stage=stage, contracts_root=contracts_root)
     expected_inputs = resolve_required_input_documents(
@@ -178,6 +179,9 @@ def prepare_stage_bundle(
         workspace_root=workspace_root,
         contracts_root=contracts_root,
     )
+    if include_existing_stage_outputs:
+        existing_outputs = tuple(path for path in expected_outputs if path.exists())
+        expected_inputs = (*expected_inputs, *existing_outputs)
     project_set_context_path: Path | None = None
     if project_set is not None and project_set.projects:
         project_set_context_path = persist_project_set_context(

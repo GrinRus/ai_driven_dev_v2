@@ -247,6 +247,7 @@ def prepare_stage_resume_after_answers(
         work_item=work_item,
         stage=stage,
         contracts_root=contracts_root,
+        include_existing_stage_outputs=True,
     )
     execution_state = persist_execution_state(
         workspace_root=workspace_root,

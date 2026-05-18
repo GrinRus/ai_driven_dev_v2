@@ -234,7 +234,9 @@ For every stage run:
    - surface them through the CLI or durable stage documents,
    - persist them as `questions.md`,
    - collect or wait for `answers.md`,
-   - resume stage execution after answers when the run state allows it.
+   - resume stage execution after answers when the run state allows it,
+   - include existing same-stage question, answer, and draft output documents in the resume
+     attempt input bundle so the runtime can update the blocked stage from answered context.
 9. After the runtime finishes, validate the declared output documents.
 10. If validation passes:
    - write the canonical AIDD `validator-report.md` in the stage root,

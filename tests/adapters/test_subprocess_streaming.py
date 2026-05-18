@@ -94,28 +94,44 @@ def test_timeout_is_enforced_while_process_is_streaming_output(tmp_path: Path) -
 @pytest.mark.skipif(os.name == "nt", reason="process groups are POSIX-specific")
 def test_timeout_stops_child_process_that_inherits_stream_pipe(tmp_path: Path) -> None:
     signal_path = tmp_path / "child-signal.txt"
+    ready_path = tmp_path / "child-ready.txt"
     child_script = (
         "import pathlib\n"
         "import signal\n"
         "import sys\n"
         "import time\n"
         "signal_path = pathlib.Path(sys.argv[1])\n"
+        "ready_path = pathlib.Path(sys.argv[2])\n"
         "def _handle_stop(signum, _frame):\n"
         "    signal_path.write_text(str(signum), encoding='utf-8')\n"
         "    raise SystemExit(0)\n"
         "signal.signal(signal.SIGTERM, _handle_stop)\n"
+        "ready_path.write_text('ready', encoding='utf-8')\n"
         "print('child-started', flush=True)\n"
         "while True:\n"
         "    time.sleep(1)\n"
     )
     parent_script = (
+        "import pathlib\n"
         "import subprocess\n"
         "import sys\n"
-        "subprocess.Popen([sys.executable, '-c', sys.argv[1], sys.argv[2]])\n"
+        "import time\n"
+        "ready_path = pathlib.Path(sys.argv[3])\n"
+        "subprocess.Popen([sys.executable, '-c', sys.argv[1], sys.argv[2], sys.argv[3]])\n"
+        "deadline = time.monotonic() + 5\n"
+        "while not ready_path.exists() and time.monotonic() < deadline:\n"
+        "    time.sleep(0.01)\n"
         "print('parent-exit', flush=True)\n"
     )
     spec = RuntimeSubprocessSpec(
-        command=(sys.executable, "-c", parent_script, child_script, signal_path.as_posix()),
+        command=(
+            sys.executable,
+            "-c",
+            parent_script,
+            child_script,
+            signal_path.as_posix(),
+            ready_path.as_posix(),
+        ),
         cwd=tmp_path,
         env=dict(os.environ),
     )
@@ -123,7 +139,7 @@ def test_timeout_stops_child_process_that_inherits_stream_pipe(tmp_path: Path) -
     started_at = time.monotonic()
     result = run_streamed_subprocess(
         spec=spec,
-        timeout_seconds=0.2,
+        timeout_seconds=1.0,
         timeout_stop_reason=StopReason.TIMEOUT,
         cancel_stop_reason=StopReason.CANCELLED,
     )

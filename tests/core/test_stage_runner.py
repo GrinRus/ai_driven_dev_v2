@@ -2490,3 +2490,18 @@ def test_prepare_stage_resume_after_answers_creates_new_attempt_and_invocation(
     assert resume_result.execution_state.attempt_path.name == "attempt-0001"
     assert resume_result.adapter_invocation.attempt_number == 1
     assert resume_result.adapter_invocation.input_bundle_path.exists()
+    assert (
+        "`workitems/WI-001/stages/plan/questions.md`"
+        in resume_result.adapter_invocation.input_bundle_markdown
+    )
+    assert (
+        "`workitems/WI-001/stages/plan/answers.md`"
+        in resume_result.adapter_invocation.input_bundle_markdown
+    )
+    assert "Release owner approval is recorded." in (
+        resume_result.adapter_invocation.input_bundle_markdown
+    )
+    assert (
+        "`workitems/WI-001/stages/plan/answers.md`"
+        in resume_result.preparation_bundle.stage_brief_markdown
+    )
