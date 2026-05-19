@@ -1750,7 +1750,19 @@ def _stage_unresolved_questions(ctx: FlowContext, stage: str) -> bool:
     if not questions_path.exists():
         return False
     questions_text = questions_path.read_text(encoding="utf-8", errors="replace").lower()
-    if "pending-blocking" not in questions_text and "blocking" not in questions_text:
+    no_question_markers = (
+        "no unresolved blocking questions",
+        "no blocking or non-blocking questions remain",
+        "no questions were raised",
+        "no questions yet",
+    )
+    if any(marker in questions_text for marker in no_question_markers):
+        return False
+    if (
+        "[blocking]" not in questions_text
+        and "pending-blocking" not in questions_text
+        and "blocking questions are unresolved" not in questions_text
+    ):
         return False
     return not _answers_file_has_resolved_answers(_answers_path(ctx, stage))
 

@@ -108,6 +108,13 @@ def option(args: list[str], name: str, default: str = "") -> str:
 def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
     output_root = Path(".aidd") / "workitems" / work_item / "stages" / stage / "output"
     output_root.mkdir(parents=True, exist_ok=True)
+    root = output_root.parent
+    if not (root / "questions.md").exists():
+        (root / "questions.md").write_text(
+            "# Questions\\n\\nNo blocking or non-blocking questions remain.\\n"
+        )
+    if not (root / "answers.md").exists():
+        (root / "answers.md").write_text("# Answers\\n\\nNo questions were raised.\\n")
     (output_root / "stage-result.md").write_text(
         "# Stage\\n\\n"
         f"{{stage}}\\n\\n"
@@ -521,6 +528,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
             )
         )
         assert stage_audit["stage_state"] == "passed"
+        assert stage_audit["unresolved_questions"] is False
     grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
     assert grader_payload["quality"]["quality_gate"] == "pass"
