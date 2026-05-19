@@ -54,7 +54,12 @@ def test_native_prompt_compiler_includes_attempt_bundle_and_contract(
     assert "`repair-brief.md` is AIDD-owned read-only repair control evidence" in prompt
     assert "AIDD post-runtime validation is the final truth source" in prompt
     assert "do not inspect AIDD validator implementation" in prompt
-    assert "After updating the required documents and checking consistency, stop" in prompt
+    assert (
+        "emit one brief final response that states the stage artifacts are complete or "
+        "blocked, then stop immediately"
+    ) in prompt
+    assert "After the final required document write, do not read more files" in prompt
+    assert "wait for additional instructions" in prompt
     assert "`answers.md` bullets must reuse the same question id" in prompt
     assert "Do not invent `A1`/`A2` answer ids" in prompt
     assert "exact path listed in the Stage brief" in prompt

@@ -49,3 +49,6 @@ manifest with explicit acceptance criteria and verification intent.
   and placeholder documentation examples.
 - Stage briefs now include exact skeleton hints for `stage-result.md` and
   `validator-report.md` to reduce first-pass contract churn.
+- Native runtime prompts now make turn completion explicit after the final required
+  document write so providers that have already produced valid Markdown artifacts do not
+  keep the adapter call open until a stage timeout.

@@ -172,8 +172,13 @@ def build_native_prompt_text(
             "validator report, repair brief, stage brief, input bundle, and active "
             "prompt pack as the repair scope.",
             "",
-            "After updating the required documents and checking consistency, stop. "
-            "Do not keep exploring repository internals or running unrelated diagnostics.",
+            "After updating the required documents and checking consistency, emit one "
+            "brief final response that states the stage artifacts are complete or "
+            "blocked, then stop immediately.",
+            "",
+            "After the final required document write, do not read more files, start "
+            "another step, make more tool calls, wait for additional instructions, or "
+            "keep exploring repository internals or running unrelated diagnostics.",
             "",
         )
     )
