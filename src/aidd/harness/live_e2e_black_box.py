@@ -425,6 +425,14 @@ def _flow_state_payload(
     completed_stages: tuple[str, ...],
     extra: dict[str, object] | None = None,
 ) -> dict[str, object]:
+    install_home = None
+    if ctx.install_result is not None:
+        install_home = ctx.install_result.install_home.as_posix()
+    elif ctx.preserved_install_payload is not None:
+        preserved_install_home = ctx.preserved_install_payload.get("install_home")
+        if isinstance(preserved_install_home, str):
+            install_home = preserved_install_home
+
     payload: dict[str, object] = {
         "schema_version": 1,
         "updated_at_utc": _utc_now(),
@@ -467,6 +475,7 @@ def _flow_state_payload(
             else ctx.prepared_working_copy.working_copy_path.as_posix()
         ),
         "config_path": None if ctx.config_path is None else ctx.config_path.as_posix(),
+        "install_home": install_home,
         "installed_command": list(ctx.installed_command),
     }
     if ctx.install_result is not None:

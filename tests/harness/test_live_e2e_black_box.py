@@ -514,6 +514,8 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert state_payload["work_root"] == work_root.as_posix()
     assert state_payload["report_root"] == report_root.as_posix()
     assert state_payload["run_work_root"] == (work_root / result.run_id).as_posix()
+    assert Path(state_payload["install_home"]).is_absolute()
+    assert state_payload["install_home"] == state_payload["install"]["install_home"]
     assert str(state_payload["target_repo_root"]).startswith(
         (work_root / result.run_id / "target").as_posix()
     )
