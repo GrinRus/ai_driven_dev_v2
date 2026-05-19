@@ -108,7 +108,14 @@ def option(args: list[str], name: str, default: str = "") -> str:
 def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
     output_root = Path(".aidd") / "workitems" / work_item / "stages" / stage / "output"
     output_root.mkdir(parents=True, exist_ok=True)
-    (output_root / "stage-result.md").write_text("# Stage result\\n\\n- status: succeeded\\n")
+    (output_root / "stage-result.md").write_text(
+        "# Stage\\n\\n"
+        f"{{stage}}\\n\\n"
+        "## Attempt history\\n\\n"
+        "- Attempt `1` (`initial`) -> succeeded.\\n\\n"
+        "## Status\\n\\n"
+        "- `succeeded`\\n"
+    )
     (output_root / "validator-report.md").write_text(
         "# Validator report\\n\\n## Result\\n\\n- Verdict: `pass`\\n"
     )
@@ -507,10 +514,13 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     for stage in STAGES:
         assert (result.bundle_root / "stage-audits" / f"{stage}.json").exists()
         assert (result.bundle_root / "stage-audits" / f"{stage}.md").exists()
-    idea_audit = json.loads(
-        (result.bundle_root / "stage-audits" / "idea.json").read_text(encoding="utf-8")
-    )
-    assert idea_audit["stage_state"] == "passed"
+    for stage in STAGES:
+        stage_audit = json.loads(
+            (result.bundle_root / "stage-audits" / f"{stage}.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert stage_audit["stage_state"] == "passed"
     grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
     assert grader_payload["quality"]["quality_gate"] == "pass"

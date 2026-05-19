@@ -1678,7 +1678,29 @@ def _read_text_if_exists(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def _stage_status_section_state(stage_result_text: str) -> str | None:
+    in_status = False
+    for raw_line in stage_result_text.splitlines():
+        line = raw_line.strip().lower()
+        if line.startswith("## "):
+            in_status = line == "## status"
+            continue
+        if not in_status:
+            continue
+        if "blocked" in line:
+            return "blocked"
+        if "succeeded" in line or "passed" in line:
+            return "passed"
+        if "failed" in line:
+            return "failed"
+    return None
+
+
 def _stage_state_from_text(stage_result_text: str) -> str:
+    status_section_state = _stage_status_section_state(stage_result_text)
+    if status_section_state is not None:
+        return status_section_state
+
     lowered = stage_result_text.lower()
     if "action=wait" in lowered or "state=blocked" in lowered:
         return "blocked"
