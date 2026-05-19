@@ -1652,6 +1652,21 @@ def _stage_output_root(ctx: FlowContext, stage: str) -> Path:
     )
 
 
+def _stage_root(ctx: FlowContext, stage: str) -> Path:
+    working_copy = _require_working_copy(ctx)
+    return working_copy / ".aidd" / "workitems" / ctx.work_item / "stages" / stage
+
+
+def _stage_document_path(ctx: FlowContext, stage: str, filename: str) -> Path:
+    output_path = _stage_output_root(ctx, stage) / filename
+    if output_path.exists():
+        return output_path
+    root_path = _stage_root(ctx, stage) / filename
+    if root_path.exists():
+        return root_path
+    return output_path
+
+
 def _stage_audit_paths(ctx: FlowContext, stage: str) -> tuple[Path, Path]:
     audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
     return audit_root / f"{stage}.json", audit_root / f"{stage}.md"
@@ -1667,9 +1682,20 @@ def _stage_state_from_text(stage_result_text: str) -> str:
     lowered = stage_result_text.lower()
     if "action=wait" in lowered or "state=blocked" in lowered:
         return "blocked"
-    if "action=proceed" in lowered or "state=valid" in lowered:
+    if (
+        "action=proceed" in lowered
+        or "state=valid" in lowered
+        or "status: `succeeded`" in lowered
+        or "status: succeeded" in lowered
+    ):
         return "passed"
-    if "action=stop" in lowered or "state=invalid" in lowered:
+    if (
+        "action=stop" in lowered
+        or "state=invalid" in lowered
+        or "state=failed" in lowered
+        or "status: `failed`" in lowered
+        or "status: failed" in lowered
+    ):
         return "failed"
     return "unknown"
 
@@ -1739,7 +1765,10 @@ def _implementation_verification_evidence_shape(report_text: str) -> dict[str, o
     evidence_markers = (
         "-> exit 0",
         "exit 0",
+        "exit code",
         "-> pass",
+        "passed in",
+        "all checks passed",
         "not-run:",
         "captured assertion",
         "artifact path",
@@ -1771,11 +1800,14 @@ def _write_stage_audit(
     inspection_results: tuple[BlackBoxCommandResult, ...],
 ) -> tuple[Path, Path]:
     working_copy = _require_working_copy(ctx)
-    output_root = _stage_output_root(ctx, stage)
     primary_filename = _PRIMARY_STAGE_OUTPUTS.get(stage)
-    primary_path = None if primary_filename is None else output_root / primary_filename
-    stage_result_path = output_root / "stage-result.md"
-    validator_report_path = output_root / "validator-report.md"
+    primary_path = (
+        None
+        if primary_filename is None
+        else _stage_document_path(ctx, stage, primary_filename)
+    )
+    stage_result_path = _stage_document_path(ctx, stage, "stage-result.md")
+    validator_report_path = _stage_document_path(ctx, stage, "validator-report.md")
     stage_result_text = _read_text_if_exists(stage_result_path)
     validator_text = _read_text_if_exists(validator_report_path)
     implementation_details: dict[str, object] | None = None

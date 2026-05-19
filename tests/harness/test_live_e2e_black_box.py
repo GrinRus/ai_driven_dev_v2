@@ -144,11 +144,25 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
     )
 
 
+def write_failed_stage_artifacts(stage: str, work_item: str) -> None:
+    stage_root = Path(".aidd") / "workitems" / work_item / "stages" / stage
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "stage-result.md").write_text(
+        "# Stage result\\n\\n## Status\\n\\n- Status: `failed`\\n"
+    )
+    (stage_root / "validator-report.md").write_text(
+        "# Validator report\\n\\n## Result\\n\\n- Verdict: `fail`\\n"
+    )
+    primary = PRIMARY_OUTPUTS[stage]
+    (stage_root / primary).write_text(f"# {{stage}} output\\n\\n- failed by fake AIDD\\n")
+
+
 def stage_run(args: list[str]) -> int:
     stage = args[2]
     work_item = option(args, "--work-item")
     run_id = option(args, "--run-id")
     if stage == FAIL_STAGE:
+        write_failed_stage_artifacts(stage, work_item)
         print(f"Stage run result: action=stop state=failed stage={{stage}}")
         return 7
     if stage == BLOCK_STAGE:
@@ -493,6 +507,10 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     for stage in STAGES:
         assert (result.bundle_root / "stage-audits" / f"{stage}.json").exists()
         assert (result.bundle_root / "stage-audits" / f"{stage}.md").exists()
+    idea_audit = json.loads(
+        (result.bundle_root / "stage-audits" / "idea.json").read_text(encoding="utf-8")
+    )
+    assert idea_audit["stage_state"] == "passed"
     grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
     assert grader_payload["quality"]["quality_gate"] == "pass"
@@ -731,6 +749,13 @@ def test_black_box_live_e2e_reports_stage_failure_from_step_evidence(
     assert result.first_failure_note is not None
     assert "plan" in result.first_failure_note
     assert "run-stage" in (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
+    audit_payload = json.loads(
+        (result.bundle_root / "stage-audits" / "plan.json").read_text(encoding="utf-8")
+    )
+    assert audit_payload["stage_state"] == "failed"
+    assert audit_payload["validator_verdict"] == "fail"
+    assert audit_payload["primary_artifact"]["present"] is True
+    assert "/output/" not in audit_payload["primary_artifact"]["path"]
 
 
 def test_black_box_live_e2e_stops_when_public_inspection_fails_after_stage_pass(
