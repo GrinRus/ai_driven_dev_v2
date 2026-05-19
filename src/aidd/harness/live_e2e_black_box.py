@@ -384,7 +384,6 @@ def _harness_environment(
         }
     )
     if install_result is not None:
-        environment["HOME"] = install_result.install_home.as_posix()
         environment["PATH"] = os.pathsep.join(
             [
                 install_result.tool_bin_dir.as_posix(),
@@ -404,9 +403,6 @@ def _harness_environment_for_context(ctx: FlowContext) -> dict[str, str]:
     if ctx.install_result is not None or ctx.preserved_install_payload is None:
         return environment
 
-    install_home = ctx.preserved_install_payload.get("install_home")
-    if isinstance(install_home, str) and install_home:
-        environment["HOME"] = install_home
     tool_bin_dir = ctx.preserved_install_payload.get("tool_bin_dir")
     if isinstance(tool_bin_dir, str) and tool_bin_dir:
         environment["PATH"] = os.pathsep.join([tool_bin_dir, environment.get("PATH", "")])
@@ -1621,6 +1617,7 @@ def _write_operator_action_request(
                 f"- Run ID: `{ctx.run_id}`",
                 f"- Work item: `{ctx.work_item}`",
                 f"- Stage: `{stage}`",
+                "- Operator: launching operator-agent",
                 f"- Questions: `{questions_path.as_posix()}`",
                 f"- Answers: `{answers_path.as_posix()}`",
                 "",
@@ -1631,6 +1628,7 @@ def _write_operator_action_request(
                 "## Required Operator-Agent Output",
                 "",
                 "- Write standard `[resolved]` answers to the answers path above.",
+                "- Use exact answer lines such as `- Q1 [resolved] answer text`.",
                 (
                     "- Record answer reasoning in "
                     f"`{(ctx.bundle_root / ANSWER_ANALYSIS_FILENAME).as_posix()}`."
@@ -1659,7 +1657,7 @@ def _write_answer_analysis_if_detected(ctx: FlowContext, stage: str) -> Path | N
                 f"- Scenario: `{ctx.scenario.scenario_id}`",
                 f"- Stage: `{stage}`",
                 f"- Answers path: `{answers_path.as_posix()}`",
-                "- Source: external operator-agent answers detected by evaluator resume.",
+                "- Source: launching operator-agent answers detected by evaluator resume.",
                 "",
                 "## Answers Snapshot",
                 "",
@@ -1682,7 +1680,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             action="answer-questions",
             classification="pass",
             decision="Answers are present; retry the blocked stage through public CLI.",
-            plan="Consume external operator-agent answers without generating them inside AIDD.",
+            plan="Consume launching operator-agent answers without generating them inside AIDD.",
             stage=stage,
             evidence_paths=(answer_analysis_path, _answers_path(ctx, stage)),
         )
@@ -1802,7 +1800,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             ctx=ctx,
             action="answer-questions",
             classification="blocked",
-            decision="Stop and wait for an external operator-agent to write answers.md.",
+            decision="Stop and wait for the launching operator-agent to write answers.md.",
             plan="Surface blocking questions as an operator action request.",
             stage=stage,
             evidence_paths=request_paths,

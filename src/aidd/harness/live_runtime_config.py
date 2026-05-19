@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shlex
 import shutil
+import subprocess
 import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -24,6 +25,9 @@ class LiveRuntimeCommand:
     execution_mode: RuntimeExecutionMode
     source: str
     env_var: str | None = None
+
+
+_PROVIDER_AUTH_CHECK_TIMEOUT_SECONDS = 10
 
 
 def _toml_string(value: str) -> str:
@@ -172,7 +176,58 @@ def validate_live_runtime_command(
             f"Live runtime command executable is not available for {runtime_id}: "
             f"{tokens[0]!r} (mode={mode_hint}, source={command_entry.source})."
         )
+    _validate_provider_auth_for_native_live_runtime(
+        runtime_id=runtime_id,
+        command_entry=command_entry,
+        source=source,
+        executable=tokens[0],
+    )
     return command_entry
+
+
+def _validate_provider_auth_for_native_live_runtime(
+    *,
+    runtime_id: str,
+    command_entry: LiveRuntimeCommand,
+    source: Mapping[str, str],
+    executable: str,
+) -> None:
+    if (
+        runtime_id != "codex"
+        or command_entry.execution_mode is not RuntimeExecutionMode.NATIVE
+    ):
+        return
+
+    check_command = [executable, "login", "status"]
+    try:
+        completed = subprocess.run(
+            check_command,
+            env=dict(source),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_PROVIDER_AUTH_CHECK_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            "Live runtime provider auth check failed for codex: "
+            "`codex login status` timed out. provider-auth readiness is unknown."
+        ) from exc
+    except OSError as exc:
+        raise RuntimeError(
+            "Live runtime provider auth check failed for codex: "
+            f"could not run `codex login status`: {exc}."
+        ) from exc
+
+    if completed.returncode == 0:
+        return
+
+    output = (completed.stderr or completed.stdout or "no command output").strip()
+    raise RuntimeError(
+        "Live runtime provider auth check failed for codex: "
+        f"`codex login status` exited {completed.returncode}. "
+        f"provider-auth blocker: {output}"
+    )
 
 
 def write_live_runtime_config(

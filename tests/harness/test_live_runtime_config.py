@@ -223,7 +223,12 @@ def test_validate_live_runtime_command_checks_native_executable(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     codex = bin_dir / "codex"
-    codex.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    codex.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then exit 0; fi\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
     codex.chmod(0o755)
     monkeypatch.setenv("PATH", "")
 
@@ -237,6 +242,36 @@ def test_validate_live_runtime_command_checks_native_executable(
     )
 
     assert entry.execution_mode is RuntimeExecutionMode.NATIVE
+
+
+def test_validate_live_runtime_command_rejects_codex_native_auth_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    codex = bin_dir / "codex"
+    codex.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then\n"
+        "  echo 'not logged in' >&2\n"
+        "  exit 7\n"
+        "fi\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", "")
+
+    with pytest.raises(RuntimeError, match="provider-auth blocker"):
+        validate_live_runtime_command(
+            runtime_id="codex",
+            scenario=_scenario(runtime_targets=("codex",)),
+            environment={
+                **_empty_live_command_env(),
+                "PATH": bin_dir.as_posix(),
+            },
+        )
 
 
 def test_validate_live_runtime_command_checks_claude_native_executable(

@@ -69,7 +69,12 @@ def test_eval_doctor_reports_native_live_readiness(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     codex = bin_dir / "codex"
-    codex.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    codex.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then exit 0; fi\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
     codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir.as_posix()}:{os.environ.get('PATH', '')}")
     scenario_path = tmp_path / "harness" / "scenarios" / "live" / "scenario.yaml"
@@ -82,3 +87,35 @@ def test_eval_doctor_reports_native_live_readiness(
     assert "Execution readiness" in normalized_stdout
     assert "pass" in normalized_stdout
     assert "native" in normalized_stdout
+
+
+def test_eval_doctor_reports_codex_native_auth_failure(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("AIDD_EVAL_CODEX_COMMAND", raising=False)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    codex = bin_dir / "codex"
+    codex.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then\n"
+        "  echo 'not logged in' >&2\n"
+        "  exit 7\n"
+        "fi\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir.as_posix()}:{os.environ.get('PATH', '')}")
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "scenario.yaml"
+    _write_live_scenario(scenario_path)
+
+    result = runner.invoke(app, ["eval", "doctor", str(scenario_path), "--runtime", "codex"])
+
+    assert result.exit_code == 0, result.output
+    normalized_stdout = " ".join(result.stdout.split())
+    assert "Execution readiness" in normalized_stdout
+    assert "fail" in normalized_stdout
+    assert "provider-auth" in normalized_stdout
+    assert "blocker" in normalized_stdout

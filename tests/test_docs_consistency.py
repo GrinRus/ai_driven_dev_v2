@@ -326,6 +326,7 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "does **not** provision runtime authentication, wrapper scripts, or provider setup",
         "the launching agent is the operator-agent",
         "write standard `[resolved]` answers",
+        "`- Q1 [resolved] answer text`",
         "answer-analysis.md",
         "operator-quality-analysis.md",
         "The operator audit cannot upgrade machine `fail` or `warn`",
@@ -334,6 +335,7 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
 
     assert "For **local live-run operator guidance**, prefer `live-e2e`." in aidd_eval_skill
     assert "the launching agent is the operator-agent" in aidd_eval_skill
+    assert "`- Q1 [resolved] answer text`" in aidd_eval_skill
     assert "operator-quality-analysis.md" in aidd_eval_skill
 
 

@@ -564,7 +564,7 @@ def _validate_scenario_contract(
             raise ScenarioManifestError(
                 "Live scenario manifest black-box answer contract mismatch: "
                 "`live_flow.answer_policy` must be `agent-decides` so any live "
-                "scenario can block on questions and resume after external "
+                "scenario can block on questions and resume after launching "
                 "operator-agent answers."
             )
         if run.interview_required is not expects_interview:

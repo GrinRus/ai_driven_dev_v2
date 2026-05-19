@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from aidd.core.models.run import StageRunMetadata
 from aidd.core.run_store import (
     RUN_ATTEMPT_INPUT_BUNDLE_FILENAME,
     RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME,
@@ -127,15 +128,8 @@ def _write_attempt_repair_context(
 
 def _previous_stage_status_before_current_attempt(
     *,
-    workspace_root: Path,
-    execution_state: StageExecutionState,
+    stage_metadata: StageRunMetadata | None,
 ) -> str | None:
-    stage_metadata = load_stage_metadata(
-        workspace_root=workspace_root,
-        work_item=execution_state.work_item,
-        run_id=execution_state.run_id,
-        stage=execution_state.stage,
-    )
     if stage_metadata is None:
         return None
     status_history = stage_metadata.status_history
@@ -144,6 +138,26 @@ def _previous_stage_status_before_current_attempt(
     if status_history[-1].status == StageState.EXECUTING.value:
         return status_history[-2].status
     return status_history[-1].status
+
+
+def _is_repair_context_attempt(
+    *,
+    execution_state: StageExecutionState,
+    stage_metadata: StageRunMetadata | None,
+    previous_status: str | None,
+) -> bool:
+    if execution_state.attempt_number <= 1:
+        return False
+    if previous_status == StageState.REPAIR_NEEDED.value:
+        return True
+    if previous_status != StageState.PREPARING.value or stage_metadata is None:
+        return False
+    if not stage_metadata.repair_history:
+        return False
+    return any(
+        status_change.status == StageState.BLOCKED.value
+        for status_change in stage_metadata.status_history
+    )
 
 
 def prepare_adapter_invocation(
@@ -170,12 +184,19 @@ def prepare_adapter_invocation(
         stage=execution_state.stage,
     )
     candidate_repair_brief_path = stage_documents_root / "repair-brief.md"
-    previous_status = _previous_stage_status_before_current_attempt(
+    stage_metadata = load_stage_metadata(
         workspace_root=workspace_root,
-        execution_state=execution_state,
+        work_item=execution_state.work_item,
+        run_id=execution_state.run_id,
+        stage=execution_state.stage,
     )
-    repair_mode = execution_state.attempt_number > 1 and (
-        previous_status == StageState.REPAIR_NEEDED.value
+    previous_status = _previous_stage_status_before_current_attempt(
+        stage_metadata=stage_metadata,
+    )
+    repair_mode = _is_repair_context_attempt(
+        execution_state=execution_state,
+        stage_metadata=stage_metadata,
+        previous_status=previous_status,
     )
     repair_brief_path: Path | None = None
     repair_brief_markdown: str | None = None

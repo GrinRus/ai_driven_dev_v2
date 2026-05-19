@@ -47,7 +47,8 @@ and manual-live lanes.
 9. For live scenarios, preserve install evidence, feature-selection evidence, and quality artifacts.
 10. Never mutate roadmap or backlog files as part of live quality auditing.
 11. For manual live lanes, the launching agent is the operator-agent: answer blocking
-    questions in `answers.md`, write `answer-analysis.md`, and write
+    questions in `answers.md` with exact lines such as
+    `- Q1 [resolved] answer text`, write `answer-analysis.md`, and write
     `operator-quality-analysis.md` as operator-authored eval bundle evidence.
 12. Do not hand-edit runtime-generated stage output documents while adding
     operator-authored answer or quality evidence.

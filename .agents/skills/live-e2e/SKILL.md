@@ -79,6 +79,8 @@ Before the live run, confirm all of these:
 6. the runtime you plan to use appears in `runtime_targets`
 7. `uv run aidd eval doctor <manifest> --runtime <runtime>` reports execution readiness
 8. any wrapper env var you choose to set resolves on the machine and uses the expected auth state
+9. for native `codex` live runs, `aidd eval doctor` also confirms `codex login status`
+   from the operator environment that live stage execution will inherit
 
 Recommended local preflight:
 
@@ -153,6 +155,8 @@ When the evaluator returns `blocked`:
 1. Open `operator-action-request.md`.
 2. Open the referenced `questions.md`.
 3. write standard `[resolved]` answers to the referenced `answers.md`.
+   Use exact answer lines such as `- Q1 [resolved] answer text`; do not insert a
+   colon after `[resolved]`.
 4. Write `answer-analysis.md` in the eval bundle, explaining the choices and how
    they satisfy the authored task constraints.
 5. Re-run the same black-box command for the same manifest/runtime so the
@@ -270,12 +274,15 @@ present, the machine `quality_gate` is `pass`, and the bundle includes
 ## First triage for common failures
 
 - Provider executable missing: install/login to the selected provider CLI, or export `AIDD_EVAL_CODEX_COMMAND` / `AIDD_EVAL_OPENCODE_COMMAND` for a wrapper.
+- Codex native live auth missing: `aidd eval doctor` checks `codex login status`
+  from the operator environment that live stage execution inherits.
 - Runtime launches but immediately fails in native mode: inspect provider auth, model selection, and sandbox permissions.
 - Runtime launches but immediately fails in `adapter-flags` mode: the configured command is probably not an AIDD-compatible wrapper command.
 - `unsupported-runtime`: the runtime is not declared in the scenario's `runtime_targets`.
 - `blocked`: inspect `operator-action-request.md`, `questions.md`, and
   `answers.md`; as the launching operator-agent, write `[resolved]` answers,
-  write `answer-analysis.md`, then rerun the same black-box command to resume.
+  using exact lines such as `- Q1 [resolved] answer text`, write
+  `answer-analysis.md`, then rerun the same black-box command to resume.
 - `fail` after run success: inspect `verify-transcript.json`, `quality-transcript.json`, and the stage-local validator reports.
 - Missing clean execution despite zero exit codes: inspect `verdict.md` and `grader.json` for pass-guard failures caused by missing `stage-result.md` or `validator-report.md`.
 

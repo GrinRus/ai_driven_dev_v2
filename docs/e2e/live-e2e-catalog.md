@@ -193,6 +193,8 @@ The maintained interview scenarios are:
 
 Any live scenario may block when questions are unresolved and resume only after
 standard `answers.md` content is present in the target-repository workspace path.
+Operator-authored answer lines use the exact form `- Q1 [resolved] answer text`
+without a colon after `[resolved]`.
 The interview scenarios above are the maintained coverage cases where the manifest
 expects that blocking question path to happen.
 

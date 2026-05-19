@@ -19,7 +19,7 @@ from aidd.adapters.generic_cli.runner import (
 )
 from aidd.config import ProjectConfig, ProjectSetConfig
 from aidd.core.project_set import resolve_project_set
-from aidd.core.repair import RepairBudgetPolicy
+from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
 from aidd.core.run_store import (
     create_run_manifest,
     persist_stage_status,
@@ -1080,6 +1080,140 @@ def test_run_single_stage_orchestration_includes_answers_after_blocked_resume(
     assert "`workitems/WI-001/stages/plan/questions.md`" in seen_input_bundle[0]
     assert "`workitems/WI-001/stages/plan/answers.md`" in seen_input_bundle[0]
     assert "Release owner approval is recorded." in seen_input_bundle[0]
+
+
+def test_run_single_stage_orchestration_preserves_repair_context_after_blocked_repair_resume(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    validator_report_path = stage_root / "validator-report.md"
+    validator_report_path.write_text(
+        "# Validator Report\n\n"
+        "## Result\n\n"
+        "- Verdict: `repair`\n",
+        encoding="utf-8",
+    )
+    repair_brief_path = stage_root / "repair-brief.md"
+    repair_brief_text = (
+        "# Failed checks\n\n"
+        "- `STRUCT-MISSING-REQUIRED-SECTION` `high` in "
+        "`workitems/WI-001/stages/plan/plan.md`\n"
+    )
+    repair_brief_path.write_text(repair_brief_text, encoding="utf-8")
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+        trigger="initial",
+        outcome="failed validation",
+        stage_status=StageState.REPAIR_NEEDED.value,
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.BLOCKED.value,
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=2,
+        trigger="repair",
+        outcome="blocked by questions",
+        stage_status=StageState.BLOCKED.value,
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+    )
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approval is recorded.\n",
+        encoding="utf-8",
+    )
+    unblock_state = update_stage_unblock_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert unblock_state.unblocked is True
+    seen_invocations: list[AdapterInvocationBundle] = []
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        seen_invocations.append(invocation)
+        assert execution_state.attempt_number == 3
+        runtime_documents = _valid_plan_output_documents()
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert seen_invocations
+    invocation = seen_invocations[0]
+    assert invocation.repair_mode is True
+    assert invocation.repair_brief_path == repair_brief_path
+    assert invocation.repair_brief_markdown == repair_brief_text
+    assert invocation.repair_context_markdown is not None
+    assert "Mode: `repair`" in invocation.repair_context_markdown
+    assert "Attempt number: `3`" in invocation.repair_context_markdown
+    assert repair_brief_path.exists()
+    validator_report_text = (stage_root / "validator-report.md").read_text(encoding="utf-8")
+    assert "CROSS-REPAIR-MENTION-WITHOUT-BRIEF" not in validator_report_text
 
 
 def test_run_single_stage_orchestration_removes_model_authored_initial_repair_brief(

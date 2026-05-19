@@ -10,8 +10,9 @@ import yaml
 
 from aidd.core.stages import STAGES
 from aidd.harness.install_artifact import HarnessInstallResult
-from aidd.harness.live_e2e_black_box import run_black_box_live_e2e
+from aidd.harness.live_e2e_black_box import _harness_environment, run_black_box_live_e2e
 from aidd.harness.runner import HarnessCommandTranscript
+from aidd.harness.scenarios import load_scenario
 
 _PRIMARY_OUTPUTS: dict[str, str] = {
     "idea": "idea-brief.md",
@@ -357,6 +358,35 @@ def _install_result_for_fake_aidd(fake_aidd: Path) -> HarnessInstallResult:
     )
 
 
+def test_harness_environment_preserves_operator_home_after_install(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator_home = tmp_path / "operator-home"
+    operator_home.mkdir()
+    monkeypatch.setenv("HOME", operator_home.as_posix())
+    fake_aidd = tmp_path / "fake-aidd"
+    install_result = _install_result_for_fake_aidd(fake_aidd)
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "scenario-live.yaml"
+    scenario_path.parent.mkdir(parents=True)
+    _write_scenario_manifest(path=scenario_path, repo_url="https://example.invalid/repo.git")
+    scenario = load_scenario(
+        scenario_path,
+        runtime_id="opencode",
+        workspace_root=tmp_path / ".aidd",
+    )
+
+    environment = _harness_environment(
+        scenario=scenario,
+        runtime_id="opencode",
+        work_item="WI-TEST",
+        install_result=install_result,
+    )
+
+    assert environment["HOME"] == operator_home.as_posix()
+    assert environment["PATH"].split(os.pathsep)[0] == install_result.tool_bin_dir.as_posix()
+
+
 def _prepare_live_test(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -483,12 +513,17 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     assert first.status == "blocked"
     first_grader = json.loads((first.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert first_grader["steps"][-1]["action"] == "stop"
+    request_markdown = (first.bundle_root / "operator-action-request.md").read_text(
+        encoding="utf-8"
+    )
+    assert "launching operator-agent" in request_markdown
+    assert "`- Q1 [resolved] answer text`" in request_markdown
     request_payload = json.loads(
         (first.bundle_root / "operator-action-request.json").read_text(encoding="utf-8")
     )
     answers_path = Path(request_payload["answers_path"])
     answers_path.write_text(
-        "# Answers\n\n- Q1 [resolved]: Implement the behavior described by the task.\n",
+        "# Answers\n\n- Q1 [resolved] Implement the behavior described by the task.\n",
         encoding="utf-8",
     )
     manifest_payload = yaml.safe_load(scenario_path.read_text(encoding="utf-8"))
@@ -555,7 +590,7 @@ def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
     assert request_payload["stage"] == "idea"
     answers_path = Path(request_payload["answers_path"])
     answers_path.write_text(
-        "# Answers\n\n- Q1 [resolved]: Implement the behavior described by the task.\n",
+        "# Answers\n\n- Q1 [resolved] Implement the behavior described by the task.\n",
         encoding="utf-8",
     )
 
