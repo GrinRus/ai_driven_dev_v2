@@ -466,7 +466,7 @@ def _stage_documents(*, work_item: str) -> dict[str, dict[str, str]]:
                 "",
                 "- `uv run pytest -q || pytest -q` -> pass",
                 (
-                    "- `uv run aidd eval run harness/scenarios/live/"
+                    "- `uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/"
                     "sqlite-utils-detect-types-header-only.yaml --runtime generic-cli` "
                     "-> pass"
                 ),

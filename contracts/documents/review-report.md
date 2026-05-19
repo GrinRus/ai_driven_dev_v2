@@ -18,6 +18,8 @@ Capture implementation review findings and readiness judgment.
 - the content is non-placeholder and stage-relevant,
 - upstream references are present when the stage requires them.
 - findings may be top-level bullets or `### RV-*` / `### REV-*` subsections,
+- if no review findings remain, the `Findings` section may instead contain an explicit
+  no-findings declaration such as `- none` or `No review findings were identified.`,
 - nested finding metadata bullets still belong to the enclosing finding and must include
   severity, disposition, rationale, and evidence.
 

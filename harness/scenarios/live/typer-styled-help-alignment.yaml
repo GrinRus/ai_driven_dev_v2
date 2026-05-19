@@ -87,3 +87,8 @@ interview:
   required: false
 runtime_targets:
 - codex
+live_flow:
+  driver: stepwise-black-box
+  checkpoint_policy: after-each-step
+  answer_policy: agent-decides
+  frontend_checkpoints: true

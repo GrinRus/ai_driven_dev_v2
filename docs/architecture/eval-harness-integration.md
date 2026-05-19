@@ -104,7 +104,7 @@ Harness scenarios are defined in YAML and describe:
 - setup and verify commands;
 - feature source policy;
 - quality gate policy;
-- interview expectations;
+- live answer policy and interview expectations;
 - grading rules;
 - timeout and patch-budget limits.
 
@@ -116,6 +116,7 @@ Live scenarios additionally imply:
 - target repository cwd as the operator execution root;
 - `.aidd` workspace rooted inside that target repository.
 - a live runtime config written into the prepared working copy, with optional command overrides from `AIDD_EVAL_<RUNTIME>_COMMAND`.
+- `agent-decides` answer handling for any live scenario that blocks on questions.
 - one post-verification quality phase that writes quality artifacts without mutating roadmap or backlog files.
 
 Deterministic scenarios additionally imply:
@@ -134,10 +135,12 @@ Deterministic scenarios additionally imply:
    - the first authored task for live scenarios.
 5. Prepare the AIDD artifact under test when the scenario uses the installed-live lane.
 6. Run setup commands in the target repository root.
-7. Launch AIDD from the target repository root with explicit workflow bounds.
+7. For live E2E, plan the next step, execute through public installed-AIDD surfaces
+   (`aidd stage run` plus inspection commands), inspect evidence, classify the step,
+   and decide whether to continue, request answers, stop, or finish.
 8. Capture raw runtime logs and emitted structured logs when supported.
 9. Capture emitted normalized events and include them in first-failure boundary analysis.
-10. Capture question and answer artifacts when used.
+10. Capture question and answer artifacts whenever a live or deterministic run uses them.
 11. Capture validator outcomes and repair attempts.
 12. Run scenario verification commands.
 13. Run scenario quality commands.
@@ -147,8 +150,14 @@ Deterministic scenarios additionally imply:
 
 ## 7. Mandatory output artifacts
 
-Every eval run should aim to write:
+Every black-box live E2E run should aim to write:
 
+- `.aidd/reports/evals/<run_id>/flow-state.json`
+- `.aidd/reports/evals/<run_id>/flow-steps.json`
+- `.aidd/reports/evals/<run_id>/flow-report.md`
+- `.aidd/reports/evals/<run_id>/operator-actions.jsonl`
+- `.aidd/reports/evals/<run_id>/frontend-checkpoints.json`
+- `.aidd/reports/evals/<run_id>/frontend-checkpoints.md`
 - `.aidd/reports/evals/<run_id>/runtime.log`
 - `.aidd/reports/evals/<run_id>/runtime.jsonl` when attempts emitted structured JSONL
 - `.aidd/reports/evals/<run_id>/events.jsonl` when attempts emitted normalized JSONL

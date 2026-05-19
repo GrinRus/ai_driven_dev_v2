@@ -14,7 +14,9 @@ scope safety, verification truthfulness, and cross-document status consistency.
    `contracts/documents/validator-report.md`,
    `contracts/documents/stage-result.md`
 5. `contracts/documents/questions.md` and `contracts/documents/answers.md`
-6. current outputs:
+6. stage input bundle for this attempt, especially `context/acceptance-criteria.md` and
+   `context/verification-output.md`
+7. current outputs:
    - `implementation-report.md`
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
@@ -71,7 +73,9 @@ Use concrete repair actions:
 1. Preserve valid evidence-backed sections; do not rewrite unaffected parts.
 2. Keep selected task id and scope constraints explicit after every edit.
 3. Rework touched-files list and verification notes together whenever implementation claims change.
-4. Do not claim commands/checks that were not executed in this attempt.
+4. Do not claim commands/checks that were not executed in this attempt; if
+   `context/verification-output.md` lists authored or scenario verification commands, record each
+   command as executed with outcome or explicitly not-run with a reason.
 5. If no-op is retained, include justification, evidence, and next action; otherwise no-op is invalid.
 6. Keep `stage-result.md` attempt status truthful for the current repair attempt.
 7. Use exact required headings from document contracts; do not rename or qualify headings.

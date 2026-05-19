@@ -27,6 +27,8 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `context/repository-state.md`
 - `context/task-selection.md`
 - `context/allowed-write-scope.md`
+- `context/acceptance-criteria.md`
+- `context/verification-output.md`
 
 ## Optional context inputs
 
@@ -41,6 +43,8 @@ Optional context documents may improve implementation quality, but they must not
 - `implement` depends on artifacts from the latest completed `tasklist` attempt.
 - `implement` must not declare `succeeded` when selected task id is missing from `tasklist.md`.
 - `implement` must not declare `succeeded` when edits exceed `context/allowed-write-scope.md` or the scope definition is missing.
+- `implement` must not declare `succeeded` when authored verification commands in
+  `context/verification-output.md` were skipped without an explicit not-run reason.
 
 ## Implementation output expectations
 
@@ -48,6 +52,8 @@ Optional context documents may improve implementation quality, but they must not
   - an explicit change summary mapped to the selected task id,
   - a touched-files list with file path and short change intent per entry,
   - verification notes naming the primary checks executed and their outcomes,
+  - explicit status for verification commands from `context/verification-output.md`
+    when that document names authored or scenario checks,
   - follow-up notes for known residual risks or deferred non-blocking items.
 - touched-files validation is based on top-level file entries; nested bullets and fenced diffs may
   provide supporting detail, but each top-level file entry must include a backticked path and a short

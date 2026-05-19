@@ -165,10 +165,10 @@ jobs:
           )
           PY
 
-      - name: Run manual live eval
+      - name: Run black-box live E2E evaluator
         run: |
           set -euo pipefail
-          uv run aidd eval run "$SCENARIO_PATH" --runtime "${{ inputs.runtime_id }}"
+          uv run python -m aidd.harness.live_e2e_black_box "$SCENARIO_PATH" --runtime "${{ inputs.runtime_id }}"
 
       - name: Upload live eval bundle
         if: always()

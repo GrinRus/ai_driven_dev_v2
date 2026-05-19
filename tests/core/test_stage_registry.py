@@ -249,6 +249,8 @@ def test_resolve_required_input_documents_maps_context_and_upstream_paths(
         workspace_root / "workitems" / "WI-001" / "context" / "repository-state.md",
         workspace_root / "workitems" / "WI-001" / "context" / "task-selection.md",
         workspace_root / "workitems" / "WI-001" / "context" / "allowed-write-scope.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "acceptance-criteria.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "verification-output.md",
     )
 
 

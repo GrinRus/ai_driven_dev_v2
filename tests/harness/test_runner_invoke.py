@@ -50,6 +50,7 @@ def _build_scenario(
         verify=ScenarioCommandSteps(commands=("echo verify",)),
         feature_source=None,
         quality=None,
+        live_flow=None,
         runtime_targets=runtime_targets,
         is_live=False,
         raw={"id": "AIDD-TEST-RUNNER-INVOKE"},

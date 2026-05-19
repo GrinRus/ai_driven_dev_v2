@@ -54,18 +54,23 @@ operators initialize work items from the target project root with
 ## Manual-Only Automation Policy
 
 - `automation_lane` for every live scenario is `manual`.
-- The only supported automation entrypoint is `.github/workflows/manual-live-e2e.yml`.
+- The only supported automation entrypoint is `.github/workflows/manual-live-e2e.yml`,
+  which invokes the black-box evaluator module instead of a product CLI command.
 - That workflow supports optional GitHub secret overrides for custom wrapper
   commands:
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`
   - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
-- When no override is set, the harness validates the default native provider
+- When no override is set, the evaluator validates the default native provider
   command on the runner before cloning or installing artifacts.
 - Secret override values must point to runner-available wrapper commands that
   accept the AIDD adapter contract flags.
 - CI must not reference `harness/scenarios/live/`.
 - Release automation must not run live scenarios or require live-eval artifacts.
+- Live manifests must declare `live_flow.driver: stepwise-black-box`,
+  `live_flow.checkpoint_policy: after-each-step`, and
+  `live_flow.frontend_checkpoints: true` so every live run inspects the public
+  CLI, UI, and UI/API surfaces after each stage.
 
 ## Maintained Repository Set
 
@@ -138,7 +143,10 @@ Every maintained live scenario must:
 - select the first listed authored task deterministically;
 - define authored task `id`, `title`, `summary`, `intent`, `target_change`, `expected_scope`,
   `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
-- define authored task `interview` guidance only for `live-full-flow-interview` scenarios;
+- declare `live_flow.answer_policy: agent-decides` so any stage can block on questions
+  and resume after external operator-agent answers are written;
+- define authored task `interview` guidance when the scenario is
+  `live-full-flow-interview`; other live scenarios may include it as optional context;
 - force full-flow `idea -> qa`;
 - run repo-local verification commands;
 - run repo-local quality commands;
@@ -174,8 +182,10 @@ The maintained interview scenarios are:
 - `AIDD-LIVE-006`
 - `AIDD-LIVE-008`
 
-These scenarios must block when questions are unresolved and resume only after `answers.md`
-is present in the expected target-repository workspace path.
+Any live scenario may block when questions are unresolved and resume only after
+standard `answers.md` content is present in the target-repository workspace path.
+The interview scenarios above are the maintained coverage cases where the manifest
+expects that blocking question path to happen.
 
 ## Related References
 

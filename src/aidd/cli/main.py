@@ -7,7 +7,7 @@ import typer
 from aidd import __version__
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.cli.doctor import _runtime_probe_report, doctor
-from aidd.cli.eval import eval_doctor, eval_run, eval_summary
+from aidd.cli.eval import eval_doctor, eval_summary
 from aidd.cli.init_command import init
 from aidd.cli.run import run_artifacts, run_callback, run_logs, run_show
 from aidd.cli.stage import stage_questions, stage_run, stage_summary
@@ -40,7 +40,6 @@ __all__ = [
     "app",
     "doctor",
     "eval_doctor",
-    "eval_run",
     "eval_summary",
     "init",
     "main",
@@ -115,7 +114,6 @@ run_app.command("artifacts")(run_artifacts)
 stage_app.command("run")(stage_run)
 stage_app.command("questions")(stage_questions)
 stage_app.command("summary")(stage_summary)
-eval_app.command("run")(eval_run)
 eval_app.command("doctor")(eval_doctor)
 eval_app.command("summary")(eval_summary)
 

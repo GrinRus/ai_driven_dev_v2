@@ -26,6 +26,9 @@ _LIVE_SCENARIO_CLASSES = {"live-full-flow", "live-full-flow-interview"}
 _FEATURE_SIZES = {"tiny", "small", "medium", "large", "xlarge"}
 _AUTOMATION_LANES = {"ci", "manual"}
 _SUPPORTED_RUNTIME_IDS = set(runtime_ids())
+_LIVE_FLOW_DRIVERS = {"stepwise-black-box"}
+_LIVE_FLOW_CHECKPOINT_POLICIES = {"after-each-step"}
+_LIVE_FLOW_ANSWER_POLICIES = {"agent-decides"}
 
 
 @dataclass(frozen=True)
@@ -85,6 +88,14 @@ class ScenarioRunConfig:
 
 
 @dataclass(frozen=True)
+class ScenarioLiveFlowConfig:
+    driver: str
+    checkpoint_policy: str
+    answer_policy: str
+    frontend_checkpoints: bool
+
+
+@dataclass(frozen=True)
 class Scenario:
     scenario_id: str
     scenario_class: str
@@ -98,6 +109,7 @@ class Scenario:
     verify: ScenarioCommandSteps
     feature_source: ScenarioFeatureSource | None
     quality: ScenarioQualityConfig | None
+    live_flow: ScenarioLiveFlowConfig | None
     runtime_targets: tuple[str, ...]
     is_live: bool
     raw: dict[str, Any]
@@ -422,6 +434,36 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
     )
 
 
+def _to_live_flow_config(raw: Any) -> ScenarioLiveFlowConfig:
+    payload = _require_mapping(value=raw, key="live_flow")
+    driver = _require_choice(
+        payload=payload,
+        key="driver",
+        supported=_LIVE_FLOW_DRIVERS,
+    )
+    checkpoint_policy = _require_choice(
+        payload=payload,
+        key="checkpoint_policy",
+        supported=_LIVE_FLOW_CHECKPOINT_POLICIES,
+    )
+    answer_policy = _require_choice(
+        payload=payload,
+        key="answer_policy",
+        supported=_LIVE_FLOW_ANSWER_POLICIES,
+    )
+    frontend_checkpoints_raw = payload.get("frontend_checkpoints", False)
+    if not isinstance(frontend_checkpoints_raw, bool):
+        raise ScenarioManifestError(
+            "Scenario manifest key 'live_flow.frontend_checkpoints' must be a boolean."
+        )
+    return ScenarioLiveFlowConfig(
+        driver=driver,
+        checkpoint_policy=checkpoint_policy,
+        answer_policy=answer_policy,
+        frontend_checkpoints=frontend_checkpoints_raw,
+    )
+
+
 def _is_live_scenario_path(path: Path) -> bool:
     resolved = path.resolve(strict=False)
     return (
@@ -451,6 +493,7 @@ def _validate_scenario_contract(
     run: ScenarioRunConfig,
     feature_source: ScenarioFeatureSource | None,
     quality: ScenarioQualityConfig | None,
+    live_flow: ScenarioLiveFlowConfig | None,
 ) -> None:
     if run.stage_start is None or run.stage_end is None:
         raise ScenarioManifestError(
@@ -506,7 +549,24 @@ def _validate_scenario_contract(
             raise ScenarioManifestError(
                 f"Live scenario manifest missing required key: quality ({path.as_posix()})."
             )
+        if live_flow is None:
+            raise ScenarioManifestError(
+                f"Live scenario manifest missing required key: live_flow ({path.as_posix()})."
+            )
+        if live_flow.frontend_checkpoints is not True:
+            raise ScenarioManifestError(
+                "Live scenario manifest black-box checkpoint contract mismatch: "
+                "`live_flow.frontend_checkpoints` must be true so live E2E inspects "
+                "the public `aidd ui` surface and UI/API endpoints after each stage."
+            )
         expects_interview = scenario_class == "live-full-flow-interview"
+        if live_flow.answer_policy != "agent-decides":
+            raise ScenarioManifestError(
+                "Live scenario manifest black-box answer contract mismatch: "
+                "`live_flow.answer_policy` must be `agent-decides` so any live "
+                "scenario can block on questions and resume after external "
+                "operator-agent answers."
+            )
         if run.interview_required is not expects_interview:
             expected_value = "true" if expects_interview else "false"
             raise ScenarioManifestError(
@@ -519,11 +579,6 @@ def _validate_scenario_contract(
                 raise ScenarioManifestError(
                     "Live interview scenario authored tasks must include "
                     f"`feature_source.tasks[{index}].interview` guidance."
-                )
-            if not expects_interview and task.interview:
-                raise ScenarioManifestError(
-                    "Non-interview live scenario authored tasks must not declare "
-                    f"`feature_source.tasks[{index}].interview`."
                 )
         return
 
@@ -538,6 +593,10 @@ def _validate_scenario_contract(
     if quality is not None:
         raise ScenarioManifestError(
             "Deterministic scenario manifests must not declare a live `quality` block."
+        )
+    if live_flow is not None:
+        raise ScenarioManifestError(
+            "Deterministic scenario manifests must not declare a `live_flow` block."
         )
     if scenario_class == "deterministic-stage" and (
         run.stage_start == STAGES[0] and run.stage_end == STAGES[-1]
@@ -604,6 +663,11 @@ def load_scenario(
         if substituted.get("quality") is not None
         else None
     )
+    live_flow = (
+        _to_live_flow_config(substituted.get("live_flow"))
+        if substituted.get("live_flow") is not None
+        else None
+    )
     repo = _to_repo_source(substituted.get("repo"))
     setup = _to_command_steps(raw=substituted.get("setup"), key="setup")
     verify = _to_command_steps(raw=substituted.get("verify"), key="verify")
@@ -616,6 +680,7 @@ def load_scenario(
         run=run,
         feature_source=feature_source,
         quality=quality,
+        live_flow=live_flow,
     )
     return Scenario(
         scenario_id=scenario_id,
@@ -630,6 +695,7 @@ def load_scenario(
         verify=verify,
         feature_source=feature_source,
         quality=quality,
+        live_flow=live_flow,
         runtime_targets=run.runtime_targets,
         is_live=is_live,
         raw=substituted,

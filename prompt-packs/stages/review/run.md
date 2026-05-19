@@ -7,7 +7,9 @@ disposition, then makes an explicit approval decision (`approved`, `approved-wit
 or `rejected`).
 
 The stage is complete only when every finding is evidence-backed, severity/disposition labels are
-coherent, and approval status matches unresolved `must-fix` items.
+coherent, and approval status matches unresolved `must-fix` items. If there are no review
+findings, the `Findings` section must say exactly `- none` or
+`No review findings were identified.`
 
 ## Inputs to read first
 
@@ -53,6 +55,8 @@ normalize if canonical validation proves the terminal status inconsistent.
    Every finding must include an explicit `Evidence:` metadata item or equivalent inline evidence
    text that cites `implementation-report.md`, a changed file path, or an acceptance-criteria id
    such as `AC-1`. A plausible rationale without this evidence reference is invalid.
+   If there are no active findings, do not invent a finding id; write a single explicit
+   no-findings declaration instead.
 2. Severity and disposition labels must stay consistent between detailed findings and summary
    sections.
 3. `must-fix` findings block `approved` status until resolved.

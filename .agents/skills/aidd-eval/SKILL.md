@@ -105,5 +105,5 @@ Quality remains additive and must be reported separately as:
 ## Example command shape
 
 ```bash
-aidd eval run harness/scenarios/smoke/plan-stagepack-smoke.yaml --runtime opencode
+uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode
 ```

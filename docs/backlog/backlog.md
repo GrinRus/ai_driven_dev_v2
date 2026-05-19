@@ -89,3 +89,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-07` Wave 21 completed explicit UI runtime selection, warn-only UI request safety, conditional project-set stage-result evidence, adapter callable registration, manifest provenance completion, runtime-log event ownership, and scoped module decomposition. Active backlog queue is empty again.
 - `2026-05-07` Wave 22 was opened via `W8-E3-S1` queue-restoration policy to reconcile the empty active backlog with stale historical blocked local tasks; `W22-E0-S1-T1` was promoted to `Next` for the reconciliation pass.
 - `2026-05-07` Wave 22 completed `W22-E0-S1-T1`: stale blockers `W15-E3-S1-T1`, `W15-E3-S2-T1`, `W20-E1-S3-T5`, and `W20-E1-S4-T2` were closed or superseded by accepted later evidence. Active backlog queue remains empty.
+- `2026-05-18` Wave 23 completed `W23-E1-S1-T1`: the legacy eval-run
+  product command and its monolithic live execution path were removed, manual live
+  E2E now uses the stepwise black-box evaluator module, and the active backlog queue
+  remains empty.
