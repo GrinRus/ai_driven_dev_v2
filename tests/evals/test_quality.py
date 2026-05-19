@@ -77,7 +77,7 @@ def _build_live_scenario() -> Scenario:
         live_flow=ScenarioLiveFlowConfig(
             driver="stepwise-black-box",
             checkpoint_policy="after-each-step",
-            answer_policy="none",
+            answer_policy="agent-decides",
             frontend_checkpoints=True,
         ),
         runtime_targets=("generic-cli",),

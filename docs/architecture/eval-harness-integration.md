@@ -104,7 +104,7 @@ Harness scenarios are defined in YAML and describe:
 - setup and verify commands;
 - feature source policy;
 - quality gate policy;
-- interview expectations;
+- live answer policy and interview expectations;
 - grading rules;
 - timeout and patch-budget limits.
 
@@ -116,6 +116,7 @@ Live scenarios additionally imply:
 - target repository cwd as the operator execution root;
 - `.aidd` workspace rooted inside that target repository.
 - a live runtime config written into the prepared working copy, with optional command overrides from `AIDD_EVAL_<RUNTIME>_COMMAND`.
+- `agent-decides` answer handling for any live scenario that blocks on questions.
 - one post-verification quality phase that writes quality artifacts without mutating roadmap or backlog files.
 
 Deterministic scenarios additionally imply:
@@ -139,7 +140,7 @@ Deterministic scenarios additionally imply:
    and decide whether to continue, request answers, stop, or finish.
 8. Capture raw runtime logs and emitted structured logs when supported.
 9. Capture emitted normalized events and include them in first-failure boundary analysis.
-10. Capture question and answer artifacts when used.
+10. Capture question and answer artifacts whenever a live or deterministic run uses them.
 11. Capture validator outcomes and repair attempts.
 12. Run scenario verification commands.
 13. Run scenario quality commands.

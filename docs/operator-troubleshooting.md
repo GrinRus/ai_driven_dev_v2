@@ -192,7 +192,8 @@ Actions:
    - `self-repair-matrix.md`
 3. Classify failure source:
    - `infra-fail`: setup/teardown/repo-prep issue;
-   - `blocked`: interview lane is waiting for required answers evidence;
+   - `blocked`: the live evaluator found unresolved blocking questions and is
+     waiting for `answers.md` evidence requested in `operator-action-request.md`;
    - `fail`: verification or run command failed.
 4. Re-run the same scenario/runtime after fixing the first failure boundary.
 

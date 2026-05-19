@@ -143,7 +143,10 @@ Every maintained live scenario must:
 - select the first listed authored task deterministically;
 - define authored task `id`, `title`, `summary`, `intent`, `target_change`, `expected_scope`,
   `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
-- define authored task `interview` guidance only for `live-full-flow-interview` scenarios;
+- declare `live_flow.answer_policy: agent-decides` so any stage can block on questions
+  and resume after external operator-agent answers are written;
+- define authored task `interview` guidance when the scenario is
+  `live-full-flow-interview`; other live scenarios may include it as optional context;
 - force full-flow `idea -> qa`;
 - run repo-local verification commands;
 - run repo-local quality commands;
@@ -179,8 +182,10 @@ The maintained interview scenarios are:
 - `AIDD-LIVE-006`
 - `AIDD-LIVE-008`
 
-These scenarios must block when questions are unresolved and resume only after `answers.md`
-is present in the expected target-repository workspace path.
+Any live scenario may block when questions are unresolved and resume only after
+standard `answers.md` content is present in the target-repository workspace path.
+The interview scenarios above are the maintained coverage cases where the manifest
+expects that blocking question path to happen.
 
 ## Related References
 

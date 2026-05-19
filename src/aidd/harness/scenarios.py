@@ -28,7 +28,7 @@ _AUTOMATION_LANES = {"ci", "manual"}
 _SUPPORTED_RUNTIME_IDS = set(runtime_ids())
 _LIVE_FLOW_DRIVERS = {"stepwise-black-box"}
 _LIVE_FLOW_CHECKPOINT_POLICIES = {"after-each-step"}
-_LIVE_FLOW_ANSWER_POLICIES = {"none", "agent-decides"}
+_LIVE_FLOW_ANSWER_POLICIES = {"agent-decides"}
 
 
 @dataclass(frozen=True)
@@ -560,12 +560,12 @@ def _validate_scenario_contract(
                 "the public `aidd ui` surface and UI/API endpoints after each stage."
             )
         expects_interview = scenario_class == "live-full-flow-interview"
-        expected_answer_policy = "agent-decides" if expects_interview else "none"
-        if live_flow.answer_policy != expected_answer_policy:
+        if live_flow.answer_policy != "agent-decides":
             raise ScenarioManifestError(
                 "Live scenario manifest black-box answer contract mismatch: "
-                f"`live_flow.answer_policy` must be `{expected_answer_policy}` for "
-                f"`scenario_class: {scenario_class}`."
+                "`live_flow.answer_policy` must be `agent-decides` so any live "
+                "scenario can block on questions and resume after external "
+                "operator-agent answers."
             )
         if run.interview_required is not expects_interview:
             expected_value = "true" if expects_interview else "false"
@@ -579,11 +579,6 @@ def _validate_scenario_contract(
                 raise ScenarioManifestError(
                     "Live interview scenario authored tasks must include "
                     f"`feature_source.tasks[{index}].interview` guidance."
-                )
-            if not expects_interview and task.interview:
-                raise ScenarioManifestError(
-                    "Non-interview live scenario authored tasks must not declare "
-                    f"`feature_source.tasks[{index}].interview`."
                 )
         return
 

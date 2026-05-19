@@ -314,6 +314,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "plan step, execute through public operator surfaces, inspect artifacts",
         "frontend-checkpoints.json",
         "first listed authored task",
+        "any live scenario may block when required answers are missing",
+        "`live-full-flow-interview` scenarios are coverage cases",
         "`idea -> qa`",
         "`.aidd/reports/evals/<run_id>/`",
         "does **not** provision runtime authentication, wrapper scripts, or provider setup",
@@ -338,6 +340,33 @@ def test_docs_do_not_reference_removed_eval_run_command() -> None:
                 continue
             text = path.read_text(encoding="utf-8")
             if "aidd eval run" in text:
+                offenders.append(path.relative_to(_repo_root()).as_posix())
+
+    assert offenders == []
+
+
+def test_live_docs_do_not_limit_questions_to_interview_scenarios() -> None:
+    searched_roots = [
+        _repo_root() / "README.md",
+        _repo_root() / "docs" / "architecture" / "eval-harness-integration.md",
+        _repo_root() / "docs" / "e2e",
+        _repo_root() / "docs" / "operator-handbook.md",
+        _repo_root() / "docs" / "operator-troubleshooting.md",
+        _repo_root() / ".agents" / "skills" / "live-e2e",
+    ]
+    stale_phrases = (
+        "interview scenarios block when required answers are missing",
+        "questions.md` / `answers.md` expectations for interview scenarios",
+        "interview guidance only for `live-full-flow-interview` scenarios",
+    )
+    offenders: list[str] = []
+    for root in searched_roots:
+        paths = [root] if root.is_file() else list(root.rglob("*"))
+        for path in paths:
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8")
+            if any(phrase in text for phrase in stale_phrases):
                 offenders.append(path.relative_to(_repo_root()).as_posix())
 
     assert offenders == []

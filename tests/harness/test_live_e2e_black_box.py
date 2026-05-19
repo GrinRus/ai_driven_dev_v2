@@ -74,7 +74,9 @@ def _write_fake_aidd(
     *,
     fail_stage: str | None = None,
     block_stage: str | None = None,
+    inspect_block_stage: str | None = None,
     inspect_fail_command: str | None = None,
+    log_blocking_text: bool = False,
 ) -> None:
     path.write_text(
         f"""#!/usr/bin/env python3
@@ -88,7 +90,9 @@ from pathlib import Path
 PRIMARY_OUTPUTS = {json.dumps(_PRIMARY_OUTPUTS)}
 FAIL_STAGE = {fail_stage!r}
 BLOCK_STAGE = {block_stage!r}
+INSPECT_BLOCK_STAGE = {inspect_block_stage!r}
 INSPECT_FAIL_COMMAND = {inspect_fail_command!r}
+LOG_BLOCKING_TEXT = {log_blocking_text!r}
 
 
 def option(args: list[str], name: str, default: str = "") -> str:
@@ -192,6 +196,31 @@ def ui(args: list[str]) -> int:
     return 0
 
 
+def stage_questions(args: list[str]) -> int:
+    stage = args[2]
+    work_item = option(args, "--work-item")
+    stage_root = Path(".aidd") / "workitems" / work_item / "stages" / stage
+    answers_path = stage_root / "answers.md"
+    questions_path = stage_root / "questions.md"
+    if stage == INSPECT_BLOCK_STAGE:
+        questions_path.parent.mkdir(parents=True, exist_ok=True)
+        questions_path.write_text(
+            "# Questions\\n\\n- Q1 [blocking]: Which behavior should be implemented?\\n"
+        )
+    print(f"Stage questions: {{stage}}")
+    questions_text = questions_path.read_text().lower() if questions_path.exists() else ""
+    if "[blocking]" in questions_text and (
+        not answers_path.exists() or "[resolved]" not in answers_path.read_text().lower()
+    ):
+        print("pending-blocking")
+        print("Blocking questions are unresolved.")
+        print(f"Questions: {{questions_path}}")
+        print(f"Answers: {{answers_path}}")
+        return 0
+    print("No unresolved blocking questions.")
+    return 0
+
+
 def main() -> int:
     args = sys.argv[1:]
     if args[:1] == ["ui"]:
@@ -205,12 +234,13 @@ def main() -> int:
         print(f"Stage summary: {{args[2]}}")
         return 0
     if args[:2] == ["stage", "questions"]:
-        print(f"Stage questions: {{args[2]}}")
-        return 0
+        return stage_questions(args)
     if args[:2] == ["run", "show"]:
         print("Run metadata")
         return 0
     if args[:2] == ["run", "logs"]:
+        if LOG_BLOCKING_TEXT:
+            print("Historical log: Blocking questions are unresolved.")
         print("Run log")
         return 0
     if args[:2] == ["run", "artifacts"]:
@@ -265,7 +295,7 @@ def _write_scenario_manifest(
         "live_flow": {
             "driver": "stepwise-black-box",
             "checkpoint_policy": "after-each-step",
-            "answer_policy": "agent-decides" if interview_required else "none",
+            "answer_policy": "agent-decides",
             "frontend_checkpoints": frontend_checkpoints,
         },
         "feature_source": {
@@ -337,7 +367,9 @@ def _prepare_live_test(
     quality_commands: tuple[str, ...] = ("printf 'quality\\n' > quality.log",),
     interview_required: bool = False,
     frontend_checkpoints: bool = True,
+    inspect_block_stage: str | None = None,
     inspect_fail_command: str | None = None,
+    log_blocking_text: bool = False,
 ) -> tuple[Path, Path]:
     _clear_live_runtime_command_env(monkeypatch)
     _put_fake_provider_on_path(tmp_path=tmp_path, monkeypatch=monkeypatch)
@@ -348,7 +380,9 @@ def _prepare_live_test(
         fake_aidd,
         fail_stage=fail_stage,
         block_stage=block_stage,
+        inspect_block_stage=inspect_block_stage,
         inspect_fail_command=inspect_fail_command,
+        log_blocking_text=log_blocking_text,
     )
     scenario_dir = tmp_path / "harness" / "scenarios" / "live"
     scenario_dir.mkdir(parents=True)
@@ -438,7 +472,6 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
         monkeypatch,
         block_stage="idea",
         quality_commands=("command -v fake-aidd >/dev/null",),
-        interview_required=True,
     )
 
     first = run_black_box_live_e2e(
@@ -495,6 +528,79 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     ).read_text(encoding="utf-8")
     assert "- none" in (resumed.bundle_root / "validator-report.md").read_text(
         encoding="utf-8"
+    )
+
+
+def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, workspace_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        inspect_block_stage="idea",
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+
+    first = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        workspace_root=workspace_root,
+    )
+
+    assert first.status == "blocked"
+    request_payload = json.loads(
+        (first.bundle_root / "operator-action-request.json").read_text(encoding="utf-8")
+    )
+    assert request_payload["stage"] == "idea"
+    answers_path = Path(request_payload["answers_path"])
+    answers_path.write_text(
+        "# Answers\n\n- Q1 [resolved]: Implement the behavior described by the task.\n",
+        encoding="utf-8",
+    )
+
+    resumed = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        workspace_root=workspace_root,
+    )
+
+    assert resumed.status == "pass"
+    steps = json.loads((resumed.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    assert any(
+        step["action"] == "inspect-stage"
+        and step["stage"] == "idea"
+        and step["classification"] == "blocked"
+        for step in steps
+    )
+    assert any(
+        step["action"] == "answer-questions" and step["classification"] == "pass"
+        for step in steps
+    )
+
+
+def test_black_box_live_e2e_does_not_reblock_on_historical_log_text(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, workspace_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        log_blocking_text=True,
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        workspace_root=workspace_root,
+    )
+
+    assert result.status == "pass"
+    steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    assert all(
+        not (step["action"] == "inspect-stage" and step["classification"] == "blocked")
+        for step in steps
     )
 
 

@@ -1276,6 +1276,25 @@ def _classify_stage_run(result: BlackBoxCommandResult) -> StepClassification:
     return "fail"
 
 
+def _inspection_reports_unresolved_questions(
+    results: tuple[BlackBoxCommandResult, ...],
+) -> bool:
+    for result in results:
+        if not any(
+            result.command[index : index + 2] == ("stage", "questions")
+            for index in range(len(result.command) - 1)
+        ):
+            continue
+        output = f"{result.stdout_text}\n{result.stderr_text}".lower()
+        if (
+            "blocking questions are unresolved" in output
+            or "pending-blocking" in output
+            or "action=wait state=blocked" in output
+        ):
+            return True
+    return False
+
+
 def _frontend_checkpoints_enabled(ctx: FlowContext) -> bool:
     return (
         ctx.scenario.live_flow is not None
@@ -1698,8 +1717,11 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         )
         for command in _inspection_commands(ctx, stage)
     )
+    inspection_reports_blocked = _inspection_reports_unresolved_questions(inspection_results)
     inspect_classification: StepClassification
-    if classification == "pass":
+    if inspection_reports_blocked:
+        inspect_classification = "blocked"
+    elif classification == "pass":
         inspect_classification = (
             "pass"
             if all(result.exit_code == 0 for result in inspection_results)
@@ -1711,7 +1733,12 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             if any(result.exit_code == 0 for result in inspection_results)
             else classification
         )
-    if classification == "pass" and inspect_classification == "pass":
+    if inspection_reports_blocked:
+        inspect_decision = (
+            "Stop and request operator input because public question inspection "
+            "found unresolved blocking questions."
+        )
+    elif classification == "pass" and inspect_classification == "pass":
         inspect_decision = "Continue to the next stage."
     elif classification == "pass":
         inspect_decision = (
@@ -1731,6 +1758,8 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         stage=stage,
         command_results=inspection_results,
     )
+    if inspection_reports_blocked:
+        classification = "blocked"
     frontend_classification = _run_frontend_checkpoint(ctx, stage)
     if classification == "pass" and inspect_classification == "fail":
         _persist_state(

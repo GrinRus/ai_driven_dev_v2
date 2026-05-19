@@ -21,6 +21,11 @@ The supported classes are:
 - `live-full-flow`
 - `live-full-flow-interview`
 
+All live classes use `live_flow.answer_policy: agent-decides`: any live scenario
+may block on unresolved questions and resume after external operator-agent
+answers are written. `live-full-flow-interview` is the coverage class for
+scenarios where that blocking interview path is expected by the manifest.
+
 The supported feature sizes are:
 
 - `tiny` - docs/config-only, 1-2 files, no runtime behavior change.

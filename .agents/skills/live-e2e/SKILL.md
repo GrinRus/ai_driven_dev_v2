@@ -151,7 +151,9 @@ The live run can be rejected or downgraded at several layers:
 - stage execution stays bounded to `idea -> qa`;
 - stage outputs must validate against Markdown document contracts;
 - repair loops are allowed to run when validation failures are repairable;
-- interview scenarios block when required answers are missing;
+- any live scenario may block when required answers are missing;
+- `live-full-flow-interview` scenarios are coverage cases where a blocking
+  interview path is expected by the manifest;
 - repo-local `verify.commands` must pass;
 - repo-local `quality.commands` must pass for a clean quality result;
 - execution `pass` is impossible if any stage in scope is missing required validated artifacts.
@@ -203,7 +205,7 @@ A live run is only "clean" when execution evidence exists, verification output i
 - Runtime launches but immediately fails in native mode: inspect provider auth, model selection, and sandbox permissions.
 - Runtime launches but immediately fails in `adapter-flags` mode: the configured command is probably not an AIDD-compatible wrapper command.
 - `unsupported-runtime`: the runtime is not declared in the scenario's `runtime_targets`.
-- `blocked`: inspect `questions.md` / `answers.md` expectations for interview scenarios.
+- `blocked`: inspect `operator-action-request.md`, `questions.md`, and `answers.md`; the live evaluator will continue after external operator-agent answers are present.
 - `fail` after run success: inspect `verify-transcript.json`, `quality-transcript.json`, and the stage-local validator reports.
 - Missing clean execution despite zero exit codes: inspect `verdict.md` and `grader.json` for pass-guard failures caused by missing `stage-result.md` or `validator-report.md`.
 

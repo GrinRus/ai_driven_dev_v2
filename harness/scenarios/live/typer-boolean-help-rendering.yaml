@@ -81,5 +81,5 @@ runtime_targets:
 live_flow:
   driver: stepwise-black-box
   checkpoint_policy: after-each-step
-  answer_policy: none
+  answer_policy: agent-decides
   frontend_checkpoints: true

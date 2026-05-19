@@ -26,7 +26,7 @@ def _assert_live_contract(scenario) -> None:
     assert scenario.live_flow is not None
     assert scenario.live_flow.driver == "stepwise-black-box"
     assert scenario.live_flow.checkpoint_policy == "after-each-step"
-    assert scenario.live_flow.answer_policy in {"none", "agent-decides"}
+    assert scenario.live_flow.answer_policy == "agent-decides"
     assert scenario.live_flow.frontend_checkpoints is True
 
 

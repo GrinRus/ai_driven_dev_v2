@@ -91,7 +91,7 @@ def _scenario(
         live_flow=ScenarioLiveFlowConfig(
             driver="stepwise-black-box",
             checkpoint_policy="after-each-step",
-            answer_policy="none",
+            answer_policy="agent-decides",
             frontend_checkpoints=True,
         ),
         runtime_targets=runtime_targets,

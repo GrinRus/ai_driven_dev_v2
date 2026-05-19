@@ -28,7 +28,7 @@ def _write_live_scenario(path: Path) -> None:
         "live_flow": {
             "driver": "stepwise-black-box",
             "checkpoint_policy": "after-each-step",
-            "answer_policy": "none",
+            "answer_policy": "agent-decides",
             "frontend_checkpoints": True,
         },
         "interview": {"required": False},

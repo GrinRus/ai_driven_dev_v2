@@ -46,12 +46,7 @@ def test_live_scenarios_are_manual_only() -> None:
             assert scenario.live_flow.driver == "stepwise-black-box", path.as_posix()
             assert scenario.live_flow.checkpoint_policy == "after-each-step", path.as_posix()
             assert scenario.live_flow.frontend_checkpoints is True, path.as_posix()
-            expected_answer_policy = (
-                "agent-decides"
-                if scenario.scenario_class == "live-full-flow-interview"
-                else "none"
-            )
-            assert scenario.live_flow.answer_policy == expected_answer_policy, path.as_posix()
+            assert scenario.live_flow.answer_policy == "agent-decides", path.as_posix()
 
 
 def test_live_scenarios_do_not_mask_setup_or_pytest_failures_with_shell_fallbacks() -> None:
