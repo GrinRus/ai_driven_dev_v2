@@ -55,6 +55,9 @@ manifest with explicit acceptance criteria and verification intent.
 - OpenCode native runs can now finish with `document_complete` when required stage
   documents settle but the provider process does not return a final message; canonical
   validation still decides whether the stage blocks, repairs, or advances.
+- The OpenCode completion rule treats a settled blocking-question bundle as terminal even
+  when `answers.md` remains the unanswered placeholder; canonical validation and the
+  black-box flow decide whether operator answers are still required.
 - Idea semantic validation still rejects absolute success claims, but allows negated
   security-guarantee caveats such as "without implying a broader guarantee" because those
   phrases document risk rather than overclaiming certainty.

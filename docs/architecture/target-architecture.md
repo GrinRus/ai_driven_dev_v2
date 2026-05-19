@@ -233,7 +233,9 @@ For every stage run:
    Provider-specific native adapters may mark a process `document_complete` only after the
    declared Markdown outputs are present, terminal documents have been updated, and the
    files have settled. This is still raw-log-visible adapter evidence; it does not skip the
-   canonical validation step.
+   canonical validation step. When a stage writes fresh blocking questions, `answers.md`
+   may still be an unanswered placeholder; validation and interview routing decide whether
+   the stage waits for operator answers.
 8. If the runtime or stage documents raise questions:
    - surface them through the CLI or durable stage documents,
    - persist them as `questions.md`,
