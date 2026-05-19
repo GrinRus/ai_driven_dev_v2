@@ -61,3 +61,7 @@ manifest with explicit acceptance criteria and verification intent.
 - Idea semantic validation still rejects absolute success claims, but allows negated
   security-guarantee caveats such as "without implying a broader guarantee" because those
   phrases document risk rather than overclaiming certainty.
+- Interview validation now treats malformed `questions.md` structure plus unresolved blocking
+  questions as a repairable document failure, not a clean wait state for prepared answers.
+  The `idea` prompt also forbids nested question bullets, which previously produced malformed
+  interview documents in live runs.

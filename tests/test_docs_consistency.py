@@ -123,9 +123,14 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
     stage_result_contract = (
         repo_root / "contracts" / "documents" / "stage-result.md"
     ).read_text(encoding="utf-8")
+    questions_contract = (
+        repo_root / "contracts" / "documents" / "questions.md"
+    ).read_text(encoding="utf-8")
 
     assert "`validator-report.md` is AIDD-canonical" in document_contracts
     assert "`repair-brief.md` is not runtime-authored" in document_contracts
+    assert "nested or indented bullets" in questions_contract.lower()
+    assert "nested or indented bullets" in document_contracts.lower()
     assert "AIDD treats it as the\nworkflow-facing summary" in stage_result_contract
 
     for stage in STAGES:

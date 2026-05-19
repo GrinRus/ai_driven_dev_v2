@@ -175,6 +175,11 @@ When a stage needs clarification, the system should write:
 - `questions.md`
 - `answers.md` once the user replies
 
+`questions.md` uses one top-level bullet per question id. Nested or indented bullets
+under a question are structurally invalid because the parser treats bullets in the
+questions section as question entries; alternatives or rationale belong in the question
+sentence or non-bullet continuation prose.
+
 These documents must be durable because:
 - the run might pause,
 - the user might answer later,

@@ -55,6 +55,7 @@ def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
 
     assert "`Open questions` as Markdown bullet items, or exactly `- none`" in run_prompt
     assert "prose-only text is invalid" in run_prompt
+    assert "do not put indented or nested bullets under a question" in run_prompt
     assert "Prose such as `No open questions.` is still invalid" in repair_prompt
     assert (
         "`SEM-INCOMPLETE-SECTION` for `Constraints` or `Open questions`" in repair_prompt

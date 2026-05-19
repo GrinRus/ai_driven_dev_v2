@@ -34,9 +34,9 @@ def derive_validation_verdict(
     findings: tuple[ValidationFinding, ...],
     interview_routing: StageInterviewRouting | None = None,
 ) -> ValidationVerdict:
-    if any(finding.code == BLOCKING_UNANSWERED_CODE for finding in findings):
-        return ValidationVerdict.BLOCKED
     if findings:
+        if all(finding.code == BLOCKING_UNANSWERED_CODE for finding in findings):
+            return ValidationVerdict.BLOCKED
         return ValidationVerdict.REPAIR
     if interview_routing is not None and interview_routing.requires_interview:
         return ValidationVerdict.BLOCKED

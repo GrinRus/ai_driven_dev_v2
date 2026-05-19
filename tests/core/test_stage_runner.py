@@ -1235,6 +1235,64 @@ def test_run_single_stage_orchestration_repairs_malformed_questions_document(
     assert "`- <QID> [resolved|partial|deferred] <text>` for answers" in validator_report_text
 
 
+def test_run_single_stage_orchestration_repairs_malformed_questions_with_blockers(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["questions.md"] = (
+        "# Questions\n\n"
+        "- Q1 [blocking] What input form should the CLI accept?\n"
+        "  - Should it accept inline code, a Python file, or both?\n"
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        stage_root = (
+            workspace_root
+            / "workitems"
+            / invocation.work_item
+            / "stages"
+            / invocation.stage
+        )
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.REPAIR
+    assert orchestration.validation_result is not None
+    finding_codes = {finding.code for finding in orchestration.validation_result.findings}
+    assert "INTERVIEW-MALFORMED-DOCUMENT" in finding_codes
+    assert "CROSS-BLOCKING-UNANSWERED" in finding_codes
+
+
 def test_run_single_stage_orchestration_allows_final_repair_attempt_to_pass(
     tmp_path: Path,
 ) -> None:
@@ -1839,6 +1897,18 @@ def test_derive_validation_verdict_maps_combined_validation_outcomes() -> None:
             ),
         )
     ) is ValidationVerdict.BLOCKED
+    assert derive_validation_verdict(
+        findings=(
+            ValidationFinding(
+                code="CROSS-BLOCKING-UNANSWERED",
+                message="Blocking question is unresolved.",
+            ),
+            ValidationFinding(
+                code="INTERVIEW-MALFORMED-DOCUMENT",
+                message="Question document contains invalid bullet continuation.",
+            ),
+        )
+    ) is ValidationVerdict.REPAIR
 
     interview_routing = StageInterviewRouting(
         stage="plan",
