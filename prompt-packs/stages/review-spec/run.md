@@ -45,6 +45,11 @@ Write sign-off status under `## Decision`. Do not rename that section to aliases
 `## Decision/sign-off`, `## Sign-off`, or `## Recommendation decision`; those headings are
 structurally invalid even when the prose is semantically correct.
 
+Under `## Readiness state`, write exactly one top-level bullet containing exactly one allowed token:
+`ready`, `ready-with-conditions`, or `not-ready`. Do not use prose substitutes such as
+`conditionally ready`; when conditions remain but decomposition can proceed, write a bullet
+containing only `ready-with-conditions`.
+
 ## System-owned control artifacts
 
 - Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
@@ -62,6 +67,8 @@ structurally invalid even when the prose is semantically correct.
 4. Recommendations must be prioritized and explicit enough for downstream execution.
 5. Sign-off decision must be explicit (`approved`, `approved-with-conditions`, or `rejected`) and
    consistent with readiness state and required changes.
+   Use this exact mapping: `ready` -> `approved`, `ready-with-conditions` ->
+   `approved-with-conditions`, and `not-ready` -> `rejected`.
 6. Blocking uncertainty must be turned into questions instead of implied assumptions.
 
 ## Execution instructions

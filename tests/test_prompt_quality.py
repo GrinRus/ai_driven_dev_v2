@@ -89,3 +89,39 @@ def test_review_spec_prompts_require_exact_decision_heading() -> None:
     assert "`## Decision/sign-off`" in repair_prompt
     assert "aliases do not" in repair_prompt
     assert "satisfy the document contract" in repair_prompt
+
+
+def test_review_spec_prompts_require_exact_readiness_vocabulary() -> None:
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "exactly one top-level bullet" in run_prompt
+    assert "`ready`, `ready-with-conditions`, or `not-ready`" in run_prompt
+    assert "`conditionally ready`" in run_prompt
+    assert "containing only `ready-with-conditions`" in run_prompt
+    assert "`ready-with-conditions` ->" in run_prompt
+    assert "`approved-with-conditions`" in run_prompt
+    assert "`approved-with-conditions` is paired with `ready-with-conditions`" in repair_prompt
+    assert "do not replace it with prose such as `conditionally ready`" in repair_prompt
+
+
+def test_implement_prompts_require_executable_verification_evidence() -> None:
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "outcome claim is invalid unless the same bullet" in run_prompt
+    assert "executable/check evidence" in run_prompt
+    assert "Manual or `CliRunner` checks must cite" in run_prompt
+    assert "do not write `manual inspection -> pass` without evidence" in run_prompt
+    assert "write `not-run: <reason>`" in run_prompt
+    assert "outcome claim without executable/check evidence" in repair_prompt
+    assert "captured assertion result" in repair_prompt
+    assert "`not-run: <reason>` explicitly" in repair_prompt

@@ -57,6 +57,10 @@ Use concrete repair actions:
   Markdown list items tied to issues;
 - sign-off inconsistency: align readiness state, decision, and required changes so go/no-go status
   is unambiguous;
+  use the exact allowed readiness/sign-off mapping: `ready` -> `approved`,
+  `ready-with-conditions` -> `approved-with-conditions`, and `not-ready` -> `rejected`.
+  If the decision is `approved-with-conditions`, the readiness state must be
+  `ready-with-conditions`; do not replace it with prose such as `conditionally ready`;
 - contradiction in review context: keep/add a blocking question instead of forcing approval;
 - cross-document drift: align `stage-result.md` blockers/next actions with validator/report outcome.
 
@@ -79,6 +83,8 @@ Use concrete repair actions:
 9. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
 10. Do not claim success unless required headings, validator verdict, stage-result status, and sign-off decision are mutually consistent.
 11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+12. Under `## Readiness state`, preserve exactly one top-level bullet containing exactly one allowed
+    token: `ready`, `ready-with-conditions`, or `not-ready`.
 
 ## Repair exit checks
 
@@ -87,6 +93,7 @@ Use concrete repair actions:
   block includes severity and rationale; explicit no-issue/no-defect markers are allowed,
 - recommendation summary uses prioritized Markdown list items that are concrete and traceable,
 - readiness state, required changes, and sign-off decision are coherent,
+- `approved-with-conditions` is paired with `ready-with-conditions`,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no blocking inconsistency remains between report, validator result, and stage status.

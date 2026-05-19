@@ -49,6 +49,10 @@ For each finding:
    line-level details;
 4. re-check verification entries for concrete command/check evidence plus observed outcome
    (`-> pass`, `exit 0`, `exit code 0`, or captured tool summary);
+   any pass/fail/success outcome claim without executable/check evidence in the same bullet is still
+   invalid. Manual or `CliRunner` checks must cite the executed command/snippet, artifact path, or
+   captured assertion result; replace unevidenced `manual inspection -> pass` claims with concrete
+   evidence or `not-run: <reason>`.
 5. re-check `stage-result.md` and `validator-report.md` for status/blocker consistency.
 
 Use concrete repair actions:
@@ -56,7 +60,7 @@ Use concrete repair actions:
 - `missing diffs`: remove unsupported touched-files claims or add missing concrete entries that match
   observed edits;
 - `unverifiable claims`: replace vague assertions with concrete command/check outcomes, or mark as
-  not-run explicitly;
+  `not-run: <reason>` explicitly;
 - `incomplete summary`: rewrite change summary so it maps selected task id -> edits -> outcomes;
 - `invalid no-op`: add evidence-backed justification and actionable next step, or convert run from
   no-op to real scoped edits;
