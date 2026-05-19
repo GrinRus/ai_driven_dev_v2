@@ -129,6 +129,10 @@ UNSUPPORTED_CLAIM_PATTERN = re.compile(
     r"\b(always|never|guarantee(?:d|s)?|proven|certain(?:ly)?)\b",
     flags=re.IGNORECASE,
 )
+NEGATED_GUARANTEE_CAVEAT_PATTERN = re.compile(
+    r"\b(?:no|not|without)\b[^\n.]{0,80}\bguarantee(?:d|s)?\b",
+    flags=re.IGNORECASE,
+)
 REVIEW_SPEC_READINESS_PATTERN = re.compile(
     r"\b(ready-with-conditions|not-ready|ready)\b",
     flags=re.IGNORECASE,

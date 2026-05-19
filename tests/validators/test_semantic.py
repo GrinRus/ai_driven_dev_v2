@@ -429,6 +429,52 @@ def test_validate_semantic_outputs_reports_unsupported_claims(tmp_path: Path) ->
     )
 
 
+def test_validate_semantic_outputs_allows_negated_security_guarantee_caveat(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md",)
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_idea_brief(
+        workspace_root,
+        (
+            "# Idea Brief\n\n"
+            "## Problem statement\n\n"
+            "The CLI needs an explicit trust boundary for user-provided Python code.\n\n"
+            "## Desired outcome\n\n"
+            "Document the feature and its caveats without implying a broader security "
+            "guarantee for untrusted code.\n\n"
+            "## Constraints\n\n"
+            "- none\n\n"
+            "## Open questions\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="idea",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_requires_list_format_for_constraints(tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts" / "stages"
     contracts_root.mkdir(parents=True)
