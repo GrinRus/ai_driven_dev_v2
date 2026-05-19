@@ -32,6 +32,9 @@ Every live E2E run must follow the installed full-flow operator model:
 10. Preserve `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`, and
     `self-repair-matrix.md` so operators can audit step duration, per-attempt runtime windows,
     deterministic repair-probe coverage, terminal document consistency, and repair behavior.
+11. For manual local runs, the launching agent is the operator-agent: it answers
+    blocking questions, records answer reasoning, and writes an operator-authored
+    quality analysis before a run can be counted as clean.
 
 Live E2E is not defined by source-checkout execution from the AIDD repository itself, and it is not a merge gate.
 Local-wheel live evals build from the source checkout containing the scenario manifest. To
@@ -144,7 +147,7 @@ Every maintained live scenario must:
 - define authored task `id`, `title`, `summary`, `intent`, `target_change`, `expected_scope`,
   `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
 - declare `live_flow.answer_policy: agent-decides` so any stage can block on questions
-  and resume after external operator-agent answers are written;
+  and resume after the launching operator-agent writes resolved answers;
 - define authored task `interview` guidance when the scenario is
   `live-full-flow-interview`; other live scenarios may include it as optional context;
 - force full-flow `idea -> qa`;
@@ -174,6 +177,12 @@ Every live eval bundle must aim to contain:
 - `verify-transcript.json`
 - `quality-transcript.json`
 - `teardown-transcript.json`
+
+For counted manual clean-pass decisions, the eval bundle must also include
+operator-authored evidence:
+
+- `operator-quality-analysis.md`
+- `answer-analysis.md` when the launching operator-agent answered blocking questions
 
 ## Interview Scenarios
 

@@ -194,8 +194,13 @@ Actions:
    - `infra-fail`: setup/teardown/repo-prep issue;
    - `blocked`: the live evaluator found unresolved blocking questions and is
      waiting for `answers.md` evidence requested in `operator-action-request.md`;
+     when you launched the manual lane, you are the operator-agent, so write
+     `[resolved]` answers, write `answer-analysis.md`, and rerun the same
+     manifest/runtime command to resume;
    - `fail`: verification or run command failed.
 4. Re-run the same scenario/runtime after fixing the first failure boundary.
+5. For any terminal live run, inspect the full eval bundle and write
+   `operator-quality-analysis.md` before marking the run counted or not counted.
 
 ### 5.4 Eval summary is missing
 

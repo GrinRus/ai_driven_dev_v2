@@ -18,6 +18,24 @@ Every live eval bundle should write:
 - `quality-transcript.json`
 - a `quality` section in `grader.json`
 
+## Manual operator overlay
+
+The machine quality gate is the minimum clean-pass requirement. For manual live
+E2E, the launching agent is also the operator-agent and must write
+`operator-quality-analysis.md` before counting a terminal run.
+
+The operator audit can only downgrade the counted/not-counted decision. It cannot
+upgrade a machine `fail` or `warn` quality gate to a counted clean pass.
+
+For counted manual clean passes, `operator-quality-analysis.md` records:
+
+- runtime, manifest, run id, and bundle path;
+- execution verdict, quality gate, QA verdict, and review status;
+- flow fidelity, artifact quality, and code quality assessment;
+- final decision: `counted-clean`, `not-counted`, or
+  `blocked/infra/provider/model-quality`;
+- explicit blockers, or `none`.
+
 ## Dimensions
 
 Each dimension uses a fixed integer score from `0` to `3`.

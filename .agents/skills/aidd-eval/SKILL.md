@@ -46,6 +46,11 @@ and manual-live lanes.
 8. Keep infrastructure failures separate from model or document failures.
 9. For live scenarios, preserve install evidence, feature-selection evidence, and quality artifacts.
 10. Never mutate roadmap or backlog files as part of live quality auditing.
+11. For manual live lanes, the launching agent is the operator-agent: answer blocking
+    questions in `answers.md`, write `answer-analysis.md`, and write
+    `operator-quality-analysis.md` as operator-authored eval bundle evidence.
+12. Do not hand-edit runtime-generated stage output documents while adding
+    operator-authored answer or quality evidence.
 
 ## Default procedure
 
@@ -85,6 +90,10 @@ and manual-live lanes.
 - `.aidd/reports/evals/<run_id>/verdict.md`
 - `.aidd/reports/evals/<run_id>/quality-report.md`
 - `.aidd/reports/evals/<run_id>/quality-transcript.json`
+- `.aidd/reports/evals/<run_id>/answer-analysis.md` when the launching
+  operator-agent answered blocking questions
+- `.aidd/reports/evals/<run_id>/operator-quality-analysis.md` for counted manual
+  live clean-pass decisions
 
 ## Execution verdict taxonomy
 

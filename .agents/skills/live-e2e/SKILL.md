@@ -142,6 +142,69 @@ During a successful local live run, the evaluator will:
 10. run setup, verify, quality, and teardown commands and write final audit artifacts
     from the recorded step evidence.
 
+## Operator-agent responsibilities
+
+For local manual live runs, the launching agent is the operator-agent. Do not
+delegate blocking questions to a separate external actor when you are running the
+lane yourself.
+
+When the evaluator returns `blocked`:
+
+1. Open `operator-action-request.md`.
+2. Open the referenced `questions.md`.
+3. write standard `[resolved]` answers to the referenced `answers.md`.
+4. Write `answer-analysis.md` in the eval bundle, explaining the choices and how
+   they satisfy the authored task constraints.
+5. Re-run the same black-box command for the same manifest/runtime so the
+   evaluator resumes the existing blocked run.
+
+After any terminal live run, the launching operator-agent must write
+`operator-quality-analysis.md` in the eval bundle before counting the run. Use
+this template:
+
+```markdown
+# Operator Quality Analysis
+
+## Run
+- Runtime: `<runtime>`
+- Manifest: `<manifest>`
+- Run ID: `<run_id>`
+- Bundle: `<bundle path>`
+
+## Machine Result
+- Execution verdict: `<pass|fail|blocked|infra-fail>`
+- Quality gate: `<pass|warn|fail|none>`
+- QA verdict: `<ready|ready-with-risks|not-ready|missing>`
+- Review status: `<approved|approved-with-conditions|rejected|missing>`
+
+## Flow Fidelity
+- Stages reached:
+- Repair/interview behavior:
+- Evidence completeness:
+
+## Artifact Quality
+- Stage outputs:
+- Validator reports:
+- Review/QA evidence:
+- Unresolved findings:
+
+## Code Quality
+- Diff scope:
+- Tests:
+- Docs/examples:
+- Acceptance criteria:
+
+## Decision
+- Decision: `<counted-clean|not-counted|blocked/infra/provider/model-quality>`
+
+## Blockers
+- `<explicit blockers, or none>`
+```
+
+The operator audit cannot upgrade machine `fail` or `warn` to a counted clean
+pass. It can only reject or downgrade a machine-clean run after inspecting the
+artifacts.
+
 ## Validations and blockers
 
 The live run can be rejected or downgraded at several layers:
@@ -196,8 +259,13 @@ Expected live artifacts include:
 - `verdict.md`
 - `quality-report.md`
 - `quality-transcript.json`
+- `operator-quality-analysis.md` for counted manual clean-pass decisions
+- `answer-analysis.md` when the run answered blocking questions
 
-A live run is only "clean" when execution evidence exists, verification output is present, and the bundle includes `quality-report.md` plus `quality-transcript.json`.
+A live run is only "clean" when execution evidence exists, verification output is
+present, the machine `quality_gate` is `pass`, and the bundle includes
+`quality-report.md`, `quality-transcript.json`, and an operator-authored
+`operator-quality-analysis.md` with decision `counted-clean`.
 
 ## First triage for common failures
 
@@ -205,7 +273,9 @@ A live run is only "clean" when execution evidence exists, verification output i
 - Runtime launches but immediately fails in native mode: inspect provider auth, model selection, and sandbox permissions.
 - Runtime launches but immediately fails in `adapter-flags` mode: the configured command is probably not an AIDD-compatible wrapper command.
 - `unsupported-runtime`: the runtime is not declared in the scenario's `runtime_targets`.
-- `blocked`: inspect `operator-action-request.md`, `questions.md`, and `answers.md`; the live evaluator will continue after external operator-agent answers are present.
+- `blocked`: inspect `operator-action-request.md`, `questions.md`, and
+  `answers.md`; as the launching operator-agent, write `[resolved]` answers,
+  write `answer-analysis.md`, then rerun the same black-box command to resume.
 - `fail` after run success: inspect `verify-transcript.json`, `quality-transcript.json`, and the stage-local validator reports.
 - Missing clean execution despite zero exit codes: inspect `verdict.md` and `grader.json` for pass-guard failures caused by missing `stage-result.md` or `validator-report.md`.
 
@@ -216,7 +286,11 @@ A live run is only "clean" when execution evidence exists, verification output i
 3. Export a wrapper env var only when you intentionally want `adapter-flags` mode.
 4. Launch `uv run python -m aidd.harness.live_e2e_black_box <manifest> --runtime <runtime>`.
 5. Preserve the resulting bundle and inspect `verdict.md`, `grader.json`, `quality-report.md`, and transcripts before judging the run.
-6. If the setup, provider coverage, size classification, quality recipe, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
+6. For `blocked` runs, answer questions yourself as the launching operator-agent,
+   write `answer-analysis.md`, and rerun the same command to resume.
+7. For terminal runs, write `operator-quality-analysis.md` before deciding
+   counted/not-counted.
+8. If the setup, provider coverage, size classification, quality recipe, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
 
 ## Hard rules
 
@@ -227,6 +301,9 @@ A live run is only "clean" when execution evidence exists, verification output i
 - Never run a live scenario without storing the selected authored task snapshot.
 - Never treat a live scenario as canonical unless it executes `idea -> qa`.
 - Never treat a live scenario as passed without install evidence and verification output.
-- Never treat a live scenario as clean without `quality-report.md` and `quality-transcript.json`.
+- Never treat a live scenario as clean without `quality-report.md`,
+  `quality-transcript.json`, and `operator-quality-analysis.md`.
+- Never let operator analysis upgrade a machine `fail` or `warn` quality gate to a
+  counted clean pass.
 - Preserve all runtime logs.
 - Keep `.aidd` rooted inside the target repository for installed live runs.

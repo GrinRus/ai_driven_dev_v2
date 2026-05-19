@@ -324,10 +324,43 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "`idea -> qa`",
         "`.aidd/reports/evals/<run_id>/`",
         "does **not** provision runtime authentication, wrapper scripts, or provider setup",
+        "the launching agent is the operator-agent",
+        "write standard `[resolved]` answers",
+        "answer-analysis.md",
+        "operator-quality-analysis.md",
+        "The operator audit cannot upgrade machine `fail` or `warn`",
     ):
         assert needle in live_e2e_skill
 
     assert "For **local live-run operator guidance**, prefer `live-e2e`." in aidd_eval_skill
+    assert "the launching agent is the operator-agent" in aidd_eval_skill
+    assert "operator-quality-analysis.md" in aidd_eval_skill
+
+
+def test_live_manual_docs_do_not_delegate_answers_to_external_operator_agent() -> None:
+    searched_roots = [
+        _repo_root() / "docs" / "e2e",
+        _repo_root() / "docs" / "operator-troubleshooting.md",
+        _repo_root() / ".agents" / "skills" / "live-e2e",
+        _repo_root() / ".agents" / "skills" / "aidd-eval",
+    ]
+    stale_phrases = (
+        "external operator-agent",
+        "external operator-agent answers",
+        "after external operator-agent answers",
+        "waiting for an external operator-agent",
+    )
+    offenders: list[str] = []
+    for root in searched_roots:
+        paths = [root] if root.is_file() else list(root.rglob("*"))
+        for path in paths:
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8")
+            if any(phrase in text for phrase in stale_phrases):
+                offenders.append(path.relative_to(_repo_root()).as_posix())
+
+    assert offenders == []
 
 
 def test_docs_do_not_reference_removed_eval_run_command() -> None:
