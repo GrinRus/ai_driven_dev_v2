@@ -131,9 +131,10 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
     claude_live_targets = [
         scenario.scenario_id for scenario in live if "claude-code" in scenario.runtime_targets
     ]
-    assert claude_live_targets == [
-        "AIDD-LIVE-005"
-    ], "Claude Code live rollout must remain limited to the small smoke lane."
+    assert sorted(claude_live_targets) == [
+        "AIDD-LIVE-005",
+        "AIDD-LIVE-007",
+    ], "Claude Code live rollout must include smoke plus planned medium coverage."
 
 
 def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:

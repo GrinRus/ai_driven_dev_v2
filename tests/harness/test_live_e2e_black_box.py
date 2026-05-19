@@ -400,7 +400,7 @@ def _prepare_live_test(
     inspect_block_stage: str | None = None,
     inspect_fail_command: str | None = None,
     log_blocking_text: bool = False,
-) -> tuple[Path, Path]:
+) -> tuple[Path, Path, Path]:
     _clear_live_runtime_command_env(monkeypatch)
     _put_fake_provider_on_path(tmp_path=tmp_path, monkeypatch=monkeypatch)
     source_repo = tmp_path / "source"
@@ -427,26 +427,28 @@ def _prepare_live_test(
     )
     monkeypatch.setattr(
         "aidd.harness.live_e2e_black_box.prepare_local_wheel_install",
-        lambda *, workspace_root, run_id, repository_root: _install_result_for_fake_aidd(
+        lambda *, work_root, run_id, repository_root: _install_result_for_fake_aidd(
             fake_aidd
         ),
     )
-    return scenario_path, tmp_path / ".aidd"
+    return scenario_path, tmp_path / "work-root", tmp_path / ".aidd" / "reports" / "evals"
 
 
 def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario_path, workspace_root = _prepare_live_test(tmp_path, monkeypatch)
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
 
     result = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert result.status == "pass"
+    assert result.bundle_root == report_root / result.run_id
     for filename in (
         "flow-state.json",
         "flow-steps.json",
@@ -478,10 +480,32 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert "black-box" in (result.bundle_root / "harness-metadata.json").read_text(
         encoding="utf-8"
     )
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["work_root"] == work_root.as_posix()
+    assert state_payload["report_root"] == report_root.as_posix()
+    assert state_payload["run_work_root"] == (work_root / result.run_id).as_posix()
+    assert str(state_payload["target_repo_root"]).startswith(
+        (work_root / result.run_id / "target").as_posix()
+    )
+    assert ".aidd/harness-cache" not in str(state_payload["target_repo_root"])
+    for stage in STAGES:
+        assert (result.bundle_root / "stage-audits" / f"{stage}.json").exists()
+        assert (result.bundle_root / "stage-audits" / f"{stage}.md").exists()
     grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
     assert grader_payload["quality"]["quality_gate"] == "pass"
+    assert len(grader_payload["stage_audits"]) == len(STAGES)
     assert grader_payload["steps"][-1]["action"] == "finish"
+    assert "Stage Audit Evidence" in (result.bundle_root / "quality-report.md").read_text(
+        encoding="utf-8"
+    )
+    metadata_payload = json.loads(
+        (result.bundle_root / "harness-metadata.json").read_text(encoding="utf-8")
+    )
+    assert metadata_payload["temp_layout"]["work_root"] == work_root.as_posix()
+    assert metadata_payload["temp_layout"]["report_root"] == report_root.as_posix()
     frontend_payload = json.loads(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
@@ -497,7 +521,7 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario_path, workspace_root = _prepare_live_test(
+    scenario_path, work_root, report_root = _prepare_live_test(
         tmp_path,
         monkeypatch,
         block_stage="idea",
@@ -507,7 +531,8 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     first = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert first.status == "blocked"
@@ -535,7 +560,8 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     resumed = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert resumed.status == "pass"
@@ -570,7 +596,7 @@ def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario_path, workspace_root = _prepare_live_test(
+    scenario_path, work_root, report_root = _prepare_live_test(
         tmp_path,
         monkeypatch,
         inspect_block_stage="idea",
@@ -580,7 +606,8 @@ def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
     first = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert first.status == "blocked"
@@ -597,7 +624,8 @@ def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
     resumed = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert resumed.status == "pass"
@@ -614,11 +642,53 @@ def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
     )
 
 
+def test_black_box_live_e2e_reports_first_unresolved_signal_after_resolved_block(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        block_stage="idea",
+        fail_stage="plan",
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+
+    first = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+    request_payload = json.loads(
+        (first.bundle_root / "operator-action-request.json").read_text(encoding="utf-8")
+    )
+    Path(request_payload["answers_path"]).write_text(
+        "# Answers\n\n- Q1 [resolved] Implement the behavior described by the task.\n",
+        encoding="utf-8",
+    )
+
+    resumed = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert resumed.status == "fail"
+    assert resumed.first_failure_note is not None
+    assert "plan" in resumed.first_failure_note
+    assert "idea" not in resumed.first_failure_note
+    assert "run-stage stage `plan`" in (
+        resumed.bundle_root / "log-analysis.md"
+    ).read_text(encoding="utf-8")
+
+
 def test_black_box_live_e2e_does_not_reblock_on_historical_log_text(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario_path, workspace_root = _prepare_live_test(
+    scenario_path, work_root, report_root = _prepare_live_test(
         tmp_path,
         monkeypatch,
         log_blocking_text=True,
@@ -628,7 +698,8 @@ def test_black_box_live_e2e_does_not_reblock_on_historical_log_text(
     result = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert result.status == "pass"
@@ -643,12 +714,17 @@ def test_black_box_live_e2e_reports_stage_failure_from_step_evidence(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario_path, workspace_root = _prepare_live_test(tmp_path, monkeypatch, fail_stage="plan")
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        fail_stage="plan",
+    )
 
     result = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert result.status == "fail"
@@ -661,7 +737,7 @@ def test_black_box_live_e2e_stops_when_public_inspection_fails_after_stage_pass(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario_path, workspace_root = _prepare_live_test(
+    scenario_path, work_root, report_root = _prepare_live_test(
         tmp_path,
         monkeypatch,
         inspect_fail_command="run logs",
@@ -670,7 +746,8 @@ def test_black_box_live_e2e_stops_when_public_inspection_fails_after_stage_pass(
     result = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert result.status == "fail"
@@ -688,7 +765,7 @@ def test_black_box_live_e2e_reports_setup_infra_failure_and_partial_bundle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario_path, workspace_root = _prepare_live_test(
+    scenario_path, work_root, report_root = _prepare_live_test(
         tmp_path,
         monkeypatch,
         setup_commands=("printf 'setup failed\\n'; exit 3",),
@@ -697,7 +774,8 @@ def test_black_box_live_e2e_reports_setup_infra_failure_and_partial_bundle(
     result = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert result.status == "infra-fail"
@@ -713,7 +791,7 @@ def test_black_box_live_e2e_quality_failure_is_additive(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario_path, workspace_root = _prepare_live_test(
+    scenario_path, work_root, report_root = _prepare_live_test(
         tmp_path,
         monkeypatch,
         quality_commands=("printf 'quality failed\\n'; exit 5",),
@@ -722,7 +800,8 @@ def test_black_box_live_e2e_quality_failure_is_additive(
     result = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert result.status == "pass"
@@ -737,10 +816,10 @@ def test_black_box_live_e2e_reports_install_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario_path, workspace_root = _prepare_live_test(tmp_path, monkeypatch)
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
 
-    def _fail_install(*, workspace_root: Path, run_id: str, repository_root: Path | None) -> None:
-        _ = workspace_root, run_id, repository_root
+    def _fail_install(*, work_root: Path, run_id: str, repository_root: Path | None) -> None:
+        _ = work_root, run_id, repository_root
         raise RuntimeError("install failed")
 
     monkeypatch.setattr(
@@ -751,7 +830,8 @@ def test_black_box_live_e2e_reports_install_failure(
     result = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
     )
 
     assert result.status == "fail"

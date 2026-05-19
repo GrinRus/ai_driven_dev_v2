@@ -316,6 +316,12 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
             "harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
             "--runtime codex"
         ),
+        "`--work-root ${TMPDIR:-/tmp}/aidd-live-e2e`",
+        "`--report-root .aidd/reports/evals`",
+        "`--run-id <id>`",
+        "`stage-audits/<stage>.json`",
+        "snapshot tracked AIDD `HEAD`",
+        "Rerun the same manifest/runtime until it is clean.",
         "plan step, execute through public operator surfaces, inspect artifacts",
         "frontend-checkpoints.json",
         "first listed authored task",
@@ -336,7 +342,40 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     assert "For **local live-run operator guidance**, prefer `live-e2e`." in aidd_eval_skill
     assert "the launching agent is the operator-agent" in aidd_eval_skill
     assert "`- Q1 [resolved] answer text`" in aidd_eval_skill
+    assert "stage-audits/<stage>.json" in aidd_eval_skill
+    assert "${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd" in aidd_eval_skill
     assert "operator-quality-analysis.md" in aidd_eval_skill
+
+
+def test_live_docs_describe_temp_install_layout_and_stage_audits() -> None:
+    repo_root = _repo_root()
+    documents = {
+        "README.md": (repo_root / "README.md").read_text(encoding="utf-8"),
+        "docs/e2e/live-e2e-catalog.md": (
+            repo_root / "docs" / "e2e" / "live-e2e-catalog.md"
+        ).read_text(encoding="utf-8"),
+        "docs/e2e/live-quality-rubric.md": (
+            repo_root / "docs" / "e2e" / "live-quality-rubric.md"
+        ).read_text(encoding="utf-8"),
+        "docs/architecture/eval-harness-integration.md": (
+            repo_root / "docs" / "architecture" / "eval-harness-integration.md"
+        ).read_text(encoding="utf-8"),
+    }
+
+    for relative_path, text in documents.items():
+        for needle in (
+            "stage-audits/<stage>.json",
+            ".aidd/reports/evals",
+        ):
+            assert needle in text, relative_path
+
+    readme = documents["README.md"]
+    assert "--work-root /tmp/aidd-live-e2e" in readme
+    assert "--report-root .aidd/reports/evals" in readme
+    catalog = documents["docs/e2e/live-e2e-catalog.md"]
+    assert "<work-root>/<run_id>/source/aidd" in catalog
+    assert "<work-root>/<run_id>/target/<repo-slug>" in catalog
+    assert "dirty tracked" in catalog
 
 
 def test_live_manual_docs_do_not_delegate_answers_to_external_operator_agent() -> None:

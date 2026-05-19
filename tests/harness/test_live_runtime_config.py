@@ -176,6 +176,8 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     claude_stage_timeouts = config["runtime"]["claude_code"]["stage_timeouts"]
     assert claude_stage_timeouts["idea"] == 1500
     assert claude_stage_timeouts["research"] == 1500
+    assert claude_stage_timeouts["plan"] == 1500
+    assert claude_stage_timeouts["review-spec"] == 1500
     assert claude_stage_timeouts["tasklist"] == 1800
     assert claude_stage_timeouts["implement"] == 1800
     assert claude_stage_timeouts["review"] == 1800

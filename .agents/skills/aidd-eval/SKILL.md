@@ -59,7 +59,9 @@ and manual-live lanes.
 2. Probe the adapter and record capability information.
 3. Prepare or reset the fixture workspace or target repository.
 4. Run the requested stage or flow through the harness.
-   For live scenarios, select the first authored task, install the artifact under test first, and run AIDD from the target repository root.
+   For live scenarios, select the first authored task, build/install the artifact
+   under test from the temp source snapshot, clone the target repository under the
+   temp work root, and run AIDD from the target repository root.
 5. Capture:
    - install transcript and artifact identity for live scenarios,
    - feature-selection evidence for live scenarios,
@@ -91,10 +93,19 @@ and manual-live lanes.
 - `.aidd/reports/evals/<run_id>/verdict.md`
 - `.aidd/reports/evals/<run_id>/quality-report.md`
 - `.aidd/reports/evals/<run_id>/quality-transcript.json`
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
 - `.aidd/reports/evals/<run_id>/answer-analysis.md` when the launching
   operator-agent answered blocking questions
 - `.aidd/reports/evals/<run_id>/operator-quality-analysis.md` for counted manual
   live clean-pass decisions
+
+Manual live mutable execution is outside the source checkout by default:
+`${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd`,
+`${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/build/dist`,
+`${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/install-home`,
+`${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/uv-cache`, and
+`${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/target/<repo-slug>`.
 
 ## Execution verdict taxonomy
 
@@ -115,5 +126,5 @@ Quality remains additive and must be reported separately as:
 ## Example command shape
 
 ```bash
-uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime opencode
+uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml --runtime opencode --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```

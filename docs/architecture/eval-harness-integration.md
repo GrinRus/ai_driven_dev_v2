@@ -129,7 +129,9 @@ Deterministic scenarios additionally imply:
 
 1. Load the scenario and validate runtime eligibility.
 2. Probe the requested adapter and record capabilities.
-3. Prepare or reset the pinned target repository working copy.
+3. For black-box live E2E, create a temp work layout, snapshot tracked AIDD `HEAD`,
+   build/install from that snapshot, and clone the pinned target repository under
+   `<work-root>/<run_id>/target/<repo-slug>`.
 4. Resolve and persist the scenario feature seed:
    - fixture-owned seed metadata for deterministic scenarios;
    - the first authored task for live scenarios.
@@ -142,11 +144,12 @@ Deterministic scenarios additionally imply:
 9. Capture emitted normalized events and include them in first-failure boundary analysis.
 10. Capture question and answer artifacts whenever a live or deterministic run uses them.
 11. Capture validator outcomes and repair attempts.
-12. Run scenario verification commands.
-13. Run scenario quality commands.
-14. Run graders and quality scoring.
-15. Run log analysis.
-16. Write verdict and durable bundle metadata, including install provenance when applicable.
+12. Write per-stage audits after every live stage.
+13. Run scenario verification commands.
+14. Run scenario quality commands.
+15. Run graders and quality scoring.
+16. Run log analysis.
+17. Write verdict and durable bundle metadata, including install provenance when applicable.
 
 ## 7. Mandatory output artifacts
 
@@ -158,6 +161,8 @@ Every black-box live E2E run should aim to write:
 - `.aidd/reports/evals/<run_id>/operator-actions.jsonl`
 - `.aidd/reports/evals/<run_id>/frontend-checkpoints.json`
 - `.aidd/reports/evals/<run_id>/frontend-checkpoints.md`
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
 - `.aidd/reports/evals/<run_id>/runtime.log`
 - `.aidd/reports/evals/<run_id>/runtime.jsonl` when attempts emitted structured JSONL
 - `.aidd/reports/evals/<run_id>/events.jsonl` when attempts emitted normalized JSONL
@@ -177,6 +182,7 @@ Every black-box live E2E run should aim to write:
 - `.aidd/reports/evals/<run_id>/run-transcript.json`
 - `.aidd/reports/evals/<run_id>/verify-transcript.json`
 - `.aidd/reports/evals/<run_id>/quality-transcript.json`
+- `.aidd/reports/evals/<run_id>/teardown-transcript.json`
 
 `self-repair-matrix.json` and `.md` include the deterministic repair-probe catalog for
 all stages from `idea` to `qa`. Each probe row records the observed initial verdict,
@@ -185,13 +191,15 @@ from the run artifacts when that stage was reached.
 Repair attempts also persist per-attempt `repair-context.md` under the run attempt
 directory so timing reports can attribute the repair reason to the exact retry rather
 than the final `repair-brief.md` state.
-- `.aidd/reports/evals/<run_id>/teardown-transcript.json`
-
 Installed live runs should additionally preserve install provenance in harness metadata:
 
 - install channel;
 - artifact source;
 - artifact identity;
+- work root;
+- source snapshot path and revision when local-wheel mode is used;
+- install home;
+- uv cache path;
 - target repository cwd;
 - workspace root;
 - packaged-resource source.

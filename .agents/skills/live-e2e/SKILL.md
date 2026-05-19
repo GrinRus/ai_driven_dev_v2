@@ -124,6 +124,18 @@ or:
 uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime claude-code
 ```
 
+The default execution layout is:
+
+- `--work-root ${TMPDIR:-/tmp}/aidd-live-e2e` for mutable execution state;
+- `--report-root .aidd/reports/evals` for durable evidence bundles;
+- `--run-id <id>` only when you need to resume or name a specific run.
+
+Use explicit paths when the audit needs stable local references:
+
+```bash
+uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/typer-boolean-help-rendering.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
+```
+
 The GitHub `manual-live-e2e` workflow is a secondary alternate entrypoint, not the primary flow described by this skill.
 
 ## What the harness will do
@@ -131,17 +143,24 @@ The GitHub `manual-live-e2e` workflow is a secondary alternate entrypoint, not t
 During a successful local live run, the evaluator will:
 
 1. load the selected scenario and validate the live-lane contract;
-2. resolve and record the pinned target repository commit;
-3. prepare a clean working copy of the target repository;
-4. select the **first listed authored task** from the manifest task pool;
-5. write feature-selection evidence to the eval bundle and target-repo context;
-6. seed `.aidd/` inside the target repository;
-7. write a live `aidd.example.toml` with the runtime command and execution mode for the chosen provider;
-8. build and install the local AIDD source wheel with `uv tool`, or install the
-   package specified by `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`;
-9. plan step, execute through public operator surfaces, inspect artifacts/UI/API/logs,
+2. fail as an infra/config blocker if the tracked AIDD source checkout is dirty;
+3. snapshot tracked AIDD `HEAD` into `<work-root>/<run_id>/source/aidd`;
+4. build the wheel in `<work-root>/<run_id>/build/dist`;
+5. install with isolated `HOME=<work-root>/<run_id>/install-home` and
+   `UV_CACHE_DIR=<work-root>/<run_id>/uv-cache`;
+6. clone the pinned target repository into `<work-root>/<run_id>/target/<repo-slug>`;
+7. select the **first listed authored task** from the manifest task pool;
+8. write feature-selection evidence to the eval bundle and target-repo context;
+9. seed `.aidd/` inside the target repository;
+10. write a live `aidd.example.toml` with the runtime command and execution mode for the chosen provider;
+11. run setup, stage, verify, and quality commands from the target repository root
+    with the installed `aidd` binary on `PATH`;
+12. inherit the launching operator's `HOME` and provider environment during stage
+    execution so native provider auth works without copying credentials;
+13. plan step, execute through public operator surfaces, inspect artifacts/UI/API/logs,
    classify, and decide the next step for every stage from `idea -> qa`;
-10. run setup, verify, quality, and teardown commands and write final audit artifacts
+14. write `stage-audits/<stage>.json` and `.md` after every stage;
+15. run setup, verify, quality, and teardown commands and write final audit artifacts
     from the recorded step evidence.
 
 ## Operator-agent responsibilities
@@ -253,6 +272,8 @@ Expected live artifacts include:
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
+- `stage-audits/<stage>.json`
+- `stage-audits/<stage>.md`
 - `feature-selection.json`
 - `install-transcript.json`
 - `runtime.log`
@@ -270,6 +291,25 @@ A live run is only "clean" when execution evidence exists, verification output i
 present, the machine `quality_gate` is `pass`, and the bundle includes
 `quality-report.md`, `quality-transcript.json`, and an operator-authored
 `operator-quality-analysis.md` with decision `counted-clean`.
+
+## Iteration loop contract
+
+For live quality stabilization, the launching agent should repeat this external
+operator loop instead of relying on a self-mutating product command:
+
+1. Run one `>= medium` live scenario through the black-box evaluator.
+2. Read the full evidence bundle, including every `stage-audits/<stage>.json`,
+   `verdict.md`, `grader.json`, `quality-report.md`, transcripts, and logs.
+3. Write `operator-quality-analysis.md` and classify the first unresolved decisive
+   signal as infra/provider/auth/wrapper, adapter integration, orchestration,
+   contract/validator, prompt/stagepack, harness/grader/rubric, target repo setup,
+   or model artifact quality.
+4. If AIDD needs a fix, change the smallest vertical slice, update tests/docs for
+   touched orchestration/adapters/contracts/prompts/validators/harness/evals, run
+   repo-local checks, and commit.
+5. Rerun the same manifest/runtime until it is clean.
+6. After one clean pass, switch to another maintained scenario/provider until the
+   matrix has at least five counted clean `>= medium` passes with provider coverage.
 
 ## First triage for common failures
 

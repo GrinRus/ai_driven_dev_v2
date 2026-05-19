@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import io
 import os
+import shutil
 import subprocess
 import sys
+import tarfile
 import time
 import zipfile
 from dataclasses import dataclass
@@ -28,6 +31,10 @@ class HarnessInstallResult:
     installed_command: tuple[str, ...]
     command_transcripts: tuple[HarnessCommandTranscript, ...]
     duration_seconds: float
+    source_snapshot_path: Path | None = None
+    build_dist_path: Path | None = None
+    uv_cache_dir: Path | None = None
+    source_revision: str | None = None
 
 
 def _source_repository_root_from_cwd() -> Path | None:
@@ -65,8 +72,8 @@ def _tool_bin_dir(*, install_home: Path) -> Path:
     return install_home / ".local" / "bin"
 
 
-def _uv_cache_dir(*, workspace_root: Path) -> Path:
-    return workspace_root / "harness-cache" / "uv-cache"
+def _run_uv_cache_dir(*, run_root: Path) -> Path:
+    return run_root / "uv-cache"
 
 
 def _run_command(
@@ -121,28 +128,111 @@ def _validate_built_wheel_resources(wheel_path: Path) -> None:
         )
 
 
+def _git_stdout(args: tuple[str, ...], *, cwd: Path) -> str:
+    completed = subprocess.run(
+        ("git", *args),
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode == 0:
+        return completed.stdout.strip()
+    stderr = completed.stderr.strip() or completed.stdout.strip() or "unknown git error"
+    raise HarnessInstallError(stderr)
+
+
+def _require_clean_tracked_head(repository_root: Path) -> str:
+    try:
+        source_revision = _git_stdout(("rev-parse", "HEAD"), cwd=repository_root)
+    except HarnessInstallError as exc:
+        raise HarnessInstallError(
+            "Local-wheel live eval requires a git checkout so the black-box source "
+            "snapshot can be built from tracked HEAD. "
+            f"{exc}"
+        ) from exc
+
+    status = subprocess.run(
+        ("git", "status", "--porcelain", "--untracked-files=no"),
+        cwd=repository_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if status.returncode != 0:
+        stderr = status.stderr.strip() or status.stdout.strip() or "unknown git error"
+        raise HarnessInstallError(
+            "Failed to inspect source checkout cleanliness before live eval: "
+            f"{stderr}"
+        )
+    if status.stdout.strip():
+        raise HarnessInstallError(
+            "Local-wheel live eval requires a clean tracked source checkout because "
+            "the black-box artifact is built from tracked HEAD. Commit or stash "
+            "tracked changes before running live E2E."
+        )
+    return source_revision
+
+
+def _snapshot_tracked_head(
+    *,
+    repository_root: Path,
+    source_snapshot_path: Path,
+) -> str:
+    source_revision = _require_clean_tracked_head(repository_root)
+    if source_snapshot_path.exists():
+        shutil.rmtree(source_snapshot_path)
+    source_snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+    source_snapshot_path.mkdir(parents=True, exist_ok=True)
+
+    archive = subprocess.run(
+        ("git", "archive", "--format=tar", "HEAD"),
+        cwd=repository_root,
+        capture_output=True,
+        check=False,
+    )
+    if archive.returncode != 0:
+        stderr = archive.stderr.decode(errors="replace").strip()
+        stdout = archive.stdout.decode(errors="replace").strip()
+        raise HarnessInstallError(
+            "Failed to snapshot tracked HEAD for local-wheel live eval: "
+            f"{stderr or stdout or 'no command output'}"
+        )
+
+    with tarfile.open(fileobj=io.BytesIO(archive.stdout), mode="r:") as tar:
+        tar.extractall(source_snapshot_path)
+    return source_revision
+
+
 def prepare_local_wheel_install(
     *,
-    workspace_root: Path,
+    work_root: Path,
     run_id: str,
     repository_root: Path | None = None,
 ) -> HarnessInstallResult:
     if not run_id.strip():
         raise ValueError("run_id must be non-empty.")
 
-    resolved_workspace_root = workspace_root.resolve(strict=False)
-    cache_root = resolved_workspace_root / "harness-cache" / "installs" / run_id
-    dist_root = cache_root / "dist"
-    install_home = cache_root / "home"
+    resolved_work_root = work_root.resolve(strict=False)
+    run_root = resolved_work_root / run_id
+    source_snapshot_path = run_root / "source" / "aidd"
+    dist_root = run_root / "build" / "dist"
+    install_home = run_root / "install-home"
+    uv_cache_dir = _run_uv_cache_dir(run_root=run_root)
     dist_root.mkdir(parents=True, exist_ok=True)
     install_home.mkdir(parents=True, exist_ok=True)
+    uv_cache_dir.mkdir(parents=True, exist_ok=True)
 
     repository_root = _validate_local_wheel_repository_root(
         repository_root or _source_repository_root_from_cwd()
     )
+    source_revision = _snapshot_tracked_head(
+        repository_root=repository_root,
+        source_snapshot_path=source_snapshot_path,
+    )
     build_transcript = _run_command(
         command=("uv", "build", "--wheel", "--out-dir", dist_root.as_posix()),
-        cwd=repository_root,
+        cwd=source_snapshot_path,
         env=dict(os.environ),
     )
     if build_transcript.exit_code != 0:
@@ -163,7 +253,7 @@ def prepare_local_wheel_install(
     tool_bin_dir = _tool_bin_dir(install_home=install_home)
     install_env = dict(os.environ)
     install_env["HOME"] = install_home.as_posix()
-    install_env["UV_CACHE_DIR"] = _uv_cache_dir(workspace_root=resolved_workspace_root).as_posix()
+    install_env["UV_CACHE_DIR"] = uv_cache_dir.as_posix()
     install_env["PATH"] = os.pathsep.join(
         [
             tool_bin_dir.as_posix(),
@@ -182,7 +272,7 @@ def prepare_local_wheel_install(
             sys.executable,
             wheel_path.as_posix(),
         ),
-        cwd=repository_root,
+        cwd=source_snapshot_path,
         env=install_env,
     )
     if install_transcript.exit_code != 0:
@@ -212,12 +302,16 @@ def prepare_local_wheel_install(
             transcript.duration_seconds
             for transcript in (build_transcript, install_transcript)
         ),
+        source_snapshot_path=source_snapshot_path,
+        build_dist_path=dist_root,
+        uv_cache_dir=uv_cache_dir,
+        source_revision=source_revision,
     )
 
 
 def prepare_published_package_install(
     *,
-    workspace_root: Path,
+    work_root: Path,
     run_id: str,
     package_spec: str,
 ) -> HarnessInstallResult:
@@ -227,16 +321,18 @@ def prepare_published_package_install(
     if not run_id.strip():
         raise ValueError("run_id must be non-empty.")
 
-    resolved_workspace_root = workspace_root.resolve(strict=False)
-    cache_root = resolved_workspace_root / "harness-cache" / "installs" / run_id
-    install_home = cache_root / "home"
-    resolved_workspace_root.mkdir(parents=True, exist_ok=True)
+    resolved_work_root = work_root.resolve(strict=False)
+    run_root = resolved_work_root / run_id
+    install_home = run_root / "install-home"
+    uv_cache_dir = _run_uv_cache_dir(run_root=run_root)
+    resolved_work_root.mkdir(parents=True, exist_ok=True)
     install_home.mkdir(parents=True, exist_ok=True)
+    uv_cache_dir.mkdir(parents=True, exist_ok=True)
 
     tool_bin_dir = _tool_bin_dir(install_home=install_home)
     install_env = dict(os.environ)
     install_env["HOME"] = install_home.as_posix()
-    install_env["UV_CACHE_DIR"] = _uv_cache_dir(workspace_root=resolved_workspace_root).as_posix()
+    install_env["UV_CACHE_DIR"] = uv_cache_dir.as_posix()
     install_env["PATH"] = os.pathsep.join(
         [
             tool_bin_dir.as_posix(),
@@ -253,7 +349,7 @@ def prepare_published_package_install(
             sys.executable,
             normalized_package_spec,
         ),
-        cwd=resolved_workspace_root,
+        cwd=run_root,
         env=install_env,
     )
     if install_transcript.exit_code != 0:
@@ -280,6 +376,7 @@ def prepare_published_package_install(
         installed_command=(installed_binary.as_posix(),),
         command_transcripts=(install_transcript,),
         duration_seconds=install_transcript.duration_seconds,
+        uv_cache_dir=uv_cache_dir,
     )
 
 
