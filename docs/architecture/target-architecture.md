@@ -230,6 +230,10 @@ For every stage run:
 6. Stream raw runtime logs when the adapter can expose them, and persist raw attempt logs.
 7. Persist structured `runtime.jsonl` and normalized `events.jsonl` attempt artifacts when
    the selected adapter observes structured JSONL runtime output.
+   Provider-specific native adapters may mark a process `document_complete` only after the
+   declared Markdown outputs are present, terminal documents have been updated, and the
+   files have settled. This is still raw-log-visible adapter evidence; it does not skip the
+   canonical validation step.
 8. If the runtime or stage documents raise questions:
    - surface them through the CLI or durable stage documents,
    - persist them as `questions.md`,

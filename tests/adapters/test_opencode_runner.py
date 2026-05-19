@@ -249,6 +249,55 @@ def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> Non
     assert result.exit_code != 0
 
 
+def test_run_subprocess_with_streaming_completes_after_stage_documents_settle(
+    tmp_path: Path,
+) -> None:
+    stage_root = tmp_path / ".aidd" / "workitems" / "WI-123" / "stages" / "idea"
+    stage_root.mkdir(parents=True)
+    idea_brief = stage_root / "idea-brief.md"
+    stage_result = stage_root / "stage-result.md"
+    validator_report = stage_root / "validator-report.md"
+    stage_result.write_text("# Stage result\n\nStage not run yet.\n", encoding="utf-8")
+    validator_report.write_text(
+        "# Validator report\n\nNo validator output yet.\n",
+        encoding="utf-8",
+    )
+    script = (
+        "import pathlib, sys, time\n"
+        "pathlib.Path(sys.argv[1]).write_text('# Idea Brief\\n\\nComplete.\\n', encoding='utf-8')\n"
+        "pathlib.Path(sys.argv[2]).write_text("
+        "'# Stage Result\\n\\n## Status\\n\\n- Status: `succeeded`\\n', encoding='utf-8')\n"
+        "pathlib.Path(sys.argv[3]).write_text("
+        "'# Validator Report\\n\\n## Result\\n\\n- Validator verdict: `pass`\\n', "
+        "encoding='utf-8')\n"
+        "print('documents-written', flush=True)\n"
+        "time.sleep(5)\n"
+    )
+    spec = OpenCodeSubprocessSpec(
+        command=(
+            sys.executable,
+            "-c",
+            script,
+            idea_brief.as_posix(),
+            stage_result.as_posix(),
+            validator_report.as_posix(),
+        ),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(
+        spec=spec,
+        timeout_seconds=5.0,
+        document_completion_paths=(idea_brief, stage_result, validator_report),
+        document_completion_settle_seconds=0.01,
+    )
+
+    assert result.exit_classification is OpenCodeExitClassification.DOCUMENT_COMPLETE
+    assert result.exit_code != 0
+    assert "documents-written\n" in result.runtime_log_text
+
+
 def test_run_subprocess_with_streaming_classifies_cancelled(tmp_path: Path) -> None:
     spec = OpenCodeSubprocessSpec(
         command=(sys.executable, "-c", "import time; time.sleep(2)"),

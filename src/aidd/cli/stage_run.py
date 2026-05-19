@@ -213,6 +213,7 @@ def _execute_adapter_invocation(
         stage_brief_path=stage_brief_path,
         prompt_pack_paths=prompt_pack_paths_for_runtime,
         repository_root=runtime_config.repository_root,
+        expected_output_documents=invocation.expected_output_documents,
         attempt_number=invocation.attempt_number,
         repair_mode=invocation.repair_mode,
         input_bundle_path=invocation.input_bundle_path,

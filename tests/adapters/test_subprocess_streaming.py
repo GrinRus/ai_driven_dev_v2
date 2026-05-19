@@ -15,6 +15,7 @@ from aidd.adapters.subprocess_streaming import run_streamed_subprocess
 
 
 class StopReason(StrEnum):
+    COMPLETE = "complete"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
 
@@ -89,6 +90,33 @@ def test_timeout_is_enforced_while_process_is_streaming_output(tmp_path: Path) -
     )
 
     assert result.stop_reason is StopReason.TIMEOUT
+
+
+def test_completion_request_stops_process_before_timeout(tmp_path: Path) -> None:
+    spec = RuntimeSubprocessSpec(
+        command=(sys.executable, "-c", "import time; print('ready', flush=True); time.sleep(5)"),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+    poll_count = 0
+
+    def completion_requested() -> bool:
+        nonlocal poll_count
+        poll_count += 1
+        return poll_count >= 2
+
+    started_at = time.monotonic()
+    result = run_streamed_subprocess(
+        spec=spec,
+        timeout_seconds=5.0,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+        completion_requested=completion_requested,
+        completion_stop_reason=StopReason.COMPLETE,
+    )
+
+    assert result.stop_reason is StopReason.COMPLETE
+    assert time.monotonic() - started_at < 1.5
 
 
 @pytest.mark.skipif(os.name == "nt", reason="process groups are POSIX-specific")

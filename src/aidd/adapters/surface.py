@@ -366,6 +366,7 @@ def _execute_opencode(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
+        document_completion_paths=request.expected_output_documents,
     )
     persist_opencode_runtime_log(attempt_path=attempt_path, run_result=run_result)
     event_artifacts = persist_runtime_event_artifacts(
@@ -382,9 +383,10 @@ def _execute_opencode(
         adapter_question_events=question_detection.question_events,
     )
     return RuntimeAdapterExecutionResult(
-        succeeded=_success_result(
-            run_result.exit_classification,
+        succeeded=run_result.exit_classification
+        in (
             OpenCodeExitClassification.SUCCESS,
+            OpenCodeExitClassification.DOCUMENT_COMPLETE,
         ),
         details=run_result.exit_classification.value,
         runtime_jsonl_path=event_artifacts.runtime_jsonl_path,

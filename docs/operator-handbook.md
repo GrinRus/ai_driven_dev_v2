@@ -133,6 +133,11 @@ Claude Code, Codex, and OpenCode native mode adapt AIDD stage briefs and prompt
 packs to the raw provider CLI. Use `mode = "adapter-flags"` only for wrapper
 commands that accept AIDD adapter flags directly.
 
+OpenCode native mode can report `document_complete` when it has written the declared
+Markdown outputs and then keeps the provider process open instead of returning a final
+message. AIDD still preserves the raw log and runtime exit metadata and still runs canonical
+stage validation before any workflow progression.
+
 Current config fields consumed by the CLI:
 
 - `workspace.root`

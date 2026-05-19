@@ -52,3 +52,6 @@ manifest with explicit acceptance criteria and verification intent.
 - Native runtime prompts now make turn completion explicit after the final required
   document write so providers that have already produced valid Markdown artifacts do not
   keep the adapter call open until a stage timeout.
+- OpenCode native runs can now finish with `document_complete` when required stage
+  documents settle but the provider process does not return a final message; canonical
+  validation still decides whether the stage blocks, repairs, or advances.

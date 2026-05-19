@@ -107,6 +107,8 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     timeout_stop_reason: ExitClassificationT,
     cancel_stop_reason: ExitClassificationT,
     cancel_requested: Callable[[], bool] | None = None,
+    completion_requested: Callable[[], bool] | None = None,
+    completion_stop_reason: ExitClassificationT | None = None,
     on_stdout: Callable[[str], None] | None = None,
     on_stderr: Callable[[str], None] | None = None,
     queue_timeout_seconds: float = 0.1,
@@ -114,6 +116,8 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
 ) -> StreamedSubprocessResult[ExitClassificationT]:
     if timeout_seconds is not None and timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be greater than zero when provided.")
+    if completion_requested is not None and completion_stop_reason is None:
+        raise ValueError("completion_stop_reason is required when completion_requested is set.")
 
     try:
         process = subprocess.Popen(
@@ -183,6 +187,10 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             return
         if cancel_requested is not None and cancel_requested():
             stop_reason = cancel_stop_reason
+            request_subprocess_stop(process)
+            return
+        if completion_requested is not None and completion_requested():
+            stop_reason = completion_stop_reason
             request_subprocess_stop(process)
             return
         if deadline is not None and time.monotonic() >= deadline:
