@@ -2057,6 +2057,52 @@ def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_bun_verification_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-BUN",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-LIVE-HONO-NON-ERROR-THROW`\n"
+            "- Selected task title: non-Error throw handling\n\n"
+            "## Summary\n\n"
+            "Implemented the selected Hono runtime error-handling task and "
+            "recorded focused regression coverage plus broad-suite evidence.\n\n"
+            "## Touched files\n\n"
+            "- `src/compose.ts` - normalize non-Error thrown values before onError.\n"
+            "- `src/hono-base.ts` - normalize dispatch errors before the Hono error handler.\n"
+            "- `src/hono.test.ts` - cover primitive and object non-Error throws.\n\n"
+            "## Verification\n\n"
+            "- `bunx vitest --run src/compose.test.ts src/hono.test.ts` "
+            "-> exit code 0; captured summary `Test Files 2 passed (2)` and "
+            "`Tests 241 passed (241)`.\n"
+            "- `bunx tsc --noEmit` -> exit code 0; captured output contained no diagnostics.\n"
+            "- `bun run test` -> exit code 1; captured summary "
+            "`Test Files 3 failed | 141 passed (144)`, `Tests 11 failed | "
+            "4314 passed | 33 skipped (4358)`, and `Errors 4 errors`.\n"
+            "- `bun test` -> not-run: earlier implement evidence recorded this "
+            "plain Bun runner as a sandbox-hanging command.\n\n"
+            "## Risks\n\n"
+            "- Broad-suite verification remains locally blocked by unrelated target "
+            "runner failures; focused regression and TypeScript checks passed.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-BUN",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_live_noop_blocker_evidence(
     tmp_path: Path,
 ) -> None:
