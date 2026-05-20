@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -93,6 +94,28 @@ def test_run_verification_steps_executes_commands_after_aidd_run(tmp_path: Path)
     assert result.duration_seconds >= 0
     assert (working_copy_path / "verify-exit-code.txt").read_text(encoding="utf-8") == "0\n"
     assert (working_copy_path / "verify.log").read_text(encoding="utf-8") == "verified\n"
+
+
+def test_run_verification_steps_preserves_environment_path_order(tmp_path: Path) -> None:
+    working_copy_path = tmp_path / "working-copy"
+    working_copy_path.mkdir(parents=True, exist_ok=True)
+    tool_bin = tmp_path / "tool-bin"
+    tool_bin.mkdir()
+    scenario = _build_scenario(
+        verify_commands=("printf '%s\\n' \"$PATH\" > observed-path.txt",)
+    )
+
+    run_verification_steps(
+        scenario=scenario,
+        working_copy_path=working_copy_path,
+        aidd_run_result=_build_aidd_run_result(exit_code=0),
+        environment={"PATH": f"{tool_bin}{os.pathsep}{os.environ.get('PATH', '')}"},
+    )
+
+    observed_path = (working_copy_path / "observed-path.txt").read_text(
+        encoding="utf-8"
+    )
+    assert observed_path.split(os.pathsep, 1)[0] == tool_bin.as_posix()
 
 
 def test_run_verification_steps_stops_after_first_failing_command(tmp_path: Path) -> None:

@@ -100,7 +100,7 @@ def _run_shell_commands(
     for command in commands:
         start = time.monotonic()
         completed = subprocess.run(
-            ["/bin/sh", "-lc", command],
+            ["/bin/sh", "-c", command],
             cwd=working_copy_path,
             env=command_env,
             capture_output=True,
