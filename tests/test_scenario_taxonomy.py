@@ -144,11 +144,14 @@ def test_hono_medium_live_scenario_uses_focused_verification_gate() -> None:
     )
     scenario = entries[scenario_path]
 
-    focused_command = "bunx vitest run src/hono.test.ts src/compose.test.ts"
+    focused_command = "./node_modules/.bin/vitest --run src/hono.test.ts src/compose.test.ts"
     assert focused_command in scenario.verify.commands
     assert focused_command in scenario.quality.commands
+    assert "./node_modules/.bin/tsc --noEmit" in scenario.verify.commands
+    assert "./node_modules/.bin/tsc --noEmit" in scenario.quality.commands
     assert "bun test" not in scenario.verify.commands
     assert "bun test" not in scenario.quality.commands
+    assert "bunx vitest run src/hono.test.ts src/compose.test.ts" not in scenario.verify.commands
 
 
 def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:
