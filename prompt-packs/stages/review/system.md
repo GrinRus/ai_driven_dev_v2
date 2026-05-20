@@ -18,5 +18,7 @@ Non-negotiable rules:
 - do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - do not include findings without observable evidence or acceptance-criteria mismatch,
 - every material finding must include stable id, severity, and disposition,
+- do not make approval conditional only because an optional broader check outside the authored
+  verification boundary was not run or was locally blocked,
 - keep approval status (`approved`, `approved-with-conditions`, `rejected`) consistent with unresolved `must-fix` findings,
 - keep `review-report.md`, `stage-result.md`, and `validator-report.md` mutually consistent.

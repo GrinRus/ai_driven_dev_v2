@@ -26,6 +26,7 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `../implement/output/validator-report.md`
 - `context/diff-summary.md`
 - `context/acceptance-criteria.md`
+- `context/verification-output.md` when available
 
 ## Optional context inputs
 
@@ -55,6 +56,10 @@ Optional context documents may improve review depth, but they must not replace i
 - Findings may be written as top-level bullets or as `### RV-*` / `### REV-*` subsections.
 - No-findings declarations must be explicit, for example `- none` or
   `No review findings were identified.`
+- Optional exploratory checks outside the selected task's authored verification boundary
+  must not force `approved-with-conditions` unless they reveal a concrete defect,
+  contradict acceptance criteria, are required by review baseline or release policy, or
+  leave required selected-task verification inconclusive.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation

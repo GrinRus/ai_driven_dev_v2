@@ -73,6 +73,22 @@ def test_review_prompts_make_finding_evidence_reference_explicit() -> None:
     assert "if no such evidence exists, mark the finding `invalid` or remove it" in repair_prompt
 
 
+def test_review_prompt_respects_authored_verification_boundary() -> None:
+    run_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/review/system.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "`context/verification-output.md` define the" in run_prompt
+    assert "Do not convert optional broader checks outside that boundary" in run_prompt
+    assert "Keep out-of-boundary exploratory check limitations as non-blocking notes" in (
+        run_prompt
+    )
+    assert "do not make approval conditional only because an optional broader check" in (
+        system_prompt
+    )
+
+
 def test_review_spec_prompts_require_exact_decision_heading() -> None:
     run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
         encoding="utf-8"

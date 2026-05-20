@@ -19,6 +19,7 @@ findings, the `Findings` section must say exactly `- none` or
   - `../implement/output/validator-report.md`
   - `context/diff-summary.md`
   - `context/acceptance-criteria.md`
+  - `context/verification-output.md` when available
 - optional context when available:
   - `context/repository-state.md`
   - `context/constraints.md`
@@ -62,11 +63,17 @@ normalize if canonical validation proves the terminal status inconsistent.
 3. `must-fix` findings block `approved` status until resolved.
 4. Required changes must map to concrete finding ids when status is conditional or rejected.
 5. Missing/contradictory baseline context must become explicit questions, not silent assumptions.
+6. The selected task, acceptance criteria, and `context/verification-output.md` define the
+   authored verification boundary. Do not convert optional broader checks outside that boundary
+   into `approved-with-conditions` unless they reveal a concrete defect, contradict acceptance
+   criteria, are required by review baseline or release policy, or leave required selected-task
+   verification inconclusive.
 
 ## Execution instructions
 
-1. Read required `implement` artifacts, diff summary, acceptance criteria, and
-   `contracts/stages/review.md` before drafting outputs.
+1. Read required `implement` artifacts, diff summary, acceptance criteria,
+   `context/verification-output.md` when present, and `contracts/stages/review.md` before
+   drafting outputs.
 2. Do not mark stage `succeeded` when `implement` status is unresolved or validator verdict is
    `fail`.
 3. Draft `review-report.md` with sections for findings, approval decision, and required changes.
@@ -80,7 +87,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    unambiguous for downstream QA.
 6. If contradictions in baseline prevent defensible decision, ask a `[blocking]` question instead
    of forcing approval.
-7. Update `validator-report.md` and `stage-result.md` so verdict, blockers, and next actions match
+7. Keep out-of-boundary exploratory check limitations as non-blocking notes when authored
+   verification and acceptance criteria are clean.
+8. Update `validator-report.md` and `stage-result.md` so verdict, blockers, and next actions match
    the final review decision.
 
 ## Common output skeleton discipline
@@ -97,5 +106,7 @@ normalize if canonical validation proves the terminal status inconsistent.
   or acceptance-criteria mismatch,
 - approval status is explicit and consistent with unresolved `must-fix` findings,
 - required changes map to concrete findings for non-approved outcomes,
+- optional checks outside the authored verification boundary are not treated as approval
+  conditions unless they expose a concrete defect or selected-task evidence gap,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.
