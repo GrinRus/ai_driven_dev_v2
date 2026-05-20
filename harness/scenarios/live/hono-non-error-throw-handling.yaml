@@ -52,7 +52,7 @@ feature_source:
     - Existing Error object handling remains unchanged.
     - Regression tests cover at least one primitive thrown value and one object thrown value.
     verification:
-    - bun test
+    - bunx vitest run src/hono.test.ts src/compose.test.ts
     - bunx tsc --noEmit
     quality_bar: The patch is localized, typed, regression-covered, and does not weaken
       existing Error handling behavior.
@@ -60,18 +60,18 @@ feature_source:
       type-checked tests, but should remain within one subsystem.
 verify:
   commands:
-  - bun test
+  - bunx vitest run src/hono.test.ts src/compose.test.ts
   - bunx tsc --noEmit
   - test -f .aidd/workitems/WI-LIVE-HONO-SMOKE/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-HONO-SMOKE/stages/qa/output/validator-report.md
   pass_conditions:
   - Verification commands exit with status 0.
-  - Bun test run reports no failing tests.
+  - Focused Hono runtime and compose regression tests report no failing tests.
   - TypeScript compile check reports no type errors.
   - QA stage output artifacts exist for the selected work item.
 quality:
   commands:
-  - bun test
+  - bunx vitest run src/hono.test.ts src/compose.test.ts
   - bunx tsc --noEmit
   rubric_profile: live-full
   require_review_status: approved

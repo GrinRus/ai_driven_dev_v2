@@ -34,6 +34,10 @@ manifest with explicit acceptance criteria and verification intent.
   verification in Rich/default and `TYPER_USE_RICH=0` modes. The authored task explicitly
   covers false-only boolean declarations so quality review does not leave leading separator
   behavior as a residual follow-up.
+- `AIDD-LIVE-007` uses focused Hono runtime and compose tests plus `bunx tsc --noEmit`.
+  The pinned Hono repository's broad `bun test` command currently exercises unrelated
+  runner/runtime surfaces and fails outside the selected non-Error throw task, so it is not
+  a maintained clean-run gate for this medium scenario.
 - `AIDD-LIVE-008` is intentionally `xlarge`; router wildcard semantics are API-sensitive and
   should not be treated as an ordinary large feature.
 - Interview scenarios must keep top-level `interview.required: true` plus authored task
