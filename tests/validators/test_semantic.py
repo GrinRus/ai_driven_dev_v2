@@ -2268,6 +2268,42 @@ def test_validate_semantic_outputs_flags_invalid_implement_verification_fixture_
     )
 
 
+def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-DIFF",
+        "# Implementation Report\n\n"
+        "## Selected task\n\n"
+        "- Task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n"
+        "- Local task ids: T1, T2\n\n"
+        "## Change summary\n\n"
+        "Implemented the selected yielded-rows feature with scoped code, tests, and docs.\n\n"
+        "## Touched files\n\n"
+        "- `sqlite_utils/cli.py` - add yielded-row ingestion handling.\n"
+        "- `tests/test_cli_insert.py` - cover yielded rows and invalid input.\n"
+        "- `docs/cli.rst` - document trusted local Python caveats.\n\n"
+        "## Verification\n\n"
+        "- `uv run pytest -q` -> 1044 passed, 16 skipped.\n"
+        "- `git diff --name-only` -> changes bounded to `sqlite_utils/cli.py`, "
+        "`tests/test_cli_insert.py`, `docs/cli.rst`.\n\n"
+        "## Risks\n\n"
+        "- None observed.\n\n"
+        "## Follow-up\n\n"
+        "- None.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-DIFF",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_valid_review_fixture_bundle() -> None:
     workspace_root = _SEMANTIC_FIXTURES_ROOT / "review-valid" / "workspace"
 
