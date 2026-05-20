@@ -214,6 +214,25 @@ def test_prepare_stage_bundle_renders_stage_brief_with_relative_paths(tmp_path: 
     assert "`workitems/WI-001/stages/plan/plan.md`" in content
 
 
+def test_prepare_stage_bundle_renders_implementation_report_skeleton(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="implement",
+    )
+    content = bundle.stage_brief_markdown
+
+    assert "## `implementation-report.md`" in content
+    assert "# Implementation Report" in content
+    assert "## Summary" in content
+    assert "## Touched files" in content
+    assert "## Verification" in content
+    assert "## Risks" in content
+    assert "## Follow-up" in content
+
+
 def test_prepare_stage_bundle_persists_project_set_context_when_declared(
     tmp_path: Path,
 ) -> None:

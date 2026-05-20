@@ -83,6 +83,32 @@ _VALIDATOR_REPORT_SKELETON = """```md
 - Repair required: `<yes|no>`
 ```"""
 
+_IMPLEMENTATION_REPORT_SKELETON = """```md
+# Implementation Report
+
+## Summary
+
+- Selected task id: `<selected-task-id>`
+- Change summary: <what changed, why, and how it maps to the selected task>
+
+## Touched files
+
+- `<path>` - <short change intent>
+
+## Verification
+
+- `<command or concrete check>` -> <observed outcome>
+- `<scenario verification command>` -> <observed outcome or `not-run: <reason>`>
+
+## Risks
+
+- none
+
+## Follow-up
+
+- none
+```"""
+
 
 def _append_common_output_skeletons(
     *,
@@ -90,7 +116,11 @@ def _append_common_output_skeletons(
     expected_output_documents: tuple[str, ...],
 ) -> None:
     expected_names = {Path(path).name for path in expected_output_documents}
-    if not {"stage-result.md", "validator-report.md"} & expected_names:
+    if not {
+        "implementation-report.md",
+        "stage-result.md",
+        "validator-report.md",
+    } & expected_names:
         return
 
     lines.extend(
@@ -98,9 +128,13 @@ def _append_common_output_skeletons(
             "",
             "# Required common output skeletons",
             "",
-            "Use these exact section headings when writing the common output documents.",
+            "Use these exact section headings when writing these output documents.",
         ]
     )
+    if "implementation-report.md" in expected_names:
+        lines.extend(
+            ["", "## `implementation-report.md`", "", _IMPLEMENTATION_REPORT_SKELETON]
+        )
     if "stage-result.md" in expected_names:
         lines.extend(["", "## `stage-result.md`", "", _STAGE_RESULT_SKELETON])
     if "validator-report.md" in expected_names:
