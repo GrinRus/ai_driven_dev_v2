@@ -2081,6 +2081,8 @@ def test_validate_semantic_outputs_accepts_bun_verification_evidence(
             "-> exit code 0; captured summary `Test Files 2 passed (2)` and "
             "`Tests 241 passed (241)`.\n"
             "- `bunx tsc --noEmit` -> exit code 0; captured output contained no diagnostics.\n"
+            "- `./node_modules/.bin/prettier --check src/utils/error.ts src/hono-base.ts` "
+            "-> pass, exit code 0; all matched files use Prettier style.\n"
             "- `bun run test` -> exit code 1; captured summary "
             "`Test Files 3 failed | 141 passed (144)`, `Tests 11 failed | "
             "4314 passed | 33 skipped (4358)`, and `Errors 4 errors`.\n"
