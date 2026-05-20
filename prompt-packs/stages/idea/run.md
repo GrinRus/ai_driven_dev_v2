@@ -56,7 +56,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    In `Constraints` and `Open questions`, prose-only text is invalid; write one
    top-level bullet per item, and when there are no items write exactly `- none`.
 3. Replace ambiguity with durable questions in `questions.md` using stable ids and
-   `[blocking]` / `[non-blocking]` markers.
+   `[blocking]` / `[non-blocking]` markers. Write one top-level bullet per question id;
+   do not put indented or nested bullets under a question. Put alternatives or examples
+   in the question sentence or non-bullet continuation prose.
 4. Treat unresolved `[blocking]` questions as stage blockers; do not mark the stage as `succeeded`.
 5. Write `validator-report.md` so its findings and verdict match the actual artifact state.
 6. Write `stage-result.md` so status and blockers are consistent with both `validator-report.md`

@@ -111,8 +111,48 @@ def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBu
     )
 
 
+def build_result_bundle_layout_at_run_root(*, run_root: Path) -> ResultBundleLayout:
+    normalized_run_root = run_root.resolve(strict=False)
+    _validate_run_id(normalized_run_root.name)
+    return ResultBundleLayout(
+        run_root=normalized_run_root,
+        harness_metadata_path=normalized_run_root / HARNESS_METADATA_FILENAME,
+        install_transcript_path=normalized_run_root / INSTALL_TRANSCRIPT_FILENAME,
+        setup_transcript_path=normalized_run_root / SETUP_TRANSCRIPT_FILENAME,
+        run_transcript_path=normalized_run_root / RUN_TRANSCRIPT_FILENAME,
+        verify_transcript_path=normalized_run_root / VERIFY_TRANSCRIPT_FILENAME,
+        quality_transcript_path=normalized_run_root / QUALITY_TRANSCRIPT_FILENAME,
+        teardown_transcript_path=normalized_run_root / TEARDOWN_TRANSCRIPT_FILENAME,
+        feature_selection_path=normalized_run_root / FEATURE_SELECTION_FILENAME,
+        runtime_log_path=normalized_run_root / RUNTIME_LOG_FILENAME,
+        runtime_jsonl_path=normalized_run_root / RUNTIME_JSONL_FILENAME,
+        events_jsonl_path=normalized_run_root / EVENTS_JSONL_FILENAME,
+        validator_report_path=normalized_run_root / VALIDATOR_REPORT_FILENAME,
+        repair_history_path=normalized_run_root / REPAIR_HISTORY_FILENAME,
+        log_analysis_path=normalized_run_root / LOG_ANALYSIS_FILENAME,
+        stage_timing_json_path=normalized_run_root / STAGE_TIMING_JSON_FILENAME,
+        stage_timing_markdown_path=normalized_run_root / STAGE_TIMING_MARKDOWN_FILENAME,
+        self_repair_matrix_json_path=normalized_run_root / SELF_REPAIR_MATRIX_JSON_FILENAME,
+        self_repair_matrix_path=normalized_run_root / SELF_REPAIR_MATRIX_FILENAME,
+        grader_path=normalized_run_root / GRADER_FILENAME,
+        verdict_path=normalized_run_root / VERDICT_FILENAME,
+        quality_report_path=normalized_run_root / QUALITY_REPORT_FILENAME,
+    )
+
+
 def ensure_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBundleLayout:
     layout = build_result_bundle_layout(workspace_root=workspace_root, run_id=run_id)
+    layout.run_root.mkdir(parents=True, exist_ok=True)
+    return layout
+
+
+def ensure_result_bundle_layout_at_report_root(
+    *,
+    report_root: Path,
+    run_id: str,
+) -> ResultBundleLayout:
+    normalized_run_id = _validate_run_id(run_id)
+    layout = build_result_bundle_layout_at_run_root(run_root=report_root / normalized_run_id)
     layout.run_root.mkdir(parents=True, exist_ok=True)
     return layout
 

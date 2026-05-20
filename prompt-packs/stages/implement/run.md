@@ -47,11 +47,13 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Implementation discipline
 
-1. Selected task id from `context/task-selection.md` must exist in upstream `tasklist.md`.
+1. Selected task id from `context/task-selection.md` must be explicit in the implementation
+   report. If upstream `tasklist.md` decomposes that selected task into local ids such as `T1` or
+   `TL-1`, use those local ids to structure touched-file and verification evidence where practical.
 2. `context/allowed-write-scope.md` is a hard boundary for touched files.
 3. `context/acceptance-criteria.md` and `context/verification-output.md` define the
    authored live acceptance and verification baseline for the implementation.
-4. Change summary must describe what changed, why it changed, and how it maps to selected task id.
+4. Change summary must describe what changed, why it changed, and how it maps to the selected task id.
 5. Touched-files list must include concrete path + short intent per entry and never claim unobserved edits.
 6. Verification notes must list actual checks run (or explicitly not run) with observed outcomes.
 7. No-op outcomes require explicit evidence-based justification plus next action; otherwise no-op is invalid.
@@ -70,8 +72,14 @@ normalize if canonical validation proves the terminal status inconsistent.
 5. Record verification using concrete commands/checks and outcomes; include observed results such as
    `-> pass`, `exit 0`, `exit code 0`, or the captured tool summary. Do not imply execution that did
    not happen.
+   A verification note with any pass/fail/success outcome claim is invalid unless the same bullet
+   includes executable/check evidence: a shell command in backticks, a test or code snippet path, an
+   artifact path, or a captured assertion/tool summary.
+   Manual or `CliRunner` checks must cite the executed command/snippet, artifact path, or captured
+   assertion result; do not write `manual inspection -> pass` without evidence.
    When `context/verification-output.md` lists authored or scenario verification commands, run those
    commands after the implementation or explicitly mark each skipped command as not-run with a reason.
+   For skipped checks, write `not-run: <reason>` in the verification note.
 6. If required inputs are missing or scope/task constraints conflict, raise a `[blocking]` question
    instead of inventing assumptions.
 7. Update `validator-report.md` and `stage-result.md` so readiness, blockers, and next actions remain

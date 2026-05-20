@@ -232,19 +232,23 @@ manual installed-operator audit, not CI and not a release gate.
 Example black-box live E2E evaluator command:
 
 ```bash
-python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
+python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```
 
-Manual live E2E scenarios install AIDD through an isolated `uv tool` path, run from the
-target repository root, execute each stage through public `aidd stage run` and
-inspection commands plus loopback `aidd ui` UI/API checkpoints, and preserve audit
-bundles under `.aidd/reports/evals/`.
-By default, the evaluator builds a local wheel from the source checkout containing the
-scenario manifest. To test an already published package instead, set:
+Manual live E2E scenarios snapshot tracked AIDD `HEAD` into
+`${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd`, build and install through an
+isolated `uv tool` home/cache, clone the pinned target repository under
+`<work-root>/<run_id>/target/<repo-slug>`, run from the target repository root,
+execute each stage through public `aidd stage run` and inspection commands plus
+loopback `aidd ui` UI/API checkpoints, write `stage-audits/<stage>.json` and
+`.md` per-stage audits, and preserve durable
+audit bundles under `.aidd/reports/evals/`.
+By default, the evaluator builds a local wheel from the clean tracked source checkout
+containing the scenario manifest. To test an already published package instead, set:
 
 ```bash
 AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a2" \
-  python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex
+  python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```
 
 Public GitHub repositories are live E2E targets for evaluator evidence only. See:

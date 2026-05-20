@@ -123,9 +123,14 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
     stage_result_contract = (
         repo_root / "contracts" / "documents" / "stage-result.md"
     ).read_text(encoding="utf-8")
+    questions_contract = (
+        repo_root / "contracts" / "documents" / "questions.md"
+    ).read_text(encoding="utf-8")
 
     assert "`validator-report.md` is AIDD-canonical" in document_contracts
     assert "`repair-brief.md` is not runtime-authored" in document_contracts
+    assert "nested or indented bullets" in questions_contract.lower()
+    assert "nested or indented bullets" in document_contracts.lower()
     assert "AIDD treats it as the\nworkflow-facing summary" in stage_result_contract
 
     for stage in STAGES:
@@ -311,6 +316,12 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
             "harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
             "--runtime codex"
         ),
+        "`--work-root ${TMPDIR:-/tmp}/aidd-live-e2e`",
+        "`--report-root .aidd/reports/evals`",
+        "`--run-id <id>`",
+        "`stage-audits/<stage>.json`",
+        "snapshot tracked AIDD `HEAD`",
+        "Rerun the same manifest/runtime until it is clean.",
         "plan step, execute through public operator surfaces, inspect artifacts",
         "frontend-checkpoints.json",
         "first listed authored task",
@@ -319,10 +330,78 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "`idea -> qa`",
         "`.aidd/reports/evals/<run_id>/`",
         "does **not** provision runtime authentication, wrapper scripts, or provider setup",
+        "the launching agent is the operator-agent",
+        "write standard `[resolved]` answers",
+        "`- Q1 [resolved] answer text`",
+        "answer-analysis.md",
+        "operator-quality-analysis.md",
+        "The operator audit cannot upgrade machine `fail` or `warn`",
     ):
         assert needle in live_e2e_skill
 
     assert "For **local live-run operator guidance**, prefer `live-e2e`." in aidd_eval_skill
+    assert "the launching agent is the operator-agent" in aidd_eval_skill
+    assert "`- Q1 [resolved] answer text`" in aidd_eval_skill
+    assert "stage-audits/<stage>.json" in aidd_eval_skill
+    assert "${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd" in aidd_eval_skill
+    assert "operator-quality-analysis.md" in aidd_eval_skill
+
+
+def test_live_docs_describe_temp_install_layout_and_stage_audits() -> None:
+    repo_root = _repo_root()
+    documents = {
+        "README.md": (repo_root / "README.md").read_text(encoding="utf-8"),
+        "docs/e2e/live-e2e-catalog.md": (
+            repo_root / "docs" / "e2e" / "live-e2e-catalog.md"
+        ).read_text(encoding="utf-8"),
+        "docs/e2e/live-quality-rubric.md": (
+            repo_root / "docs" / "e2e" / "live-quality-rubric.md"
+        ).read_text(encoding="utf-8"),
+        "docs/architecture/eval-harness-integration.md": (
+            repo_root / "docs" / "architecture" / "eval-harness-integration.md"
+        ).read_text(encoding="utf-8"),
+    }
+
+    for relative_path, text in documents.items():
+        for needle in (
+            "stage-audits/<stage>.json",
+            ".aidd/reports/evals",
+        ):
+            assert needle in text, relative_path
+
+    readme = documents["README.md"]
+    assert "--work-root /tmp/aidd-live-e2e" in readme
+    assert "--report-root .aidd/reports/evals" in readme
+    catalog = documents["docs/e2e/live-e2e-catalog.md"]
+    assert "<work-root>/<run_id>/source/aidd" in catalog
+    assert "<work-root>/<run_id>/target/<repo-slug>" in catalog
+    assert "dirty tracked" in catalog
+
+
+def test_live_manual_docs_do_not_delegate_answers_to_external_operator_agent() -> None:
+    searched_roots = [
+        _repo_root() / "docs" / "e2e",
+        _repo_root() / "docs" / "operator-troubleshooting.md",
+        _repo_root() / ".agents" / "skills" / "live-e2e",
+        _repo_root() / ".agents" / "skills" / "aidd-eval",
+    ]
+    stale_phrases = (
+        "external operator-agent",
+        "external operator-agent answers",
+        "after external operator-agent answers",
+        "waiting for an external operator-agent",
+    )
+    offenders: list[str] = []
+    for root in searched_roots:
+        paths = [root] if root.is_file() else list(root.rglob("*"))
+        for path in paths:
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8")
+            if any(phrase in text for phrase in stale_phrases):
+                offenders.append(path.relative_to(_repo_root()).as_posix())
+
+    assert offenders == []
 
 
 def test_docs_do_not_reference_removed_eval_run_command() -> None:

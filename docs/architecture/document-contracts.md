@@ -50,7 +50,9 @@ Examples:
 
 `stage-result.md` is runtime-facing as a draft and workflow-facing as the final stage summary:
 the runtime writes the Markdown summary, and the AIDD core may correct terminal status when
-canonical validation proves the draft inconsistent.
+canonical validation proves the draft inconsistent. During repair attempts, the core may also add
+the required `repair-brief.md` trace reference before validation because `repair-brief.md` is
+AIDD-owned control evidence.
 
 `validator-report.md` is different. A runtime may draft it as evidence, but the canonical
 report is the one AIDD writes after validation.
@@ -172,6 +174,11 @@ When a stage needs clarification, the system should write:
 
 - `questions.md`
 - `answers.md` once the user replies
+
+`questions.md` uses one top-level bullet per question id. Nested or indented bullets
+under a question are structurally invalid because the parser treats bullets in the
+questions section as question entries; alternatives or rationale belong in the question
+sentence or non-bullet continuation prose.
 
 These documents must be durable because:
 - the run might pause,

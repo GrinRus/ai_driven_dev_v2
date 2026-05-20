@@ -230,11 +230,20 @@ For every stage run:
 6. Stream raw runtime logs when the adapter can expose them, and persist raw attempt logs.
 7. Persist structured `runtime.jsonl` and normalized `events.jsonl` attempt artifacts when
    the selected adapter observes structured JSONL runtime output.
+   Provider-specific native adapters may mark a process `document_complete` only after the
+   declared Markdown outputs are present, terminal documents have been updated, and the
+   files have settled. This is still raw-log-visible adapter evidence; it does not skip the
+   canonical validation step. When a stage writes fresh blocking questions, `answers.md`
+   may still be an unanswered placeholder; validation and interview routing decide whether
+   the stage waits for operator answers.
 8. If the runtime or stage documents raise questions:
    - surface them through the CLI or durable stage documents,
    - persist them as `questions.md`,
    - collect or wait for `answers.md`,
-   - resume stage execution after answers when the run state allows it.
+   - resume stage execution after answers when the run state allows it,
+   - include existing same-stage question, answer, and draft output documents in the resume
+     attempt input bundle for both direct stage resume helpers and workflow-driven resume,
+     so the runtime can update the blocked stage from answered context.
 9. After the runtime finishes, validate the declared output documents.
 10. If validation passes:
    - write the canonical AIDD `validator-report.md` in the stage root,

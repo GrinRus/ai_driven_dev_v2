@@ -20,6 +20,8 @@ Summarize verification evidence, remaining risks, and release readiness.
 - `Release recommendation` declares exactly one supported state:
   `proceed`, `proceed-with-conditions`, or `hold`,
 - material evidence entries use stable `EV-N` ids and/or backticked artifact paths,
+- `Known issues` may include an empty marker such as `- Known issues: none.`;
+  residual risk entries are separate items and must include severity plus mitigation or ownership,
 - upstream references are present when the stage requires them.
 
 ## Notes

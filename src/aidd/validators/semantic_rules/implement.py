@@ -24,6 +24,8 @@ from aidd.validators.semantic_rules.common import (
     validate_placeholder_sections,
 )
 
+LIVE_SELECTED_TASK_ID_PATTERN = re.compile(r"\bTASK-[A-Z0-9][A-Z0-9-]*[A-Z0-9]\b")
+
 
 def _compact_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
@@ -53,14 +55,17 @@ def _validate_selected_task(
     context: SemanticDocumentContext,
     selected_task: SemanticSection,
 ) -> tuple[ValidationFinding, ...]:
-    if extract_tasklist_task_ids(selected_task.content):
+    if (
+        extract_tasklist_task_ids(selected_task.content)
+        or LIVE_SELECTED_TASK_ID_PATTERN.search(selected_task.content)
+    ):
         return tuple()
     return (
         context.finding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Section `Selected task` must include a stable task id "
-                "(for example `TL-2`)."
+                "Section `Selected task` must include a stable selected task "
+                "or tasklist id (for example `TASK-LIVE-EXAMPLE` or `TL-2`)."
             ),
             severity="medium",
             location=selected_task.location,

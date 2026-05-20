@@ -34,9 +34,9 @@ def derive_validation_verdict(
     findings: tuple[ValidationFinding, ...],
     interview_routing: StageInterviewRouting | None = None,
 ) -> ValidationVerdict:
-    if any(finding.code == BLOCKING_UNANSWERED_CODE for finding in findings):
-        return ValidationVerdict.BLOCKED
     if findings:
+        if all(finding.code == BLOCKING_UNANSWERED_CODE for finding in findings):
+            return ValidationVerdict.BLOCKED
         return ValidationVerdict.REPAIR
     if interview_routing is not None and interview_routing.requires_interview:
         return ValidationVerdict.BLOCKED
@@ -247,6 +247,7 @@ def prepare_stage_resume_after_answers(
         work_item=work_item,
         stage=stage,
         contracts_root=contracts_root,
+        include_existing_stage_outputs=True,
     )
     execution_state = persist_execution_state(
         workspace_root=workspace_root,

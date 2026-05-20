@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import signal
 import subprocess
 import threading
 import time
@@ -25,6 +27,21 @@ class StreamedSubprocessResult[ExitClassificationT: StrEnum]:
 
 
 def request_subprocess_stop(process: subprocess.Popen[str]) -> None:
+    process_group_terminated = _request_process_group_stop(process, signal.SIGTERM)
+    if process_group_terminated:
+        deadline = time.monotonic() + 0.5
+        while time.monotonic() < deadline:
+            if not _process_group_exists(process.pid):
+                return
+            time.sleep(0.05)
+        _request_process_group_stop(process, signal.SIGKILL)
+        if process.poll() is None:
+            try:
+                process.kill()
+            except (OSError, ProcessLookupError):
+                pass
+        return
+
     if process.poll() is not None:
         return
 
@@ -40,6 +57,28 @@ def request_subprocess_stop(process: subprocess.Popen[str]) -> None:
             process.kill()
         except (OSError, ProcessLookupError):
             return
+
+
+def _request_process_group_stop(process: subprocess.Popen[str], sig: signal.Signals) -> bool:
+    if os.name == "nt":
+        return False
+    try:
+        os.killpg(process.pid, sig)
+    except (OSError, ProcessLookupError):
+        return False
+    return True
+
+
+def _process_group_exists(pid: int) -> bool:
+    if os.name == "nt":
+        return False
+    try:
+        os.killpg(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 def stream_reader(
@@ -68,6 +107,8 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     timeout_stop_reason: ExitClassificationT,
     cancel_stop_reason: ExitClassificationT,
     cancel_requested: Callable[[], bool] | None = None,
+    completion_requested: Callable[[], bool] | None = None,
+    completion_stop_reason: ExitClassificationT | None = None,
     on_stdout: Callable[[str], None] | None = None,
     on_stderr: Callable[[str], None] | None = None,
     queue_timeout_seconds: float = 0.1,
@@ -75,6 +116,8 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
 ) -> StreamedSubprocessResult[ExitClassificationT]:
     if timeout_seconds is not None and timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be greater than zero when provided.")
+    if completion_requested is not None and completion_stop_reason is None:
+        raise ValueError("completion_stop_reason is required when completion_requested is set.")
 
     try:
         process = subprocess.Popen(
@@ -86,6 +129,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
+            start_new_session=os.name != "nt",
         )
     except (FileNotFoundError, PermissionError, OSError) as exc:
         if launch_failure_stop_reason is None:
@@ -143,6 +187,10 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             return
         if cancel_requested is not None and cancel_requested():
             stop_reason = cancel_stop_reason
+            request_subprocess_stop(process)
+            return
+        if completion_requested is not None and completion_requested():
+            stop_reason = completion_stop_reason
             request_subprocess_stop(process)
             return
         if deadline is not None and time.monotonic() >= deadline:

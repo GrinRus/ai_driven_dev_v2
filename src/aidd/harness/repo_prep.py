@@ -297,3 +297,64 @@ def prepare_working_copy(
             action=action,
             resolved_revision=_git_stdout(["rev-parse", "HEAD"], cwd=working_copy_path),
         )
+
+
+def prepare_live_target_repository(
+    *,
+    work_root: Path,
+    scenario: Scenario,
+    run_id: str,
+) -> PreparedWorkingCopy:
+    """Clone a per-run target repository directly under the live temp work root."""
+
+    normalized_run_id = run_id.strip()
+    if not normalized_run_id:
+        raise RepoPreparationError("run_id must be non-empty.")
+
+    slug = _repo_slug(scenario.repo.url)
+    target_root = work_root.resolve(strict=False) / normalized_run_id / "target"
+    working_copy_path = target_root / slug
+    target_root.mkdir(parents=True, exist_ok=True)
+
+    local_source_path = _local_directory_source(scenario.repo.url)
+    if local_source_path is not None and not _is_standalone_git_worktree(local_source_path):
+        prepared = _materialize_local_directory_repository(
+            source_path=local_source_path,
+            repo_path=working_copy_path,
+        )
+        _pin_repository_revision(repo_path=working_copy_path, scenario=scenario)
+        resolved_revision = _git_stdout(["rev-parse", "HEAD"], cwd=working_copy_path)
+        _run_git(["reset", "--hard", resolved_revision], cwd=working_copy_path)
+        _run_git(["clean", "-fdx"], cwd=working_copy_path)
+        return PreparedWorkingCopy(
+            working_copy_path=working_copy_path,
+            action=prepared.action,
+            resolved_revision=resolved_revision,
+        )
+
+    action = "reused"
+    if working_copy_path.exists():
+        if not (working_copy_path / ".git").exists():
+            _remove_tree(working_copy_path)
+            action = "cloned"
+    else:
+        action = "cloned"
+
+    if action == "cloned":
+        _run_git(["clone", "--origin", "origin", scenario.repo.url, working_copy_path.as_posix()])
+    else:
+        _cleanup_transient_git_files(working_copy_path)
+        if local_source_path is None:
+            _run_git(["fetch", "--prune", "origin"], cwd=working_copy_path)
+
+    _pin_repository_revision(repo_path=working_copy_path, scenario=scenario)
+    resolved_revision = _git_stdout(["rev-parse", "HEAD"], cwd=working_copy_path)
+    _run_git(["checkout", "--detach", "--force", resolved_revision], cwd=working_copy_path)
+    _run_git(["reset", "--hard", resolved_revision], cwd=working_copy_path)
+    _run_git(["clean", "-fdx"], cwd=working_copy_path)
+
+    return PreparedWorkingCopy(
+        working_copy_path=working_copy_path,
+        action=action,
+        resolved_revision=resolved_revision,
+    )

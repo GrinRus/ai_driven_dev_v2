@@ -254,6 +254,31 @@ def test_resolve_required_input_documents_maps_context_and_upstream_paths(
     )
 
 
+def test_resolve_required_input_documents_includes_qa_selected_task_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    resolved = resolve_required_input_documents(
+        stage="qa",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert (
+        workspace_root / "workitems" / "WI-001" / "context" / "selected-task.md"
+        in resolved
+    )
+    assert (
+        workspace_root / "workitems" / "WI-001" / "context" / "verification-output.md"
+        in resolved
+    )
+    assert (
+        workspace_root / "workitems" / "WI-001" / "context" / "verification-artifacts.md"
+        in resolved
+    )
+
+
 def test_resolve_required_input_documents_rejects_workspace_escape(tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts" / "stages"
     contracts_root.mkdir(parents=True)

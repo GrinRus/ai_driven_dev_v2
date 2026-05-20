@@ -4,6 +4,7 @@ from pathlib import Path
 
 from aidd.core.stage_terminal import (
     ensure_repair_brief_records_exhausted_budget,
+    ensure_stage_result_references_repair_brief,
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
     repair_brief_exhausts_terminal_budget,
@@ -107,6 +108,31 @@ def test_strip_success_claims_for_validator_findings_keeps_result_file(
     assert "- `failed`" in stage_result_text
     assert "validator report verdict: `fail`" in stage_result_text
     assert "canonical aidd validation found open findings" in stage_result_text.lower()
+
+
+def test_ensure_stage_result_references_repair_brief_appends_trace_note(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_result_path = _write_successful_stage_result(workspace_root)
+    repair_brief_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md"
+    )
+    repair_brief_path.write_text("# Repair brief\n", encoding="utf-8")
+
+    result_path = ensure_stage_result_references_repair_brief(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        repair_brief_path=repair_brief_path,
+    )
+
+    assert result_path == stage_result_path
+    stage_result_text = stage_result_path.read_text(encoding="utf-8")
+    assert (
+        "- Repair decision context recorded in "
+        "`workitems/WI-001/stages/plan/repair-brief.md`."
+    ) in stage_result_text
 
 
 def test_exhausted_budget_validation_finding_points_at_stage_result(

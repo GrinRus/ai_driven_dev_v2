@@ -21,6 +21,7 @@ class StageRuntimeRequest:
     stage_brief_path: Path
     prompt_pack_paths: tuple[Path, ...]
     repository_root: Path
+    expected_output_documents: tuple[Path, ...] = ()
     attempt_number: int = 1
     repair_mode: bool = False
     input_bundle_path: Path | None = None

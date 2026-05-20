@@ -79,6 +79,8 @@ Before the live run, confirm all of these:
 6. the runtime you plan to use appears in `runtime_targets`
 7. `uv run aidd eval doctor <manifest> --runtime <runtime>` reports execution readiness
 8. any wrapper env var you choose to set resolves on the machine and uses the expected auth state
+9. for native `codex` live runs, `aidd eval doctor` also confirms `codex login status`
+   from the operator environment that live stage execution will inherit
 
 Recommended local preflight:
 
@@ -122,6 +124,18 @@ or:
 uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime claude-code
 ```
 
+The default execution layout is:
+
+- `--work-root ${TMPDIR:-/tmp}/aidd-live-e2e` for mutable execution state;
+- `--report-root .aidd/reports/evals` for durable evidence bundles;
+- `--run-id <id>` only when you need to resume or name a specific run.
+
+Use explicit paths when the audit needs stable local references:
+
+```bash
+uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/typer-boolean-help-rendering.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
+```
+
 The GitHub `manual-live-e2e` workflow is a secondary alternate entrypoint, not the primary flow described by this skill.
 
 ## What the harness will do
@@ -129,18 +143,90 @@ The GitHub `manual-live-e2e` workflow is a secondary alternate entrypoint, not t
 During a successful local live run, the evaluator will:
 
 1. load the selected scenario and validate the live-lane contract;
-2. resolve and record the pinned target repository commit;
-3. prepare a clean working copy of the target repository;
-4. select the **first listed authored task** from the manifest task pool;
-5. write feature-selection evidence to the eval bundle and target-repo context;
-6. seed `.aidd/` inside the target repository;
-7. write a live `aidd.example.toml` with the runtime command and execution mode for the chosen provider;
-8. build and install the local AIDD source wheel with `uv tool`, or install the
-   package specified by `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`;
-9. plan step, execute through public operator surfaces, inspect artifacts/UI/API/logs,
+2. fail as an infra/config blocker if the tracked AIDD source checkout is dirty;
+3. snapshot tracked AIDD `HEAD` into `<work-root>/<run_id>/source/aidd`;
+4. build the wheel in `<work-root>/<run_id>/build/dist`;
+5. install with isolated `HOME=<work-root>/<run_id>/install-home` and
+   `UV_CACHE_DIR=<work-root>/<run_id>/uv-cache`;
+6. clone the pinned target repository into `<work-root>/<run_id>/target/<repo-slug>`;
+7. select the **first listed authored task** from the manifest task pool;
+8. write feature-selection evidence to the eval bundle and target-repo context;
+9. seed `.aidd/` inside the target repository;
+10. write a live `aidd.example.toml` with the runtime command and execution mode for the chosen provider;
+11. run setup, stage, verify, and quality commands from the target repository root
+    with the installed `aidd` binary on `PATH`;
+12. inherit the launching operator's `HOME` and provider environment during stage
+    execution so native provider auth works without copying credentials;
+13. plan step, execute through public operator surfaces, inspect artifacts/UI/API/logs,
    classify, and decide the next step for every stage from `idea -> qa`;
-10. run setup, verify, quality, and teardown commands and write final audit artifacts
+14. write `stage-audits/<stage>.json` and `.md` after every stage;
+15. run setup, verify, quality, and teardown commands and write final audit artifacts
     from the recorded step evidence.
+
+## Operator-agent responsibilities
+
+For local manual live runs, the launching agent is the operator-agent. Do not
+delegate blocking questions to a separate external actor when you are running the
+lane yourself.
+
+When the evaluator returns `blocked`:
+
+1. Open `operator-action-request.md`.
+2. Open the referenced `questions.md`.
+3. write standard `[resolved]` answers to the referenced `answers.md`.
+   Use exact answer lines such as `- Q1 [resolved] answer text`; do not insert a
+   colon after `[resolved]`.
+4. Write `answer-analysis.md` in the eval bundle, explaining the choices and how
+   they satisfy the authored task constraints.
+5. Re-run the same black-box command for the same manifest/runtime so the
+   evaluator resumes the existing blocked run.
+
+After any terminal live run, the launching operator-agent must write
+`operator-quality-analysis.md` in the eval bundle before counting the run. Use
+this template:
+
+```markdown
+# Operator Quality Analysis
+
+## Run
+- Runtime: `<runtime>`
+- Manifest: `<manifest>`
+- Run ID: `<run_id>`
+- Bundle: `<bundle path>`
+
+## Machine Result
+- Execution verdict: `<pass|fail|blocked|infra-fail>`
+- Quality gate: `<pass|warn|fail|none>`
+- QA verdict: `<ready|ready-with-risks|not-ready|missing>`
+- Review status: `<approved|approved-with-conditions|rejected|missing>`
+
+## Flow Fidelity
+- Stages reached:
+- Repair/interview behavior:
+- Evidence completeness:
+
+## Artifact Quality
+- Stage outputs:
+- Validator reports:
+- Review/QA evidence:
+- Unresolved findings:
+
+## Code Quality
+- Diff scope:
+- Tests:
+- Docs/examples:
+- Acceptance criteria:
+
+## Decision
+- Decision: `<counted-clean|not-counted|blocked/infra/provider/model-quality>`
+
+## Blockers
+- `<explicit blockers, or none>`
+```
+
+The operator audit cannot upgrade machine `fail` or `warn` to a counted clean
+pass. It can only reject or downgrade a machine-clean run after inspecting the
+artifacts.
 
 ## Validations and blockers
 
@@ -186,6 +272,8 @@ Expected live artifacts include:
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
+- `stage-audits/<stage>.json`
+- `stage-audits/<stage>.md`
 - `feature-selection.json`
 - `install-transcript.json`
 - `runtime.log`
@@ -196,16 +284,45 @@ Expected live artifacts include:
 - `verdict.md`
 - `quality-report.md`
 - `quality-transcript.json`
+- `operator-quality-analysis.md` for counted manual clean-pass decisions
+- `answer-analysis.md` when the run answered blocking questions
 
-A live run is only "clean" when execution evidence exists, verification output is present, and the bundle includes `quality-report.md` plus `quality-transcript.json`.
+A live run is only "clean" when execution evidence exists, verification output is
+present, the machine `quality_gate` is `pass`, and the bundle includes
+`quality-report.md`, `quality-transcript.json`, and an operator-authored
+`operator-quality-analysis.md` with decision `counted-clean`.
+
+## Iteration loop contract
+
+For live quality stabilization, the launching agent should repeat this external
+operator loop instead of relying on a self-mutating product command:
+
+1. Run one `>= medium` live scenario through the black-box evaluator.
+2. Read the full evidence bundle, including every `stage-audits/<stage>.json`,
+   `verdict.md`, `grader.json`, `quality-report.md`, transcripts, and logs.
+3. Write `operator-quality-analysis.md` and classify the first unresolved decisive
+   signal as infra/provider/auth/wrapper, adapter integration, orchestration,
+   contract/validator, prompt/stagepack, harness/grader/rubric, target repo setup,
+   or model artifact quality.
+4. If AIDD needs a fix, change the smallest vertical slice, update tests/docs for
+   touched orchestration/adapters/contracts/prompts/validators/harness/evals, run
+   repo-local checks, and commit.
+5. Rerun the same manifest/runtime until it is clean.
+6. After one clean pass, switch to another maintained scenario/provider until the
+   matrix has at least five counted clean `>= medium` passes with provider coverage.
 
 ## First triage for common failures
 
 - Provider executable missing: install/login to the selected provider CLI, or export `AIDD_EVAL_CODEX_COMMAND` / `AIDD_EVAL_OPENCODE_COMMAND` for a wrapper.
+- Codex native live auth missing: `aidd eval doctor` checks `codex login status`
+  from the operator environment that live stage execution inherits.
 - Runtime launches but immediately fails in native mode: inspect provider auth, model selection, and sandbox permissions.
 - Runtime launches but immediately fails in `adapter-flags` mode: the configured command is probably not an AIDD-compatible wrapper command.
 - `unsupported-runtime`: the runtime is not declared in the scenario's `runtime_targets`.
-- `blocked`: inspect `operator-action-request.md`, `questions.md`, and `answers.md`; the live evaluator will continue after external operator-agent answers are present.
+- `blocked`: inspect `operator-action-request.md`, `questions.md`, and
+  `answers.md`; as the launching operator-agent, write `[resolved]` answers,
+  using exact lines such as `- Q1 [resolved] answer text`, write
+  `answer-analysis.md`, then rerun the same black-box command to resume.
 - `fail` after run success: inspect `verify-transcript.json`, `quality-transcript.json`, and the stage-local validator reports.
 - Missing clean execution despite zero exit codes: inspect `verdict.md` and `grader.json` for pass-guard failures caused by missing `stage-result.md` or `validator-report.md`.
 
@@ -216,7 +333,11 @@ A live run is only "clean" when execution evidence exists, verification output i
 3. Export a wrapper env var only when you intentionally want `adapter-flags` mode.
 4. Launch `uv run python -m aidd.harness.live_e2e_black_box <manifest> --runtime <runtime>`.
 5. Preserve the resulting bundle and inspect `verdict.md`, `grader.json`, `quality-report.md`, and transcripts before judging the run.
-6. If the setup, provider coverage, size classification, quality recipe, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
+6. For `blocked` runs, answer questions yourself as the launching operator-agent,
+   write `answer-analysis.md`, and rerun the same command to resume.
+7. For terminal runs, write `operator-quality-analysis.md` before deciding
+   counted/not-counted.
+8. If the setup, provider coverage, size classification, quality recipe, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
 
 ## Hard rules
 
@@ -227,6 +348,9 @@ A live run is only "clean" when execution evidence exists, verification output i
 - Never run a live scenario without storing the selected authored task snapshot.
 - Never treat a live scenario as canonical unless it executes `idea -> qa`.
 - Never treat a live scenario as passed without install evidence and verification output.
-- Never treat a live scenario as clean without `quality-report.md` and `quality-transcript.json`.
+- Never treat a live scenario as clean without `quality-report.md`,
+  `quality-transcript.json`, and `operator-quality-analysis.md`.
+- Never let operator analysis upgrade a machine `fail` or `warn` quality gate to a
+  counted clean pass.
 - Preserve all runtime logs.
 - Keep `.aidd` rooted inside the target repository for installed live runs.

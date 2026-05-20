@@ -12,6 +12,8 @@ Store user-facing clarification questions raised during a stage.
 
 - `Questions`
   - Must be a bullet list where each bullet is one atomic question.
+  - Each question entry must be a top-level bullet; nested or indented bullets under a
+    question entry are invalid because they are parsed as additional question entries.
   - Each question must include a marker: `[blocking]` or `[non-blocking]`.
   - Each question must include a stable question id token (for example, `Q1`, `Q2`).
   - Blocking questions must describe why progression cannot continue without an answer.
@@ -30,6 +32,8 @@ Store user-facing clarification questions raised during a stage.
 - Do not fabricate answers inside this document; answers belong in `answers.md`.
 - When assumptions are acceptable, still record the question with `[non-blocking]`.
 - Preserve question ids across revisions to keep durable cross-references stable.
+- Put alternatives, examples, or rationale in the question sentence itself, or in plain
+  continuation prose that does not start with `-`.
 - Only bullets inside the `Questions` section are interpreted as question entries;
   use noncanonical sections only for non-authoritative prose metadata.
 

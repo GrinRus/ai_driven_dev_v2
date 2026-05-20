@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import zipfile
 from pathlib import Path
 
@@ -39,6 +40,25 @@ def _write_fake_aidd_wheel(path: Path) -> None:
         )
 
 
+def _run(args: list[str], *, cwd: Path | None = None) -> str:
+    completed = subprocess.run(
+        args,
+        cwd=cwd,
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+    return completed.stdout.strip()
+
+
+def _commit_source_checkout(repository_root: Path) -> None:
+    _run(["git", "init", repository_root.as_posix()])
+    _run(["git", "config", "user.email", "tests@example.invalid"], cwd=repository_root)
+    _run(["git", "config", "user.name", "AIDD Tests"], cwd=repository_root)
+    _run(["git", "add", "."], cwd=repository_root)
+    _run(["git", "commit", "-m", "source baseline"], cwd=repository_root)
+
+
 def test_prepare_local_wheel_install_returns_absolute_installed_command_for_relative_workspace(
     tmp_path: Path,
     monkeypatch,
@@ -48,6 +68,7 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
     repository_root.mkdir()
     (repository_root / "pyproject.toml").write_text("[project]\nname='aidd-test'\n")
     (repository_root / "contracts").mkdir()
+    _commit_source_checkout(repository_root)
 
     def _fake_run_command(
         *,
@@ -55,8 +76,9 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
         cwd: Path,
         env: dict[str, str] | None = None,
     ) -> HarnessCommandTranscript:
-        _ = cwd
         if command[:3] == ("uv", "build", "--wheel"):
+            assert cwd != repository_root
+            assert (cwd / "pyproject.toml").exists()
             out_dir = Path(command[-1])
             _write_fake_aidd_wheel(
                 out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
@@ -77,13 +99,22 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
     monkeypatch.setattr(install_artifact, "_run_command", _fake_run_command)
 
     result: HarnessInstallResult = prepare_local_wheel_install(
-        workspace_root=Path(".aidd"),
+        work_root=Path("work-root"),
         run_id="eval-live-test",
         repository_root=repository_root,
     )
 
     assert Path(result.installed_command[0]).is_absolute()
     assert Path(result.installed_command[0]).exists()
+    assert result.source_snapshot_path == (
+        tmp_path / "work-root" / "eval-live-test" / "source" / "aidd"
+    )
+    assert result.build_dist_path == (
+        tmp_path / "work-root" / "eval-live-test" / "build" / "dist"
+    )
+    assert result.install_home == tmp_path / "work-root" / "eval-live-test" / "install-home"
+    assert result.uv_cache_dir == tmp_path / "work-root" / "eval-live-test" / "uv-cache"
+    assert result.source_revision
 
 
 def test_prepare_published_package_install_returns_absolute_installed_command(
@@ -120,7 +151,7 @@ def test_prepare_published_package_install_returns_absolute_installed_command(
     monkeypatch.setattr(install_artifact, "_run_command", _fake_run_command)
 
     result = prepare_published_package_install(
-        workspace_root=Path(".aidd"),
+        work_root=Path("work-root"),
         run_id="eval-live-test",
         package_spec="ai-driven-dev-v2==9.9.9",
     )
@@ -139,7 +170,7 @@ def test_prepare_local_wheel_install_requires_source_checkout_root(
     monkeypatch.chdir(cwd)
     try:
         prepare_local_wheel_install(
-            workspace_root=tmp_path / ".aidd",
+            work_root=tmp_path / "work-root",
             run_id="eval-live-test",
             repository_root=None,
         )
@@ -160,6 +191,7 @@ def test_prepare_local_wheel_install_can_derive_source_checkout_from_cwd(
     source_root.mkdir()
     (source_root / "pyproject.toml").write_text("[project]\nname='aidd-test'\n")
     (source_root / "contracts").mkdir()
+    _commit_source_checkout(source_root)
     monkeypatch.chdir(source_root)
 
     def _fake_run_command(
@@ -168,8 +200,9 @@ def test_prepare_local_wheel_install_can_derive_source_checkout_from_cwd(
         cwd: Path,
         env: dict[str, str] | None = None,
     ) -> HarnessCommandTranscript:
-        assert cwd == source_root
         if command[:3] == ("uv", "build", "--wheel"):
+            assert cwd != source_root
+            assert (cwd / "pyproject.toml").exists()
             out_dir = Path(command[-1])
             _write_fake_aidd_wheel(
                 out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
@@ -189,7 +222,7 @@ def test_prepare_local_wheel_install_can_derive_source_checkout_from_cwd(
     monkeypatch.setattr(install_artifact, "_run_command", _fake_run_command)
 
     result = prepare_local_wheel_install(
-        workspace_root=Path(".aidd"),
+        work_root=Path("work-root"),
         run_id="eval-live-test",
         repository_root=None,
     )
@@ -197,12 +230,40 @@ def test_prepare_local_wheel_install_can_derive_source_checkout_from_cwd(
     assert Path(result.installed_command[0]).exists()
 
 
+def test_prepare_local_wheel_install_rejects_dirty_tracked_source_checkout(
+    tmp_path: Path,
+) -> None:
+    repository_root = tmp_path / "source"
+    repository_root.mkdir()
+    (repository_root / "pyproject.toml").write_text("[project]\nname='aidd-test'\n")
+    (repository_root / "contracts").mkdir()
+    _commit_source_checkout(repository_root)
+    (repository_root / "pyproject.toml").write_text(
+        "[project]\nname='aidd-test-dirty'\n",
+        encoding="utf-8",
+    )
+
+    try:
+        prepare_local_wheel_install(
+            work_root=tmp_path / "work-root",
+            run_id="eval-live-test",
+            repository_root=repository_root,
+        )
+    except HarnessInstallError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("Expected HarnessInstallError for dirty tracked checkout.")
+
+    assert "clean tracked source checkout" in message
+    assert not (tmp_path / "work-root" / "eval-live-test" / "source" / "aidd").exists()
+
+
 def test_prepare_local_wheel_install_rejects_invalid_source_checkout(
     tmp_path: Path,
 ) -> None:
     try:
         prepare_local_wheel_install(
-            workspace_root=tmp_path / ".aidd",
+            work_root=tmp_path / "work-root",
             run_id="eval-live-test",
             repository_root=tmp_path / "invalid-source",
         )

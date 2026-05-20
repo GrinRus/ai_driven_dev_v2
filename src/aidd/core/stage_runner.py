@@ -61,6 +61,7 @@ from aidd.core.stage_preparation import (
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stage_terminal import (
     ensure_repair_brief_records_exhausted_budget,
+    ensure_stage_result_references_repair_brief,
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
     repair_brief_exhausts_terminal_budget,
@@ -164,6 +165,30 @@ def _should_persist_terminal_repair_history(
     return metadata is not None and bool(metadata.repair_history)
 
 
+def _should_include_existing_stage_outputs_for_resume(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> bool:
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if metadata is None:
+        return False
+    return (
+        metadata.status == StageState.PREPARING.value
+        and any(
+            status_change.status == StageState.BLOCKED.value
+            for status_change in metadata.status_history
+        )
+    )
+
+
 def run_single_stage_orchestration(
     *,
     workspace_root: Path,
@@ -179,12 +204,19 @@ def run_single_stage_orchestration(
     project_set: ResolvedProjectSet | None = None,
     changed_at_utc: datetime | None = None,
 ) -> StageOrchestrationResult:
+    include_existing_stage_outputs = _should_include_existing_stage_outputs_for_resume(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
     preparation_bundle = prepare_stage_bundle(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
         contracts_root=contracts_root,
         project_set=project_set,
+        include_existing_stage_outputs=include_existing_stage_outputs,
     )
     execution_state = persist_execution_state(
         workspace_root=workspace_root,
@@ -265,6 +297,12 @@ def run_single_stage_orchestration(
             work_item=work_item,
             stage=stage,
         )
+    ensure_stage_result_references_repair_brief(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        repair_brief_path=adapter_invocation.repair_brief_path,
+    )
     validation_result = run_structural_validation_after_output_discovery(
         workspace_root=workspace_root,
         discovery=discovery,

@@ -21,23 +21,35 @@ Live E2E is no longer part of CI or release automation. It is a manual external-
 Every live E2E run must follow the installed full-flow operator model:
 
 1. Select a maintained manifest from `harness/scenarios/live/`.
-2. Resolve and record the pinned target repository commit.
-3. Prepare a working copy of that repository.
-4. Install the AIDD artifact under test with `uv tool`.
-5. Change into the target repository root.
-6. Select the first authored task from the scenario's `authored-task-pool`.
-7. Run installed `aidd` from that repository root with explicit workflow bounds `idea -> qa`.
-8. Keep `.aidd/` rooted inside the target repository.
-9. Preserve install, setup, run, verify, quality, and teardown evidence in the eval bundle.
-10. Preserve `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`, and
+2. Create a temp work layout under `<work-root>/<run_id>/`.
+3. Snapshot tracked AIDD `HEAD` into `<work-root>/<run_id>/source/aidd`; dirty tracked
+   source is an infra/config blocker.
+4. Build the local wheel into `<work-root>/<run_id>/build/dist`.
+5. Install the artifact with isolated
+   `HOME=<work-root>/<run_id>/install-home` and
+   `UV_CACHE_DIR=<work-root>/<run_id>/uv-cache`.
+6. Clone and pin the target repository directly under
+   `<work-root>/<run_id>/target/<repo-slug>`.
+7. Change into the target repository root for setup, stage, verify, and quality execution.
+8. Select the first authored task from the scenario's `authored-task-pool`.
+9. Run installed `aidd` from that repository root with explicit workflow bounds `idea -> qa`.
+10. Keep target `.aidd/` rooted inside the target repository.
+11. Preserve install, setup, run, verify, quality, and teardown evidence in the eval bundle.
+12. Write `stage-audits/<stage>.json` and `.md` after each stage.
+13. Preserve `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`, and
     `self-repair-matrix.md` so operators can audit step duration, per-attempt runtime windows,
     deterministic repair-probe coverage, terminal document consistency, and repair behavior.
+14. For manual local runs, the launching agent is the operator-agent: it answers
+    blocking questions, records answer reasoning, and writes an operator-authored
+    quality analysis before a run can be counted as clean.
 
-Live E2E is not defined by source-checkout execution from the AIDD repository itself, and it is not a merge gate.
-Local-wheel live evals build from the source checkout containing the scenario manifest. To
-test an already published package, set `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` to the exact
-package spec, for example `ai-driven-dev-v2==0.1.0a2`; published-package mode must not
-require a source checkout root.
+Live E2E is not defined by mutable source-checkout execution from the AIDD repository
+itself, and it is not a merge gate. The source checkout is read only during local-wheel
+snapshot/build preparation, while durable evidence is written to
+`<report-root>/<run_id>`; the default report root is `.aidd/reports/evals`.
+To test an already published package, set `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` to the
+exact package spec, for example `ai-driven-dev-v2==0.1.0a2`; published-package mode
+must not require a source checkout root.
 
 The local operator UI has a separate E2E evidence lane in
 [`Operator UI Local-Project E2E Lane`](./operator-ui-local-project.md). That lane uses
@@ -108,11 +120,11 @@ For live scenarios in this wave:
 
 - `codex` is the primary canonical runtime for maintained tiny, small, and medium live lanes;
 - `opencode` covers at least one live lane;
-- `claude-code` is enabled only for the `AIDD-LIVE-005` small smoke lane, where the
-  manual timeout budget is intentionally extended to 240 minutes because native
-  Claude Code full-flow attempts can run materially longer than Codex/OpenCode
-  attempts; its generated live runtime config also extends long-running
-  `research`, `tasklist`, `implement`, `review`, and `qa` stage attempts;
+- `claude-code` keeps `AIDD-LIVE-005` as a small smoke lane and uses
+  `AIDD-LIVE-007` as the planned maintained medium coverage candidate when
+  `aidd eval doctor` confirms provider/auth readiness; generated live runtime
+  config extends long-running `research`, `plan`, `review-spec`, `tasklist`,
+  `implement`, `review`, and `qa` stage attempts;
 - `generic-cli` remains a deterministic baseline provider and is not a maintained live provider in this wave.
 
 Representative matrix coverage for the live lane:
@@ -121,7 +133,7 @@ Representative matrix coverage for the live lane:
 | --- | --- | --- | --- |
 | `live-full-flow` | `tiny` | `codex` | `AIDD-LIVE-004` |
 | `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005` |
-| `live-full-flow` | `medium` | `codex` | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
+| `live-full-flow` | `medium` | `codex`, `claude-code` planned | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
 | `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006` |
 | `live-full-flow-interview` | `xlarge` | `opencode` | `AIDD-LIVE-008` |
 
@@ -144,7 +156,7 @@ Every maintained live scenario must:
 - define authored task `id`, `title`, `summary`, `intent`, `target_change`, `expected_scope`,
   `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
 - declare `live_flow.answer_policy: agent-decides` so any stage can block on questions
-  and resume after external operator-agent answers are written;
+  and resume after the launching operator-agent writes resolved answers;
 - define authored task `interview` guidance when the scenario is
   `live-full-flow-interview`; other live scenarios may include it as optional context;
 - force full-flow `idea -> qa`;
@@ -169,11 +181,21 @@ Every live eval bundle must aim to contain:
 - `quality-report.md`
 - `feature-selection.json`
 - `install-transcript.json`
+- `harness-metadata.json`
+- `flow-state.json`
 - `setup-transcript.json`
 - `run-transcript.json`
 - `verify-transcript.json`
 - `quality-transcript.json`
 - `teardown-transcript.json`
+- `stage-audits/<stage>.json`
+- `stage-audits/<stage>.md`
+
+For counted manual clean-pass decisions, the eval bundle must also include
+operator-authored evidence:
+
+- `operator-quality-analysis.md`
+- `answer-analysis.md` when the launching operator-agent answered blocking questions
 
 ## Interview Scenarios
 
@@ -184,6 +206,8 @@ The maintained interview scenarios are:
 
 Any live scenario may block when questions are unresolved and resume only after
 standard `answers.md` content is present in the target-repository workspace path.
+Operator-authored answer lines use the exact form `- Q1 [resolved] answer text`
+without a colon after `[resolved]`.
 The interview scenarios above are the maintained coverage cases where the manifest
 expects that blocking question path to happen.
 

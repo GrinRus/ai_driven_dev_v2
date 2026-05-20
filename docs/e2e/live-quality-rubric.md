@@ -17,6 +17,29 @@ Every live eval bundle should write:
 - `quality-report.md`
 - `quality-transcript.json`
 - a `quality` section in `grader.json`
+- `stage-audits/<stage>.json` and `.md` so the final quality report can cite
+  stage-local state, validator verdict, repair/interview behavior, runtime log
+  visibility, and implement evidence shape
+
+The default durable bundle root for these artifacts is `.aidd/reports/evals/<run_id>/`.
+
+## Manual operator overlay
+
+The machine quality gate is the minimum clean-pass requirement. For manual live
+E2E, the launching agent is also the operator-agent and must write
+`operator-quality-analysis.md` before counting a terminal run.
+
+The operator audit can only downgrade the counted/not-counted decision. It cannot
+upgrade a machine `fail` or `warn` quality gate to a counted clean pass.
+
+For counted manual clean passes, `operator-quality-analysis.md` records:
+
+- runtime, manifest, run id, and bundle path;
+- execution verdict, quality gate, QA verdict, and review status;
+- flow fidelity, artifact quality, and code quality assessment;
+- final decision: `counted-clean`, `not-counted`, or
+  `blocked/infra/provider/model-quality`;
+- explicit blockers, or `none`.
 
 ## Dimensions
 
@@ -31,6 +54,8 @@ What it measures:
 - workflow bounds stayed `idea -> qa`;
 - question, repair, and verification behavior remained truthful;
 - the run did not silently skip required stages or artifacts.
+- `stage-audits/<stage>.json` exists for every reached stage and agrees with
+  final `flow-state.json`.
 
 Interpretation:
 
@@ -66,7 +91,12 @@ What it measures:
 - QA did not conclude `not-ready`;
 - the resulting change remains bounded and reviewable.
 - implementation size is plausible for the authored task's declared scope.
+- implement-stage audit records changed files, diff summary, and whether
+  implementation-report verification claims are backed by executable/check
+  evidence or explicit `not-run:` reasons.
 - documentation examples avoid placeholder or non-runnable endpoints presented as runnable.
+- optional broader checks outside the authored task's verification boundary do not become
+  release conditions unless they expose a concrete defect or contradict acceptance criteria.
 
 Interpretation:
 

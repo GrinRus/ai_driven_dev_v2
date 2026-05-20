@@ -6,6 +6,7 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -44,6 +45,7 @@ from aidd.harness.eval_preparation import (
     select_authored_task,
 )
 from aidd.harness.install_artifact import (
+    HarnessInstallError,
     HarnessInstallResult,
     prepare_local_wheel_install,
     prepare_published_package_install,
@@ -56,9 +58,7 @@ from aidd.harness.live_workspace_bootstrap import bootstrap_live_work_item
 from aidd.harness.repo_prep import (
     PreparedRepository,
     PreparedWorkingCopy,
-    prepare_scenario_repository,
-    prepare_working_copy,
-    prepare_workspace,
+    prepare_live_target_repository,
 )
 from aidd.harness.result_bundle import (
     EVENTS_JSONL_FILENAME,
@@ -79,8 +79,8 @@ from aidd.harness.result_bundle import (
     VALIDATOR_REPORT_FILENAME,
     VERDICT_FILENAME,
     VERIFY_TRANSCRIPT_FILENAME,
-    build_result_bundle_layout,
-    ensure_result_bundle_layout,
+    build_result_bundle_layout_at_run_root,
+    ensure_result_bundle_layout_at_report_root,
     write_feature_selection,
 )
 from aidd.harness.runner import (
@@ -127,6 +127,7 @@ FRONTEND_CHECKPOINTS_JSON_FILENAME = "frontend-checkpoints.json"
 FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME = "frontend-checkpoints.md"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 SUMMARY_REPORT_FILENAME = "summary.md"
+STAGE_AUDITS_DIRNAME = "stage-audits"
 FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
 
 TERMINAL_STATUSES = {"pass", "fail", "infra-fail"}
@@ -185,7 +186,9 @@ class FlowContext:
     scenario: Scenario
     run_id: str
     runtime_id: str
+    # Internal name kept close to older harness code: this is the temp execution work root.
     workspace_root: Path
+    report_root: Path
     bundle_root: Path
     work_item: str
     selected_task_payload: dict[str, object]
@@ -202,6 +205,10 @@ class FlowContext:
 
 def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _default_work_root() -> Path:
+    return Path(tempfile.gettempdir()) / "aidd-live-e2e"
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -384,7 +391,6 @@ def _harness_environment(
         }
     )
     if install_result is not None:
-        environment["HOME"] = install_result.install_home.as_posix()
         environment["PATH"] = os.pathsep.join(
             [
                 install_result.tool_bin_dir.as_posix(),
@@ -404,9 +410,6 @@ def _harness_environment_for_context(ctx: FlowContext) -> dict[str, str]:
     if ctx.install_result is not None or ctx.preserved_install_payload is None:
         return environment
 
-    install_home = ctx.preserved_install_payload.get("install_home")
-    if isinstance(install_home, str) and install_home:
-        environment["HOME"] = install_home
     tool_bin_dir = ctx.preserved_install_payload.get("tool_bin_dir")
     if isinstance(tool_bin_dir, str) and tool_bin_dir:
         environment["PATH"] = os.pathsep.join([tool_bin_dir, environment.get("PATH", "")])
@@ -422,6 +425,14 @@ def _flow_state_payload(
     completed_stages: tuple[str, ...],
     extra: dict[str, object] | None = None,
 ) -> dict[str, object]:
+    install_home = None
+    if ctx.install_result is not None:
+        install_home = ctx.install_result.install_home.as_posix()
+    elif ctx.preserved_install_payload is not None:
+        preserved_install_home = ctx.preserved_install_payload.get("install_home")
+        if isinstance(preserved_install_home, str):
+            install_home = preserved_install_home
+
     payload: dict[str, object] = {
         "schema_version": 1,
         "updated_at_utc": _utc_now(),
@@ -435,6 +446,24 @@ def _flow_state_payload(
         "current_stage": current_stage,
         "completed_stages": list(completed_stages),
         "bundle_root": ctx.bundle_root.as_posix(),
+        "work_root": ctx.workspace_root.as_posix(),
+        "run_work_root": (ctx.workspace_root / ctx.run_id).as_posix(),
+        "report_root": ctx.report_root.as_posix(),
+        "source_snapshot": (
+            ctx.install_result.source_snapshot_path.as_posix()
+            if ctx.install_result is not None
+            and ctx.install_result.source_snapshot_path is not None
+            else (
+                ctx.preserved_install_payload.get("source_snapshot")
+                if ctx.preserved_install_payload is not None
+                else None
+            )
+        ),
+        "target_repo_root": (
+            None
+            if ctx.prepared_working_copy is None
+            else ctx.prepared_working_copy.working_copy_path.as_posix()
+        ),
         "target_workspace_root": (
             None
             if ctx.prepared_working_copy is None
@@ -446,6 +475,7 @@ def _flow_state_payload(
             else ctx.prepared_working_copy.working_copy_path.as_posix()
         ),
         "config_path": None if ctx.config_path is None else ctx.config_path.as_posix(),
+        "install_home": install_home,
         "installed_command": list(ctx.installed_command),
     }
     if ctx.install_result is not None:
@@ -455,6 +485,22 @@ def _flow_state_payload(
             "install_channel": ctx.install_result.install_channel,
             "install_home": ctx.install_result.install_home.as_posix(),
             "tool_bin_dir": ctx.install_result.tool_bin_dir.as_posix(),
+            "uv_cache_dir": (
+                None
+                if ctx.install_result.uv_cache_dir is None
+                else ctx.install_result.uv_cache_dir.as_posix()
+            ),
+            "source_snapshot": (
+                None
+                if ctx.install_result.source_snapshot_path is None
+                else ctx.install_result.source_snapshot_path.as_posix()
+            ),
+            "build_dist": (
+                None
+                if ctx.install_result.build_dist_path is None
+                else ctx.install_result.build_dist_path.as_posix()
+            ),
+            "source_revision": ctx.install_result.source_revision,
         }
     elif ctx.preserved_install_payload is not None:
         payload["install"] = dict(ctx.preserved_install_payload)
@@ -640,20 +686,22 @@ def _write_flow_report(ctx: FlowContext) -> Path:
 
 def _find_resume_state(
     *,
-    workspace_root: Path,
+    report_root: Path,
     scenario_path: Path,
     runtime_id: str,
+    run_id: str | None,
 ) -> Path | None:
-    run_id_override = os.environ.get("AIDD_LIVE_E2E_RUN_ID", "").strip()
-    eval_root = workspace_root / "reports" / "evals"
-    if run_id_override:
-        candidate = eval_root / run_id_override / FLOW_STATE_FILENAME
+    normalized_run_id = run_id.strip() if run_id is not None else None
+    if normalized_run_id == "":
+        raise ValueError("run_id must be non-empty when provided.")
+    if normalized_run_id is not None:
+        candidate = report_root / normalized_run_id / FLOW_STATE_FILENAME
         return candidate if candidate.exists() else None
-    if not eval_root.exists():
+    if not report_root.exists():
         return None
     scenario_abs = scenario_path.resolve(strict=False).as_posix()
     candidates: list[Path] = []
-    for state_path in eval_root.glob(f"*/{FLOW_STATE_FILENAME}"):
+    for state_path in report_root.glob(f"*/{FLOW_STATE_FILENAME}"):
         try:
             payload = _read_json_object(state_path)
         except (OSError, ValueError, json.JSONDecodeError):
@@ -667,12 +715,21 @@ def _find_resume_state(
         candidates.append(state_path)
     if not candidates:
         return None
-    return sorted(candidates, key=lambda path: (path.stat().st_mtime, path.as_posix()))[-1]
+    if len(candidates) > 1:
+        run_ids = ", ".join(sorted(path.parent.name for path in candidates))
+        raise ValueError(
+            "More than one non-terminal black-box live E2E run matches this "
+            f"manifest/runtime under {report_root.as_posix()}: {run_ids}. "
+            "Pass --run-id to resume a specific run."
+        )
+    return candidates[0]
 
 
-def _new_run_id(*, scenario_id: str, runtime_id: str) -> str:
-    override = os.environ.get("AIDD_LIVE_E2E_RUN_ID", "").strip()
-    return override or derive_run_id(scenario_id=scenario_id, runtime_id=runtime_id)
+def _new_run_id(*, scenario_id: str, runtime_id: str, run_id: str | None) -> str:
+    normalized_run_id = run_id.strip() if run_id is not None else None
+    if normalized_run_id == "":
+        raise ValueError("run_id must be non-empty when provided.")
+    return normalized_run_id or derive_run_id(scenario_id=scenario_id, runtime_id=runtime_id)
 
 
 def _feature_selection_payload(
@@ -744,12 +801,14 @@ def _initial_context(
     *,
     scenario_path: Path,
     runtime_id: str,
-    workspace_root: Path,
+    work_root: Path,
+    report_root: Path,
+    run_id: str | None,
 ) -> FlowContext:
     scenario = load_scenario(
         scenario_path,
         runtime_id=runtime_id,
-        workspace_root=workspace_root,
+        workspace_root=work_root,
     )
     if not scenario.is_live:
         raise ValueError("Black-box live E2E evaluator only supports live scenarios.")
@@ -762,9 +821,16 @@ def _initial_context(
     selected_task = select_authored_task(scenario)
     if selected_task is None:
         raise ValueError("Live scenario must provide an authored task pool.")
-    run_id = _new_run_id(scenario_id=scenario.scenario_id, runtime_id=runtime_id)
-    layout = ensure_result_bundle_layout(workspace_root=workspace_root, run_id=run_id)
-    prepare_workspace(workspace_root)
+    resolved_run_id = _new_run_id(
+        scenario_id=scenario.scenario_id,
+        runtime_id=runtime_id,
+        run_id=run_id,
+    )
+    layout = ensure_result_bundle_layout_at_report_root(
+        report_root=report_root,
+        run_id=resolved_run_id,
+    )
+    work_root.mkdir(parents=True, exist_ok=True)
     selected_task_payload = build_feature_selection_payload(
         scenario=scenario,
         selected_task=selected_task,
@@ -773,9 +839,10 @@ def _initial_context(
     return FlowContext(
         scenario_path=scenario_path,
         scenario=scenario,
-        run_id=run_id,
+        run_id=resolved_run_id,
         runtime_id=runtime_id,
-        workspace_root=workspace_root,
+        workspace_root=work_root,
+        report_root=report_root,
         bundle_root=layout.run_root,
         work_item=derive_work_item(scenario),
         selected_task_payload=selected_task_payload,
@@ -796,16 +863,23 @@ def _context_from_state(
     state_path: Path,
     scenario_path: Path,
     runtime_id: str,
-    workspace_root: Path,
+    work_root: Path,
+    report_root: Path,
 ) -> FlowContext:
     state = _read_json_object(state_path)
+    state_work_root = state.get("work_root")
+    resolved_work_root = (
+        Path(state_work_root)
+        if isinstance(state_work_root, str) and state_work_root
+        else work_root
+    )
     scenario = load_scenario(
         scenario_path,
         runtime_id=runtime_id,
-        workspace_root=workspace_root,
+        workspace_root=resolved_work_root,
     )
     run_id = str(state["run_id"])
-    layout = build_result_bundle_layout(workspace_root=workspace_root, run_id=run_id)
+    layout = build_result_bundle_layout_at_run_root(run_root=state_path.parent)
     selected_task_payload = _feature_selection_payload(
         bundle_root=layout.run_root,
         scenario=scenario,
@@ -851,7 +925,8 @@ def _context_from_state(
         scenario=scenario,
         run_id=run_id,
         runtime_id=runtime_id,
-        workspace_root=workspace_root,
+        workspace_root=resolved_work_root,
+        report_root=report_root,
         bundle_root=layout.run_root,
         work_item=str(state.get("work_item") or derive_work_item(scenario)),
         selected_task_payload=selected_task_payload,
@@ -871,24 +946,30 @@ def _load_or_create_context(
     *,
     scenario_path: Path,
     runtime_id: str,
-    workspace_root: Path,
+    work_root: Path,
+    report_root: Path,
+    run_id: str | None,
 ) -> FlowContext:
     resume_state = _find_resume_state(
-        workspace_root=workspace_root,
+        report_root=report_root,
         scenario_path=scenario_path,
         runtime_id=runtime_id,
+        run_id=run_id,
     )
     if resume_state is not None:
         return _context_from_state(
             state_path=resume_state,
             scenario_path=scenario_path,
             runtime_id=runtime_id,
-            workspace_root=workspace_root,
+            work_root=work_root,
+            report_root=report_root,
         )
     ctx = _initial_context(
         scenario_path=scenario_path,
         runtime_id=runtime_id,
-        workspace_root=workspace_root,
+        work_root=work_root,
+        report_root=report_root,
+        run_id=run_id,
     )
     _persist_state(
         ctx=ctx,
@@ -951,6 +1032,17 @@ def _require_config_path(ctx: FlowContext) -> Path:
     return ctx.config_path
 
 
+def _install_failure_classification(error: Exception) -> StepClassification:
+    message = str(error).lower()
+    if isinstance(error, HarnessInstallError) and (
+        "clean tracked source checkout" in message
+        or "git checkout" in message
+        or "could not locate" in message
+    ):
+        return "infra-fail"
+    return "fail"
+
+
 def _prepare_target_repository(ctx: FlowContext) -> None:
     if ctx.prepared_working_copy is not None:
         return
@@ -960,14 +1052,9 @@ def _prepare_target_repository(ctx: FlowContext) -> None:
             scenario=ctx.scenario,
             source_repository_root=ctx.source_repository_root,
         )
-        ctx.prepared_repository = prepare_scenario_repository(
-            cache_root=ctx.workspace_root / "harness-cache",
+        ctx.prepared_working_copy = prepare_live_target_repository(
+            work_root=ctx.workspace_root,
             scenario=ctx.scenario,
-        )
-        ctx.prepared_working_copy = prepare_working_copy(
-            cache_root=ctx.workspace_root / "harness-cache",
-            scenario=ctx.scenario,
-            prepared_repository=ctx.prepared_repository,
             run_id=ctx.run_id,
         )
         selected_task = _selected_task_for_context(ctx)
@@ -1035,30 +1122,31 @@ def _install_aidd(ctx: FlowContext) -> None:
         package_spec = os.environ.get("AIDD_EVAL_PUBLISHED_PACKAGE_SPEC", "").strip()
         if package_spec:
             ctx.install_result = prepare_published_package_install(
-                workspace_root=ctx.workspace_root,
+                work_root=ctx.workspace_root,
                 run_id=ctx.run_id,
                 package_spec=package_spec,
             )
         else:
             ctx.install_result = prepare_local_wheel_install(
-                workspace_root=ctx.workspace_root,
+                work_root=ctx.workspace_root,
                 run_id=ctx.run_id,
                 repository_root=ctx.source_repository_root,
             )
         ctx.installed_command = ctx.install_result.installed_command
         ctx.preserved_install_payload = None
     except Exception as exc:
+        classification = _install_failure_classification(exc)
         _record_step(
             ctx=ctx,
             action="install",
-            classification="fail",
+            classification=classification,
             decision="Stop before target setup commands because AIDD installation failed.",
             plan="Install the AIDD artifact under test outside the product CLI.",
             details={"error": str(exc)},
         )
         _persist_state(
             ctx=ctx,
-            status="fail",
+            status=classification,
             next_action="stop",
             current_stage=_first_incomplete_stage(ctx),
             completed_stages=_state_completed_stages(ctx.bundle_root),
@@ -1548,6 +1636,341 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
     return classification
 
 
+_PRIMARY_STAGE_OUTPUTS: dict[str, str] = {
+    "idea": "idea-brief.md",
+    "research": "research-notes.md",
+    "plan": "plan.md",
+    "review-spec": "review-spec-report.md",
+    "tasklist": "tasklist.md",
+    "implement": "implementation-report.md",
+    "review": "review-report.md",
+    "qa": "qa-report.md",
+}
+
+
+def _stage_output_root(ctx: FlowContext, stage: str) -> Path:
+    working_copy = _require_working_copy(ctx)
+    return (
+        working_copy
+        / ".aidd"
+        / "workitems"
+        / ctx.work_item
+        / "stages"
+        / stage
+        / "output"
+    )
+
+
+def _stage_root(ctx: FlowContext, stage: str) -> Path:
+    working_copy = _require_working_copy(ctx)
+    return working_copy / ".aidd" / "workitems" / ctx.work_item / "stages" / stage
+
+
+def _stage_document_path(ctx: FlowContext, stage: str, filename: str) -> Path:
+    output_path = _stage_output_root(ctx, stage) / filename
+    if output_path.exists():
+        return output_path
+    root_path = _stage_root(ctx, stage) / filename
+    if root_path.exists():
+        return root_path
+    return output_path
+
+
+def _stage_audit_paths(ctx: FlowContext, stage: str) -> tuple[Path, Path]:
+    audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
+    return audit_root / f"{stage}.json", audit_root / f"{stage}.md"
+
+
+def _read_text_if_exists(path: Path) -> str:
+    if not path.exists() or not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _stage_status_section_state(stage_result_text: str) -> str | None:
+    in_status = False
+    for raw_line in stage_result_text.splitlines():
+        line = raw_line.strip().lower()
+        if line.startswith("## "):
+            in_status = line == "## status"
+            continue
+        if not in_status:
+            continue
+        if "blocked" in line:
+            return "blocked"
+        if "succeeded" in line or "passed" in line:
+            return "passed"
+        if "failed" in line:
+            return "failed"
+    return None
+
+
+def _stage_state_from_text(stage_result_text: str) -> str:
+    status_section_state = _stage_status_section_state(stage_result_text)
+    if status_section_state is not None:
+        return status_section_state
+
+    lowered = stage_result_text.lower()
+    if "action=wait" in lowered or "state=blocked" in lowered:
+        return "blocked"
+    if (
+        "action=proceed" in lowered
+        or "state=valid" in lowered
+        or "status: `succeeded`" in lowered
+        or "status: succeeded" in lowered
+    ):
+        return "passed"
+    if (
+        "action=stop" in lowered
+        or "state=invalid" in lowered
+        or "state=failed" in lowered
+        or "status: `failed`" in lowered
+        or "status: failed" in lowered
+    ):
+        return "failed"
+    return "unknown"
+
+
+def _validator_verdict_from_text(validator_text: str) -> str:
+    lowered = validator_text.lower()
+    if not lowered.strip():
+        return "missing"
+    if "verdict: `pass`" in lowered or "status: `pass`" in lowered:
+        return "pass"
+    if "verdict: `fail`" in lowered or "status: `fail`" in lowered:
+        return "fail"
+    if "no findings" in lowered or "- none" in lowered:
+        return "pass"
+    if "finding" in lowered or "invalid" in lowered or "`high`" in lowered:
+        return "fail"
+    return "unknown"
+
+
+def _stage_attempt_count(ctx: FlowContext, stage: str) -> int:
+    working_copy = _require_working_copy(ctx)
+    runs_root = working_copy / ".aidd" / "reports" / "runs" / ctx.work_item
+    if not runs_root.exists():
+        return 0
+    return len(list(runs_root.glob(f"*/stages/{stage}/attempts/attempt-*")))
+
+
+def _stage_unresolved_questions(ctx: FlowContext, stage: str) -> bool:
+    questions_path = _questions_path(ctx, stage)
+    if not questions_path.exists():
+        return False
+    questions_text = questions_path.read_text(encoding="utf-8", errors="replace").lower()
+    no_question_markers = (
+        "no unresolved blocking questions",
+        "no blocking or non-blocking questions remain",
+        "no questions were raised",
+        "no questions yet",
+    )
+    if any(marker in questions_text for marker in no_question_markers):
+        return False
+    if (
+        "[blocking]" not in questions_text
+        and "pending-blocking" not in questions_text
+        and "blocking questions are unresolved" not in questions_text
+    ):
+        return False
+    return not _answers_file_has_resolved_answers(_answers_path(ctx, stage))
+
+
+def _inspection_runtime_log_visible(
+    inspection_results: tuple[BlackBoxCommandResult, ...],
+) -> bool:
+    for result in inspection_results:
+        if not any(
+            result.command[index : index + 2] == ("run", "logs")
+            for index in range(len(result.command) - 1)
+        ):
+            continue
+        if result.exit_code == 0 and f"{result.stdout_text}{result.stderr_text}".strip():
+            return True
+    return False
+
+
+def _git_output_or_note(*, working_copy: Path, args: tuple[str, ...]) -> str:
+    completed = subprocess.run(
+        ("git", *args),
+        cwd=working_copy,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode == 0:
+        return completed.stdout.strip()
+    return f"git command failed: {(completed.stderr or completed.stdout).strip()}"
+
+
+def _implementation_verification_evidence_shape(report_text: str) -> dict[str, object]:
+    lines = [line.strip() for line in report_text.splitlines() if line.strip()]
+    evidence_markers = (
+        "-> exit 0",
+        "exit 0",
+        "exit code",
+        "-> pass",
+        "passed in",
+        "all checks passed",
+        "not-run:",
+        "captured assertion",
+        "artifact path",
+    )
+    backed_lines = [
+        line
+        for line in lines
+        if any(marker in line.lower() for marker in evidence_markers)
+    ]
+    outcome_claims = [
+        line
+        for line in lines
+        if any(token in line.lower() for token in ("passed", "verified", "complete", "green"))
+    ]
+    return {
+        "backed_evidence_line_count": len(backed_lines),
+        "outcome_claim_line_count": len(outcome_claims),
+        "has_executable_or_not_run_evidence": bool(backed_lines),
+    }
+
+
+def _write_stage_audit(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_classification: StepClassification,
+    inspect_classification: StepClassification,
+    frontend_classification: StepClassification,
+    inspection_results: tuple[BlackBoxCommandResult, ...],
+) -> tuple[Path, Path]:
+    working_copy = _require_working_copy(ctx)
+    primary_filename = _PRIMARY_STAGE_OUTPUTS.get(stage)
+    primary_path = (
+        None
+        if primary_filename is None
+        else _stage_document_path(ctx, stage, primary_filename)
+    )
+    stage_result_path = _stage_document_path(ctx, stage, "stage-result.md")
+    validator_report_path = _stage_document_path(ctx, stage, "validator-report.md")
+    stage_result_text = _read_text_if_exists(stage_result_path)
+    validator_text = _read_text_if_exists(validator_report_path)
+    implementation_details: dict[str, object] | None = None
+    if stage == "implement":
+        implementation_report_text = (
+            ""
+            if primary_path is None
+            else _read_text_if_exists(primary_path)
+        )
+        changed_files_text = _git_output_or_note(
+            working_copy=working_copy,
+            args=("diff", "--name-only", "HEAD", "--", "."),
+        )
+        changed_files = [
+            item
+            for item in changed_files_text.splitlines()
+            if item.strip() and not item.strip().startswith(".aidd/")
+        ]
+        implementation_details = {
+            "changed_files": changed_files,
+            "diff_summary": _git_output_or_note(
+                working_copy=working_copy,
+                args=("diff", "--stat", "HEAD", "--", "."),
+            ),
+            "implementation_report_verification_evidence": (
+                _implementation_verification_evidence_shape(implementation_report_text)
+            ),
+        }
+
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "run_id": ctx.run_id,
+        "runtime_id": ctx.runtime_id,
+        "scenario_id": ctx.scenario.scenario_id,
+        "work_item": ctx.work_item,
+        "stage": stage,
+        "stage_state": _stage_state_from_text(stage_result_text),
+        "classifications": {
+            "stage_run": stage_classification,
+            "public_inspection": inspect_classification,
+            "frontend_checkpoint": frontend_classification,
+        },
+        "validator_verdict": _validator_verdict_from_text(validator_text),
+        "primary_artifact": {
+            "filename": primary_filename,
+            "path": None if primary_path is None else primary_path.as_posix(),
+            "present": primary_path.exists() if primary_path is not None else False,
+        },
+        "stage_result_path": stage_result_path.as_posix(),
+        "validator_report_path": validator_report_path.as_posix(),
+        "repair_attempts": max(_stage_attempt_count(ctx, stage) - 1, 0),
+        "unresolved_questions": _stage_unresolved_questions(ctx, stage),
+        "runtime_log_visible": _inspection_runtime_log_visible(inspection_results),
+        "artifact_quality_notes": [
+            (
+                "primary artifact present"
+                if primary_path is not None and primary_path.exists()
+                else "primary artifact missing"
+            ),
+            (
+                "validator report present"
+                if validator_report_path.exists()
+                else "validator report missing"
+            ),
+            (
+                "runtime logs visible through public CLI"
+                if _inspection_runtime_log_visible(inspection_results)
+                else "runtime logs not visible through public CLI"
+            ),
+        ],
+    }
+    if implementation_details is not None:
+        payload["implementation"] = implementation_details
+
+    json_path, markdown_path = _stage_audit_paths(ctx, stage)
+    _write_json(json_path, payload)
+    primary_artifact = cast(dict[str, object], payload["primary_artifact"])
+    changed_files = (
+        []
+        if implementation_details is None
+        else cast(list[str], implementation_details["changed_files"])
+    )
+    md_lines = [
+        f"# Stage Audit: {stage}",
+        "",
+        f"- Run: `{ctx.runtime_id}` / `{ctx.scenario_path.as_posix()}` / `{ctx.run_id}`",
+        f"- Stage state: `{payload['stage_state']}`",
+        f"- Validator verdict: `{payload['validator_verdict']}`",
+        f"- Primary artifact present: `{primary_artifact['present']}`",
+        f"- Repair attempts: `{payload['repair_attempts']}`",
+        f"- Unresolved questions: `{payload['unresolved_questions']}`",
+        f"- Runtime log visible: `{payload['runtime_log_visible']}`",
+        "",
+        "## Classifications",
+        "",
+        f"- Stage run: `{stage_classification}`",
+        f"- Public inspection: `{inspect_classification}`",
+        f"- Frontend checkpoint: `{frontend_classification}`",
+        "",
+        "## Artifact Quality Notes",
+        "",
+    ]
+    md_lines.extend(f"- {note}" for note in cast(list[str], payload["artifact_quality_notes"]))
+    if implementation_details is not None:
+        md_lines.extend(
+            (
+                "",
+                "## Implementation Evidence",
+                "",
+                f"- Changed files: `{len(changed_files)}`",
+                "- Verification evidence shape: "
+                f"`{implementation_details['implementation_report_verification_evidence']}`",
+            )
+        )
+    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_path.write_text("\n".join(md_lines).rstrip() + "\n", encoding="utf-8")
+    return json_path, markdown_path
+
+
 def _answers_path(ctx: FlowContext, stage: str) -> Path:
     working_copy = _require_working_copy(ctx)
     return working_copy / ".aidd" / "workitems" / ctx.work_item / "stages" / stage / "answers.md"
@@ -1621,6 +2044,7 @@ def _write_operator_action_request(
                 f"- Run ID: `{ctx.run_id}`",
                 f"- Work item: `{ctx.work_item}`",
                 f"- Stage: `{stage}`",
+                "- Operator: launching operator-agent",
                 f"- Questions: `{questions_path.as_posix()}`",
                 f"- Answers: `{answers_path.as_posix()}`",
                 "",
@@ -1631,6 +2055,7 @@ def _write_operator_action_request(
                 "## Required Operator-Agent Output",
                 "",
                 "- Write standard `[resolved]` answers to the answers path above.",
+                "- Use exact answer lines such as `- Q1 [resolved] answer text`.",
                 (
                     "- Record answer reasoning in "
                     f"`{(ctx.bundle_root / ANSWER_ANALYSIS_FILENAME).as_posix()}`."
@@ -1659,7 +2084,7 @@ def _write_answer_analysis_if_detected(ctx: FlowContext, stage: str) -> Path | N
                 f"- Scenario: `{ctx.scenario.scenario_id}`",
                 f"- Stage: `{stage}`",
                 f"- Answers path: `{answers_path.as_posix()}`",
-                "- Source: external operator-agent answers detected by evaluator resume.",
+                "- Source: launching operator-agent answers detected by evaluator resume.",
                 "",
                 "## Answers Snapshot",
                 "",
@@ -1682,7 +2107,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             action="answer-questions",
             classification="pass",
             decision="Answers are present; retry the blocked stage through public CLI.",
-            plan="Consume external operator-agent answers without generating them inside AIDD.",
+            plan="Consume launching operator-agent answers without generating them inside AIDD.",
             stage=stage,
             evidence_paths=(answer_analysis_path, _answers_path(ctx, stage)),
         )
@@ -1761,6 +2186,14 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
     if inspection_reports_blocked:
         classification = "blocked"
     frontend_classification = _run_frontend_checkpoint(ctx, stage)
+    _write_stage_audit(
+        ctx=ctx,
+        stage=stage,
+        stage_classification=classification,
+        inspect_classification=inspect_classification,
+        frontend_classification=frontend_classification,
+        inspection_results=inspection_results,
+    )
     if classification == "pass" and inspect_classification == "fail":
         _persist_state(
             ctx=ctx,
@@ -1802,7 +2235,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             ctx=ctx,
             action="answer-questions",
             classification="blocked",
-            decision="Stop and wait for an external operator-agent to write answers.md.",
+            decision="Stop and wait for the launching operator-agent to write answers.md.",
             plan="Surface blocking questions as an operator action request.",
             stage=stage,
             evidence_paths=request_paths,
@@ -2102,15 +2535,44 @@ def _copy_attempt_jsonl_artifacts(
     return destination
 
 
-def _first_failure_from_steps(ctx: FlowContext) -> tuple[str, str | None]:
-    for step in _load_steps(ctx.bundle_root):
+def _format_failure_step(step: dict[str, Any]) -> tuple[str, str]:
+    action = str(step.get("action", "unknown"))
+    stage = step.get("stage")
+    reason = str(step.get("decision", "step did not pass"))
+    stage_text = f" stage `{stage}`" if isinstance(stage, str) and stage else ""
+    return action, f"{action}{stage_text}: {reason}"
+
+
+def _first_failure_from_steps(
+    ctx: FlowContext,
+    *,
+    status: VerdictStatus,
+) -> tuple[str, str | None]:
+    steps = _load_steps(ctx.bundle_root)
+    classifications: tuple[str, ...]
+    if status == "blocked":
+        classifications = ("blocked",)
+    elif status == "infra-fail":
+        classifications = ("infra-fail", "fail")
+    else:
+        classifications = ("fail", "infra-fail")
+
+    for step in steps:
         classification = step.get("classification")
-        if classification in {"fail", "blocked", "infra-fail"}:
-            action = str(step.get("action", "unknown"))
-            stage = step.get("stage")
-            reason = str(step.get("decision", "step did not pass"))
-            stage_text = f" stage `{stage}`" if isinstance(stage, str) and stage else ""
-            return action, f"{action}{stage_text}: {reason}"
+        action = step.get("action")
+        if classification not in classifications or action in {"finish", "stop"}:
+            continue
+        return _format_failure_step(step)
+
+    if status != "pass":
+        for step in steps:
+            classification = step.get("classification")
+            action = step.get("action")
+            if classification in {"fail", "blocked", "infra-fail"} and action not in {
+                "finish",
+                "stop",
+            }:
+                return _format_failure_step(step)
     return "none", None
 
 
@@ -2195,7 +2657,9 @@ def _write_log_analysis(
     first_failure_note: str | None,
 ) -> Path:
     boundary_action, note = (
-        ("none", None) if status == "pass" else _first_failure_from_steps(ctx)
+        ("none", None)
+        if status == "pass"
+        else _first_failure_from_steps(ctx, status=status)
     )
     reason = first_failure_note or note or "No unresolved failure signals were recorded."
     path = ctx.bundle_root / LOG_ANALYSIS_FILENAME
@@ -2316,6 +2780,40 @@ def _ensure_transcript_files(ctx: FlowContext) -> None:
         _write_step_transcript(path=path, step=step, transcripts=tuple())
 
 
+def _stage_audit_payloads(ctx: FlowContext) -> list[dict[str, object]]:
+    audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
+    if not audit_root.exists():
+        return []
+    payloads: list[dict[str, object]] = []
+    for path in sorted(audit_root.glob("*.json")):
+        try:
+            payloads.append(dict(_read_json_object(path)))
+        except (OSError, ValueError, json.JSONDecodeError):
+            payloads.append({"path": path.as_posix(), "error": "failed to read audit"})
+    return payloads
+
+
+def _append_stage_audit_section_to_quality_report(ctx: FlowContext) -> None:
+    path = ctx.bundle_root / QUALITY_REPORT_FILENAME
+    if not path.exists():
+        return
+    payloads = _stage_audit_payloads(ctx)
+    lines = ["", "## Stage Audit Evidence", ""]
+    if not payloads:
+        lines.append("- No per-stage audit artifacts were recorded.")
+    for payload in payloads:
+        stage = str(payload.get("stage", "unknown"))
+        json_path, markdown_path = _stage_audit_paths(ctx, stage)
+        lines.append(
+            f"- `{stage}` state=`{payload.get('stage_state', 'unknown')}` "
+            f"validator=`{payload.get('validator_verdict', 'unknown')}` "
+            f"unresolved_questions=`{payload.get('unresolved_questions', 'unknown')}` "
+            f"evidence=`{markdown_path.as_posix()}` json=`{json_path.as_posix()}`"
+        )
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write("\n".join(lines).rstrip() + "\n")
+
+
 def _write_harness_metadata(
     *,
     ctx: FlowContext,
@@ -2350,6 +2848,7 @@ def _write_harness_metadata(
             "flow_report": (ctx.bundle_root / FLOW_REPORT_FILENAME).as_posix(),
             "operator_actions": (ctx.bundle_root / OPERATOR_ACTIONS_FILENAME).as_posix(),
             "scenario_path": ctx.scenario_path.as_posix(),
+            "stage_audits": (ctx.bundle_root / STAGE_AUDITS_DIRNAME).as_posix(),
         },
         "black_box": {
             "operator_surface": "installed-aidd-cli",
@@ -2369,6 +2868,16 @@ def _write_harness_metadata(
             ],
         },
         "flow_state": state,
+        "temp_layout": {
+            "work_root": ctx.workspace_root.as_posix(),
+            "run_work_root": (ctx.workspace_root / ctx.run_id).as_posix(),
+            "report_root": ctx.report_root.as_posix(),
+            "bundle_root": ctx.bundle_root.as_posix(),
+            "source_snapshot": state.get("source_snapshot"),
+            "target_repo_root": state.get("target_repo_root") or state.get("working_copy_path"),
+            "target_workspace_root": state.get("target_workspace_root"),
+        },
+        "stage_audits": _stage_audit_payloads(ctx),
     }
     if state.get("install") is not None:
         payload["aidd_install"] = state["install"]
@@ -2379,6 +2888,8 @@ def _write_harness_metadata(
             "workspace_root": (
                 ctx.prepared_working_copy.working_copy_path / ".aidd"
             ).as_posix(),
+            "work_root": ctx.workspace_root.as_posix(),
+            "report_root": ctx.report_root.as_posix(),
         }
     return _write_json(ctx.bundle_root / HARNESS_METADATA_FILENAME, payload)
 
@@ -2417,6 +2928,7 @@ def _grader_payload(
         "runtime_id": ctx.runtime_id,
         "scenario_id": ctx.scenario.scenario_id,
         "selected_task": ctx.selected_task_payload.get("selected_task"),
+        "stage_audits": _stage_audit_payloads(ctx),
         "steps": _load_steps(ctx.bundle_root),
     }
 
@@ -2451,6 +2963,7 @@ def _record_terminal_decision_step(
             ctx.bundle_root / STAGE_TIMING_MARKDOWN_FILENAME,
             ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME,
             ctx.bundle_root / FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME,
+            ctx.bundle_root / STAGE_AUDITS_DIRNAME,
         ),
     )
 
@@ -2471,7 +2984,7 @@ def _finalize_reports(
         status = "infra-fail"
         summary = f"Teardown failed after black-box execution: {teardown_error}"
     quality_workspace_root = (
-        ctx.workspace_root
+        ctx.bundle_root
         if ctx.prepared_working_copy is None
         else ctx.prepared_working_copy.working_copy_path / ".aidd"
     )
@@ -2498,7 +3011,9 @@ def _finalize_reports(
         },
     )
     _record_terminal_decision_step(ctx=ctx, status=status)
-    first_failure_note = None if status == "pass" else _first_failure_from_steps(ctx)[1]
+    first_failure_note = (
+        None if status == "pass" else _first_failure_from_steps(ctx, status=status)[1]
+    )
     runtime_log_path = _write_runtime_log_from_steps(ctx)
     _copy_attempt_jsonl_artifacts(
         ctx=ctx,
@@ -2517,7 +3032,7 @@ def _finalize_reports(
         quality_result=quality_result,
         teardown_result=teardown_result,
     )
-    layout = build_result_bundle_layout(workspace_root=ctx.workspace_root, run_id=ctx.run_id)
+    layout = build_result_bundle_layout_at_run_root(run_root=ctx.bundle_root)
     write_stage_timing_artifacts(layout=layout, payload=stage_timing_payload)
     (ctx.bundle_root / REPAIR_HISTORY_FILENAME).write_text(
         render_repair_history_markdown(stage_timing_payload),
@@ -2542,6 +3057,7 @@ def _finalize_reports(
         review_report_path=review_report_path,
         qa_report_path=qa_report_path,
     )
+    _append_stage_audit_section_to_quality_report(ctx)
     outcome = HarnessOutcome(
         aidd_exit_code=0 if status == "pass" else 1,
         verification_failed=verification_failed,
@@ -2641,7 +3157,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     _write_log_analysis(
         ctx=ctx,
         status="blocked",
-        first_failure_note=_first_failure_from_steps(ctx)[1],
+        first_failure_note=_first_failure_from_steps(ctx, status="blocked")[1],
     )
     outcome = HarnessOutcome(
         aidd_exit_code=1,
@@ -2660,7 +3176,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
             (ctx.bundle_root / VALIDATOR_REPORT_FILENAME).as_posix(),
             (ctx.bundle_root / FLOW_STEPS_FILENAME).as_posix(),
         ),
-        first_failure_note=_first_failure_from_steps(ctx)[1],
+        first_failure_note=_first_failure_from_steps(ctx, status="blocked")[1],
         verification_summary="blocked waiting for answers",
     )
     write_scenario_verdict_markdown(path=ctx.bundle_root / VERDICT_FILENAME, verdict=verdict)
@@ -2669,14 +3185,14 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         quality_result=None,
         teardown_result=None,
     )
-    layout = build_result_bundle_layout(workspace_root=ctx.workspace_root, run_id=ctx.run_id)
+    layout = build_result_bundle_layout_at_run_root(run_root=ctx.bundle_root)
     write_stage_timing_artifacts(layout=layout, payload=stage_timing_payload)
     (ctx.bundle_root / REPAIR_HISTORY_FILENAME).write_text(
         render_repair_history_markdown(stage_timing_payload),
         encoding="utf-8",
     )
     quality_workspace_root = (
-        ctx.workspace_root
+        ctx.bundle_root
         if ctx.prepared_working_copy is None
         else ctx.prepared_working_copy.working_copy_path / ".aidd"
     )
@@ -2696,6 +3212,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         feature_selection_path=ctx.bundle_root / FEATURE_SELECTION_FILENAME,
         quality_transcript_path=ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,
     )
+    _append_stage_audit_section_to_quality_report(ctx)
     _write_frontend_checkpoint_placeholders(ctx)
     _persist_state(
         ctx=ctx,
@@ -2721,7 +3238,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
             "execution": {
                 "status": "blocked",
                 "summary": summary,
-                "first_failure_note": _first_failure_from_steps(ctx)[1],
+                "first_failure_note": _first_failure_from_steps(ctx, status="blocked")[1],
                 "step_evidence_source": (ctx.bundle_root / FLOW_STEPS_FILENAME).as_posix(),
             },
             "quality": {
@@ -2733,6 +3250,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
             "runtime_id": ctx.runtime_id,
             "scenario_id": ctx.scenario.scenario_id,
             "selected_task": ctx.selected_task_payload.get("selected_task"),
+            "stage_audits": _stage_audit_payloads(ctx),
             "steps": _load_steps(ctx.bundle_root),
         },
     )
@@ -2759,7 +3277,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         quality_gate=quality_assessment.gate,
         quality_verdict=quality_assessment.verdict,
         quality_report_path=ctx.bundle_root / QUALITY_REPORT_FILENAME,
-        first_failure_note=_first_failure_from_steps(ctx)[1],
+        first_failure_note=_first_failure_from_steps(ctx, status="blocked")[1],
         operator_action_request_path=ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME,
     )
 
@@ -2768,18 +3286,24 @@ def run_black_box_live_e2e(
     *,
     scenario_path: Path,
     runtime_id: str,
-    workspace_root: Path = Path(".aidd"),
+    work_root: Path | None = None,
+    report_root: Path = Path(".aidd/reports/evals"),
+    run_id: str | None = None,
 ) -> BlackBoxLiveE2EResult:
+    resolved_work_root = (work_root or _default_work_root()).resolve(strict=False)
+    resolved_report_root = report_root.resolve(strict=False)
     ctx = _load_or_create_context(
         scenario_path=scenario_path,
         runtime_id=runtime_id,
-        workspace_root=workspace_root,
+        work_root=resolved_work_root,
+        report_root=resolved_report_root,
+        run_id=run_id,
     )
     status = _state_status(ctx.bundle_root)
     if status in TERMINAL_STATUSES:
         raise ValueError(
-            "The latest matching black-box live E2E run is terminal. Set "
-            "`AIDD_LIVE_E2E_RUN_ID` for a specific non-terminal run or start a new run."
+            "The selected black-box live E2E run is terminal. Pass a fresh --run-id "
+            "or omit --run-id to create/resume the unique non-terminal run."
         )
     try:
         _prepare_target_repository(ctx)
@@ -2797,9 +3321,12 @@ def run_black_box_live_e2e(
     try:
         _install_aidd(ctx)
     except Exception as exc:
+        install_status: VerdictStatus = (
+            "infra-fail" if _state_status(ctx.bundle_root) == "infra-fail" else "fail"
+        )
         return _finalize_reports(
             ctx=ctx,
-            status="fail",
+            status=install_status,
             summary=f"AIDD installation failed before black-box stage execution: {exc}",
             verification_failed=True,
             quality_result=None,
@@ -2874,9 +3401,22 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("scenario", help="Path to a live scenario manifest.")
     parser.add_argument("--runtime", default="generic-cli", help="Runtime id.")
     parser.add_argument(
-        "--root",
-        default=".aidd",
-        help="Evaluator workspace root for result bundles.",
+        "--work-root",
+        default=_default_work_root().as_posix(),
+        help=(
+            "Temp execution root for source snapshot, wheel build, install home, "
+            "and target clone."
+        ),
+    )
+    parser.add_argument(
+        "--report-root",
+        default=".aidd/reports/evals",
+        help="Durable report root that receives one evidence bundle per run id.",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Explicit run id to create or resume; omitted resumes the unique non-terminal match.",
     )
     return parser.parse_args(argv)
 
@@ -2887,7 +3427,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = run_black_box_live_e2e(
             scenario_path=Path(args.scenario),
             runtime_id=str(args.runtime),
-            workspace_root=Path(args.root),
+            work_root=Path(args.work_root),
+            report_root=Path(args.report_root),
+            run_id=None if args.run_id is None else str(args.run_id),
         )
     except ValueError as exc:
         print(f"black-box live e2e: {exc}", file=sys.stderr)

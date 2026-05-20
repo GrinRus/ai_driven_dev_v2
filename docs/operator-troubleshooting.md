@@ -143,7 +143,9 @@ If status is `pending-blocking`:
 
 1. Add answers in `answers.md`.
 2. Mark resolved entries with `[resolved]`.
-3. Re-run `stage questions` until it reports no unresolved blocking questions.
+3. Use exact answer lines such as `- Q1 [resolved] answer text`; do not insert a
+   colon after `[resolved]`.
+4. Re-run `stage questions` until it reports no unresolved blocking questions.
 
 ## 5. Harness and Eval Failures
 
@@ -164,13 +166,23 @@ Symptoms:
 
 - installed black-box live E2E fails before setup with a local-wheel install error.
 - the error says local-wheel live eval requires a source checkout containing `pyproject.toml` and `contracts/`.
+- the error says the local-wheel live eval requires a clean tracked source checkout.
 
 Actions:
 
 1. Run the command from an AIDD source checkout or pass a scenario path inside that checkout.
-2. If you are testing an already published artifact, set:
+2. Commit or stash tracked source changes before the run. The evaluator snapshots
+   tracked `HEAD` into `<work-root>/<run_id>/source/aidd` and builds the wheel
+   from that temp snapshot.
+3. If you are testing an already published artifact, set:
    `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==<version>"`.
-3. Do not copy only the installed package's `site-packages` path into the scenario command; live local-wheel mode needs the source checkout to build the wheel.
+4. Do not copy only the installed package's `site-packages` path into the
+   scenario command; live local-wheel mode needs the source checkout to build
+   the wheel.
+
+The default mutable live work root is `${TMPDIR:-/tmp}/aidd-live-e2e`. Durable
+evidence remains under `.aidd/reports/evals/<run_id>/` unless `--report-root`
+overrides it.
 
 ### 5.3 Black-box live E2E reports `fail`, `blocked`, or `infra-fail`
 
@@ -187,6 +199,7 @@ Actions:
    - `validator-report.md`
    - `verdict.md`
    - `log-analysis.md`
+   - `stage-audits/<stage>.json`
    - `stage-timing.md`
    - `self-repair-matrix.json`
    - `self-repair-matrix.md`
@@ -194,8 +207,14 @@ Actions:
    - `infra-fail`: setup/teardown/repo-prep issue;
    - `blocked`: the live evaluator found unresolved blocking questions and is
      waiting for `answers.md` evidence requested in `operator-action-request.md`;
+     when you launched the manual lane, you are the operator-agent, so write
+     `[resolved]` answers with exact lines such as
+     `- Q1 [resolved] answer text`, write `answer-analysis.md`, and rerun the
+     same manifest/runtime command to resume;
    - `fail`: verification or run command failed.
 4. Re-run the same scenario/runtime after fixing the first failure boundary.
+5. For any terminal live run, inspect the full eval bundle and write
+   `operator-quality-analysis.md` before marking the run counted or not counted.
 
 ### 5.4 Eval summary is missing
 

@@ -5,6 +5,7 @@ import re
 from aidd.validators.models import ValidationFinding
 from aidd.validators.semantic_rules.common import (
     INCOMPLETE_SECTION_CODE,
+    NEGATED_GUARANTEE_CAVEAT_PATTERN,
     UNSUPPORTED_CLAIM_CODE,
     UNSUPPORTED_CLAIM_PATTERN,
     SemanticDocumentContext,
@@ -13,6 +14,11 @@ from aidd.validators.semantic_rules.common import (
     normalized_heading,
     validate_placeholder_sections,
 )
+
+
+def _contains_unsupported_claim(content: str) -> bool:
+    normalized_content = NEGATED_GUARANTEE_CAVEAT_PATTERN.sub("", content)
+    return UNSUPPORTED_CLAIM_PATTERN.search(normalized_content) is not None
 
 
 def validate_idea_brief(context: SemanticDocumentContext) -> tuple[ValidationFinding, ...]:
@@ -36,7 +42,7 @@ def validate_idea_brief(context: SemanticDocumentContext) -> tuple[ValidationFin
                     )
                 )
 
-            if UNSUPPORTED_CLAIM_PATTERN.search(compact_content):
+            if _contains_unsupported_claim(compact_content):
                 findings.append(
                     context.finding(
                         code=UNSUPPORTED_CLAIM_CODE,

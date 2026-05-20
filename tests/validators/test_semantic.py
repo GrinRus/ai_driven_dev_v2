@@ -429,6 +429,52 @@ def test_validate_semantic_outputs_reports_unsupported_claims(tmp_path: Path) ->
     )
 
 
+def test_validate_semantic_outputs_allows_negated_security_guarantee_caveat(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md",)
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_idea_brief(
+        workspace_root,
+        (
+            "# Idea Brief\n\n"
+            "## Problem statement\n\n"
+            "The CLI needs an explicit trust boundary for user-provided Python code.\n\n"
+            "## Desired outcome\n\n"
+            "Document the feature and its caveats without implying a broader security "
+            "guarantee for untrusted code.\n\n"
+            "## Constraints\n\n"
+            "- none\n\n"
+            "## Open questions\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="idea",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_requires_list_format_for_constraints(tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts" / "stages"
     contracts_root.mkdir(parents=True)
@@ -1924,6 +1970,93 @@ def test_validate_semantic_outputs_accepts_flat_live_verification_evidence(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_rg_verification_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-RG-EVIDENCE",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task id\n\n"
+            "- `TASK-123`, decomposed into tasklist item `TL-2`.\n\n"
+            "## Summary\n\n"
+            "Implemented the scoped task and used command readback to confirm "
+            "the repaired document shape and stage status.\n\n"
+            "## Touched files\n\n"
+            "- `src/example.py` - apply the selected scoped change.\n\n"
+            "## Verification\n\n"
+            "- Repair readback: `rg -n '^## (Summary|Verification)$|Status:' "
+            ".aidd/workitems/WI-123/stages/implement` -> exit code 0; "
+            "confirmed expected headings and status markers.\n"
+            "- Downstream artifact check: `test -f "
+            ".aidd/workitems/WI-123/stages/qa/output/stage-result.md` -> "
+            "exit code 1; expected because QA output is downstream of implement.\n\n"
+            "## Risks\n\n"
+            "- No residual risk remains for the selected task.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-RG-EVIDENCE",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-LIVE-TASK-ID",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Work item: `WI-LIVE-TYPER-BOOLEAN`\n"
+            "- Stable selected task id: `TASK-LIVE-TYPER-BOOLEAN-HELP`\n"
+            "- Selected task title: boolean option help rendering\n\n"
+            "## Summary\n\n"
+            "Implemented the selected live task by changing the Rich help label "
+            "rendering and adding focused regression coverage for grouped "
+            "boolean option labels while preserving default details.\n\n"
+            "## Touched files\n\n"
+            "- `typer/rich_utils.py` - group boolean option labels when secondary flags exist.\n"
+            "- `tests/test_tutorial/test_parameter_types/test_bool/test_tutorial003.py` - add "
+            "Rich label and default preservation assertions.\n\n"
+            "## Verification\n\n"
+            "- Authored Rich-mode command `uv run pytest -q "
+            "tests/test_tutorial/test_parameter_types/test_bool` -> blocked before pytest: "
+            "`error: failed to open file /Users/example/.cache/uv/sdists-v9/.git: "
+            "Operation not permitted (os error 1)`.\n"
+            "- Sandbox-compatible Rich command `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q "
+            "tests/test_tutorial/test_parameter_types/test_bool` -> pass, `43 passed in 1.95s`.\n"
+            "- QA output existence check `test -f "
+            ".aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/stage-result.md` "
+            "-> not-run, targets a downstream QA-stage artifact that is not produced by "
+            "the implement stage.\n\n"
+            "## Risks\n\n"
+            "- No residual risk remains for the selected task.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-LIVE-TASK-ID",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_live_noop_blocker_evidence(
     tmp_path: Path,
 ) -> None:
@@ -2600,6 +2733,49 @@ def test_validate_semantic_outputs_accepts_flat_known_issue_metadata(
 ## Readiness
 
 - Ready with conditions because `EV-1` is clean and known issue ownership is explicit.
+""",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item=work_item,
+        workspace_root=tmp_path,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_ignores_known_issues_none_marker(
+    tmp_path: Path,
+) -> None:
+    work_item = "WI-SEM-QA-KNOWN-ISSUES-NONE-MARKER"
+    _write_qa_report(
+        tmp_path,
+        work_item,
+        """# QA Report
+
+## Verification summary
+
+- Quality verdict: `ready`.
+- Verification passed with residual risk tracked by `EV-1`.
+
+## Release recommendation
+
+- proceed
+
+## Evidence
+
+- EV-1: `context/verification-output.md` reports full test pass.
+
+## Known issues
+
+- Known issues: none.
+- Residual risk RR-1: Severity: low. Verification is focused rather than full-suite.
+  Mitigation/ownership: release operator may run the broader suite if policy requires it.
+
+## Readiness
+
+- Ready because `EV-1` is clean and the residual risk has low severity and owner coverage.
 """,
     )
 

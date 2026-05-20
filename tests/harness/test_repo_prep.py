@@ -10,7 +10,11 @@ from pathlib import Path
 import pytest
 
 import aidd.harness.repo_prep as repo_prep
-from aidd.harness.repo_prep import prepare_scenario_repository, prepare_working_copy
+from aidd.harness.repo_prep import (
+    prepare_live_target_repository,
+    prepare_scenario_repository,
+    prepare_working_copy,
+)
 from aidd.harness.scenarios import (
     Scenario,
     ScenarioCommandSteps,
@@ -345,6 +349,58 @@ def test_prepare_working_copy_uses_isolated_path_per_run_id(tmp_path: Path) -> N
     assert first.working_copy_path != second.working_copy_path
     assert first.resolved_revision == prepared_repository.resolved_revision
     assert second.resolved_revision == prepared_repository.resolved_revision
+
+
+def test_prepare_live_target_repository_clones_directly_under_run_work_root(
+    tmp_path: Path,
+) -> None:
+    source_repo = tmp_path / "source"
+    _, source_head = _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+
+    prepared = prepare_live_target_repository(
+        work_root=tmp_path / "live-work",
+        scenario=scenario,
+        run_id="eval-run-1",
+    )
+
+    expected_root = tmp_path / "live-work" / "eval-run-1" / "target"
+    assert prepared.action == "cloned"
+    assert prepared.working_copy_path.parent == expected_root
+    assert ".aidd/harness-cache" not in prepared.working_copy_path.as_posix()
+    assert prepared.resolved_revision == source_head
+    assert _run(["git", "status", "--porcelain"], cwd=prepared.working_copy_path) == ""
+
+
+def test_prepare_live_target_repository_resets_existing_run_target(
+    tmp_path: Path,
+) -> None:
+    source_repo = tmp_path / "source"
+    _, source_head = _init_source_repo(source_repo)
+    scenario = _build_scenario(source_repo.as_uri())
+    work_root = tmp_path / "live-work"
+
+    first = prepare_live_target_repository(
+        work_root=work_root,
+        scenario=scenario,
+        run_id="eval-run-1",
+    )
+    (first.working_copy_path / "README.md").write_text("dirty\n", encoding="utf-8")
+    (first.working_copy_path / "TEMP.txt").write_text("temp\n", encoding="utf-8")
+
+    second = prepare_live_target_repository(
+        work_root=work_root,
+        scenario=scenario,
+        run_id="eval-run-1",
+    )
+
+    assert second.action == "reused"
+    assert second.working_copy_path == first.working_copy_path
+    assert second.resolved_revision == source_head
+    assert (second.working_copy_path / "README.md").read_text(encoding="utf-8") == (
+        "init\n"
+    )
+    assert not (second.working_copy_path / "TEMP.txt").exists()
 
 
 def test_prepare_working_copy_rejects_blank_run_id(tmp_path: Path) -> None:

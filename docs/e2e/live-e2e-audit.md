@@ -31,7 +31,9 @@ manifest with explicit acceptance criteria and verification intent.
   this proved the medium Codex full-flow budget was too small for the installed operator
   lane. The Typer full-suite verification also failed on the pinned baseline with current
   dependencies, so this lane now uses a 90-minute budget and focused boolean/help-rendering
-  verification in Rich/default and `TYPER_USE_RICH=0` modes.
+  verification in Rich/default and `TYPER_USE_RICH=0` modes. The authored task explicitly
+  covers false-only boolean declarations so quality review does not leave leading separator
+  behavior as a residual follow-up.
 - `AIDD-LIVE-008` is intentionally `xlarge`; router wildcard semantics are API-sensitive and
   should not be treated as an ordinary large feature.
 - Interview scenarios must keep top-level `interview.required: true` plus authored task
@@ -47,3 +49,19 @@ manifest with explicit acceptance criteria and verification intent.
   and placeholder documentation examples.
 - Stage briefs now include exact skeleton hints for `stage-result.md` and
   `validator-report.md` to reduce first-pass contract churn.
+- Native runtime prompts now make turn completion explicit after the final required
+  document write so providers that have already produced valid Markdown artifacts do not
+  keep the adapter call open until a stage timeout.
+- OpenCode native runs can now finish with `document_complete` when required stage
+  documents settle but the provider process does not return a final message; canonical
+  validation still decides whether the stage blocks, repairs, or advances.
+- The OpenCode completion rule treats a settled blocking-question bundle as terminal even
+  when `answers.md` remains the unanswered placeholder; canonical validation and the
+  black-box flow decide whether operator answers are still required.
+- Idea semantic validation still rejects absolute success claims, but allows negated
+  security-guarantee caveats such as "without implying a broader guarantee" because those
+  phrases document risk rather than overclaiming certainty.
+- Interview validation now treats malformed `questions.md` structure plus unresolved blocking
+  questions as a repairable document failure, not a clean wait state for prepared answers.
+  The `idea` prompt also forbids nested question bullets, which previously produced malformed
+  interview documents in live runs.

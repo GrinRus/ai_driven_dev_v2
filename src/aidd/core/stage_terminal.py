@@ -59,6 +59,41 @@ def ensure_repair_brief_records_exhausted_budget(repair_brief_path: Path | None)
     )
 
 
+def ensure_stage_result_references_repair_brief(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    repair_brief_path: Path | None,
+) -> Path | None:
+    if repair_brief_path is None or not repair_brief_path.exists():
+        return None
+
+    stage_result_path = (
+        workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
+        / "stage-result.md"
+    )
+    if not stage_result_path.exists():
+        return None
+
+    text = stage_result_path.read_text(encoding="utf-8", errors="replace")
+    if "repair-brief.md" in text:
+        return stage_result_path
+
+    repair_brief_reference = _workspace_relative_path(workspace_root, repair_brief_path)
+    note = f"- Repair decision context recorded in `{repair_brief_reference}`.\n"
+    match = _TERMINAL_NOTES_PATTERN.search(text)
+    if match is None:
+        updated = text.rstrip() + "\n\n## Terminal state notes\n\n" + note
+    else:
+        body = match.group("body")
+        prefix = "" if body.endswith("\n") or not body else "\n"
+        updated = text[: match.end("body")] + prefix + note + text[match.end("body") :]
+
+    stage_result_path.write_text(updated, encoding="utf-8")
+    return stage_result_path
+
+
 def _replace_or_add_status_section(markdown: str) -> str:
     match = _STATUS_SECTION_PATTERN.search(markdown)
     if match is None:
@@ -186,6 +221,7 @@ def exhausted_budget_validation_finding(
 
 __all__ = [
     "ensure_repair_brief_records_exhausted_budget",
+    "ensure_stage_result_references_repair_brief",
     "exhausted_budget_validation_finding",
     "force_stage_result_failed_for_exhausted_budget",
     "repair_brief_exhausts_terminal_budget",
