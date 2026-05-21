@@ -1129,6 +1129,134 @@ def test_run_single_stage_orchestration_includes_answers_after_blocked_resume(
     assert "Release owner approval is recorded." in seen_input_bundle[0]
 
 
+def test_run_single_stage_orchestration_blocks_when_runtime_answers_own_question(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["questions.md"] = (
+        "# Questions\n\n"
+        "## Questions\n\n"
+        "- Q1 [blocking] Which rollout owner should approve this scope?\n"
+    )
+    runtime_documents["answers.md"] = (
+        "# Answers\n\n"
+        "## Answers\n\n"
+        "- Q1 [resolved] The runtime picked the engineering lead.\n"
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.WAIT
+    assert orchestration.transition.next_state is StageState.BLOCKED
+    assert orchestration.interview_routing is not None
+    assert orchestration.interview_routing.unresolved_blocking_question_ids == ("Q1",)
+    answers_text = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "answers.md"
+    ).read_text(encoding="utf-8")
+    assert "runtime picked" not in answers_text
+    assert "- none" in answers_text
+
+
+@pytest.mark.parametrize("runtime_answer_action", ("rewrite", "delete"))
+def test_run_single_stage_orchestration_preserves_operator_answers_after_runtime_attempt(
+    tmp_path: Path,
+    runtime_answer_action: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    operator_answers = (
+        "# Answers\n\n"
+        "## Answers\n\n"
+        "- Q1 [resolved] Release owner approval is recorded.\n"
+    )
+    (stage_root / "answers.md").write_text(operator_answers, encoding="utf-8")
+
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["questions.md"] = (
+        "# Questions\n\n"
+        "## Questions\n\n"
+        "- Q1 [blocking] Which rollout owner should approve this scope?\n"
+    )
+    runtime_documents["answers.md"] = (
+        "# Answers\n\n"
+        "## Answers\n\n"
+        "- Q1 [resolved] The runtime rewrote the operator answer.\n"
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        del invocation, execution_state
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            if name == "answers.md" and runtime_answer_action == "delete":
+                continue
+            (stage_root / name).write_text(content, encoding="utf-8")
+        if runtime_answer_action == "delete":
+            (stage_root / "answers.md").unlink(missing_ok=True)
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert orchestration.transition.next_state is StageState.SUCCEEDED
+    answers_text = (stage_root / "answers.md").read_text(encoding="utf-8")
+    assert answers_text == operator_answers
+
+
 def test_run_single_stage_orchestration_preserves_repair_context_after_blocked_repair_resume(
     tmp_path: Path,
 ) -> None:

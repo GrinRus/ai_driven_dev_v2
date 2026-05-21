@@ -27,6 +27,8 @@ Store durable answers to the questions raised during a stage.
 
 ## Authoring rules
 
+- `answers.md` is operator-authored or AIDD UI/API-authored; runtime/model stage attempts must not
+  create, modify, or remove resolved answers.
 - Do not answer questions that are not present in `questions.md`.
 - Preserve question ids exactly as written in `questions.md`; do not renumber in `answers.md`.
 - Keep answers specific and auditable; avoid placeholders such as `TBD` or `decide later` without context.
