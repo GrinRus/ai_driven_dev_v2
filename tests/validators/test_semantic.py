@@ -2009,6 +2009,59 @@ def test_validate_semantic_outputs_accepts_rg_verification_evidence(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_python_c_output_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-PYTHON-C-OUTPUT",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected yielded-rows CLI behavior and recorded "
+            "target-local command evidence for focused tests, help output, "
+            "runtime success paths, and invalid-input behavior.\n\n"
+            "## Touched files\n\n"
+            "- `sqlite_utils/cli.py` - add trusted Python file input handling.\n"
+            "- `tests/test_cli_insert.py` - cover rows, yields, and invalid input.\n"
+            "- `docs/cli.rst` - document the trusted-code boundary.\n\n"
+            "## Verification\n\n"
+            "- `python -m pytest tests/test_cli_insert.py -q` "
+            "-> output: `52 passed in 1.01s`.\n"
+            "- `python -c \"from click.testing import CliRunner; "
+            "from sqlite_utils import cli; result = CliRunner().invoke("
+            "cli.cli, ['insert', '--help']); print(result.output)\"` "
+            "-> output contains: `--python-file FILE`.\n"
+            "- `python -c \"from click.testing import CliRunner; "
+            "from sqlite_utils import cli; result = CliRunner().invoke("
+            "cli.cli, ['insert', '/tmp/test.db', 'people', '--python-file', "
+            "'/tmp/rows_test.py']); print(result.exit_code)\"` "
+            "-> output: `0`.\n"
+            "- `python -c \"from click.testing import CliRunner; "
+            "from sqlite_utils import cli; result = CliRunner().invoke("
+            "cli.cli, ['insert', '/tmp/test.db', 'items', '--python-file', "
+            "'/tmp/rows_test.py', '--csv']); print(result.output); "
+            "print(result.exit_code)\"` "
+            "-> output: `Error: Cannot use --python-file with --csv\\n1`.\n\n"
+            "## Risks\n\n"
+            "- No residual product risk remains for the selected task.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-PYTHON-C-OUTPUT",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks(
     tmp_path: Path,
 ) -> None:
