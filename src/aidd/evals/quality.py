@@ -260,6 +260,7 @@ def _looks_like_reported_touched_file(path_text: str) -> bool:
         or path_text.startswith(".aidd/")
         or "://" in path_text
         or any(char.isspace() for char in path_text)
+        or any(char in path_text for char in "()")
         or "'" in path_text
         or '"' in path_text
     ):
