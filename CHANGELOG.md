@@ -13,6 +13,9 @@ stable compatibility window exists.
 - Add Dependabot, CodeQL, Dependency Review, and OpenSSF Scorecard workflow coverage.
 - Track `uv.lock` so `uv` installs and Dependabot updates are reproducible.
 - Use locked `uv` sync in CI, release, support, and source-checkout instructions.
+- Prepare beta-readiness release guardrails without changing the alpha safety claim.
+- Add deterministic release quality checks before package publish.
+- Keep live E2E manual-only and add workflow-shape checks preventing live scenarios in CI/CD.
 
 ## 0.1.0a2 - 2026-05-06
 

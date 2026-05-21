@@ -68,3 +68,31 @@ def test_ci_and_release_workflows_use_locked_uv_sync() -> None:
         assert "uv sync --extra dev" not in workflow_text, workflow_path.as_posix()
         if "uv sync" in workflow_text:
             assert "uv sync --locked --extra dev" in workflow_text, workflow_path.as_posix()
+
+
+def test_makefile_install_uses_locked_uv_sync() -> None:
+    makefile_text = (_repo_root() / "Makefile").read_text(encoding="utf-8")
+    assert "uv sync --locked --extra dev" in makefile_text
+    assert "uv sync --extra dev" not in makefile_text
+
+
+def test_ci_cd_workflows_do_not_run_live_e2e() -> None:
+    ci_cd_workflows = (
+        ".github/workflows/ci.yml",
+        ".github/workflows/release.yml",
+        ".github/workflows/security.yml",
+    )
+    forbidden_markers = (
+        "harness/scenarios/live/",
+        "live_e2e_black_box",
+        "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC",
+        "AIDD_EVAL_CLAUDE_CODE_COMMAND",
+        "AIDD_EVAL_CODEX_COMMAND",
+        "AIDD_EVAL_OPENCODE_COMMAND",
+        "OPENAI_API_KEY",
+    )
+
+    for relative_path in ci_cd_workflows:
+        workflow_text = (_repo_root() / relative_path).read_text(encoding="utf-8")
+        for marker in forbidden_markers:
+            assert marker not in workflow_text, f"{relative_path} contains {marker}"

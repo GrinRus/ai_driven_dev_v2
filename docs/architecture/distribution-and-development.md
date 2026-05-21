@@ -102,8 +102,12 @@ Recommended CI structure:
   and package build
 - main branch: the same deterministic checks or a wider deterministic matrix
 - manual workflows: live external audits
-- release: build, PyPI publish, `pipx` installability verification, and `uv tool`
-  installability verification
+- release: deterministic lint/type/test evidence, build, PyPI publish, `pipx`
+  installability verification, and `uv tool` installability verification
+
+CI/CD and release workflows must not run live E2E scenarios, require provider runtime
+credentials, invoke `live_e2e_black_box`, or clone public live target repositories. Live
+E2E remains a manual operator-audit lane.
 
 ## 9. Release flow
 
@@ -116,6 +120,10 @@ Recommended release flow:
 5. verify installability through `pipx`,
 6. verify installability through `uv tool`,
 7. publish release notes.
+
+The release workflow must run deterministic quality checks before publish. Manual live
+evidence can be refreshed before or after a release candidate, but it is not a release gate
+and must remain outside the release workflow.
 
 Operator-oriented step-by-step release execution lives in `docs/release-checklist.md`.
 

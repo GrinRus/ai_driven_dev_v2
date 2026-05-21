@@ -22,6 +22,11 @@ ready for unattended production automation. AIDD launches external runtime CLIs 
 local working tree; review runtime commands before execution and prefer a disposable branch,
 workspace, or sandboxed checkout for trials.
 
+Beta-readiness work on `main` is a preparation gate, not a production-readiness claim.
+Before any beta-oriented release note is published, maintainers must confirm that the README,
+main user stories, and target architecture still match the code, deterministic release checks
+pass, and manual live evidence is refreshed outside CI/CD.
+
 Do not commit `.aidd/` unless your repository policy explicitly allows it. The workspace can
 contain raw runtime logs, prompts, repository context, operator answers, and other sensitive
 evidence.
@@ -228,6 +233,8 @@ Contributor workflow:
 
 AIDD includes deterministic harness checks and manual live E2E scenarios. Live E2E is a
 manual installed-operator audit, not CI and not a release gate.
+CI, security, and release workflows must not run live scenarios, require provider
+credentials, or depend on public live target repositories.
 
 Example black-box live E2E evaluator command:
 

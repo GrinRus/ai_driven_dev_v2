@@ -23,6 +23,11 @@ uv run --extra dev pytest -q
 uv run aidd doctor
 ```
 
+- [ ] Source-of-truth audit is current for the release-prep slice:
+  `README.md`, `docs/product/user-stories.md`, and
+  `docs/architecture/target-architecture.md` match the code and release claims.
+- [ ] Live E2E is not wired into CI/CD or release workflows.
+
 ## 2. Create and push release tag
 
 - [ ] Create an annotated release tag that exactly matches `v<project.version>`.
@@ -38,6 +43,7 @@ git push origin v0.1.0a0
 
 ## 3. Package publish checklist (PyPI)
 
+- [ ] `quality` job passed on Python 3.12, 3.13, and 3.14.
 - [ ] `build` job passed.
 - [ ] `publish-pypi` job passed.
 - [ ] Published version appears on PyPI for `ai-driven-dev-v2`.
@@ -75,6 +81,7 @@ Prerequisite refresh before evidence capture:
 Manual live-audit notes:
 
 - Live E2E is no longer a release gate.
+- Live E2E must not be added to CI/CD or release workflows.
 - If maintainers want a post-release operator audit, run `manual-live-e2e` explicitly from GitHub Actions.
 - That manual workflow validates the selected provider command before clone/install;
   `AIDD_EVAL_CODEX_COMMAND` or `AIDD_EVAL_OPENCODE_COMMAND` are optional wrapper

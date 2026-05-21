@@ -306,6 +306,7 @@ def test_installed_local_project_smoke_scenario_uses_source_install_and_local_fi
     ]
     setup_commands = "\n".join(scenario.setup.commands)
     verify_commands = "\n".join(scenario.verify.commands)
+    assert 'command = "python ../aidd_fixture_runtime.py"' in setup_commands
     assert "aidd doctor --config aidd.example.toml" in setup_commands
     assert "aidd init --work-item WI-INSTALLED-LOCAL-SMOKE" in setup_commands
     assert "--request" in setup_commands
@@ -323,6 +324,18 @@ def test_installed_local_project_smoke_scenario_uses_source_install_and_local_fi
         verify_commands
     )
     assert "answers.md" in verify_commands
+
+
+def test_local_fixture_workflow_scenarios_use_workspace_relative_runtime_path() -> None:
+    scenario_paths = (
+        Path("harness/scenarios/deterministic/project-set-plan-context.yaml"),
+        Path("harness/scenarios/smoke/installed-local-project-fixture.yaml"),
+    )
+
+    for scenario_path in scenario_paths:
+        scenario = load_scenario(scenario_path)
+        setup_commands = "\n".join(scenario.setup.commands)
+        assert 'command = "python ../aidd_fixture_runtime.py"' in setup_commands
 
 
 def test_deterministic_workflow_scenarios_cover_medium_ci_and_large_manual_buckets() -> None:

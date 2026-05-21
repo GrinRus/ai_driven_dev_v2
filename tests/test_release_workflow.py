@@ -49,6 +49,24 @@ def test_release_workflow_has_pypi_install_verification_job() -> None:
     assert "aidd doctor" in run_blocks
 
 
+def test_release_workflow_runs_deterministic_quality_before_publish() -> None:
+    jobs = _release_workflow_jobs()
+    assert "quality" in jobs
+
+    quality_job = jobs["quality"]
+    assert quality_job["strategy"]["matrix"]["python-version"] == ["3.12", "3.13", "3.14"]
+
+    quality_run_blocks = _job_run_blocks(quality_job)
+    assert "uv sync --locked --extra dev" in quality_run_blocks
+    assert "uv run --extra dev ruff check ." in quality_run_blocks
+    assert "uv run --extra dev python -m mypy src" in quality_run_blocks
+    assert "uv run --extra dev pytest -q" in quality_run_blocks
+
+    build_job = jobs["build"]
+    assert "quality" in _normalize_needs(build_job.get("needs"))
+    assert "build" in _normalize_needs(jobs["publish-pypi"].get("needs"))
+
+
 def test_release_workflow_has_uv_tool_install_verification_job() -> None:
     jobs = _release_workflow_jobs()
     assert "verify-uv-tool-install" in jobs
@@ -85,6 +103,7 @@ def test_release_workflow_does_not_run_live_e2e() -> None:
 
     serialized = yaml.safe_dump({"jobs": jobs}, sort_keys=False)
     assert "harness/scenarios/live/" not in serialized
+    assert "live_e2e_black_box" not in serialized
     assert "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC" not in serialized
     assert "aidd eval run" not in serialized
     assert "AIDD_EVAL_CLAUDE_CODE_COMMAND" not in serialized
