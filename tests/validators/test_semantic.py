@@ -2062,6 +2062,41 @@ def test_validate_semantic_outputs_accepts_python_c_output_evidence(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_sphinx_build_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-SPHINX-BUILD",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected documentation-bearing CLI behavior and "
+            "recorded a concrete documentation build command with observed output.\n\n"
+            "## Touched files\n\n"
+            "- `docs/cli.rst` - document the new CLI option and trust boundary.\n\n"
+            "## Verification\n\n"
+            "- `sphinx-build docs docs/_build` -> build succeeded, 16 warnings "
+            "(exit code 0).\n\n"
+            "## Risks\n\n"
+            "- No residual product risk remains for the selected task.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-SPHINX-BUILD",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks(
     tmp_path: Path,
 ) -> None:
