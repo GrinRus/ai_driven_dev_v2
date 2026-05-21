@@ -307,7 +307,48 @@ def test_build_live_quality_assessment_normalizes_touched_file_line_suffix(
     implement_root.joinpath("implementation-report.md").write_text(
         "# Implementation Report\n\n"
         "## Touched files\n\n"
-        "- `src/router.ts:12` - normalize `/**` to `/*`.\n",
+        "  - `src/router.ts:12` - normalize `/**` to `/*`.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert assessment.blocking_findings == tuple()
+
+
+def test_build_live_quality_assessment_ignores_url_tokens_in_touched_files(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-TOUCHED-URL"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `https://example.com:443/docs` - cited compatibility reference, not a file.\n",
         encoding="utf-8",
     )
 
@@ -365,6 +406,61 @@ def test_build_live_quality_assessment_fails_when_touched_files_lack_diff_eviden
     assert assessment.gate == "fail"
     assert assessment.dimensions[2].score == 0
     assert any(
+        "no matching repository change evidence" in finding
+        for finding in assessment.blocking_findings
+    )
+
+
+def test_build_live_quality_assessment_fails_on_repository_change_collection_error(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-GIT-ERROR"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `src/router.ts` - claimed source change.\n",
+        encoding="utf-8",
+    )
+
+    def raise_os_error(*_args: object, **_kwargs: object) -> None:
+        raise OSError("git unavailable")
+
+    monkeypatch.setattr(subprocess, "run", raise_os_error)
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "fail"
+    assert assessment.dimensions[2].score == 0
+    assert any(
+        "repository change collection failed" in finding
+        for finding in assessment.blocking_findings
+    )
+    assert not any(
         "no matching repository change evidence" in finding
         for finding in assessment.blocking_findings
     )

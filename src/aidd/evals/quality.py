@@ -11,7 +11,7 @@ from aidd.core.markdown import (
     extract_inline_code_tokens,
 )
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
-from aidd.evals.repository_changes import collect_repository_changes
+from aidd.evals.repository_changes import RepositoryChanges, collect_repository_changes
 from aidd.harness.runner import HarnessQualityResult
 from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask
 
@@ -59,6 +59,7 @@ class LiveQualityEvidence:
     evidence_reference_count: int
     repair_attempt_count: int
     changed_file_count: int | None
+    repository_change_errors: tuple[str, ...]
     touched_file_mismatches: tuple[str, ...]
     weak_doc_example_count: int
 
@@ -188,13 +189,13 @@ def _git_output(*, repo_root: Path, args: tuple[str, ...]) -> str | None:
     return completed.stdout
 
 
-def _changed_repository_files(workspace_root: Path) -> tuple[str, ...] | None:
+def _repository_changes_from_workspace(workspace_root: Path) -> RepositoryChanges | None:
     repo_root = _repo_root_from_workspace(workspace_root)
     if repo_root is None:
         return None
     if not (repo_root / ".git").exists():
         return None
-    return collect_repository_changes(repo_root).changed_files
+    return collect_repository_changes(repo_root)
 
 
 def _implementation_report_touched_files(report_text: str | None) -> tuple[str, ...]:
@@ -207,7 +208,8 @@ def _implementation_report_touched_files(report_text: str | None) -> tuple[str, 
 
     section_text = section_index.section_content(match[0])
     paths: list[str] = []
-    for line in section_text.splitlines():
+    for raw_line in section_text.splitlines():
+        line = raw_line.lstrip()
         if not line.startswith("- "):
             continue
         tokens = extract_inline_code_tokens(line)
@@ -235,6 +237,7 @@ def _looks_like_reported_touched_file(path_text: str) -> bool:
         not path_text
         or path_text.startswith("/")
         or path_text.startswith(".aidd/")
+        or "://" in path_text
         or any(char.isspace() for char in path_text)
         or "'" in path_text
         or '"' in path_text
@@ -258,7 +261,11 @@ def _touched_file_mismatches(
     )
 
 
-def _count_weak_doc_examples(workspace_root: Path) -> int:
+def _count_weak_doc_examples(
+    workspace_root: Path,
+    *,
+    repository_changes: RepositoryChanges | None = None,
+) -> int:
     repo_root = _repo_root_from_workspace(workspace_root)
     if repo_root is None:
         return 0
@@ -279,7 +286,7 @@ def _count_weak_doc_examples(workspace_root: Path) -> int:
     if not (repo_root / ".git").exists():
         return weak_count
 
-    changes = collect_repository_changes(repo_root)
+    changes = repository_changes or collect_repository_changes(repo_root)
     for path_text in changes.untracked_files:
         path = repo_root / path_text
         if path.suffix.lower() != ".md" and path.name.lower() != "readme.md":
@@ -352,7 +359,15 @@ def _collect_live_quality_evidence(
     review_report_text = _read_text_if_exists(review_report_path)
     qa_report_text = _read_text_if_exists(qa_report_path)
     implementation_report_text = _read_text_if_exists(implementation_report_path)
-    changed_files = _changed_repository_files(workspace_root)
+    repository_changes = _repository_changes_from_workspace(workspace_root)
+    repository_change_errors = (
+        tuple() if repository_changes is None else repository_changes.command_errors
+    )
+    changed_files = (
+        None
+        if repository_changes is None or repository_change_errors
+        else repository_changes.changed_files
+    )
     return LiveQualityEvidence(
         missing_stage_paths=missing_stage_paths,
         review_status=_extract_markdown_status_value(
@@ -372,11 +387,15 @@ def _collect_live_quality_evidence(
             work_item=work_item,
         ),
         changed_file_count=None if changed_files is None else len(changed_files),
+        repository_change_errors=repository_change_errors,
         touched_file_mismatches=_touched_file_mismatches(
             changed_files=changed_files,
             implementation_report_text=implementation_report_text,
         ),
-        weak_doc_example_count=_count_weak_doc_examples(workspace_root),
+        weak_doc_example_count=_count_weak_doc_examples(
+            workspace_root,
+            repository_changes=repository_changes,
+        ),
     )
 
 
@@ -416,6 +435,11 @@ def _blocking_findings_for_live_quality(
         blocking_findings.append(
             "documentation examples include placeholder or non-runnable example endpoints "
             f"({evidence.weak_doc_example_count})"
+        )
+    if evidence.repository_change_errors:
+        blocking_findings.append(
+            "repository change collection failed: "
+            + "; ".join(evidence.repository_change_errors[:3])
         )
     if evidence.touched_file_mismatches:
         preview = ", ".join(evidence.touched_file_mismatches[:4])
@@ -514,6 +538,7 @@ def _score_code_quality(
         quality_error is not None
         or evidence.unresolved_must_fix_count > 0
         or evidence.qa_verdict == "not-ready"
+        or evidence.repository_change_errors
         or evidence.touched_file_mismatches
     ):
         return QualityDimensionScore(
@@ -521,8 +546,8 @@ def _score_code_quality(
             score=0,
             rationale=(
                 "Quality checks failed, review/QA evidence says the code result "
-                "is not ready, or implementation file claims do not match "
-                "repository change evidence."
+                "is not ready, repository change evidence could not be collected, "
+                "or implementation file claims do not match repository change evidence."
             ),
         )
     suspiciously_small = (
