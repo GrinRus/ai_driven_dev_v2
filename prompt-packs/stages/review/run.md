@@ -68,6 +68,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    into `approved-with-conditions` unless they reveal a concrete defect, contradict acceptance
    criteria, are required by review baseline or release policy, or leave required selected-task
    verification inconclusive.
+7. Review the complete local workspace change set. Newly created untracked source files under the
+   allowed write scope are part of the AIDD deliverable when repository evidence shows they exist.
+   Do not reject solely because such a file is absent from `git diff --stat`; inspect it and treat
+   it as a changed file unless it is missing, outside scope, undocumented by implementation
+   evidence, or an explicit release policy requires a tracked-only patch artifact.
 
 ## Execution instructions
 

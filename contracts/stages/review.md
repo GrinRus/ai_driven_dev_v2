@@ -60,6 +60,12 @@ Optional context documents may improve review depth, but they must not replace i
   must not force `approved-with-conditions` unless they reveal a concrete defect,
   contradict acceptance criteria, are required by review baseline or release policy, or
   leave required selected-task verification inconclusive.
+- Review the complete local workspace change set. Tracked diffs and newly created untracked files
+  under the allowed write scope are both part of the AIDD deliverable; do not reject a change solely
+  because a new file is absent from `git diff --stat` when `git status --short` or diff-summary
+  evidence shows it exists and it is inspectable. Reject only when the file is missing, outside
+  scope, undocumented by implementation evidence, not inspectable, or an explicit release policy
+  requires a tracked-only patch artifact.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation

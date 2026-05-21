@@ -55,6 +55,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    authored live acceptance and verification baseline for the implementation.
 4. Change summary must describe what changed, why it changed, and how it maps to the selected task id.
 5. Touched-files list must include concrete path + short intent per entry and never claim unobserved edits.
+   Treat newly created untracked source files under the allowed write scope as observed workspace
+   edits. Include them in the touched-files list alongside tracked diffs; the deliverable is the
+   local workspace state, not a tracked-only patch.
 6. Verification notes must list actual checks run (or explicitly not run) with observed outcomes.
 7. No-op outcomes require explicit evidence-based justification plus next action; otherwise no-op is invalid.
 8. Stage/validator status must match observed implementation and verification evidence.
@@ -69,6 +72,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 4. Keep touched-files entries bounded to allowed scope and aligned with observable repository changes.
    Use top-level bullets for each file, with a backticked path plus short intent (`path` - intent,
    `path`: intent, or `path` -> intent). Put line-level details under that file entry.
+   If `git status --short` or equivalent repository evidence shows untracked files created for the
+   task, list and describe those files rather than relying only on `git diff --name-only`.
 5. Record verification using concrete commands/checks and outcomes; include observed results such as
    `-> pass`, `exit 0`, `exit code 0`, or the captured tool summary. Do not imply execution that did
    not happen.

@@ -89,6 +89,30 @@ def test_review_prompt_respects_authored_verification_boundary() -> None:
     )
 
 
+def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes() -> None:
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_system_prompt = Path("prompt-packs/stages/review/system.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "newly created untracked source files" in implement_prompt
+    assert "the deliverable is the" in implement_prompt
+    assert "local workspace state, not a tracked-only patch" in implement_prompt
+    assert "Newly created untracked source files under the" in review_prompt
+    assert "allowed write scope are part of the AIDD deliverable" in review_prompt
+    assert "Do not reject solely because such a file is absent from `git diff --stat`" in (
+        review_prompt
+    )
+    assert "do not reject a change solely because a newly created file is untracked" in (
+        review_system_prompt
+    )
+
+
 def test_review_spec_prompts_require_exact_decision_heading() -> None:
     run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
         encoding="utf-8"
