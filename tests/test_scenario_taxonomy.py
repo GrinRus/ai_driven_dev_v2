@@ -152,6 +152,9 @@ def test_hono_medium_live_scenario_uses_focused_verification_gate() -> None:
     assert "bun test" not in scenario.verify.commands
     assert "bun test" not in scenario.quality.commands
     assert "bunx vitest run src/hono.test.ts src/compose.test.ts" not in scenario.verify.commands
+    task = scenario.feature_source.tasks[0]
+    assert "without widening the public error handler" in task.target_change
+    assert "preserves the existing public error type contracts" in task.quality_bar
 
 
 def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:

@@ -43,19 +43,24 @@ feature_source:
     intent: Preserve Hono middleware error handling semantics when application code
       throws strings, plain objects, or other non-Error values.
     target_change: Normalize non-Error thrown values at the error boundary and add
-      regression coverage for the middleware/onError path.
+      regression coverage for the middleware/onError path without widening the
+      public error handler or context error type contracts.
     expected_scope: Localized runtime behavior plus tests in the Hono middleware or
       request dispatch path.
     acceptance_criteria:
     - Non-Error thrown values are delivered to configured onError handling instead of
       surfacing as unhandled promise rejections.
     - Existing Error object handling remains unchanged.
+    - Public error handler and context error types remain source-compatible for
+      existing Hono users; the fix must not require release-note-documented type
+      narrowing by consumers.
     - Regression tests cover at least one primitive thrown value and one object thrown value.
     verification:
     - ./node_modules/.bin/vitest --run src/hono.test.ts src/compose.test.ts
     - ./node_modules/.bin/tsc --noEmit
-    quality_bar: The patch is localized, typed, regression-covered, and does not weaken
-      existing Error handling behavior.
+    quality_bar: The patch is localized, typed, regression-covered, preserves the
+      existing public error type contracts, and does not weaken existing Error
+      handling behavior.
     size_rationale: Medium because the behavioral fix touches runtime error handling and
       type-checked tests, but should remain within one subsystem.
 verify:
