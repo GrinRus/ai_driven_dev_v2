@@ -550,6 +550,46 @@ def test_build_live_quality_assessment_accepts_contract_verdict_and_bold_evidenc
     assert [dimension.score for dimension in assessment.dimensions] == [3, 2, 1]
 
 
+def test_build_live_quality_assessment_accepts_verdict_prefix_with_rationale(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-VERDICT-PREFIX"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    review_root = stage_output_root(root=tmp_path, work_item=work_item, stage="review")
+    review_root.joinpath("review-report.md").write_text(
+        "# Review Report\n\n"
+        "## Verdict\n\n"
+        "- approved. The implementation satisfies the selected acceptance criteria.\n\n"
+        "## Findings\n\n"
+        "- none\n\n"
+        "## Required follow-up\n\n"
+        "- none\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.review_status == "approved"
+    assert assessment.gate == "pass"
+    assert "review approval status is missing from review-report.md" not in (
+        assessment.blocking_findings
+    )
+
+
 def test_build_live_quality_assessment_scores_flow_fidelity_independently(
     tmp_path: Path,
 ) -> None:

@@ -73,6 +73,13 @@ def test_review_prompts_make_finding_evidence_reference_explicit() -> None:
     assert "if no such evidence exists, mark the finding `invalid` or remove it" in repair_prompt
 
 
+def test_review_prompt_requires_machine_readable_status_line() -> None:
+    run_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
+
+    assert "write the approval decision as a machine-readable line" in run_prompt
+    assert "- Review status: approved" in run_prompt
+
+
 def test_review_prompt_respects_authored_verification_boundary() -> None:
     run_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
     system_prompt = Path("prompt-packs/stages/review/system.md").read_text(

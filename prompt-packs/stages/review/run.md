@@ -73,6 +73,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    Do not reject solely because such a file is absent from `git diff --stat`; inspect it and treat
    it as a changed file unless it is missing, outside scope, undocumented by implementation
    evidence, or an explicit release policy requires a tracked-only patch artifact.
+8. In `review-report.md`, write the approval decision as a machine-readable line:
+   `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
+   `Approval status` or `Verdict`, then add rationale separately.
 
 ## Execution instructions
 
@@ -82,6 +85,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 2. Do not mark stage `succeeded` when `implement` status is unresolved or validator verdict is
    `fail`.
 3. Draft `review-report.md` with sections for findings, approval decision, and required changes.
+   Put the approval decision on its own line using `- Review status: approved` (or
+   `approved-with-conditions` / `rejected`) before explanatory rationale.
 4. Keep every finding tied to observable evidence from `implementation-report.md` and/or explicit
    acceptance-criteria mismatch. For subsection findings, use this metadata shape:
    - `Severity: low|medium|high|critical|info|none`

@@ -104,6 +104,23 @@ def _normalized_status_line_value(line: str) -> str:
     return normalized.lower()
 
 
+def _status_value_from_normalized_line(
+    normalized: str,
+    *,
+    allowed: tuple[str, ...],
+    allow_leading_token: bool,
+) -> str | None:
+    allowed_by_length = sorted(allowed, key=len, reverse=True)
+    for value in allowed_by_length:
+        if normalized == value:
+            return value
+        if allow_leading_token and normalized.startswith(value):
+            suffix = normalized[len(value) :]
+            if suffix and suffix[0] in ".:;,-":
+                return value
+    return None
+
+
 def _extract_markdown_status_value(
     text: str | None,
     *,
@@ -116,7 +133,6 @@ def _extract_markdown_status_value(
     if text is None:
         return None
 
-    allowed_by_length = sorted(allowed, key=len, reverse=True)
     in_target_section = False
     for raw_line in text.splitlines():
         stripped = raw_line.strip()
@@ -128,9 +144,13 @@ def _extract_markdown_status_value(
             continue
 
         normalized = _normalized_status_line_value(stripped)
-        for value in allowed_by_length:
-            if normalized == value:
-                return value
+        status_value = _status_value_from_normalized_line(
+            normalized,
+            allowed=allowed,
+            allow_leading_token=in_target_section,
+        )
+        if status_value is not None:
+            return status_value
         if in_target_section:
             return None
     return None

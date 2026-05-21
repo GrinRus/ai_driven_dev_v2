@@ -52,6 +52,8 @@ Optional context documents may improve review depth, but they must not replace i
     equivalent inline text that cites `implementation-report.md`, a changed file path,
     or an acceptance-criteria id such as `AC-1`,
   - an explicit approval status suitable for go/no-go decision (`approved`, `approved-with-conditions`, `rejected`),
+  - a machine-readable approval line, preferably `Review status: approved` (or
+    `approved-with-conditions` / `rejected`) under `Approval status` or `Verdict`,
   - summary of required changes when approval status is not `approved`.
 - Findings may be written as top-level bullets or as `### RV-*` / `### REV-*` subsections.
 - No-findings declarations must be explicit, for example `- none` or
