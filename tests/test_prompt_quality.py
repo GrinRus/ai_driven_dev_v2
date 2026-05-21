@@ -80,6 +80,13 @@ def test_review_prompt_requires_machine_readable_status_line() -> None:
     assert "- Review status: approved" in run_prompt
 
 
+def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
+    run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+
+    assert "quality decision on its own machine-readable line" in run_prompt
+    assert "- QA verdict: ready" in run_prompt
+
+
 def test_review_prompt_respects_authored_verification_boundary() -> None:
     run_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
     system_prompt = Path("prompt-packs/stages/review/system.md").read_text(

@@ -95,7 +95,8 @@ def _normalized_status_line_value(line: str) -> str:
     normalized = normalized.replace("**", "")
     normalized = normalized.strip("` \t.")
     label_match = re.match(
-        r"^(?:review status|approval status|qa verdict|verdict|status)\s*:\s*(?P<value>.+)$",
+        r"^(?:review status|approval status|qa verdict|quality verdict|verdict|status)"
+        r"\s*:\s*(?P<value>.+)$",
         normalized,
         flags=re.IGNORECASE,
     )

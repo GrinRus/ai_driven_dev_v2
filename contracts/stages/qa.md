@@ -51,6 +51,8 @@ Optional context documents may improve QA depth, but they must not replace imple
 
 - `qa-report.md` must include:
   - an explicit quality verdict (`ready`, `ready-with-risks`, `not-ready`),
+  - a machine-readable verdict line, preferably `QA verdict: ready` (or
+    `ready-with-risks` / `not-ready`) under `Verification summary` or `Readiness`,
   - residual risk summary with severity and mitigation/ownership notes,
   - a dedicated `Release recommendation` section aligned to verdict and risk profile,
   - evidence references linking verdict claims to verification artifacts.
