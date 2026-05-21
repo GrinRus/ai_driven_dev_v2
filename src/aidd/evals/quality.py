@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from aidd.core.markdown import (
+    MarkdownSectionIndex,
+    extract_inline_code_tokens,
+)
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
+from aidd.evals.repository_changes import collect_repository_changes
 from aidd.harness.runner import HarnessQualityResult
 from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask
 
@@ -54,6 +59,7 @@ class LiveQualityEvidence:
     evidence_reference_count: int
     repair_attempt_count: int
     changed_file_count: int | None
+    touched_file_mismatches: tuple[str, ...]
     weak_doc_example_count: int
 
 
@@ -186,13 +192,46 @@ def _changed_repository_files(workspace_root: Path) -> tuple[str, ...] | None:
     repo_root = _repo_root_from_workspace(workspace_root)
     if repo_root is None:
         return None
-    output = _git_output(repo_root=repo_root, args=("diff", "--name-only", "HEAD", "--"))
-    if output is None:
+    if not (repo_root / ".git").exists():
         return None
+    return collect_repository_changes(repo_root).changed_files
+
+
+def _implementation_report_touched_files(report_text: str | None) -> tuple[str, ...]:
+    if report_text is None:
+        return tuple()
+    section_index = MarkdownSectionIndex.from_markdown(report_text)
+    match = section_index.first_match(("Touched files",))
+    if match is None:
+        return tuple()
+
+    section_text = section_index.section_content(match[0])
+    paths: list[str] = []
+    for line in section_text.splitlines():
+        if not line.startswith("- "):
+            continue
+        for token in extract_inline_code_tokens(line):
+            normalized = token.removeprefix("./").strip()
+            if not normalized or normalized.startswith(".aidd/"):
+                continue
+            if "/" not in normalized and "." not in Path(normalized).name:
+                continue
+            paths.append(normalized)
+    return tuple(dict.fromkeys(paths))
+
+
+def _touched_file_mismatches(
+    *,
+    changed_files: tuple[str, ...] | None,
+    implementation_report_text: str | None,
+) -> tuple[str, ...]:
+    if changed_files is None:
+        return tuple()
+    changed_set = {path.removeprefix("./") for path in changed_files}
     return tuple(
-        line.strip()
-        for line in output.splitlines()
-        if line.strip() and not line.strip().startswith(".aidd/")
+        path
+        for path in _implementation_report_touched_files(implementation_report_text)
+        if path not in changed_set
     )
 
 
@@ -204,8 +243,6 @@ def _count_weak_doc_examples(workspace_root: Path) -> int:
         repo_root=repo_root,
         args=("diff", "--", "*.md", "docs", "README.md"),
     )
-    if not output:
-        return 0
     weak_patterns = (
         "https://example.org",
         "https://example.com",
@@ -214,8 +251,24 @@ def _count_weak_doc_examples(workspace_root: Path) -> int:
         "placeholder",
         "todo",
     )
-    normalized = output.lower()
-    return sum(normalized.count(pattern) for pattern in weak_patterns)
+    normalized = (output or "").lower()
+    weak_count = sum(normalized.count(pattern) for pattern in weak_patterns)
+    if not (repo_root / ".git").exists():
+        return weak_count
+
+    changes = collect_repository_changes(repo_root)
+    for path_text in changes.untracked_files:
+        path = repo_root / path_text
+        if path.suffix.lower() != ".md" and path.name.lower() != "readme.md":
+            continue
+        if not (path_text.startswith("docs/") or path.name.lower() == "readme.md"):
+            continue
+        text = _read_text_if_exists(path)
+        if text is None:
+            continue
+        lowered = text.lower()
+        weak_count += sum(lowered.count(pattern) for pattern in weak_patterns)
+    return weak_count
 
 
 def _count_repair_attempt_signals(*, workspace_root: Path, work_item: str) -> int:
@@ -268,8 +321,14 @@ def _collect_live_quality_evidence(
         work_item=work_item,
         stage="qa",
     ) / "qa-report.md"
+    implementation_report_path = workspace_stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    ) / "implementation-report.md"
     review_report_text = _read_text_if_exists(review_report_path)
     qa_report_text = _read_text_if_exists(qa_report_path)
+    implementation_report_text = _read_text_if_exists(implementation_report_path)
     changed_files = _changed_repository_files(workspace_root)
     return LiveQualityEvidence(
         missing_stage_paths=missing_stage_paths,
@@ -290,6 +349,10 @@ def _collect_live_quality_evidence(
             work_item=work_item,
         ),
         changed_file_count=None if changed_files is None else len(changed_files),
+        touched_file_mismatches=_touched_file_mismatches(
+            changed_files=changed_files,
+            implementation_report_text=implementation_report_text,
+        ),
         weak_doc_example_count=_count_weak_doc_examples(workspace_root),
     )
 
@@ -330,6 +393,12 @@ def _blocking_findings_for_live_quality(
         blocking_findings.append(
             "documentation examples include placeholder or non-runnable example endpoints "
             f"({evidence.weak_doc_example_count})"
+        )
+    if evidence.touched_file_mismatches:
+        preview = ", ".join(evidence.touched_file_mismatches[:4])
+        blocking_findings.append(
+            "implementation report lists touched files with no matching repository change "
+            f"evidence ({preview})"
         )
     return blocking_findings
 
@@ -422,13 +491,15 @@ def _score_code_quality(
         quality_error is not None
         or evidence.unresolved_must_fix_count > 0
         or evidence.qa_verdict == "not-ready"
+        or evidence.touched_file_mismatches
     ):
         return QualityDimensionScore(
             name="code_quality",
             score=0,
             rationale=(
-                "Quality checks failed or review/QA evidence says the code result "
-                "is not ready."
+                "Quality checks failed, review/QA evidence says the code result "
+                "is not ready, or implementation file claims do not match "
+                "repository change evidence."
             ),
         )
     suspiciously_small = (

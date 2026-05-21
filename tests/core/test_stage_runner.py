@@ -233,6 +233,34 @@ def test_prepare_stage_bundle_renders_implementation_report_skeleton(tmp_path: P
     assert "## Follow-up" in content
 
 
+def test_prepare_stage_bundle_renders_contract_skeletons_for_review_and_qa(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    review_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="review",
+    )
+    qa_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="qa",
+    )
+
+    assert "## `review-report.md`" in review_bundle.stage_brief_markdown
+    assert "# Review Report" in review_bundle.stage_brief_markdown
+    assert "## Verdict" in review_bundle.stage_brief_markdown
+    assert "## Findings" in review_bundle.stage_brief_markdown
+    assert "## Required follow-up" in review_bundle.stage_brief_markdown
+    assert "## `qa-report.md`" in qa_bundle.stage_brief_markdown
+    assert "# QA Report" in qa_bundle.stage_brief_markdown
+    assert "## Verification summary" in qa_bundle.stage_brief_markdown
+    assert "## Release recommendation" in qa_bundle.stage_brief_markdown
+    assert "## Readiness" in qa_bundle.stage_brief_markdown
+
+
 def test_prepare_stage_bundle_persists_project_set_context_when_declared(
     tmp_path: Path,
 ) -> None:

@@ -4,11 +4,17 @@ import re
 
 IMPLEMENT_FILE_ENTRY_PATTERN = re.compile(r"`(?=[^`\n]*(?:/|\.))[^\n`]+`")
 IMPLEMENT_COMMAND_PATTERN = re.compile(
-    r"(\$ [^\n]+|\.venv/bin/[^\s`]+|\b("
+    r"(\$ [^\n]+|"
+    r"`[^`\n]*\b("
     r"uv run|pytest|ruff|mypy|python -m|npm|pnpm|yarn|go test|cargo test|"
     r"make|git|grep|rg|echo|printf|flake8|black|prettier|ty check|sqlite-utils|"
-    r"bun|bunx|vitest|tsc"
-    r")\b|`test\s+[^`\n]+`|`(?:insert|upsert|memory)\b[^`\n]*`)",
+    r"bun|bunx|npx|vitest|tsc"
+    r")\b[^`\n]*`|"
+    r"`(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^`\n]+`|"
+    r"(?:^|\s)(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^\s`]+|"
+    r"\b(uv run|python -m|go test|cargo test|ty check|sqlite-utils)\b|"
+    r"\b(pytest|ruff|mypy|npm|pnpm|yarn|make|git|grep|rg|echo|printf|flake8|black)\b|"
+    r"`test\s+[^`\n]+`|`(?:insert|upsert|memory)\b[^`\n]*`)",
     flags=re.IGNORECASE,
 )
 IMPLEMENT_RESULT_PATTERN = re.compile(
@@ -21,6 +27,7 @@ IMPLEMENT_RESULT_PATTERN = re.compile(
     r"\b\d+\s+passed\b|"
     r"\bSuccess:|"
     r"\bFound\s+\d+\s+diagnostics\b|"
+    r"\b\d+\s+(?:type\s+)?errors?\b|"
     r"\bshows?\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|no)\b|"
     r"\bexactly\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+matches\b|"
     r"\b\d+\s+(?:production\s+)?matches\b|"

@@ -10,7 +10,11 @@ import yaml
 
 from aidd.core.stages import STAGES
 from aidd.harness.install_artifact import HarnessInstallResult
-from aidd.harness.live_e2e_black_box import _harness_environment, run_black_box_live_e2e
+from aidd.harness.live_e2e_black_box import (
+    _harness_environment,
+    _implementation_verification_evidence_shape,
+    run_black_box_live_e2e,
+)
 from aidd.harness.runner import HarnessCommandTranscript
 from aidd.harness.scenarios import load_scenario
 
@@ -776,6 +780,24 @@ def test_black_box_live_e2e_reports_stage_failure_from_step_evidence(
     assert audit_payload["validator_verdict"] == "fail"
     assert audit_payload["primary_artifact"]["present"] is True
     assert "/output/" not in audit_payload["primary_artifact"]["path"]
+
+
+def test_implementation_verification_evidence_shape_uses_validator_patterns() -> None:
+    shape = _implementation_verification_evidence_shape(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `src/router/common.case.test.ts` - add parity tests.\n\n"
+        "## Verification\n\n"
+        "- `npx vitest run src/router/ src/utils/url.test.ts` -> "
+        "8 test files passed, 561 tests passed, 20 skipped.\n"
+        "- `npx tsc --noEmit --project tsconfig.spec.json` -> 0 type errors.\n"
+    )
+
+    assert shape == {
+        "backed_evidence_line_count": 2,
+        "outcome_claim_line_count": 2,
+        "has_executable_or_not_run_evidence": True,
+    }
 
 
 def test_black_box_live_e2e_stops_when_public_inspection_fails_after_stage_pass(

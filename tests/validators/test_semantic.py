@@ -2105,6 +2105,47 @@ def test_validate_semantic_outputs_accepts_bun_verification_evidence(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-PLAIN-TOOLS",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-LIVE-HONO-NON-ERROR-THROW`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected Hono task with a scoped source update and "
+            "recorded verification notes.\n\n"
+            "## Touched files\n\n"
+            "- `src/hono-base.ts` - normalize dispatch errors before the Hono error handler.\n\n"
+            "## Verification\n\n"
+            "- Bun runner passed.\n"
+            "- Prettier passed.\n"
+            "- TypeScript tsc passed.\n\n"
+            "## Risks\n\n"
+            "- No residual risk remains.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-PLAIN-TOOLS",
+        workspace_root=workspace_root,
+    )
+
+    assert [finding.code for finding in findings] == [
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
+    ]
+    assert all(finding.severity == "high" for finding in findings)
+
+
 def test_validate_semantic_outputs_accepts_live_noop_blocker_evidence(
     tmp_path: Path,
 ) -> None:

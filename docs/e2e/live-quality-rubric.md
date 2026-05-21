@@ -94,6 +94,8 @@ What it measures:
 - implement-stage audit records changed files, diff summary, and whether
   implementation-report verification claims are backed by executable/check
   evidence or explicit `not-run:` reasons.
+- implement-stage audit includes both tracked diffs and untracked target-repository
+  files so runtime-authored touched-file claims cannot hide new files.
 - documentation examples avoid placeholder or non-runnable endpoints presented as runnable.
 - optional broader checks outside the authored task's verification boundary do not become
   release conditions unless they expose a concrete defect or contradict acceptance criteria.
