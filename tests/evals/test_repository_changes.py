@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from subprocess import TimeoutExpired
+
+import pytest
 
 from aidd.evals.repository_changes import collect_repository_changes
 
@@ -37,3 +40,42 @@ def test_collect_repository_changes_includes_tracked_and_untracked_files(
     assert "new.txt" in changes.diff_summary
     assert ".aidd/generated.md" not in changes.changed_files
     assert changes.command_errors == tuple()
+
+
+def test_collect_repository_changes_records_git_execution_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _init_git_repo(tmp_path)
+
+    def raise_os_error(*_args: object, **_kwargs: object) -> None:
+        raise OSError("git unavailable")
+
+    monkeypatch.setattr(subprocess, "run", raise_os_error)
+
+    changes = collect_repository_changes(tmp_path)
+
+    assert changes.changed_files == tuple()
+    assert changes.tracked_files == tuple()
+    assert changes.untracked_files == tuple()
+    assert len(changes.command_errors) == 3
+    assert all("failed to execute" in error for error in changes.command_errors)
+    assert "Git change collection errors:" in changes.diff_summary
+
+
+def test_collect_repository_changes_records_git_timeout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _init_git_repo(tmp_path)
+
+    def raise_timeout(command: object, **_kwargs: object) -> None:
+        raise TimeoutExpired(command, timeout=10)
+
+    monkeypatch.setattr(subprocess, "run", raise_timeout)
+
+    changes = collect_repository_changes(tmp_path)
+
+    assert changes.changed_files == tuple()
+    assert len(changes.command_errors) == 3
+    assert all("timed out after 10s" in error for error in changes.command_errors)

@@ -213,11 +213,21 @@ def _implementation_report_touched_files(report_text: str | None) -> tuple[str, 
         tokens = extract_inline_code_tokens(line)
         if not tokens:
             continue
-        normalized = tokens[0].removeprefix("./").strip()
-        if not _looks_like_reported_touched_file(normalized):
+        normalized = _normalize_reported_touched_file(tokens[0])
+        if normalized is None:
             continue
         paths.append(normalized)
     return tuple(dict.fromkeys(paths))
+
+
+def _normalize_reported_touched_file(path_text: str) -> str | None:
+    normalized = path_text.removeprefix("./").strip()
+    line_suffix_match = re.match(r"^(?P<path>.+?):\d+(?::\d+)?$", normalized)
+    if line_suffix_match is not None:
+        normalized = line_suffix_match.group("path")
+    if not _looks_like_reported_touched_file(normalized):
+        return None
+    return normalized
 
 
 def _looks_like_reported_touched_file(path_text: str) -> bool:

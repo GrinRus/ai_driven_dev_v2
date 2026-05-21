@@ -15,17 +15,24 @@ class RepositoryChanges:
 
 
 def _run_git(*, repo_root: Path, args: tuple[str, ...]) -> tuple[str | None, str | None]:
-    completed = subprocess.run(
-        ("git", *args),
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    command_label = f"git {' '.join(args)}"
+    try:
+        completed = subprocess.run(
+            ("git", *args),
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        return None, f"{command_label} timed out after 10s"
+    except OSError as exc:
+        return None, f"{command_label} failed to execute: {exc}"
     if completed.returncode == 0:
         return completed.stdout, None
     stderr = completed.stderr.strip() or completed.stdout.strip() or "no command output"
-    return None, f"git {' '.join(args)} failed: {stderr}"
+    return None, f"{command_label} failed: {stderr}"
 
 
 def _repo_relative_paths(output: str | None) -> tuple[str, ...]:
