@@ -475,6 +475,53 @@ def test_validate_semantic_outputs_allows_negated_security_guarantee_caveat(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_allows_disclaimed_security_guarantee_caveat(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md",)
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_idea_brief(
+        workspace_root,
+        (
+            "# Idea Brief\n\n"
+            "## Problem statement\n\n"
+            "The CLI needs clear documentation that includes an explicit disclaimer "
+            "of sandboxing or any security guarantee for local Python execution.\n\n"
+            "## Desired outcome\n\n"
+            "Document the feature with a warning callout that explicitly disclaims "
+            "sandboxing or any security guarantee.\n\n"
+            "## Constraints\n\n"
+            "- none\n\n"
+            "## Open questions\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="idea",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_requires_list_format_for_constraints(tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts" / "stages"
     contracts_root.mkdir(parents=True)
