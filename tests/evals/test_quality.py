@@ -217,7 +217,53 @@ def test_build_live_quality_assessment_counts_untracked_touched_files(
     implement_root.joinpath("implementation-report.md").write_text(
         "# Implementation Report\n\n"
         "## Touched files\n\n"
-        "- `src/new_feature.py` - add the selected behavior.\n",
+        "- `src/new_feature.py` - add the selected behavior for route `/**` "
+        "without changing `/*`.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert assessment.blocking_findings == tuple()
+
+
+def test_build_live_quality_assessment_ignores_route_snippets_in_touched_files(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-ROUTE-SNIPPETS"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    source_path = repo_root / "src" / "router.ts"
+    source_path.parent.mkdir()
+    source_path.write_text("export const ok = true\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `src/router.ts` - normalized `/**` to `/*` before the "
+        "`path === '/*'` shortcut.\n",
         encoding="utf-8",
     )
 

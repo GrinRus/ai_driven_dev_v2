@@ -210,14 +210,27 @@ def _implementation_report_touched_files(report_text: str | None) -> tuple[str, 
     for line in section_text.splitlines():
         if not line.startswith("- "):
             continue
-        for token in extract_inline_code_tokens(line):
-            normalized = token.removeprefix("./").strip()
-            if not normalized or normalized.startswith(".aidd/"):
-                continue
-            if "/" not in normalized and "." not in Path(normalized).name:
-                continue
-            paths.append(normalized)
+        tokens = extract_inline_code_tokens(line)
+        if not tokens:
+            continue
+        normalized = tokens[0].removeprefix("./").strip()
+        if not _looks_like_reported_touched_file(normalized):
+            continue
+        paths.append(normalized)
     return tuple(dict.fromkeys(paths))
+
+
+def _looks_like_reported_touched_file(path_text: str) -> bool:
+    if (
+        not path_text
+        or path_text.startswith("/")
+        or path_text.startswith(".aidd/")
+        or any(char.isspace() for char in path_text)
+        or "'" in path_text
+        or '"' in path_text
+    ):
+        return False
+    return "/" in path_text or "." in Path(path_text).name
 
 
 def _touched_file_mismatches(

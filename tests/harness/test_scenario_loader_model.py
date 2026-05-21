@@ -219,7 +219,7 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
     assert scenario.verify.commands == (
         "uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW",
         "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md",
-        "bun test",
+        "bunx vitest run src/router/ src/utils/url.test.ts",
         "bunx tsc --noEmit",
         "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/qa/output/stage-result.md",
         "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/qa/output/validator-report.md",
