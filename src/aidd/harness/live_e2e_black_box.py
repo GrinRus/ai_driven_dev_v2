@@ -2572,6 +2572,34 @@ def _first_failure_from_steps(
     return "none", None
 
 
+def _required_interview_flow_failure(ctx: FlowContext) -> str | None:
+    if not ctx.scenario.run.interview_required:
+        return None
+
+    steps = _load_steps(ctx.bundle_root)
+    observed_blocked_question_stop = any(
+        step.get("classification") == "blocked"
+        and step.get("action") in {"run-stage", "inspect-stage"}
+        for step in steps
+    )
+    observed_operator_answers = any(
+        step.get("action") == "answer-questions" and step.get("classification") == "pass"
+        for step in steps
+    )
+
+    if not observed_blocked_question_stop:
+        return (
+            "Required interview flow was not observed: scenario requires at least "
+            "one blocking question stop before progression."
+        )
+    if not observed_operator_answers:
+        return (
+            "Required interview flow was not observed: scenario requires "
+            "operator-authored answers before resumed progression."
+        )
+    return None
+
+
 def _write_runtime_log_from_steps(ctx: FlowContext) -> Path:
     lines = [
         f"run_id={ctx.run_id}",
@@ -3352,6 +3380,27 @@ def run_black_box_live_e2e(
             ctx=ctx,
             status="fail",
             summary="A public stage run failed during black-box live E2E execution.",
+            verification_failed=True,
+            quality_result=None,
+            quality_error=None,
+            teardown_result=teardown_result,
+            teardown_error=teardown_error,
+        )
+
+    interview_flow_failure = _required_interview_flow_failure(ctx)
+    if interview_flow_failure is not None:
+        _record_step(
+            ctx=ctx,
+            action="verify",
+            classification="fail",
+            decision=interview_flow_failure,
+            plan="Validate manifest-specific interview flow requirements.",
+        )
+        teardown_result, teardown_error = _run_teardown(ctx)
+        return _finalize_reports(
+            ctx=ctx,
+            status="fail",
+            summary="Required interview flow was not observed during black-box live E2E.",
             verification_failed=True,
             quality_result=None,
             quality_error=None,

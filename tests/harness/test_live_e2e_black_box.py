@@ -634,6 +634,40 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     )
 
 
+def test_black_box_live_e2e_fails_required_interview_without_blocked_resume(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        interview_required=True,
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "fail"
+    assert result.quality_gate == "fail"
+    assert result.first_failure_note is not None
+    assert "Required interview flow was not observed" in result.first_failure_note
+    steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    assert any(
+        step["action"] == "verify"
+        and step["classification"] == "fail"
+        and "blocking question stop" in step["decision"]
+        for step in steps
+    )
+    assert "Required interview flow was not observed" in (
+        result.bundle_root / "validator-report.md"
+    ).read_text(encoding="utf-8")
+
+
 def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
