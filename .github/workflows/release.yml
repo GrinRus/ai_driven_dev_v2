@@ -1,9 +1,8 @@
 name: release
 
-on:
-  push:
-    tags:
-      - "v*"
+"on":
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -67,12 +66,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate PyPI release tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Validate release branch and PyPI tag
+        if: github.event_name == 'release'
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
+
+          EXPECTED_RELEASE_BRANCH="release/${RELEASE_TAG}"
+          export EXPECTED_RELEASE_BRANCH
 
           python - <<'PY'
           from __future__ import annotations
@@ -107,7 +109,32 @@ jobs:
               raise SystemExit(1)
 
           print(f"Release tag '{tag}' matches project.version '{version}'.")
+
+          expected_branch = os.environ["EXPECTED_RELEASE_BRANCH"]
+          if expected_branch != f"release/{tag}":
+              print(
+                  f"Release branch '{expected_branch}' does not match expected "
+                  f"'release/{tag}'.",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+          print(f"Expected release branch: {expected_branch}")
           PY
+
+          git fetch --no-tags origin "+refs/heads/${EXPECTED_RELEASE_BRANCH}:refs/remotes/origin/${EXPECTED_RELEASE_BRANCH}"
+          git fetch --no-tags origin "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+
+          RELEASE_BRANCH_SHA="$(git rev-parse "refs/remotes/origin/${EXPECTED_RELEASE_BRANCH}")"
+          RELEASE_TAG_SHA="$(git rev-parse "${RELEASE_TAG}^{commit}")"
+
+          if [ "${RELEASE_TAG_SHA}" != "${RELEASE_BRANCH_SHA}" ]; then
+            echo "Release tag '${RELEASE_TAG}' does not point at '${EXPECTED_RELEASE_BRANCH}'." >&2
+            echo "Tag commit: ${RELEASE_TAG_SHA}" >&2
+            echo "Branch head: ${RELEASE_BRANCH_SHA}" >&2
+            exit 1
+          fi
+
+          echo "Release tag '${RELEASE_TAG}' points at '${EXPECTED_RELEASE_BRANCH}' (${RELEASE_TAG_SHA})."
 
       - name: Install dependencies
         run: |
@@ -126,7 +153,7 @@ jobs:
           path: dist/
 
   publish-pypi:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'release'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -146,7 +173,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
 
   verify-pypi-install:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'release'
     needs: publish-pypi
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -166,7 +193,7 @@ jobs:
 
       - name: Verify published package installability via pipx
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
 
@@ -191,7 +218,7 @@ jobs:
           python -m pipx run --spec "ai-driven-dev-v2==${PACKAGE_VERSION}" aidd doctor
 
   verify-uv-tool-install:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'release'
     needs: verify-pypi-install
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -210,7 +237,7 @@ jobs:
 
       - name: Verify published package installability via uv tool
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
 

@@ -12,9 +12,15 @@ def _repo_root() -> Path:
     return repo_root_from(Path(__file__).resolve())
 
 
-def _release_workflow_jobs() -> dict[str, Any]:
+def _release_workflow() -> dict[str, Any]:
     release_workflow_path = _repo_root() / ".github" / "workflows" / "release.yml"
     release_workflow = yaml.safe_load(release_workflow_path.read_text(encoding="utf-8"))
+    assert isinstance(release_workflow, dict)
+    return release_workflow
+
+
+def _release_workflow_jobs() -> dict[str, Any]:
+    release_workflow = _release_workflow()
     return release_workflow["jobs"]
 
 
@@ -32,6 +38,15 @@ def _job_run_blocks(job: dict[str, Any]) -> str:
         for step in job.get("steps", [])
         if isinstance(step, dict) and isinstance(step.get("run"), str)
     )
+
+
+def test_release_workflow_uses_published_release_event_not_tag_push() -> None:
+    workflow = _release_workflow()
+    triggers = workflow["on"]
+
+    assert "push" not in triggers
+    assert triggers["release"]["types"] == ["published"]
+    assert "workflow_dispatch" in triggers
 
 
 def test_release_workflow_has_pypi_install_verification_job() -> None:
@@ -65,6 +80,34 @@ def test_release_workflow_runs_deterministic_quality_before_publish() -> None:
     build_job = jobs["build"]
     assert "quality" in _normalize_needs(build_job.get("needs"))
     assert "build" in _normalize_needs(jobs["publish-pypi"].get("needs"))
+
+
+def test_release_workflow_validates_release_branch_and_tag_before_build() -> None:
+    jobs = _release_workflow_jobs()
+    build_job = jobs["build"]
+
+    run_blocks = _job_run_blocks(build_job)
+    assert "Validate release branch and PyPI tag" in yaml.safe_dump(build_job)
+    assert "github.event_name == 'release'" in yaml.safe_dump(build_job)
+    assert "github.event.release.tag_name" in yaml.safe_dump(build_job)
+    assert 'EXPECTED_RELEASE_BRANCH="release/${RELEASE_TAG}"' in run_blocks
+    assert "refs/heads/${EXPECTED_RELEASE_BRANCH}" in run_blocks
+    assert "refs/remotes/origin/${EXPECTED_RELEASE_BRANCH}" in run_blocks
+    assert "refs/tags/${RELEASE_TAG}" in run_blocks
+    assert "${RELEASE_TAG}^{commit}" in run_blocks
+    assert "project.version" in run_blocks
+    assert "does not point at '${EXPECTED_RELEASE_BRANCH}'" in run_blocks
+
+
+def test_release_workflow_publishes_only_for_github_release_event() -> None:
+    jobs = _release_workflow_jobs()
+
+    for job_id in (
+        "publish-pypi",
+        "verify-pypi-install",
+        "verify-uv-tool-install",
+    ):
+        assert jobs[job_id]["if"] == "github.event_name == 'release'"
 
 
 def test_release_workflow_has_uv_tool_install_verification_job() -> None:

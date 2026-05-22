@@ -46,9 +46,11 @@ Docker/GHCR remains outside the supported prerelease contract.
 
 ## Release checklist
 
-- Confirm `pyproject.toml` version is set to `0.1.0a3` before tagging.
+- Confirm `pyproject.toml` version is set to `0.1.0a3` before creating the GitHub
+  Release.
 - Run deterministic local gates.
-- Confirm the release workflow quality, build, publish, `pipx`, and `uv tool` verification
-  jobs pass for the tag.
+- Create `release/v0.1.0a3`, publish a GitHub Release tagged `v0.1.0a3` from that
+  branch, and confirm the release workflow quality, build, publish, `pipx`, and `uv tool`
+  verification jobs pass for the GitHub Release.
 - Refresh manual live evidence locally, separately from release automation, when maintainers
   need an operator-quality audit.

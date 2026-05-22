@@ -114,35 +114,43 @@ repositories. Live E2E remains a local manual operator-audit lane.
 Recommended release flow:
 
 1. set `pyproject.toml` to the intended release version,
-2. tag a release candidate that exactly matches `v<project.version>`,
-3. build the Python package,
-4. publish to PyPI through Trusted Publishing,
-5. verify installability through `pipx`,
-6. verify installability through `uv tool`,
-7. publish release notes.
+2. create a release branch named `release/v<project.version>`,
+3. open a release PR from that branch to `main` and wait for deterministic CI,
+4. create a draft GitHub Release with tag `v<project.version>` targeting the release branch,
+5. publish the GitHub Release,
+6. build the Python package in the release workflow,
+7. publish to PyPI through Trusted Publishing,
+8. verify installability through `pipx`,
+9. verify installability through `uv tool`,
+10. publish release notes.
 
+The release workflow publishes only from the GitHub Release `published` event. Its manual
+`workflow_dispatch` path is a dry run for deterministic quality and package build jobs only;
+it must not publish to PyPI or run package installability verification against the registry.
 The release workflow must run deterministic quality checks before publish. Manual live
-evidence can be refreshed locally before or after a release candidate, but it is not a
-release gate and must remain outside GitHub Actions and the release workflow.
+evidence can be refreshed locally before or after a release branch, but it is not a release
+gate and must remain outside GitHub Actions and the release workflow.
 
 Operator-oriented step-by-step release execution lives in `docs/release-checklist.md`.
 
-Install evidence is valid only for a concrete release candidate or tagged release. A source
-checkout can refresh prerequisites, workflow shape, and local tool availability, but it must
-record missing tags or registry credentials as blockers instead of claiming package-channel
-evidence.
+Install evidence is valid only for a concrete published GitHub Release. A source checkout
+can refresh prerequisites, workflow shape, and local tool availability, but it must record
+missing release branches, GitHub Releases, tags, or registry credentials as blockers instead
+of claiming package-channel evidence.
 
-## 10. PyPI release tagging rules
+## 10. PyPI release branch and tag rules
 
-PyPI publishing accepts release tags that:
+PyPI publishing accepts GitHub Releases whose tags:
 
 - start with `v`;
 - use `v<major>.<minor>.<patch>` with optional PEP 440 suffix (`aN`, `bN`, `rcN`,
   `.postN`, `.devN`);
 - exactly match `v<project.version>` from `pyproject.toml`.
 
-If a release tag fails format or version-alignment checks, the release workflow fails before
-package publishing.
+The release branch must be named exactly `release/<tag>`, for example
+`release/v0.1.0a3`, and the release tag commit must match the remote release branch HEAD.
+If the release tag fails format, version-alignment, branch-name, or branch-head checks, the
+release workflow fails before package publishing.
 
 After publishing a prerelease, `main` should move to the next development version, for
 example from `0.1.0a3` to `0.1.0a4.dev0`, so source builds cannot collide with an already
