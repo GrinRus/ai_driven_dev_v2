@@ -243,9 +243,13 @@ def test_attempt_artifact_index_records_canonical_stage_document_paths(tmp_path:
         name.removesuffix(".md").replace("-", "_")
         for name in RESERVED_STAGE_FILENAMES
     }
+    expected_doc_keys.add("plan")
     expected_doc_keys.add("input_bundle")
     assert set(payload["documents"]) == expected_doc_keys
 
+    assert payload["documents"]["plan"] == (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "plan.md"
+    ).relative_to(workspace_root).as_posix()
     for filename in RESERVED_STAGE_FILENAMES:
         key = filename.removesuffix(".md").replace("-", "_")
         expected_path = (

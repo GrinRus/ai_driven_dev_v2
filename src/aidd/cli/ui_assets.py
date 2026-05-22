@@ -420,6 +420,12 @@ async function loadRun() {
   try {
     const run = await api("/api/run");
     const metadata = run.metadata;
+    if (!metadata) {
+      stageSummaryByStage = {};
+      setText("runLine", run.message || "No runs found for this work item.");
+      document.getElementById("stages").innerHTML = stages.map((stage) => `<button class="stage-button ${stage === activeStage ? "active" : ""}" data-stage="${escapeHtml(stage)}" type="button">${escapeHtml(stage)}</button>`).join("");
+      return;
+    }
     setText("runLine", `${metadata.work_item} / ${metadata.run_id} / ${metadata.runtime_id}`);
     stageSummaryByStage = Object.fromEntries(metadata.stages.map((stage) => [stage.stage, stage]));
     document.getElementById("stages").innerHTML = stages.map((stage) => {
@@ -536,6 +542,14 @@ async function loadArtifactDocument(key) {
 
 function preferredArtifactKey(documents) {
   const preferredKeys = [
+    "idea_brief",
+    "research_notes",
+    "plan",
+    "review_spec_report",
+    "tasklist",
+    "implementation_report",
+    "review_report",
+    "qa_report",
     "stage_result",
     "validator_report",
     "questions",

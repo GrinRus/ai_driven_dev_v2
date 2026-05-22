@@ -370,13 +370,19 @@ class OperatorUiService:
                     body=b"",
                 )
             if path == "/api/run":
-                return _json_response(
-                    resolve_operator_run_view(
-                        workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
-                        run_id=_first_param(params, "run_id"),
+                try:
+                    return _json_response(
+                        resolve_operator_run_view(
+                            workspace_root=self.workspace_root,
+                            work_item=self.options.work_item,
+                            run_id=_first_param(params, "run_id"),
+                        )
                     )
-                )
+                except ValueError as exc:
+                    message = str(exc)
+                    if message.startswith("No runs found for work item "):
+                        return _json_response({"metadata": None, "message": message})
+                    raise
             if path == "/api/runtime-readiness":
                 return _json_response(self._runtime_readiness())
             if path == "/api/stage":
