@@ -484,3 +484,26 @@ def test_live_docs_do_not_limit_questions_to_interview_scenarios() -> None:
                 offenders.append(path.relative_to(_repo_root()).as_posix())
 
     assert offenders == []
+
+
+def test_release_publish_skill_describes_release_flow_guardrails() -> None:
+    skill = (
+        _repo_root() / ".agents" / "skills" / "release-publish" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    for needle in (
+        "release/v<project.version>",
+        "GitHub Release",
+        "GitHub Release `published` event",
+        "`workflow_dispatch` as a dry-run path",
+        "`pipx`",
+        "`uv tool`",
+        "Do not add or run live E2E in GitHub Actions, CI/CD, or release workflows.",
+        "Do not use direct tag-push publishing.",
+        "If the PyPI version already exists, stop and ask for a new version decision.",
+        "Docker/GHCR is not a supported alpha release channel.",
+        "If the release tag SHA does not match `origin/release/<tag>`, stop",
+        "Tag v<project.version> already exists on origin",
+        "git rev-parse refs/tags/v<project.version>^{commit}",
+    ):
+        assert needle in skill
