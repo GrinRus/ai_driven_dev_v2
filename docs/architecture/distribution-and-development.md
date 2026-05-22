@@ -101,13 +101,13 @@ Recommended CI structure:
 - pull request: lint, typecheck, unit tests, deterministic fixture checks, security checks,
   and package build
 - main branch: the same deterministic checks or a wider deterministic matrix
-- manual workflows: live external audits
+- local manual operator audits: live external audits
 - release: deterministic lint/type/test evidence, build, PyPI publish, `pipx`
   installability verification, and `uv tool` installability verification
 
-CI/CD and release workflows must not run live E2E scenarios, require provider runtime
-credentials, invoke `live_e2e_black_box`, or clone public live target repositories. Live
-E2E remains a manual operator-audit lane.
+GitHub Actions, CI/CD, and release workflows must not run live E2E scenarios, require
+provider runtime credentials, invoke `live_e2e_black_box`, or clone public live target
+repositories. Live E2E remains a local manual operator-audit lane.
 
 ## 9. Release flow
 
@@ -122,8 +122,8 @@ Recommended release flow:
 7. publish release notes.
 
 The release workflow must run deterministic quality checks before publish. Manual live
-evidence can be refreshed before or after a release candidate, but it is not a release gate
-and must remain outside the release workflow.
+evidence can be refreshed locally before or after a release candidate, but it is not a
+release gate and must remain outside GitHub Actions and the release workflow.
 
 Operator-oriented step-by-step release execution lives in `docs/release-checklist.md`.
 
@@ -145,7 +145,7 @@ If a release tag fails format or version-alignment checks, the release workflow 
 package publishing.
 
 After publishing a prerelease, `main` should move to the next development version, for
-example from `0.1.0a2` to `0.1.0a3.dev0`, so source builds cannot collide with an already
+example from `0.1.0a3` to `0.1.0a4.dev0`, so source builds cannot collide with an already
 published artifact.
 
 ## 11. Versioning policy

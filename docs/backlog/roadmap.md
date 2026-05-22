@@ -5546,7 +5546,7 @@ Primary outputs:
   `operator-actions.jsonl`
 - operator action request artifacts for blocking questions
 - live manifest `live_flow` contract
-- manual workflow and local skill entrypoint using the evaluator module
+- local skill entrypoint using the evaluator module
 - removed product eval-run command and legacy runner compatibility path
 
 Touched areas:
@@ -5554,7 +5554,7 @@ Touched areas:
 - `src/aidd/cli/`
 - `src/aidd/harness/`
 - `harness/scenarios/live/`
-- `.github/workflows/manual-live-e2e.yml`
+- `.github/workflows/`
 - `.agents/skills/`
 - `docs/`
 - `tests/`
@@ -5575,8 +5575,9 @@ Evidence:
   patch modules were removed.
 - Live manifests now declare `live_flow.driver: stepwise-black-box`,
   `checkpoint_policy: after-each-step`, and explicit answer policy.
-- `.github/workflows/manual-live-e2e.yml` invokes
-  `uv run python -m aidd.harness.live_e2e_black_box`.
+- Local live documentation and skills invoke
+  `uv run python -m aidd.harness.live_e2e_black_box`; GitHub Actions workflows no
+  longer expose a live E2E entrypoint.
 - Focused and full local gates passed on 2026-05-18:
   `uv run --extra dev ruff check .`,
   `uv run --extra dev python -m mypy src`,

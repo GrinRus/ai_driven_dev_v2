@@ -136,7 +136,8 @@ Use explicit paths when the audit needs stable local references:
 uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/typer-boolean-help-rendering.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```
 
-The GitHub `manual-live-e2e` workflow is a secondary alternate entrypoint, not the primary flow described by this skill.
+There is no GitHub Actions live E2E entrypoint. Live E2E is local manual operator audit
+evidence only.
 
 ## What the harness will do
 
@@ -343,7 +344,7 @@ operator loop instead of relying on a self-mutating product command:
 
 - Never treat live E2E as a CI or release lane.
 - Never assume this skill provisions runtime auth, wrappers, or provider setup.
-- Never dispatch the manual GitHub workflow without provider execution readiness for the selected runtime.
+- Never route live E2E through GitHub Actions, CI/CD, or release workflows.
 - Never run a live scenario without storing the resolved repo pin.
 - Never run a live scenario without storing the selected authored task snapshot.
 - Never treat a live scenario as canonical unless it executes `idea -> qa`.

@@ -14,8 +14,8 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 
 ## Alpha status and safety
 
-Current published prerelease: `0.1.0a2`.
-Current development version on `main`: `0.1.0a3.dev0`.
+Current release-candidate package version on this branch: `0.1.0a3`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a2`.
 
 AIDD is alpha software for local evaluation and controlled operator trials. It is not
 ready for unattended production automation. AIDD launches external runtime CLIs against a
@@ -51,20 +51,20 @@ Claude Code, Codex, OpenCode, or other runtime CLIs separately.
 
 ## Install with pipx
 
-Install the current published prerelease:
+Install this prerelease after publication:
 
 ```bash
-pipx install "ai-driven-dev-v2==0.1.0a2"
+pipx install "ai-driven-dev-v2==0.1.0a3"
 aidd --version
 aidd doctor
 ```
 
 ## Install with uv tool
 
-Install the current published prerelease:
+Install this prerelease after publication:
 
 ```bash
-uv tool install "ai-driven-dev-v2==0.1.0a2"
+uv tool install "ai-driven-dev-v2==0.1.0a3"
 aidd --version
 aidd doctor
 ```
@@ -87,8 +87,9 @@ uv run aidd --version
 uv run aidd doctor
 ```
 
-The `v0.1.0a2` release evidence passed PyPI publish plus `pipx` and `uv tool`
-install verification.
+The `v0.1.0a3` release evidence must pass PyPI publish plus `pipx` and `uv tool`
+install verification before the release is accepted. The last accepted published
+prerelease evidence before this candidate is `v0.1.0a2`.
 
 ## Run your first local workflow
 
@@ -231,15 +232,15 @@ Contributor workflow:
 
 ## Eval and release evidence
 
-AIDD includes deterministic harness checks and manual live E2E scenarios. Live E2E is a
-manual installed-operator audit, not CI and not a release gate.
-CI, security, and release workflows must not run live scenarios, require provider
-credentials, or depend on public live target repositories.
+AIDD includes deterministic harness checks and manual live E2E scenarios. Live E2E is
+manual local operator audit evidence, not CI/CD, not a release workflow, not GitHub Actions,
+and not a release gate. CI, security, and release workflows must not run live scenarios,
+require provider credentials, or depend on public live target repositories.
 
 Example black-box live E2E evaluator command:
 
 ```bash
-python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
+uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```
 
 Manual live E2E scenarios snapshot tracked AIDD `HEAD` into
@@ -254,8 +255,8 @@ By default, the evaluator builds a local wheel from the clean tracked source che
 containing the scenario manifest. To test an already published package instead, set:
 
 ```bash
-AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a2" \
-  python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
+AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a3" \
+  uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```
 
 Public GitHub repositories are live E2E targets for evaluator evidence only. See:

@@ -76,23 +76,18 @@ def test_makefile_install_uses_locked_uv_sync() -> None:
     assert "uv sync --extra dev" not in makefile_text
 
 
-def test_ci_cd_workflows_do_not_run_live_e2e() -> None:
-    ci_cd_workflows = (
-        ".github/workflows/ci.yml",
-        ".github/workflows/release.yml",
-        ".github/workflows/security.yml",
-    )
+def test_github_actions_workflows_do_not_run_live_e2e() -> None:
+    workflow_paths = sorted((_repo_root() / ".github" / "workflows").glob("*.yml"))
+    assert workflow_paths
+
     forbidden_markers = (
         "harness/scenarios/live/",
         "live_e2e_black_box",
-        "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC",
-        "AIDD_EVAL_CLAUDE_CODE_COMMAND",
-        "AIDD_EVAL_CODEX_COMMAND",
-        "AIDD_EVAL_OPENCODE_COMMAND",
+        "AIDD_EVAL_",
         "OPENAI_API_KEY",
     )
 
-    for relative_path in ci_cd_workflows:
-        workflow_text = (_repo_root() / relative_path).read_text(encoding="utf-8")
+    for workflow_path in workflow_paths:
+        workflow_text = workflow_path.read_text(encoding="utf-8")
         for marker in forbidden_markers:
-            assert marker not in workflow_text, f"{relative_path} contains {marker}"
+            assert marker not in workflow_text, f"{workflow_path.as_posix()} contains {marker}"

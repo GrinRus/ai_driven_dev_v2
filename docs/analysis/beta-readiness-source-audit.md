@@ -1,6 +1,6 @@
 # Beta Readiness Source Audit
 
-Date: 2026-05-21
+Date: 2026-05-22
 
 ## Purpose
 
@@ -13,24 +13,25 @@ Reviewed sources:
 - `docs/product/user-stories.md`
 - `docs/architecture/target-architecture.md`
 - CLI command registration and package metadata
-- CI, security, release, and manual live workflows
+- CI, security, and release workflows
 - maintained live scenario matrix and operator docs
 
 ## Findings
 
 ### README
 
-- The published prerelease and development versions match the package state:
-  `0.1.0a2` is the published prerelease and `main` is `0.1.0a3.dev0`.
+- The release-candidate package version matches the package state: `0.1.0a3`.
+  The last accepted published prerelease evidence before this candidate is `0.1.0a2`.
 - The documented public CLI commands match the registered command surface:
   `doctor`, `init`, `ui`, `stage`, `eval`, and `run`.
 - The removed eval-run product command is not documented as a current product command.
-- The README correctly states that live E2E is manual installed-operator evidence, not CI
-  or release automation.
+- The README correctly states that live E2E is manual local operator audit evidence, not
+  CI/CD, not a release workflow, not GitHub Actions, and not a release gate.
 - The README correctly states that Docker/GHCR is outside the alpha release contract.
 
-Required change: add beta-readiness wording only as a preparation gate, not as a claim that
-AIDD is production-ready or ready for unattended automation.
+Required change: none after this release-prep slice; keep beta-readiness wording as a
+preparation gate, not as a claim that AIDD is production-ready or ready for unattended
+automation.
 
 ### User Stories
 
@@ -69,16 +70,17 @@ command so future smoke refactors do not break source-installed local runs.
 
 ### CI/CD And Manual Live Boundary
 
-- CI and security workflows are deterministic and do not run live E2E.
+- GitHub Actions workflows are deterministic and do not run live E2E.
 - Release workflow publishes and verifies Python package installability only.
-- Manual live E2E remains isolated in the `manual-live-e2e` workflow and local
-  `python -m aidd.harness.live_e2e_black_box` operator path.
+- Manual live E2E remains isolated to the local
+  `uv run python -m aidd.harness.live_e2e_black_box` operator path; there is no GitHub
+  Actions live E2E workflow.
 - `aidd eval doctor` reported execution readiness `pass` for the selected maintained
   manual-live beta evidence pairs: `AIDD-LIVE-002/codex`, `AIDD-LIVE-007/codex`,
   `AIDD-LIVE-007/claude-code`, `AIDD-LIVE-006/opencode`, and `AIDD-LIVE-008/opencode`.
 
-Required change: strengthen release workflow with deterministic lint/type/test evidence
-before publish, and add tests that prevent live E2E from entering CI/CD or release jobs.
+Required change: none after this release-prep slice; workflow-shape tests now prevent live
+E2E from entering any GitHub Actions workflow.
 
 ## Decision
 

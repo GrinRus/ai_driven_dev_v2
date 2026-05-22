@@ -39,12 +39,13 @@ that same project. `aidd init --github-issue <url>` is out of product scope.
 Public GitHub repositories are used by live E2E eval manifests and support evidence,
 not by a product issue-intake command.
 
-For the GitHub Actions manual live lane, Codex and OpenCode use native provider
-commands by default. A runner-available command override secret is optional when
-the operator wants a custom wrapper:
+For local manual live audits, Codex, OpenCode, and Claude Code use native provider
+commands by default. A locally available command override is optional when the operator
+wants a custom wrapper:
 
 - `AIDD_EVAL_CODEX_COMMAND`
 - `AIDD_EVAL_OPENCODE_COMMAND`
+- `AIDD_EVAL_CLAUDE_CODE_COMMAND`
 
 Those values should point to wrapper commands that accept the AIDD adapter flags;
 when they are unset, the harness validates the default native provider command.
@@ -238,10 +239,12 @@ Expected behavior in the current local implementation:
   and terminal document consistency audit.
 - repair retries persist `repair-context.md` in the run attempt directory, which lets
   operators trace the exact validator findings that caused each retry.
-- the GitHub `manual-live-e2e` workflow uses native provider commands by default and forwards
-  runtime-command secrets only when an adapter-compatible wrapper override is needed.
+- live E2E is manual local operator audit evidence, not CI/CD, not a release workflow,
+  not GitHub Actions, and not a release gate.
+- local live E2E uses native provider commands by default and reads runtime-command
+  environment overrides only when an adapter-compatible wrapper override is needed.
 - published-package live evals use `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`, for example
-  `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a2" python -m aidd.harness.live_e2e_black_box ...`;
+  `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a3" uv run python -m aidd.harness.live_e2e_black_box ...`;
   local-wheel live evals require the scenario manifest to live in, or be run from, an
   AIDD source checkout.
 

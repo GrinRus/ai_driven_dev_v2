@@ -6,9 +6,7 @@ from pathlib import Path
 
 from aidd.core.interview import (
     load_questions_document,
-    parse_answers_markdown,
     render_answers_markdown,
-    resolved_question_ids,
 )
 from aidd.core.project_set import ResolvedProjectSet
 from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
@@ -212,16 +210,6 @@ def _read_stage_answers_text(
     return answers_path.read_text(encoding="utf-8")
 
 
-def _resolved_answer_ids_from_text(answers_text: str | None) -> set[str]:
-    if answers_text is None:
-        return set()
-    try:
-        answers = parse_answers_markdown(answers_text)
-    except ValueError:
-        return set()
-    return set(resolved_question_ids(answers=answers))
-
-
 def _restore_operator_owned_answers_after_runtime_attempt(
     *,
     workspace_root: Path,
@@ -248,11 +236,7 @@ def _restore_operator_owned_answers_after_runtime_attempt(
     except FileNotFoundError:
         answers_text_after_attempt = None
 
-    resolved_before = _resolved_answer_ids_from_text(answers_text_before_attempt)
-    resolved_after = _resolved_answer_ids_from_text(answers_text_after_attempt)
     question_ids = {question.question_id for question in questions}
-    runtime_resolved_ids = resolved_after - resolved_before
-    runtime_resolved_question_ids = runtime_resolved_ids & question_ids
     empty_answers_text = render_answers_markdown(())
 
     if answers_text_before_attempt is None:
@@ -262,14 +246,6 @@ def _restore_operator_owned_answers_after_runtime_attempt(
         return
 
     if question_ids and answers_text_after_attempt != answers_text_before_attempt:
-        answers_path.parent.mkdir(parents=True, exist_ok=True)
-        answers_path.write_text(answers_text_before_attempt, encoding="utf-8")
-        return
-
-    preserved_operator_answer_ids = resolved_before & question_ids
-    if not preserved_operator_answer_ids and not runtime_resolved_question_ids:
-        return
-    if answers_text_after_attempt != answers_text_before_attempt:
         answers_path.parent.mkdir(parents=True, exist_ok=True)
         answers_path.write_text(answers_text_before_attempt, encoding="utf-8")
 
