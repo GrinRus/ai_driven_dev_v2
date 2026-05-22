@@ -14,8 +14,8 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 
 ## Alpha status and safety
 
-Current development package version on `main`: `0.1.0a4.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a3`.
+Current release-candidate package version on this branch: `0.1.0a4`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a3`.
 
 AIDD is alpha software for local evaluation and controlled operator trials. It is not
 ready for unattended production automation. AIDD launches external runtime CLIs against a
@@ -54,7 +54,7 @@ Claude Code, Codex, OpenCode, or other runtime CLIs separately.
 Install the latest accepted prerelease:
 
 ```bash
-pipx install "ai-driven-dev-v2==0.1.0a3"
+pipx install "ai-driven-dev-v2==0.1.0a4"
 aidd --version
 aidd doctor
 ```
@@ -64,7 +64,7 @@ aidd doctor
 Install the latest accepted prerelease:
 
 ```bash
-uv tool install "ai-driven-dev-v2==0.1.0a3"
+uv tool install "ai-driven-dev-v2==0.1.0a4"
 aidd --version
 aidd doctor
 ```
@@ -87,8 +87,9 @@ uv run aidd --version
 uv run aidd doctor
 ```
 
-The `v0.1.0a3` release evidence passed PyPI publish plus `pipx` and `uv tool`
-install verification. It is the latest accepted published prerelease evidence.
+The `v0.1.0a4` release evidence must pass PyPI publish plus `pipx` and `uv tool`
+install verification before it is accepted. The latest accepted published prerelease
+evidence before this candidate is `v0.1.0a3`.
 
 ## Run your first local workflow
 
@@ -262,7 +263,7 @@ By default, the evaluator builds a local wheel from the clean tracked source che
 containing the scenario manifest. To test an already published package instead, set:
 
 ```bash
-AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a3" \
+AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a4" \
   uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```
 
