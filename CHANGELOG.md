@@ -7,8 +7,20 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Move `main` to `0.1.0a4.dev0` after accepted `v0.1.0a3` package release
-  evidence.
+- No unreleased changes yet.
+
+## 0.1.0a4 - 2026-05-22
+
+- Prepare the `0.1.0a4` prerelease package for controlled operator trials.
+- Add local operator UI async jobs for workflow and single-stage runs, with polling-based
+  live runtime log chunks and persisted `runtime.log` replay.
+- Align UI selected-stage execution with `aidd stage run <stage>` semantics instead of
+  workflow range execution.
+- Add read-only UI artifact document rendering with safe Markdown Preview/Source modes,
+  including primary stage outputs such as `plan.md`.
+- Clarify UI and CLI question-answer flows: UI writes `[resolved]` answers, while CLI users
+  inspect `aidd stage questions`, edit `answers.md`, and rerun the selected stage.
+- Keep fresh UI work items in a clean empty state before the first run.
 
 ## 0.1.0a3 - 2026-05-22
 
