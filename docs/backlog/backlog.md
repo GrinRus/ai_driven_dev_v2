@@ -6,9 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
+- `W24-E1-S2-T1`
 
 ## Soon
 
+- `W24-E1-S2-T2`
 
 ## Parking lot
 
@@ -93,3 +95,8 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   product command and its monolithic live execution path were removed, manual live
   E2E now uses the stepwise black-box evaluator module, and the active backlog queue
   remains empty.
+- `2026-05-21` Wave 24 opened for beta-readiness release preparation. Completed
+  `W24-E1-S1-T1` through `W24-E1-S1-T4` for source-of-truth audit, deterministic
+  release guardrails, source-installed local smoke path verification, and draft
+  release notes. Promoted `W24-E1-S2-T1` to `Next` and `W24-E1-S2-T2` to `Soon`
+  for manual live evidence refresh outside CI/CD.

@@ -130,7 +130,8 @@ UNSUPPORTED_CLAIM_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 NEGATED_GUARANTEE_CAVEAT_PATTERN = re.compile(
-    r"\b(?:no|not|without)\b[^\n.]{0,80}\bguarantee(?:d|s)?\b",
+    r"\b(?:(?:no|not|without)\b|(?:disclaim(?:s|ed|ing)?|disclaimer\s+of)\b)"
+    r"[^\n.]{0,80}\bguarantee(?:d|s)?\b",
     flags=re.IGNORECASE,
 )
 REVIEW_SPEC_READINESS_PATTERN = re.compile(

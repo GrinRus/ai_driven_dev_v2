@@ -1,7 +1,7 @@
 .PHONY: install lint typecheck test check doctor init-demo build
 
 install:
-	uv sync --extra dev
+	uv sync --locked --extra dev
 
 lint:
 	uv run --extra dev ruff check .

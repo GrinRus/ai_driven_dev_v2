@@ -34,6 +34,11 @@ manifest with explicit acceptance criteria and verification intent.
   verification in Rich/default and `TYPER_USE_RICH=0` modes. The authored task explicitly
   covers false-only boolean declarations so quality review does not leave leading separator
   behavior as a residual follow-up.
+- `AIDD-LIVE-007` uses focused Hono runtime and compose tests plus `tsc --noEmit`
+  through the repository-local `node_modules/.bin` tools installed by scenario setup.
+  The pinned Hono repository's broad `bun test` command currently exercises unrelated
+  runner/runtime surfaces and fails outside the selected non-Error throw task, so it is not
+  a maintained clean-run gate for this medium scenario.
 - `AIDD-LIVE-008` is intentionally `xlarge`; router wildcard semantics are API-sensitive and
   should not be treated as an ordinary large feature.
 - Interview scenarios must keep top-level `interview.required: true` plus authored task
@@ -47,8 +52,9 @@ manifest with explicit acceptance criteria and verification intent.
   fields.
 - Quality scoring now flags heavy repair burden, suspiciously small patches for larger tasks,
   and placeholder documentation examples.
-- Stage briefs now include exact skeleton hints for `stage-result.md` and
-  `validator-report.md` to reduce first-pass contract churn.
+- Stage briefs now include exact skeleton hints for primary stage documents plus
+  richer `stage-result.md` and `validator-report.md` skeletons to reduce first-pass
+  contract churn.
 - Native runtime prompts now make turn completion explicit after the final required
   document write so providers that have already produced valid Markdown artifacts do not
   keep the adapter call open until a stage timeout.

@@ -48,7 +48,11 @@ feature_source:
     - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/stage-result.md
     - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/validator-report.md
     quality_bar: The result must be explicit about code execution risk, covered by tests,
-      and documented without implying a broader security guarantee.
+      and documented without implying a broader security guarantee. When resolved
+      interview answers intentionally select trusted local Python execution and the
+      implementation stays inside that boundary with confirmation, tests, and documentation,
+      the inherent trust requirement is satisfied acceptance context rather than a residual
+      release risk by itself.
     size_rationale: Large because it is a new CLI feature gated by interview decisions
       and requires behavior, tests, and documentation.
     interview:

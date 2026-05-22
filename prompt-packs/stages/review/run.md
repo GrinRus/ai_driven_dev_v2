@@ -19,6 +19,7 @@ findings, the `Findings` section must say exactly `- none` or
   - `../implement/output/validator-report.md`
   - `context/diff-summary.md`
   - `context/acceptance-criteria.md`
+  - `context/verification-output.md` when available
 - optional context when available:
   - `context/repository-state.md`
   - `context/constraints.md`
@@ -62,14 +63,36 @@ normalize if canonical validation proves the terminal status inconsistent.
 3. `must-fix` findings block `approved` status until resolved.
 4. Required changes must map to concrete finding ids when status is conditional or rejected.
 5. Missing/contradictory baseline context must become explicit questions, not silent assumptions.
+6. The selected task, acceptance criteria, and `context/verification-output.md` define the
+   authored verification boundary. Do not convert optional broader checks outside that boundary
+   into `approved-with-conditions` unless they reveal a concrete defect, contradict acceptance
+   criteria, are required by review baseline or release policy, or leave required selected-task
+   verification inconclusive.
+7. Review the complete local workspace change set. Newly created untracked source files under the
+   allowed write scope are part of the AIDD deliverable when repository evidence shows they exist.
+   Do not reject solely because such a file is absent from `git diff --stat`; inspect it and treat
+   it as a changed file unless it is missing, outside scope, undocumented by implementation
+   evidence, or an explicit release policy requires a tracked-only patch artifact.
+8. Intentional design constraints selected by the authored task or resolved interview answers are
+   acceptance context, not findings by themselves. For example, do not write an `accepted-risk`
+   finding solely because the task intentionally executes trusted local Python when the
+   implementation requires explicit confirmation, documents the trust boundary, and stays within
+   the selected scope. Write a finding only for missing mitigation/evidence, broadened scope,
+   contradictory artifacts, or a concrete defect.
+9. In `review-report.md`, write the approval decision as a machine-readable line:
+   `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
+   `Approval status` or `Verdict`, then add rationale separately.
 
 ## Execution instructions
 
-1. Read required `implement` artifacts, diff summary, acceptance criteria, and
-   `contracts/stages/review.md` before drafting outputs.
+1. Read required `implement` artifacts, diff summary, acceptance criteria,
+   `context/verification-output.md` when present, and `contracts/stages/review.md` before
+   drafting outputs.
 2. Do not mark stage `succeeded` when `implement` status is unresolved or validator verdict is
    `fail`.
 3. Draft `review-report.md` with sections for findings, approval decision, and required changes.
+   Put the approval decision on its own line using `- Review status: approved` (or
+   `approved-with-conditions` / `rejected`) before explanatory rationale.
 4. Keep every finding tied to observable evidence from `implementation-report.md` and/or explicit
    acceptance-criteria mismatch. For subsection findings, use this metadata shape:
    - `Severity: low|medium|high|critical|info|none`
@@ -80,7 +103,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    unambiguous for downstream QA.
 6. If contradictions in baseline prevent defensible decision, ask a `[blocking]` question instead
    of forcing approval.
-7. Update `validator-report.md` and `stage-result.md` so verdict, blockers, and next actions match
+7. Keep out-of-boundary exploratory check limitations as non-blocking notes when authored
+   verification and acceptance criteria are clean.
+8. Update `validator-report.md` and `stage-result.md` so verdict, blockers, and next actions match
    the final review decision.
 
 ## Common output skeleton discipline
@@ -97,5 +122,9 @@ normalize if canonical validation proves the terminal status inconsistent.
   or acceptance-criteria mismatch,
 - approval status is explicit and consistent with unresolved `must-fix` findings,
 - required changes map to concrete findings for non-approved outcomes,
+- optional checks outside the authored verification boundary are not treated as approval
+  conditions unless they expose a concrete defect or selected-task evidence gap,
+- intentional selected design constraints are not emitted as `accepted-risk` findings when their
+  required mitigations and evidence are complete,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.

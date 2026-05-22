@@ -191,6 +191,326 @@ def test_build_live_quality_assessment_returns_pass_for_clean_full_flow(tmp_path
     assert [dimension.score for dimension in assessment.dimensions] == [3, 3, 3]
 
 
+def test_build_live_quality_assessment_counts_untracked_touched_files(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-UNTRACKED"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    source_path = repo_root / "src" / "new_feature.py"
+    source_path.parent.mkdir()
+    source_path.write_text("print('ok')\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `src/new_feature.py` - add the selected behavior for route `/**` "
+        "without changing `/*`.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert assessment.blocking_findings == tuple()
+
+
+def test_build_live_quality_assessment_ignores_route_snippets_in_touched_files(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-ROUTE-SNIPPETS"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    source_path = repo_root / "src" / "router.ts"
+    source_path.parent.mkdir()
+    source_path.write_text("export const ok = true\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `src/router.ts` - normalized `/**` to `/*` before the "
+        "`path === '/*'` shortcut.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert assessment.blocking_findings == tuple()
+
+
+def test_build_live_quality_assessment_ignores_function_call_tokens_in_touched_files(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-FUNCTION-CALL-SNIPPETS"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    source_path = repo_root / "sqlite_utils" / "cli.py"
+    source_path.parent.mkdir()
+    source_path.write_text("print('ok')\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `sqlite_utils/cli.py` - integrated Python rows while bypassing "
+        "`io.TextIOWrapper(file)` when generated rows are provided.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert assessment.blocking_findings == tuple()
+
+
+def test_build_live_quality_assessment_normalizes_touched_file_line_suffix(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-TOUCHED-LINE-SUFFIX"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    source_path = repo_root / "src" / "router.ts"
+    source_path.parent.mkdir()
+    source_path.write_text("export const ok = true\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "  - `src/router.ts:12` - normalize `/**` to `/*`.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert assessment.blocking_findings == tuple()
+
+
+def test_build_live_quality_assessment_ignores_url_tokens_in_touched_files(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-TOUCHED-URL"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `https://example.com:443/docs` - cited compatibility reference, not a file.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert assessment.blocking_findings == tuple()
+
+
+def test_build_live_quality_assessment_fails_when_touched_files_lack_diff_evidence(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-TOUCHED-MISMATCH"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `src/missing.py` - claimed source change.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "fail"
+    assert assessment.dimensions[2].score == 0
+    assert any(
+        "no matching repository change evidence" in finding
+        for finding in assessment.blocking_findings
+    )
+
+
+def test_build_live_quality_assessment_fails_on_repository_change_collection_error(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-GIT-ERROR"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `src/router.ts` - claimed source change.\n",
+        encoding="utf-8",
+    )
+
+    def raise_os_error(*_args: object, **_kwargs: object) -> None:
+        raise OSError("git unavailable")
+
+    monkeypatch.setattr(subprocess, "run", raise_os_error)
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "fail"
+    assert assessment.dimensions[2].score == 0
+    assert any(
+        "repository change collection failed" in finding
+        for finding in assessment.blocking_findings
+    )
+    assert not any(
+        "no matching repository change evidence" in finding
+        for finding in assessment.blocking_findings
+    )
+
+
 def test_build_live_quality_assessment_returns_warn_for_bounded_quality_risks(
     tmp_path: Path,
 ) -> None:
@@ -273,6 +593,83 @@ def test_build_live_quality_assessment_accepts_contract_verdict_and_bold_evidenc
         assessment.blocking_findings
     )
     assert [dimension.score for dimension in assessment.dimensions] == [3, 2, 1]
+
+
+def test_build_live_quality_assessment_accepts_verdict_prefix_with_rationale(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-VERDICT-PREFIX"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    review_root = stage_output_root(root=tmp_path, work_item=work_item, stage="review")
+    review_root.joinpath("review-report.md").write_text(
+        "# Review Report\n\n"
+        "## Verdict\n\n"
+        "- approved. The implementation satisfies the selected acceptance criteria.\n\n"
+        "## Findings\n\n"
+        "- none\n\n"
+        "## Required follow-up\n\n"
+        "- none\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.review_status == "approved"
+    assert assessment.gate == "pass"
+    assert "review approval status is missing from review-report.md" not in (
+        assessment.blocking_findings
+    )
+
+
+def test_build_live_quality_assessment_accepts_quality_verdict_label(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-QA-LABEL"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    qa_root = stage_output_root(root=tmp_path, work_item=work_item, stage="qa")
+    qa_root.joinpath("qa-report.md").write_text(
+        "# QA Report\n\n"
+        "## Verification summary\n\n"
+        "- Quality verdict: ready.\n"
+        "- Required verification passed.\n\n"
+        "## Evidence\n\n"
+        "- EV-1: `verify-transcript.json` records passing checks.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.qa_verdict == "ready"
+    assert assessment.gate == "pass"
+    assert "QA verdict is missing from qa-report.md" not in assessment.blocking_findings
 
 
 def test_build_live_quality_assessment_scores_flow_fidelity_independently(

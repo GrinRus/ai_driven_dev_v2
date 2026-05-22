@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from aidd.core.markdown import extract_required_sections_from_document_contract
 from aidd.core.project_set import ResolvedProjectSet, persist_project_set_context
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
@@ -83,28 +84,80 @@ _VALIDATOR_REPORT_SKELETON = """```md
 - Repair required: `<yes|no>`
 ```"""
 
+_COMMON_OUTPUT_SKELETONS = {
+    "stage-result.md": _STAGE_RESULT_SKELETON,
+    "validator-report.md": _VALIDATOR_REPORT_SKELETON,
+}
+_SKIPPED_CONTRACT_SKELETONS = {"answers.md", "questions.md"}
 
-def _append_common_output_skeletons(
+
+def _document_title_from_name(document_name: str) -> str:
+    words = Path(document_name).stem.split("-")
+    return " ".join("QA" if word == "qa" else word.capitalize() for word in words)
+
+
+def _contract_output_skeleton(
+    *,
+    document_name: str,
+    contracts_root: Path,
+) -> str | None:
+    if (
+        document_name in _COMMON_OUTPUT_SKELETONS
+        or document_name in _SKIPPED_CONTRACT_SKELETONS
+    ):
+        return None
+
+    document_contract_path = contracts_root.parent / "documents" / document_name
+    if not document_contract_path.exists():
+        return None
+
+    required_sections = extract_required_sections_from_document_contract(
+        document_contract_path.read_text(encoding="utf-8")
+    )
+    if not required_sections:
+        return None
+
+    lines = ["```md", f"# {_document_title_from_name(document_name)}", ""]
+    for section in required_sections:
+        lines.extend((f"## {section}", "", "- <replace with stage-specific content>", ""))
+    lines.append("```")
+    return "\n".join(lines)
+
+
+def _append_output_skeletons(
     *,
     lines: list[str],
     expected_output_documents: tuple[str, ...],
+    contracts_root: Path,
 ) -> None:
     expected_names = {Path(path).name for path in expected_output_documents}
-    if not {"stage-result.md", "validator-report.md"} & expected_names:
+    skeletons: list[tuple[str, str]] = []
+    for document_name in sorted(expected_names):
+        common_skeleton = _COMMON_OUTPUT_SKELETONS.get(document_name)
+        if common_skeleton is not None:
+            skeletons.append((document_name, common_skeleton))
+            continue
+
+        contract_skeleton = _contract_output_skeleton(
+            document_name=document_name,
+            contracts_root=contracts_root,
+        )
+        if contract_skeleton is not None:
+            skeletons.append((document_name, contract_skeleton))
+
+    if not skeletons:
         return
 
     lines.extend(
         [
             "",
-            "# Required common output skeletons",
+            "# Required output skeletons",
             "",
-            "Use these exact section headings when writing the common output documents.",
+            "Use these exact section headings when writing these output documents.",
         ]
     )
-    if "stage-result.md" in expected_names:
-        lines.extend(["", "## `stage-result.md`", "", _STAGE_RESULT_SKELETON])
-    if "validator-report.md" in expected_names:
-        lines.extend(["", "## `validator-report.md`", "", _VALIDATOR_REPORT_SKELETON])
+    for document_name, skeleton in skeletons:
+        lines.extend(["", f"## `{document_name}`", "", skeleton])
 
 
 def render_stage_brief(
@@ -115,6 +168,7 @@ def render_stage_brief(
     expected_output_documents: tuple[str, ...],
     project_set: ResolvedProjectSet | None = None,
     project_set_context_path: str | None = None,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> str:
     lines = [
         "# Stage",
@@ -149,9 +203,10 @@ def render_stage_brief(
         )
     lines.extend(["", "# Expected output documents", ""])
     lines.extend(f"- `{path}`" for path in expected_output_documents)
-    _append_common_output_skeletons(
+    _append_output_skeletons(
         lines=lines,
         expected_output_documents=expected_output_documents,
+        contracts_root=contracts_root,
     )
     lines.append("")
     return "\n".join(lines)
@@ -202,6 +257,7 @@ def prepare_stage_bundle(
             if project_set_context_path is None
             else workspace_relative_paths(workspace_root, (project_set_context_path,))[0]
         ),
+        contracts_root=contracts_root,
     )
     return StagePreparationBundle(
         stage=stage,

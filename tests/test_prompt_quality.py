@@ -73,6 +73,77 @@ def test_review_prompts_make_finding_evidence_reference_explicit() -> None:
     assert "if no such evidence exists, mark the finding `invalid` or remove it" in repair_prompt
 
 
+def test_review_prompt_requires_machine_readable_status_line() -> None:
+    run_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
+
+    assert "write the approval decision as a machine-readable line" in run_prompt
+    assert "- Review status: approved" in run_prompt
+
+
+def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
+    run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+
+    assert "quality decision on its own machine-readable line" in run_prompt
+    assert "- QA verdict: ready" in run_prompt
+
+
+def test_review_prompt_respects_authored_verification_boundary() -> None:
+    run_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/review/system.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "`context/verification-output.md` define the" in run_prompt
+    assert "Do not convert optional broader checks outside that boundary" in run_prompt
+    assert "Keep out-of-boundary exploratory check limitations as non-blocking notes" in (
+        run_prompt
+    )
+    assert "do not make approval conditional only because an optional broader check" in (
+        system_prompt
+    )
+    assert "intentional design constraint selected by the authored task" in system_prompt
+    assert "not findings by themselves" in run_prompt
+    assert "do not write an `accepted-risk`" in run_prompt
+
+
+def test_qa_prompt_respects_selected_design_constraints() -> None:
+    run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/qa/system.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Intentional design constraints selected by the authored task" in run_prompt
+    assert "not residual release risks by themselves" in run_prompt
+    assert "trusted local code execution is `ready`" in run_prompt
+    assert "Do not preserve `ready-with-risks` only because" in repair_prompt
+    assert "do not downgrade solely for an intentional design constraint" in system_prompt
+
+
+def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes() -> None:
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_system_prompt = Path("prompt-packs/stages/review/system.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "newly created untracked source files" in implement_prompt
+    assert "the deliverable is the" in implement_prompt
+    assert "local workspace state, not a tracked-only patch" in implement_prompt
+    assert "Newly created untracked source files under the" in review_prompt
+    assert "allowed write scope are part of the AIDD deliverable" in review_prompt
+    assert "Do not reject solely because such a file is absent from `git diff --stat`" in (
+        review_prompt
+    )
+    assert "do not reject a change solely because a newly created file is untracked" in (
+        review_system_prompt
+    )
+
+
 def test_review_spec_prompts_require_exact_decision_heading() -> None:
     run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
         encoding="utf-8"

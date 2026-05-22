@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from aidd.core.markdown import (
+    MarkdownSectionIndex,
+    extract_inline_code_tokens,
+)
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
+from aidd.evals.repository_changes import RepositoryChanges, collect_repository_changes
 from aidd.harness.runner import HarnessQualityResult
 from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask
 
@@ -54,6 +59,8 @@ class LiveQualityEvidence:
     evidence_reference_count: int
     repair_attempt_count: int
     changed_file_count: int | None
+    repository_change_errors: tuple[str, ...]
+    touched_file_mismatches: tuple[str, ...]
     weak_doc_example_count: int
 
 
@@ -88,13 +95,31 @@ def _normalized_status_line_value(line: str) -> str:
     normalized = normalized.replace("**", "")
     normalized = normalized.strip("` \t.")
     label_match = re.match(
-        r"^(?:review status|approval status|qa verdict|verdict|status)\s*:\s*(?P<value>.+)$",
+        r"^(?:review status|approval status|qa verdict|quality verdict|verdict|status)"
+        r"\s*:\s*(?P<value>.+)$",
         normalized,
         flags=re.IGNORECASE,
     )
     if label_match is not None:
         normalized = label_match.group("value").strip("` \t.")
     return normalized.lower()
+
+
+def _status_value_from_normalized_line(
+    normalized: str,
+    *,
+    allowed: tuple[str, ...],
+    allow_leading_token: bool,
+) -> str | None:
+    allowed_by_length = sorted(allowed, key=len, reverse=True)
+    for value in allowed_by_length:
+        if normalized == value:
+            return value
+        if allow_leading_token and normalized.startswith(value):
+            suffix = normalized[len(value) :]
+            if suffix and suffix[0] in ".:;,-":
+                return value
+    return None
 
 
 def _extract_markdown_status_value(
@@ -109,7 +134,6 @@ def _extract_markdown_status_value(
     if text is None:
         return None
 
-    allowed_by_length = sorted(allowed, key=len, reverse=True)
     in_target_section = False
     for raw_line in text.splitlines():
         stripped = raw_line.strip()
@@ -121,9 +145,13 @@ def _extract_markdown_status_value(
             continue
 
         normalized = _normalized_status_line_value(stripped)
-        for value in allowed_by_length:
-            if normalized == value:
-                return value
+        status_value = _status_value_from_normalized_line(
+            normalized,
+            allowed=allowed,
+            allow_leading_token=in_target_section,
+        )
+        if status_value is not None:
+            return status_value
         if in_target_section:
             return None
     return None
@@ -182,21 +210,84 @@ def _git_output(*, repo_root: Path, args: tuple[str, ...]) -> str | None:
     return completed.stdout
 
 
-def _changed_repository_files(workspace_root: Path) -> tuple[str, ...] | None:
+def _repository_changes_from_workspace(workspace_root: Path) -> RepositoryChanges | None:
     repo_root = _repo_root_from_workspace(workspace_root)
     if repo_root is None:
         return None
-    output = _git_output(repo_root=repo_root, args=("diff", "--name-only", "HEAD", "--"))
-    if output is None:
+    if not (repo_root / ".git").exists():
         return None
+    return collect_repository_changes(repo_root)
+
+
+def _implementation_report_touched_files(report_text: str | None) -> tuple[str, ...]:
+    if report_text is None:
+        return tuple()
+    section_index = MarkdownSectionIndex.from_markdown(report_text)
+    match = section_index.first_match(("Touched files",))
+    if match is None:
+        return tuple()
+
+    section_text = section_index.section_content(match[0])
+    paths: list[str] = []
+    for raw_line in section_text.splitlines():
+        line = raw_line.lstrip()
+        if not line.startswith("- "):
+            continue
+        tokens = extract_inline_code_tokens(line)
+        if not tokens:
+            continue
+        normalized = _normalize_reported_touched_file(tokens[0])
+        if normalized is None:
+            continue
+        paths.append(normalized)
+    return tuple(dict.fromkeys(paths))
+
+
+def _normalize_reported_touched_file(path_text: str) -> str | None:
+    normalized = path_text.removeprefix("./").strip()
+    line_suffix_match = re.match(r"^(?P<path>.+?):\d+(?::\d+)?$", normalized)
+    if line_suffix_match is not None:
+        normalized = line_suffix_match.group("path")
+    if not _looks_like_reported_touched_file(normalized):
+        return None
+    return normalized
+
+
+def _looks_like_reported_touched_file(path_text: str) -> bool:
+    if (
+        not path_text
+        or path_text.startswith("/")
+        or path_text.startswith(".aidd/")
+        or "://" in path_text
+        or any(char.isspace() for char in path_text)
+        or any(char in path_text for char in "()")
+        or "'" in path_text
+        or '"' in path_text
+    ):
+        return False
+    return "/" in path_text or "." in Path(path_text).name
+
+
+def _touched_file_mismatches(
+    *,
+    changed_files: tuple[str, ...] | None,
+    implementation_report_text: str | None,
+) -> tuple[str, ...]:
+    if changed_files is None:
+        return tuple()
+    changed_set = {path.removeprefix("./") for path in changed_files}
     return tuple(
-        line.strip()
-        for line in output.splitlines()
-        if line.strip() and not line.strip().startswith(".aidd/")
+        path
+        for path in _implementation_report_touched_files(implementation_report_text)
+        if path not in changed_set
     )
 
 
-def _count_weak_doc_examples(workspace_root: Path) -> int:
+def _count_weak_doc_examples(
+    workspace_root: Path,
+    *,
+    repository_changes: RepositoryChanges | None = None,
+) -> int:
     repo_root = _repo_root_from_workspace(workspace_root)
     if repo_root is None:
         return 0
@@ -204,8 +295,6 @@ def _count_weak_doc_examples(workspace_root: Path) -> int:
         repo_root=repo_root,
         args=("diff", "--", "*.md", "docs", "README.md"),
     )
-    if not output:
-        return 0
     weak_patterns = (
         "https://example.org",
         "https://example.com",
@@ -214,8 +303,24 @@ def _count_weak_doc_examples(workspace_root: Path) -> int:
         "placeholder",
         "todo",
     )
-    normalized = output.lower()
-    return sum(normalized.count(pattern) for pattern in weak_patterns)
+    normalized = (output or "").lower()
+    weak_count = sum(normalized.count(pattern) for pattern in weak_patterns)
+    if not (repo_root / ".git").exists():
+        return weak_count
+
+    changes = repository_changes or collect_repository_changes(repo_root)
+    for path_text in changes.untracked_files:
+        path = repo_root / path_text
+        if path.suffix.lower() != ".md" and path.name.lower() != "readme.md":
+            continue
+        if not (path_text.startswith("docs/") or path.name.lower() == "readme.md"):
+            continue
+        text = _read_text_if_exists(path)
+        if text is None:
+            continue
+        lowered = text.lower()
+        weak_count += sum(lowered.count(pattern) for pattern in weak_patterns)
+    return weak_count
 
 
 def _count_repair_attempt_signals(*, workspace_root: Path, work_item: str) -> int:
@@ -268,9 +373,23 @@ def _collect_live_quality_evidence(
         work_item=work_item,
         stage="qa",
     ) / "qa-report.md"
+    implementation_report_path = workspace_stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    ) / "implementation-report.md"
     review_report_text = _read_text_if_exists(review_report_path)
     qa_report_text = _read_text_if_exists(qa_report_path)
-    changed_files = _changed_repository_files(workspace_root)
+    implementation_report_text = _read_text_if_exists(implementation_report_path)
+    repository_changes = _repository_changes_from_workspace(workspace_root)
+    repository_change_errors = (
+        tuple() if repository_changes is None else repository_changes.command_errors
+    )
+    changed_files = (
+        None
+        if repository_changes is None or repository_change_errors
+        else repository_changes.changed_files
+    )
     return LiveQualityEvidence(
         missing_stage_paths=missing_stage_paths,
         review_status=_extract_markdown_status_value(
@@ -290,7 +409,15 @@ def _collect_live_quality_evidence(
             work_item=work_item,
         ),
         changed_file_count=None if changed_files is None else len(changed_files),
-        weak_doc_example_count=_count_weak_doc_examples(workspace_root),
+        repository_change_errors=repository_change_errors,
+        touched_file_mismatches=_touched_file_mismatches(
+            changed_files=changed_files,
+            implementation_report_text=implementation_report_text,
+        ),
+        weak_doc_example_count=_count_weak_doc_examples(
+            workspace_root,
+            repository_changes=repository_changes,
+        ),
     )
 
 
@@ -330,6 +457,17 @@ def _blocking_findings_for_live_quality(
         blocking_findings.append(
             "documentation examples include placeholder or non-runnable example endpoints "
             f"({evidence.weak_doc_example_count})"
+        )
+    if evidence.repository_change_errors:
+        blocking_findings.append(
+            "repository change collection failed: "
+            + "; ".join(evidence.repository_change_errors[:3])
+        )
+    if evidence.touched_file_mismatches:
+        preview = ", ".join(evidence.touched_file_mismatches[:4])
+        blocking_findings.append(
+            "implementation report lists touched files with no matching repository change "
+            f"evidence ({preview})"
         )
     return blocking_findings
 
@@ -422,13 +560,16 @@ def _score_code_quality(
         quality_error is not None
         or evidence.unresolved_must_fix_count > 0
         or evidence.qa_verdict == "not-ready"
+        or evidence.repository_change_errors
+        or evidence.touched_file_mismatches
     ):
         return QualityDimensionScore(
             name="code_quality",
             score=0,
             rationale=(
-                "Quality checks failed or review/QA evidence says the code result "
-                "is not ready."
+                "Quality checks failed, review/QA evidence says the code result "
+                "is not ready, repository change evidence could not be collected, "
+                "or implementation file claims do not match repository change evidence."
             ),
         )
     suspiciously_small = (

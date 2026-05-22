@@ -62,6 +62,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    boundary. Do not downgrade to `ready-with-risks` or `proceed-with-conditions` only because
    optional broader checks outside that boundary were not run or were blocked by local sandbox
    policy, unless they reveal a concrete defect or contradict acceptance criteria/review evidence.
+7. Intentional design constraints selected by the authored task or resolved interview answers are
+   not residual release risks by themselves. For example, trusted local code execution is `ready`
+   when explicit confirmation, documentation, tests, and scope boundaries required by the selected
+   task are complete. Downgrade only for missing mitigation/evidence, broadened scope, contradictory
+   review/verification artifacts, or a concrete defect beyond the selected boundary.
 
 ## Execution instructions
 
@@ -71,6 +76,8 @@ normalize if canonical validation proves the terminal status inconsistent.
    to separate required scenario evidence from optional exploratory checks.
 3. Build `qa-report.md` with these exact H2 sections:
    `Verification summary`, `Release recommendation`, `Evidence`, `Known issues`, and `Readiness`.
+   Put the quality decision on its own machine-readable line near the top, for example
+   `- QA verdict: ready` (or `ready-with-risks` / `not-ready`), then add rationale separately.
 4. In `Release recommendation`, put exactly one supported state on its own bullet:
    `proceed`, `proceed-with-conditions`, or `hold`.
 5. In `Evidence`, label material evidence entries as `EV-1`, `EV-2`, ... and include command
@@ -103,4 +110,6 @@ normalize if canonical validation proves the terminal status inconsistent.
 - unresolved critical uncertainty is surfaced as blocking question with `hold`,
 - optional checks outside the authored verification boundary are not treated as release
   conditions unless they expose a concrete defect,
+- intentional selected design constraints are not treated as residual risks when their required
+  mitigations and evidence are complete,
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.

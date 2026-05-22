@@ -94,6 +94,8 @@ What it measures:
 - implement-stage audit records changed files, diff summary, and whether
   implementation-report verification claims are backed by executable/check
   evidence or explicit `not-run:` reasons.
+- implement-stage audit includes both tracked diffs and untracked target-repository
+  files so runtime-authored touched-file claims cannot hide new files.
 - documentation examples avoid placeholder or non-runnable endpoints presented as runnable.
 - optional broader checks outside the authored task's verification boundary do not become
   release conditions unless they expose a concrete defect or contradict acceptance criteria.
@@ -109,7 +111,7 @@ Interpretation:
 
 - `quality_gate = fail` when any quality command fails, any dimension score is `0`, review leaves unresolved `must-fix` findings, or QA verdict is `not-ready`.
 - `quality_gate = warn` when execution passed but review is `approved-with-conditions`, QA is `ready-with-risks`, or any dimension score is `1`.
-- `quality_gate = pass` only when all dimensions are `2` or higher, review is `approved`, QA is `ready` or `ready-with-risks`, and all quality commands pass.
+- `quality_gate = pass` only when all dimensions are `2` or higher, review is `approved`, QA is `ready`, and all quality commands pass.
 
 ## Quality verdict
 

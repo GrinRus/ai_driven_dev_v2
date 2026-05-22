@@ -5546,7 +5546,7 @@ Primary outputs:
   `operator-actions.jsonl`
 - operator action request artifacts for blocking questions
 - live manifest `live_flow` contract
-- manual workflow and local skill entrypoint using the evaluator module
+- local skill entrypoint using the evaluator module
 - removed product eval-run command and legacy runner compatibility path
 
 Touched areas:
@@ -5554,7 +5554,7 @@ Touched areas:
 - `src/aidd/cli/`
 - `src/aidd/harness/`
 - `harness/scenarios/live/`
-- `.github/workflows/manual-live-e2e.yml`
+- `.github/workflows/`
 - `.agents/skills/`
 - `docs/`
 - `tests/`
@@ -5575,8 +5575,9 @@ Evidence:
   patch modules were removed.
 - Live manifests now declare `live_flow.driver: stepwise-black-box`,
   `checkpoint_policy: after-each-step`, and explicit answer policy.
-- `.github/workflows/manual-live-e2e.yml` invokes
-  `uv run python -m aidd.harness.live_e2e_black_box`.
+- Local live documentation and skills invoke
+  `uv run python -m aidd.harness.live_e2e_black_box`; GitHub Actions workflows no
+  longer expose a live E2E entrypoint.
 - Focused and full local gates passed on 2026-05-18:
   `uv run --extra dev ruff check .`,
   `uv run --extra dev python -m mypy src`,
@@ -5587,3 +5588,108 @@ Exit evidence:
 - no live docs, skills, or manual workflow instruct operators to run the legacy eval-run command;
 - live E2E remains manual-only and outside CI/release gates;
 - final audit artifacts are derived from per-step black-box evidence.
+
+## Wave 24 — beta readiness release preparation (`next`)
+
+Goal: prepare AIDD for controlled operator-trial beta readiness without claiming unattended
+production automation and without wiring live E2E into CI/CD or release workflows.
+
+### Epic W24-E1 — source-of-truth and release guardrail closure (`next`)
+Linked stories: `US-01`, `US-07`, `US-09`, `US-10`, `US-11`, `US-12`
+
+#### Slice W24-E1-S1 — beta release-prep source audit (`done`)
+Goal: prove README, user stories, target architecture, release process, and local smoke
+evidence agree with the current code before release materials are prepared.
+
+Primary outputs:
+
+- beta-readiness source audit
+- deterministic release workflow quality gate
+- CI/CD guardrails that exclude live E2E
+- source-installed local-project smoke verification
+- draft `v0.1.0a3` release notes
+
+Touched areas:
+
+- `README.md`
+- `docs/analysis/`
+- `docs/architecture/`
+- `docs/release-checklist.md`
+- `.github/workflows/`
+- `harness/scenarios/`
+- `tests/`
+
+Dependencies:
+
+- `W23-E1-S1`
+
+Local tasks:
+
+- `W24-E1-S1-T1` (done) Audit README, user stories, and target architecture against the
+  current CLI, package, workflow, runtime, and artifact behavior.
+- `W24-E1-S1-T2` (done) Add deterministic release quality checks and locked local install
+  commands while preserving the manual-only live E2E boundary.
+- `W24-E1-S1-T3` (done) Verify the source-installed local-project smoke fixture runtime
+  path and cover the workspace-relative command with scenario-loader regression checks.
+- `W24-E1-S1-T4` (done) Prepare draft `v0.1.0a3` release notes without creating a tag or
+  publishing artifacts.
+
+Evidence:
+
+- `docs/analysis/beta-readiness-source-audit.md` records the README, user-story, target
+  architecture, workflow, runtime, and live-boundary audit.
+- `.github/workflows/release.yml` now runs deterministic lint, typecheck, and tests on
+  Python 3.12, 3.13, and 3.14 before package build and publish jobs.
+- `Makefile install` now uses `uv sync --locked --extra dev`.
+- `tests/test_release_workflow.py` and `tests/test_security_configuration.py` prevent live
+  E2E commands, provider secrets, live manifests, and live evaluator invocation from
+  entering CI/CD or release workflows.
+- `harness/scenarios/smoke/installed-local-project-fixture.yaml` and the project-set
+  deterministic scenario keep the `generic-cli` runtime command workspace-relative from
+  `.aidd/` to the fixture root, and tests now lock that behavior.
+- A source-installed local-project smoke passed on 2026-05-21 against a disposable
+  `harness/fixtures/minimal-python` copy, covering `doctor`, `init`, bounded
+  `run idea->plan`, `run show`, `run logs`, `run artifacts`, and `stage questions`.
+- `docs/release-notes-v0.1.0a3-draft.md` is a release-note draft only; tag creation and PyPI
+  publishing still require explicit operator approval.
+
+Exit evidence:
+
+- deterministic local gates pass;
+- package build succeeds into a temp directory;
+- live E2E remains manual-only and outside CI/CD/release workflows;
+- release materials are prepared without changing the public alpha safety claim.
+
+#### Slice W24-E1-S2 — manual live beta evidence refresh (`planned`)
+Goal: refresh maintained manual live E2E evidence for the beta-readiness provider matrix
+outside CI/CD and release automation.
+
+Primary outputs:
+
+- uncommitted live stabilization ledger updates under `.aidd/reports/evals/`
+- operator-authored overlays for terminal live runs
+- explicit external blockers for provider/auth/network/setup failures
+
+Touched areas:
+
+- `.aidd/reports/evals/` local evidence only
+- `src/`, `tests/`, `docs/`, `contracts/`, `prompt-packs/`, or `harness/scenarios/` only
+  if a live run proves an AIDD-owned defect
+
+Dependencies:
+
+- `W24-E1-S1`
+
+Local tasks:
+
+- `W24-E1-S2-T1` (planned) Refresh medium-plus manual live evidence for `codex`,
+  `claude-code`, and `opencode` using maintained live manifests outside CI/CD.
+- `W24-E1-S2-T2` (planned) Apply evidence-backed AIDD fixes discovered by the manual live
+  refresh and commit each verified fix separately.
+
+Exit evidence:
+
+- counted clean manual live runs or explicit external blockers are recorded in the local
+  operator ledger;
+- no live evidence artifact, target repository diff, provider log, or temp work root is
+  committed.

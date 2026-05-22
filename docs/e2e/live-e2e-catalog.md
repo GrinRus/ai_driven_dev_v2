@@ -14,7 +14,8 @@ That makes live E2E different from the deterministic lanes:
 - deterministic stage and workflow scenarios prove repo-local invariants quickly;
 - manual live E2E proves installed-CLI full-flow behavior on a pinned public repository.
 
-Live E2E is no longer part of CI or release automation. It is a manual external-audit lane only.
+Live E2E is manual local operator audit evidence only. It is not CI/CD, not a release
+workflow, not GitHub Actions, and not a release gate.
 
 ## Canonical Execution Model
 
@@ -48,7 +49,7 @@ itself, and it is not a merge gate. The source checkout is read only during loca
 snapshot/build preparation, while durable evidence is written to
 `<report-root>/<run_id>`; the default report root is `.aidd/reports/evals`.
 To test an already published package, set `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` to the
-exact package spec, for example `ai-driven-dev-v2==0.1.0a2`; published-package mode
+exact package spec, for example `ai-driven-dev-v2==0.1.0a3`; published-package mode
 must not require a source checkout root.
 
 The local operator UI has a separate E2E evidence lane in
@@ -63,22 +64,28 @@ They are not the supported local operator intake path. The product does not expo
 operators initialize work items from the target project root with
 `aidd init --work-item <id> --root .aidd`.
 
-## Manual-Only Automation Policy
+## Manual-Only Local Audit Policy
 
 - `automation_lane` for every live scenario is `manual`.
-- The only supported automation entrypoint is `.github/workflows/manual-live-e2e.yml`,
-  which invokes the black-box evaluator module instead of a product CLI command.
-- That workflow supports optional GitHub secret overrides for custom wrapper
-  commands:
+- The only supported execution entrypoint is a local operator command that invokes the
+  black-box evaluator module from a prepared source checkout, for example:
+
+```bash
+uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
+```
+
+- Local runs may use optional environment variable overrides for custom wrapper commands:
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`
   - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
-- When no override is set, the evaluator validates the default native provider
-  command on the runner before cloning or installing artifacts.
-- Secret override values must point to runner-available wrapper commands that
-  accept the AIDD adapter contract flags.
-- CI must not reference `harness/scenarios/live/`.
-- Release automation must not run live scenarios or require live-eval artifacts.
+- When no override is set, the evaluator validates the default native provider command
+  locally before cloning or installing artifacts.
+- Override values must point to locally available wrapper commands that accept the AIDD
+  adapter contract flags.
+- GitHub Actions workflows must not reference `harness/scenarios/live/`.
+- GitHub Actions workflows must not invoke `live_e2e_black_box`, require provider
+  credentials, or use live-eval artifacts.
+- CI/CD and release automation must not run live scenarios or require live-eval artifacts.
 - Live manifests must declare `live_flow.driver: stepwise-black-box`,
   `live_flow.checkpoint_policy: after-each-step`, and
   `live_flow.frontend_checkpoints: true` so every live run inspects the public

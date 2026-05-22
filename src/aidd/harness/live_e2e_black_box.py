@@ -17,6 +17,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+from aidd.core.markdown import MarkdownSectionIndex
 from aidd.core.stages import STAGES
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.evals.quality import (
@@ -25,6 +26,7 @@ from aidd.evals.quality import (
     write_live_quality_report_markdown,
 )
 from aidd.evals.reporting import build_scenario_summary_row, write_eval_summary_markdown
+from aidd.evals.repository_changes import collect_repository_changes
 from aidd.evals.stage_timing import (
     build_stage_timing_payload,
     render_repair_history_markdown,
@@ -100,6 +102,13 @@ from aidd.harness.runner import (
     run_verification_steps,
 )
 from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask, load_scenario
+from aidd.validators.semantic_rules.blocks import extract_implementation_verification_blocks
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_ARTIFACT_REFERENCE_PATTERN,
+    IMPLEMENT_RESULT_PATTERN,
+    has_implementation_command_evidence,
+    is_deferred_implementation_verification,
+)
 
 FlowAction = Literal[
     "install",
@@ -1790,46 +1799,37 @@ def _inspection_runtime_log_visible(
     return False
 
 
-def _git_output_or_note(*, working_copy: Path, args: tuple[str, ...]) -> str:
-    completed = subprocess.run(
-        ("git", *args),
-        cwd=working_copy,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if completed.returncode == 0:
-        return completed.stdout.strip()
-    return f"git command failed: {(completed.stderr or completed.stdout).strip()}"
-
-
 def _implementation_verification_evidence_shape(report_text: str) -> dict[str, object]:
-    lines = [line.strip() for line in report_text.splitlines() if line.strip()]
-    evidence_markers = (
-        "-> exit 0",
-        "exit 0",
-        "exit code",
-        "-> pass",
-        "passed in",
-        "all checks passed",
-        "not-run:",
-        "captured assertion",
-        "artifact path",
+    section_index = MarkdownSectionIndex.from_markdown(report_text)
+    verification_match = section_index.first_match(("Verification", "Verification notes"))
+    verification_text = (
+        report_text
+        if verification_match is None
+        else section_index.section_content(verification_match[0])
     )
-    backed_lines = [
-        line
-        for line in lines
-        if any(marker in line.lower() for marker in evidence_markers)
-    ]
-    outcome_claims = [
-        line
-        for line in lines
-        if any(token in line.lower() for token in ("passed", "verified", "complete", "green"))
-    ]
+    verification_items = extract_implementation_verification_blocks(verification_text)
+    if not verification_items:
+        verification_items = tuple(
+            line.strip() for line in verification_text.splitlines() if line.strip()
+        )
+
+    backed_items = []
+    outcome_claims = []
+    for item in verification_items:
+        has_result_reference = IMPLEMENT_RESULT_PATTERN.search(item) is not None
+        has_command_reference = has_implementation_command_evidence(item)
+        has_artifact_reference = IMPLEMENT_ARTIFACT_REFERENCE_PATTERN.search(item) is not None
+        is_deferred = is_deferred_implementation_verification(item)
+        if has_result_reference:
+            outcome_claims.append(item)
+        if is_deferred or (
+            has_result_reference and (has_command_reference or has_artifact_reference)
+        ):
+            backed_items.append(item)
     return {
-        "backed_evidence_line_count": len(backed_lines),
+        "backed_evidence_line_count": len(backed_items),
         "outcome_claim_line_count": len(outcome_claims),
-        "has_executable_or_not_run_evidence": bool(backed_lines),
+        "has_executable_or_not_run_evidence": bool(backed_items),
     }
 
 
@@ -1860,21 +1860,13 @@ def _write_stage_audit(
             if primary_path is None
             else _read_text_if_exists(primary_path)
         )
-        changed_files_text = _git_output_or_note(
-            working_copy=working_copy,
-            args=("diff", "--name-only", "HEAD", "--", "."),
-        )
-        changed_files = [
-            item
-            for item in changed_files_text.splitlines()
-            if item.strip() and not item.strip().startswith(".aidd/")
-        ]
+        repository_changes = collect_repository_changes(working_copy)
         implementation_details = {
-            "changed_files": changed_files,
-            "diff_summary": _git_output_or_note(
-                working_copy=working_copy,
-                args=("diff", "--stat", "HEAD", "--", "."),
-            ),
+            "changed_files": list(repository_changes.changed_files),
+            "tracked_changed_files": list(repository_changes.tracked_files),
+            "untracked_changed_files": list(repository_changes.untracked_files),
+            "diff_summary": repository_changes.diff_summary,
+            "git_change_collection_errors": list(repository_changes.command_errors),
             "implementation_report_verification_evidence": (
                 _implementation_verification_evidence_shape(implementation_report_text)
             ),
@@ -1962,6 +1954,10 @@ def _write_stage_audit(
                 "## Implementation Evidence",
                 "",
                 f"- Changed files: `{len(changed_files)}`",
+                "- Tracked changed files: "
+                f"`{len(cast(list[str], implementation_details['tracked_changed_files']))}`",
+                "- Untracked changed files: "
+                f"`{len(cast(list[str], implementation_details['untracked_changed_files']))}`",
                 "- Verification evidence shape: "
                 f"`{implementation_details['implementation_report_verification_evidence']}`",
             )
@@ -2574,6 +2570,34 @@ def _first_failure_from_steps(
             }:
                 return _format_failure_step(step)
     return "none", None
+
+
+def _required_interview_flow_failure(ctx: FlowContext) -> str | None:
+    if not ctx.scenario.run.interview_required:
+        return None
+
+    steps = _load_steps(ctx.bundle_root)
+    observed_blocked_question_stop = any(
+        step.get("classification") == "blocked"
+        and step.get("action") in {"run-stage", "inspect-stage"}
+        for step in steps
+    )
+    observed_operator_answers = any(
+        step.get("action") == "answer-questions" and step.get("classification") == "pass"
+        for step in steps
+    )
+
+    if not observed_blocked_question_stop:
+        return (
+            "Required interview flow was not observed: scenario requires at least "
+            "one blocking question stop before progression."
+        )
+    if not observed_operator_answers:
+        return (
+            "Required interview flow was not observed: scenario requires "
+            "operator-authored answers before resumed progression."
+        )
+    return None
 
 
 def _write_runtime_log_from_steps(ctx: FlowContext) -> Path:
@@ -3356,6 +3380,27 @@ def run_black_box_live_e2e(
             ctx=ctx,
             status="fail",
             summary="A public stage run failed during black-box live E2E execution.",
+            verification_failed=True,
+            quality_result=None,
+            quality_error=None,
+            teardown_result=teardown_result,
+            teardown_error=teardown_error,
+        )
+
+    interview_flow_failure = _required_interview_flow_failure(ctx)
+    if interview_flow_failure is not None:
+        _record_step(
+            ctx=ctx,
+            action="verify",
+            classification="fail",
+            decision=interview_flow_failure,
+            plan="Validate manifest-specific interview flow requirements.",
+        )
+        teardown_result, teardown_error = _run_teardown(ctx)
+        return _finalize_reports(
+            ctx=ctx,
+            status="fail",
+            summary="Required interview flow was not observed during black-box live E2E.",
             verification_failed=True,
             quality_result=None,
             quality_error=None,

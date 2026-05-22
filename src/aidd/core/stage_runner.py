@@ -4,6 +4,10 @@ from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
+from aidd.core.interview import (
+    load_questions_document,
+    render_answers_markdown,
+)
 from aidd.core.project_set import ResolvedProjectSet
 from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
 from aidd.core.run_store import (
@@ -76,6 +80,7 @@ from aidd.core.stage_validation import (
     update_stage_unblock_state,
 )
 from aidd.core.state_machine import StageState, transition_stage_state
+from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.models import ValidationFinding
 from aidd.validators.reports import write_validator_report
 
@@ -189,6 +194,62 @@ def _should_include_existing_stage_outputs_for_resume(
     )
 
 
+def _read_stage_answers_text(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> str | None:
+    answers_path = workspace_stage_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    ) / "answers.md"
+    if not answers_path.exists():
+        return None
+    return answers_path.read_text(encoding="utf-8")
+
+
+def _restore_operator_owned_answers_after_runtime_attempt(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    answers_text_before_attempt: str | None,
+) -> None:
+    answers_path = workspace_stage_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    ) / "answers.md"
+    try:
+        questions = load_questions_document(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
+    except ValueError:
+        return
+
+    try:
+        answers_text_after_attempt = answers_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        answers_text_after_attempt = None
+
+    question_ids = {question.question_id for question in questions}
+    empty_answers_text = render_answers_markdown(())
+
+    if answers_text_before_attempt is None:
+        if question_ids and answers_text_after_attempt != empty_answers_text:
+            answers_path.parent.mkdir(parents=True, exist_ok=True)
+            answers_path.write_text(empty_answers_text, encoding="utf-8")
+        return
+
+    if question_ids and answers_text_after_attempt != answers_text_before_attempt:
+        answers_path.parent.mkdir(parents=True, exist_ok=True)
+        answers_path.write_text(answers_text_before_attempt, encoding="utf-8")
+
+
 def run_single_stage_orchestration(
     *,
     workspace_root: Path,
@@ -204,6 +265,11 @@ def run_single_stage_orchestration(
     project_set: ResolvedProjectSet | None = None,
     changed_at_utc: datetime | None = None,
 ) -> StageOrchestrationResult:
+    answers_text_before_attempt = _read_stage_answers_text(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
     include_existing_stage_outputs = _should_include_existing_stage_outputs_for_resume(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -284,6 +350,12 @@ def run_single_stage_orchestration(
     discovery = discover_stage_markdown_outputs(
         execution_state=execution_state,
         invocation_bundle=adapter_invocation,
+    )
+    _restore_operator_owned_answers_after_runtime_attempt(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        answers_text_before_attempt=answers_text_before_attempt,
     )
     exhausted_repair_budget = repair_brief_exhausts_terminal_budget(
         repair_brief_path=adapter_invocation.repair_brief_path,

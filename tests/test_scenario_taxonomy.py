@@ -137,6 +137,26 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
     ], "Claude Code live rollout must include smoke plus planned medium coverage."
 
 
+def test_hono_medium_live_scenario_uses_focused_verification_gate() -> None:
+    entries = dict(_scenario_entries())
+    scenario_path = (
+        _repo_root() / "harness" / "scenarios" / "live" / "hono-non-error-throw-handling.yaml"
+    )
+    scenario = entries[scenario_path]
+
+    focused_command = "./node_modules/.bin/vitest --run src/hono.test.ts src/compose.test.ts"
+    assert focused_command in scenario.verify.commands
+    assert focused_command in scenario.quality.commands
+    assert "./node_modules/.bin/tsc --noEmit" in scenario.verify.commands
+    assert "./node_modules/.bin/tsc --noEmit" in scenario.quality.commands
+    assert "bun test" not in scenario.verify.commands
+    assert "bun test" not in scenario.quality.commands
+    assert "bunx vitest run src/hono.test.ts src/compose.test.ts" not in scenario.verify.commands
+    task = scenario.feature_source.tasks[0]
+    assert "without widening the public error handler" in task.target_change
+    assert "preserves the existing public error type contracts" in task.quality_bar
+
+
 def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:
     matrix_doc = (_repo_root() / "docs" / "e2e" / "scenario-matrix.md").read_text(
         encoding="utf-8"
@@ -165,7 +185,7 @@ def test_live_catalog_mentions_manual_matrix_coverage() -> None:
     )
 
     for needle in (
-        "manual external-audit lane only",
+        "manual local operator audit evidence only",
         "Representative matrix coverage for the live lane",
         "`live-full-flow`",
         "`live-full-flow-interview`",
@@ -198,38 +218,6 @@ def test_ci_python_matrix_matches_compatibility_window() -> None:
     assert matrix["python-version"] == ["3.12", "3.13", "3.14"]
 
 
-def test_manual_live_workflow_dispatch_is_manual_only() -> None:
+def test_manual_live_github_actions_workflow_is_absent() -> None:
     workflow_path = _repo_root() / ".github" / "workflows" / "manual-live-e2e.yml"
-    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-
-    trigger_block = workflow.get("on", workflow.get(True))
-    assert isinstance(trigger_block, dict)
-    assert set(trigger_block) == {"workflow_dispatch"}
-    inputs = trigger_block["workflow_dispatch"]["inputs"]
-    assert set(inputs) == {"scenario_id", "runtime_id", "feature_size", "scenario_class"}
-    assert inputs["runtime_id"]["options"] == ["codex", "opencode", "claude-code"]
-    assert inputs["feature_size"]["options"] == [
-        "any",
-        "tiny",
-        "small",
-        "medium",
-        "large",
-        "xlarge",
-    ]
-
-    job_env = workflow["jobs"]["manual-live-e2e"]["env"]
-    assert job_env["AIDD_EVAL_CODEX_COMMAND"] == "${{ secrets.AIDD_EVAL_CODEX_COMMAND }}"
-    assert job_env["AIDD_EVAL_OPENCODE_COMMAND"] == "${{ secrets.AIDD_EVAL_OPENCODE_COMMAND }}"
-    assert (
-        job_env["AIDD_EVAL_CLAUDE_CODE_COMMAND"]
-        == "${{ secrets.AIDD_EVAL_CLAUDE_CODE_COMMAND }}"
-    )
-
-    steps = workflow["jobs"]["manual-live-e2e"]["steps"]
-    run_blocks = "\n".join(step.get("run", "") for step in steps if isinstance(step, dict))
-    assert "harness/scenarios/live" in run_blocks
-    assert 'scenario.automation_lane != "manual"' in run_blocks
-    assert "uv run python -m aidd.harness.live_e2e_black_box" in run_blocks
-    assert "aidd eval run" not in run_blocks
-    assert "validate_live_runtime_command" in run_blocks
-    assert "Validated runtime readiness" in run_blocks
+    assert not workflow_path.exists()

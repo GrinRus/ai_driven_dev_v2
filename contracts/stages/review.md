@@ -26,6 +26,7 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `../implement/output/validator-report.md`
 - `context/diff-summary.md`
 - `context/acceptance-criteria.md`
+- `context/verification-output.md` when available
 
 ## Optional context inputs
 
@@ -51,10 +52,29 @@ Optional context documents may improve review depth, but they must not replace i
     equivalent inline text that cites `implementation-report.md`, a changed file path,
     or an acceptance-criteria id such as `AC-1`,
   - an explicit approval status suitable for go/no-go decision (`approved`, `approved-with-conditions`, `rejected`),
+  - a machine-readable approval line, preferably `Review status: approved` (or
+    `approved-with-conditions` / `rejected`) under `Approval status` or `Verdict`,
   - summary of required changes when approval status is not `approved`.
 - Findings may be written as top-level bullets or as `### RV-*` / `### REV-*` subsections.
 - No-findings declarations must be explicit, for example `- none` or
   `No review findings were identified.`
+- Optional exploratory checks outside the selected task's authored verification boundary
+  must not force `approved-with-conditions` unless they reveal a concrete defect,
+  contradict acceptance criteria, are required by review baseline or release policy, or
+  leave required selected-task verification inconclusive.
+- Intentional design constraints selected by the authored task or resolved interview answers
+  are not review findings solely because the behavior is inherently hazardous or limited.
+  For example, trusted local code execution with explicit confirmation and documentation is
+  acceptance context, not an `accepted-risk` finding, when the implementation matches the
+  selected trust boundary and required mitigations/tests/docs are present. Record a finding only
+  when the implementation broadens the selected scope, misses a required mitigation, contradicts
+  acceptance criteria, or leaves required evidence inconclusive.
+- Review the complete local workspace change set. Tracked diffs and newly created untracked files
+  under the allowed write scope are both part of the AIDD deliverable; do not reject a change solely
+  because a new file is absent from `git diff --stat` when `git status --short` or diff-summary
+  evidence shows it exists and it is inspectable. Reject only when the file is missing, outside
+  scope, undocumented by implementation evidence, not inspectable, or an explicit release policy
+  requires a tracked-only patch artifact.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation

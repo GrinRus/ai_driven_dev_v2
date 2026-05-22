@@ -51,6 +51,8 @@ Optional context documents may improve QA depth, but they must not replace imple
 
 - `qa-report.md` must include:
   - an explicit quality verdict (`ready`, `ready-with-risks`, `not-ready`),
+  - a machine-readable verdict line, preferably `QA verdict: ready` (or
+    `ready-with-risks` / `not-ready`) under `Verification summary` or `Readiness`,
   - residual risk summary with severity and mitigation/ownership notes,
   - a dedicated `Release recommendation` section aligned to verdict and risk profile,
   - evidence references linking verdict claims to verification artifacts.
@@ -61,6 +63,12 @@ Optional context documents may improve QA depth, but they must not replace imple
 - Optional exploratory checks outside the selected task's authored verification boundary
   must not force `ready-with-risks` or `proceed-with-conditions` unless they reveal a
   concrete defect, contradict acceptance criteria, or are required by review findings.
+- Intentional design constraints selected by the authored task or resolved interview answers
+  must not force `ready-with-risks` or `proceed-with-conditions` by themselves when the
+  implementation exactly follows that selected boundary and required mitigations, tests, and
+  documentation are present. Treat those constraints as satisfied acceptance context, not residual
+  release risk. Downgrade only for a remaining risk beyond the authored boundary, missing
+  mitigation/evidence, broadened scope, or a contradiction in review/verification artifacts.
 - evidence entries must use stable ids in the `EV-1`, `EV-2`, ... style and/or backticked
   artifact paths so validators can trace claims mechanically.
 - `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.

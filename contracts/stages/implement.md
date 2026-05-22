@@ -65,8 +65,12 @@ Optional context documents may improve implementation quality, but they must not
   intent using a clear separator such as `-`, `:`, or `->`.
 - verification notes may be grouped by task or evidence heading; executed command/check entries must
   pair command evidence with an observed outcome such as `-> pass`, `exit 0`, `exit code 0`, or a
-  captured tool summary.
+  captured tool summary. Bounded-diff checks may summarize the observed path set, for example
+  `git diff --name-only -> changes bounded to src/example.py and tests/test_example.py`.
 - touched-files entries must stay within `context/allowed-write-scope.md`.
+- The implementation deliverable is the local workspace state, not a tracked-only patch. Newly
+  created untracked files under the allowed write scope count as touched files and must be listed
+  with the tracked diffs.
 - `stage-result.md` and `validator-report.md` must remain consistent with declared verification outcomes.
 
 ## Validation focus

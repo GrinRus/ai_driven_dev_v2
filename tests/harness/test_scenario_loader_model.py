@@ -105,6 +105,25 @@ def test_typer_boolean_live_scenario_uses_extended_budget_and_focused_help_check
     assert scenario.quality.require_review_status == "approved"
 
 
+def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
+    scenario = load_scenario(Path("harness/scenarios/live/hono-non-error-throw-handling.yaml"))
+
+    _assert_live_contract(scenario)
+    assert scenario.scenario_id == "AIDD-LIVE-007"
+    assert scenario.feature_size == "medium"
+    assert scenario.canonical_runtime == "codex"
+    assert scenario.runtime_targets == ("codex", "claude-code")
+    task = scenario.feature_source.tasks[0]
+    assert task.task_id == "TASK-LIVE-HONO-NON-ERROR-THROW"
+    assert "without widening the public error handler" in task.target_change
+    assert any(
+        "Public error handler and context error types remain source-compatible"
+        in criterion
+        for criterion in task.acceptance_criteria
+    )
+    assert "preserves the existing public error type contracts" in task.quality_bar
+
+
 def test_all_live_scenarios_load_as_valid_full_flow_manifests() -> None:
     live_root = Path("harness/scenarios/live")
     scenario_files = sorted(live_root.glob("*.yaml"))
@@ -219,7 +238,7 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
     assert scenario.verify.commands == (
         "uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW",
         "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md",
-        "bun test",
+        "bunx vitest run src/router/ src/utils/url.test.ts",
         "bunx tsc --noEmit",
         "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/qa/output/stage-result.md",
         "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/qa/output/validator-report.md",
@@ -306,6 +325,7 @@ def test_installed_local_project_smoke_scenario_uses_source_install_and_local_fi
     ]
     setup_commands = "\n".join(scenario.setup.commands)
     verify_commands = "\n".join(scenario.verify.commands)
+    assert 'command = "python ../aidd_fixture_runtime.py"' in setup_commands
     assert "aidd doctor --config aidd.example.toml" in setup_commands
     assert "aidd init --work-item WI-INSTALLED-LOCAL-SMOKE" in setup_commands
     assert "--request" in setup_commands
@@ -323,6 +343,18 @@ def test_installed_local_project_smoke_scenario_uses_source_install_and_local_fi
         verify_commands
     )
     assert "answers.md" in verify_commands
+
+
+def test_local_fixture_workflow_scenarios_use_workspace_relative_runtime_path() -> None:
+    scenario_paths = (
+        Path("harness/scenarios/deterministic/project-set-plan-context.yaml"),
+        Path("harness/scenarios/smoke/installed-local-project-fixture.yaml"),
+    )
+
+    for scenario_path in scenario_paths:
+        scenario = load_scenario(scenario_path)
+        setup_commands = "\n".join(scenario.setup.commands)
+        assert 'command = "python ../aidd_fixture_runtime.py"' in setup_commands
 
 
 def test_deterministic_workflow_scenarios_cover_medium_ci_and_large_manual_buckets() -> None:

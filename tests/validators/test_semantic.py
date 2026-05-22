@@ -475,6 +475,53 @@ def test_validate_semantic_outputs_allows_negated_security_guarantee_caveat(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_allows_disclaimed_security_guarantee_caveat(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md",)
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_idea_brief(
+        workspace_root,
+        (
+            "# Idea Brief\n\n"
+            "## Problem statement\n\n"
+            "The CLI needs clear documentation that includes an explicit disclaimer "
+            "of sandboxing or any security guarantee for local Python execution.\n\n"
+            "## Desired outcome\n\n"
+            "Document the feature with a warning callout that explicitly disclaims "
+            "sandboxing or any security guarantee.\n\n"
+            "## Constraints\n\n"
+            "- none\n\n"
+            "## Open questions\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="idea",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_requires_list_format_for_constraints(tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts" / "stages"
     contracts_root.mkdir(parents=True)
@@ -2009,6 +2056,94 @@ def test_validate_semantic_outputs_accepts_rg_verification_evidence(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_python_c_output_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-PYTHON-C-OUTPUT",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected yielded-rows CLI behavior and recorded "
+            "target-local command evidence for focused tests, help output, "
+            "runtime success paths, and invalid-input behavior.\n\n"
+            "## Touched files\n\n"
+            "- `sqlite_utils/cli.py` - add trusted Python file input handling.\n"
+            "- `tests/test_cli_insert.py` - cover rows, yields, and invalid input.\n"
+            "- `docs/cli.rst` - document the trusted-code boundary.\n\n"
+            "## Verification\n\n"
+            "- `python -m pytest tests/test_cli_insert.py -q` "
+            "-> output: `52 passed in 1.01s`.\n"
+            "- `python -c \"from click.testing import CliRunner; "
+            "from sqlite_utils import cli; result = CliRunner().invoke("
+            "cli.cli, ['insert', '--help']); print(result.output)\"` "
+            "-> output contains: `--python-file FILE`.\n"
+            "- `python -c \"from click.testing import CliRunner; "
+            "from sqlite_utils import cli; result = CliRunner().invoke("
+            "cli.cli, ['insert', '/tmp/test.db', 'people', '--python-file', "
+            "'/tmp/rows_test.py']); print(result.exit_code)\"` "
+            "-> output: `0`.\n"
+            "- `python -c \"from click.testing import CliRunner; "
+            "from sqlite_utils import cli; result = CliRunner().invoke("
+            "cli.cli, ['insert', '/tmp/test.db', 'items', '--python-file', "
+            "'/tmp/rows_test.py', '--csv']); print(result.output); "
+            "print(result.exit_code)\"` "
+            "-> output: `Error: Cannot use --python-file with --csv\\n1`.\n\n"
+            "## Risks\n\n"
+            "- No residual product risk remains for the selected task.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-PYTHON-C-OUTPUT",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_sphinx_build_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-SPHINX-BUILD",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected documentation-bearing CLI behavior and "
+            "recorded a concrete documentation build command with observed output.\n\n"
+            "## Touched files\n\n"
+            "- `docs/cli.rst` - document the new CLI option and trust boundary.\n\n"
+            "## Verification\n\n"
+            "- `sphinx-build docs docs/_build` -> build succeeded, 16 warnings "
+            "(exit code 0).\n\n"
+            "## Risks\n\n"
+            "- No residual product risk remains for the selected task.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-SPHINX-BUILD",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks(
     tmp_path: Path,
 ) -> None:
@@ -2055,6 +2190,95 @@ def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks
     )
 
     assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_bun_verification_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-BUN",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-LIVE-HONO-NON-ERROR-THROW`\n"
+            "- Selected task title: non-Error throw handling\n\n"
+            "## Summary\n\n"
+            "Implemented the selected Hono runtime error-handling task and "
+            "recorded focused regression coverage plus broad-suite evidence.\n\n"
+            "## Touched files\n\n"
+            "- `src/compose.ts` - normalize non-Error thrown values before onError.\n"
+            "- `src/hono-base.ts` - normalize dispatch errors before the Hono error handler.\n"
+            "- `src/hono.test.ts` - cover primitive and object non-Error throws.\n\n"
+            "## Verification\n\n"
+            "- `bunx vitest --run src/compose.test.ts src/hono.test.ts` "
+            "-> exit code 0; captured summary `Test Files 2 passed (2)` and "
+            "`Tests 241 passed (241)`.\n"
+            "- `bunx tsc --noEmit` -> exit code 0; captured output contained no diagnostics.\n"
+            "- `./node_modules/.bin/prettier --check src/utils/error.ts src/hono-base.ts` "
+            "-> pass, exit code 0; all matched files use Prettier style.\n"
+            "- `bun run test` -> exit code 1; captured summary "
+            "`Test Files 3 failed | 141 passed (144)`, `Tests 11 failed | "
+            "4314 passed | 33 skipped (4358)`, and `Errors 4 errors`.\n"
+            "- `bun test` -> not-run: earlier implement evidence recorded this "
+            "plain Bun runner as a sandbox-hanging command.\n\n"
+            "## Risks\n\n"
+            "- Broad-suite verification remains locally blocked by unrelated target "
+            "runner failures; focused regression and TypeScript checks passed.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-BUN",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-PLAIN-TOOLS",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-LIVE-HONO-NON-ERROR-THROW`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected Hono task with a scoped source update and "
+            "recorded verification notes.\n\n"
+            "## Touched files\n\n"
+            "- `src/hono-base.ts` - normalize dispatch errors before the Hono error handler.\n\n"
+            "## Verification\n\n"
+            "- Bun runner passed.\n"
+            "- Prettier passed.\n"
+            "- TypeScript tsc passed.\n\n"
+            "## Risks\n\n"
+            "- No residual risk remains.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-PLAIN-TOOLS",
+        workspace_root=workspace_root,
+    )
+
+    assert [finding.code for finding in findings] == [
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
+    ]
+    assert all(finding.severity == "high" for finding in findings)
 
 
 def test_validate_semantic_outputs_accepts_live_noop_blocker_evidence(
@@ -2218,6 +2442,42 @@ def test_validate_semantic_outputs_flags_invalid_implement_verification_fixture_
             ),
         ),
     )
+
+
+def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-DIFF",
+        "# Implementation Report\n\n"
+        "## Selected task\n\n"
+        "- Task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n"
+        "- Local task ids: T1, T2\n\n"
+        "## Change summary\n\n"
+        "Implemented the selected yielded-rows feature with scoped code, tests, and docs.\n\n"
+        "## Touched files\n\n"
+        "- `sqlite_utils/cli.py` - add yielded-row ingestion handling.\n"
+        "- `tests/test_cli_insert.py` - cover yielded rows and invalid input.\n"
+        "- `docs/cli.rst` - document trusted local Python caveats.\n\n"
+        "## Verification\n\n"
+        "- `uv run pytest -q` -> 1044 passed, 16 skipped.\n"
+        "- `git diff --name-only` -> changes bounded to `sqlite_utils/cli.py`, "
+        "`tests/test_cli_insert.py`, `docs/cli.rst`.\n\n"
+        "## Risks\n\n"
+        "- None observed.\n\n"
+        "## Follow-up\n\n"
+        "- None.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-DIFF",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
 
 
 def test_validate_semantic_outputs_accepts_valid_review_fixture_bundle() -> None:
