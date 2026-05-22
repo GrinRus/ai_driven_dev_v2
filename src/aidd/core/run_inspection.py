@@ -17,6 +17,7 @@ from aidd.core.run_lookup import (
     resolve_attempt_artifact_paths,
 )
 from aidd.core.run_store import (
+    load_attempt_artifact_index,
     load_stage_metadata,
     run_attempt_root,
     run_manifest_path,
@@ -98,7 +99,20 @@ class RunArtifactsSummary:
     logs: dict[str, str]
 
 
+@dataclass(frozen=True, slots=True)
+class RunArtifactDocumentContent:
+    run_id: str
+    stage: str
+    attempt_number: int
+    key: str
+    path: str
+    text: str
+    byte_size: int
+    content_type: str
+
+
 _MIN_TIMESTAMP = datetime(1970, 1, 1, tzinfo=UTC)
+_MAX_ARTIFACT_DOCUMENT_BYTES = 512 * 1024
 
 
 def _parse_utc_timestamp(value: str | None) -> datetime:
@@ -434,6 +448,114 @@ def resolve_run_artifacts_summary(
             for key, path in sorted(artifact_paths.logs.items())
         },
     )
+
+
+def resolve_run_artifact_document_content(
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    key: str,
+    *,
+    run_id: str | None = None,
+    attempt_number: int | None = None,
+    max_bytes: int = _MAX_ARTIFACT_DOCUMENT_BYTES,
+) -> RunArtifactDocumentContent:
+    normalized_key = key.strip()
+    if not normalized_key:
+        raise ValueError("Artifact document key is required.")
+
+    selected_run_id = _resolve_selected_run_id(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
+    selected_attempt = attempt_number or latest_attempt_number(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+    )
+    if selected_attempt is None:
+        raise ValueError(
+            "No attempts found for work item "
+            f"'{work_item}', run '{selected_run_id}', stage '{stage}'."
+        )
+
+    artifact_index = load_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+    )
+    if artifact_index is None:
+        raise ValueError(
+            f"Artifact index is missing for work item '{work_item}', run '{selected_run_id}', "
+            f"stage '{stage}', attempt {selected_attempt}."
+        )
+
+    relative_document_path = artifact_index.documents.get(normalized_key)
+    if relative_document_path is None:
+        supported = ", ".join(sorted(artifact_index.documents)) or "none"
+        raise ValueError(
+            f"Artifact document key '{normalized_key}' is not available. "
+            f"Available document keys: {supported}."
+        )
+    document_path = _resolve_workspace_relative_artifact_path(
+        workspace_root=workspace_root,
+        relative_path=relative_document_path,
+    )
+    if not document_path.exists():
+        raise ValueError(f"Artifact document file does not exist: {document_path.as_posix()}.")
+
+    byte_size = document_path.stat().st_size
+    if byte_size > max_bytes:
+        raise ValueError(
+            "Artifact document is too large to render in the operator UI "
+            f"({byte_size} bytes > {max_bytes} bytes): {document_path.as_posix()}."
+        )
+    try:
+        text = document_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(
+            f"Artifact document is not UTF-8 text: {document_path.as_posix()}."
+        ) from exc
+
+    return RunArtifactDocumentContent(
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+        key=normalized_key,
+        path=_workspace_relative_path(workspace_root, document_path),
+        text=text,
+        byte_size=byte_size,
+        content_type=_artifact_content_type(document_path),
+    )
+
+
+def _artifact_content_type(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in {".md", ".markdown"}:
+        return "text/markdown"
+    if suffix in {".txt", ".log", ".json", ".jsonl", ".yaml", ".yml", ".toml"}:
+        return "text/plain"
+    return "application/octet-stream"
+
+
+def _resolve_workspace_relative_artifact_path(
+    *,
+    workspace_root: Path,
+    relative_path: str,
+) -> Path:
+    relative = Path(relative_path)
+    if relative.is_absolute():
+        raise ValueError(f"Artifact path must be workspace-relative: {relative_path}")
+
+    resolved_workspace = workspace_root.resolve(strict=False)
+    resolved_path = (workspace_root / relative).resolve(strict=False)
+    if not resolved_path.is_relative_to(resolved_workspace):
+        raise ValueError(f"Artifact path escapes workspace root: {relative_path}")
+    return resolved_path
 
 
 def _workspace_relative_path(workspace_root: Path, path: Path) -> str:

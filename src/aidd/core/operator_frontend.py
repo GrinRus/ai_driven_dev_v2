@@ -14,10 +14,12 @@ from aidd.core.interview import (
     unresolved_blocking_questions,
 )
 from aidd.core.run_inspection import (
+    RunArtifactDocumentContent,
     RunArtifactsSummary,
     RunLogSummary,
     RunMetadataSummary,
     StageResultSummary,
+    resolve_run_artifact_document_content,
     resolve_run_artifacts_summary,
     resolve_run_log_summary,
     resolve_run_metadata_summary,
@@ -113,6 +115,26 @@ def resolve_operator_artifacts_view(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
+        run_id=run_id,
+        attempt_number=attempt_number,
+    )
+
+
+def resolve_operator_artifact_document_content(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    key: str,
+    run_id: str | None = None,
+    attempt_number: int | None = None,
+) -> RunArtifactDocumentContent:
+    _validate_stage(stage)
+    return resolve_run_artifact_document_content(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        key=key,
         run_id=run_id,
         attempt_number=attempt_number,
     )

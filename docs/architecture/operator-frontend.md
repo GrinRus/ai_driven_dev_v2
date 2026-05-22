@@ -37,29 +37,33 @@ The first frontend contract covers these flows:
 
 1. **Full workflow run**
    - choose a work item and runtime;
-   - start or resume `idea -> qa`;
+   - start or resume `idea -> qa` through the workflow run application service;
    - show the current stage, terminal state, and next required operator action.
 
 2. **Stage run and resume**
    - choose a stage from the canonical stage list;
+   - execute the selected stage through the same single-stage path as `aidd stage run`;
    - show eligibility, missing prerequisites, blocked questions, failed validation,
      repair attempts, and final state;
    - never allow stage progression that the core would reject.
 
 3. **Question answering**
    - show unresolved questions from the standard `questions.md`;
-   - write operator answers to the standard `answers.md`;
+   - write UI answers to the standard `answers.md` as `[resolved]`;
    - preserve blocking vs non-blocking question semantics;
    - resume only through the normal core path after answers are present.
+   - keep partial and deferred answer states as direct file-mode semantics until the UI
+     exposes an explicit resolution selector.
 
 4. **Runner log viewing**
-   - show raw runtime logs when available;
+   - show live runtime stdout/stderr chunks for UI-started jobs when the adapter can stream;
+   - show saved `runtime.log` attempt artifacts after execution;
    - show normalized events when available;
    - keep adapter/runtime labels visible so operators can distinguish native
      runtime output from AIDD summaries.
 
 5. **Artifact browsing**
-   - show stage input and output Markdown;
+   - render stage input and output Markdown from known artifact-index document keys;
    - show `validator-report.md`, `stage-result.md`, and repair evidence;
    - show run/eval metadata, prompt paths, Git SHA, hashes, runtime id, and adapter id.
 
@@ -113,17 +117,24 @@ Current W20 implementation status:
   the CLI delegating to it;
 - `aidd ui --work-item <id> --root <path> --config <path> --host 127.0.0.1 --port 0`
   starts a local-only Python-packaged web UI;
-- workflow launch requests require an explicit operator-selected runtime and do not
-  fall back to `generic-cli`;
+- workflow and selected-stage launch requests require an explicit operator-selected
+  runtime and do not fall back to `generic-cli`;
+- UI launch requests create process-local jobs; `/api/jobs/<job_id>` exposes
+  `running`, `completed`, or `failed` status and `/api/jobs/<job_id>/logs` exposes
+  cursor-based live chunks;
+- selected-stage launch uses the CLI-equivalent single-stage execution path, not a
+  workflow range shortcut;
 - the private local JSON API enforces a small request-body limit and deterministic
   malformed-body errors; non-loopback binds remain allowed but warn because this
   release has no UI authentication;
-- private JSON endpoints expose run, stage, questions, answer writes, logs,
-  artifacts, and workflow run requests over the operator services;
+- private JSON endpoints expose run, stage, questions, answer writes, persisted logs,
+  artifact summaries, artifact document content, workflow run requests, stage run
+  requests, and job status/log polling over the operator services;
 - the UI shell serves static HTML, CSS, and JavaScript from the Python package,
   without a Node or Vite dependency;
 - dynamic question text, stage metadata, artifact labels and paths, runtime-derived
-  values, and logs are rendered through escaped UI text paths;
+  values, artifact document content, and logs are rendered through escaped UI text paths;
 - local smoke evidence covers page load, blocking answer persistence to
-  `answers.md`, log and artifact reads, and workflow-run delegation through the
+  `answers.md`, persisted log reads, selected-stage run delegation, live job log
+  chunks, artifact document rendering, and workflow-run delegation through the
   internal service seam.
