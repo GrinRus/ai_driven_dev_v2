@@ -244,7 +244,11 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
 
     assert "workflow_dispatch` path is a dry run" in distribution
     assert "release tag commit must match the remote release branch HEAD" in distribution
-    assert "publish a GitHub Release tagged `v0.1.0a3`" in release_notes
+    assert "Status: published on 2026-05-22." in release_notes
+    assert (
+        "Release workflow quality, build, publish, `pipx`, and `uv tool` "
+        "verification jobs passed"
+    ) in release_notes
 
 
 def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -> None:

@@ -1,6 +1,6 @@
-# Draft Release Notes: v0.1.0a3
+# Release Notes: v0.1.0a3
 
-Status: draft, not tagged or published.
+Status: published on 2026-05-22.
 
 ## Summary
 
@@ -46,11 +46,7 @@ Docker/GHCR remains outside the supported prerelease contract.
 
 ## Release checklist
 
-- Confirm `pyproject.toml` version is set to `0.1.0a3` before creating the GitHub
-  Release.
-- Run deterministic local gates.
-- Create `release/v0.1.0a3`, publish a GitHub Release tagged `v0.1.0a3` from that
-  branch, and confirm the release workflow quality, build, publish, `pipx`, and `uv tool`
-  verification jobs pass for the GitHub Release.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed
+  for GitHub Release `v0.1.0a3`.
 - Refresh manual live evidence locally, separately from release automation, when maintainers
   need an operator-quality audit.
