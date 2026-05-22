@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 from aidd.cli import main as cli_main
+from aidd.cli.stage_run import StageRunOptions
 from aidd.cli.ui import (
     OperatorUiService,
     UiRequestBodyTooLarge,
@@ -18,6 +21,7 @@ from aidd.core.run_store import (
     create_next_attempt_directory,
     create_run_manifest,
     persist_stage_status,
+    run_attempt_artifact_index_path,
     run_attempt_runtime_log_path,
 )
 from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
@@ -29,6 +33,7 @@ def _service(
     *,
     config: Path | None = None,
     workflow_runner: Any | None = None,
+    stage_runner: Any | None = None,
     readiness_probe_provider: Any | None = None,
 ) -> OperatorUiService:
     options = UiServerOptions(
@@ -41,6 +46,8 @@ def _service(
     kwargs: dict[str, Any] = {}
     if workflow_runner is not None:
         kwargs["workflow_runner"] = workflow_runner
+    if stage_runner is not None:
+        kwargs["stage_runner"] = stage_runner
     if readiness_probe_provider is not None:
         kwargs["readiness_probe_provider"] = readiness_probe_provider
     return OperatorUiService(options, **kwargs)
@@ -54,6 +61,15 @@ def _payload(response) -> dict[str, object]:
 def _error_payload(response) -> dict[str, object]:
     assert response.status >= 400
     return json.loads(response.body.decode("utf-8"))
+
+
+def _wait_job(service: OperatorUiService, job_id: str) -> dict[str, object]:
+    for _ in range(100):
+        payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+        if payload["status"] != "running":
+            return payload
+        time.sleep(0.01)
+    raise AssertionError(f"job did not finish: {job_id}")
 
 
 class _BodyHandler:
@@ -97,6 +113,12 @@ def _prepare_run(workspace_root: Path) -> None:
         "# Validator Report\n\n"
         "## Result\n\n"
         "- Verdict: `fail`\n",
+        encoding="utf-8",
+    )
+    stage_root.joinpath("stage-result.md").write_text(
+        "# Stage Result\n\n"
+        "## Summary\n\n"
+        "Blocked on clarification.\n",
         encoding="utf-8",
     )
     stage_root.joinpath("repair-brief.md").write_text(
@@ -196,16 +218,94 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     )
 
     payload = _payload(response)
+    job_payload = _wait_job(service, str(payload["job_id"]))
     request = captured["request"]
     assert isinstance(request, WorkflowRunRequest)
-    assert payload["run_id"] == "run-ui-seam"
-    assert payload["completed"] is True
+    assert payload["kind"] == "workflow"
+    assert job_payload["status"] == "completed"
+    assert job_payload["result"]["run_id"] == "run-ui-seam"  # type: ignore[index]
+    assert job_payload["result"]["completed"] is True  # type: ignore[index]
     assert request.work_item == "WI-UI"
     assert request.runtime_id == "codex"
     assert request.stage_start == "research"
     assert request.stage_end == "plan"
     assert request.log_follow is True
     assert "stage_executor" in captured
+
+
+def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+    captured: dict[str, object] = {}
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        captured["options"] = options
+        assert options.runtime_chunk_sink is not None
+        options.runtime_chunk_sink("stdout", "runtime-output-line\n")
+        started.set()
+        assert release.wait(timeout=2)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/stage/run",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+            "log_follow": True,
+        },
+    )
+
+    payload = _payload(response)
+    assert payload["kind"] == "stage"
+    assert payload["stage"] == "plan"
+    assert started.wait(timeout=2)
+
+    job_id = str(payload["job_id"])
+    running_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+    logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+    options = captured["options"]
+    assert isinstance(options, StageRunOptions)
+    assert running_payload["status"] == "running"
+    assert options.stage == "plan"
+    assert options.runtime == "codex"
+    assert options.log_follow is True
+    assert any(
+        chunk["stream"] == "stdout" and chunk["text"] == "runtime-output-line\n"
+        for chunk in logs_payload["chunks"]  # type: ignore[index]
+    )
+
+    release.set()
+    completed_payload = _wait_job(service, job_id)
+    assert completed_payload["status"] == "completed"
+    assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+
+
+def test_ui_stage_run_endpoint_rejects_invalid_stage_and_runtime(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    invalid_stage = service.handle_post(
+        "/api/stage/run",
+        {
+            "stage": "unknown",
+            "runtime": "codex",
+        },
+    )
+    invalid_runtime = service.handle_post(
+        "/api/stage/run",
+        {
+            "stage": "plan",
+            "runtime": "unknown-runtime",
+        },
+    )
+
+    assert invalid_stage.status == HTTPStatus.BAD_REQUEST
+    assert invalid_runtime.status == HTTPStatus.BAD_REQUEST
+    assert "Unknown stage" in _error_payload(invalid_stage)["error"]  # type: ignore[operator]
+    assert "Unsupported runtime" in _error_payload(invalid_runtime)["error"]  # type: ignore[operator]
 
 
 def test_ui_workflow_run_endpoint_requires_runtime(tmp_path: Path) -> None:
@@ -333,9 +433,10 @@ def test_ui_runtime_readiness_is_not_workflow_source_of_truth(
     )
 
     payload = _payload(response)
+    job_payload = _wait_job(service, str(payload["job_id"]))
     request = captured["request"]
     assert isinstance(request, WorkflowRunRequest)
-    assert payload["run_id"] == "run-ui-source"
+    assert job_payload["result"]["run_id"] == "run-ui-source"  # type: ignore[index]
     assert request.config_snapshot["runtime_command"] == "python -m trusted_runtime"
     assert request.config_snapshot["mode"] == "ui-workflow"
 
@@ -360,11 +461,17 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     service = _service(workspace_root, workflow_runner=fake_workflow_runner)
 
     page = service.handle_get("/", {})
+    favicon = service.handle_get("/favicon.ico", {})
     assert page.status == 200
+    assert favicon.status == HTTPStatus.NO_CONTENT
     html = page.body.decode("utf-8")
     assert "AIDD Operator" in html
     assert 'id="runtimeSelect"' in html
-    assert '<button id="runButton" type="button" disabled>Run</button>' in html
+    assert '<button id="runWorkflowButton" type="button" disabled>Run workflow</button>' in html
+    assert (
+        '<button id="runStageButton" type="button" disabled>Run selected stage</button>'
+        in html
+    )
 
     run_response = service.handle_post(
         "/api/workflow/run",
@@ -375,9 +482,10 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
         },
     )
     run_payload = _payload(run_response)
+    job_payload = _wait_job(service, str(run_payload["job_id"]))
     request = captured["request"]
     assert isinstance(request, WorkflowRunRequest)
-    assert run_payload["run_id"] == "run-ui-e2e"
+    assert job_payload["result"]["run_id"] == "run-ui-e2e"  # type: ignore[index]
     assert request.workspace_root == workspace_root
     assert request.stage_start == "idea"
     assert request.stage_end == "qa"
@@ -444,6 +552,105 @@ def test_operator_ui_artifacts_include_declared_project_set_roots(
     assert "`apps/web`" in project_context
 
 
+def test_ui_artifact_document_endpoint_reads_known_document_content(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["stage_result"],
+            },
+        )
+    )
+
+    assert payload["key"] == "stage_result"
+    assert payload["path"] == "workitems/WI-UI/stages/plan/stage-result.md"
+    assert payload["content_type"] == "text/markdown"
+    assert "Blocked on clarification." in payload["text"]  # type: ignore[operator]
+
+
+def test_ui_artifact_document_endpoint_rejects_unknown_key_and_escaping_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    service = _service(workspace_root)
+
+    unknown = service.handle_get(
+        "/api/artifacts/document",
+        {
+            "stage": ["plan"],
+            "key": ["missing"],
+        },
+    )
+
+    assert unknown.status == HTTPStatus.BAD_REQUEST
+    assert "not available" in _error_payload(unknown)["error"]  # type: ignore[operator]
+
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    payload = json.loads(artifact_index_path.read_text(encoding="utf-8"))
+    payload["documents"]["escape"] = "../outside.md"
+    artifact_index_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    known_after_unrelated_corruption = service.handle_get(
+        "/api/artifacts/document",
+        {
+            "stage": ["plan"],
+            "key": ["stage_result"],
+        },
+    )
+    escaped = service.handle_get(
+        "/api/artifacts/document",
+        {
+            "stage": ["plan"],
+            "key": ["escape"],
+        },
+    )
+
+    assert known_after_unrelated_corruption.status == HTTPStatus.OK
+    assert escaped.status == HTTPStatus.BAD_REQUEST
+    assert "escapes workspace root" in _error_payload(escaped)["error"]  # type: ignore[operator]
+
+
+def test_ui_artifact_document_endpoint_rejects_non_utf8_documents(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    binary_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "bad.bin"
+    binary_path.write_bytes(b"\xff\xfe\x00")
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    payload = json.loads(artifact_index_path.read_text(encoding="utf-8"))
+    payload["documents"]["bad"] = "workitems/WI-UI/stages/plan/bad.bin"
+    artifact_index_path.write_text(json.dumps(payload), encoding="utf-8")
+    service = _service(workspace_root)
+
+    response = service.handle_get(
+        "/api/artifacts/document",
+        {
+            "stage": ["plan"],
+            "key": ["bad"],
+        },
+    )
+
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert "not UTF-8 text" in _error_payload(response)["error"]  # type: ignore[operator]
+
+
 def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     service = _service(tmp_path / ".aidd")
 
@@ -451,15 +658,35 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     script = response.body.decode("utf-8")
 
     assert "function escapeHtml(value)" in script
+    assert "function renderMarkdown(text)" in script
+    assert "function preferredArtifactKey(documents)" in script
+    assert '"stage_result"' in script
+    assert "let stageSummaryByStage = {};" in script
+    assert "No artifacts for this stage yet" in script
+    assert "No runtime log for this stage yet" in script
     assert "${escapeHtml(question.text)}" in script
     assert "`<span>${escapeHtml(item)}</span>`" in script
     assert "`<pre>${escapeHtml(view.text)}</pre>`" in script
-    assert "${escapeHtml(key)}: ${escapeHtml(value)}" in script
+    assert 'activeJobStatus?.status === "running"' in script
+    assert 'activeJobStatus?.stage === activeStage' in script
+    assert (
+        "`/api/artifacts/document?stage=${encodeURIComponent(activeStage)}&key="
+        "${encodeURIComponent(key)}`"
+        in script
+    )
+    assert "${renderMarkdown(documentView.text)}" in script
+    assert (
+        "body: JSON.stringify({stage: activeStage, runtime: selectedRuntime, "
+        "log_follow: true})"
+        in script
+    )
+    assert "body: JSON.stringify({runtime: selectedRuntime, log_follow: true})" in script
     assert "${escapeHtml(runtime.command)}" in script
     assert "${escapeHtml(runtime.provider_version || \"unknown\")}" in script
     assert "${escapeHtml(stageTimeoutSummary(runtime.stage_timeout_seconds))}" in script
     assert "function renderRuntimeSelector(runtimes)" in script
-    assert "body: JSON.stringify({runtime: selectedRuntime})" in script
+    assert "/api/stage/run" in script
+    assert "/api/jobs/${encodeURIComponent(activeJobId)}/logs?cursor=${activeJobCursor}" in script
     assert 'body: JSON.stringify({runtime: "generic-cli"})' not in script
 
 

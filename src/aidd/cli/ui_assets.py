@@ -20,7 +20,8 @@ _INDEX_HTML = """<!doctype html>
       <select id="runtimeSelect">
         <option value="">Select runtime</option>
       </select>
-      <button id="runButton" type="button" disabled>Run</button>
+      <button id="runWorkflowButton" type="button" disabled>Run workflow</button>
+      <button id="runStageButton" type="button" disabled>Run selected stage</button>
     </div>
   </header>
   <main class="layout">
@@ -169,6 +170,87 @@ pre {
   white-space: pre-wrap;
 }
 .list { margin: 0; padding-left: 18px; }
+.job-status {
+  color: #4d584f;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.artifact-layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+}
+.artifact-list {
+  display: grid;
+  gap: 6px;
+}
+.artifact-doc {
+  background: #ffffff;
+  border-color: #cdd5c6;
+  color: #1d211c;
+  overflow-wrap: anywhere;
+  text-align: left;
+  width: 100%;
+}
+.artifact-doc.active {
+  border-color: #285e61;
+  color: #285e61;
+}
+.artifact-path {
+  color: #647067;
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+.viewer-header {
+  align-items: center;
+  border-bottom: 1px solid #d8ddd2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+}
+.viewer-modes {
+  display: flex;
+  gap: 6px;
+}
+.viewer-modes button {
+  background: #ffffff;
+  border-color: #cdd5c6;
+  color: #1d211c;
+}
+.viewer-modes button.active {
+  border-color: #285e61;
+  color: #285e61;
+}
+.markdown-preview {
+  background: #ffffff;
+  border: 1px solid #d8ddd2;
+  border-radius: 6px;
+  max-height: 66vh;
+  overflow: auto;
+  padding: 16px;
+}
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  margin: 14px 0 8px;
+}
+.markdown-preview p { margin: 8px 0; }
+.markdown-preview code {
+  background: #eef1ea;
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.markdown-preview pre code {
+  background: transparent;
+  padding: 0;
+}
 .readiness-table {
   border-collapse: collapse;
   min-width: 960px;
@@ -198,6 +280,7 @@ pre {
 }
 @media (max-width: 780px) {
   .layout { grid-template-columns: 1fr; }
+  .artifact-layout { grid-template-columns: 1fr; }
   .stages { border-right: 0; border-bottom: 1px solid #d8ddd2; }
   .topbar { align-items: flex-start; flex-direction: column; }
 }
@@ -209,6 +292,14 @@ const stages = ["idea", "research", "plan", "review-spec", "tasklist", "implemen
 let activeStage = "idea";
 let activeTab = "questions";
 let selectedRuntime = "";
+let stageSummaryByStage = {};
+let activeJobId = "";
+let activeJobCursor = 0;
+let activeJobLogText = "";
+let activeJobStatus = null;
+let activeJobTimer = null;
+let activeArtifactKey = "";
+let artifactViewMode = "preview";
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -227,12 +318,18 @@ async function api(path, options = {}) {
   return payload;
 }
 
+function activateTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === tab));
+}
+
 function setText(id, text) {
   document.getElementById(id).textContent = text;
 }
 
 function setRunButtonState() {
-  document.getElementById("runButton").disabled = !selectedRuntime;
+  document.getElementById("runWorkflowButton").disabled = !selectedRuntime;
+  document.getElementById("runStageButton").disabled = !selectedRuntime;
 }
 
 function renderRuntimeSelector(runtimes) {
@@ -259,17 +356,78 @@ async function loadRuntimeChoices() {
   return view;
 }
 
+function renderInlineMarkdown(value) {
+  return escapeHtml(value).replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function renderMarkdown(text) {
+  const lines = String(text ?? "").split(/\\r?\\n/);
+  let html = "";
+  let inCode = false;
+  let inList = false;
+  const closeList = () => {
+    if (inList) {
+      html += "</ul>";
+      inList = false;
+    }
+  };
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```")) {
+      if (inCode) {
+        html += "</code></pre>";
+        inCode = false;
+      } else {
+        closeList();
+        html += "<pre><code>";
+        inCode = true;
+      }
+      continue;
+    }
+    if (inCode) {
+      html += `${escapeHtml(line)}\\n`;
+      continue;
+    }
+    if (!trimmed) {
+      closeList();
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\\s+(.+)$/);
+    if (heading) {
+      closeList();
+      const level = Math.min(heading[1].length, 6);
+      html += `<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`;
+      continue;
+    }
+    const bullet = line.match(/^[-*]\\s+(.+)$/);
+    if (bullet) {
+      if (!inList) {
+        html += "<ul>";
+        inList = true;
+      }
+      html += `<li>${renderInlineMarkdown(bullet[1])}</li>`;
+      continue;
+    }
+    closeList();
+    html += `<p>${renderInlineMarkdown(line)}</p>`;
+  }
+  closeList();
+  if (inCode) html += "</code></pre>";
+  return html || "<p>Empty document</p>";
+}
+
 async function loadRun() {
   try {
     const run = await api("/api/run");
     const metadata = run.metadata;
     setText("runLine", `${metadata.work_item} / ${metadata.run_id} / ${metadata.runtime_id}`);
-    const statusByStage = Object.fromEntries(metadata.stages.map((stage) => [stage.stage, stage]));
+    stageSummaryByStage = Object.fromEntries(metadata.stages.map((stage) => [stage.stage, stage]));
     document.getElementById("stages").innerHTML = stages.map((stage) => {
-      const status = statusByStage[stage]?.status || "pending";
+      const status = stageSummaryByStage[stage]?.status || "pending";
       return `<button class="stage-button ${stage === activeStage ? "active" : ""}" data-stage="${escapeHtml(stage)}" type="button"><span>${escapeHtml(stage)}</span><span class="stage-status">${escapeHtml(status)}</span></button>`;
     }).join("");
   } catch (error) {
+    stageSummaryByStage = {};
     setText("runLine", error.message);
     document.getElementById("stages").innerHTML = stages.map((stage) => `<button class="stage-button ${stage === activeStage ? "active" : ""}" data-stage="${escapeHtml(stage)}" type="button">${escapeHtml(stage)}</button>`).join("");
   }
@@ -277,6 +435,16 @@ async function loadRun() {
 
 async function loadStage() {
   try {
+    const summary = stageSummaryByStage[activeStage];
+    if (!summary || Number(summary.attempt_count || 0) <= 0) {
+      document.getElementById("stageMeta").innerHTML = [
+        `stage: ${activeStage}`,
+        `state: ${summary?.status || "pending"}`,
+        `attempts: ${summary?.attempt_count || 0}`,
+        "validator pass/fail: 0/0"
+      ].map((item) => `<span>${escapeHtml(item)}</span>`).join("");
+      return;
+    }
     const stage = await api(`/api/stage?stage=${encodeURIComponent(activeStage)}`);
     const result = stage.result;
     document.getElementById("stageMeta").innerHTML = [
@@ -306,16 +474,116 @@ async function loadQuestions() {
   `).join("");
 }
 
+function renderLiveLogs() {
+  const status = activeJobStatus?.status || "running";
+  const exitCode = activeJobStatus?.exit_code === null || activeJobStatus?.exit_code === undefined ? "" : ` / exit ${activeJobStatus.exit_code}`;
+  const message = activeJobStatus?.message ? ` / ${activeJobStatus.message}` : "";
+  document.getElementById("content").innerHTML = `
+    <div class="job-status">Live job ${escapeHtml(activeJobId)}: ${escapeHtml(status)}${escapeHtml(exitCode)}${escapeHtml(message)}</div>
+    <pre id="liveLog">${escapeHtml(activeJobLogText || "Waiting for runtime output...\\n")}</pre>
+  `;
+}
+
 async function loadLogs() {
-  const view = await api(`/api/logs?stage=${encodeURIComponent(activeStage)}`);
-  document.getElementById("content").innerHTML = `<pre>${escapeHtml(view.text)}</pre>`;
+  if (activeJobId && activeJobStatus?.status === "running") {
+    renderLiveLogs();
+    return;
+  }
+  if (!stageSummaryByStage[activeStage] || Number(stageSummaryByStage[activeStage].attempt_count || 0) <= 0) {
+    document.getElementById("content").textContent = "No runtime log for this stage yet";
+    return;
+  }
+  try {
+    const view = await api(`/api/logs?stage=${encodeURIComponent(activeStage)}`);
+    document.getElementById("content").innerHTML = `<pre>${escapeHtml(view.text)}</pre>`;
+  } catch (error) {
+    const jobMatchesStage = activeJobStatus?.kind === "workflow" || activeJobStatus?.stage === activeStage;
+    if (activeJobId && jobMatchesStage) {
+      renderLiveLogs();
+      return;
+    }
+    throw error;
+  }
+}
+
+async function loadArtifactDocument(key) {
+  const viewer = document.getElementById("artifactViewer");
+  if (!viewer) return;
+  try {
+    const documentView = await api(`/api/artifacts/document?stage=${encodeURIComponent(activeStage)}&key=${encodeURIComponent(key)}`);
+    const previewActive = artifactViewMode === "preview" ? " active" : "";
+    const sourceActive = artifactViewMode === "source" ? " active" : "";
+    const body = artifactViewMode === "source"
+      ? `<pre>${escapeHtml(documentView.text)}</pre>`
+      : `<div class="markdown-preview">${renderMarkdown(documentView.text)}</div>`;
+    viewer.innerHTML = `
+      <div class="viewer-header">
+        <div>
+          <strong>${escapeHtml(documentView.key)}</strong>
+          <span class="artifact-path">${escapeHtml(documentView.path)} / ${escapeHtml(documentView.byte_size)} bytes</span>
+        </div>
+        <div class="viewer-modes">
+          <button data-artifact-mode="preview" class="${previewActive}" type="button">Preview</button>
+          <button data-artifact-mode="source" class="${sourceActive}" type="button">Source</button>
+        </div>
+      </div>
+      ${body}
+    `;
+  } catch (error) {
+    viewer.textContent = error.message;
+  }
+}
+
+function preferredArtifactKey(documents) {
+  const preferredKeys = [
+    "stage_result",
+    "validator_report",
+    "questions",
+    "input_bundle",
+    "stage_brief",
+    "repair_brief",
+    "answers"
+  ];
+  for (const key of preferredKeys) {
+    if (Object.prototype.hasOwnProperty.call(documents, key)) return key;
+  }
+  return Object.keys(documents)[0] || "";
 }
 
 async function loadArtifacts() {
+  if (!stageSummaryByStage[activeStage] || Number(stageSummaryByStage[activeStage].attempt_count || 0) <= 0) {
+    document.getElementById("content").textContent = "No artifacts for this stage yet";
+    return;
+  }
   const view = await api(`/api/artifacts?stage=${encodeURIComponent(activeStage)}`);
-  const docs = Object.entries(view.documents).map(([key, value]) => `<li>${escapeHtml(key)}: ${escapeHtml(value)}</li>`).join("");
-  const logs = Object.entries(view.logs).map(([key, value]) => `<li>${escapeHtml(key)}: ${escapeHtml(value)}</li>`).join("");
-  document.getElementById("content").innerHTML = `<h2>Documents</h2><ul class="list">${docs}</ul><h2>Logs</h2><ul class="list">${logs}</ul>`;
+  const documentEntries = Object.entries(view.documents || {});
+  const logEntries = Object.entries(view.logs || {});
+  if (!activeArtifactKey || !Object.prototype.hasOwnProperty.call(view.documents || {}, activeArtifactKey)) {
+    activeArtifactKey = preferredArtifactKey(view.documents || {});
+  }
+  const docs = documentEntries.length
+    ? documentEntries.map(([key, value]) => `
+      <button class="artifact-doc ${key === activeArtifactKey ? "active" : ""}" data-artifact-key="${escapeHtml(key)}" type="button">
+        <span>${escapeHtml(key)}</span>
+        <span class="artifact-path">${escapeHtml(value)}</span>
+      </button>
+    `).join("")
+    : "<p>No documents</p>";
+  const logs = logEntries.length
+    ? logEntries.map(([key, value]) => `<li>${escapeHtml(key)}: ${escapeHtml(value)}</li>`).join("")
+    : "<li>No logs</li>";
+  document.getElementById("content").innerHTML = `
+    <div class="artifact-layout">
+      <aside>
+        <h2>Documents</h2>
+        <div class="artifact-list">${docs}</div>
+        <h2>Logs</h2>
+        <ul class="list">${logs}</ul>
+      </aside>
+      <section id="artifactViewer">Select a document</section>
+    </div>
+  `;
+  if (activeArtifactKey) await loadArtifactDocument(activeArtifactKey);
 }
 
 function timeoutSummary(value) {
@@ -369,6 +637,41 @@ async function loadReadiness(view = null) {
   `;
 }
 
+async function pollActiveJob() {
+  if (!activeJobId) return;
+  try {
+    const logs = await api(`/api/jobs/${encodeURIComponent(activeJobId)}/logs?cursor=${activeJobCursor}`);
+    activeJobCursor = Number(logs.cursor || activeJobCursor);
+    activeJobLogText += (logs.chunks || []).map((chunk) => String(chunk.text || "")).join("");
+    activeJobStatus = await api(`/api/jobs/${encodeURIComponent(activeJobId)}`);
+    if (activeTab === "logs") renderLiveLogs();
+    if (activeJobStatus.status !== "running") {
+      if (activeJobTimer) clearInterval(activeJobTimer);
+      activeJobTimer = null;
+      await loadRun();
+      await loadStage();
+      if (activeTab === "logs") await loadLogs();
+    }
+  } catch (error) {
+    activeJobLogText += `[ui] ${error.message}\\n`;
+    if (activeJobTimer) clearInterval(activeJobTimer);
+    activeJobTimer = null;
+    if (activeTab === "logs") renderLiveLogs();
+  }
+}
+
+async function startJobPolling(job) {
+  activeJobId = job.job_id;
+  activeJobCursor = 0;
+  activeJobLogText = "";
+  activeJobStatus = {job_id: job.job_id, kind: job.kind, stage: job.stage, status: "running"};
+  if (activeJobTimer) clearInterval(activeJobTimer);
+  activateTab("logs");
+  renderLiveLogs();
+  await pollActiveJob();
+  activeJobTimer = setInterval(pollActiveJob, 1000);
+}
+
 async function refresh() {
   let readinessView = null;
   await loadRun();
@@ -398,14 +701,26 @@ document.addEventListener("click", async (event) => {
   const stage = event.target.closest("[data-stage]")?.dataset.stage;
   if (stage) {
     activeStage = stage;
+    activeArtifactKey = "";
     await refresh();
     return;
   }
   const tab = event.target.closest("[data-tab]")?.dataset.tab;
   if (tab) {
-    activeTab = tab;
-    document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === tab));
+    activateTab(tab);
     await refresh();
+    return;
+  }
+  const artifactButton = event.target.closest("[data-artifact-key]");
+  if (artifactButton) {
+    activeArtifactKey = artifactButton.dataset.artifactKey || "";
+    await loadArtifacts();
+    return;
+  }
+  const artifactMode = event.target.closest("[data-artifact-mode]")?.dataset.artifactMode;
+  if (artifactMode) {
+    artifactViewMode = artifactMode;
+    if (activeArtifactKey) await loadArtifactDocument(activeArtifactKey);
     return;
   }
   const answerButton = event.target.closest(".answer");
@@ -421,14 +736,24 @@ document.addEventListener("click", async (event) => {
     await refresh();
     return;
   }
-  if (event.target.id === "runButton") {
+  if (event.target.id === "runWorkflowButton") {
     if (!selectedRuntime) return;
-    await api("/api/workflow/run", {
+    const job = await api("/api/workflow/run", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({runtime: selectedRuntime})
+      body: JSON.stringify({runtime: selectedRuntime, log_follow: true})
     });
-    await refresh();
+    await startJobPolling(job);
+    return;
+  }
+  if (event.target.id === "runStageButton") {
+    if (!selectedRuntime) return;
+    const job = await api("/api/stage/run", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({stage: activeStage, runtime: selectedRuntime, log_follow: true})
+    });
+    await startJobPolling(job);
   }
 });
 

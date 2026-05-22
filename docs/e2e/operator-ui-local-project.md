@@ -23,8 +23,11 @@ The local-project UI lane follows the product operator path:
 3. Run `aidd doctor` with the intended config.
 4. Run `aidd init --work-item <id> --request "<task>" --root .aidd`.
 5. Run the workflow through `aidd run --runtime <runtime>` or continue through `aidd ui`.
-6. Inspect logs and artifacts through the UI or `aidd run logs` / `aidd run artifacts`.
-7. Keep `.aidd/` inside the local project root.
+6. Run a single selected stage through the UI or `aidd stage run <stage>` when the
+   operator needs a bounded retry.
+7. Inspect live UI job logs, persisted logs, and rendered artifacts through the UI or
+   `aidd run logs` / `aidd run artifacts`.
+8. Keep `.aidd/` inside the local project root.
 
 `aidd init --github-issue <url>` is out of product scope for this lane.
 
@@ -34,10 +37,14 @@ The maintained operator UI lane covers:
 
 - page load for the local UI shell;
 - workflow-run request delegation through the same core service used by the CLI;
-- explicit runtime selection before workflow-run request dispatch;
+- selected-stage run request delegation through the same stage execution path used by
+  `aidd stage run`;
+- explicit runtime selection before workflow-run or stage-run request dispatch;
 - blocking answer persistence to `answers.md`;
-- runtime log rendering from attempt artifacts;
-- artifact index rendering for stage documents and logs;
+- live runtime chunk rendering through UI job polling;
+- persisted runtime log rendering from attempt artifacts;
+- artifact index rendering for stage documents and logs, including read-only document
+  preview/source rendering;
 - validation visibility through validator pass/fail counts and validator report paths;
 - repair-history visibility through `repair-brief.md` paths;
 - declared project-set roots through `project-set.md` artifact visibility.
@@ -51,12 +58,14 @@ Current deterministic coverage lives in:
 
 - `tests/cli/test_ui.py::test_operator_ui_local_project_e2e_lane_covers_core_operator_flow`
 - `tests/cli/test_ui.py::test_operator_ui_artifacts_include_declared_project_set_roots`
+- `tests/cli/test_ui.py::test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs`
+- `tests/cli/test_ui.py::test_ui_artifact_document_endpoint_reads_known_document_content`
 - `tests/core/test_operator_frontend.py`
 
 These tests exercise `OperatorUiService` and the runtime-agnostic operator read/write
-services directly. The workflow-run endpoint is tested through an injected workflow
-service seam so it proves request shape and UI/Core delegation without invoking real
-runtimes.
+services directly. Workflow-run and stage-run endpoints are tested through injected
+execution seams so they prove request shape, UI/Core delegation, and live log polling
+without invoking real runtimes.
 
 ## Manual Installed Smoke
 
@@ -68,9 +77,10 @@ A manual installed UI smoke should use a disposable local fixture project:
 4. Run `aidd init --work-item <id> --request "<task>" --root .aidd` so `.aidd/` and intake context are created inside the fixture project.
 5. Seed request context with `--request` or `--request-file`, then execute a local deterministic work item through `aidd run --runtime <runtime>`.
 6. Start `aidd ui --work-item <id> --root .aidd --host 127.0.0.1 --port <port>`.
-7. Verify the page loads, runtime selection is required before `/api/workflow/run`
-   dispatch, blocking answers persist, logs and artifacts render, validation state
-   is visible, and repair evidence is linked.
+7. Verify the page loads, runtime selection is required before `/api/workflow/run` and
+   `/api/stage/run` dispatch, blocking answers persist, live logs update during the
+   UI job, persisted logs remain readable after completion, Markdown artifacts render
+   as preview/source, validation state is visible, and repair evidence is linked.
 8. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
 
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`

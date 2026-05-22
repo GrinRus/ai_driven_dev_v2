@@ -226,7 +226,9 @@ Expected behavior in the current local implementation:
 - `aidd run --runtime <maintained-runtime>` performs workflow execution through the selected adapter;
 - `aidd run` and `aidd stage run` require an explicit `--runtime`;
 - `aidd ui` also requires the operator to select a runtime in the browser before
-  launching a workflow; the UI does not silently default to `generic-cli`;
+  launching a workflow or selected stage; the UI does not silently default to `generic-cli`;
+- the UI **Run workflow** action requests full workflow progression, while **Run selected
+  stage** uses the same single-stage semantics as `aidd stage run <stage>`;
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
 - `generic-cli` is an advanced wrapper/test lane, not the default product onboarding runtime;
 - `python -m aidd.harness.live_e2e_black_box` executes the black-box evaluator
@@ -256,6 +258,7 @@ Use either the local UI or CLI read commands:
 aidd run show --work-item WI-001 --root .aidd
 aidd run logs --work-item WI-001 --stage plan --root .aidd
 aidd run artifacts --work-item WI-001 --stage plan --root .aidd
+aidd stage questions plan --work-item WI-001 --root .aidd
 ```
 
 The UI uses the same `.aidd/` root:
@@ -263,6 +266,23 @@ The UI uses the same `.aidd/` root:
 ```bash
 aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
 ```
+
+The CLI does not post answers through a separate command in this release. When a stage
+is blocked, use `aidd stage questions <stage>` to locate the standard question and answer
+documents, write resolved answers to
+`.aidd/workitems/<work-item>/stages/<stage>/answers.md`, then rerun
+`aidd stage run <stage> --work-item <id> --runtime <runtime> --root .aidd`.
+
+In the UI, answer unresolved questions in the **Questions** tab. The browser writes
+`[resolved]` answers to the same `answers.md`; use **Run selected stage** or **Run
+workflow** after answering. Partial and deferred answer states remain file-mode CLI
+semantics for this release.
+
+During a UI-triggered run, the **Logs** tab follows the in-memory job stream from the
+runtime stdout/stderr callbacks. After completion, `aidd run logs` and the UI persisted
+log view read the durable attempt `runtime.log`. The **Artifacts** tab renders known
+stage document keys from the artifact index as read-only Markdown preview/source views;
+it does not allow arbitrary path reads.
 
 The local UI has no authentication in this release. The default bind host is
 `127.0.0.1`; binding to `0.0.0.0`, a LAN address, or another non-loopback host is

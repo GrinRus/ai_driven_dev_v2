@@ -157,6 +157,9 @@ aidd stage questions idea --work-item WI-001 --root .aidd
 Stage documents, runtime logs, validator reports, repair briefs, questions, and answers
 remain ordinary files in the local workspace. The core treats Markdown documents as the
 contract surface; runtime-authored JSON schemas are not the primary stage output format.
+When a CLI stage stops on questions, inspect them with `aidd stage questions`, write
+answers to `.aidd/workitems/<work-item>/stages/<stage>/answers.md`, and rerun the stage
+with `aidd stage run <stage> --work-item <id> --runtime <runtime> --root .aidd`.
 
 ## Operator UI
 
@@ -166,11 +169,16 @@ Start the local UI for an initialized work item:
 aidd ui --work-item WI-001 --root .aidd
 ```
 
-The UI reads the same `.aidd/` state as the CLI. It can show stage status, stage artifacts,
-runtime logs, questions, repair history, and runtime readiness details without introducing a
-separate workflow engine. Workflow launches from the UI require an explicit runtime selection;
-there is no hidden `generic-cli` fallback. The UI is a local no-auth operator surface: the
-default host is loopback, and non-loopback binds print a warning.
+The UI reads the same `.aidd/` state as the CLI. It can show stage status, render stage
+Markdown artifacts, show runtime logs, answer questions, show repair history, and display
+runtime readiness details without introducing a separate workflow engine. Operators can run
+the full workflow with **Run workflow** or run only the selected stage with **Run selected
+stage**; both actions require an explicit runtime selection and there is no hidden
+`generic-cli` fallback. New UI launches stream live job logs while the process runs, and
+the saved `runtime.log` remains available afterward through the normal log view and CLI.
+The UI writes question answers as `[resolved]` entries in the standard `answers.md`; rerun
+the selected stage or workflow after answering. The UI is a local no-auth operator surface:
+the default host is loopback, and non-loopback binds print a warning.
 
 For the local UI evidence lane, see `docs/e2e/operator-ui-local-project.md`.
 

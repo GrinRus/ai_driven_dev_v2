@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -58,6 +59,7 @@ class StageRunOptions:
     root: Path | None
     config: Path
     log_follow: bool
+    runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,6 +181,9 @@ def _stream_runtime_chunk(
         chunk=chunk,
         multi_stream=True,
     )
+    if options.runtime_chunk_sink is not None:
+        options.runtime_chunk_sink(stream, prefixed_chunk)
+        return
     console.print(prefixed_chunk, end="", markup=False, highlight=False)
 
 
