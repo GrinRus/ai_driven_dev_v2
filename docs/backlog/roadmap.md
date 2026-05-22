@@ -5650,8 +5650,8 @@ Evidence:
 - A source-installed local-project smoke passed on 2026-05-21 against a disposable
   `harness/fixtures/minimal-python` copy, covering `doctor`, `init`, bounded
   `run idea->plan`, `run show`, `run logs`, `run artifacts`, and `stage questions`.
-- `docs/release-notes-v0.1.0a3-draft.md` is a release-note draft only; tag creation and PyPI
-  publishing still require explicit operator approval.
+- `docs/release-notes-v0.1.0a3-draft.md` captured the `v0.1.0a3` release notes before
+  publication; accepted package-channel evidence is recorded in `docs/release-checklist.md`.
 
 Exit evidence:
 

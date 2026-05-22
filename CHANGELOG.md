@@ -7,7 +7,8 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes yet.
+- Move `main` to `0.1.0a4.dev0` after accepted `v0.1.0a3` package release
+  evidence.
 
 ## 0.1.0a3 - 2026-05-22
 
