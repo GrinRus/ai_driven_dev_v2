@@ -14,7 +14,7 @@ from aidd.core.run_provenance import (
     resolve_repository_git_sha,
     resolve_resource_revision,
 )
-from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
+from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, resolve_expected_output_documents
 from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
     WORKSPACE_REPORTS_DIRNAME,
@@ -292,19 +292,39 @@ def load_attempt_artifact_index(
     return RunArtifactIndex.from_dict(payload)
 
 
-def _canonical_stage_documents(workspace_root: Path, work_item: str, stage: str) -> dict[str, str]:
+def _document_key(path: Path) -> str:
+    return path.name.removesuffix(".md").replace("-", "_")
+
+
+def _canonical_stage_documents(
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    *,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> dict[str, str]:
     stage_documents_root = work_item_stage_root(
         root=workspace_root,
         work_item=work_item,
         stage=stage,
     )
-    documents = {
-        filename.removesuffix(".md").replace("-", "_"): _workspace_relative_canonical_path(
+    documents: dict[str, str] = {}
+    for path in resolve_expected_output_documents(
+        stage=stage,
+        work_item=work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    ):
+        if path.suffix.lower() == ".md":
+            documents[_document_key(path)] = _workspace_relative_canonical_path(
+                workspace_root=workspace_root,
+                path=path,
+            )
+    for filename in RESERVED_STAGE_FILENAMES:
+        documents[_document_key(Path(filename))] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=stage_documents_root / filename,
         )
-        for filename in RESERVED_STAGE_FILENAMES
-    }
     project_set_context = (
         work_item_context_root(root=workspace_root, work_item=work_item) / "project-set.md"
     )
@@ -434,6 +454,7 @@ def write_attempt_artifact_index(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
+        contracts_root=contracts_root,
     )
     documents.update(
         _canonical_attempt_documents(

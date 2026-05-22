@@ -121,6 +121,12 @@ def _prepare_run(workspace_root: Path) -> None:
         "Blocked on clarification.\n",
         encoding="utf-8",
     )
+    stage_root.joinpath("plan.md").write_text(
+        "# Plan\n\n"
+        "## Goals\n\n"
+        "- Keep stage primary output visible in the operator UI.\n",
+        encoding="utf-8",
+    )
     stage_root.joinpath("repair-brief.md").write_text(
         "# Failed checks\n\n"
         "- `SEM-INCOMPLETE-SECTION` `medium` in "
@@ -166,6 +172,16 @@ def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
     ]
     assert logs_payload["text"] == "runtime-line\n"
     assert artifacts_payload["documents"]["input_bundle"].endswith("input-bundle.md")
+
+
+def test_ui_run_endpoint_uses_empty_state_when_no_run_exists(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    service = _service(workspace_root)
+
+    payload = _payload(service.handle_get("/api/run", {}))
+
+    assert payload["metadata"] is None
+    assert payload["message"] == "No runs found for work item 'WI-UI'."
 
 
 def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> None:
@@ -510,6 +526,9 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     stage_payload = _payload(service.handle_get("/api/stage", {"stage": ["plan"]}))
 
     assert logs_payload["text"] == "runtime-line\n"
+    assert artifacts_payload["documents"]["plan"] == (
+        "workitems/WI-UI/stages/plan/plan.md"
+    )
     assert artifacts_payload["documents"]["stage_result"] == (
         "workitems/WI-UI/stages/plan/stage-result.md"
     )
@@ -556,6 +575,19 @@ def test_ui_artifact_document_endpoint_reads_known_document_content(tmp_path: Pa
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
     service = _service(workspace_root)
+
+    primary_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+            },
+        )
+    )
+    assert primary_payload["key"] == "plan"
+    assert primary_payload["path"] == "workitems/WI-UI/stages/plan/plan.md"
+    assert "stage primary output visible" in primary_payload["text"]  # type: ignore[operator]
 
     payload = _payload(
         service.handle_get(
@@ -660,7 +692,9 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "function escapeHtml(value)" in script
     assert "function renderMarkdown(text)" in script
     assert "function preferredArtifactKey(documents)" in script
+    assert '"plan"' in script
     assert '"stage_result"' in script
+    assert "if (!metadata)" in script
     assert "let stageSummaryByStage = {};" in script
     assert "No artifacts for this stage yet" in script
     assert "No runtime log for this stage yet" in script
