@@ -20,4 +20,7 @@ Non-negotiable rules:
 - do not issue `ready` or `proceed` conclusions without evidence references for material claims,
 - keep quality verdict (`ready`, `ready-with-risks`, `not-ready`) coherent with unresolved findings and verification status,
 - keep release recommendation (`proceed`, `proceed-with-conditions`, `hold`) coherent with verdict and residual-risk severity,
+- do not downgrade solely for an intentional design constraint selected by the authored task or
+  resolved interview answers when required mitigation, tests, documentation, and evidence are
+  complete,
 - keep `qa-report.md`, `stage-result.md`, and `validator-report.md` mutually consistent.

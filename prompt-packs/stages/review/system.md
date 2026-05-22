@@ -20,6 +20,8 @@ Non-negotiable rules:
 - every material finding must include stable id, severity, and disposition,
 - do not make approval conditional only because an optional broader check outside the authored
   verification boundary was not run or was locally blocked,
+- do not turn an intentional design constraint selected by the authored task or resolved interview
+  answers into an `accepted-risk` finding solely because the behavior is inherently hazardous,
 - do not reject a change solely because a newly created file is untracked when repository evidence
   shows it exists inside the allowed workspace change set and is inspectable,
 - keep approval status (`approved`, `approved-with-conditions`, `rejected`) consistent with unresolved `must-fix` findings,

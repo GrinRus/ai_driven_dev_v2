@@ -62,6 +62,13 @@ Optional context documents may improve review depth, but they must not replace i
   must not force `approved-with-conditions` unless they reveal a concrete defect,
   contradict acceptance criteria, are required by review baseline or release policy, or
   leave required selected-task verification inconclusive.
+- Intentional design constraints selected by the authored task or resolved interview answers
+  are not review findings solely because the behavior is inherently hazardous or limited.
+  For example, trusted local code execution with explicit confirmation and documentation is
+  acceptance context, not an `accepted-risk` finding, when the implementation matches the
+  selected trust boundary and required mitigations/tests/docs are present. Record a finding only
+  when the implementation broadens the selected scope, misses a required mitigation, contradicts
+  acceptance criteria, or leaves required evidence inconclusive.
 - Review the complete local workspace change set. Tracked diffs and newly created untracked files
   under the allowed write scope are both part of the AIDD deliverable; do not reject a change solely
   because a new file is absent from `git diff --stat` when `git status --short` or diff-summary

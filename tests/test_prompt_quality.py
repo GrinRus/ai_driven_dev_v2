@@ -101,6 +101,23 @@ def test_review_prompt_respects_authored_verification_boundary() -> None:
     assert "do not make approval conditional only because an optional broader check" in (
         system_prompt
     )
+    assert "intentional design constraint selected by the authored task" in system_prompt
+    assert "not findings by themselves" in run_prompt
+    assert "do not write an `accepted-risk`" in run_prompt
+
+
+def test_qa_prompt_respects_selected_design_constraints() -> None:
+    run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/qa/system.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Intentional design constraints selected by the authored task" in run_prompt
+    assert "not residual release risks by themselves" in run_prompt
+    assert "trusted local code execution is `ready`" in run_prompt
+    assert "Do not preserve `ready-with-risks` only because" in repair_prompt
+    assert "do not downgrade solely for an intentional design constraint" in system_prompt
 
 
 def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes() -> None:

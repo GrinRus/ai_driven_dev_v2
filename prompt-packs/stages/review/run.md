@@ -73,7 +73,13 @@ normalize if canonical validation proves the terminal status inconsistent.
    Do not reject solely because such a file is absent from `git diff --stat`; inspect it and treat
    it as a changed file unless it is missing, outside scope, undocumented by implementation
    evidence, or an explicit release policy requires a tracked-only patch artifact.
-8. In `review-report.md`, write the approval decision as a machine-readable line:
+8. Intentional design constraints selected by the authored task or resolved interview answers are
+   acceptance context, not findings by themselves. For example, do not write an `accepted-risk`
+   finding solely because the task intentionally executes trusted local Python when the
+   implementation requires explicit confirmation, documents the trust boundary, and stays within
+   the selected scope. Write a finding only for missing mitigation/evidence, broadened scope,
+   contradictory artifacts, or a concrete defect.
+9. In `review-report.md`, write the approval decision as a machine-readable line:
    `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
    `Approval status` or `Verdict`, then add rationale separately.
 
@@ -118,5 +124,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - required changes map to concrete findings for non-approved outcomes,
 - optional checks outside the authored verification boundary are not treated as approval
   conditions unless they expose a concrete defect or selected-task evidence gap,
+- intentional selected design constraints are not emitted as `accepted-risk` findings when their
+  required mitigations and evidence are complete,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.

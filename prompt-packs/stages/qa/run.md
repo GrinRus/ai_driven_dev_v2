@@ -62,6 +62,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    boundary. Do not downgrade to `ready-with-risks` or `proceed-with-conditions` only because
    optional broader checks outside that boundary were not run or were blocked by local sandbox
    policy, unless they reveal a concrete defect or contradict acceptance criteria/review evidence.
+7. Intentional design constraints selected by the authored task or resolved interview answers are
+   not residual release risks by themselves. For example, trusted local code execution is `ready`
+   when explicit confirmation, documentation, tests, and scope boundaries required by the selected
+   task are complete. Downgrade only for missing mitigation/evidence, broadened scope, contradictory
+   review/verification artifacts, or a concrete defect beyond the selected boundary.
 
 ## Execution instructions
 
@@ -105,4 +110,6 @@ normalize if canonical validation proves the terminal status inconsistent.
 - unresolved critical uncertainty is surfaced as blocking question with `hold`,
 - optional checks outside the authored verification boundary are not treated as release
   conditions unless they expose a concrete defect,
+- intentional selected design constraints are not treated as residual risks when their required
+  mitigations and evidence are complete,
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.
