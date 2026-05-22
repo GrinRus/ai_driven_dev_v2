@@ -237,6 +237,8 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
         "Do not push a tag to trigger publishing directly",
         "GitHub Release `published` event",
         "release tag commit to match the remote release branch HEAD",
+        "GitHub cannot open a no-diff release",
+        "`workflow_dispatch` on the release branch",
     ):
         assert needle in pre_history_checklist
 

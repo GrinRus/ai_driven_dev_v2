@@ -34,6 +34,9 @@ uv run aidd doctor
 - [ ] Push the release branch.
 - [ ] Open a release PR from `release/v<project.version>` to `main` and wait for
   deterministic CI to pass before publishing.
+- [ ] If the release branch matches `main` exactly and GitHub cannot open a no-diff release
+  PR, mark the release PR as N/A and run both `ci.yml` and `release.yml` through
+  `workflow_dispatch` on the release branch instead.
 - [ ] Create a draft GitHub Release with tag `v<project.version>` targeting the
   `release/v<project.version>` branch.
 - [ ] Publish the GitHub Release only after the release branch is final.
