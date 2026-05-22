@@ -253,10 +253,17 @@ def _restore_operator_owned_answers_after_runtime_attempt(
     question_ids = {question.question_id for question in questions}
     runtime_resolved_ids = resolved_after - resolved_before
     runtime_resolved_question_ids = runtime_resolved_ids & question_ids
+    empty_answers_text = render_answers_markdown(())
 
     if answers_text_before_attempt is None:
-        if runtime_resolved_question_ids:
-            answers_path.write_text(render_answers_markdown(()), encoding="utf-8")
+        if question_ids and answers_text_after_attempt != empty_answers_text:
+            answers_path.parent.mkdir(parents=True, exist_ok=True)
+            answers_path.write_text(empty_answers_text, encoding="utf-8")
+        return
+
+    if question_ids and answers_text_after_attempt != answers_text_before_attempt:
+        answers_path.parent.mkdir(parents=True, exist_ok=True)
+        answers_path.write_text(answers_text_before_attempt, encoding="utf-8")
         return
 
     preserved_operator_answer_ids = resolved_before & question_ids
