@@ -210,10 +210,41 @@ def test_release_checklist_requires_verification_job_evidence() -> None:
         "Release checklist is missing required verification job references: "
         f"{', '.join(missing_job_references)}"
     )
-    assert "required release evidence for tagged alpha builds" in release_checklist.lower()
+    assert "required release evidence for published github release alpha builds" in (
+        release_checklist.lower()
+    )
     assert "does not publish or support docker/ghcr images during the alpha phase" in (
         release_checklist.lower()
     )
+
+
+def test_release_docs_describe_release_branch_publish_flow() -> None:
+    repo_root = _repo_root()
+    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
+        encoding="utf-8"
+    )
+    distribution = (
+        repo_root / "docs" / "architecture" / "distribution-and-development.md"
+    ).read_text(encoding="utf-8")
+    release_notes = (
+        repo_root / "docs" / "release-notes-v0.1.0a3-draft.md"
+    ).read_text(encoding="utf-8")
+
+    pre_history_checklist = release_checklist.split("## Release attempt evidence log", 1)[0]
+    for needle in (
+        "release/v<project.version>",
+        "Create a draft GitHub Release",
+        "Do not push a tag to trigger publishing directly",
+        "GitHub Release `published` event",
+        "release tag commit to match the remote release branch HEAD",
+        "GitHub cannot open a no-diff release",
+        "`workflow_dispatch` on the release branch",
+    ):
+        assert needle in pre_history_checklist
+
+    assert "workflow_dispatch` path is a dry run" in distribution
+    assert "release tag commit must match the remote release branch HEAD" in distribution
+    assert "publish a GitHub Release tagged `v0.1.0a3`" in release_notes
 
 
 def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -> None:

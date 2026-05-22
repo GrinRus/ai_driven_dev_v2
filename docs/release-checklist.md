@@ -1,13 +1,13 @@
 # Release Checklist
 
-Use this checklist for tagged releases of `ai_driven_dev_v2`.
+Use this checklist for GitHub Release-driven package releases of `ai_driven_dev_v2`.
 
 ## 1. Pre-release preparation
 
 - [ ] Working tree is clean and scoped to intended release changes.
 - [ ] `pyproject.toml` `project.version` is set to the intended release version.
 - [ ] If the previous version was already published, `main` has first moved to the next
-  development version and the release branch/tag uses a unique unpublished version.
+  development version and the release branch uses a unique unpublished version.
 - [ ] Local quality gate passes:
 
 ```bash
@@ -28,18 +28,34 @@ uv run aidd doctor
   `docs/architecture/target-architecture.md` match the code and release claims.
 - [ ] Live E2E is not wired into GitHub Actions, CI/CD, or release workflows.
 
-## 2. Create and push release tag
+## 2. Create release branch and GitHub Release
 
-- [ ] Create an annotated release tag that exactly matches `v<project.version>`.
+- [ ] Create a release branch named exactly `release/v<project.version>`.
+- [ ] Push the release branch.
+- [ ] Open a release PR from `release/v<project.version>` to `main` and wait for
+  deterministic CI to pass before publishing.
+- [ ] If the release branch matches `main` exactly and GitHub cannot open a no-diff release
+  PR, mark the release PR as N/A and run both `ci.yml` and `release.yml` through
+  `workflow_dispatch` on the release branch instead.
+- [ ] Create a draft GitHub Release with tag `v<project.version>` targeting the
+  `release/v<project.version>` branch.
+- [ ] Publish the GitHub Release only after the release branch is final.
+- [ ] Do not push a tag to trigger publishing directly. The release workflow publishes only
+  from the GitHub Release `published` event.
+- [ ] Confirm the `release` GitHub Actions workflow started from the GitHub Release event.
 
 Example:
 
 ```bash
-git tag -a v0.1.0a0 -m "Release v0.1.0a0"
-git push origin v0.1.0a0
+git switch -c release/v0.1.0a3 main
+git push -u origin release/v0.1.0a3
 ```
 
-- [ ] Confirm the `release` GitHub Actions workflow started from the tag push.
+Release workflow validation requires:
+
+- the release tag to exactly match `v<project.version>`;
+- the branch to be named exactly `release/<tag>`, for example `release/v0.1.0a3`;
+- the release tag commit to match the remote release branch HEAD.
 
 ## 3. Package publish checklist (PyPI)
 
@@ -69,11 +85,11 @@ AIDD does not publish or support Docker/GHCR images during the alpha phase.
 
 - [ ] `verify-pypi-install` job passed and its logs include `aidd --version` and `aidd doctor`.
 - [ ] `verify-uv-tool-install` job passed and its logs include `aidd --version` and `aidd doctor`.
-- [ ] These two jobs are required release evidence for tagged alpha builds.
+- [ ] These two jobs are required release evidence for published GitHub Release alpha builds.
 
 Prerequisite refresh before evidence capture:
 
-- a release candidate tag must point at the commit under test;
+- the GitHub Release tag must point at the release branch HEAD under test;
 - PyPI or TestPyPI publishing credentials must be available to the release workflow;
 - if any prerequisite is missing, record an explicit blocker instead of treating release
   evidence as refreshed.
@@ -94,7 +110,7 @@ uv run python -m aidd.harness.live_e2e_black_box <manifest> --runtime <runtime> 
 - The local evaluator validates the selected provider command before clone/install;
   `AIDD_EVAL_CODEX_COMMAND`, `AIDD_EVAL_OPENCODE_COMMAND`, or
   `AIDD_EVAL_CLAUDE_CODE_COMMAND` are optional wrapper overrides for `adapter-flags` mode.
-- That audit is separate from publish/installability evidence and must not block tagged releases.
+- That audit is separate from publish/installability evidence and must not block package releases.
 
 Suggested package-path verification:
 
@@ -119,7 +135,7 @@ uv tool uninstall ai-driven-dev-v2
 - [ ] Summarize user-visible changes for this release.
 - [ ] Include task ids and major behavior/contract updates.
 - [ ] Include known limitations and blocked items if they affect operators.
-- [ ] Publish GitHub release notes for the tag.
+- [ ] Publish GitHub release notes through the GitHub Release.
 
 ## 7. Post-release follow-up
 
