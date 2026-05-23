@@ -12,6 +12,8 @@ stable compatibility window exists.
 ## 0.1.0a4 - 2026-05-22
 
 - Prepare the `0.1.0a4` prerelease package for controlled operator trials.
+- Publish `0.1.0a4` to PyPI and verify `pipx` plus `uv tool` install evidence on
+  2026-05-23.
 - Add local operator UI async jobs for workflow and single-stage runs, with polling-based
   live runtime log chunks and persisted `runtime.log` replay.
 - Align UI selected-stage execution with `aidd stage run <stage>` semantics instead of

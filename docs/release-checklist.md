@@ -149,6 +149,29 @@ Historical release attempts below may mention GHCR because earlier alpha candida
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
 
+### `v0.1.0a4` accepted evidence on 2026-05-23
+
+- Tag: `v0.1.0a4`
+- Release branch: `release/v0.1.0a4`
+- Commit: `40a611373c25a90244c188d9c0ecdd2e3e778033`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a4`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/26325967424`
+- Result: accepted release/install evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: release tag `v0.1.0a4` matched `project.version` `0.1.0a4`, and the
+  release tag commit matched the remote `release/v0.1.0a4` branch HEAD.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a4/`.
+- PyPI files: `ai_driven_dev_v2-0.1.0a4-py3-none-any.whl` and
+  `ai_driven_dev_v2-0.1.0a4.tar.gz`.
+- `pipx` verification installed `ai-driven-dev-v2==0.1.0a4`; `aidd --version` returned
+  `aidd 0.1.0a4`, and `aidd doctor` reported `Version 0.1.0a4`.
+- `uv tool` verification installed `ai-driven-dev-v2==0.1.0a4`; `aidd --version` returned
+  `aidd 0.1.0a4`, and `aidd doctor` reported `Version 0.1.0a4`.
+- Independent local package smoke resolved `ai-driven-dev-v2==0.1.0a4` through
+  isolated `pipx` and `uv tool` runs and returned `aidd 0.1.0a4`.
+- No Docker/GHCR artifact is part of the supported `v0.1.0a4` release contract.
+
 ### `v0.1.0a3` accepted evidence on 2026-05-22
 
 - Tag: `v0.1.0a3`
