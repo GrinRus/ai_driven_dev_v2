@@ -1,12 +1,12 @@
-# Draft Release Notes: v0.1.0a4
+# Release Notes: v0.1.0a4
 
-Status: draft, not tagged or published.
+Status: published as GitHub Release `v0.1.0a4` on 2026-05-23.
 
 ## Summary
 
-This release candidate focuses on the local operator UI runtime flow. It keeps AIDD in
-prerelease alpha while making stage execution, question handling, live logs, and artifact
-inspection more consistent between the UI and CLI.
+This prerelease focuses on the local operator UI runtime flow. It keeps AIDD in prerelease
+alpha while making stage execution, question handling, live logs, and artifact inspection
+more consistent between the UI and CLI.
 
 ## User-visible changes
 
@@ -41,12 +41,3 @@ Docker/GHCR remains outside the supported prerelease contract.
 - Runtime binaries and authentication are external operator prerequisites.
 - UI v1 persists only `[resolved]` answers; `[partial]` and `[deferred]` remain CLI/file-mode
   behavior.
-
-## Release checklist
-
-- Confirm `pyproject.toml` version is set to `0.1.0a4` before creating the release branch.
-- Run deterministic local gates.
-- Run `ci.yml` and `release.yml` dry-runs on `release/v0.1.0a4`.
-- Publish the GitHub Release only after explicit maintainer approval.
-- Confirm the release workflow quality, build, publish, `pipx`, and `uv tool` verification
-  jobs pass for GitHub Release `v0.1.0a4`.
