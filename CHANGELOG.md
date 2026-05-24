@@ -20,6 +20,8 @@ stable compatibility window exists.
   including primary stage outputs such as `plan.md`.
 - Clarify UI and CLI question-answer flows: UI writes `[resolved]` answers, while CLI users
   inspect `aidd stage questions`, edit `answers.md`, and rerun the selected stage.
+- Clarify strict interview repair prompts so runtime repair attempts avoid colon-style
+  answer bullets such as `- Q1 [resolved]: ...`.
 - Keep fresh UI work items in a clean empty state before the first run.
 
 ## 0.1.0a3 - 2026-05-22

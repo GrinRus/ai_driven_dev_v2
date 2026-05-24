@@ -79,12 +79,21 @@ command so future smoke refactors do not break source-installed local runs.
   selected maintained manual-live beta evidence pairs: `AIDD-LIVE-002/codex`,
   `AIDD-LIVE-007/codex`, `AIDD-LIVE-007/claude-code`, `AIDD-LIVE-006/opencode`,
   and `AIDD-LIVE-008/opencode`.
+- On 2026-05-24, terminal black-box bundles were refreshed and counted clean for the
+  selected maintained manual-live beta evidence pairs:
+  `w24-a4-live-002-codex-20260524`, `w24-a4-live-007-codex-20260524`,
+  `w24-a4-live-007-claude-code-20260524`, `w24-a4-live-006-opencode-20260524-r2`,
+  and `w24-a4-live-008-opencode-20260524`. The two interview scenarios include
+  `answer-analysis.md` plus `operator-quality-analysis.md`; all five counted bundles
+  include `operator-quality-analysis.md`.
+- The `AIDD-LIVE-006/opencode` refresh first exposed an AIDD-owned repair-prompt clarity
+  defect around malformed interview answer bullets. That defect was fixed in the
+  candidate source before the counted rerun.
 - No accepted `0.1.0a4` release/install evidence exists yet. The `0.1.0a4` candidate
   still requires GitHub Release publish, PyPI publish, `pipx` verification, and `uv tool`
   verification before it can become the latest accepted published prerelease evidence.
-- Counted manual live evidence still requires terminal black-box bundles with
-  `operator-quality-analysis.md`; preflight readiness alone is not counted clean live
-  evidence.
+- Preflight readiness alone is not counted clean live evidence; the counted W24 refresh
+  uses terminal black-box bundles and operator overlays.
 
 Required change: keep workflow-shape tests preventing live E2E from entering GitHub
 Actions, and run terminal black-box bundles separately before claiming refreshed counted
@@ -95,5 +104,5 @@ manual live evidence.
 Proceed with beta-readiness release preparation as a documentation, release-process,
 scenario-smoke, and test-hardening slice.
 
-Do not claim beta completion until manual live evidence is refreshed outside CI/CD and the
-operator ledger records the maintained provider/scenario results.
+Do not claim beta completion until publish/install release evidence exists for `0.1.0a4`
+and the operator ledger records the maintained provider/scenario results.

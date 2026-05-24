@@ -25,6 +25,8 @@ inspection more consistent between the UI and CLI.
 - Clarified question-answer handling: the UI writes `[resolved]` answer entries, and CLI
   operators edit `answers.md` after inspecting `aidd stage questions`.
 - Fresh UI work items now load without `/api/run` errors before the first run exists.
+- Clarified repair prompts for strict interview documents so runtime repair attempts call
+  out that answer lines such as `- Q1 [resolved]: ...` are invalid.
 
 ## Installation channels
 
@@ -49,6 +51,8 @@ accepted published prerelease evidence.
 - Runtime binaries and authentication are external operator prerequisites.
 - UI v1 persists only `[resolved]` answers; `[partial]` and `[deferred]` remain CLI/file-mode
   behavior.
+- W24 manual live evidence has been refreshed locally for the maintained beta evidence
+  matrix, but that evidence is not publish/install acceptance evidence for `0.1.0a4`.
 
 ## Release checklist
 

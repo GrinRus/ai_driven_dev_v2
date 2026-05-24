@@ -140,15 +140,19 @@ published and the release workflow quality, build, PyPI publish, `pipx`, and `uv
 verification jobs pass. Do not add an accepted `v0.1.0a4` evidence log entry before those
 publish/install checks exist.
 
-W24 manual live preflight evidence on 2026-05-24:
+W24 manual live evidence refresh on 2026-05-24:
 
 | Scenario / runtime | Manifest | Preflight result | Counted live evidence |
 | --- | --- | --- | --- |
-| `AIDD-LIVE-002` / `codex` | `harness/scenarios/live/typer-boolean-help-rendering.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Not counted; terminal black-box bundle and `operator-quality-analysis.md` still required |
-| `AIDD-LIVE-007` / `codex` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Not counted; terminal black-box bundle and `operator-quality-analysis.md` still required |
-| `AIDD-LIVE-007` / `claude-code` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `2.1.85 (Claude Code)`; native default command | Not counted; terminal black-box bundle and `operator-quality-analysis.md` still required |
-| `AIDD-LIVE-006` / `opencode` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Not counted; terminal black-box bundle, resolved interview answers, and `operator-quality-analysis.md` still required |
-| `AIDD-LIVE-008` / `opencode` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Not counted; terminal black-box bundle, resolved interview answers, and `operator-quality-analysis.md` still required |
+| `AIDD-LIVE-002` / `codex` | `harness/scenarios/live/typer-boolean-help-rendering.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Counted clean: `w24-a4-live-002-codex-20260524`; quality gate `pass`; `operator-quality-analysis.md` present |
+| `AIDD-LIVE-007` / `codex` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Counted clean: `w24-a4-live-007-codex-20260524`; quality gate `pass`; `operator-quality-analysis.md` present |
+| `AIDD-LIVE-007` / `claude-code` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `2.1.85 (Claude Code)`; native default command | Counted clean: `w24-a4-live-007-claude-code-20260524`; quality gate `pass`; `operator-quality-analysis.md` present |
+| `AIDD-LIVE-006` / `opencode` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Counted clean after blocked/resumed interview path: `w24-a4-live-006-opencode-20260524-r2`; quality gate `pass`; `answer-analysis.md` and `operator-quality-analysis.md` present |
+| `AIDD-LIVE-008` / `opencode` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Counted clean after blocked/resumed interview path: `w24-a4-live-008-opencode-20260524`; quality gate `pass`; `answer-analysis.md` and `operator-quality-analysis.md` present |
+
+This counted manual live evidence is local operator audit evidence only. It is not accepted
+`0.1.0a4` publish/install evidence and does not replace GitHub Release, PyPI, `pipx`, or
+`uv tool` verification.
 
 ## 6. Changelog and release notes checklist
 
