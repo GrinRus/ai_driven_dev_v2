@@ -1,6 +1,6 @@
 # Beta Readiness Source Audit
 
-Date: 2026-05-22
+Date: 2026-05-24
 
 ## Purpose
 
@@ -20,8 +20,8 @@ Reviewed sources:
 
 ### README
 
-- The release-candidate package version matches the package state: `0.1.0a3`.
-  The last accepted published prerelease evidence before this candidate is `0.1.0a2`.
+- The release-candidate package version matches the package state: `0.1.0a4`.
+  The last accepted published prerelease evidence before this candidate is `0.1.0a3`.
 - The documented public CLI commands match the registered command surface:
   `doctor`, `init`, `ui`, `stage`, `eval`, and `run`.
 - The removed eval-run product command is not documented as a current product command.
@@ -75,12 +75,20 @@ command so future smoke refactors do not break source-installed local runs.
 - Manual live E2E remains isolated to the local
   `uv run python -m aidd.harness.live_e2e_black_box` operator path; there is no GitHub
   Actions live E2E workflow.
-- `aidd eval doctor` reported execution readiness `pass` for the selected maintained
-  manual-live beta evidence pairs: `AIDD-LIVE-002/codex`, `AIDD-LIVE-007/codex`,
-  `AIDD-LIVE-007/claude-code`, `AIDD-LIVE-006/opencode`, and `AIDD-LIVE-008/opencode`.
+- On 2026-05-24, `aidd eval doctor` reported execution readiness `pass` for the
+  selected maintained manual-live beta evidence pairs: `AIDD-LIVE-002/codex`,
+  `AIDD-LIVE-007/codex`, `AIDD-LIVE-007/claude-code`, `AIDD-LIVE-006/opencode`,
+  and `AIDD-LIVE-008/opencode`.
+- No accepted `0.1.0a4` release/install evidence exists yet. The `0.1.0a4` candidate
+  still requires GitHub Release publish, PyPI publish, `pipx` verification, and `uv tool`
+  verification before it can become the latest accepted published prerelease evidence.
+- Counted manual live evidence still requires terminal black-box bundles with
+  `operator-quality-analysis.md`; preflight readiness alone is not counted clean live
+  evidence.
 
-Required change: none after this release-prep slice; workflow-shape tests now prevent live
-E2E from entering any GitHub Actions workflow.
+Required change: keep workflow-shape tests preventing live E2E from entering GitHub
+Actions, and run terminal black-box bundles separately before claiming refreshed counted
+manual live evidence.
 
 ## Decision
 

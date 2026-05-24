@@ -2,6 +2,9 @@
 
 Status: draft, not tagged or published.
 
+Current release-candidate package version: `0.1.0a4`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a3`.
+
 ## Summary
 
 This release candidate focuses on the local operator UI runtime flow. It keeps AIDD in
@@ -32,6 +35,11 @@ Supported prerelease channels remain:
 - source checkout
 
 Docker/GHCR remains outside the supported prerelease contract.
+
+The `0.1.0a4` package must not be described as the latest accepted published prerelease
+until the GitHub Release is published and the release workflow quality, build, PyPI publish,
+`pipx`, and `uv tool` verification jobs pass. Until then, `0.1.0a3` remains the latest
+accepted published prerelease evidence.
 
 ## Known limitations
 

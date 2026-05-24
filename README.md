@@ -51,20 +51,20 @@ Claude Code, Codex, OpenCode, or other runtime CLIs separately.
 
 ## Install with pipx
 
-Install the latest accepted prerelease:
+Install the latest accepted published prerelease evidence:
 
 ```bash
-pipx install "ai-driven-dev-v2==0.1.0a4"
+pipx install "ai-driven-dev-v2==0.1.0a3"
 aidd --version
 aidd doctor
 ```
 
 ## Install with uv tool
 
-Install the latest accepted prerelease:
+Install the latest accepted published prerelease evidence:
 
 ```bash
-uv tool install "ai-driven-dev-v2==0.1.0a4"
+uv tool install "ai-driven-dev-v2==0.1.0a3"
 aidd --version
 aidd doctor
 ```

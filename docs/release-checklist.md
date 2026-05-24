@@ -47,14 +47,14 @@ uv run aidd doctor
 Example:
 
 ```bash
-git switch -c release/v0.1.0a3 main
-git push -u origin release/v0.1.0a3
+git switch -c release/v0.1.0a4 main
+git push -u origin release/v0.1.0a4
 ```
 
 Release workflow validation requires:
 
 - the release tag to exactly match `v<project.version>`;
-- the branch to be named exactly `release/<tag>`, for example `release/v0.1.0a3`;
+- the branch to be named exactly `release/<tag>`, for example `release/v0.1.0a4`;
 - the release tag commit to match the remote release branch HEAD.
 
 ## 3. Package publish checklist (PyPI)
@@ -129,6 +129,26 @@ aidd --version
 aidd doctor
 uv tool uninstall ai-driven-dev-v2
 ```
+
+## Current candidate readiness snapshot
+
+Current release-candidate package version: `0.1.0a4`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a3`.
+
+`0.1.0a4` is ready only for release branch preparation until the GitHub Release is
+published and the release workflow quality, build, PyPI publish, `pipx`, and `uv tool`
+verification jobs pass. Do not add an accepted `v0.1.0a4` evidence log entry before those
+publish/install checks exist.
+
+W24 manual live preflight evidence on 2026-05-24:
+
+| Scenario / runtime | Manifest | Preflight result | Counted live evidence |
+| --- | --- | --- | --- |
+| `AIDD-LIVE-002` / `codex` | `harness/scenarios/live/typer-boolean-help-rendering.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Not counted; terminal black-box bundle and `operator-quality-analysis.md` still required |
+| `AIDD-LIVE-007` / `codex` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Not counted; terminal black-box bundle and `operator-quality-analysis.md` still required |
+| `AIDD-LIVE-007` / `claude-code` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `2.1.85 (Claude Code)`; native default command | Not counted; terminal black-box bundle and `operator-quality-analysis.md` still required |
+| `AIDD-LIVE-006` / `opencode` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Not counted; terminal black-box bundle, resolved interview answers, and `operator-quality-analysis.md` still required |
+| `AIDD-LIVE-008` / `opencode` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Not counted; terminal black-box bundle, resolved interview answers, and `operator-quality-analysis.md` still required |
 
 ## 6. Changelog and release notes checklist
 
