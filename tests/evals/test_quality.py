@@ -411,6 +411,50 @@ def test_build_live_quality_assessment_ignores_url_tokens_in_touched_files(
     assert assessment.blocking_findings == tuple()
 
 
+def test_build_live_quality_assessment_ignores_nested_touched_file_explanations(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    workspace_root = repo_root / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-NESTED-TOUCHED-NOTES"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    readme_path = repo_root / "README.md"
+    readme_path.write_text("updated docs\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `README.md` - updated CLI docs.\n"
+        "  - Left `docs/img/httpx-request.png` unchanged and out of scope.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert assessment.blocking_findings == tuple()
+
+
 def test_build_live_quality_assessment_fails_when_touched_files_lack_diff_evidence(
     tmp_path: Path,
 ) -> None:

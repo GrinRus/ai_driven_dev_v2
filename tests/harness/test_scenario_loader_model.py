@@ -136,7 +136,7 @@ def test_all_live_scenarios_load_as_valid_full_flow_manifests() -> None:
         _assert_live_contract(scenario)
 
 
-def test_httpx_docs_sync_live_scenario_uses_extended_runtime_budget_and_requirements() -> None:
+def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> None:
     scenario = load_scenario(Path("harness/scenarios/live/httpx-cli-docs-sync.yaml"))
 
     _assert_live_contract(scenario)
@@ -144,15 +144,25 @@ def test_httpx_docs_sync_live_scenario_uses_extended_runtime_budget_and_requirem
     assert scenario.feature_size == "tiny"
     assert scenario.canonical_runtime == "codex"
     assert scenario.run.timeout_minutes == 240
-    full_requirements_pytest = (
-        "UV_CACHE_DIR=.aidd/uv-cache uv run --with-requirements requirements.txt pytest -q"
-    )
-    assert scenario.verify.commands == (
-        full_requirements_pytest,
+    verification_text = "\n".join(scenario.verify.commands)
+    quality_text = "\n".join(scenario.quality.commands)
+    assert "git\", \"diff\", \"--name-only" in verification_text
+    assert ".venv/bin/python" in verification_text
+    assert "README.md" in verification_text
+    assert "docs/index.md" in verification_text
+    assert '"httpx " + "https:" + "//httpbin.org/json"' in verification_text
+    assert "https://httpbin.org/json" not in verification_text
+    assert "placeholder runnable example introduced" in verification_text
+    assert "pytest -q" not in verification_text
+    assert "pytest -q" not in quality_text
+    assert scenario.verify.commands[-2:] == (
         "test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md",
-        "test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/validator-report.md",
+        (
+            "test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/"
+            "validator-report.md"
+        ),
     )
-    assert scenario.quality.commands == (full_requirements_pytest,)
+    assert scenario.quality.commands == scenario.verify.commands[:2]
 
 
 def test_sqlite_utils_canonical_live_scenario_declares_installed_full_flow_bundle() -> None:

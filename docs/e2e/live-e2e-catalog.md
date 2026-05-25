@@ -117,7 +117,7 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
 ### `encode/httpx`
 
 - `AIDD-LIVE-003` - authored invalid header error message task
-- `AIDD-LIVE-004` - authored CLI docs sync task
+- `AIDD-LIVE-004` - authored CLI docs sync task with docs-only counted verification
 
 ### `simonw/sqlite-utils`
 
@@ -164,6 +164,14 @@ Representative matrix coverage for the live lane:
 Typer pin is setup-blocked before the runtime boundary. Use `AIDD-LIVE-005` as the
 canonical installed live smoke until `AIDD-LIVE-001` is repinned or its setup baseline is
 fixed.
+
+`AIDD-LIVE-004` is the maintained tiny docs-only lane. Its counted gate is scoped to
+documentation acceptance criteria: tracked product diff limited to the selected docs
+files, consistent `https://httpbin.org/json` CLI example text, no placeholder runnable
+URLs in added docs lines, no public endpoint call during verification, and QA artifact
+publication. Full HTTPX pytest can still be run by an operator as exploratory
+target-repository evidence, but it is not the clean-pass gate for this tiny documentation
+scenario because unrelated async timeout tests can fail outside the selected docs change.
 
 ## Live-Scenario Contract
 

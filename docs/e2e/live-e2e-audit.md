@@ -16,7 +16,7 @@ manifest with explicit acceptance criteria and verification intent.
 | `AIDD-LIVE-001` | `small` | Weak: setup-blocked baseline remains non-canonical. | Pinned Typer setup fails before runtime boundary. | Keep as focused styled-help alignment bugfix with regression criteria. |
 | `AIDD-LIVE-002` | `medium` | Unproven in latest local audit set. | Help rendering can drift across formatter behavior and tests. | Define explicit boolean help rendering acceptance criteria and non-regression expectations. |
 | `AIDD-LIVE-003` | `small` | Historical reference failed before clean verification. | HTTPX full-suite setup can be sensitive to dependency state. | Make invalid-header diagnostic output and regression coverage explicit. |
-| `AIDD-LIVE-004` | `tiny` | Recent Codex run reached QA but failed target pytest; artifacts narrowed to docs-only. | Docs example quality and full-suite target instability. | Define docs-only CLI sync with no placeholder endpoints and requirements-based pytest. |
+| `AIDD-LIVE-004` | `tiny` | Recent Codex run reached QA but failed final full-suite target pytest on `test_write_timeout[trio]`; stage artifacts and tracked diff were docs-only. | Docs example quality and unrelated full-suite target instability. | Define docs-only CLI sync with no placeholder endpoints and docs-only counted verification. |
 | `AIDD-LIVE-005` | `small` | Best current smoke lane; latest maintained budgets are long enough for native providers. | Multiple runtime targets increase provider-specific timing variance. | Keep header-only CSV crash fix as localized bug plus regression test. |
 | `AIDD-LIVE-006` | `large` | Interview flow commonly blocks without prepared answers. | Trust-boundary decisions cannot be invented by the model. | Encode interview topics directly on the authored task and keep answer evidence mandatory. |
 | `AIDD-LIVE-007` | `medium` | Historical verification failure in reference evidence. | Middleware error handling can affect runtime semantics beyond one test. | Define non-Error throw normalization with primitive/object regression coverage. |
@@ -25,7 +25,14 @@ manifest with explicit acceptance criteria and verification intent.
 ## Matrix Quality Notes
 
 - `AIDD-LIVE-004` is intentionally `tiny`; its expected output is documentation-only, so a
-  broad implementation patch would be a quality smell.
+  broad implementation patch would be a quality smell. The 2026-05-25 Codex brokered-live
+  run reached `qa` and proved the stage flow, but final manifest verification failed in the
+  upstream HTTPX full suite on `test_write_timeout[trio]` with a Trio async-generator
+  `ResourceWarning`. That failure is outside the selected docs-only patch, so counted
+  verification for this lane now checks tracked docs diff scope, concrete CLI example
+  consistency, absence of placeholder runnable URLs, and QA artifact publication without
+  calling the public endpoint. Full HTTPX pytest remains useful exploratory operator evidence,
+  not the maintained clean-pass gate for this tiny scenario.
 - `AIDD-LIVE-002` was re-audited locally on `2026-05-09` with Codex. The run reached
   `review-spec` repair but timed out at the 20-minute harness boundary before `tasklist`;
   this proved the medium Codex full-flow budget was too small for the installed operator
