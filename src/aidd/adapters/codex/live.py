@@ -46,6 +46,15 @@ _APPROVAL_METHODS = frozenset(
         "item/execCommand/requestApproval",
     }
 )
+_AIDD_CODEX_APPROVAL_POLICY: dict[str, object] = {
+    "granular": {
+        "mcp_elicitations": True,
+        "request_permissions": True,
+        "rules": True,
+        "sandbox_approval": True,
+        "skill_approval": True,
+    }
+}
 
 
 class _JsonRpcLineClient:
@@ -237,15 +246,15 @@ def execute_codex_live_transport(
 
     client.notify("initialized")
     thread_start_id = client.request(
-        "thread/start",
-        {
-            "cwd": repository_root.as_posix(),
-            "approvalPolicy": "on-request",
-            "approvalsReviewer": "user",
-            "sandbox": "workspace-write",
-            "ephemeral": True,
-            "serviceName": "aidd",
-            "baseInstructions": "Run the AIDD stage request exactly as provided.",
+            "thread/start",
+            {
+                "cwd": repository_root.as_posix(),
+                "approvalPolicy": _AIDD_CODEX_APPROVAL_POLICY,
+                "approvalsReviewer": "user",
+                "sandbox": "read-only",
+                "ephemeral": True,
+                "serviceName": "aidd",
+                "baseInstructions": "Run the AIDD stage request exactly as provided.",
         },
     )
     pending_request_id, denied_reason = _drain_until_response(
@@ -286,8 +295,9 @@ def execute_codex_live_transport(
         {
             "threadId": thread_id,
             "cwd": repository_root.as_posix(),
-            "approvalPolicy": "on-request",
+            "approvalPolicy": _AIDD_CODEX_APPROVAL_POLICY,
             "approvalsReviewer": "user",
+            "sandboxPolicy": {"type": "readOnly", "networkAccess": False},
             "input": [{"type": "text", "text": spec.stdin_text or ""}],
         },
     )

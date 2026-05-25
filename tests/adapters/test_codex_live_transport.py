@@ -183,6 +183,32 @@ def test_codex_live_transport_resumes_after_provider_decision(tmp_path: Path) ->
         if item["direction"] == "client" and item["payload"].get("id") == "approval-1"
     ][0]
     assert approval_response["result"] == {"decision": "acceptForSession"}
+    thread_start = [
+        item["payload"]
+        for item in transcript
+        if item["direction"] == "client"
+        and item["payload"].get("method") == "thread/start"
+    ][0]
+    turn_start = [
+        item["payload"]
+        for item in transcript
+        if item["direction"] == "client"
+        and item["payload"].get("method") == "turn/start"
+    ][0]
+    assert thread_start["params"]["sandbox"] == "read-only"
+    assert thread_start["params"]["approvalPolicy"] == {
+        "granular": {
+            "mcp_elicitations": True,
+            "request_permissions": True,
+            "rules": True,
+            "sandbox_approval": True,
+            "skill_approval": True,
+        }
+    }
+    assert turn_start["params"]["sandboxPolicy"] == {
+        "type": "readOnly",
+        "networkAccess": False,
+    }
 
 
 def test_codex_live_transport_denial_fails_stage(tmp_path: Path) -> None:
