@@ -7,7 +7,8 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes yet.
+- Record accepted `v0.1.0a5` release evidence and move source development to
+  `0.1.0a6.dev0`.
 
 ## 0.1.0a5 - 2026-05-25
 
@@ -16,8 +17,9 @@ stable compatibility window exists.
   answer bullets such as `- Q1 [resolved]: ...`.
 - Refresh W24 manual live readiness evidence for the maintained beta scenario/runtime
   matrix while keeping live E2E outside CI/CD and release workflows.
-- Keep release-readiness docs explicit about `0.1.0a5` as the current candidate and
-  `0.1.0a4` as the latest accepted published prerelease evidence.
+- Keep release-readiness docs explicit about `0.1.0a5` as the current candidate during
+  release preparation and `0.1.0a4` as the then-latest accepted published prerelease
+  evidence.
 
 ## 0.1.0a4 - 2026-05-23
 

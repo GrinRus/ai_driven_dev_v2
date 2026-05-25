@@ -1,15 +1,14 @@
-# Draft Release Notes: v0.1.0a5
+# Release Notes: v0.1.0a5
 
-Status: draft, not tagged or published.
+Status: published on 2026-05-25.
 
-Current release-candidate package version: `0.1.0a5`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a4`.
+Latest accepted published prerelease evidence: `0.1.0a5`.
 
 ## Summary
 
-This release candidate follows the published `0.1.0a4` prerelease with release-readiness
-cleanup, strict interview repair-prompt clarification, and refreshed W24 manual live
-operator evidence. It keeps AIDD in prerelease alpha and does not expand the product scope.
+This prerelease follows the published `0.1.0a4` prerelease with release-readiness cleanup,
+strict interview repair-prompt clarification, and refreshed W24 manual live operator
+evidence. It keeps AIDD in prerelease alpha and does not expand the product scope.
 
 ## User-visible changes
 
@@ -19,8 +18,9 @@ operator evidence. It keeps AIDD in prerelease alpha and does not expand the pro
   matrix:
   `AIDD-LIVE-002/codex`, `AIDD-LIVE-007/codex`, `AIDD-LIVE-007/claude-code`,
   `AIDD-LIVE-006/opencode`, and `AIDD-LIVE-008/opencode`.
-- Clarified release-readiness documentation so `0.1.0a5` is the current candidate while
-  `0.1.0a4` remains the latest accepted published prerelease evidence.
+- Clarified release-readiness documentation so `0.1.0a5` moved from current candidate to
+  latest accepted published prerelease evidence only after GitHub Release, PyPI, `pipx`,
+  and `uv tool` verification passed.
 
 ## Installation channels
 
@@ -32,10 +32,8 @@ Supported prerelease channels remain:
 
 Docker/GHCR remains outside the supported prerelease contract.
 
-The `0.1.0a5` package must not be described as the latest accepted published prerelease
-until the GitHub Release is published and the release workflow quality, build, PyPI publish,
-`pipx`, and `uv tool` verification jobs pass. Until then, `0.1.0a4` remains the latest
-accepted published prerelease evidence.
+Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed
+for GitHub Release `v0.1.0a5`.
 
 ## Known limitations
 
@@ -44,13 +42,13 @@ accepted published prerelease evidence.
   not GitHub Actions, and not a release gate.
 - Runtime binaries and authentication are external operator prerequisites.
 - W24 manual live evidence has been refreshed locally for the maintained beta evidence
-  matrix, but that evidence is not publish/install acceptance evidence for `0.1.0a5`.
+  matrix, but that evidence remains local operator-audit evidence and is separate from
+  package-channel acceptance.
 
 ## Release checklist
 
-- Confirm `pyproject.toml` version is set to `0.1.0a5` before creating the release branch.
-- Run deterministic local gates.
-- Run `ci.yml` and `release.yml` dry-runs on `release/v0.1.0a5`.
-- Publish the GitHub Release only after explicit maintainer approval.
-- Confirm the release workflow quality, build, publish, `pipx`, and `uv tool` verification
-  jobs pass for GitHub Release `v0.1.0a5`.
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a5`.
+- Release workflow: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/26385081630`.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a5/`.
+- Release tag `v0.1.0a5` matched `project.version` `0.1.0a5` and the remote
+  `release/v0.1.0a5` branch HEAD before publishing.

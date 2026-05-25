@@ -148,12 +148,12 @@ PyPI publishing accepts GitHub Releases whose tags:
 - exactly match `v<project.version>` from `pyproject.toml`.
 
 The release branch must be named exactly `release/<tag>`, for example
-`release/v0.1.0a4`, and the release tag commit must match the remote release branch HEAD.
+`release/v0.1.0a5`, and the release tag commit must match the remote release branch HEAD.
 If the release tag fails format, version-alignment, branch-name, or branch-head checks, the
 release workflow fails before package publishing.
 
 After publishing a prerelease, `main` should move to the next development version, for
-example from `0.1.0a4` to `0.1.0a5.dev0`, so source builds cannot collide with an already
+example from `0.1.0a5` to `0.1.0a6.dev0`, so source builds cannot collide with an already
 published artifact.
 
 ## 11. Versioning policy
