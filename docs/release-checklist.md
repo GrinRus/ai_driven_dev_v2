@@ -130,9 +130,9 @@ aidd doctor
 uv tool uninstall ai-driven-dev-v2
 ```
 
-## Current source readiness snapshot
+## Maintainer release state
 
-Current source development package version: `0.1.0a6.dev0`.
+Maintainer source development package version: `0.1.0a6.dev0`.
 Latest accepted published prerelease evidence: `0.1.0a5`.
 
 No current release candidate is accepted from this development version. The next release

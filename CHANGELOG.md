@@ -7,8 +7,7 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Record accepted `v0.1.0a5` release evidence and move source development to
-  `0.1.0a6.dev0`.
+- Open the next development cycle after accepted `v0.1.0a5` release evidence.
 
 ## 0.1.0a5 - 2026-05-25
 

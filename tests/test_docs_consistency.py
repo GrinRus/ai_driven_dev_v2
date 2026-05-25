@@ -265,16 +265,19 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
     assert latest_accepted_version != source_version
 
     if _is_development_version(source_version):
+        assert source_version not in readme
+        assert "Current source development package version" not in readme
         assert (
-            f"Current source development package version on this branch: `{source_version}`."
+            f"Latest published prerelease: `{latest_accepted_version}`."
             in readme
         )
         assert (
-            f"Latest accepted published prerelease evidence: `{latest_accepted_version}`."
+            "The `main` branch is development source and may contain unreleased changes."
             in readme
         )
+        assert "Install the latest published prerelease:" in readme_install_section
         assert f"## {source_version} -" not in changelog
-        assert f"`{source_version}`" in changelog
+        assert f"`{source_version}`" not in changelog
         assert (
             f"source development package version matches the package state: `{source_version}`"
             in beta_audit
@@ -283,7 +286,8 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
             f"latest accepted published prerelease evidence is `{latest_accepted_version}`"
             in beta_audit
         )
-        assert f"Current source development package version: `{source_version}`." in (
+        assert "## Maintainer release state" in release_checklist
+        assert f"Maintainer source development package version: `{source_version}`." in (
             release_checklist
         )
         assert (
