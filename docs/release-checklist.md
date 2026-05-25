@@ -47,14 +47,14 @@ uv run aidd doctor
 Example:
 
 ```bash
-git switch -c release/v0.1.0a5 main
-git push -u origin release/v0.1.0a5
+git switch -c release/v0.1.0a6 main
+git push -u origin release/v0.1.0a6
 ```
 
 Release workflow validation requires:
 
 - the release tag to exactly match `v<project.version>`;
-- the branch to be named exactly `release/<tag>`, for example `release/v0.1.0a5`;
+- the branch to be named exactly `release/<tag>`, for example `release/v0.1.0a6`;
 - the release tag commit to match the remote release branch HEAD.
 
 ## 3. Package publish checklist (PyPI)
@@ -130,15 +130,15 @@ aidd doctor
 uv tool uninstall ai-driven-dev-v2
 ```
 
-## Current candidate readiness snapshot
+## Current source readiness snapshot
 
-Current release-candidate package version: `0.1.0a5`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a4`.
+Current source development package version: `0.1.0a6.dev0`.
+Latest accepted published prerelease evidence: `0.1.0a5`.
 
-`0.1.0a5` is ready only for release branch preparation until the GitHub Release is
-published and the release workflow quality, build, PyPI publish, `pipx`, and `uv tool`
-verification jobs pass. Do not add an accepted `v0.1.0a5` evidence log entry before those
-publish/install checks exist.
+No current release candidate is accepted from this development version. The next release
+candidate must use a unique unpublished PEP 440 prerelease version, publish through the
+GitHub Release `published` event, and pass the release workflow quality, build, PyPI
+publish, `pipx`, and `uv tool` verification jobs before it can become accepted evidence.
 
 W24 manual live evidence refresh on 2026-05-24:
 
@@ -150,9 +150,9 @@ W24 manual live evidence refresh on 2026-05-24:
 | `AIDD-LIVE-006` / `opencode` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Counted clean after blocked/resumed interview path: `w24-a4-live-006-opencode-20260524-r2`; quality gate `pass`; `answer-analysis.md` and `operator-quality-analysis.md` present |
 | `AIDD-LIVE-008` / `opencode` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Counted clean after blocked/resumed interview path: `w24-a4-live-008-opencode-20260524`; quality gate `pass`; `answer-analysis.md` and `operator-quality-analysis.md` present |
 
-This counted manual live evidence is local operator audit evidence only. It is not accepted
-`0.1.0a5` publish/install evidence and does not replace GitHub Release, PyPI, `pipx`, or
-`uv tool` verification.
+This counted manual live evidence is local operator audit evidence only. It supported the
+`0.1.0a5` release-preparation slice, but it is separate from package-channel acceptance and
+does not replace GitHub Release, PyPI, `pipx`, or `uv tool` verification.
 
 ## 6. Changelog and release notes checklist
 
@@ -172,6 +172,27 @@ This counted manual live evidence is local operator audit evidence only. It is n
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a5` accepted evidence on 2026-05-25
+
+- Tag: `v0.1.0a5`
+- Release branch: `release/v0.1.0a5`
+- Commit: `ed518487c11d89b93002be194f5b7d2753e75d61`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a5`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/26385081630`
+- Result: accepted release/install evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: release tag `v0.1.0a5` matched `project.version` `0.1.0a5`, and the
+  release tag commit matched the remote `release/v0.1.0a5` branch HEAD.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a5/`.
+- `pipx` verification installed `ai-driven-dev-v2==0.1.0a5`; `aidd --version` returned
+  `aidd 0.1.0a5`, and `aidd doctor` reported `Version 0.1.0a5`. The GitHub workflow used
+  `python -m pipx`; the independent local smoke used an isolated `uv tool run --from pipx`
+  runner because local `python3 -m pipx` was unavailable.
+- `uv tool` verification installed `ai-driven-dev-v2==0.1.0a5`; `aidd --version` returned
+  `aidd 0.1.0a5`, and `aidd doctor` reported `Version 0.1.0a5`.
+- No Docker/GHCR artifact is part of the supported `v0.1.0a5` release contract.
 
 ### `v0.1.0a4` accepted evidence on 2026-05-23
 

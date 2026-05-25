@@ -75,6 +75,10 @@ def _latest_accepted_prerelease_version(release_checklist: str) -> str:
     return matches[0]
 
 
+def _is_development_version(version: str) -> bool:
+    return ".dev" in version
+
+
 def test_current_docs_do_not_reintroduce_bootstrap_or_planned_adapter_wording() -> None:
     repo_root = _repo_root()
     stale_matches: list[str] = []
@@ -240,7 +244,7 @@ def test_release_checklist_requires_verification_job_evidence() -> None:
 
 def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() -> None:
     repo_root = _repo_root()
-    candidate_version = _project_version(repo_root)
+    source_version = _project_version(repo_root)
     release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
         encoding="utf-8"
     )
@@ -250,58 +254,91 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
     beta_audit = (
         repo_root / "docs" / "analysis" / "beta-readiness-source-audit.md"
     ).read_text(encoding="utf-8")
-    release_notes_path = (
-        repo_root / "docs" / f"release-notes-v{candidate_version}-draft.md"
-    )
-    release_notes = release_notes_path.read_text(encoding="utf-8")
-
-    assert latest_accepted_version != candidate_version
-    assert (
-        f"Current release-candidate package version on this branch: `{candidate_version}`."
-        in readme
-    )
-    assert (
-        "Latest accepted published prerelease evidence before this candidate: "
-        f"`{latest_accepted_version}`."
-    ) in readme
 
     readme_install_section = readme.split("## Install with pipx", 1)[1].split(
         "## Container support",
         1,
     )[0]
     assert f'ai-driven-dev-v2=={latest_accepted_version}' in readme_install_section
-    assert f'ai-driven-dev-v2=={candidate_version}' not in readme_install_section
+    assert f'ai-driven-dev-v2=={source_version}' not in readme_install_section
 
-    assert f"## {candidate_version} -" in changelog
-    assert (
-        f"release-candidate package version matches the package state: `{candidate_version}`"
-        in beta_audit
-    )
-    assert (
-        "last accepted published prerelease evidence before this candidate is "
-        f"`{latest_accepted_version}`"
-    ) in beta_audit
-    assert f"Current release-candidate package version: `{candidate_version}`." in (
-        release_checklist
-    )
-    assert (
-        "Latest accepted published prerelease evidence before this candidate: "
-        f"`{latest_accepted_version}`."
-    ) in release_checklist
-    assert f"accepted `v{candidate_version}` evidence log entry" in release_checklist
-    assert f"### `v{candidate_version}` accepted evidence" not in release_checklist
-    assert "Status: draft, not tagged or published." in release_notes
-    assert f"Current release-candidate package version: `{candidate_version}`." in (
-        release_notes
-    )
-    assert (
-        "Latest accepted published prerelease evidence before this candidate: "
-        f"`{latest_accepted_version}`."
-    ) in release_notes
-    assert (
-        f"`{candidate_version}` package must not be described as the latest accepted "
-        "published prerelease"
-    ) in release_notes
+    assert latest_accepted_version != source_version
+
+    if _is_development_version(source_version):
+        assert (
+            f"Current source development package version on this branch: `{source_version}`."
+            in readme
+        )
+        assert (
+            f"Latest accepted published prerelease evidence: `{latest_accepted_version}`."
+            in readme
+        )
+        assert f"## {source_version} -" not in changelog
+        assert f"`{source_version}`" in changelog
+        assert (
+            f"source development package version matches the package state: `{source_version}`"
+            in beta_audit
+        )
+        assert (
+            f"latest accepted published prerelease evidence is `{latest_accepted_version}`"
+            in beta_audit
+        )
+        assert f"Current source development package version: `{source_version}`." in (
+            release_checklist
+        )
+        assert (
+            f"Latest accepted published prerelease evidence: `{latest_accepted_version}`."
+            in release_checklist
+        )
+        assert f"### `v{source_version}` accepted evidence" not in release_checklist
+        assert "No current release candidate is accepted from this development version." in (
+            release_checklist
+        )
+    else:
+        release_notes_path = (
+            repo_root / "docs" / f"release-notes-v{source_version}-draft.md"
+        )
+        release_notes = release_notes_path.read_text(encoding="utf-8")
+
+        assert (
+            f"Current release-candidate package version on this branch: `{source_version}`."
+            in readme
+        )
+        assert (
+            "Latest accepted published prerelease evidence before this candidate: "
+            f"`{latest_accepted_version}`."
+        ) in readme
+
+        assert f"## {source_version} -" in changelog
+        assert (
+            f"release-candidate package version matches the package state: `{source_version}`"
+            in beta_audit
+        )
+        assert (
+            "last accepted published prerelease evidence before this candidate is "
+            f"`{latest_accepted_version}`"
+        ) in beta_audit
+        assert f"Current release-candidate package version: `{source_version}`." in (
+            release_checklist
+        )
+        assert (
+            "Latest accepted published prerelease evidence before this candidate: "
+            f"`{latest_accepted_version}`."
+        ) in release_checklist
+        assert f"accepted `v{source_version}` evidence log entry" in release_checklist
+        assert f"### `v{source_version}` accepted evidence" not in release_checklist
+        assert "Status: draft, not tagged or published." in release_notes
+        assert f"Current release-candidate package version: `{source_version}`." in (
+            release_notes
+        )
+        assert (
+            "Latest accepted published prerelease evidence before this candidate: "
+            f"`{latest_accepted_version}`."
+        ) in release_notes
+        assert (
+            f"`{source_version}` package must not be described as the latest accepted "
+            "published prerelease"
+        ) in release_notes
 
 
 def test_release_docs_describe_release_branch_publish_flow() -> None:

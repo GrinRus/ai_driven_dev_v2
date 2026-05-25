@@ -49,7 +49,7 @@ itself, and it is not a merge gate. The source checkout is read only during loca
 snapshot/build preparation, while durable evidence is written to
 `<report-root>/<run_id>`; the default report root is `.aidd/reports/evals`.
 To test an already published package, set `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` to the
-exact package spec, for example `ai-driven-dev-v2==0.1.0a4`; published-package mode
+exact package spec, for example `ai-driven-dev-v2==0.1.0a5`; published-package mode
 must not require a source checkout root.
 
 The local operator UI has a separate E2E evidence lane in
