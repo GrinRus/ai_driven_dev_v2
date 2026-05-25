@@ -312,8 +312,9 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
     distribution = (
         repo_root / "docs" / "architecture" / "distribution-and-development.md"
     ).read_text(encoding="utf-8")
+    latest_accepted_version = _latest_accepted_prerelease_version(release_checklist)
     release_notes = (
-        repo_root / "docs" / "release-notes-v0.1.0a3-draft.md"
+        repo_root / "docs" / f"release-notes-v{latest_accepted_version}-draft.md"
     ).read_text(encoding="utf-8")
 
     pre_history_checklist = release_checklist.split("## Release attempt evidence log", 1)[0]
@@ -330,7 +331,7 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
 
     assert "workflow_dispatch` path is a dry run" in distribution
     assert "release tag commit must match the remote release branch HEAD" in distribution
-    assert "Status: published on 2026-05-22." in release_notes
+    assert "Status: published on " in release_notes
     assert (
         "Release workflow quality, build, publish, `pipx`, and `uv tool` "
         "verification jobs passed"

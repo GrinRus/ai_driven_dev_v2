@@ -1,9 +1,6 @@
-# Draft Release Notes: v0.1.0a4
+# Release Notes: v0.1.0a4
 
-Status: draft, not tagged or published.
-
-Current release-candidate package version: `0.1.0a4`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a3`.
+Status: published on 2026-05-23.
 
 ## Summary
 
@@ -25,8 +22,6 @@ inspection more consistent between the UI and CLI.
 - Clarified question-answer handling: the UI writes `[resolved]` answer entries, and CLI
   operators edit `answers.md` after inspecting `aidd stage questions`.
 - Fresh UI work items now load without `/api/run` errors before the first run exists.
-- Clarified repair prompts for strict interview documents so runtime repair attempts call
-  out that answer lines such as `- Q1 [resolved]: ...` are invalid.
 
 ## Installation channels
 
@@ -38,11 +33,6 @@ Supported prerelease channels remain:
 
 Docker/GHCR remains outside the supported prerelease contract.
 
-The `0.1.0a4` package must not be described as the latest accepted published prerelease
-until the GitHub Release is published and the release workflow quality, build, PyPI publish,
-`pipx`, and `uv tool` verification jobs pass. Until then, `0.1.0a3` remains the latest
-accepted published prerelease evidence.
-
 ## Known limitations
 
 - AIDD is still not ready for unattended production automation.
@@ -51,14 +41,10 @@ accepted published prerelease evidence.
 - Runtime binaries and authentication are external operator prerequisites.
 - UI v1 persists only `[resolved]` answers; `[partial]` and `[deferred]` remain CLI/file-mode
   behavior.
-- W24 manual live evidence has been refreshed locally for the maintained beta evidence
-  matrix, but that evidence is not publish/install acceptance evidence for `0.1.0a4`.
 
 ## Release checklist
 
-- Confirm `pyproject.toml` version is set to `0.1.0a4` before creating the release branch.
-- Run deterministic local gates.
-- Run `ci.yml` and `release.yml` dry-runs on `release/v0.1.0a4`.
-- Publish the GitHub Release only after explicit maintainer approval.
-- Confirm the release workflow quality, build, publish, `pipx`, and `uv tool` verification
-  jobs pass for GitHub Release `v0.1.0a4`.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed
+  for GitHub Release `v0.1.0a4`.
+- Refresh manual live evidence locally, separately from release automation, when maintainers
+  need an operator-quality audit.

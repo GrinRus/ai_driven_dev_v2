@@ -9,7 +9,17 @@ stable compatibility window exists.
 
 - No unreleased changes yet.
 
-## 0.1.0a4 - 2026-05-22
+## 0.1.0a5 - 2026-05-25
+
+- Prepare the `0.1.0a5` prerelease candidate after `0.1.0a4` was already published.
+- Clarify strict interview repair prompts so runtime repair attempts avoid colon-style
+  answer bullets such as `- Q1 [resolved]: ...`.
+- Refresh W24 manual live readiness evidence for the maintained beta scenario/runtime
+  matrix while keeping live E2E outside CI/CD and release workflows.
+- Keep release-readiness docs explicit about `0.1.0a5` as the current candidate and
+  `0.1.0a4` as the latest accepted published prerelease evidence.
+
+## 0.1.0a4 - 2026-05-23
 
 - Prepare the `0.1.0a4` prerelease package for controlled operator trials.
 - Add local operator UI async jobs for workflow and single-stage runs, with polling-based
@@ -20,8 +30,6 @@ stable compatibility window exists.
   including primary stage outputs such as `plan.md`.
 - Clarify UI and CLI question-answer flows: UI writes `[resolved]` answers, while CLI users
   inspect `aidd stage questions`, edit `answers.md`, and rerun the selected stage.
-- Clarify strict interview repair prompts so runtime repair attempts avoid colon-style
-  answer bullets such as `- Q1 [resolved]: ...`.
 - Keep fresh UI work items in a clean empty state before the first run.
 
 ## 0.1.0a3 - 2026-05-22
