@@ -801,6 +801,42 @@ def test_black_box_live_e2e_brokered_live_approvals_use_ui_stage_run(
     assert decision_paths
 
 
+def test_black_box_live_e2e_brokered_live_auto_approves_aidd_workspace_shell(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    command = (
+        "/bin/zsh -lc \"python3 - <<'PY'\n"
+        "from pathlib import Path\n"
+        "base = Path('.aidd/workitems/WI-LIVE/stages/idea')\n"
+        "(base / 'idea-brief.md').write_text('ok')\n"
+        "PY\""
+    )
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        runtime_targets=("codex",),
+        ui_operator_request_stage="idea",
+        ui_operator_request_command=command,
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="codex",
+        work_root=work_root,
+        report_root=report_root,
+        brokered_live_approvals=True,
+    )
+
+    assert result.status == "pass"
+    approval_analysis = (result.bundle_root / "runtime-approval-analysis.md").read_text(
+        encoding="utf-8"
+    )
+    assert "allow_once" in approval_analysis
+    assert "bounded AIDD workspace shell" in approval_analysis
+
+
 def test_black_box_live_e2e_brokered_live_blocks_for_non_safe_runtime_request(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

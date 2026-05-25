@@ -80,6 +80,102 @@ def test_broad_policy_auto_allows_project_reads_writes_and_inspect_commands(
     }
 
 
+def test_broad_policy_does_not_treat_project_config_json_as_provider_config(
+    tmp_path: Path,
+) -> None:
+    policy = _policy(tmp_path)
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="implement",
+        kind=RuntimeOperatorRequestKind.FILE_WRITE,
+        paths=(policy.project_roots[0] / "src" / "config.json",),
+    )
+
+    decision = policy.evaluate(request)
+
+    assert decision is not None
+    assert decision.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
+
+
+def test_broad_policy_auto_allows_aidd_workspace_reads_and_writes_on_any_stage(
+    tmp_path: Path,
+) -> None:
+    policy = _policy(tmp_path)
+    workspace_root = policy.workspace_root
+    read_request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="idea",
+        kind=RuntimeOperatorRequestKind.FILE_READ,
+        paths=(workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "idea-brief.md",),
+        risk=RuntimeOperatorRisk.LOW,
+    )
+    stage_write_request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="idea",
+        kind=RuntimeOperatorRequestKind.FILE_WRITE,
+        paths=(
+            workspace_root
+            / "workitems"
+            / "WI-001"
+            / "stages"
+            / "idea"
+            / "stage-result.md",
+        ),
+    )
+    report_write_request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="research",
+        kind=RuntimeOperatorRequestKind.FILE_EDIT,
+        paths=(
+            workspace_root
+            / "reports"
+            / "runs"
+            / "WI-001"
+            / "run-1"
+            / "stages"
+            / "research"
+            / "attempts"
+            / "attempt-0001"
+            / "runtime.log",
+        ),
+    )
+
+    decisions = tuple(
+        policy.evaluate(request)
+        for request in (read_request, stage_write_request, report_write_request)
+    )
+
+    assert all(decision is not None for decision in decisions)
+    assert {decision.action for decision in decisions if decision is not None} == {
+        RuntimeOperatorDecisionAction.ALLOW_ONCE
+    }
+
+
+def test_broad_policy_denies_sensitive_aidd_workspace_writes(tmp_path: Path) -> None:
+    policy = _policy(tmp_path)
+    workspace_root = policy.workspace_root
+
+    for path in (
+        workspace_root / ".env.local",
+        workspace_root / "auth" / "codex.json",
+        workspace_root / "reports" / "runs" / "WI-001" / "operator-requests.jsonl",
+        workspace_root / "reports" / "runs" / "WI-001" / "operator-decisions.jsonl",
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md",
+        workspace_root / ".codex" / "auth.json",
+    ):
+        request = RuntimeOperatorRequest.create(
+            runtime_id="generic-cli",
+            stage="plan",
+            kind=RuntimeOperatorRequestKind.FILE_WRITE,
+            paths=(path,),
+        )
+
+        decision = policy.evaluate(request)
+
+        assert decision is not None
+        assert decision.action is RuntimeOperatorDecisionAction.DENY
+
+
 def test_broad_policy_asks_for_network_package_and_git_publish_commands(
     tmp_path: Path,
 ) -> None:
@@ -165,6 +261,18 @@ def test_broad_policy_asks_for_file_deletes_inside_project_root(tmp_path: Path) 
         stage="implement",
         kind=RuntimeOperatorRequestKind.FILE_DELETE,
         paths=(policy.project_roots[0] / "src" / "obsolete.py",),
+    )
+
+    assert policy.evaluate(request) is None
+
+
+def test_broad_policy_asks_for_file_deletes_inside_aidd_workspace(tmp_path: Path) -> None:
+    policy = _policy(tmp_path)
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="idea",
+        kind=RuntimeOperatorRequestKind.FILE_DELETE,
+        paths=(policy.workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "old.md",),
     )
 
     assert policy.evaluate(request) is None
@@ -302,10 +410,66 @@ def test_plan_policy_does_not_auto_approve_writes_even_with_broad_preset(
         runtime_id="generic-cli",
         stage="implement",
         kind=RuntimeOperatorRequestKind.FILE_WRITE,
-        paths=(brokered_policy.project_roots[0] / "src" / "app.py",),
+        paths=(
+            brokered_policy.workspace_root
+            / "workitems"
+            / "WI-001"
+            / "stages"
+            / "plan"
+            / "plan.md",
+        ),
     )
 
     assert plan_policy.evaluate(request) is None
+
+
+def test_broad_policy_auto_allows_bounded_aidd_workspace_shell(tmp_path: Path) -> None:
+    policy = _policy(tmp_path)
+    command = (
+        "/bin/zsh -lc \"python3 - <<'PY'\n"
+        "from pathlib import Path\n"
+        "base = Path('.aidd/workitems/WI-001/stages/idea')\n"
+        "(base / 'idea-brief.md').write_text('ok')\n"
+        "PY\""
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="idea",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": command},
+        cwd=policy.project_roots[0],
+    )
+
+    decision = policy.evaluate(request)
+
+    assert decision is not None
+    assert decision.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
+
+
+def test_broad_policy_does_not_auto_approve_unbounded_aidd_workspace_shell(
+    tmp_path: Path,
+) -> None:
+    policy = _policy(tmp_path)
+    external_write = (
+        "python3 -c \"from pathlib import Path; "
+        "Path('.aidd/x').write_text('ok'); "
+        "Path('/tmp/out').write_text('bad')\""
+    )
+
+    for command in (
+        external_write,
+        "curl https://example.com -o .aidd/downloaded",
+        "rm .aidd/workitems/WI-001/stages/idea/old.md",
+    ):
+        request = RuntimeOperatorRequest.create(
+            runtime_id="generic-cli",
+            stage="idea",
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": command},
+            cwd=policy.project_roots[0],
+        )
+
+        assert policy.evaluate(request) is None
 
 
 def test_policy_denies_protected_paths_and_destructive_shell(tmp_path: Path) -> None:

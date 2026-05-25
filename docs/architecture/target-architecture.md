@@ -503,6 +503,13 @@ permissions:
 - runtime approvals are attempt artifacts (`operator-requests.jsonl` and
   `operator-decisions.jsonl`), not product interview documents.
 
+`broad` brokered policy treats `.aidd/` as the governed AIDD workspace. It can
+auto-approve normal `.aidd/workitems/...` and `.aidd/reports/...` reads and
+writes so live runtimes can produce stage documents and evidence without a
+human decision for every artifact write. The policy still protects `.aidd`
+secrets/auth/config paths, provider credentials, operator approval ledgers,
+AIDD-owned repair control files, file deletes, and destructive shell commands.
+
 If a runtime adapter cannot enforce a non-full policy with its current transport, it must
 return `blocked_for_operator` and leave validation unstarted. Qwen dual-file control and
 Codex app-server approvals are wired as adapter-local live transports. OpenCode serve/ACP

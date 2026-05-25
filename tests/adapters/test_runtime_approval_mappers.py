@@ -102,6 +102,51 @@ def test_codex_approval_mapper_handles_file_permissions_and_legacy_names() -> No
     assert legacy_patch_request.kind is RuntimeOperatorRequestKind.FILE_EDIT
 
 
+def test_codex_approval_mapper_extracts_real_file_change_path_shapes() -> None:
+    request = codex_approval_request_to_operator_request(
+        method="item/fileChange/requestApproval",
+        payload={
+            "itemId": "file-change-1",
+            "files": [
+                {"filePath": ".aidd/workitems/WI-001/stages/idea/idea-brief.md"},
+                ".aidd/workitems/WI-001/stages/idea/stage-result.md",
+            ],
+            "patches": [
+                {"targetPath": ".aidd/workitems/WI-001/stages/idea/validator-report.md"}
+            ],
+            "modifiedFiles": [
+                {"absolutePath": "/repo/.aidd/workitems/WI-001/stages/idea/questions.md"}
+            ],
+        },
+        runtime_id="codex",
+        stage="idea",
+        cwd=Path("/repo"),
+    )
+
+    assert request.id == "file-change-1"
+    assert request.kind is RuntimeOperatorRequestKind.FILE_EDIT
+    assert request.paths == (
+        Path(".aidd/workitems/WI-001/stages/idea/idea-brief.md"),
+        Path(".aidd/workitems/WI-001/stages/idea/stage-result.md"),
+        Path("/repo/.aidd/workitems/WI-001/stages/idea/questions.md"),
+        Path(".aidd/workitems/WI-001/stages/idea/validator-report.md"),
+    )
+
+
+def test_codex_approval_mapper_keeps_file_change_without_paths_unbounded() -> None:
+    request = codex_approval_request_to_operator_request(
+        method="item/fileChange/requestApproval",
+        payload={"itemId": "file-change-2", "grantRoot": None, "reason": None},
+        runtime_id="codex",
+        stage="idea",
+        cwd=Path("/repo"),
+    )
+
+    assert request.id == "file-change-2"
+    assert request.kind is RuntimeOperatorRequestKind.FILE_EDIT
+    assert request.paths == ()
+
+
 def test_opencode_permission_mapper_handles_file_edit() -> None:
     request = opencode_permission_request_to_operator_request(
         {"id": "open-1", "tool": "edit", "path": "src/app.py"},

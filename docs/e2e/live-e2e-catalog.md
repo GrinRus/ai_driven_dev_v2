@@ -79,7 +79,11 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   the evaluator writes `permission_policy = "brokered"`, `interaction_mode =
   "live"`, and `auto_approval_preset = "broad"` for the selected runtime, runs
   stages through `aidd ui` `/api/stage/run`, auto-approves only broad-safe
-  project-local runtime requests, and preserves `runtime-approval-analysis.md`.
+  project-local and `.aidd/` workspace runtime requests, and preserves
+  `runtime-approval-analysis.md`. Package installs, network access, external
+  paths, release/publish/git push commands, `.aidd` secrets/provider config,
+  operator approval ledgers, file deletes, and destructive shell stay blocked
+  for operator action evidence.
 - Local runs may use optional environment variable overrides for custom wrapper commands:
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`

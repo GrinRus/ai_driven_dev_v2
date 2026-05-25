@@ -23,6 +23,7 @@ OPERATOR_REQUESTS_FILENAME = "operator-requests.jsonl"
 OPERATOR_DECISIONS_FILENAME = "operator-decisions.jsonl"
 
 _WRITE_STAGES = frozenset({"implement", "review", "qa"})
+_AIDD_WORKSPACE_DIRNAME = ".aidd"
 _READ_KINDS = frozenset(
     {
         RuntimeOperatorRequestKind.FILE_READ,
@@ -41,7 +42,6 @@ _WRITE_KINDS = frozenset(
 _PROTECTED_NAMES = frozenset(
     {
         ".git",
-        ".aidd",
         ".ssh",
         ".aws",
         ".config",
@@ -51,11 +51,36 @@ _PROTECTED_NAMES = frozenset(
         ".qwen",
     }
 )
+_PROTECTED_AIDD_DIR_NAMES = frozenset(
+    {
+        "auth",
+        "auths",
+        "credential",
+        "credentials",
+        "secret",
+        "secrets",
+        "token",
+        "tokens",
+        "provider-auth",
+        "provider_auth",
+        "runtime-auth",
+        "runtime_auth",
+    }
+)
 _PROTECTED_FILE_NAMES = frozenset(
     {
+        OPERATOR_DECISIONS_FILENAME,
+        OPERATOR_REQUESTS_FILENAME,
+        "auth.json",
         "claude.json",
+        "codex.json",
+        "credentials.json",
         "opencode.json",
+        "qwen.json",
+        "repair-brief.md",
         "settings.json",
+        "token.json",
+        "tokens.json",
         "credentials",
         "known_hosts",
         "id_rsa",
@@ -87,6 +112,19 @@ _PACKAGE_MANAGERS = frozenset(
 _NETWORK_COMMANDS = frozenset({"curl", "wget"})
 _PUBLISH_COMMANDS = frozenset({"release", "publish", "twine"})
 _NETWORK_GIT_SUBCOMMANDS = frozenset({"clone", "fetch", "pull", "push"})
+_AIDD_WORKSPACE_PATH_RE = re.compile(
+    r"(?<![\w./-])(?:\./)?\.aidd(?:/[^\s'\"`$<>|;&)]+)?"
+)
+_ABSOLUTE_PATH_RE = re.compile(r"(?<![\w.-])/[^\s'\"`$<>|;&)]+")
+_SHELL_DELETE_OR_PERMISSION_COMMANDS = frozenset(
+    {
+        "rm",
+        "rmdir",
+        "unlink",
+        "chmod",
+        "chown",
+    }
+)
 
 
 def _utc_now() -> str:
@@ -300,11 +338,11 @@ class RuntimeOperatorPolicy:
         if self.auto_approval_preset is AutoApprovalPreset.OFF:
             return None
 
-        if request.kind in _READ_KINDS and self._paths_within_project_roots(request):
+        if request.kind in _READ_KINDS and self._paths_within_read_roots(request):
             return _decision(
                 request=request,
                 action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
-                reason="auto-approved safe project read/list/search request",
+                reason="auto-approved safe project/AIDD read/list/search request",
             )
         if request.kind is RuntimeOperatorRequestKind.SHELL:
             return self._shell_auto_decision(request)
@@ -312,12 +350,15 @@ class RuntimeOperatorPolicy:
             return None
         if self.auto_approval_preset is not AutoApprovalPreset.BROAD:
             return None
-        if (
-            request.kind in _WRITE_KINDS
-            and request.stage in _WRITE_STAGES
-            and request.paths
-            and self._paths_within_project_roots(request)
-        ):
+        if request.kind not in _WRITE_KINDS or not request.paths:
+            return None
+        if self._paths_within_workspace_root(request):
+            return _decision(
+                request=request,
+                action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+                reason="auto-approved broad preset AIDD workspace write request",
+            )
+        if request.stage in _WRITE_STAGES and self._paths_within_project_roots(request):
             return _decision(
                 request=request,
                 action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
@@ -336,6 +377,24 @@ class RuntimeOperatorPolicy:
             return None
         if _requires_operator_for_shell(command):
             return None
+        if (
+            self.permission_policy is not RuntimePermissionPolicy.PLAN
+            and self.auto_approval_preset is AutoApprovalPreset.BROAD
+            and _is_bounded_aidd_workspace_shell(
+                command=command,
+                cwd=request.cwd,
+                workspace_root=self.workspace_root.resolve(strict=False),
+                allowed_roots=(
+                    *self._resolved_project_roots(),
+                    self.workspace_root.resolve(strict=False),
+                ),
+            )
+        ):
+            return _decision(
+                request=request,
+                action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+                reason="auto-approved broad preset bounded AIDD workspace shell request",
+            )
         if _shell_references_external_path(
             command=command,
             cwd=request.cwd,
@@ -371,12 +430,40 @@ class RuntimeOperatorPolicy:
         project_roots = self._resolved_project_roots()
         return all(_is_relative_to_any(path, project_roots) for path in resolved_paths)
 
+    def _paths_within_workspace_root(self, request: RuntimeOperatorRequest) -> bool:
+        resolved_paths = self._resolved_request_paths(request)
+        if not resolved_paths:
+            return self._cwd_within_workspace_root(request)
+        if request.cwd is None and any(not path.is_absolute() for path in request.paths):
+            return False
+        workspace_root = self.workspace_root.resolve(strict=False)
+        return all(_is_relative_to(path, workspace_root) for path in resolved_paths)
+
+    def _paths_within_read_roots(self, request: RuntimeOperatorRequest) -> bool:
+        resolved_paths = self._resolved_request_paths(request)
+        if not resolved_paths:
+            return self._cwd_within_project_roots(request) or self._cwd_within_workspace_root(
+                request
+            )
+        if request.cwd is None and any(not path.is_absolute() for path in request.paths):
+            return False
+        roots = (*self._resolved_project_roots(), self.workspace_root.resolve(strict=False))
+        return all(_is_relative_to_any(path, roots) for path in resolved_paths)
+
     def _cwd_within_project_roots(self, request: RuntimeOperatorRequest) -> bool:
         if request.cwd is None:
             return False
         return _is_relative_to_any(
             request.cwd.resolve(strict=False),
             self._resolved_project_roots(),
+        )
+
+    def _cwd_within_workspace_root(self, request: RuntimeOperatorRequest) -> bool:
+        if request.cwd is None:
+            return False
+        return _is_relative_to(
+            request.cwd.resolve(strict=False),
+            self.workspace_root.resolve(strict=False),
         )
 
     def _resolved_project_roots(self) -> tuple[Path, ...]:
@@ -602,6 +689,106 @@ def _shell_references_external_path(
     )
 
 
+def _is_bounded_aidd_workspace_shell(
+    *,
+    command: str,
+    cwd: Path | None,
+    workspace_root: Path,
+    allowed_roots: tuple[Path, ...],
+) -> bool:
+    if cwd is None:
+        return False
+    if not _command_mentions_aidd_workspace(command, workspace_root=workspace_root):
+        return False
+    if _shell_contains_delete_or_permission_command(command):
+        return False
+    explicit_paths = _explicit_shell_paths(command=command, cwd=cwd)
+    if not explicit_paths:
+        return False
+    return all(
+        _is_aidd_workspace_shell_path(
+            path=path,
+            workspace_root=workspace_root,
+            allowed_roots=allowed_roots,
+        )
+        for path in explicit_paths
+    )
+
+
+def _is_aidd_workspace_shell_path(
+    *,
+    path: Path,
+    workspace_root: Path,
+    allowed_roots: tuple[Path, ...],
+) -> bool:
+    if _is_relative_to(path, workspace_root):
+        return True
+    return (
+        _AIDD_WORKSPACE_DIRNAME in path.parts
+        and _is_relative_to_any(path, allowed_roots)
+    )
+
+
+def _command_mentions_aidd_workspace(command: str, *, workspace_root: Path) -> bool:
+    return bool(_AIDD_WORKSPACE_PATH_RE.search(command)) or (
+        workspace_root.as_posix() in command
+    )
+
+
+def _shell_contains_delete_or_permission_command(command: str) -> bool:
+    tokens = _shell_tokens(command)
+    if any(Path(token).name in _SHELL_DELETE_OR_PERMISSION_COMMANDS for token in tokens):
+        return True
+    return any(
+        re.search(rf"(?<![\w.-]){re.escape(executable)}(?![\w.-])", command)
+        for executable in _SHELL_DELETE_OR_PERMISSION_COMMANDS
+    )
+
+
+def _explicit_shell_paths(*, command: str, cwd: Path) -> tuple[Path, ...]:
+    paths: list[Path] = []
+    tokens = _shell_tokens(command)
+    executable = "" if not tokens else Path(tokens[0]).name
+    is_shell_wrapper = executable in {"sh", "bash", "zsh"} and any(
+        option.endswith("c") for option in tokens[1:] if option.startswith("-")
+    )
+    if not is_shell_wrapper:
+        paths.extend(
+            resolved_path
+            for _, resolved_path in _shell_path_operands(command=command, cwd=cwd)
+        )
+    paths.extend(_aidd_workspace_path_literals(command=command, cwd=cwd))
+    paths.extend(_absolute_path_literals(tokens=tokens[1:], cwd=cwd))
+    return _dedupe_paths(paths)
+
+
+def _aidd_workspace_path_literals(*, command: str, cwd: Path) -> tuple[Path, ...]:
+    return tuple(
+        _resolve_shell_path_token(token=match.group(0), cwd=cwd)
+        for match in _AIDD_WORKSPACE_PATH_RE.finditer(command)
+    )
+
+
+def _absolute_path_literals(*, tokens: tuple[str, ...], cwd: Path) -> tuple[Path, ...]:
+    paths: list[Path] = []
+    for token in tokens:
+        for match in _ABSOLUTE_PATH_RE.finditer(token):
+            paths.append(_resolve_shell_path_token(token=match.group(0), cwd=cwd))
+    return tuple(paths)
+
+
+def _dedupe_paths(paths: Iterable[Path]) -> tuple[Path, ...]:
+    seen: set[str] = set()
+    deduped: list[Path] = []
+    for path in paths:
+        key = path.as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(path)
+    return tuple(deduped)
+
+
 def _shell_path_operands(*, command: str, cwd: Path) -> tuple[tuple[str, Path], ...]:
     tokens = _shell_tokens(command)
     if not tokens:
@@ -698,6 +885,10 @@ def _is_protected_path(path: Path) -> bool:
     name = path.name.lower()
     if name.startswith(".env"):
         return True
+    if _AIDD_WORKSPACE_DIRNAME in lowered_parts:
+        aidd_index = lowered_parts.index(_AIDD_WORKSPACE_DIRNAME)
+        if any(part in _PROTECTED_AIDD_DIR_NAMES for part in lowered_parts[aidd_index + 1 :]):
+            return True
     if any(part in _PROTECTED_NAMES for part in lowered_parts):
         return True
     if name in _PROTECTED_FILE_NAMES:

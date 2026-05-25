@@ -155,6 +155,16 @@ stage validation before any workflow progression. For initial interview stops, a
 `questions.md` plus terminal stage documents may complete the adapter call while `answers.md`
 is still waiting for operator or harness-provided answers.
 
+For `permission_policy = "brokered"` with `auto_approval_preset = "broad"`,
+AIDD intentionally allows normal reads and writes inside the local `.aidd/`
+workspace. That includes stage documents, reports, runtime logs, metadata, and
+attempt artifacts under `.aidd/workitems/...` and `.aidd/reports/...`, even on
+early stages. It still does not auto-approve `.env*`, credentials, secrets,
+tokens, provider auth/config files, approval ledgers
+(`operator-requests.jsonl`, `operator-decisions.jsonl`), AIDD repair control
+files such as `repair-brief.md`, file deletes, network/package/publish/git push
+actions, or destructive shell commands.
+
 Current config fields consumed by the CLI:
 
 - `workspace.root`

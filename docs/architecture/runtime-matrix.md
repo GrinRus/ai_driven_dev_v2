@@ -49,6 +49,16 @@ behavior. Non-full policies route normalized runtime approval requests through t
 `operator-decisions.jsonl`, and unresolved requests are recorded in
 `operator-requests.jsonl` before the stage moves to `blocked`.
 
+In `brokered` mode with `auto_approval_preset = "broad"`, `.aidd/` is treated
+as the AIDD workspace, not as a blanket protected project path. Policy can
+auto-approve normal reads and writes for stage documents, reports, logs, run
+metadata, and attempt artifacts under `.aidd/`, including early stages such as
+`idea` and `plan`. The remaining hard stops inside `.aidd/` are secret/auth
+material (`.env*`, credential/secret/token paths, provider config/auth files),
+operator ledgers (`operator-requests.jsonl`, `operator-decisions.jsonl`),
+AIDD-owned repair control files such as `repair-brief.md`, file deletes, and
+destructive shell actions.
+
 Provider adapters use their existing subprocess execution for `full-access`,
 `batch`, and `evented` stage runs. In `brokered`/non-full `live` mode, AIDD only
 launches a provider when the adapter has a confirmed live approval transport and a

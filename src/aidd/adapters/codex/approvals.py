@@ -12,6 +12,28 @@ from aidd.runtime_permissions import (
     RuntimeOperatorRisk,
 )
 
+_PATH_KEYS = (
+    "path",
+    "paths",
+    "file",
+    "files",
+    "file_path",
+    "filePath",
+    "absolute_path",
+    "absolutePath",
+    "target_path",
+    "targetPath",
+    "grantRoot",
+)
+_PATH_CONTAINER_KEYS = (
+    "changes",
+    "commandActions",
+    "edits",
+    "files",
+    "modifiedFiles",
+    "patches",
+)
+
 
 def codex_approval_request_to_operator_request(
     *,
@@ -110,22 +132,52 @@ def _payload_command(payload: Mapping[str, Any]) -> str | None:
 
 
 def _payload_paths(payload: Mapping[str, Any]) -> tuple[object, ...]:
-    raw_paths = payload.get("paths")
-    if isinstance(raw_paths, list | tuple):
-        return tuple(raw_paths)
-    raw_path = payload.get("path") or payload.get("file_path")
-    paths: list[object] = [] if raw_path is None else [raw_path]
-    grant_root = payload.get("grantRoot")
-    if grant_root is not None:
-        paths.append(grant_root)
-    command_actions = payload.get("commandActions")
-    if isinstance(command_actions, list):
-        for action in command_actions:
-            if isinstance(action, Mapping) and action.get("path") is not None:
-                paths.append(action["path"])
-    changes = payload.get("changes")
-    if isinstance(changes, list):
-        for change in changes:
-            if isinstance(change, Mapping) and change.get("path") is not None:
-                paths.append(change["path"])
-    return tuple(paths)
+    paths: list[object] = []
+    for key in _PATH_KEYS:
+        _collect_path_value(payload.get(key), paths)
+    for key in _PATH_CONTAINER_KEYS:
+        raw_container = payload.get(key)
+        if isinstance(raw_container, Mapping):
+            _collect_mapping_paths(raw_container, paths)
+        elif isinstance(raw_container, list | tuple):
+            for item in raw_container:
+                _collect_path_value(item, paths)
+    return _dedupe_paths(paths)
+
+
+def _collect_path_value(value: object, paths: list[object]) -> None:
+    if value is None:
+        return
+    if isinstance(value, str):
+        paths.append(value)
+        return
+    if isinstance(value, Mapping):
+        _collect_mapping_paths(value, paths)
+        return
+    if isinstance(value, list | tuple):
+        for item in value:
+            _collect_path_value(item, paths)
+
+
+def _collect_mapping_paths(value: Mapping[str, Any], paths: list[object]) -> None:
+    for key in _PATH_KEYS:
+        raw_path = value.get(key)
+        if isinstance(raw_path, Mapping):
+            _collect_mapping_paths(raw_path, paths)
+        elif isinstance(raw_path, list | tuple):
+            for item in raw_path:
+                _collect_path_value(item, paths)
+        elif raw_path is not None:
+            paths.append(raw_path)
+
+
+def _dedupe_paths(paths: list[object]) -> tuple[object, ...]:
+    deduped: list[object] = []
+    seen: set[str] = set()
+    for path in paths:
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(path)
+    return tuple(deduped)
