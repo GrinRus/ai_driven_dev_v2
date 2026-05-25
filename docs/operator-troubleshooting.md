@@ -68,14 +68,14 @@ Symptoms:
 - `aidd run --runtime <unknown>` fails with:
   `Unsupported runtime '<id>' for workflow execution.`
 - `aidd stage run --runtime <unknown>` fails with:
-  `Unsupported runtime '<id>'. Supported runtimes: generic-cli, claude-code, codex, opencode.`
+  `Unsupported runtime '<id>'. Supported runtimes: generic-cli, claude-code, codex, opencode, qwen.`
 
 Actions:
 
-1. Use one of: `generic-cli`, `claude-code`, `codex`, `opencode`.
+1. Use one of: `generic-cli`, `claude-code`, `codex`, `opencode`, `qwen`.
 2. Use `aidd doctor` to verify probe availability and configured runtime commands.
 3. If the runtime id is not in the supported list, treat it as unsupported until roadmap adds explicit adapter support.
-4. For product onboarding, prefer a real configured runtime such as `codex`, `claude-code`, or `opencode`; use `generic-cli` only for an explicit AIDD-compatible wrapper/test lane.
+4. For product onboarding, prefer a real configured runtime such as `codex`, `claude-code`, `opencode`, or experimental `qwen`; use `generic-cli` only for an explicit AIDD-compatible wrapper/test lane.
 
 ### 3.4 Intake context is missing
 

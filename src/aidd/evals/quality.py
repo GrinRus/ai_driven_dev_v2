@@ -229,9 +229,15 @@ def _implementation_report_touched_files(report_text: str | None) -> tuple[str, 
 
     section_text = section_index.section_content(match[0])
     paths: list[str] = []
+    top_level_indent: int | None = None
     for raw_line in section_text.splitlines():
         line = raw_line.lstrip()
         if not line.startswith("- "):
+            continue
+        indent = len(raw_line) - len(line)
+        if top_level_indent is None:
+            top_level_indent = indent
+        if indent != top_level_indent:
             continue
         tokens = extract_inline_code_tokens(line)
         if not tokens:

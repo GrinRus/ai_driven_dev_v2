@@ -31,6 +31,9 @@ class RuntimeReadinessItem:
     execution_command_available: bool
     default_timeout_seconds: float | None
     stage_timeout_seconds: dict[str, float]
+    permission_policy: str
+    interaction_mode: str
+    auto_approval_preset: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +75,9 @@ def resolve_runtime_readiness(
                 ),
                 default_timeout_seconds=runtime_config.timeout_seconds,
                 stage_timeout_seconds=dict(runtime_config.stage_timeout_seconds),
+                permission_policy=runtime_config.permission_policy.value,
+                interaction_mode=runtime_config.interaction_mode.value,
+                auto_approval_preset=runtime_config.auto_approval_preset.value,
             )
         )
     return RuntimeReadinessView(runtimes=tuple(runtimes))

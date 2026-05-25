@@ -14,6 +14,15 @@ from aidd.adapters.runtime_registry import (
 )
 from aidd.compatibility import should_upgrade_legacy_raw_provider_command
 from aidd.core.stages import STAGES, is_valid_stage
+from aidd.runtime_permissions import (
+    AutoApprovalPreset,
+    RuntimeInteractionMode,
+    RuntimePermissionPolicy,
+    command_contains_permission_bypass,
+    normalize_auto_approval_preset,
+    normalize_interaction_mode,
+    normalize_permission_policy,
+)
 
 _PROJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
@@ -24,6 +33,9 @@ class RuntimeConfig:
     execution_mode: RuntimeExecutionMode
     timeout_seconds: float | None
     stage_timeout_seconds: dict[str, float]
+    permission_policy: RuntimePermissionPolicy = RuntimePermissionPolicy.FULL_ACCESS
+    interaction_mode: RuntimeInteractionMode = RuntimeInteractionMode.BATCH
+    auto_approval_preset: AutoApprovalPreset = AutoApprovalPreset.BROAD
 
 
 @dataclass(frozen=True)
@@ -44,18 +56,22 @@ class LegacyRuntimeConfigFields:
     claude_code_command: str | None
     codex_command: str | None
     opencode_command: str | None
+    qwen_command: str | None
     generic_cli_execution_mode: RuntimeExecutionMode | None
     claude_code_execution_mode: RuntimeExecutionMode | None
     codex_execution_mode: RuntimeExecutionMode | None
     opencode_execution_mode: RuntimeExecutionMode | None
+    qwen_execution_mode: RuntimeExecutionMode | None
     generic_cli_timeout_seconds: float | None
     claude_code_timeout_seconds: float | None
     codex_timeout_seconds: float | None
     opencode_timeout_seconds: float | None
+    qwen_timeout_seconds: float | None
     generic_cli_stage_timeout_seconds: dict[str, float] | None
     claude_code_stage_timeout_seconds: dict[str, float] | None
     codex_stage_timeout_seconds: dict[str, float] | None
     opencode_stage_timeout_seconds: dict[str, float] | None
+    qwen_stage_timeout_seconds: dict[str, float] | None
 
 
 @dataclass(frozen=True, init=False)
@@ -78,18 +94,22 @@ class AiddConfig:
         claude_code_command: str | None = None,
         codex_command: str | None = None,
         opencode_command: str | None = None,
+        qwen_command: str | None = None,
         generic_cli_execution_mode: RuntimeExecutionMode | None = None,
         claude_code_execution_mode: RuntimeExecutionMode | None = None,
         codex_execution_mode: RuntimeExecutionMode | None = None,
         opencode_execution_mode: RuntimeExecutionMode | None = None,
+        qwen_execution_mode: RuntimeExecutionMode | None = None,
         generic_cli_timeout_seconds: float | None = None,
         claude_code_timeout_seconds: float | None = None,
         codex_timeout_seconds: float | None = None,
         opencode_timeout_seconds: float | None = None,
+        qwen_timeout_seconds: float | None = None,
         generic_cli_stage_timeout_seconds: dict[str, float] | None = None,
         claude_code_stage_timeout_seconds: dict[str, float] | None = None,
         codex_stage_timeout_seconds: dict[str, float] | None = None,
         opencode_stage_timeout_seconds: dict[str, float] | None = None,
+        qwen_stage_timeout_seconds: dict[str, float] | None = None,
     ) -> None:
         object.__setattr__(self, "workspace_root", workspace_root)
         object.__setattr__(self, "log_mode", log_mode)
@@ -105,18 +125,22 @@ class AiddConfig:
                     claude_code_command=claude_code_command,
                     codex_command=codex_command,
                     opencode_command=opencode_command,
+                    qwen_command=qwen_command,
                     generic_cli_execution_mode=generic_cli_execution_mode,
                     claude_code_execution_mode=claude_code_execution_mode,
                     codex_execution_mode=codex_execution_mode,
                     opencode_execution_mode=opencode_execution_mode,
+                    qwen_execution_mode=qwen_execution_mode,
                     generic_cli_timeout_seconds=generic_cli_timeout_seconds,
                     claude_code_timeout_seconds=claude_code_timeout_seconds,
                     codex_timeout_seconds=codex_timeout_seconds,
                     opencode_timeout_seconds=opencode_timeout_seconds,
+                    qwen_timeout_seconds=qwen_timeout_seconds,
                     generic_cli_stage_timeout_seconds=generic_cli_stage_timeout_seconds,
                     claude_code_stage_timeout_seconds=claude_code_stage_timeout_seconds,
                     codex_stage_timeout_seconds=codex_stage_timeout_seconds,
                     opencode_stage_timeout_seconds=opencode_stage_timeout_seconds,
+                    qwen_stage_timeout_seconds=qwen_stage_timeout_seconds,
                 ),
             ),
         )
@@ -146,6 +170,10 @@ class AiddConfig:
         return self.runtime_config("opencode").command
 
     @property
+    def qwen_command(self) -> str:
+        return self.runtime_config("qwen").command
+
+    @property
     def generic_cli_execution_mode(self) -> RuntimeExecutionMode:
         return self.runtime_config("generic-cli").execution_mode
 
@@ -160,6 +188,10 @@ class AiddConfig:
     @property
     def opencode_execution_mode(self) -> RuntimeExecutionMode:
         return self.runtime_config("opencode").execution_mode
+
+    @property
+    def qwen_execution_mode(self) -> RuntimeExecutionMode:
+        return self.runtime_config("qwen").execution_mode
 
     @property
     def generic_cli_timeout_seconds(self) -> float | None:
@@ -178,6 +210,10 @@ class AiddConfig:
         return self.runtime_config("opencode").timeout_seconds
 
     @property
+    def qwen_timeout_seconds(self) -> float | None:
+        return self.runtime_config("qwen").timeout_seconds
+
+    @property
     def generic_cli_stage_timeout_seconds(self) -> dict[str, float]:
         return dict(self.runtime_config("generic-cli").stage_timeout_seconds)
 
@@ -192,6 +228,10 @@ class AiddConfig:
     @property
     def opencode_stage_timeout_seconds(self) -> dict[str, float]:
         return dict(self.runtime_config("opencode").stage_timeout_seconds)
+
+    @property
+    def qwen_stage_timeout_seconds(self) -> dict[str, float]:
+        return dict(self.runtime_config("qwen").stage_timeout_seconds)
 
 
 def _require_runtime_value[T](runtime_id: str, field_name: str, value: T | None) -> T:
@@ -223,6 +263,9 @@ def _copy_runtime_configs(
             execution_mode=runtime_config.execution_mode,
             timeout_seconds=runtime_config.timeout_seconds,
             stage_timeout_seconds=dict(runtime_config.stage_timeout_seconds),
+            permission_policy=runtime_config.permission_policy,
+            interaction_mode=runtime_config.interaction_mode,
+            auto_approval_preset=runtime_config.auto_approval_preset,
         )
         for runtime_id, runtime_config in runtime_configs.items()
     }
@@ -290,6 +333,16 @@ def _legacy_runtime_configs_from_constructor_fields(
             timeout_seconds=legacy_fields.opencode_timeout_seconds,
             stage_timeout_seconds=legacy_fields.opencode_stage_timeout_seconds,
         ),
+        "qwen": runtime_config_from_legacy(
+            runtime_id="qwen",
+            command=legacy_fields.qwen_command or get_runtime_definition("qwen").default_command,
+            execution_mode=(
+                legacy_fields.qwen_execution_mode
+                or get_runtime_definition("qwen").default_execution_mode
+            ),
+            timeout_seconds=legacy_fields.qwen_timeout_seconds,
+            stage_timeout_seconds=legacy_fields.qwen_stage_timeout_seconds,
+        ),
     }
 
 
@@ -299,10 +352,37 @@ def _runtime_section(data: dict[str, Any], runtime_id: str) -> dict[str, Any]:
     return raw_section if isinstance(raw_section, dict) else {}
 
 
-def _runtime_command(data: dict[str, Any], runtime_id: str) -> str:
+def _brokered_default_command(runtime_id: str) -> str:
+    definition = get_runtime_definition(runtime_id)
+    return definition.brokered_default_command or definition.default_command
+
+
+def _runtime_command(
+    data: dict[str, Any],
+    runtime_id: str,
+    permission_policy: RuntimePermissionPolicy,
+) -> str:
     definition = get_runtime_definition(runtime_id)
     section = _runtime_section(data, runtime_id)
+    has_custom_command = "command" in section
     command = str(section.get("command", definition.default_command)).strip()
+    is_default_managed_command = command == definition.default_command
+    if (
+        has_custom_command
+        and is_default_managed_command
+        and permission_policy is not RuntimePermissionPolicy.FULL_ACCESS
+    ):
+        return _brokered_default_command(runtime_id)
+    if (
+        has_custom_command
+        and permission_policy is not RuntimePermissionPolicy.FULL_ACCESS
+        and command_contains_permission_bypass(command)
+    ):
+        raise ValueError(
+            f"permission-policy-conflict: [runtime.{definition.config_section}] custom "
+            f"command includes full-access bypass flags while permission_policy is "
+            f"{permission_policy.value!r}."
+        )
     if should_upgrade_legacy_raw_provider_command(
         section=section,
         command=command,
@@ -310,7 +390,14 @@ def _runtime_command(data: dict[str, Any], runtime_id: str) -> str:
         default_execution_mode=definition.default_execution_mode,
         native_mode=RuntimeExecutionMode.NATIVE,
     ):
+        if permission_policy is not RuntimePermissionPolicy.FULL_ACCESS:
+            return _brokered_default_command(runtime_id)
         return definition.default_command
+    if (
+        not has_custom_command
+        and permission_policy is not RuntimePermissionPolicy.FULL_ACCESS
+    ):
+        return _brokered_default_command(runtime_id)
     return command or definition.default_command
 
 
@@ -324,6 +411,7 @@ def _runtime_execution_mode(data: dict[str, Any], runtime_id: str) -> RuntimeExe
     if (
         command
         and command != definition.default_command
+        and command != _brokered_default_command(runtime_id)
         and command != definition.probe_command
         and RuntimeExecutionMode.ADAPTER_FLAGS in definition.supported_execution_modes
     ):
@@ -388,6 +476,48 @@ def _runtime_stage_timeout_seconds(data: dict[str, Any], runtime_id: str) -> dic
     return stage_timeouts
 
 
+def _runtime_permission_policy(
+    data: dict[str, Any],
+    runtime_id: str,
+) -> RuntimePermissionPolicy:
+    definition = get_runtime_definition(runtime_id)
+    section = _runtime_section(data, runtime_id)
+    try:
+        return normalize_permission_policy(section.get("permission_policy"))
+    except ValueError as exc:
+        raise ValueError(
+            f"[runtime.{definition.config_section}] {exc}"
+        ) from exc
+
+
+def _runtime_interaction_mode(
+    data: dict[str, Any],
+    runtime_id: str,
+) -> RuntimeInteractionMode:
+    definition = get_runtime_definition(runtime_id)
+    section = _runtime_section(data, runtime_id)
+    try:
+        return normalize_interaction_mode(section.get("interaction_mode"))
+    except ValueError as exc:
+        raise ValueError(
+            f"[runtime.{definition.config_section}] {exc}"
+        ) from exc
+
+
+def _runtime_auto_approval_preset(
+    data: dict[str, Any],
+    runtime_id: str,
+) -> AutoApprovalPreset:
+    definition = get_runtime_definition(runtime_id)
+    section = _runtime_section(data, runtime_id)
+    try:
+        return normalize_auto_approval_preset(section.get("auto_approval_preset"))
+    except ValueError as exc:
+        raise ValueError(
+            f"[runtime.{definition.config_section}] {exc}"
+        ) from exc
+
+
 def _parse_project_set(data: dict[str, Any]) -> ProjectSetConfig:
     raw_project_set = data.get("project_set", {})
     if raw_project_set is None:
@@ -444,15 +574,18 @@ def load_config(path: Path) -> AiddConfig:
             data = tomllib.load(file_obj)
 
     workspace_root = Path(data.get("workspace", {}).get("root", ".aidd"))
-    runtime_configs = {
-        runtime_id: RuntimeConfig(
-            command=_runtime_command(data, runtime_id),
+    runtime_configs: dict[str, RuntimeConfig] = {}
+    for runtime_id in runtime_ids():
+        permission_policy = _runtime_permission_policy(data, runtime_id)
+        runtime_configs[runtime_id] = RuntimeConfig(
+            command=_runtime_command(data, runtime_id, permission_policy),
             execution_mode=_runtime_execution_mode(data, runtime_id),
             timeout_seconds=_runtime_timeout_seconds(data, runtime_id),
             stage_timeout_seconds=_runtime_stage_timeout_seconds(data, runtime_id),
+            permission_policy=permission_policy,
+            interaction_mode=_runtime_interaction_mode(data, runtime_id),
+            auto_approval_preset=_runtime_auto_approval_preset(data, runtime_id),
         )
-        for runtime_id in runtime_ids()
-    }
     log_mode = data.get("logging", {}).get("mode", "both")
     max_repair_attempts = int(data.get("repair", {}).get("max_attempts", 2))
 

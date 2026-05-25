@@ -66,6 +66,12 @@ class ValidationVerdict(StrEnum):
     FAIL = "fail"
 
 
+class AdapterExecutionStatus(StrEnum):
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    BLOCKED_FOR_OPERATOR = "blocked_for_operator"
+
+
 @dataclass(frozen=True, slots=True)
 class StageValidationState:
     stage: str
@@ -159,10 +165,53 @@ class StageResumeResult:
     adapter_invocation: AdapterInvocationBundle | None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class AdapterExecutionOutcome:
-    succeeded: bool
+    status: AdapterExecutionStatus
     details: str | None = None
+    operator_requests_path: Path | None = None
+    operator_decisions_path: Path | None = None
+    pending_operator_request_ids: tuple[str, ...] = ()
+
+    def __init__(
+        self,
+        *,
+        succeeded: bool | None = None,
+        status: AdapterExecutionStatus | str | None = None,
+        details: str | None = None,
+        operator_requests_path: Path | None = None,
+        operator_decisions_path: Path | None = None,
+        pending_operator_request_ids: tuple[str, ...] = (),
+    ) -> None:
+        if status is None:
+            resolved_status = (
+                AdapterExecutionStatus.SUCCEEDED
+                if succeeded
+                else AdapterExecutionStatus.FAILED
+            )
+        else:
+            resolved_status = (
+                status
+                if isinstance(status, AdapterExecutionStatus)
+                else AdapterExecutionStatus(status)
+            )
+        object.__setattr__(self, "status", resolved_status)
+        object.__setattr__(self, "details", details)
+        object.__setattr__(self, "operator_requests_path", operator_requests_path)
+        object.__setattr__(self, "operator_decisions_path", operator_decisions_path)
+        object.__setattr__(
+            self,
+            "pending_operator_request_ids",
+            tuple(pending_operator_request_ids),
+        )
+
+    @property
+    def succeeded(self) -> bool:
+        return self.status is AdapterExecutionStatus.SUCCEEDED
+
+    @property
+    def blocked_for_operator(self) -> bool:
+        return self.status is AdapterExecutionStatus.BLOCKED_FOR_OPERATOR
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,6 +231,7 @@ class StageOrchestrationResult:
 
 
 __all__ = [
+    "AdapterExecutionStatus",
     "AdapterExecutionOutcome",
     "AdapterInvocationBundle",
     "PostValidationAction",

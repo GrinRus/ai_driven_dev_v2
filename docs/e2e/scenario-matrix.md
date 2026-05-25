@@ -58,6 +58,13 @@ The maintained set must cover these buckets without turning the matrix into a fu
 canonical README smoke. Use `AIDD-LIVE-005` for installed live smoke evidence until
 `AIDD-LIVE-001` is repinned or fixed.
 
+`AIDD-LIVE-004` is intentionally docs-only. Its maintained clean-pass gate checks the
+selected documentation acceptance criteria instead of the whole upstream HTTPX suite:
+tracked diff remains limited to `README.md` and `docs/index.md`, both docs surfaces carry
+the concrete `https://httpbin.org/json` CLI example, added docs lines do not introduce
+placeholder runnable URLs, verification does not call the public endpoint, and QA artifacts
+are published.
+
 ## Operator UI Local-Project Lane
 
 Operator UI evidence is tracked separately from the scenario-class matrix because it is a

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import sys
 from pathlib import Path
 
@@ -114,3 +115,27 @@ def test_probe_handles_malformed_version_output(tmp_path: Path) -> None:
     assert report.available is True
     assert report.version_text == "???"
     assert report.supports_non_interactive_mode is True
+
+
+def test_probe_marks_codex_app_server_live_decisions_when_schema_tool_exists(
+    monkeypatch,
+) -> None:
+    probe_module = importlib.import_module("aidd.adapters.codex.probe")
+    monkeypatch.setattr(probe_module, "discover_command", lambda _: "/tmp/codex")
+    monkeypatch.setattr(probe_module, "discover_version", lambda _: "codex 0.131.0")
+    monkeypatch.setattr(probe_module, "discover_help_text", lambda _: "--json")
+    monkeypatch.setattr(
+        probe_module,
+        "discover_app_server_help_text",
+        lambda _: "codex app-server --listen generate-json-schema",
+    )
+    monkeypatch.setattr(
+        probe_module,
+        "discover_app_server_schema_help_text",
+        lambda _: "generate-json-schema --out DIR",
+    )
+
+    report = probe_module.probe("codex")
+
+    assert report.supports_live_decisions is True
+    assert report.preferred_transport == "app-server"

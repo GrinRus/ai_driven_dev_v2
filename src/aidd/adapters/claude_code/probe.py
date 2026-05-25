@@ -31,12 +31,18 @@ def discover_help_text(command_path: str) -> str | None:
     )
 
 
+def _supports_live_decisions(help_text: str) -> bool:
+    return "--permission-prompt-tool" in help_text
+
+
 def probe(command: str) -> CapabilityReport:
     discovered = discover_command(command)
     available = discovered is not None
     version_text = discover_version(discovered) if discovered else None
-    detected = detect_capability_flags(discover_help_text(discovered) or "") if discovered else {}
+    help_text = discover_help_text(discovered) or "" if discovered else ""
+    detected = detect_capability_flags(help_text) if discovered else {}
 
+    supports_live_decisions = available and _supports_live_decisions(help_text)
     return CapabilityReport(
         runtime_id="claude-code",
         available=available,
@@ -53,4 +59,10 @@ def probe(command: str) -> CapabilityReport:
             False,
         ),
         supports_env_injection=detected.get("supports_env_injection", False),
+        supports_permission_policy=available,
+        supports_live_decisions=supports_live_decisions,
+        supports_deferred_resume=detected.get("supports_resume", False),
+        preferred_transport=(
+            "permission-prompt-tool" if supports_live_decisions else "subprocess"
+        ),
     )

@@ -47,6 +47,7 @@ __all__ = [
     "probe_codex",
     "probe_generic_cli",
     "probe_opencode",
+    "probe_qwen",
     "run_artifacts",
     "run_callback",
     "run_logs",
@@ -64,6 +65,7 @@ probe_generic_cli = get_runtime_adapter_surface("generic-cli").probe
 probe_claude_code = get_runtime_adapter_surface("claude-code").probe
 probe_codex = get_runtime_adapter_surface("codex").probe
 probe_opencode = get_runtime_adapter_surface("opencode").probe
+probe_qwen = get_runtime_adapter_surface("qwen").probe
 
 app = typer.Typer(
     help="Runtime-agnostic orchestration for document-first AI software delivery.",

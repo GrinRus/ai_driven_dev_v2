@@ -130,6 +130,7 @@ tiers, and default timeout settings.
 | `claude-code` | Authenticated `claude` CLI | `native` | Claude Code-backed workflow runs |
 | `codex` | Authenticated `codex` CLI | `native` | Codex-backed workflow runs and live evals |
 | `opencode` | Authenticated `opencode` CLI | `native` | OpenCode-backed workflow runs and live evals |
+| `qwen` | Authenticated `qwen` CLI | `native` | Experimental Qwen Code workflow runs |
 
 Product workflow and stage execution require an explicit runtime id:
 
@@ -138,10 +139,10 @@ aidd run --work-item WI-001 --runtime codex --root .aidd
 aidd stage run plan --work-item WI-001 --runtime opencode --root .aidd
 ```
 
-Codex, OpenCode, and Claude Code default to native provider CLI execution. `generic-cli`
-is not the default product onboarding runtime; use it when you intentionally configure an
-AIDD-compatible wrapper command with `mode = "adapter-flags"` for a deterministic or
-custom execution surface.
+Codex, OpenCode, Qwen, and Claude Code default to native provider CLI execution.
+`generic-cli` is not the default product onboarding runtime; use it when you
+intentionally configure an AIDD-compatible wrapper command with `mode = "adapter-flags"`
+for a deterministic or custom execution surface.
 
 Unknown runtime ids fail fast with `unsupported-runtime` classification.
 

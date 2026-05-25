@@ -4,6 +4,9 @@ root = ".aidd"
 [runtime.generic_cli]
 command = "python"
 mode = "adapter-flags"
+# permission_policy = "full-access" # full-access | brokered | plan | deny-unapproved
+# interaction_mode = "batch"        # batch | evented | live
+# auto_approval_preset = "broad"    # off | conservative | broad
 
 [runtime.claude_code]
 command = "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
@@ -18,12 +21,17 @@ mode = "native"
 # implement = 1800
 
 [runtime.codex]
-command = "codex exec --full-auto --skip-git-repo-check --json -"
+command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
 # timeout_seconds = 900
 
 [runtime.opencode]
 command = "opencode run --format json --dangerously-skip-permissions"
+mode = "native"
+# timeout_seconds = 900
+
+[runtime.qwen]
+command = "qwen --approval-mode yolo --output-format stream-json"
 mode = "native"
 # timeout_seconds = 900
 

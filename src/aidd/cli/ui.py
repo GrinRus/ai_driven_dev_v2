@@ -54,6 +54,18 @@ from aidd.core.operator_frontend import (
     resolve_operator_run_view,
     resolve_operator_stage_view,
 )
+from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
+from aidd.core.run_store import next_attempt_number, run_attempt_root
+from aidd.core.runtime_operator import (
+    OPERATOR_DECISIONS_FILENAME,
+    OPERATOR_REQUESTS_FILENAME,
+    RuntimeOperatorDecision,
+    RuntimeOperatorRequest,
+    append_operator_decision,
+    load_operator_decisions,
+    load_operator_requests,
+    unapproved_operator_request_ids,
+)
 from aidd.core.runtime_readiness import (
     RuntimeCommandSource,
     RuntimeReadinessProbeReport,
@@ -66,6 +78,10 @@ from aidd.core.workflow_service import (
     WorkflowStageExecutionError,
     WorkflowStageExecutionRequest,
     run_workflow,
+)
+from aidd.runtime_permissions import (
+    RuntimeOperatorDecisionAction,
+    RuntimeOperatorDecisionSource,
 )
 
 WorkflowRunner = Callable[..., WorkflowRunResult]
@@ -82,6 +98,7 @@ class UiServerOptions:
     config: Path
     host: str
     port: int
+    allow_remote_approvals: bool = False
 
 
 @dataclass(slots=True)
@@ -95,6 +112,7 @@ class _UiRunJob:
     exit_code: int | None = None
     message: str = ""
     result: object | None = None
+    attempt_path: str | None = None
     chunks: list[dict[str, object]] = field(default_factory=list)
 
 
@@ -155,6 +173,37 @@ class UiRunJobStore:
             job.message = message
             job.updated_at_utc = _utc_now()
 
+    def wait_for_operator(
+        self,
+        job_id: str,
+        *,
+        result: object,
+        message: str,
+        exit_code: int | None = None,
+    ) -> None:
+        with self._lock:
+            job = self._require_job(job_id)
+            job.status = "waiting-for-operator"
+            job.exit_code = exit_code
+            job.result = result
+            job.message = message
+            job.updated_at_utc = _utc_now()
+
+    def mark_running(self, job_id: str, *, message: str = "running") -> None:
+        with self._lock:
+            job = self._require_job(job_id)
+            job.status = "running"
+            job.exit_code = None
+            job.result = None
+            job.message = message
+            job.updated_at_utc = _utc_now()
+
+    def set_attempt_path(self, job_id: str, attempt_path: Path) -> None:
+        with self._lock:
+            job = self._require_job(job_id)
+            job.attempt_path = attempt_path.as_posix()
+            job.updated_at_utc = _utc_now()
+
     def view(self, job_id: str) -> dict[str, object]:
         with self._lock:
             job = self._require_job(job_id)
@@ -166,6 +215,7 @@ class UiRunJobStore:
                 "exit_code": job.exit_code,
                 "message": job.message,
                 "result": job.result,
+                "attempt_path": job.attempt_path,
                 "created_at_utc": job.created_at_utc,
                 "updated_at_utc": job.updated_at_utc,
             }
@@ -185,6 +235,31 @@ class UiRunJobStore:
             return self._jobs[job_id]
         except KeyError as exc:
             raise ValueError(f"Unknown UI job '{job_id}'.") from exc
+
+
+@dataclass(slots=True)
+class _UiOperatorDecisionWaiter:
+    condition: threading.Condition = field(default_factory=threading.Condition)
+    decision: RuntimeOperatorDecision | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _UiRuntimeOperatorDecisionProvider:
+    service: OperatorUiService
+    job_id: str
+
+    def request_decision(
+        self,
+        request: RuntimeOperatorRequest,
+        *,
+        requests_path: Path,
+        decisions_path: Path,
+    ) -> RuntimeOperatorDecision | None:
+        return self.service._wait_for_operator_decision(
+            job_id=self.job_id,
+            request=request,
+            attempt_path=requests_path.parent,
+        )
 
 
 def _utc_now() -> str:
@@ -311,6 +386,60 @@ def _open_local_folder(path: Path) -> None:
     subprocess.Popen(command)  # noqa: S603
 
 
+def _latest_attempt_path(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> Path | None:
+    next_number = next_attempt_number(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    latest_number = next_number - 1
+    if latest_number < 1:
+        return None
+    return run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=latest_number,
+    )
+
+
+def _operator_request_view(attempt_path: Path | None) -> dict[str, object]:
+    if attempt_path is None:
+        return {
+            "attempt_path": None,
+            "requests_path": None,
+            "decisions_path": None,
+            "requests": (),
+            "pending_request_ids": (),
+            "unapproved_request_ids": (),
+            "decisions": (),
+        }
+    requests_path = attempt_path / OPERATOR_REQUESTS_FILENAME
+    decisions_path = attempt_path / OPERATOR_DECISIONS_FILENAME
+    requests = load_operator_requests(requests_path)
+    decisions = load_operator_decisions(decisions_path)
+    decided_ids = {decision.request_id for decision in decisions}
+    return {
+        "attempt_path": attempt_path.as_posix(),
+        "requests_path": requests_path.as_posix() if requests_path.exists() else None,
+        "decisions_path": decisions_path.as_posix() if decisions_path.exists() else None,
+        "requests": tuple(request.to_dict() for request in requests),
+        "pending_request_ids": tuple(
+            request.id for request in requests if request.id not in decided_ids
+        ),
+        "unapproved_request_ids": unapproved_operator_request_ids(attempt_path=attempt_path),
+        "decisions": tuple(decision.to_dict() for decision in decisions),
+    }
+
+
 def _runtime_command_sources_from_config(path: Path) -> dict[str, RuntimeCommandSource]:
     data: dict[str, Any] = {}
     if path.exists():
@@ -364,6 +493,8 @@ class OperatorUiService:
         self._folder_opener = folder_opener
         self._jobs = UiRunJobStore()
         self._shutdown_requested = False
+        self._operator_waiters_lock = threading.Lock()
+        self._operator_waiters: dict[str, _UiOperatorDecisionWaiter] = {}
 
     @property
     def workspace_root(self) -> Path:
@@ -501,6 +632,8 @@ class OperatorUiService:
 
     def handle_post(self, path: str, payload: dict[str, Any]) -> UiResponse:
         try:
+            if path.startswith("/api/jobs/"):
+                return self._handle_job_post(path=path, payload=payload)
             if path == "/api/answers":
                 stage = str(payload.get("stage", STAGES[0])).strip() or STAGES[0]
                 question_id = str(payload.get("question_id", "")).strip()
@@ -546,7 +679,137 @@ class OperatorUiService:
             return _json_response(self._jobs.view(parts[2]))
         if len(parts) == 4 and parts[:2] == ["api", "jobs"] and parts[3] == "logs":
             return _json_response(self._jobs.logs(parts[2], cursor=_cursor_param(params)))
+        if (
+            len(parts) == 4
+            and parts[:2] == ["api", "jobs"]
+            and parts[3] == "operator-requests"
+        ):
+            return _json_response(self._job_operator_requests(parts[2]))
         return _error_response("not found", status=HTTPStatus.NOT_FOUND)
+
+    def _handle_job_post(self, *, path: str, payload: dict[str, Any]) -> UiResponse:
+        parts = path.strip("/").split("/")
+        if (
+            len(parts) == 6
+            and parts[:2] == ["api", "jobs"]
+            and parts[3] == "operator-requests"
+            and parts[5] == "decision"
+        ):
+            if not _is_loopback_host(self.options.host) and not self.options.allow_remote_approvals:
+                return _error_response(
+                    "remote approval decisions require --allow-remote-approvals.",
+                    status=HTTPStatus.FORBIDDEN,
+                )
+            return _json_response(
+                self._record_operator_decision(
+                    job_id=parts[2],
+                    request_id=parts[4],
+                    payload=payload,
+                )
+            )
+        return _error_response("not found", status=HTTPStatus.NOT_FOUND)
+
+    def _job_attempt_path(self, job_id: str) -> Path | None:
+        job = self._jobs.view(job_id)
+        raw_attempt_path = job.get("attempt_path")
+        if isinstance(raw_attempt_path, str) and raw_attempt_path:
+            return Path(raw_attempt_path)
+        result = job.get("result")
+        stage = job.get("stage")
+        run_id: object = None
+        if isinstance(result, Mapping):
+            stage = result.get("stage") or stage
+            run_id = result.get("run_id")
+        if not isinstance(stage, str):
+            return None
+        selected_run_id = (
+            run_id
+            if isinstance(run_id, str) and run_id
+            else resolve_latest_run_id(
+                workspace_root=self.workspace_root,
+                work_item=self.options.work_item,
+            )
+        )
+        if selected_run_id is None:
+            return None
+        return _latest_attempt_path(
+            workspace_root=self.workspace_root,
+            work_item=self.options.work_item,
+            run_id=selected_run_id,
+            stage=stage,
+        )
+
+    def _job_operator_requests(self, job_id: str) -> dict[str, object]:
+        self._jobs.view(job_id)
+        return _operator_request_view(self._job_attempt_path(job_id))
+
+    def _wait_for_operator_decision(
+        self,
+        *,
+        job_id: str,
+        request: RuntimeOperatorRequest,
+        attempt_path: Path,
+    ) -> RuntimeOperatorDecision | None:
+        waiter = _UiOperatorDecisionWaiter()
+        with self._operator_waiters_lock:
+            self._operator_waiters[request.id] = waiter
+        self._jobs.set_attempt_path(job_id, attempt_path)
+        self._jobs.wait_for_operator(
+            job_id,
+            result={
+                "waiting_for_operator": True,
+                "request_id": request.id,
+                "attempt_path": attempt_path.as_posix(),
+            },
+            message="waiting for operator decision",
+        )
+        try:
+            with waiter.condition:
+                while waiter.decision is None:
+                    waiter.condition.wait(timeout=0.25)
+                return waiter.decision
+        finally:
+            with self._operator_waiters_lock:
+                self._operator_waiters.pop(request.id, None)
+            self._jobs.mark_running(job_id, message="runtime resumed after operator decision")
+
+    def _deliver_operator_decision(self, decision: RuntimeOperatorDecision) -> None:
+        with self._operator_waiters_lock:
+            waiter = self._operator_waiters.get(decision.request_id)
+        if waiter is None:
+            return
+        with waiter.condition:
+            waiter.decision = decision
+            waiter.condition.notify_all()
+
+    def _record_operator_decision(
+        self,
+        *,
+        job_id: str,
+        request_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, object]:
+        attempt_path = self._job_attempt_path(job_id)
+        if attempt_path is None:
+            raise ValueError("job has no attempt operator request context.")
+        requests = load_operator_requests(attempt_path / OPERATOR_REQUESTS_FILENAME)
+        if request_id not in {request.id for request in requests}:
+            raise ValueError(f"Unknown operator request '{request_id}'.")
+        raw_action = str(payload.get("action", "")).strip()
+        if not raw_action:
+            raise ValueError("action is required.")
+        decision = RuntimeOperatorDecision(
+            request_id=request_id,
+            action=RuntimeOperatorDecisionAction(raw_action),
+            source=RuntimeOperatorDecisionSource.UI,
+            reason=None if payload.get("reason") is None else str(payload.get("reason")),
+        )
+        append_operator_decision(
+            path=attempt_path / OPERATOR_DECISIONS_FILENAME,
+            decision=decision,
+        )
+        self._deliver_operator_decision(decision)
+        return _operator_request_view(attempt_path)
 
     def _start_stage_job(self, payload: dict[str, Any]) -> object:
         stage = _stage_from_payload(payload)
@@ -614,6 +877,7 @@ class OperatorUiService:
         log_follow: bool,
         job_id: str,
     ) -> object:
+        selected_run_id = run_id
         try:
             self._stage_runner(
                 StageRunOptions(
@@ -629,19 +893,46 @@ class OperatorUiService:
                         stream=stream,
                         text=text,
                     ),
+                    runtime_operator_decision_provider=_UiRuntimeOperatorDecisionProvider(
+                        service=self,
+                        job_id=job_id,
+                    ),
                 )
             )
         except typer.Exit as exc:
             exit_code = int(exc.exit_code or 0)
+            selected_run_id = selected_run_id or resolve_latest_run_id(
+                workspace_root=self.workspace_root,
+                work_item=self.options.work_item,
+            )
+            operator_view = (
+                _operator_request_view(
+                    _latest_attempt_path(
+                        workspace_root=self.workspace_root,
+                        work_item=self.options.work_item,
+                        run_id=selected_run_id,
+                        stage=stage,
+                    )
+                )
+                if selected_run_id is not None
+                else _operator_request_view(None)
+            )
             return {
                 "stage": stage,
                 "runtime": runtime,
+                "run_id": selected_run_id,
                 "exit_code": exit_code,
                 "completed": exit_code == 0,
+                "waiting_for_operator": bool(operator_view["pending_request_ids"]),
             }
+        selected_run_id = selected_run_id or resolve_latest_run_id(
+            workspace_root=self.workspace_root,
+            work_item=self.options.work_item,
+        )
         return {
             "stage": stage,
             "runtime": runtime,
+            "run_id": selected_run_id,
             "exit_code": 0,
             "completed": True,
         }
@@ -730,6 +1021,14 @@ class OperatorUiService:
             try:
                 result = target(job_id)
                 exit_code = _exit_code_from_result(result)
+                if isinstance(result, Mapping) and bool(result.get("waiting_for_operator")):
+                    self._jobs.wait_for_operator(
+                        job_id,
+                        result=result,
+                        exit_code=exit_code,
+                        message="waiting for operator decision",
+                    )
+                    return
                 self._jobs.complete(
                     job_id,
                     result=result,
@@ -770,6 +1069,10 @@ class OperatorUiService:
                             job_id,
                             stream=stream,
                             text=text,
+                        ),
+                        runtime_operator_decision_provider=_UiRuntimeOperatorDecisionProvider(
+                            service=self,
+                            job_id=job_id,
                         ),
                     )
                 )
@@ -941,6 +1244,13 @@ def ui_command(
         int,
         typer.Option("--port", help="Local bind port; use 0 to allocate one."),
     ] = 0,
+    allow_remote_approvals: Annotated[
+        bool,
+        typer.Option(
+            "--allow-remote-approvals",
+            help="Enable runtime approval decisions when the UI is bound off loopback.",
+        ),
+    ] = False,
 ) -> None:
     """Start the local operator UI."""
     run_ui_server(
@@ -950,6 +1260,7 @@ def ui_command(
             config=config,
             host=host,
             port=port,
+            allow_remote_approvals=allow_remote_approvals,
         )
     )
 

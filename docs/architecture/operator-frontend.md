@@ -70,7 +70,14 @@ The first frontend contract covers these flows:
    - show `validator-report.md`, `stage-result.md`, and repair evidence;
    - show run/eval metadata, prompt paths, Git SHA, hashes, runtime id, and adapter id.
 
-6. **Operator intervention**
+6. **Runtime approval handling**
+   - show pending runtime operator requests from attempt-level `operator-requests.jsonl`;
+   - show auto-approved, denied, or cancelled decisions from `operator-decisions.jsonl`;
+   - write approval decisions only through the local job approval API;
+   - keep runtime approvals separate from product questions in `questions.md` and
+     `answers.md`.
+
+7. **Operator intervention**
    - accept a selected-stage request through UI, CLI, or another operator integration;
    - persist the request as
      `.aidd/workitems/<id>/stages/<stage>/operator-requests/request-0001.md`;
@@ -148,6 +155,13 @@ Current W20 implementation status:
   persisted logs, artifact summaries, artifact document content, workflow run
   requests, stage run requests, stage intervention requests, and job status/log
   polling over the operator services;
+- UI job state includes `waiting-for-operator`, with
+  `GET /api/jobs/<job_id>/operator-requests` and
+  `POST /api/jobs/<job_id>/operator-requests/<request_id>/decision` for local runtime
+  approvals; these runtime approvals remain attempt artifacts and are separate from
+  product/operator questions in `questions.md` and `answers.md`;
+- approval decisions are loopback-only by default; non-loopback binds must opt in with
+  `--allow-remote-approvals`;
 - `POST /api/stage/interact` accepts `{stage, runtime, run_id, request,
   target_documents, log_follow}`, validates the request shape, and starts a
   process-local intervention job; the durable request artifact and attempt semantics

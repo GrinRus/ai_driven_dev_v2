@@ -17,3 +17,7 @@ class CapabilityReport:
     supports_non_interactive_mode: bool = True
     supports_working_directory_control: bool = True
     supports_env_injection: bool = True
+    supports_permission_policy: bool = False
+    supports_live_decisions: bool = False
+    supports_deferred_resume: bool = False
+    preferred_transport: str = "subprocess"

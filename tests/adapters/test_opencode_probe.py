@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from aidd.adapters.opencode.live import discover_permission_endpoints
 from aidd.adapters.opencode.probe import (
     detect_capability_flags,
     discover_command,
@@ -113,3 +114,35 @@ def test_probe_handles_malformed_version_output(tmp_path: Path) -> None:
     assert report.available is True
     assert report.version_text == "???"
     assert report.supports_non_interactive_mode is True
+
+
+def test_opencode_permission_endpoint_discovery_requires_request_and_response_paths() -> None:
+    assert (
+        discover_permission_endpoints(
+            {
+                "openapi": "3.1.1",
+                "paths": {
+                    "/log": {"post": {"operationId": "app.log"}},
+                },
+            }
+        )
+        is None
+    )
+
+    endpoints = discover_permission_endpoints(
+        {
+            "openapi": "3.1.1",
+            "paths": {
+                "/permission/requests": {
+                    "get": {"operationId": "permission.list", "summary": "List pending"},
+                },
+                "/permission/requests/{id}/decision": {
+                    "post": {"operationId": "permission.respond", "summary": "Respond"},
+                },
+            },
+        }
+    )
+
+    assert endpoints is not None
+    assert endpoints.request_path == "/permission/requests"
+    assert endpoints.response_path == "/permission/requests/{id}/decision"

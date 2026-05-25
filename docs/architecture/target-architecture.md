@@ -91,6 +91,7 @@ core orchestrator
           +--> claude-code adapter
           +--> codex adapter
           +--> opencode adapter
+          +--> qwen adapter
           +--> future pi-mono bridge
   |
   v
@@ -504,6 +505,33 @@ Different runtimes expose different permission models. The AIDD core must theref
 - and documented fallbacks.
 
 The core must never assume that a runtime's permission system is identical to another runtime's.
+
+AIDD therefore owns a runtime-agnostic permission layer in front of provider-specific
+permissions:
+
+- `permission_policy = "full-access"` preserves the current default behavior;
+- `permission_policy = "brokered" | "plan" | "deny-unapproved"` requires runtime approval
+  requests to pass through the AIDD `RuntimeOperatorBroker`;
+- `auto_approval_preset = "off" | "conservative" | "broad"` controls which normalized
+  requests policy can decide without user input;
+- runtime approvals are attempt artifacts (`operator-requests.jsonl` and
+  `operator-decisions.jsonl`), not product interview documents.
+
+`broad` brokered policy treats `.aidd/` as the governed AIDD workspace. It can
+auto-approve normal `.aidd/workitems/...` and `.aidd/reports/...` reads and
+writes so live runtimes can produce stage documents and evidence without a
+human decision for every artifact write. The policy still protects `.aidd`
+secrets/auth/config paths, provider credentials, operator approval ledgers,
+AIDD-owned repair control files, file deletes, and destructive shell commands.
+The same `broad` policy can auto-approve local inspection and verification
+shell commands from declared project roots, while package, network, git remote,
+publish, destructive, and external-path operations remain guarded.
+
+If a runtime adapter cannot enforce a non-full policy with its current transport, it must
+return `blocked_for_operator` and leave validation unstarted. Qwen dual-file control and
+Codex app-server approvals are wired as adapter-local live transports. OpenCode serve/ACP
+and Claude prompt-tool or SDK callbacks remain capability-gated degraded paths until the
+runtime probe confirms the required endpoint or flag.
 
 ## 19. Distribution and deployment
 

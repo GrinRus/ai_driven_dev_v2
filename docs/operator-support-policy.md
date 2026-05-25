@@ -21,7 +21,7 @@ Maintainers currently provide best-effort support for:
 - runtime discovery and probe diagnostics (`uv run aidd doctor`);
 - workspace initialization (`uv run aidd init --work-item <id>`);
 - workflow execution through maintained runtimes (`aidd run`);
-- stage execution support through `aidd stage run` on `generic-cli`, `claude-code`, `codex`, and `opencode`;
+- stage execution support through `aidd stage run` on `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
 - stage-scoped operator intervention support through `aidd stage interact` and the
   local UI `Request change` path;
 - manual installed live E2E execution through

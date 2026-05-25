@@ -125,14 +125,20 @@ def test_adapter_protocol_documents_current_execution_result_surface() -> None:
     assert result_fields == {
         "details",
         "events_jsonl_path",
+        "operator_decisions_path",
+        "operator_requests_path",
+        "pending_operator_request_ids",
         "questions_path",
         "runtime_jsonl_path",
+        "status",
         "succeeded",
     }
     for expected_text in (
         "whether the runtime invocation succeeded",
         "a normalized details string",
+        "`succeeded`, `failed`, or `blocked_for_operator`",
         "`runtime.jsonl` and `events.jsonl`",
+        "`operator-requests.jsonl` and `operator-decisions.jsonl`",
         "`questions.md`",
         "in-memory workflow semantics",
     ):
@@ -406,7 +412,10 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
         "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
         in operator_handbook
     )
-    assert "codex exec --full-auto --skip-git-repo-check --json -" in operator_handbook
+    assert (
+        "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
+        in operator_handbook
+    )
     assert "opencode run --format json --dangerously-skip-permissions" in operator_handbook
     assert "probe target and the execution command do not have to be identical" in adapter_protocol
     assert "`native` execution" in runtime_matrix

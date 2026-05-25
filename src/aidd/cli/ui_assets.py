@@ -67,6 +67,7 @@ _INDEX_HTML = """<!doctype html>
         <button data-tab="validation" type="button">Validation</button>
         <button data-tab="artifacts" type="button">Artifacts</button>
         <button data-tab="logs" type="button">Logs</button>
+        <button data-tab="approvals" type="button">Approvals</button>
         <button data-tab="request" type="button">Request change</button>
       </div>
       <div id="cockpitContent" class="cockpit-content"></div>
@@ -512,6 +513,7 @@ h1, h2, h3, p {
 .panel,
 .dock-panel,
 .question-card,
+.approval-card,
 .artifact-viewer,
 .log-panel {
   background: var(--surface);
@@ -566,6 +568,20 @@ h1, h2, h3, p {
   display: grid;
   gap: 9px;
   padding: 12px;
+}
+.approval-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+}
+.approval-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.payload-preview {
+  max-height: 240px;
 }
 .question-head {
   align-items: center;
@@ -1611,6 +1627,82 @@ async function renderRequestChange() {
   updateSubmitInterventionState();
 }
 
+function renderApprovalRequestCard(request, decision, pendingIds) {
+  const payload = request.payload || {};
+  const command = payload.command || payload.cmd || "";
+  const paths = request.paths || [];
+  const pending = pendingIds.has(request.id);
+  const decisionBadge = decision
+    ? `<span class="small-badge ${decision.action === "deny" || decision.action === "cancel" ? "bad" : "good"}">${escapeHtml(decision.action)}</span>`
+    : pending ? `<span class="small-badge warn">pending</span>` : `<span class="small-badge">recorded</span>`;
+  const pathBody = paths.length
+    ? paths.map((path) => pathLine(path, 86)).join("")
+    : `<span class="muted">No normalized paths</span>`;
+  const actions = pending ? `
+    <div class="approval-actions">
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_once" type="button">Allow once</button>
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_for_session" type="button">Allow session</button>
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="deny" class="secondary" type="button">Deny</button>
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="cancel" class="danger" type="button">Cancel</button>
+    </div>
+  ` : "";
+  return `
+    <article class="approval-card">
+      <div class="question-head">
+        <strong>${escapeHtml(request.kind || "unknown")} / ${escapeHtml(request.tool_name || "runtime")}</strong>
+        ${decisionBadge}
+      </div>
+      <div class="panel-list">
+        <div class="panel-item"><strong>Request</strong><span>${escapeHtml(request.id)}</span></div>
+        <div class="panel-item"><strong>Runtime / stage</strong><span>${escapeHtml(request.runtime_id)} / ${escapeHtml(request.stage)}</span></div>
+        ${command ? `<div class="panel-item"><strong>Command</strong><code>${escapeHtml(command)}</code></div>` : ""}
+        <div class="panel-item"><strong>CWD</strong>${pathLine(request.cwd || "not provided", 86)}</div>
+        <div class="panel-item"><strong>Paths</strong><span>${pathBody}</span></div>
+        <div class="panel-item"><strong>Payload</strong><pre class="payload-preview">${escapeHtml(JSON.stringify(payload, null, 2))}</pre></div>
+        ${decision ? `<div class="panel-item"><strong>Decision</strong><span>${escapeHtml(decision.source)} / ${escapeHtml(decision.reason || "no reason")}</span></div>` : ""}
+      </div>
+      ${actions}
+    </article>
+  `;
+}
+
+async function renderApprovals() {
+  const content = document.getElementById("cockpitContent");
+  if (!state.activeJobId) {
+    content.innerHTML = `<div class="empty-state">No active runtime approval job.</div>`;
+    return;
+  }
+  try {
+    const view = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests`);
+    const requests = view.requests || [];
+    const decisions = view.decisions || [];
+    const pendingIds = new Set(view.pending_request_ids || []);
+    const decisionByRequest = new Map();
+    decisions.forEach((decision) => decisionByRequest.set(decision.request_id, decision));
+    const cards = requests.length
+      ? requests.map((request) => renderApprovalRequestCard(request, decisionByRequest.get(request.id), pendingIds)).join("")
+      : `<div class="empty-state">No runtime operator requests for this job.</div>`;
+    content.innerHTML = `
+      <section class="surface">
+        <div class="surface-title">
+          <span>Runtime approvals</span>
+          <span class="small-badge ${pendingIds.size ? "warn" : "good"}">${escapeHtml(pendingIds.size)} pending</span>
+        </div>
+        <div class="question-list">${cards}</div>
+      </section>
+    `;
+  } catch (error) {
+    content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function submitApproval(requestId, action) {
+  if (!state.activeJobId) return;
+  await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests/${encodeURIComponent(requestId)}/decision`, {action});
+  toast(`Runtime approval ${action}.`);
+  await renderApprovals();
+}
+
 function parsePrefixedLogLine(text, fallbackStream) {
   const rawText = String(text ?? "");
   const matched = rawText.match(/^\\[([^:\\]]+):([^:\\]]+):(stdout|stderr|system)\\]\\s?(.*)$/i);
@@ -1705,7 +1797,7 @@ function liveJobMatchesStage() {
 }
 
 async function renderLogs() {
-  if (state.activeJobId && liveJobMatchesStage() && (state.activeJobStatus?.status === "running" || state.activeJobLogChunks.length)) {
+  if (state.activeJobId && liveJobMatchesStage() && (state.activeJobStatus?.status === "running" || state.activeJobStatus?.status === "waiting-for-operator" || state.activeJobLogChunks.length)) {
     const entries = logEntriesFromChunks(state.activeJobLogChunks);
     document.getElementById("cockpitContent").innerHTML = renderLogPanel({
       title: `Live job ${state.activeJobId}`,
@@ -1746,6 +1838,7 @@ async function renderCockpit() {
   if (state.activeTab === "validation") content.innerHTML = renderValidation();
   if (state.activeTab === "artifacts") await renderArtifacts();
   if (state.activeTab === "logs") await renderLogs();
+  if (state.activeTab === "approvals") await renderApprovals();
   if (state.activeTab === "request") await renderRequestChange();
 }
 
@@ -2017,13 +2110,18 @@ async function stopServer() {
 async function pollActiveJob() {
   if (!state.activeJobId) return;
   try {
+    const activeStatuses = new Set(["running", "waiting-for-operator"]);
     const logs = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}/logs?cursor=${state.activeJobCursor}`);
     state.activeJobCursor = Number(logs.cursor || state.activeJobCursor);
     state.activeJobLogChunks.push(...(logs.chunks || []));
     state.activeJobStatus = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}`);
     renderActivityTable();
     if (state.activeTab === "logs") await renderLogs();
-    if (state.activeJobStatus.status !== "running") {
+    if (state.activeJobStatus.status === "waiting-for-operator") {
+      activateTab("approvals");
+      await renderApprovals();
+    }
+    if (!activeStatuses.has(state.activeJobStatus.status)) {
       if (state.activeJobTimer) clearInterval(state.activeJobTimer);
       state.activeJobTimer = null;
       await fetchDashboard();
@@ -2123,6 +2221,11 @@ document.addEventListener("click", async (event) => {
     if (tabShortcut) {
       activateTab(tabShortcut);
       await renderCockpit();
+      return;
+    }
+    const approvalButton = event.target.closest("[data-operator-request][data-operator-action]");
+    if (approvalButton) {
+      await submitApproval(approvalButton.dataset.operatorRequest, approvalButton.dataset.operatorAction);
       return;
     }
     const artifactReference = event.target.closest("[data-artifact-stage]");

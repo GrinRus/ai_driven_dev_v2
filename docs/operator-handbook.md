@@ -22,8 +22,8 @@ Today:
 
 - `aidd doctor` is functional;
 - `aidd init` is functional and can seed first-stage intake context from `--request` or `--request-file`;
-- `aidd run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`;
-- `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`;
+- `aidd run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
+- `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
 - `aidd stage interact` records a stage-scoped operator request and runs an
   intervention attempt in the current run through the same adapter boundary;
 - `python -m aidd.harness.live_e2e_black_box` executes the manual black-box
@@ -103,6 +103,9 @@ mode = "adapter-flags"
 [runtime.claude_code]
 command = "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
 mode = "native"
+# permission_policy = "full-access" # full-access | brokered | plan | deny-unapproved
+# interaction_mode = "batch"        # batch | evented | live
+# auto_approval_preset = "broad"    # off | conservative | broad
 # Optional per-attempt runtime subprocess budget.
 # timeout_seconds = 1200
 
@@ -116,13 +119,24 @@ mode = "native"
 # qa = 1800
 
 [runtime.codex]
-command = "codex exec --full-auto --skip-git-repo-check --json -"
+command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
+# Brokered live mode uses `codex app-server --listen stdio://` when the local
+# Codex probe confirms app-server approval schema support.
 # timeout_seconds = 900
 
 [runtime.opencode]
 command = "opencode run --format json --dangerously-skip-permissions"
 mode = "native"
+# Brokered live mode blocks before launch until `opencode serve` exposes
+# permission request/response endpoints in `/doc`.
+# timeout_seconds = 900
+
+[runtime.qwen]
+command = "qwen --approval-mode yolo --output-format stream-json"
+mode = "native"
+# Brokered live mode uses Qwen dual-file control with `--json-file` and
+# `--input-file` when the local Qwen probe confirms both flags.
 # timeout_seconds = 900
 
 [logging]
@@ -142,6 +156,24 @@ message. AIDD still preserves the raw log and runtime exit metadata and still ru
 stage validation before any workflow progression. For initial interview stops, a settled
 `questions.md` plus terminal stage documents may complete the adapter call while `answers.md`
 is still waiting for operator or harness-provided answers.
+
+For `permission_policy = "brokered"` with `auto_approval_preset = "broad"`,
+AIDD intentionally allows normal reads and writes inside the local `.aidd/`
+workspace. That includes stage documents, reports, runtime logs, metadata, and
+attempt artifacts under `.aidd/workitems/...` and `.aidd/reports/...`, even on
+early stages. It still does not auto-approve `.env*`, credentials, secrets,
+tokens, provider auth/config files, approval ledgers
+(`operator-requests.jsonl`, `operator-decisions.jsonl`), AIDD repair control
+files such as `repair-brief.md`, file deletes, network/package/publish/git push
+actions, or destructive shell commands.
+
+The same broad preset can approve project-local shell verification when the
+runtime request runs inside a declared project root and does not include an
+unsafe marker. Typical local inspect/test commands such as `git status`,
+`.venv/bin/python`, `python -m pytest`, `pytest`, and `uv run pytest` can
+proceed without a manual approval. Commands that install packages, access
+network URLs, mutate git history or remotes, publish releases, delete files, or
+reference paths outside the declared roots remain operator-gated or denied.
 
 Current config fields consumed by the CLI:
 

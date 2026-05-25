@@ -39,25 +39,126 @@ feature_source:
       or explains any local test server requirement.
     - README and docs index content stay consistent if both mention CLI behavior.
     - The change does not introduce placeholder URLs as if they were runnable examples.
+    - Verification checks documentation text and diff scope only; it must not call
+      the public endpoint.
     verification:
-    - UV_CACHE_DIR=.aidd/uv-cache uv run --with-requirements requirements.txt pytest -q
+    - |
+      .venv/bin/python - <<'PY'
+      import subprocess
+      allowed = {"README.md", "docs/index.md"}
+      changed = set(subprocess.check_output(["git", "diff", "--name-only"], text=True).splitlines())
+      unexpected = sorted(changed - allowed)
+      if unexpected:
+          raise SystemExit(f"unexpected tracked docs-sync changes: {unexpected}")
+      if not changed:
+          raise SystemExit("expected docs-sync tracked changes")
+      PY
+    - |
+      .venv/bin/python - <<'PY'
+      import subprocess
+      from pathlib import Path
+
+      needle = "httpx " + "https:" + "//httpbin.org/json"
+      docs = ("README.md", "docs/index.md")
+      missing = [path for path in docs if needle not in Path(path).read_text(encoding="utf-8")]
+      if missing:
+          raise SystemExit(f"missing concrete CLI example in: {missing}")
+
+      diff = subprocess.check_output(["git", "diff", "--", *docs], text=True)
+      added = "\n".join(
+          line[1:] for line in diff.splitlines()
+          if line.startswith("+") and not line.startswith("+++")
+      ).lower()
+      placeholders = ("example.com", "example.org", "example.net", "placeholder")
+      offenders = [item for item in placeholders if item in added]
+      if offenders:
+          raise SystemExit(f"placeholder runnable example introduced: {offenders}")
+      PY
     - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md
     - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/validator-report.md
     quality_bar: The documentation should be minimal, truthful, runnable or clearly
-      labeled, and should not require source changes.
+      labeled, should not require source changes, and should pass docs-only
+      acceptance checks. Full upstream pytest remains useful exploratory evidence
+      for operators but is not the counted gate for this tiny docs-only lane.
     size_rationale: Tiny because this is docs-only, expected to touch one or two files
       without runtime behavior changes.
 verify:
   commands:
-  - "UV_CACHE_DIR=.aidd/uv-cache uv run --with-requirements requirements.txt pytest -q"
+  - |
+    .venv/bin/python - <<'PY'
+    import subprocess
+    allowed = {"README.md", "docs/index.md"}
+    changed = set(subprocess.check_output(["git", "diff", "--name-only"], text=True).splitlines())
+    unexpected = sorted(changed - allowed)
+    if unexpected:
+        raise SystemExit(f"unexpected tracked docs-sync changes: {unexpected}")
+    if not changed:
+        raise SystemExit("expected docs-sync tracked changes")
+    PY
+  - |
+    .venv/bin/python - <<'PY'
+    import subprocess
+    from pathlib import Path
+
+    needle = "httpx " + "https:" + "//httpbin.org/json"
+    docs = ("README.md", "docs/index.md")
+    missing = [path for path in docs if needle not in Path(path).read_text(encoding="utf-8")]
+    if missing:
+        raise SystemExit(f"missing concrete CLI example in: {missing}")
+
+    diff = subprocess.check_output(["git", "diff", "--", *docs], text=True)
+    added = "\n".join(
+        line[1:] for line in diff.splitlines()
+        if line.startswith("+") and not line.startswith("+++")
+    ).lower()
+    placeholders = ("example.com", "example.org", "example.net", "placeholder")
+    offenders = [item for item in placeholders if item in added]
+    if offenders:
+        raise SystemExit(f"placeholder runnable example introduced: {offenders}")
+    PY
   - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/validator-report.md
   pass_conditions:
   - Verification commands exit with status 0.
+  - Tracked product diff is limited to README.md and docs/index.md.
+  - README.md and docs/index.md contain the same concrete https://httpbin.org/json CLI example.
+  - Added documentation lines do not introduce placeholder URLs as runnable examples.
+  - Verification does not call the public endpoint.
   - QA stage output artifacts exist for the selected work item.
 quality:
   commands:
-  - "UV_CACHE_DIR=.aidd/uv-cache uv run --with-requirements requirements.txt pytest -q"
+  - |
+    .venv/bin/python - <<'PY'
+    import subprocess
+    allowed = {"README.md", "docs/index.md"}
+    changed = set(subprocess.check_output(["git", "diff", "--name-only"], text=True).splitlines())
+    unexpected = sorted(changed - allowed)
+    if unexpected:
+        raise SystemExit(f"unexpected tracked docs-sync changes: {unexpected}")
+    if not changed:
+        raise SystemExit("expected docs-sync tracked changes")
+    PY
+  - |
+    .venv/bin/python - <<'PY'
+    import subprocess
+    from pathlib import Path
+
+    needle = "httpx " + "https:" + "//httpbin.org/json"
+    docs = ("README.md", "docs/index.md")
+    missing = [path for path in docs if needle not in Path(path).read_text(encoding="utf-8")]
+    if missing:
+        raise SystemExit(f"missing concrete CLI example in: {missing}")
+
+    diff = subprocess.check_output(["git", "diff", "--", *docs], text=True)
+    added = "\n".join(
+        line[1:] for line in diff.splitlines()
+        if line.startswith("+") and not line.startswith("+++")
+    ).lower()
+    placeholders = ("example.com", "example.org", "example.net", "placeholder")
+    offenders = [item for item in placeholders if item in added]
+    if offenders:
+        raise SystemExit(f"placeholder runnable example introduced: {offenders}")
+    PY
   rubric_profile: live-full
   require_review_status: approved
   allowed_qa_verdicts:
