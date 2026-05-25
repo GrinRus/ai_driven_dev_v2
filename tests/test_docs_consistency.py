@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from dataclasses import fields
 from pathlib import Path
 
@@ -18,6 +19,10 @@ from aidd.core.stages import STAGES
 
 _USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
 _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
+_ACCEPTED_RELEASE_EVIDENCE_HEADING_PATTERN = re.compile(
+    r"^### `v(?P<version>\d+\.\d+\.\d+a\d+)` accepted evidence",
+    re.MULTILINE,
+)
 _REQUIRED_RELEASE_VERIFICATION_JOB_IDS: tuple[str, ...] = (
     "verify-pypi-install",
     "verify-uv-tool-install",
@@ -53,6 +58,21 @@ _STALE_CURRENT_DOC_WORDING: tuple[str, ...] = (
 
 def _repo_root() -> Path:
     return repo_root_from(Path(__file__).resolve())
+
+
+def _project_version(repo_root: Path) -> str:
+    pyproject = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
+    project = pyproject["project"]
+    assert isinstance(project, dict)
+    version = project["version"]
+    assert isinstance(version, str)
+    return version
+
+
+def _latest_accepted_prerelease_version(release_checklist: str) -> str:
+    matches = _ACCEPTED_RELEASE_EVIDENCE_HEADING_PATTERN.findall(release_checklist)
+    assert matches, "Release checklist must record at least one accepted prerelease evidence entry."
+    return matches[0]
 
 
 def test_current_docs_do_not_reintroduce_bootstrap_or_planned_adapter_wording() -> None:
@@ -218,6 +238,72 @@ def test_release_checklist_requires_verification_job_evidence() -> None:
     )
 
 
+def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() -> None:
+    repo_root = _repo_root()
+    candidate_version = _project_version(repo_root)
+    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
+        encoding="utf-8"
+    )
+    latest_accepted_version = _latest_accepted_prerelease_version(release_checklist)
+    readme = (repo_root / "README.md").read_text(encoding="utf-8")
+    changelog = (repo_root / "CHANGELOG.md").read_text(encoding="utf-8")
+    beta_audit = (
+        repo_root / "docs" / "analysis" / "beta-readiness-source-audit.md"
+    ).read_text(encoding="utf-8")
+    release_notes_path = (
+        repo_root / "docs" / f"release-notes-v{candidate_version}-draft.md"
+    )
+    release_notes = release_notes_path.read_text(encoding="utf-8")
+
+    assert latest_accepted_version != candidate_version
+    assert (
+        f"Current release-candidate package version on this branch: `{candidate_version}`."
+        in readme
+    )
+    assert (
+        "Latest accepted published prerelease evidence before this candidate: "
+        f"`{latest_accepted_version}`."
+    ) in readme
+
+    readme_install_section = readme.split("## Install with pipx", 1)[1].split(
+        "## Container support",
+        1,
+    )[0]
+    assert f'ai-driven-dev-v2=={latest_accepted_version}' in readme_install_section
+    assert f'ai-driven-dev-v2=={candidate_version}' not in readme_install_section
+
+    assert f"## {candidate_version} -" in changelog
+    assert (
+        f"release-candidate package version matches the package state: `{candidate_version}`"
+        in beta_audit
+    )
+    assert (
+        "last accepted published prerelease evidence before this candidate is "
+        f"`{latest_accepted_version}`"
+    ) in beta_audit
+    assert f"Current release-candidate package version: `{candidate_version}`." in (
+        release_checklist
+    )
+    assert (
+        "Latest accepted published prerelease evidence before this candidate: "
+        f"`{latest_accepted_version}`."
+    ) in release_checklist
+    assert f"accepted `v{candidate_version}` evidence log entry" in release_checklist
+    assert f"### `v{candidate_version}` accepted evidence" not in release_checklist
+    assert "Status: draft, not tagged or published." in release_notes
+    assert f"Current release-candidate package version: `{candidate_version}`." in (
+        release_notes
+    )
+    assert (
+        "Latest accepted published prerelease evidence before this candidate: "
+        f"`{latest_accepted_version}`."
+    ) in release_notes
+    assert (
+        f"`{candidate_version}` package must not be described as the latest accepted "
+        "published prerelease"
+    ) in release_notes
+
+
 def test_release_docs_describe_release_branch_publish_flow() -> None:
     repo_root = _repo_root()
     release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
@@ -226,8 +312,9 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
     distribution = (
         repo_root / "docs" / "architecture" / "distribution-and-development.md"
     ).read_text(encoding="utf-8")
+    latest_accepted_version = _latest_accepted_prerelease_version(release_checklist)
     release_notes = (
-        repo_root / "docs" / "release-notes-v0.1.0a3-draft.md"
+        repo_root / "docs" / f"release-notes-v{latest_accepted_version}-draft.md"
     ).read_text(encoding="utf-8")
 
     pre_history_checklist = release_checklist.split("## Release attempt evidence log", 1)[0]
@@ -244,7 +331,7 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
 
     assert "workflow_dispatch` path is a dry run" in distribution
     assert "release tag commit must match the remote release branch HEAD" in distribution
-    assert "Status: published on 2026-05-22." in release_notes
+    assert "Status: published on " in release_notes
     assert (
         "Release workflow quality, build, publish, `pipx`, and `uv tool` "
         "verification jobs passed"

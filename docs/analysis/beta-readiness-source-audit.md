@@ -1,6 +1,6 @@
 # Beta Readiness Source Audit
 
-Date: 2026-05-22
+Date: 2026-05-25
 
 ## Purpose
 
@@ -20,8 +20,8 @@ Reviewed sources:
 
 ### README
 
-- The release-candidate package version matches the package state: `0.1.0a3`.
-  The last accepted published prerelease evidence before this candidate is `0.1.0a2`.
+- The release-candidate package version matches the package state: `0.1.0a5`.
+  The last accepted published prerelease evidence before this candidate is `0.1.0a4`.
 - The documented public CLI commands match the registered command surface:
   `doctor`, `init`, `ui`, `stage`, `eval`, and `run`.
 - The removed eval-run product command is not documented as a current product command.
@@ -75,17 +75,36 @@ command so future smoke refactors do not break source-installed local runs.
 - Manual live E2E remains isolated to the local
   `uv run python -m aidd.harness.live_e2e_black_box` operator path; there is no GitHub
   Actions live E2E workflow.
-- `aidd eval doctor` reported execution readiness `pass` for the selected maintained
-  manual-live beta evidence pairs: `AIDD-LIVE-002/codex`, `AIDD-LIVE-007/codex`,
-  `AIDD-LIVE-007/claude-code`, `AIDD-LIVE-006/opencode`, and `AIDD-LIVE-008/opencode`.
+- On 2026-05-24, `aidd eval doctor` reported execution readiness `pass` for the
+  selected maintained manual-live beta evidence pairs: `AIDD-LIVE-002/codex`,
+  `AIDD-LIVE-007/codex`, `AIDD-LIVE-007/claude-code`, `AIDD-LIVE-006/opencode`,
+  and `AIDD-LIVE-008/opencode`.
+- On 2026-05-24, terminal black-box bundles were refreshed and counted clean for the
+  selected maintained manual-live beta evidence pairs:
+  `w24-a4-live-002-codex-20260524`, `w24-a4-live-007-codex-20260524`,
+  `w24-a4-live-007-claude-code-20260524`, `w24-a4-live-006-opencode-20260524-r2`,
+  and `w24-a4-live-008-opencode-20260524`. The two interview scenarios include
+  `answer-analysis.md` plus `operator-quality-analysis.md`; all five counted bundles
+  include `operator-quality-analysis.md`.
+- The `AIDD-LIVE-006/opencode` refresh first exposed an AIDD-owned repair-prompt clarity
+  defect around malformed interview answer bullets. That defect was fixed in the
+  candidate source before the counted rerun.
+- Accepted `0.1.0a4` release/install evidence exists from the published GitHub Release,
+  PyPI publish, `pipx` verification, and `uv tool` verification on 2026-05-23.
+- No accepted `0.1.0a5` release/install evidence exists yet. The `0.1.0a5` candidate
+  still requires GitHub Release publish, PyPI publish, `pipx` verification, and `uv tool`
+  verification before it can become the latest accepted published prerelease evidence.
+- Preflight readiness alone is not counted clean live evidence; the counted W24 refresh
+  uses terminal black-box bundles and operator overlays.
 
-Required change: none after this release-prep slice; workflow-shape tests now prevent live
-E2E from entering any GitHub Actions workflow.
+Required change: keep workflow-shape tests preventing live E2E from entering GitHub
+Actions, and run terminal black-box bundles separately before claiming refreshed counted
+manual live evidence.
 
 ## Decision
 
 Proceed with beta-readiness release preparation as a documentation, release-process,
 scenario-smoke, and test-hardening slice.
 
-Do not claim beta completion until manual live evidence is refreshed outside CI/CD and the
-operator ledger records the maintained provider/scenario results.
+Do not claim beta completion until publish/install release evidence exists for `0.1.0a5`
+and the operator ledger records the maintained provider/scenario results.

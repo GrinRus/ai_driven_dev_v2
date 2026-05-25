@@ -1,6 +1,6 @@
-# Draft Release Notes: v0.1.0a4
+# Release Notes: v0.1.0a4
 
-Status: draft, not tagged or published.
+Status: published on 2026-05-23.
 
 ## Summary
 
@@ -44,9 +44,7 @@ Docker/GHCR remains outside the supported prerelease contract.
 
 ## Release checklist
 
-- Confirm `pyproject.toml` version is set to `0.1.0a4` before creating the release branch.
-- Run deterministic local gates.
-- Run `ci.yml` and `release.yml` dry-runs on `release/v0.1.0a4`.
-- Publish the GitHub Release only after explicit maintainer approval.
-- Confirm the release workflow quality, build, publish, `pipx`, and `uv tool` verification
-  jobs pass for GitHub Release `v0.1.0a4`.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed
+  for GitHub Release `v0.1.0a4`.
+- Refresh manual live evidence locally, separately from release automation, when maintainers
+  need an operator-quality audit.

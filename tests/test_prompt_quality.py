@@ -30,6 +30,8 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     assert "contracts/documents/answers.md" in prompt_text
     assert "Do not invent `A1`/`A2` answer ids" in prompt_text
     assert "`- Q1 [resolved] ...`" in prompt_text
+    assert "Do not put a colon after the marker" in prompt_text
+    assert "`- Q1 [resolved]: ...` is invalid" in prompt_text
 
 
 @pytest.mark.parametrize("stage", STAGES)
