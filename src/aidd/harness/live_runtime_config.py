@@ -237,6 +237,7 @@ def write_live_runtime_config(
     scenario: Scenario,
     environment: Mapping[str, str] | None = None,
     source_repository_root: Path | None = None,
+    brokered_live_approvals: bool = False,
 ) -> Path:
     source = dict(os.environ)
     if environment is not None:
@@ -268,6 +269,25 @@ def write_live_runtime_config(
         scenario=scenario,
         source_repository_root=source_repository_root,
     )
+
+    def _runtime_command(runtime_key: str) -> str:
+        entry = runtime_entries[runtime_key]
+        if not brokered_live_approvals or runtime_key != runtime_id:
+            return entry.command
+        definition = get_runtime_definition(runtime_key)
+        if entry.source == "default-native" and definition.brokered_default_command:
+            return definition.brokered_default_command
+        return entry.command
+
+    def _brokered_live_lines(runtime_key: str) -> tuple[str, ...]:
+        if not brokered_live_approvals or runtime_key != runtime_id:
+            return tuple()
+        return (
+            'permission_policy = "brokered"',
+            'interaction_mode = "live"',
+            'auto_approval_preset = "broad"',
+        )
+
     config_path = working_copy_path / "aidd.example.toml"
     config_path.write_text(
         "\n".join(
@@ -276,12 +296,14 @@ def write_live_runtime_config(
                 'root = ".aidd"',
                 "",
                 "[runtime.generic_cli]",
-                f"command = {_toml_string(runtime_entries['generic-cli'].command)}",
+                f"command = {_toml_string(_runtime_command('generic-cli'))}",
                 f"mode = {_toml_string(runtime_entries['generic-cli'].execution_mode.value)}",
+                *_brokered_live_lines("generic-cli"),
                 "",
                 "[runtime.claude_code]",
-                f"command = {_toml_string(runtime_entries['claude-code'].command)}",
+                f"command = {_toml_string(_runtime_command('claude-code'))}",
                 f"mode = {_toml_string(runtime_entries['claude-code'].execution_mode.value)}",
+                *_brokered_live_lines("claude-code"),
                 "timeout_seconds = 1200",
                 "",
                 "[runtime.claude_code.stage_timeouts]",
@@ -295,8 +317,9 @@ def write_live_runtime_config(
                 "qa = 1800",
                 "",
                 "[runtime.codex]",
-                f"command = {_toml_string(runtime_entries['codex'].command)}",
+                f"command = {_toml_string(_runtime_command('codex'))}",
                 f"mode = {_toml_string(runtime_entries['codex'].execution_mode.value)}",
+                *_brokered_live_lines("codex"),
                 "timeout_seconds = 1800",
                 "",
                 "[runtime.codex.stage_timeouts]",
@@ -310,11 +333,28 @@ def write_live_runtime_config(
                 "qa = 1800",
                 "",
                 "[runtime.opencode]",
-                f"command = {_toml_string(runtime_entries['opencode'].command)}",
+                f"command = {_toml_string(_runtime_command('opencode'))}",
                 f"mode = {_toml_string(runtime_entries['opencode'].execution_mode.value)}",
+                *_brokered_live_lines("opencode"),
                 "timeout_seconds = 1200",
                 "",
                 "[runtime.opencode.stage_timeouts]",
+                "idea = 1500",
+                "research = 1500",
+                "plan = 1500",
+                "review-spec = 1500",
+                "tasklist = 1800",
+                "implement = 1800",
+                "review = 1800",
+                "qa = 1800",
+                "",
+                "[runtime.qwen]",
+                f"command = {_toml_string(_runtime_command('qwen'))}",
+                f"mode = {_toml_string(runtime_entries['qwen'].execution_mode.value)}",
+                *_brokered_live_lines("qwen"),
+                "timeout_seconds = 1200",
+                "",
+                "[runtime.qwen.stage_timeouts]",
                 "idea = 1500",
                 "research = 1500",
                 "plan = 1500",

@@ -7,9 +7,12 @@ from aidd.core.interview import stage_has_unresolved_blocking_questions
 from aidd.core.repair import RepairBudgetPolicy, evaluate_stage_repair_counter
 from aidd.core.run_store import (
     load_stage_metadata,
+    next_attempt_number,
     persist_stage_status,
+    run_attempt_root,
     run_stage_metadata_path,
 )
+from aidd.core.runtime_operator import unapproved_operator_request_ids
 from aidd.core.stage_invocation import prepare_adapter_invocation
 from aidd.core.stage_models import (
     PostValidationAction,
@@ -175,6 +178,27 @@ def update_stage_unblock_state(
             ),
         )
 
+    if _stage_has_unapproved_operator_requests(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    ):
+        return StageUnblockState(
+            stage=stage,
+            work_item=work_item,
+            run_id=run_id,
+            was_blocked=True,
+            unblocked=False,
+            next_state=StageState.BLOCKED,
+            stage_metadata_path=run_stage_metadata_path(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+            ),
+        )
+
     if stage_has_unresolved_blocking_questions(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -213,6 +237,34 @@ def update_stage_unblock_state(
         next_state=StageState.PREPARING,
         stage_metadata_path=stage_metadata_path,
     )
+
+
+def _stage_has_unapproved_operator_requests(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> bool:
+    latest_attempt_number = (
+        next_attempt_number(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        - 1
+    )
+    if latest_attempt_number < 1:
+        return False
+    attempt_path = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=latest_attempt_number,
+    )
+    return bool(unapproved_operator_request_ids(attempt_path=attempt_path))
 
 
 def prepare_stage_resume_after_answers(

@@ -13,6 +13,10 @@ It converts adapter-extension safety from distributed expectations into one repe
 - `codex`
 - `opencode`
 
+Experimental registered runtimes:
+
+- `qwen`
+
 ## Required conformance dimensions
 
 - `probe_behavior`
@@ -34,4 +38,4 @@ It converts adapter-extension safety from distributed expectations into one repe
 
 ## Usage rule
 
-The matrix is normative for maintained runtimes. Any new maintained runtime must add one new row and must satisfy every required dimension.
+The matrix is normative for maintained runtimes. Any new maintained runtime must add one new row and must satisfy every required dimension. Experimental runtimes such as `qwen` stay out of this required matrix until promoted.

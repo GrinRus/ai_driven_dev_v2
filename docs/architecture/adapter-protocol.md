@@ -45,14 +45,19 @@ StageRuntimeRequest -> RuntimeAdapterExecutionResult
 
 The core prepares the workspace, stage brief, input bundle, prompt-pack paths,
 attempt metadata, repair context, runtime id, execution mode, timeout, and repository
-root before calling the adapter surface.
+root before calling the adapter surface. Runtime permission settings are part of the
+request so adapters can either enforce them through a live provider transport or report an
+explicit blocked operator request.
 
 The adapter returns:
 
 - whether the runtime invocation succeeded;
+- the stable execution status: `succeeded`, `failed`, or `blocked_for_operator`;
 - a normalized details string, usually the adapter exit classification;
 - optional paths for emitted structured artifacts such as `runtime.jsonl` and `events.jsonl`;
 - an optional path to `questions.md` when runtime-native question events were persisted.
+- optional paths for `operator-requests.jsonl` and `operator-decisions.jsonl` when runtime
+  approval handling was involved.
 
 Runtime stdout, stderr, combined raw logs, exit code, and normalized exit classification are
 persisted as attempt artifacts such as `runtime.log` and `runtime-exit.json`; they are not
@@ -67,6 +72,9 @@ The implemented request shape contains:
 
 - `runtime_id`
 - `execution_mode`
+- `permission_policy`
+- `interaction_mode`
+- `auto_approval_preset`
 - `timeout_seconds`
 - `stage`
 - `work_item`
@@ -75,6 +83,7 @@ The implemented request shape contains:
 - `stage_brief_path`
 - `prompt_pack_paths`
 - `repository_root`
+- `project_roots`
 - `attempt_number`
 - `repair_mode`
 - `input_bundle_path`
@@ -99,8 +108,33 @@ Each adapter declares a capability report with at least:
 - `supports_non_interactive_mode`
 - `supports_working_directory_control`
 - `supports_env_injection`
+- `supports_permission_policy`
+- `supports_live_decisions`
+- `supports_deferred_resume`
+- `preferred_transport`
 
 The core and CLI use this report to decide whether to proceed, degrade explicitly, or stop.
+
+## 4.1 Runtime operator requests
+
+AIDD separates product questions from runtime approvals:
+
+- product questions remain in stage-level `questions.md` and `answers.md`;
+- runtime approvals are attempt artifacts and job state, recorded as
+  `operator-requests.jsonl` and `operator-decisions.jsonl`.
+
+Adapters normalize runtime permission prompts into `RuntimeOperatorRequest` values with
+runtime id, stage, kind, tool name, payload, cwd, paths, risk, and suggestions. The
+`RuntimeOperatorBroker` persists the request, applies the AIDD policy engine, records
+policy decisions, and returns a `RuntimeOperatorDecision` when a decision is immediately
+available. If a non-full-access request cannot be decided inside the current transport, the
+adapter returns `blocked_for_operator`; the core marks the stage blocked and does not run
+output validation.
+
+Current subprocess-backed provider adapters do not yet own live decision transports. For
+`permission_policy != "full-access"`, they block before launch instead of silently running a
+provider in a mode AIDD cannot govern. Live provider paths can land incrementally on the same
+request/decision artifacts.
 
 ## 5. Log and event model
 
@@ -205,6 +239,7 @@ Current registered runtimes:
 - `claude-code` - Tier 1 release-blocking maintained runtime.
 - `codex` - Tier 2 actively maintained runtime.
 - `opencode` - Tier 3 limited maintained runtime.
+- `qwen` - Experimental registered runtime.
 
 Future bridge target:
 

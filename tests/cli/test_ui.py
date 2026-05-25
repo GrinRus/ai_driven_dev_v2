@@ -8,6 +8,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import typer
+
 from aidd.cli import main as cli_main
 from aidd.cli.stage_run import StageRunOptions
 from aidd.cli.ui import (
@@ -24,8 +26,21 @@ from aidd.core.run_store import (
     run_attempt_artifact_index_path,
     run_attempt_runtime_log_path,
 )
+from aidd.core.runtime_operator import (
+    RuntimeOperatorBroker,
+    RuntimeOperatorDecision,
+    RuntimeOperatorPolicy,
+    RuntimeOperatorRequest,
+    append_operator_request,
+)
 from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
 from aidd.core.workflow_service import WorkflowRunRequest, WorkflowRunResult
+from aidd.runtime_permissions import (
+    AutoApprovalPreset,
+    RuntimeOperatorDecisionAction,
+    RuntimeOperatorRequestKind,
+    RuntimePermissionPolicy,
+)
 
 
 def _service(
@@ -298,6 +313,178 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+
+
+def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    request_holder: dict[str, str] = {}
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-operator",
+            runtime_id=options.runtime,
+            stage_target=options.stage,
+            config_snapshot={"mode": "ui-test"},
+        )
+        attempt_path = create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-operator",
+            stage=options.stage,
+        )
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-operator",
+            stage=options.stage,
+            status="blocked",
+        )
+        request = RuntimeOperatorRequest.create(
+            runtime_id=options.runtime,
+            stage=options.stage,
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": "npm install"},
+            cwd=tmp_path,
+        )
+        request_holder["id"] = request.id
+        append_operator_request(
+            path=attempt_path / "operator-requests.jsonl",
+            request=request,
+        )
+        raise typer.Exit(code=1)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/stage/run",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+        },
+    )
+
+    job_id = str(_payload(response)["job_id"])
+    job_payload = _wait_job(service, job_id)
+    requests_payload = _payload(
+        service.handle_get(f"/api/jobs/{job_id}/operator-requests", {})
+    )
+    denied_payload = _payload(
+        service.handle_post(
+            f"/api/jobs/{job_id}/operator-requests/{request_holder['id']}/decision",
+            {
+                "action": "deny",
+                "reason": "denied in UI test",
+            },
+        )
+    )
+    decision_payload = _payload(
+        service.handle_post(
+            f"/api/jobs/{job_id}/operator-requests/{request_holder['id']}/decision",
+            {
+                "action": "allow_once",
+                "reason": "approved in UI test",
+            },
+        )
+    )
+
+    assert job_payload["status"] == "waiting-for-operator"
+    assert requests_payload["pending_request_ids"] == [request_holder["id"]]
+    assert requests_payload["unapproved_request_ids"] == [request_holder["id"]]
+    assert denied_payload["pending_request_ids"] == []
+    assert denied_payload["unapproved_request_ids"] == [request_holder["id"]]
+    assert decision_payload["pending_request_ids"] == []
+    assert decision_payload["unapproved_request_ids"] == []
+    assert decision_payload["decisions"][-1]["action"] == "allow_once"  # type: ignore[index]
+
+
+def test_ui_operator_decision_endpoint_wakes_live_stage_job(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    request_holder: dict[str, str] = {}
+    decision_holder: dict[str, RuntimeOperatorDecision | None] = {}
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-live-operator",
+            runtime_id=options.runtime,
+            stage_target=options.stage,
+            config_snapshot={"mode": "ui-live-test"},
+        )
+        attempt_path = create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-live-operator",
+            stage=options.stage,
+        )
+        broker = RuntimeOperatorBroker(
+            policy=RuntimeOperatorPolicy(
+                permission_policy=RuntimePermissionPolicy.BROKERED,
+                auto_approval_preset=AutoApprovalPreset.BROAD,
+                project_roots=(tmp_path,),
+                workspace_root=workspace_root,
+            ),
+            attempt_path=attempt_path,
+        )
+        request = RuntimeOperatorRequest.create(
+            runtime_id=options.runtime,
+            stage=options.stage,
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": "npm install"},
+            cwd=tmp_path,
+        )
+        request_holder["id"] = request.id
+        decision_holder["decision"] = broker.handle_request(
+            request,
+            decision_provider=options.runtime_operator_decision_provider,
+        )
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+    response = service.handle_post(
+        "/api/stage/run",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+        },
+    )
+    job_id = str(_payload(response)["job_id"])
+
+    for _ in range(100):
+        job_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+        if job_payload["status"] == "waiting-for-operator":
+            break
+        time.sleep(0.01)
+    else:
+        raise AssertionError("job did not reach waiting-for-operator")
+
+    requests_payload = _payload(
+        service.handle_get(f"/api/jobs/{job_id}/operator-requests", {})
+    )
+    assert requests_payload["pending_request_ids"] == [request_holder["id"]]
+
+    decision_payload = _payload(
+        service.handle_post(
+            f"/api/jobs/{job_id}/operator-requests/{request_holder['id']}/decision",
+            {
+                "action": "allow_once",
+                "reason": "approved while runtime is waiting",
+            },
+        )
+    )
+    for _ in range(100):
+        completed_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+        if completed_payload["status"] == "completed":
+            break
+        time.sleep(0.01)
+    else:
+        raise AssertionError("job did not complete after operator decision")
+
+    assert decision_payload["pending_request_ids"] == []
+    assert completed_payload["status"] == "completed"
+    assert decision_holder["decision"] is not None
+    assert decision_holder["decision"].action is RuntimeOperatorDecisionAction.ALLOW_ONCE
 
 
 def test_ui_stage_run_endpoint_rejects_invalid_stage_and_runtime(tmp_path: Path) -> None:

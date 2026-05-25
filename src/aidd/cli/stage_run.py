@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,15 @@ from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
     create_run_manifest,
     load_stage_metadata,
+    next_attempt_number,
+    run_attempt_root,
+)
+from aidd.core.runtime_operator import (
+    OPERATOR_REQUESTS_FILENAME,
+    RuntimeOperatorDecision,
+    RuntimeOperatorDecisionProvider,
+    RuntimeOperatorRequest,
+    unapproved_operator_request_ids,
 )
 from aidd.core.stage_registry import resolve_prompt_pack_file_paths
 from aidd.core.stage_runner import (
@@ -48,6 +58,13 @@ from aidd.core.stage_runner import (
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.state_machine import StageState
 from aidd.core.workspace import stage_root as workspace_stage_root
+from aidd.runtime_permissions import (
+    AutoApprovalPreset,
+    RuntimeInteractionMode,
+    RuntimeOperatorDecisionAction,
+    RuntimeOperatorDecisionSource,
+    RuntimePermissionPolicy,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +77,7 @@ class StageRunOptions:
     config: Path
     log_follow: bool
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
+    runtime_operator_decision_provider: RuntimeOperatorDecisionProvider | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,9 +86,65 @@ class StageRunRuntimeConfig:
     repository_root: Path
     runtime_command: str
     runtime_execution_mode: RuntimeExecutionMode
+    runtime_permission_policy: RuntimePermissionPolicy
+    runtime_interaction_mode: RuntimeInteractionMode
+    runtime_auto_approval_preset: AutoApprovalPreset
     runtime_timeout_seconds: float | None
     repair_policy: RepairBudgetPolicy
     project_set: ResolvedProjectSet | None
+
+
+@dataclass(frozen=True, slots=True)
+class _CliRuntimeOperatorDecisionProvider:
+    def request_decision(
+        self,
+        request: RuntimeOperatorRequest,
+        *,
+        requests_path: Path,
+        decisions_path: Path,
+    ) -> RuntimeOperatorDecision | None:
+        if not sys.stdin.isatty() or not sys.stdout.isatty():
+            return None
+
+        console.print()
+        console.print("Runtime operator approval requested.")
+        console.print(f"Request: {request.id}")
+        console.print(f"Runtime: {request.runtime_id}")
+        console.print(f"Stage: {request.stage}")
+        console.print(f"Kind: {request.kind.value}")
+        if request.tool_name is not None:
+            console.print(f"Tool: {request.tool_name}")
+        if request.cwd is not None:
+            console.print(f"CWD: {request.cwd.as_posix()}")
+        if request.paths:
+            console.print("Paths: " + ", ".join(path.as_posix() for path in request.paths))
+        command = request.payload.get("command") or request.payload.get("cmd")
+        if command is not None:
+            console.print(f"Command: {command}")
+        console.print(f"Operator requests: {requests_path.as_posix()}")
+        console.print(f"Operator decisions: {decisions_path.as_posix()}")
+
+        choices = {
+            "a": RuntimeOperatorDecisionAction.ALLOW_ONCE,
+            "s": RuntimeOperatorDecisionAction.ALLOW_FOR_SESSION,
+            "d": RuntimeOperatorDecisionAction.DENY,
+            "c": RuntimeOperatorDecisionAction.CANCEL,
+        }
+        prompt = "Decision [a=allow once, s=session, d=deny, c=cancel]: "
+        while True:
+            try:
+                raw_choice = input(prompt).strip().lower()
+            except EOFError:
+                return None
+            action = choices.get(raw_choice)
+            if action is not None:
+                return RuntimeOperatorDecision(
+                    request_id=request.id,
+                    action=action,
+                    source=RuntimeOperatorDecisionSource.CLI,
+                    reason="AIDD CLI operator decision",
+                )
+            console.print("Choose one of: a, s, d, c.")
 
 
 def _validate_stage_run_options(options: StageRunOptions) -> None:
@@ -99,6 +173,7 @@ def _resolve_stage_run_config(options: StageRunOptions) -> StageRunRuntimeConfig
         if cfg.project_set.projects
         else None
     )
+    runtime_cfg = cfg.runtime_config(options.runtime)
     return StageRunRuntimeConfig(
         workspace_root=workspace_root,
         repository_root=repository_root,
@@ -107,6 +182,9 @@ def _resolve_stage_run_config(options: StageRunOptions) -> StageRunRuntimeConfig
             runtime=options.runtime,
             cfg=cfg,
         ),
+        runtime_permission_policy=runtime_cfg.permission_policy,
+        runtime_interaction_mode=runtime_cfg.interaction_mode,
+        runtime_auto_approval_preset=runtime_cfg.auto_approval_preset,
         runtime_timeout_seconds=_runtime_timeout_for_runtime(
             runtime=options.runtime,
             cfg=cfg,
@@ -115,6 +193,16 @@ def _resolve_stage_run_config(options: StageRunOptions) -> StageRunRuntimeConfig
         repair_policy=RepairBudgetPolicy(default_max_repair_attempts=cfg.max_repair_attempts),
         project_set=project_set,
     )
+
+
+def _default_operator_decision_provider(
+    runtime_config: StageRunRuntimeConfig,
+) -> RuntimeOperatorDecisionProvider | None:
+    if runtime_config.runtime_permission_policy is RuntimePermissionPolicy.FULL_ACCESS:
+        return None
+    if runtime_config.runtime_interaction_mode is not RuntimeInteractionMode.LIVE:
+        return None
+    return _CliRuntimeOperatorDecisionProvider()
 
 
 def _selected_or_new_run_id(
@@ -210,6 +298,9 @@ def _execute_adapter_invocation(
     runtime_request = StageRuntimeRequest(
         runtime_id=options.runtime,
         execution_mode=runtime_config.runtime_execution_mode,
+        permission_policy=runtime_config.runtime_permission_policy,
+        interaction_mode=runtime_config.runtime_interaction_mode,
+        auto_approval_preset=runtime_config.runtime_auto_approval_preset,
         timeout_seconds=runtime_config.runtime_timeout_seconds,
         stage=invocation.stage,
         work_item=invocation.work_item,
@@ -218,6 +309,11 @@ def _execute_adapter_invocation(
         stage_brief_path=stage_brief_path,
         prompt_pack_paths=prompt_pack_paths_for_runtime,
         repository_root=runtime_config.repository_root,
+        project_roots=(
+            tuple(project.root for project in runtime_config.project_set.projects)
+            if runtime_config.project_set is not None
+            else (runtime_config.repository_root,)
+        ),
         expected_output_documents=invocation.expected_output_documents,
         attempt_number=invocation.attempt_number,
         repair_mode=invocation.repair_mode,
@@ -234,6 +330,11 @@ def _execute_adapter_invocation(
 
     on_stdout = _on_stdout if options.log_follow else None
     on_stderr = _on_stderr if options.log_follow else None
+    operator_decision_provider = (
+        options.runtime_operator_decision_provider
+        if options.runtime_operator_decision_provider is not None
+        else _default_operator_decision_provider(runtime_config)
+    )
     try:
         adapter_result = get_runtime_adapter_surface(options.runtime).execute_stage_request(
             configured_command=runtime_config.runtime_command,
@@ -242,10 +343,14 @@ def _execute_adapter_invocation(
             base_env=dict(os.environ),
             on_stdout=on_stdout,
             on_stderr=on_stderr,
+            operator_decision_provider=operator_decision_provider,
         )
         return AdapterExecutionOutcome(
-            succeeded=adapter_result.succeeded,
+            status=adapter_result.resolved_status,
             details=adapter_result.details,
+            operator_requests_path=adapter_result.operator_requests_path,
+            operator_decisions_path=adapter_result.operator_decisions_path,
+            pending_operator_request_ids=adapter_result.pending_operator_request_ids,
         )
     except ValueError:
         if options.runtime not in _STAGE_RUN_SUPPORTED_RUNTIMES:
@@ -322,9 +427,20 @@ def _run_stage_attempts(
                 / "stages"
                 / options.stage
             )
+            unapproved_operator_ids, operator_requests_path = _unapproved_stage_operator_requests(
+                workspace_root=runtime_config.workspace_root,
+                work_item=options.work_item,
+                run_id=run_id,
+                stage=options.stage,
+            )
             console.print("Stage run result: action=wait state=blocked")
             if unblock_state.stage_metadata_path is not None:
                 console.print(f"Stage metadata: {unblock_state.stage_metadata_path.as_posix()}")
+            if unapproved_operator_ids:
+                console.print("Runtime operator approval is pending or denied.")
+                if operator_requests_path is not None:
+                    console.print(f"Operator requests: {operator_requests_path.as_posix()}")
+                raise typer.Exit(code=1)
             console.print("Blocking questions are unresolved.")
             console.print(f"Questions: {(stage_documents_root / 'questions.md').as_posix()}")
             console.print(f"Answers: {(stage_documents_root / 'answers.md').as_posix()}")
@@ -369,6 +485,37 @@ def _run_stage_attempts(
     return orchestration, stage_attempt_count
 
 
+def _unapproved_stage_operator_requests(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> tuple[tuple[str, ...], Path | None]:
+    latest_attempt_number = (
+        next_attempt_number(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        - 1
+    )
+    if latest_attempt_number < 1:
+        return (), None
+    attempt_path = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=latest_attempt_number,
+    )
+    return (
+        unapproved_operator_request_ids(attempt_path=attempt_path),
+        attempt_path / OPERATOR_REQUESTS_FILENAME,
+    )
+
+
 def _write_run_manifest(
     *,
     options: StageRunOptions,
@@ -386,6 +533,11 @@ def _write_run_manifest(
             "workspace_root": runtime_config.workspace_root.as_posix(),
             "runtime_command": runtime_config.runtime_command,
             "runtime_execution_mode": runtime_config.runtime_execution_mode.value,
+            "runtime_permission_policy": runtime_config.runtime_permission_policy.value,
+            "runtime_interaction_mode": runtime_config.runtime_interaction_mode.value,
+            "runtime_auto_approval_preset": (
+                runtime_config.runtime_auto_approval_preset.value
+            ),
             "runtime_timeout_seconds": runtime_config.runtime_timeout_seconds,
             "log_follow": options.log_follow,
         },
@@ -430,7 +582,20 @@ def _print_stage_run_result(
         )
     if orchestration.adapter_outcome.details:
         console.print(f"Adapter outcome: {orchestration.adapter_outcome.details}")
+    if orchestration.adapter_outcome.operator_requests_path is not None:
+        console.print(
+            "Operator requests: "
+            f"{orchestration.adapter_outcome.operator_requests_path.as_posix()}"
+        )
+    if orchestration.adapter_outcome.operator_decisions_path is not None:
+        console.print(
+            "Operator decisions: "
+            f"{orchestration.adapter_outcome.operator_decisions_path.as_posix()}"
+        )
     if orchestration.transition.next_state is StageState.BLOCKED:
+        if orchestration.adapter_outcome.blocked_for_operator:
+            console.print("Runtime operator approval is required.")
+            return
         questions_path = _expected_stage_document_path(
             orchestration=orchestration,
             document_name="questions.md",

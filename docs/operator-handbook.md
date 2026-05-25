@@ -22,8 +22,8 @@ Today:
 
 - `aidd doctor` is functional;
 - `aidd init` is functional and can seed first-stage intake context from `--request` or `--request-file`;
-- `aidd run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, and `opencode`;
-- `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, and `opencode`;
+- `aidd run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
+- `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
 - `python -m aidd.harness.live_e2e_black_box` executes the manual black-box
   live E2E evaluator and writes a result bundle;
 - live scenarios under `harness/scenarios/live/` are a manual external-audit lane:
@@ -101,6 +101,9 @@ mode = "adapter-flags"
 [runtime.claude_code]
 command = "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
 mode = "native"
+# permission_policy = "full-access" # full-access | brokered | plan | deny-unapproved
+# interaction_mode = "batch"        # batch | evented | live
+# auto_approval_preset = "broad"    # off | conservative | broad
 # Optional per-attempt runtime subprocess budget.
 # timeout_seconds = 1200
 
@@ -114,13 +117,24 @@ mode = "native"
 # qa = 1800
 
 [runtime.codex]
-command = "codex exec --full-auto --skip-git-repo-check --json -"
+command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
+# Brokered live mode uses `codex app-server --listen stdio://` when the local
+# Codex probe confirms app-server approval schema support.
 # timeout_seconds = 900
 
 [runtime.opencode]
 command = "opencode run --format json --dangerously-skip-permissions"
 mode = "native"
+# Brokered live mode blocks before launch until `opencode serve` exposes
+# permission request/response endpoints in `/doc`.
+# timeout_seconds = 900
+
+[runtime.qwen]
+command = "qwen --approval-mode yolo --output-format stream-json"
+mode = "native"
+# Brokered live mode uses Qwen dual-file control with `--json-file` and
+# `--input-file` when the local Qwen probe confirms both flags.
 # timeout_seconds = 900
 
 [logging]

@@ -5,6 +5,11 @@ from pathlib import Path
 
 from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.config import AiddConfig, RuntimeConfig, load_config
+from aidd.runtime_permissions import (
+    AutoApprovalPreset,
+    RuntimeInteractionMode,
+    RuntimePermissionPolicy,
+)
 
 
 def _runtime_configs() -> dict[str, RuntimeConfig]:
@@ -33,6 +38,12 @@ def _runtime_configs() -> dict[str, RuntimeConfig]:
             timeout_seconds=900,
             stage_timeout_seconds={},
         ),
+        "qwen": RuntimeConfig(
+            command="qwen",
+            execution_mode=RuntimeExecutionMode.NATIVE,
+            timeout_seconds=900,
+            stage_timeout_seconds={},
+        ),
     }
 
 
@@ -44,18 +55,28 @@ def test_load_config_defaults_native_providers_to_native(tmp_path: Path) -> None
         == "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
     )
     assert cfg.claude_code_execution_mode is RuntimeExecutionMode.NATIVE
-    assert cfg.codex_command == "codex exec --full-auto --skip-git-repo-check --json -"
+    assert (
+        cfg.codex_command
+        == "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
+    )
     assert cfg.codex_execution_mode is RuntimeExecutionMode.NATIVE
     assert cfg.opencode_command == "opencode run --format json --dangerously-skip-permissions"
     assert cfg.opencode_execution_mode is RuntimeExecutionMode.NATIVE
+    assert cfg.qwen_command == "qwen --approval-mode yolo --output-format stream-json"
+    assert cfg.qwen_execution_mode is RuntimeExecutionMode.NATIVE
     assert cfg.generic_cli_execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
     assert cfg.claude_code_timeout_seconds is None
     assert cfg.codex_timeout_seconds is None
     assert cfg.opencode_timeout_seconds is None
+    assert cfg.qwen_timeout_seconds is None
     assert cfg.claude_code_stage_timeout_seconds == {}
     assert cfg.codex_stage_timeout_seconds == {}
     assert cfg.opencode_stage_timeout_seconds == {}
+    assert cfg.qwen_stage_timeout_seconds == {}
     assert cfg.project_set.projects == ()
+    assert cfg.runtime_config("codex").permission_policy is RuntimePermissionPolicy.FULL_ACCESS
+    assert cfg.runtime_config("codex").interaction_mode is RuntimeInteractionMode.BATCH
+    assert cfg.runtime_config("codex").auto_approval_preset is AutoApprovalPreset.BROAD
 
 
 def test_runtime_configs_are_primary_config_storage(tmp_path: Path) -> None:
@@ -150,10 +171,124 @@ def test_load_config_upgrades_legacy_raw_provider_commands_to_native(
         == "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
     )
     assert cfg.claude_code_execution_mode is RuntimeExecutionMode.NATIVE
-    assert cfg.codex_command == "codex exec --full-auto --skip-git-repo-check --json -"
+    assert (
+        cfg.codex_command
+        == "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
+    )
     assert cfg.codex_execution_mode is RuntimeExecutionMode.NATIVE
     assert cfg.opencode_command == "opencode run --format json --dangerously-skip-permissions"
     assert cfg.opencode_execution_mode is RuntimeExecutionMode.NATIVE
+
+
+def test_load_config_parses_runtime_permission_fields(tmp_path: Path) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[runtime.codex]",
+                'permission_policy = "brokered"',
+                'interaction_mode = "live"',
+                'auto_approval_preset = "conservative"',
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(config_path)
+    runtime_config = cfg.runtime_config("codex")
+
+    assert runtime_config.permission_policy is RuntimePermissionPolicy.BROKERED
+    assert runtime_config.interaction_mode is RuntimeInteractionMode.LIVE
+    assert runtime_config.auto_approval_preset is AutoApprovalPreset.CONSERVATIVE
+    assert runtime_config.command == (
+        "codex exec --sandbox workspace-write --skip-git-repo-check --json -"
+    )
+
+
+def test_brokered_config_rewrites_explicit_default_managed_command(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[runtime.codex]",
+                'permission_policy = "brokered"',
+                (
+                    'command = "codex exec --dangerously-bypass-approvals-and-sandbox '
+                    '--skip-git-repo-check --json -"'
+                ),
+                "",
+                "[runtime.qwen]",
+                'permission_policy = "brokered"',
+                'command = "qwen --approval-mode yolo --output-format stream-json"',
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(config_path)
+
+    assert cfg.runtime_config("codex").command == (
+        "codex exec --sandbox workspace-write --skip-git-repo-check --json -"
+    )
+    assert cfg.runtime_config("qwen").command == (
+        "qwen --approval-mode default --output-format stream-json"
+    )
+    assert cfg.runtime_config("codex").execution_mode is RuntimeExecutionMode.NATIVE
+    assert cfg.runtime_config("qwen").execution_mode is RuntimeExecutionMode.NATIVE
+
+
+def test_brokered_default_command_infers_native_mode_when_explicit(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[runtime.codex]",
+                'permission_policy = "brokered"',
+                'command = "codex exec --sandbox workspace-write --skip-git-repo-check --json -"',
+                "",
+                "[runtime.qwen]",
+                'permission_policy = "brokered"',
+                'command = "qwen --approval-mode default --output-format stream-json"',
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(config_path)
+
+    assert cfg.runtime_config("codex").execution_mode is RuntimeExecutionMode.NATIVE
+    assert cfg.runtime_config("qwen").execution_mode is RuntimeExecutionMode.NATIVE
+
+
+def test_load_config_rejects_custom_bypass_command_in_brokered_mode(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[runtime.codex]",
+                'permission_policy = "brokered"',
+                'command = "codex exec --full-auto --json -"',
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        load_config(config_path)
+    except ValueError as exc:
+        assert "permission-policy-conflict" in str(exc)
+    else:  # pragma: no cover - assertion clarity
+        raise AssertionError("Expected ValueError for brokered bypass command.")
 
 
 def test_load_config_treats_custom_provider_commands_as_adapter_flags(

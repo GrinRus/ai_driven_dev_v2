@@ -27,7 +27,8 @@ def probe(command: str) -> CapabilityReport:
     discovered = discover_command(command)
     available = discovered is not None
     version_text = discover_version(discovered) if discovered else None
-    detected = detect_capability_flags(discover_help_text(discovered) or "") if discovered else {}
+    help_text = discover_help_text(discovered) or "" if discovered else ""
+    detected = detect_capability_flags(help_text) if discovered else {}
 
     return CapabilityReport(
         runtime_id="opencode",
@@ -45,4 +46,8 @@ def probe(command: str) -> CapabilityReport:
             False,
         ),
         supports_env_injection=detected.get("supports_env_injection", False),
+        supports_permission_policy=available,
+        supports_live_decisions=False,
+        supports_deferred_resume=False,
+        preferred_transport="subprocess",
     )

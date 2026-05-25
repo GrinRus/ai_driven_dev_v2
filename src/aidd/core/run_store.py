@@ -14,6 +14,10 @@ from aidd.core.run_provenance import (
     resolve_repository_git_sha,
     resolve_resource_revision,
 )
+from aidd.core.runtime_operator import (
+    OPERATOR_DECISIONS_FILENAME,
+    OPERATOR_REQUESTS_FILENAME,
+)
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, resolve_expected_output_documents
 from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
@@ -420,6 +424,30 @@ def _canonical_log_paths(
         logs["events_jsonl"] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=events_jsonl,
+        )
+    operator_requests = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    ) / OPERATOR_REQUESTS_FILENAME
+    if operator_requests.exists():
+        logs["operator_requests"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=operator_requests,
+        )
+    operator_decisions = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    ) / OPERATOR_DECISIONS_FILENAME
+    if operator_decisions.exists():
+        logs["operator_decisions"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=operator_decisions,
         )
     return logs
 

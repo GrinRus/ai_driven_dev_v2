@@ -29,6 +29,9 @@ def _capability_summary(report: CapabilityReport) -> str:
         ("non-interactive", report.supports_non_interactive_mode),
         ("cwd-control", report.supports_working_directory_control),
         ("env-injection", report.supports_env_injection),
+        ("permission-policy", report.supports_permission_policy),
+        ("live-decisions", report.supports_live_decisions),
+        ("deferred-resume", report.supports_deferred_resume),
     )
     enabled = [name for name, is_enabled in capability_pairs if is_enabled]
     return ", ".join(enabled) if enabled else "none"

@@ -5,6 +5,11 @@ from pathlib import Path
 from typing import TypeVar
 
 from aidd.adapters.runtime_registry import RuntimeExecutionMode
+from aidd.runtime_permissions import (
+    AutoApprovalPreset,
+    RuntimeInteractionMode,
+    RuntimePermissionPolicy,
+)
 
 ExitClassificationT = TypeVar("ExitClassificationT")
 
@@ -13,6 +18,9 @@ ExitClassificationT = TypeVar("ExitClassificationT")
 class StageRuntimeRequest:
     runtime_id: str
     execution_mode: RuntimeExecutionMode
+    permission_policy: RuntimePermissionPolicy
+    interaction_mode: RuntimeInteractionMode
+    auto_approval_preset: AutoApprovalPreset
     timeout_seconds: float | None
     stage: str
     work_item: str
@@ -21,6 +29,7 @@ class StageRuntimeRequest:
     stage_brief_path: Path
     prompt_pack_paths: tuple[Path, ...]
     repository_root: Path
+    project_roots: tuple[Path, ...] = ()
     expected_output_documents: tuple[Path, ...] = ()
     attempt_number: int = 1
     repair_mode: bool = False

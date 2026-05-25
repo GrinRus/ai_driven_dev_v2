@@ -15,9 +15,10 @@ from pathlib import Path
 from typing import Any, Literal, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from aidd.core.markdown import MarkdownSectionIndex
+from aidd.core.runtime_operator import RuntimeOperatorPolicy, RuntimeOperatorRequest
 from aidd.core.stages import STAGES
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.evals.quality import (
@@ -102,6 +103,11 @@ from aidd.harness.runner import (
     run_verification_steps,
 )
 from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask, load_scenario
+from aidd.runtime_permissions import (
+    AutoApprovalPreset,
+    RuntimeOperatorDecisionAction,
+    RuntimePermissionPolicy,
+)
 from aidd.validators.semantic_rules.blocks import extract_implementation_verification_blocks
 from aidd.validators.semantic_rules.evidence import (
     IMPLEMENT_ARTIFACT_REFERENCE_PATTERN,
@@ -132,6 +138,7 @@ OPERATOR_ACTIONS_FILENAME = "operator-actions.jsonl"
 OPERATOR_REQUEST_JSON_FILENAME = "operator-action-request.json"
 OPERATOR_REQUEST_MARKDOWN_FILENAME = "operator-action-request.md"
 ANSWER_ANALYSIS_FILENAME = "answer-analysis.md"
+RUNTIME_APPROVAL_ANALYSIS_FILENAME = "runtime-approval-analysis.md"
 FRONTEND_CHECKPOINTS_JSON_FILENAME = "frontend-checkpoints.json"
 FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME = "frontend-checkpoints.md"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
@@ -202,6 +209,7 @@ class FlowContext:
     work_item: str
     selected_task_payload: dict[str, object]
     teardown_commands: tuple[str, ...]
+    brokered_live_approvals: bool
     source_repository_root: Path | None
     prepared_repository: PreparedRepository | None
     prepared_working_copy: PreparedWorkingCopy | None
@@ -450,6 +458,7 @@ def _flow_state_payload(
         "runtime_id": ctx.runtime_id,
         "run_id": ctx.run_id,
         "work_item": ctx.work_item,
+        "brokered_live_approvals": ctx.brokered_live_approvals,
         "status": status,
         "next_action": next_action,
         "current_stage": current_stage,
@@ -813,6 +822,7 @@ def _initial_context(
     work_root: Path,
     report_root: Path,
     run_id: str | None,
+    brokered_live_approvals: bool,
 ) -> FlowContext:
     scenario = load_scenario(
         scenario_path,
@@ -856,6 +866,7 @@ def _initial_context(
         work_item=derive_work_item(scenario),
         selected_task_payload=selected_task_payload,
         teardown_commands=derive_teardown_commands(scenario),
+        brokered_live_approvals=brokered_live_approvals,
         source_repository_root=derive_source_repository_root(scenario_path),
         prepared_repository=None,
         prepared_working_copy=None,
@@ -874,6 +885,7 @@ def _context_from_state(
     runtime_id: str,
     work_root: Path,
     report_root: Path,
+    brokered_live_approvals: bool,
 ) -> FlowContext:
     state = _read_json_object(state_path)
     state_work_root = state.get("work_root")
@@ -940,6 +952,9 @@ def _context_from_state(
         work_item=str(state.get("work_item") or derive_work_item(scenario)),
         selected_task_payload=selected_task_payload,
         teardown_commands=derive_teardown_commands(scenario),
+        brokered_live_approvals=bool(
+            state.get("brokered_live_approvals", brokered_live_approvals)
+        ),
         source_repository_root=derive_source_repository_root(scenario_path),
         prepared_repository=prepared_repository,
         prepared_working_copy=prepared_working_copy,
@@ -958,6 +973,7 @@ def _load_or_create_context(
     work_root: Path,
     report_root: Path,
     run_id: str | None,
+    brokered_live_approvals: bool,
 ) -> FlowContext:
     resume_state = _find_resume_state(
         report_root=report_root,
@@ -972,6 +988,7 @@ def _load_or_create_context(
             runtime_id=runtime_id,
             work_root=work_root,
             report_root=report_root,
+            brokered_live_approvals=brokered_live_approvals,
         )
     ctx = _initial_context(
         scenario_path=scenario_path,
@@ -979,6 +996,7 @@ def _load_or_create_context(
         work_root=work_root,
         report_root=report_root,
         run_id=run_id,
+        brokered_live_approvals=brokered_live_approvals,
     )
     _persist_state(
         ctx=ctx,
@@ -1081,6 +1099,7 @@ def _prepare_target_repository(ctx: FlowContext) -> None:
             runtime_id=ctx.runtime_id,
             scenario=ctx.scenario,
             source_repository_root=ctx.source_repository_root,
+            brokered_live_approvals=ctx.brokered_live_approvals,
         )
     except Exception as exc:
         _record_step(
@@ -1366,7 +1385,11 @@ def _inspection_commands(ctx: FlowContext, stage: str) -> tuple[tuple[str, ...],
 
 def _classify_stage_run(result: BlackBoxCommandResult) -> StepClassification:
     output = f"{result.stdout_text}\n{result.stderr_text}".lower()
-    if "blocking questions are unresolved" in output or "action=wait state=blocked" in output:
+    if (
+        "blocking questions are unresolved" in output
+        or "action=wait state=blocked" in output
+        or "runtime approval is waiting for operator" in output
+    ):
         return "blocked"
     if result.exit_code == 0:
         return "pass"
@@ -1441,6 +1464,31 @@ def _http_probe(url: str) -> dict[str, object]:
         }
     except (OSError, URLError) as exc:
         return {"ok": False, "status": None, "body_preview": "", "error": str(exc)}
+
+
+def _http_json_get(url: str) -> dict[str, object]:
+    with urlopen(url, timeout=5.0) as response:
+        body = response.read().decode("utf-8", errors="replace")
+    payload = json.loads(body)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Expected JSON object from {url}.")
+    return payload
+
+
+def _http_json_post(url: str, payload: dict[str, object]) -> dict[str, object]:
+    data = json.dumps(payload).encode("utf-8")
+    request = Request(
+        url,
+        data=data,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with urlopen(request, timeout=5.0) as response:
+        body = response.read().decode("utf-8", errors="replace")
+    response_payload = json.loads(body)
+    if not isinstance(response_payload, dict):
+        raise ValueError(f"Expected JSON object from {url}.")
+    return response_payload
 
 
 def _frontend_probe_targets(ctx: FlowContext, stage: str) -> tuple[tuple[str, str], ...]:
@@ -2093,6 +2141,374 @@ def _write_answer_analysis_if_detected(ctx: FlowContext, stage: str) -> Path | N
     return analysis_path
 
 
+def _runtime_approval_analysis_path(ctx: FlowContext) -> Path:
+    return ctx.bundle_root / RUNTIME_APPROVAL_ANALYSIS_FILENAME
+
+
+def _append_runtime_approval_analysis(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    request: RuntimeOperatorRequest,
+    decision: RuntimeOperatorDecisionAction | None,
+    reason: str,
+    job_id: str,
+) -> Path:
+    path = _runtime_approval_analysis_path(ctx)
+    if not path.exists():
+        path.write_text(
+            "\n".join(
+                (
+                    "# Runtime Approval Analysis",
+                    "",
+                    f"- Scenario: `{ctx.scenario.scenario_id}`",
+                    f"- Runtime: `{ctx.runtime_id}`",
+                    f"- Run ID: `{ctx.run_id}`",
+                    f"- Brokered live approvals: `{ctx.brokered_live_approvals}`",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+        )
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(
+            "\n".join(
+                (
+                    f"## {stage} / {request.id}",
+                    "",
+                    f"- Job: `{job_id}`",
+                    f"- Kind: `{request.kind.value}`",
+                    f"- Tool: `{request.tool_name or ''}`",
+                    f"- CWD: `{'' if request.cwd is None else request.cwd.as_posix()}`",
+                    "- Paths: "
+                    + (
+                        "`none`"
+                        if not request.paths
+                        else ", ".join(f"`{path.as_posix()}`" for path in request.paths)
+                    ),
+                    "- Decision: "
+                    f"`{decision.value if decision is not None else 'operator-required'}`",
+                    f"- Reason: {reason}",
+                    "",
+                )
+            )
+        )
+    return path
+
+
+def _operator_request_from_view(
+    request_view: dict[str, object],
+    request_id: str,
+) -> RuntimeOperatorRequest | None:
+    raw_requests = request_view.get("requests")
+    if not isinstance(raw_requests, list | tuple):
+        return None
+    for raw_request in raw_requests:
+        if not isinstance(raw_request, dict) or raw_request.get("id") != request_id:
+            continue
+        try:
+            return RuntimeOperatorRequest.from_dict(raw_request)
+        except (KeyError, ValueError, TypeError):
+            return None
+    return None
+
+
+def _auto_runtime_approval_decision(
+    *,
+    ctx: FlowContext,
+    request: RuntimeOperatorRequest,
+) -> tuple[RuntimeOperatorDecisionAction, str] | None:
+    working_copy = _require_working_copy(ctx)
+    policy = RuntimeOperatorPolicy(
+        permission_policy=RuntimePermissionPolicy.BROKERED,
+        auto_approval_preset=AutoApprovalPreset.BROAD,
+        project_roots=(working_copy,),
+        workspace_root=working_copy / ".aidd",
+    )
+    decision = policy.evaluate(request)
+    if decision is None or not decision.is_approval:
+        return None
+    return decision.action, decision.reason or "auto-approved by live E2E broker policy"
+
+
+def _write_runtime_operator_action_request(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    job_id: str,
+    request: RuntimeOperatorRequest | None,
+    request_view: dict[str, object],
+    reason: str,
+) -> tuple[Path, Path]:
+    payload = {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "action": "approve-runtime-request",
+        "scenario_id": ctx.scenario.scenario_id,
+        "runtime_id": ctx.runtime_id,
+        "run_id": ctx.run_id,
+        "work_item": ctx.work_item,
+        "stage": stage,
+        "job_id": job_id,
+        "reason": reason,
+        "request": None if request is None else request.to_dict(),
+        "request_view": request_view,
+    }
+    json_path = ctx.bundle_root / OPERATOR_REQUEST_JSON_FILENAME
+    md_path = ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME
+    _write_json(json_path, payload)
+    md_path.write_text(
+        "\n".join(
+            (
+                "# Operator Action Request",
+                "",
+                "- Action: `approve-runtime-request`",
+                f"- Scenario: `{ctx.scenario.scenario_id}`",
+                f"- Runtime: `{ctx.runtime_id}`",
+                f"- Run ID: `{ctx.run_id}`",
+                f"- Work item: `{ctx.work_item}`",
+                f"- Stage: `{stage}`",
+                f"- UI job: `{job_id}`",
+                f"- Reason: {reason}",
+                "",
+                "## Runtime Request",
+                "",
+                (
+                    "- Request could not be decoded from the UI operator request view."
+                    if request is None
+                    else "\n".join(
+                        (
+                            f"- Request ID: `{request.id}`",
+                            f"- Kind: `{request.kind.value}`",
+                            f"- Tool: `{request.tool_name or ''}`",
+                            f"- CWD: `{'' if request.cwd is None else request.cwd.as_posix()}`",
+                            "- Paths: "
+                            + (
+                                "`none`"
+                                if not request.paths
+                                else ", ".join(
+                                    f"`{path.as_posix()}`" for path in request.paths
+                                )
+                            ),
+                            f"- Payload: `{json.dumps(dict(request.payload), sort_keys=True)}`",
+                        )
+                    )
+                ),
+                "",
+                "## Required Operator-Agent Output",
+                "",
+                "- Inspect the request payload and target repository state.",
+                "- Resume by posting an explicit UI decision or rerun with a safer task/config.",
+                (
+                    "- Preserve reasoning in "
+                    f"`{_runtime_approval_analysis_path(ctx).as_posix()}`."
+                ),
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    return json_path, md_path
+
+
+def _ui_job_log_text(base_url: str, job_id: str) -> str:
+    try:
+        payload = _http_json_get(f"{base_url}/api/jobs/{job_id}/logs?cursor=0")
+    except (OSError, URLError, HTTPError, ValueError, json.JSONDecodeError):
+        return ""
+    raw_chunks = payload.get("chunks")
+    chunks = raw_chunks if isinstance(raw_chunks, list | tuple) else []
+    lines: list[str] = []
+    for chunk in chunks:
+        if not isinstance(chunk, dict):
+            continue
+        stream = str(chunk.get("stream") or "log")
+        text = str(chunk.get("text") or "")
+        if text:
+            lines.append(f"[{stream}] {text.rstrip()}")
+    return "\n".join(lines)
+
+
+def _handle_ui_operator_requests(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    base_url: str,
+    job_id: str,
+) -> tuple[bool, str | None, tuple[Path, ...]]:
+    request_view = _http_json_get(f"{base_url}/api/jobs/{job_id}/operator-requests")
+    raw_pending_ids = request_view.get("pending_request_ids")
+    pending_ids = raw_pending_ids if isinstance(raw_pending_ids, list | tuple) else []
+    evidence_paths: list[Path] = []
+    for raw_request_id in pending_ids:
+        request_id = str(raw_request_id)
+        request = _operator_request_from_view(request_view, request_id)
+        if request is None:
+            reason = "runtime operator request could not be decoded"
+            request_paths = _write_runtime_operator_action_request(
+                ctx=ctx,
+                stage=stage,
+                job_id=job_id,
+                request=None,
+                request_view=request_view,
+                reason=reason,
+            )
+            evidence_paths.extend(request_paths)
+            return False, reason, tuple(evidence_paths)
+        auto_decision = _auto_runtime_approval_decision(ctx=ctx, request=request)
+        if auto_decision is None:
+            reason = (
+                "runtime operator request needs manual approval; live E2E only "
+                "auto-allows broad-safe project-local requests"
+            )
+            analysis_path = _append_runtime_approval_analysis(
+                ctx=ctx,
+                stage=stage,
+                request=request,
+                decision=None,
+                reason=reason,
+                job_id=job_id,
+            )
+            request_paths = _write_runtime_operator_action_request(
+                ctx=ctx,
+                stage=stage,
+                job_id=job_id,
+                request=request,
+                request_view=request_view,
+                reason=reason,
+            )
+            evidence_paths.extend((analysis_path, *request_paths))
+            return False, reason, tuple(evidence_paths)
+        action, reason = auto_decision
+        _http_json_post(
+            f"{base_url}/api/jobs/{job_id}/operator-requests/{request.id}/decision",
+            {"action": action.value, "reason": reason},
+        )
+        evidence_paths.append(
+            _append_runtime_approval_analysis(
+                ctx=ctx,
+                stage=stage,
+                request=request,
+                decision=action,
+                reason=reason,
+                job_id=job_id,
+            )
+        )
+    return True, None, tuple(evidence_paths)
+
+
+def _run_stage_via_ui(ctx: FlowContext, stage: str) -> BlackBoxCommandResult:
+    working_copy = _require_working_copy(ctx)
+    port = _allocate_loopback_port()
+    base_url = f"http://127.0.0.1:{port}"
+    ui_command = _frontend_checkpoint_command(ctx, port)
+    started = time.monotonic()
+    stdout_text = ""
+    stderr_text = ""
+    exit_code = 1
+    timed_out = False
+    timeout_seconds = _flow_timeout_seconds(ctx.scenario)
+    deadline = None if timeout_seconds is None else started + timeout_seconds
+    process: subprocess.Popen[str] | None = None
+    try:
+        process = subprocess.Popen(
+            ui_command,
+            cwd=working_copy,
+            env=_harness_environment_for_context(ctx),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        ready_deadline = time.monotonic() + FRONTEND_CHECKPOINT_TIMEOUT_SECONDS
+        while time.monotonic() < ready_deadline:
+            if process.poll() is not None:
+                raise RuntimeError("UI process exited before brokered stage run started.")
+            if _http_probe(f"{base_url}/").get("ok") is True:
+                break
+            time.sleep(0.1)
+        else:
+            raise TimeoutError("Timed out waiting for UI brokered stage runner.")
+
+        start_payload = _http_json_post(
+            f"{base_url}/api/stage/run",
+            {
+                "stage": stage,
+                "runtime": ctx.runtime_id,
+                "run_id": ctx.run_id,
+                "log_follow": True,
+            },
+        )
+        job_id = str(start_payload.get("job_id") or "")
+        if not job_id:
+            raise RuntimeError("UI stage run did not return a job id.")
+
+        while process.poll() is None:
+            if deadline is not None and time.monotonic() >= deadline:
+                timed_out = True
+                exit_code = 124
+                stderr_text = "UI brokered stage run timed out.\n"
+                break
+            job = _http_json_get(f"{base_url}/api/jobs/{job_id}")
+            status = str(job.get("status") or "")
+            if status == "waiting-for-operator":
+                handled, reason, evidence_paths = _handle_ui_operator_requests(
+                    ctx=ctx,
+                    stage=stage,
+                    base_url=base_url,
+                    job_id=job_id,
+                )
+                if not handled:
+                    stdout_text = (
+                        "Stage run result: action=wait state=blocked\n"
+                        "Runtime approval is waiting for operator.\n"
+                        f"Reason: {reason}\n"
+                    )
+                    if evidence_paths:
+                        stdout_text += "Evidence:\n" + "\n".join(
+                            path.as_posix() for path in evidence_paths
+                        )
+                    exit_code = 1
+                    break
+                time.sleep(0.1)
+                continue
+            if status in {"completed", "failed"}:
+                raw_exit_code = job.get("exit_code")
+                exit_code = raw_exit_code if isinstance(raw_exit_code, int) else (
+                    0 if status == "completed" else 1
+                )
+                stdout_text = (
+                    f"UI stage job {job_id} completed with status={status}.\n"
+                    f"waiting_for_operator={job.get('result', {})}\n"
+                    f"{_ui_job_log_text(base_url, job_id)}"
+                ).rstrip() + "\n"
+                break
+            time.sleep(0.25)
+        else:
+            stderr_text = "UI process exited before brokered stage job completed.\n"
+    except Exception as exc:
+        stderr_text = f"UI brokered stage run failed: {exc}\n"
+        exit_code = 1
+    finally:
+        if process is not None:
+            process_stdout, process_stderr, _ = _terminate_process(process)
+            stdout_text = f"{stdout_text}{process_stdout}"
+            stderr_text = f"{stderr_text}{process_stderr}"
+
+    transcript = HarnessCommandTranscript(
+        command=_command_text((*ui_command, "POST", "/api/stage/run")),
+        exit_code=exit_code,
+        stdout_text=stdout_text,
+        stderr_text=stderr_text,
+        duration_seconds=time.monotonic() - started,
+        timed_out=timed_out,
+        timeout_seconds=timeout_seconds,
+    )
+    return BlackBoxCommandResult(
+        command=(*ui_command, "POST", "/api/stage/run"),
+        transcript=transcript,
+    )
+
+
 def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
     working_copy = _require_working_copy(ctx)
     environment = _harness_environment_for_context(ctx)
@@ -2108,11 +2524,15 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             evidence_paths=(answer_analysis_path, _answers_path(ctx, stage)),
         )
 
-    stage_result = _run_black_box_command(
-        command=_stage_run_command(ctx, stage),
-        cwd=working_copy,
-        environment=environment,
-        timeout_seconds=_flow_timeout_seconds(ctx.scenario),
+    stage_result = (
+        _run_stage_via_ui(ctx, stage)
+        if ctx.brokered_live_approvals
+        else _run_black_box_command(
+            command=_stage_run_command(ctx, stage),
+            cwd=working_copy,
+            environment=environment,
+            timeout_seconds=_flow_timeout_seconds(ctx.scenario),
+        )
     )
     classification = _classify_stage_run(stage_result)
     _record_step(
@@ -2124,7 +2544,11 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             if classification == "pass"
             else "Inspect public artifacts before stopping or requesting operator input."
         ),
-        plan=f"Run `{stage}` through the installed public `aidd stage run` surface.",
+        plan=(
+            f"Run `{stage}` through the installed public `aidd ui` stage-run surface."
+            if ctx.brokered_live_approvals
+            else f"Run `{stage}` through the installed public `aidd stage run` surface."
+        ),
         stage=stage,
         command_results=(stage_result,),
     )
@@ -2221,18 +2645,26 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         )
         return classification
     if classification == "blocked":
-        request_paths = _write_operator_action_request(
-            ctx=ctx,
-            stage=stage,
-            stage_result=stage_result,
-            inspection_results=inspection_results,
+        existing_request_paths = (
+            ctx.bundle_root / OPERATOR_REQUEST_JSON_FILENAME,
+            ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME,
+        )
+        request_paths = (
+            existing_request_paths
+            if all(path.exists() for path in existing_request_paths)
+            else _write_operator_action_request(
+                ctx=ctx,
+                stage=stage,
+                stage_result=stage_result,
+                inspection_results=inspection_results,
+            )
         )
         _record_step(
             ctx=ctx,
             action="answer-questions",
             classification="blocked",
-            decision="Stop and wait for the launching operator-agent to write answers.md.",
-            plan="Surface blocking questions as an operator action request.",
+            decision="Stop and wait for launching operator-agent input.",
+            plan="Surface blocking questions or runtime approvals as an operator action request.",
             stage=stage,
             evidence_paths=request_paths,
         )
@@ -2790,6 +3222,28 @@ def _write_frontend_checkpoint_placeholders(ctx: FlowContext) -> None:
     )
 
 
+def _write_runtime_approval_analysis_placeholder(ctx: FlowContext) -> None:
+    path = _runtime_approval_analysis_path(ctx)
+    if path.exists():
+        return
+    path.write_text(
+        "\n".join(
+            (
+                "# Runtime Approval Analysis",
+                "",
+                f"- Scenario: `{ctx.scenario.scenario_id}`",
+                f"- Runtime: `{ctx.runtime_id}`",
+                f"- Run ID: `{ctx.run_id}`",
+                f"- Brokered live approvals: `{ctx.brokered_live_approvals}`",
+                "",
+                "- No runtime approval decisions were recorded.",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+
 def _ensure_transcript_files(ctx: FlowContext) -> None:
     for filename, step in (
         (INSTALL_TRANSCRIPT_FILENAME, "install"),
@@ -2871,12 +3325,19 @@ def _write_harness_metadata(
             "flow_steps": (ctx.bundle_root / FLOW_STEPS_FILENAME).as_posix(),
             "flow_report": (ctx.bundle_root / FLOW_REPORT_FILENAME).as_posix(),
             "operator_actions": (ctx.bundle_root / OPERATOR_ACTIONS_FILENAME).as_posix(),
+            "runtime_approval_analysis": (
+                ctx.bundle_root / RUNTIME_APPROVAL_ANALYSIS_FILENAME
+            ).as_posix(),
             "scenario_path": ctx.scenario_path.as_posix(),
             "stage_audits": (ctx.bundle_root / STAGE_AUDITS_DIRNAME).as_posix(),
         },
         "black_box": {
             "operator_surface": "installed-aidd-cli",
-            "stage_execution": "aidd stage run",
+            "stage_execution": (
+                "aidd ui /api/stage/run"
+                if ctx.brokered_live_approvals
+                else "aidd stage run"
+            ),
             "inspection": [
                 "aidd stage summary",
                 "aidd stage questions",
@@ -2987,6 +3448,7 @@ def _record_terminal_decision_step(
             ctx.bundle_root / STAGE_TIMING_MARKDOWN_FILENAME,
             ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME,
             ctx.bundle_root / FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME,
+            ctx.bundle_root / RUNTIME_APPROVAL_ANALYSIS_FILENAME,
             ctx.bundle_root / STAGE_AUDITS_DIRNAME,
         ),
     )
@@ -3134,6 +3596,7 @@ def _finalize_reports(
         quality_verdict=quality_assessment.verdict,
     )
     _write_frontend_checkpoint_placeholders(ctx)
+    _write_runtime_approval_analysis_placeholder(ctx)
     _write_run_transcript_from_flow(ctx=ctx, exit_code=0 if verdict.status == "pass" else 1)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
@@ -3173,7 +3636,7 @@ def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path
 
 
 def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
-    summary = "Black-box live E2E is blocked waiting for operator-agent answers."
+    summary = "Black-box live E2E is blocked waiting for operator-agent input."
     _ensure_transcript_files(ctx)
     _record_terminal_decision_step(ctx=ctx, status="blocked")
     _write_runtime_log_from_steps(ctx)
@@ -3238,6 +3701,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     )
     _append_stage_audit_section_to_quality_report(ctx)
     _write_frontend_checkpoint_placeholders(ctx)
+    _write_runtime_approval_analysis_placeholder(ctx)
     _persist_state(
         ctx=ctx,
         status="blocked",
@@ -3313,6 +3777,7 @@ def run_black_box_live_e2e(
     work_root: Path | None = None,
     report_root: Path = Path(".aidd/reports/evals"),
     run_id: str | None = None,
+    brokered_live_approvals: bool = False,
 ) -> BlackBoxLiveE2EResult:
     resolved_work_root = (work_root or _default_work_root()).resolve(strict=False)
     resolved_report_root = report_root.resolve(strict=False)
@@ -3322,6 +3787,7 @@ def run_black_box_live_e2e(
         work_root=resolved_work_root,
         report_root=resolved_report_root,
         run_id=run_id,
+        brokered_live_approvals=brokered_live_approvals,
     )
     status = _state_status(ctx.bundle_root)
     if status in TERMINAL_STATUSES:
@@ -3463,6 +3929,14 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         default=None,
         help="Explicit run id to create or resume; omitted resumes the unique non-terminal match.",
     )
+    parser.add_argument(
+        "--brokered-live-approvals",
+        action="store_true",
+        help=(
+            "Write brokered/live runtime config and run stages through the UI-backed "
+            "approval surface."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -3475,6 +3949,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             work_root=Path(args.work_root),
             report_root=Path(args.report_root),
             run_id=None if args.run_id is None else str(args.run_id),
+            brokered_live_approvals=bool(args.brokered_live_approvals),
         )
     except ValueError as exc:
         print(f"black-box live e2e: {exc}", file=sys.stderr)

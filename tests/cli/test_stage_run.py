@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.cli.main import _prefix_stream_chunk, app
+from aidd.cli.stage_run import _CliRuntimeOperatorDecisionProvider
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
@@ -17,9 +18,65 @@ from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
     run_attempt_artifact_index_path,
 )
+from aidd.core.runtime_operator import RuntimeOperatorRequest
 from aidd.core.stage_runner import prepare_stage_bundle
+from aidd.runtime_permissions import (
+    RuntimeOperatorDecisionAction,
+    RuntimeOperatorDecisionSource,
+    RuntimeOperatorRequestKind,
+)
 
 runner = CliRunner()
+
+
+def test_cli_operator_decision_provider_returns_tty_decision(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda _: "s")
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="implement",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "npm install"},
+        cwd=tmp_path,
+    )
+
+    decision = _CliRuntimeOperatorDecisionProvider().request_decision(
+        request,
+        requests_path=tmp_path / "operator-requests.jsonl",
+        decisions_path=tmp_path / "operator-decisions.jsonl",
+    )
+
+    assert decision is not None
+    assert decision.request_id == request.id
+    assert decision.action is RuntimeOperatorDecisionAction.ALLOW_FOR_SESSION
+    assert decision.source is RuntimeOperatorDecisionSource.CLI
+
+
+def test_cli_operator_decision_provider_no_tty_returns_none(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="implement",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "npm install"},
+        cwd=tmp_path,
+    )
+
+    decision = _CliRuntimeOperatorDecisionProvider().request_decision(
+        request,
+        requests_path=tmp_path / "operator-requests.jsonl",
+        decisions_path=tmp_path / "operator-decisions.jsonl",
+    )
+
+    assert decision is None
 
 
 def _materialize_plan_inputs(*, workspace_root: Path, work_item: str) -> None:
@@ -221,6 +278,7 @@ def _write_cli_config(
     claude_code_command: str = "claude",
     codex_command: str = "codex",
     opencode_command: str = "opencode",
+    qwen_command: str = "qwen",
     max_repair_attempts: int = 2,
 ) -> Path:
     config_path = tmp_path / "aidd.test.toml"
@@ -236,6 +294,8 @@ def _write_cli_config(
             f"command = \"{codex_command}\"\n\n"
             "[runtime.opencode]\n"
             f"command = \"{opencode_command}\"\n\n"
+            "[runtime.qwen]\n"
+            f"command = \"{qwen_command}\"\n\n"
             "[repair]\n"
             f"max_attempts = {max_repair_attempts}\n"
         ),
@@ -489,7 +549,7 @@ def test_stage_run_returns_nonzero_when_runtime_fails(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "runtime",
-    ("claude-code", "codex", "opencode"),
+    ("claude-code", "codex", "opencode", "qwen"),
 )
 def test_stage_run_executes_supported_non_generic_runtime(
     tmp_path: Path,
@@ -511,6 +571,7 @@ def test_stage_run_executes_supported_non_generic_runtime(
         claude_code_command=runtime_command,
         codex_command=runtime_command,
         opencode_command=runtime_command,
+        qwen_command=runtime_command,
     )
 
     result = runner.invoke(
@@ -575,7 +636,7 @@ def test_stage_run_executes_native_provider_mode_without_adapter_flags(
     if runtime == "codex":
         runtime_command = (
             f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())} "
-            "exec --full-auto --skip-git-repo-check --json -"
+            "exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
         )
     else:
         runtime_command = (

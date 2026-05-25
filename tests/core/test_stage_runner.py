@@ -21,15 +21,23 @@ from aidd.config import ProjectConfig, ProjectSetConfig
 from aidd.core.project_set import resolve_project_set
 from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
 from aidd.core.run_store import (
+    create_next_attempt_directory,
     create_run_manifest,
     persist_stage_status,
     run_attempt_artifact_index_path,
     run_stage_metadata_path,
 )
+from aidd.core.runtime_operator import (
+    RuntimeOperatorDecision,
+    RuntimeOperatorRequest,
+    append_operator_decision,
+    append_operator_request,
+)
 from aidd.core.stage_runner import (
     ATTEMPT_INPUT_BUNDLE_FILENAME,
     ATTEMPT_REPAIR_CONTEXT_FILENAME,
     AdapterExecutionOutcome,
+    AdapterExecutionStatus,
     AdapterInvocationBundle,
     PostValidationAction,
     RepairBudgetValidationTransition,
@@ -58,6 +66,11 @@ from aidd.core.stage_runner import (
     update_stage_unblock_state,
 )
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
+from aidd.runtime_permissions import (
+    RuntimeOperatorDecisionAction,
+    RuntimeOperatorDecisionSource,
+    RuntimeOperatorRequestKind,
+)
 from aidd.validators.models import ValidationFinding
 
 
@@ -2020,6 +2033,63 @@ def test_run_single_stage_orchestration_stops_on_adapter_failure(tmp_path: Path)
     assert orchestration.validation_transition is None
 
 
+def test_run_single_stage_orchestration_blocks_before_validation_for_operator_request(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        assert invocation.stage == "plan"
+        return AdapterExecutionOutcome(
+            status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
+            details="blocked_for_operator: runtime permission decision required",
+            operator_requests_path=(
+                execution_state.attempt_path / "operator-requests.jsonl"
+            ),
+            pending_operator_request_ids=("opr-test",),
+        )
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    metadata_payload = json.loads(
+        run_stage_metadata_path(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+        ).read_text(encoding="utf-8")
+    )
+    assert orchestration.transition.action is PostValidationAction.WAIT
+    assert orchestration.transition.next_state is StageState.BLOCKED
+    assert orchestration.validation_result is None
+    assert orchestration.validation_transition is None
+    assert orchestration.adapter_outcome.blocked_for_operator is True
+    assert metadata_payload["status"] == StageState.BLOCKED.value
+
+
 def test_run_structural_validation_after_output_discovery_writes_report_path(
     tmp_path: Path,
 ) -> None:
@@ -2871,6 +2941,89 @@ def test_update_stage_unblock_state_moves_stage_to_preparing_when_answers_ready(
         StageState.BLOCKED.value,
         StageState.PREPARING.value,
     ]
+
+
+def test_update_stage_unblock_state_keeps_stage_blocked_for_pending_operator_request(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.BLOCKED.value,
+    )
+    attempt_path = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="plan",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "npm install"},
+        cwd=tmp_path,
+    )
+    append_operator_request(path=attempt_path / "operator-requests.jsonl", request=request)
+
+    pending_state = update_stage_unblock_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    append_operator_decision(
+        path=attempt_path / "operator-decisions.jsonl",
+        decision=RuntimeOperatorDecision(
+            request_id=request.id,
+            action=RuntimeOperatorDecisionAction.DENY,
+            source=RuntimeOperatorDecisionSource.UI,
+            reason="denied in test",
+        ),
+    )
+    denied_state = update_stage_unblock_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    append_operator_decision(
+        path=attempt_path / "operator-decisions.jsonl",
+        decision=RuntimeOperatorDecision(
+            request_id=request.id,
+            action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+            source=RuntimeOperatorDecisionSource.UI,
+            reason="approved in test",
+        ),
+    )
+    unblocked_state = update_stage_unblock_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert pending_state.was_blocked is True
+    assert pending_state.unblocked is False
+    assert pending_state.next_state == StageState.BLOCKED
+    assert denied_state.was_blocked is True
+    assert denied_state.unblocked is False
+    assert denied_state.next_state == StageState.BLOCKED
+    assert unblocked_state.was_blocked is True
+    assert unblocked_state.unblocked is True
+    assert unblocked_state.next_state == StageState.PREPARING
 
 
 def test_update_stage_unblock_state_keeps_stage_blocked_with_partial_answer(

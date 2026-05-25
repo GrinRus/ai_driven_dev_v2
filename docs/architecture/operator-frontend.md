@@ -67,6 +67,13 @@ The first frontend contract covers these flows:
    - show `validator-report.md`, `stage-result.md`, and repair evidence;
    - show run/eval metadata, prompt paths, Git SHA, hashes, runtime id, and adapter id.
 
+6. **Runtime approval handling**
+   - show pending runtime operator requests from attempt-level `operator-requests.jsonl`;
+   - show auto-approved, denied, or cancelled decisions from `operator-decisions.jsonl`;
+   - write approval decisions only through the local job approval API;
+   - keep runtime approvals separate from product questions in `questions.md` and
+     `answers.md`.
+
 ## 4. Write boundaries
 
 Frontend writes are intentionally narrow:
@@ -130,6 +137,12 @@ Current W20 implementation status:
 - private JSON endpoints expose run, stage, questions, answer writes, persisted logs,
   artifact summaries, artifact document content, workflow run requests, stage run
   requests, and job status/log polling over the operator services;
+- UI job state includes `waiting-for-operator`, with
+  `GET /api/jobs/<job_id>/operator-requests` and
+  `POST /api/jobs/<job_id>/operator-requests/<request_id>/decision` for local runtime
+  approvals;
+- approval decisions are loopback-only by default; non-loopback binds must opt in with
+  `--allow-remote-approvals`;
 - the UI shell serves static HTML, CSS, and JavaScript from the Python package,
   without a Node or Vite dependency;
 - dynamic question text, stage metadata, artifact labels and paths, runtime-derived

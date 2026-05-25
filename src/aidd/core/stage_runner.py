@@ -28,6 +28,7 @@ from aidd.core.stage_invocation import (
 )
 from aidd.core.stage_models import (
     AdapterExecutionOutcome,
+    AdapterExecutionStatus,
     AdapterInvocationBundle,
     PostValidationAction,
     PostValidationTransition,
@@ -128,6 +129,25 @@ def _fail_after_adapter_error(
         verdict=ValidationVerdict.FAIL,
         next_state=StageState.FAILED,
         stage_metadata_path=failed_metadata_path,
+    )
+
+
+def _block_after_operator_request(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    changed_at_utc: datetime | None,
+) -> StageValidationState:
+    return persist_validation_state(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        verdict=ValidationVerdict.BLOCKED,
+        from_state=StageState.EXECUTING,
+        changed_at_utc=changed_at_utc,
     )
 
 
@@ -314,6 +334,30 @@ def run_single_stage_orchestration(
             contracts_root=contracts_root,
         )
 
+    if adapter_outcome.blocked_for_operator:
+        blocked_validation_state = _block_after_operator_request(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            changed_at_utc=changed_at_utc,
+        )
+        transition = decide_post_validation_transition(blocked_validation_state)
+        return StageOrchestrationResult(
+            stage=stage,
+            work_item=work_item,
+            run_id=run_id,
+            preparation_bundle=preparation_bundle,
+            execution_state=execution_state,
+            adapter_invocation=adapter_invocation,
+            adapter_outcome=adapter_outcome,
+            discovery=None,
+            validation_result=None,
+            interview_routing=None,
+            validation_transition=None,
+            transition=transition,
+        )
+
     if not adapter_outcome.succeeded:
         failed_validation_state = _fail_after_adapter_error(
             workspace_root=workspace_root,
@@ -469,6 +513,7 @@ __all__ = [
     "ATTEMPT_INPUT_BUNDLE_FILENAME",
     "ATTEMPT_REPAIR_CONTEXT_FILENAME",
     "AdapterExecutionOutcome",
+    "AdapterExecutionStatus",
     "AdapterInvocationBundle",
     "MALFORMED_INTERVIEW_DOCUMENT_CODE",
     "PostValidationAction",

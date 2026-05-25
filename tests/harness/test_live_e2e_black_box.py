@@ -70,6 +70,7 @@ def _clear_live_runtime_command_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("AIDD_EVAL_CODEX_COMMAND", raising=False)
     monkeypatch.delenv("AIDD_EVAL_GENERIC_CLI_COMMAND", raising=False)
     monkeypatch.delenv("AIDD_EVAL_OPENCODE_COMMAND", raising=False)
+    monkeypatch.delenv("AIDD_EVAL_QWEN_COMMAND", raising=False)
     monkeypatch.delenv("AIDD_LIVE_E2E_RUN_ID", raising=False)
     monkeypatch.delenv("AIDD_EVAL_PUBLISHED_PACKAGE_SPEC", raising=False)
 
@@ -79,6 +80,8 @@ def _write_fake_aidd(
     *,
     fail_stage: str | None = None,
     block_stage: str | None = None,
+    ui_operator_request_stage: str | None = None,
+    ui_operator_request_command: str = "pwd",
     inspect_block_stage: str | None = None,
     inspect_fail_command: str | None = None,
     log_blocking_text: bool = False,
@@ -95,6 +98,8 @@ from pathlib import Path
 PRIMARY_OUTPUTS = {json.dumps(_PRIMARY_OUTPUTS)}
 FAIL_STAGE = {fail_stage!r}
 BLOCK_STAGE = {block_stage!r}
+UI_OPERATOR_REQUEST_STAGE = {ui_operator_request_stage!r}
+UI_OPERATOR_REQUEST_COMMAND = {ui_operator_request_command!r}
 INSPECT_BLOCK_STAGE = {inspect_block_stage!r}
 INSPECT_FAIL_COMMAND = {inspect_fail_command!r}
 LOG_BLOCKING_TEXT = {log_blocking_text!r}
@@ -204,12 +209,126 @@ def stage_run(args: list[str]) -> int:
 
 def ui(args: list[str]) -> int:
     port = int(option(args, "--port", "0"))
+    work_item = option(args, "--work-item")
+    jobs: dict[str, dict[str, object]] = {{}}
+
+    def job_payload(job_id: str) -> dict[str, object]:
+        job = jobs[job_id]
+        return {{
+            "job_id": job_id,
+            "kind": "stage",
+            "stage": job.get("stage"),
+            "status": job.get("status", "running"),
+            "exit_code": job.get("exit_code"),
+            "message": job.get("message", ""),
+            "result": job.get("result"),
+            "attempt_path": job.get("attempt_path"),
+            "created_at_utc": "2026-05-25T00:00:00Z",
+            "updated_at_utc": "2026-05-25T00:00:00Z",
+        }}
+
+    def operator_request_view(job: dict[str, object]) -> dict[str, object]:
+        attempt_path = Path(str(job.get("attempt_path", "")))
+        request_path = attempt_path / "operator-requests.jsonl"
+        decision_path = attempt_path / "operator-decisions.jsonl"
+        requests = [
+            json.loads(line)
+            for line in request_path.read_text().splitlines()
+            if line.strip()
+        ] if request_path.exists() else []
+        decisions = [
+            json.loads(line)
+            for line in decision_path.read_text().splitlines()
+            if line.strip()
+        ] if decision_path.exists() else []
+        decided = {{decision["request_id"] for decision in decisions}}
+        return {{
+            "attempt_path": attempt_path.as_posix(),
+            "requests_path": request_path.as_posix() if request_path.exists() else None,
+            "decisions_path": decision_path.as_posix() if decision_path.exists() else None,
+            "requests": requests,
+            "pending_request_ids": [
+                request["id"] for request in requests if request["id"] not in decided
+            ],
+            "unapproved_request_ids": [
+                request["id"] for request in requests if request["id"] not in decided
+            ],
+            "decisions": decisions,
+        }}
+
+    def write_runtime_request(stage: str, run_id: str) -> tuple[str, str]:
+        request_id = f"opr-{{stage}}"
+        attempt_root = (
+            Path(".aidd")
+            / "reports"
+            / "runs"
+            / work_item
+            / run_id
+            / "stages"
+            / stage
+            / "attempts"
+            / "attempt-0001"
+        )
+        attempt_root.mkdir(parents=True, exist_ok=True)
+        request = {{
+            "id": request_id,
+            "runtime_id": "codex",
+            "stage": stage,
+            "kind": "shell",
+            "tool_name": "shell",
+            "payload": {{"command": UI_OPERATOR_REQUEST_COMMAND}},
+            "cwd": Path.cwd().as_posix(),
+            "paths": [],
+            "risk": "high",
+            "suggestions": ["allow_once", "allow_for_session", "deny", "cancel"],
+            "created_at_utc": "2026-05-25T00:00:00Z",
+        }}
+        (attempt_root / "operator-requests.jsonl").write_text(json.dumps(request) + "\\n")
+        (attempt_root / "runtime.log").write_text("waiting for operator approval\\n")
+        return request_id, attempt_root.as_posix()
+
+    def send_json(
+        handler: BaseHTTPRequestHandler,
+        payload: dict[str, object],
+        status: int = 200,
+    ) -> None:
+        body = json.dumps(payload).encode()
+        handler.send_response(status)
+        handler.send_header("Content-Type", "application/json")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             if self.path == "/":
                 body = b"<html><body>AIDD UI</body></html>"
                 content_type = "text/html; charset=utf-8"
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if self.path.startswith("/api/jobs/"):
+                parts = self.path.split("?")[0].strip("/").split("/")
+                job_id = parts[2]
+                if len(parts) == 3 and job_id in jobs:
+                    send_json(self, job_payload(job_id))
+                    return
+                if len(parts) == 4 and parts[3] == "logs" and job_id in jobs:
+                    send_json(
+                        self,
+                        {{
+                            "job_id": job_id,
+                            "cursor": 1,
+                            "chunks": jobs[job_id].get("chunks", []),
+                        }},
+                    )
+                    return
+                if len(parts) == 4 and parts[3] == "operator-requests" and job_id in jobs:
+                    send_json(self, operator_request_view(jobs[job_id]))
+                    return
             else:
                 body = json.dumps({{"ok": True, "path": self.path}}).encode()
                 content_type = "application/json"
@@ -218,6 +337,64 @@ def ui(args: list[str]) -> int:
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+
+        def do_POST(self) -> None:
+            length = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(length).decode() or "{{}}")
+            if self.path == "/api/stage/run":
+                stage = str(payload.get("stage", ""))
+                run_id = str(payload.get("run_id", ""))
+                job_id = f"job-{{len(jobs) + 1}}"
+                if stage == UI_OPERATOR_REQUEST_STAGE:
+                    request_id, attempt_path = write_runtime_request(stage, run_id)
+                    jobs[job_id] = {{
+                        "stage": stage,
+                        "status": "waiting-for-operator",
+                        "exit_code": None,
+                        "message": "waiting for operator decision",
+                        "attempt_path": attempt_path,
+                        "request_id": request_id,
+                        "run_id": run_id,
+                        "chunks": [{{"sequence": 1, "stream": "stdout", "text": "waiting\\n"}}],
+                        "result": {{"waiting_for_operator": True, "request_id": request_id}},
+                    }}
+                else:
+                    write_stage_outputs(stage, work_item, run_id)
+                    jobs[job_id] = {{
+                        "stage": stage,
+                        "status": "completed",
+                        "exit_code": 0,
+                        "message": "completed",
+                        "attempt_path": "",
+                        "run_id": run_id,
+                        "chunks": [{{"sequence": 1, "stream": "stdout", "text": "done\\n"}}],
+                        "result": {{"completed": True, "stage": stage, "run_id": run_id}},
+                    }}
+                send_json(self, {{"job_id": job_id, "stage": stage, "kind": "stage"}})
+                return
+            if "/operator-requests/" in self.path and self.path.endswith("/decision"):
+                parts = self.path.strip("/").split("/")
+                job_id = parts[2]
+                request_id = parts[4]
+                job = jobs[job_id]
+                attempt_path = Path(str(job["attempt_path"]))
+                decision = {{
+                    "request_id": request_id,
+                    "action": str(payload.get("action", "")),
+                    "source": "ui",
+                    "reason": payload.get("reason"),
+                    "created_at_utc": "2026-05-25T00:00:00Z",
+                }}
+                with (attempt_path / "operator-decisions.jsonl").open("a") as handle:
+                    handle.write(json.dumps(decision) + "\\n")
+                write_stage_outputs(str(job["stage"]), work_item, str(job.get("run_id", "")))
+                job["status"] = "completed"
+                job["exit_code"] = 0
+                job["message"] = "completed"
+                job["result"] = {{"completed": True, "waiting_for_operator": False}}
+                send_json(self, operator_request_view(job))
+                return
+            send_json(self, {{"error": "not found"}}, status=404)
 
         def log_message(self, format: str, *args: object) -> None:
             return
@@ -301,13 +478,14 @@ def _write_scenario_manifest(
     quality_commands: tuple[str, ...] = ("printf 'quality\\n' > quality.log",),
     interview_required: bool = False,
     frontend_checkpoints: bool = True,
+    runtime_targets: tuple[str, ...] = ("opencode",),
 ) -> None:
     payload = {
         "id": "AIDD-TEST-LIVE-BLACKBOX",
         "scenario_class": "live-full-flow-interview" if interview_required else "live-full-flow",
         "feature_size": "small" if not interview_required else "large",
         "automation_lane": "manual",
-        "canonical_runtime": "opencode",
+        "canonical_runtime": runtime_targets[0],
         "task": "exercise black-box live evaluator",
         "repo": {"url": repo_url},
         "setup": {"commands": list(setup_commands)},
@@ -324,7 +502,7 @@ def _write_scenario_manifest(
         },
         "stage_scope": {"start": "idea", "end": "qa"},
         "interview": {"required": interview_required},
-        "runtime_targets": ["opencode"],
+        "runtime_targets": list(runtime_targets),
         "live_flow": {
             "driver": "stepwise-black-box",
             "checkpoint_policy": "after-each-step",
@@ -423,8 +601,11 @@ def _prepare_live_test(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     *,
+    runtime_targets: tuple[str, ...] = ("opencode",),
     fail_stage: str | None = None,
     block_stage: str | None = None,
+    ui_operator_request_stage: str | None = None,
+    ui_operator_request_command: str = "pwd",
     setup_commands: tuple[str, ...] = ("printf 'setup\\n' > setup.log",),
     quality_commands: tuple[str, ...] = ("printf 'quality\\n' > quality.log",),
     interview_required: bool = False,
@@ -434,7 +615,11 @@ def _prepare_live_test(
     log_blocking_text: bool = False,
 ) -> tuple[Path, Path, Path]:
     _clear_live_runtime_command_env(monkeypatch)
-    _put_fake_provider_on_path(tmp_path=tmp_path, monkeypatch=monkeypatch)
+    _put_fake_provider_on_path(
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        executable_name=runtime_targets[0],
+    )
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
     fake_aidd = tmp_path / "fake-aidd"
@@ -442,6 +627,8 @@ def _prepare_live_test(
         fake_aidd,
         fail_stage=fail_stage,
         block_stage=block_stage,
+        ui_operator_request_stage=ui_operator_request_stage,
+        ui_operator_request_command=ui_operator_request_command,
         inspect_block_stage=inspect_block_stage,
         inspect_fail_command=inspect_fail_command,
         log_blocking_text=log_blocking_text,
@@ -456,6 +643,7 @@ def _prepare_live_test(
         quality_commands=quality_commands,
         interview_required=interview_required,
         frontend_checkpoints=frontend_checkpoints,
+        runtime_targets=runtime_targets,
     )
     monkeypatch.setattr(
         "aidd.harness.live_e2e_black_box.prepare_local_wheel_install",
@@ -557,6 +745,93 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         checkpoint["classification"] == "pass"
         for checkpoint in frontend_payload["checkpoints"]
     )
+
+
+def test_black_box_live_e2e_brokered_live_approvals_use_ui_stage_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        runtime_targets=("codex",),
+        ui_operator_request_stage="idea",
+        ui_operator_request_command="pwd",
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="codex",
+        work_root=work_root,
+        report_root=report_root,
+        brokered_live_approvals=True,
+    )
+
+    assert result.status == "pass"
+    config_text = Path(
+        json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))[
+            "config_path"
+        ]
+    ).read_text(encoding="utf-8")
+    assert 'permission_policy = "brokered"' in config_text
+    assert 'interaction_mode = "live"' in config_text
+    steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    run_stage_steps = [step for step in steps if step["action"] == "run-stage"]
+    assert run_stage_steps[0]["commands"][0]["command"][1] == "ui"
+    assert run_stage_steps[0]["commands"][0]["command"][-2:] == ["POST", "/api/stage/run"]
+    approval_analysis = (result.bundle_root / "runtime-approval-analysis.md").read_text(
+        encoding="utf-8"
+    )
+    assert "opr-idea" in approval_analysis
+    assert "allow_once" in approval_analysis
+    metadata = json.loads((result.bundle_root / "harness-metadata.json").read_text())
+    assert metadata["black_box"]["stage_execution"] == "aidd ui /api/stage/run"
+    working_copy = Path(
+        json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))[
+            "working_copy_path"
+        ]
+    )
+    decision_paths = list(
+        working_copy.glob(
+            ".aidd/reports/runs/*/*/stages/idea/attempts/"
+            "attempt-0001/operator-decisions.jsonl"
+        )
+    )
+    assert decision_paths
+
+
+def test_black_box_live_e2e_brokered_live_blocks_for_non_safe_runtime_request(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        runtime_targets=("codex",),
+        ui_operator_request_stage="idea",
+        ui_operator_request_command="npm install",
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="codex",
+        work_root=work_root,
+        report_root=report_root,
+        brokered_live_approvals=True,
+    )
+
+    assert result.status == "blocked"
+    request_payload = json.loads(
+        (result.bundle_root / "operator-action-request.json").read_text(encoding="utf-8")
+    )
+    assert request_payload["action"] == "approve-runtime-request"
+    assert request_payload["request"]["payload"]["command"] == "npm install"
+    approval_analysis = (result.bundle_root / "runtime-approval-analysis.md").read_text(
+        encoding="utf-8"
+    )
+    assert "operator-required" in approval_analysis
 
 
 def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(

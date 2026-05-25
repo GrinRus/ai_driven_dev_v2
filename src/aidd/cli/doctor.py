@@ -27,6 +27,7 @@ def _runtime_probe_report(*, definition: RuntimeDefinition) -> CapabilityReport:
         "claude-code": cli_main.probe_claude_code,
         "codex": cli_main.probe_codex,
         "opencode": cli_main.probe_opencode,
+        "qwen": cli_main.probe_qwen,
     }
     try:
         probe_runtime = probe_by_runtime[definition.runtime_id]

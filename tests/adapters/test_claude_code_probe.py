@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import sys
 from pathlib import Path
 
@@ -85,3 +86,21 @@ def test_probe_handles_unexpected_version_output(tmp_path: Path) -> None:
     report = probe(str(fake_cli))
     assert report.available is True
     assert report.version_text == "???"
+
+
+def test_probe_keeps_live_decisions_false_without_permission_prompt_tool(
+    monkeypatch,
+) -> None:
+    probe_module = importlib.import_module("aidd.adapters.claude_code.probe")
+    monkeypatch.setattr(probe_module, "discover_command", lambda _: "/tmp/claude")
+    monkeypatch.setattr(probe_module, "discover_version", lambda _: "2.1.85")
+    monkeypatch.setattr(
+        probe_module,
+        "discover_help_text",
+        lambda _: "--permission-mode default --mcp-config",
+    )
+
+    report = probe_module.probe("claude")
+
+    assert report.supports_live_decisions is False
+    assert report.preferred_transport == "subprocess"

@@ -152,7 +152,7 @@ def test_build_native_subprocess_spec_uses_stdin_prompt_without_adapter_flags(
     assert spec.command == (
         "codex",
         "exec",
-        "--full-auto",
+        "--dangerously-bypass-approvals-and-sandbox",
         "--skip-git-repo-check",
         "--json",
         "-",

@@ -86,6 +86,21 @@ A manual installed UI smoke should use a disposable local fixture project:
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`
 state stays local to the fixture project.
 
+## Brokered Approval Proof
+
+For brokered runtime approval proof, keep the project disposable and run the stage
+through the UI surface rather than non-TTY CLI execution:
+
+1. Configure the selected runtime with `permission_policy = "brokered"`,
+   `interaction_mode = "live"`, and `auto_approval_preset = "broad"`.
+2. Start `aidd ui --work-item <id> --root .aidd --host 127.0.0.1 --port <port>`.
+3. Dispatch `/api/stage/run` with an explicit runtime and run id.
+4. Wait for `waiting-for-operator`, inspect
+   `/api/jobs/<id>/operator-requests`, and post a decision to
+   `/api/jobs/<id>/operator-requests/<request_id>/decision`.
+5. Confirm the job resumes to `running` or `completed` and the attempt contains
+   `operator-requests.jsonl`, `operator-decisions.jsonl`, and runtime logs.
+
 ## Source-Install Fixture Smoke
 
 `harness/scenarios/smoke/installed-local-project-fixture.yaml` records the

@@ -74,10 +74,17 @@ operators initialize work items from the target project root with
 uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```
 
+- Brokered live approval proof is opt-in. Add `--brokered-live-approvals` only
+  when the selected runtime has a confirmed live approval transport. In this mode
+  the evaluator writes `permission_policy = "brokered"`, `interaction_mode =
+  "live"`, and `auto_approval_preset = "broad"` for the selected runtime, runs
+  stages through `aidd ui` `/api/stage/run`, auto-approves only broad-safe
+  project-local runtime requests, and preserves `runtime-approval-analysis.md`.
 - Local runs may use optional environment variable overrides for custom wrapper commands:
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`
   - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
+  - `AIDD_EVAL_QWEN_COMMAND` for experimental `qwen`
 - When no override is set, the evaluator validates the default native provider command
   locally before cloning or installing artifacts.
 - Override values must point to locally available wrapper commands that accept the AIDD

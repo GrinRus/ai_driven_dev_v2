@@ -30,6 +30,7 @@ _INDEX_HTML = """<!doctype html>
       <div class="tabs">
         <button data-tab="questions" class="active" type="button">Questions</button>
         <button data-tab="logs" type="button">Logs</button>
+        <button data-tab="approvals" type="button">Approvals</button>
         <button data-tab="artifacts" type="button">Artifacts</button>
         <button data-tab="readiness" type="button">Readiness</button>
       </div>
@@ -174,6 +175,22 @@ pre {
   color: #4d584f;
   font-size: 13px;
   margin-bottom: 8px;
+}
+.approval {
+  border-bottom: 1px solid #e0e5dc;
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+}
+.approval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.approval-actions button {
+  background: #ffffff;
+  border-color: #cdd5c6;
+  color: #1d211c;
 }
 .artifact-layout {
   display: grid;
@@ -512,6 +529,44 @@ async function loadLogs() {
   }
 }
 
+async function loadApprovals() {
+  if (!activeJobId) {
+    document.getElementById("content").textContent = "No active runtime approval job";
+    return;
+  }
+  const view = await api(`/api/jobs/${encodeURIComponent(activeJobId)}/operator-requests`);
+  const requests = view.requests || [];
+  const decisions = Object.fromEntries((view.decisions || []).map((decision) => [decision.request_id, decision]));
+  const pending = new Set(view.pending_request_ids || []);
+  const unapproved = new Set(view.unapproved_request_ids || view.pending_request_ids || []);
+  if (!requests.length) {
+    document.getElementById("content").textContent = "No runtime approval requests";
+    return;
+  }
+  document.getElementById("content").innerHTML = requests.map((request) => {
+    const decision = decisions[request.id];
+    const status = pending.has(request.id) ? "pending" : (decision?.action || "decided");
+    const paths = (request.paths || []).join("\\n");
+    const payload = JSON.stringify(request.payload || {}, null, 2);
+    const actions = unapproved.has(request.id) ? `
+      <div class="approval-actions">
+        <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_once" type="button">Allow once</button>
+        <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="deny" type="button">Deny</button>
+        <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="cancel" type="button">Cancel</button>
+      </div>
+    ` : `<div>Decision: ${escapeHtml(decision?.action || "unknown")} / ${escapeHtml(decision?.source || "unknown")}</div>`;
+    return `
+      <div class="approval">
+        <strong>${escapeHtml(request.kind)} / ${escapeHtml(status)} / ${escapeHtml(request.risk)}</strong>
+        <div>${escapeHtml(request.tool_name || request.runtime_id)} · ${escapeHtml(request.cwd || "")}</div>
+        ${paths ? `<pre>${escapeHtml(paths)}</pre>` : ""}
+        <pre>${escapeHtml(payload)}</pre>
+        ${actions}
+      </div>
+    `;
+  }).join("");
+}
+
 async function loadArtifactDocument(key) {
   const viewer = document.getElementById("artifactViewer");
   if (!viewer) return;
@@ -619,6 +674,9 @@ async function loadReadiness(view = null) {
       <td>${escapeHtml(runtime.command_source)}</td>
       <td><code class="runtime-command">${escapeHtml(runtime.command)}</code></td>
       <td>${escapeHtml(runtime.execution_mode)}</td>
+      <td>${escapeHtml(runtime.permission_policy || "full-access")}</td>
+      <td>${escapeHtml(runtime.interaction_mode || "batch")}</td>
+      <td>${escapeHtml(runtime.auto_approval_preset || "broad")}</td>
       <td>${escapeHtml(runtime.provider_available ? "available" : "unavailable")}</td>
       <td>${escapeHtml(runtime.provider_version || "unknown")}</td>
       <td>${escapeHtml(runtime.provider_command || "unknown")}</td>
@@ -637,6 +695,9 @@ async function loadReadiness(view = null) {
             <th>Source</th>
             <th>Command</th>
             <th>Mode</th>
+            <th>Permissions</th>
+            <th>Interaction</th>
+            <th>Auto approval</th>
             <th>Provider</th>
             <th>Version</th>
             <th>Probe</th>
@@ -659,12 +720,17 @@ async function pollActiveJob() {
     activeJobLogText += (logs.chunks || []).map((chunk) => String(chunk.text || "")).join("");
     activeJobStatus = await api(`/api/jobs/${encodeURIComponent(activeJobId)}`);
     if (activeTab === "logs") renderLiveLogs();
+    if (activeJobStatus.status === "waiting-for-operator") {
+      activateTab("approvals");
+      await loadApprovals();
+    }
     if (activeJobStatus.status !== "running") {
       if (activeJobTimer) clearInterval(activeJobTimer);
       activeJobTimer = null;
       await loadRun();
       await loadStage();
       if (activeTab === "logs") await loadLogs();
+      if (activeTab === "approvals") await loadApprovals();
     }
   } catch (error) {
     activeJobLogText += `[ui] ${error.message}\\n`;
@@ -705,6 +771,7 @@ async function refresh() {
     await loadStage();
     if (activeTab === "questions") await loadQuestions();
     if (activeTab === "logs") await loadLogs();
+    if (activeTab === "approvals") await loadApprovals();
     if (activeTab === "artifacts") await loadArtifacts();
   } catch (error) {
     document.getElementById("content").textContent = error.message;
@@ -738,6 +805,17 @@ document.addEventListener("click", async (event) => {
     return;
   }
   const answerButton = event.target.closest(".answer");
+  const approvalButton = event.target.closest("[data-operator-request][data-operator-action]");
+  if (approvalButton) {
+    await api(`/api/jobs/${encodeURIComponent(activeJobId)}/operator-requests/${encodeURIComponent(approvalButton.dataset.operatorRequest)}/decision`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({action: approvalButton.dataset.operatorAction})
+    });
+    await loadApprovals();
+    return;
+  }
+  if (answerButton) {
   if (answerButton) {
     const questionId = answerButton.dataset.question;
     const textarea = answerButton.closest(".question")?.querySelector("textarea");
