@@ -46,6 +46,7 @@ Examples:
 - `qa-report.md`
 - `questions.md`
 - `answers.md`
+- `operator-request.md`
 - `stage-result.md`
 
 `stage-result.md` is runtime-facing as a draft and workflow-facing as the final stage summary:
@@ -59,6 +60,10 @@ report is the one AIDD writes after validation.
 
 `repair-brief.md` is not runtime-authored. It is AIDD-owned control evidence that runtimes may
 read during repair attempts.
+
+`operator-request.md` is not runtime-authored either. It is AIDD/operator-owned input for
+stage intervention attempts and is stored under
+`workitems/<id>/stages/<stage>/operator-requests/request-000N.md`.
 
 ### System-facing artifacts
 

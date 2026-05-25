@@ -103,6 +103,7 @@ Question/answer document rules:
 
 - `prompt-packs/stages/tasklist/system.md`
 - `prompt-packs/stages/tasklist/run.md`
+- `prompt-packs/stages/tasklist/intervention.md`
 - `prompt-packs/stages/tasklist/repair.md`
 - `prompt-packs/stages/tasklist/interview.md`
 

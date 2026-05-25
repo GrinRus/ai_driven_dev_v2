@@ -43,6 +43,11 @@ Every live E2E run must follow the installed full-flow operator model:
 14. For manual local runs, the launching agent is the operator-agent: it answers
     blocking questions, records answer reasoning, and writes an operator-authored
     quality analysis before a run can be counted as clean.
+15. After at least one completed stage in a manual checkpoint run, the operator may
+    submit one stage-scoped intervention request through CLI or UI. If used, preserve
+    `operator-requests/request-000N.md`, the resulting attempt log, validation result,
+    and a short `operator-intervention-analysis.md` explaining why the request was
+    needed and whether validation accepted the result.
 
 Live E2E is not defined by mutable source-checkout execution from the AIDD repository
 itself, and it is not a merge gate. The source checkout is read only during local-wheel
@@ -90,6 +95,8 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   `live_flow.checkpoint_policy: after-each-step`, and
   `live_flow.frontend_checkpoints: true` so every live run inspects the public
   CLI, UI, and UI/API surfaces after each stage.
+- Manual checkpoint notes should include an operator-intervention checkpoint when
+  the run uses `aidd stage interact` or the UI `Request change` panel.
 
 ## Maintained Repository Set
 
@@ -166,6 +173,8 @@ Every maintained live scenario must:
   and resume after the launching operator-agent writes resolved answers;
 - define authored task `interview` guidance when the scenario is
   `live-full-flow-interview`; other live scenarios may include it as optional context;
+- document manual operator-intervention guidance when the run is expected to exercise
+  a stage-scoped correction after a completed or blocked stage;
 - force full-flow `idea -> qa`;
 - run repo-local verification commands;
 - run repo-local quality commands;
@@ -203,6 +212,8 @@ operator-authored evidence:
 
 - `operator-quality-analysis.md`
 - `answer-analysis.md` when the launching operator-agent answered blocking questions
+- `operator-intervention-analysis.md` when the launching operator-agent submitted an
+  operator intervention request
 
 ## Interview Scenarios
 

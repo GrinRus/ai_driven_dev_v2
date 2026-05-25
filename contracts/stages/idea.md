@@ -99,6 +99,7 @@ Question/answer document rules:
 
 - `prompt-packs/stages/idea/system.md`
 - `prompt-packs/stages/idea/run.md`
+- `prompt-packs/stages/idea/intervention.md`
 - `prompt-packs/stages/idea/repair.md`
 - `prompt-packs/stages/idea/interview.md`
 

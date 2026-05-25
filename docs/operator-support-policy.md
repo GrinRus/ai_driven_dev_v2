@@ -22,6 +22,8 @@ Maintainers currently provide best-effort support for:
 - workspace initialization (`uv run aidd init --work-item <id>`);
 - workflow execution through maintained runtimes (`aidd run`);
 - stage execution support through `aidd stage run` on `generic-cli`, `claude-code`, `codex`, and `opencode`;
+- stage-scoped operator intervention support through `aidd stage interact` and the
+  local UI `Request change` path;
 - manual installed live E2E execution through
   `python -m aidd.harness.live_e2e_black_box` on manifests under `harness/scenarios/live/`;
 - run-inspection commands (`aidd run show`, `aidd run logs`, `aidd run artifacts`);

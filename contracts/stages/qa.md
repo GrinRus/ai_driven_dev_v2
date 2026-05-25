@@ -122,6 +122,7 @@ Question/answer document rules:
 
 - `prompt-packs/stages/qa/system.md`
 - `prompt-packs/stages/qa/run.md`
+- `prompt-packs/stages/qa/intervention.md`
 - `prompt-packs/stages/qa/repair.md`
 - `prompt-packs/stages/qa/interview.md`
 

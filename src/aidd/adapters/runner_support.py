@@ -45,8 +45,10 @@ def validate_stage_command_context(
     prompt_pack_path: Path | None = None,
     prompt_pack_paths: tuple[Path, ...] | None = None,
     attempt_number: int | None = None,
+    attempt_mode: str | None = None,
     input_bundle_path: Path | None = None,
     repair_brief_path: Path | None = None,
+    operator_request_path: Path | None = None,
 ) -> None:
     if not stage.strip():
         raise ValueError("Stage context requires a non-empty stage id.")
@@ -67,10 +69,14 @@ def validate_stage_command_context(
             raise ValueError("Stage context prompt-pack paths must not be empty.")
     if attempt_number is not None and attempt_number < 1:
         raise ValueError("Stage context attempt number must be greater than zero.")
+    if attempt_mode is not None and not attempt_mode.strip():
+        raise ValueError("Stage context attempt mode must not be empty.")
     if input_bundle_path is not None and str(input_bundle_path).strip() == "":
         raise ValueError("Stage context input bundle path must not be empty.")
     if repair_brief_path is not None and str(repair_brief_path).strip() == "":
         raise ValueError("Stage context repair brief path must not be empty.")
+    if operator_request_path is not None and str(operator_request_path).strip() == "":
+        raise ValueError("Stage context operator request path must not be empty.")
 
 
 def resolve_exit_classification[ExitClassificationT: StrEnum](
@@ -99,9 +105,11 @@ def build_aidd_execution_environment(
     prompt_pack_path: Path | None = None,
     prompt_pack_paths: tuple[Path, ...] = (),
     attempt_number: int | None = None,
+    attempt_mode: str | None = None,
     repair_mode: bool | None = None,
     input_bundle_path: Path | None = None,
     repair_brief_path: Path | None = None,
+    operator_request_path: Path | None = None,
 ) -> dict[str, str]:
     env = dict(base_env or {})
     env.update(
@@ -123,12 +131,18 @@ def build_aidd_execution_environment(
         )
     if attempt_number is not None:
         env["AIDD_ATTEMPT_NUMBER"] = str(attempt_number)
+    if attempt_mode is not None:
+        env["AIDD_ATTEMPT_MODE"] = attempt_mode
     if repair_mode is not None:
         env["AIDD_REPAIR_MODE"] = "true" if repair_mode else "false"
     if input_bundle_path is not None:
         env["AIDD_INPUT_BUNDLE_PATH"] = input_bundle_path.resolve(strict=False).as_posix()
     if repair_brief_path is not None:
         env["AIDD_REPAIR_BRIEF_PATH"] = repair_brief_path.resolve(strict=False).as_posix()
+    if operator_request_path is not None:
+        env["AIDD_OPERATOR_REQUEST_PATH"] = (
+            operator_request_path.resolve(strict=False).as_posix()
+        )
     return env
 
 

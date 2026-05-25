@@ -59,9 +59,12 @@ def build_native_prompt_text(
     repository_root: Path | None,
     attempt_number: int,
     repair_mode: bool,
+    attempt_mode: str | None = None,
     input_bundle_path: Path | None = None,
     repair_brief_path: Path | None = None,
     repair_context_markdown: str | None = None,
+    operator_request_path: Path | None = None,
+    operator_request_markdown: str | None = None,
 ) -> str:
     if attempt_number < 1:
         raise ValueError("Native prompt attempt_number must be greater than zero.")
@@ -85,7 +88,12 @@ def build_native_prompt_text(
         if repair_brief_path is not None
         else None
     )
-    mode_label = "repair" if repair_mode else "initial"
+    resolved_operator_request_path = (
+        _resolve_workspace_path(path=operator_request_path, workspace_root=resolved_workspace_root)
+        if operator_request_path is not None
+        else None
+    )
+    mode_label = attempt_mode or ("repair" if repair_mode else "initial")
 
     lines: list[str] = [
         "# AIDD stage runtime request",
@@ -103,6 +111,8 @@ def build_native_prompt_text(
         lines.append(f"- Input bundle: {resolved_input_bundle_path.as_posix()}")
     if resolved_repair_brief_path is not None:
         lines.append(f"- Repair brief: {resolved_repair_brief_path.as_posix()}")
+    if resolved_operator_request_path is not None:
+        lines.append(f"- Operator request: {resolved_operator_request_path.as_posix()}")
 
     lines.extend(
         (
@@ -130,6 +140,18 @@ def build_native_prompt_text(
                 repair_context_markdown.strip(),
             )
         )
+    if (
+        resolved_operator_request_path is not None
+        or operator_request_markdown is not None and operator_request_markdown.strip()
+    ):
+        lines.extend(("", "## Operator request context", ""))
+        if resolved_operator_request_path is not None:
+            lines.append(f"Source: `{resolved_operator_request_path.as_posix()}`")
+            lines.append("")
+        if operator_request_markdown is not None and operator_request_markdown.strip():
+            lines.append(operator_request_markdown.strip())
+        elif resolved_operator_request_path is not None:
+            lines.append(_read_text_for_prompt(resolved_operator_request_path).rstrip())
     for prompt_pack_path in resolved_prompt_pack_paths:
         lines.extend(
             (
@@ -154,6 +176,10 @@ def build_native_prompt_text(
             "",
             "`repair-brief.md` is AIDD-owned read-only repair control evidence. "
             "Read it when present, but do not rewrite it.",
+            "",
+            "During intervention attempts, treat the operator request as durable input. "
+            "Apply only the requested stage-scoped delta, preserve valid existing sections, "
+            "and record the outcome truthfully in `stage-result.md`.",
             "",
             "Treat any existing model-authored `validator-report.md` as draft. "
             "AIDD post-runtime validation is the final truth source.",

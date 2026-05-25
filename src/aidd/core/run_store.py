@@ -325,6 +325,15 @@ def _canonical_stage_documents(
             workspace_root=workspace_root,
             path=stage_documents_root / filename,
         )
+    operator_requests_root = stage_documents_root / "operator-requests"
+    if operator_requests_root.exists():
+        operator_requests = sorted(operator_requests_root.glob("request-*.md"))
+        if operator_requests:
+            latest_operator_request = operator_requests[-1]
+            documents["operator_request"] = _workspace_relative_canonical_path(
+                workspace_root=workspace_root,
+                path=latest_operator_request,
+            )
     project_set_context = (
         work_item_context_root(root=workspace_root, work_item=work_item) / "project-set.md"
     )
