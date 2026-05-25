@@ -82,6 +82,7 @@ def _write_fake_aidd(
     block_stage: str | None = None,
     ui_operator_request_stage: str | None = None,
     ui_operator_request_command: str = "pwd",
+    internal_operator_decision_stage: str | None = None,
     inspect_block_stage: str | None = None,
     inspect_fail_command: str | None = None,
     log_blocking_text: bool = False,
@@ -100,6 +101,7 @@ FAIL_STAGE = {fail_stage!r}
 BLOCK_STAGE = {block_stage!r}
 UI_OPERATOR_REQUEST_STAGE = {ui_operator_request_stage!r}
 UI_OPERATOR_REQUEST_COMMAND = {ui_operator_request_command!r}
+INTERNAL_OPERATOR_DECISION_STAGE = {internal_operator_decision_stage!r}
 INSPECT_BLOCK_STAGE = {inspect_block_stage!r}
 INSPECT_FAIL_COMMAND = {inspect_fail_command!r}
 LOG_BLOCKING_TEXT = {log_blocking_text!r}
@@ -165,6 +167,30 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
     (attempt_root / "events.jsonl").write_text(
         json.dumps({{"event": "stage_completed", "stage": stage}}) + "\\n"
     )
+    if stage == INTERNAL_OPERATOR_DECISION_STAGE:
+        request_id = f"auto-{{stage}}"
+        request = {{
+            "id": request_id,
+            "runtime_id": "codex",
+            "stage": stage,
+            "kind": "shell",
+            "tool_name": "shell",
+            "payload": {{"command": "pytest -q"}},
+            "cwd": Path.cwd().as_posix(),
+            "paths": [],
+            "risk": "medium",
+            "suggestions": ["allow_once", "allow_for_session", "deny", "cancel"],
+            "created_at_utc": "2026-05-25T00:00:00Z",
+        }}
+        decision = {{
+            "request_id": request_id,
+            "action": "allow_once",
+            "source": "policy",
+            "reason": "auto-approved broad preset project-local shell request",
+            "created_at_utc": "2026-05-25T00:00:01Z",
+        }}
+        (attempt_root / "operator-requests.jsonl").write_text(json.dumps(request) + "\\n")
+        (attempt_root / "operator-decisions.jsonl").write_text(json.dumps(decision) + "\\n")
 
 
 def write_failed_stage_artifacts(stage: str, work_item: str) -> None:
@@ -606,6 +632,7 @@ def _prepare_live_test(
     block_stage: str | None = None,
     ui_operator_request_stage: str | None = None,
     ui_operator_request_command: str = "pwd",
+    internal_operator_decision_stage: str | None = None,
     setup_commands: tuple[str, ...] = ("printf 'setup\\n' > setup.log",),
     quality_commands: tuple[str, ...] = ("printf 'quality\\n' > quality.log",),
     interview_required: bool = False,
@@ -629,6 +656,7 @@ def _prepare_live_test(
         block_stage=block_stage,
         ui_operator_request_stage=ui_operator_request_stage,
         ui_operator_request_command=ui_operator_request_command,
+        internal_operator_decision_stage=internal_operator_decision_stage,
         inspect_block_stage=inspect_block_stage,
         inspect_fail_command=inspect_fail_command,
         log_blocking_text=log_blocking_text,
@@ -834,7 +862,38 @@ def test_black_box_live_e2e_brokered_live_auto_approves_aidd_workspace_shell(
         encoding="utf-8"
     )
     assert "allow_once" in approval_analysis
-    assert "bounded AIDD workspace shell" in approval_analysis
+    assert "project-local shell" in approval_analysis
+
+
+def test_black_box_live_e2e_aggregates_broker_operator_ledgers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        runtime_targets=("codex",),
+        internal_operator_decision_stage="idea",
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="codex",
+        work_root=work_root,
+        report_root=report_root,
+        brokered_live_approvals=True,
+    )
+
+    assert result.status == "pass"
+    approval_analysis = (result.bundle_root / "runtime-approval-analysis.md").read_text(
+        encoding="utf-8"
+    )
+    assert "auto-idea" in approval_analysis
+    assert "allow_once" in approval_analysis
+    assert "auto-approved broad preset project-local shell request" in approval_analysis
+    assert (result.bundle_root / "operator-requests.jsonl").exists()
+    assert (result.bundle_root / "operator-decisions.jsonl").exists()
 
 
 def test_black_box_live_e2e_brokered_live_blocks_for_non_safe_runtime_request(
@@ -915,6 +974,7 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
         runtime_id="opencode",
         work_root=work_root,
         report_root=report_root,
+        run_id=first.run_id,
     )
 
     assert resumed.status == "pass"
@@ -943,6 +1003,69 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     assert "- none" in (resumed.bundle_root / "validator-report.md").read_text(
         encoding="utf-8"
     )
+
+
+def test_black_box_live_e2e_does_not_resume_blocked_run_without_run_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        block_stage="idea",
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+
+    first = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+    second = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert first.status == "blocked"
+    assert second.status == "blocked"
+    assert second.run_id != first.run_id
+    assert second.bundle_root != first.bundle_root
+
+
+def test_black_box_live_e2e_adds_suffix_when_generated_run_id_exists(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        quality_commands=("command -v fake-aidd >/dev/null",),
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box.derive_run_id",
+        lambda *, scenario_id, runtime_id: "fixed-live-run",
+    )
+
+    first = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+    second = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert first.run_id == "fixed-live-run"
+    assert second.run_id == "fixed-live-run-r2"
+    assert first.status == "pass"
+    assert second.status == "pass"
 
 
 def test_black_box_live_e2e_fails_required_interview_without_blocked_resume(
@@ -1013,6 +1136,7 @@ def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
         runtime_id="opencode",
         work_root=work_root,
         report_root=report_root,
+        run_id=first.run_id,
     )
 
     assert resumed.status == "pass"
@@ -1060,6 +1184,7 @@ def test_black_box_live_e2e_reports_first_unresolved_signal_after_resolved_block
         runtime_id="opencode",
         work_root=work_root,
         report_root=report_root,
+        run_id=first.run_id,
     )
 
     assert resumed.status == "fail"

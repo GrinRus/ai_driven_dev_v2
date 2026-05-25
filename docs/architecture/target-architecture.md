@@ -509,6 +509,9 @@ writes so live runtimes can produce stage documents and evidence without a
 human decision for every artifact write. The policy still protects `.aidd`
 secrets/auth/config paths, provider credentials, operator approval ledgers,
 AIDD-owned repair control files, file deletes, and destructive shell commands.
+The same `broad` policy can auto-approve local inspection and verification
+shell commands from declared project roots, while package, network, git remote,
+publish, destructive, and external-path operations remain guarded.
 
 If a runtime adapter cannot enforce a non-full policy with its current transport, it must
 return `blocked_for_operator` and leave validation unstarted. Qwen dual-file control and

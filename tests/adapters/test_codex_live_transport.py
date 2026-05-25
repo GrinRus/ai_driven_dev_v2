@@ -133,11 +133,25 @@ def _fake_codex(tmp_path: Path, *, scenario: str = "command") -> Path:
         "'grantRoot': msg['params']['cwd'] + '/src', "
         "'changes': [{'path': 'src/app.py'}]}})\n"
         "            continue\n"
+        "        if scenario == 'file_permissions_cached':\n"
+        "            emit({'method': 'item/started', 'params': {'item': {'id': "
+        "'file-item', 'type': 'fileChange', 'changes': [{'path': "
+        "msg['params']['cwd'] + '/.aidd/workitems/WI-CODEX/stages/implement/"
+        "stage-result.md'}]}}})\n"
+        "            emit({'id': 'file-approval', 'method': "
+        "'item/fileChange/requestApproval', 'params': {'approvalId': "
+        "'file-approval', 'itemId': 'file-item', 'cwd': msg['params']['cwd'], "
+        "'grantRoot': None}})\n"
+        "            continue\n"
         "        emit({'id': 'approval-1', 'method': 'item/commandExecution/requestApproval', "
         "'params': {'approvalId': 'approval-1', 'itemId': 'item-1', "
         "'threadId': thread_id, 'turnId': 'turn-1', 'startedAtMs': 1, "
         "'cwd': msg['params']['cwd'], 'command': 'npm install'}})\n"
         "    elif msg.get('id') == 'file-approval':\n"
+        "        if scenario == 'file_permissions_cached':\n"
+        "            emit({'method': 'turn/completed', 'params': {'threadId': thread_id, "
+        "'turn': {'id': 'turn-1'}}})\n"
+        "            raise SystemExit(0)\n"
         "        emit({'id': 'perm-approval', 'method': "
         "'item/permissions/requestApproval', 'params': {'approvalId': "
         "'perm-approval', 'itemId': 'perm-item', 'cwd': msg.get('params', {}).get('cwd'), "
@@ -301,3 +315,35 @@ def test_codex_live_transport_handles_file_and_permissions_requests(
         "scope": "session",
         "strictAutoReview": True,
     }
+
+
+def test_codex_live_transport_enriches_file_change_from_cached_item(
+    tmp_path: Path,
+) -> None:
+    fake_codex = _fake_codex(tmp_path, scenario="file_permissions_cached")
+    provider = _NoDecisionProvider()
+    attempt_path = tmp_path / "attempt"
+
+    result = get_runtime_adapter_surface("codex").execute_stage_request(
+        configured_command=f"{fake_codex} exec --json -",
+        request=_request(tmp_path),
+        attempt_path=attempt_path,
+        base_env={},
+        operator_decision_provider=provider,
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.SUCCEEDED
+    requests = load_operator_requests(attempt_path / "operator-requests.jsonl")
+    assert len(requests) == 1
+    assert requests[0].kind is RuntimeOperatorRequestKind.FILE_EDIT
+    assert requests[0].paths == (
+        tmp_path
+        / "repo"
+        / ".aidd"
+        / "workitems"
+        / "WI-CODEX"
+        / "stages"
+        / "implement"
+        / "stage-result.md",
+    )
+    assert provider.requests == []

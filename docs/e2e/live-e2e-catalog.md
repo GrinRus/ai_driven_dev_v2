@@ -84,6 +84,11 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   paths, release/publish/git push commands, `.aidd` secrets/provider config,
   operator approval ledgers, file deletes, and destructive shell stay blocked
   for operator action evidence.
+- When `--run-id` is omitted, the evaluator creates a fresh evidence bundle and
+  does not resume a previously blocked run. Resume blocked evidence only by
+  passing that exact `--run-id`. If the generated run id already exists, the
+  evaluator appends `-r2`, `-r3`, and so on instead of appending to the old
+  bundle.
 - Local runs may use optional environment variable overrides for custom wrapper commands:
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`

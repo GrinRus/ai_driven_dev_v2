@@ -73,6 +73,7 @@ class _JsonRpcLineClient:
         self._messages: queue.Queue[Mapping[str, Any]] = queue.Queue()
         self._stdout_lines: list[str] = []
         self._stderr_lines: list[str] = []
+        self._item_cache: dict[str, dict[str, Any]] = {}
         self._threads: list[threading.Thread] = []
         self._next_id = 1
 
@@ -87,6 +88,12 @@ class _JsonRpcLineClient:
     @property
     def runtime_log_text(self) -> str:
         return self.stdout_text + self.stderr_text
+
+    def cached_item(self, item_id: object) -> Mapping[str, Any] | None:
+        normalized_item_id = str(item_id or "").strip()
+        if not normalized_item_id:
+            return None
+        return self._item_cache.get(normalized_item_id)
 
     def start(self) -> None:
         if self.process.stdout is not None:
@@ -143,6 +150,7 @@ class _JsonRpcLineClient:
                         self.transcript_path,
                         {"direction": "server", "payload": dict(message)},
                     )
+                    self._remember_item(message)
                     self._messages.put(message)
         finally:
             self.process.stdout.close()
@@ -156,6 +164,24 @@ class _JsonRpcLineClient:
                     self._on_stderr(line)
         finally:
             self.process.stderr.close()
+
+    def _remember_item(self, message: Mapping[str, Any]) -> None:
+        method = str(message.get("method") or "")
+        if method not in {"item/started", "item/updated", "item/completed"}:
+            return
+        raw_params = message.get("params")
+        if not isinstance(raw_params, Mapping):
+            return
+        raw_item = raw_params.get("item")
+        if not isinstance(raw_item, Mapping):
+            return
+        raw_item_id = raw_item.get("id")
+        item_id = str(raw_item_id or "").strip()
+        if not item_id:
+            return
+        cached = dict(self._item_cache.get(item_id, {}))
+        cached.update(dict(raw_item))
+        self._item_cache[item_id] = cached
 
 
 def codex_live_transport_available(configured_command: str) -> bool:
@@ -422,9 +448,13 @@ def _handle_approval_request(
     raw_params = message.get("params")
     params = dict(raw_params) if isinstance(raw_params, Mapping) else {}
     cwd = Path(str(params.get("cwd"))) if params.get("cwd") is not None else repository_root
+    enriched_params = _enrich_approval_params_from_cached_item(
+        params=params,
+        cached_item=client.cached_item(params.get("itemId") or params.get("item_id")),
+    )
     operator_request = codex_approval_request_to_operator_request(
         method=method,
-        payload=params,
+        payload=enriched_params,
         runtime_id="codex",
         stage=context.stage,
         cwd=cwd,
@@ -440,12 +470,36 @@ def _handle_approval_request(
         _codex_jsonrpc_approval_result(
             method=method,
             decision=decision,
-            params=params,
+            params=enriched_params,
         ),
     )
     if not decision.is_approval:
         return None, f"permission-denied: {decision.action.value}"
     return None, None
+
+
+def _enrich_approval_params_from_cached_item(
+    *,
+    params: Mapping[str, Any],
+    cached_item: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    enriched = dict(params)
+    if cached_item is None:
+        return enriched
+    for key in (
+        "changes",
+        "command",
+        "commandActions",
+        "file",
+        "files",
+        "modifiedFiles",
+        "patches",
+        "path",
+        "paths",
+    ):
+        if key not in enriched and key in cached_item:
+            enriched[key] = cached_item[key]
+    return enriched
 
 
 def _codex_jsonrpc_approval_result(

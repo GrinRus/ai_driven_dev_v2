@@ -59,6 +59,14 @@ operator ledgers (`operator-requests.jsonl`, `operator-decisions.jsonl`),
 AIDD-owned repair control files such as `repair-brief.md`, file deletes, and
 destructive shell actions.
 
+The same broad preset can auto-approve project-local shell work when the
+request runs inside a declared project root and does not contain guard markers.
+This covers local inspection and verification commands such as `git status`,
+`.venv/bin/python`, `python -m pytest`, `pytest`, and `uv run pytest`.
+Package installs or updates, network URLs, `curl`/`wget`, git network or publish
+commands, release/publish commands, destructive filesystem commands, and paths
+outside the declared roots still require an operator or are denied.
+
 Provider adapters use their existing subprocess execution for `full-access`,
 `batch`, and `evented` stage runs. In `brokered`/non-full `live` mode, AIDD only
 launches a provider when the adapter has a confirmed live approval transport and a

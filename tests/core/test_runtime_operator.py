@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 from aidd.core.runtime_operator import (
@@ -377,6 +378,67 @@ def test_broad_policy_does_not_auto_approve_external_shell_paths_or_network(
         )
 
         assert policy.evaluate(request) is None
+
+
+def test_broad_policy_auto_allows_guarded_project_local_shell(
+    tmp_path: Path,
+) -> None:
+    policy = _policy(tmp_path)
+    project_root = policy.project_roots[0]
+    venv_bin = project_root / ".venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    (venv_bin / "python").symlink_to(Path(sys.executable))
+
+    for command in (
+        "git status --short && PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'\n"
+        "print('ok')\n"
+        "PY",
+        ".venv/bin/python scripts/check.py",
+        "python -m pytest tests/test_cli.py",
+        "pytest -q",
+        "uv run pytest -q",
+    ):
+        request = RuntimeOperatorRequest.create(
+            runtime_id="generic-cli",
+            stage="qa",
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": command},
+            cwd=project_root,
+        )
+
+        decision = policy.evaluate(request)
+
+        assert decision is not None
+        assert decision.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
+        assert decision.reason == "auto-approved broad preset project-local shell request"
+
+
+def test_broad_policy_keeps_project_local_shell_guards(
+    tmp_path: Path,
+) -> None:
+    policy = _policy(tmp_path)
+    project_root = policy.project_roots[0]
+
+    for command in (
+        "python scripts/check.py https://example.com",
+        "/bin/zsh -lc 'curl https://example.com'",
+        "/bin/zsh -lc 'npm install'",
+        "/bin/zsh -lc 'git fetch origin'",
+        "/bin/zsh -lc 'rm .aidd/workitems/WI-001/stages/idea/old.md'",
+        "/bin/zsh -lc 'python /tmp/check.py'",
+        "/bin/zsh -lc 'ls ../outside'",
+    ):
+        request = RuntimeOperatorRequest.create(
+            runtime_id="generic-cli",
+            stage="qa",
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": command},
+            cwd=project_root,
+        )
+
+        assert policy.evaluate(request) is None or (
+            policy.evaluate(request).action is RuntimeOperatorDecisionAction.DENY
+        )
 
 
 def test_policy_denies_shell_path_traversal_outside_project_root(tmp_path: Path) -> None:

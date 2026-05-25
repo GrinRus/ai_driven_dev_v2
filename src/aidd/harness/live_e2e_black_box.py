@@ -18,7 +18,12 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from aidd.core.markdown import MarkdownSectionIndex
-from aidd.core.runtime_operator import RuntimeOperatorPolicy, RuntimeOperatorRequest
+from aidd.core.runtime_operator import (
+    OPERATOR_DECISIONS_FILENAME,
+    OPERATOR_REQUESTS_FILENAME,
+    RuntimeOperatorPolicy,
+    RuntimeOperatorRequest,
+)
 from aidd.core.stages import STAGES
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.evals.quality import (
@@ -239,6 +244,22 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"Expected JSON object in {path.as_posix()}.")
     return payload
+
+
+def _read_jsonl_objects(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    objects: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            objects.append(payload)
+    return objects
 
 
 def _command_transcript_payload(transcript: HarnessCommandTranscript) -> dict[str, object]:
@@ -728,6 +749,8 @@ def _find_resume_state(
             continue
         if payload.get("runtime_id") != runtime_id:
             continue
+        if payload.get("status") in {"blocked", "fail", "infra-fail", "pass"}:
+            continue
         if payload.get("status") not in NON_TERMINAL_STATUSES:
             continue
         candidates.append(state_path)
@@ -743,11 +766,25 @@ def _find_resume_state(
     return candidates[0]
 
 
-def _new_run_id(*, scenario_id: str, runtime_id: str, run_id: str | None) -> str:
+def _new_run_id(
+    *,
+    scenario_id: str,
+    runtime_id: str,
+    report_root: Path,
+    run_id: str | None,
+) -> str:
     normalized_run_id = run_id.strip() if run_id is not None else None
     if normalized_run_id == "":
         raise ValueError("run_id must be non-empty when provided.")
-    return normalized_run_id or derive_run_id(scenario_id=scenario_id, runtime_id=runtime_id)
+    if normalized_run_id is not None:
+        return normalized_run_id
+    candidate = derive_run_id(scenario_id=scenario_id, runtime_id=runtime_id)
+    if not (report_root / candidate).exists():
+        return candidate
+    suffix = 2
+    while (report_root / f"{candidate}-r{suffix}").exists():
+        suffix += 1
+    return f"{candidate}-r{suffix}"
 
 
 def _feature_selection_payload(
@@ -843,6 +880,7 @@ def _initial_context(
     resolved_run_id = _new_run_id(
         scenario_id=scenario.scenario_id,
         runtime_id=runtime_id,
+        report_root=report_root,
         run_id=run_id,
     )
     layout = ensure_result_bundle_layout_at_report_root(
@@ -2145,6 +2183,110 @@ def _runtime_approval_analysis_path(ctx: FlowContext) -> Path:
     return ctx.bundle_root / RUNTIME_APPROVAL_ANALYSIS_FILENAME
 
 
+def _format_runtime_approval_request_lines(
+    request: RuntimeOperatorRequest | None,
+) -> tuple[str, ...]:
+    if request is None:
+        return (
+            "- Kind: `unknown`",
+            "- Tool: ``",
+            "- CWD: ``",
+            "- Paths: `none`",
+        )
+    return (
+        f"- Kind: `{request.kind.value}`",
+        f"- Tool: `{request.tool_name or ''}`",
+        f"- CWD: `{'' if request.cwd is None else request.cwd.as_posix()}`",
+        "- Paths: "
+        + (
+            "`none`"
+            if not request.paths
+            else ", ".join(f"`{path.as_posix()}`" for path in request.paths)
+        ),
+    )
+
+
+def _write_runtime_approval_analysis_from_attempt_ledgers(ctx: FlowContext) -> Path | None:
+    if ctx.prepared_working_copy is None:
+        return None
+    run_root = (
+        ctx.prepared_working_copy.working_copy_path
+        / ".aidd"
+        / "reports"
+        / "runs"
+        / ctx.work_item
+        / ctx.run_id
+    )
+    if not run_root.exists():
+        return None
+
+    sections: list[str] = []
+    decision_paths = sorted(
+        run_root.glob(f"stages/*/attempts/attempt-*/{OPERATOR_DECISIONS_FILENAME}")
+    )
+    for decision_path in decision_paths:
+        decisions = _read_jsonl_objects(decision_path)
+        if not decisions:
+            continue
+        request_path = decision_path.with_name(OPERATOR_REQUESTS_FILENAME)
+        requests_by_id: dict[str, RuntimeOperatorRequest] = {}
+        for raw_request in _read_jsonl_objects(request_path):
+            raw_request_id = raw_request.get("id")
+            if not isinstance(raw_request_id, str) or not raw_request_id:
+                continue
+            try:
+                requests_by_id[raw_request_id] = RuntimeOperatorRequest.from_dict(raw_request)
+            except (KeyError, TypeError, ValueError):
+                continue
+
+        try:
+            relative = decision_path.relative_to(run_root)
+            stage = relative.parts[1]
+            attempt = relative.parts[3]
+        except (ValueError, IndexError):
+            stage = "unknown"
+            attempt = decision_path.parent.name
+
+        for raw_decision in decisions:
+            request_id = str(raw_decision.get("request_id") or "unknown")
+            request = requests_by_id.get(request_id)
+            action = str(raw_decision.get("action") or "unknown")
+            source = str(raw_decision.get("source") or "unknown")
+            reason = str(raw_decision.get("reason") or "")
+            sections.extend(
+                (
+                    f"## {stage} / {attempt} / {request_id}",
+                    "",
+                    *_format_runtime_approval_request_lines(request),
+                    f"- Decision: `{action}`",
+                    f"- Source: `{source}`",
+                    f"- Reason: {reason}",
+                    "",
+                )
+            )
+
+    if not sections:
+        return None
+
+    path = _runtime_approval_analysis_path(ctx)
+    path.write_text(
+        "\n".join(
+            (
+                "# Runtime Approval Analysis",
+                "",
+                f"- Scenario: `{ctx.scenario.scenario_id}`",
+                f"- Runtime: `{ctx.runtime_id}`",
+                f"- Run ID: `{ctx.run_id}`",
+                f"- Brokered live approvals: `{ctx.brokered_live_approvals}`",
+                "",
+                *sections,
+            )
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def _append_runtime_approval_analysis(
     *,
     ctx: FlowContext,
@@ -2177,15 +2319,7 @@ def _append_runtime_approval_analysis(
                     f"## {stage} / {request.id}",
                     "",
                     f"- Job: `{job_id}`",
-                    f"- Kind: `{request.kind.value}`",
-                    f"- Tool: `{request.tool_name or ''}`",
-                    f"- CWD: `{'' if request.cwd is None else request.cwd.as_posix()}`",
-                    "- Paths: "
-                    + (
-                        "`none`"
-                        if not request.paths
-                        else ", ".join(f"`{path.as_posix()}`" for path in request.paths)
-                    ),
+                    *_format_runtime_approval_request_lines(request),
                     "- Decision: "
                     f"`{decision.value if decision is not None else 'operator-required'}`",
                     f"- Reason: {reason}",
@@ -2359,7 +2493,7 @@ def _handle_ui_operator_requests(
         if auto_decision is None:
             reason = (
                 "runtime operator request needs manual approval; live E2E only "
-                "auto-allows broad-safe project-local requests"
+                "auto-allows broad-safe project-local and AIDD workspace requests"
             )
             analysis_path = _append_runtime_approval_analysis(
                 ctx=ctx,
@@ -2952,8 +3086,13 @@ def _copy_attempt_jsonl_artifacts(
     runs_root = working_copy / ".aidd" / "reports" / "runs" / ctx.work_item
     if not runs_root.exists():
         return None
+    search_root = runs_root / ctx.run_id
+    glob_pattern = f"stages/*/attempts/attempt-*/{filename}"
+    if not search_root.exists():
+        search_root = runs_root
+        glob_pattern = f"*/stages/*/attempts/attempt-*/{filename}"
     lines: list[str] = []
-    for source_path in sorted(runs_root.glob(f"*/stages/*/attempts/attempt-*/{filename}")):
+    for source_path in sorted(search_root.glob(glob_pattern)):
         text = source_path.read_text(encoding="utf-8", errors="replace").strip()
         if text:
             lines.extend(text.splitlines())
@@ -3225,6 +3364,8 @@ def _write_frontend_checkpoint_placeholders(ctx: FlowContext) -> None:
 def _write_runtime_approval_analysis_placeholder(ctx: FlowContext) -> None:
     path = _runtime_approval_analysis_path(ctx)
     if path.exists():
+        return
+    if _write_runtime_approval_analysis_from_attempt_ledgers(ctx) is not None:
         return
     path.write_text(
         "\n".join(
@@ -3510,6 +3651,16 @@ def _finalize_reports(
         ctx=ctx,
         filename=EVENTS_JSONL_FILENAME,
         destination=ctx.bundle_root / EVENTS_JSONL_FILENAME,
+    )
+    _copy_attempt_jsonl_artifacts(
+        ctx=ctx,
+        filename=OPERATOR_REQUESTS_FILENAME,
+        destination=ctx.bundle_root / OPERATOR_REQUESTS_FILENAME,
+    )
+    _copy_attempt_jsonl_artifacts(
+        ctx=ctx,
+        filename=OPERATOR_DECISIONS_FILENAME,
+        destination=ctx.bundle_root / OPERATOR_DECISIONS_FILENAME,
     )
     _write_validator_report_from_steps(ctx=ctx, status=status, summary=summary)
     _write_log_analysis(ctx=ctx, status=status, first_failure_note=first_failure_note)

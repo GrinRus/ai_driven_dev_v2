@@ -165,6 +165,14 @@ tokens, provider auth/config files, approval ledgers
 files such as `repair-brief.md`, file deletes, network/package/publish/git push
 actions, or destructive shell commands.
 
+The same broad preset can approve project-local shell verification when the
+runtime request runs inside a declared project root and does not include an
+unsafe marker. Typical local inspect/test commands such as `git status`,
+`.venv/bin/python`, `python -m pytest`, `pytest`, and `uv run pytest` can
+proceed without a manual approval. Commands that install packages, access
+network URLs, mutate git history or remotes, publish releases, delete files, or
+reference paths outside the declared roots remain operator-gated or denied.
+
 Current config fields consumed by the CLI:
 
 - `workspace.root`

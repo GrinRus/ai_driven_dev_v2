@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shlex
 from collections.abc import Iterable, Mapping
@@ -395,6 +396,21 @@ class RuntimeOperatorPolicy:
                 action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
                 reason="auto-approved broad preset bounded AIDD workspace shell request",
             )
+        if (
+            self.permission_policy is not RuntimePermissionPolicy.PLAN
+            and self.auto_approval_preset is AutoApprovalPreset.BROAD
+            and _is_broad_project_local_shell(
+                command=command,
+                cwd=request.cwd,
+                project_roots=self._resolved_project_roots(),
+                workspace_root=self.workspace_root.resolve(strict=False),
+            )
+        ):
+            return _decision(
+                request=request,
+                action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+                reason="auto-approved broad preset project-local shell request",
+            )
         if _shell_references_external_path(
             command=command,
             cwd=request.cwd,
@@ -565,8 +581,11 @@ def _requires_operator_for_shell(command: str) -> bool:
     tokens = _shell_tokens(command)
     if not tokens:
         return False
+    guard_text = _shell_guard_text(command)
     executable = Path(tokens[0]).name
     if _contains_url(tokens):
+        return True
+    if _contains_operator_required_shell_action(guard_text):
         return True
     if executable in _NETWORK_COMMANDS:
         return True
@@ -579,6 +598,24 @@ def _requires_operator_for_shell(command: str) -> bool:
     if executable in _PACKAGE_MANAGERS:
         return _package_command_requires_operator(executable=executable, tokens=tokens)
     return any(token in {"release", "publish"} for token in tokens[1:])
+
+
+def _contains_operator_required_shell_action(command: str) -> bool:
+    return any(
+        re.search(pattern, command)
+        for pattern in (
+            r"(?<![\w])https?://",
+            r"(?<![\w./-])(curl|wget)(?![\w.-])",
+            r"(?<![\w./-])(npm|pnpm|yarn)\s+(install|add|update|upgrade)\b",
+            r"(?<![\w./-])(pip|pip3|pipx)\s+(install|upgrade)\b",
+            r"(?<![\w./-])uv\s+(add|remove|pip)\b",
+            r"(?<![\w./-])cargo\s+(add|install|update)\b",
+            r"(?<![\w./-])go\s+(get|install)\b",
+            r"(?<![\w./-])bundle\s+(add|install|update)\b",
+            r"(?<![\w./-])git\s+(clone|fetch|pull|push|commit|tag)\b",
+            r"(?<![\w./-])(release|publish|twine)(?![\w.-])",
+        )
+    )
 
 
 def _package_command_requires_operator(*, executable: str, tokens: tuple[str, ...]) -> bool:
@@ -715,6 +752,25 @@ def _is_bounded_aidd_workspace_shell(
     )
 
 
+def _is_broad_project_local_shell(
+    *,
+    command: str,
+    cwd: Path | None,
+    project_roots: tuple[Path, ...],
+    workspace_root: Path,
+) -> bool:
+    if cwd is None or not _is_relative_to_any(cwd.resolve(strict=False), project_roots):
+        return False
+    if _shell_contains_delete_or_permission_command(command):
+        return False
+    explicit_paths = _explicit_shell_paths(command=command, cwd=cwd)
+    allowed_roots = (*project_roots, workspace_root)
+    return all(
+        _is_relative_to_any(path, allowed_roots) and not _is_protected_path(path)
+        for path in explicit_paths
+    )
+
+
 def _is_aidd_workspace_shell_path(
     *,
     path: Path,
@@ -736,11 +792,12 @@ def _command_mentions_aidd_workspace(command: str, *, workspace_root: Path) -> b
 
 
 def _shell_contains_delete_or_permission_command(command: str) -> bool:
-    tokens = _shell_tokens(command)
+    guard_text = _shell_guard_text(command)
+    tokens = _shell_tokens(guard_text)
     if any(Path(token).name in _SHELL_DELETE_OR_PERMISSION_COMMANDS for token in tokens):
         return True
     return any(
-        re.search(rf"(?<![\w.-]){re.escape(executable)}(?![\w.-])", command)
+        re.search(rf"(?<![\w.-]){re.escape(executable)}(?![\w.-])", guard_text)
         for executable in _SHELL_DELETE_OR_PERMISSION_COMMANDS
     )
 
@@ -752,14 +809,77 @@ def _explicit_shell_paths(*, command: str, cwd: Path) -> tuple[Path, ...]:
     is_shell_wrapper = executable in {"sh", "bash", "zsh"} and any(
         option.endswith("c") for option in tokens[1:] if option.startswith("-")
     )
-    if not is_shell_wrapper:
+    if is_shell_wrapper:
+        inner_command = _shell_wrapper_command_argument(tokens)
+        if inner_command is not None:
+            stripped_inner = _strip_heredoc_bodies(inner_command)
+            paths.extend(
+                resolved_path
+                for _, resolved_path in _shell_path_operands(
+                    command=stripped_inner,
+                    cwd=cwd,
+                )
+            )
+            paths.extend(_aidd_workspace_path_literals(command=stripped_inner, cwd=cwd))
+            paths.extend(
+                _absolute_path_literals(tokens=_shell_tokens(stripped_inner), cwd=cwd)
+            )
+    else:
         paths.extend(
             resolved_path
             for _, resolved_path in _shell_path_operands(command=command, cwd=cwd)
         )
-    paths.extend(_aidd_workspace_path_literals(command=command, cwd=cwd))
-    paths.extend(_absolute_path_literals(tokens=tokens[1:], cwd=cwd))
+        paths.extend(_aidd_workspace_path_literals(command=command, cwd=cwd))
+        paths.extend(_absolute_path_literals(tokens=tokens[1:], cwd=cwd))
     return _dedupe_paths(paths)
+
+
+def _shell_guard_text(command: str) -> str:
+    tokens = _shell_tokens(command)
+    inner_command = _shell_wrapper_command_argument(tokens)
+    if inner_command is None:
+        return _strip_heredoc_bodies(command)
+    return _strip_heredoc_bodies(inner_command)
+
+
+def _shell_wrapper_command_argument(tokens: tuple[str, ...]) -> str | None:
+    if not tokens or Path(tokens[0]).name not in {"sh", "bash", "zsh"}:
+        return None
+    for index, token in enumerate(tokens[1:], start=1):
+        if token == "-c" or (token.startswith("-") and token.endswith("c")):
+            if index + 1 < len(tokens):
+                return tokens[index + 1]
+            return None
+    return None
+
+
+def _strip_heredoc_bodies(command: str) -> str:
+    lines = command.splitlines()
+    if not lines:
+        return command
+    stripped: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        stripped.append(line)
+        delimiter = _heredoc_delimiter(line)
+        if delimiter is None:
+            index += 1
+            continue
+        index += 1
+        while index < len(lines) and lines[index].strip() != delimiter:
+            index += 1
+        if index < len(lines):
+            stripped.append(lines[index])
+            index += 1
+    return "\n".join(stripped)
+
+
+def _heredoc_delimiter(line: str) -> str | None:
+    match = re.search(r"<<-?\s*['\"]?([A-Za-z0-9_]+)['\"]?", line)
+    if match is None:
+        return None
+    return match.group(1)
 
 
 def _aidd_workspace_path_literals(*, command: str, cwd: Path) -> tuple[Path, ...]:
@@ -846,19 +966,19 @@ def _looks_like_path(token: str) -> bool:
 
 def _resolve_shell_path_token(*, token: str, cwd: Path) -> Path:
     if token == "~":
-        return Path.home().resolve(strict=False)
+        return _lexical_absolute_path(Path.home(), cwd=cwd)
     if token.startswith("~/"):
-        return (Path.home() / token[2:]).resolve(strict=False)
+        return _lexical_absolute_path(Path.home() / token[2:], cwd=cwd)
     if token == "$HOME":
-        return Path.home().resolve(strict=False)
+        return _lexical_absolute_path(Path.home(), cwd=cwd)
     if token.startswith("$HOME/"):
-        return (Path.home() / token[6:]).resolve(strict=False)
-    path = Path(token)
-    return (
-        path.resolve(strict=False)
-        if path.is_absolute()
-        else (cwd / path).resolve(strict=False)
-    )
+        return _lexical_absolute_path(Path.home() / token[6:], cwd=cwd)
+    return _lexical_absolute_path(Path(token), cwd=cwd)
+
+
+def _lexical_absolute_path(path: Path, *, cwd: Path) -> Path:
+    candidate = path if path.is_absolute() else cwd / path
+    return Path(os.path.abspath(os.path.normpath(os.fspath(candidate))))
 
 
 def _contains_destructive_root_or_home_remove(tokens: tuple[str, ...]) -> bool:
