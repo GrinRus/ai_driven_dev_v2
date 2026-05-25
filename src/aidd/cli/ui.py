@@ -309,6 +309,15 @@ def _runtime_from_payload(payload: dict[str, Any]) -> str:
     return runtime
 
 
+def _optional_run_id_from_payload(payload: dict[str, Any]) -> str | None:
+    raw_run_id = payload.get("run_id")
+    if raw_run_id is None:
+        return None
+    if not isinstance(raw_run_id, str):
+        raise ValueError("run_id must be a string.")
+    return raw_run_id.strip() or None
+
+
 def _validate_runtime(runtime: str) -> None:
     supported = {definition.runtime_id for definition in runtime_definitions()}
     if runtime not in supported:
@@ -991,11 +1000,13 @@ class OperatorUiService:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
+        run_id = _optional_run_id_from_payload(payload)
         log_follow = bool(payload.get("log_follow", True))
         prepared_payload = dict(payload)
         prepared_payload["runtime"] = runtime
         prepared_payload["from_stage"] = stage_start
         prepared_payload["to_stage"] = stage_end
+        prepared_payload["run_id"] = run_id
         prepared_payload["log_follow"] = log_follow
 
         def _target(job_id: str) -> object:
@@ -1049,6 +1060,7 @@ class OperatorUiService:
     def _run_workflow(self, payload: dict[str, Any], *, job_id: str) -> object:
         runtime = _runtime_from_payload(payload)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
+        run_id = _optional_run_id_from_payload(payload)
         log_follow = bool(payload.get("log_follow", True))
         cfg = load_config(self.options.config)
         runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
@@ -1098,6 +1110,7 @@ class OperatorUiService:
                     "log_follow": log_follow,
                     "mode": "ui-workflow",
                 },
+                run_id=run_id,
                 stage_start=stage_start,
                 stage_end=stage_end,
                 log_follow=log_follow,

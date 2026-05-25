@@ -351,6 +351,49 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
         ) in release_notes
 
 
+def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
+    repo_root = _repo_root()
+    source_version = _project_version(repo_root)
+    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
+        encoding="utf-8"
+    )
+    latest_accepted_version = _latest_accepted_prerelease_version(release_checklist)
+    readme = (repo_root / "README.md").read_text(encoding="utf-8")
+    roadmap = (repo_root / "docs" / "backlog" / "roadmap.md").read_text(
+        encoding="utf-8"
+    )
+    backlog = (repo_root / "docs" / "backlog" / "backlog.md").read_text(
+        encoding="utf-8"
+    )
+    w24_s1 = roadmap.split("#### Slice W24-E1-S1", 1)[1].split(
+        "#### Slice W24-E1-S2",
+        1,
+    )[0]
+    w24_s2 = roadmap.split("#### Slice W24-E1-S2", 1)[1].split("## Wave", 1)[0]
+    backlog_next = backlog.split("## Next", 1)[1].split("## Soon", 1)[0]
+    backlog_soon = backlog.split("## Soon", 1)[1].split("## Parking lot", 1)[0]
+
+    assert (
+        "The UI can write question answers as `[resolved]`, `[partial]`, or "
+        "`[deferred]` entries"
+    ) in readme
+    assert "only `[resolved]` answers unblock blocking questions" in readme
+    assert "The UI writes question answers as `[resolved]` entries" not in readme
+
+    assert (
+        f"latest accepted `{latest_accepted_version}` package-channel evidence"
+        in w24_s1
+    )
+    assert f"`{source_version}` source development state" in w24_s1
+    assert "v0.1.0a3" not in w24_s1
+
+    assert "#### Slice W24-E1-S2 — manual live beta evidence refresh (`next`)" in roadmap
+    assert "`W24-E1-S2-T1` (next)" in w24_s2
+    assert "`W24-E1-S2-T2` (planned)" in w24_s2
+    assert "- `W24-E1-S2-T1`" in backlog_next
+    assert "- `W24-E1-S2-T2`" in backlog_soon
+
+
 def test_release_docs_describe_release_branch_publish_flow() -> None:
     repo_root = _repo_root()
     release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
