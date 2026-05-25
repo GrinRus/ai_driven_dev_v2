@@ -182,9 +182,23 @@ After a successful prerelease:
 1. switch back to updated `main`;
 2. create a `codex/post-<version>-release-followup` branch;
 3. bump `pyproject.toml` and `uv.lock` to the next `.dev0` version;
-4. update `CHANGELOG.md`, `README.md`, and `docs/release-checklist.md` evidence;
+4. update `CHANGELOG.md`, `README.md`, and `docs/release-checklist.md` evidence while
+   keeping README user/operator-facing;
 5. run deterministic checks and `uv build`;
 6. commit, push, and open a PR to `main`.
+
+Post-release version wording guardrail:
+
+- The next `.dev0` source version belongs in `pyproject.toml`, `uv.lock`, and
+  maintainer/release-state docs such as `docs/release-checklist.md`,
+  beta-readiness audits, or distribution policy docs.
+- Do not publish, install, or advertise the next `.dev0` source version as the latest or
+  current release.
+- README install, status, and source-checkout positioning must name the latest accepted
+  published prerelease and may warn that `main` is development source with unreleased
+  changes.
+- Keep docs consistency tests aligned with this split so README cannot reintroduce `.dev0`
+  as a public release version.
 
 ## Failure handling
 
