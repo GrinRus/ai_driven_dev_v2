@@ -1042,6 +1042,8 @@ const PREFERRED_ARTIFACT_KEYS = [
 const state = {
   dashboard: null,
   readiness: null,
+  readinessLoading: true,
+  readinessError: "",
   activeStage: "idea",
   activeTab: "overview",
   selectedRuntime: "",
@@ -1165,23 +1167,39 @@ async function fetchDashboard() {
 }
 
 async function fetchReadiness() {
+  state.readinessLoading = true;
+  state.readinessError = "";
   try {
     state.readiness = await api("/api/runtime-readiness");
+    state.readinessError = "";
   } catch (error) {
     state.readiness = {runtimes: []};
+    state.readinessError = error.message || "runtime readiness unavailable";
     toast(`Runtime readiness unavailable: ${error.message}`);
+  } finally {
+    state.readinessLoading = false;
   }
 }
 
 function renderRuntimeSelector() {
   const select = document.getElementById("runtimeSelect");
-  const runtimes = state.readiness?.runtimes || [];
+  const runtimes = state.readinessLoading ? [] : (state.readiness?.runtimes || []);
   const runtimeIds = runtimes.map((runtime) => String(runtime.runtime_id || ""));
+  const options = [
+    `<option value="">${state.readinessLoading ? "Checking runtimes..." : "Select runtime"}</option>`
+  ];
   if (state.selectedRuntime && !runtimeIds.includes(state.selectedRuntime)) {
-    state.selectedRuntime = "";
+    const label = state.readinessLoading
+      ? "checking"
+      : state.readinessError
+        ? "unverified"
+        : "not listed";
+    options.push(
+      `<option value="${escapeHtml(state.selectedRuntime)}" selected>${escapeHtml(state.selectedRuntime)} (${label})</option>`
+    );
   }
   select.innerHTML = [
-    `<option value="">Select runtime</option>`,
+    ...options,
     ...runtimes.map((runtime) => {
       const runtimeId = String(runtime.runtime_id || "");
       const selected = runtimeId === state.selectedRuntime ? " selected" : "";
@@ -1194,12 +1212,39 @@ function renderRuntimeSelector() {
 }
 
 function selectedRuntimeView() {
+  if (state.readinessLoading) return null;
   return (state.readiness?.runtimes || []).find((runtime) => runtime.runtime_id === state.selectedRuntime) || null;
 }
 
 function selectedRuntimeReady() {
   const runtime = selectedRuntimeView();
   return Boolean(runtime && runtime.provider_available && runtime.execution_command_available);
+}
+
+function readinessText(value, fallback = "not reported") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function timeoutSummary(runtime) {
+  if (!runtime) return "not reported";
+  const defaultTimeout = runtime.default_timeout_seconds ?? "";
+  const defaultText = defaultTimeout === "" ? "default: inherited" : `default: ${defaultTimeout}s`;
+  const stageTimeouts = Object.entries(runtime.stage_timeout_seconds || {});
+  const stageText = stageTimeouts.length
+    ? `stages: ${stageTimeouts.map(([stage, seconds]) => `${stage} ${seconds}s`).join(", ")}`
+    : "stages: none";
+  return `${defaultText}; ${stageText}`;
+}
+
+function readinessDetail(label, value, maxLength = 72) {
+  const text = readinessText(value);
+  return `
+    <div class="panel-item">
+      <strong>${escapeHtml(label)}</strong>
+      <span title="${escapeHtml(text)}">${escapeHtml(compactPath(text, maxLength))}</span>
+    </div>
+  `;
 }
 
 function ensureRunnableRuntime() {
@@ -1224,10 +1269,19 @@ function renderTopbar() {
   document.getElementById("runChip").textContent = run.run_id ? `Run: ${run.run_id}` : "Run: none";
   const runtime = selectedRuntimeView();
   const ready = runtime ? runtime.provider_available && runtime.execution_command_available : false;
-  document.getElementById("localStatus").textContent = runtime
-    ? `${state.selectedRuntime}: ${ready ? "ready" : "needs check"}`
-    : "Local control-plane connected";
-  document.getElementById("localStatus").className = ready || !runtime ? "status-chip good" : "status-chip";
+  const localStatus = document.getElementById("localStatus");
+  if (state.readinessLoading) {
+    localStatus.textContent = "Checking runtime readiness...";
+    localStatus.className = "status-chip";
+    return;
+  }
+  if (runtime) {
+    localStatus.textContent = `${state.selectedRuntime}: ${ready ? "ready" : "needs check"}`;
+    localStatus.className = ready ? "status-chip good" : "status-chip";
+    return;
+  }
+  localStatus.textContent = state.readinessError ? "Runtime readiness unavailable" : "Local control-plane connected";
+  localStatus.className = state.readinessError ? "status-chip" : "status-chip good";
 }
 
 function renderStageRail() {
@@ -1845,12 +1899,17 @@ async function renderCockpit() {
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
+  const runStageResume = action.action === "run-stage" && state.activeRunId && action.enabled;
   const runtimeNeeded = needsRuntime(action.action) || noRunWithRuntime;
   const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
   const disabled = !(action.enabled || noRunWithRuntime) || runtimeBlocked;
-  const label = noRunWithRuntime ? "Run workflow" : action.label;
+  const label = noRunWithRuntime
+    ? (state.activeRunId ? "Resume workflow" : "Run workflow")
+    : runStageResume
+      ? `Continue with ${stageTitle(action.stage || state.activeStage)}`
+      : action.label;
   const detail = runtimeBlocked && state.selectedRuntime
-    ? `${action.detail} Selected runtime is not ready.`
+    ? `${action.detail} ${state.readinessLoading ? "Checking runtime readiness." : "Selected runtime is not ready."}`
     : action.detail;
   document.getElementById("nextActionPanel").innerHTML = `
     <div class="panel-title">Next action</div>
@@ -1903,15 +1962,42 @@ function renderRuntimeRootPanel() {
 
 function renderSafetyPanel() {
   const runtime = selectedRuntimeView();
-  const provider = runtime ? (runtime.provider_available ? "provider available" : "provider unavailable") : "runtime not selected";
-  const exec = runtime ? (runtime.execution_command_available ? "execution command available" : "execution command unavailable") : "select runtime";
-  const readinessClass = runtime && runtime.provider_available && runtime.execution_command_available ? "good" : runtime ? "warn" : "";
+  const readinessClass = runtime && runtime.provider_available && runtime.execution_command_available ? "good" : runtime || state.readinessError ? "warn" : "";
+  const badge = runtime
+    ? runtime.runtime_id
+    : state.readinessLoading
+      ? "checking"
+      : state.readinessError
+        ? "error"
+        : "none";
+  let details = "";
+  if (state.readinessLoading) {
+    details = readinessDetail("Status", "checking runtimes");
+  } else if (!runtime && state.readinessError) {
+    details = readinessDetail("Status", `readiness unavailable: ${state.readinessError}`);
+  } else if (!runtime) {
+    details = readinessDetail("Status", "select a runtime to view readiness");
+  } else {
+    details = [
+      readinessDetail("Support tier", runtime.support_tier),
+      readinessDetail("Command source", runtime.command_source),
+      readinessDetail("Command", runtime.command, 86),
+      readinessDetail("Execution mode", runtime.execution_mode),
+      readinessDetail("Permission policy", runtime.permission_policy),
+      readinessDetail("Interaction mode", runtime.interaction_mode),
+      readinessDetail("Auto approval", runtime.auto_approval_preset),
+      readinessDetail("Timeouts", timeoutSummary(runtime), 96),
+      readinessDetail("Provider", runtime.provider_available ? "available" : "unavailable"),
+      readinessDetail("Provider version", runtime.provider_version),
+      readinessDetail("Provider command", runtime.provider_command, 86),
+      readinessDetail("Execution command", runtime.execution_command_available ? "available" : "unavailable")
+    ].join("");
+  }
   document.getElementById("safetyPanel").innerHTML = `
-    <div class="panel-title">Safety / Readiness <span class="small-badge ${readinessClass}">${runtime ? escapeHtml(runtime.runtime_id) : "none"}</span></div>
+    <div class="panel-title">Safety / Readiness <span class="small-badge ${readinessClass}">${escapeHtml(badge)}</span></div>
     <div class="panel-list">
       <div class="panel-item"><strong>No upstream write</strong><span>UI actions stay inside local AIDD workspace and normal runner boundaries.</span></div>
-      <div class="panel-item"><strong>Provider</strong><span>${escapeHtml(provider)}</span></div>
-      <div class="panel-item"><strong>Execution</strong><span>${escapeHtml(exec)}</span></div>
+      ${details}
     </div>
   `;
 }
@@ -2004,9 +2090,14 @@ async function renderAll() {
 }
 
 async function refresh() {
+  state.readinessLoading = true;
+  state.readinessError = "";
   try {
-    await Promise.all([fetchDashboard(), fetchReadiness()]);
+    await fetchDashboard();
     await renderAll();
+    void fetchReadiness().then(renderAll).catch((error) => {
+      toast(error.message);
+    });
   } catch (error) {
     document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
@@ -2032,7 +2123,9 @@ async function saveAnswer(questionId) {
 
 async function startWorkflow() {
   if (!ensureRunnableRuntime()) return;
-  const job = await postJson("/api/workflow/run", {runtime: state.selectedRuntime, log_follow: true});
+  const payload = {runtime: state.selectedRuntime, log_follow: true};
+  if (state.activeRunId) payload.run_id = state.activeRunId;
+  const job = await postJson("/api/workflow/run", payload);
   await startJobPolling(job);
 }
 

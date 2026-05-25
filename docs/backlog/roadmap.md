@@ -5607,7 +5607,8 @@ Primary outputs:
 - deterministic release workflow quality gate
 - CI/CD guardrails that exclude live E2E
 - source-installed local-project smoke verification
-- draft `v0.1.0a3` release notes
+- release-readiness notes for latest accepted `0.1.0a5` evidence and source
+  `0.1.0a6.dev0` state
 
 Touched areas:
 
@@ -5631,7 +5632,8 @@ Local tasks:
   commands while preserving the manual-only live E2E boundary.
 - `W24-E1-S1-T3` (done) Verify the source-installed local-project smoke fixture runtime
   path and cover the workspace-relative command with scenario-loader regression checks.
-- `W24-E1-S1-T4` (done) Prepare draft `v0.1.0a3` release notes without creating a tag or
+- `W24-E1-S1-T4` (done) Prepare release-readiness notes for the accepted `0.1.0a5`
+  evidence and post-release `0.1.0a6.dev0` source state without creating a tag or
   publishing artifacts.
 
 Evidence:
@@ -5650,8 +5652,10 @@ Evidence:
 - A source-installed local-project smoke passed on 2026-05-21 against a disposable
   `harness/fixtures/minimal-python` copy, covering `doctor`, `init`, bounded
   `run idea->plan`, `run show`, `run logs`, `run artifacts`, and `stage questions`.
-- `docs/release-notes-v0.1.0a3-draft.md` captured the `v0.1.0a3` release notes before
-  publication; accepted package-channel evidence is recorded in `docs/release-checklist.md`.
+- `docs/release-notes-v0.1.0a5-draft.md` and `docs/analysis/beta-readiness-source-audit.md`
+  record the latest accepted `0.1.0a5` package-channel evidence and current
+  `0.1.0a6.dev0` source development state; accepted package-channel evidence is recorded
+  in `docs/release-checklist.md`.
 
 Exit evidence:
 
@@ -5660,7 +5664,7 @@ Exit evidence:
 - live E2E remains manual-only and outside CI/CD/release workflows;
 - release materials are prepared without changing the public alpha safety claim.
 
-#### Slice W24-E1-S2 — manual live beta evidence refresh (`planned`)
+#### Slice W24-E1-S2 — manual live beta evidence refresh (`next`)
 Goal: refresh maintained manual live E2E evidence for the beta-readiness provider matrix
 outside CI/CD and release automation.
 
@@ -5682,7 +5686,7 @@ Dependencies:
 
 Local tasks:
 
-- `W24-E1-S2-T1` (planned) Refresh medium-plus manual live evidence for `codex`,
+- `W24-E1-S2-T1` (next) Refresh medium-plus manual live evidence for `codex`,
   `claude-code`, and `opencode` using maintained live manifests outside CI/CD.
 - `W24-E1-S2-T2` (planned) Apply evidence-backed AIDD fixes discovered by the manual live
   refresh and commit each verified fix separately.

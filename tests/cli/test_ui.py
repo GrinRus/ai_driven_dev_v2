@@ -286,6 +286,7 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
             "runtime": "codex",
             "from_stage": "research",
             "to_stage": "plan",
+            "run_id": "run-ui-existing",
             "log_follow": True,
         },
     )
@@ -300,6 +301,7 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     assert job_payload["result"]["completed"] is True  # type: ignore[index]
     assert request.work_item == "WI-UI"
     assert request.runtime_id == "codex"
+    assert request.run_id == "run-ui-existing"
     assert request.stage_start == "research"
     assert request.stage_end == "plan"
     assert request.log_follow is True
@@ -1113,6 +1115,8 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert '"plan"' in script
     assert '"stage_result"' in script
     assert 'activeRunId: ""' in script
+    assert "readinessLoading: true" in script
+    assert 'readinessError: ""' in script
     assert "state.activeRunId = state.dashboard.run?.run_id || \"\";" in script
     assert "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`" in script
     assert "No artifacts for this stage yet" in script
@@ -1136,6 +1140,10 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "function logEntriesFromText(text)" in script
     assert "rawText.match(/^\\[(stdout|stderr|system)\\]\\s?(.*)$/i)" in script
     assert "function selectedRuntimeReady()" in script
+    assert "function timeoutSummary(runtime)" in script
+    assert "function readinessDetail(label, value, maxLength = 72)" in script
+    assert 'title="${escapeHtml(text)}"' in script
+    assert "${escapeHtml(compactPath(text, maxLength))}" in script
     assert "function ensureRunnableRuntime()" in script
     assert 'toast("Selected runtime is not ready.")' in script
     assert 'if (element.textContent === message) element.textContent = "";' in script
@@ -1155,10 +1163,28 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "const payload = {stage, runtime: state.selectedRuntime, log_follow: true};" in script
     assert "target_documents: targetDocuments" in script
     assert "if (state.activeRunId) payload.run_id = state.activeRunId;" in script
+    assert "const payload = {runtime: state.selectedRuntime, log_follow: true};" in script
+    assert 'postJson("/api/workflow/run", payload)' in script
+    assert "Resume workflow" in script
+    assert "Continue with ${stageTitle(action.stage || state.activeStage)}" in script
+    assert "Checking runtimes..." in script
+    assert "Checking runtime readiness." in script
     assert (
-        'postJson("/api/workflow/run", {runtime: state.selectedRuntime, log_follow: true})'
-        in script
-    )
+        "const runtimes = state.readinessLoading ? [] : "
+        "(state.readiness?.runtimes || []);"
+    ) in script
+    assert "if (state.readinessLoading) return null;" in script
+    assert "Support tier" in script
+    assert "Command source" in script
+    assert "Execution mode" in script
+    assert "Permission policy" in script
+    assert "Interaction mode" in script
+    assert "Auto approval" in script
+    assert "Provider version" in script
+    assert "Provider command" in script
+    assert "await fetchDashboard();" in script
+    assert "void fetchReadiness().then(renderAll)" in script
+    assert "Promise.all([fetchDashboard(), fetchReadiness()])" not in script
     assert 'resolution: resolution?.value || "resolved"' in script
     assert 'option value="partial"' in script
     assert 'option value="deferred"' in script

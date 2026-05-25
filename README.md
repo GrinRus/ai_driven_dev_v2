@@ -185,8 +185,9 @@ the next eligible stage, or submit **Request change -> Submit & run** from the s
 stage cockpit; these actions require an explicit runtime selection and there is no hidden
 `generic-cli` fallback. New UI launches stream live job logs while the process runs, and
 the saved `runtime.log` remains available afterward through the normal log view and CLI.
-The UI writes question answers as `[resolved]` entries in the standard `answers.md`; rerun
-the selected stage or workflow after answering. Intervention requests are stored as
+The UI can write question answers as `[resolved]`, `[partial]`, or `[deferred]` entries
+in the standard `answers.md`; only `[resolved]` answers unblock blocking questions, then
+rerun the selected stage or workflow after answering. Intervention requests are stored as
 durable Markdown input under `.aidd/workitems/<id>/stages/<stage>/operator-requests/`
 and are shown in Activity, Evidence Refs, and Recent Artifacts. The UI is a local no-auth
 operator surface: the default host is loopback, and non-loopback binds print a warning.
