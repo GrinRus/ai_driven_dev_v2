@@ -115,7 +115,7 @@ _NETWORK_GIT_SUBCOMMANDS = frozenset({"clone", "fetch", "pull", "push"})
 _AIDD_WORKSPACE_PATH_RE = re.compile(
     r"(?<![\w./-])(?:\./)?\.aidd(?:/[^\s'\"`$<>|;&)]+)?"
 )
-_ABSOLUTE_PATH_RE = re.compile(r"(?<![\w.-])/[^\s'\"`$<>|;&)]+")
+_ABSOLUTE_PATH_RE = re.compile(r"(?<![\w./:-])/[^\s'\"`$<>|;&)]+")
 _SHELL_DELETE_OR_PERMISSION_COMMANDS = frozenset(
     {
         "rm",

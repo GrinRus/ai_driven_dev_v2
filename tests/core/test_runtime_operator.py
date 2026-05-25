@@ -429,7 +429,7 @@ def test_broad_policy_auto_allows_bounded_aidd_workspace_shell(tmp_path: Path) -
         "/bin/zsh -lc \"python3 - <<'PY'\n"
         "from pathlib import Path\n"
         "base = Path('.aidd/workitems/WI-001/stages/idea')\n"
-        "(base / 'idea-brief.md').write_text('ok')\n"
+        "(base / 'idea-brief.md').write_text('repo: https://github.com/acme/project')\n"
         "PY\""
     )
     request = RuntimeOperatorRequest.create(
