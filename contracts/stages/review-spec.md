@@ -104,6 +104,7 @@ Question/answer document rules:
 
 - `prompt-packs/stages/review-spec/system.md`
 - `prompt-packs/stages/review-spec/run.md`
+- `prompt-packs/stages/review-spec/intervention.md`
 - `prompt-packs/stages/review-spec/repair.md`
 - `prompt-packs/stages/review-spec/interview.md`
 

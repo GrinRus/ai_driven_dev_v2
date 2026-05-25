@@ -11,7 +11,12 @@ from aidd.cli.stage_inspection import (
     show_stage_questions,
     show_stage_summary,
 )
-from aidd.cli.stage_run import StageRunOptions, run_stage_command
+from aidd.cli.stage_run import (
+    StageInteractOptions,
+    StageRunOptions,
+    run_stage_command,
+    run_stage_interact_command,
+)
 from aidd.cli.support import console
 
 
@@ -54,6 +59,68 @@ def stage_run(
             run_id=run_id,
             root=root,
             config=config,
+            log_follow=log_follow,
+        )
+    )
+
+
+def stage_interact(
+    stage: Annotated[str, typer.Argument(help="Stage name")],
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    runtime: Annotated[str | None, typer.Option("--runtime", help="Runtime id")] = None,
+    request: Annotated[
+        str | None,
+        typer.Option("--request", help="Inline operator request for this stage."),
+    ] = None,
+    request_file: Annotated[
+        Path | None,
+        typer.Option("--request-file", help="Markdown file containing the operator request."),
+    ] = None,
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Optional run id; defaults to the latest run."),
+    ] = None,
+    target_documents: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--target-document",
+            help="Stage-scoped target Markdown document; may be repeated.",
+        ),
+    ] = None,
+    root: Annotated[
+        Path | None,
+        typer.Option("--root", help="Root AIDD storage directory. Defaults to config value."),
+    ] = None,
+    config: Annotated[
+        Path,
+        typer.Option("--config", help="Path to an AIDD TOML config file."),
+    ] = Path("aidd.example.toml"),
+    log_follow: Annotated[
+        bool,
+        typer.Option(
+            "--log-follow/--no-log-follow",
+            help="Enable explicit live-log follow mode during intervention execution.",
+        ),
+    ] = True,
+) -> None:
+    """Run a stage-scoped operator intervention in the current run."""
+    if runtime is None:
+        console.print(
+            "Missing option '--runtime'. Operator intervention requires an explicit "
+            "runtime id. Run `aidd doctor` to check runtime readiness."
+        )
+        raise typer.Exit(code=2)
+    run_stage_interact_command(
+        StageInteractOptions(
+            stage=stage,
+            work_item=work_item,
+            runtime=runtime,
+            run_id=run_id,
+            root=root,
+            config=config,
+            request=request,
+            request_file=request_file,
+            target_documents=tuple(target_documents or ()),
             log_follow=log_follow,
         )
     )

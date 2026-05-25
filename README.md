@@ -154,6 +154,7 @@ aidd run show --work-item WI-001 --root .aidd
 aidd run logs --work-item WI-001 --stage plan --root .aidd
 aidd run artifacts --work-item WI-001 --stage plan --root .aidd
 aidd stage questions idea --work-item WI-001 --root .aidd
+aidd stage interact plan --work-item WI-001 --runtime codex --request "Add rollback risks" --root .aidd
 ```
 
 Stage documents, runtime logs, validator reports, repair briefs, questions, and answers
@@ -162,6 +163,10 @@ contract surface; runtime-authored JSON schemas are not the primary stage output
 When a CLI stage stops on questions, inspect them with `aidd stage questions`, write
 answers to `.aidd/workitems/<work-item>/stages/<stage>/answers.md`, and rerun the stage
 with `aidd stage run <stage> --work-item <id> --runtime <runtime> --root .aidd`.
+When a stage artifact needs a scoped correction or additional analysis, use
+`aidd stage interact <stage>` with `--request` or `--request-file`; AIDD stores the
+operator request under `operator-requests/request-000N.md` and runs a normal validated
+stage attempt in the current run.
 
 ## Operator UI
 
@@ -172,15 +177,18 @@ aidd ui --work-item WI-001 --root .aidd
 ```
 
 The UI reads the same `.aidd/` state as the CLI. It can show stage status, render stage
-Markdown artifacts, show runtime logs, answer questions, show repair history, and display
-runtime readiness details without introducing a separate workflow engine. Operators can run
-the full workflow with **Run workflow** or run only the selected stage with **Run selected
-stage**; both actions require an explicit runtime selection and there is no hidden
+Markdown artifacts, show runtime logs, answer questions, show repair history, submit
+stage-scoped operator intervention requests, and display runtime readiness details without
+introducing a separate workflow engine. Operators can run the full workflow, run or resume
+the next eligible stage, or submit **Request change -> Submit & run** from the selected
+stage cockpit; these actions require an explicit runtime selection and there is no hidden
 `generic-cli` fallback. New UI launches stream live job logs while the process runs, and
 the saved `runtime.log` remains available afterward through the normal log view and CLI.
 The UI writes question answers as `[resolved]` entries in the standard `answers.md`; rerun
-the selected stage or workflow after answering. The UI is a local no-auth operator surface:
-the default host is loopback, and non-loopback binds print a warning.
+the selected stage or workflow after answering. Intervention requests are stored as
+durable Markdown input under `.aidd/workitems/<id>/stages/<stage>/operator-requests/`
+and are shown in Activity, Evidence Refs, and Recent Artifacts. The UI is a local no-auth
+operator surface: the default host is loopback, and non-loopback binds print a warning.
 
 For the local UI evidence lane, see `docs/e2e/operator-ui-local-project.md`.
 
@@ -199,6 +207,8 @@ Key design rules:
 - stage inputs and outputs are Markdown documents;
 - validation failures trigger repair or an explicit stop;
 - questions and answers are persisted as documents;
+- operator intervention requests are persisted as stage-scoped Markdown input and
+  validated through the normal stage chain;
 - runtime logs are streamed when possible and saved for replay and eval analysis.
 
 Primary architecture docs:

@@ -27,6 +27,12 @@ class GenericCliStageContext:
     work_item: str
     run_id: str
     prompt_pack_path: Path
+    attempt_number: int = 1
+    attempt_mode: str = "initial"
+    repair_mode: bool = False
+    input_bundle_path: Path | None = None
+    repair_brief_path: Path | None = None
+    operator_request_path: Path | None = None
 
     def __post_init__(self) -> None:
         validate_stage_command_context(
@@ -34,6 +40,11 @@ class GenericCliStageContext:
             work_item=self.work_item,
             run_id=self.run_id,
             prompt_pack_path=self.prompt_pack_path,
+            attempt_number=self.attempt_number,
+            attempt_mode=self.attempt_mode,
+            input_bundle_path=self.input_bundle_path,
+            repair_brief_path=self.repair_brief_path,
+            operator_request_path=self.operator_request_path,
         )
 
 
@@ -124,6 +135,12 @@ def build_execution_environment(
         run_id=context.run_id,
         base_env=base_env,
         prompt_pack_path=context.prompt_pack_path,
+        attempt_number=context.attempt_number,
+        attempt_mode=context.attempt_mode,
+        repair_mode=context.repair_mode,
+        input_bundle_path=context.input_bundle_path,
+        repair_brief_path=context.repair_brief_path,
+        operator_request_path=context.operator_request_path,
     )
 
 
@@ -145,6 +162,12 @@ def build_subprocess_spec(
         work_item=context.work_item,
         run_id=context.run_id,
         prompt_pack_path=resolved_prompt_pack_path,
+        attempt_number=context.attempt_number,
+        attempt_mode=context.attempt_mode,
+        repair_mode=context.repair_mode,
+        input_bundle_path=context.input_bundle_path,
+        repair_brief_path=context.repair_brief_path,
+        operator_request_path=context.operator_request_path,
     )
     return GenericCliSubprocessSpec(
         command=assemble_command(

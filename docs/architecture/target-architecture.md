@@ -126,6 +126,8 @@ Recommended shape:
           validator-report.md
           repair-brief.md
           stage-result.md
+          operator-requests/
+            request-0001.md
         research/
           input/
           output/
@@ -226,6 +228,10 @@ For every stage run:
 2. Collect declared input documents.
 3. Run preflight checks for missing or invalid prerequisites.
 4. Build a **stage brief** in Markdown for the runtime.
+   Operator intervention attempts use the same stage contract but add
+   `attempt_mode=intervention`, include the latest
+   `operator-requests/request-000N.md`, include existing same-stage outputs, and
+   include `questions.md` / `answers.md` when present.
 5. Launch the runtime through the selected adapter.
 6. Stream raw runtime logs when the adapter can expose them, and persist raw attempt logs.
 7. Persist structured `runtime.jsonl` and normalized `events.jsonl` attempt artifacts when
@@ -259,6 +265,14 @@ For every stage run:
 12. If repair budget is exhausted:
     - mark the stage as failed or waiting for human input,
     - persist the failure and stop progression.
+
+Operator intervention is a stage-scoped mutation path, not live chat and not a
+new workflow engine. A request is durable operator-owned Markdown input under the
+selected stage. The runtime receives it through the normal adapter request and
+must still satisfy the selected stage contract; AIDD validation remains the
+terminal gate. V1 rejects intervention when any downstream stage has already
+reached `succeeded` in the same run, because downstream invalidation and rerun
+cascade policy is a separate workflow slice.
 
 ## 9. Document-first contracts
 

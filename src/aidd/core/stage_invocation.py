@@ -166,6 +166,7 @@ def prepare_adapter_invocation(
     preparation_bundle: StagePreparationBundle,
     execution_state: StageExecutionState,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    intervention_request_path: Path | None = None,
 ) -> AdapterInvocationBundle:
     if preparation_bundle.stage != execution_state.stage:
         raise ValueError(
@@ -198,11 +199,28 @@ def prepare_adapter_invocation(
         stage_metadata=stage_metadata,
         previous_status=previous_status,
     )
+    intervention_mode = intervention_request_path is not None
+    if intervention_mode:
+        repair_mode = False
     repair_brief_path: Path | None = None
     repair_brief_markdown: str | None = None
     repair_context_markdown: str | None = None
+    operator_request_markdown: str | None = None
 
-    if repair_mode:
+    if intervention_mode:
+        assert intervention_request_path is not None
+        if not intervention_request_path.exists():
+            raise FileNotFoundError(
+                "Operator intervention requires an existing operator request: "
+                f"{workspace_relative_path(workspace_root, intervention_request_path)}"
+            )
+        operator_request_markdown = intervention_request_path.read_text(encoding="utf-8")
+        if not operator_request_markdown.strip():
+            raise ValueError(
+                "Operator intervention requires a non-empty operator request: "
+                f"{workspace_relative_path(workspace_root, intervention_request_path)}"
+            )
+    elif repair_mode:
         repair_brief_path = candidate_repair_brief_path
         if not repair_brief_path.exists():
             raise FileNotFoundError(
@@ -250,6 +268,15 @@ def prepare_adapter_invocation(
         input_bundle_markdown=input_bundle_markdown,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
         expected_output_documents=preparation_bundle.expected_output_documents,
+        attempt_mode=(
+            "intervention"
+            if intervention_mode
+            else "repair"
+            if repair_mode
+            else "initial"
+        ),
+        operator_request_path=intervention_request_path,
+        operator_request_markdown=operator_request_markdown,
     )
 
 
@@ -262,7 +289,11 @@ def restore_core_owned_repair_brief(
         invocation_bundle.repair_brief_path is None
         or invocation_bundle.repair_brief_markdown is None
     ):
-        if workspace_root is None or invocation_bundle.repair_mode:
+        if (
+            workspace_root is None
+            or invocation_bundle.repair_mode
+            or invocation_bundle.attempt_mode == "intervention"
+        ):
             return None
         model_authored_repair_brief_path = (
             workspace_stage_root(

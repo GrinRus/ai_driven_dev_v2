@@ -21,7 +21,7 @@ uv run aidd doctor
 
 2. Identify the failing lane:
 
-- workflow/stage runtime gate (`aidd run`, `aidd stage run`);
+- workflow/stage runtime gate (`aidd run`, `aidd stage run`, `aidd stage interact`);
 - stage artifacts and validator state (`aidd stage summary`, `aidd stage questions`);
 - eval lane (`python -m aidd.harness.live_e2e_black_box`, `aidd eval summary`).
 
@@ -64,6 +64,7 @@ Symptoms:
 
 - `aidd run --work-item <id>` fails with `Missing option '--runtime'`.
 - `aidd stage run <stage> --work-item <id>` fails with `Missing option '--runtime'`.
+- `aidd stage interact <stage> --work-item <id>` fails with `Missing option '--runtime'`.
 - `aidd run --runtime <unknown>` fails with:
   `Unsupported runtime '<id>' for workflow execution.`
 - `aidd stage run --runtime <unknown>` fails with:
@@ -146,6 +147,22 @@ If status is `pending-blocking`:
 3. Use exact answer lines such as `- Q1 [resolved] answer text`; do not insert a
    colon after `[resolved]`.
 4. Re-run `stage questions` until it reports no unresolved blocking questions.
+
+### 4.4 Stage intervention is rejected
+
+Use intervention only for current-stage, document-first corrections:
+
+```bash
+uv run aidd stage interact plan --work-item WI-001 --runtime codex --request "Add rollback risks"
+```
+
+Common failures:
+
+- `Operator request must not be empty.`: provide non-empty `--request` or `--request-file`.
+- `Target document is outside current stage scope`: use a current-stage Markdown document
+  such as `plan.md` or omit `--target-document`.
+- `downstream stages already succeeded`: V1 does not invalidate completed downstream
+  stages; start a new run or wait for downstream rerun policy work.
 
 ## 5. Harness and Eval Failures
 

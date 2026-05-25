@@ -22,6 +22,11 @@ from aidd.cli.support import (
     console,
 )
 from aidd.config import load_config
+from aidd.core.operator_intervention import (
+    ensure_intervention_allowed_for_downstream,
+    persist_operator_intervention_request,
+    resolve_intervention_run_id,
+)
 from aidd.core.project_set import ResolvedProjectSet, resolve_project_set
 from aidd.core.repair import (
     RepairBudgetPolicy,
@@ -29,7 +34,7 @@ from aidd.core.repair import (
     persist_repair_history_snapshot,
     write_repair_brief,
 )
-from aidd.core.run_lookup import latest_run_id
+from aidd.core.run_lookup import latest_attempt_number, latest_run_id
 from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
     create_run_manifest,
@@ -59,6 +64,21 @@ class StageRunOptions:
     root: Path | None
     config: Path
     log_follow: bool
+    runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class StageInteractOptions:
+    stage: str
+    work_item: str
+    runtime: str
+    run_id: str | None
+    root: Path | None
+    config: Path
+    request: str | None = None
+    request_file: Path | None = None
+    target_documents: tuple[str, ...] = ()
+    log_follow: bool = True
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
 
 
@@ -206,6 +226,7 @@ def _execute_adapter_invocation(
     prompt_pack_paths_for_runtime = _active_prompt_pack_paths(
         prompt_pack_paths=tuple(prompt_pack_file_paths),
         repair_mode=invocation.repair_mode,
+        intervention_mode=invocation.attempt_mode == "intervention",
     )
     runtime_request = StageRuntimeRequest(
         runtime_id=options.runtime,
@@ -220,10 +241,13 @@ def _execute_adapter_invocation(
         repository_root=runtime_config.repository_root,
         expected_output_documents=invocation.expected_output_documents,
         attempt_number=invocation.attempt_number,
+        attempt_mode=invocation.attempt_mode,
         repair_mode=invocation.repair_mode,
         input_bundle_path=invocation.input_bundle_path,
         repair_brief_path=invocation.repair_brief_path,
         repair_context_markdown=invocation.repair_context_markdown,
+        operator_request_path=invocation.operator_request_path,
+        operator_request_markdown=invocation.operator_request_markdown,
     )
 
     def _on_stdout(chunk: str) -> None:
@@ -285,11 +309,7 @@ def _write_repair_brief_for_retry(
         run_id=orchestration.run_id,
         stage=orchestration.stage,
         attempt_number=orchestration.execution_state.attempt_number,
-        trigger=(
-            "initial"
-            if orchestration.execution_state.attempt_number == 1
-            else "repair"
-        ),
+        trigger=orchestration.adapter_invocation.attempt_mode,
         outcome="failed validation",
         stage_status=orchestration.transition.next_state.value,
         validator_report_path=validator_report_path,
@@ -304,33 +324,38 @@ def _run_stage_attempts(
     runtime_config: StageRunRuntimeConfig,
     run_id: str,
     prompt_pack_file_paths: tuple[Path, ...],
+    intervention_request_path: Path | None = None,
 ) -> tuple[StageOrchestrationResult, int]:
     orchestration: StageOrchestrationResult | None = None
     stage_attempt_count = 0
+    current_intervention_request_path = intervention_request_path
     while True:
-        unblock_state = update_stage_unblock_state(
-            workspace_root=runtime_config.workspace_root,
-            work_item=options.work_item,
-            run_id=run_id,
-            stage=options.stage,
-        )
-        if unblock_state.was_blocked and not unblock_state.unblocked:
-            stage_documents_root = (
-                runtime_config.workspace_root
-                / "workitems"
-                / options.work_item
-                / "stages"
-                / options.stage
+        if current_intervention_request_path is None:
+            unblock_state = update_stage_unblock_state(
+                workspace_root=runtime_config.workspace_root,
+                work_item=options.work_item,
+                run_id=run_id,
+                stage=options.stage,
             )
-            console.print("Stage run result: action=wait state=blocked")
-            if unblock_state.stage_metadata_path is not None:
-                console.print(f"Stage metadata: {unblock_state.stage_metadata_path.as_posix()}")
-            console.print("Blocking questions are unresolved.")
-            console.print(f"Questions: {(stage_documents_root / 'questions.md').as_posix()}")
-            console.print(f"Answers: {(stage_documents_root / 'answers.md').as_posix()}")
-            raise typer.Exit(code=1)
-        if unblock_state.unblocked:
-            console.print("Resuming blocked stage after answers were detected.")
+            if unblock_state.was_blocked and not unblock_state.unblocked:
+                stage_documents_root = (
+                    runtime_config.workspace_root
+                    / "workitems"
+                    / options.work_item
+                    / "stages"
+                    / options.stage
+                )
+                console.print("Stage run result: action=wait state=blocked")
+                if unblock_state.stage_metadata_path is not None:
+                    console.print(
+                        f"Stage metadata: {unblock_state.stage_metadata_path.as_posix()}"
+                    )
+                console.print("Blocking questions are unresolved.")
+                console.print(f"Questions: {(stage_documents_root / 'questions.md').as_posix()}")
+                console.print(f"Answers: {(stage_documents_root / 'answers.md').as_posix()}")
+                raise typer.Exit(code=1)
+            if unblock_state.unblocked:
+                console.print("Resuming blocked stage after answers were detected.")
 
         try:
             orchestration = run_single_stage_orchestration(
@@ -347,12 +372,14 @@ def _run_stage_attempts(
                 ),
                 repair_policy=runtime_config.repair_policy,
                 project_set=runtime_config.project_set,
+                intervention_request_path=current_intervention_request_path,
             )
         except (FileNotFoundError, ValueError) as exc:
             console.print(f"Error: {exc}")
             raise typer.Exit(code=2) from exc
 
         stage_attempt_count += 1
+        current_intervention_request_path = None
         if orchestration.transition.action is not PostValidationAction.REPAIR:
             break
         repair_brief_path = _write_repair_brief_for_retry(
@@ -367,6 +394,21 @@ def _run_stage_attempts(
 
     assert orchestration is not None
     return orchestration, stage_attempt_count
+
+
+def _operator_request_text(options: StageInteractOptions) -> str:
+    has_inline = options.request is not None and options.request.strip() != ""
+    has_file = options.request_file is not None
+    if has_inline == has_file:
+        raise typer.BadParameter("Provide exactly one of '--request' or '--request-file'.")
+    if has_inline:
+        assert options.request is not None
+        return options.request.strip()
+    assert options.request_file is not None
+    try:
+        return options.request_file.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise typer.BadParameter(f"Could not read request file: {exc}") from exc
 
 
 def _write_run_manifest(
@@ -446,6 +488,37 @@ def _print_stage_run_result(
             console.print(f"Answers: {answers_path.as_posix()}")
 
 
+def _print_stage_interact_start(
+    *,
+    options: StageInteractOptions,
+    run_id: str,
+    request_path: Path,
+) -> None:
+    console.print(
+        "AIDD stage interaction: "
+        f"stage={options.stage} work_item={options.work_item} runtime={options.runtime} "
+        f"log_follow={options.log_follow} run_id={run_id}"
+    )
+    console.print(f"Operator request: {request_path.as_posix()}")
+    if options.log_follow:
+        console.print("Live-log follow mode enabled for intervention runtime output.")
+
+
+def _print_stage_interact_result(
+    *,
+    orchestration: StageOrchestrationResult,
+    stage_attempt_count: int,
+    request_path: Path,
+    intervention_attempt_number: int,
+) -> None:
+    _print_stage_run_result(
+        orchestration=orchestration,
+        stage_attempt_count=stage_attempt_count,
+    )
+    console.print(f"Operator request: {request_path.as_posix()}")
+    console.print(f"Intervention attempt: {intervention_attempt_number}")
+
+
 def _expected_stage_document_path(
     *,
     orchestration: StageOrchestrationResult,
@@ -486,7 +559,76 @@ def run_stage_command(options: StageRunOptions) -> None:
         raise typer.Exit(code=1)
 
 
+def run_stage_interact_command(options: StageInteractOptions) -> None:
+    stage_run_options = StageRunOptions(
+        stage=options.stage,
+        work_item=options.work_item,
+        runtime=options.runtime,
+        run_id=options.run_id,
+        root=options.root,
+        config=options.config,
+        log_follow=options.log_follow,
+        runtime_chunk_sink=options.runtime_chunk_sink,
+    )
+    _validate_stage_run_options(stage_run_options)
+    request_text = _operator_request_text(options)
+    runtime_config = _resolve_stage_run_config(stage_run_options)
+    try:
+        run_id = resolve_intervention_run_id(
+            workspace_root=runtime_config.workspace_root,
+            work_item=options.work_item,
+            run_id=options.run_id,
+        )
+        ensure_intervention_allowed_for_downstream(
+            workspace_root=runtime_config.workspace_root,
+            work_item=options.work_item,
+            run_id=run_id,
+            stage=options.stage,
+        )
+        operator_request = persist_operator_intervention_request(
+            workspace_root=runtime_config.workspace_root,
+            work_item=options.work_item,
+            stage=options.stage,
+            request_text=request_text,
+            target_documents=options.target_documents,
+        )
+        previous_attempt_number = latest_attempt_number(
+            workspace_root=runtime_config.workspace_root,
+            work_item=options.work_item,
+            run_id=run_id,
+            stage=options.stage,
+        )
+    except ValueError as exc:
+        console.print(f"Error: {exc}")
+        raise typer.Exit(code=2) from exc
+
+    intervention_attempt_number = (previous_attempt_number or 0) + 1
+    prompt_pack_file_paths = resolve_prompt_pack_file_paths(stage=options.stage)
+    _print_stage_interact_start(
+        options=options,
+        run_id=run_id,
+        request_path=operator_request.request_path,
+    )
+    orchestration, stage_attempt_count = _run_stage_attempts(
+        options=stage_run_options,
+        runtime_config=runtime_config,
+        run_id=run_id,
+        prompt_pack_file_paths=tuple(prompt_pack_file_paths),
+        intervention_request_path=operator_request.request_path,
+    )
+    _print_stage_interact_result(
+        orchestration=orchestration,
+        stage_attempt_count=stage_attempt_count,
+        request_path=operator_request.request_path,
+        intervention_attempt_number=intervention_attempt_number,
+    )
+    if orchestration.transition.action is not PostValidationAction.ADVANCE:
+        raise typer.Exit(code=1)
+
+
 __all__ = [
+    "StageInteractOptions",
     "StageRunOptions",
+    "run_stage_interact_command",
     "run_stage_command",
 ]

@@ -98,6 +98,7 @@ Question/answer document rules:
 
 - `prompt-packs/stages/research/system.md`
 - `prompt-packs/stages/research/run.md`
+- `prompt-packs/stages/research/intervention.md`
 - `prompt-packs/stages/research/repair.md`
 - `prompt-packs/stages/research/interview.md`
 
