@@ -9,6 +9,8 @@ It must let an operator:
 
 - start and resume the full `idea -> qa` flow;
 - run or inspect an individual stage;
+- request a stage-scoped correction or additional analysis without leaving the
+  document-first workflow;
 - answer blocking questions;
 - inspect stage artifacts, validation reports, repair history, and runner logs;
 - keep enough provenance visible to compare the frontend action with the CLI action.
@@ -49,11 +51,12 @@ The first frontend contract covers these flows:
 
 3. **Question answering**
    - show unresolved questions from the standard `questions.md`;
-   - write UI answers to the standard `answers.md` as `[resolved]`;
+   - write UI answers to the standard `answers.md` as `[resolved]`,
+     `[partial]`, or `[deferred]` according to the operator-selected resolution;
    - preserve blocking vs non-blocking question semantics;
    - resume only through the normal core path after answers are present.
-   - keep partial and deferred answer states as direct file-mode semantics until the UI
-     exposes an explicit resolution selector.
+   - when blocking questions exist, make the answer form the selected-stage
+     cockpit priority and use the current run id when resuming the selected stage.
 
 4. **Runner log viewing**
    - show live runtime stdout/stderr chunks for UI-started jobs when the adapter can stream;
@@ -74,20 +77,34 @@ The first frontend contract covers these flows:
    - keep runtime approvals separate from product questions in `questions.md` and
      `answers.md`.
 
+7. **Operator intervention**
+   - accept a selected-stage request through UI, CLI, or another operator integration;
+   - persist the request as
+     `.aidd/workitems/<id>/stages/<stage>/operator-requests/request-0001.md`;
+   - run a new attempt in the current run id with `attempt_mode=intervention`;
+   - include required inputs, existing same-stage outputs, the latest operator request,
+     and available `questions.md` / `answers.md` in the input bundle;
+   - validate and publish through the normal post-runtime chain;
+   - reject the request when downstream stages have already succeeded in the same run
+     until a downstream invalidation/rerun policy exists.
+
 ## 4. Write boundaries
 
 Frontend writes are intentionally narrow:
 
 - answer documents may be written through the same durable question/answer path
   used by the CLI;
+- operator intervention requests may be written through the durable
+  `operator-requests/request-000N.md` path and then executed by the same stage
+  runner used by the CLI;
 - run or stage execution may be requested only through core workflow commands or
   equivalent application services;
 - runtime-authored stage outputs, validator reports, repair briefs, runtime logs,
   and eval artifacts must not be edited by the frontend.
 
-If the frontend needs a correction workflow, it should create an explicit operator
-document or task for the existing workflow instead of silently rewriting generated
-evidence.
+The frontend must not silently rewrite generated evidence. Correction workflows use
+explicit operator request documents, which become runtime input for a new attempt and
+remain auditable in Evidence Refs and Activity.
 
 ## 5. Runtime and adapter boundary
 
@@ -134,20 +151,60 @@ Current W20 implementation status:
 - the private local JSON API enforces a small request-body limit and deterministic
   malformed-body errors; non-loopback binds remain allowed but warn because this
   release has no UI authentication;
-- private JSON endpoints expose run, stage, questions, answer writes, persisted logs,
-  artifact summaries, artifact document content, workflow run requests, stage run
-  requests, and job status/log polling over the operator services;
+- private JSON endpoints expose run, dashboard, stage, questions, answer writes,
+  persisted logs, artifact summaries, artifact document content, workflow run
+  requests, stage run requests, stage intervention requests, and job status/log
+  polling over the operator services;
 - UI job state includes `waiting-for-operator`, with
   `GET /api/jobs/<job_id>/operator-requests` and
   `POST /api/jobs/<job_id>/operator-requests/<request_id>/decision` for local runtime
-  approvals;
+  approvals; these runtime approvals remain attempt artifacts and are separate from
+  product/operator questions in `questions.md` and `answers.md`;
 - approval decisions are loopback-only by default; non-loopback binds must opt in with
   `--allow-remote-approvals`;
+- `POST /api/stage/interact` accepts `{stage, runtime, run_id, request,
+  target_documents, log_follow}`, validates the request shape, and starts a
+  process-local intervention job; the durable request artifact and attempt semantics
+  are handled by core/CLI services, not by JavaScript state;
+- `GET /api/dashboard?stage=<stage>&run_id=<run_id?>` returns an
+  `OperatorDashboardView` containing project/work-item/run summary, canonical
+  stage rail, selected-stage cockpit data, next action, blockers, evidence refs,
+  recent activity, and recent artifacts derived from existing `.aidd/` state;
+- dashboard `next_action` is run-global, not only selected-stage-local: unresolved
+  blocking questions are surfaced before runnable-stage suggestions, failed
+  validation points to validation inspection, and only existing artifact files are
+  shown in Recent Artifacts;
+- the static UI is organized as an operator console: top status bar, canonical
+  stage rail, selected-stage cockpit with Overview/Questions/Validation/Artifacts/Logs
+  tabs, right-side Next Action/Blockers/Evidence/Runtime Root/Safety panels, and a
+  bottom Activity/Events plus Recent Artifacts dock;
+- Recent Activity includes run/stage metadata and `events.jsonl` entries across
+  all attempted stages plus `operator.request.created` entries for durable
+  intervention requests; the static UI overlays process-local live job chunks into
+  the Activity table while a UI-started run is active;
+- Evidence Refs and Recent Artifacts include the latest operator request for the
+  selected stage when present;
+- the selected-stage cockpit includes a `Request change` tab with an escaped
+  textarea and current-stage target document selector; submitting switches to the
+  Logs tab and follows the intervention job through the same polling path as stage
+  runs;
+- long workspace-relative paths are retained in payloads and element titles, but
+  rendered in compact form so evidence lanes stay scannable in the right sidebar
+  and bottom dock;
+- workflow and stage launches are primarily routed through the right-side Next
+  Action button so the top bar stays status/control-plane focused;
+- `POST /api/open-folder` is a loopback-only convenience action for allowlisted
+  workspace, stage, and artifact folders inside `.aidd/`; it does not create or
+  mutate workflow artifacts;
+- `POST /api/server/stop` stops only the local UI server. It explicitly reports
+  that runtime job cancellation is not provided by this redesign because current
+  UI jobs are thread/subprocess executions without a core cancel token;
 - the UI shell serves static HTML, CSS, and JavaScript from the Python package,
   without a Node or Vite dependency;
 - dynamic question text, stage metadata, artifact labels and paths, runtime-derived
   values, artifact document content, and logs are rendered through escaped UI text paths;
-- local smoke evidence covers page load, blocking answer persistence to
-  `answers.md`, persisted log reads, selected-stage run delegation, live job log
-  chunks, artifact document rendering, and workflow-run delegation through the
-  internal service seam.
+- local smoke evidence covers page load, dashboard payload shape, blocking answer
+  persistence to `answers.md`, answer-and-resume with the current run id, persisted
+  log reads, structured live job log chunks, artifact document rendering, local-only
+  open-folder/server-stop actions, stage intervention request dispatch, and
+  workflow-run delegation through the internal service seam.

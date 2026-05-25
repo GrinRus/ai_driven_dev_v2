@@ -41,6 +41,11 @@ For counted manual clean passes, `operator-quality-analysis.md` records:
   `blocked/infra/provider/model-quality`;
 - explicit blockers, or `none`.
 
+If the operator used a stage intervention during the live run, the bundle must also
+include `operator-intervention-analysis.md`. It records the target stage, request
+artifact path, reason for the intervention, validation outcome, and whether downstream
+state was untouched or rerun by a separately documented policy.
+
 ## Dimensions
 
 Each dimension uses a fixed integer score from `0` to `3`.

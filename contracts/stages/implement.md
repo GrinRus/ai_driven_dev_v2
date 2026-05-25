@@ -111,6 +111,7 @@ optional when a destructive or policy-sensitive choice must be confirmed
 
 - `prompt-packs/stages/implement/system.md`
 - `prompt-packs/stages/implement/run.md`
+- `prompt-packs/stages/implement/intervention.md`
 - `prompt-packs/stages/implement/repair.md`
 - `prompt-packs/stages/implement/interview.md`
 

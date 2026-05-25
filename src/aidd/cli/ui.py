@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 import threading
 import tomllib
 from collections.abc import Callable, Mapping
@@ -17,9 +19,15 @@ from uuid import uuid4
 
 import typer
 
+from aidd import __version__
 from aidd.adapters.runtime_registry import runtime_definitions
 from aidd.adapters.surface import get_runtime_adapter_surface
-from aidd.cli.stage_run import StageRunOptions, run_stage_command
+from aidd.cli.stage_run import (
+    StageInteractOptions,
+    StageRunOptions,
+    run_stage_command,
+    run_stage_interact_command,
+)
 from aidd.cli.support import (
     _execution_command_available,
     _runtime_command_for_runtime,
@@ -40,6 +48,7 @@ from aidd.core.operator_frontend import (
     persist_operator_answer,
     resolve_operator_artifact_document_content,
     resolve_operator_artifacts_view,
+    resolve_operator_dashboard_view,
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
     resolve_operator_run_view,
@@ -77,7 +86,9 @@ from aidd.runtime_permissions import (
 
 WorkflowRunner = Callable[..., WorkflowRunResult]
 StageRunner = Callable[[StageRunOptions], None]
+StageInteractRunner = Callable[[StageInteractOptions], None]
 ReadinessProbeProvider = Callable[[AiddConfig], Mapping[str, RuntimeReadinessProbeReport]]
+LocalFolderOpener = Callable[[Path], None]
 
 
 @dataclass(frozen=True, slots=True)
@@ -365,6 +376,16 @@ def _warn_if_non_loopback_host(host: str) -> None:
     )
 
 
+def _open_local_folder(path: Path) -> None:
+    if sys.platform == "darwin":
+        command = ("open", path.as_posix())
+    elif sys.platform.startswith("win"):
+        command = ("explorer", str(path))
+    else:
+        command = ("xdg-open", path.as_posix())
+    subprocess.Popen(command)  # noqa: S603
+
+
 def _latest_attempt_path(
     *,
     workspace_root: Path,
@@ -394,6 +415,8 @@ def _operator_request_view(attempt_path: Path | None) -> dict[str, object]:
     if attempt_path is None:
         return {
             "attempt_path": None,
+            "requests_path": None,
+            "decisions_path": None,
             "requests": (),
             "pending_request_ids": (),
             "unapproved_request_ids": (),
@@ -458,13 +481,18 @@ class OperatorUiService:
         *,
         workflow_runner: WorkflowRunner = run_workflow,
         stage_runner: StageRunner = run_stage_command,
+        stage_interact_runner: StageInteractRunner = run_stage_interact_command,
         readiness_probe_provider: ReadinessProbeProvider = _collect_runtime_readiness_probe_reports,
+        folder_opener: LocalFolderOpener = _open_local_folder,
     ) -> None:
         self.options = options
         self._workflow_runner = workflow_runner
         self._stage_runner = stage_runner
+        self._stage_interact_runner = stage_interact_runner
         self._readiness_probe_provider = readiness_probe_provider
+        self._folder_opener = folder_opener
         self._jobs = UiRunJobStore()
+        self._shutdown_requested = False
         self._operator_waiters_lock = threading.Lock()
         self._operator_waiters: dict[str, _UiOperatorDecisionWaiter] = {}
 
@@ -512,6 +540,21 @@ class OperatorUiService:
                     if message.startswith("No runs found for work item "):
                         return _json_response({"metadata": None, "message": message})
                     raise
+            if path == "/api/dashboard":
+                stage = _first_param(params, "stage", STAGES[0])
+                assert stage is not None
+                return _json_response(
+                    {
+                        "app_version": __version__,
+                        "dashboard": resolve_operator_dashboard_view(
+                            workspace_root=self.workspace_root,
+                            work_item=self.options.work_item,
+                            active_stage=stage,
+                            run_id=_first_param(params, "run_id"),
+                            project_root=Path.cwd(),
+                        ),
+                    }
+                )
             if path == "/api/runtime-readiness":
                 return _json_response(self._runtime_readiness())
             if path == "/api/stage":
@@ -612,11 +655,23 @@ class OperatorUiService:
                 )
             if path == "/api/stage/run":
                 return _json_response(self._start_stage_job(payload))
+            if path == "/api/stage/interact":
+                return _json_response(self._start_stage_interact_job(payload))
             if path == "/api/workflow/run":
                 return _json_response(self._start_workflow_job(payload))
+            if path == "/api/open-folder":
+                return _json_response(self._open_folder(payload))
+            if path == "/api/server/stop":
+                return _json_response(self._request_server_stop())
         except ValueError as exc:
             return _error_response(str(exc))
         return _error_response("not found", status=HTTPStatus.NOT_FOUND)
+
+    def consume_shutdown_requested(self) -> bool:
+        if not self._shutdown_requested:
+            return False
+        self._shutdown_requested = False
+        return True
 
     def _handle_job_get(self, *, path: str, params: dict[str, list[str]]) -> UiResponse:
         parts = path.strip("/").split("/")
@@ -660,16 +715,27 @@ class OperatorUiService:
         if isinstance(raw_attempt_path, str) and raw_attempt_path:
             return Path(raw_attempt_path)
         result = job.get("result")
-        if not isinstance(result, Mapping):
+        stage = job.get("stage")
+        run_id: object = None
+        if isinstance(result, Mapping):
+            stage = result.get("stage") or stage
+            run_id = result.get("run_id")
+        if not isinstance(stage, str):
             return None
-        stage = result.get("stage") or job.get("stage")
-        run_id = result.get("run_id")
-        if not isinstance(stage, str) or not isinstance(run_id, str):
+        selected_run_id = (
+            run_id
+            if isinstance(run_id, str) and run_id
+            else resolve_latest_run_id(
+                workspace_root=self.workspace_root,
+                work_item=self.options.work_item,
+            )
+        )
+        if selected_run_id is None:
             return None
         return _latest_attempt_path(
             workspace_root=self.workspace_root,
             work_item=self.options.work_item,
-            run_id=run_id,
+            run_id=selected_run_id,
             stage=stage,
         )
 
@@ -705,7 +771,7 @@ class OperatorUiService:
         finally:
             with self._operator_waiters_lock:
                 self._operator_waiters.pop(request.id, None)
-            self._jobs.mark_running(job_id)
+            self._jobs.mark_running(job_id, message="runtime resumed after operator decision")
 
     def _deliver_operator_decision(self, decision: RuntimeOperatorDecision) -> None:
         with self._operator_waiters_lock:
@@ -762,6 +828,45 @@ class OperatorUiService:
             )
 
         return self._start_job(kind="stage", stage=stage, target=_target)
+
+    def _target_documents_from_payload(self, payload: dict[str, Any]) -> tuple[str, ...]:
+        raw_targets = payload.get("target_documents", ())
+        if raw_targets is None:
+            return ()
+        if not isinstance(raw_targets, list):
+            raise ValueError("target_documents must be an array.")
+        targets: list[str] = []
+        for item in raw_targets:
+            if not isinstance(item, str):
+                raise ValueError("target_documents entries must be strings.")
+            normalized = item.strip()
+            if normalized:
+                targets.append(normalized)
+        return tuple(targets)
+
+    def _start_stage_interact_job(self, payload: dict[str, Any]) -> object:
+        stage = _stage_from_payload(payload)
+        runtime = _runtime_from_payload(payload)
+        _validate_runtime(runtime)
+        raw_request = payload.get("request")
+        if not isinstance(raw_request, str) or not raw_request.strip():
+            raise ValueError("request is required.")
+        target_documents = self._target_documents_from_payload(payload)
+        log_follow = bool(payload.get("log_follow", True))
+        run_id = str(payload.get("run_id", "")).strip() or None
+
+        def _target(job_id: str) -> object:
+            return self._run_stage_interact(
+                stage=stage,
+                runtime=runtime,
+                run_id=run_id,
+                request=raw_request.strip(),
+                target_documents=target_documents,
+                log_follow=log_follow,
+                job_id=job_id,
+            )
+
+        return self._start_job(kind="intervention", stage=stage, target=_target)
 
     def _run_stage(
         self,
@@ -832,6 +937,56 @@ class OperatorUiService:
             "completed": True,
         }
 
+    def _run_stage_interact(
+        self,
+        *,
+        stage: str,
+        runtime: str,
+        run_id: str | None,
+        request: str,
+        target_documents: tuple[str, ...],
+        log_follow: bool,
+        job_id: str,
+    ) -> object:
+        try:
+            self._stage_interact_runner(
+                StageInteractOptions(
+                    stage=stage,
+                    work_item=self.options.work_item,
+                    runtime=runtime,
+                    run_id=run_id,
+                    root=self.workspace_root,
+                    config=self.options.config,
+                    request=request,
+                    request_file=None,
+                    target_documents=target_documents,
+                    log_follow=log_follow,
+                    runtime_chunk_sink=lambda stream, text: self._jobs.append_chunk(
+                        job_id,
+                        stream=stream,
+                        text=text,
+                    ),
+                )
+            )
+        except typer.Exit as exc:
+            exit_code = int(exc.exit_code or 0)
+            return {
+                "stage": stage,
+                "runtime": runtime,
+                "run_id": run_id,
+                "target_documents": target_documents,
+                "exit_code": exit_code,
+                "completed": exit_code == 0,
+            }
+        return {
+            "stage": stage,
+            "runtime": runtime,
+            "run_id": run_id,
+            "target_documents": target_documents,
+            "exit_code": 0,
+            "completed": True,
+        }
+
     def _start_workflow_job(self, payload: dict[str, Any]) -> object:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
@@ -866,10 +1021,7 @@ class OperatorUiService:
             try:
                 result = target(job_id)
                 exit_code = _exit_code_from_result(result)
-                if (
-                    isinstance(result, Mapping)
-                    and bool(result.get("waiting_for_operator"))
-                ):
+                if isinstance(result, Mapping) and bool(result.get("waiting_for_operator")):
                     self._jobs.wait_for_operator(
                         job_id,
                         result=result,
@@ -970,6 +1122,58 @@ class OperatorUiService:
             command_sources=_runtime_command_sources_from_config(self.options.config),
         )
 
+    def _ensure_local_only_action(self) -> None:
+        if not _is_loopback_host(self.options.host):
+            raise ValueError("Local-only UI action is available only on loopback hosts.")
+
+    def _open_folder(self, payload: dict[str, Any]) -> object:
+        self._ensure_local_only_action()
+        raw_target = payload.get("target")
+        if not isinstance(raw_target, str):
+            raise ValueError("target is required.")
+        target = raw_target.strip()
+        if target == "workspace":
+            folder = self.workspace_root
+        elif target == "stage":
+            stage = str(payload.get("stage", "")).strip()
+            if not is_valid_stage(stage):
+                raise ValueError(f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}.")
+            folder = self.workspace_root / "workitems" / self.options.work_item / "stages" / stage
+        elif target == "artifact":
+            raw_path = payload.get("path")
+            if not isinstance(raw_path, str) or not raw_path.strip():
+                raise ValueError("path is required for artifact folder target.")
+            relative_path = Path(raw_path.strip())
+            if relative_path.is_absolute():
+                raise ValueError("artifact path must be workspace-relative.")
+            workspace = self.workspace_root.resolve(strict=False)
+            resolved = (self.workspace_root / relative_path).resolve(strict=False)
+            if not resolved.is_relative_to(workspace):
+                raise ValueError("artifact path escapes workspace root.")
+            folder = resolved if resolved.is_dir() else resolved.parent
+        else:
+            raise ValueError(
+                "unsupported folder target. Expected one of: workspace, stage, artifact."
+            )
+
+        resolved_workspace = self.workspace_root.resolve(strict=False)
+        resolved_folder = folder.resolve(strict=False)
+        if not resolved_folder.is_relative_to(resolved_workspace):
+            raise ValueError("folder path escapes workspace root.")
+        if not resolved_folder.exists() or not resolved_folder.is_dir():
+            raise ValueError(f"folder does not exist: {resolved_folder.as_posix()}.")
+        self._folder_opener(resolved_folder)
+        return {"opened": resolved_folder.as_posix(), "target": target}
+
+    def _request_server_stop(self) -> object:
+        self._ensure_local_only_action()
+        self._shutdown_requested = True
+        return {
+            "status": "stopping",
+            "runtime_job_cancellation": False,
+            "message": "Stopping the local UI server only; active runtime jobs are not cancelled.",
+        }
+
 
 def _handler_for(service: OperatorUiService) -> type[BaseHTTPRequestHandler]:
     class OperatorUiHandler(BaseHTTPRequestHandler):
@@ -995,6 +1199,12 @@ def _handler_for(service: OperatorUiService) -> type[BaseHTTPRequestHandler]:
                 self._send(_error_response(str(exc)))
                 return
             self._send(service.handle_post(parsed.path, payload))
+            if service.consume_shutdown_requested():
+                threading.Thread(
+                    target=self.server.shutdown,
+                    name="aidd-ui-server-stop",
+                    daemon=True,
+                ).start()
 
         def log_message(self, format: str, *args: object) -> None:
             return

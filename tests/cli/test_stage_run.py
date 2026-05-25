@@ -9,13 +9,14 @@ import pytest
 from typer.testing import CliRunner
 
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
-from aidd.cli.main import _prefix_stream_chunk, app
+from aidd.cli.main import _active_prompt_pack_paths, _prefix_stream_chunk, app
 from aidd.cli.stage_run import _CliRuntimeOperatorDecisionProvider
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_JSONL_FILENAME,
     RUN_RUNTIME_LOG_FILENAME,
+    create_run_manifest,
     run_attempt_artifact_index_path,
 )
 from aidd.core.runtime_operator import RuntimeOperatorRequest
@@ -330,6 +331,42 @@ def _write_native_runtime_cli_config(
         encoding="utf-8",
     )
     return config_path
+
+
+def _write_intervention_runtime_script(
+    *,
+    tmp_path: Path,
+    documents: dict[str, str],
+) -> Path:
+    script_path = tmp_path / "intervention_runtime.py"
+    script_lines = [
+        "import os",
+        "import sys",
+        "from pathlib import Path",
+        f"documents = {documents!r}",
+        "if os.environ.get('AIDD_ATTEMPT_MODE') != 'intervention':",
+        "    print('missing intervention attempt mode', file=sys.stderr)",
+        "    raise SystemExit(41)",
+        "request_path = Path(os.environ.get('AIDD_OPERATOR_REQUEST_PATH', ''))",
+        "if not request_path.exists():",
+        "    print('missing operator request path', file=sys.stderr)",
+        "    raise SystemExit(42)",
+        "request_text = request_path.read_text(encoding='utf-8')",
+        "if 'Add migration rollback risks' not in request_text:",
+        "    print('missing operator request text', file=sys.stderr)",
+        "    raise SystemExit(43)",
+        "root = Path(os.environ['AIDD_WORKSPACE_ROOT'])",
+        (
+            "stage_root = root / 'workitems' / os.environ['AIDD_WORK_ITEM'] "
+            "/ 'stages' / os.environ['AIDD_STAGE']"
+        ),
+        "stage_root.mkdir(parents=True, exist_ok=True)",
+        "for name, content in documents.items():",
+        "    (stage_root / name).write_text(content, encoding='utf-8')",
+        "print('intervention-runtime-ok')",
+    ]
+    script_path.write_text("\n".join(script_lines) + "\n", encoding="utf-8")
+    return script_path
 
 
 def _run_id_for_work_item(*, workspace_root: Path, work_item: str) -> str:
@@ -672,6 +709,212 @@ def test_stage_run_executes_native_provider_mode_without_adapter_flags(
     assert (
         workspace_root / "workitems" / "WI-017" / "stages" / "plan" / "output" / "plan.md"
     ).exists()
+
+
+def test_stage_interact_creates_operator_request_and_runs_current_run(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-INT"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-int",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    writer_script = _write_intervention_runtime_script(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+    )
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "interact",
+            "plan",
+            "--work-item",
+            work_item,
+            "--runtime",
+            "generic-cli",
+            "--run-id",
+            "run-int",
+            "--request",
+            "Add migration rollback risks",
+            "--target-document",
+            "plan.md",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    request_path = (
+        workspace_root
+        / "workitems"
+        / work_item
+        / "stages"
+        / "plan"
+        / "operator-requests"
+        / "request-0001.md"
+    )
+    assert result.exit_code == 0, result.output
+    assert "AIDD stage interaction: stage=plan" in result.stdout
+    assert "Intervention attempt: 1" in result.stdout
+    assert "Operator request:" in result.stdout
+    assert "operator-requests" in result.stdout
+    assert "request-0001.md" in result.stdout
+    assert request_path.exists()
+    assert "Add migration rollback risks" in request_path.read_text(encoding="utf-8")
+    artifact_index = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-int",
+        stage="plan",
+        attempt_number=1,
+    )
+    artifact_payload = json.loads(artifact_index.read_text(encoding="utf-8"))
+    assert artifact_payload["documents"]["operator_request"].endswith(
+        "operator-requests/request-0001.md"
+    )
+
+
+def test_stage_interact_reports_original_intervention_attempt_when_repair_retries(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-INT-REPAIR"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-int",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=_repair_trigger_plan_output_documents(),
+        exit_code=0,
+        next_documents=_valid_plan_output_documents(repair_trace=True),
+    )
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}",
+        max_repair_attempts=1,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "interact",
+            "plan",
+            "--work-item",
+            work_item,
+            "--runtime",
+            "generic-cli",
+            "--run-id",
+            "run-int",
+            "--request",
+            "Add migration rollback risks",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Repair retry scheduled: attempt=2" in result.stdout
+    assert "Stage attempts: 2" in result.stdout
+    assert "Intervention attempt: 1" in result.stdout
+    assert "Intervention attempt: 2" not in result.stdout
+
+
+def test_stage_interact_supports_request_file_and_rejects_bad_target(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-INT-FILE"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-int",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    request_file = tmp_path / "request.md"
+    request_file.write_text("Add migration rollback risks\n", encoding="utf-8")
+    writer_script = _write_intervention_runtime_script(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+    )
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}",
+    )
+
+    file_result = runner.invoke(
+        app,
+        [
+            "stage",
+            "interact",
+            "plan",
+            "--work-item",
+            work_item,
+            "--runtime",
+            "generic-cli",
+            "--run-id",
+            "run-int",
+            "--request-file",
+            str(request_file),
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+    bad_target = runner.invoke(
+        app,
+        [
+            "stage",
+            "interact",
+            "plan",
+            "--work-item",
+            work_item,
+            "--runtime",
+            "generic-cli",
+            "--run-id",
+            "run-int",
+            "--request",
+            "Add migration rollback risks",
+            "--target-document",
+            "workitems/WI-INT-FILE/stages/research/research-notes.md",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+        ],
+    )
+
+    assert file_result.exit_code == 0, file_result.output
+    assert bad_target.exit_code != 0
+    assert "outside current stage scope" in bad_target.output
 
 
 def test_stage_run_rejects_unknown_runtime() -> None:
@@ -1094,3 +1337,28 @@ def test_prefix_stream_chunk_leaves_single_stream_output_unchanged() -> None:
     )
 
     assert formatted == original
+
+
+def test_active_prompt_pack_paths_selects_intervention_overlay() -> None:
+    paths = (
+        Path("prompt-packs/stages/plan/system.md"),
+        Path("prompt-packs/stages/plan/run.md"),
+        Path("prompt-packs/stages/plan/intervention.md"),
+        Path("prompt-packs/stages/plan/repair.md"),
+        Path("prompt-packs/stages/plan/interview.md"),
+    )
+
+    active = _active_prompt_pack_paths(
+        prompt_pack_paths=paths,
+        repair_mode=False,
+        intervention_mode=True,
+    )
+    normal = _active_prompt_pack_paths(prompt_pack_paths=paths, repair_mode=False)
+    repair = _active_prompt_pack_paths(prompt_pack_paths=paths, repair_mode=True)
+
+    assert active == (
+        Path("prompt-packs/stages/plan/system.md"),
+        Path("prompt-packs/stages/plan/intervention.md"),
+    )
+    assert Path("prompt-packs/stages/plan/intervention.md") not in normal
+    assert Path("prompt-packs/stages/plan/intervention.md") not in repair

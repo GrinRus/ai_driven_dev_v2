@@ -43,6 +43,9 @@ class AdapterInvocationBundle:
     input_bundle_markdown: str
     expected_input_bundle: tuple[Path, ...]
     expected_output_documents: tuple[Path, ...]
+    attempt_mode: str = "initial"
+    operator_request_path: Path | None = None
+    operator_request_markdown: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

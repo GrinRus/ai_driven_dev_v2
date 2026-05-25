@@ -71,10 +71,18 @@ def _active_prompt_pack_paths(
     *,
     prompt_pack_paths: tuple[Path, ...],
     repair_mode: bool,
+    intervention_mode: bool = False,
 ) -> tuple[Path, ...]:
+    mode_specific = {"intervention.md", "repair.md"}
+    if intervention_mode:
+        return tuple(
+            path
+            for path in prompt_pack_paths
+            if path.name not in {"run.md", "repair.md", "interview.md"}
+        )
     if repair_mode:
-        return prompt_pack_paths
-    return tuple(path for path in prompt_pack_paths if path.name != "repair.md")
+        return tuple(path for path in prompt_pack_paths if path.name != "intervention.md")
+    return tuple(path for path in prompt_pack_paths if path.name not in mode_specific)
 
 
 def _execution_command_available(command: str) -> bool:

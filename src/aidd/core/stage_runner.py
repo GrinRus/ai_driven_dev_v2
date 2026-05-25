@@ -151,8 +151,8 @@ def _block_after_operator_request(
     )
 
 
-def _repair_history_trigger(attempt_number: int) -> str:
-    return "initial" if attempt_number == 1 else "repair"
+def _repair_history_trigger(*, adapter_invocation: AdapterInvocationBundle) -> str:
+    return adapter_invocation.attempt_mode
 
 
 def _repair_history_outcome(
@@ -175,10 +175,13 @@ def _should_persist_terminal_repair_history(
     run_id: str,
     stage: str,
     attempt_number: int,
+    attempt_mode: str,
     validation_transition: RepairBudgetValidationTransition,
 ) -> bool:
     if validation_transition.requested_verdict is ValidationVerdict.REPAIR:
         return validation_transition.resolved_verdict is ValidationVerdict.FAIL
+    if attempt_mode == "intervention":
+        return True
     if attempt_number > 1:
         return True
     metadata = load_stage_metadata(
@@ -270,6 +273,26 @@ def _restore_operator_owned_answers_after_runtime_attempt(
         answers_path.write_text(answers_text_before_attempt, encoding="utf-8")
 
 
+def _intervention_context_documents(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    operator_request_path: Path,
+) -> tuple[Path, ...]:
+    stage_documents_root = workspace_stage_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    candidates = (
+        operator_request_path,
+        stage_documents_root / "questions.md",
+        stage_documents_root / "answers.md",
+    )
+    return tuple(path for path in candidates if path.exists())
+
+
 def run_single_stage_orchestration(
     *,
     workspace_root: Path,
@@ -284,6 +307,7 @@ def run_single_stage_orchestration(
     repair_policy: RepairBudgetPolicy | None = None,
     project_set: ResolvedProjectSet | None = None,
     changed_at_utc: datetime | None = None,
+    intervention_request_path: Path | None = None,
 ) -> StageOrchestrationResult:
     answers_text_before_attempt = _read_stage_answers_text(
         workspace_root=workspace_root,
@@ -296,6 +320,8 @@ def run_single_stage_orchestration(
         run_id=run_id,
         stage=stage,
     )
+    if intervention_request_path is not None:
+        include_existing_stage_outputs = True
     preparation_bundle = prepare_stage_bundle(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -303,6 +329,16 @@ def run_single_stage_orchestration(
         contracts_root=contracts_root,
         project_set=project_set,
         include_existing_stage_outputs=include_existing_stage_outputs,
+        extra_input_documents=(
+            ()
+            if intervention_request_path is None
+            else _intervention_context_documents(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                stage=stage,
+                operator_request_path=intervention_request_path,
+            )
+        ),
     )
     execution_state = persist_execution_state(
         workspace_root=workspace_root,
@@ -317,6 +353,7 @@ def run_single_stage_orchestration(
         preparation_bundle=preparation_bundle,
         execution_state=execution_state,
         contracts_root=contracts_root,
+        intervention_request_path=intervention_request_path,
     )
     try:
         adapter_outcome = adapter_executor(adapter_invocation, execution_state)
@@ -473,6 +510,7 @@ def run_single_stage_orchestration(
         run_id=run_id,
         stage=stage,
         attempt_number=execution_state.attempt_number,
+        attempt_mode=adapter_invocation.attempt_mode,
         validation_transition=validation_transition,
     ):
         persist_repair_history_snapshot(
@@ -481,7 +519,7 @@ def run_single_stage_orchestration(
             run_id=run_id,
             stage=stage,
             attempt_number=execution_state.attempt_number,
-            trigger=_repair_history_trigger(execution_state.attempt_number),
+            trigger=_repair_history_trigger(adapter_invocation=adapter_invocation),
             outcome=_repair_history_outcome(validation_transition=validation_transition),
             stage_status=validation_transition.validation_state.next_state.value,
             validator_report_path=validation_result.validator_report_path,

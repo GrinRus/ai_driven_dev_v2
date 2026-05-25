@@ -32,10 +32,13 @@ class StageRuntimeRequest:
     project_roots: tuple[Path, ...] = ()
     expected_output_documents: tuple[Path, ...] = ()
     attempt_number: int = 1
+    attempt_mode: str = "initial"
     repair_mode: bool = False
     input_bundle_path: Path | None = None
     repair_brief_path: Path | None = None
     repair_context_markdown: str | None = None
+    operator_request_path: Path | None = None
+    operator_request_markdown: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

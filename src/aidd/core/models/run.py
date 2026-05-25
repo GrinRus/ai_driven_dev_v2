@@ -40,8 +40,11 @@ class RepairHistoryEntry:
             raise ValueError("Repair history attempt number must be >= 1.")
 
         normalized_trigger = self.trigger.strip().lower()
-        if normalized_trigger not in {"initial", "repair"}:
-            raise ValueError("Repair history trigger must be either 'initial' or 'repair'.")
+        if normalized_trigger not in {"initial", "repair", "intervention"}:
+            raise ValueError(
+                "Repair history trigger must be one of 'initial', 'repair', "
+                "or 'intervention'."
+            )
         object.__setattr__(self, "trigger", normalized_trigger)
 
         normalized_outcome = self.outcome.strip()

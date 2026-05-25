@@ -9,21 +9,27 @@ from aidd.core.interview import AnswerResolution
 from aidd.core.operator_frontend import (
     persist_operator_answer,
     resolve_operator_artifacts_view,
+    resolve_operator_dashboard_view,
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
     resolve_operator_run_view,
     resolve_operator_stage_view,
 )
+from aidd.core.operator_intervention import persist_operator_intervention_request
+from aidd.core.repair import persist_repair_history_snapshot
 from aidd.core.run_store import (
+    RUN_EVENTS_JSONL_FILENAME,
     create_next_attempt_directory,
     create_run_manifest,
     persist_stage_status,
+    run_attempt_root,
     run_attempt_runtime_log_path,
 )
 from aidd.core.runtime_readiness import (
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
 )
+from aidd.core.stages import STAGES
 
 
 def _prepare_run(workspace_root: Path) -> None:
@@ -74,6 +80,350 @@ def _write_questions(workspace_root: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def test_operator_dashboard_view_handles_no_runs(tmp_path: Path) -> None:
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=tmp_path / ".aidd",
+        work_item="WI-UI",
+        active_stage="idea",
+        project_root=tmp_path,
+    )
+
+    assert dashboard.run.run_id is None
+    assert dashboard.next_action.action == "choose-runtime"
+    assert dashboard.next_action.enabled is False
+    assert dashboard.stages[0].stage == "idea"
+    assert dashboard.stages[0].can_run is True
+    assert dashboard.activity == ()
+    assert dashboard.recent_artifacts == ()
+
+
+def test_operator_dashboard_view_surfaces_blocked_stage_evidence_and_activity(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_questions(workspace_root)
+    stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    stage_root.joinpath("plan.md").write_text("# Plan\n\n- Ship UI cockpit.\n", encoding="utf-8")
+    stage_root.joinpath("validator-report.md").write_text(
+        "# Validator Report\n\n- Verdict: `fail`\n",
+        encoding="utf-8",
+    )
+    stage_root.joinpath("repair-brief.md").write_text(
+        "# Repair\n\n- Missing evidence.\n",
+        encoding="utf-8",
+    )
+    request = persist_operator_intervention_request(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        request_text="Add rollback risk coverage.",
+        target_documents=("plan.md",),
+    )
+    run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ).joinpath("input-bundle.md").write_text(
+        f"# Input bundle\n\n## `{request.request_path.relative_to(workspace_root)}`\n",
+        encoding="utf-8",
+    )
+    run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ).joinpath(RUN_EVENTS_JSONL_FILENAME).write_text(
+        (
+            '{"timestamp":"2026-05-25T00:00:00Z","level":"warn",'
+            '"source":"runtime","event":"question","message":"Need release target"}\n'
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="plan",
+        run_id="run-ui",
+        project_root=tmp_path,
+    )
+
+    assert dashboard.run.run_id == "run-ui"
+    assert dashboard.next_action.action == "answer-questions"
+    assert dashboard.primary_artifact is not None
+    assert dashboard.primary_artifact.key == "plan"
+    assert "Ship UI cockpit" in dashboard.primary_artifact.excerpt
+    assert {blocker.kind for blocker in dashboard.blockers} == {"questions", "validation"}
+    assert all(
+        blocker.path is None or not Path(blocker.path).is_absolute()
+        for blocker in dashboard.blockers
+    )
+    assert all(not Path(ref.path).is_absolute() for ref in dashboard.evidence_refs)
+    assert any(ref.kind == "operator-request" for ref in dashboard.evidence_refs)
+    assert any(ref.key == "plan" for ref in dashboard.recent_artifacts)
+    assert any(ref.key == "operator_request" for ref in dashboard.recent_artifacts)
+    assert any(ref.key == "runtime_log" for ref in dashboard.recent_artifacts)
+    assert all(
+        (workspace_root / ref.path).exists()
+        for ref in dashboard.recent_artifacts
+    )
+    assert any(event.event == "question" for event in dashboard.activity)
+    assert any(event.event == "operator.request.created" for event in dashboard.activity)
+
+    dashboard_from_other_stage = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="idea",
+        run_id="run-ui",
+        project_root=tmp_path,
+    )
+
+    assert any(event.event == "question" for event in dashboard_from_other_stage.activity)
+
+
+def test_operator_dashboard_next_action_finds_blocked_stage_when_another_stage_is_selected(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_questions(workspace_root)
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="idea",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "answer-questions"
+    assert dashboard.next_action.stage == "plan"
+    assert dashboard.next_action.enabled is True
+    assert any(
+        blocker.kind == "questions" and blocker.stage == "plan"
+        for blocker in dashboard.blockers
+    )
+
+
+def test_operator_dashboard_next_action_inspects_failed_validation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    stage_root.joinpath("validator-report.md").write_text(
+        "# Validator Report\n\n- Verdict: `fail`\n",
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="plan",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "inspect-validation"
+    assert any(blocker.kind == "validation" for blocker in dashboard.blockers)
+
+
+def test_operator_dashboard_next_action_reviews_failed_intervention_result(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    stage_root.joinpath("validator-report.md").write_text(
+        "# Validator Report\n\n- Verdict: `fail`\n",
+        encoding="utf-8",
+    )
+    request = persist_operator_intervention_request(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        request_text="Add rollback risk coverage.",
+        target_documents=("plan.md",),
+    )
+    run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ).joinpath("input-bundle.md").write_text(
+        f"# Input bundle\n\n## `{request.request_path.relative_to(workspace_root)}`\n",
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="plan",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "review-intervention"
+    assert dashboard.next_action.label == "Review requested change result"
+
+
+def test_operator_dashboard_keeps_intervention_next_action_after_repair_retry_failure(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    stage_root.joinpath("validator-report.md").write_text(
+        "# Validator Report\n\n- Verdict: `fail`\n",
+        encoding="utf-8",
+    )
+    stage_root.joinpath("repair-brief.md").write_text(
+        "# Failed checks\n\n- retry failed\n",
+        encoding="utf-8",
+    )
+    request = persist_operator_intervention_request(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        request_text="Add rollback risk coverage.",
+        target_documents=("plan.md",),
+    )
+    run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ).joinpath("input-bundle.md").write_text(
+        f"# Input bundle\n\n## `{request.request_path.relative_to(workspace_root)}`\n",
+        encoding="utf-8",
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+        trigger="intervention",
+        outcome="failed validation",
+        stage_status="repair-needed",
+        validator_report_path=stage_root / "validator-report.md",
+        repair_brief_path=stage_root / "repair-brief.md",
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="plan",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "review-intervention"
+    assert any(event.event == "repair.intervention" for event in dashboard.activity)
+
+
+def test_operator_dashboard_reports_missing_prerequisite_blockers(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="codex",
+        stage_target="implement",
+        config_snapshot={"mode": "test"},
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="implement",
+        run_id="run-ui",
+    )
+
+    assert any(blocker.kind == "missing-prerequisite" for blocker in dashboard.blockers)
+    implement = {item.stage: item for item in dashboard.stages}["implement"]
+    assert implement.can_run is False
+    assert "missing prerequisites" in implement.reason
+
+
+def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="codex",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+        workflow_stage_start="idea",
+        workflow_stage_end="qa",
+    )
+    for stage in STAGES:
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+        )
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            status="succeeded",
+        )
+        stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / stage
+        stage_root.mkdir(parents=True, exist_ok=True)
+        stage_root.joinpath("validator-report.md").write_text(
+            "# Validator Report\n\n- Verdict: `pass`\n",
+            encoding="utf-8",
+        )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "review-complete"
+    assert dashboard.next_action.enabled is True
 
 
 def test_operator_read_models_expose_run_stage_logs_artifacts_and_questions(

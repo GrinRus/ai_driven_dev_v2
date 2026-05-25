@@ -14,8 +14,8 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 
 ## Alpha status and safety
 
-Current release-candidate package version on this branch: `0.1.0a4`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a3`.
+Latest published prerelease: `0.1.0a5`.
+The `main` branch is development source and may contain unreleased changes.
 
 AIDD is alpha software for local evaluation and controlled operator trials. It is not
 ready for unattended production automation. AIDD launches external runtime CLIs against a
@@ -51,20 +51,20 @@ Claude Code, Codex, OpenCode, or other runtime CLIs separately.
 
 ## Install with pipx
 
-Install the latest accepted published prerelease evidence:
+Install the latest published prerelease:
 
 ```bash
-pipx install "ai-driven-dev-v2==0.1.0a3"
+pipx install "ai-driven-dev-v2==0.1.0a5"
 aidd --version
 aidd doctor
 ```
 
 ## Install with uv tool
 
-Install the latest accepted published prerelease evidence:
+Install the latest published prerelease:
 
 ```bash
-uv tool install "ai-driven-dev-v2==0.1.0a3"
+uv tool install "ai-driven-dev-v2==0.1.0a5"
 aidd --version
 aidd doctor
 ```
@@ -87,9 +87,10 @@ uv run aidd --version
 uv run aidd doctor
 ```
 
-The `v0.1.0a4` release evidence must pass PyPI publish plus `pipx` and `uv tool`
-install verification before it is accepted. The latest accepted published prerelease
-evidence before this candidate is `v0.1.0a3`.
+The latest published prerelease with accepted install evidence is `v0.1.0a5`. Source
+checkouts from `main` may contain unreleased changes; future release candidates must again
+pass GitHub Release, PyPI publish, `pipx`, and `uv tool` verification before they are
+accepted.
 
 ## Run your first local workflow
 
@@ -154,6 +155,7 @@ aidd run show --work-item WI-001 --root .aidd
 aidd run logs --work-item WI-001 --stage plan --root .aidd
 aidd run artifacts --work-item WI-001 --stage plan --root .aidd
 aidd stage questions idea --work-item WI-001 --root .aidd
+aidd stage interact plan --work-item WI-001 --runtime codex --request "Add rollback risks" --root .aidd
 ```
 
 Stage documents, runtime logs, validator reports, repair briefs, questions, and answers
@@ -162,6 +164,10 @@ contract surface; runtime-authored JSON schemas are not the primary stage output
 When a CLI stage stops on questions, inspect them with `aidd stage questions`, write
 answers to `.aidd/workitems/<work-item>/stages/<stage>/answers.md`, and rerun the stage
 with `aidd stage run <stage> --work-item <id> --runtime <runtime> --root .aidd`.
+When a stage artifact needs a scoped correction or additional analysis, use
+`aidd stage interact <stage>` with `--request` or `--request-file`; AIDD stores the
+operator request under `operator-requests/request-000N.md` and runs a normal validated
+stage attempt in the current run.
 
 ## Operator UI
 
@@ -172,15 +178,18 @@ aidd ui --work-item WI-001 --root .aidd
 ```
 
 The UI reads the same `.aidd/` state as the CLI. It can show stage status, render stage
-Markdown artifacts, show runtime logs, answer questions, show repair history, and display
-runtime readiness details without introducing a separate workflow engine. Operators can run
-the full workflow with **Run workflow** or run only the selected stage with **Run selected
-stage**; both actions require an explicit runtime selection and there is no hidden
+Markdown artifacts, show runtime logs, answer questions, show repair history, submit
+stage-scoped operator intervention requests, and display runtime readiness details without
+introducing a separate workflow engine. Operators can run the full workflow, run or resume
+the next eligible stage, or submit **Request change -> Submit & run** from the selected
+stage cockpit; these actions require an explicit runtime selection and there is no hidden
 `generic-cli` fallback. New UI launches stream live job logs while the process runs, and
 the saved `runtime.log` remains available afterward through the normal log view and CLI.
 The UI writes question answers as `[resolved]` entries in the standard `answers.md`; rerun
-the selected stage or workflow after answering. The UI is a local no-auth operator surface:
-the default host is loopback, and non-loopback binds print a warning.
+the selected stage or workflow after answering. Intervention requests are stored as
+durable Markdown input under `.aidd/workitems/<id>/stages/<stage>/operator-requests/`
+and are shown in Activity, Evidence Refs, and Recent Artifacts. The UI is a local no-auth
+operator surface: the default host is loopback, and non-loopback binds print a warning.
 
 For the local UI evidence lane, see `docs/e2e/operator-ui-local-project.md`.
 
@@ -199,6 +208,8 @@ Key design rules:
 - stage inputs and outputs are Markdown documents;
 - validation failures trigger repair or an explicit stop;
 - questions and answers are persisted as documents;
+- operator intervention requests are persisted as stage-scoped Markdown input and
+  validated through the normal stage chain;
 - runtime logs are streamed when possible and saved for replay and eval analysis.
 
 Primary architecture docs:
@@ -264,7 +275,7 @@ By default, the evaluator builds a local wheel from the clean tracked source che
 containing the scenario manifest. To test an already published package instead, set:
 
 ```bash
-AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a4" \
+AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a5" \
   uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```
 

@@ -10,7 +10,7 @@ from aidd.cli.doctor import _runtime_probe_report, doctor
 from aidd.cli.eval import eval_doctor, eval_summary
 from aidd.cli.init_command import init
 from aidd.cli.run import run_artifacts, run_callback, run_logs, run_show
-from aidd.cli.stage import stage_questions, stage_run, stage_summary
+from aidd.cli.stage import stage_interact, stage_questions, stage_run, stage_summary
 from aidd.cli.support import (
     _active_prompt_pack_paths,
     _allocate_stage_run_id,
@@ -52,6 +52,7 @@ __all__ = [
     "run_callback",
     "run_logs",
     "run_show",
+    "stage_interact",
     "select_next_runnable_stage",
     "stage_questions",
     "stage_run",
@@ -114,6 +115,7 @@ run_app.command("show")(run_show)
 run_app.command("logs")(run_logs)
 run_app.command("artifacts")(run_artifacts)
 stage_app.command("run")(stage_run)
+stage_app.command("interact")(stage_interact)
 stage_app.command("questions")(stage_questions)
 stage_app.command("summary")(stage_summary)
 eval_app.command("doctor")(eval_doctor)

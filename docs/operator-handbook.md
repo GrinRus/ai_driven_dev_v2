@@ -24,6 +24,8 @@ Today:
 - `aidd init` is functional and can seed first-stage intake context from `--request` or `--request-file`;
 - `aidd run` executes workflow progression for `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
 - `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
+- `aidd stage interact` records a stage-scoped operator request and runs an
+  intervention attempt in the current run through the same adapter boundary;
 - `python -m aidd.harness.live_e2e_black_box` executes the manual black-box
   live E2E evaluator and writes a result bundle;
 - live scenarios under `harness/scenarios/live/` are a manual external-audit lane:
@@ -250,17 +252,20 @@ Verify that:
 aidd run --work-item WI-001 --runtime codex --root .aidd --config /path/to/aidd.example.toml
 aidd run --work-item WI-001 --runtime claude-code --root .aidd --config /path/to/aidd.example.toml
 aidd stage run plan --work-item WI-001 --runtime opencode --root .aidd --config /path/to/aidd.example.toml
+aidd stage interact plan --work-item WI-001 --runtime codex --request "Add rollback risks" --root .aidd --config /path/to/aidd.example.toml
 aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
 ```
 
 Expected behavior in the current local implementation:
 
 - `aidd run --runtime <maintained-runtime>` performs workflow execution through the selected adapter;
-- `aidd run` and `aidd stage run` require an explicit `--runtime`;
+- `aidd run`, `aidd stage run`, and `aidd stage interact` require an explicit `--runtime`;
 - `aidd ui` also requires the operator to select a runtime in the browser before
   launching a workflow or selected stage; the UI does not silently default to `generic-cli`;
 - the UI **Run workflow** action requests full workflow progression, while **Run selected
   stage** uses the same single-stage semantics as `aidd stage run <stage>`;
+- the UI **Request change** panel uses the same durable intervention semantics as
+  `aidd stage interact <stage>`;
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
 - `generic-cli` is an advanced wrapper/test lane, not the default product onboarding runtime;
 - `python -m aidd.harness.live_e2e_black_box` executes the black-box evaluator
@@ -278,7 +283,7 @@ Expected behavior in the current local implementation:
 - local live E2E uses native provider commands by default and reads runtime-command
   environment overrides only when an adapter-compatible wrapper override is needed.
 - published-package live evals use `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`, for example
-  `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a4" uv run python -m aidd.harness.live_e2e_black_box ...`;
+  `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a5" uv run python -m aidd.harness.live_e2e_black_box ...`;
   local-wheel live evals require the scenario manifest to live in, or be run from, an
   AIDD source checkout.
 
@@ -291,6 +296,7 @@ aidd run show --work-item WI-001 --root .aidd
 aidd run logs --work-item WI-001 --stage plan --root .aidd
 aidd run artifacts --work-item WI-001 --stage plan --root .aidd
 aidd stage questions plan --work-item WI-001 --root .aidd
+aidd stage interact plan --work-item WI-001 --runtime codex --request-file request.md --root .aidd
 ```
 
 The UI uses the same `.aidd/` root:
@@ -309,6 +315,14 @@ In the UI, answer unresolved questions in the **Questions** tab. The browser wri
 `[resolved]` answers to the same `answers.md`; use **Run selected stage** or **Run
 workflow** after answering. Partial and deferred answer states remain file-mode CLI
 semantics for this release.
+
+When an operator needs a scoped correction or additional analysis on an existing stage
+artifact, use `aidd stage interact <stage> --request "..."` or the UI **Request change**
+tab. AIDD writes the request to
+`.aidd/workitems/<id>/stages/<stage>/operator-requests/request-000N.md`, runs an
+`intervention` attempt in the current run, and still gates the result through normal
+validation. V1 blocks this action when downstream stages have already succeeded in the
+same run.
 
 During a UI-triggered run, the **Logs** tab follows the in-memory job stream from the
 runtime stdout/stderr callbacks. After completion, `aidd run logs` and the UI persisted

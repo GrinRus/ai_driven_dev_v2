@@ -11,7 +11,7 @@ from typing import Any
 import typer
 
 from aidd.cli import main as cli_main
-from aidd.cli.stage_run import StageRunOptions
+from aidd.cli.stage_run import StageInteractOptions, StageRunOptions
 from aidd.cli.ui import (
     OperatorUiService,
     UiRequestBodyTooLarge,
@@ -49,22 +49,31 @@ def _service(
     config: Path | None = None,
     workflow_runner: Any | None = None,
     stage_runner: Any | None = None,
+    stage_interact_runner: Any | None = None,
     readiness_probe_provider: Any | None = None,
+    folder_opener: Any | None = None,
+    host: str = "127.0.0.1",
+    allow_remote_approvals: bool = False,
 ) -> OperatorUiService:
     options = UiServerOptions(
         work_item="WI-UI",
         root=workspace_root,
         config=config or Path("aidd.test.toml"),
-        host="127.0.0.1",
+        host=host,
         port=0,
+        allow_remote_approvals=allow_remote_approvals,
     )
     kwargs: dict[str, Any] = {}
     if workflow_runner is not None:
         kwargs["workflow_runner"] = workflow_runner
     if stage_runner is not None:
         kwargs["stage_runner"] = stage_runner
+    if stage_interact_runner is not None:
+        kwargs["stage_interact_runner"] = stage_interact_runner
     if readiness_probe_provider is not None:
         kwargs["readiness_probe_provider"] = readiness_probe_provider
+    if folder_opener is not None:
+        kwargs["folder_opener"] = folder_opener
     return OperatorUiService(options, **kwargs)
 
 
@@ -189,6 +198,27 @@ def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
     assert artifacts_payload["documents"]["input_bundle"].endswith("input-bundle.md")
 
 
+def test_ui_dashboard_endpoint_exposes_operator_console_payload(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_questions(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(service.handle_get("/api/dashboard", {"stage": ["plan"]}))
+
+    assert isinstance(payload["app_version"], str)
+    dashboard = payload["dashboard"]
+    assert dashboard["work_item"] == "WI-UI"  # type: ignore[index]
+    assert dashboard["active_stage"] == "plan"  # type: ignore[index]
+    assert dashboard["run"]["run_id"] == "run-ui"  # type: ignore[index]
+    assert dashboard["next_action"]["action"] == "answer-questions"  # type: ignore[index]
+    assert dashboard["primary_artifact"]["key"] == "plan"  # type: ignore[index]
+    assert any(
+        artifact["path"] == "workitems/WI-UI/stages/plan/plan.md"
+        for artifact in dashboard["recent_artifacts"]  # type: ignore[index]
+    )
+
+
 def test_ui_run_endpoint_uses_empty_state_when_no_run_exists(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     service = _service(workspace_root)
@@ -197,6 +227,18 @@ def test_ui_run_endpoint_uses_empty_state_when_no_run_exists(tmp_path: Path) -> 
 
     assert payload["metadata"] is None
     assert payload["message"] == "No runs found for work item 'WI-UI'."
+
+
+def test_ui_dashboard_endpoint_uses_empty_state_when_no_run_exists(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    service = _service(workspace_root)
+
+    payload = _payload(service.handle_get("/api/dashboard", {}))
+
+    dashboard = payload["dashboard"]
+    assert dashboard["run"]["run_id"] is None  # type: ignore[index]
+    assert dashboard["next_action"]["action"] == "choose-runtime"  # type: ignore[index]
+    assert dashboard["stages"][0]["stage"] == "idea"  # type: ignore[index]
 
 
 def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> None:
@@ -286,6 +328,7 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
         {
             "stage": "plan",
             "runtime": "codex",
+            "run_id": "run-ui-flow",
             "log_follow": True,
         },
     )
@@ -303,6 +346,7 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     assert running_payload["status"] == "running"
     assert options.stage == "plan"
     assert options.runtime == "codex"
+    assert options.run_id == "run-ui-flow"
     assert options.log_follow is True
     assert any(
         chunk["stream"] == "stdout" and chunk["text"] == "runtime-output-line\n"
@@ -317,29 +361,23 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
 
 def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
-    request_holder: dict[str, str] = {}
+    request_ref: dict[str, RuntimeOperatorRequest] = {}
 
     def fake_stage_runner(options: StageRunOptions) -> None:
+        run_id = options.run_id or "run-ui-approval"
         create_run_manifest(
             workspace_root=workspace_root,
             work_item="WI-UI",
-            run_id="run-operator",
+            run_id=run_id,
             runtime_id=options.runtime,
             stage_target=options.stage,
-            config_snapshot={"mode": "ui-test"},
+            config_snapshot={"mode": "ui-approval-test"},
         )
         attempt_path = create_next_attempt_directory(
             workspace_root=workspace_root,
             work_item="WI-UI",
-            run_id="run-operator",
+            run_id=run_id,
             stage=options.stage,
-        )
-        persist_stage_status(
-            workspace_root=workspace_root,
-            work_item="WI-UI",
-            run_id="run-operator",
-            stage=options.stage,
-            status="blocked",
         )
         request = RuntimeOperatorRequest.create(
             runtime_id=options.runtime,
@@ -348,143 +386,241 @@ def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> N
             payload={"command": "npm install"},
             cwd=tmp_path,
         )
-        request_holder["id"] = request.id
-        append_operator_request(
-            path=attempt_path / "operator-requests.jsonl",
-            request=request,
-        )
-        raise typer.Exit(code=1)
+        request_ref["request"] = request
+        append_operator_request(path=attempt_path / "operator-requests.jsonl", request=request)
+        raise typer.Exit(1)
 
     service = _service(workspace_root, stage_runner=fake_stage_runner)
-
     response = service.handle_post(
         "/api/stage/run",
-        {
-            "stage": "plan",
-            "runtime": "codex",
-        },
+        {"stage": "plan", "runtime": "codex", "run_id": "run-ui-approval"},
     )
 
-    job_id = str(_payload(response)["job_id"])
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
     job_payload = _wait_job(service, job_id)
-    requests_payload = _payload(
+    assert job_payload["status"] == "waiting-for-operator"
+
+    request_id = request_ref["request"].id
+    pending_payload = _payload(
         service.handle_get(f"/api/jobs/{job_id}/operator-requests", {})
     )
-    denied_payload = _payload(
-        service.handle_post(
-            f"/api/jobs/{job_id}/operator-requests/{request_holder['id']}/decision",
-            {
-                "action": "deny",
-                "reason": "denied in UI test",
-            },
-        )
-    )
+    assert pending_payload["pending_request_ids"] == [request_id]
+
     decision_payload = _payload(
         service.handle_post(
-            f"/api/jobs/{job_id}/operator-requests/{request_holder['id']}/decision",
-            {
-                "action": "allow_once",
-                "reason": "approved in UI test",
-            },
+            f"/api/jobs/{job_id}/operator-requests/{request_id}/decision",
+            {"action": RuntimeOperatorDecisionAction.ALLOW_ONCE.value},
         )
     )
 
-    assert job_payload["status"] == "waiting-for-operator"
-    assert requests_payload["pending_request_ids"] == [request_holder["id"]]
-    assert requests_payload["unapproved_request_ids"] == [request_holder["id"]]
-    assert denied_payload["pending_request_ids"] == []
-    assert denied_payload["unapproved_request_ids"] == [request_holder["id"]]
     assert decision_payload["pending_request_ids"] == []
     assert decision_payload["unapproved_request_ids"] == []
-    assert decision_payload["decisions"][-1]["action"] == "allow_once"  # type: ignore[index]
+    assert decision_payload["decisions"][0]["source"] == "ui"  # type: ignore[index]
+    assert (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-UI"
+        / "run-ui-approval"
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+        / "operator-decisions.jsonl"
+    ).exists()
 
 
 def test_ui_operator_decision_endpoint_wakes_live_stage_job(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
-    request_holder: dict[str, str] = {}
-    decision_holder: dict[str, RuntimeOperatorDecision | None] = {}
+    request_ready = threading.Event()
+    captured: dict[str, RuntimeOperatorDecision | RuntimeOperatorRequest] = {}
 
     def fake_stage_runner(options: StageRunOptions) -> None:
+        run_id = options.run_id or "run-ui-live-approval"
         create_run_manifest(
             workspace_root=workspace_root,
             work_item="WI-UI",
-            run_id="run-live-operator",
+            run_id=run_id,
             runtime_id=options.runtime,
             stage_target=options.stage,
-            config_snapshot={"mode": "ui-live-test"},
+            config_snapshot={"mode": "ui-live-approval-test"},
         )
         attempt_path = create_next_attempt_directory(
             workspace_root=workspace_root,
             work_item="WI-UI",
-            run_id="run-live-operator",
+            run_id=run_id,
             stage=options.stage,
         )
+        request = RuntimeOperatorRequest.create(
+            runtime_id=options.runtime,
+            stage=options.stage,
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": "python -m pytest -q"},
+            cwd=tmp_path,
+        )
+        captured["request"] = request
         broker = RuntimeOperatorBroker(
             policy=RuntimeOperatorPolicy(
                 permission_policy=RuntimePermissionPolicy.BROKERED,
-                auto_approval_preset=AutoApprovalPreset.BROAD,
+                auto_approval_preset=AutoApprovalPreset.OFF,
                 project_roots=(tmp_path,),
                 workspace_root=workspace_root,
             ),
             attempt_path=attempt_path,
         )
-        request = RuntimeOperatorRequest.create(
-            runtime_id=options.runtime,
-            stage=options.stage,
-            kind=RuntimeOperatorRequestKind.SHELL,
-            payload={"command": "npm install"},
-            cwd=tmp_path,
-        )
-        request_holder["id"] = request.id
-        decision_holder["decision"] = broker.handle_request(
+        request_ready.set()
+        decision = broker.handle_request(
             request,
             decision_provider=options.runtime_operator_decision_provider,
         )
+        assert decision is not None
+        captured["decision"] = decision
 
     service = _service(workspace_root, stage_runner=fake_stage_runner)
     response = service.handle_post(
         "/api/stage/run",
-        {
-            "stage": "plan",
-            "runtime": "codex",
-        },
+        {"stage": "plan", "runtime": "codex", "run_id": "run-ui-live-approval"},
     )
-    job_id = str(_payload(response)["job_id"])
 
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert request_ready.wait(timeout=2)
     for _ in range(100):
-        job_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
-        if job_payload["status"] == "waiting-for-operator":
+        waiting_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+        if waiting_payload["status"] == "waiting-for-operator":
             break
         time.sleep(0.01)
-    else:
-        raise AssertionError("job did not reach waiting-for-operator")
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("job did not enter waiting-for-operator")
 
-    requests_payload = _payload(
+    request = captured["request"]
+    assert isinstance(request, RuntimeOperatorRequest)
+    pending_payload = _payload(
         service.handle_get(f"/api/jobs/{job_id}/operator-requests", {})
     )
-    assert requests_payload["pending_request_ids"] == [request_holder["id"]]
+    assert pending_payload["pending_request_ids"] == [request.id]
 
     decision_payload = _payload(
         service.handle_post(
-            f"/api/jobs/{job_id}/operator-requests/{request_holder['id']}/decision",
-            {
-                "action": "allow_once",
-                "reason": "approved while runtime is waiting",
-            },
+            f"/api/jobs/{job_id}/operator-requests/{request.id}/decision",
+            {"action": RuntimeOperatorDecisionAction.ALLOW_ONCE.value},
         )
     )
-    for _ in range(100):
-        completed_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
-        if completed_payload["status"] == "completed":
-            break
-        time.sleep(0.01)
-    else:
-        raise AssertionError("job did not complete after operator decision")
-
     assert decision_payload["pending_request_ids"] == []
+
+    completed_payload = _wait_job(service, job_id)
+    decision = captured["decision"]
+    assert isinstance(decision, RuntimeOperatorDecision)
     assert completed_payload["status"] == "completed"
-    assert decision_holder["decision"] is not None
-    assert decision_holder["decision"].action is RuntimeOperatorDecisionAction.ALLOW_ONCE
+    assert decision.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
+
+
+def test_ui_operator_decision_endpoint_requires_loopback_or_opt_in(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui-remote-approval",
+        runtime_id="codex",
+        stage_target="plan",
+        config_snapshot={"mode": "ui-remote-approval-test"},
+    )
+    attempt_path = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui-remote-approval",
+        stage="plan",
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="plan",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "npm install"},
+        cwd=tmp_path,
+    )
+    append_operator_request(path=attempt_path / "operator-requests.jsonl", request=request)
+
+    def blocked_stage_runner(options: StageRunOptions) -> None:
+        raise typer.Exit(1)
+
+    service = _service(
+        workspace_root,
+        stage_runner=blocked_stage_runner,
+        host="0.0.0.0",
+    )
+    response = service.handle_post(
+        "/api/stage/run",
+        {"stage": "plan", "runtime": "codex", "run_id": "run-ui-remote-approval"},
+    )
+    job_id = str(_payload(response)["job_id"])
+    job_payload = _wait_job(service, job_id)
+    assert job_payload["status"] == "waiting-for-operator"
+
+    denied = service.handle_post(
+        f"/api/jobs/{job_id}/operator-requests/{request.id}/decision",
+        {"action": RuntimeOperatorDecisionAction.ALLOW_ONCE.value},
+    )
+
+    assert denied.status == HTTPStatus.FORBIDDEN
+    assert "remote approval decisions require" in _error_payload(denied)["error"]  # type: ignore[operator]
+
+
+def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+    captured: dict[str, object] = {}
+
+    def fake_stage_interact_runner(options: StageInteractOptions) -> None:
+        captured["options"] = options
+        assert options.runtime_chunk_sink is not None
+        options.runtime_chunk_sink("stdout", "intervention-output-line\n")
+        started.set()
+        assert release.wait(timeout=2)
+
+    service = _service(
+        workspace_root,
+        stage_interact_runner=fake_stage_interact_runner,
+    )
+
+    response = service.handle_post(
+        "/api/stage/interact",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+            "run_id": "run-ui-flow",
+            "request": "Add migration rollback risks",
+            "target_documents": ["workitems/WI-UI/stages/plan/plan.md"],
+            "log_follow": True,
+        },
+    )
+
+    payload = _payload(response)
+    assert payload["kind"] == "intervention"
+    assert payload["stage"] == "plan"
+    assert started.wait(timeout=2)
+
+    job_id = str(payload["job_id"])
+    logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+    options = captured["options"]
+    assert isinstance(options, StageInteractOptions)
+    assert options.stage == "plan"
+    assert options.runtime == "codex"
+    assert options.run_id == "run-ui-flow"
+    assert options.request == "Add migration rollback risks"
+    assert options.target_documents == ("workitems/WI-UI/stages/plan/plan.md",)
+    assert any(
+        chunk["stream"] == "stdout" and chunk["text"] == "intervention-output-line\n"
+        for chunk in logs_payload["chunks"]  # type: ignore[index]
+    )
+
+    release.set()
+    completed_payload = _wait_job(service, job_id)
+    assert completed_payload["status"] == "completed"
+    assert completed_payload["result"]["completed"] is True  # type: ignore[index]
 
 
 def test_ui_stage_run_endpoint_rejects_invalid_stage_and_runtime(tmp_path: Path) -> None:
@@ -509,6 +645,98 @@ def test_ui_stage_run_endpoint_rejects_invalid_stage_and_runtime(tmp_path: Path)
     assert invalid_runtime.status == HTTPStatus.BAD_REQUEST
     assert "Unknown stage" in _error_payload(invalid_stage)["error"]  # type: ignore[operator]
     assert "Unsupported runtime" in _error_payload(invalid_runtime)["error"]  # type: ignore[operator]
+
+
+def test_ui_stage_interact_endpoint_rejects_bad_payload(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    empty_request = service.handle_post(
+        "/api/stage/interact",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+            "request": " ",
+        },
+    )
+    bad_targets = service.handle_post(
+        "/api/stage/interact",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+            "request": "Add migration rollback risks",
+            "target_documents": "plan.md",
+        },
+    )
+
+    assert empty_request.status == HTTPStatus.BAD_REQUEST
+    assert bad_targets.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(empty_request)["error"] == "request is required."
+    assert "target_documents must be an array" in _error_payload(bad_targets)["error"]  # type: ignore[operator]
+
+
+def test_ui_open_folder_endpoint_allows_workspace_stage_and_artifact_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    opened: list[Path] = []
+    service = _service(workspace_root, folder_opener=opened.append)
+
+    workspace_payload = _payload(
+        service.handle_post("/api/open-folder", {"target": "workspace"})
+    )
+    stage_payload = _payload(
+        service.handle_post("/api/open-folder", {"target": "stage", "stage": "plan"})
+    )
+    artifact_payload = _payload(
+        service.handle_post(
+            "/api/open-folder",
+            {"target": "artifact", "path": "workitems/WI-UI/stages/plan/plan.md"},
+        )
+    )
+
+    assert workspace_payload["target"] == "workspace"
+    assert stage_payload["target"] == "stage"
+    assert artifact_payload["target"] == "artifact"
+    assert opened == [
+        workspace_root.resolve(strict=False),
+        (workspace_root / "workitems" / "WI-UI" / "stages" / "plan").resolve(
+            strict=False
+        ),
+        (workspace_root / "workitems" / "WI-UI" / "stages" / "plan").resolve(
+            strict=False
+        ),
+    ]
+
+
+def test_ui_open_folder_endpoint_rejects_escaping_and_unsupported_targets(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    service = _service(workspace_root, folder_opener=lambda path: None)
+
+    escaped = service.handle_post(
+        "/api/open-folder",
+        {"target": "artifact", "path": "../outside.md"},
+    )
+    unsupported = service.handle_post("/api/open-folder", {"target": "project"})
+
+    assert escaped.status == HTTPStatus.BAD_REQUEST
+    assert unsupported.status == HTTPStatus.BAD_REQUEST
+    assert "escapes workspace root" in _error_payload(escaped)["error"]  # type: ignore[operator]
+    assert "unsupported folder target" in _error_payload(unsupported)["error"]  # type: ignore[operator]
+
+
+def test_ui_server_stop_endpoint_is_local_server_action_only(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    payload = _payload(service.handle_post("/api/server/stop", {}))
+
+    assert payload["status"] == "stopping"
+    assert payload["runtime_job_cancellation"] is False
+    assert service.consume_shutdown_requested() is True
+    assert service.consume_shutdown_requested() is False
 
 
 def test_ui_workflow_run_endpoint_requires_runtime(tmp_path: Path) -> None:
@@ -668,13 +896,11 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert page.status == 200
     assert favicon.status == HTTPStatus.NO_CONTENT
     html = page.body.decode("utf-8")
-    assert "AIDD Operator" in html
+    assert "AIDD Operator Console" in html
     assert 'id="runtimeSelect"' in html
-    assert '<button id="runWorkflowButton" type="button" disabled>Run workflow</button>' in html
-    assert (
-        '<button id="runStageButton" type="button" disabled>Run selected stage</button>'
-        in html
-    )
+    assert 'id="openWorkspaceButton"' in html
+    assert 'id="stopServerButton"' in html
+    assert 'id="nextActionButton"' not in html
 
     run_response = service.handle_post(
         "/api/workflow/run",
@@ -877,37 +1103,87 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     script = response.body.decode("utf-8")
 
     assert "function escapeHtml(value)" in script
+    assert "function compactPath(value, maxLength = 56)" in script
+    assert "function pathLine(value, maxLength = 56)" in script
     assert "function renderMarkdown(text)" in script
     assert "function preferredArtifactKey(documents)" in script
+    assert "async function fetchDashboard()" in script
+    assert "dashboardUrl()" in script
+    assert 'api("/api/runtime-readiness")' in script
     assert '"plan"' in script
     assert '"stage_result"' in script
-    assert "if (!metadata)" in script
-    assert "let stageSummaryByStage = {};" in script
+    assert 'activeRunId: ""' in script
+    assert "state.activeRunId = state.dashboard.run?.run_id || \"\";" in script
+    assert "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`" in script
     assert "No artifacts for this stage yet" in script
     assert "No runtime log for this stage yet" in script
-    assert "${escapeHtml(question.text)}" in script
-    assert "`<span>${escapeHtml(item)}</span>`" in script
-    assert "`<pre>${escapeHtml(view.text)}</pre>`" in script
-    assert 'activeJobStatus?.status === "running"' in script
-    assert 'activeJobStatus?.stage === activeStage' in script
-    assert (
-        "`/api/artifacts/document?stage=${encodeURIComponent(activeStage)}&key="
-        "${encodeURIComponent(key)}`"
-        in script
-    )
+    assert "<p>${escapeHtml(question.text)}</p>" in script
+    assert "function renderLogPanel({title, meta, entries, rawText, emptyText})" in script
+    assert "async function renderRequestChange()" in script
+    assert "async function renderApprovals()" in script
+    assert "async function submitApproval(requestId, action)" in script
+    assert "async function submitIntervention()" in script
+    assert 'id="operatorRequestText"' in script
+    assert 'id="submitInterventionButton"' in script
+    assert "data-intervention-target" in script
+    assert '"validator_report"' in script
+    assert '"questions.md"' in script
+    assert "!textPath.includes(\"/operator-requests/\")" in script
+    assert "function interventionTargetLabel(key)" in script
+    assert "function updateSubmitInterventionState()" in script
+    assert 'event.target.id === "operatorRequestText"' in script
+    assert "function logEntriesFromChunks(chunks)" in script
+    assert "function logEntriesFromText(text)" in script
+    assert "rawText.match(/^\\[(stdout|stderr|system)\\]\\s?(.*)$/i)" in script
+    assert "function selectedRuntimeReady()" in script
+    assert "function ensureRunnableRuntime()" in script
+    assert 'toast("Selected runtime is not ready.")' in script
+    assert 'if (element.textContent === message) element.textContent = "";' in script
+    assert "data-log-filter" in script
+    assert "data-log-raw" in script
+    assert "state.rawLogMode" in script
+    assert 'state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered)' in script
+    assert "activeJobLogChunks.push(...(logs.chunks || []));" in script
+    assert "function liveJobActivityEvents()" in script
+    assert "function activityEvents()" in script
+    assert "renderActivityTable();" in script
+    assert "activeJobLogChunks.length" in script
+    assert 'state.activeJobStatus?.status === "running"' in script
+    assert "state.activeJobStatus.stage === state.activeStage" in script
+    assert "/api/artifacts/document?${params.toString()}" in script
     assert "${renderMarkdown(documentView.text)}" in script
+    assert "const payload = {stage, runtime: state.selectedRuntime, log_follow: true};" in script
+    assert "target_documents: targetDocuments" in script
+    assert "if (state.activeRunId) payload.run_id = state.activeRunId;" in script
     assert (
-        "body: JSON.stringify({stage: activeStage, runtime: selectedRuntime, "
-        "log_follow: true})"
+        'postJson("/api/workflow/run", {runtime: state.selectedRuntime, log_follow: true})'
         in script
     )
-    assert "body: JSON.stringify({runtime: selectedRuntime, log_follow: true})" in script
-    assert "${escapeHtml(runtime.command)}" in script
-    assert "${escapeHtml(runtime.provider_version || \"unknown\")}" in script
-    assert "${escapeHtml(stageTimeoutSummary(runtime.stage_timeout_seconds))}" in script
-    assert "function renderRuntimeSelector(runtimes)" in script
+    assert 'resolution: resolution?.value || "resolved"' in script
+    assert 'option value="partial"' in script
+    assert 'option value="deferred"' in script
+    assert "async function answerAndResume(questionId)" in script
+    assert "async function inspectArtifactReference({stage, key, path, kind})" in script
+    assert "data-evidence-path" in script
+    assert "data-artifact-key" in script
+    assert "data-blocker-stage" in script
+    assert 'class="stage-copy"' in script
+    assert script.index('closest("[data-artifact-stage]")') < script.index(
+        'closest("[data-artifact-key]")'
+    )
+    assert "function renderRuntimeSelector()" in script
+    assert "/api/dashboard" in script
     assert "/api/stage/run" in script
-    assert "/api/jobs/${encodeURIComponent(activeJobId)}/logs?cursor=${activeJobCursor}" in script
+    assert "/api/stage/interact" in script
+    assert "/operator-requests/" in script
+    assert '"waiting-for-operator"' in script
+    assert "/api/open-folder" in script
+    assert "/api/server/stop" in script
+    assert (
+        "/api/jobs/${encodeURIComponent(state.activeJobId)}/logs?cursor="
+        "${state.activeJobCursor}"
+        in script
+    )
     assert 'body: JSON.stringify({runtime: "generic-cli"})' not in script
 
 

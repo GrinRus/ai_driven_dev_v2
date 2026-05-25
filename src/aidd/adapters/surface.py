@@ -401,6 +401,12 @@ def _execute_generic_cli(
         work_item=request.work_item,
         run_id=request.run_id,
         prompt_pack_path=prompt_pack_path,
+        attempt_number=request.attempt_number,
+        attempt_mode=request.attempt_mode,
+        repair_mode=request.repair_mode,
+        input_bundle_path=request.input_bundle_path,
+        repair_brief_path=request.repair_brief_path,
+        operator_request_path=request.operator_request_path,
     )
     spec = build_generic_cli_spec(
         configured_command=configured_command,
@@ -450,10 +456,13 @@ def _execute_claude_code(
         stage_brief_path=request.stage_brief_path,
         prompt_pack_paths=request.prompt_pack_paths,
         attempt_number=request.attempt_number,
+        attempt_mode=request.attempt_mode,
         repair_mode=request.repair_mode,
         input_bundle_path=request.input_bundle_path,
         repair_brief_path=request.repair_brief_path,
         repair_context_markdown=request.repair_context_markdown,
+        operator_request_path=request.operator_request_path,
+        operator_request_markdown=request.operator_request_markdown,
     )
     spec = build_claude_code_subprocess_spec(
         configured_command=configured_command,
@@ -512,10 +521,13 @@ def _execute_codex(
         stage_brief_path=request.stage_brief_path,
         prompt_pack_paths=request.prompt_pack_paths,
         attempt_number=request.attempt_number,
+        attempt_mode=request.attempt_mode,
         repair_mode=request.repair_mode,
         input_bundle_path=request.input_bundle_path,
         repair_brief_path=request.repair_brief_path,
         repair_context_markdown=request.repair_context_markdown,
+        operator_request_path=request.operator_request_path,
+        operator_request_markdown=request.operator_request_markdown,
     )
     if should_use_live_transport(
         permission_policy=request.permission_policy,
@@ -642,10 +654,13 @@ def _execute_opencode(
         stage_brief_path=request.stage_brief_path,
         prompt_pack_paths=request.prompt_pack_paths,
         attempt_number=request.attempt_number,
+        attempt_mode=request.attempt_mode,
         repair_mode=request.repair_mode,
         input_bundle_path=request.input_bundle_path,
         repair_brief_path=request.repair_brief_path,
         repair_context_markdown=request.repair_context_markdown,
+        operator_request_path=request.operator_request_path,
+        operator_request_markdown=request.operator_request_markdown,
     )
     spec = build_opencode_subprocess_spec(
         configured_command=configured_command,

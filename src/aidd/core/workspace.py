@@ -148,8 +148,9 @@ def _starter_stage_file_contents(stage: str) -> dict[str, str]:
 
 def _default_contract_reference_paths() -> tuple[str, ...]:
     common_contracts = tuple(f"contracts/documents/{name}" for name in RESERVED_STAGE_FILENAMES)
+    operator_contracts = ("contracts/documents/operator-request.md",)
     stage_contracts = tuple(f"contracts/stages/{stage}.md" for stage in STAGES)
-    return common_contracts + stage_contracts
+    return common_contracts + operator_contracts + stage_contracts
 
 
 def seed_default_contract_references(root: Path, work_item: str) -> Path:
