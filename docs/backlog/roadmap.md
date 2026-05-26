@@ -6207,10 +6207,18 @@ Local tasks:
     `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
     `uv build`; built wheel inspection confirmed `aidd/cli/static/{index.html,operator.css,operator.js}`;
     a wheel-import smoke verified `/`, `/operator.css`, and `/operator.js` responses.
-- `W25-E4-S2-T2` (planned) Split operator frontend read-model assembly into smaller
+- `W25-E4-S2-T2` (done) Split operator frontend read-model assembly into smaller
   modules for dashboard, artifacts, logs, and questions.
   - Scope: `src/aidd/core/operator_frontend.py` decomposition only.
   - Verification: existing operator frontend tests pass with no API shape change.
+  - Evidence (`2026-05-26`): `src/aidd/core/operator_frontend.py` is now a
+    compatibility facade; read-model implementation lives in
+    `operator_frontend_models.py`, `operator_frontend_logs.py`,
+    `operator_frontend_artifacts.py`, `operator_frontend_questions.py`, and
+    `operator_frontend_dashboard.py`.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/core/test_operator_frontend.py tests/cli/test_ui.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
+    facade import smoke confirmed the existing public functions remain exported.
 - `W25-E4-S2-T3` (planned) Split the live E2E black-box evaluator into orchestration,
   step execution, and report writing modules.
   - Scope: harness maintainability only.
