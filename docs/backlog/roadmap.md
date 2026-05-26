@@ -6143,11 +6143,17 @@ Local tasks:
   - Checks (`2026-05-26`): `rg -n "aidd\\.adapters\\.runtime_registry|runtime_registry import" src/aidd/core src/aidd/cli src/aidd/harness src/aidd/config.py`
     returned no matches; `uv run --extra dev pytest tests/adapters/test_runtime_registry.py tests/test_config.py tests/test_docs_consistency.py tests/cli/test_doctor.py tests/harness/test_live_runtime_config.py tests/harness/test_conformance_matrix.py -q`;
     `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`.
-- `W25-E4-S1-T2` (planned) Remove the Claude adapter's direct run-store metadata write by
+- `W25-E4-S1-T2` (done) Remove the Claude adapter's direct run-store metadata write by
   exposing a protocol-owned metadata hook or event.
   - Scope: Claude adapter boundary and core run metadata update path.
   - Verification: Claude question artifact tests still pass without importing
     `aidd.core.run_store` from adapters.
+  - Evidence (`2026-05-26`): `src/aidd/core/adapter_interview.py` now exposes
+    `persist_adapter_question_metadata`; Claude question persistence calls that hook
+    instead of importing `aidd.core.run_store` or writing stage metadata directly.
+  - Checks (`2026-05-26`): `rg -n "from aidd\\.core\\.run_store|import aidd\\.core\\.run_store" src/aidd/adapters -g '*.py'`
+    returned no matches; `uv run --extra dev pytest tests/core/test_adapter_interview.py tests/adapters/test_claude_code_runner.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`.
 - `W25-E4-S1-T3` (planned) Record a validator or report warning when misplaced stage
   outputs are auto-promoted from `output/`.
   - Scope: stage output discovery and validation evidence.
