@@ -5702,7 +5702,7 @@ regression coverage, architecture boundaries, and maintainability. Authenticatio
 session tokens, Origin/CSRF guards, secret redaction, trusted harness sandboxing, and
 dangerous provider default changes are explicitly out of scope for this wave.
 
-### Epic W25-E1 — runtime control and observability (`next`)
+### Epic W25-E1 — runtime control and observability (`done`)
 Linked stories: `US-01`, `US-06`, `US-11`
 
 #### Slice W25-E1-S1 — cancellable UI runtime jobs (`done`)
@@ -5790,7 +5790,7 @@ Exit evidence:
   subprocess alive;
 - completed jobs cannot be cancelled retroactively.
 
-#### Slice W25-E1-S2 — bounded logs and artifact previews (`planned`)
+#### Slice W25-E1-S2 — bounded logs and artifact previews (`done`)
 Goal: keep local UI log and artifact inspection responsive on large runs while preserving
 raw evidence availability through explicit bounded reads.
 
@@ -5825,7 +5825,7 @@ Local tasks:
   - Scope: `/api/artifacts/document` and the UI artifact viewer.
   - Verification: a large Markdown artifact test proves preview truncation, byte counts,
     and source-mode bounds.
-- `W25-E1-S2-T3` (planned) Add operator console copy and states for truncated logs and
+- `W25-E1-S2-T3` (done) Add operator console copy and states for truncated logs and
   artifacts.
   - Scope: packaged UI assets.
   - Verification: `tests/cli/test_ui.py` covers visible truncation indicators.
@@ -5858,6 +5858,15 @@ Exit evidence:
   `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`,
   `uv run --extra dev ruff check src/aidd/core/operator_frontend.py src/aidd/cli/ui.py src/aidd/cli/ui_assets.py tests/cli/test_ui.py tests/core/test_operator_frontend.py`,
   and `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now renders visible truncation notices for saved runtime
+  logs and artifact document previews/source views, including byte range and full-file
+  inspection guidance.
+- `tests/cli/test_ui.py` statically covers the truncation notice copy, artifact/source
+  state wiring, and packaged `.truncation-notice` style.
+- `2026-05-26` Focused W25-E1-S2-T3 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
 - large logs and artifacts no longer require full-file UI responses by default;
 - operators can see when a displayed log or artifact preview is truncated;
 - raw evidence paths remain inspectable through existing artifact surfaces.

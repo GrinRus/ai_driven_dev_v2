@@ -852,6 +852,22 @@ h1, h2, h3, p {
   align-items: center;
   justify-content: flex-end;
 }
+.truncation-notice {
+  background: #fff9ec;
+  border: 1px solid #ecd59b;
+  border-radius: 6px;
+  color: #6f4b06;
+  display: grid;
+  gap: 3px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+}
+.truncation-notice strong {
+  font-size: 12px;
+}
+.truncation-notice span {
+  font-size: 12px;
+}
 .markdown-preview {
   line-height: 1.48;
   max-height: 500px;
@@ -1120,6 +1136,34 @@ function compactPath(value, maxLength = 56) {
 function pathLine(value, maxLength = 56) {
   const text = String(value ?? "");
   return `<span class="path-line" title="${escapeHtml(text)}">${escapeHtml(compactPath(text, maxLength))}</span>`;
+}
+
+function byteRangeSummary(view) {
+  const start = Number(view?.start_byte || 0);
+  const end = Number(view?.end_byte || 0);
+  const total = Number(view?.byte_size || 0);
+  return `${start}-${end} of ${total} bytes`;
+}
+
+function renderTruncationNotice(kind, view, mode = "") {
+  if (!view?.truncated) return "";
+  const direction = view.truncated_head && view.truncated_tail
+    ? "selected range"
+    : view.truncated_head
+      ? "latest content"
+      : "first content";
+  const subject = kind === "artifact" ? "Artifact view truncated" : "Runtime log truncated";
+  const artifactHint = mode === "preview"
+    ? "Switch to Source for a larger bounded read, or open the folder for the full file."
+    : "Source view is bounded. Open the folder for the full file.";
+  const logHint = "Full runtime.log remains on disk and available through CLI log inspection.";
+  const hint = kind === "artifact" ? artifactHint : logHint;
+  return `
+    <div class="truncation-notice" role="status">
+      <strong>${subject}</strong>
+      <span>Showing ${escapeHtml(direction)} (${escapeHtml(byteRangeSummary(view))}). ${escapeHtml(hint)}</span>
+    </div>
+  `;
 }
 
 async function api(path, options = {}) {
@@ -1528,6 +1572,7 @@ async function loadArtifactDocument(key) {
     const body = state.artifactViewMode === "source"
       ? `<pre>${escapeHtml(documentView.text)}</pre>`
       : `<div class="markdown-preview">${renderMarkdown(documentView.text)}</div>`;
+    const truncation = renderTruncationNotice("artifact", documentView, state.artifactViewMode);
     viewer.innerHTML = `
       <div class="viewer-header">
         <div>
@@ -1540,6 +1585,7 @@ async function loadArtifactDocument(key) {
           <button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button>
         </div>
       </div>
+      ${truncation}
       ${body}
     `;
   } catch (error) {
@@ -1802,7 +1848,7 @@ function rawTextFromEntries(entries) {
   return entries.map((entry) => `[${entry.stream}] ${entry.source ? `${entry.source}: ` : ""}${entry.text}`).join("\\n");
 }
 
-function renderLogPanel({title, meta, entries, rawText, emptyText, actions = ""}) {
+function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "", truncation = null}) {
   const filtered = filteredLogEntries(entries);
   const rawBody = state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered);
   const filterButtons = ["all", "stdout", "stderr", "system"].map((filter) => (
@@ -1834,6 +1880,7 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = ""}
           </div>
         </div>
       </div>
+      ${renderTruncationNotice("log", truncation)}
       ${rows}
     </section>
   `;
@@ -1900,7 +1947,8 @@ async function renderLogs() {
       meta: [summary.run_id ? `run ${summary.run_id}` : "", summary.stage ? `stage ${summary.stage}` : "", summary.attempt_number ? `attempt ${summary.attempt_number}` : ""],
       entries: logEntriesFromText(state.savedLogText),
       rawText: state.savedLogText,
-      emptyText: "Saved runtime log is empty"
+      emptyText: "Saved runtime log is empty",
+      truncation: view
     });
   } catch (error) {
     document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;

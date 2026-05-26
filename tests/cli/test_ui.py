@@ -1647,8 +1647,17 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
         '<select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}"'
         in script
     )
+    assert "function byteRangeSummary(view)" in script
+    assert 'function renderTruncationNotice(kind, view, mode = "")' in script
+    assert 'class="truncation-notice" role="status"' in script
+    assert "Runtime log truncated" in script
+    assert "Artifact view truncated" in script
+    assert "Switch to Source for a larger bounded read" in script
+    assert "Source view is bounded. Open the folder for the full file." in script
+    assert "Full runtime.log remains on disk" in script
     assert (
-        "function renderLogPanel({title, meta, entries, rawText, emptyText, actions = \"\"})"
+        "function renderLogPanel({title, meta, entries, rawText, emptyText, actions = \"\", "
+        "truncation = null})"
         in script
     )
     assert "async function renderRequestChange()" in script
@@ -1695,6 +1704,7 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert 'params.set("mode", state.artifactViewMode);' in script
     assert "const MAX_ARTIFACT_READ_BYTES = 262144;" in script
     assert 'params.set("limit", String(MAX_ARTIFACT_READ_BYTES));' in script
+    assert 'renderTruncationNotice("artifact", documentView, state.artifactViewMode)' in script
     assert "${renderMarkdown(documentView.text)}" in script
     assert "const payload = {stage, runtime: state.selectedRuntime, log_follow: true};" in script
     assert "target_documents: targetDocuments" in script
@@ -1736,6 +1746,7 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert ".small-badge.cancelling" in css
     assert ".small-badge.waiting-for-operator" in css
     assert ".log-actions" in css
+    assert ".truncation-notice" in css
 
 
 def test_operator_question_controls_have_screen_reader_labels(tmp_path: Path) -> None:
