@@ -80,7 +80,6 @@ from aidd.adapters.runtime_events import (
     persist_runtime_event_artifacts,
 )
 from aidd.adapters.runtime_execution import StageRuntimeRequest
-from aidd.adapters.runtime_registry import RuntimeExecutionMode, runtime_ids
 from aidd.core.runtime_operator import (
     RuntimeOperatorBroker,
     RuntimeOperatorDecisionProvider,
@@ -88,6 +87,7 @@ from aidd.core.runtime_operator import (
     RuntimeOperatorRequest,
 )
 from aidd.core.stage_models import AdapterExecutionStatus
+from aidd.runtime_catalog import RuntimeExecutionMode, runtime_ids
 from aidd.runtime_permissions import (
     RuntimeInteractionMode,
     RuntimeOperatorDecisionAction,

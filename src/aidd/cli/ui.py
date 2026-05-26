@@ -20,7 +20,6 @@ from uuid import uuid4
 import typer
 
 from aidd import __version__
-from aidd.adapters.runtime_registry import runtime_definitions
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.cli.stage_run import (
     StageInteractOptions,
@@ -79,6 +78,7 @@ from aidd.core.workflow_service import (
     WorkflowStageExecutionRequest,
     run_workflow,
 )
+from aidd.runtime_catalog import runtime_definitions
 from aidd.runtime_permissions import (
     RuntimeOperatorDecisionAction,
     RuntimeOperatorDecisionSource,

@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 
 from aidd.adapters.runtime_execution import StageRuntimeRequest
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.core.runtime_operator import (
     RuntimeOperatorDecision,
@@ -13,6 +12,7 @@ from aidd.core.runtime_operator import (
     load_operator_requests,
 )
 from aidd.core.stage_models import AdapterExecutionStatus
+from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeInteractionMode,

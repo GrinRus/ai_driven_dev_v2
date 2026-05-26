@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.adapters.surface import (
     default_execution_mode_for_surface,
     runtime_adapter_surfaces,
 )
+from aidd.runtime_catalog import RuntimeExecutionMode
 
 
 def test_runtime_adapter_surfaces_register_execution_and_conformance_callables() -> None:

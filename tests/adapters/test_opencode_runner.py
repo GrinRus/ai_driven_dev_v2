@@ -19,7 +19,7 @@ from aidd.adapters.opencode.runner import (
     run_subprocess_with_streaming,
 )
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
-from aidd.adapters.runtime_registry import RuntimeExecutionMode, get_runtime_definition
+from aidd.runtime_catalog import RuntimeExecutionMode, get_runtime_definition
 
 
 def _context(tmp_path: Path) -> OpenCodeCommandContext:

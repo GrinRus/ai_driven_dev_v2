@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import fields
 from pathlib import Path
 
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.config import AiddConfig, RuntimeConfig, load_config
+from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeInteractionMode,

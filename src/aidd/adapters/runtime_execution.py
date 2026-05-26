@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeVar
 
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
+from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeInteractionMode,

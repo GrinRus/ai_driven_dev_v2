@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-from aidd.adapters.runtime_registry import runtime_definitions, runtime_ids
 from aidd.adapters.surface import RuntimeAdapterExecutionResult
 from aidd.core.contracts import repo_root_from
 from aidd.core.stage_registry import (
@@ -16,6 +15,7 @@ from aidd.core.stage_registry import (
     resolve_prompt_pack_paths,
 )
 from aidd.core.stages import STAGES
+from aidd.runtime_catalog import runtime_definitions, runtime_ids
 
 _USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
 _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")

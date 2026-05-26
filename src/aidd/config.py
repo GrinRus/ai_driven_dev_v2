@@ -6,14 +6,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from aidd.adapters.runtime_registry import (
+from aidd.compatibility import should_upgrade_legacy_raw_provider_command
+from aidd.core.stages import STAGES, is_valid_stage
+from aidd.runtime_catalog import (
     RuntimeExecutionMode,
     get_runtime_definition,
     normalize_execution_mode,
     runtime_ids,
 )
-from aidd.compatibility import should_upgrade_legacy_raw_provider_command
-from aidd.core.stages import STAGES, is_valid_stage
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeInteractionMode,

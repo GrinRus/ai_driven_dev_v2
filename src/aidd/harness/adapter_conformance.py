@@ -5,13 +5,13 @@ from enum import StrEnum
 from pathlib import Path
 
 from aidd.adapters.base import CapabilityReport
-from aidd.adapters.runtime_registry import runtime_ids
 from aidd.adapters.surface import RuntimeAdapterSurface, get_runtime_adapter_surface
 from aidd.harness.conformance_matrix import (
     RuntimeConformanceMatrix,
     RuntimeConformanceRow,
     load_runtime_conformance_matrix,
 )
+from aidd.runtime_catalog import runtime_ids
 
 _CONFORMANCE_PROBE_COMMAND = "aidd-conformance-missing-runtime-binary"
 

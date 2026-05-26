@@ -8,11 +8,11 @@ from typing import Literal
 from rich.console import Console
 
 from aidd.adapters.base import CapabilityReport
-from aidd.adapters.runtime_registry import RuntimeExecutionMode, runtime_ids
 from aidd.config import AiddConfig
 from aidd.core.run_inspection import resolve_run_metadata_summary
 from aidd.core.stages import STAGES
 from aidd.core.workflow_service import allocate_workflow_run_id
+from aidd.runtime_catalog import RuntimeExecutionMode, runtime_ids
 
 console = Console(no_color=True)
 _STAGE_RUN_SUPPORTED_RUNTIMES: tuple[str, ...] = runtime_ids()

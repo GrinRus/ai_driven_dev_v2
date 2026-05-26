@@ -26,13 +26,13 @@ from aidd.adapters.live_transport import (
     split_command,
     terminate_process,
 )
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.core.runtime_operator import (
     RuntimeOperatorBroker,
     RuntimeOperatorDecision,
     RuntimeOperatorDecisionProvider,
 )
 from aidd.core.stage_models import AdapterExecutionStatus
+from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import RuntimeOperatorDecisionAction
 
 _CODEX_TRANSCRIPT_FILENAME = "codex-app-server.jsonl"

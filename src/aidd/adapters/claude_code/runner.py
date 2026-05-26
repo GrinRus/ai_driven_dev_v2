@@ -22,7 +22,6 @@ from aidd.adapters.runner_support import (
     validate_stage_command_context,
 )
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
-from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
 from aidd.core.adapter_interview import (
     AdapterQuestionEvent,
@@ -35,6 +34,7 @@ from aidd.core.adapter_interview import (
     unresolved_blocking_questions,
 )
 from aidd.core.run_store import run_stage_metadata_path
+from aidd.runtime_catalog import RuntimeExecutionMode, normalize_execution_mode
 from aidd.runtime_logs.events import normalize_structured_events as normalize_runtime_log_events
 
 

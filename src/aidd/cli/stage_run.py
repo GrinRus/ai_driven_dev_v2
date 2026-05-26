@@ -10,7 +10,6 @@ from typing import Literal
 import typer
 
 from aidd.adapters.runtime_execution import StageRuntimeRequest
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.cli.support import (
     _STAGE_RUN_SUPPORTED_RUNTIMES,
@@ -63,6 +62,7 @@ from aidd.core.stage_runner import (
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.state_machine import StageState
 from aidd.core.workspace import stage_root as workspace_stage_root
+from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeInteractionMode,

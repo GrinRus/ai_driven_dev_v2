@@ -6132,10 +6132,17 @@ Dependencies:
 
 Local tasks:
 
-- `W25-E4-S1-T1` (planned) Move runtime readiness catalog data out of
+- `W25-E4-S1-T1` (done) Move runtime readiness catalog data out of
   `aidd.adapters.runtime_registry` into a neutral runtime catalog module.
   - Scope: runtime metadata imports only; no behavior change.
   - Verification: an import-boundary grep plus existing doctor and readiness tests.
+  - Evidence (`2026-05-26`): runtime catalog ownership moved to
+    `src/aidd/runtime_catalog.py`; `src/aidd/adapters/runtime_registry.py` is now a
+    compatibility re-export shim; core, CLI, harness, config, adapter, and test imports
+    use the neutral catalog module.
+  - Checks (`2026-05-26`): `rg -n "aidd\\.adapters\\.runtime_registry|runtime_registry import" src/aidd/core src/aidd/cli src/aidd/harness src/aidd/config.py`
+    returned no matches; `uv run --extra dev pytest tests/adapters/test_runtime_registry.py tests/test_config.py tests/test_docs_consistency.py tests/cli/test_doctor.py tests/harness/test_live_runtime_config.py tests/harness/test_conformance_matrix.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`.
 - `W25-E4-S1-T2` (planned) Remove the Claude adapter's direct run-store metadata write by
   exposing a protocol-owned metadata hook or event.
   - Scope: Claude adapter boundary and core run metadata update path.
