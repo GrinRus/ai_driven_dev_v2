@@ -42,7 +42,7 @@ _INDEX_HTML = """<!doctype html>
         <span>Stages</span>
         <span id="stageCounter" class="counter">0/8</span>
       </div>
-      <nav id="stageRail" class="stage-list"></nav>
+      <nav id="stageRail" class="stage-list" aria-label="Workflow stages"></nav>
       <div class="quick-links">
         <div class="rail-header small">Quick links</div>
         <button data-tab-shortcut="logs" class="quick-link" type="button">Run status</button>
@@ -61,16 +61,16 @@ _INDEX_HTML = """<!doctype html>
         </div>
         <div id="stageBadges" class="badge-row"></div>
       </div>
-      <div class="tabs">
-        <button data-tab="overview" class="active" type="button">Overview</button>
-        <button data-tab="questions" type="button">Questions</button>
-        <button data-tab="validation" type="button">Validation</button>
-        <button data-tab="artifacts" type="button">Artifacts</button>
-        <button data-tab="logs" type="button">Logs</button>
-        <button data-tab="approvals" type="button">Approvals</button>
-        <button data-tab="request" type="button">Request change</button>
+      <div class="tabs" role="tablist" aria-label="Stage cockpit views">
+        <button id="tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="cockpitContent" class="active" type="button">Overview</button>
+        <button id="tab-questions" data-tab="questions" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Questions</button>
+        <button id="tab-validation" data-tab="validation" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Validation</button>
+        <button id="tab-artifacts" data-tab="artifacts" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Artifacts</button>
+        <button id="tab-logs" data-tab="logs" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Logs</button>
+        <button id="tab-approvals" data-tab="approvals" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Approvals</button>
+        <button id="tab-request" data-tab="request" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Request change</button>
       </div>
-      <div id="cockpitContent" class="cockpit-content"></div>
+      <div id="cockpitContent" class="cockpit-content" role="tabpanel" aria-labelledby="tab-overview" tabindex="0"></div>
     </section>
 
     <aside class="right-sidebar">
@@ -1223,8 +1223,12 @@ function setRunButtonState() {
 function activateTab(tab) {
   state.activeTab = tab;
   document.querySelectorAll("[data-tab]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.tab === tab);
+    const isActive = button.dataset.tab === tab;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
   });
+  const content = document.getElementById("cockpitContent");
+  if (content) content.setAttribute("aria-labelledby", `tab-${tab}`);
 }
 
 function dashboardUrl() {
@@ -1316,7 +1320,8 @@ function renderStageRail() {
   const done = stages.filter((item) => item.status === "succeeded").length;
   document.getElementById("stageCounter").textContent = `${done}/${STAGES.length}`;
   document.getElementById("stageRail").innerHTML = stages.map((item, index) => {
-    const active = item.stage === state.activeStage ? " active" : "";
+    const isActive = item.stage === state.activeStage;
+    const active = isActive ? " active" : "";
     const status = statusClass(item.status);
     const markers = [
       item.unresolved_blocking_count ? `<span class="small-badge warn">Q${item.unresolved_blocking_count}</span>` : "",
@@ -1324,7 +1329,7 @@ function renderStageRail() {
       item.attempt_count ? `<span class="small-badge">${escapeHtml(item.attempt_count)}x</span>` : ""
     ].filter(Boolean).join("");
     return `
-      <button class="stage-card${active}" data-stage="${escapeHtml(item.stage)}" type="button">
+      <button class="stage-card${active}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${isActive ? "step" : "false"}">
         <span class="stage-index">${index + 1}</span>
         <span class="stage-copy">
           <span class="stage-name">${escapeHtml(item.title)}</span>

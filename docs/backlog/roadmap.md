@@ -5902,7 +5902,7 @@ Local tasks:
   - Scope: question card rendering.
   - Verification: DOM or static tests prove every generated textarea and select has a
     label or ARIA name.
-- `W25-E2-S1-T2` (planned) Add tablist, tab, and panel semantics to cockpit tabs and
+- `W25-E2-S1-T2` (done) Add tablist, tab, and panel semantics to cockpit tabs and
   `aria-current` to the active stage.
   - Scope: UI HTML and JavaScript rendering only.
   - Verification: static UI tests prove roles, selected state, and active stage
@@ -5921,6 +5921,15 @@ Evidence:
 - `tests/cli/test_ui.py` statically covers the question control labels, described-by
   relationships, and packaged `.sr-only` helper style.
 - `2026-05-26` Focused W25-E2-S1-T1 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now exposes cockpit tabs as a `tablist` with `tab`
+  buttons, updates `aria-selected` and the dynamic `tabpanel` label on activation, and
+  marks the active stage rail item with `aria-current="step"`.
+- `tests/cli/test_ui.py` statically covers the tablist, tab, panel, selected-state, and
+  active-stage semantics.
+- `2026-05-26` Focused W25-E2-S1-T2 checks passed:
   `uv run --extra dev pytest tests/cli/test_ui.py -q`,
   `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
   `uv run --extra dev python -m mypy src`.

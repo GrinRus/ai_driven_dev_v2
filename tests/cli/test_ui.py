@@ -1326,6 +1326,18 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert 'id="runtimeSelect"' in html
     assert 'id="openWorkspaceButton"' in html
     assert 'id="stopServerButton"' in html
+    assert 'id="stageRail" class="stage-list" aria-label="Workflow stages"' in html
+    assert 'class="tabs" role="tablist" aria-label="Stage cockpit views"' in html
+    assert (
+        'id="tab-overview" data-tab="overview" role="tab" aria-selected="true" '
+        'aria-controls="cockpitContent"'
+        in html
+    )
+    assert (
+        'id="cockpitContent" class="cockpit-content" role="tabpanel" '
+        'aria-labelledby="tab-overview" tabindex="0"'
+        in html
+    )
     assert 'id="nextActionButton"' not in html
 
     run_response = service.handle_post(
@@ -1680,6 +1692,9 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "function ensureRunnableRuntime()" in script
     assert 'toast("Selected runtime is not ready.")' in script
     assert 'if (element.textContent === message) element.textContent = "";' in script
+    assert 'button.setAttribute("aria-selected", isActive ? "true" : "false");' in script
+    assert 'content.setAttribute("aria-labelledby", `tab-${tab}`);' in script
+    assert 'aria-current="${isActive ? "step" : "false"}"' in script
     assert "data-log-filter" in script
     assert "data-log-raw" in script
     assert "state.rawLogMode" in script
