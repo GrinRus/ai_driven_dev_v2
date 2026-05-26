@@ -6,7 +6,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W24-E1-S2-T3`
+No immediate tasks queued.
 
 ## Soon
 
@@ -165,3 +165,7 @@ No deferred tasks queued.
 - `2026-05-26` Completed `W24-E1-S2-T2`; native OpenCode provider API error payloads
   with zero process exit now stop as `provider_error` before repair retries, with raw
   logs and runtime exit metadata preserved. `W24-E1-S2-T3` is promoted to `Next`.
+- `2026-05-26` Completed `W24-E1-S2-T3`; black-box live stage command timeouts now
+  reconcile non-terminal inspected stage metadata to `failed`, write timeout
+  reconciliation evidence, and keep the evidence local. Wave 24 is closed and the active
+  backlog queue is empty.

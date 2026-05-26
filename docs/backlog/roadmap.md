@@ -5589,12 +5589,12 @@ Exit evidence:
 - live E2E remains manual-only and outside CI/release gates;
 - final audit artifacts are derived from per-step black-box evidence.
 
-## Wave 24 — beta readiness release preparation (`next`)
+## Wave 24 — beta readiness release preparation (`done`)
 
 Goal: prepare AIDD for controlled operator-trial beta readiness without claiming unattended
 production automation and without wiring live E2E into CI/CD or release workflows.
 
-### Epic W24-E1 — source-of-truth and release guardrail closure (`next`)
+### Epic W24-E1 — source-of-truth and release guardrail closure (`done`)
 Linked stories: `US-01`, `US-07`, `US-09`, `US-10`, `US-11`, `US-12`
 
 #### Slice W24-E1-S1 — beta release-prep source audit (`done`)
@@ -5660,7 +5660,7 @@ Exit evidence:
 - live E2E remains manual-only and outside CI/CD/release workflows;
 - release materials are prepared without changing the public alpha safety claim.
 
-#### Slice W24-E1-S2 — manual live beta evidence refresh (`next`)
+#### Slice W24-E1-S2 — manual live beta evidence refresh (`done`)
 Goal: refresh maintained manual live E2E evidence for the beta-readiness provider matrix
 outside CI/CD and release automation.
 
@@ -5687,7 +5687,7 @@ Local tasks:
 - `W24-E1-S2-T2` (done) Classify structured `opencode` provider error payloads as
   runtime failures when the native CLI exits `0`, so orchestration stops explicitly
   instead of spending repair budget on missing documents.
-- `W24-E1-S2-T3` (planned) Make black-box live stage command timeouts terminal and visible
+- `W24-E1-S2-T3` (done) Make black-box live stage command timeouts terminal and visible
   in evidence without leaving inspected AIDD stage metadata in `executing`.
 
 Evidence:
@@ -5719,11 +5719,20 @@ Evidence:
   provider API errors are classified as `provider_error`; raw logs and runtime exit
   metadata are preserved; CLI coverage proves the stage stops after one attempt instead
   of scheduling repair retries.
+- `2026-05-26` completed `W24-E1-S2-T3`: black-box live stage command timeouts now
+  write `stage-audits/<stage>-timeout-reconciliation.json`, reconcile non-terminal
+  inspected stage metadata to `failed`, include the reconciliation payload in
+  `flow-steps.json` and `flow-state.json`, skip the frontend checkpoint after a timed-out
+  stage command, and derive stage audit state from reconciled metadata when the public
+  stage-result document is missing. `tests/harness/test_live_e2e_black_box.py` covers the
+  timeout lifecycle and evidence shape.
 
 Exit evidence:
 
 - counted clean manual live runs or explicit external blockers are recorded in the local
   operator ledger;
+- evidence-backed AIDD-owned live harness defects discovered during the refresh were
+  split, fixed, and covered by deterministic regressions;
 - no live evidence artifact, target repository diff, provider log, or temp work root is
   committed.
 

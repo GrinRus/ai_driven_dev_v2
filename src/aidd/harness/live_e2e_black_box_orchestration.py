@@ -18,6 +18,11 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from aidd.core.markdown import MarkdownSectionIndex
+from aidd.core.run_store import (
+    load_stage_metadata,
+    persist_stage_status,
+    run_stage_metadata_path,
+)
 from aidd.core.runtime_operator import (
     OPERATOR_DECISIONS_FILENAME,
     OPERATOR_REQUESTS_FILENAME,
@@ -163,9 +168,11 @@ RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 SUMMARY_REPORT_FILENAME = "summary.md"
 STAGE_AUDITS_DIRNAME = "stage-audits"
 FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
+STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
 
 TERMINAL_STATUSES = {"pass", "fail", "infra-fail"}
 NON_TERMINAL_STATUSES = {"created", "running", "blocked"}
+TERMINAL_STAGE_METADATA_STATUSES = {"blocked", "failed", "succeeded"}
 PRESERVED_STATE_EXTRA_KEYS = (
     "error",
     "operator_action_request_json",
@@ -1634,6 +1641,11 @@ def _stage_audit_paths(ctx: FlowContext, stage: str) -> tuple[Path, Path]:
     return audit_root / f"{stage}.json", audit_root / f"{stage}.md"
 
 
+def _stage_timeout_reconciliation_path(ctx: FlowContext, stage: str) -> Path:
+    audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
+    return audit_root / f"{stage}{STAGE_TIMEOUT_RECONCILIATION_SUFFIX}"
+
+
 def _read_text_if_exists(path: Path) -> str:
     if not path.exists() or not path.is_file():
         return ""
@@ -1682,6 +1694,98 @@ def _stage_state_from_text(stage_result_text: str) -> str:
     ):
         return "failed"
     return "unknown"
+
+
+def _stage_metadata_status(ctx: FlowContext, stage: str) -> str | None:
+    working_copy = _require_working_copy(ctx)
+    metadata_path = run_stage_metadata_path(
+        workspace_root=working_copy / ".aidd",
+        work_item=ctx.work_item,
+        run_id=ctx.run_id,
+        stage=stage,
+    )
+    if not metadata_path.exists():
+        return None
+    try:
+        payload = _read_json_object(metadata_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    status = payload.get("status")
+    return status if isinstance(status, str) and status else None
+
+
+def _resolved_stage_audit_state(*, stage_result_text: str, metadata_status: str | None) -> str:
+    stage_state = _stage_state_from_text(stage_result_text)
+    if stage_state != "unknown":
+        return stage_state
+    if metadata_status == "succeeded":
+        return "passed"
+    if metadata_status in {"blocked", "failed"}:
+        return metadata_status
+    return stage_state
+
+
+def _reconcile_timed_out_stage_run(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_result: BlackBoxCommandResult,
+) -> tuple[tuple[Path, ...], dict[str, object] | None]:
+    if not stage_result.transcript.timed_out:
+        return tuple(), None
+
+    working_copy = _require_working_copy(ctx)
+    workspace_root = working_copy / ".aidd"
+    metadata_path = run_stage_metadata_path(
+        workspace_root=workspace_root,
+        work_item=ctx.work_item,
+        run_id=ctx.run_id,
+        stage=stage,
+    )
+    before = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=ctx.work_item,
+        run_id=ctx.run_id,
+        stage=stage,
+    )
+    previous_status = None if before is None else before.status
+    reconciled = False
+    if previous_status not in TERMINAL_STAGE_METADATA_STATUSES:
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item=ctx.work_item,
+            run_id=ctx.run_id,
+            stage=stage,
+            status="failed",
+        )
+        reconciled = True
+
+    after = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=ctx.work_item,
+        run_id=ctx.run_id,
+        stage=stage,
+    )
+    reconciled_status = None if after is None else after.status
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "run_id": ctx.run_id,
+        "runtime_id": ctx.runtime_id,
+        "scenario_id": ctx.scenario.scenario_id,
+        "work_item": ctx.work_item,
+        "stage": stage,
+        "timed_out": True,
+        "timeout_seconds": stage_result.transcript.timeout_seconds,
+        "stage_run_exit_code": stage_result.exit_code,
+        "metadata_path": metadata_path.as_posix(),
+        "previous_status": previous_status,
+        "reconciled_status": reconciled_status,
+        "reconciled": reconciled,
+    }
+    reconciliation_path = _stage_timeout_reconciliation_path(ctx, stage)
+    _write_json(reconciliation_path, payload)
+    return (reconciliation_path,), payload
 
 
 def _validator_verdict_from_text(validator_text: str) -> str:
@@ -1797,6 +1901,7 @@ def _write_stage_audit(
     validator_report_path = _stage_document_path(ctx, stage, "validator-report.md")
     stage_result_text = _read_text_if_exists(stage_result_path)
     validator_text = _read_text_if_exists(validator_report_path)
+    stage_metadata_status = _stage_metadata_status(ctx, stage)
     implementation_details: dict[str, object] | None = None
     if stage == "implement":
         implementation_report_text = (
@@ -1824,7 +1929,11 @@ def _write_stage_audit(
         "scenario_id": ctx.scenario.scenario_id,
         "work_item": ctx.work_item,
         "stage": stage,
-        "stage_state": _stage_state_from_text(stage_result_text),
+        "stage_state": _resolved_stage_audit_state(
+            stage_result_text=stage_result_text,
+            metadata_status=stage_metadata_status,
+        ),
+        "stage_metadata_status": stage_metadata_status,
         "classifications": {
             "stage_run": stage_classification,
             "public_inspection": inspect_classification,
@@ -1875,6 +1984,7 @@ def _write_stage_audit(
         "",
         f"- Run: `{ctx.runtime_id}` / `{ctx.scenario_path.as_posix()}` / `{ctx.run_id}`",
         f"- Stage state: `{payload['stage_state']}`",
+        f"- Stage metadata status: `{payload['stage_metadata_status']}`",
         f"- Validator verdict: `{payload['validator_verdict']}`",
         f"- Primary artifact present: `{primary_artifact['present']}`",
         f"- Repair attempts: `{payload['repair_attempts']}`",
@@ -2527,6 +2637,11 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         )
     )
     classification = _classify_stage_run(stage_result)
+    timeout_evidence_paths, timeout_reconciliation = _reconcile_timed_out_stage_run(
+        ctx=ctx,
+        stage=stage,
+        stage_result=stage_result,
+    )
     _record_step(
         ctx=ctx,
         action="run-stage",
@@ -2543,6 +2658,12 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         ),
         stage=stage,
         command_results=(stage_result,),
+        evidence_paths=timeout_evidence_paths,
+        details=(
+            {"timeout_reconciliation": timeout_reconciliation}
+            if timeout_reconciliation is not None
+            else None
+        ),
     )
 
     inspection_results = tuple(
@@ -2597,7 +2718,11 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
     )
     if inspection_reports_blocked:
         classification = "blocked"
-    frontend_classification = _run_frontend_checkpoint(ctx, stage)
+    frontend_classification = (
+        "skipped"
+        if stage_result.transcript.timed_out
+        else _run_frontend_checkpoint(ctx, stage)
+    )
     _write_stage_audit(
         ctx=ctx,
         stage=stage,
@@ -2678,7 +2803,14 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         next_action="stop",
         current_stage=stage,
         completed_stages=_state_completed_stages(ctx.bundle_root),
-        extra={"stage_exit_code": stage_result.exit_code},
+        extra={
+            "stage_exit_code": stage_result.exit_code,
+            **(
+                {"timeout_reconciliation": timeout_reconciliation}
+                if timeout_reconciliation is not None
+                else {}
+            ),
+        },
     )
     return classification
 
