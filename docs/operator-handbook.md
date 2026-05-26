@@ -157,6 +157,10 @@ stage validation before any workflow progression. For initial interview stops, a
 `questions.md` plus terminal stage documents may complete the adapter call while `answers.md`
 is still waiting for operator or harness-provided answers.
 
+If the native OpenCode CLI emits a structured provider API error payload but exits `0`,
+AIDD classifies the attempt as `provider_error`, preserves the raw runtime log, and stops
+the stage before spending repair attempts on missing model-authored documents.
+
 For `permission_policy = "brokered"` with `auto_approval_preset = "broad"`,
 AIDD intentionally allows normal reads and writes inside the local `.aidd/`
 workspace. That includes stage documents, reports, runtime logs, metadata, and

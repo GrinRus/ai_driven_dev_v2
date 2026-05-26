@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W24-E1-S2-T2`
+- `W24-E1-S2-T3`
 
 ## Soon
 
-- `W24-E1-S2-T3`
+No near-term tasks queued.
 
 ## Parking lot
 
@@ -162,3 +162,6 @@ No deferred tasks queued.
   now owns `opencode` provider error-payload classification and remains in `Next`;
   `W24-E1-S2-T3` owns live harness timeout lifecycle/evidence cleanup and is promoted
   to `Soon`.
+- `2026-05-26` Completed `W24-E1-S2-T2`; native OpenCode provider API error payloads
+  with zero process exit now stop as `provider_error` before repair retries, with raw
+  logs and runtime exit metadata preserved. `W24-E1-S2-T3` is promoted to `Next`.

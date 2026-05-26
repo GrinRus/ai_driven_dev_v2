@@ -5684,7 +5684,7 @@ Local tasks:
 
 - `W24-E1-S2-T1` (done) Refresh medium-plus manual live evidence for `codex`,
   `claude-code`, and `opencode` using maintained live manifests outside CI/CD.
-- `W24-E1-S2-T2` (planned) Classify structured `opencode` provider error payloads as
+- `W24-E1-S2-T2` (done) Classify structured `opencode` provider error payloads as
   runtime failures when the native CLI exits `0`, so orchestration stops explicitly
   instead of spending repair budget on missing documents.
 - `W24-E1-S2-T3` (planned) Make black-box live stage command timeouts terminal and visible
@@ -5715,6 +5715,10 @@ Evidence:
   `W24-E1-S2-T2` owns the adapter/runtime error-payload classification issue proven by
   `eval-live-006-opencode-20260526T173043Z`, while `W24-E1-S2-T3` owns the live harness
   timeout lifecycle/evidence issue proven by `eval-live-007-codex-20260526T163850Z`.
+- `2026-05-26` completed `W24-E1-S2-T2`: native OpenCode zero-exit structured
+  provider API errors are classified as `provider_error`; raw logs and runtime exit
+  metadata are preserved; CLI coverage proves the stage stops after one attempt instead
+  of scheduling repair retries.
 
 Exit evidence:
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shlex
 import time
 from collections.abc import Callable, Mapping
@@ -65,6 +66,7 @@ class OpenCodeSubprocessSpec(RuntimeSubprocessSpec):
 class OpenCodeExitClassification(StrEnum):
     SUCCESS = "success"
     DOCUMENT_COMPLETE = "document_complete"
+    PROVIDER_ERROR = "provider_error"
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
@@ -89,12 +91,54 @@ def _resolve_exit_classification(
     *,
     exit_code: int,
     stop_reason: OpenCodeExitClassification | None,
+    stdout_text: str = "",
+    stderr_text: str = "",
 ) -> OpenCodeExitClassification:
+    if (
+        stop_reason is None
+        and exit_code == 0
+        and _has_structured_provider_error(stdout_text=stdout_text, stderr_text=stderr_text)
+    ):
+        return OpenCodeExitClassification.PROVIDER_ERROR
     return resolve_exit_classification(
         exit_code=exit_code,
         stop_reason=stop_reason,
         success_value=OpenCodeExitClassification.SUCCESS,
         non_zero_value=OpenCodeExitClassification.NON_ZERO_EXIT,
+    )
+
+
+def _has_structured_provider_error(*, stdout_text: str, stderr_text: str) -> bool:
+    for stream_text in (stdout_text, stderr_text):
+        for line in stream_text.splitlines():
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            if _is_structured_provider_error_payload(payload):
+                return True
+    return False
+
+
+def _is_structured_provider_error_payload(payload: Mapping[str, object]) -> bool:
+    if payload.get("type") != "error":
+        return False
+    error_payload = payload.get("error")
+    if not isinstance(error_payload, Mapping):
+        return False
+    error_name = error_payload.get("name")
+    if isinstance(error_name, str) and error_name.lower() in {"apierror", "api_error"}:
+        return True
+    data_payload = error_payload.get("data")
+    if not isinstance(data_payload, Mapping):
+        return False
+    return (
+        "statusCode" in data_payload
+        or "status_code" in data_payload
+        or "responseBody" in data_payload
+        or "response_body" in data_payload
     )
 
 
@@ -427,6 +471,8 @@ def run_subprocess_with_streaming(
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,
         stop_reason=streamed_result.stop_reason,
+        stdout_text=streamed_result.stdout_text,
+        stderr_text=streamed_result.stderr_text,
     )
     return OpenCodeRunResult(
         exit_code=streamed_result.exit_code,
