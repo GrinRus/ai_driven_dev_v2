@@ -600,6 +600,8 @@ def test_persist_operator_answer_writes_standard_answers_document(tmp_path: Path
 
     assert questions_view.has_unresolved_blocking_questions is False
     assert questions_view.questions[0].status == "resolved"
+    assert questions_view.questions[0].answer_text == "The target release is 0.2.0."
+    assert questions_view.questions[0].answer_resolution is AnswerResolution.RESOLVED
     assert questions_view.answers_path.read_text(encoding="utf-8") == (
         "# Answers\n\n"
         "## Answers\n\n"
@@ -622,6 +624,8 @@ def test_persist_operator_answer_preserves_partial_semantics(tmp_path: Path) -> 
 
     assert questions_view.has_unresolved_blocking_questions is True
     assert questions_view.questions[0].status == "pending-blocking"
+    assert questions_view.questions[0].answer_text is None
+    assert questions_view.questions[0].answer_resolution is AnswerResolution.PARTIAL
 
 
 def test_persist_operator_answer_rejects_unknown_question_id(tmp_path: Path) -> None:

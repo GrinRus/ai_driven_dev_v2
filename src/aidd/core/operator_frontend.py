@@ -85,6 +85,8 @@ class OperatorQuestionView:
     text: str
     policy: QuestionPolicy
     status: str
+    answer_text: str | None = None
+    answer_resolution: AnswerResolution | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -511,9 +513,11 @@ def resolve_operator_questions_view(
         work_item=work_item,
         stage=stage,
     )
+    answers_by_id = {answer.question_id: answer for answer in answers}
     resolved_ids = set(resolved_question_ids(answers=answers))
     question_views: list[OperatorQuestionView] = []
     for question in questions:
+        answer = answers_by_id.get(question.question_id)
         if question.question_id in resolved_ids:
             status = "resolved"
         elif question.policy is QuestionPolicy.BLOCKING:
@@ -526,6 +530,8 @@ def resolve_operator_questions_view(
                 text=question.text,
                 policy=question.policy,
                 status=status,
+                answer_text=answer.text if status == "resolved" and answer else None,
+                answer_resolution=answer.resolution if answer else None,
             )
         )
 

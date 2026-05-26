@@ -5979,7 +5979,7 @@ Local tasks:
   - Scope: UI JavaScript and CSS.
   - Verification: a mobile viewport browser or manual smoke confirms the selected stage
     is visible after load and stage switch.
-- `W25-E2-S2-T2` (planned) Render saved answer text for resolved questions.
+- `W25-E2-S2-T2` (done) Render saved answer text for resolved questions.
   - Scope: operator frontend question read model and question card UI.
   - Verification: API and UI tests prove `answers.md` content appears in resolved
     question cards.
@@ -6003,6 +6003,17 @@ Evidence:
   `uv run --extra dev pytest tests/cli/test_ui.py -q`,
   `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
   `uv run --extra dev python -m mypy src`.
+- `src/aidd/core/operator_frontend.py` now includes resolved answer text and answer
+  resolution metadata in each operator question view.
+- `src/aidd/cli/ui_assets.py` renders a read-only saved-answer block for resolved
+  question cards without treating partial or deferred answers as resolved.
+- `tests/core/test_operator_frontend.py` covers resolved and partial answer read-model
+  behavior, and `tests/cli/test_ui.py` covers API payload fields plus saved-answer card
+  markup.
+- `2026-05-26` Focused W25-E2-S2-T2 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`,
+  `uv run --extra dev ruff check src/aidd/core/operator_frontend.py src/aidd/cli/ui_assets.py tests/cli/test_ui.py tests/core/test_operator_frontend.py`,
+  and `uv run --extra dev python -m mypy src`.
 
 Exit evidence:
 

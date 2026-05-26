@@ -398,6 +398,9 @@ def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> 
 
     payload = _payload(response)
     assert payload["unresolved_blocking_question_ids"] == []
+    assert payload["questions"][0]["status"] == "resolved"  # type: ignore[index]
+    assert payload["questions"][0]["answer_text"] == "Release target is 0.2.0."  # type: ignore[index]
+    assert payload["questions"][0]["answer_resolution"] == "resolved"  # type: ignore[index]
     answers_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "answers.md"
     assert "Release target is 0.2.0." in answers_path.read_text(encoding="utf-8")
 
@@ -1665,6 +1668,10 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
         '<select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}"'
         in script
     )
+    assert 'const savedAnswer = resolved && question.answer_text' in script
+    assert 'class="saved-answer"' in script
+    assert "Saved answer" in script
+    assert "${escapeHtml(question.answer_text)}" in script
     assert "function byteRangeSummary(view)" in script
     assert 'function renderTruncationNotice(kind, view, mode = "")' in script
     assert 'class="truncation-notice" role="status"' in script
@@ -1776,6 +1783,8 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert ".small-badge.waiting-for-operator" in css
     assert ".log-actions" in css
     assert ".truncation-notice" in css
+    assert ".saved-answer" in css
+    assert ".saved-answer-text" in css
     assert "--focus-ring:" in css
     assert "button:focus-visible" in css
     assert "outline: 3px solid var(--focus-ring)" in css

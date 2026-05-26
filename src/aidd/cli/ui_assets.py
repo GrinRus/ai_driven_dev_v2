@@ -632,6 +632,25 @@ h1, h2, h3, p {
 .question-actions select {
   min-width: 130px;
 }
+.saved-answer {
+  background: #f6f8f5;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+}
+.saved-answer-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.saved-answer-text {
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
 .intervention-form {
   display: grid;
   gap: 12px;
@@ -1469,6 +1488,9 @@ function renderQuestionCards({showResume}) {
         const questionTextId = questionControlId("question-text", question.question_id, index);
         const answerId = questionControlId("answer", question.question_id, index);
         const resolutionId = questionControlId("resolution", question.question_id, index);
+        const savedAnswer = resolved && question.answer_text
+          ? `<div class="saved-answer"><span class="saved-answer-label">Saved answer</span><span class="saved-answer-text">${escapeHtml(question.answer_text)}</span></div>`
+          : "";
         return `
           <article class="question-card">
             <div class="question-head">
@@ -1476,6 +1498,7 @@ function renderQuestionCards({showResume}) {
               <span class="small-badge ${question.status === "pending-blocking" ? "warn" : resolved ? "good" : ""}">${escapeHtml(question.status)}</span>
             </div>
             <p id="${questionTextId}">${escapeHtml(question.text)}</p>
+            ${savedAnswer}
             <label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>
             <textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}" data-question-text="${escapeHtml(question.question_id)}" ${resolved ? "disabled" : ""}></textarea>
             <div class="question-actions">
