@@ -6172,7 +6172,7 @@ Exit evidence:
 - Claude adapter no longer mutates run-store metadata through a core layout helper;
 - output promotion remains compatible but becomes visible in validation evidence.
 
-#### Slice W25-E4-S2 — module size reduction (`planned`)
+#### Slice W25-E4-S2 — module size reduction (`done`)
 Goal: reduce the largest remaining UI, operator frontend, and live evaluator modules
 without changing behavior, public CLI commands, or artifact filenames.
 
@@ -6219,10 +6219,18 @@ Local tasks:
   - Checks (`2026-05-26`): `uv run --extra dev pytest tests/core/test_operator_frontend.py tests/cli/test_ui.py -q`;
     `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
     facade import smoke confirmed the existing public functions remain exported.
-- `W25-E4-S2-T3` (planned) Split the live E2E black-box evaluator into orchestration,
+- `W25-E4-S2-T3` (done) Split the live E2E black-box evaluator into orchestration,
   step execution, and report writing modules.
   - Scope: harness maintainability only.
   - Verification: live evaluator unit tests and result bundle tests pass.
+  - Evidence (`2026-05-26`): `src/aidd/harness/live_e2e_black_box.py` is now a
+    compatibility facade; orchestration moved to
+    `src/aidd/harness/live_e2e_black_box_orchestration.py`, subprocess/command primitives
+    moved to `src/aidd/harness/live_e2e_black_box_steps.py`, and JSON/report transcript
+    helpers moved to `src/aidd/harness/live_e2e_black_box_reports.py`.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py tests/harness/test_result_bundle_layout.py tests/harness/test_result_bundle_persistence.py tests/harness/test_result_bundle_completeness.py tests/harness/test_result_bundle_artifacts.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
+    `uv run --extra dev pytest tests/test_docs_consistency.py -q`; backlog sync check.
 
 Exit evidence:
 
