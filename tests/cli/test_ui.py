@@ -1543,7 +1543,34 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`" in script
     assert "No artifacts for this stage yet" in script
     assert "No runtime log for this stage yet" in script
-    assert "<p>${escapeHtml(question.text)}</p>" in script
+    assert "function questionControlId(prefix, questionId, index)" in script
+    assert (
+        'const questionTextId = questionControlId("question-text", question.question_id, index);'
+        in script
+    )
+    assert 'const answerId = questionControlId("answer", question.question_id, index);' in script
+    assert (
+        'const resolutionId = questionControlId("resolution", question.question_id, index);'
+        in script
+    )
+    assert '<p id="${questionTextId}">${escapeHtml(question.text)}</p>' in script
+    assert (
+        '<label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>'
+        in script
+    )
+    assert (
+        '<textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}"'
+        in script
+    )
+    assert (
+        '<label class="sr-only" for="${resolutionId}">Resolution for '
+        "${escapeHtml(questionLabel)}</label>"
+        in script
+    )
+    assert (
+        '<select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}"'
+        in script
+    )
     assert (
         "function renderLogPanel({title, meta, entries, rawText, emptyText, actions = \"\"})"
         in script
@@ -1630,6 +1657,27 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert ".small-badge.cancelling" in css
     assert ".small-badge.waiting-for-operator" in css
     assert ".log-actions" in css
+
+
+def test_operator_question_controls_have_screen_reader_labels(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    script = service.handle_get("/operator.js", {}).body.decode("utf-8")
+    css = service.handle_get("/operator.css", {}).body.decode("utf-8")
+
+    assert '<label class="sr-only" for="${answerId}">Answer for' in script
+    assert (
+        '<textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}"'
+        in script
+    )
+    assert '<label class="sr-only" for="${resolutionId}">Resolution for' in script
+    assert (
+        '<select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}"'
+        in script
+    )
+    assert ".sr-only" in css
+    assert "clip-path: inset(50%)" in css
+    assert "position: absolute" in css
 
 
 def test_ui_json_body_reader_rejects_oversized_payload() -> None:

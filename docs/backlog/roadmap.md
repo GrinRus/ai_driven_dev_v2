@@ -5875,7 +5875,7 @@ Dependencies:
 
 Local tasks:
 
-- `W25-E2-S1-T1` (planned) Add accessible labels and relationships for dynamic question
+- `W25-E2-S1-T1` (done) Add accessible labels and relationships for dynamic question
   answer controls.
   - Scope: question card rendering.
   - Verification: DOM or static tests prove every generated textarea and select has a
@@ -5890,6 +5890,18 @@ Local tasks:
   - Scope: packaged HTML and CSS.
   - Verification: UI asset tests assert landmark labels, and a screenshot or manual
     checklist confirms visible focus.
+
+Evidence:
+
+- `src/aidd/cli/ui_assets.py` now gives each generated question textarea and resolution
+  select a stable `id`, a screen-reader label, and an `aria-describedby` relationship to
+  the rendered question text.
+- `tests/cli/test_ui.py` statically covers the question control labels, described-by
+  relationships, and packaged `.sr-only` helper style.
+- `2026-05-26` Focused W25-E2-S1-T1 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
 
 Exit evidence:
 

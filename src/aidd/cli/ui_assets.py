@@ -203,6 +203,18 @@ textarea {
   resize: vertical;
   width: 100%;
 }
+.sr-only {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
 code {
   background: var(--surface-soft);
   border-radius: 4px;
@@ -1084,6 +1096,14 @@ function escapeHtml(value) {
   }[char]));
 }
 
+function questionControlId(prefix, questionId, index) {
+  const safeQuestionId = String(questionId ?? "")
+    .trim()
+    .replace(/[^A-Za-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${prefix}-${index + 1}-${safeQuestionId || "question"}`;
+}
+
 function compactPath(value, maxLength = 56) {
   const text = String(value ?? "");
   if (text.length <= maxLength) return text;
@@ -1374,18 +1394,24 @@ function renderQuestionCards({showResume}) {
   }
   return `
     <div class="question-list">
-      ${questions.map((question) => {
+      ${questions.map((question, index) => {
         const resolved = question.status === "resolved";
+        const questionLabel = question.question_id || `question ${index + 1}`;
+        const questionTextId = questionControlId("question-text", question.question_id, index);
+        const answerId = questionControlId("answer", question.question_id, index);
+        const resolutionId = questionControlId("resolution", question.question_id, index);
         return `
           <article class="question-card">
             <div class="question-head">
               <strong>${escapeHtml(question.question_id)}</strong>
               <span class="small-badge ${question.status === "pending-blocking" ? "warn" : resolved ? "good" : ""}">${escapeHtml(question.status)}</span>
             </div>
-            <p>${escapeHtml(question.text)}</p>
-            <textarea id="answer-${escapeHtml(question.question_id)}" name="answer-${escapeHtml(question.question_id)}" data-question-text="${escapeHtml(question.question_id)}" ${resolved ? "disabled" : ""}></textarea>
+            <p id="${questionTextId}">${escapeHtml(question.text)}</p>
+            <label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>
+            <textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}" data-question-text="${escapeHtml(question.question_id)}" ${resolved ? "disabled" : ""}></textarea>
             <div class="question-actions">
-              <select id="resolution-${escapeHtml(question.question_id)}" name="resolution-${escapeHtml(question.question_id)}" data-question-resolution="${escapeHtml(question.question_id)}" ${resolved ? "disabled" : ""}>
+              <label class="sr-only" for="${resolutionId}">Resolution for ${escapeHtml(questionLabel)}</label>
+              <select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}" data-question-resolution="${escapeHtml(question.question_id)}" ${resolved ? "disabled" : ""}>
                 <option value="resolved">resolved</option>
                 <option value="partial">partial</option>
                 <option value="deferred">deferred</option>
