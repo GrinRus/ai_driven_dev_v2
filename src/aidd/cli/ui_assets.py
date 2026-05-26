@@ -1067,6 +1067,7 @@ const PREFERRED_ARTIFACT_KEYS = [
   "operator_request",
   "answers"
 ];
+const MAX_ARTIFACT_READ_BYTES = 262144;
 const state = {
   dashboard: null,
   readiness: null,
@@ -1519,6 +1520,8 @@ async function loadArtifactDocument(key) {
   try {
     const params = new URLSearchParams({stage: state.activeStage, key});
     if (state.activeRunId) params.set("run_id", state.activeRunId);
+    params.set("mode", state.artifactViewMode);
+    if (state.artifactViewMode === "source") params.set("limit", String(MAX_ARTIFACT_READ_BYTES));
     const documentView = await api(`/api/artifacts/document?${params.toString()}`);
     const previewActive = state.artifactViewMode === "preview" ? " active" : "";
     const sourceActive = state.artifactViewMode === "source" ? " active" : "";

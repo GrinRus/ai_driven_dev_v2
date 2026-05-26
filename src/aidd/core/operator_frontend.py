@@ -19,21 +19,20 @@ from aidd.core.operator_intervention import (
     list_operator_intervention_requests,
 )
 from aidd.core.run_inspection import (
-    RunArtifactDocumentContent,
     RunArtifactsSummary,
     RunLogSummary,
     RunMetadataSummary,
     StageResultSummary,
-    resolve_run_artifact_document_content,
     resolve_run_artifacts_summary,
     resolve_run_log_summary,
     resolve_run_metadata_summary,
     resolve_stage_result_summary,
 )
-from aidd.core.run_lookup import latest_attempt_number
+from aidd.core.run_lookup import latest_attempt_number, latest_run_id
 from aidd.core.run_store import (
     RUN_ATTEMPT_INPUT_BUNDLE_FILENAME,
     RUN_EVENTS_JSONL_FILENAME,
+    load_attempt_artifact_index,
     load_stage_metadata,
     run_attempt_root,
 )
@@ -73,6 +72,9 @@ _PRIMARY_ARTIFACT_KEYS: tuple[str, ...] = (
 _MAX_ACTIVITY_EVENTS = 24
 _MAX_RECENT_ARTIFACTS = 12
 _MAX_ARTIFACT_EXCERPT_CHARS = 6000
+_DEFAULT_ARTIFACT_PREVIEW_BYTES = 64 * 1024
+_DEFAULT_ARTIFACT_SOURCE_BYTES = 128 * 1024
+_MAX_ARTIFACT_READ_BYTES = 256 * 1024
 _DEFAULT_LOG_TAIL_BYTES = 64 * 1024
 _MAX_LOG_READ_BYTES = 256 * 1024
 
@@ -212,6 +214,26 @@ class OperatorPrimaryArtifact:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorArtifactDocumentView:
+    run_id: str
+    stage: str
+    attempt_number: int
+    key: str
+    path: str
+    text: str
+    byte_size: int
+    content_type: str
+    mode: str
+    start_byte: int
+    end_byte: int
+    requested_bytes: int
+    max_bytes: int
+    truncated: bool
+    truncated_head: bool
+    truncated_tail: bool
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorDashboardView:
     work_item: str
     workspace_root: Path
@@ -344,16 +366,132 @@ def resolve_operator_artifact_document_content(
     key: str,
     run_id: str | None = None,
     attempt_number: int | None = None,
-) -> RunArtifactDocumentContent:
+    mode: str = "preview",
+    limit_bytes: int | None = None,
+) -> OperatorArtifactDocumentView:
     _validate_stage(stage)
-    return resolve_run_artifact_document_content(
+    normalized_key = key.strip()
+    if not normalized_key:
+        raise ValueError("Artifact document key is required.")
+    normalized_mode = mode.strip().lower() or "preview"
+    if normalized_mode not in {"preview", "source"}:
+        raise ValueError("mode must be 'preview' or 'source'.")
+    if limit_bytes is not None and limit_bytes <= 0:
+        raise ValueError("limit_bytes must be greater than zero.")
+
+    selected_run_id = run_id or latest_run_id(workspace_root=workspace_root, work_item=work_item)
+    if selected_run_id is None:
+        raise ValueError(f"No runs found for work item '{work_item}'.")
+    selected_attempt = attempt_number or latest_attempt_number(
         workspace_root=workspace_root,
         work_item=work_item,
+        run_id=selected_run_id,
         stage=stage,
-        key=key,
-        run_id=run_id,
-        attempt_number=attempt_number,
     )
+    if selected_attempt is None:
+        raise ValueError(
+            "No attempts found for work item "
+            f"'{work_item}', run '{selected_run_id}', stage '{stage}'."
+        )
+    artifact_index = load_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+    )
+    if artifact_index is None:
+        raise ValueError(
+            f"Artifact index is missing for work item '{work_item}', run '{selected_run_id}', "
+            f"stage '{stage}', attempt {selected_attempt}."
+        )
+
+    relative_document_path = artifact_index.documents.get(normalized_key)
+    if relative_document_path is None:
+        supported = ", ".join(sorted(artifact_index.documents)) or "none"
+        raise ValueError(
+            f"Artifact document key '{normalized_key}' is not available. "
+            f"Available document keys: {supported}."
+        )
+    return _bounded_operator_artifact_document(
+        workspace_root=workspace_root,
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+        key=normalized_key,
+        relative_document_path=relative_document_path,
+        mode=normalized_mode,
+        limit_bytes=limit_bytes,
+    )
+
+
+def _bounded_operator_artifact_document(
+    *,
+    workspace_root: Path,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+    key: str,
+    relative_document_path: str,
+    mode: str,
+    limit_bytes: int | None,
+) -> OperatorArtifactDocumentView:
+    relative = Path(relative_document_path)
+    document_path = _safe_relative_path(workspace_root, relative_document_path)
+    if document_path is None:
+        if relative.is_absolute():
+            raise ValueError(f"Artifact path must be workspace-relative: {relative_document_path}")
+        raise ValueError(f"Artifact path escapes workspace root: {relative_document_path}")
+    if not document_path.exists():
+        raise ValueError(f"Artifact document file does not exist: {document_path.as_posix()}.")
+
+    byte_size = document_path.stat().st_size
+    default_bytes = (
+        _DEFAULT_ARTIFACT_SOURCE_BYTES if mode == "source" else _DEFAULT_ARTIFACT_PREVIEW_BYTES
+    )
+    requested_bytes = min(limit_bytes or default_bytes, _MAX_ARTIFACT_READ_BYTES)
+    start_byte = 0
+    end_byte = min(byte_size, requested_bytes)
+    with document_path.open("rb") as file_obj:
+        raw_text = file_obj.read(end_byte - start_byte)
+    text = _decode_bounded_utf8(raw_text, path=document_path, truncated_tail=end_byte < byte_size)
+
+    return OperatorArtifactDocumentView(
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+        key=key,
+        path=workspace_relative_path(workspace_root, document_path),
+        text=text,
+        byte_size=byte_size,
+        content_type=_operator_artifact_content_type(document_path),
+        mode=mode,
+        start_byte=start_byte,
+        end_byte=end_byte,
+        requested_bytes=requested_bytes,
+        max_bytes=_MAX_ARTIFACT_READ_BYTES,
+        truncated=start_byte > 0 or end_byte < byte_size,
+        truncated_head=start_byte > 0,
+        truncated_tail=end_byte < byte_size,
+    )
+
+
+def _operator_artifact_content_type(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in {".md", ".markdown"}:
+        return "text/markdown"
+    if suffix in {".txt", ".log", ".json", ".jsonl", ".yaml", ".yml", ".toml"}:
+        return "text/plain"
+    return "application/octet-stream"
+
+
+def _decode_bounded_utf8(raw_text: bytes, *, path: Path, truncated_tail: bool) -> str:
+    try:
+        return raw_text.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        if truncated_tail and exc.reason == "unexpected end of data":
+            return raw_text[: exc.start].decode("utf-8")
+        raise ValueError(f"Artifact document is not UTF-8 text: {path.as_posix()}.") from exc
 
 
 def resolve_operator_questions_view(
@@ -609,12 +747,14 @@ def _primary_artifact(
     if key is None:
         return None
     try:
-        content = resolve_run_artifact_document_content(
+        content = resolve_operator_artifact_document_content(
             workspace_root=workspace_root,
             work_item=work_item,
             stage=stage,
             key=key,
             run_id=run_id,
+            mode="preview",
+            limit_bytes=_MAX_ARTIFACT_EXCERPT_CHARS,
         )
     except ValueError:
         return None
@@ -625,7 +765,7 @@ def _primary_artifact(
         content_type=content.content_type,
         byte_size=content.byte_size,
         excerpt=excerpt,
-        truncated=len(content.text) > len(excerpt),
+        truncated=content.truncated or len(content.text) > len(excerpt),
     )
 
 

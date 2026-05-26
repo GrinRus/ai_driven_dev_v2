@@ -8,6 +8,7 @@ from aidd.config import load_config
 from aidd.core.interview import AnswerResolution
 from aidd.core.operator_frontend import (
     persist_operator_answer,
+    resolve_operator_artifact_document_content,
     resolve_operator_artifacts_view,
     resolve_operator_dashboard_view,
     resolve_operator_questions_view,
@@ -507,6 +508,49 @@ def test_operator_run_log_view_returns_bounded_text_with_metadata(tmp_path: Path
     assert tail_view.start_byte == 6
     assert tail_view.end_byte == 10
     assert tail_view.truncated_head is True
+
+
+def test_operator_artifact_document_content_returns_bounded_text_with_metadata(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    text = "# Plan\n\n" + ("A" * 4096)
+    plan_path.write_text(text, encoding="utf-8")
+
+    preview = resolve_operator_artifact_document_content(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        key="plan",
+        run_id="run-ui",
+        attempt_number=1,
+        limit_bytes=32,
+    )
+    source = resolve_operator_artifact_document_content(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        key="plan",
+        run_id="run-ui",
+        attempt_number=1,
+        mode="source",
+        limit_bytes=64,
+    )
+
+    assert preview.text == text[:32]
+    assert preview.mode == "preview"
+    assert preview.byte_size == len(text.encode("utf-8"))
+    assert preview.start_byte == 0
+    assert preview.end_byte == 32
+    assert preview.truncated is True
+    assert preview.truncated_head is False
+    assert preview.truncated_tail is True
+    assert source.mode == "source"
+    assert source.requested_bytes == 64
+    assert source.end_byte == 64
 
 
 def test_operator_artifacts_view_exposes_project_set_context(tmp_path: Path) -> None:

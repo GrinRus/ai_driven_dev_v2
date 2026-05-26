@@ -5820,7 +5820,7 @@ Local tasks:
   - Scope: UI API and operator frontend log view.
   - Verification: a high-volume runtime log test proves truncation metadata and no
     whole-file default response.
-- `W25-E1-S2-T2` (planned) Cap artifact document preview payloads while preserving
+- `W25-E1-S2-T2` (done) Cap artifact document preview payloads while preserving
   explicit source inspection through bounded reads.
   - Scope: `/api/artifacts/document` and the UI artifact viewer.
   - Verification: a large Markdown artifact test proves preview truncation, byte counts,
@@ -5844,6 +5844,19 @@ Exit evidence:
 - `2026-05-26` Focused W25-E1-S2-T1 checks passed:
   `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`,
   `uv run --extra dev ruff check src/aidd/core/operator_frontend.py src/aidd/cli/ui.py tests/cli/test_ui.py tests/core/test_operator_frontend.py`,
+  and `uv run --extra dev python -m mypy src`.
+- `src/aidd/core/operator_frontend.py` now returns bounded artifact document text with
+  mode, byte-size, byte-range, requested-size, max-size, and truncation metadata; default
+  preview reads are capped and source reads are explicitly bounded.
+- `src/aidd/cli/ui.py` accepts `mode` and `limit` on `/api/artifacts/document`, and
+  `src/aidd/cli/ui_assets.py` sends source-mode reads with the maximum bounded artifact
+  limit instead of requesting an unbounded document.
+- `tests/cli/test_ui.py` covers a large Markdown artifact where default preview and source
+  reads are truncated with byte counts, and `tests/core/test_operator_frontend.py` covers
+  the bounded artifact read model.
+- `2026-05-26` Focused W25-E1-S2-T2 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`,
+  `uv run --extra dev ruff check src/aidd/core/operator_frontend.py src/aidd/cli/ui.py src/aidd/cli/ui_assets.py tests/cli/test_ui.py tests/core/test_operator_frontend.py`,
   and `uv run --extra dev python -m mypy src`.
 - large logs and artifacts no longer require full-file UI responses by default;
 - operators can see when a displayed log or artifact preview is truncated;

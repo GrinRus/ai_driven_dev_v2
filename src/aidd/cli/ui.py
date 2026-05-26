@@ -758,6 +758,8 @@ class OperatorUiService:
                         key=key,
                         run_id=_first_param(params, "run_id"),
                         attempt_number=_optional_attempt(params),
+                        mode=_first_param(params, "mode", "preview") or "preview",
+                        limit_bytes=_optional_positive_int_param(params, "limit"),
                     )
                 )
         except ValueError as exc:

@@ -1444,6 +1444,82 @@ def test_ui_artifact_document_endpoint_reads_known_document_content(tmp_path: Pa
     assert "Blocked on clarification." in payload["text"]  # type: ignore[operator]
 
 
+def test_ui_artifact_document_endpoint_bounds_large_markdown_payloads(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    large_text = "# Plan\n\n" + ("A" * (300 * 1024)) + "\nEND\n"
+    plan_path.write_text(large_text, encoding="utf-8")
+    byte_size = len(large_text.encode("utf-8"))
+    service = _service(workspace_root)
+
+    preview_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+            },
+        )
+    )
+    source_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+                "mode": ["source"],
+                "limit": ["999999"],
+            },
+        )
+    )
+    explicit_limit_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+                "mode": ["source"],
+                "limit": ["128"],
+            },
+        )
+    )
+    invalid_limit = service.handle_get(
+        "/api/artifacts/document",
+        {
+            "stage": ["plan"],
+            "key": ["plan"],
+            "limit": ["0"],
+        },
+    )
+
+    assert preview_payload["mode"] == "preview"
+    assert preview_payload["byte_size"] == byte_size
+    assert preview_payload["requested_bytes"] == 64 * 1024
+    assert preview_payload["start_byte"] == 0
+    assert preview_payload["end_byte"] == 64 * 1024
+    assert preview_payload["truncated"] is True
+    assert preview_payload["truncated_tail"] is True
+    assert "END" not in str(preview_payload["text"])
+
+    assert source_payload["mode"] == "source"
+    assert source_payload["requested_bytes"] == 256 * 1024
+    assert source_payload["max_bytes"] == 256 * 1024
+    assert source_payload["end_byte"] == 256 * 1024
+    assert source_payload["truncated_tail"] is True
+    assert "END" not in str(source_payload["text"])
+
+    assert explicit_limit_payload["start_byte"] == 0
+    assert explicit_limit_payload["end_byte"] == 128
+    assert explicit_limit_payload["requested_bytes"] == 128
+    assert str(explicit_limit_payload["text"]).startswith("# Plan\n\n")
+
+    assert invalid_limit.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(invalid_limit)["error"] == "limit must be greater than zero."
+
+
 def test_ui_artifact_document_endpoint_rejects_unknown_key_and_escaping_paths(
     tmp_path: Path,
 ) -> None:
@@ -1616,6 +1692,9 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert 'state.activeJobStatus?.status === "running"' in script
     assert "state.activeJobStatus.stage === state.activeStage" in script
     assert "/api/artifacts/document?${params.toString()}" in script
+    assert 'params.set("mode", state.artifactViewMode);' in script
+    assert "const MAX_ARTIFACT_READ_BYTES = 262144;" in script
+    assert 'params.set("limit", String(MAX_ARTIFACT_READ_BYTES));' in script
     assert "${renderMarkdown(documentView.text)}" in script
     assert "const payload = {stage, runtime: state.selectedRuntime, log_follow: true};" in script
     assert "target_documents: targetDocuments" in script
