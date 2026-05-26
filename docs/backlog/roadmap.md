@@ -6030,10 +6030,10 @@ Exit evidence:
 - resolved question cards show the saved operator answer;
 - first launch and no-run states present clear operator next actions.
 
-### Epic W25-E3 — UI regression coverage (`planned`)
+### Epic W25-E3 — UI regression coverage (`done`)
 Linked stories: `US-07`, `US-11`
 
-#### Slice W25-E3-S1 — deterministic UI coverage without Node/Vite (`planned`)
+#### Slice W25-E3-S1 — deterministic UI coverage without Node/Vite (`done`)
 Goal: lock the operator console's critical DOM and service contracts with pytest-only
 coverage that preserves the packaged static UI model.
 
@@ -6068,7 +6068,7 @@ Local tasks:
   desktop, tablet, and mobile.
   - Scope: `docs/e2e/operator-ui-local-project.md`.
   - Verification: docs consistency or targeted Markdown assertions cover the checklist.
-- `W25-E3-S1-T3` (planned) Add service-level regressions for cancellation, bounded logs,
+- `W25-E3-S1-T3` (done) Add service-level regressions for cancellation, bounded logs,
   saved-answer display, and truncation metadata.
   - Scope: `tests/cli/test_ui.py` and `tests/core/test_operator_frontend.py`.
   - Verification: the focused pytest suite passes.
@@ -6092,6 +6092,12 @@ Evidence:
 - `2026-05-26` Focused W25-E3-S1-T2 checks passed:
   `uv run --extra dev pytest tests/test_docs_consistency.py -q` and
   `uv run --extra dev ruff check tests/test_docs_consistency.py`.
+- `tests/cli/test_ui.py` now includes a service-level hardening regression that exercises
+  already-finished cancellation, bounded log metadata, artifact truncation metadata, and
+  saved-answer payload fields together.
+- `2026-05-26` Focused W25-E3-S1-T3 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`
+  and `uv run --extra dev ruff check tests/cli/test_ui.py tests/core/test_operator_frontend.py`.
 
 Exit evidence:
 

@@ -405,6 +405,67 @@ def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> 
     assert "Release target is 0.2.0." in answers_path.read_text(encoding="utf-8")
 
 
+def test_ui_service_hardening_regression_metadata_surface(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_questions(workspace_root)
+    runtime_log_path = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    runtime_log_path.write_text("log-line\n" * 20000, encoding="utf-8")
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    plan_path.write_text("# Plan\n\n" + ("A" * (300 * 1024)), encoding="utf-8")
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        return WorkflowRunResult(
+            run_id="run-ui-hardening",
+            executed_stage_count=0,
+            completed=True,
+            incomplete=(),
+        )
+
+    service = _service(workspace_root, workflow_runner=fake_workflow_runner)
+
+    run_payload = _payload(service.handle_post("/api/workflow/run", {"runtime": "codex"}))
+    job_id = str(run_payload["job_id"])
+    completed_payload = _wait_job(service, job_id)
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+    logs_payload = _payload(service.handle_get("/api/logs", {"stage": ["plan"]}))
+    artifact_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+                "mode": ["source"],
+                "limit": ["999999"],
+            },
+        )
+    )
+    answer_payload = _payload(
+        service.handle_post(
+            "/api/answers",
+            {
+                "stage": "plan",
+                "question_id": "Q1",
+                "text": "Release target is local-alpha.",
+            },
+        )
+    )
+
+    assert completed_payload["status"] == "completed"
+    assert cancel_payload["cancel_state"] == "already-finished"
+    assert logs_payload["truncated"] is True
+    assert logs_payload["truncated_head"] is True
+    assert artifact_payload["truncated"] is True
+    assert artifact_payload["max_bytes"] == 256 * 1024
+    assert answer_payload["questions"][0]["answer_text"] == "Release target is local-alpha."  # type: ignore[index]
+
+
 def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     tmp_path: Path,
 ) -> None:
