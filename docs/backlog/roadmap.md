@@ -6063,7 +6063,7 @@ Local tasks:
   accessibility-critical markup.
   - Scope: tests around `ui_assets.py`.
   - Verification: pytest-only checks pass with no Node or browser dependency.
-- `W25-E3-S1-T2` (planned) Extend operator UI local-project E2E documentation with
+- `W25-E3-S1-T2` (done) Extend operator UI local-project E2E documentation with
   manual browser checks for dashboard, tabs, logs, artifacts, questions, intervention,
   desktop, tablet, and mobile.
   - Scope: `docs/e2e/operator-ui-local-project.md`.
@@ -6084,6 +6084,14 @@ Evidence:
 - `2026-05-26` Focused W25-E3-S1-T1 checks passed:
   `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py -q` and
   `uv run --extra dev ruff check tests/cli/test_ui_assets_contracts.py`.
+- `docs/e2e/operator-ui-local-project.md` now includes a Manual Browser Checklist
+  covering dashboard shell, cockpit tabs, live and saved logs, artifacts, questions,
+  request-change/intervention flow, and desktop/tablet/mobile viewports.
+- `tests/test_docs_consistency.py` asserts the checklist sections and viewport/focus
+  coverage stay present.
+- `2026-05-26` Focused W25-E3-S1-T2 checks passed:
+  `uv run --extra dev pytest tests/test_docs_consistency.py -q` and
+  `uv run --extra dev ruff check tests/test_docs_consistency.py`.
 
 Exit evidence:
 

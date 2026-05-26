@@ -449,6 +449,28 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
     assert "Public GitHub repositories are live E2E targets" in live_catalog
 
 
+def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> None:
+    operator_ui_lane = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "## Manual Browser Checklist",
+        "### Dashboard Shell",
+        "### Cockpit Tabs",
+        "### Logs",
+        "### Artifacts",
+        "### Questions",
+        "### Request Change / Intervention",
+        "### Viewports",
+        "Desktop width",
+        "Tablet width",
+        "Mobile width",
+        "Keyboard focus is visible",
+    ):
+        assert expected in operator_ui_lane
+
+
 def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
 
