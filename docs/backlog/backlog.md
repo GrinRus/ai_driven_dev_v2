@@ -6,11 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W25-E1-S2-T1`
+- `W25-E2-S1-T1`
 
 ## Soon
 
-- `W25-E2-S1-T1`
+No near-term tasks queued.
 
 ## Parking lot
 
@@ -129,3 +129,5 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   promoted to `Next`.
 - `2026-05-26` Completed `W25-E1-S1-T3`; backlog advanced with `W25-E1-S2-T1`
   promoted to `Next`.
+- `2026-05-26` Completed `W25-E1-S2-T1`; backlog advanced with `W25-E2-S1-T1`
+  promoted to `Next`; `W25-E1-S2-T2` and `W25-E1-S2-T3` remain parked.

@@ -398,6 +398,19 @@ def _optional_attempt(params: dict[str, list[str]]) -> int | None:
     return attempt
 
 
+def _optional_positive_int_param(params: dict[str, list[str]], name: str) -> int | None:
+    raw_value = _first_param(params, name)
+    if raw_value is None:
+        return None
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer.") from exc
+    if value <= 0:
+        raise ValueError(f"{name} must be greater than zero.")
+    return value
+
+
 def _cursor_param(params: dict[str, list[str]]) -> int:
     raw_cursor = _first_param(params, "cursor", "0")
     assert raw_cursor is not None
@@ -698,11 +711,21 @@ class OperatorUiService:
                     stage=stage,
                     run_id=_first_param(params, "run_id"),
                     attempt_number=_optional_attempt(params),
+                    tail_bytes=_optional_positive_int_param(params, "tail"),
+                    limit_bytes=_optional_positive_int_param(params, "limit"),
                 )
                 return _json_response(
                     {
-                        "summary": summary,
-                        "text": summary.runtime_log_path.read_text(encoding="utf-8"),
+                        "summary": summary.summary,
+                        "text": summary.text,
+                        "byte_size": summary.byte_size,
+                        "start_byte": summary.start_byte,
+                        "end_byte": summary.end_byte,
+                        "requested_bytes": summary.requested_bytes,
+                        "max_bytes": summary.max_bytes,
+                        "truncated": summary.truncated,
+                        "truncated_head": summary.truncated_head,
+                        "truncated_tail": summary.truncated_tail,
                     }
                 )
             if path == "/api/jobs":

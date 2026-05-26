@@ -280,7 +280,63 @@ def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
         "workitems/WI-UI/stages/plan/repair-brief.md"
     ]
     assert logs_payload["text"] == "runtime-line\n"
+    assert logs_payload["truncated"] is False
+    assert logs_payload["byte_size"] == len(b"runtime-line\n")
     assert artifacts_payload["documents"]["input_bundle"].endswith("input-bundle.md")
+
+
+def test_ui_logs_endpoint_defaults_to_bounded_tail_and_accepts_limit_params(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    runtime_log_path = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    log_text = "".join(f"line-{index:05d}\n" for index in range(10000))
+    runtime_log_path.write_text(log_text, encoding="utf-8")
+    byte_size = len(log_text.encode("utf-8"))
+    service = _service(workspace_root)
+
+    default_payload = _payload(service.handle_get("/api/logs", {"stage": ["plan"]}))
+    tail_payload = _payload(
+        service.handle_get("/api/logs", {"stage": ["plan"], "tail": ["128"]})
+    )
+    limit_payload = _payload(
+        service.handle_get("/api/logs", {"stage": ["plan"], "limit": ["128"]})
+    )
+    invalid_payload = service.handle_get(
+        "/api/logs",
+        {"stage": ["plan"], "tail": ["0"]},
+    )
+
+    assert default_payload["byte_size"] == byte_size
+    assert default_payload["requested_bytes"] == 64 * 1024
+    assert default_payload["start_byte"] == byte_size - (64 * 1024)
+    assert default_payload["end_byte"] == byte_size
+    assert default_payload["truncated"] is True
+    assert default_payload["truncated_head"] is True
+    assert default_payload["truncated_tail"] is False
+    assert len(str(default_payload["text"]).encode("utf-8")) < byte_size
+
+    assert tail_payload["start_byte"] == byte_size - 128
+    assert tail_payload["end_byte"] == byte_size
+    assert tail_payload["truncated_head"] is True
+    assert tail_payload["truncated_tail"] is False
+    assert str(tail_payload["text"]).endswith("line-09999\n")
+
+    assert limit_payload["start_byte"] == 0
+    assert limit_payload["end_byte"] == 128
+    assert limit_payload["truncated_head"] is False
+    assert limit_payload["truncated_tail"] is True
+    assert str(limit_payload["text"]).startswith("line-00000\n")
+
+    assert invalid_payload.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(invalid_payload)["error"] == "tail must be greater than zero."
 
 
 def test_ui_dashboard_endpoint_exposes_operator_console_payload(tmp_path: Path) -> None:

@@ -468,6 +468,47 @@ def test_operator_read_models_expose_run_stage_logs_artifacts_and_questions(
     )
 
 
+def test_operator_run_log_view_returns_bounded_text_with_metadata(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    runtime_log_path = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    runtime_log_path.write_text("abcdefghij", encoding="utf-8")
+
+    head_view = resolve_operator_run_log_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+        attempt_number=1,
+        limit_bytes=4,
+    )
+    tail_view = resolve_operator_run_log_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+        attempt_number=1,
+        tail_bytes=4,
+    )
+
+    assert head_view.text == "abcd"
+    assert head_view.byte_size == 10
+    assert head_view.start_byte == 0
+    assert head_view.end_byte == 4
+    assert head_view.truncated is True
+    assert head_view.truncated_tail is True
+    assert tail_view.text == "ghij"
+    assert tail_view.start_byte == 6
+    assert tail_view.end_byte == 10
+    assert tail_view.truncated_head is True
+
+
 def test_operator_artifacts_view_exposes_project_set_context(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     create_run_manifest(

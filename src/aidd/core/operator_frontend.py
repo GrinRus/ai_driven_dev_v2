@@ -73,6 +73,8 @@ _PRIMARY_ARTIFACT_KEYS: tuple[str, ...] = (
 _MAX_ACTIVITY_EVENTS = 24
 _MAX_RECENT_ARTIFACTS = 12
 _MAX_ARTIFACT_EXCERPT_CHARS = 6000
+_DEFAULT_LOG_TAIL_BYTES = 64 * 1024
+_MAX_LOG_READ_BYTES = 256 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +101,24 @@ class OperatorQuestionsView:
 @dataclass(frozen=True, slots=True)
 class OperatorRunView:
     metadata: RunMetadataSummary
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorRunLogView:
+    summary: RunLogSummary
+    text: str
+    byte_size: int
+    start_byte: int
+    end_byte: int
+    requested_bytes: int
+    max_bytes: int
+    truncated: bool
+    truncated_head: bool
+    truncated_tail: bool
+
+    @property
+    def runtime_log_path(self) -> Path:
+        return self.summary.runtime_log_path
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,6 +252,44 @@ def resolve_operator_run_view(
     )
 
 
+def _bounded_operator_run_log(
+    summary: RunLogSummary,
+    *,
+    tail_bytes: int | None,
+    limit_bytes: int | None,
+) -> OperatorRunLogView:
+    byte_size = summary.runtime_log_path.stat().st_size
+    if tail_bytes is not None:
+        requested_bytes = min(tail_bytes, _MAX_LOG_READ_BYTES)
+        start_byte = max(0, byte_size - requested_bytes)
+        end_byte = byte_size
+    elif limit_bytes is not None:
+        requested_bytes = min(limit_bytes, _MAX_LOG_READ_BYTES)
+        start_byte = 0
+        end_byte = min(byte_size, requested_bytes)
+    else:
+        requested_bytes = _DEFAULT_LOG_TAIL_BYTES
+        start_byte = max(0, byte_size - requested_bytes)
+        end_byte = byte_size
+
+    with summary.runtime_log_path.open("rb") as file_obj:
+        file_obj.seek(start_byte)
+        raw_text = file_obj.read(end_byte - start_byte)
+
+    return OperatorRunLogView(
+        summary=summary,
+        text=raw_text.decode("utf-8", errors="replace"),
+        byte_size=byte_size,
+        start_byte=start_byte,
+        end_byte=end_byte,
+        requested_bytes=requested_bytes,
+        max_bytes=_MAX_LOG_READ_BYTES,
+        truncated=start_byte > 0 or end_byte < byte_size,
+        truncated_head=start_byte > 0,
+        truncated_tail=end_byte < byte_size,
+    )
+
+
 def resolve_operator_run_log_view(
     *,
     workspace_root: Path,
@@ -239,15 +297,25 @@ def resolve_operator_run_log_view(
     stage: str,
     run_id: str | None = None,
     attempt_number: int | None = None,
-) -> RunLogSummary:
+    tail_bytes: int | None = None,
+    limit_bytes: int | None = None,
+) -> OperatorRunLogView:
     _validate_stage(stage)
-    return resolve_run_log_summary(
+    if tail_bytes is not None and limit_bytes is not None:
+        raise ValueError("Provide only one of tail_bytes or limit_bytes.")
+    if tail_bytes is not None and tail_bytes <= 0:
+        raise ValueError("tail_bytes must be greater than zero.")
+    if limit_bytes is not None and limit_bytes <= 0:
+        raise ValueError("limit_bytes must be greater than zero.")
+
+    summary = resolve_run_log_summary(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
         run_id=run_id,
         attempt_number=attempt_number,
     )
+    return _bounded_operator_run_log(summary, tail_bytes=tail_bytes, limit_bytes=limit_bytes)
 
 
 def resolve_operator_artifacts_view(

@@ -5815,7 +5815,7 @@ Dependencies:
 
 Local tasks:
 
-- `W25-E1-S2-T1` (planned) Add tail or limit parameters to UI log reads and cap the
+- `W25-E1-S2-T1` (done) Add tail or limit parameters to UI log reads and cap the
   default `/api/logs` response size.
   - Scope: UI API and operator frontend log view.
   - Verification: a high-volume runtime log test proves truncation metadata and no
@@ -5832,6 +5832,19 @@ Local tasks:
 
 Exit evidence:
 
+- `src/aidd/core/operator_frontend.py` now returns bounded operator log text with
+  byte-size, byte-range, requested-size, max-size, and truncation metadata.
+- `src/aidd/cli/ui.py` accepts `tail` or `limit` query parameters on `/api/logs`
+  and no longer reads the whole runtime log by default.
+- `tests/cli/test_ui.py` covers a high-volume runtime log where the default response
+  is truncated to a tail window, and explicit `tail`/`limit` reads expose the expected
+  byte ranges.
+- `tests/core/test_operator_frontend.py` covers bounded head and tail read-model
+  metadata.
+- `2026-05-26` Focused W25-E1-S2-T1 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`,
+  `uv run --extra dev ruff check src/aidd/core/operator_frontend.py src/aidd/cli/ui.py tests/cli/test_ui.py tests/core/test_operator_frontend.py`,
+  and `uv run --extra dev python -m mypy src`.
 - large logs and artifacts no longer require full-file UI responses by default;
 - operators can see when a displayed log or artifact preview is truncated;
 - raw evidence paths remain inspectable through existing artifact surfaces.
