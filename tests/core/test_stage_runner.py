@@ -2158,6 +2158,69 @@ def test_run_structural_validation_after_output_discovery_writes_report_path(
     assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" in report_text
 
 
+def test_validation_collects_semantic_findings_with_independent_structural_defects(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    plan_output_path = preparation_bundle.expected_output_documents[0]
+    plan_output_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_output_path.write_text(
+        (
+            "# Plan\n\n"
+            "## Goals\n\n- Deliver a reviewable execution plan.\n\n"
+            "## Out of scope\n\n- Runtime migration is excluded.\n\n"
+            "## Milestones\n\n- M1: Draft and validate plan.\n\n"
+            "## Implementation strategy\n\n- Use staged, document-first increments.\n\n"
+            "## Risks\n\n- R1: Missing constraints.\n\n"
+            "## Dependencies\n\nResearch artifacts from prior stage.\n\n"
+            "## Verification approach\n\n- Run structural and semantic checks.\n\n"
+            "## Verification notes\n\n- Verify the plan with targeted tests.\n"
+        ),
+        encoding="utf-8",
+    )
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+
+    structural_validation = run_structural_validation_after_output_discovery(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+
+    finding_codes = [finding.code for finding in structural_validation.findings]
+    assert "STRUCT-MISSING-REQUIRED-DOCUMENT" in finding_codes
+    assert "SEM-INCOMPLETE-SECTION" in finding_codes
+    report_text = structural_validation.validator_report_path.read_text(encoding="utf-8")
+    assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" in report_text
+    assert "`SEM-INCOMPLETE-SECTION`" in report_text
+
+
 def test_route_stage_questions_to_interview_detects_unresolved_blocking_questions(
     tmp_path: Path,
 ) -> None:

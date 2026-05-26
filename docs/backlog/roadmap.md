@@ -5694,7 +5694,7 @@ Exit evidence:
 - no live evidence artifact, target repository diff, provider log, or temp work root is
   committed.
 
-## Wave 25 — local operator workflow hardening (`next`)
+## Wave 25 — local operator workflow hardening (`done`)
 
 Goal: close non-security audit findings for the local alpha operator workflow: runtime
 control, bounded log and artifact inspection, accessibility, mobile usability, UI
@@ -6105,7 +6105,7 @@ Exit evidence:
   build pipeline;
 - manual browser coverage remains documented for the local-project operator lane.
 
-### Epic W25-E4 — non-security architecture and maintainability cleanup (`planned`)
+### Epic W25-E4 — non-security architecture and maintainability cleanup (`done`)
 Linked stories: `US-01`, `US-07`, `US-08`, `US-11`
 
 #### Slice W25-E4-S1 — runtime boundary cleanup (`done`)
@@ -6238,7 +6238,7 @@ Exit evidence:
   public functions;
 - existing UI, operator frontend, and live evaluator behavior remains unchanged.
 
-#### Slice W25-E4-S3 — config and validation polish (`planned`)
+#### Slice W25-E4-S3 — config and validation polish (`done`)
 Goal: improve operator-facing diagnostics for config and repair loops without changing
 stage contracts.
 
@@ -6270,11 +6270,19 @@ Local tasks:
   - Checks (`2026-05-26`): `uv run --extra dev pytest tests/test_config.py tests/test_docs_consistency.py -q`;
     `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
     backlog sync check.
-- `W25-E4-S3-T2` (planned) Collect independent semantic findings when structural
+- `W25-E4-S3-T2` (done) Collect independent semantic findings when structural
   validation is sufficient to continue checking.
   - Scope: validation flow only.
   - Verification: a validator regression proves mixed structural and semantic defects can
     surface together where safe.
+  - Evidence (`2026-05-26`): `run_structural_validation_after_output_discovery` now
+    preserves structural findings while also running semantic and cross-document checks
+    when at least one output document is available for safe follow-on validation.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/core/test_stage_runner.py tests/validators/test_structural.py tests/validators/test_semantic.py tests/validators/test_cross_document.py -q`.
+    Final Wave 25 checks: `uv run --extra dev pytest -q` (`999 passed`, 2 existing
+    tar extraction deprecation warnings); `uv run --extra dev ruff check .`;
+    `uv run --extra dev python -m mypy src`; `uv run --extra dev pytest tests/test_docs_consistency.py -q`;
+    backlog sync check.
 
 Exit evidence:
 

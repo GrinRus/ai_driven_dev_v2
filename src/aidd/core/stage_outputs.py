@@ -187,7 +187,7 @@ def run_structural_validation_after_output_discovery(
     )
     findings: tuple[ValidationFinding, ...]
     findings = (*structural_findings, *section_findings)
-    if not findings:
+    if not findings or discovery.discovered_markdown_documents:
         semantic_findings = validate_semantic_outputs(
             stage=discovery.stage,
             work_item=discovery.work_item,
@@ -200,7 +200,7 @@ def run_structural_validation_after_output_discovery(
             workspace_root=workspace_root,
             contracts_root=contracts_root,
         )
-        findings = (*semantic_findings, *cross_document_findings)
+        findings = (*findings, *semantic_findings, *cross_document_findings)
 
     stage_root = workspace_stage_root(
         root=workspace_root,

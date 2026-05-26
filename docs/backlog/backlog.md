@@ -6,7 +6,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W25-E4-S3-T2`
+No immediate tasks queued.
 
 ## Soon
 
@@ -149,3 +149,6 @@ No near-term tasks queued.
   promoted from `Parking lot` to `Next`.
 - `2026-05-26` Completed `W25-E4-S3-T1`; backlog advanced with `W25-E4-S3-T2`
   promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E4-S3-T2` and closed Wave 25. No non-security W25
+  local operator workflow hardening tasks remain queued; W24 manual live evidence
+  tasks remain parked.
