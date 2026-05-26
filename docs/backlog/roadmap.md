@@ -6260,10 +6260,16 @@ Dependencies:
 
 Local tasks:
 
-- `W25-E4-S3-T1` (planned) Add friendly validation for `repair.max_attempts` and invalid
+- `W25-E4-S3-T1` (done) Add friendly validation for `repair.max_attempts` and invalid
   scalar config values.
   - Scope: `src/aidd/config.py`.
   - Verification: config tests cover non-integer, negative, and valid values.
+  - Evidence (`2026-05-26`): `src/aidd/config.py` now validates config tables,
+    string scalar fields, and non-negative integer `repair.max_attempts` with field-scoped
+    `ValueError` messages instead of implicit coercion or attribute errors.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/test_config.py tests/test_docs_consistency.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
+    backlog sync check.
 - `W25-E4-S3-T2` (planned) Collect independent semantic findings when structural
   validation is sufficient to continue checking.
   - Scope: validation flow only.
