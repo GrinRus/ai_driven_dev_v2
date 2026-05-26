@@ -5974,7 +5974,7 @@ Dependencies:
 
 Local tasks:
 
-- `W25-E2-S2-T1` (planned) Auto-scroll the active stage into view in the mobile
+- `W25-E2-S2-T1` (done) Auto-scroll the active stage into view in the mobile
   horizontal stage rail.
   - Scope: UI JavaScript and CSS.
   - Verification: a mobile viewport browser or manual smoke confirms the selected stage
@@ -5988,6 +5988,21 @@ Local tasks:
   - Scope: UI assets.
   - Verification: UI tests cover pre-fetch loading state and no-run state copy and
     actions.
+
+Evidence:
+
+- `src/aidd/cli/ui_assets.py` now gives the mobile stage rail scroll padding and calls
+  `scrollIntoView({block: "nearest", inline: "center"})` for the active stage after each
+  rail render, gated to the `max-width: 760px` mobile breakpoint.
+- `tests/cli/test_ui.py` statically covers the mobile breakpoint gate, active-stage
+  selector, `scrollIntoView` options, render hook, and CSS scroll padding.
+- `2026-05-26` Manual implementation checklist confirmed the selected-stage scroll path
+  runs after load and stage switch because both paths call `renderStageRail()`;
+  in-app browser smoke loaded the operator console, but viewport control was unavailable.
+- `2026-05-26` Focused W25-E2-S2-T1 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
 
 Exit evidence:
 

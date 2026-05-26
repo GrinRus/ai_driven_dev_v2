@@ -1028,6 +1028,7 @@ pre {
     gap: 8px;
     overflow-x: auto;
     padding-bottom: 4px;
+    scroll-padding-inline: 10px;
     scroll-snap-type: x proximity;
   }
   .stage-card {
@@ -1288,6 +1289,13 @@ function renderRuntimeSelector() {
   setRunButtonState();
 }
 
+function scrollActiveStageIntoView() {
+  const rail = document.getElementById("stageRail");
+  if (!rail || !window.matchMedia("(max-width: 760px)").matches) return;
+  const active = rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`);
+  active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});
+}
+
 function selectedRuntimeView() {
   return (state.readiness?.runtimes || []).find((runtime) => runtime.runtime_id === state.selectedRuntime) || null;
 }
@@ -1352,6 +1360,7 @@ function renderStageRail() {
       </button>
     `;
   }).join("");
+  requestAnimationFrame(scrollActiveStageIntoView);
 }
 
 function renderStageHeader() {

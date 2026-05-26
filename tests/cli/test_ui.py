@@ -1696,6 +1696,14 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "rawText.match(/^\\[(stdout|stderr|system)\\]\\s?(.*)$/i)" in script
     assert "function selectedRuntimeReady()" in script
     assert "function ensureRunnableRuntime()" in script
+    assert "function scrollActiveStageIntoView()" in script
+    assert 'window.matchMedia("(max-width: 760px)").matches' in script
+    assert 'rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`)' in script
+    assert (
+        'active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});'
+        in script
+    )
+    assert "requestAnimationFrame(scrollActiveStageIntoView);" in script
     assert 'toast("Selected runtime is not ready.")' in script
     assert 'if (element.textContent === message) element.textContent = "";' in script
     assert 'button.setAttribute("aria-selected", isActive ? "true" : "false");' in script
@@ -1772,6 +1780,7 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "button:focus-visible" in css
     assert "outline: 3px solid var(--focus-ring)" in css
     assert "box-shadow: 0 0 0 4px var(--focus-ring-soft)" in css
+    assert "scroll-padding-inline: 10px" in css
 
 
 def test_operator_question_controls_have_screen_reader_labels(tmp_path: Path) -> None:
