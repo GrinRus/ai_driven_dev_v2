@@ -5874,7 +5874,7 @@ Exit evidence:
 ### Epic W25-E2 — operator UI usability and accessibility (`planned`)
 Linked stories: `US-05`, `US-06`, `US-11`
 
-#### Slice W25-E2-S1 — accessibility baseline (`planned`)
+#### Slice W25-E2-S1 — accessibility baseline (`done`)
 Goal: make the local operator console usable with keyboard and assistive technologies
 without changing the visual information architecture.
 
@@ -5907,7 +5907,7 @@ Local tasks:
   - Scope: UI HTML and JavaScript rendering only.
   - Verification: static UI tests prove roles, selected state, and active stage
     semantics.
-- `W25-E2-S1-T3` (planned) Add named landmarks and explicit focus-visible styling for
+- `W25-E2-S1-T3` (done) Add named landmarks and explicit focus-visible styling for
   keyboard users.
   - Scope: packaged HTML and CSS.
   - Verification: UI asset tests assert landmark labels, and a screenshot or manual
@@ -5930,6 +5930,17 @@ Evidence:
 - `tests/cli/test_ui.py` statically covers the tablist, tab, panel, selected-state, and
   active-stage semantics.
 - `2026-05-26` Focused W25-E2-S1-T2 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now names the main operator landmarks and defines an
+  explicit `:focus-visible` ring for buttons, selects, textareas, and focusable panels.
+- `tests/cli/test_ui.py` statically covers the landmark labels and focus-visible CSS
+  contract.
+- `2026-05-26` Browser smoke loaded `http://127.0.0.1:8791/` and confirmed the rendered
+  landmark labels: Operator controls, Operator workspace, Workflow navigation, Workflow
+  stages, Stage cockpit, Run details, and Activity and recent artifacts.
+- `2026-05-26` Focused W25-E2-S1-T3 checks passed:
   `uv run --extra dev pytest tests/cli/test_ui.py -q`,
   `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
   `uv run --extra dev python -m mypy src`.

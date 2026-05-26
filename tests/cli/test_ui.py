@@ -1326,6 +1326,12 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert 'id="runtimeSelect"' in html
     assert 'id="openWorkspaceButton"' in html
     assert 'id="stopServerButton"' in html
+    assert 'class="topbar" aria-label="Operator controls"' in html
+    assert 'class="operator-shell" aria-label="Operator workspace"' in html
+    assert 'class="stage-rail" aria-label="Workflow navigation"' in html
+    assert 'class="cockpit" aria-label="Stage cockpit"' in html
+    assert 'class="right-sidebar" aria-label="Run details"' in html
+    assert 'class="bottom-dock" aria-label="Activity and recent artifacts"' in html
     assert 'id="stageRail" class="stage-list" aria-label="Workflow stages"' in html
     assert 'class="tabs" role="tablist" aria-label="Stage cockpit views"' in html
     assert (
@@ -1762,6 +1768,10 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert ".small-badge.waiting-for-operator" in css
     assert ".log-actions" in css
     assert ".truncation-notice" in css
+    assert "--focus-ring:" in css
+    assert "button:focus-visible" in css
+    assert "outline: 3px solid var(--focus-ring)" in css
+    assert "box-shadow: 0 0 0 4px var(--focus-ring-soft)" in css
 
 
 def test_operator_question_controls_have_screen_reader_labels(tmp_path: Path) -> None:

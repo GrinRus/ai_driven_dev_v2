@@ -10,7 +10,7 @@ _INDEX_HTML = """<!doctype html>
   <link rel="stylesheet" href="/operator.css">
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar" aria-label="Operator controls">
     <div class="brand">
       <div class="brand-mark">AI</div>
       <div>
@@ -36,8 +36,8 @@ _INDEX_HTML = """<!doctype html>
     </div>
   </header>
 
-  <main class="operator-shell">
-    <aside class="stage-rail">
+  <main class="operator-shell" aria-label="Operator workspace">
+    <aside class="stage-rail" aria-label="Workflow navigation">
       <div class="rail-header">
         <span>Stages</span>
         <span id="stageCounter" class="counter">0/8</span>
@@ -52,7 +52,7 @@ _INDEX_HTML = """<!doctype html>
       </div>
     </aside>
 
-    <section class="cockpit">
+    <section class="cockpit" aria-label="Stage cockpit">
       <div class="cockpit-header">
         <div>
           <p class="eyebrow">Stage cockpit</p>
@@ -73,7 +73,7 @@ _INDEX_HTML = """<!doctype html>
       <div id="cockpitContent" class="cockpit-content" role="tabpanel" aria-labelledby="tab-overview" tabindex="0"></div>
     </section>
 
-    <aside class="right-sidebar">
+    <aside class="right-sidebar" aria-label="Run details">
       <section class="panel" id="nextActionPanel"></section>
       <section class="panel" id="blockersPanel"></section>
       <section class="panel" id="evidencePanel"></section>
@@ -81,7 +81,7 @@ _INDEX_HTML = """<!doctype html>
       <section class="panel" id="safetyPanel"></section>
     </aside>
 
-    <section class="bottom-dock">
+    <section class="bottom-dock" aria-label="Activity and recent artifacts">
       <div class="dock-panel activity-panel">
         <div class="dock-header">
           <span>Activity / Events</span>
@@ -122,6 +122,8 @@ _OPERATOR_CSS = """
   --amber: #9a6a12;
   --red: #b4232a;
   --blue: #225d9c;
+  --focus-ring: #245fb3;
+  --focus-ring-soft: rgba(36, 95, 179, 0.2);
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg);
@@ -135,6 +137,14 @@ body {
 }
 button, select, textarea {
   font: inherit;
+}
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 button {
   align-items: center;
