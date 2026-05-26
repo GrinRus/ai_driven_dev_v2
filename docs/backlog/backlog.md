@@ -6,7 +6,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-No immediate tasks queued.
+- `W24-E1-S2-T2`
 
 ## Soon
 
@@ -14,8 +14,7 @@ No near-term tasks queued.
 
 ## Parking lot
 
-- `W24-E1-S2-T1`
-- `W24-E1-S2-T2`
+No deferred tasks queued.
 
 ## Update rules
 
@@ -152,3 +151,10 @@ No near-term tasks queued.
 - `2026-05-26` Completed `W25-E4-S3-T2` and closed Wave 25. No non-security W25
   local operator workflow hardening tasks remain queued; W24 manual live evidence
   tasks remain parked.
+- `2026-05-26` Completed `W24-E1-S2-T1` manual live refresh with one supplementary
+  Codex smoke pass and three medium-plus/large terminal evidence bundles:
+  `eval-live-007-codex-20260526T163850Z` exposed harness/stage timeout cleanup work,
+  `eval-live-007-claude-code-20260526T172838Z` recorded an external provider quota
+  blocker with visible raw logs, and `eval-live-006-opencode-20260526T173043Z`
+  exposed provider-error payload classification work. `W24-E1-S2-T2` is promoted to
+  `Next`.

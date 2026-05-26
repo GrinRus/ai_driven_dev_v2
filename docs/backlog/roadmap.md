@@ -5660,7 +5660,7 @@ Exit evidence:
 - live E2E remains manual-only and outside CI/CD/release workflows;
 - release materials are prepared without changing the public alpha safety claim.
 
-#### Slice W24-E1-S2 — manual live beta evidence refresh (`planned`)
+#### Slice W24-E1-S2 — manual live beta evidence refresh (`next`)
 Goal: refresh maintained manual live E2E evidence for the beta-readiness provider matrix
 outside CI/CD and release automation.
 
@@ -5682,10 +5682,32 @@ Dependencies:
 
 Local tasks:
 
-- `W24-E1-S2-T1` (planned) Refresh medium-plus manual live evidence for `codex`,
+- `W24-E1-S2-T1` (done) Refresh medium-plus manual live evidence for `codex`,
   `claude-code`, and `opencode` using maintained live manifests outside CI/CD.
 - `W24-E1-S2-T2` (planned) Apply evidence-backed AIDD fixes discovered by the manual live
   refresh and commit each verified fix separately.
+
+Evidence:
+
+- `2026-05-26` refreshed manual live evidence from source revision
+  `99864851129baaaf11bdc0fa883b35dff3966c57` using maintained live manifests.
+- `eval-live-005-codex-20260526T160204Z` (`AIDD-LIVE-005`, `codex`) passed as a
+  supplementary small smoke control: execution `pass`, quality gate `pass`, quality
+  verdict `ready`, review `approved`, and QA `ready`.
+- `eval-live-007-codex-20260526T163850Z` (`AIDD-LIVE-007`, `codex`) produced negative
+  medium-plus evidence: stages reached `implement`, `plan` repaired successfully once,
+  but the harness command timeout killed `aidd stage run implement` after `1200.000s`,
+  leaving the stage metadata in `executing` and no runtime log visible through
+  `aidd run logs`.
+- `eval-live-007-claude-code-20260526T172838Z` (`AIDD-LIVE-007`, `claude-code`) is an
+  explicit external provider blocker: the runtime log exposed through public CLI shows
+  API 403 provider usage-limit/quota text before `idea` could produce stage documents.
+- `eval-live-006-opencode-20260526T173043Z` (`AIDD-LIVE-006`, `opencode`) is negative
+  large-scenario evidence: provider quota returned a structured API error payload with
+  process exit `0`, so AIDD treated the runtime exit as success, spent repair budget on
+  missing `idea-brief.md`, and stopped after validation failed three times.
+- Operator-authored `operator-quality-analysis.md` overlays were written in each
+  terminal bundle; `.aidd/reports/evals/` remains local evidence and is not committed.
 
 Exit evidence:
 
