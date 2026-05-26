@@ -10,7 +10,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Soon
 
-No near-term tasks queued.
+- `W24-E1-S2-T3`
 
 ## Parking lot
 
@@ -158,3 +158,7 @@ No deferred tasks queued.
   blocker with visible raw logs, and `eval-live-006-opencode-20260526T173043Z`
   exposed provider-error payload classification work. `W24-E1-S2-T2` is promoted to
   `Next`.
+- `2026-05-26` Split broad `W24-E1-S2-T2` evidence-backed fix work: `W24-E1-S2-T2`
+  now owns `opencode` provider error-payload classification and remains in `Next`;
+  `W24-E1-S2-T3` owns live harness timeout lifecycle/evidence cleanup and is promoted
+  to `Soon`.
