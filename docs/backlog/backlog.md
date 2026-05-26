@@ -6,14 +6,37 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W24-E1-S2-T1`
+- `W25-E1-S1-T1`
 
 ## Soon
 
-- `W24-E1-S2-T2`
+- `W25-E1-S1-T2`
+- `W25-E1-S1-T3`
+- `W25-E1-S2-T1`
+- `W25-E2-S1-T1`
 
 ## Parking lot
 
+- `W25-E1-S2-T2`
+- `W25-E1-S2-T3`
+- `W25-E2-S1-T2`
+- `W25-E2-S1-T3`
+- `W25-E2-S2-T1`
+- `W25-E2-S2-T2`
+- `W25-E2-S2-T3`
+- `W25-E3-S1-T1`
+- `W25-E3-S1-T2`
+- `W25-E3-S1-T3`
+- `W25-E4-S1-T1`
+- `W25-E4-S1-T2`
+- `W25-E4-S1-T3`
+- `W25-E4-S2-T1`
+- `W25-E4-S2-T2`
+- `W25-E4-S2-T3`
+- `W25-E4-S3-T1`
+- `W25-E4-S3-T2`
+- `W24-E1-S2-T1`
+- `W24-E1-S2-T2`
 
 ## Update rules
 
@@ -100,3 +123,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   release guardrails, source-installed local smoke path verification, and draft
   release notes. Promoted `W24-E1-S2-T1` to `Next` and `W24-E1-S2-T2` to `Soon`
   for manual live evidence refresh outside CI/CD.
+- `2026-05-26` Wave 25 opened from the audit's non-security local-alpha findings.
+  Operator UI/runtime hardening moved ahead of W24 manual live evidence; `W24-E1-S2-T1`
+  and `W24-E1-S2-T2` remain parked, not removed.

@@ -5693,3 +5693,379 @@ Exit evidence:
   operator ledger;
 - no live evidence artifact, target repository diff, provider log, or temp work root is
   committed.
+
+## Wave 25 — local operator workflow hardening (`next`)
+
+Goal: close non-security audit findings for the local alpha operator workflow: runtime
+control, bounded log and artifact inspection, accessibility, mobile usability, UI
+regression coverage, architecture boundaries, and maintainability. Authentication,
+session tokens, Origin/CSRF guards, secret redaction, trusted harness sandboxing, and
+dangerous provider default changes are explicitly out of scope for this wave.
+
+### Epic W25-E1 — runtime control and observability (`next`)
+Linked stories: `US-01`, `US-06`, `US-11`
+
+#### Slice W25-E1-S1 — cancellable UI runtime jobs (`planned`)
+Goal: let operators cancel active local UI runtime jobs without stopping only the HTTP
+server or losing runtime evidence.
+
+Primary outputs:
+
+- cancellable UI job registry
+- `POST /api/jobs/<job_id>/cancel`
+- cancelled job and runtime evidence states
+- operator console cancel control
+
+Touched areas:
+
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/ui_assets.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W21-E1-S1`
+- `W21-E1-S2`
+
+Local tasks:
+
+- `W25-E1-S1-T1` (planned) Add a cancellable UI job registry and
+  `POST /api/jobs/<job_id>/cancel` endpoint for active stage, workflow, and intervention
+  jobs.
+  - Scope: `src/aidd/cli/ui.py` job lifecycle only.
+  - Verification: `tests/cli/test_ui.py` proves active, cancelling, cancelled,
+    completed, and already-finished job states.
+- `W25-E1-S1-T2` (planned) Propagate UI cancellation to the running stage execution so
+  subprocess-backed runtimes terminate and persist a cancelled outcome.
+  - Scope: UI-to-stage execution path using existing adapter and process cancellation
+    behavior.
+  - Verification: a fixture long-running `generic-cli` job cancels from the UI API and
+    records cancelled runtime and stage evidence.
+- `W25-E1-S1-T3` (planned) Render a Cancel action and cancelled or terminating states in
+  the operator console live job panel.
+  - Scope: packaged UI assets only.
+  - Verification: UI service or static tests prove button visibility, disabled terminal
+    states, and live log preservation.
+
+Exit evidence:
+
+- active UI runtime jobs can be cancelled from API and UI;
+- cancelled jobs persist a deterministic terminal state and do not keep a runtime
+  subprocess alive;
+- completed jobs cannot be cancelled retroactively.
+
+#### Slice W25-E1-S2 — bounded logs and artifact previews (`planned`)
+Goal: keep local UI log and artifact inspection responsive on large runs while preserving
+raw evidence availability through explicit bounded reads.
+
+Primary outputs:
+
+- tail/limit parameters for UI log reads
+- capped default `/api/logs` responses
+- capped artifact document previews
+- visible truncation states in the operator console
+
+Touched areas:
+
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/ui_assets.py`
+- `src/aidd/core/operator_frontend.py`
+- `tests/cli/test_ui.py`
+- `tests/core/test_operator_frontend.py`
+
+Dependencies:
+
+- `W25-E1-S1`
+
+Local tasks:
+
+- `W25-E1-S2-T1` (planned) Add tail or limit parameters to UI log reads and cap the
+  default `/api/logs` response size.
+  - Scope: UI API and operator frontend log view.
+  - Verification: a high-volume runtime log test proves truncation metadata and no
+    whole-file default response.
+- `W25-E1-S2-T2` (planned) Cap artifact document preview payloads while preserving
+  explicit source inspection through bounded reads.
+  - Scope: `/api/artifacts/document` and the UI artifact viewer.
+  - Verification: a large Markdown artifact test proves preview truncation, byte counts,
+    and source-mode bounds.
+- `W25-E1-S2-T3` (planned) Add operator console copy and states for truncated logs and
+  artifacts.
+  - Scope: packaged UI assets.
+  - Verification: `tests/cli/test_ui.py` covers visible truncation indicators.
+
+Exit evidence:
+
+- large logs and artifacts no longer require full-file UI responses by default;
+- operators can see when a displayed log or artifact preview is truncated;
+- raw evidence paths remain inspectable through existing artifact surfaces.
+
+### Epic W25-E2 — operator UI usability and accessibility (`planned`)
+Linked stories: `US-05`, `US-06`, `US-11`
+
+#### Slice W25-E2-S1 — accessibility baseline (`planned`)
+Goal: make the local operator console usable with keyboard and assistive technologies
+without changing the visual information architecture.
+
+Primary outputs:
+
+- accessible question answer controls
+- cockpit tab semantics
+- active stage semantics
+- named landmarks and visible focus styles
+
+Touched areas:
+
+- `src/aidd/cli/ui_assets.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W20-E2-S5`
+- `W21-E1-S1`
+
+Local tasks:
+
+- `W25-E2-S1-T1` (planned) Add accessible labels and relationships for dynamic question
+  answer controls.
+  - Scope: question card rendering.
+  - Verification: DOM or static tests prove every generated textarea and select has a
+    label or ARIA name.
+- `W25-E2-S1-T2` (planned) Add tablist, tab, and panel semantics to cockpit tabs and
+  `aria-current` to the active stage.
+  - Scope: UI HTML and JavaScript rendering only.
+  - Verification: static UI tests prove roles, selected state, and active stage
+    semantics.
+- `W25-E2-S1-T3` (planned) Add named landmarks and explicit focus-visible styling for
+  keyboard users.
+  - Scope: packaged HTML and CSS.
+  - Verification: UI asset tests assert landmark labels, and a screenshot or manual
+    checklist confirms visible focus.
+
+Exit evidence:
+
+- question answer inputs are accessible by label;
+- cockpit tabs and the active stage expose semantic state;
+- keyboard focus is visible on critical operator controls.
+
+#### Slice W25-E2-S2 — mobile and workflow clarity (`planned`)
+Goal: reduce local operator confusion during first launch, mobile inspection, and
+question resolution flows.
+
+Primary outputs:
+
+- mobile active-stage rail visibility
+- saved answer rendering in resolved question cards
+- explicit loading and empty-run UI states
+
+Touched areas:
+
+- `src/aidd/cli/ui_assets.py`
+- `src/aidd/core/operator_frontend.py`
+- `tests/cli/test_ui.py`
+- `tests/core/test_operator_frontend.py`
+
+Dependencies:
+
+- `W25-E2-S1`
+
+Local tasks:
+
+- `W25-E2-S2-T1` (planned) Auto-scroll the active stage into view in the mobile
+  horizontal stage rail.
+  - Scope: UI JavaScript and CSS.
+  - Verification: a mobile viewport browser or manual smoke confirms the selected stage
+    is visible after load and stage switch.
+- `W25-E2-S2-T2` (planned) Render saved answer text for resolved questions.
+  - Scope: operator frontend question read model and question card UI.
+  - Verification: API and UI tests prove `answers.md` content appears in resolved
+    question cards.
+- `W25-E2-S2-T3` (planned) Add explicit initial loading and empty-run states for first
+  launch.
+  - Scope: UI assets.
+  - Verification: UI tests cover pre-fetch loading state and no-run state copy and
+    actions.
+
+Exit evidence:
+
+- selected stage remains visible on mobile viewport checks;
+- resolved question cards show the saved operator answer;
+- first launch and no-run states present clear operator next actions.
+
+### Epic W25-E3 — UI regression coverage (`planned`)
+Linked stories: `US-07`, `US-11`
+
+#### Slice W25-E3-S1 — deterministic UI coverage without Node/Vite (`planned`)
+Goal: lock the operator console's critical DOM and service contracts with pytest-only
+coverage that preserves the packaged static UI model.
+
+Primary outputs:
+
+- static DOM contract tests for packaged UI assets
+- extended local-project UI E2E documentation
+- service-level regressions for new UI hardening behavior
+
+Touched areas:
+
+- `src/aidd/cli/ui_assets.py`
+- `docs/e2e/operator-ui-local-project.md`
+- `tests/cli/test_ui.py`
+- `tests/core/test_operator_frontend.py`
+
+Dependencies:
+
+- `W25-E1-S1`
+- `W25-E1-S2`
+- `W25-E2-S1`
+- `W25-E2-S2`
+
+Local tasks:
+
+- `W25-E3-S1-T1` (planned) Add static DOM contract tests for packaged UI
+  accessibility-critical markup.
+  - Scope: tests around `ui_assets.py`.
+  - Verification: pytest-only checks pass with no Node or browser dependency.
+- `W25-E3-S1-T2` (planned) Extend operator UI local-project E2E documentation with
+  manual browser checks for dashboard, tabs, logs, artifacts, questions, intervention,
+  desktop, tablet, and mobile.
+  - Scope: `docs/e2e/operator-ui-local-project.md`.
+  - Verification: docs consistency or targeted Markdown assertions cover the checklist.
+- `W25-E3-S1-T3` (planned) Add service-level regressions for cancellation, bounded logs,
+  saved-answer display, and truncation metadata.
+  - Scope: `tests/cli/test_ui.py` and `tests/core/test_operator_frontend.py`.
+  - Verification: the focused pytest suite passes.
+
+Exit evidence:
+
+- critical UI semantics and new hardening states are covered without introducing a Node
+  build pipeline;
+- manual browser coverage remains documented for the local-project operator lane.
+
+### Epic W25-E4 — non-security architecture and maintainability cleanup (`planned`)
+Linked stories: `US-01`, `US-07`, `US-08`, `US-11`
+
+#### Slice W25-E4-S1 — runtime boundary cleanup (`planned`)
+Goal: remove non-security architecture boundary smells found during the audit without
+changing public runtime behavior.
+
+Primary outputs:
+
+- neutral runtime catalog ownership
+- protocol-owned Claude question metadata update path
+- visible validator evidence for misplaced output promotion
+
+Touched areas:
+
+- `src/aidd/config.py`
+- `src/aidd/core/`
+- `src/aidd/adapters/`
+- `src/aidd/validators/`
+- `tests/`
+
+Dependencies:
+
+- `W21-E3-S3`
+
+Local tasks:
+
+- `W25-E4-S1-T1` (planned) Move runtime readiness catalog data out of
+  `aidd.adapters.runtime_registry` into a neutral runtime catalog module.
+  - Scope: runtime metadata imports only; no behavior change.
+  - Verification: an import-boundary grep plus existing doctor and readiness tests.
+- `W25-E4-S1-T2` (planned) Remove the Claude adapter's direct run-store metadata write by
+  exposing a protocol-owned metadata hook or event.
+  - Scope: Claude adapter boundary and core run metadata update path.
+  - Verification: Claude question artifact tests still pass without importing
+    `aidd.core.run_store` from adapters.
+- `W25-E4-S1-T3` (planned) Record a validator or report warning when misplaced stage
+  outputs are auto-promoted from `output/`.
+  - Scope: stage output discovery and validation evidence.
+  - Verification: a regression test proves promotion still works and warning evidence is
+    visible.
+
+Exit evidence:
+
+- core readiness models no longer import adapter-owned runtime registry data;
+- Claude adapter no longer mutates run-store metadata through a core layout helper;
+- output promotion remains compatible but becomes visible in validation evidence.
+
+#### Slice W25-E4-S2 — module size reduction (`planned`)
+Goal: reduce the largest remaining UI, operator frontend, and live evaluator modules
+without changing behavior, public CLI commands, or artifact filenames.
+
+Primary outputs:
+
+- static UI resource loader
+- smaller operator frontend read-model modules
+- split live E2E black-box evaluator modules
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `src/aidd/core/operator_frontend.py`
+- `src/aidd/harness/live_e2e_black_box.py`
+- `tests/`
+
+Dependencies:
+
+- `W25-E3-S1`
+
+Local tasks:
+
+- `W25-E4-S2-T1` (planned) Split packaged UI assets into static resource files while
+  preserving the no-Node and no-Vite packaging model.
+  - Scope: `src/aidd/cli/static/` resources plus loader.
+  - Verification: package resource tests and UI endpoint tests pass from source and built
+    wheel.
+- `W25-E4-S2-T2` (planned) Split operator frontend read-model assembly into smaller
+  modules for dashboard, artifacts, logs, and questions.
+  - Scope: `src/aidd/core/operator_frontend.py` decomposition only.
+  - Verification: existing operator frontend tests pass with no API shape change.
+- `W25-E4-S2-T3` (planned) Split the live E2E black-box evaluator into orchestration,
+  step execution, and report writing modules.
+  - Scope: harness maintainability only.
+  - Verification: live evaluator unit tests and result bundle tests pass.
+
+Exit evidence:
+
+- large module responsibilities are split behind compatibility-preserving imports or
+  public functions;
+- existing UI, operator frontend, and live evaluator behavior remains unchanged.
+
+#### Slice W25-E4-S3 — config and validation polish (`planned`)
+Goal: improve operator-facing diagnostics for config and repair loops without changing
+stage contracts.
+
+Primary outputs:
+
+- friendly scalar config validation
+- richer safe semantic finding collection during validation
+
+Touched areas:
+
+- `src/aidd/config.py`
+- `src/aidd/core/stage_outputs.py`
+- `src/aidd/validators/`
+- `tests/`
+
+Dependencies:
+
+- `W25-E4-S1`
+
+Local tasks:
+
+- `W25-E4-S3-T1` (planned) Add friendly validation for `repair.max_attempts` and invalid
+  scalar config values.
+  - Scope: `src/aidd/config.py`.
+  - Verification: config tests cover non-integer, negative, and valid values.
+- `W25-E4-S3-T2` (planned) Collect independent semantic findings when structural
+  validation is sufficient to continue checking.
+  - Scope: validation flow only.
+  - Verification: a validator regression proves mixed structural and semantic defects can
+    surface together where safe.
+
+Exit evidence:
+
+- invalid scalar config values produce actionable errors;
+- validation can surface independent semantic defects earlier without silently continuing
+  past blocking structural failures.
