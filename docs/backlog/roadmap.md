@@ -6108,7 +6108,7 @@ Exit evidence:
 ### Epic W25-E4 — non-security architecture and maintainability cleanup (`planned`)
 Linked stories: `US-01`, `US-07`, `US-08`, `US-11`
 
-#### Slice W25-E4-S1 — runtime boundary cleanup (`planned`)
+#### Slice W25-E4-S1 — runtime boundary cleanup (`done`)
 Goal: remove non-security architecture boundary smells found during the audit without
 changing public runtime behavior.
 
@@ -6154,11 +6154,17 @@ Local tasks:
   - Checks (`2026-05-26`): `rg -n "from aidd\\.core\\.run_store|import aidd\\.core\\.run_store" src/aidd/adapters -g '*.py'`
     returned no matches; `uv run --extra dev pytest tests/core/test_adapter_interview.py tests/adapters/test_claude_code_runner.py -q`;
     `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`.
-- `W25-E4-S1-T3` (planned) Record a validator or report warning when misplaced stage
+- `W25-E4-S1-T3` (done) Record a validator or report warning when misplaced stage
   outputs are auto-promoted from `output/`.
   - Scope: stage output discovery and validation evidence.
   - Verification: a regression test proves promotion still works and warning evidence is
     visible.
+  - Evidence (`2026-05-26`): stage output discovery now records promoted
+    source/destination pairs and `validator-report.md` appends a non-blocking
+    `STRUCT-OUTPUT-PROMOTED` warning section when misplaced `output/` documents are
+    copied into canonical stage document locations.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/core/test_stage_runner.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`.
 
 Exit evidence:
 

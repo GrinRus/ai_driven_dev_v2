@@ -861,11 +861,21 @@ def test_discover_stage_markdown_outputs_promotes_misplaced_output_documents(
 
     assert discovery.discovered_markdown_documents == preparation_bundle.expected_output_documents
     assert discovery.missing_markdown_documents == ()
+    assert tuple(
+        promotion.destination_path for promotion in discovery.promoted_misplaced_documents
+    ) == preparation_bundle.expected_output_documents
     assert (stage_root / "plan.md").read_text(encoding="utf-8") == valid_documents["plan.md"]
     assert (stage_root / "stage-result.md").read_text(encoding="utf-8") == (
         valid_documents["stage-result.md"]
     )
     assert structural_validation.findings == ()
+    validator_report_text = structural_validation.validator_report_path.read_text(
+        encoding="utf-8"
+    )
+    assert "- Verdict: `pass`" in validator_report_text
+    assert "`STRUCT-OUTPUT-PROMOTED` (`low`)" in validator_report_text
+    assert "workitems/WI-001/stages/plan/output/plan.md" in validator_report_text
+    assert "workitems/WI-001/stages/plan/plan.md" in validator_report_text
 
 
 def test_discover_stage_markdown_outputs_rejects_mismatched_execution_context(
