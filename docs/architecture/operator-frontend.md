@@ -155,6 +155,9 @@ Current W20 implementation status:
   persisted logs, artifact summaries, artifact document content, workflow run
   requests, stage run requests, stage intervention requests, and job status/log
   polling over the operator services;
+- `POST /api/workflow/run` accepts optional `{run_id}`; when present, the UI asks the
+  workflow service to continue that run through normal stage eligibility and the same
+  backend config snapshot used by CLI launches;
 - UI job state includes `waiting-for-operator`, with
   `GET /api/jobs/<job_id>/operator-requests` and
   `POST /api/jobs/<job_id>/operator-requests/<request_id>/decision` for local runtime
