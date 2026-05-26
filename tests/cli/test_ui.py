@@ -1488,7 +1488,10 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "No artifacts for this stage yet" in script
     assert "No runtime log for this stage yet" in script
     assert "<p>${escapeHtml(question.text)}</p>" in script
-    assert "function renderLogPanel({title, meta, entries, rawText, emptyText})" in script
+    assert (
+        "function renderLogPanel({title, meta, entries, rawText, emptyText, actions = \"\"})"
+        in script
+    )
     assert "async function renderRequestChange()" in script
     assert "async function renderApprovals()" in script
     assert "async function submitApproval(requestId, action)" in script
@@ -1513,6 +1516,15 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "data-log-raw" in script
     assert "state.rawLogMode" in script
     assert 'state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered)' in script
+    assert "function renderLiveJobActions()" in script
+    assert "function activeJobCancelLabel()" in script
+    assert "async function cancelActiveJob()" in script
+    assert "data-cancel-job" in script
+    assert "Cancel job" in script
+    assert "Cancelling..." in script
+    assert "Cancelled" in script
+    assert "/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel" in script
+    assert 'new Set(["running", "waiting-for-operator", "cancelling"])' in script
     assert "activeJobLogChunks.push(...(logs.chunks || []));" in script
     assert "function liveJobActivityEvents()" in script
     assert "function activityEvents()" in script
@@ -1555,6 +1567,13 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
         in script
     )
     assert 'body: JSON.stringify({runtime: "generic-cli"})' not in script
+
+    css = service.handle_get("/operator.css", {}).body.decode("utf-8")
+    assert ".status-badge.cancelled" in css
+    assert ".small-badge.running" in css
+    assert ".small-badge.cancelling" in css
+    assert ".small-badge.waiting-for-operator" in css
+    assert ".log-actions" in css
 
 
 def test_ui_json_body_reader_rejects_oversized_payload() -> None:

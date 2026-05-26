@@ -293,6 +293,8 @@ code {
 }
 .status-badge.blocked,
 .status-badge.repair-needed,
+.status-badge.waiting-for-operator,
+.small-badge.waiting-for-operator,
 .small-badge.warn {
   background: #fff8e7;
   border-color: #e8ce8f;
@@ -304,8 +306,17 @@ code {
   border-color: #ebb6b1;
   color: var(--red);
 }
+.status-badge.cancelled,
+.small-badge.cancelled {
+  background: #fff1f0;
+  border-color: #ebb6b1;
+  color: var(--red);
+}
 .status-badge.running,
-.status-badge.ready {
+.small-badge.running,
+.status-badge.ready,
+.status-badge.cancelling,
+.small-badge.cancelling {
   background: #ebf6ff;
   border-color: #b5d2ee;
   color: var(--blue);
@@ -819,10 +830,15 @@ h1, h2, h3, p {
   padding-bottom: 9px;
 }
 .viewer-modes,
-.log-filter {
+.log-filter,
+.log-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+}
+.log-actions {
+  align-items: center;
+  justify-content: flex-end;
 }
 .markdown-preview {
   line-height: 1.48;
@@ -1757,7 +1773,7 @@ function rawTextFromEntries(entries) {
   return entries.map((entry) => `[${entry.stream}] ${entry.source ? `${entry.source}: ` : ""}${entry.text}`).join("\\n");
 }
 
-function renderLogPanel({title, meta, entries, rawText, emptyText}) {
+function renderLogPanel({title, meta, entries, rawText, emptyText, actions = ""}) {
   const filtered = filteredLogEntries(entries);
   const rawBody = state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered);
   const filterButtons = ["all", "stdout", "stderr", "system"].map((filter) => (
@@ -1781,9 +1797,12 @@ function renderLogPanel({title, meta, entries, rawText, emptyText}) {
           <strong>${escapeHtml(title)}</strong>
           ${pathLine(meta.filter(Boolean).join(" / "), 72)}
         </div>
-        <div class="log-filter">
-          ${filterButtons}
-          <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button">Raw</button>
+        <div class="log-actions">
+          ${actions}
+          <div class="log-filter">
+            ${filterButtons}
+            <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button">Raw</button>
+          </div>
         </div>
       </div>
       ${rows}
@@ -1796,15 +1815,43 @@ function liveJobMatchesStage() {
   return state.activeJobStatus.kind === "workflow" || state.activeJobStatus.stage === state.activeStage;
 }
 
+function activeJobStatusClass() {
+  return statusClass(state.activeJobStatus?.status || "running");
+}
+
+function activeJobIsTerminal() {
+  return ["cancelled", "completed", "failed"].includes(state.activeJobStatus?.status || "");
+}
+
+function activeJobCancelLabel() {
+  const status = state.activeJobStatus?.status || "running";
+  if (status === "cancelling") return "Cancelling...";
+  if (status === "cancelled") return "Cancelled";
+  if (status === "completed") return "Completed";
+  if (status === "failed") return "Stopped";
+  return "Cancel job";
+}
+
+function renderLiveJobActions() {
+  if (!state.activeJobId || !state.activeJobStatus) return "";
+  const status = state.activeJobStatus.status || "running";
+  const disabled = activeJobIsTerminal() || status === "cancelling";
+  return `
+    <span class="small-badge ${escapeHtml(activeJobStatusClass())}">${escapeHtml(status)}</span>
+    <button data-cancel-job="${escapeHtml(state.activeJobId)}" class="danger" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(activeJobCancelLabel())}</button>
+  `;
+}
+
 async function renderLogs() {
-  if (state.activeJobId && liveJobMatchesStage() && (state.activeJobStatus?.status === "running" || state.activeJobStatus?.status === "waiting-for-operator" || state.activeJobLogChunks.length)) {
+  if (state.activeJobId && liveJobMatchesStage() && (state.activeJobStatus?.status === "running" || state.activeJobStatus?.status === "waiting-for-operator" || state.activeJobStatus?.status === "cancelling" || state.activeJobLogChunks.length)) {
     const entries = logEntriesFromChunks(state.activeJobLogChunks);
     document.getElementById("cockpitContent").innerHTML = renderLogPanel({
       title: `Live job ${state.activeJobId}`,
       meta: [state.activeJobStatus?.status || "running", state.activeJobStatus?.stage || "workflow"],
       entries,
       rawText: rawTextFromEntries(entries),
-      emptyText: "Waiting for runtime output..."
+      emptyText: "Waiting for runtime output...",
+      actions: renderLiveJobActions()
     });
     return;
   }
@@ -2107,10 +2154,29 @@ async function stopServer() {
   toast(result.message || "Stopping local UI server.");
 }
 
+async function cancelActiveJob() {
+  if (!state.activeJobId) return;
+  const result = await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel`, {});
+  state.activeJobStatus = result;
+  if (result.already_finished) {
+    toast("Job already finished.");
+  } else if (result.status === "cancelled") {
+    toast("Job cancelled.");
+  } else {
+    toast("Cancel requested.");
+  }
+  renderActivityTable();
+  if (state.activeTab === "logs") await renderLogs();
+  const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
+  if (!state.activeJobTimer && activeStatuses.has(result.status)) {
+    state.activeJobTimer = setInterval(pollActiveJob, 1000);
+  }
+}
+
 async function pollActiveJob() {
   if (!state.activeJobId) return;
   try {
-    const activeStatuses = new Set(["running", "waiting-for-operator"]);
+    const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
     const logs = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}/logs?cursor=${state.activeJobCursor}`);
     state.activeJobCursor = Number(logs.cursor || state.activeJobCursor);
     state.activeJobLogChunks.push(...(logs.chunks || []));
@@ -2221,6 +2287,11 @@ document.addEventListener("click", async (event) => {
     if (tabShortcut) {
       activateTab(tabShortcut);
       await renderCockpit();
+      return;
+    }
+    const cancelJob = event.target.closest("[data-cancel-job]");
+    if (cancelJob) {
+      await cancelActiveJob();
       return;
     }
     const approvalButton = event.target.closest("[data-operator-request][data-operator-action]");

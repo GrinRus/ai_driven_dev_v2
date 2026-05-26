@@ -5705,7 +5705,7 @@ dangerous provider default changes are explicitly out of scope for this wave.
 ### Epic W25-E1 — runtime control and observability (`next`)
 Linked stories: `US-01`, `US-06`, `US-11`
 
-#### Slice W25-E1-S1 — cancellable UI runtime jobs (`planned`)
+#### Slice W25-E1-S1 — cancellable UI runtime jobs (`done`)
 Goal: let operators cancel active local UI runtime jobs without stopping only the HTTP
 server or losing runtime evidence.
 
@@ -5741,7 +5741,7 @@ Local tasks:
     behavior.
   - Verification: a fixture long-running `generic-cli` job cancels from the UI API and
     records cancelled runtime and stage evidence.
-- `W25-E1-S1-T3` (planned) Render a Cancel action and cancelled or terminating states in
+- `W25-E1-S1-T3` (done) Render a Cancel action and cancelled or terminating states in
   the operator console live job panel.
   - Scope: packaged UI assets only.
   - Verification: UI service or static tests prove button visibility, disabled terminal
@@ -5771,6 +5771,17 @@ Evidence:
   `uv run --extra dev pytest tests/cli/test_ui.py -q`,
   `uv run --extra dev ruff check src/aidd/cli/ui.py src/aidd/cli/stage_run.py src/aidd/adapters/runtime_execution.py src/aidd/adapters/surface.py tests/cli/test_ui.py`,
   and `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now renders a live-job Cancel action in the log panel,
+  shows `cancelling` and terminal `cancelled`/`completed`/`failed` disabled states,
+  keeps `cancelling` in the active polling set, and preserves live log chunks after
+  cancellation.
+- `tests/cli/test_ui.py` statically covers the packaged Cancel action, `/api/jobs/.../cancel`
+  call, `cancelling` polling state, terminal labels, and CSS status classes.
+- `2026-05-26` Focused W25-E1-S1-T3 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  browser smoke of `uv run aidd ui --work-item WI-UI --root /tmp/.../.aidd --host 127.0.0.1 --port 8787`
+  loaded the operator shell at `http://127.0.0.1:8787/`.
 
 Exit evidence:
 
