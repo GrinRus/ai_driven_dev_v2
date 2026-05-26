@@ -6195,11 +6195,18 @@ Dependencies:
 
 Local tasks:
 
-- `W25-E4-S2-T1` (planned) Split packaged UI assets into static resource files while
+- `W25-E4-S2-T1` (done) Split packaged UI assets into static resource files while
   preserving the no-Node and no-Vite packaging model.
   - Scope: `src/aidd/cli/static/` resources plus loader.
   - Verification: package resource tests and UI endpoint tests pass from source and built
     wheel.
+  - Evidence (`2026-05-26`): HTML, CSS, and JS moved to
+    `src/aidd/cli/static/`; `src/aidd/cli/ui_assets.py` now loads those package resources
+    while preserving `_INDEX_HTML`, `_OPERATOR_CSS`, and `_OPERATOR_JS` imports.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py tests/cli/test_ui.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
+    `uv build`; built wheel inspection confirmed `aidd/cli/static/{index.html,operator.css,operator.js}`;
+    a wheel-import smoke verified `/`, `/operator.css`, and `/operator.js` responses.
 - `W25-E4-S2-T2` (planned) Split operator frontend read-model assembly into smaller
   modules for dashboard, artifacts, logs, and questions.
   - Scope: `src/aidd/core/operator_frontend.py` decomposition only.

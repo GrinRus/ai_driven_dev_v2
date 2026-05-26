@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from html.parser import HTMLParser
+from importlib.resources import files
 
 from aidd.cli.ui_assets import _INDEX_HTML, _OPERATOR_CSS, _OPERATOR_JS
 
@@ -27,6 +28,14 @@ def _attrs_for(tag: str, **required: str) -> dict[str, str | None]:
         if all(attrs.get(key) == value for key, value in required.items()):
             return attrs
     raise AssertionError(f"missing <{tag}> with attrs {required}")
+
+
+def test_operator_assets_are_loaded_from_packaged_static_resources() -> None:
+    static_files = files("aidd.cli.static")
+
+    assert static_files.joinpath("index.html").read_text(encoding="utf-8") == _INDEX_HTML
+    assert static_files.joinpath("operator.css").read_text(encoding="utf-8") == _OPERATOR_CSS
+    assert static_files.joinpath("operator.js").read_text(encoding="utf-8") == _OPERATOR_JS
 
 
 def test_index_html_exposes_named_operator_landmarks() -> None:

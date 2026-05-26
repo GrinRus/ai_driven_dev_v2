@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AIDD Operator Console</title>
+  <link rel="stylesheet" href="/operator.css">
+</head>
+<body>
+  <header class="topbar" aria-label="Operator controls">
+    <div class="brand">
+      <div class="brand-mark">AI</div>
+      <div>
+        <div class="brand-title">AIDD Operator Console <span id="appVersion" class="version-badge">v</span></div>
+        <div class="brand-meta">Project <code id="projectPath">...</code></div>
+      </div>
+    </div>
+    <div class="top-status">
+      <span id="workItemChip" class="status-chip">Work item</span>
+      <span id="runChip" class="status-chip">Run: none</span>
+      <span id="localStatus" class="status-chip good">Local control-plane connected</span>
+    </div>
+    <div class="top-actions">
+      <label class="runtime-picker" for="runtimeSelect">
+        <span>Runtime</span>
+        <select id="runtimeSelect">
+          <option value="">Select runtime</option>
+        </select>
+      </label>
+      <button id="refreshButton" class="secondary" type="button">Refresh</button>
+      <button id="openWorkspaceButton" class="secondary" type="button">Open .aidd</button>
+      <button id="stopServerButton" class="danger" type="button">Stop server</button>
+    </div>
+  </header>
+
+  <main class="operator-shell" aria-label="Operator workspace">
+    <aside class="stage-rail" aria-label="Workflow navigation">
+      <div class="rail-header">
+        <span>Stages</span>
+        <span id="stageCounter" class="counter">0/8</span>
+      </div>
+      <nav id="stageRail" class="stage-list" aria-label="Workflow stages"></nav>
+      <div class="quick-links">
+        <div class="rail-header small">Quick links</div>
+        <button data-tab-shortcut="logs" class="quick-link" type="button">Run status</button>
+        <button data-tab-shortcut="artifacts" class="quick-link" type="button">Artifacts</button>
+        <button data-tab-shortcut="validation" class="quick-link" type="button">Validation</button>
+        <button data-tab-shortcut="questions" class="quick-link" type="button">Questions</button>
+      </div>
+    </aside>
+
+    <section class="cockpit" aria-label="Stage cockpit">
+      <div class="cockpit-header">
+        <div>
+          <p class="eyebrow">Stage cockpit</p>
+          <h1 id="stageTitle">Idea</h1>
+          <p id="stageSubtitle" class="muted">Clarify the request</p>
+        </div>
+        <div id="stageBadges" class="badge-row"></div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Stage cockpit views">
+        <button id="tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="cockpitContent" class="active" type="button">Overview</button>
+        <button id="tab-questions" data-tab="questions" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Questions</button>
+        <button id="tab-validation" data-tab="validation" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Validation</button>
+        <button id="tab-artifacts" data-tab="artifacts" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Artifacts</button>
+        <button id="tab-logs" data-tab="logs" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Logs</button>
+        <button id="tab-approvals" data-tab="approvals" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Approvals</button>
+        <button id="tab-request" data-tab="request" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Request change</button>
+      </div>
+      <div id="cockpitContent" class="cockpit-content" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+        <div class="empty-state loading-state">Loading operator workspace...</div>
+      </div>
+    </section>
+
+    <aside class="right-sidebar" aria-label="Run details">
+      <section class="panel" id="nextActionPanel"></section>
+      <section class="panel" id="blockersPanel"></section>
+      <section class="panel" id="evidencePanel"></section>
+      <section class="panel" id="runtimeRootPanel"></section>
+      <section class="panel" id="safetyPanel"></section>
+    </aside>
+
+    <section class="bottom-dock" aria-label="Activity and recent artifacts">
+      <div class="dock-panel activity-panel">
+        <div class="dock-header">
+          <span>Activity / Events</span>
+          <button id="viewFullLogButton" class="link-button" type="button">View full log</button>
+        </div>
+        <div id="activityTable" class="table-wrap"></div>
+      </div>
+      <div class="dock-panel artifacts-panel">
+        <div class="dock-header">
+          <span>Recent artifacts</span>
+          <button id="openStageFolderButton" class="link-button" type="button">Open stage folder</button>
+        </div>
+        <div id="recentArtifacts" class="recent-artifacts"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/operator.js"></script>
+</body>
+</html>
