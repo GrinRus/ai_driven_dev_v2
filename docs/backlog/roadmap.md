@@ -5871,7 +5871,7 @@ Exit evidence:
 - operators can see when a displayed log or artifact preview is truncated;
 - raw evidence paths remain inspectable through existing artifact surfaces.
 
-### Epic W25-E2 — operator UI usability and accessibility (`planned`)
+### Epic W25-E2 — operator UI usability and accessibility (`done`)
 Linked stories: `US-05`, `US-06`, `US-11`
 
 #### Slice W25-E2-S1 — accessibility baseline (`done`)
@@ -5951,7 +5951,7 @@ Exit evidence:
 - cockpit tabs and the active stage expose semantic state;
 - keyboard focus is visible on critical operator controls.
 
-#### Slice W25-E2-S2 — mobile and workflow clarity (`planned`)
+#### Slice W25-E2-S2 — mobile and workflow clarity (`done`)
 Goal: reduce local operator confusion during first launch, mobile inspection, and
 question resolution flows.
 
@@ -5983,7 +5983,7 @@ Local tasks:
   - Scope: operator frontend question read model and question card UI.
   - Verification: API and UI tests prove `answers.md` content appears in resolved
     question cards.
-- `W25-E2-S2-T3` (planned) Add explicit initial loading and empty-run states for first
+- `W25-E2-S2-T3` (done) Add explicit initial loading and empty-run states for first
   launch.
   - Scope: UI assets.
   - Verification: UI tests cover pre-fetch loading state and no-run state copy and
@@ -6014,6 +6014,15 @@ Evidence:
   `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`,
   `uv run --extra dev ruff check src/aidd/core/operator_frontend.py src/aidd/cli/ui_assets.py tests/cli/test_ui.py tests/core/test_operator_frontend.py`,
   and `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now renders a pre-fetch loading state in the cockpit and a
+  first-launch/no-run overview state with runtime readiness copy plus a runtime-gated Run
+  workflow action.
+- `tests/cli/test_ui.py` statically covers the loading markup, no-run copy, first-launch
+  action wiring, and runtime-select re-render hook.
+- `2026-05-26` Focused W25-E2-S2-T3 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
 
 Exit evidence:
 

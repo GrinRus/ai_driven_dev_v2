@@ -70,7 +70,9 @@ _INDEX_HTML = """<!doctype html>
         <button id="tab-approvals" data-tab="approvals" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Approvals</button>
         <button id="tab-request" data-tab="request" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Request change</button>
       </div>
-      <div id="cockpitContent" class="cockpit-content" role="tabpanel" aria-labelledby="tab-overview" tabindex="0"></div>
+      <div id="cockpitContent" class="cockpit-content" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+        <div class="empty-state loading-state">Loading operator workspace...</div>
+      </div>
     </section>
 
     <aside class="right-sidebar" aria-label="Run details">
@@ -992,6 +994,9 @@ pre {
   color: var(--muted);
   padding: 18px 0;
 }
+.loading-state {
+  min-height: 160px;
+}
 .toast {
   background: #17201b;
   border-radius: 7px;
@@ -1518,7 +1523,30 @@ function renderQuestionCards({showResume}) {
   `;
 }
 
+function renderFirstLaunchState() {
+  const runtime = selectedRuntimeView();
+  const ready = selectedRuntimeReady();
+  const detail = !state.selectedRuntime
+    ? "Select a runtime to start the first governed workflow run."
+    : ready
+      ? `${state.selectedRuntime} is ready to start the workflow.`
+      : `${state.selectedRuntime} needs a passing readiness check before the first run.`;
+  return `
+    <section class="surface first-launch-state">
+      <div class="surface-title">
+        <span>First launch</span>
+        <span class="small-badge">no run yet</span>
+      </div>
+      <p>${escapeHtml(detail)}</p>
+      <button data-first-launch-run type="button" ${ready && runtime ? "" : "disabled"}>Run workflow</button>
+    </section>
+  `;
+}
+
 function renderOverview() {
+  if (!state.dashboard?.run?.run_id) {
+    return renderFirstLaunchState();
+  }
   const item = activeStageItem();
   const view = activeStageView();
   const unresolved = view?.questions?.unresolved_blocking_question_ids || [];
@@ -2505,6 +2533,10 @@ document.addEventListener("click", async (event) => {
       await handleNextAction();
       return;
     }
+    if (event.target.closest("[data-first-launch-run]")) {
+      await startWorkflow();
+      return;
+    }
     if (event.target.id === "submitInterventionButton") {
       await submitIntervention();
       return;
@@ -2536,6 +2568,7 @@ document.addEventListener("change", async (event) => {
     updateSubmitInterventionState();
     renderTopbar();
     renderSidebar();
+    if (state.activeTab === "overview") await renderCockpit();
   }
 });
 

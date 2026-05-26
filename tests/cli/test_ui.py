@@ -1326,6 +1326,8 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert favicon.status == HTTPStatus.NO_CONTENT
     html = page.body.decode("utf-8")
     assert "AIDD Operator Console" in html
+    assert "Loading operator workspace..." in html
+    assert 'class="empty-state loading-state"' in html
     assert 'id="runtimeSelect"' in html
     assert 'id="openWorkspaceButton"' in html
     assert 'id="stopServerButton"' in html
@@ -1704,6 +1706,12 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "function selectedRuntimeReady()" in script
     assert "function ensureRunnableRuntime()" in script
     assert "function scrollActiveStageIntoView()" in script
+    assert "function renderFirstLaunchState()" in script
+    assert "first-launch-state" in script
+    assert "Select a runtime to start the first governed workflow run." in script
+    assert "data-first-launch-run" in script
+    assert 'event.target.closest("[data-first-launch-run]")' in script
+    assert 'if (state.activeTab === "overview") await renderCockpit();' in script
     assert 'window.matchMedia("(max-width: 760px)").matches' in script
     assert 'rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`)' in script
     assert (
@@ -1785,6 +1793,7 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert ".truncation-notice" in css
     assert ".saved-answer" in css
     assert ".saved-answer-text" in css
+    assert ".loading-state" in css
     assert "--focus-ring:" in css
     assert "button:focus-visible" in css
     assert "outline: 3px solid var(--focus-ring)" in css
