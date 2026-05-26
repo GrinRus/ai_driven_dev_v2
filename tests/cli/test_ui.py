@@ -96,6 +96,19 @@ def _wait_job(service: OperatorUiService, job_id: str) -> dict[str, object]:
     raise AssertionError(f"job did not finish: {job_id}")
 
 
+def _wait_job_status(
+    service: OperatorUiService,
+    job_id: str,
+    expected_status: str,
+) -> dict[str, object]:
+    for _ in range(100):
+        payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+        if payload["status"] == expected_status:
+            return payload
+        time.sleep(0.01)
+    raise AssertionError(f"job did not reach {expected_status}: {job_id}")
+
+
 class _BodyHandler:
     def __init__(self, body: bytes, *, content_length: str | None = None) -> None:
         self.headers = {"Content-Length": content_length or str(len(body))}
@@ -357,6 +370,98 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+
+
+def test_ui_job_cancel_endpoint_marks_running_job_cancelling_then_cancelled(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        assert options.runtime_chunk_sink is not None
+        options.runtime_chunk_sink("stdout", "runtime-output-line\n")
+        started.set()
+        assert release.wait(timeout=2)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+    response = service.handle_post(
+        "/api/stage/run",
+        {"stage": "plan", "runtime": "codex", "run_id": "run-ui-cancel"},
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+    running_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+    assert running_payload["status"] == "running"
+    assert running_payload["cancel_state"] == "none"
+
+    cancel_payload = _payload(
+        service.handle_post(f"/api/jobs/{job_id}/cancel", {})
+    )
+
+    assert cancel_payload["status"] == "cancelling"
+    assert cancel_payload["cancel_state"] == "cancelling"
+    assert cancel_payload["previous_status"] == "running"
+    assert cancel_payload["already_finished"] is False
+    assert cancel_payload["cancel_requested"] is True
+    assert cancel_payload["exit_code"] is None
+
+    logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+    assert any(
+        chunk["stream"] == "stdout" and chunk["text"] == "runtime-output-line\n"
+        for chunk in logs_payload["chunks"]  # type: ignore[index]
+    )
+    assert any(
+        chunk["stream"] == "system" and "cancel requested" in str(chunk["text"])
+        for chunk in logs_payload["chunks"]  # type: ignore[index]
+    )
+
+    release.set()
+    cancelled_payload = _wait_job_status(service, job_id, "cancelled")
+    assert cancelled_payload["exit_code"] == 130
+    assert cancelled_payload["cancel_state"] == "cancelled"
+    assert cancelled_payload["cancel_requested"] is True
+    assert cancelled_payload["cancelled_at_utc"] is not None
+    assert cancelled_payload["result"] is None
+
+
+def test_ui_job_cancel_endpoint_reports_completed_job_as_already_finished(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        return WorkflowRunResult(
+            run_id="run-ui-already-finished",
+            executed_stage_count=1,
+            completed=True,
+            incomplete=(),
+        )
+
+    service = _service(workspace_root, workflow_runner=fake_workflow_runner)
+    response = service.handle_post(
+        "/api/workflow/run",
+        {"runtime": "codex", "from_stage": "idea", "to_stage": "plan"},
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    completed_payload = _wait_job(service, job_id)
+    assert completed_payload["status"] == "completed"
+
+    cancel_payload = _payload(
+        service.handle_post(f"/api/jobs/{job_id}/cancel", {})
+    )
+
+    assert cancel_payload["status"] == "completed"
+    assert cancel_payload["cancel_state"] == "already-finished"
+    assert cancel_payload["previous_status"] == "completed"
+    assert cancel_payload["already_finished"] is True
+    assert cancel_payload["cancel_requested"] is False
+    assert cancel_payload["result"]["run_id"] == "run-ui-already-finished"  # type: ignore[index]
 
 
 def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> None:

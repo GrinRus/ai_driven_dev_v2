@@ -90,6 +90,9 @@ StageInteractRunner = Callable[[StageInteractOptions], None]
 ReadinessProbeProvider = Callable[[AiddConfig], Mapping[str, RuntimeReadinessProbeReport]]
 LocalFolderOpener = Callable[[Path], None]
 
+_CANCELLED_JOB_EXIT_CODE = 130
+_TERMINAL_JOB_STATUSES = frozenset({"cancelled", "completed", "failed"})
+
 
 @dataclass(frozen=True, slots=True)
 class UiServerOptions:
@@ -113,6 +116,8 @@ class _UiRunJob:
     message: str = ""
     result: object | None = None
     attempt_path: str | None = None
+    cancel_requested_at_utc: str | None = None
+    cancelled_at_utc: str | None = None
     chunks: list[dict[str, object]] = field(default_factory=list)
 
 
@@ -140,13 +145,7 @@ class UiRunJobStore:
             return
         with self._lock:
             job = self._require_job(job_id)
-            job.chunks.append(
-                {
-                    "sequence": len(job.chunks) + 1,
-                    "stream": stream,
-                    "text": text,
-                }
-            )
+            self._append_chunk_locked(job, stream=stream, text=text)
             job.updated_at_utc = _utc_now()
 
     def complete(
@@ -159,6 +158,14 @@ class UiRunJobStore:
     ) -> None:
         with self._lock:
             job = self._require_job(job_id)
+            if job.status == "cancelling":
+                self._mark_cancelled_locked(
+                    job,
+                    message="cancelled after runtime job returned",
+                )
+                return
+            if job.status in _TERMINAL_JOB_STATUSES:
+                return
             job.status = "completed" if exit_code == 0 else "failed"
             job.exit_code = exit_code
             job.result = result
@@ -168,6 +175,14 @@ class UiRunJobStore:
     def fail(self, job_id: str, *, message: str, exit_code: int = 1) -> None:
         with self._lock:
             job = self._require_job(job_id)
+            if job.status == "cancelling":
+                self._mark_cancelled_locked(
+                    job,
+                    message="cancelled after runtime job failed",
+                )
+                return
+            if job.status in _TERMINAL_JOB_STATUSES:
+                return
             job.status = "failed"
             job.exit_code = exit_code
             job.message = message
@@ -183,6 +198,14 @@ class UiRunJobStore:
     ) -> None:
         with self._lock:
             job = self._require_job(job_id)
+            if job.status == "cancelling":
+                self._mark_cancelled_locked(
+                    job,
+                    message="cancelled before operator wait",
+                )
+                return
+            if job.status in _TERMINAL_JOB_STATUSES:
+                return
             job.status = "waiting-for-operator"
             job.exit_code = exit_code
             job.result = result
@@ -192,6 +215,8 @@ class UiRunJobStore:
     def mark_running(self, job_id: str, *, message: str = "running") -> None:
         with self._lock:
             job = self._require_job(job_id)
+            if job.status in {"cancelling", *_TERMINAL_JOB_STATUSES}:
+                return
             job.status = "running"
             job.exit_code = None
             job.result = None
@@ -204,21 +229,58 @@ class UiRunJobStore:
             job.attempt_path = attempt_path.as_posix()
             job.updated_at_utc = _utc_now()
 
+    def cancel(self, job_id: str) -> dict[str, object]:
+        with self._lock:
+            job = self._require_job(job_id)
+            previous_status = job.status
+            if previous_status in _TERMINAL_JOB_STATUSES:
+                payload = self._view_locked(job)
+                payload.update(
+                    {
+                        "already_finished": True,
+                        "cancel_state": "already-finished",
+                        "previous_status": previous_status,
+                    }
+                )
+                return payload
+
+            timestamp = _utc_now()
+            if job.cancel_requested_at_utc is None:
+                job.cancel_requested_at_utc = timestamp
+            if previous_status == "waiting-for-operator":
+                self._append_chunk_locked(
+                    job,
+                    stream="system",
+                    text="[ui] cancel requested while waiting for operator.\n",
+                )
+                self._mark_cancelled_locked(
+                    job,
+                    message="cancelled while waiting for operator",
+                )
+            else:
+                if previous_status != "cancelling":
+                    self._append_chunk_locked(
+                        job,
+                        stream="system",
+                        text="[ui] cancel requested.\n",
+                    )
+                job.status = "cancelling"
+                job.message = "cancel requested"
+                job.updated_at_utc = timestamp
+
+            payload = self._view_locked(job)
+            payload.update(
+                {
+                    "already_finished": False,
+                    "previous_status": previous_status,
+                }
+            )
+            return payload
+
     def view(self, job_id: str) -> dict[str, object]:
         with self._lock:
             job = self._require_job(job_id)
-            return {
-                "job_id": job.job_id,
-                "kind": job.kind,
-                "stage": job.stage,
-                "status": job.status,
-                "exit_code": job.exit_code,
-                "message": job.message,
-                "result": job.result,
-                "attempt_path": job.attempt_path,
-                "created_at_utc": job.created_at_utc,
-                "updated_at_utc": job.updated_at_utc,
-            }
+            return self._view_locked(job)
 
     def logs(self, job_id: str, *, cursor: int) -> dict[str, object]:
         with self._lock:
@@ -235,6 +297,50 @@ class UiRunJobStore:
             return self._jobs[job_id]
         except KeyError as exc:
             raise ValueError(f"Unknown UI job '{job_id}'.") from exc
+
+    def _append_chunk_locked(self, job: _UiRunJob, *, stream: str, text: str) -> None:
+        job.chunks.append(
+            {
+                "sequence": len(job.chunks) + 1,
+                "stream": stream,
+                "text": text,
+            }
+        )
+
+    def _mark_cancelled_locked(self, job: _UiRunJob, *, message: str) -> None:
+        timestamp = _utc_now()
+        if job.cancel_requested_at_utc is None:
+            job.cancel_requested_at_utc = timestamp
+        job.status = "cancelled"
+        job.exit_code = _CANCELLED_JOB_EXIT_CODE
+        job.result = None
+        job.message = message
+        job.cancelled_at_utc = timestamp
+        job.updated_at_utc = timestamp
+
+    def _view_locked(self, job: _UiRunJob) -> dict[str, object]:
+        if job.status == "cancelled":
+            cancel_state = "cancelled"
+        elif job.cancel_requested_at_utc is not None:
+            cancel_state = "cancelling"
+        else:
+            cancel_state = "none"
+        return {
+            "job_id": job.job_id,
+            "kind": job.kind,
+            "stage": job.stage,
+            "status": job.status,
+            "exit_code": job.exit_code,
+            "message": job.message,
+            "result": job.result,
+            "attempt_path": job.attempt_path,
+            "created_at_utc": job.created_at_utc,
+            "updated_at_utc": job.updated_at_utc,
+            "cancel_requested": job.cancel_requested_at_utc is not None,
+            "cancel_requested_at_utc": job.cancel_requested_at_utc,
+            "cancelled_at_utc": job.cancelled_at_utc,
+            "cancel_state": cancel_state,
+        }
 
 
 @dataclass(slots=True)
@@ -689,6 +795,8 @@ class OperatorUiService:
 
     def _handle_job_post(self, *, path: str, payload: dict[str, Any]) -> UiResponse:
         parts = path.strip("/").split("/")
+        if len(parts) == 4 and parts[:2] == ["api", "jobs"] and parts[3] == "cancel":
+            return _json_response(self._jobs.cancel(parts[2]))
         if (
             len(parts) == 6
             and parts[:2] == ["api", "jobs"]

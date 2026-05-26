@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W25-E1-S1-T1`
+- `W25-E1-S1-T2`
 
 ## Soon
 
-- `W25-E1-S1-T2`
 - `W25-E1-S1-T3`
 - `W25-E1-S2-T1`
 - `W25-E2-S1-T1`
@@ -126,3 +125,5 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-26` Wave 25 opened from the audit's non-security local-alpha findings.
   Operator UI/runtime hardening moved ahead of W24 manual live evidence; `W24-E1-S2-T1`
   and `W24-E1-S2-T2` remain parked, not removed.
+- `2026-05-26` Completed `W25-E1-S1-T1`; backlog advanced with `W25-E1-S1-T2`
+  promoted to `Next`.

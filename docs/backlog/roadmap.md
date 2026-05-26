@@ -5729,7 +5729,7 @@ Dependencies:
 
 Local tasks:
 
-- `W25-E1-S1-T1` (planned) Add a cancellable UI job registry and
+- `W25-E1-S1-T1` (done) Add a cancellable UI job registry and
   `POST /api/jobs/<job_id>/cancel` endpoint for active stage, workflow, and intervention
   jobs.
   - Scope: `src/aidd/cli/ui.py` job lifecycle only.
@@ -5746,6 +5746,19 @@ Local tasks:
   - Scope: packaged UI assets only.
   - Verification: UI service or static tests prove button visibility, disabled terminal
     states, and live log preservation.
+
+Evidence:
+
+- `src/aidd/cli/ui.py` now exposes `POST /api/jobs/<job_id>/cancel`, records cancel
+  request metadata in job views, returns deterministic already-finished payloads for
+  completed jobs, and preserves live job logs.
+- `tests/cli/test_ui.py` covers a running stage job moving through `running`,
+  `cancelling`, and `cancelled`, plus completed jobs returning an already-finished
+  cancel response.
+- `2026-05-26` Focused checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
 
 Exit evidence:
 
