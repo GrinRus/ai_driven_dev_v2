@@ -6059,7 +6059,7 @@ Dependencies:
 
 Local tasks:
 
-- `W25-E3-S1-T1` (planned) Add static DOM contract tests for packaged UI
+- `W25-E3-S1-T1` (done) Add static DOM contract tests for packaged UI
   accessibility-critical markup.
   - Scope: tests around `ui_assets.py`.
   - Verification: pytest-only checks pass with no Node or browser dependency.
@@ -6072,6 +6072,18 @@ Local tasks:
   saved-answer display, and truncation metadata.
   - Scope: `tests/cli/test_ui.py` and `tests/core/test_operator_frontend.py`.
   - Verification: the focused pytest suite passes.
+
+Evidence:
+
+- `tests/cli/test_ui_assets_contracts.py` now parses packaged `_INDEX_HTML` with the
+  standard-library HTML parser and asserts named landmarks, runtime labeling, tab/panel
+  semantics, and loading-state markup.
+- The same pytest-only contract file statically covers dynamic UI accessibility contracts
+  in `_OPERATOR_JS` and focus/screen-reader/truncation/saved-answer CSS hooks in
+  `_OPERATOR_CSS`.
+- `2026-05-26` Focused W25-E3-S1-T1 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py -q` and
+  `uv run --extra dev ruff check tests/cli/test_ui_assets_contracts.py`.
 
 Exit evidence:
 
