@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shlex
+import sys
 import threading
 import time
 from http import HTTPStatus
@@ -20,6 +22,7 @@ from aidd.cli.ui import (
     _read_json_body,
 )
 from aidd.core.run_store import (
+    RUN_RUNTIME_EXIT_METADATA_FILENAME,
     create_next_attempt_directory,
     create_run_manifest,
     persist_stage_status,
@@ -34,7 +37,13 @@ from aidd.core.runtime_operator import (
     append_operator_request,
 )
 from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
-from aidd.core.workflow_service import WorkflowRunRequest, WorkflowRunResult
+from aidd.core.stage_runner import prepare_stage_bundle
+from aidd.core.workflow_service import (
+    WorkflowRunRequest,
+    WorkflowRunResult,
+    WorkflowStageExecutionError,
+    WorkflowStageExecutionRequest,
+)
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeOperatorDecisionAction,
@@ -190,6 +199,69 @@ def _write_questions(workspace_root: Path) -> None:
     )
 
 
+def _materialize_plan_inputs(*, workspace_root: Path, work_item: str) -> None:
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage="plan",
+    )
+    for index, path in enumerate(bundle.expected_input_bundle, start=1):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"# Input {index}\n\nPrepared for UI cancellation.\n", encoding="utf-8")
+
+
+def _write_ui_runtime_config(*, tmp_path: Path, runtime_command: str) -> Path:
+    config_path = tmp_path / "aidd.ui.test.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[workspace]",
+                'root = ".aidd"',
+                "",
+                "[runtime.generic_cli]",
+                f"command = {json.dumps(runtime_command)}",
+                'mode = "adapter-flags"',
+                "",
+                "[repair]",
+                "max_attempts = 0",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_long_running_runtime_script(tmp_path: Path) -> Path:
+    script_path = tmp_path / "long_running_runtime.py"
+    script_path.write_text(
+        "\n".join(
+            (
+                "import os",
+                "import signal",
+                "import sys",
+                "import time",
+                "from pathlib import Path",
+                "root = Path(os.environ['AIDD_WORKSPACE_ROOT'])",
+                "root.mkdir(parents=True, exist_ok=True)",
+                "(root / 'long-runtime-started.txt').write_text('started\\n', encoding='utf-8')",
+                "def _stop(signum, frame):",
+                "    print('long-runtime-sigterm', flush=True)",
+                "    stopped = root / 'long-runtime-stopped.txt'",
+                "    stopped.write_text('sigterm\\n', encoding='utf-8')",
+                "    raise SystemExit(130)",
+                "signal.signal(signal.SIGTERM, _stop)",
+                "print('long-runtime-start', flush=True)",
+                "while True:",
+                "    time.sleep(0.05)",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return script_path
+
+
 def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
@@ -319,6 +391,73 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     assert "stage_executor" in captured
 
 
+def test_ui_workflow_stage_executor_passes_cancel_callback(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+    observed_cancel = threading.Event()
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        assert options.cancel_requested is not None
+        started.set()
+        assert release.wait(timeout=2)
+        if options.cancel_requested():
+            observed_cancel.set()
+        raise typer.Exit(1)
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        request = kwargs["request"]
+        assert isinstance(request, WorkflowRunRequest)
+        stage_executor = kwargs["stage_executor"]
+        assert callable(stage_executor)
+        try:
+            stage_executor(
+                WorkflowStageExecutionRequest(
+                    stage="plan",
+                    work_item=request.work_item,
+                    runtime_id=request.runtime_id,
+                    run_id="run-ui-workflow-cancel",
+                    workspace_root=request.workspace_root,
+                    config_path=request.config_path,
+                    log_follow=request.log_follow,
+                )
+            )
+        except WorkflowStageExecutionError as exc:
+            assert exc.exit_code == 1
+        return WorkflowRunResult(
+            run_id="run-ui-workflow-cancel",
+            executed_stage_count=1,
+            completed=False,
+            incomplete=(),
+            stopped_stage="plan",
+            exit_code=1,
+        )
+
+    service = _service(
+        workspace_root,
+        workflow_runner=fake_workflow_runner,
+        stage_runner=fake_stage_runner,
+    )
+
+    response = service.handle_post(
+        "/api/workflow/run",
+        {"runtime": "codex", "from_stage": "plan", "to_stage": "plan"},
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+    assert cancel_payload["status"] == "cancelling"
+    release.set()
+
+    cancelled_payload = _wait_job_status(service, job_id, "cancelled")
+    assert observed_cancel.wait(timeout=2)
+    assert cancelled_payload["cancel_state"] == "cancelled"
+
+
 def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     tmp_path: Path,
 ) -> None:
@@ -361,6 +500,8 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     assert options.runtime == "codex"
     assert options.run_id == "run-ui-flow"
     assert options.log_follow is True
+    assert options.cancel_requested is not None
+    assert options.cancel_requested() is False
     assert any(
         chunk["stream"] == "stdout" and chunk["text"] == "runtime-output-line\n"
         for chunk in logs_payload["chunks"]  # type: ignore[index]
@@ -378,12 +519,16 @@ def test_ui_job_cancel_endpoint_marks_running_job_cancelling_then_cancelled(
     workspace_root = tmp_path / ".aidd"
     started = threading.Event()
     release = threading.Event()
+    observed_cancel = threading.Event()
 
     def fake_stage_runner(options: StageRunOptions) -> None:
         assert options.runtime_chunk_sink is not None
         options.runtime_chunk_sink("stdout", "runtime-output-line\n")
         started.set()
         assert release.wait(timeout=2)
+        assert options.cancel_requested is not None
+        if options.cancel_requested():
+            observed_cancel.set()
 
     service = _service(workspace_root, stage_runner=fake_stage_runner)
     response = service.handle_post(
@@ -421,11 +566,86 @@ def test_ui_job_cancel_endpoint_marks_running_job_cancelling_then_cancelled(
 
     release.set()
     cancelled_payload = _wait_job_status(service, job_id, "cancelled")
+    assert observed_cancel.wait(timeout=2)
     assert cancelled_payload["exit_code"] == 130
     assert cancelled_payload["cancel_state"] == "cancelled"
     assert cancelled_payload["cancel_requested"] is True
     assert cancelled_payload["cancelled_at_utc"] is not None
     assert cancelled_payload["result"] is None
+
+
+def test_ui_cancel_terminates_generic_cli_runtime_and_records_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    run_id = "run-ui-runtime-cancel"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-UI")
+    runtime_script = _write_long_running_runtime_script(tmp_path)
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(runtime_script.as_posix())}"
+    )
+    config_path = _write_ui_runtime_config(
+        tmp_path=tmp_path,
+        runtime_command=runtime_command,
+    )
+    service = _service(workspace_root, config=config_path)
+
+    response = service.handle_post(
+        "/api/stage/run",
+        {
+            "stage": "plan",
+            "runtime": "generic-cli",
+            "run_id": run_id,
+            "log_follow": True,
+        },
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    for _ in range(100):
+        logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+        if any("long-runtime-start" in str(chunk["text"]) for chunk in logs_payload["chunks"]):  # type: ignore[index]
+            break
+        time.sleep(0.01)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("runtime did not start")
+
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+    assert cancel_payload["status"] == "cancelling"
+
+    cancelled_payload = _wait_job_status(service, job_id, "cancelled")
+    assert cancelled_payload["cancel_state"] == "cancelled"
+    assert cancelled_payload["exit_code"] == 130
+
+    attempt_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-UI"
+        / run_id
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+    )
+    runtime_exit = json.loads(
+        (attempt_path / RUN_RUNTIME_EXIT_METADATA_FILENAME).read_text(encoding="utf-8")
+    )
+    stage_metadata = json.loads(
+        (
+            workspace_root
+            / "reports"
+            / "runs"
+            / "WI-UI"
+            / run_id
+            / "stages"
+            / "plan"
+            / "stage-metadata.json"
+        )
+        .read_text(encoding="utf-8")
+    )
+    assert runtime_exit["exit_classification"] == "cancelled"
+    assert stage_metadata["status"] == "failed"
 
 
 def test_ui_job_cancel_endpoint_reports_completed_job_as_already_finished(
@@ -717,6 +937,8 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
     assert options.run_id == "run-ui-flow"
     assert options.request == "Add migration rollback risks"
     assert options.target_documents == ("workitems/WI-UI/stages/plan/plan.md",)
+    assert options.cancel_requested is not None
+    assert options.cancel_requested() is False
     assert any(
         chunk["stream"] == "stdout" and chunk["text"] == "intervention-output-line\n"
         for chunk in logs_payload["chunks"]  # type: ignore[index]
@@ -726,6 +948,49 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+
+
+def test_ui_stage_interact_cancel_callback_observes_cancel_request(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+    observed_cancel = threading.Event()
+
+    def fake_stage_interact_runner(options: StageInteractOptions) -> None:
+        assert options.cancel_requested is not None
+        started.set()
+        assert release.wait(timeout=2)
+        if options.cancel_requested():
+            observed_cancel.set()
+
+    service = _service(
+        workspace_root,
+        stage_interact_runner=fake_stage_interact_runner,
+    )
+
+    response = service.handle_post(
+        "/api/stage/interact",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+            "run_id": "run-ui-intervention-cancel",
+            "request": "Cancel this intervention",
+            "target_documents": [],
+        },
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+    assert cancel_payload["status"] == "cancelling"
+    release.set()
+
+    cancelled_payload = _wait_job_status(service, job_id, "cancelled")
+    assert observed_cancel.wait(timeout=2)
+    assert cancelled_payload["cancel_state"] == "cancelled"
 
 
 def test_ui_stage_run_endpoint_rejects_invalid_stage_and_runtime(tmp_path: Path) -> None:

@@ -83,6 +83,7 @@ class StageRunOptions:
     log_follow: bool
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
     runtime_operator_decision_provider: RuntimeOperatorDecisionProvider | None = None
+    cancel_requested: Callable[[], bool] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +99,7 @@ class StageInteractOptions:
     target_documents: tuple[str, ...] = ()
     log_follow: bool = True
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
+    cancel_requested: Callable[[], bool] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -344,6 +346,7 @@ def _execute_adapter_invocation(
         repair_context_markdown=invocation.repair_context_markdown,
         operator_request_path=invocation.operator_request_path,
         operator_request_markdown=invocation.operator_request_markdown,
+        cancel_requested=options.cancel_requested,
     )
 
     def _on_stdout(chunk: str) -> None:
@@ -736,6 +739,7 @@ def run_stage_interact_command(options: StageInteractOptions) -> None:
         config=options.config,
         log_follow=options.log_follow,
         runtime_chunk_sink=options.runtime_chunk_sink,
+        cancel_requested=options.cancel_requested,
     )
     _validate_stage_run_options(stage_run_options)
     request_text = _operator_request_text(options)

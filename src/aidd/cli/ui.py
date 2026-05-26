@@ -277,6 +277,11 @@ class UiRunJobStore:
             )
             return payload
 
+    def cancel_requested(self, job_id: str) -> bool:
+        with self._lock:
+            job = self._require_job(job_id)
+            return job.cancel_requested_at_utc is not None
+
     def view(self, job_id: str) -> dict[str, object]:
         with self._lock:
             job = self._require_job(job_id)
@@ -1005,6 +1010,7 @@ class OperatorUiService:
                         service=self,
                         job_id=job_id,
                     ),
+                    cancel_requested=lambda: self._jobs.cancel_requested(job_id),
                 )
             )
         except typer.Exit as exc:
@@ -1074,6 +1080,7 @@ class OperatorUiService:
                         stream=stream,
                         text=text,
                     ),
+                    cancel_requested=lambda: self._jobs.cancel_requested(job_id),
                 )
             )
         except typer.Exit as exc:
@@ -1182,6 +1189,7 @@ class OperatorUiService:
                             service=self,
                             job_id=job_id,
                         ),
+                        cancel_requested=lambda: self._jobs.cancel_requested(job_id),
                     )
                 )
             except typer.Exit as exc:

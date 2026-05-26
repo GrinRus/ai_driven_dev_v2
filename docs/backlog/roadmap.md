@@ -5735,7 +5735,7 @@ Local tasks:
   - Scope: `src/aidd/cli/ui.py` job lifecycle only.
   - Verification: `tests/cli/test_ui.py` proves active, cancelling, cancelled,
     completed, and already-finished job states.
-- `W25-E1-S1-T2` (planned) Propagate UI cancellation to the running stage execution so
+- `W25-E1-S1-T2` (done) Propagate UI cancellation to the running stage execution so
   subprocess-backed runtimes terminate and persist a cancelled outcome.
   - Scope: UI-to-stage execution path using existing adapter and process cancellation
     behavior.
@@ -5755,10 +5755,22 @@ Evidence:
 - `tests/cli/test_ui.py` covers a running stage job moving through `running`,
   `cancelling`, and `cancelled`, plus completed jobs returning an already-finished
   cancel response.
+- `src/aidd/cli/stage_run.py` and `src/aidd/adapters/runtime_execution.py` now carry
+  a `cancel_requested` callback from UI job state into stage runtime requests, and
+  `src/aidd/adapters/surface.py` passes it to the subprocess-backed `generic-cli`,
+  Claude Code, Codex, OpenCode, and Qwen runners.
+- `tests/cli/test_ui.py` covers cancel callback propagation for UI stage, workflow,
+  and intervention jobs, plus a long-running `generic-cli` fixture cancelled via
+  `POST /api/jobs/<job_id>/cancel` with `runtime-exit.json` recording
+  `exit_classification: cancelled` and stage metadata recording a stopped stage.
 - `2026-05-26` Focused checks passed:
   `uv run --extra dev pytest tests/cli/test_ui.py -q`,
   `uv run --extra dev ruff check src/aidd/cli/ui.py tests/cli/test_ui.py`, and
   `uv run --extra dev python -m mypy src`.
+- `2026-05-26` Focused W25-E1-S1-T2 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui.py src/aidd/cli/stage_run.py src/aidd/adapters/runtime_execution.py src/aidd/adapters/surface.py tests/cli/test_ui.py`,
+  and `uv run --extra dev python -m mypy src`.
 
 Exit evidence:
 

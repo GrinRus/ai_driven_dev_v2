@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeVar
@@ -39,6 +40,7 @@ class StageRuntimeRequest:
     repair_context_markdown: str | None = None
     operator_request_path: Path | None = None
     operator_request_markdown: str | None = None
+    cancel_requested: Callable[[], bool] | None = None
 
 
 @dataclass(frozen=True, slots=True)

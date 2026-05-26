@@ -420,6 +420,7 @@ def _execute_generic_cli(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
+        cancel_requested=request.cancel_requested,
     )
     persist_generic_cli_runtime_artifacts(attempt_path=attempt_path, run_result=run_result)
     return RuntimeAdapterExecutionResult(
@@ -476,6 +477,7 @@ def _execute_claude_code(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
+        cancel_requested=request.cancel_requested,
     )
     persist_claude_code_runtime_log(attempt_path=attempt_path, run_result=run_result)
     event_artifacts = persist_runtime_event_artifacts(
@@ -605,6 +607,7 @@ def _execute_codex(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
+        cancel_requested=request.cancel_requested,
     )
     persist_codex_runtime_log(attempt_path=attempt_path, run_result=run_result)
     event_artifacts = persist_runtime_event_artifacts(
@@ -675,6 +678,7 @@ def _execute_opencode(
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
         document_completion_paths=request.expected_output_documents,
+        cancel_requested=request.cancel_requested,
     )
     persist_opencode_runtime_log(attempt_path=attempt_path, run_result=run_result)
     event_artifacts = persist_runtime_event_artifacts(
@@ -802,6 +806,7 @@ def _execute_qwen(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
+        cancel_requested=request.cancel_requested,
     )
     persist_qwen_runtime_log(attempt_path=attempt_path, run_result=run_result)
     event_artifacts = persist_runtime_event_artifacts(
