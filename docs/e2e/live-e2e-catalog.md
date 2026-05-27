@@ -83,10 +83,13 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   on installed `aidd stage run`, CLI inspection, loopback UI/API checkpoints, and
   target-repository verification.
 - When `--run-id` is omitted, the evaluator creates a fresh evidence bundle and
-  does not resume a previously blocked run. Resume blocked evidence only by
-  passing that exact `--run-id`. If the generated run id already exists, the
-  evaluator appends `-r2`, `-r3`, and so on instead of appending to the old
+  does not resume prior state. Resume blocked or interrupted-resumable evidence
+  only by passing that exact `--run-id`. If the generated run id already exists,
+  the evaluator appends `-r2`, `-r3`, and so on instead of appending to the old
   bundle.
+- If the evaluator is interrupted, it records `interrupted-resumable` state,
+  attempts to terminate live runtime subprocesses, and requires explicit
+  `--run-id` before continuing.
 - Local runs may use optional environment variable overrides for custom wrapper commands:
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`

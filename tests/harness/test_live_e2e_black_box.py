@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -14,6 +17,11 @@ from aidd.harness.live_e2e_black_box import (
     _harness_environment,
     _implementation_verification_evidence_shape,
     run_black_box_live_e2e,
+)
+from aidd.harness.live_e2e_black_box_orchestration import (
+    _find_resume_state,
+    _live_interruption_handlers,
+    _run_black_box_command,
 )
 from aidd.harness.runner import HarnessCommandTranscript
 from aidd.harness.scenarios import load_scenario
@@ -1174,6 +1182,82 @@ def test_black_box_live_e2e_adds_suffix_when_generated_run_id_exists(
     assert second.run_id == "fixed-live-run-r2"
     assert first.status == "pass"
     assert second.status == "pass"
+
+
+def test_black_box_live_e2e_marks_stale_running_run_resumable(tmp_path: Path) -> None:
+    report_root = tmp_path / "reports"
+    state_path = report_root / "stale-run" / "flow-state.json"
+    state_path.parent.mkdir(parents=True)
+    state_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "status": "running",
+                "next_action": "run-stage",
+                "current_stage": "plan",
+                "completed_stages": ["idea", "research"],
+                "evaluator_pid": 99999999,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _find_resume_state(report_root=report_root, run_id="stale-run") == state_path
+
+    payload = json.loads(state_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "interrupted-resumable"
+    assert payload["interruption"]["reason"] == "stale-running-state"
+
+
+def test_black_box_command_timeout_kills_child_process_group(tmp_path: Path) -> None:
+    child_pid_path = tmp_path / "child.pid"
+    command = (
+        sys.executable,
+        "-c",
+        (
+            "import subprocess, time; "
+            f"path={str(child_pid_path)!r}; "
+            "child=subprocess.Popen(['sleep', '30']); "
+            "open(path, 'w', encoding='utf-8').write(str(child.pid)); "
+            "time.sleep(30)"
+        ),
+    )
+
+    result = _run_black_box_command(
+        command=command,
+        cwd=tmp_path,
+        environment=dict(os.environ),
+        timeout_seconds=0.5,
+    )
+
+    assert result.exit_code == 124
+    child_pid = int(child_pid_path.read_text(encoding="utf-8"))
+    for _ in range(20):
+        try:
+            os.kill(child_pid, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.05)
+    else:
+        pytest.fail(f"child process {child_pid} survived command group timeout cleanup")
+
+
+def test_live_interruption_handlers_are_noop_outside_main_thread() -> None:
+    errors: list[BaseException] = []
+
+    def _target() -> None:
+        try:
+            with _live_interruption_handlers():
+                pass
+        except BaseException as exc:  # pragma: no cover - surfaced by assertion below
+            errors.append(exc)
+
+    thread = threading.Thread(target=_target)
+    thread.start()
+    thread.join(timeout=2.0)
+
+    assert not thread.is_alive()
+    assert errors == []
 
 
 def test_black_box_live_e2e_fails_required_interview_without_blocked_resume(

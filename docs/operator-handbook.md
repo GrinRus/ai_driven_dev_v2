@@ -121,22 +121,16 @@ mode = "native"
 [runtime.codex]
 command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
-# Brokered live mode uses `codex app-server --listen stdio://` when the local
-# Codex probe confirms app-server approval schema support.
 # timeout_seconds = 900
 
 [runtime.opencode]
 command = "opencode run --format json --dangerously-skip-permissions"
 mode = "native"
-# Brokered live mode blocks before launch until `opencode serve` exposes
-# permission request/response endpoints in `/doc`.
 # timeout_seconds = 900
 
 [runtime.qwen]
 command = "qwen --approval-mode yolo --output-format stream-json"
 mode = "native"
-# Brokered live mode uses Qwen dual-file control with `--json-file` and
-# `--input-file` when the local Qwen probe confirms both flags.
 # timeout_seconds = 900
 
 [logging]

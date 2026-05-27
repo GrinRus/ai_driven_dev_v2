@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
+import signal
 import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -173,9 +176,11 @@ OPERATOR_QUALITY_DECISIONS = {
 }
 
 TERMINAL_STATUSES = {"pass", "fail", "infra-fail"}
+RESUMABLE_STATUSES = {"blocked", "interrupted-resumable"}
 TERMINAL_STAGE_METADATA_STATUSES = {"blocked", "failed", "succeeded"}
 PRESERVED_STATE_EXTRA_KEYS = (
     "error",
+    "interruption",
     "operator_action_request_json",
     "operator_action_request_markdown",
     "quality_error",
@@ -244,6 +249,21 @@ class FlowContext:
     config_path: Path | None
     installed_command: tuple[str, ...]
     started: float
+
+
+class LiveE2EInterrupted(Exception):
+    def __init__(
+        self,
+        message: str,
+        *,
+        signum: int | None = None,
+        command_result: BlackBoxCommandResult | None = None,
+        cleanup: dict[str, object] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.signum = signum
+        self.command_result = command_result
+        self.cleanup = cleanup or {}
 
 
 def _utc_now() -> str:
@@ -368,30 +388,79 @@ def _run_black_box_command(
 ) -> BlackBoxCommandResult:
     started = time.monotonic()
     timed_out = False
+    process: subprocess.Popen[str] | None = None
     try:
-        completed = subprocess.run(
+        process = subprocess.Popen(
             command,
             cwd=cwd,
             env=environment,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            check=False,
-            timeout=timeout_seconds,
+            start_new_session=True,
         )
-        exit_code = completed.returncode
-        stdout_text = completed.stdout
-        stderr_text = completed.stderr
+        stdout_text, stderr_text = process.communicate(timeout=timeout_seconds)
+        exit_code = process.returncode
     except subprocess.TimeoutExpired as exc:
         timed_out = True
         exit_code = 124
         stdout_text = _timeout_output_to_text(exc.stdout)
         stderr_text = _timeout_output_to_text(exc.stderr)
+        cleanup = _terminate_process_group(process)
+        if cleanup["stdout_text"]:
+            stdout_text = str(cleanup["stdout_text"])
+        if cleanup["stderr_text"]:
+            stderr_text = str(cleanup["stderr_text"])
         timeout_label = (
             f"{timeout_seconds:.3f}s" if timeout_seconds is not None else "configured timeout"
         )
         stderr_text = (
             f"{stderr_text.rstrip()}\nCommand timed out after {timeout_label}.\n"
         ).lstrip()
+    except LiveE2EInterrupted as exc:
+        cleanup = _terminate_process_group(process)
+        duration_seconds = time.monotonic() - started
+        stdout_text = str(cleanup.get("stdout_text") or "")
+        stderr_text = str(cleanup.get("stderr_text") or "")
+        transcript = HarnessCommandTranscript(
+            command=_command_text(command),
+            exit_code=130,
+            stdout_text=stdout_text,
+            stderr_text=stderr_text,
+            duration_seconds=duration_seconds,
+            timed_out=False,
+            timeout_seconds=timeout_seconds,
+        )
+        exc.command_result = BlackBoxCommandResult(command=command, transcript=transcript)
+        exc.cleanup = {
+            "command": list(command),
+            "process_exit_code": cleanup.get("return_code"),
+            "terminated_process_group": cleanup.get("terminated_process_group"),
+            "signal": exc.signum,
+        }
+        raise
+    except KeyboardInterrupt as exc:
+        cleanup = _terminate_process_group(process)
+        duration_seconds = time.monotonic() - started
+        transcript = HarnessCommandTranscript(
+            command=_command_text(command),
+            exit_code=130,
+            stdout_text=str(cleanup.get("stdout_text") or ""),
+            stderr_text=str(cleanup.get("stderr_text") or ""),
+            duration_seconds=duration_seconds,
+            timed_out=False,
+            timeout_seconds=timeout_seconds,
+        )
+        raise LiveE2EInterrupted(
+            "Black-box live E2E interrupted by operator.",
+            command_result=BlackBoxCommandResult(command=command, transcript=transcript),
+            cleanup={
+                "command": list(command),
+                "process_exit_code": cleanup.get("return_code"),
+                "terminated_process_group": cleanup.get("terminated_process_group"),
+                "signal": None,
+            },
+        ) from exc
     except OSError as exc:
         exit_code = 127
         stdout_text = ""
@@ -409,15 +478,53 @@ def _run_black_box_command(
     return BlackBoxCommandResult(command=command, transcript=transcript)
 
 
-def _terminate_process(process: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+def _terminate_process_group(
+    process: subprocess.Popen[str] | None,
+) -> dict[str, object]:
+    if process is None:
+        return {
+            "return_code": None,
+            "stdout_text": "",
+            "stderr_text": "",
+            "terminated_process_group": False,
+        }
+    terminated_process_group = False
     if process.poll() is None:
-        process.terminate()
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+            terminated_process_group = True
+        except ProcessLookupError:
+            pass
+        except OSError:
+            process.terminate()
     try:
         stdout_text, stderr_text = process.communicate(timeout=2.0)
     except subprocess.TimeoutExpired:
-        process.kill()
+        if process.poll() is None:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+                terminated_process_group = True
+            except ProcessLookupError:
+                pass
+            except OSError:
+                process.kill()
         stdout_text, stderr_text = process.communicate(timeout=2.0)
-    return stdout_text, stderr_text, process.returncode
+    return {
+        "return_code": process.returncode,
+        "stdout_text": stdout_text,
+        "stderr_text": stderr_text,
+        "terminated_process_group": terminated_process_group,
+    }
+
+
+def _terminate_process(process: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+    cleanup = _terminate_process_group(process)
+    return_code = cleanup.get("return_code")
+    return (
+        str(cleanup.get("stdout_text") or ""),
+        str(cleanup.get("stderr_text") or ""),
+        return_code if isinstance(return_code, int) else None,
+    )
 
 
 def _timeout_output_to_text(value: str | bytes | None) -> str:
@@ -504,6 +611,7 @@ def _flow_state_payload(
         "next_action": next_action,
         "current_stage": current_stage,
         "completed_stages": list(completed_stages),
+        "evaluator_pid": os.getpid(),
         "bundle_root": ctx.bundle_root.as_posix(),
         "work_root": ctx.workspace_root.as_posix(),
         "run_work_root": (ctx.workspace_root / ctx.run_id).as_posix(),
@@ -743,6 +851,37 @@ def _write_flow_report(ctx: FlowContext) -> Path:
     return report_path
 
 
+def _pid_is_alive(pid: object) -> bool:
+    if not isinstance(pid, int) or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _mark_stale_running_state_interrupted(state_path: Path) -> dict[str, Any]:
+    payload = _read_json_object(state_path)
+    if payload.get("status") != "running" or _pid_is_alive(payload.get("evaluator_pid")):
+        return payload
+    interruption = {
+        "created_at_utc": _utc_now(),
+        "reason": "stale-running-state",
+        "previous_status": "running",
+        "previous_evaluator_pid": payload.get("evaluator_pid"),
+        "cleanup": "no active evaluator process was found",
+    }
+    payload["status"] = "interrupted-resumable"
+    payload["next_action"] = "run-stage"
+    payload["updated_at_utc"] = interruption["created_at_utc"]
+    payload["interruption"] = interruption
+    _write_json(state_path, payload)
+    return payload
+
+
 def _find_resume_state(
     *,
     report_root: Path,
@@ -759,11 +898,12 @@ def _find_resume_state(
             "Explicit --run-id can only resume or refresh an existing black-box live "
             f"E2E run. State file not found: {candidate.as_posix()}."
         )
-    status = _read_json_object(candidate).get("status")
-    if status not in {"blocked", *TERMINAL_STATUSES}:
+    state = _mark_stale_running_state_interrupted(candidate)
+    status = state.get("status")
+    if status not in {*RESUMABLE_STATUSES, *TERMINAL_STATUSES}:
         raise ValueError(
-            "Explicit --run-id can only resume a blocked run or refresh terminal "
-            "operator-quality analysis. "
+            "Explicit --run-id can only resume a blocked or interrupted-resumable "
+            "run, or refresh terminal operator-quality analysis. "
             f"Run '{normalized_run_id}' has status `{status}`."
         )
     return candidate
@@ -1864,6 +2004,7 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            start_new_session=True,
         )
     except OSError as exc:
         duration_seconds = time.monotonic() - started
@@ -2702,7 +2843,7 @@ def _write_runtime_approval_analysis_from_attempt_ledgers(ctx: FlowContext) -> P
                 f"- Scenario: `{ctx.scenario.scenario_id}`",
                 f"- Runtime: `{ctx.runtime_id}`",
                 f"- Run ID: `{ctx.run_id}`",
-                "- Brokered live approvals: `not-supported-in-public-repo-live-e2e`",
+                "- Runtime approvals: `operator-ui-local-project-lane-only`",
                 "",
                 *sections,
             )
@@ -3507,7 +3648,7 @@ def _write_runtime_approval_analysis_placeholder(ctx: FlowContext) -> None:
                 f"- Scenario: `{ctx.scenario.scenario_id}`",
                 f"- Runtime: `{ctx.runtime_id}`",
                 f"- Run ID: `{ctx.run_id}`",
-                "- Brokered live approvals: `not-supported-in-public-repo-live-e2e`",
+                "- Runtime approvals: `operator-ui-local-project-lane-only`",
                 "",
                 "- No runtime approval decisions were recorded.",
                 "",
@@ -4099,6 +4240,70 @@ def _counting_status(
     return "not-counted"
 
 
+@contextlib.contextmanager
+def _live_interruption_handlers() -> Any:
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    previous_handlers: dict[int, Any] = {}
+
+    def _handler(signum: int, _frame: object) -> None:
+        raise LiveE2EInterrupted(
+            f"Black-box live E2E interrupted by signal {signum}.",
+            signum=signum,
+        )
+
+    for signum in (int(signal.SIGINT), int(signal.SIGTERM)):
+        previous_handlers[signum] = signal.getsignal(signum)
+        signal.signal(signum, _handler)
+    try:
+        yield
+    finally:
+        for signum, previous_handler in previous_handlers.items():
+            signal.signal(signum, previous_handler)
+
+
+def _record_interruption(
+    *,
+    ctx: FlowContext,
+    interruption: LiveE2EInterrupted,
+) -> None:
+    command_results = (
+        (interruption.command_result,)
+        if interruption.command_result is not None
+        else tuple()
+    )
+    details: dict[str, object] = {
+        "interruption": {
+            "message": str(interruption),
+            "signal": interruption.signum,
+            "cleanup": interruption.cleanup,
+        }
+    }
+    _record_step(
+        ctx=ctx,
+        action="stop",
+        classification="infra-fail",
+        decision=(
+            "Live evaluator was interrupted; runtime subprocesses were cleaned up "
+            "and the run can be resumed explicitly."
+        ),
+        plan="Convert interrupted live execution into explicit resumable evidence.",
+        stage=_first_incomplete_stage(ctx),
+        command_results=command_results,
+        details=details,
+    )
+    _persist_state(
+        ctx=ctx,
+        status="interrupted-resumable",
+        next_action="run-stage",
+        current_stage=_first_incomplete_stage(ctx),
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra=details,
+    )
+
+
 def _effective_quality_gate(
     *,
     machine_gate: str,
@@ -4525,6 +4730,15 @@ def run_black_box_live_e2e(
         report_root=resolved_report_root,
         run_id=run_id,
     )
+    try:
+        with _live_interruption_handlers():
+            return _run_black_box_live_e2e_with_context(ctx)
+    except LiveE2EInterrupted as exc:
+        _record_interruption(ctx=ctx, interruption=exc)
+        raise
+
+
+def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     status = _state_status(ctx.bundle_root)
     if status in TERMINAL_STATUSES:
         terminal_status = cast(VerdictStatus, status)
@@ -4708,6 +4922,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ValueError as exc:
         print(f"black-box live e2e: {exc}", file=sys.stderr)
         return 2
+    except LiveE2EInterrupted as exc:
+        print(f"black-box live e2e interrupted: {exc}", file=sys.stderr)
+        return 130
     except Exception as exc:
         print(f"black-box live e2e failed: {exc}", file=sys.stderr)
         return 1
