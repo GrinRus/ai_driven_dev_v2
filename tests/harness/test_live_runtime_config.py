@@ -224,7 +224,7 @@ def test_write_live_runtime_config_records_env_override_as_adapter_flags(
     assert 'mode = "adapter-flags"' in config_text
 
 
-def test_write_live_runtime_config_preserves_non_brokered_defaults(tmp_path: Path) -> None:
+def test_write_live_runtime_config_preserves_real_runtime_defaults(tmp_path: Path) -> None:
     config_path = write_live_runtime_config(
         working_copy_path=tmp_path,
         runtime_id="codex",

@@ -267,6 +267,11 @@ Expected live artifacts include:
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
+- `ui-ux-checkpoints.json`
+- `ui-ux-checkpoints.md`
+- `acceptance-coverage.json`
+- `acceptance-coverage.md`
+- `operator-quality-analysis-validation.json`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
 - `feature-selection.json`
@@ -283,8 +288,9 @@ Expected live artifacts include:
 - `answer-analysis.md` when the run answered blocking questions
 
 A live run is only "clean" when execution evidence exists, verification output is
-present, the machine `quality_gate` is `pass`, and the bundle includes
-`quality-report.md`, `quality-transcript.json`, and an operator-authored
+present, the machine `quality_gate` is `pass`, acceptance coverage is complete,
+the UI/UX gate is not failed, and the bundle includes `quality-report.md`,
+`quality-transcript.json`, and a valid operator-authored
 `operator-quality-analysis.md` with decision `counted-clean`.
 
 ## Iteration loop contract

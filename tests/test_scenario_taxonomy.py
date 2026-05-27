@@ -134,6 +134,7 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
     assert sorted(claude_live_targets) == [
         "AIDD-LIVE-005",
         "AIDD-LIVE-007",
+        "AIDD-LIVE-009",
     ], "Claude Code live rollout must include smoke plus planned medium coverage."
 
 

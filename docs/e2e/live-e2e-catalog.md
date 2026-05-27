@@ -122,6 +122,7 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
 
 - `AIDD-LIVE-005` - authored header-only CSV bugfix task
 - `AIDD-LIVE-006` - authored yielded rows feature with interview
+- `AIDD-LIVE-009` - less scripted CSV import resilience boundary task
 
 ### `honojs/hono`
 
@@ -148,13 +149,16 @@ For live scenarios in this wave:
   config extends long-running `research`, `plan`, `review-spec`, `tasklist`,
   `implement`, `review`, and `qa` stage attempts;
 - `generic-cli` remains a deterministic baseline provider and is not a maintained live provider in this wave.
+- Public-repository live E2E now records UI/UX evidence artifacts, but brokered
+  approval proof remains in the operator UI/local-project lane rather than this
+  public-repository lane.
 
 Representative matrix coverage for the live lane:
 
 | Scenario class | Feature size | Maintained provider | Representative scenarios |
 | --- | --- | --- | --- |
 | `live-full-flow` | `tiny` | `codex` | `AIDD-LIVE-004` |
-| `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005` |
+| `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005`, `AIDD-LIVE-009` |
 | `live-full-flow` | `medium` | `codex`, `claude-code` planned | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
 | `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006` |
 | `live-full-flow-interview` | `xlarge` | `opencode` | `AIDD-LIVE-008` |
@@ -222,6 +226,11 @@ Every live eval bundle must aim to contain:
 - `teardown-transcript.json`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
+- `acceptance-coverage.json`
+- `acceptance-coverage.md`
+- `operator-quality-analysis-validation.json`
+- `ui-ux-checkpoints.json`
+- `ui-ux-checkpoints.md`
 
 For counted manual clean-pass decisions, the eval bundle must also include
 operator-authored evidence:

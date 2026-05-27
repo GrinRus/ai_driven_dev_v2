@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -150,13 +151,26 @@ OPERATOR_REQUEST_MARKDOWN_FILENAME = "operator-action-request.md"
 ANSWER_ANALYSIS_FILENAME = "answer-analysis.md"
 RUNTIME_APPROVAL_ANALYSIS_FILENAME = "runtime-approval-analysis.md"
 OPERATOR_QUALITY_ANALYSIS_FILENAME = "operator-quality-analysis.md"
+OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME = "operator-quality-analysis-validation.json"
+ACCEPTANCE_COVERAGE_JSON_FILENAME = "acceptance-coverage.json"
+ACCEPTANCE_COVERAGE_MARKDOWN_FILENAME = "acceptance-coverage.md"
 FRONTEND_CHECKPOINTS_JSON_FILENAME = "frontend-checkpoints.json"
 FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME = "frontend-checkpoints.md"
+UI_UX_CHECKPOINTS_JSON_FILENAME = "ui-ux-checkpoints.json"
+UI_UX_CHECKPOINTS_MARKDOWN_FILENAME = "ui-ux-checkpoints.md"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 SUMMARY_REPORT_FILENAME = "summary.md"
 STAGE_AUDITS_DIRNAME = "stage-audits"
 FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
 STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
+OPERATOR_QUALITY_DECISIONS = {
+    "counted-clean",
+    "not-counted",
+    "blocked/infra",
+    "blocked/provider",
+    "blocked/model-quality",
+    "blocked/product-defect",
+}
 
 TERMINAL_STATUSES = {"pass", "fail", "infra-fail"}
 TERMINAL_STAGE_METADATA_STATUSES = {"blocked", "failed", "succeeded"}
@@ -742,13 +756,14 @@ def _find_resume_state(
     candidate = report_root / normalized_run_id / FLOW_STATE_FILENAME
     if not candidate.exists():
         raise ValueError(
-            "Explicit --run-id can only resume an existing blocked black-box live E2E "
-            f"run. State file not found: {candidate.as_posix()}."
+            "Explicit --run-id can only resume or refresh an existing black-box live "
+            f"E2E run. State file not found: {candidate.as_posix()}."
         )
     status = _read_json_object(candidate).get("status")
-    if status != "blocked":
+    if status not in {"blocked", *TERMINAL_STATUSES}:
         raise ValueError(
-            "Explicit --run-id can only resume a blocked black-box live E2E run. "
+            "Explicit --run-id can only resume a blocked run or refresh terminal "
+            "operator-quality analysis. "
             f"Run '{normalized_run_id}' has status `{status}`."
         )
     return candidate
@@ -1693,6 +1708,138 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
     path = ctx.bundle_root / FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     return path
+
+
+def _ui_ux_flags_for_checkpoint(checkpoint: dict[str, object]) -> dict[str, bool]:
+    probes_raw = checkpoint.get("probes")
+    probes = (
+        [probe for probe in probes_raw if isinstance(probe, dict)]
+        if isinstance(probes_raw, list)
+        else []
+    )
+    by_name = {str(probe.get("name")): probe for probe in probes}
+    page_body = str(by_name.get("page", {}).get("body_preview") or "")
+
+    def _probe_ok(name: str) -> bool:
+        probe = by_name.get(name)
+        return (
+            isinstance(probe, dict)
+            and probe.get("ok") is True
+            and probe.get("semantic_ok") is True
+        )
+
+    return {
+        "current_run_visible": _probe_ok("run-api") or "run" in page_body.lower(),
+        "current_work_item_visible": _probe_ok("run-api"),
+        "stage_status_visible": _probe_ok("stage-api"),
+        "log_presence_visible": _probe_ok("logs-api"),
+        "artifacts_visible": _probe_ok("artifacts-api"),
+        "question_state_visible": _probe_ok("questions-api"),
+        "next_action_or_blocked_state_visible": _probe_ok("stage-api")
+        or "blocked" in page_body.lower()
+        or "next" in page_body.lower(),
+    }
+
+
+def _ui_ux_gate_from_checkpoints(checkpoints: list[dict[str, object]]) -> str:
+    if not checkpoints:
+        return "skipped"
+    if any(checkpoint.get("classification") == "fail" for checkpoint in checkpoints):
+        return "fail"
+    flags = [
+        _ui_ux_flags_for_checkpoint(checkpoint)
+        for checkpoint in checkpoints
+        if checkpoint.get("classification") != "skipped"
+    ]
+    if not flags:
+        return "skipped"
+    if all(all(value for value in item.values()) for item in flags):
+        return "pass"
+    return "warn"
+
+
+def _write_ui_ux_checkpoint_artifacts(ctx: FlowContext) -> tuple[Path, Path, dict[str, object]]:
+    frontend_payload = _read_frontend_checkpoint_payload(ctx)
+    checkpoints_raw = frontend_payload.get("checkpoints")
+    checkpoints = [
+        checkpoint for checkpoint in checkpoints_raw if isinstance(checkpoint, dict)
+    ] if isinstance(checkpoints_raw, list) else []
+    ui_checkpoints: list[dict[str, object]] = []
+    for checkpoint in checkpoints:
+        probes_raw = checkpoint.get("probes")
+        probes = [
+            {
+                "name": str(probe.get("name", "")),
+                "path": str(probe.get("path", "")),
+                "status": probe.get("status"),
+                "ok": probe.get("ok") is True,
+                "semantic_ok": probe.get("semantic_ok") is True,
+                "body_preview": str(probe.get("body_preview") or "")[:1000],
+                "json_snapshot": probe.get("json_payload") if isinstance(probe, dict) else None,
+            }
+            for probe in probes_raw
+            if isinstance(probe, dict)
+        ] if isinstance(probes_raw, list) else []
+        flags = _ui_ux_flags_for_checkpoint(checkpoint)
+        ui_checkpoints.append(
+            {
+                "stage": checkpoint.get("stage"),
+                "classification": checkpoint.get("classification"),
+                "base_url": checkpoint.get("base_url"),
+                "failure_reason": checkpoint.get("failure_reason"),
+                "semantic_ux_flags": flags,
+                "screenshot": {
+                    "status": "skipped",
+                    "reason": (
+                        "browser screenshot capture is optional and unavailable "
+                        "in this evaluator path"
+                    ),
+                },
+                "probes": probes,
+            }
+        )
+    gate = _ui_ux_gate_from_checkpoints(checkpoints)
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "run_id": ctx.run_id,
+        "runtime_id": ctx.runtime_id,
+        "scenario_id": ctx.scenario.scenario_id,
+        "ui_ux_gate": gate,
+        "screenshot_capture": "skipped",
+        "checkpoints": ui_checkpoints,
+    }
+    json_path = _write_json(ctx.bundle_root / UI_UX_CHECKPOINTS_JSON_FILENAME, payload)
+    lines = [
+        "# UI/UX Checkpoints",
+        "",
+        f"- UI/UX gate: `{gate}`",
+        "- Screenshot capture: `skipped`",
+        "",
+    ]
+    if not ui_checkpoints:
+        lines.append("- No UI/UX checkpoints were recorded.")
+    for checkpoint in ui_checkpoints:
+        lines.extend(
+            (
+                f"## {checkpoint.get('stage', 'unknown')}",
+                "",
+                f"- Classification: `{checkpoint.get('classification', 'unknown')}`",
+                f"- Failure reason: `{checkpoint.get('failure_reason') or 'none'}`",
+                "",
+                "### Semantic UX Flags",
+                "",
+            )
+        )
+        markdown_flags = checkpoint.get("semantic_ux_flags")
+        if isinstance(markdown_flags, dict):
+            lines.extend(
+                f"- {key}: `{value}`" for key, value in sorted(markdown_flags.items())
+            )
+        lines.append("")
+    markdown_path = ctx.bundle_root / UI_UX_CHECKPOINTS_MARKDOWN_FILENAME
+    markdown_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    return json_path, markdown_path, payload
 
 
 def _append_frontend_checkpoint(
@@ -2956,6 +3103,45 @@ def _run_quality(ctx: FlowContext) -> tuple[HarnessQualityResult | None, BaseExc
     return result, None
 
 
+def _quality_result_from_existing_transcript(ctx: FlowContext) -> HarnessQualityResult | None:
+    path = ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME
+    if not path.exists():
+        return None
+    try:
+        payload = _read_json_object(path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    commands_raw = payload.get("commands")
+    if not isinstance(commands_raw, list) or not commands_raw:
+        return None
+    transcripts: list[HarnessCommandTranscript] = []
+    for item in commands_raw:
+        if not isinstance(item, dict):
+            continue
+        transcripts.append(
+            HarnessCommandTranscript(
+                command=str(item.get("command") or ""),
+                exit_code=int(item.get("exit_code") or 0),
+                stdout_text=str(item.get("stdout_text") or ""),
+                stderr_text=str(item.get("stderr_text") or ""),
+                duration_seconds=float(item.get("duration_seconds") or 0.0),
+                timed_out=item.get("timed_out") is True,
+                timeout_seconds=(
+                    float(item["timeout_seconds"])
+                    if isinstance(item.get("timeout_seconds"), int | float)
+                    else None
+                ),
+            )
+        )
+    if not transcripts or any(transcript.exit_code != 0 for transcript in transcripts):
+        return None
+    return HarnessQualityResult(
+        executed_commands=tuple(transcript.command for transcript in transcripts),
+        command_transcripts=tuple(transcripts),
+        duration_seconds=_transcript_duration(tuple(transcripts)),
+    )
+
+
 def _run_teardown(ctx: FlowContext) -> tuple[HarnessTeardownResult | None, BaseException | None]:
     if not ctx.teardown_commands:
         _write_step_transcript(
@@ -3365,6 +3551,228 @@ def _stage_audit_payloads(ctx: FlowContext) -> list[dict[str, object]]:
     return payloads
 
 
+def _criterion_tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9][a-z0-9_-]{2,}", text.lower())
+        if token
+        not in {
+            "the",
+            "and",
+            "or",
+            "with",
+            "without",
+            "that",
+            "this",
+            "must",
+            "should",
+            "remains",
+            "remain",
+        }
+    }
+
+
+def _line_matches_criterion(line: str, criterion: str) -> bool:
+    criterion_tokens = _criterion_tokens(criterion)
+    if not criterion_tokens:
+        return False
+    line_tokens = _criterion_tokens(line)
+    if not line_tokens:
+        return False
+    overlap = criterion_tokens & line_tokens
+    required = 1 if len(criterion_tokens) <= 2 else min(3, len(criterion_tokens))
+    return len(overlap) >= required
+
+
+def _evidence_refs_for_source(
+    *,
+    source: str,
+    path: Path,
+    text: str,
+    criterion: str,
+) -> list[dict[str, object]]:
+    refs: list[dict[str, object]] = []
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or not _line_matches_criterion(line, criterion):
+            continue
+        refs.append(
+            {
+                "source": source,
+                "path": path.as_posix(),
+                "line": line_number,
+                "snippet": line[:240],
+            }
+        )
+        if len(refs) >= 3:
+            break
+    return refs
+
+
+def _acceptance_evidence_sources(ctx: FlowContext) -> tuple[tuple[str, Path, str], ...]:
+    quality_workspace_root = (
+        ctx.bundle_root
+        if ctx.prepared_working_copy is None
+        else ctx.prepared_working_copy.working_copy_path / ".aidd"
+    )
+    sources: list[tuple[str, Path, str]] = []
+    for source, stage, filename in (
+        ("implementation-report", "implement", "implementation-report.md"),
+        ("review-report", "review", "review-report.md"),
+        ("qa-report", "qa", "qa-report.md"),
+    ):
+        path = workspace_stage_output_root(
+            root=quality_workspace_root,
+            work_item=ctx.work_item,
+            stage=stage,
+        ) / filename
+        sources.append((source, path, _read_text_if_exists(path)))
+    verify_path = ctx.bundle_root / VERIFY_TRANSCRIPT_FILENAME
+    sources.append(("verify-transcript", verify_path, _read_text_if_exists(verify_path)))
+    audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
+    audit_text = "\n".join(
+        path.read_text(encoding="utf-8", errors="replace")
+        for path in sorted(audit_root.glob("*.json"))
+        if path.is_file()
+    ) if audit_root.exists() else ""
+    sources.append(("stage-audit", audit_root, audit_text))
+    return tuple(sources)
+
+
+def _acceptance_ref_confirms(ref: dict[str, object], source_text: str) -> bool:
+    source = ref.get("source")
+    if source in {"verify-transcript", "review-report", "qa-report"}:
+        return True
+    if source != "implementation-report":
+        return False
+    snippet = str(ref.get("snippet") or "").lower()
+    combined = f"{snippet}\n{source_text.lower()}"
+    return (
+        "result:" in combined
+        and ("command:" in combined or "evidence:" in combined or "not run" in combined)
+    )
+
+
+def _build_acceptance_coverage(ctx: FlowContext) -> dict[str, object]:
+    selected_task = _selected_task_for_context(ctx)
+    criteria = tuple() if selected_task is None else selected_task.acceptance_criteria
+    source_entries = _acceptance_evidence_sources(ctx)
+    criterion_payloads: list[dict[str, object]] = []
+    for index, criterion in enumerate(criteria, start=1):
+        refs: list[dict[str, object]] = []
+        source_text_by_name: dict[str, str] = {}
+        for source, path, text in source_entries:
+            source_text_by_name[source] = text
+            refs.extend(
+                _evidence_refs_for_source(
+                    source=source,
+                    path=path,
+                    text=text,
+                    criterion=criterion,
+                )
+            )
+        evidence_sources = sorted({str(ref["source"]) for ref in refs})
+        confirmed = any(
+            _acceptance_ref_confirms(ref, source_text_by_name.get(str(ref["source"]), ""))
+            for ref in refs
+        )
+        status = "confirmed" if confirmed else "claimed-only" if refs else "missing"
+        criterion_payloads.append(
+            {
+                "criterion_id": f"AC-{index}",
+                "text": criterion,
+                "status": status,
+                "evidence_sources": evidence_sources,
+                "evidence_refs": refs,
+            }
+        )
+    if not criterion_payloads:
+        coverage_status = "missing"
+    elif all(item["status"] == "confirmed" for item in criterion_payloads):
+        coverage_status = "complete"
+    elif any(item["status"] == "confirmed" for item in criterion_payloads):
+        coverage_status = "partial"
+    elif any(item["status"] == "claimed-only" for item in criterion_payloads):
+        coverage_status = "claimed-only"
+    else:
+        coverage_status = "missing"
+    return {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "run_id": ctx.run_id,
+        "runtime_id": ctx.runtime_id,
+        "scenario_id": ctx.scenario.scenario_id,
+        "work_item": ctx.work_item,
+        "acceptance_coverage_status": coverage_status,
+        "criteria": criterion_payloads,
+    }
+
+
+def _write_acceptance_coverage_artifacts(ctx: FlowContext) -> tuple[Path, Path, dict[str, object]]:
+    payload = _build_acceptance_coverage(ctx)
+    json_path = _write_json(ctx.bundle_root / ACCEPTANCE_COVERAGE_JSON_FILENAME, payload)
+    lines = [
+        "# Acceptance Coverage",
+        "",
+        f"- Status: `{payload['acceptance_coverage_status']}`",
+        "",
+    ]
+    criteria = cast(list[dict[str, object]], payload["criteria"])
+    if not criteria:
+        lines.append("- No acceptance criteria were recorded.")
+    for item in criteria:
+        lines.extend(
+            (
+                f"## {item['criterion_id']}",
+                "",
+                f"- Status: `{item['status']}`",
+                f"- Text: {item['text']}",
+                "- Evidence sources: "
+                + (
+                    "`none`"
+                    if not item["evidence_sources"]
+                    else ", ".join(
+                        f"`{source}`"
+                        for source in cast(list[str], item["evidence_sources"])
+                    )
+                ),
+                "",
+            )
+        )
+        refs = cast(list[dict[str, object]], item["evidence_refs"])
+        if not refs:
+            lines.append("- No evidence references matched.")
+        for ref in refs:
+            lines.append(
+                f"- `{ref['source']}` {ref['path']}:{ref['line']} - {ref['snippet']}"
+            )
+        lines.append("")
+    markdown_path = ctx.bundle_root / ACCEPTANCE_COVERAGE_MARKDOWN_FILENAME
+    markdown_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    return json_path, markdown_path, payload
+
+
+def _attach_acceptance_coverage_to_stage_audits(
+    *,
+    ctx: FlowContext,
+    acceptance_payload: dict[str, object],
+) -> None:
+    audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
+    if not audit_root.exists():
+        return
+    summary = {
+        "acceptance_coverage_status": acceptance_payload.get("acceptance_coverage_status"),
+        "criteria": acceptance_payload.get("criteria", []),
+    }
+    for path in sorted(audit_root.glob("*.json")):
+        try:
+            payload = _read_json_object(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        payload["acceptance_coverage"] = summary
+        _write_json(path, payload)
+
+
 def _append_stage_audit_section_to_quality_report(ctx: FlowContext) -> None:
     path = ctx.bundle_root / QUALITY_REPORT_FILENAME
     if not path.exists():
@@ -3393,6 +3801,8 @@ def _write_harness_metadata(
     quality_gate: str,
     quality_verdict: str,
     counting_status: CountingStatus,
+    acceptance_coverage_status: str,
+    ui_ux_gate: str,
 ) -> Path:
     state = _read_json_object(_state_path(ctx.bundle_root))
     payload: dict[str, object] = {
@@ -3404,6 +3814,8 @@ def _write_harness_metadata(
         "quality_gate": quality_gate,
         "quality_verdict": quality_verdict,
         "counting_status": counting_status,
+        "acceptance_coverage_status": acceptance_coverage_status,
+        "ui_ux_gate": ui_ux_gate,
         "run_id": ctx.run_id,
         "runtime_id": ctx.runtime_id,
         "scenario_class": ctx.scenario.scenario_class,
@@ -3426,10 +3838,22 @@ def _write_harness_metadata(
             ).as_posix(),
             "scenario_path": ctx.scenario_path.as_posix(),
             "stage_audits": (ctx.bundle_root / STAGE_AUDITS_DIRNAME).as_posix(),
+            "acceptance_coverage": (
+                ctx.bundle_root / ACCEPTANCE_COVERAGE_JSON_FILENAME
+            ).as_posix(),
+            "ui_ux_checkpoints": (ctx.bundle_root / UI_UX_CHECKPOINTS_JSON_FILENAME).as_posix(),
+            "operator_quality_analysis_validation": (
+                ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME
+            ).as_posix(),
         },
         "black_box": {
             "operator_surface": "installed-aidd-cli",
             "stage_execution": "aidd stage run",
+            "ui_ux_evidence": {
+                "gate": ui_ux_gate,
+                "artifact": (ctx.bundle_root / UI_UX_CHECKPOINTS_JSON_FILENAME).as_posix(),
+                "screenshot_capture": "optional-skipped-when-unavailable",
+            },
             "inspection": [
                 "aidd stage summary",
                 "aidd stage questions",
@@ -3479,6 +3903,9 @@ def _grader_payload(
     quality_assessment: LiveQualityAssessment,
     quality_gate: str,
     counting_status: CountingStatus,
+    acceptance_coverage: dict[str, object],
+    ui_ux_payload: dict[str, object],
+    operator_validation: dict[str, object],
     first_failure_note: str | None,
 ) -> dict[str, object]:
     return {
@@ -3501,6 +3928,11 @@ def _grader_payload(
             "quality_gate": quality_gate,
             "quality_verdict": quality_assessment.verdict,
             "counting_status": counting_status,
+            "acceptance_coverage_status": acceptance_coverage.get(
+                "acceptance_coverage_status"
+            ),
+            "ui_ux_gate": ui_ux_payload.get("ui_ux_gate"),
+            "operator_quality_analysis_validation": operator_validation,
             "review_status": quality_assessment.review_status,
             "suggested_follow_ups": list(quality_assessment.suggested_follow_ups),
             "qa_verdict": quality_assessment.qa_verdict,
@@ -3544,39 +3976,133 @@ def _record_terminal_decision_step(
             ctx.bundle_root / STAGE_TIMING_MARKDOWN_FILENAME,
             ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME,
             ctx.bundle_root / FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME,
+            ctx.bundle_root / UI_UX_CHECKPOINTS_JSON_FILENAME,
+            ctx.bundle_root / UI_UX_CHECKPOINTS_MARKDOWN_FILENAME,
+            ctx.bundle_root / ACCEPTANCE_COVERAGE_JSON_FILENAME,
+            ctx.bundle_root / ACCEPTANCE_COVERAGE_MARKDOWN_FILENAME,
+            ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME,
             ctx.bundle_root / RUNTIME_APPROVAL_ANALYSIS_FILENAME,
             ctx.bundle_root / STAGE_AUDITS_DIRNAME,
         ),
     )
 
 
-def _operator_quality_analysis_decision(ctx: FlowContext) -> str | None:
-    path = ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_FILENAME
-    if not path.exists():
-        return None
-    text = path.read_text(encoding="utf-8", errors="replace")
+def _operator_quality_analysis_fields(text: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    current_section = ""
     for raw_line in text.splitlines():
         line = raw_line.strip()
-        if not line.lower().startswith("decision:"):
+        if line.startswith("## "):
+            current_section = line[3:].strip().lower()
             continue
-        return line.split(":", 1)[1].strip().strip("`").lower() or None
-    return None
+        if line.lower().startswith("decision:"):
+            fields["decision"] = line.split(":", 1)[1].strip().strip("`").lower()
+            continue
+        if current_section == "blockers" and line.startswith("- ") and ":" not in line:
+            existing = fields.get("blockers", "")
+            value = line[2:].strip().strip("`").lower()
+            fields["blockers"] = f"{existing}; {value}".strip("; ") if existing else value
+            continue
+        if not line.startswith("- ") or ":" not in line:
+            continue
+        key, value = line[2:].split(":", 1)
+        normalized_key = key.strip().lower().replace(" ", "_")
+        fields[normalized_key] = value.strip().strip("`").lower()
+    return fields
+
+
+def _operator_quality_analysis_validation(
+    *,
+    ctx: FlowContext,
+    machine_status: VerdictStatus,
+    quality_assessment: LiveQualityAssessment,
+    acceptance_coverage_status: str,
+    ui_ux_gate: str,
+) -> dict[str, object]:
+    path = ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_FILENAME
+    if not path.exists():
+        payload: dict[str, object] = {
+            "schema_version": 1,
+            "created_at_utc": _utc_now(),
+            "present": False,
+            "valid": False,
+            "decision": None,
+            "fields": {},
+            "findings": ["operator-quality-analysis.md is missing"],
+        }
+        _write_json(ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME, payload)
+        return payload
+    text = path.read_text(encoding="utf-8", errors="replace")
+    fields = _operator_quality_analysis_fields(text)
+    decision = fields.get("decision")
+    findings: list[str] = []
+    required_fields = (
+        "execution_verdict",
+        "quality_gate",
+        "qa_verdict",
+        "review_status",
+        "decision",
+        "blockers",
+    )
+    for field in required_fields:
+        if not fields.get(field):
+            findings.append(f"Missing required field: {field}.")
+    if decision is not None and decision not in OPERATOR_QUALITY_DECISIONS:
+        findings.append(f"Unsupported operator quality decision: {decision}.")
+    if decision == "counted-clean":
+        if machine_status != "pass":
+            findings.append("Operator analysis cannot count a non-pass machine status clean.")
+        if quality_assessment.gate != "pass":
+            findings.append("Operator analysis cannot count a non-pass machine quality gate clean.")
+        if acceptance_coverage_status != "complete":
+            findings.append("Operator analysis cannot count incomplete acceptance coverage clean.")
+        if ui_ux_gate == "fail":
+            findings.append("Operator analysis cannot count a failed UI/UX gate clean.")
+        if quality_assessment.review_status != "approved":
+            findings.append("Operator analysis requires approved review status for counted-clean.")
+        if quality_assessment.qa_verdict not in {"ready", "ready-with-risks"}:
+            findings.append("Operator analysis requires ready or ready-with-risks QA verdict.")
+    payload = {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "present": True,
+        "valid": not findings,
+        "decision": decision,
+        "fields": fields,
+        "findings": findings,
+        "analysis_path": path.as_posix(),
+    }
+    _write_json(ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME, payload)
+    return payload
 
 
 def _counting_status(
     *,
     machine_status: VerdictStatus,
     machine_quality_gate: str,
-    operator_decision: str | None,
+    operator_validation: dict[str, object],
+    acceptance_coverage_status: str,
+    ui_ux_gate: str,
 ) -> CountingStatus:
     if machine_status == "blocked":
         return "blocked"
     if machine_status != "pass" or machine_quality_gate != "pass":
         return "failed"
-    if operator_decision == "counted-clean":
-        return "counted-clean"
-    if operator_decision is None:
+    if acceptance_coverage_status != "complete":
         return "pending-operator-analysis"
+    if ui_ux_gate == "fail":
+        return "not-counted"
+    operator_decision = operator_validation.get("decision")
+    operator_present = operator_validation.get("present") is True
+    operator_valid = operator_validation.get("valid") is True
+    if operator_decision == "counted-clean" and operator_valid:
+        return "counted-clean"
+    if not operator_present:
+        return "pending-operator-analysis"
+    if operator_decision not in OPERATOR_QUALITY_DECISIONS:
+        return "pending-operator-analysis"
+    if not operator_valid:
+        return "not-counted"
     return "not-counted"
 
 
@@ -3622,11 +4148,30 @@ def _finalize_reports(
         quality_result=quality_result,
         quality_error=quality_error,
     )
-    operator_decision = _operator_quality_analysis_decision(ctx)
+    _write_frontend_checkpoint_placeholders(ctx)
+    _, _, ui_ux_payload = _write_ui_ux_checkpoint_artifacts(ctx)
+    _, _, acceptance_coverage = _write_acceptance_coverage_artifacts(ctx)
+    _attach_acceptance_coverage_to_stage_audits(
+        ctx=ctx,
+        acceptance_payload=acceptance_coverage,
+    )
+    acceptance_coverage_status = str(
+        acceptance_coverage.get("acceptance_coverage_status") or "missing"
+    )
+    ui_ux_gate = str(ui_ux_payload.get("ui_ux_gate") or "skipped")
+    operator_validation = _operator_quality_analysis_validation(
+        ctx=ctx,
+        machine_status=status,
+        quality_assessment=quality_assessment,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
+    )
     counting_status = _counting_status(
         machine_status=status,
         machine_quality_gate=quality_assessment.gate,
-        operator_decision=operator_decision,
+        operator_validation=operator_validation,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
     )
     effective_quality_gate = _effective_quality_gate(
         machine_gate=quality_assessment.gate,
@@ -3643,7 +4188,9 @@ def _finalize_reports(
             "machine_quality_gate": quality_assessment.gate,
             "quality_gate": effective_quality_gate,
             "quality_verdict": quality_assessment.verdict,
-            "operator_quality_decision": operator_decision,
+            "operator_quality_decision": operator_validation.get("decision"),
+            "acceptance_coverage_status": acceptance_coverage_status,
+            "ui_ux_gate": ui_ux_gate,
             "counting_status": counting_status,
         },
     )
@@ -3739,6 +4286,9 @@ def _finalize_reports(
             quality_assessment=quality_assessment,
             quality_gate=effective_quality_gate,
             counting_status=counting_status,
+            acceptance_coverage=acceptance_coverage,
+            ui_ux_payload=ui_ux_payload,
+            operator_validation=operator_validation,
             first_failure_note=first_failure_note,
         ),
     )
@@ -3758,8 +4308,9 @@ def _finalize_reports(
         quality_gate=effective_quality_gate,
         quality_verdict=quality_assessment.verdict,
         counting_status=counting_status,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
     )
-    _write_frontend_checkpoint_placeholders(ctx)
     _write_runtime_approval_analysis_placeholder(ctx)
     _write_run_transcript_from_flow(ctx=ctx, exit_code=0 if verdict.status == "pass" else 1)
     return BlackBoxLiveE2EResult(
@@ -3867,6 +4418,23 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     )
     _append_stage_audit_section_to_quality_report(ctx)
     _write_frontend_checkpoint_placeholders(ctx)
+    _, _, ui_ux_payload = _write_ui_ux_checkpoint_artifacts(ctx)
+    _, _, acceptance_coverage = _write_acceptance_coverage_artifacts(ctx)
+    _attach_acceptance_coverage_to_stage_audits(
+        ctx=ctx,
+        acceptance_payload=acceptance_coverage,
+    )
+    acceptance_coverage_status = str(
+        acceptance_coverage.get("acceptance_coverage_status") or "missing"
+    )
+    ui_ux_gate = str(ui_ux_payload.get("ui_ux_gate") or "skipped")
+    operator_validation = _operator_quality_analysis_validation(
+        ctx=ctx,
+        machine_status="blocked",
+        quality_assessment=quality_assessment,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
+    )
     _write_runtime_approval_analysis_placeholder(ctx)
     _persist_state(
         ctx=ctx,
@@ -3878,6 +4446,8 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
             **_preserved_state_extras(ctx),
             "quality_gate": quality_assessment.gate,
             "quality_verdict": quality_assessment.verdict,
+            "acceptance_coverage_status": acceptance_coverage_status,
+            "ui_ux_gate": ui_ux_gate,
             "counting_status": counting_status,
         },
     )
@@ -3887,6 +4457,8 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         quality_gate=quality_assessment.gate,
         quality_verdict=quality_assessment.verdict,
         counting_status=counting_status,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
     )
     _write_json(
         ctx.bundle_root / GRADER_FILENAME,
@@ -3902,6 +4474,9 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
                 "quality_gate": quality_assessment.gate,
                 "quality_verdict": quality_assessment.verdict,
                 "counting_status": counting_status,
+                "acceptance_coverage_status": acceptance_coverage_status,
+                "ui_ux_gate": ui_ux_gate,
+                "operator_quality_analysis_validation": operator_validation,
             },
             "run_id": ctx.run_id,
             "runtime_id": ctx.runtime_id,
@@ -3959,9 +4534,23 @@ def run_black_box_live_e2e(
     )
     status = _state_status(ctx.bundle_root)
     if status in TERMINAL_STATUSES:
-        raise ValueError(
-            "The selected black-box live E2E run is terminal. Pass a fresh --run-id "
-            "or omit --run-id to create/resume the unique non-terminal run."
+        terminal_status = cast(VerdictStatus, status)
+        return _finalize_reports(
+            ctx=ctx,
+            status=terminal_status,
+            summary=(
+                "Refreshed terminal black-box live E2E reports from existing "
+                "operator-quality and artifact evidence."
+            ),
+            verification_failed=terminal_status != "pass",
+            quality_result=(
+                _quality_result_from_existing_transcript(ctx)
+                if terminal_status == "pass"
+                else None
+            ),
+            quality_error=None,
+            teardown_result=None,
+            teardown_error=None,
         )
     try:
         _prepare_target_repository(ctx)
