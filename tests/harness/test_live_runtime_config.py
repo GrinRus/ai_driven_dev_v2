@@ -31,6 +31,20 @@ def _empty_live_command_env() -> dict[str, str]:
     }
 
 
+def _fake_codex_bin_env(tmp_path: Path) -> dict[str, str]:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    codex = bin_dir / "codex"
+    codex.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then exit 0; fi\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    return {"PATH": bin_dir.as_posix()}
+
+
 def _scenario(
     *,
     runtime_targets: tuple[str, ...] = ("codex", "opencode"),
@@ -150,7 +164,10 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
         working_copy_path=tmp_path,
         runtime_id="codex",
         scenario=_scenario(runtime_targets=("codex", "opencode")),
-        environment=_empty_live_command_env(),
+        environment={
+            **_empty_live_command_env(),
+            **_fake_codex_bin_env(tmp_path),
+        },
     )
 
     config_text = config_path.read_text(encoding="utf-8")
@@ -227,7 +244,10 @@ def test_write_live_runtime_config_preserves_real_runtime_defaults(tmp_path: Pat
         working_copy_path=tmp_path,
         runtime_id="codex",
         scenario=_scenario(runtime_targets=("codex",)),
-        environment=_empty_live_command_env(),
+        environment={
+            **_empty_live_command_env(),
+            **_fake_codex_bin_env(tmp_path),
+        },
     )
 
     config = tomllib.loads(config_path.read_text(encoding="utf-8"))
