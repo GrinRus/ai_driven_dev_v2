@@ -20,7 +20,7 @@ id: AIDD-TEST-001
 scenario_class: deterministic-stage
 feature_size: small
 automation_lane: ci
-canonical_runtime: generic-cli
+canonical_runtime: codex
 repo:
   url: https://github.com/example/repo
 setup:
@@ -47,7 +47,7 @@ id: AIDD-TEST-001
 scenario_class: deterministic-stage
 feature_size: small
 automation_lane: ci
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Example task
 repo:
   url: https://github.com/example/repo
@@ -74,7 +74,7 @@ id: AIDD-TEST-001
 scenario_class: deterministic-stage
 feature_size: small
 automation_lane: ci
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Example task
 repo:
   url: https://github.com/example/repo
@@ -85,7 +85,7 @@ verify:
   commands:
     - echo verify
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -102,7 +102,7 @@ id: AIDD-TEST-001
 scenario_class: deterministic-stage
 feature_size: small
 automation_lane: ci
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Example task
 repo:
   default_branch: main
@@ -113,7 +113,7 @@ verify:
   commands:
     - echo verify
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -132,7 +132,7 @@ id: AIDD-LIVE-TEST-001
 scenario_class: live-full-flow
 feature_size: small
 automation_lane: manual
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Exercise live manifest validation
 repo:
   url: https://github.com/example/repo
@@ -155,7 +155,7 @@ stage_scope:
   start: idea
   end: qa
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -174,7 +174,7 @@ id: AIDD-LIVE-TEST-002
 scenario_class: live-full-flow
 feature_size: small
 automation_lane: manual
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Exercise live manifest validation
 repo:
   url: https://github.com/example/repo
@@ -213,7 +213,7 @@ stage_scope:
   start: plan
   end: qa
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -232,7 +232,7 @@ id: AIDD-LIVE-TEST-003
 scenario_class: live-full-flow
 feature_size: small
 automation_lane: manual
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Exercise live manifest validation
 repo:
   url: https://github.com/example/repo
@@ -270,7 +270,7 @@ stage_scope:
   start: idea
   end: qa
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -289,7 +289,7 @@ id: AIDD-LIVE-TEST-004
 scenario_class: live-full-flow
 feature_size: small
 automation_lane: ci
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Exercise live manifest validation
 repo:
   url: https://github.com/example/repo
@@ -328,7 +328,7 @@ stage_scope:
   start: idea
   end: qa
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -345,7 +345,7 @@ id: AIDD-DET-TEST-001
 scenario_class: deterministic-workflow
 feature_size: large
 automation_lane: ci
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Example task
 repo:
   url: https://github.com/example/repo
@@ -365,7 +365,7 @@ stage_scope:
   start: idea
   end: qa
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -382,7 +382,7 @@ id: AIDD-DET-TEST-002
 scenario_class: deterministic-workflow
 feature_size: medium
 automation_lane: ci
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Example task
 repo:
   url: https://github.com/example/repo
@@ -412,7 +412,7 @@ stage_scope:
   start: plan
   end: tasklist
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -431,7 +431,7 @@ id: AIDD-LIVE-TEST-005
 scenario_class: live-full-flow
 feature_size: small
 automation_lane: manual
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Exercise live manifest validation
 repo:
   url: https://github.com/example/repo
@@ -460,7 +460,7 @@ stage_scope:
   start: idea
   end: qa
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -481,7 +481,7 @@ id: AIDD-LIVE-TEST-006
 scenario_class: live-full-flow
 feature_size: tiny
 automation_lane: manual
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Exercise authored task validation
 repo:
   url: https://github.com/example/repo
@@ -519,7 +519,7 @@ stage_scope:
   start: idea
   end: qa
 runtime_targets:
-  - generic-cli
+  - codex
 """.strip()
         + "\n",
     )
@@ -538,7 +538,7 @@ id: AIDD-LIVE-TEST-007
 scenario_class: live-full-flow
 feature_size: small
 automation_lane: manual
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Exercise optional live question guidance
 repo:
   url: https://github.com/example/repo
@@ -581,7 +581,7 @@ stage_scope:
 interview:
   required: false
 runtime_targets:
-  - generic-cli
+  - codex
 live_flow:
   driver: stepwise-black-box
   checkpoint_policy: after-each-step
@@ -603,6 +603,132 @@ live_flow:
     )
 
 
+def test_load_live_scenario_rejects_generic_cli_runtime_target(tmp_path: Path) -> None:
+    live_root = tmp_path / "harness" / "scenarios" / "live"
+    live_root.mkdir(parents=True)
+    manifest = _write_manifest(
+        live_root / "scenario.yaml",
+        """
+id: AIDD-LIVE-TEST-GENERIC
+scenario_class: live-full-flow
+feature_size: small
+automation_lane: manual
+canonical_runtime: generic-cli
+task: Exercise live generic-cli rejection
+repo:
+  url: https://github.com/example/repo
+setup:
+  commands:
+    - echo setup
+verify:
+  commands:
+    - echo verify
+feature_source:
+  mode: authored-task-pool
+  selection_policy: first-listed
+  tasks:
+    - id: TASK-1
+      title: Example task
+      summary: Example summary
+      intent: Exercise validation.
+      target_change: Change test fixture behavior.
+      expected_scope: Test fixture only.
+      acceptance_criteria:
+        - Fixture criteria pass.
+      verification:
+        - echo verify
+      quality_bar: Test quality bar.
+      size_rationale: Small test fixture.
+quality:
+  commands:
+    - echo quality
+  rubric_profile: live-full
+  require_review_status: approved
+  allowed_qa_verdicts:
+    - ready
+  code_review_required: true
+stage_scope:
+  start: idea
+  end: qa
+runtime_targets:
+  - generic-cli
+live_flow:
+  driver: stepwise-black-box
+  checkpoint_policy: after-each-step
+  answer_policy: agent-decides
+  frontend_checkpoints: true
+""".strip()
+        + "\n",
+    )
+
+    with pytest.raises(ScenarioManifestError, match="real maintained runtimes"):
+        load_scenario(manifest)
+
+
+def test_load_live_scenario_rejects_release_proof_runtime(tmp_path: Path) -> None:
+    live_root = tmp_path / "harness" / "scenarios" / "live"
+    live_root.mkdir(parents=True)
+    manifest = _write_manifest(
+        live_root / "scenario.yaml",
+        """
+id: AIDD-LIVE-TEST-RELEASE-PROOF
+scenario_class: live-full-flow
+feature_size: small
+automation_lane: manual
+canonical_runtime: codex
+task: Exercise live release-proof rejection
+repo:
+  url: https://github.com/example/repo
+setup:
+  commands:
+    - echo setup
+verify:
+  commands:
+    - echo verify
+workflow_bundle:
+  release_proof_runtime: generic-cli
+feature_source:
+  mode: authored-task-pool
+  selection_policy: first-listed
+  tasks:
+    - id: TASK-1
+      title: Example task
+      summary: Example summary
+      intent: Exercise validation.
+      target_change: Change test fixture behavior.
+      expected_scope: Test fixture only.
+      acceptance_criteria:
+        - Fixture criteria pass.
+      verification:
+        - echo verify
+      quality_bar: Test quality bar.
+      size_rationale: Small test fixture.
+quality:
+  commands:
+    - echo quality
+  rubric_profile: live-full
+  require_review_status: approved
+  allowed_qa_verdicts:
+    - ready
+  code_review_required: true
+stage_scope:
+  start: idea
+  end: qa
+runtime_targets:
+  - codex
+live_flow:
+  driver: stepwise-black-box
+  checkpoint_policy: after-each-step
+  answer_policy: agent-decides
+  frontend_checkpoints: true
+""".strip()
+        + "\n",
+    )
+
+    with pytest.raises(ScenarioManifestError, match="release_proof_runtime"):
+        load_scenario(manifest)
+
+
 def test_load_live_interview_scenario_requires_authored_task_guidance(
     tmp_path: Path,
 ) -> None:
@@ -615,7 +741,7 @@ id: AIDD-LIVE-TEST-008
 scenario_class: live-full-flow-interview
 feature_size: large
 automation_lane: manual
-canonical_runtime: generic-cli
+canonical_runtime: codex
 task: Exercise required live interview guidance
 repo:
   url: https://github.com/example/repo
@@ -659,7 +785,7 @@ interview:
   blocking_question_topics:
     - Scope choice.
 runtime_targets:
-  - generic-cli
+  - codex
 live_flow:
   driver: stepwise-black-box
   checkpoint_policy: after-each-step

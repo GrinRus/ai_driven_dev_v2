@@ -4,17 +4,14 @@ import os
 import shlex
 import shutil
 import subprocess
-import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from aidd.core.contracts import repo_root_from
 from aidd.harness.scenarios import Scenario
 from aidd.runtime_catalog import (
     RuntimeExecutionMode,
     get_runtime_definition,
-    runtime_definitions,
 )
 
 
@@ -28,6 +25,7 @@ class LiveRuntimeCommand:
 
 
 _PROVIDER_AUTH_CHECK_TIMEOUT_SECONDS = 10
+LIVE_E2E_RUNTIME_ALLOWLIST = ("codex", "opencode", "claude-code")
 
 
 def _toml_string(value: str) -> str:
@@ -35,48 +33,14 @@ def _toml_string(value: str) -> str:
     return f'"{escaped}"'
 
 
-def _source_repository_root_from_cwd() -> Path | None:
-    try:
-        return repo_root_from(Path.cwd().resolve(strict=False))
-    except FileNotFoundError:
-        return None
-
-
-def _release_proof_generic_cli_command(
-    *,
-    scenario: Scenario | None,
-    source_repository_root: Path | None = None,
-) -> str | None:
-    if scenario is None:
-        return None
-    workflow_bundle = scenario.raw.get("workflow_bundle")
-    if not isinstance(workflow_bundle, dict):
-        return None
-    if str(workflow_bundle.get("release_proof_runtime", "")).strip() != "generic-cli":
-        return None
-
-    repository_root = source_repository_root or _source_repository_root_from_cwd()
-    if repository_root is None:
-        return None
-    helper_path = repository_root / "scripts" / "release_live_proof_runtime.py"
-    if not helper_path.exists():
-        return None
-
-    return shlex.join((sys.executable, helper_path.as_posix()))
-
-
 def resolve_live_runtime_commands(
     *,
     environment: Mapping[str, str] | None = None,
-    scenario: Scenario | None = None,
-    source_repository_root: Path | None = None,
 ) -> dict[str, str]:
     return {
         runtime_id: entry.command
         for runtime_id, entry in resolve_live_runtime_command_entries(
             environment=environment,
-            scenario=scenario,
-            source_repository_root=source_repository_root,
         ).items()
     }
 
@@ -84,19 +48,14 @@ def resolve_live_runtime_commands(
 def resolve_live_runtime_command_entries(
     *,
     environment: Mapping[str, str] | None = None,
-    scenario: Scenario | None = None,
-    source_repository_root: Path | None = None,
 ) -> dict[str, LiveRuntimeCommand]:
     source = dict(os.environ)
     if environment is not None:
         source.update(environment)
 
-    release_proof_command = _release_proof_generic_cli_command(
-        scenario=scenario,
-        source_repository_root=source_repository_root,
-    )
     entries: dict[str, LiveRuntimeCommand] = {}
-    for definition in runtime_definitions():
+    for runtime_id in LIVE_E2E_RUNTIME_ALLOWLIST:
+        definition = get_runtime_definition(runtime_id)
         command_env = definition.live_command_env_var
         command_value = source.get(command_env, "").strip() if command_env is not None else ""
         env_var: str | None = command_env if command_value else None
@@ -105,13 +64,6 @@ def resolve_live_runtime_command_entries(
         if command_value:
             execution_mode = RuntimeExecutionMode.ADAPTER_FLAGS
             command_source = "environment"
-        elif (
-            definition.runtime_id == "generic-cli"
-            and release_proof_command is not None
-        ):
-            command_value = release_proof_command
-            execution_mode = RuntimeExecutionMode.ADAPTER_FLAGS
-            command_source = "release-proof-helper"
         if not command_value:
             command_value = definition.default_command
             command_source = (
@@ -119,8 +71,8 @@ def resolve_live_runtime_command_entries(
                 if execution_mode is RuntimeExecutionMode.NATIVE
                 else "default"
             )
-        entries[definition.runtime_id] = LiveRuntimeCommand(
-            runtime_id=definition.runtime_id,
+        entries[runtime_id] = LiveRuntimeCommand(
+            runtime_id=runtime_id,
             command=command_value,
             execution_mode=execution_mode,
             source=command_source,
@@ -134,12 +86,17 @@ def validate_live_runtime_command(
     runtime_id: str,
     scenario: Scenario,
     environment: Mapping[str, str] | None = None,
-    source_repository_root: Path | None = None,
 ) -> LiveRuntimeCommand:
     source = dict(os.environ)
     if environment is not None:
         source.update(environment)
 
+    if runtime_id not in LIVE_E2E_RUNTIME_ALLOWLIST:
+        allowed = ", ".join(LIVE_E2E_RUNTIME_ALLOWLIST)
+        raise RuntimeError(
+            f"Unsupported live runtime: {runtime_id}. Black-box live E2E allows "
+            f"only real maintained runtimes: {allowed}."
+        )
     if runtime_id not in scenario.runtime_targets:
         supported = ", ".join(scenario.runtime_targets)
         raise RuntimeError(
@@ -149,17 +106,9 @@ def validate_live_runtime_command(
     try:
         command_entry = resolve_live_runtime_command_entries(
             environment=environment,
-            scenario=scenario,
-            source_repository_root=source_repository_root,
         )[runtime_id]
     except KeyError as exc:
         raise RuntimeError(f"Unsupported live runtime: {runtime_id}") from exc
-
-    if runtime_id == "generic-cli" and command_entry.source == "default":
-        raise RuntimeError(
-            "Live generic-cli eval requires `AIDD_EVAL_GENERIC_CLI_COMMAND` unless the "
-            "selected scenario declares a built-in generic-cli release-proof helper."
-        )
 
     try:
         tokens = shlex.split(command_entry.command)
@@ -236,57 +185,20 @@ def write_live_runtime_config(
     runtime_id: str,
     scenario: Scenario,
     environment: Mapping[str, str] | None = None,
-    source_repository_root: Path | None = None,
-    brokered_live_approvals: bool = False,
 ) -> Path:
-    source = dict(os.environ)
-    if environment is not None:
-        source.update(environment)
-
-    generic_cli_definition = get_runtime_definition("generic-cli")
-    generic_cli_env_var = generic_cli_definition.live_command_env_var
-    generic_cli_override = (
-        source.get(generic_cli_env_var, "").strip()
-        if generic_cli_env_var is not None
-        else ""
-    )
-    generic_cli_release_proof = _release_proof_generic_cli_command(
+    validate_live_runtime_command(
+        runtime_id=runtime_id,
         scenario=scenario,
-        source_repository_root=source_repository_root,
+        environment=environment,
     )
-    if (
-        runtime_id == "generic-cli"
-        and not generic_cli_override
-        and generic_cli_release_proof is None
-    ):
-        raise RuntimeError(
-            "Live generic-cli eval requires `AIDD_EVAL_GENERIC_CLI_COMMAND` unless the "
-            "selected scenario declares a built-in generic-cli release-proof helper."
-        )
 
     runtime_entries = resolve_live_runtime_command_entries(
         environment=environment,
-        scenario=scenario,
-        source_repository_root=source_repository_root,
     )
 
     def _runtime_command(runtime_key: str) -> str:
         entry = runtime_entries[runtime_key]
-        if not brokered_live_approvals or runtime_key != runtime_id:
-            return entry.command
-        definition = get_runtime_definition(runtime_key)
-        if entry.source == "default-native" and definition.brokered_default_command:
-            return definition.brokered_default_command
         return entry.command
-
-    def _brokered_live_lines(runtime_key: str) -> tuple[str, ...]:
-        if not brokered_live_approvals or runtime_key != runtime_id:
-            return tuple()
-        return (
-            'permission_policy = "brokered"',
-            'interaction_mode = "live"',
-            'auto_approval_preset = "broad"',
-        )
 
     config_path = working_copy_path / "aidd.example.toml"
     config_path.write_text(
@@ -295,15 +207,9 @@ def write_live_runtime_config(
                 "[workspace]",
                 'root = ".aidd"',
                 "",
-                "[runtime.generic_cli]",
-                f"command = {_toml_string(_runtime_command('generic-cli'))}",
-                f"mode = {_toml_string(runtime_entries['generic-cli'].execution_mode.value)}",
-                *_brokered_live_lines("generic-cli"),
-                "",
                 "[runtime.claude_code]",
                 f"command = {_toml_string(_runtime_command('claude-code'))}",
                 f"mode = {_toml_string(runtime_entries['claude-code'].execution_mode.value)}",
-                *_brokered_live_lines("claude-code"),
                 "timeout_seconds = 1200",
                 "",
                 "[runtime.claude_code.stage_timeouts]",
@@ -319,7 +225,6 @@ def write_live_runtime_config(
                 "[runtime.codex]",
                 f"command = {_toml_string(_runtime_command('codex'))}",
                 f"mode = {_toml_string(runtime_entries['codex'].execution_mode.value)}",
-                *_brokered_live_lines("codex"),
                 "timeout_seconds = 1800",
                 "",
                 "[runtime.codex.stage_timeouts]",
@@ -335,26 +240,9 @@ def write_live_runtime_config(
                 "[runtime.opencode]",
                 f"command = {_toml_string(_runtime_command('opencode'))}",
                 f"mode = {_toml_string(runtime_entries['opencode'].execution_mode.value)}",
-                *_brokered_live_lines("opencode"),
                 "timeout_seconds = 1200",
                 "",
                 "[runtime.opencode.stage_timeouts]",
-                "idea = 1500",
-                "research = 1500",
-                "plan = 1500",
-                "review-spec = 1500",
-                "tasklist = 1800",
-                "implement = 1800",
-                "review = 1800",
-                "qa = 1800",
-                "",
-                "[runtime.qwen]",
-                f"command = {_toml_string(_runtime_command('qwen'))}",
-                f"mode = {_toml_string(runtime_entries['qwen'].execution_mode.value)}",
-                *_brokered_live_lines("qwen"),
-                "timeout_seconds = 1200",
-                "",
-                "[runtime.qwen.stage_timeouts]",
                 "idea = 1500",
                 "research = 1500",
                 "plan = 1500",

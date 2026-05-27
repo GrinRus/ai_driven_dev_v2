@@ -44,8 +44,8 @@ external prerequisites to already be true:
   command override for the chosen live runtime.
 
 This skill does **not** provision runtime authentication, wrapper scripts, or provider setup for you.
-If you are testing an already published AIDD artifact rather than a local source wheel,
-set `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` to the exact package spec before launch.
+Public-repository live E2E always builds a local wheel from clean tracked `HEAD`.
+Published-package install proof belongs to the separate release/install lane.
 
 ## Runtime-command contract
 
@@ -98,12 +98,6 @@ export AIDD_EVAL_OPENCODE_COMMAND='<aidd-compatible opencode wrapper>'
 export AIDD_EVAL_CLAUDE_CODE_COMMAND='<aidd-compatible claude-code wrapper>'
 ```
 
-Optional published package under test:
-
-```bash
-export AIDD_EVAL_PUBLISHED_PACKAGE_SPEC='ai-driven-dev-v2==0.1.0a2'
-```
-
 ## Canonical local launch
 
 The primary execution path for this skill is a local run from the AIDD source checkout:
@@ -128,7 +122,7 @@ The default execution layout is:
 
 - `--work-root ${TMPDIR:-/tmp}/aidd-live-e2e` for mutable execution state;
 - `--report-root .aidd/reports/evals` for durable evidence bundles;
-- `--run-id <id>` only when you need to resume or name a specific run.
+- `--run-id <id>` only when you need to resume an existing blocked run.
 
 Use explicit paths when the audit needs stable local references:
 

@@ -104,7 +104,6 @@ def _scenario(
 def test_resolve_live_runtime_command_entries_defaults_codex_to_native() -> None:
     entries = resolve_live_runtime_command_entries(
         environment=_empty_live_command_env(),
-        scenario=_scenario(runtime_targets=("codex",)),
     )
 
     assert entries["codex"].execution_mode is RuntimeExecutionMode.NATIVE
@@ -115,7 +114,6 @@ def test_resolve_live_runtime_command_entries_defaults_codex_to_native() -> None
 def test_resolve_live_runtime_command_entries_defaults_claude_code_to_native() -> None:
     entries = resolve_live_runtime_command_entries(
         environment=_empty_live_command_env(),
-        scenario=_scenario(runtime_targets=("claude-code",)),
     )
 
     assert entries["claude-code"].execution_mode is RuntimeExecutionMode.NATIVE
@@ -129,7 +127,6 @@ def test_resolve_live_runtime_command_entries_uses_env_override_as_adapter_flags
             **_empty_live_command_env(),
             "AIDD_EVAL_CODEX_COMMAND": "/tmp/aidd-codex-wrapper",
         },
-        scenario=_scenario(runtime_targets=("codex",)),
     )
 
     assert entries["codex"].execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
@@ -143,7 +140,6 @@ def test_resolve_live_runtime_command_entries_uses_claude_env_override_as_adapte
             **_empty_live_command_env(),
             "AIDD_EVAL_CLAUDE_CODE_COMMAND": "/tmp/aidd-claude-wrapper",
         },
-        scenario=_scenario(runtime_targets=("claude-code",)),
     )
 
     assert entries["claude-code"].execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
@@ -175,9 +171,9 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert 'mode = "native"' in config_text
     assert "[runtime.opencode]" in config_text
     assert 'command = "opencode run --format json --dangerously-skip-permissions"' in config_text
-    assert "[runtime.qwen]" in config_text
-    assert 'command = "qwen --approval-mode yolo --output-format stream-json"' in config_text
-    assert config_text.count("timeout_seconds = 1200") == 3
+    assert "[runtime.qwen]" not in config_text
+    assert "[runtime.generic_cli]" not in config_text
+    assert config_text.count("timeout_seconds = 1200") == 2
     assert "[runtime.claude_code.stage_timeouts]" in config_text
     config = tomllib.loads(config_text)
     claude_stage_timeouts = config["runtime"]["claude_code"]["stage_timeouts"]
@@ -210,44 +206,22 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
 def test_write_live_runtime_config_records_env_override_as_adapter_flags(
     tmp_path: Path,
 ) -> None:
+    wrapper = tmp_path / "aidd-codex-wrapper"
+    wrapper.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    wrapper.chmod(0o755)
     config_path = write_live_runtime_config(
         working_copy_path=tmp_path,
         runtime_id="codex",
         scenario=_scenario(runtime_targets=("codex",)),
         environment={
             **_empty_live_command_env(),
-            "AIDD_EVAL_CODEX_COMMAND": "/tmp/aidd-codex-wrapper",
+            "AIDD_EVAL_CODEX_COMMAND": wrapper.as_posix(),
         },
     )
 
     config_text = config_path.read_text(encoding="utf-8")
-    assert 'command = "/tmp/aidd-codex-wrapper"' in config_text
+    assert f'command = "{wrapper.as_posix()}"' in config_text
     assert 'mode = "adapter-flags"' in config_text
-
-
-def test_write_live_runtime_config_records_brokered_live_for_selected_runtime_only(
-    tmp_path: Path,
-) -> None:
-    config_path = write_live_runtime_config(
-        working_copy_path=tmp_path,
-        runtime_id="codex",
-        scenario=_scenario(runtime_targets=("codex", "qwen")),
-        environment=_empty_live_command_env(),
-        brokered_live_approvals=True,
-    )
-
-    config = tomllib.loads(config_path.read_text(encoding="utf-8"))
-
-    codex = config["runtime"]["codex"]
-    assert codex["command"] == "codex exec --sandbox workspace-write --skip-git-repo-check --json -"
-    assert codex["permission_policy"] == "brokered"
-    assert codex["interaction_mode"] == "live"
-    assert codex["auto_approval_preset"] == "broad"
-    assert "permission_policy" not in config["runtime"]["qwen"]
-    assert (
-        config["runtime"]["qwen"]["command"]
-        == "qwen --approval-mode yolo --output-format stream-json"
-    )
 
 
 def test_write_live_runtime_config_preserves_non_brokered_defaults(tmp_path: Path) -> None:
@@ -362,31 +336,10 @@ def test_validate_live_runtime_command_fails_before_repo_prep_when_missing(
         )
 
 
-def test_validate_live_runtime_command_rejects_default_generic_cli() -> None:
-    with pytest.raises(RuntimeError, match="AIDD_EVAL_GENERIC_CLI_COMMAND"):
+def test_validate_live_runtime_command_rejects_generic_cli_for_live() -> None:
+    with pytest.raises(RuntimeError, match="real maintained runtimes"):
         validate_live_runtime_command(
             runtime_id="generic-cli",
             scenario=_scenario(runtime_targets=("generic-cli",)),
             environment=_empty_live_command_env(),
         )
-
-
-def test_release_proof_helper_uses_explicit_source_repository_root(tmp_path: Path) -> None:
-    source_root = tmp_path / "aidd-source"
-    helper_path = source_root / "scripts" / "release_live_proof_runtime.py"
-    helper_path.parent.mkdir(parents=True)
-    helper_path.write_text("print('ok')\n", encoding="utf-8")
-    scenario = _scenario(
-        runtime_targets=("generic-cli",),
-        raw={"workflow_bundle": {"release_proof_runtime": "generic-cli"}},
-    )
-
-    entries = resolve_live_runtime_command_entries(
-        environment=_empty_live_command_env(),
-        scenario=scenario,
-        source_repository_root=source_root,
-    )
-
-    assert entries["generic-cli"].source == "release-proof-helper"
-    assert entries["generic-cli"].execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
-    assert helper_path.as_posix() in entries["generic-cli"].command

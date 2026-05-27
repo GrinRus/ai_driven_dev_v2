@@ -286,10 +286,8 @@ Expected behavior in the current local implementation:
   not GitHub Actions, and not a release gate.
 - local live E2E uses native provider commands by default and reads runtime-command
   environment overrides only when an adapter-compatible wrapper override is needed.
-- published-package live evals use `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`, for example
-  `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a5" uv run python -m aidd.harness.live_e2e_black_box ...`;
-  local-wheel live evals require the scenario manifest to live in, or be run from, an
-  AIDD source checkout.
+- public-repository live evals always build a local wheel from clean tracked `HEAD`;
+  published-package install proof is recorded in the separate release/install lane.
 
 ### 6.5 Inspect logs and artifacts
 

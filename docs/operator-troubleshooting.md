@@ -191,9 +191,7 @@ Actions:
 2. Commit or stash tracked source changes before the run. The evaluator snapshots
    tracked `HEAD` into `<work-root>/<run_id>/source/aidd` and builds the wheel
    from that temp snapshot.
-3. If you are testing an already published artifact, set:
-   `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==<version>"`.
-4. Do not copy only the installed package's `site-packages` path into the
+3. Do not copy only the installed package's `site-packages` path into the
    scenario command; live local-wheel mode needs the source checkout to build
    the wheel.
 

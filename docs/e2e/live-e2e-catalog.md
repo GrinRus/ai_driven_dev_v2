@@ -53,9 +53,8 @@ Live E2E is not defined by mutable source-checkout execution from the AIDD repos
 itself, and it is not a merge gate. The source checkout is read only during local-wheel
 snapshot/build preparation, while durable evidence is written to
 `<report-root>/<run_id>`; the default report root is `.aidd/reports/evals`.
-To test an already published package, set `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` to the
-exact package spec, for example `ai-driven-dev-v2==0.1.0a5`; published-package mode
-must not require a source checkout root.
+Public-repository live E2E always builds and installs a local wheel from clean tracked
+`HEAD`. Published-package install proof belongs to a separate release/install lane.
 
 The local operator UI has a separate E2E evidence lane in
 [`Operator UI Local-Project E2E Lane`](./operator-ui-local-project.md). That lane uses
@@ -79,16 +78,10 @@ operators initialize work items from the target project root with
 uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
 ```
 
-- Brokered live approval proof is opt-in. Add `--brokered-live-approvals` only
-  when the selected runtime has a confirmed live approval transport. In this mode
-  the evaluator writes `permission_policy = "brokered"`, `interaction_mode =
-  "live"`, and `auto_approval_preset = "broad"` for the selected runtime, runs
-  stages through `aidd ui` `/api/stage/run`, auto-approves only broad-safe
-  project-local and `.aidd/` workspace runtime requests, and preserves
-  `runtime-approval-analysis.md`. Package installs, network access, external
-  paths, release/publish/git push commands, `.aidd` secrets/provider config,
-  operator approval ledgers, file deletes, and destructive shell stay blocked
-  for operator action evidence.
+- Brokered approval proof is outside the public-repository live E2E lane. Keep it
+  in the operator UI/local-project evidence lane so this evaluator stays focused
+  on installed `aidd stage run`, CLI inspection, loopback UI/API checkpoints, and
+  target-repository verification.
 - When `--run-id` is omitted, the evaluator creates a fresh evidence bundle and
   does not resume a previously blocked run. Resume blocked evidence only by
   passing that exact `--run-id`. If the generated run id already exists, the
@@ -98,7 +91,6 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`
   - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
-  - `AIDD_EVAL_QWEN_COMMAND` for experimental `qwen`
 - When no override is set, the evaluator validates the default native provider command
   locally before cloning or installing artifacts.
 - Override values must point to locally available wrapper commands that accept the AIDD

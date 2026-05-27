@@ -10,7 +10,6 @@ from aidd.harness.install_artifact import (
     HarnessInstallError,
     HarnessInstallResult,
     prepare_local_wheel_install,
-    prepare_published_package_install,
 )
 from aidd.harness.runner import HarnessCommandTranscript
 
@@ -117,50 +116,6 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
     assert result.source_revision
 
 
-def test_prepare_published_package_install_returns_absolute_installed_command(
-    tmp_path: Path,
-    monkeypatch,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    source_lookup_called = False
-    monkeypatch.setattr(
-        install_artifact,
-        "_source_repository_root_from_cwd",
-        lambda: (_ for _ in ()).throw(AssertionError("source root lookup not expected")),
-    )
-
-    def _fake_run_command(
-        *,
-        command: tuple[str, ...],
-        cwd: Path,
-        env: dict[str, str] | None = None,
-    ) -> HarnessCommandTranscript:
-        nonlocal source_lookup_called
-        source_lookup_called = cwd.name == "repo"
-        _ = cwd
-        assert env is not None
-        assert Path(env["UV_CACHE_DIR"]).is_absolute()
-        home = Path(env["HOME"])
-        tool_bin_dir = install_artifact._tool_bin_dir(install_home=home)
-        tool_bin_dir.mkdir(parents=True, exist_ok=True)
-        installed_binary = tool_bin_dir / "aidd"
-        installed_binary.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        installed_binary.chmod(0o755)
-        return _transcript(command)
-
-    monkeypatch.setattr(install_artifact, "_run_command", _fake_run_command)
-
-    result = prepare_published_package_install(
-        work_root=Path("work-root"),
-        run_id="eval-live-test",
-        package_spec="ai-driven-dev-v2==9.9.9",
-    )
-
-    assert Path(result.installed_command[0]).is_absolute()
-    assert Path(result.installed_command[0]).exists()
-    assert source_lookup_called is False
-
-
 def test_prepare_local_wheel_install_requires_source_checkout_root(
     tmp_path: Path,
     monkeypatch,
@@ -180,7 +135,7 @@ def test_prepare_local_wheel_install_requires_source_checkout_root(
         raise AssertionError("Expected HarnessInstallError for missing source checkout.")
 
     assert "Local-wheel live eval requires a source checkout" in message
-    assert "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC" in message
+    assert "published package" not in message.lower()
 
 
 def test_prepare_local_wheel_install_can_derive_source_checkout_from_cwd(

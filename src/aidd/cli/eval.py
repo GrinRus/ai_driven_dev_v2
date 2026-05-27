@@ -8,21 +8,10 @@ from rich.table import Table
 
 from aidd.cli.doctor import _runtime_probe_report
 from aidd.cli.support import console
-from aidd.core.contracts import repo_root_from
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
 from aidd.harness.live_runtime_config import validate_live_runtime_command
 from aidd.harness.scenarios import load_scenario
 from aidd.runtime_catalog import get_runtime_definition
-
-
-def _derive_source_repository_root(scenario_path: Path) -> Path | None:
-    try:
-        return repo_root_from(scenario_path.resolve(strict=False))
-    except FileNotFoundError:
-        try:
-            return repo_root_from(Path.cwd().resolve(strict=False))
-        except FileNotFoundError:
-            return None
 
 
 def eval_doctor(
@@ -65,7 +54,6 @@ def eval_doctor(
             command_entry = validate_live_runtime_command(
                 runtime_id=runtime,
                 scenario=loaded_scenario,
-                source_repository_root=_derive_source_repository_root(scenario_path),
             )
         except RuntimeError as exc:
             table.add_row("Execution readiness", "fail")

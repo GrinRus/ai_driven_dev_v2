@@ -26,6 +26,7 @@ _LIVE_SCENARIO_CLASSES = {"live-full-flow", "live-full-flow-interview"}
 _FEATURE_SIZES = {"tiny", "small", "medium", "large", "xlarge"}
 _AUTOMATION_LANES = {"ci", "manual"}
 _SUPPORTED_RUNTIME_IDS = set(runtime_ids())
+_LIVE_RUNTIME_IDS = {"codex", "opencode", "claude-code"}
 _LIVE_FLOW_DRIVERS = {"stepwise-black-box"}
 _LIVE_FLOW_CHECKPOINT_POLICIES = {"after-each-step"}
 _LIVE_FLOW_ANSWER_POLICIES = {"agent-decides"}
@@ -494,6 +495,7 @@ def _validate_scenario_contract(
     feature_source: ScenarioFeatureSource | None,
     quality: ScenarioQualityConfig | None,
     live_flow: ScenarioLiveFlowConfig | None,
+    raw: dict[str, Any],
 ) -> None:
     if run.stage_start is None or run.stage_end is None:
         raise ScenarioManifestError(
@@ -528,6 +530,28 @@ def _validate_scenario_contract(
         )
 
     if is_live:
+        workflow_bundle = raw.get("workflow_bundle")
+        if isinstance(workflow_bundle, dict) and workflow_bundle.get("release_proof_runtime"):
+            raise ScenarioManifestError(
+                "Live scenario manifests must not declare "
+                "`workflow_bundle.release_proof_runtime`; published-package and "
+                "release-proof helper evidence belongs to a separate release/install lane."
+            )
+        unsupported_live_runtimes = sorted(set(run.runtime_targets) - _LIVE_RUNTIME_IDS)
+        if unsupported_live_runtimes:
+            allowed = ", ".join(sorted(_LIVE_RUNTIME_IDS))
+            raise ScenarioManifestError(
+                "Live scenario manifests may only target real maintained runtimes "
+                f"({allowed}); unsupported live runtime target(s): "
+                + ", ".join(unsupported_live_runtimes)
+                + "."
+            )
+        if canonical_runtime not in _LIVE_RUNTIME_IDS:
+            allowed = ", ".join(sorted(_LIVE_RUNTIME_IDS))
+            raise ScenarioManifestError(
+                "Live scenario manifests must use a real maintained canonical runtime "
+                f"({allowed})."
+            )
         if automation_lane != "manual":
             raise ScenarioManifestError(
                 "Live scenario manifests must declare `automation_lane: manual`."
@@ -681,6 +705,7 @@ def load_scenario(
         feature_source=feature_source,
         quality=quality,
         live_flow=live_flow,
+        raw=substituted,
     )
     return Scenario(
         scenario_id=scenario_id,

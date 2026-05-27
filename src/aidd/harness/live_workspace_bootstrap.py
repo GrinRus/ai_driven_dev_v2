@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.core.workspace import init_workspace
 from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask
 
 
@@ -24,9 +23,14 @@ def bootstrap_live_work_item(
     resolved_revision: str | None = None,
 ) -> Path:
     workspace_root = working_copy_path / ".aidd"
-    init_workspace(root=workspace_root, work_item=work_item)
+    work_item_root = workspace_root / "workitems" / work_item
+    if not work_item_root.exists():
+        raise RuntimeError(
+            "Installed `aidd init` must create the live workspace before scenario "
+            f"context is written: {work_item_root.as_posix()}"
+        )
 
-    context_root = workspace_root / "workitems" / work_item / "context"
+    context_root = work_item_root / "context"
     repository_revision = (
         resolved_revision
         or scenario.repo.revision

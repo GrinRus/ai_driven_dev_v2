@@ -272,13 +272,9 @@ execute each stage through public `aidd stage run` and inspection commands plus
 loopback `aidd ui` UI/API checkpoints, write `stage-audits/<stage>.json` and
 `.md` per-stage audits, and preserve durable
 audit bundles under `.aidd/reports/evals/`.
-By default, the evaluator builds a local wheel from the clean tracked source checkout
-containing the scenario manifest. To test an already published package instead, set:
-
-```bash
-AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a5" \
-  uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
-```
+The evaluator always builds a local wheel from the clean tracked source checkout
+containing the scenario manifest. Published-package install proof is a separate
+release/install evidence lane, not part of public-repository live E2E.
 
 Public GitHub repositories are live E2E targets for evaluator evidence only. See:
 
