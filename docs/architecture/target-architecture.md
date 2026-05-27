@@ -198,6 +198,20 @@ Planned operator frontend and project-set workflow support must preserve this ow
 
 Detailed contracts live in `operator-frontend.md` and `project-set-workspace.md`.
 
+Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
+state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a
+separate unit:
+
+- a new work item for unrelated work;
+- a follow-up work item linked to source QA, review, validation, log, or artifact evidence;
+- a cloned flow that starts from the same configuration but receives its own run identity;
+- an eval or scenario batch that records comparison evidence outside the completed run;
+- or an archive decision that freezes the run without creating downstream work.
+
+Lineage metadata must reference source runs and artifacts rather than rewriting completed
+artifacts. The core owns the source-run and baseline references; adapters only execute the
+runtime selected for the new flow.
+
 ## 7. Stage model
 
 The canonical stage chain remains:

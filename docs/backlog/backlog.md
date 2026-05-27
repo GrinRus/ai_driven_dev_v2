@@ -6,15 +6,43 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-No immediate tasks queued.
+- `W26-E1-S1-T1`
 
 ## Soon
 
-No near-term tasks queued.
+- `W26-E1-S1-T2`
+- `W26-E1-S2-T1`
+- `W26-E2-S1-T1`
 
 ## Parking lot
 
-No deferred tasks queued.
+- `W26-E1-S2-T2`
+- `W26-E1-S2-T3`
+- `W26-E1-S3-T1`
+- `W26-E1-S3-T2`
+- `W26-E1-S3-T3`
+- `W26-E2-S1-T2`
+- `W26-E2-S1-T3`
+- `W26-E2-S2-T1`
+- `W26-E2-S2-T2`
+- `W26-E2-S2-T3`
+- `W26-E2-S3-T1`
+- `W26-E2-S3-T2`
+- `W26-E2-S3-T3`
+- `W26-E2-S3-T4`
+- `W26-E3-S1-T1`
+- `W26-E3-S1-T2`
+- `W26-E3-S1-T3`
+- `W26-E3-S2-T1`
+- `W26-E3-S2-T2`
+- `W26-E3-S2-T3`
+- `W26-E4-S1-T1`
+- `W26-E4-S1-T2`
+- `W26-E4-S1-T3`
+- `W26-E4-S2-T1`
+- `W26-E4-S2-T2`
+- `W26-E4-S2-T3`
+- `W26-E5-S1-T1`
 
 ## Update rules
 
@@ -169,3 +197,9 @@ No deferred tasks queued.
   reconcile non-terminal inspected stage metadata to `failed`, write timeout
   reconciliation evidence, and keep the evidence local. Wave 24 is closed and the active
   backlog queue is empty.
+- `2026-05-27` Wave 26 was opened for the accepted Mission Control operator UI and
+  completed-flow lineage behavior; promoted `W26-E1-S1-T1` to `Next`,
+  `W26-E1-S1-T2`, `W26-E1-S2-T1`, and `W26-E2-S1-T1` to `Soon`, and kept the
+  remaining core read-model, UI, API, deterministic coverage, local-project E2E, and
+  public live E2E next-flow checkpoint tasks plus operator documentation follow-up in
+  `Parking lot`.

@@ -351,7 +351,7 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
         ) in release_notes
 
 
-def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
+def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     repo_root = _repo_root()
     source_version = _project_version(repo_root)
     release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
@@ -362,6 +362,9 @@ def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
     roadmap = (repo_root / "docs" / "backlog" / "roadmap.md").read_text(
         encoding="utf-8"
     )
+    operator_frontend = (
+        repo_root / "docs" / "architecture" / "operator-frontend.md"
+    ).read_text(encoding="utf-8")
     backlog = (repo_root / "docs" / "backlog" / "backlog.md").read_text(
         encoding="utf-8"
     )
@@ -370,6 +373,7 @@ def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
         1,
     )[0]
     w24_s2 = roadmap.split("#### Slice W24-E1-S2", 1)[1].split("## Wave", 1)[0]
+    w26 = roadmap.split("## Wave 26", 1)[1]
     backlog_next = backlog.split("## Next", 1)[1].split("## Soon", 1)[0]
     backlog_soon = backlog.split("## Soon", 1)[1].split("## Parking lot", 1)[0]
     backlog_parking = backlog.split("## Parking lot", 1)[1].split("## Update rules", 1)[0]
@@ -393,9 +397,54 @@ def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
     assert "`W24-E1-S2-T1` (done)" in w24_s2
     assert "`W24-E1-S2-T2` (done)" in w24_s2
     assert "`W24-E1-S2-T3` (done)" in w24_s2
-    assert "No immediate tasks queued." in backlog_next
-    assert "No near-term tasks queued." in backlog_soon
-    assert "No deferred tasks queued." in backlog_parking
+
+    assert "## Wave 26 — completed-flow lineage operator experience (`next`)" in roadmap
+    assert "`W26-E0-S1-T1` (done)" in w26
+    assert "`W26-E1-S1-T1` Add a terminal-run handoff read model" in w26
+    assert (
+        "`W26-E4-S2-T1` Define the manual live E2E next-flow checkpoint policy"
+        in w26
+    )
+    assert "`W26-E1-S1-T1`" in backlog_next
+    assert "`W26-E1-S1-T2`" in backlog_soon
+    assert "`W26-E1-S2-T1`" in backlog_soon
+    assert "`W26-E2-S1-T1`" in backlog_soon
+    assert "`W26-E4-S2-T1`" in backlog_parking
+    assert "`W26-E4-S2-T2`" in backlog_parking
+    assert "`W26-E4-S2-T3`" in backlog_parking
+    assert "`W26-E5-S1-T1`" in backlog_parking
+    for expected_screen_task in (
+        "`W26-E1-S3-T1`",
+        "`W26-E1-S3-T2`",
+        "`W26-E1-S3-T3`",
+        "`W26-E2-S3-T1`",
+        "`W26-E2-S3-T2`",
+        "`W26-E2-S3-T3`",
+        "`W26-E2-S3-T4`",
+    ):
+        assert expected_screen_task in backlog_parking
+
+    visual_reference_dir = (
+        repo_root / "docs" / "architecture" / "assets" / "operator-ui-mission-control"
+    )
+    visual_references = (
+        "01-project-setup-previous-run.png",
+        "02-active-run-command-center.png",
+        "02b-flow-complete-start-next-flow.png",
+        "03-stage-document-workbench.png",
+        "04-questions-interview-loop.png",
+        "05-validation-repair-center.png",
+        "06-runtime-logs-live-console.png",
+        "07-artifacts-evidence-graph.png",
+        "08-approvals-request-change.png",
+        "09-run-history-lineage.png",
+        "10-start-next-flow-source-findings.png",
+        "11-define-follow-up-work-item.png",
+        "12-confirm-launch-next-flow.png",
+    )
+    for filename in visual_references:
+        assert filename in operator_frontend
+        assert (visual_reference_dir / filename).is_file()
 
 
 def test_release_docs_describe_release_branch_publish_flow() -> None:
@@ -657,6 +706,16 @@ def test_docs_do_not_reference_removed_eval_run_command() -> None:
         paths = [root] if root.is_file() else list(root.rglob("*"))
         for path in paths:
             if not path.is_file():
+                continue
+            if path.suffix.lower() not in {
+                ".md",
+                ".txt",
+                ".yml",
+                ".yaml",
+                ".toml",
+                ".json",
+                ".jsonl",
+            }:
                 continue
             text = path.read_text(encoding="utf-8")
             if "aidd eval run" in text:

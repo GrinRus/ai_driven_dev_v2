@@ -211,3 +211,74 @@ Current W20 implementation status:
   log reads, structured live job log chunks, artifact document rendering, local-only
   open-folder/server-stop actions, stage intervention request dispatch, and
   workflow-run delegation through the internal service seam.
+
+## 7. Accepted next-generation UX direction
+
+The accepted operator frontend direction is a Mission Control console. It keeps the
+canonical stage timeline visible, gives the run-global next action primary weight, and
+keeps documents, validation evidence, artifacts, approvals, and logs one click away.
+
+The locked screen inventory is:
+
+1. Project Setup / Work Item Picker with optional previous-run context.
+2. Active Run Command Center for in-progress `idea -> qa` execution.
+3. Stage Document Workbench for Markdown preview/source/diff and contract checks.
+4. Questions / Interview Loop for unresolved model questions and persisted answers.
+5. Validation / Repair Center for validation failures, repair attempts, and explicit stop.
+6. Runtime Logs / Live Console for raw adapter/runtime logs and correlated events.
+7. Artifacts / Evidence Graph for provenance between documents, logs, reports, and stages.
+8. Approvals / Request Change for runtime approvals and stage-scoped interventions.
+9. Run History / Scenario Matrix / Eval Reports for comparisons and systemic issues.
+10. Start Next Flow Wizard for completed-run handoff.
+11. Define Follow-up Work Item for new work item scope and inherited context.
+12. Confirm and Launch Next Flow for preflight, audit preview, and launch.
+
+The visual references for this direction are stored in
+`docs/architecture/assets/operator-ui-mission-control/`:
+
+- `01-project-setup-previous-run.png`
+- `02-active-run-command-center.png`
+- `02b-flow-complete-start-next-flow.png`
+- `03-stage-document-workbench.png`
+- `04-questions-interview-loop.png`
+- `05-validation-repair-center.png`
+- `06-runtime-logs-live-console.png`
+- `07-artifacts-evidence-graph.png`
+- `08-approvals-request-change.png`
+- `09-run-history-lineage.png`
+- `10-start-next-flow-source-findings.png`
+- `11-define-follow-up-work-item.png`
+- `12-confirm-launch-next-flow.png`
+
+When the current run is active, the command center prioritizes blocked questions,
+validation failures, approvals, resumable stages, and log visibility. When the run reaches
+a terminal state after `qa`, the same command center switches to **Flow Complete** and the
+primary action band becomes **Start Next Flow**.
+
+The accepted completed-flow actions are:
+
+- **Create New Work Item**: starts a fresh work item without previous-run context.
+- **Start Follow-up Flow**: creates a new work item from selected QA findings, review
+  notes, failed evidence, or a manual request.
+- **Clone This Flow**: creates a new flow from the same runtime, prompt pack, contracts,
+  branch, and baseline configuration, with optional edits before launch.
+- **Run Eval / Scenario Batch**: sends the completed run into comparison or scenario
+  evidence workflows without changing the completed run.
+- **Archive Run**: marks the completed run as closed for operator navigation.
+
+Follow-up and cloned flows are independent work items and runs. They may inherit selected
+context references, but they must not continue or mutate the completed source run. The UI
+must show source run, source work item, baseline, inherited artifacts, and audit preview
+before launch.
+
+## 8. UX validation checklist for the accepted direction
+
+Before implementation is considered done, the local UI evidence lane must prove:
+
+- a completed `qa` run renders the Flow Complete state and handoff summary;
+- Start Next Flow actions are visible without hiding final artifacts, logs, approvals,
+  and validation evidence;
+- follow-up creation records selected source findings and inherited context explicitly;
+- launch preflight creates a new work item/run identity and source-run lineage evidence;
+- run history can show parent and child relationships and still open raw logs/artifacts;
+- mobile and keyboard paths can reach completed-run actions and the wizard controls.
