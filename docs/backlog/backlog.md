@@ -12,7 +12,8 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 - `W26-E1-S1-T2`
 - `W26-E1-S2-T1`
-- `W26-E2-S1-T1`
+- `W26-E2-S0-T1`
+- `W26-E2-S0-T2`
 
 ## Parking lot
 
@@ -21,6 +22,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `W26-E1-S3-T1`
 - `W26-E1-S3-T2`
 - `W26-E1-S3-T3`
+- `W26-E2-S0-T3`
+- `W26-E2-S0-T4`
+- `W26-E2-S1-T1`
 - `W26-E2-S1-T2`
 - `W26-E2-S1-T3`
 - `W26-E2-S2-T1`
@@ -198,8 +202,13 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   reconciliation evidence, and keep the evidence local. Wave 24 is closed and the active
   backlog queue is empty.
 - `2026-05-27` Wave 26 was opened for the accepted Mission Control operator UI and
-  completed-flow lineage behavior; promoted `W26-E1-S1-T1` to `Next`,
-  `W26-E1-S1-T2`, `W26-E1-S2-T1`, and `W26-E2-S1-T1` to `Soon`, and kept the
+  completed-flow lineage behavior; promoted `W26-E1-S1-T1` to `Next`, core lineage
+  follow-up plus static UI refactoring foundation tasks to `Soon`, and kept the
   remaining core read-model, UI, API, deterministic coverage, local-project E2E, and
   public live E2E next-flow checkpoint tasks plus operator documentation follow-up in
   `Parking lot`.
+- `2026-05-27` After rebasing on remote `origin/main`, latest-main UI analysis found no
+  new remote commits beyond the branch base, but confirmed current main already split
+  packaged static assets and core operator frontend read models while leaving
+  `operator.js`, `operator.css`, and script-string UI tests large. `W26-E2-S0` was added
+  so static UI module/CSS/test refactoring happens before Mission Control screen rollout.

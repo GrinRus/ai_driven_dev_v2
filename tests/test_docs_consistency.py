@@ -408,7 +408,11 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E1-S1-T1`" in backlog_next
     assert "`W26-E1-S1-T2`" in backlog_soon
     assert "`W26-E1-S2-T1`" in backlog_soon
-    assert "`W26-E2-S1-T1`" in backlog_soon
+    assert "`W26-E2-S0-T1`" in backlog_soon
+    assert "`W26-E2-S0-T2`" in backlog_soon
+    assert "`W26-E2-S0-T3`" in backlog_parking
+    assert "`W26-E2-S0-T4`" in backlog_parking
+    assert "`W26-E2-S1-T1`" in backlog_parking
     assert "`W26-E4-S2-T1`" in backlog_parking
     assert "`W26-E4-S2-T2`" in backlog_parking
     assert "`W26-E4-S2-T3`" in backlog_parking

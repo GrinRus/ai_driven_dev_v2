@@ -6530,6 +6530,74 @@ Exit evidence:
 ### Epic W26-E2 — accepted operator UI screens (`planned`)
 Linked stories: `US-05`, `US-06`, `US-11`
 
+#### Slice W26-E2-S0 — static UI refactoring foundation (`planned`)
+Goal: reduce the current packaged static UI monolith before adding the larger Mission
+Control screen set, while preserving the no-Node and no-Vite packaging model.
+
+Current-main analysis:
+
+- `origin/main` is currently `36dc558`; rebasing `codex/operator-ui-mission-control-backlog`
+  onto `origin/main` was a no-op.
+- Main already split packaged assets into `src/aidd/cli/static/` and split operator
+  frontend read models into smaller core modules.
+- The remaining UI implementation is still concentrated in `operator.js` and
+  `operator.css`; before adding the new screens, the static UI needs explicit
+  module/resource boundaries so rendering, state, API, logs, artifacts, questions,
+  approvals, and next-flow controls do not become one larger file.
+
+Primary outputs:
+
+- multi-resource static asset loader
+- smaller browser JavaScript modules or equivalent packaged static boundaries
+- CSS token, layout, and component boundaries
+- targeted static UI contract tests
+
+Touched areas:
+
+- `src/aidd/cli/ui_assets.py`
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/static/`
+- `tests/cli/test_ui_assets_contracts.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W25-E4-S2`
+- `W26-E1-S1`
+
+Local tasks:
+
+- `W26-E2-S0-T1` Add a packaged static asset manifest or loader that can serve multiple
+  UI JavaScript and CSS resources while preserving the existing `/operator.js` and
+  `/operator.css` compatibility routes.
+  - Scope: static resource loader and UI HTTP serving only.
+  - Verification: package resource tests and UI endpoint tests prove old routes still
+    work and new static resources are included in source and wheel builds.
+- `W26-E2-S0-T2` Split `operator.js` into smaller packaged browser modules for API/state,
+  shell rendering, stage cockpit rendering, artifacts/documents, logs/jobs, questions,
+  approvals/interventions, and next-flow actions.
+  - Scope: static JavaScript resources only.
+  - Verification: existing UI tests pass and static contract tests assert each module owns
+    its intended surface without removing escaping, accessibility, or runtime-selection
+    safeguards.
+- `W26-E2-S0-T3` Split `operator.css` into token, layout, component, and responsive layers
+  or equivalent clearly bounded sections before adding Mission Control-specific styles.
+  - Scope: static CSS resources only.
+  - Verification: CSS contract tests keep focus, screen-reader, truncation, saved-answer,
+    mobile rail, and density rules present.
+- `W26-E2-S0-T4` Split monolithic script-string assertions in `tests/cli/test_ui.py` into
+  targeted UI asset contract tests organized by surface.
+  - Scope: UI tests only.
+  - Verification: focused UI asset and UI endpoint tests pass with the same behavior
+    checks but smaller failure surfaces.
+
+Exit evidence:
+
+- Mission Control UI work can add new screens without extending the current static
+  JavaScript/CSS monoliths;
+- existing local UI behavior, package resource loading, and no-Node packaging remain
+  compatibility-preserved.
+
 #### Slice W26-E2-S1 — Mission Control shell updates (`planned`)
 Goal: update the existing static operator console shell to match the accepted screen
 inventory while preserving the no-Node packaging model.
@@ -6551,6 +6619,7 @@ Touched areas:
 Dependencies:
 
 - `W26-E1-S1`
+- `W26-E2-S0`
 
 Local tasks:
 
