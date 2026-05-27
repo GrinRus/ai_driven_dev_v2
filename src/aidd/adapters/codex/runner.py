@@ -19,8 +19,8 @@ from aidd.adapters.runner_support import (
     validate_stage_command_context,
 )
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
-from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
+from aidd.runtime_catalog import RuntimeExecutionMode, normalize_execution_mode
 
 
 @dataclass(frozen=True, slots=True)

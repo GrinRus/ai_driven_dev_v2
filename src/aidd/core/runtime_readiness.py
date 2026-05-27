@@ -4,8 +4,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
-from aidd.adapters.runtime_registry import runtime_definitions
 from aidd.config import AiddConfig
+from aidd.runtime_catalog import runtime_definitions
 
 RuntimeCommandSource = Literal["default", "config"]
 

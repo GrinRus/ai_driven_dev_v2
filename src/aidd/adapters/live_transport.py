@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from aidd.adapters.runtime_execution import RuntimeRunResult
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.core.stage_models import AdapterExecutionStatus
+from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import RuntimeInteractionMode, RuntimePermissionPolicy
 
 ExitClassificationT = TypeVar("ExitClassificationT")

@@ -119,6 +119,69 @@ A manual installed UI smoke should use a disposable local fixture project:
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`
 state stays local to the fixture project.
 
+## Manual Browser Checklist
+
+Run these checks in a real browser against the local URL printed by `aidd ui`. Use a
+disposable `.aidd/` workspace and record the AIDD version, runtime id, browser, viewport,
+and any blockers in roadmap evidence.
+
+### Dashboard Shell
+
+- First launch shows the loading state before `/api/dashboard` resolves.
+- No-run state explains the first action and exposes a runtime-gated `Run workflow`
+  action after a runtime is selected.
+- Work item, run chip, runtime readiness, stage rail, stage cockpit, right sidebar,
+  Activity / Events, and Recent artifacts are visible after refresh.
+- The active stage is marked in the rail and remains visible after selecting another
+  stage.
+
+### Cockpit Tabs
+
+- Overview, Questions, Validation, Artifacts, Logs, Approvals, and Request change tabs
+  switch content without losing the selected stage.
+- Tab semantics expose the selected tab and the cockpit panel remains keyboard-focusable.
+- Quick links route to Logs, Artifacts, Validation, and Questions consistently.
+
+### Logs
+
+- A running workflow, stage run, or intervention shows live stdout/stderr/system chunks.
+- Cancelled or completed jobs keep their live log chunks visible.
+- Saved `runtime.log` loads after completion and shows a truncation notice when bounded.
+- Raw mode and stdout/stderr/system filters do not hide the truncation notice.
+
+### Artifacts
+
+- Artifact list renders document and log artifacts for the selected stage.
+- Markdown preview and Source mode load through `/api/artifacts/document`.
+- Large artifacts show byte-range truncation states and keep Open folder available for
+  full-file inspection.
+- Evidence Refs and Recent Artifacts navigate into the artifact inspection view.
+
+### Questions
+
+- Blocking questions appear in Overview and Questions.
+- Saving a resolved answer writes `answers.md`, disables the answer controls, and shows
+  the saved answer text in the resolved question card.
+- Partial or deferred answers remain non-resolved and keep blocking policy visible.
+- Answer & resume uses the selected runtime and current run id.
+
+### Request Change / Intervention
+
+- Request change shows current-stage target document checkboxes when available.
+- Submit & run creates an operator request artifact, switches to Logs, and streams the
+  intervention job.
+- Activity and Evidence Refs show `operator.request.created` after refresh.
+- Validation and repair evidence remain inspectable after the intervention attempt.
+
+### Viewports
+
+- Desktop width shows stage rail, cockpit, right sidebar, and bottom dock together.
+- Tablet width keeps the right sidebar below the cockpit without overlapping content.
+- Mobile width turns the stage rail into horizontal navigation, auto-scrolls the active
+  stage into view on load and stage switch, and preserves readable tab/action buttons.
+- Keyboard focus is visible on runtime select, stage cards, cockpit tabs, action buttons,
+  artifact rows, textareas, and source/preview controls.
+
 ## Brokered Approval Proof
 
 For brokered runtime approval proof, keep the project disposable and run the stage

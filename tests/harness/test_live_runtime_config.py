@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.harness.live_runtime_config import (
     resolve_live_runtime_command_entries,
     validate_live_runtime_command,
@@ -21,6 +20,7 @@ from aidd.harness.scenarios import (
     ScenarioRepoSource,
     ScenarioRunConfig,
 )
+from aidd.runtime_catalog import RuntimeExecutionMode
 
 
 def _empty_live_command_env() -> dict[str, str]:

@@ -6,14 +6,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from aidd.adapters.runtime_registry import (
+from aidd.compatibility import should_upgrade_legacy_raw_provider_command
+from aidd.core.stages import STAGES, is_valid_stage
+from aidd.runtime_catalog import (
     RuntimeExecutionMode,
     get_runtime_definition,
     normalize_execution_mode,
     runtime_ids,
 )
-from aidd.compatibility import should_upgrade_legacy_raw_provider_command
-from aidd.core.stages import STAGES, is_valid_stage
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeInteractionMode,
@@ -242,6 +242,64 @@ def _require_runtime_value[T](runtime_id: str, field_name: str, value: T | None)
     return value
 
 
+def _config_table(data: dict[str, Any], section_name: str) -> dict[str, Any]:
+    raw_section = data.get(section_name, {})
+    if raw_section is None:
+        return {}
+    if not isinstance(raw_section, dict):
+        raise ValueError(f"[{section_name}] must be a table when provided.")
+    return raw_section
+
+
+def _nested_config_table(
+    data: dict[str, Any],
+    *,
+    parent_section: str,
+    section_name: str,
+) -> dict[str, Any]:
+    parent = _config_table(data, parent_section)
+    raw_section = parent.get(section_name, {})
+    if raw_section is None:
+        return {}
+    if not isinstance(raw_section, dict):
+        raise ValueError(
+            f"[{parent_section}.{section_name}] must be a table when provided."
+        )
+    return raw_section
+
+
+def _string_config_value(
+    section: dict[str, Any],
+    *,
+    section_label: str,
+    field_name: str,
+    default: str,
+) -> str:
+    raw_value = section.get(field_name, default)
+    if not isinstance(raw_value, str):
+        raise ValueError(f"[{section_label}.{field_name}] must be a string when provided.")
+    return raw_value
+
+
+def _integer_config_value(
+    section: dict[str, Any],
+    *,
+    section_label: str,
+    field_name: str,
+    default: int,
+) -> int:
+    raw_value = section.get(field_name, default)
+    if isinstance(raw_value, bool) or not isinstance(raw_value, int):
+        raise ValueError(
+            f"[{section_label}.{field_name}] must be a non-negative integer."
+        )
+    if raw_value < 0:
+        raise ValueError(
+            f"[{section_label}.{field_name}] must be a non-negative integer."
+        )
+    return int(raw_value)
+
+
 def _copy_runtime_configs(
     runtime_configs: dict[str, RuntimeConfig],
 ) -> dict[str, RuntimeConfig]:
@@ -348,8 +406,11 @@ def _legacy_runtime_configs_from_constructor_fields(
 
 def _runtime_section(data: dict[str, Any], runtime_id: str) -> dict[str, Any]:
     definition = get_runtime_definition(runtime_id)
-    raw_section = data.get("runtime", {}).get(definition.config_section, {})
-    return raw_section if isinstance(raw_section, dict) else {}
+    return _nested_config_table(
+        data,
+        parent_section="runtime",
+        section_name=definition.config_section,
+    )
 
 
 def _brokered_default_command(runtime_id: str) -> str:
@@ -365,7 +426,12 @@ def _runtime_command(
     definition = get_runtime_definition(runtime_id)
     section = _runtime_section(data, runtime_id)
     has_custom_command = "command" in section
-    command = str(section.get("command", definition.default_command)).strip()
+    command = _string_config_value(
+        section,
+        section_label=f"runtime.{definition.config_section}",
+        field_name="command",
+        default=definition.default_command,
+    ).strip()
     is_default_managed_command = command == definition.default_command
     if (
         has_custom_command
@@ -405,9 +471,20 @@ def _runtime_execution_mode(data: dict[str, Any], runtime_id: str) -> RuntimeExe
     definition = get_runtime_definition(runtime_id)
     section = _runtime_section(data, runtime_id)
     if "mode" in section:
-        return normalize_execution_mode(runtime_id=runtime_id, value=str(section["mode"]))
+        mode = _string_config_value(
+            section,
+            section_label=f"runtime.{definition.config_section}",
+            field_name="mode",
+            default="",
+        )
+        return normalize_execution_mode(runtime_id=runtime_id, value=mode)
 
-    command = str(section.get("command", "")).strip()
+    command = _string_config_value(
+        section,
+        section_label=f"runtime.{definition.config_section}",
+        field_name="command",
+        default="",
+    ).strip()
     if (
         command
         and command != definition.default_command
@@ -482,8 +559,14 @@ def _runtime_permission_policy(
 ) -> RuntimePermissionPolicy:
     definition = get_runtime_definition(runtime_id)
     section = _runtime_section(data, runtime_id)
+    raw_policy = _string_config_value(
+        section,
+        section_label=f"runtime.{definition.config_section}",
+        field_name="permission_policy",
+        default="",
+    )
     try:
-        return normalize_permission_policy(section.get("permission_policy"))
+        return normalize_permission_policy(raw_policy)
     except ValueError as exc:
         raise ValueError(
             f"[runtime.{definition.config_section}] {exc}"
@@ -496,8 +579,14 @@ def _runtime_interaction_mode(
 ) -> RuntimeInteractionMode:
     definition = get_runtime_definition(runtime_id)
     section = _runtime_section(data, runtime_id)
+    raw_mode = _string_config_value(
+        section,
+        section_label=f"runtime.{definition.config_section}",
+        field_name="interaction_mode",
+        default="",
+    )
     try:
-        return normalize_interaction_mode(section.get("interaction_mode"))
+        return normalize_interaction_mode(raw_mode)
     except ValueError as exc:
         raise ValueError(
             f"[runtime.{definition.config_section}] {exc}"
@@ -510,8 +599,14 @@ def _runtime_auto_approval_preset(
 ) -> AutoApprovalPreset:
     definition = get_runtime_definition(runtime_id)
     section = _runtime_section(data, runtime_id)
+    raw_preset = _string_config_value(
+        section,
+        section_label=f"runtime.{definition.config_section}",
+        field_name="auto_approval_preset",
+        default="",
+    )
     try:
-        return normalize_auto_approval_preset(section.get("auto_approval_preset"))
+        return normalize_auto_approval_preset(raw_preset)
     except ValueError as exc:
         raise ValueError(
             f"[runtime.{definition.config_section}] {exc}"
@@ -573,7 +668,14 @@ def load_config(path: Path) -> AiddConfig:
         with path.open("rb") as file_obj:
             data = tomllib.load(file_obj)
 
-    workspace_root = Path(data.get("workspace", {}).get("root", ".aidd"))
+    workspace_root = Path(
+        _string_config_value(
+            _config_table(data, "workspace"),
+            section_label="workspace",
+            field_name="root",
+            default=".aidd",
+        )
+    )
     runtime_configs: dict[str, RuntimeConfig] = {}
     for runtime_id in runtime_ids():
         permission_policy = _runtime_permission_policy(data, runtime_id)
@@ -586,8 +688,18 @@ def load_config(path: Path) -> AiddConfig:
             interaction_mode=_runtime_interaction_mode(data, runtime_id),
             auto_approval_preset=_runtime_auto_approval_preset(data, runtime_id),
         )
-    log_mode = data.get("logging", {}).get("mode", "both")
-    max_repair_attempts = int(data.get("repair", {}).get("max_attempts", 2))
+    log_mode = _string_config_value(
+        _config_table(data, "logging"),
+        section_label="logging",
+        field_name="mode",
+        default="both",
+    )
+    max_repair_attempts = _integer_config_value(
+        _config_table(data, "repair"),
+        section_label="repair",
+        field_name="max_attempts",
+        default=2,
+    )
 
     return AiddConfig(
         workspace_root=workspace_root,

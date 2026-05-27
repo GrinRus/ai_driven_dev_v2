@@ -9,13 +9,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from aidd.adapters.runtime_registry import (
+from aidd.core.contracts import repo_root_from
+from aidd.harness.scenarios import Scenario
+from aidd.runtime_catalog import (
     RuntimeExecutionMode,
     get_runtime_definition,
     runtime_definitions,
 )
-from aidd.core.contracts import repo_root_from
-from aidd.harness.scenarios import Scenario
 
 
 @dataclass(frozen=True, slots=True)

@@ -79,6 +79,7 @@ def _write_fake_aidd(
     path: Path,
     *,
     fail_stage: str | None = None,
+    timeout_stage: str | None = None,
     block_stage: str | None = None,
     ui_operator_request_stage: str | None = None,
     ui_operator_request_command: str = "pwd",
@@ -93,11 +94,13 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 PRIMARY_OUTPUTS = {json.dumps(_PRIMARY_OUTPUTS)}
 FAIL_STAGE = {fail_stage!r}
+TIMEOUT_STAGE = {timeout_stage!r}
 BLOCK_STAGE = {block_stage!r}
 UI_OPERATOR_REQUEST_STAGE = {ui_operator_request_stage!r}
 UI_OPERATOR_REQUEST_COMMAND = {ui_operator_request_command!r}
@@ -206,6 +209,33 @@ def write_failed_stage_artifacts(stage: str, work_item: str) -> None:
     (stage_root / primary).write_text(f"# {{stage}} output\\n\\n- failed by fake AIDD\\n")
 
 
+def write_executing_stage_metadata(stage: str, work_item: str, run_id: str) -> None:
+    stage_root = (
+        Path(".aidd") / "reports" / "runs" / work_item / run_id / "stages" / stage
+    )
+    attempt_root = stage_root / "attempts" / "attempt-0001"
+    attempt_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "stage-metadata.json").write_text(
+        json.dumps(
+            {{
+                "schema_version": 1,
+                "run_id": run_id,
+                "work_item_id": work_item,
+                "stage": stage,
+                "status": "executing",
+                "created_at_utc": "2026-05-25T00:00:00Z",
+                "updated_at_utc": "2026-05-25T00:00:00Z",
+                "status_history": [
+                    {{
+                        "status": "executing",
+                        "changed_at_utc": "2026-05-25T00:00:00Z",
+                    }}
+                ],
+            }}
+        )
+    )
+
+
 def stage_run(args: list[str]) -> int:
     stage = args[2]
     work_item = option(args, "--work-item")
@@ -214,6 +244,11 @@ def stage_run(args: list[str]) -> int:
         write_failed_stage_artifacts(stage, work_item)
         print(f"Stage run result: action=stop state=failed stage={{stage}}")
         return 7
+    if stage == TIMEOUT_STAGE:
+        write_executing_stage_metadata(stage, work_item, run_id)
+        print(f"Stage run started: state=executing stage={{stage}}", flush=True)
+        time.sleep(5)
+        return 0
     if stage == BLOCK_STAGE:
         stage_root = Path(".aidd") / "workitems" / work_item / "stages" / stage
         answers_path = stage_root / "answers.md"
@@ -629,6 +664,7 @@ def _prepare_live_test(
     *,
     runtime_targets: tuple[str, ...] = ("opencode",),
     fail_stage: str | None = None,
+    timeout_stage: str | None = None,
     block_stage: str | None = None,
     ui_operator_request_stage: str | None = None,
     ui_operator_request_command: str = "pwd",
@@ -653,6 +689,7 @@ def _prepare_live_test(
     _write_fake_aidd(
         fake_aidd,
         fail_stage=fail_stage,
+        timeout_stage=timeout_stage,
         block_stage=block_stage,
         ui_operator_request_stage=ui_operator_request_stage,
         ui_operator_request_command=ui_operator_request_command,
@@ -1250,6 +1287,70 @@ def test_black_box_live_e2e_reports_stage_failure_from_step_evidence(
     assert audit_payload["validator_verdict"] == "fail"
     assert audit_payload["primary_artifact"]["present"] is True
     assert "/output/" not in audit_payload["primary_artifact"]["path"]
+
+
+def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        timeout_stage="idea",
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._flow_timeout_seconds",
+        lambda scenario: 2.0,
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "fail"
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    target_workspace_root = Path(state_payload["target_workspace_root"])
+    metadata_path = (
+        target_workspace_root
+        / "reports"
+        / "runs"
+        / "WI-LIVE-BLACKBOX"
+        / result.run_id
+        / "stages"
+        / "idea"
+        / "stage-metadata.json"
+    )
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata["status"] == "failed"
+    assert [entry["status"] for entry in metadata["status_history"]] == [
+        "executing",
+        "failed",
+    ]
+    steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    timeout_step = next(
+        step
+        for step in steps
+        if step["action"] == "run-stage" and step["stage"] == "idea"
+    )
+    assert timeout_step["commands"][0]["timed_out"] is True
+    assert timeout_step["details"]["timeout_reconciliation"]["previous_status"] == "executing"
+    assert timeout_step["details"]["timeout_reconciliation"]["reconciled_status"] == "failed"
+    assert timeout_step["evidence_paths"]
+    reconciliation_path = Path(timeout_step["evidence_paths"][0])
+    assert reconciliation_path.exists()
+    reconciliation = json.loads(reconciliation_path.read_text(encoding="utf-8"))
+    assert reconciliation["reconciled"] is True
+    audit_payload = json.loads(
+        (result.bundle_root / "stage-audits" / "idea.json").read_text(encoding="utf-8")
+    )
+    assert audit_payload["stage_state"] == "failed"
+    assert audit_payload["stage_metadata_status"] == "failed"
+    assert audit_payload["classifications"]["frontend_checkpoint"] == "skipped"
 
 
 def test_implementation_verification_evidence_shape_uses_validator_patterns() -> None:

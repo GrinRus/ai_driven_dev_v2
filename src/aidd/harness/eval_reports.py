@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
 
-from aidd.adapters.runtime_registry import get_runtime_definition
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_JSONL_FILENAME,
@@ -60,6 +59,7 @@ from aidd.harness.result_bundle import (
     write_harness_metadata,
 )
 from aidd.harness.scenarios import Scenario
+from aidd.runtime_catalog import get_runtime_definition
 
 EXIT_CODE_PATTERN = re.compile(r"non-zero exit \((?P<code>\d+)\)")
 

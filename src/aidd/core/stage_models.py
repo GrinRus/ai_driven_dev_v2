@@ -49,6 +49,12 @@ class AdapterInvocationBundle:
 
 
 @dataclass(frozen=True, slots=True)
+class StageOutputPromotion:
+    source_path: Path
+    destination_path: Path
+
+
+@dataclass(frozen=True, slots=True)
 class StageOutputDiscovery:
     stage: str
     work_item: str
@@ -57,6 +63,7 @@ class StageOutputDiscovery:
     expected_markdown_documents: tuple[Path, ...]
     discovered_markdown_documents: tuple[Path, ...]
     missing_markdown_documents: tuple[Path, ...]
+    promoted_misplaced_documents: tuple[StageOutputPromotion, ...] = ()
 
 
 class ValidationVerdict(StrEnum):
@@ -241,6 +248,7 @@ __all__ = [
     "StageInterviewRouting",
     "StageOrchestrationResult",
     "StageOutputDiscovery",
+    "StageOutputPromotion",
     "StageOutputPublication",
     "StagePreparationBundle",
     "StageResumeResult",

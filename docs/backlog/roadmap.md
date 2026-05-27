@@ -5589,12 +5589,12 @@ Exit evidence:
 - live E2E remains manual-only and outside CI/release gates;
 - final audit artifacts are derived from per-step black-box evidence.
 
-## Wave 24 — beta readiness release preparation (`next`)
+## Wave 24 — beta readiness release preparation (`done`)
 
 Goal: prepare AIDD for controlled operator-trial beta readiness without claiming unattended
 production automation and without wiring live E2E into CI/CD or release workflows.
 
-### Epic W24-E1 — source-of-truth and release guardrail closure (`next`)
+### Epic W24-E1 — source-of-truth and release guardrail closure (`done`)
 Linked stories: `US-01`, `US-07`, `US-09`, `US-10`, `US-11`, `US-12`
 
 #### Slice W24-E1-S1 — beta release-prep source audit (`done`)
@@ -5664,7 +5664,7 @@ Exit evidence:
 - live E2E remains manual-only and outside CI/CD/release workflows;
 - release materials are prepared without changing the public alpha safety claim.
 
-#### Slice W24-E1-S2 — manual live beta evidence refresh (`next`)
+#### Slice W24-E1-S2 — manual live beta evidence refresh (`done`)
 Goal: refresh maintained manual live E2E evidence for the beta-readiness provider matrix
 outside CI/CD and release automation.
 
@@ -5686,14 +5686,652 @@ Dependencies:
 
 Local tasks:
 
-- `W24-E1-S2-T1` (next) Refresh medium-plus manual live evidence for `codex`,
+- `W24-E1-S2-T1` (done) Refresh medium-plus manual live evidence for `codex`,
   `claude-code`, and `opencode` using maintained live manifests outside CI/CD.
-- `W24-E1-S2-T2` (planned) Apply evidence-backed AIDD fixes discovered by the manual live
-  refresh and commit each verified fix separately.
+- `W24-E1-S2-T2` (done) Classify structured `opencode` provider error payloads as
+  runtime failures when the native CLI exits `0`, so orchestration stops explicitly
+  instead of spending repair budget on missing documents.
+- `W24-E1-S2-T3` (done) Make black-box live stage command timeouts terminal and visible
+  in evidence without leaving inspected AIDD stage metadata in `executing`.
+
+Evidence:
+
+- `2026-05-26` refreshed manual live evidence from source revision
+  `99864851129baaaf11bdc0fa883b35dff3966c57` using maintained live manifests.
+- `eval-live-005-codex-20260526T160204Z` (`AIDD-LIVE-005`, `codex`) passed as a
+  supplementary small smoke control: execution `pass`, quality gate `pass`, quality
+  verdict `ready`, review `approved`, and QA `ready`.
+- `eval-live-007-codex-20260526T163850Z` (`AIDD-LIVE-007`, `codex`) produced negative
+  medium-plus evidence: stages reached `implement`, `plan` repaired successfully once,
+  but the harness command timeout killed `aidd stage run implement` after `1200.000s`,
+  leaving the stage metadata in `executing` and no runtime log visible through
+  `aidd run logs`.
+- `eval-live-007-claude-code-20260526T172838Z` (`AIDD-LIVE-007`, `claude-code`) is an
+  explicit external provider blocker: the runtime log exposed through public CLI shows
+  API 403 provider usage-limit/quota text before `idea` could produce stage documents.
+- `eval-live-006-opencode-20260526T173043Z` (`AIDD-LIVE-006`, `opencode`) is negative
+  large-scenario evidence: provider quota returned a structured API error payload with
+  process exit `0`, so AIDD treated the runtime exit as success, spent repair budget on
+  missing `idea-brief.md`, and stopped after validation failed three times.
+- Operator-authored `operator-quality-analysis.md` overlays were written in each
+  terminal bundle; `.aidd/reports/evals/` remains local evidence and is not committed.
+- `2026-05-26` split the broad evidence-backed fix pass into two reviewable tasks:
+  `W24-E1-S2-T2` owns the adapter/runtime error-payload classification issue proven by
+  `eval-live-006-opencode-20260526T173043Z`, while `W24-E1-S2-T3` owns the live harness
+  timeout lifecycle/evidence issue proven by `eval-live-007-codex-20260526T163850Z`.
+- `2026-05-26` completed `W24-E1-S2-T2`: native OpenCode zero-exit structured
+  provider API errors are classified as `provider_error`; raw logs and runtime exit
+  metadata are preserved; CLI coverage proves the stage stops after one attempt instead
+  of scheduling repair retries.
+- `2026-05-26` completed `W24-E1-S2-T3`: black-box live stage command timeouts now
+  write `stage-audits/<stage>-timeout-reconciliation.json`, reconcile non-terminal
+  inspected stage metadata to `failed`, include the reconciliation payload in
+  `flow-steps.json` and `flow-state.json`, skip the frontend checkpoint after a timed-out
+  stage command, and derive stage audit state from reconciled metadata when the public
+  stage-result document is missing. `tests/harness/test_live_e2e_black_box.py` covers the
+  timeout lifecycle and evidence shape.
 
 Exit evidence:
 
 - counted clean manual live runs or explicit external blockers are recorded in the local
   operator ledger;
+- evidence-backed AIDD-owned live harness defects discovered during the refresh were
+  split, fixed, and covered by deterministic regressions;
 - no live evidence artifact, target repository diff, provider log, or temp work root is
   committed.
+
+## Wave 25 — local operator workflow hardening (`done`)
+
+Goal: close non-security audit findings for the local alpha operator workflow: runtime
+control, bounded log and artifact inspection, accessibility, mobile usability, UI
+regression coverage, architecture boundaries, and maintainability. Authentication,
+session tokens, Origin/CSRF guards, secret redaction, trusted harness sandboxing, and
+dangerous provider default changes are explicitly out of scope for this wave.
+
+### Epic W25-E1 — runtime control and observability (`done`)
+Linked stories: `US-01`, `US-06`, `US-11`
+
+#### Slice W25-E1-S1 — cancellable UI runtime jobs (`done`)
+Goal: let operators cancel active local UI runtime jobs without stopping only the HTTP
+server or losing runtime evidence.
+
+Primary outputs:
+
+- cancellable UI job registry
+- `POST /api/jobs/<job_id>/cancel`
+- cancelled job and runtime evidence states
+- operator console cancel control
+
+Touched areas:
+
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/ui_assets.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W21-E1-S1`
+- `W21-E1-S2`
+
+Local tasks:
+
+- `W25-E1-S1-T1` (done) Add a cancellable UI job registry and
+  `POST /api/jobs/<job_id>/cancel` endpoint for active stage, workflow, and intervention
+  jobs.
+  - Scope: `src/aidd/cli/ui.py` job lifecycle only.
+  - Verification: `tests/cli/test_ui.py` proves active, cancelling, cancelled,
+    completed, and already-finished job states.
+- `W25-E1-S1-T2` (done) Propagate UI cancellation to the running stage execution so
+  subprocess-backed runtimes terminate and persist a cancelled outcome.
+  - Scope: UI-to-stage execution path using existing adapter and process cancellation
+    behavior.
+  - Verification: a fixture long-running `generic-cli` job cancels from the UI API and
+    records cancelled runtime and stage evidence.
+- `W25-E1-S1-T3` (done) Render a Cancel action and cancelled or terminating states in
+  the operator console live job panel.
+  - Scope: packaged UI assets only.
+  - Verification: UI service or static tests prove button visibility, disabled terminal
+    states, and live log preservation.
+
+Evidence:
+
+- `src/aidd/cli/ui.py` now exposes `POST /api/jobs/<job_id>/cancel`, records cancel
+  request metadata in job views, returns deterministic already-finished payloads for
+  completed jobs, and preserves live job logs.
+- `tests/cli/test_ui.py` covers a running stage job moving through `running`,
+  `cancelling`, and `cancelled`, plus completed jobs returning an already-finished
+  cancel response.
+- `src/aidd/cli/stage_run.py` and `src/aidd/adapters/runtime_execution.py` now carry
+  a `cancel_requested` callback from UI job state into stage runtime requests, and
+  `src/aidd/adapters/surface.py` passes it to the subprocess-backed `generic-cli`,
+  Claude Code, Codex, OpenCode, and Qwen runners.
+- `tests/cli/test_ui.py` covers cancel callback propagation for UI stage, workflow,
+  and intervention jobs, plus a long-running `generic-cli` fixture cancelled via
+  `POST /api/jobs/<job_id>/cancel` with `runtime-exit.json` recording
+  `exit_classification: cancelled` and stage metadata recording a stopped stage.
+- `2026-05-26` Focused checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
+- `2026-05-26` Focused W25-E1-S1-T2 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui.py src/aidd/cli/stage_run.py src/aidd/adapters/runtime_execution.py src/aidd/adapters/surface.py tests/cli/test_ui.py`,
+  and `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now renders a live-job Cancel action in the log panel,
+  shows `cancelling` and terminal `cancelled`/`completed`/`failed` disabled states,
+  keeps `cancelling` in the active polling set, and preserves live log chunks after
+  cancellation.
+- `tests/cli/test_ui.py` statically covers the packaged Cancel action, `/api/jobs/.../cancel`
+  call, `cancelling` polling state, terminal labels, and CSS status classes.
+- `2026-05-26` Focused W25-E1-S1-T3 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  browser smoke of `uv run aidd ui --work-item WI-UI --root /tmp/.../.aidd --host 127.0.0.1 --port 8787`
+  loaded the operator shell at `http://127.0.0.1:8787/`.
+
+Exit evidence:
+
+- active UI runtime jobs can be cancelled from API and UI;
+- cancelled jobs persist a deterministic terminal state and do not keep a runtime
+  subprocess alive;
+- completed jobs cannot be cancelled retroactively.
+
+#### Slice W25-E1-S2 — bounded logs and artifact previews (`done`)
+Goal: keep local UI log and artifact inspection responsive on large runs while preserving
+raw evidence availability through explicit bounded reads.
+
+Primary outputs:
+
+- tail/limit parameters for UI log reads
+- capped default `/api/logs` responses
+- capped artifact document previews
+- visible truncation states in the operator console
+
+Touched areas:
+
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/ui_assets.py`
+- `src/aidd/core/operator_frontend.py`
+- `tests/cli/test_ui.py`
+- `tests/core/test_operator_frontend.py`
+
+Dependencies:
+
+- `W25-E1-S1`
+
+Local tasks:
+
+- `W25-E1-S2-T1` (done) Add tail or limit parameters to UI log reads and cap the
+  default `/api/logs` response size.
+  - Scope: UI API and operator frontend log view.
+  - Verification: a high-volume runtime log test proves truncation metadata and no
+    whole-file default response.
+- `W25-E1-S2-T2` (done) Cap artifact document preview payloads while preserving
+  explicit source inspection through bounded reads.
+  - Scope: `/api/artifacts/document` and the UI artifact viewer.
+  - Verification: a large Markdown artifact test proves preview truncation, byte counts,
+    and source-mode bounds.
+- `W25-E1-S2-T3` (done) Add operator console copy and states for truncated logs and
+  artifacts.
+  - Scope: packaged UI assets.
+  - Verification: `tests/cli/test_ui.py` covers visible truncation indicators.
+
+Exit evidence:
+
+- `src/aidd/core/operator_frontend.py` now returns bounded operator log text with
+  byte-size, byte-range, requested-size, max-size, and truncation metadata.
+- `src/aidd/cli/ui.py` accepts `tail` or `limit` query parameters on `/api/logs`
+  and no longer reads the whole runtime log by default.
+- `tests/cli/test_ui.py` covers a high-volume runtime log where the default response
+  is truncated to a tail window, and explicit `tail`/`limit` reads expose the expected
+  byte ranges.
+- `tests/core/test_operator_frontend.py` covers bounded head and tail read-model
+  metadata.
+- `2026-05-26` Focused W25-E1-S2-T1 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`,
+  `uv run --extra dev ruff check src/aidd/core/operator_frontend.py src/aidd/cli/ui.py tests/cli/test_ui.py tests/core/test_operator_frontend.py`,
+  and `uv run --extra dev python -m mypy src`.
+- `src/aidd/core/operator_frontend.py` now returns bounded artifact document text with
+  mode, byte-size, byte-range, requested-size, max-size, and truncation metadata; default
+  preview reads are capped and source reads are explicitly bounded.
+- `src/aidd/cli/ui.py` accepts `mode` and `limit` on `/api/artifacts/document`, and
+  `src/aidd/cli/ui_assets.py` sends source-mode reads with the maximum bounded artifact
+  limit instead of requesting an unbounded document.
+- `tests/cli/test_ui.py` covers a large Markdown artifact where default preview and source
+  reads are truncated with byte counts, and `tests/core/test_operator_frontend.py` covers
+  the bounded artifact read model.
+- `2026-05-26` Focused W25-E1-S2-T2 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`,
+  `uv run --extra dev ruff check src/aidd/core/operator_frontend.py src/aidd/cli/ui.py src/aidd/cli/ui_assets.py tests/cli/test_ui.py tests/core/test_operator_frontend.py`,
+  and `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now renders visible truncation notices for saved runtime
+  logs and artifact document previews/source views, including byte range and full-file
+  inspection guidance.
+- `tests/cli/test_ui.py` statically covers the truncation notice copy, artifact/source
+  state wiring, and packaged `.truncation-notice` style.
+- `2026-05-26` Focused W25-E1-S2-T3 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
+- large logs and artifacts no longer require full-file UI responses by default;
+- operators can see when a displayed log or artifact preview is truncated;
+- raw evidence paths remain inspectable through existing artifact surfaces.
+
+### Epic W25-E2 — operator UI usability and accessibility (`done`)
+Linked stories: `US-05`, `US-06`, `US-11`
+
+#### Slice W25-E2-S1 — accessibility baseline (`done`)
+Goal: make the local operator console usable with keyboard and assistive technologies
+without changing the visual information architecture.
+
+Primary outputs:
+
+- accessible question answer controls
+- cockpit tab semantics
+- active stage semantics
+- named landmarks and visible focus styles
+
+Touched areas:
+
+- `src/aidd/cli/ui_assets.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W20-E2-S5`
+- `W21-E1-S1`
+
+Local tasks:
+
+- `W25-E2-S1-T1` (done) Add accessible labels and relationships for dynamic question
+  answer controls.
+  - Scope: question card rendering.
+  - Verification: DOM or static tests prove every generated textarea and select has a
+    label or ARIA name.
+- `W25-E2-S1-T2` (done) Add tablist, tab, and panel semantics to cockpit tabs and
+  `aria-current` to the active stage.
+  - Scope: UI HTML and JavaScript rendering only.
+  - Verification: static UI tests prove roles, selected state, and active stage
+    semantics.
+- `W25-E2-S1-T3` (done) Add named landmarks and explicit focus-visible styling for
+  keyboard users.
+  - Scope: packaged HTML and CSS.
+  - Verification: UI asset tests assert landmark labels, and a screenshot or manual
+    checklist confirms visible focus.
+
+Evidence:
+
+- `src/aidd/cli/ui_assets.py` now gives each generated question textarea and resolution
+  select a stable `id`, a screen-reader label, and an `aria-describedby` relationship to
+  the rendered question text.
+- `tests/cli/test_ui.py` statically covers the question control labels, described-by
+  relationships, and packaged `.sr-only` helper style.
+- `2026-05-26` Focused W25-E2-S1-T1 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now exposes cockpit tabs as a `tablist` with `tab`
+  buttons, updates `aria-selected` and the dynamic `tabpanel` label on activation, and
+  marks the active stage rail item with `aria-current="step"`.
+- `tests/cli/test_ui.py` statically covers the tablist, tab, panel, selected-state, and
+  active-stage semantics.
+- `2026-05-26` Focused W25-E2-S1-T2 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now names the main operator landmarks and defines an
+  explicit `:focus-visible` ring for buttons, selects, textareas, and focusable panels.
+- `tests/cli/test_ui.py` statically covers the landmark labels and focus-visible CSS
+  contract.
+- `2026-05-26` Browser smoke loaded `http://127.0.0.1:8791/` and confirmed the rendered
+  landmark labels: Operator controls, Operator workspace, Workflow navigation, Workflow
+  stages, Stage cockpit, Run details, and Activity and recent artifacts.
+- `2026-05-26` Focused W25-E2-S1-T3 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
+
+Exit evidence:
+
+- question answer inputs are accessible by label;
+- cockpit tabs and the active stage expose semantic state;
+- keyboard focus is visible on critical operator controls.
+
+#### Slice W25-E2-S2 — mobile and workflow clarity (`done`)
+Goal: reduce local operator confusion during first launch, mobile inspection, and
+question resolution flows.
+
+Primary outputs:
+
+- mobile active-stage rail visibility
+- saved answer rendering in resolved question cards
+- explicit loading and empty-run UI states
+
+Touched areas:
+
+- `src/aidd/cli/ui_assets.py`
+- `src/aidd/core/operator_frontend.py`
+- `tests/cli/test_ui.py`
+- `tests/core/test_operator_frontend.py`
+
+Dependencies:
+
+- `W25-E2-S1`
+
+Local tasks:
+
+- `W25-E2-S2-T1` (done) Auto-scroll the active stage into view in the mobile
+  horizontal stage rail.
+  - Scope: UI JavaScript and CSS.
+  - Verification: a mobile viewport browser or manual smoke confirms the selected stage
+    is visible after load and stage switch.
+- `W25-E2-S2-T2` (done) Render saved answer text for resolved questions.
+  - Scope: operator frontend question read model and question card UI.
+  - Verification: API and UI tests prove `answers.md` content appears in resolved
+    question cards.
+- `W25-E2-S2-T3` (done) Add explicit initial loading and empty-run states for first
+  launch.
+  - Scope: UI assets.
+  - Verification: UI tests cover pre-fetch loading state and no-run state copy and
+    actions.
+
+Evidence:
+
+- `src/aidd/cli/ui_assets.py` now gives the mobile stage rail scroll padding and calls
+  `scrollIntoView({block: "nearest", inline: "center"})` for the active stage after each
+  rail render, gated to the `max-width: 760px` mobile breakpoint.
+- `tests/cli/test_ui.py` statically covers the mobile breakpoint gate, active-stage
+  selector, `scrollIntoView` options, render hook, and CSS scroll padding.
+- `2026-05-26` Manual implementation checklist confirmed the selected-stage scroll path
+  runs after load and stage switch because both paths call `renderStageRail()`;
+  in-app browser smoke loaded the operator console, but viewport control was unavailable.
+- `2026-05-26` Focused W25-E2-S2-T1 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
+- `src/aidd/core/operator_frontend.py` now includes resolved answer text and answer
+  resolution metadata in each operator question view.
+- `src/aidd/cli/ui_assets.py` renders a read-only saved-answer block for resolved
+  question cards without treating partial or deferred answers as resolved.
+- `tests/core/test_operator_frontend.py` covers resolved and partial answer read-model
+  behavior, and `tests/cli/test_ui.py` covers API payload fields plus saved-answer card
+  markup.
+- `2026-05-26` Focused W25-E2-S2-T2 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`,
+  `uv run --extra dev ruff check src/aidd/core/operator_frontend.py src/aidd/cli/ui_assets.py tests/cli/test_ui.py tests/core/test_operator_frontend.py`,
+  and `uv run --extra dev python -m mypy src`.
+- `src/aidd/cli/ui_assets.py` now renders a pre-fetch loading state in the cockpit and a
+  first-launch/no-run overview state with runtime readiness copy plus a runtime-gated Run
+  workflow action.
+- `tests/cli/test_ui.py` statically covers the loading markup, no-run copy, first-launch
+  action wiring, and runtime-select re-render hook.
+- `2026-05-26` Focused W25-E2-S2-T3 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py -q`,
+  `uv run --extra dev ruff check src/aidd/cli/ui_assets.py tests/cli/test_ui.py`, and
+  `uv run --extra dev python -m mypy src`.
+
+Exit evidence:
+
+- selected stage remains visible on mobile viewport checks;
+- resolved question cards show the saved operator answer;
+- first launch and no-run states present clear operator next actions.
+
+### Epic W25-E3 — UI regression coverage (`done`)
+Linked stories: `US-07`, `US-11`
+
+#### Slice W25-E3-S1 — deterministic UI coverage without Node/Vite (`done`)
+Goal: lock the operator console's critical DOM and service contracts with pytest-only
+coverage that preserves the packaged static UI model.
+
+Primary outputs:
+
+- static DOM contract tests for packaged UI assets
+- extended local-project UI E2E documentation
+- service-level regressions for new UI hardening behavior
+
+Touched areas:
+
+- `src/aidd/cli/ui_assets.py`
+- `docs/e2e/operator-ui-local-project.md`
+- `tests/cli/test_ui.py`
+- `tests/core/test_operator_frontend.py`
+
+Dependencies:
+
+- `W25-E1-S1`
+- `W25-E1-S2`
+- `W25-E2-S1`
+- `W25-E2-S2`
+
+Local tasks:
+
+- `W25-E3-S1-T1` (done) Add static DOM contract tests for packaged UI
+  accessibility-critical markup.
+  - Scope: tests around `ui_assets.py`.
+  - Verification: pytest-only checks pass with no Node or browser dependency.
+- `W25-E3-S1-T2` (done) Extend operator UI local-project E2E documentation with
+  manual browser checks for dashboard, tabs, logs, artifacts, questions, intervention,
+  desktop, tablet, and mobile.
+  - Scope: `docs/e2e/operator-ui-local-project.md`.
+  - Verification: docs consistency or targeted Markdown assertions cover the checklist.
+- `W25-E3-S1-T3` (done) Add service-level regressions for cancellation, bounded logs,
+  saved-answer display, and truncation metadata.
+  - Scope: `tests/cli/test_ui.py` and `tests/core/test_operator_frontend.py`.
+  - Verification: the focused pytest suite passes.
+
+Evidence:
+
+- `tests/cli/test_ui_assets_contracts.py` now parses packaged `_INDEX_HTML` with the
+  standard-library HTML parser and asserts named landmarks, runtime labeling, tab/panel
+  semantics, and loading-state markup.
+- The same pytest-only contract file statically covers dynamic UI accessibility contracts
+  in `_OPERATOR_JS` and focus/screen-reader/truncation/saved-answer CSS hooks in
+  `_OPERATOR_CSS`.
+- `2026-05-26` Focused W25-E3-S1-T1 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py -q` and
+  `uv run --extra dev ruff check tests/cli/test_ui_assets_contracts.py`.
+- `docs/e2e/operator-ui-local-project.md` now includes a Manual Browser Checklist
+  covering dashboard shell, cockpit tabs, live and saved logs, artifacts, questions,
+  request-change/intervention flow, and desktop/tablet/mobile viewports.
+- `tests/test_docs_consistency.py` asserts the checklist sections and viewport/focus
+  coverage stay present.
+- `2026-05-26` Focused W25-E3-S1-T2 checks passed:
+  `uv run --extra dev pytest tests/test_docs_consistency.py -q` and
+  `uv run --extra dev ruff check tests/test_docs_consistency.py`.
+- `tests/cli/test_ui.py` now includes a service-level hardening regression that exercises
+  already-finished cancellation, bounded log metadata, artifact truncation metadata, and
+  saved-answer payload fields together.
+- `2026-05-26` Focused W25-E3-S1-T3 checks passed:
+  `uv run --extra dev pytest tests/cli/test_ui.py tests/core/test_operator_frontend.py -q`
+  and `uv run --extra dev ruff check tests/cli/test_ui.py tests/core/test_operator_frontend.py`.
+
+Exit evidence:
+
+- critical UI semantics and new hardening states are covered without introducing a Node
+  build pipeline;
+- manual browser coverage remains documented for the local-project operator lane.
+
+### Epic W25-E4 — non-security architecture and maintainability cleanup (`done`)
+Linked stories: `US-01`, `US-07`, `US-08`, `US-11`
+
+#### Slice W25-E4-S1 — runtime boundary cleanup (`done`)
+Goal: remove non-security architecture boundary smells found during the audit without
+changing public runtime behavior.
+
+Primary outputs:
+
+- neutral runtime catalog ownership
+- protocol-owned Claude question metadata update path
+- visible validator evidence for misplaced output promotion
+
+Touched areas:
+
+- `src/aidd/config.py`
+- `src/aidd/core/`
+- `src/aidd/adapters/`
+- `src/aidd/validators/`
+- `tests/`
+
+Dependencies:
+
+- `W21-E3-S3`
+
+Local tasks:
+
+- `W25-E4-S1-T1` (done) Move runtime readiness catalog data out of
+  `aidd.adapters.runtime_registry` into a neutral runtime catalog module.
+  - Scope: runtime metadata imports only; no behavior change.
+  - Verification: an import-boundary grep plus existing doctor and readiness tests.
+  - Evidence (`2026-05-26`): runtime catalog ownership moved to
+    `src/aidd/runtime_catalog.py`; `src/aidd/adapters/runtime_registry.py` is now a
+    compatibility re-export shim; core, CLI, harness, config, adapter, and test imports
+    use the neutral catalog module.
+  - Checks (`2026-05-26`): `rg -n "aidd\\.adapters\\.runtime_registry|runtime_registry import" src/aidd/core src/aidd/cli src/aidd/harness src/aidd/config.py`
+    returned no matches; `uv run --extra dev pytest tests/adapters/test_runtime_registry.py tests/test_config.py tests/test_docs_consistency.py tests/cli/test_doctor.py tests/harness/test_live_runtime_config.py tests/harness/test_conformance_matrix.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`.
+- `W25-E4-S1-T2` (done) Remove the Claude adapter's direct run-store metadata write by
+  exposing a protocol-owned metadata hook or event.
+  - Scope: Claude adapter boundary and core run metadata update path.
+  - Verification: Claude question artifact tests still pass without importing
+    `aidd.core.run_store` from adapters.
+  - Evidence (`2026-05-26`): `src/aidd/core/adapter_interview.py` now exposes
+    `persist_adapter_question_metadata`; Claude question persistence calls that hook
+    instead of importing `aidd.core.run_store` or writing stage metadata directly.
+  - Checks (`2026-05-26`): `rg -n "from aidd\\.core\\.run_store|import aidd\\.core\\.run_store" src/aidd/adapters -g '*.py'`
+    returned no matches; `uv run --extra dev pytest tests/core/test_adapter_interview.py tests/adapters/test_claude_code_runner.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`.
+- `W25-E4-S1-T3` (done) Record a validator or report warning when misplaced stage
+  outputs are auto-promoted from `output/`.
+  - Scope: stage output discovery and validation evidence.
+  - Verification: a regression test proves promotion still works and warning evidence is
+    visible.
+  - Evidence (`2026-05-26`): stage output discovery now records promoted
+    source/destination pairs and `validator-report.md` appends a non-blocking
+    `STRUCT-OUTPUT-PROMOTED` warning section when misplaced `output/` documents are
+    copied into canonical stage document locations.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/core/test_stage_runner.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`.
+
+Exit evidence:
+
+- core readiness models no longer import adapter-owned runtime registry data;
+- Claude adapter no longer mutates run-store metadata through a core layout helper;
+- output promotion remains compatible but becomes visible in validation evidence.
+
+#### Slice W25-E4-S2 — module size reduction (`done`)
+Goal: reduce the largest remaining UI, operator frontend, and live evaluator modules
+without changing behavior, public CLI commands, or artifact filenames.
+
+Primary outputs:
+
+- static UI resource loader
+- smaller operator frontend read-model modules
+- split live E2E black-box evaluator modules
+
+Touched areas:
+
+- `src/aidd/cli/`
+- `src/aidd/core/operator_frontend.py`
+- `src/aidd/harness/live_e2e_black_box.py`
+- `tests/`
+
+Dependencies:
+
+- `W25-E3-S1`
+
+Local tasks:
+
+- `W25-E4-S2-T1` (done) Split packaged UI assets into static resource files while
+  preserving the no-Node and no-Vite packaging model.
+  - Scope: `src/aidd/cli/static/` resources plus loader.
+  - Verification: package resource tests and UI endpoint tests pass from source and built
+    wheel.
+  - Evidence (`2026-05-26`): HTML, CSS, and JS moved to
+    `src/aidd/cli/static/`; `src/aidd/cli/ui_assets.py` now loads those package resources
+    while preserving `_INDEX_HTML`, `_OPERATOR_CSS`, and `_OPERATOR_JS` imports.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py tests/cli/test_ui.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
+    `uv build`; built wheel inspection confirmed `aidd/cli/static/{index.html,operator.css,operator.js}`;
+    a wheel-import smoke verified `/`, `/operator.css`, and `/operator.js` responses.
+- `W25-E4-S2-T2` (done) Split operator frontend read-model assembly into smaller
+  modules for dashboard, artifacts, logs, and questions.
+  - Scope: `src/aidd/core/operator_frontend.py` decomposition only.
+  - Verification: existing operator frontend tests pass with no API shape change.
+  - Evidence (`2026-05-26`): `src/aidd/core/operator_frontend.py` is now a
+    compatibility facade; read-model implementation lives in
+    `operator_frontend_models.py`, `operator_frontend_logs.py`,
+    `operator_frontend_artifacts.py`, `operator_frontend_questions.py`, and
+    `operator_frontend_dashboard.py`.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/core/test_operator_frontend.py tests/cli/test_ui.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
+    facade import smoke confirmed the existing public functions remain exported.
+- `W25-E4-S2-T3` (done) Split the live E2E black-box evaluator into orchestration,
+  step execution, and report writing modules.
+  - Scope: harness maintainability only.
+  - Verification: live evaluator unit tests and result bundle tests pass.
+  - Evidence (`2026-05-26`): `src/aidd/harness/live_e2e_black_box.py` is now a
+    compatibility facade; orchestration moved to
+    `src/aidd/harness/live_e2e_black_box_orchestration.py`, subprocess/command primitives
+    moved to `src/aidd/harness/live_e2e_black_box_steps.py`, and JSON/report transcript
+    helpers moved to `src/aidd/harness/live_e2e_black_box_reports.py`.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py tests/harness/test_result_bundle_layout.py tests/harness/test_result_bundle_persistence.py tests/harness/test_result_bundle_completeness.py tests/harness/test_result_bundle_artifacts.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
+    `uv run --extra dev pytest tests/test_docs_consistency.py -q`; backlog sync check.
+
+Exit evidence:
+
+- large module responsibilities are split behind compatibility-preserving imports or
+  public functions;
+- existing UI, operator frontend, and live evaluator behavior remains unchanged.
+
+#### Slice W25-E4-S3 — config and validation polish (`done`)
+Goal: improve operator-facing diagnostics for config and repair loops without changing
+stage contracts.
+
+Primary outputs:
+
+- friendly scalar config validation
+- richer safe semantic finding collection during validation
+
+Touched areas:
+
+- `src/aidd/config.py`
+- `src/aidd/core/stage_outputs.py`
+- `src/aidd/validators/`
+- `tests/`
+
+Dependencies:
+
+- `W25-E4-S1`
+
+Local tasks:
+
+- `W25-E4-S3-T1` (done) Add friendly validation for `repair.max_attempts` and invalid
+  scalar config values.
+  - Scope: `src/aidd/config.py`.
+  - Verification: config tests cover non-integer, negative, and valid values.
+  - Evidence (`2026-05-26`): `src/aidd/config.py` now validates config tables,
+    string scalar fields, and non-negative integer `repair.max_attempts` with field-scoped
+    `ValueError` messages instead of implicit coercion or attribute errors.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/test_config.py tests/test_docs_consistency.py -q`;
+    `uv run --extra dev ruff check .`; `uv run --extra dev python -m mypy src`;
+    backlog sync check.
+- `W25-E4-S3-T2` (done) Collect independent semantic findings when structural
+  validation is sufficient to continue checking.
+  - Scope: validation flow only.
+  - Verification: a validator regression proves mixed structural and semantic defects can
+    surface together where safe.
+  - Evidence (`2026-05-26`): `run_structural_validation_after_output_discovery` now
+    preserves structural findings while also running semantic and cross-document checks
+    when at least one output document is available for safe follow-on validation.
+  - Checks (`2026-05-26`): `uv run --extra dev pytest tests/core/test_stage_runner.py tests/validators/test_structural.py tests/validators/test_semantic.py tests/validators/test_cross_document.py -q`.
+    Final Wave 25 checks: `uv run --extra dev pytest -q` (`999 passed`, 2 existing
+    tar extraction deprecation warnings); `uv run --extra dev ruff check .`;
+    `uv run --extra dev python -m mypy src`; `uv run --extra dev pytest tests/test_docs_consistency.py -q`;
+    backlog sync check.
+
+Exit evidence:
+
+- invalid scalar config values produce actionable errors;
+- validation can surface independent semantic defects earlier without silently continuing
+  past blocking structural failures.

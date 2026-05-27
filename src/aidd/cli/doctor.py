@@ -8,7 +8,6 @@ from rich.table import Table
 
 from aidd import __version__
 from aidd.adapters.base import CapabilityReport
-from aidd.adapters.runtime_registry import RuntimeDefinition, runtime_definitions
 from aidd.cli.support import (
     _capability_summary,
     _execution_command_available,
@@ -17,6 +16,7 @@ from aidd.cli.support import (
     console,
 )
 from aidd.config import load_config
+from aidd.runtime_catalog import RuntimeDefinition, runtime_definitions
 
 
 def _runtime_probe_report(*, definition: RuntimeDefinition) -> CapabilityReport:

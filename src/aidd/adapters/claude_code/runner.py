@@ -5,7 +5,6 @@ import re
 import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 
@@ -22,19 +21,19 @@ from aidd.adapters.runner_support import (
     validate_stage_command_context,
 )
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
-from aidd.adapters.runtime_registry import RuntimeExecutionMode, normalize_execution_mode
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
 from aidd.core.adapter_interview import (
     AdapterQuestionEvent,
     QuestionPolicy,
     load_answers_document,
     load_questions_document,
+    persist_adapter_question_metadata,
     persist_answers_document,
     persist_questions_document,
     resolved_question_ids,
     unresolved_blocking_questions,
 )
-from aidd.core.run_store import run_stage_metadata_path
+from aidd.runtime_catalog import RuntimeExecutionMode, normalize_execution_mode
 from aidd.runtime_logs.events import normalize_structured_events as normalize_runtime_log_events
 
 
@@ -554,12 +553,6 @@ def route_questions_with_file_fallback(
     )
 
 
-def _workspace_relative_path(workspace_root: Path, path: Path) -> str:
-    resolved_workspace = workspace_root.resolve(strict=False)
-    resolved_path = path.resolve(strict=False)
-    return resolved_path.relative_to(resolved_workspace).as_posix()
-
-
 def persist_surfaced_questions(
     *,
     workspace_root: Path,
@@ -603,36 +596,21 @@ def persist_surfaced_questions(
         )
     )
 
-    metadata_path = run_stage_metadata_path(
+    metadata_persistence = persist_adapter_question_metadata(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        metadata_key="claude_question_artifact",
+        questions_path=questions_path,
+        unresolved_blocking_question_ids=unresolved_ids,
     )
-    metadata_updated = False
-    if metadata_path.exists():
-        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-        payload["claude_question_artifact"] = {
-            "questions_path": _workspace_relative_path(workspace_root, questions_path),
-            "unresolved_blocking_question_ids": list(unresolved_ids),
-        }
-        payload["updated_at_utc"] = (
-            datetime.now(UTC).astimezone(UTC).replace(microsecond=0).isoformat().replace(
-                "+00:00",
-                "Z",
-            )
-        )
-        metadata_path.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        metadata_updated = True
 
     return ClaudeCodeQuestionPersistence(
         questions_path=questions_path,
-        stage_metadata_path=metadata_path,
+        stage_metadata_path=metadata_persistence.stage_metadata_path,
         unresolved_blocking_question_ids=unresolved_ids,
-        metadata_updated=metadata_updated,
+        metadata_updated=metadata_persistence.metadata_updated,
     )
 
 

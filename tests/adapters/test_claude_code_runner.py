@@ -36,7 +36,6 @@ from aidd.adapters.claude_code.runner import (
     run_subprocess_with_streaming,
 )
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
-from aidd.adapters.runtime_registry import RuntimeExecutionMode, get_runtime_definition
 from aidd.core.interview import (
     AdapterQuestionEvent,
     QuestionPolicy,
@@ -44,6 +43,7 @@ from aidd.core.interview import (
     persist_questions_document,
 )
 from aidd.core.run_store import persist_stage_status
+from aidd.runtime_catalog import RuntimeExecutionMode, get_runtime_definition
 
 
 def _context() -> ClaudeCodeCommandContext:

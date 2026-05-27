@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import fields
 from pathlib import Path
 
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
+import pytest
+
 from aidd.config import AiddConfig, RuntimeConfig, load_config
+from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeInteractionMode,
@@ -376,6 +378,67 @@ def test_load_config_parses_stage_timeout_seconds(tmp_path: Path) -> None:
         "implement": 1800,
     }
     assert cfg.codex_stage_timeout_seconds == {"plan": 900}
+
+
+def test_load_config_parses_repair_max_attempts(tmp_path: Path) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(("[repair]", "max_attempts = 0")),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(config_path)
+
+    assert cfg.max_repair_attempts == 0
+
+
+def test_load_config_rejects_non_integer_repair_max_attempts(tmp_path: Path) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(("[repair]", 'max_attempts = "2"')),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"\[repair\.max_attempts\].*integer"):
+        load_config(config_path)
+
+
+def test_load_config_rejects_negative_repair_max_attempts(tmp_path: Path) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(("[repair]", "max_attempts = -1")),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"\[repair\.max_attempts\].*non-negative"):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("config_text", "expected_message"),
+    (
+        ('workspace = ".aidd"', r"\[workspace\] must be a table"),
+        ("[workspace]\nroot = 123", r"\[workspace\.root\].*string"),
+        ("[logging]\nmode = false", r"\[logging\.mode\].*string"),
+        ("runtime = []", r"\[runtime\] must be a table"),
+        ("[runtime.codex]\ncommand = []", r"\[runtime\.codex\.command\].*string"),
+        ("[runtime.codex]\nmode = 1", r"\[runtime\.codex\.mode\].*string"),
+        (
+            "[runtime.codex]\npermission_policy = 1",
+            r"\[runtime\.codex\.permission_policy\].*string",
+        ),
+    ),
+)
+def test_load_config_rejects_invalid_scalar_config_values(
+    tmp_path: Path,
+    config_text: str,
+    expected_message: str,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(config_text, encoding="utf-8")
+
+    with pytest.raises(ValueError, match=expected_message):
+        load_config(config_path)
 
 
 def test_load_config_rejects_non_positive_runtime_timeout_seconds(tmp_path: Path) -> None:

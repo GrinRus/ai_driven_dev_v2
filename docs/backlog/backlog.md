@@ -6,14 +6,15 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W24-E1-S2-T1`
+No immediate tasks queued.
 
 ## Soon
 
-- `W24-E1-S2-T2`
+No near-term tasks queued.
 
 ## Parking lot
 
+No deferred tasks queued.
 
 ## Update rules
 
@@ -100,3 +101,71 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   release guardrails, source-installed local smoke path verification, and draft
   release notes. Promoted `W24-E1-S2-T1` to `Next` and `W24-E1-S2-T2` to `Soon`
   for manual live evidence refresh outside CI/CD.
+- `2026-05-26` Wave 25 opened from the audit's non-security local-alpha findings.
+  Operator UI/runtime hardening moved ahead of W24 manual live evidence; `W24-E1-S2-T1`
+  and `W24-E1-S2-T2` remain parked, not removed.
+- `2026-05-26` Completed `W25-E1-S1-T1`; backlog advanced with `W25-E1-S1-T2`
+  promoted to `Next`.
+- `2026-05-26` Completed `W25-E1-S1-T2`; backlog advanced with `W25-E1-S1-T3`
+  promoted to `Next`.
+- `2026-05-26` Completed `W25-E1-S1-T3`; backlog advanced with `W25-E1-S2-T1`
+  promoted to `Next`.
+- `2026-05-26` Completed `W25-E1-S2-T1`; backlog advanced with `W25-E2-S1-T1`
+  promoted to `Next`; `W25-E1-S2-T2` and `W25-E1-S2-T3` remain parked.
+- `2026-05-26` Completed `W25-E2-S1-T1`; backlog advanced with `W25-E1-S2-T2`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E1-S2-T2`; backlog advanced with `W25-E1-S2-T3`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E1-S2-T3`; backlog advanced with `W25-E2-S1-T2`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E2-S1-T2`; backlog advanced with `W25-E2-S1-T3`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E2-S1-T3`; backlog advanced with `W25-E2-S2-T1`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E2-S2-T1`; backlog advanced with `W25-E2-S2-T2`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E2-S2-T2`; backlog advanced with `W25-E2-S2-T3`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E2-S2-T3`; backlog advanced with `W25-E3-S1-T1`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E3-S1-T1`; backlog advanced with `W25-E3-S1-T2`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E3-S1-T2`; backlog advanced with `W25-E3-S1-T3`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E3-S1-T3`; backlog advanced with `W25-E4-S1-T1`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E4-S1-T1`; backlog advanced with `W25-E4-S1-T2`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E4-S1-T2`; backlog advanced with `W25-E4-S1-T3`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E4-S1-T3`; backlog advanced with `W25-E4-S2-T1`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E4-S2-T1`; backlog advanced with `W25-E4-S2-T2`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E4-S2-T2`; backlog advanced with `W25-E4-S2-T3`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E4-S2-T3`; backlog advanced with `W25-E4-S3-T1`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E4-S3-T1`; backlog advanced with `W25-E4-S3-T2`
+  promoted from `Parking lot` to `Next`.
+- `2026-05-26` Completed `W25-E4-S3-T2` and closed Wave 25. No non-security W25
+  local operator workflow hardening tasks remain queued; W24 manual live evidence
+  tasks remain parked.
+- `2026-05-26` Completed `W24-E1-S2-T1` manual live refresh with one supplementary
+  Codex smoke pass and three medium-plus/large terminal evidence bundles:
+  `eval-live-007-codex-20260526T163850Z` exposed harness/stage timeout cleanup work,
+  `eval-live-007-claude-code-20260526T172838Z` recorded an external provider quota
+  blocker with visible raw logs, and `eval-live-006-opencode-20260526T173043Z`
+  exposed provider-error payload classification work. `W24-E1-S2-T2` is promoted to
+  `Next`.
+- `2026-05-26` Split broad `W24-E1-S2-T2` evidence-backed fix work: `W24-E1-S2-T2`
+  now owns `opencode` provider error-payload classification and remains in `Next`;
+  `W24-E1-S2-T3` owns live harness timeout lifecycle/evidence cleanup and is promoted
+  to `Soon`.
+- `2026-05-26` Completed `W24-E1-S2-T2`; native OpenCode provider API error payloads
+  with zero process exit now stop as `provider_error` before repair retries, with raw
+  logs and runtime exit metadata preserved. `W24-E1-S2-T3` is promoted to `Next`.
+- `2026-05-26` Completed `W24-E1-S2-T3`; black-box live stage command timeouts now
+  reconcile non-terminal inspected stage metadata to `failed`, write timeout
+  reconciliation evidence, and keep the evidence local. Wave 24 is closed and the active
+  backlog queue is empty.

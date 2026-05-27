@@ -272,6 +272,34 @@ def _write_native_runtime_writer_script(
     return script_path
 
 
+def _write_native_opencode_provider_error_script(*, tmp_path: Path) -> Path:
+    script_path = tmp_path / "native_opencode_provider_error.py"
+    payload = {
+        "type": "error",
+        "timestamp": 1779816678585,
+        "sessionID": "ses_test",
+        "error": {
+            "name": "APIError",
+            "data": {
+                "message": "usage limit reached",
+                "statusCode": 403,
+            },
+        },
+    }
+    script_lines = [
+        "import json",
+        "import sys",
+        f"payload = {payload!r}",
+        "args = sys.argv[1:]",
+        "if '--dir' not in args or '--file' not in args:",
+        "    print('missing native opencode flags', file=sys.stderr)",
+        "    raise SystemExit(34)",
+        "print(json.dumps(payload))",
+    ]
+    script_path.write_text("\n".join(script_lines) + "\n", encoding="utf-8")
+    return script_path
+
+
 def _write_cli_config(
     *,
     tmp_path: Path,
@@ -709,6 +737,73 @@ def test_stage_run_executes_native_provider_mode_without_adapter_flags(
     assert (
         workspace_root / "workitems" / "WI-017" / "stages" / "plan" / "output" / "plan.md"
     ).exists()
+
+
+def test_stage_run_stops_on_native_opencode_zero_exit_provider_error(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-OPENCODE-ERR"
+    run_id = "run-opencode-provider-error"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    error_script = _write_native_opencode_provider_error_script(tmp_path=tmp_path)
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(error_script.as_posix())} "
+        "run --format json --dangerously-skip-permissions"
+    )
+    config_path = _write_native_runtime_cli_config(
+        tmp_path=tmp_path,
+        runtime="opencode",
+        runtime_command=runtime_command,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            work_item,
+            "--runtime",
+            "opencode",
+            "--run-id",
+            run_id,
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--log-follow",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "[opencode:plan:stdout]" in result.stdout
+    assert "usage limit reached" in result.stdout
+    assert "Stage run result: action=stop state=failed" in result.stdout
+    assert "Stage attempts: 1" in result.stdout
+    assert "Adapter outcome: provider_error" in result.stdout
+    assert "Repair retry scheduled" not in result.stdout
+    runtime_log_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / work_item
+        / run_id
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+        / RUN_RUNTIME_LOG_FILENAME
+    )
+    assert runtime_log_path.exists()
+    runtime_exit_metadata = json.loads(
+        (runtime_log_path.parent / RUNTIME_EXIT_METADATA_FILENAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert runtime_exit_metadata["exit_code"] == 0
+    assert runtime_exit_metadata["exit_classification"] == "provider_error"
 
 
 def test_stage_interact_creates_operator_request_and_runs_current_run(

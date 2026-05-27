@@ -19,7 +19,7 @@ from aidd.adapters.opencode.runner import (
     run_subprocess_with_streaming,
 )
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
-from aidd.adapters.runtime_registry import RuntimeExecutionMode, get_runtime_definition
+from aidd.runtime_catalog import RuntimeExecutionMode, get_runtime_definition
 
 
 def _context(tmp_path: Path) -> OpenCodeCommandContext:
@@ -195,6 +195,68 @@ def test_run_subprocess_with_streaming_captures_output_and_callbacks(tmp_path: P
     assert result.exit_classification == OpenCodeExitClassification.SUCCESS
     assert stdout_chunks == ["stdout-line\n"]
     assert stderr_chunks == ["stderr-line\n"]
+
+
+def test_run_subprocess_with_streaming_classifies_zero_exit_provider_error_payload(
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "type": "error",
+        "error": {
+            "name": "APIError",
+            "data": {
+                "message": "usage limit reached",
+                "statusCode": 403,
+            },
+        },
+    }
+    spec = OpenCodeSubprocessSpec(
+        command=(
+            sys.executable,
+            "-c",
+            "import json, sys; print(json.dumps(json.loads(sys.argv[1])))",
+            json.dumps(payload),
+        ),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(spec=spec)
+    runtime_log_path = persist_attempt_runtime_log(
+        attempt_path=tmp_path / "attempt-001",
+        run_result=result,
+    )
+
+    assert result.exit_code == 0
+    assert result.exit_classification is OpenCodeExitClassification.PROVIDER_ERROR
+    assert "usage limit reached" in result.runtime_log_text
+    runtime_exit_metadata = json.loads(
+        (runtime_log_path.parent / RUNTIME_EXIT_METADATA_FILENAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert runtime_exit_metadata["exit_classification"] == "provider_error"
+
+
+def test_run_subprocess_with_streaming_does_not_treat_generic_error_event_as_provider_error(
+    tmp_path: Path,
+) -> None:
+    payload = {"type": "error", "error": {"name": "ToolError", "message": "recoverable"}}
+    spec = OpenCodeSubprocessSpec(
+        command=(
+            sys.executable,
+            "-c",
+            "import json, sys; print(json.dumps(json.loads(sys.argv[1])))",
+            json.dumps(payload),
+        ),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(spec=spec)
+
+    assert result.exit_code == 0
+    assert result.exit_classification is OpenCodeExitClassification.SUCCESS
 
 
 def test_persist_attempt_runtime_log_writes_runtime_log(tmp_path: Path) -> None:

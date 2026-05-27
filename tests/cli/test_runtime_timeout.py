@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.cli.main import _runtime_timeout_for_runtime
 from aidd.config import AiddConfig
+from aidd.runtime_catalog import RuntimeExecutionMode
 
 
 def _config() -> AiddConfig:

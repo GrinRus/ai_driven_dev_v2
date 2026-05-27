@@ -7,8 +7,8 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-from aidd.adapters.runtime_registry import runtime_ids
 from aidd.core.stages import STAGES
+from aidd.runtime_catalog import runtime_ids
 
 
 class ScenarioManifestError(ValueError):

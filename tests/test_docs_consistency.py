@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-from aidd.adapters.runtime_registry import runtime_definitions, runtime_ids
 from aidd.adapters.surface import RuntimeAdapterExecutionResult
 from aidd.core.contracts import repo_root_from
 from aidd.core.stage_registry import (
@@ -16,6 +15,7 @@ from aidd.core.stage_registry import (
     resolve_prompt_pack_paths,
 )
 from aidd.core.stages import STAGES
+from aidd.runtime_catalog import runtime_definitions, runtime_ids
 
 _USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
 _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
@@ -372,6 +372,7 @@ def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
     w24_s2 = roadmap.split("#### Slice W24-E1-S2", 1)[1].split("## Wave", 1)[0]
     backlog_next = backlog.split("## Next", 1)[1].split("## Soon", 1)[0]
     backlog_soon = backlog.split("## Soon", 1)[1].split("## Parking lot", 1)[0]
+    backlog_parking = backlog.split("## Parking lot", 1)[1].split("## Update rules", 1)[0]
 
     assert (
         "The UI can write question answers as `[resolved]`, `[partial]`, or "
@@ -387,11 +388,14 @@ def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
     assert f"`{source_version}` source development state" in w24_s1
     assert "v0.1.0a3" not in w24_s1
 
-    assert "#### Slice W24-E1-S2 — manual live beta evidence refresh (`next`)" in roadmap
-    assert "`W24-E1-S2-T1` (next)" in w24_s2
-    assert "`W24-E1-S2-T2` (planned)" in w24_s2
-    assert "- `W24-E1-S2-T1`" in backlog_next
-    assert "- `W24-E1-S2-T2`" in backlog_soon
+    assert "## Wave 24 — beta readiness release preparation (`done`)" in roadmap
+    assert "#### Slice W24-E1-S2 — manual live beta evidence refresh (`done`)" in roadmap
+    assert "`W24-E1-S2-T1` (done)" in w24_s2
+    assert "`W24-E1-S2-T2` (done)" in w24_s2
+    assert "`W24-E1-S2-T3` (done)" in w24_s2
+    assert "No immediate tasks queued." in backlog_next
+    assert "No near-term tasks queued." in backlog_soon
+    assert "No deferred tasks queued." in backlog_parking
 
 
 def test_release_docs_describe_release_branch_publish_flow() -> None:
@@ -490,6 +494,28 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
 
     assert "Public GitHub repositories are live" in readme
     assert "Public GitHub repositories are live E2E targets" in live_catalog
+
+
+def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> None:
+    operator_ui_lane = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "## Manual Browser Checklist",
+        "### Dashboard Shell",
+        "### Cockpit Tabs",
+        "### Logs",
+        "### Artifacts",
+        "### Questions",
+        "### Request Change / Intervention",
+        "### Viewports",
+        "Desktop width",
+        "Tablet width",
+        "Mobile width",
+        "Keyboard focus is visible",
+    ):
+        assert expected in operator_ui_lane
 
 
 def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None:

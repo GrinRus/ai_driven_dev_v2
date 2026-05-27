@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shlex
+import sys
 import threading
 import time
 from http import HTTPStatus
@@ -20,6 +22,7 @@ from aidd.cli.ui import (
     _read_json_body,
 )
 from aidd.core.run_store import (
+    RUN_RUNTIME_EXIT_METADATA_FILENAME,
     create_next_attempt_directory,
     create_run_manifest,
     persist_stage_status,
@@ -34,7 +37,13 @@ from aidd.core.runtime_operator import (
     append_operator_request,
 )
 from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
-from aidd.core.workflow_service import WorkflowRunRequest, WorkflowRunResult
+from aidd.core.stage_runner import prepare_stage_bundle
+from aidd.core.workflow_service import (
+    WorkflowRunRequest,
+    WorkflowRunResult,
+    WorkflowStageExecutionError,
+    WorkflowStageExecutionRequest,
+)
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeOperatorDecisionAction,
@@ -94,6 +103,19 @@ def _wait_job(service: OperatorUiService, job_id: str) -> dict[str, object]:
             return payload
         time.sleep(0.01)
     raise AssertionError(f"job did not finish: {job_id}")
+
+
+def _wait_job_status(
+    service: OperatorUiService,
+    job_id: str,
+    expected_status: str,
+) -> dict[str, object]:
+    for _ in range(100):
+        payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+        if payload["status"] == expected_status:
+            return payload
+        time.sleep(0.01)
+    raise AssertionError(f"job did not reach {expected_status}: {job_id}")
 
 
 class _BodyHandler:
@@ -177,6 +199,69 @@ def _write_questions(workspace_root: Path) -> None:
     )
 
 
+def _materialize_plan_inputs(*, workspace_root: Path, work_item: str) -> None:
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage="plan",
+    )
+    for index, path in enumerate(bundle.expected_input_bundle, start=1):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"# Input {index}\n\nPrepared for UI cancellation.\n", encoding="utf-8")
+
+
+def _write_ui_runtime_config(*, tmp_path: Path, runtime_command: str) -> Path:
+    config_path = tmp_path / "aidd.ui.test.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                "[workspace]",
+                'root = ".aidd"',
+                "",
+                "[runtime.generic_cli]",
+                f"command = {json.dumps(runtime_command)}",
+                'mode = "adapter-flags"',
+                "",
+                "[repair]",
+                "max_attempts = 0",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_long_running_runtime_script(tmp_path: Path) -> Path:
+    script_path = tmp_path / "long_running_runtime.py"
+    script_path.write_text(
+        "\n".join(
+            (
+                "import os",
+                "import signal",
+                "import sys",
+                "import time",
+                "from pathlib import Path",
+                "root = Path(os.environ['AIDD_WORKSPACE_ROOT'])",
+                "root.mkdir(parents=True, exist_ok=True)",
+                "(root / 'long-runtime-started.txt').write_text('started\\n', encoding='utf-8')",
+                "def _stop(signum, frame):",
+                "    print('long-runtime-sigterm', flush=True)",
+                "    stopped = root / 'long-runtime-stopped.txt'",
+                "    stopped.write_text('sigterm\\n', encoding='utf-8')",
+                "    raise SystemExit(130)",
+                "signal.signal(signal.SIGTERM, _stop)",
+                "print('long-runtime-start', flush=True)",
+                "while True:",
+                "    time.sleep(0.05)",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return script_path
+
+
 def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
@@ -195,7 +280,63 @@ def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
         "workitems/WI-UI/stages/plan/repair-brief.md"
     ]
     assert logs_payload["text"] == "runtime-line\n"
+    assert logs_payload["truncated"] is False
+    assert logs_payload["byte_size"] == len(b"runtime-line\n")
     assert artifacts_payload["documents"]["input_bundle"].endswith("input-bundle.md")
+
+
+def test_ui_logs_endpoint_defaults_to_bounded_tail_and_accepts_limit_params(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    runtime_log_path = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    log_text = "".join(f"line-{index:05d}\n" for index in range(10000))
+    runtime_log_path.write_text(log_text, encoding="utf-8")
+    byte_size = len(log_text.encode("utf-8"))
+    service = _service(workspace_root)
+
+    default_payload = _payload(service.handle_get("/api/logs", {"stage": ["plan"]}))
+    tail_payload = _payload(
+        service.handle_get("/api/logs", {"stage": ["plan"], "tail": ["128"]})
+    )
+    limit_payload = _payload(
+        service.handle_get("/api/logs", {"stage": ["plan"], "limit": ["128"]})
+    )
+    invalid_payload = service.handle_get(
+        "/api/logs",
+        {"stage": ["plan"], "tail": ["0"]},
+    )
+
+    assert default_payload["byte_size"] == byte_size
+    assert default_payload["requested_bytes"] == 64 * 1024
+    assert default_payload["start_byte"] == byte_size - (64 * 1024)
+    assert default_payload["end_byte"] == byte_size
+    assert default_payload["truncated"] is True
+    assert default_payload["truncated_head"] is True
+    assert default_payload["truncated_tail"] is False
+    assert len(str(default_payload["text"]).encode("utf-8")) < byte_size
+
+    assert tail_payload["start_byte"] == byte_size - 128
+    assert tail_payload["end_byte"] == byte_size
+    assert tail_payload["truncated_head"] is True
+    assert tail_payload["truncated_tail"] is False
+    assert str(tail_payload["text"]).endswith("line-09999\n")
+
+    assert limit_payload["start_byte"] == 0
+    assert limit_payload["end_byte"] == 128
+    assert limit_payload["truncated_head"] is False
+    assert limit_payload["truncated_tail"] is True
+    assert str(limit_payload["text"]).startswith("line-00000\n")
+
+    assert invalid_payload.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(invalid_payload)["error"] == "tail must be greater than zero."
 
 
 def test_ui_dashboard_endpoint_exposes_operator_console_payload(tmp_path: Path) -> None:
@@ -257,8 +398,72 @@ def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> 
 
     payload = _payload(response)
     assert payload["unresolved_blocking_question_ids"] == []
+    assert payload["questions"][0]["status"] == "resolved"  # type: ignore[index]
+    assert payload["questions"][0]["answer_text"] == "Release target is 0.2.0."  # type: ignore[index]
+    assert payload["questions"][0]["answer_resolution"] == "resolved"  # type: ignore[index]
     answers_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "answers.md"
     assert "Release target is 0.2.0." in answers_path.read_text(encoding="utf-8")
+
+
+def test_ui_service_hardening_regression_metadata_surface(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_questions(workspace_root)
+    runtime_log_path = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    runtime_log_path.write_text("log-line\n" * 20000, encoding="utf-8")
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    plan_path.write_text("# Plan\n\n" + ("A" * (300 * 1024)), encoding="utf-8")
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        return WorkflowRunResult(
+            run_id="run-ui-hardening",
+            executed_stage_count=0,
+            completed=True,
+            incomplete=(),
+        )
+
+    service = _service(workspace_root, workflow_runner=fake_workflow_runner)
+
+    run_payload = _payload(service.handle_post("/api/workflow/run", {"runtime": "codex"}))
+    job_id = str(run_payload["job_id"])
+    completed_payload = _wait_job(service, job_id)
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+    logs_payload = _payload(service.handle_get("/api/logs", {"stage": ["plan"]}))
+    artifact_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+                "mode": ["source"],
+                "limit": ["999999"],
+            },
+        )
+    )
+    answer_payload = _payload(
+        service.handle_post(
+            "/api/answers",
+            {
+                "stage": "plan",
+                "question_id": "Q1",
+                "text": "Release target is local-alpha.",
+            },
+        )
+    )
+
+    assert completed_payload["status"] == "completed"
+    assert cancel_payload["cancel_state"] == "already-finished"
+    assert logs_payload["truncated"] is True
+    assert logs_payload["truncated_head"] is True
+    assert artifact_payload["truncated"] is True
+    assert artifact_payload["max_bytes"] == 256 * 1024
+    assert answer_payload["questions"][0]["answer_text"] == "Release target is local-alpha."  # type: ignore[index]
 
 
 def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
@@ -308,6 +513,73 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     assert "stage_executor" in captured
 
 
+def test_ui_workflow_stage_executor_passes_cancel_callback(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+    observed_cancel = threading.Event()
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        assert options.cancel_requested is not None
+        started.set()
+        assert release.wait(timeout=2)
+        if options.cancel_requested():
+            observed_cancel.set()
+        raise typer.Exit(1)
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        request = kwargs["request"]
+        assert isinstance(request, WorkflowRunRequest)
+        stage_executor = kwargs["stage_executor"]
+        assert callable(stage_executor)
+        try:
+            stage_executor(
+                WorkflowStageExecutionRequest(
+                    stage="plan",
+                    work_item=request.work_item,
+                    runtime_id=request.runtime_id,
+                    run_id="run-ui-workflow-cancel",
+                    workspace_root=request.workspace_root,
+                    config_path=request.config_path,
+                    log_follow=request.log_follow,
+                )
+            )
+        except WorkflowStageExecutionError as exc:
+            assert exc.exit_code == 1
+        return WorkflowRunResult(
+            run_id="run-ui-workflow-cancel",
+            executed_stage_count=1,
+            completed=False,
+            incomplete=(),
+            stopped_stage="plan",
+            exit_code=1,
+        )
+
+    service = _service(
+        workspace_root,
+        workflow_runner=fake_workflow_runner,
+        stage_runner=fake_stage_runner,
+    )
+
+    response = service.handle_post(
+        "/api/workflow/run",
+        {"runtime": "codex", "from_stage": "plan", "to_stage": "plan"},
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+    assert cancel_payload["status"] == "cancelling"
+    release.set()
+
+    cancelled_payload = _wait_job_status(service, job_id, "cancelled")
+    assert observed_cancel.wait(timeout=2)
+    assert cancelled_payload["cancel_state"] == "cancelled"
+
+
 def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     tmp_path: Path,
 ) -> None:
@@ -350,6 +622,8 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     assert options.runtime == "codex"
     assert options.run_id == "run-ui-flow"
     assert options.log_follow is True
+    assert options.cancel_requested is not None
+    assert options.cancel_requested() is False
     assert any(
         chunk["stream"] == "stdout" and chunk["text"] == "runtime-output-line\n"
         for chunk in logs_payload["chunks"]  # type: ignore[index]
@@ -359,6 +633,177 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+
+
+def test_ui_job_cancel_endpoint_marks_running_job_cancelling_then_cancelled(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+    observed_cancel = threading.Event()
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        assert options.runtime_chunk_sink is not None
+        options.runtime_chunk_sink("stdout", "runtime-output-line\n")
+        started.set()
+        assert release.wait(timeout=2)
+        assert options.cancel_requested is not None
+        if options.cancel_requested():
+            observed_cancel.set()
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+    response = service.handle_post(
+        "/api/stage/run",
+        {"stage": "plan", "runtime": "codex", "run_id": "run-ui-cancel"},
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+    running_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+    assert running_payload["status"] == "running"
+    assert running_payload["cancel_state"] == "none"
+
+    cancel_payload = _payload(
+        service.handle_post(f"/api/jobs/{job_id}/cancel", {})
+    )
+
+    assert cancel_payload["status"] == "cancelling"
+    assert cancel_payload["cancel_state"] == "cancelling"
+    assert cancel_payload["previous_status"] == "running"
+    assert cancel_payload["already_finished"] is False
+    assert cancel_payload["cancel_requested"] is True
+    assert cancel_payload["exit_code"] is None
+
+    logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+    assert any(
+        chunk["stream"] == "stdout" and chunk["text"] == "runtime-output-line\n"
+        for chunk in logs_payload["chunks"]  # type: ignore[index]
+    )
+    assert any(
+        chunk["stream"] == "system" and "cancel requested" in str(chunk["text"])
+        for chunk in logs_payload["chunks"]  # type: ignore[index]
+    )
+
+    release.set()
+    cancelled_payload = _wait_job_status(service, job_id, "cancelled")
+    assert observed_cancel.wait(timeout=2)
+    assert cancelled_payload["exit_code"] == 130
+    assert cancelled_payload["cancel_state"] == "cancelled"
+    assert cancelled_payload["cancel_requested"] is True
+    assert cancelled_payload["cancelled_at_utc"] is not None
+    assert cancelled_payload["result"] is None
+
+
+def test_ui_cancel_terminates_generic_cli_runtime_and_records_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    run_id = "run-ui-runtime-cancel"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-UI")
+    runtime_script = _write_long_running_runtime_script(tmp_path)
+    runtime_command = (
+        f"{shlex.quote(sys.executable)} {shlex.quote(runtime_script.as_posix())}"
+    )
+    config_path = _write_ui_runtime_config(
+        tmp_path=tmp_path,
+        runtime_command=runtime_command,
+    )
+    service = _service(workspace_root, config=config_path)
+
+    response = service.handle_post(
+        "/api/stage/run",
+        {
+            "stage": "plan",
+            "runtime": "generic-cli",
+            "run_id": run_id,
+            "log_follow": True,
+        },
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    for _ in range(100):
+        logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+        if any("long-runtime-start" in str(chunk["text"]) for chunk in logs_payload["chunks"]):  # type: ignore[index]
+            break
+        time.sleep(0.01)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("runtime did not start")
+
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+    assert cancel_payload["status"] == "cancelling"
+
+    cancelled_payload = _wait_job_status(service, job_id, "cancelled")
+    assert cancelled_payload["cancel_state"] == "cancelled"
+    assert cancelled_payload["exit_code"] == 130
+
+    attempt_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-UI"
+        / run_id
+        / "stages"
+        / "plan"
+        / "attempts"
+        / "attempt-0001"
+    )
+    runtime_exit = json.loads(
+        (attempt_path / RUN_RUNTIME_EXIT_METADATA_FILENAME).read_text(encoding="utf-8")
+    )
+    stage_metadata = json.loads(
+        (
+            workspace_root
+            / "reports"
+            / "runs"
+            / "WI-UI"
+            / run_id
+            / "stages"
+            / "plan"
+            / "stage-metadata.json"
+        )
+        .read_text(encoding="utf-8")
+    )
+    assert runtime_exit["exit_classification"] == "cancelled"
+    assert stage_metadata["status"] == "failed"
+
+
+def test_ui_job_cancel_endpoint_reports_completed_job_as_already_finished(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        return WorkflowRunResult(
+            run_id="run-ui-already-finished",
+            executed_stage_count=1,
+            completed=True,
+            incomplete=(),
+        )
+
+    service = _service(workspace_root, workflow_runner=fake_workflow_runner)
+    response = service.handle_post(
+        "/api/workflow/run",
+        {"runtime": "codex", "from_stage": "idea", "to_stage": "plan"},
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    completed_payload = _wait_job(service, job_id)
+    assert completed_payload["status"] == "completed"
+
+    cancel_payload = _payload(
+        service.handle_post(f"/api/jobs/{job_id}/cancel", {})
+    )
+
+    assert cancel_payload["status"] == "completed"
+    assert cancel_payload["cancel_state"] == "already-finished"
+    assert cancel_payload["previous_status"] == "completed"
+    assert cancel_payload["already_finished"] is True
+    assert cancel_payload["cancel_requested"] is False
+    assert cancel_payload["result"]["run_id"] == "run-ui-already-finished"  # type: ignore[index]
 
 
 def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> None:
@@ -614,6 +1059,8 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
     assert options.run_id == "run-ui-flow"
     assert options.request == "Add migration rollback risks"
     assert options.target_documents == ("workitems/WI-UI/stages/plan/plan.md",)
+    assert options.cancel_requested is not None
+    assert options.cancel_requested() is False
     assert any(
         chunk["stream"] == "stdout" and chunk["text"] == "intervention-output-line\n"
         for chunk in logs_payload["chunks"]  # type: ignore[index]
@@ -623,6 +1070,49 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+
+
+def test_ui_stage_interact_cancel_callback_observes_cancel_request(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+    observed_cancel = threading.Event()
+
+    def fake_stage_interact_runner(options: StageInteractOptions) -> None:
+        assert options.cancel_requested is not None
+        started.set()
+        assert release.wait(timeout=2)
+        if options.cancel_requested():
+            observed_cancel.set()
+
+    service = _service(
+        workspace_root,
+        stage_interact_runner=fake_stage_interact_runner,
+    )
+
+    response = service.handle_post(
+        "/api/stage/interact",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+            "run_id": "run-ui-intervention-cancel",
+            "request": "Cancel this intervention",
+            "target_documents": [],
+        },
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+    assert cancel_payload["status"] == "cancelling"
+    release.set()
+
+    cancelled_payload = _wait_job_status(service, job_id, "cancelled")
+    assert observed_cancel.wait(timeout=2)
+    assert cancelled_payload["cancel_state"] == "cancelled"
 
 
 def test_ui_stage_run_endpoint_rejects_invalid_stage_and_runtime(tmp_path: Path) -> None:
@@ -899,9 +1389,29 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert favicon.status == HTTPStatus.NO_CONTENT
     html = page.body.decode("utf-8")
     assert "AIDD Operator Console" in html
+    assert "Loading operator workspace..." in html
+    assert 'class="empty-state loading-state"' in html
     assert 'id="runtimeSelect"' in html
     assert 'id="openWorkspaceButton"' in html
     assert 'id="stopServerButton"' in html
+    assert 'class="topbar" aria-label="Operator controls"' in html
+    assert 'class="operator-shell" aria-label="Operator workspace"' in html
+    assert 'class="stage-rail" aria-label="Workflow navigation"' in html
+    assert 'class="cockpit" aria-label="Stage cockpit"' in html
+    assert 'class="right-sidebar" aria-label="Run details"' in html
+    assert 'class="bottom-dock" aria-label="Activity and recent artifacts"' in html
+    assert 'id="stageRail" class="stage-list" aria-label="Workflow stages"' in html
+    assert 'class="tabs" role="tablist" aria-label="Stage cockpit views"' in html
+    assert (
+        'id="tab-overview" data-tab="overview" role="tab" aria-selected="true" '
+        'aria-controls="cockpitContent"'
+        in html
+    )
+    assert (
+        'id="cockpitContent" class="cockpit-content" role="tabpanel" '
+        'aria-labelledby="tab-overview" tabindex="0"'
+        in html
+    )
     assert 'id="nextActionButton"' not in html
 
     run_response = service.handle_post(
@@ -1020,6 +1530,82 @@ def test_ui_artifact_document_endpoint_reads_known_document_content(tmp_path: Pa
     assert "Blocked on clarification." in payload["text"]  # type: ignore[operator]
 
 
+def test_ui_artifact_document_endpoint_bounds_large_markdown_payloads(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    large_text = "# Plan\n\n" + ("A" * (300 * 1024)) + "\nEND\n"
+    plan_path.write_text(large_text, encoding="utf-8")
+    byte_size = len(large_text.encode("utf-8"))
+    service = _service(workspace_root)
+
+    preview_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+            },
+        )
+    )
+    source_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+                "mode": ["source"],
+                "limit": ["999999"],
+            },
+        )
+    )
+    explicit_limit_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+                "mode": ["source"],
+                "limit": ["128"],
+            },
+        )
+    )
+    invalid_limit = service.handle_get(
+        "/api/artifacts/document",
+        {
+            "stage": ["plan"],
+            "key": ["plan"],
+            "limit": ["0"],
+        },
+    )
+
+    assert preview_payload["mode"] == "preview"
+    assert preview_payload["byte_size"] == byte_size
+    assert preview_payload["requested_bytes"] == 64 * 1024
+    assert preview_payload["start_byte"] == 0
+    assert preview_payload["end_byte"] == 64 * 1024
+    assert preview_payload["truncated"] is True
+    assert preview_payload["truncated_tail"] is True
+    assert "END" not in str(preview_payload["text"])
+
+    assert source_payload["mode"] == "source"
+    assert source_payload["requested_bytes"] == 256 * 1024
+    assert source_payload["max_bytes"] == 256 * 1024
+    assert source_payload["end_byte"] == 256 * 1024
+    assert source_payload["truncated_tail"] is True
+    assert "END" not in str(source_payload["text"])
+
+    assert explicit_limit_payload["start_byte"] == 0
+    assert explicit_limit_payload["end_byte"] == 128
+    assert explicit_limit_payload["requested_bytes"] == 128
+    assert str(explicit_limit_payload["text"]).startswith("# Plan\n\n")
+
+    assert invalid_limit.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(invalid_limit)["error"] == "limit must be greater than zero."
+
+
 def test_ui_artifact_document_endpoint_rejects_unknown_key_and_escaping_paths(
     tmp_path: Path,
 ) -> None:
@@ -1121,8 +1707,51 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`" in script
     assert "No artifacts for this stage yet" in script
     assert "No runtime log for this stage yet" in script
-    assert "<p>${escapeHtml(question.text)}</p>" in script
-    assert "function renderLogPanel({title, meta, entries, rawText, emptyText})" in script
+    assert "function questionControlId(prefix, questionId, index)" in script
+    assert (
+        'const questionTextId = questionControlId("question-text", question.question_id, index);'
+        in script
+    )
+    assert 'const answerId = questionControlId("answer", question.question_id, index);' in script
+    assert (
+        'const resolutionId = questionControlId("resolution", question.question_id, index);'
+        in script
+    )
+    assert '<p id="${questionTextId}">${escapeHtml(question.text)}</p>' in script
+    assert (
+        '<label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>'
+        in script
+    )
+    assert (
+        '<textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}"'
+        in script
+    )
+    assert (
+        '<label class="sr-only" for="${resolutionId}">Resolution for '
+        "${escapeHtml(questionLabel)}</label>"
+        in script
+    )
+    assert (
+        '<select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}"'
+        in script
+    )
+    assert 'const savedAnswer = resolved && question.answer_text' in script
+    assert 'class="saved-answer"' in script
+    assert "Saved answer" in script
+    assert "${escapeHtml(question.answer_text)}" in script
+    assert "function byteRangeSummary(view)" in script
+    assert 'function renderTruncationNotice(kind, view, mode = "")' in script
+    assert 'class="truncation-notice" role="status"' in script
+    assert "Runtime log truncated" in script
+    assert "Artifact view truncated" in script
+    assert "Switch to Source for a larger bounded read" in script
+    assert "Source view is bounded. Open the folder for the full file." in script
+    assert "Full runtime.log remains on disk" in script
+    assert (
+        "function renderLogPanel({title, meta, entries, rawText, emptyText, actions = \"\", "
+        "truncation = null})"
+        in script
+    )
     assert "async function renderRequestChange()" in script
     assert "async function renderApprovals()" in script
     assert "async function submitApproval(requestId, action)" in script
@@ -1145,12 +1774,38 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert 'title="${escapeHtml(text)}"' in script
     assert "${escapeHtml(compactPath(text, maxLength))}" in script
     assert "function ensureRunnableRuntime()" in script
+    assert "function scrollActiveStageIntoView()" in script
+    assert "function renderFirstLaunchState()" in script
+    assert "first-launch-state" in script
+    assert "Select a runtime to start the first governed workflow run." in script
+    assert "data-first-launch-run" in script
+    assert 'event.target.closest("[data-first-launch-run]")' in script
+    assert 'if (state.activeTab === "overview") await renderCockpit();' in script
+    assert 'window.matchMedia("(max-width: 760px)").matches' in script
+    assert 'rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`)' in script
+    assert (
+        'active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});'
+        in script
+    )
+    assert "requestAnimationFrame(scrollActiveStageIntoView);" in script
     assert 'toast("Selected runtime is not ready.")' in script
     assert 'if (element.textContent === message) element.textContent = "";' in script
+    assert 'button.setAttribute("aria-selected", isActive ? "true" : "false");' in script
+    assert 'content.setAttribute("aria-labelledby", `tab-${tab}`);' in script
+    assert 'aria-current="${isActive ? "step" : "false"}"' in script
     assert "data-log-filter" in script
     assert "data-log-raw" in script
     assert "state.rawLogMode" in script
     assert 'state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered)' in script
+    assert "function renderLiveJobActions()" in script
+    assert "function activeJobCancelLabel()" in script
+    assert "async function cancelActiveJob()" in script
+    assert "data-cancel-job" in script
+    assert "Cancel job" in script
+    assert "Cancelling..." in script
+    assert "Cancelled" in script
+    assert "/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel" in script
+    assert 'new Set(["running", "waiting-for-operator", "cancelling"])' in script
     assert "activeJobLogChunks.push(...(logs.chunks || []));" in script
     assert "function liveJobActivityEvents()" in script
     assert "function activityEvents()" in script
@@ -1159,6 +1814,10 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     assert 'state.activeJobStatus?.status === "running"' in script
     assert "state.activeJobStatus.stage === state.activeStage" in script
     assert "/api/artifacts/document?${params.toString()}" in script
+    assert 'params.set("mode", state.artifactViewMode);' in script
+    assert "const MAX_ARTIFACT_READ_BYTES = 262144;" in script
+    assert 'params.set("limit", String(MAX_ARTIFACT_READ_BYTES));' in script
+    assert 'renderTruncationNotice("artifact", documentView, state.artifactViewMode)' in script
     assert "${renderMarkdown(documentView.text)}" in script
     assert "const payload = {stage, runtime: state.selectedRuntime, log_follow: true};" in script
     assert "target_documents: targetDocuments" in script
@@ -1211,6 +1870,43 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
         in script
     )
     assert 'body: JSON.stringify({runtime: "generic-cli"})' not in script
+
+    css = service.handle_get("/operator.css", {}).body.decode("utf-8")
+    assert ".status-badge.cancelled" in css
+    assert ".small-badge.running" in css
+    assert ".small-badge.cancelling" in css
+    assert ".small-badge.waiting-for-operator" in css
+    assert ".log-actions" in css
+    assert ".truncation-notice" in css
+    assert ".saved-answer" in css
+    assert ".saved-answer-text" in css
+    assert ".loading-state" in css
+    assert "--focus-ring:" in css
+    assert "button:focus-visible" in css
+    assert "outline: 3px solid var(--focus-ring)" in css
+    assert "box-shadow: 0 0 0 4px var(--focus-ring-soft)" in css
+    assert "scroll-padding-inline: 10px" in css
+
+
+def test_operator_question_controls_have_screen_reader_labels(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    script = service.handle_get("/operator.js", {}).body.decode("utf-8")
+    css = service.handle_get("/operator.css", {}).body.decode("utf-8")
+
+    assert '<label class="sr-only" for="${answerId}">Answer for' in script
+    assert (
+        '<textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}"'
+        in script
+    )
+    assert '<label class="sr-only" for="${resolutionId}">Resolution for' in script
+    assert (
+        '<select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}"'
+        in script
+    )
+    assert ".sr-only" in css
+    assert "clip-path: inset(50%)" in css
+    assert "position: absolute" in css
 
 
 def test_ui_json_body_reader_rejects_oversized_payload() -> None:

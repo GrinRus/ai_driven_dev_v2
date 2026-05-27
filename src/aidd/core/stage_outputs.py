@@ -7,6 +7,7 @@ from aidd.core.stage_models import (
     AdapterInvocationBundle,
     StageExecutionState,
     StageOutputDiscovery,
+    StageOutputPromotion,
     StageOutputPublication,
     StageStructuralValidationResult,
 )
@@ -59,10 +60,14 @@ def _should_promote_misplaced_stage_output(
         return False
 
 
+_MISPLACED_OUTPUT_PROMOTION_WARNING_CODE = "STRUCT-OUTPUT-PROMOTED"
+
+
 def _promote_misplaced_stage_output_documents(
     *,
     expected_markdown_documents: tuple[Path, ...],
-) -> None:
+) -> tuple[StageOutputPromotion, ...]:
+    promotions: list[StageOutputPromotion] = []
     for destination_path in expected_markdown_documents:
         stage_root = _stage_root_for_expected_output(destination_path)
         misplaced_output_path = stage_root / "output" / destination_path.name
@@ -75,6 +80,39 @@ def _promote_misplaced_stage_output_documents(
             continue
         destination_path.parent.mkdir(parents=True, exist_ok=True)
         copy2(misplaced_output_path, destination_path)
+        promotions.append(
+            StageOutputPromotion(
+                source_path=misplaced_output_path,
+                destination_path=destination_path,
+            )
+        )
+    return tuple(promotions)
+
+
+def _append_misplaced_output_promotion_warnings(
+    *,
+    workspace_root: Path,
+    validator_report_path: Path,
+    promotions: tuple[StageOutputPromotion, ...],
+) -> None:
+    if not promotions:
+        return
+
+    warning_lines = ["## Warnings", ""]
+    for promotion in promotions:
+        source = workspace_relative_path(workspace_root, promotion.source_path)
+        destination = workspace_relative_path(workspace_root, promotion.destination_path)
+        warning_lines.append(
+            f"- `{_MISPLACED_OUTPUT_PROMOTION_WARNING_CODE}` (`low`) in `{source}`: "
+            "Promoted misplaced stage output to canonical stage document "
+            f"`{destination}`."
+        )
+    warning_lines.append("")
+    report_text = validator_report_path.read_text(encoding="utf-8").rstrip()
+    validator_report_path.write_text(
+        report_text + "\n\n" + "\n".join(warning_lines),
+        encoding="utf-8",
+    )
 
 
 def discover_stage_markdown_outputs(
@@ -108,7 +146,7 @@ def discover_stage_markdown_outputs(
         for path in invocation_bundle.expected_output_documents
         if path.suffix.lower() == ".md"
     )
-    _promote_misplaced_stage_output_documents(
+    promoted_misplaced_documents = _promote_misplaced_stage_output_documents(
         expected_markdown_documents=expected_markdown_documents
     )
     discovered_markdown_documents = tuple(
@@ -125,6 +163,7 @@ def discover_stage_markdown_outputs(
         expected_markdown_documents=expected_markdown_documents,
         discovered_markdown_documents=discovered_markdown_documents,
         missing_markdown_documents=missing_markdown_documents,
+        promoted_misplaced_documents=promoted_misplaced_documents,
     )
 
 
@@ -148,7 +187,7 @@ def run_structural_validation_after_output_discovery(
     )
     findings: tuple[ValidationFinding, ...]
     findings = (*structural_findings, *section_findings)
-    if not findings:
+    if not findings or discovery.discovered_markdown_documents:
         semantic_findings = validate_semantic_outputs(
             stage=discovery.stage,
             work_item=discovery.work_item,
@@ -161,7 +200,7 @@ def run_structural_validation_after_output_discovery(
             workspace_root=workspace_root,
             contracts_root=contracts_root,
         )
-        findings = (*semantic_findings, *cross_document_findings)
+        findings = (*findings, *semantic_findings, *cross_document_findings)
 
     stage_root = workspace_stage_root(
         root=workspace_root,
@@ -171,6 +210,11 @@ def run_structural_validation_after_output_discovery(
     stage_root.mkdir(parents=True, exist_ok=True)
     validator_report_path = stage_root / "validator-report.md"
     write_validator_report(path=validator_report_path, findings=findings)
+    _append_misplaced_output_promotion_warnings(
+        workspace_root=workspace_root,
+        validator_report_path=validator_report_path,
+        promotions=discovery.promoted_misplaced_documents,
+    )
     return StageStructuralValidationResult(
         stage=discovery.stage,
         work_item=discovery.work_item,

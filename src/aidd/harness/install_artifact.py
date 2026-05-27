@@ -200,7 +200,7 @@ def _snapshot_tracked_head(
         )
 
     with tarfile.open(fileobj=io.BytesIO(archive.stdout), mode="r:") as tar:
-        tar.extractall(source_snapshot_path)
+        tar.extractall(source_snapshot_path, filter="data")
     return source_revision
 
 

@@ -25,9 +25,9 @@ from aidd.adapters.qwen.runner import (
     QwenRunResult,
     build_subprocess_spec,
 )
-from aidd.adapters.runtime_registry import RuntimeExecutionMode
 from aidd.core.runtime_operator import RuntimeOperatorBroker, RuntimeOperatorDecisionProvider
 from aidd.core.stage_models import AdapterExecutionStatus
+from aidd.runtime_catalog import RuntimeExecutionMode
 
 _QWEN_EVENTS_FILENAME = "qwen-events.jsonl"
 _QWEN_INPUT_FILENAME = "qwen-input.jsonl"
