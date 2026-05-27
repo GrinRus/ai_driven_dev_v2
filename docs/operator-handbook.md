@@ -121,22 +121,16 @@ mode = "native"
 [runtime.codex]
 command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
-# Brokered live mode uses `codex app-server --listen stdio://` when the local
-# Codex probe confirms app-server approval schema support.
 # timeout_seconds = 900
 
 [runtime.opencode]
 command = "opencode run --format json --dangerously-skip-permissions"
 mode = "native"
-# Brokered live mode blocks before launch until `opencode serve` exposes
-# permission request/response endpoints in `/doc`.
 # timeout_seconds = 900
 
 [runtime.qwen]
 command = "qwen --approval-mode yolo --output-format stream-json"
 mode = "native"
-# Brokered live mode uses Qwen dual-file control with `--json-file` and
-# `--input-file` when the local Qwen probe confirms both flags.
 # timeout_seconds = 900
 
 [logging]
@@ -286,10 +280,8 @@ Expected behavior in the current local implementation:
   not GitHub Actions, and not a release gate.
 - local live E2E uses native provider commands by default and reads runtime-command
   environment overrides only when an adapter-compatible wrapper override is needed.
-- published-package live evals use `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC`, for example
-  `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC="ai-driven-dev-v2==0.1.0a5" uv run python -m aidd.harness.live_e2e_black_box ...`;
-  local-wheel live evals require the scenario manifest to live in, or be run from, an
-  AIDD source checkout.
+- public-repository live evals always build a local wheel from clean tracked `HEAD`;
+  published-package install proof is recorded in the separate release/install lane.
 
 ### 6.5 Inspect logs and artifacts
 

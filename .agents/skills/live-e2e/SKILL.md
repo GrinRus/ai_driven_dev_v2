@@ -44,8 +44,8 @@ external prerequisites to already be true:
   command override for the chosen live runtime.
 
 This skill does **not** provision runtime authentication, wrapper scripts, or provider setup for you.
-If you are testing an already published AIDD artifact rather than a local source wheel,
-set `AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` to the exact package spec before launch.
+Public-repository live E2E always builds a local wheel from clean tracked `HEAD`.
+Published-package install proof belongs to the separate release/install lane.
 
 ## Runtime-command contract
 
@@ -98,12 +98,6 @@ export AIDD_EVAL_OPENCODE_COMMAND='<aidd-compatible opencode wrapper>'
 export AIDD_EVAL_CLAUDE_CODE_COMMAND='<aidd-compatible claude-code wrapper>'
 ```
 
-Optional published package under test:
-
-```bash
-export AIDD_EVAL_PUBLISHED_PACKAGE_SPEC='ai-driven-dev-v2==0.1.0a2'
-```
-
 ## Canonical local launch
 
 The primary execution path for this skill is a local run from the AIDD source checkout:
@@ -128,7 +122,7 @@ The default execution layout is:
 
 - `--work-root ${TMPDIR:-/tmp}/aidd-live-e2e` for mutable execution state;
 - `--report-root .aidd/reports/evals` for durable evidence bundles;
-- `--run-id <id>` only when you need to resume or name a specific run.
+- `--run-id <id>` only when you need to resume an existing blocked run.
 
 Use explicit paths when the audit needs stable local references:
 
@@ -219,7 +213,7 @@ this template:
 - Acceptance criteria:
 
 ## Decision
-- Decision: `<counted-clean|not-counted|blocked/infra/provider/model-quality>`
+- Decision: `<counted-clean|not-counted|blocked/infra|blocked/provider|blocked/model-quality|blocked/product-defect>`
 
 ## Blockers
 - `<explicit blockers, or none>`
@@ -273,6 +267,11 @@ Expected live artifacts include:
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
+- `ui-ux-checkpoints.json`
+- `ui-ux-checkpoints.md`
+- `acceptance-coverage.json`
+- `acceptance-coverage.md`
+- `operator-quality-analysis-validation.json`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
 - `feature-selection.json`
@@ -289,8 +288,9 @@ Expected live artifacts include:
 - `answer-analysis.md` when the run answered blocking questions
 
 A live run is only "clean" when execution evidence exists, verification output is
-present, the machine `quality_gate` is `pass`, and the bundle includes
-`quality-report.md`, `quality-transcript.json`, and an operator-authored
+present, the machine `quality_gate` is `pass`, acceptance coverage is complete,
+the UI/UX gate is not failed, and the bundle includes `quality-report.md`,
+`quality-transcript.json`, and a valid operator-authored
 `operator-quality-analysis.md` with decision `counted-clean`.
 
 ## Iteration loop contract

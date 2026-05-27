@@ -134,6 +134,7 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
     assert sorted(claude_live_targets) == [
         "AIDD-LIVE-005",
         "AIDD-LIVE-007",
+        "AIDD-LIVE-009",
     ], "Claude Code live rollout must include smoke plus planned medium coverage."
 
 
@@ -194,7 +195,7 @@ def test_live_catalog_mentions_manual_matrix_coverage() -> None:
         "AIDD_EVAL_CLAUDE_CODE_COMMAND",
         "AIDD_EVAL_CODEX_COMMAND",
         "AIDD_EVAL_OPENCODE_COMMAND",
-        "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC",
+        "Published-package install proof belongs to a separate release/install lane",
         "setup-blocked",
     ):
         assert needle in catalog_doc

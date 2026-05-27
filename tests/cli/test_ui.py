@@ -963,54 +963,35 @@ def test_ui_operator_decision_endpoint_wakes_live_stage_job(tmp_path: Path) -> N
     assert decision.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
 
 
-def test_ui_operator_decision_endpoint_requires_loopback_or_opt_in(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-    create_run_manifest(
-        workspace_root=workspace_root,
-        work_item="WI-UI",
-        run_id="run-ui-remote-approval",
-        runtime_id="codex",
-        stage_target="plan",
-        config_snapshot={"mode": "ui-remote-approval-test"},
-    )
-    attempt_path = create_next_attempt_directory(
-        workspace_root=workspace_root,
-        work_item="WI-UI",
-        run_id="run-ui-remote-approval",
-        stage="plan",
-    )
-    request = RuntimeOperatorRequest.create(
-        runtime_id="codex",
-        stage="plan",
-        kind=RuntimeOperatorRequestKind.SHELL,
-        payload={"command": "npm install"},
-        cwd=tmp_path,
-    )
-    append_operator_request(path=attempt_path / "operator-requests.jsonl", request=request)
+def test_ui_remote_mutations_require_loopback_host(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd", host="0.0.0.0")
 
-    def blocked_stage_runner(options: StageRunOptions) -> None:
-        raise typer.Exit(1)
-
-    service = _service(
-        workspace_root,
-        stage_runner=blocked_stage_runner,
-        host="0.0.0.0",
-    )
-    response = service.handle_post(
+    denied = service.handle_post(
         "/api/stage/run",
         {"stage": "plan", "runtime": "codex", "run_id": "run-ui-remote-approval"},
     )
-    job_id = str(_payload(response)["job_id"])
-    job_payload = _wait_job(service, job_id)
-    assert job_payload["status"] == "waiting-for-operator"
 
-    denied = service.handle_post(
-        f"/api/jobs/{job_id}/operator-requests/{request.id}/decision",
+    assert denied.status == HTTPStatus.FORBIDDEN
+    assert "remote UI mutations require loopback" in _error_payload(denied)["error"]  # type: ignore[operator]
+
+
+def test_ui_remote_operator_decision_endpoint_allows_explicit_opt_in(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    service = _service(
+        workspace_root,
+        host="0.0.0.0",
+        allow_remote_approvals=True,
+    )
+
+    response = service.handle_post(
+        "/api/jobs/job-missing/operator-requests/request-missing/decision",
         {"action": RuntimeOperatorDecisionAction.ALLOW_ONCE.value},
     )
 
-    assert denied.status == HTTPStatus.FORBIDDEN
-    assert "remote approval decisions require" in _error_payload(denied)["error"]  # type: ignore[operator]
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert "Unknown UI job" in _error_payload(response)["error"]  # type: ignore[operator]
 
 
 def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(

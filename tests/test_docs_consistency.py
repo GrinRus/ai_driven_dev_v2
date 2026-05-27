@@ -452,7 +452,7 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     )
     assert "typer-styled-help-alignment.yaml --runtime generic-cli" not in readme
     assert "AIDD-compatible wrapper command" in readme
-    assert "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC" in readme
+    assert "Published-package install proof is a separate" in readme
     assert "mode = \"native\"" in operator_handbook
     assert "mode = \"adapter-flags\"" in operator_handbook
     assert (

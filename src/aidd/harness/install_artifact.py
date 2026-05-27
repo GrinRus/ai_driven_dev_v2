@@ -50,9 +50,7 @@ def _validate_local_wheel_repository_root(repository_root: Path | None) -> Path:
             "Local-wheel live eval requires a source checkout containing "
             "`pyproject.toml` and `contracts/`. Could not locate that checkout from "
             "the scenario path or current working directory. Run the eval from a "
-            "source checkout, pass a scenario path inside the source checkout, or set "
-            "`AIDD_EVAL_PUBLISHED_PACKAGE_SPEC=ai-driven-dev-v2==<version>` to test "
-            "an already published package."
+            "source checkout, or pass a scenario path inside the source checkout."
         )
     resolved_repository_root = repository_root.resolve(strict=False)
     if not (resolved_repository_root / "pyproject.toml").exists() or not (
@@ -308,81 +306,8 @@ def prepare_local_wheel_install(
         source_revision=source_revision,
     )
 
-
-def prepare_published_package_install(
-    *,
-    work_root: Path,
-    run_id: str,
-    package_spec: str,
-) -> HarnessInstallResult:
-    normalized_package_spec = package_spec.strip()
-    if not normalized_package_spec:
-        raise ValueError("package_spec must be non-empty.")
-    if not run_id.strip():
-        raise ValueError("run_id must be non-empty.")
-
-    resolved_work_root = work_root.resolve(strict=False)
-    run_root = resolved_work_root / run_id
-    install_home = run_root / "install-home"
-    uv_cache_dir = _run_uv_cache_dir(run_root=run_root)
-    resolved_work_root.mkdir(parents=True, exist_ok=True)
-    install_home.mkdir(parents=True, exist_ok=True)
-    uv_cache_dir.mkdir(parents=True, exist_ok=True)
-
-    tool_bin_dir = _tool_bin_dir(install_home=install_home)
-    install_env = dict(os.environ)
-    install_env["HOME"] = install_home.as_posix()
-    install_env["UV_CACHE_DIR"] = uv_cache_dir.as_posix()
-    install_env["PATH"] = os.pathsep.join(
-        [
-            tool_bin_dir.as_posix(),
-            install_env.get("PATH", ""),
-        ]
-    )
-    install_transcript = _run_command(
-        command=(
-            "uv",
-            "tool",
-            "install",
-            "--force",
-            "--python",
-            sys.executable,
-            normalized_package_spec,
-        ),
-        cwd=run_root,
-        env=install_env,
-    )
-    if install_transcript.exit_code != 0:
-        stderr = install_transcript.stderr_text.strip() or install_transcript.stdout_text.strip()
-        raise HarnessInstallError(
-            "Failed to install published AIDD package via uv tool for live harness execution: "
-            f"{stderr or 'no command output'}"
-        )
-
-    installed_binary = (tool_bin_dir / "aidd").resolve(strict=False)
-    if not installed_binary.exists():
-        raise HarnessInstallError(
-            "uv tool install completed but the installed AIDD binary was not found at "
-            f"{installed_binary.as_posix()}."
-        )
-
-    return HarnessInstallResult(
-        install_channel="uv-tool",
-        artifact_source="published-package",
-        artifact_identity=normalized_package_spec,
-        artifact_path=None,
-        install_home=install_home,
-        tool_bin_dir=tool_bin_dir,
-        installed_command=(installed_binary.as_posix(),),
-        command_transcripts=(install_transcript,),
-        duration_seconds=install_transcript.duration_seconds,
-        uv_cache_dir=uv_cache_dir,
-    )
-
-
 __all__ = [
     "HarnessInstallError",
     "HarnessInstallResult",
     "prepare_local_wheel_install",
-    "prepare_published_package_install",
 ]

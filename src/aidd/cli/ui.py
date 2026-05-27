@@ -777,6 +777,9 @@ class OperatorUiService:
 
     def handle_post(self, path: str, payload: dict[str, Any]) -> UiResponse:
         try:
+            remote_mutation_error = self._remote_mutation_error(path)
+            if remote_mutation_error is not None:
+                return remote_mutation_error
             if path.startswith("/api/jobs/"):
                 return self._handle_job_post(path=path, payload=payload)
             if path == "/api/answers":
@@ -855,6 +858,20 @@ class OperatorUiService:
                 )
             )
         return _error_response("not found", status=HTTPStatus.NOT_FOUND)
+
+    def _remote_mutation_error(self, path: str) -> UiResponse | None:
+        if _is_loopback_host(self.options.host):
+            return None
+        if (
+            self.options.allow_remote_approvals
+            and path.startswith("/api/jobs/")
+            and path.endswith("/decision")
+        ):
+            return None
+        return _error_response(
+            "remote UI mutations require loopback host; bind to 127.0.0.1 or use a local tunnel with explicit operator controls.",
+            status=HTTPStatus.FORBIDDEN,
+        )
 
     def _job_attempt_path(self, job_id: str) -> Path | None:
         job = self._jobs.view(job_id)

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -150,11 +149,6 @@ def prepare_eval_run(
         layout=layout,
         cache_root=workspace_root / "harness-cache",
         live_scenario=scenario.is_live,
-        published_package_spec=os.environ.get(
-            "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC",
-            "",
-        ).strip()
-        or None,
         resource_layout=resolve_resource_layout(),
         aidd_command=None if scenario.is_live else derive_aidd_command(scenario),
         work_item=derive_work_item(scenario),

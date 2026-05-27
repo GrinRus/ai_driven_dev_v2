@@ -113,6 +113,7 @@ manual fixture smoke and does not use public GitHub task intake.
 | `AIDD-LIVE-006` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `live-full-flow-interview` | `large` | `manual` | `opencode` | `codex`, `opencode` | `authored-task-pool` |
 | `AIDD-LIVE-007` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex`, `claude-code` | `authored-task-pool` |
 | `AIDD-LIVE-008` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `live-full-flow-interview` | `xlarge` | `manual` | `opencode` | `opencode` | `authored-task-pool` |
+| `AIDD-LIVE-009` | `harness/scenarios/live/sqlite-utils-csv-import-resilience-boundary.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex`, `opencode`, `claude-code` | `authored-task-pool` (`less-scripted`) |
 
 ## Feature Selection Policy
 

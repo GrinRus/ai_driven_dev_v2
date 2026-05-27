@@ -49,7 +49,6 @@ class EvalRunPreparation:
     layout: ResultBundleLayout
     cache_root: Path
     live_scenario: bool
-    published_package_spec: str | None
     resource_layout: ResourceLayout
     aidd_command: tuple[str, ...] | None
     work_item: str

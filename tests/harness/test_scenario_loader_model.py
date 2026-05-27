@@ -165,7 +165,7 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
     assert scenario.quality.commands == scenario.verify.commands[:2]
 
 
-def test_sqlite_utils_canonical_live_scenario_declares_installed_full_flow_bundle() -> None:
+def test_sqlite_utils_canonical_live_scenario_declares_black_box_operator_contract() -> None:
     scenario = load_scenario(
         Path("harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml")
     )
@@ -185,8 +185,6 @@ def test_sqlite_utils_canonical_live_scenario_declares_installed_full_flow_bundl
         "workspace_root": ".aidd",
         "resource_source": "packaged-assets",
     }
-    assert scenario.raw["workflow_bundle"]["lane"] == "installed-live-full-flow-audit"
-    assert "quality-report.md" in scenario.raw["workflow_bundle"]["required_artifacts"]
     assert scenario.runtime_targets == ("codex", "opencode", "claude-code")
     assert scenario.run.timeout_minutes == 240
 

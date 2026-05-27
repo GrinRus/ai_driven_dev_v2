@@ -25,7 +25,7 @@ manifest with explicit acceptance criteria and verification intent.
 ## Matrix Quality Notes
 
 - `AIDD-LIVE-004` is intentionally `tiny`; its expected output is documentation-only, so a
-  broad implementation patch would be a quality smell. The 2026-05-25 Codex brokered-live
+  broad implementation patch would be a quality smell. The historical 2026-05-25 Codex
   run reached `qa` and proved the stage flow, but final manifest verification failed in the
   upstream HTTPX full suite on `test_write_timeout[trio]` with a Trio async-generator
   `ResourceWarning`. That failure is outside the selected docs-only patch, so counted
