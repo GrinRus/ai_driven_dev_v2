@@ -31,7 +31,6 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
         probe_command="python",
         default_execution_mode=RuntimeExecutionMode.ADAPTER_FLAGS,
         supported_execution_modes=(RuntimeExecutionMode.ADAPTER_FLAGS,),
-        live_command_env_var="AIDD_EVAL_GENERIC_CLI_COMMAND",
         brokered_default_command="python",
     ),
     "claude-code": RuntimeDefinition(
@@ -96,7 +95,6 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
             RuntimeExecutionMode.NATIVE,
             RuntimeExecutionMode.ADAPTER_FLAGS,
         ),
-        live_command_env_var="AIDD_EVAL_QWEN_COMMAND",
         brokered_default_command=(
             "qwen --approval-mode default --output-format stream-json"
         ),

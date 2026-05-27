@@ -69,11 +69,7 @@ def _put_fake_provider_on_path(
 def _clear_live_runtime_command_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("AIDD_EVAL_CLAUDE_CODE_COMMAND", raising=False)
     monkeypatch.delenv("AIDD_EVAL_CODEX_COMMAND", raising=False)
-    monkeypatch.delenv("AIDD_EVAL_GENERIC_CLI_COMMAND", raising=False)
     monkeypatch.delenv("AIDD_EVAL_OPENCODE_COMMAND", raising=False)
-    monkeypatch.delenv("AIDD_EVAL_QWEN_COMMAND", raising=False)
-    monkeypatch.delenv("AIDD_LIVE_E2E_RUN_ID", raising=False)
-    monkeypatch.delenv("AIDD_EVAL_PUBLISHED_PACKAGE_SPEC", raising=False)
 
 
 def _write_fake_aidd(

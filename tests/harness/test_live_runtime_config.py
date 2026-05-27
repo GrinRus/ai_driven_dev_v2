@@ -27,9 +27,7 @@ def _empty_live_command_env() -> dict[str, str]:
     return {
         "AIDD_EVAL_CLAUDE_CODE_COMMAND": "",
         "AIDD_EVAL_CODEX_COMMAND": "",
-        "AIDD_EVAL_GENERIC_CLI_COMMAND": "",
         "AIDD_EVAL_OPENCODE_COMMAND": "",
-        "AIDD_EVAL_QWEN_COMMAND": "",
     }
 
 

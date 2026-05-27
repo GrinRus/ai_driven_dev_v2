@@ -665,7 +665,7 @@ live_flow:
         load_scenario(manifest)
 
 
-def test_load_live_scenario_rejects_release_proof_runtime(tmp_path: Path) -> None:
+def test_load_live_scenario_rejects_workflow_bundle_metadata(tmp_path: Path) -> None:
     live_root = tmp_path / "harness" / "scenarios" / "live"
     live_root.mkdir(parents=True)
     manifest = _write_manifest(
@@ -676,7 +676,7 @@ scenario_class: live-full-flow
 feature_size: small
 automation_lane: manual
 canonical_runtime: codex
-task: Exercise live release-proof rejection
+task: Exercise live workflow bundle rejection
 repo:
   url: https://github.com/example/repo
 setup:
@@ -686,7 +686,7 @@ verify:
   commands:
     - echo verify
 workflow_bundle:
-  release_proof_runtime: generic-cli
+  lane: legacy-live-bundle
 feature_source:
   mode: authored-task-pool
   selection_policy: first-listed
@@ -725,7 +725,7 @@ live_flow:
         + "\n",
     )
 
-    with pytest.raises(ScenarioManifestError, match="release_proof_runtime"):
+    with pytest.raises(ScenarioManifestError, match="workflow_bundle"):
         load_scenario(manifest)
 
 

@@ -530,12 +530,10 @@ def _validate_scenario_contract(
         )
 
     if is_live:
-        workflow_bundle = raw.get("workflow_bundle")
-        if isinstance(workflow_bundle, dict) and workflow_bundle.get("release_proof_runtime"):
+        if "workflow_bundle" in raw:
             raise ScenarioManifestError(
                 "Live scenario manifests must not declare "
-                "`workflow_bundle.release_proof_runtime`; published-package and "
-                "release-proof helper evidence belongs to a separate release/install lane."
+                "`workflow_bundle`; live evidence bundles are evaluator-owned artifacts."
             )
         unsupported_live_runtimes = sorted(set(run.runtime_targets) - _LIVE_RUNTIME_IDS)
         if unsupported_live_runtimes:

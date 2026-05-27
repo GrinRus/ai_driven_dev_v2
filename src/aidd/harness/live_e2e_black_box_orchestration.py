@@ -1158,13 +1158,6 @@ def _install_aidd(ctx: FlowContext) -> None:
     if ctx.installed_command:
         return
     try:
-        package_spec = os.environ.get("AIDD_EVAL_PUBLISHED_PACKAGE_SPEC", "").strip()
-        if package_spec:
-            raise HarnessInstallError(
-                "`AIDD_EVAL_PUBLISHED_PACKAGE_SPEC` is not supported by black-box "
-                "live E2E. Use the separate release/install evidence lane for "
-                "published-package proofs."
-            )
         ctx.install_result = prepare_local_wheel_install(
             work_root=ctx.workspace_root,
             run_id=ctx.run_id,
