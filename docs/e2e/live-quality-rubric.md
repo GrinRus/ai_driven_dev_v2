@@ -37,8 +37,8 @@ For counted manual clean passes, `operator-quality-analysis.md` records:
 - runtime, manifest, run id, and bundle path;
 - execution verdict, quality gate, QA verdict, and review status;
 - flow fidelity, artifact quality, and code quality assessment;
-- final decision: `counted-clean`, `not-counted`, or
-  `blocked/infra/provider/model-quality`;
+- final decision: `counted-clean`, `not-counted`, `blocked/infra`,
+  `blocked/provider`, `blocked/model-quality`, or `blocked/product-defect`;
 - explicit blockers, or `none`.
 
 If the operator used a stage intervention during the live run, the bundle must also

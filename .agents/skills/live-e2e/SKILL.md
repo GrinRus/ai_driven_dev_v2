@@ -213,7 +213,7 @@ this template:
 - Acceptance criteria:
 
 ## Decision
-- Decision: `<counted-clean|not-counted|blocked/infra/provider/model-quality>`
+- Decision: `<counted-clean|not-counted|blocked/infra|blocked/provider|blocked/model-quality|blocked/product-defect>`
 
 ## Blockers
 - `<explicit blockers, or none>`
