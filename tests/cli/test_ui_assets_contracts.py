@@ -42,6 +42,19 @@ def _asset_text(route: str) -> str:
     return asset.text
 
 
+def _assert_contains_all(text: str, expected: tuple[str, ...]) -> None:
+    missing = [item for item in expected if item not in text]
+    assert not missing
+
+
+def _js_bundle() -> str:
+    return "\n".join(
+        _asset_text(asset.route)
+        for asset in operator_static_asset_manifest()
+        if asset.content_type == "text/javascript; charset=utf-8"
+    )
+
+
 def _css_bundle() -> str:
     return "\n".join(
         _asset_text(asset.route)
@@ -176,6 +189,275 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "refresh();" in main
 
 
+def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() -> None:
+    api_state = _asset_text("/operator-api-state.js")
+
+    _assert_contains_all(
+        api_state,
+        (
+            'const STAGES = ["idea", "research", "plan", "review-spec", "tasklist", '
+            '"implement", "review", "qa"];',
+            'activeRunId: ""',
+            "readinessLoading: true",
+            'readinessError: ""',
+            "function escapeHtml(value)",
+            "function compactPath(value, maxLength = 56)",
+            "function pathLine(value, maxLength = 56)",
+            'title="${escapeHtml(text)}"',
+            "${escapeHtml(compactPath(text, maxLength))}",
+            "async function fetchDashboard()",
+            "dashboardUrl()",
+            "/api/dashboard",
+            'state.activeRunId = state.dashboard.run?.run_id || "";',
+            "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`",
+            'api("/api/runtime-readiness")',
+            'if (element.textContent === message) element.textContent = "";',
+            'button.setAttribute("aria-selected", isActive ? "true" : "false");',
+            'content.setAttribute("aria-labelledby", `tab-${tab}`);',
+        ),
+    )
+
+
+def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_contracts() -> None:
+    shell = _asset_text("/operator-shell-rendering.js")
+
+    _assert_contains_all(
+        shell,
+        (
+            "function renderRuntimeSelector()",
+            "const runtimes = state.readinessLoading ? [] : (state.readiness?.runtimes || []);",
+            "Checking runtimes...",
+            "if (state.readinessLoading) return null;",
+            "function selectedRuntimeReady()",
+            "function timeoutSummary(runtime)",
+            "function readinessDetail(label, value, maxLength = 72)",
+            "function ensureRunnableRuntime()",
+            'toast("Selected runtime is not ready.")',
+            "function scrollActiveStageIntoView()",
+            'window.matchMedia("(max-width: 760px)").matches',
+            'rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`)',
+            'active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});',
+            "requestAnimationFrame(scrollActiveStageIntoView);",
+            'aria-current="${isActive ? "step" : "false"}"',
+            'class="stage-copy"',
+            "function renderMarkdown(text)",
+        ),
+    )
+
+
+def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() -> None:
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+
+    _assert_contains_all(
+        cockpit,
+        (
+            "async function renderCockpit()",
+            "renderFirstLaunchState();",
+            "renderQuestionCards({showResume: true})",
+            "No validation evidence for this stage yet",
+            "data-blocker-stage",
+            "data-evidence-path",
+            "Support tier",
+            "Command source",
+            "Execution mode",
+            "Permission policy",
+            "Interaction mode",
+            "Auto approval",
+            "Provider version",
+            "Provider command",
+            "function liveJobActivityEvents()",
+            "function activityEvents()",
+            "function renderActivityTable()",
+            "renderRuntimeSelector();",
+            "await renderCockpit();",
+        ),
+    )
+
+
+def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> None:
+    artifacts = _asset_text("/operator-artifacts-documents.js")
+
+    _assert_contains_all(
+        artifacts,
+        (
+            "function preferredArtifactKey(documents)",
+            '"stage_result"',
+            "const MAX_ARTIFACT_READ_BYTES = 262144;",
+            "function byteRangeSummary(view)",
+            'function renderTruncationNotice(kind, view, mode = "")',
+            'class="truncation-notice" role="status"',
+            "Runtime log truncated",
+            "Artifact view truncated",
+            "Switch to Source for a larger bounded read",
+            "Source view is bounded. Open the folder for the full file.",
+            "Full runtime.log remains on disk",
+            "No artifacts for this stage yet",
+            "/api/artifacts/document?${params.toString()}",
+            'params.set("mode", state.artifactViewMode);',
+            'params.set("limit", String(MAX_ARTIFACT_READ_BYTES));',
+            'renderTruncationNotice("artifact", documentView, state.artifactViewMode)',
+            "${renderMarkdown(documentView.text)}",
+            "async function inspectArtifactReference({stage, key, path, kind})",
+            "data-artifact-key",
+        ),
+    )
+
+
+def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contracts() -> None:
+    questions = _asset_text("/operator-questions.js")
+
+    _assert_contains_all(
+        questions,
+        (
+            "function questionControlId(prefix, questionId, index)",
+            (
+                'const questionTextId = questionControlId("question-text", '
+                "question.question_id, index);"
+            ),
+            'const answerId = questionControlId("answer", question.question_id, index);',
+            'const resolutionId = questionControlId("resolution", question.question_id, index);',
+            '<p id="${questionTextId}">${escapeHtml(question.text)}</p>',
+            (
+                '<label class="sr-only" for="${answerId}">Answer for '
+                "${escapeHtml(questionLabel)}</label>"
+            ),
+            '<textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}"',
+            '<label class="sr-only" for="${resolutionId}">Resolution for ',
+            (
+                '<select id="${resolutionId}" name="${resolutionId}" '
+                'aria-describedby="${questionTextId}"'
+            ),
+            'const savedAnswer = resolved && question.answer_text',
+            'class="saved-answer"',
+            "Saved answer",
+            "${escapeHtml(question.answer_text)}",
+            'resolution: resolution?.value || "resolved"',
+            'option value="partial"',
+            'option value="deferred"',
+            "async function answerAndResume(questionId)",
+        ),
+    )
+
+
+def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> None:
+    approvals = _asset_text("/operator-approvals-interventions.js")
+
+    _assert_contains_all(
+        approvals,
+        (
+            "async function renderRequestChange()",
+            "async function renderApprovals()",
+            "async function submitApproval(requestId, action)",
+            "async function submitIntervention()",
+            'id="operatorRequestText"',
+            'id="submitInterventionButton"',
+            "data-intervention-target",
+            '"validator_report"',
+            '"questions.md"',
+            "!textPath.includes(\"/operator-requests/\")",
+            "function interventionTargetLabel(key)",
+            "function updateSubmitInterventionState()",
+            "/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests",
+            "target_documents: targetDocuments",
+            "if (state.activeRunId) payload.run_id = state.activeRunId;",
+            'postJson("/api/stage/interact", payload)',
+        ),
+    )
+
+
+def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> None:
+    logs = _asset_text("/operator-logs-jobs.js")
+
+    _assert_contains_all(
+        logs,
+        (
+            "function logEntriesFromChunks(chunks)",
+            "function logEntriesFromText(text)",
+            "rawText.match(/^\\[(stdout|stderr|system)\\]\\s?(.*)$/i)",
+            (
+                "function renderLogPanel({title, meta, entries, rawText, emptyText, "
+                "actions = \"\", truncation = null})"
+            ),
+            "No runtime log for this stage yet",
+            "data-log-filter",
+            "data-log-raw",
+            "state.rawLogMode",
+            'state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered)',
+            "function renderLiveJobActions()",
+            "function activeJobCancelLabel()",
+            "async function cancelActiveJob()",
+            "data-cancel-job",
+            "Cancel job",
+            "Cancelling...",
+            "Cancelled",
+            "/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel",
+            'new Set(["running", "waiting-for-operator", "cancelling"])',
+            'state.activeJobStatus?.status === "running"',
+            "state.activeJobStatus.stage === state.activeStage",
+            "state.activeJobLogChunks.length",
+            "activeJobLogChunks.push(...(logs.chunks || []));",
+            "/api/jobs/${encodeURIComponent(state.activeJobId)}/logs?cursor=${state.activeJobCursor}",
+            "state.activeJobStatus.status === \"waiting-for-operator\"",
+            "async function startJobPolling(job)",
+            "renderActivityTable();",
+        ),
+    )
+
+
+def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contracts() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function renderFirstLaunchState()",
+            "first-launch-state",
+            "Select a runtime to start the first governed workflow run.",
+            "data-first-launch-run",
+            "function renderNextActionPanel()",
+            "Resume workflow",
+            "Continue with ${stageTitle(action.stage || state.activeStage)}",
+            "Checking runtime readiness.",
+            "Selected runtime is not ready.",
+            "async function startWorkflow()",
+            "async function handleNextAction()",
+            "const payload = {runtime: state.selectedRuntime, log_follow: true};",
+            "const payload = {stage, runtime: state.selectedRuntime, log_follow: true};",
+            "if (state.activeRunId) payload.run_id = state.activeRunId;",
+            'postJson("/api/workflow/run", payload)',
+            'postJson("/api/stage/run", payload)',
+        ),
+    )
+
+
+def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -> None:
+    main = _asset_text("/operator-main.js")
+    bundle = _js_bundle()
+
+    _assert_contains_all(
+        main,
+        (
+            "await fetchDashboard();",
+            "void fetchReadiness().then(renderAll)",
+            "/api/open-folder",
+            "/api/server/stop",
+            'event.target.closest("[data-first-launch-run]")',
+            'event.target.id === "operatorRequestText"',
+            'if (state.activeTab === "overview") await renderCockpit();',
+            'closest("[data-artifact-stage]")',
+            'closest("[data-artifact-key]")',
+            "data-log-filter",
+            "data-log-raw",
+            "refresh();",
+        ),
+    )
+    assert "Promise.all([fetchDashboard(), fetchReadiness()])" not in main
+    assert 'body: JSON.stringify({runtime: "generic-cli"})' not in bundle
+    assert main.index('closest("[data-artifact-stage]")') < main.index(
+        'closest("[data-artifact-key]")'
+    )
+
+
 def test_index_html_exposes_named_operator_landmarks() -> None:
     assert _attrs_for("header", **{"aria-label": "Operator controls"})
     assert _attrs_for("main", **{"aria-label": "Operator workspace"})
@@ -228,7 +510,19 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     css = _css_bundle()
 
     assert ".sr-only" in css
+    assert "clip-path: inset(50%)" in css
+    assert "position: absolute" in css
     assert "button:focus-visible" in css
+    assert "--focus-ring:" in css
     assert "outline: 3px solid var(--focus-ring)" in css
+    assert "box-shadow: 0 0 0 4px var(--focus-ring-soft)" in css
+    assert ".status-badge.cancelled" in css
+    assert ".small-badge.running" in css
+    assert ".small-badge.cancelling" in css
+    assert ".small-badge.waiting-for-operator" in css
+    assert ".log-actions" in css
     assert ".truncation-notice" in css
     assert ".saved-answer" in css
+    assert ".saved-answer-text" in css
+    assert ".loading-state" in css
+    assert "scroll-padding-inline: 10px" in css

@@ -6530,7 +6530,7 @@ Exit evidence:
 ### Epic W26-E2 — accepted operator UI screens (`planned`)
 Linked stories: `US-05`, `US-06`, `US-11`
 
-#### Slice W26-E2-S0 — static UI refactoring foundation (`planned`)
+#### Slice W26-E2-S0 — static UI refactoring foundation (`done`)
 Goal: reduce the current packaged static UI monolith before adding the larger Mission
 Control screen set, while preserving the no-Node and no-Vite packaging model.
 
@@ -6585,7 +6585,7 @@ Local tasks:
   - Scope: static CSS resources only.
   - Verification: CSS contract tests keep focus, screen-reader, truncation, saved-answer,
     mobile rail, and density rules present.
-- `W26-E2-S0-T4` Split monolithic script-string assertions in `tests/cli/test_ui.py` into
+- `W26-E2-S0-T4` (done) Split monolithic script-string assertions in `tests/cli/test_ui.py` into
   targeted UI asset contract tests organized by surface.
   - Scope: UI tests only.
   - Verification: focused UI asset and UI endpoint tests pass with the same behavior
