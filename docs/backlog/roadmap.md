@@ -6624,7 +6624,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E2-S1-T1` Render the Project Setup mode selector with New Work Item,
+- `W26-E2-S1-T1` (done) Render the Project Setup mode selector with New Work Item,
   Follow-up Flow, Clone Previous Flow, Eval / Scenario Batch, and previous-run context.
   - Scope: packaged static UI shell and dashboard payload rendering.
   - Verification: UI endpoint and static DOM tests cover mode selection and inherited

@@ -59,6 +59,7 @@ from aidd.core.stage_graph import StageAdvancementSummary, summarize_workflow_ad
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stages import STAGES
 from aidd.core.state_machine import StageState
+from aidd.core.workspace import work_item_metadata_path
 
 _STAGE_UI_COPY: dict[str, tuple[str, str]] = {
     "idea": ("Idea", "Clarify the request"),
@@ -107,7 +108,65 @@ def _empty_run_lineage() -> OperatorRunLineage:
     )
 
 
-def _empty_run_summary(*, work_item: str) -> OperatorRunSummary:
+def _lineage_value(payload: dict[str, object], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _child_work_item_candidates(
+    lineage: dict[str, object],
+) -> tuple[OperatorChildWorkItemCandidate, ...]:
+    raw_candidates = lineage.get("child_work_item_candidates")
+    if not isinstance(raw_candidates, list):
+        return ()
+    candidates: list[OperatorChildWorkItemCandidate] = []
+    for candidate in raw_candidates:
+        if not isinstance(candidate, dict):
+            continue
+        work_item_id = _lineage_value(candidate, "work_item_id")
+        if work_item_id is None:
+            continue
+        candidates.append(
+            OperatorChildWorkItemCandidate(
+                work_item_id=work_item_id,
+                label=_lineage_value(candidate, "label"),
+                relationship=_lineage_value(candidate, "relationship"),
+                source_run_id=_lineage_value(candidate, "source_run_id"),
+            )
+        )
+    return tuple(candidates)
+
+
+def _work_item_lineage(
+    *,
+    workspace_root: Path,
+    work_item: str,
+) -> OperatorRunLineage:
+    metadata_path = work_item_metadata_path(root=workspace_root, work_item=work_item)
+    if not metadata_path.exists():
+        return _empty_run_lineage()
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return _empty_run_lineage()
+    if not isinstance(payload, dict):
+        return _empty_run_lineage()
+    lineage = payload.get("lineage")
+    if not isinstance(lineage, dict):
+        return _empty_run_lineage()
+    return OperatorRunLineage(
+        source_run_id=_lineage_value(lineage, "source_run_id"),
+        source_work_item_id=_lineage_value(lineage, "source_work_item_id"),
+        baseline_id=_lineage_value(lineage, "baseline_id"),
+        baseline_label=_lineage_value(lineage, "baseline_label"),
+        child_work_item_candidates=_child_work_item_candidates(lineage),
+    )
+
+
+def _empty_run_summary(*, workspace_root: Path, work_item: str) -> OperatorRunSummary:
     return OperatorRunSummary(
         run_id=None,
         work_item=work_item,
@@ -118,7 +177,7 @@ def _empty_run_summary(*, work_item: str) -> OperatorRunSummary:
         workflow_stage_end=None,
         created_at_utc=None,
         updated_at_utc=None,
-        lineage=_empty_run_lineage(),
+        lineage=_work_item_lineage(workspace_root=workspace_root, work_item=work_item),
     )
 
 
@@ -1231,7 +1290,11 @@ def resolve_operator_dashboard_view(
         workspace_root=workspace_root,
         project_root=selected_project_root,
         active_stage=active_stage,
-        run=_run_summary(metadata) if metadata else _empty_run_summary(work_item=work_item),
+        run=(
+            _run_summary(metadata)
+            if metadata
+            else _empty_run_summary(workspace_root=workspace_root, work_item=work_item)
+        ),
         stages=stages,
         active_stage_view=active_stage_view,
         primary_artifact=primary_artifact,

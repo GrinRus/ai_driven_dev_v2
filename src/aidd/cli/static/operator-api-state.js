@@ -1,4 +1,30 @@
 const STAGES = ["idea", "research", "plan", "review-spec", "tasklist", "implement", "review", "qa"];
+const SETUP_MODES = [
+  {
+    id: "new-work-item",
+    label: "New Work Item",
+    detail: "Start without inherited run context.",
+    requiresPreviousRun: false
+  },
+  {
+    id: "follow-up-flow",
+    label: "Follow-up Flow",
+    detail: "Continue from source findings and final QA evidence.",
+    requiresPreviousRun: true
+  },
+  {
+    id: "clone-previous-flow",
+    label: "Clone Previous Flow",
+    detail: "Reuse runtime, prompt pack, contracts, branch, and baseline.",
+    requiresPreviousRun: true
+  },
+  {
+    id: "eval-scenario-batch",
+    label: "Eval / Scenario Batch",
+    detail: "Compare completed-run evidence across scenario executions.",
+    requiresPreviousRun: true
+  }
+];
 const STAGE_COPY = {
   "idea": ["Idea", "Clarify the request"],
   "research": ["Research", "Gather context"],
@@ -28,7 +54,8 @@ const state = {
   artifactViewMode: "preview",
   logFilter: "all",
   rawLogMode: false,
-  savedLogText: ""
+  savedLogText: "",
+  setupMode: "new-work-item"
 };
 
 function escapeHtml(value) {

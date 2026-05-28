@@ -53,6 +53,8 @@
   }
   .overview-grid,
   .artifact-layout,
+  .project-setup-grid,
+  .setup-mode-grid,
   .bottom-dock {
     grid-template-columns: 1fr;
   }

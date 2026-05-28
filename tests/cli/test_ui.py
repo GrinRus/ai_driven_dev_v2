@@ -362,6 +362,39 @@ def test_ui_dashboard_endpoint_exposes_operator_console_payload(tmp_path: Path) 
     )
 
 
+def test_ui_dashboard_endpoint_exposes_previous_run_context_for_setup(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    metadata_path = workspace_root / "workitems" / "WI-UI" / "work-item.json"
+    metadata_path.parent.mkdir(parents=True)
+    metadata_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "work_item_id": "WI-UI",
+                "lineage": {
+                    "source_run_id": "run-source",
+                    "source_work_item_id": "WI-SOURCE",
+                    "baseline_id": "baseline-main",
+                    "baseline_label": "main before setup",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    service = _service(workspace_root)
+
+    payload = _payload(service.handle_get("/api/dashboard", {"stage": ["idea"]}))
+
+    lineage = payload["dashboard"]["run"]["lineage"]  # type: ignore[index]
+    assert payload["dashboard"]["run"]["run_id"] is None  # type: ignore[index]
+    assert lineage["source_run_id"] == "run-source"  # type: ignore[index]
+    assert lineage["source_work_item_id"] == "WI-SOURCE"  # type: ignore[index]
+    assert lineage["baseline_id"] == "baseline-main"  # type: ignore[index]
+    assert lineage["baseline_label"] == "main before setup"  # type: ignore[index]
+
+
 def test_ui_static_asset_routes_are_served_from_manifest(tmp_path: Path) -> None:
     service = _service(tmp_path / ".aidd")
 

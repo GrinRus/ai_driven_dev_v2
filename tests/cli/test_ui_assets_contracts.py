@@ -151,8 +151,11 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".truncation-notice" in components
     assert ".saved-answer" in components
     assert ".artifact-row" in components
+    assert ".project-setup-grid" in components
+    assert ".setup-mode-card.selected" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
+    assert ".setup-mode-grid" in responsive
     assert "scroll-padding-inline: 10px" in responsive
 
 
@@ -197,7 +200,17 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
         (
             'const STAGES = ["idea", "research", "plan", "review-spec", "tasklist", '
             '"implement", "review", "qa"];',
+            "const SETUP_MODES = [",
+            'id: "new-work-item"',
+            'label: "New Work Item"',
+            'id: "follow-up-flow"',
+            'label: "Follow-up Flow"',
+            'id: "clone-previous-flow"',
+            'label: "Clone Previous Flow"',
+            'id: "eval-scenario-batch"',
+            'label: "Eval / Scenario Batch"',
             'activeRunId: ""',
+            'setupMode: "new-work-item"',
             "readinessLoading: true",
             'readinessError: ""',
             "function escapeHtml(value)",
@@ -411,7 +424,15 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
         next_flow,
         (
             "function renderFirstLaunchState()",
+            "function setupPreviousRunContext()",
+            "function renderSetupModeSelector(context)",
+            "function renderPreviousRunContext(context)",
+            'aria-disabled="true" disabled',
             "first-launch-state",
+            "project-setup-state",
+            "Project Setup",
+            "Previous-run context",
+            "data-setup-mode",
             "Select a runtime to start the first governed workflow run.",
             "data-first-launch-run",
             "function renderNextActionPanel()",
@@ -442,6 +463,9 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             "/api/open-folder",
             "/api/server/stop",
             'event.target.closest("[data-first-launch-run]")',
+            'closest("[data-setup-mode]")',
+            "requestedMode.requiresPreviousRun",
+            "setupPreviousRunContext().available",
             'event.target.id === "operatorRequestText"',
             'if (state.activeTab === "overview") await renderCockpit();',
             'closest("[data-artifact-stage]")',
@@ -524,5 +548,7 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".truncation-notice" in css
     assert ".saved-answer" in css
     assert ".saved-answer-text" in css
+    assert ".setup-mode-card" in css
+    assert ".previous-run-context" in css
     assert ".loading-state" in css
     assert "scroll-padding-inline: 10px" in css
