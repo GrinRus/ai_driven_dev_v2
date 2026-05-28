@@ -446,7 +446,8 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E4-S1-T2` (done) Add deterministic local fixture coverage" in w26
     assert "`W26-E4-S1-T3` (done) Record a manual installed local-project smoke path" in w26
     assert "`W26-E4-S2-T1` (done) Define the manual live E2E next-flow checkpoint policy" in w26
-    assert "`W26-E4-S2-T2`" in backlog_next
+    assert "`W26-E4-S2-T2` (done) Extend the black-box live evaluator final checkpoint" in w26
+    assert "`W26-E4-S2-T3`" in backlog_next
     assert "`W26-E1-S1-T1`" not in backlog_next
     assert "`W26-E1-S1-T2`" not in backlog_next
     assert "`W26-E1-S2-T1`" not in backlog_next
@@ -479,6 +480,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E4-S1-T2`" not in backlog_next
     assert "`W26-E4-S1-T3`" not in backlog_next
     assert "`W26-E4-S2-T1`" not in backlog_next
+    assert "`W26-E4-S2-T2`" not in backlog_next
     assert "`W26-E1-S3-T1`" not in backlog_soon
     assert "`W26-E1-S1-T2`" not in backlog_soon
     assert "`W26-E1-S2-T1`" not in backlog_soon
@@ -511,7 +513,8 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E4-S1-T3`" not in backlog_soon
     assert "`W26-E4-S2-T1`" not in backlog_soon
     assert "`W26-E4-S2-T2`" not in backlog_soon
-    assert "`W26-E4-S2-T3`" in backlog_soon
+    assert "`W26-E4-S2-T3`" not in backlog_soon
+    assert "`W26-E5-S1-T1`" in backlog_soon
     assert "`W26-E2-S0-T3`" not in backlog_parking
     assert "`W26-E2-S0-T4`" not in backlog_parking
     assert "`W26-E1-S3-T1`" not in backlog_parking
@@ -539,7 +542,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E4-S2-T1`" not in backlog_parking
     assert "`W26-E4-S2-T2`" not in backlog_parking
     assert "`W26-E4-S2-T3`" not in backlog_parking
-    assert "`W26-E5-S1-T1`" in backlog_parking
+    assert "`W26-E5-S1-T1`" not in backlog_parking
     visual_reference_dir = (
         repo_root / "docs" / "architecture" / "assets" / "operator-ui-mission-control"
     )
@@ -815,6 +818,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "`- Q1 [resolved] answer text`",
         "answer-analysis.md",
         "operator-quality-analysis.md",
+        "next-flow-checkpoint.json",
+        "next-flow-checkpoint.md",
         "Next-flow terminal checkpoint",
         "Confirm **Flow Complete** is visible for the terminal run.",
         "Record the operator next-flow decision",

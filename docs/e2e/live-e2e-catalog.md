@@ -256,6 +256,8 @@ Every live eval bundle must aim to contain:
 - `operator-quality-analysis-validation.json`
 - `ui-ux-checkpoints.json`
 - `ui-ux-checkpoints.md`
+- `next-flow-checkpoint.json`
+- `next-flow-checkpoint.md`
 
 For counted manual clean-pass decisions, the eval bundle must also include
 operator-authored evidence:

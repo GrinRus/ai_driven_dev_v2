@@ -291,6 +291,8 @@ Expected live artifacts include:
 - `acceptance-coverage.json`
 - `acceptance-coverage.md`
 - `operator-quality-analysis-validation.json`
+- `next-flow-checkpoint.json`
+- `next-flow-checkpoint.md`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
 - `feature-selection.json`

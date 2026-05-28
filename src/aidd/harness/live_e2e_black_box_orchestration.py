@@ -22,6 +22,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 from aidd.core.markdown import MarkdownSectionIndex
+from aidd.core.operator_frontend import resolve_operator_dashboard_view
 from aidd.core.run_store import (
     load_stage_metadata,
     persist_stage_status,
@@ -161,6 +162,8 @@ FRONTEND_CHECKPOINTS_JSON_FILENAME = "frontend-checkpoints.json"
 FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME = "frontend-checkpoints.md"
 UI_UX_CHECKPOINTS_JSON_FILENAME = "ui-ux-checkpoints.json"
 UI_UX_CHECKPOINTS_MARKDOWN_FILENAME = "ui-ux-checkpoints.md"
+NEXT_FLOW_CHECKPOINT_JSON_FILENAME = "next-flow-checkpoint.json"
+NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 SUMMARY_REPORT_FILENAME = "summary.md"
 STAGE_AUDITS_DIRNAME = "stage-audits"
@@ -174,6 +177,14 @@ OPERATOR_QUALITY_DECISIONS = {
     "blocked/model-quality",
     "blocked/product-defect",
 }
+NEXT_FLOW_OPERATOR_DECISIONS = (
+    "no-follow-up",
+    "follow-up-draft",
+    "clone-draft",
+    "eval-batch",
+    "archive",
+    "blocked",
+)
 
 TERMINAL_STATUSES = {"pass", "fail", "infra-fail"}
 RESUMABLE_STATUSES = {"blocked", "interrupted-resumable"}
@@ -1971,6 +1982,678 @@ def _write_ui_ux_checkpoint_artifacts(ctx: FlowContext) -> tuple[Path, Path, dic
             )
         lines.append("")
     markdown_path = ctx.bundle_root / UI_UX_CHECKPOINTS_MARKDOWN_FILENAME
+    markdown_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    return json_path, markdown_path, payload
+
+
+def _artifact_payload(
+    *,
+    stage: str,
+    key: str,
+    kind: str,
+    path: Path,
+) -> dict[str, object]:
+    return {
+        "stage": stage,
+        "key": key,
+        "kind": kind,
+        "path": path.as_posix(),
+        "byte_size": path.stat().st_size if path.exists() and path.is_file() else None,
+        "present": path.exists(),
+    }
+
+
+def _next_flow_dashboard_snapshot(ctx: FlowContext) -> dict[str, object]:
+    if ctx.prepared_working_copy is None:
+        return {
+            "available": False,
+            "reason": "target working copy is not available",
+        }
+    working_copy = ctx.prepared_working_copy.working_copy_path
+    try:
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=working_copy / ".aidd",
+            work_item=ctx.work_item,
+            active_stage="qa",
+            run_id=ctx.run_id,
+            project_root=working_copy,
+        )
+    except Exception as exc:  # Best-effort evidence; fallback fields remain authoritative.
+        return {
+            "available": False,
+            "reason": str(exc),
+        }
+
+    lineage = dashboard.run.lineage
+    handoff = dashboard.terminal_handoff
+    handoff_payload: dict[str, object] | None = None
+    if handoff is not None:
+        handoff_payload = {
+            "status": handoff.status,
+            "final_qa_status": handoff.final_qa_status,
+            "qa_stage_state": handoff.qa_stage_state,
+            "final_artifacts": [
+                {
+                    "stage": artifact.stage,
+                    "key": artifact.key,
+                    "kind": artifact.kind,
+                    "path": artifact.path,
+                    "byte_size": artifact.byte_size,
+                    "updated_at_utc": artifact.updated_at_utc,
+                }
+                for artifact in handoff.final_artifacts
+            ],
+            "repair_counts": {
+                "attempts": handoff.repair_counts.attempts,
+                "succeeded": handoff.repair_counts.succeeded,
+                "failed": handoff.repair_counts.failed,
+            },
+            "approval_counts": {
+                "requested": handoff.approval_counts.requested,
+                "approved": handoff.approval_counts.approved,
+                "denied": handoff.approval_counts.denied,
+                "cancelled": handoff.approval_counts.cancelled,
+                "pending": handoff.approval_counts.pending,
+            },
+            "questions_answered_count": handoff.questions_answered_count,
+            "questions_total_count": handoff.questions_total_count,
+            "recommended_next_flow_actions": [
+                {
+                    "action": action.action,
+                    "label": action.label,
+                    "detail": action.detail,
+                    "enabled": action.enabled,
+                }
+                for action in handoff.recommended_next_flow_actions
+            ],
+        }
+    return {
+        "available": True,
+        "run": {
+            "run_id": dashboard.run.run_id,
+            "work_item": dashboard.run.work_item,
+            "runtime_id": dashboard.run.runtime_id,
+            "stage_target": dashboard.run.stage_target,
+            "workflow_stage_start": dashboard.run.workflow_stage_start,
+            "workflow_stage_end": dashboard.run.workflow_stage_end,
+            "archive": {
+                "archived": dashboard.run.archive.archived,
+                "archived_at_utc": dashboard.run.archive.archived_at_utc,
+                "reason": dashboard.run.archive.reason,
+                "source": dashboard.run.archive.source,
+            },
+            "lineage": {
+                "source_run_id": lineage.source_run_id,
+                "source_work_item_id": lineage.source_work_item_id,
+                "baseline_id": lineage.baseline_id,
+                "baseline_label": lineage.baseline_label,
+                "child_work_item_candidates": [
+                    {
+                        "work_item_id": candidate.work_item_id,
+                        "label": candidate.label,
+                        "relationship": candidate.relationship,
+                        "source_run_id": candidate.source_run_id,
+                    }
+                    for candidate in lineage.child_work_item_candidates
+                ],
+            },
+        },
+        "terminal_handoff": handoff_payload,
+    }
+
+
+def _qa_stage_audit(ctx: FlowContext) -> dict[str, object] | None:
+    for payload in _stage_audit_payloads(ctx):
+        if payload.get("stage") == "qa":
+            return payload
+    return None
+
+
+_QA_VERDICT_PATTERN = re.compile(r"QA verdict:\s*`?([a-z][a-z0-9-]*)`?", re.IGNORECASE)
+
+
+def _qa_report_path(ctx: FlowContext) -> Path | None:
+    if ctx.prepared_working_copy is None:
+        return None
+    working_copy = ctx.prepared_working_copy.working_copy_path
+    candidates = (
+        working_copy
+        / ".aidd"
+        / "workitems"
+        / ctx.work_item
+        / "stages"
+        / "qa"
+        / "output"
+        / "qa-report.md",
+        working_copy
+        / ".aidd"
+        / "workitems"
+        / ctx.work_item
+        / "stages"
+        / "qa"
+        / "qa-report.md",
+    )
+    return next((path for path in candidates if path.exists()), None)
+
+
+def _qa_status_from_artifacts(ctx: FlowContext) -> str:
+    path = _qa_report_path(ctx)
+    if path is None:
+        return "missing"
+    match = _QA_VERDICT_PATTERN.search(path.read_text(encoding="utf-8", errors="replace"))
+    return match.group(1).lower() if match is not None else "unknown"
+
+
+def _next_flow_final_artifacts(
+    *,
+    ctx: FlowContext,
+    dashboard_snapshot: dict[str, object],
+) -> list[dict[str, object]]:
+    handoff = dashboard_snapshot.get("terminal_handoff")
+    if isinstance(handoff, dict):
+        final_artifacts = handoff.get("final_artifacts")
+        if isinstance(final_artifacts, list):
+            return [item for item in final_artifacts if isinstance(item, dict)]
+
+    artifacts: list[dict[str, object]] = []
+    if ctx.prepared_working_copy is not None:
+        working_copy = ctx.prepared_working_copy.working_copy_path
+        workspace_root = working_copy / ".aidd"
+        stage_root = workspace_root / "workitems" / ctx.work_item / "stages" / "qa"
+        for key, relative in (
+            ("qa_report", Path("output/qa-report.md")),
+            ("stage_result", Path("output/stage-result.md")),
+            ("validator_report", Path("output/validator-report.md")),
+        ):
+            output_path = stage_root / relative
+            root_path = stage_root / relative.name
+            path = output_path if output_path.exists() else root_path
+            if path.exists():
+                artifacts.append(
+                    _artifact_payload(stage="qa", key=key, kind="document", path=path)
+                )
+    for key, filename in (
+        ("flow_report", FLOW_REPORT_FILENAME),
+        ("verdict", VERDICT_FILENAME),
+        ("quality_report", QUALITY_REPORT_FILENAME),
+        ("grader", GRADER_FILENAME),
+    ):
+        path = ctx.bundle_root / filename
+        if path.exists():
+            artifacts.append(
+                _artifact_payload(stage="final", key=key, kind="evidence", path=path)
+            )
+    return artifacts
+
+
+def _next_flow_recommendation_payloads(
+    *,
+    status: VerdictStatus,
+    runtime_id: str,
+) -> list[dict[str, object]]:
+    completed = status == "pass"
+    follow_up_detail = (
+        "Create a scoped follow-up only when the operator selects new work."
+        if completed
+        else "Create a scoped follow-up from QA findings, blockers, or manual notes."
+    )
+    return [
+        {
+            "action": "create-new-work-item",
+            "label": "Create New Work Item",
+            "detail": "Start unrelated work without inheriting completed-run context.",
+            "enabled": True,
+        },
+        {
+            "action": "start-follow-up-flow",
+            "label": "Start Follow-up Flow",
+            "detail": follow_up_detail,
+            "enabled": True,
+        },
+        {
+            "action": "clone-flow",
+            "label": "Clone This Flow",
+            "detail": f"Reuse runtime `{runtime_id}` and configuration in a new run identity.",
+            "enabled": True,
+        },
+        {
+            "action": "run-eval-batch",
+            "label": "Run Eval / Scenario Batch",
+            "detail": "Use completed-run evidence for comparison without mutating the source run.",
+            "enabled": True,
+        },
+        {
+            "action": "archive-run",
+            "label": "Archive Run",
+            "detail": "Close the run for navigation while preserving read-only artifacts.",
+            "enabled": True,
+        },
+    ]
+
+
+def _next_flow_question_counts(ctx: FlowContext) -> dict[str, int]:
+    if ctx.prepared_working_copy is None:
+        return {"answered": 0, "total": 0}
+    workspace_root = ctx.prepared_working_copy.working_copy_path / ".aidd"
+    answered = 0
+    total = 0
+    for stage in STAGES:
+        stage_root = workspace_root / "workitems" / ctx.work_item / "stages" / stage
+        questions_text = _read_text_if_exists(stage_root / "questions.md")
+        answers_text = _read_text_if_exists(stage_root / "answers.md")
+        stage_total = len(re.findall(r"(?im)^-\s*Q\d+\b", questions_text))
+        stage_answered = len(re.findall(r"(?im)^-\s*Q\d+\s+\[resolved\]", answers_text))
+        total += stage_total
+        answered += min(stage_answered, stage_total)
+    return {"answered": answered, "total": total}
+
+
+def _next_flow_repair_counts(ctx: FlowContext) -> dict[str, int]:
+    attempts = 0
+    succeeded = 0
+    failed = 0
+    if ctx.prepared_working_copy is not None:
+        workspace_root = ctx.prepared_working_copy.working_copy_path / ".aidd"
+        for stage in STAGES:
+            try:
+                metadata = load_stage_metadata(
+                    workspace_root=workspace_root,
+                    work_item=ctx.work_item,
+                    run_id=ctx.run_id,
+                    stage=stage,
+                )
+            except (OSError, KeyError, ValueError, json.JSONDecodeError):
+                metadata = None
+            if metadata is None:
+                continue
+            for entry in metadata.repair_history:
+                if entry.trigger != "repair":
+                    continue
+                attempts += 1
+                outcome = entry.outcome.lower()
+                if "fail" in outcome or "block" in outcome:
+                    failed += 1
+                elif "pass" in outcome or "succeed" in outcome:
+                    succeeded += 1
+    if attempts:
+        return {"attempts": attempts, "succeeded": succeeded, "failed": failed}
+
+    for audit in _stage_audit_payloads(ctx):
+        raw_audit_attempts = audit.get("repair_attempts")
+        audit_attempts = raw_audit_attempts if isinstance(raw_audit_attempts, int) else 0
+        attempts += audit_attempts
+        if audit_attempts and audit.get("stage_state") == "passed":
+            succeeded += 1
+        elif audit_attempts:
+            failed += audit_attempts
+    return {"attempts": attempts, "succeeded": succeeded, "failed": failed}
+
+
+def _next_flow_approval_counts(ctx: FlowContext) -> dict[str, int]:
+    counts = {"requested": 0, "approved": 0, "denied": 0, "cancelled": 0, "pending": 0}
+    if ctx.prepared_working_copy is None:
+        return counts
+    runs_root = (
+        ctx.prepared_working_copy.working_copy_path
+        / ".aidd"
+        / "reports"
+        / "runs"
+        / ctx.work_item
+        / ctx.run_id
+    )
+    requests_by_id: dict[str, dict[str, Any]] = {}
+    decisions_by_id: dict[str, dict[str, Any]] = {}
+    for path in sorted(runs_root.glob("stages/*/attempts/attempt-*/operator-requests.jsonl")):
+        for request in _read_jsonl_objects(path):
+            request_id = request.get("id")
+            if isinstance(request_id, str) and request_id:
+                requests_by_id[request_id] = request
+    for path in sorted(runs_root.glob("stages/*/attempts/attempt-*/operator-decisions.jsonl")):
+        for decision in _read_jsonl_objects(path):
+            request_id = decision.get("request_id")
+            if isinstance(request_id, str) and request_id:
+                decisions_by_id[request_id] = decision
+    counts["requested"] = len(requests_by_id)
+    for request_id in requests_by_id:
+        decision_payload = decisions_by_id.get(request_id)
+        if decision_payload is None:
+            counts["pending"] += 1
+            continue
+        action = str(decision_payload.get("action") or "").lower()
+        if action in {"allow_once", "allow_for_session", "approve", "approved"}:
+            counts["approved"] += 1
+        elif action in {"deny", "denied"}:
+            counts["denied"] += 1
+        elif action in {"cancel", "cancelled"}:
+            counts["cancelled"] += 1
+        else:
+            counts["pending"] += 1
+    return counts
+
+
+def _next_flow_blockers(
+    *,
+    ctx: FlowContext,
+    status: VerdictStatus,
+    first_failure_note: str | None,
+    quality_gate: str,
+    acceptance_coverage_status: str,
+    ui_ux_gate: str,
+) -> list[dict[str, object]]:
+    blockers: list[dict[str, object]] = []
+    if first_failure_note:
+        blockers.append(
+            {
+                "kind": "first-failure",
+                "severity": "error",
+                "stage": _first_failure_from_steps(ctx, status=status)[0],
+                "detail": first_failure_note,
+            }
+        )
+    for audit in _stage_audit_payloads(ctx):
+        classifications = audit.get("classifications")
+        failed_classifications = (
+            [
+                f"{key}={value}"
+                for key, value in classifications.items()
+                if value in {"fail", "blocked", "infra-fail"}
+            ]
+            if isinstance(classifications, dict)
+            else []
+        )
+        stage_state = str(audit.get("stage_state") or "unknown")
+        validator_verdict = str(audit.get("validator_verdict") or "unknown")
+        unresolved = audit.get("unresolved_questions") is True
+        if (
+            stage_state not in {"passed", "unknown"}
+            or validator_verdict == "fail"
+            or unresolved
+            or failed_classifications
+        ):
+            blockers.append(
+                {
+                    "kind": "stage-audit",
+                    "severity": "error" if stage_state in {"blocked", "failed"} else "warn",
+                    "stage": audit.get("stage"),
+                    "detail": "; ".join(
+                        item
+                        for item in (
+                            f"stage_state={stage_state}",
+                            f"validator={validator_verdict}",
+                            "unresolved_questions=true" if unresolved else "",
+                            ", ".join(failed_classifications),
+                        )
+                        if item
+                    ),
+                    "path": (
+                        ctx.bundle_root
+                        / STAGE_AUDITS_DIRNAME
+                        / f"{audit.get('stage', 'unknown')}.json"
+                    ).as_posix(),
+                }
+            )
+    if quality_gate == "fail":
+        blockers.append(
+            {
+                "kind": "quality-gate",
+                "severity": "error",
+                "stage": None,
+                "detail": "machine quality gate failed",
+            }
+        )
+    if acceptance_coverage_status in {"missing", "partial", "claimed-only"}:
+        blockers.append(
+            {
+                "kind": "acceptance-coverage",
+                "severity": "warn",
+                "stage": None,
+                "detail": f"acceptance coverage is {acceptance_coverage_status}",
+            }
+        )
+    if ui_ux_gate == "fail":
+        blockers.append(
+            {
+                "kind": "ui-ux-gate",
+                "severity": "error",
+                "stage": None,
+                "detail": "UI/UX checkpoint gate failed",
+            }
+        )
+    return blockers
+
+
+def _default_next_flow_decision(
+    *,
+    status: VerdictStatus,
+    quality_gate: str,
+    blockers: list[dict[str, object]],
+) -> tuple[str, str]:
+    has_error_blocker = any(blocker.get("severity") == "error" for blocker in blockers)
+    if status == "pass" and quality_gate != "fail" and not has_error_blocker:
+        return (
+            "no-follow-up",
+            "Default manual live E2E policy stops after the terminal checkpoint; "
+            "a second public-repository flow is optional and not required.",
+        )
+    return (
+        "blocked",
+        "Terminal evidence contains failure, blocker, or failed quality-gate signals; "
+        "do not launch a child public-repository flow by default.",
+    )
+
+
+def _write_next_flow_checkpoint_artifacts(
+    *,
+    ctx: FlowContext,
+    status: VerdictStatus,
+    quality_gate: str,
+    quality_verdict: str,
+    counting_status: CountingStatus,
+    acceptance_coverage_status: str,
+    ui_ux_gate: str,
+    first_failure_note: str | None,
+) -> tuple[Path, Path, dict[str, object]]:
+    dashboard_snapshot = _next_flow_dashboard_snapshot(ctx)
+    qa_audit = _qa_stage_audit(ctx) or {}
+    qa_stage_state = str(qa_audit.get("stage_state") or "not-run")
+    dashboard_handoff = dashboard_snapshot.get("terminal_handoff")
+    if isinstance(dashboard_handoff, dict):
+        final_qa_status = str(dashboard_handoff.get("final_qa_status") or "missing")
+        qa_stage_state = str(dashboard_handoff.get("qa_stage_state") or qa_stage_state)
+        recommendations = dashboard_handoff.get("recommended_next_flow_actions")
+        recommended_next_flow_actions = (
+            [item for item in recommendations if isinstance(item, dict)]
+            if isinstance(recommendations, list)
+            else _next_flow_recommendation_payloads(
+                status=status,
+                runtime_id=ctx.runtime_id,
+            )
+        )
+    else:
+        final_qa_status = _qa_status_from_artifacts(ctx)
+        recommended_next_flow_actions = _next_flow_recommendation_payloads(
+            status=status,
+            runtime_id=ctx.runtime_id,
+        )
+
+    final_artifacts = _next_flow_final_artifacts(
+        ctx=ctx,
+        dashboard_snapshot=dashboard_snapshot,
+    )
+    blockers = _next_flow_blockers(
+        ctx=ctx,
+        status=status,
+        first_failure_note=first_failure_note,
+        quality_gate=quality_gate,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
+    )
+    default_decision, decision_rationale = _default_next_flow_decision(
+        status=status,
+        quality_gate=quality_gate,
+        blockers=blockers,
+    )
+    questions = _next_flow_question_counts(ctx)
+    repair_counts = _next_flow_repair_counts(ctx)
+    approval_counts = _next_flow_approval_counts(ctx)
+    state = (
+        _read_json_object(_state_path(ctx.bundle_root))
+        if _state_path(ctx.bundle_root).exists()
+        else {}
+    )
+    dashboard_run = dashboard_snapshot.get("run")
+    dashboard_lineage: dict[str, object] = {}
+    if isinstance(dashboard_run, dict):
+        raw_dashboard_lineage = dashboard_run.get("lineage")
+        if isinstance(raw_dashboard_lineage, dict):
+            dashboard_lineage = {
+                str(key): value for key, value in raw_dashboard_lineage.items()
+            }
+    source_artifact_links = [
+        path for artifact in final_artifacts if isinstance(path := artifact.get("path"), str)
+    ]
+    baseline_id = dashboard_lineage.get("baseline_id")
+    if not isinstance(baseline_id, str) or not baseline_id:
+        baseline_id = ctx.run_id
+    baseline_label = dashboard_lineage.get("baseline_label")
+    if not isinstance(baseline_label, str) or not baseline_label:
+        baseline_label = f"live E2E source run {ctx.run_id}"
+    lineage_metadata: dict[str, object] = {
+        "present": bool(dashboard_lineage),
+        "source": "operator-dashboard" if dashboard_lineage else "evaluator-fallback",
+        "source_run_id": ctx.run_id,
+        "source_work_item_id": ctx.work_item,
+        "baseline_id": baseline_id,
+        "baseline_label": baseline_label,
+        "child_work_item_id": None,
+        "child_flow_enabled": False,
+        "child_flow_required": False,
+        "lineage_artifact": None,
+        "source_artifact_links": source_artifact_links,
+    }
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "run_id": ctx.run_id,
+        "runtime_id": ctx.runtime_id,
+        "scenario_id": ctx.scenario.scenario_id,
+        "work_item": ctx.work_item,
+        "terminal_status": status,
+        "quality_gate": quality_gate,
+        "quality_verdict": quality_verdict,
+        "counting_status": counting_status,
+        "acceptance_coverage_status": acceptance_coverage_status,
+        "ui_ux_gate": ui_ux_gate,
+        "flow_complete_visible": status == "pass" and qa_stage_state == "passed",
+        "source_run_summary": {
+            "source_run_id": ctx.run_id,
+            "source_work_item_id": ctx.work_item,
+            "runtime_id": ctx.runtime_id,
+            "scenario_id": ctx.scenario.scenario_id,
+            "terminal_stage": "qa",
+            "terminal_status": status,
+            "completed_stages": list(_state_completed_stages(ctx.bundle_root)),
+            "current_stage": state.get("current_stage"),
+            "stage_scope": {
+                "start": ctx.scenario.run.stage_start,
+                "end": ctx.scenario.run.stage_end,
+            },
+            "qa_stage_state": qa_stage_state,
+            "final_qa_status": final_qa_status,
+            "final_artifacts": final_artifacts,
+            "blockers": blockers,
+            "repair_counts": repair_counts,
+            "approval_counts": approval_counts,
+            "questions": {
+                "answered_count": questions["answered"],
+                "total_count": questions["total"],
+            },
+        },
+        "next_flow_actions": {
+            "allowed_operator_decisions": list(NEXT_FLOW_OPERATOR_DECISIONS),
+            "recommended_next_flow_actions": recommended_next_flow_actions,
+            "operator_decision": {
+                "decision": default_decision,
+                "source": "evaluator-default",
+                "rationale": decision_rationale,
+                "requires_second_public_repository_flow": False,
+            },
+        },
+        "optional_lineage_metadata": lineage_metadata,
+        "operator_dashboard_snapshot": dashboard_snapshot,
+    }
+    json_path = _write_json(ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME, payload)
+    lines = [
+        "# Next-Flow Checkpoint",
+        "",
+        "## Run",
+        "",
+        f"- Scenario: `{ctx.scenario.scenario_id}`",
+        f"- Runtime: `{ctx.runtime_id}`",
+        f"- Source run: `{ctx.run_id}`",
+        f"- Work item: `{ctx.work_item}`",
+        f"- Terminal status: `{status}`",
+        f"- Counting status: `{counting_status}`",
+        f"- Quality gate: `{quality_gate}`",
+        f"- Flow Complete visible: `{payload['flow_complete_visible']}`",
+        "",
+        "## Source Run Summary",
+        "",
+        f"- Final QA status: `{final_qa_status}`",
+        f"- QA stage state: `{qa_stage_state}`",
+        f"- Questions answered: `{questions['answered']}` / `{questions['total']}`",
+        (
+            f"- Repair counts: attempts=`{repair_counts['attempts']}` "
+            f"succeeded=`{repair_counts['succeeded']}` failed=`{repair_counts['failed']}`"
+        ),
+        (
+            f"- Approval counts: requested=`{approval_counts['requested']}` "
+            f"approved=`{approval_counts['approved']}` denied=`{approval_counts['denied']}` "
+            f"cancelled=`{approval_counts['cancelled']}` pending=`{approval_counts['pending']}`"
+        ),
+        "",
+        "## Operator Decision",
+        "",
+        f"- Default decision: `{default_decision}`",
+        "- Requires second public-repository flow: `false`",
+        f"- Rationale: {decision_rationale}",
+        "",
+        "## Recommended Next Actions",
+        "",
+    ]
+    for action in recommended_next_flow_actions:
+        lines.append(
+            f"- `{action.get('action', 'unknown')}` enabled=`{action.get('enabled', False)}`: "
+            f"{action.get('label', '')}"
+        )
+    lines.extend(("", "## Blockers", ""))
+    if not blockers:
+        lines.append("- none")
+    for blocker in blockers:
+        stage = blocker.get("stage") or "n/a"
+        lines.append(
+            f"- `{blocker.get('kind', 'blocker')}` severity=`{blocker.get('severity', 'warn')}` "
+            f"stage=`{stage}`: {blocker.get('detail', '')}"
+        )
+    lines.extend(("", "## Source Artifacts", ""))
+    if not final_artifacts:
+        lines.append("- none")
+    for artifact in final_artifacts:
+        lines.append(
+            f"- `{artifact.get('key', 'artifact')}` {artifact.get('path', '')}"
+        )
+    lines.extend(
+        (
+            "",
+            "## Optional Lineage Metadata",
+            "",
+            "- Child flow enabled: `false`",
+            "- Child flow required: `false`",
+            f"- Baseline id: `{lineage_metadata['baseline_id']}`",
+            f"- Source artifact links: `{len(source_artifact_links)}`",
+        )
+    )
+    markdown_path = ctx.bundle_root / NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME
     markdown_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     return json_path, markdown_path, payload
 
@@ -3976,6 +4659,9 @@ def _write_harness_metadata(
                 ctx.bundle_root / ACCEPTANCE_COVERAGE_JSON_FILENAME
             ).as_posix(),
             "ui_ux_checkpoints": (ctx.bundle_root / UI_UX_CHECKPOINTS_JSON_FILENAME).as_posix(),
+            "next_flow_checkpoint": (
+                ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME
+            ).as_posix(),
             "operator_quality_analysis_validation": (
                 ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME
             ).as_posix(),
@@ -4040,6 +4726,7 @@ def _grader_payload(
     acceptance_coverage: dict[str, object],
     ui_ux_payload: dict[str, object],
     operator_validation: dict[str, object],
+    next_flow_checkpoint: dict[str, object],
     first_failure_note: str | None,
 ) -> dict[str, object]:
     return {
@@ -4074,6 +4761,11 @@ def _grader_payload(
         "run_id": ctx.run_id,
         "runtime_id": ctx.runtime_id,
         "scenario_id": ctx.scenario.scenario_id,
+        "next_flow_checkpoint": {
+            "artifact": (ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME).as_posix(),
+            "operator_decision": next_flow_checkpoint.get("next_flow_actions", {}),
+            "flow_complete_visible": next_flow_checkpoint.get("flow_complete_visible"),
+        },
         "selected_task": ctx.selected_task_payload.get("selected_task"),
         "stage_audits": _stage_audit_payloads(ctx),
         "steps": _load_steps(ctx.bundle_root),
@@ -4094,6 +4786,7 @@ def _record_terminal_decision_step(
     *,
     ctx: FlowContext,
     status: VerdictStatus,
+    evidence_paths: tuple[Path, ...] = tuple(),
 ) -> None:
     _record_step(
         ctx=ctx,
@@ -4116,7 +4809,10 @@ def _record_terminal_decision_step(
             ctx.bundle_root / ACCEPTANCE_COVERAGE_MARKDOWN_FILENAME,
             ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME,
             ctx.bundle_root / RUNTIME_APPROVAL_ANALYSIS_FILENAME,
+            ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME,
+            ctx.bundle_root / NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME,
             ctx.bundle_root / STAGE_AUDITS_DIRNAME,
+            *evidence_paths,
         ),
     )
 
@@ -4392,10 +5088,10 @@ def _finalize_reports(
             "counting_status": counting_status,
         },
     )
-    _record_terminal_decision_step(ctx=ctx, status=status)
     first_failure_note = (
         None if status == "pass" else _first_failure_from_steps(ctx, status=status)[1]
     )
+    _record_terminal_decision_step(ctx=ctx, status=status)
     runtime_log_path = _write_runtime_log_from_steps(ctx)
     _copy_attempt_jsonl_artifacts(
         ctx=ctx,
@@ -4475,6 +5171,16 @@ def _finalize_reports(
         ),
     )
     write_scenario_verdict_markdown(path=ctx.bundle_root / VERDICT_FILENAME, verdict=verdict)
+    _, _, next_flow_checkpoint = _write_next_flow_checkpoint_artifacts(
+        ctx=ctx,
+        status=status,
+        quality_gate=effective_quality_gate,
+        quality_verdict=quality_assessment.verdict,
+        counting_status=counting_status,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
+        first_failure_note=first_failure_note,
+    )
     _write_json(
         ctx.bundle_root / GRADER_FILENAME,
         _grader_payload(
@@ -4487,6 +5193,7 @@ def _finalize_reports(
             acceptance_coverage=acceptance_coverage,
             ui_ux_payload=ui_ux_payload,
             operator_validation=operator_validation,
+            next_flow_checkpoint=next_flow_checkpoint,
             first_failure_note=first_failure_note,
         ),
     )
@@ -4552,7 +5259,6 @@ def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path
 def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     summary = "Black-box live E2E is blocked waiting for operator-agent input."
     _ensure_transcript_files(ctx)
-    _record_terminal_decision_step(ctx=ctx, status="blocked")
     _write_runtime_log_from_steps(ctx)
     _write_validator_report_from_steps(ctx=ctx, status="blocked", summary=summary)
     _write_log_analysis(
@@ -4649,6 +5355,18 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
             "counting_status": counting_status,
         },
     )
+    first_failure_note = _first_failure_from_steps(ctx, status="blocked")[1]
+    _, _, next_flow_checkpoint = _write_next_flow_checkpoint_artifacts(
+        ctx=ctx,
+        status="blocked",
+        quality_gate=quality_assessment.gate,
+        quality_verdict=quality_assessment.verdict,
+        counting_status=counting_status,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
+        first_failure_note=first_failure_note,
+    )
+    _record_terminal_decision_step(ctx=ctx, status="blocked")
     _write_harness_metadata(
         ctx=ctx,
         status="blocked",
@@ -4679,6 +5397,11 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
             "run_id": ctx.run_id,
             "runtime_id": ctx.runtime_id,
             "scenario_id": ctx.scenario.scenario_id,
+            "next_flow_checkpoint": {
+                "artifact": (ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME).as_posix(),
+                "operator_decision": next_flow_checkpoint.get("next_flow_actions", {}),
+                "flow_complete_visible": next_flow_checkpoint.get("flow_complete_visible"),
+            },
             "selected_task": ctx.selected_task_payload.get("selected_task"),
             "stage_audits": _stage_audit_payloads(ctx),
             "steps": _load_steps(ctx.bundle_root),

@@ -824,6 +824,8 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         "operator-quality-analysis-validation.json",
         "ui-ux-checkpoints.json",
         "ui-ux-checkpoints.md",
+        "next-flow-checkpoint.json",
+        "next-flow-checkpoint.md",
     ):
         assert (result.bundle_root / filename).exists(), filename
 
@@ -903,6 +905,39 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         (result.bundle_root / "acceptance-coverage.json").read_text(encoding="utf-8")
     )
     assert acceptance_payload["acceptance_coverage_status"] == "missing"
+    next_flow_payload = json.loads(
+        (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    assert next_flow_payload["terminal_status"] == "pass"
+    assert next_flow_payload["flow_complete_visible"] is True
+    assert next_flow_payload["source_run_summary"]["source_run_id"] == result.run_id
+    assert next_flow_payload["source_run_summary"]["source_work_item_id"] == (
+        "WI-LIVE-BLACKBOX"
+    )
+    assert next_flow_payload["source_run_summary"]["final_qa_status"] == "ready"
+    assert next_flow_payload["source_run_summary"]["qa_stage_state"] == "passed"
+    assert next_flow_payload["next_flow_actions"]["operator_decision"]["decision"] == (
+        "no-follow-up"
+    )
+    assert (
+        next_flow_payload["next_flow_actions"]["operator_decision"][
+            "requires_second_public_repository_flow"
+        ]
+        is False
+    )
+    assert next_flow_payload["optional_lineage_metadata"]["child_flow_required"] is False
+    assert next_flow_payload["optional_lineage_metadata"]["source_run_id"] == result.run_id
+    assert "start-follow-up-flow" in {
+        action["action"]
+        for action in next_flow_payload["next_flow_actions"][
+            "recommended_next_flow_actions"
+        ]
+    }
+    next_flow_markdown = (result.bundle_root / "next-flow-checkpoint.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Default decision: `no-follow-up`" in next_flow_markdown
+    assert "Requires second public-repository flow: `false`" in next_flow_markdown
 
 
 def test_black_box_live_e2e_records_complete_acceptance_coverage(
@@ -1066,6 +1101,14 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     assert first.status == "blocked"
     first_grader = json.loads((first.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert first_grader["steps"][-1]["action"] == "stop"
+    first_next_flow = json.loads(
+        (first.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    assert first_next_flow["terminal_status"] == "blocked"
+    assert first_next_flow["flow_complete_visible"] is False
+    assert first_next_flow["next_flow_actions"]["operator_decision"]["decision"] == "blocked"
+    assert first_next_flow["source_run_summary"]["questions"]["total_count"] == 1
+    assert first_next_flow["source_run_summary"]["questions"]["answered_count"] == 0
     request_markdown = (first.bundle_root / "operator-action-request.md").read_text(
         encoding="utf-8"
     )
@@ -1112,6 +1155,11 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     resumed_grader = json.loads((resumed.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert resumed_grader["steps"][-1]["action"] == "finish"
     assert resumed_grader["execution"]["first_failure_note"] is None
+    resumed_next_flow = json.loads(
+        (resumed.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    assert resumed_next_flow["terminal_status"] == "pass"
+    assert resumed_next_flow["source_run_summary"]["questions"]["answered_count"] == 1
     assert resumed_grader["selected_task"]["title"] == "exercise live black-box evaluator"
     assert "First Failure Boundary: `none`" in (
         resumed.bundle_root / "log-analysis.md"
@@ -1551,6 +1599,16 @@ def test_black_box_live_e2e_stops_when_public_inspection_fails_after_stage_pass(
     assert inspect_steps[0]["classification"] == "fail"
     assert "public inspection failed" in (
         result.bundle_root / "flow-state.json"
+    ).read_text(encoding="utf-8")
+    next_flow_payload = json.loads(
+        (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    assert next_flow_payload["terminal_status"] == "fail"
+    assert next_flow_payload["flow_complete_visible"] is False
+    assert next_flow_payload["next_flow_actions"]["operator_decision"]["decision"] == "blocked"
+    assert next_flow_payload["source_run_summary"]["blockers"]
+    assert "Default decision: `blocked`" in (
+        result.bundle_root / "next-flow-checkpoint.md"
     ).read_text(encoding="utf-8")
 
 

@@ -6910,7 +6910,7 @@ Local tasks:
   require launching a second public-repository flow by default.
   - Scope: live E2E docs and live-e2e skill guidance.
   - Verification: docs consistency tests cover the policy and keep live E2E manual-only.
-- `W26-E4-S2-T2` Extend the black-box live evaluator final checkpoint to capture
+- `W26-E4-S2-T2` (done) Extend the black-box live evaluator final checkpoint to capture
   completed-run next-action evidence, source-run summary, and optional lineage metadata in
   the result bundle.
   - Scope: live evaluator orchestration and report writer modules.
