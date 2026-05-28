@@ -866,6 +866,23 @@ def _clone_creation_payload(
     }
 
 
+def _next_flow_launch_lineage(
+    *,
+    source_work_item: str,
+    source_run_id: str,
+    baseline_id: str | None,
+    relationship: str,
+) -> dict[str, object]:
+    lineage: dict[str, object] = {
+        "source_work_item_id": source_work_item,
+        "source_run_id": source_run_id,
+        "relationship": relationship,
+    }
+    if baseline_id is not None:
+        lineage["baseline_id"] = baseline_id
+    return lineage
+
+
 def _exit_code_from_result(result: object) -> int:
     if isinstance(result, Mapping):
         raw_exit_code = result.get("exit_code", 0)
@@ -1233,6 +1250,8 @@ class OperatorUiService:
                 return self._next_flow_create_follow_up_draft(payload)
             if path == "/api/next-flow/clone-draft/create":
                 return self._next_flow_create_clone_draft(payload)
+            if path == "/api/next-flow/launch":
+                return self._next_flow_launch(payload)
             if path == "/api/workflow/run":
                 return _json_response(self._start_workflow_job(payload))
             if path == "/api/open-folder":
@@ -1729,6 +1748,66 @@ class OperatorUiService:
             status=HTTPStatus.CREATED,
         )
 
+    def _next_flow_launch(self, payload: dict[str, Any]) -> UiResponse:
+        source_work_item = _source_work_item_from_payload(
+            payload,
+            default=self.options.work_item,
+        )
+        source_run_id = _source_run_id_from_payload(payload)
+        new_work_item = _text_from_payload(payload, "new_work_item")
+        runtime = _runtime_from_payload(payload)
+        _validate_runtime(runtime)
+        preflight = validate_next_flow_launch_preflight(
+            NextFlowLaunchPreflightRequest(
+                workspace_root=self.workspace_root,
+                source_work_item=source_work_item,
+                source_run_id=source_run_id,
+                runtime_id=runtime,
+                contracts_root=_contracts_root_from_payload(payload),
+                baseline_id=_optional_baseline_id_from_payload(payload),
+            )
+        )
+        if preflight.status == "blocked":
+            return _json_response(preflight.error_payload, status=HTTPStatus.CONFLICT)
+        lineage = _next_flow_launch_lineage(
+            source_work_item=source_work_item,
+            source_run_id=source_run_id,
+            baseline_id=preflight.resolved_baseline_id,
+            relationship=_text_from_payload(
+                payload,
+                "relationship",
+                default="follow-up",
+            ),
+        )
+        prepared_payload = dict(payload)
+        prepared_payload["runtime"] = runtime
+        prepared_payload["log_follow"] = bool(payload.get("log_follow", True))
+
+        def _target(job_id: str) -> object:
+            return self._run_workflow(
+                prepared_payload,
+                job_id=job_id,
+                work_item=new_work_item,
+                config_snapshot_extra={
+                    "mode": "ui-next-flow-launch",
+                    "source_work_item": source_work_item,
+                    "source_run_id": source_run_id,
+                    "new_work_item": new_work_item,
+                },
+                lineage=lineage,
+            )
+
+        job = cast(
+            dict[str, object],
+            self._start_job(kind="next-flow-launch", stage=None, target=_target),
+        )
+        job["work_item"] = new_work_item
+        job["source_work_item"] = source_work_item
+        job["source_run_id"] = source_run_id
+        job["lineage"] = lineage
+        job["preflight"] = preflight
+        return _json_response(job, status=HTTPStatus.ACCEPTED)
+
     def _start_job(
         self,
         *,
@@ -1772,14 +1851,33 @@ class OperatorUiService:
         threading.Thread(target=_run, name=f"aidd-ui-{kind}-{job_id}", daemon=True).start()
         return {"job_id": job_id, "stage": stage, "kind": kind}
 
-    def _run_workflow(self, payload: dict[str, Any], *, job_id: str) -> object:
+    def _run_workflow(
+        self,
+        payload: dict[str, Any],
+        *,
+        job_id: str,
+        work_item: str | None = None,
+        config_snapshot_extra: Mapping[str, Any] | None = None,
+        lineage: Mapping[str, Any] | None = None,
+    ) -> object:
         runtime = _runtime_from_payload(payload)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
         run_id = _optional_run_id_from_payload(payload)
         log_follow = bool(payload.get("log_follow", True))
+        target_work_item = work_item or self.options.work_item
         cfg = load_config(self.options.config)
         runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
         runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
+        config_snapshot: dict[str, Any] = {
+            "config_path": self.options.config.as_posix(),
+            "workspace_root": self.workspace_root.as_posix(),
+            "runtime_command": runtime_command,
+            "runtime_execution_mode": runtime_execution_mode.value,
+            "log_follow": log_follow,
+            "mode": "ui-workflow",
+        }
+        if config_snapshot_extra is not None:
+            config_snapshot.update(config_snapshot_extra)
 
         def _stage_executor(request: WorkflowStageExecutionRequest) -> None:
             try:
@@ -1814,18 +1912,12 @@ class OperatorUiService:
 
         return self._workflow_runner(
             request=WorkflowRunRequest(
-                work_item=self.options.work_item,
+                work_item=target_work_item,
                 runtime_id=runtime,
                 workspace_root=self.workspace_root,
                 config_path=self.options.config,
-                config_snapshot={
-                    "config_path": self.options.config.as_posix(),
-                    "workspace_root": self.workspace_root.as_posix(),
-                    "runtime_command": runtime_command,
-                    "runtime_execution_mode": runtime_execution_mode.value,
-                    "log_follow": log_follow,
-                    "mode": "ui-workflow",
-                },
+                config_snapshot=config_snapshot,
+                lineage=lineage,
                 run_id=run_id,
                 stage_start=stage_start,
                 stage_end=stage_end,

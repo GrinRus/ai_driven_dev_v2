@@ -34,6 +34,7 @@ from aidd.core.run_store import (
     run_attempt_artifact_index_path,
     run_attempt_root,
     run_attempt_runtime_log_path,
+    run_manifest_path,
 )
 from aidd.core.runtime_operator import (
     RuntimeOperatorBroker,
@@ -1282,6 +1283,102 @@ def test_ui_next_flow_preflight_endpoint_returns_structured_blocking_payload(
         check["code"] == "unsupported-runtime" and check["severity"] == "blocking"
         for check in payload["checks"]
     )
+
+
+def test_ui_next_flow_launch_endpoint_delegates_new_work_item_workflow(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    source_manifest = run_manifest_path(workspace_root, "WI-UI", "run-ui")
+    source_before = source_manifest.read_text(encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        request = kwargs["request"]
+        assert isinstance(request, WorkflowRunRequest)
+        captured["request"] = request
+        return WorkflowRunResult(
+            run_id=request.run_id or "run-follow-up-ui",
+            executed_stage_count=0,
+            completed=True,
+            incomplete=(),
+            exit_code=0,
+        )
+
+    service = _service(workspace_root, workflow_runner=fake_workflow_runner)
+
+    response = service.handle_post(
+        "/api/next-flow/launch",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-FOLLOW-UP",
+            "runtime": "codex",
+            "baseline_id": "run-ui",
+            "run_id": "run-follow-up-ui",
+            "from_stage": "idea",
+            "to_stage": "qa",
+        },
+    )
+
+    assert response.status == HTTPStatus.ACCEPTED
+    payload = json.loads(response.body.decode("utf-8"))
+    job_payload = _wait_job(service, str(payload["job_id"]))
+    request = captured["request"]
+    assert isinstance(request, WorkflowRunRequest)
+    assert payload["kind"] == "next-flow-launch"
+    assert payload["work_item"] == "WI-UI-FOLLOW-UP"
+    assert payload["preflight"]["status"] == "pass"
+    assert job_payload["status"] == "completed"
+    assert request.work_item == "WI-UI-FOLLOW-UP"
+    assert request.runtime_id == "codex"
+    assert request.run_id == "run-follow-up-ui"
+    assert request.stage_start == "idea"
+    assert request.stage_end == "qa"
+    assert request.config_snapshot["mode"] == "ui-next-flow-launch"
+    assert request.lineage == {
+        "baseline_id": "run-ui",
+        "relationship": "follow-up",
+        "source_run_id": "run-ui",
+        "source_work_item_id": "WI-UI",
+    }
+    assert source_manifest.read_text(encoding="utf-8") == source_before
+
+
+def test_ui_next_flow_launch_endpoint_requires_runtime_before_preflight(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/launch",
+        {"source_run_id": "run-ui", "new_work_item": "WI-UI-FOLLOW-UP"},
+    )
+
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(response)["error"] == "runtime is required."
+
+
+def test_ui_next_flow_launch_endpoint_returns_blocked_preflight_payload(
+    tmp_path: Path,
+) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    response = service.handle_post(
+        "/api/next-flow/launch",
+        {
+            "source_run_id": "run-missing",
+            "new_work_item": "WI-UI-FOLLOW-UP",
+            "runtime": "generic-cli",
+        },
+    )
+
+    assert response.status == HTTPStatus.CONFLICT
+    payload = json.loads(response.body.decode("utf-8"))
+    assert payload["error"] == "next-flow launch preflight blocked"
+    assert "source-run-missing" in payload["blocking_codes"]
 
 
 def test_ui_workflow_stage_executor_passes_cancel_callback(

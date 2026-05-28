@@ -6777,7 +6777,7 @@ Local tasks:
   - Scope: local UI HTTP layer.
   - Verification: CLI UI tests cover success and invalid payloads without invoking real
     runtimes.
-- `W26-E3-S1-T2` Add a launch endpoint that creates the new independent work item or run,
+- `W26-E3-S1-T2` (done) Add a launch endpoint that creates the new independent work item or run,
   writes audit lineage, and dispatches normal workflow execution only after explicit
   runtime selection.
   - Scope: UI HTTP integration with core launch services.
