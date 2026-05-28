@@ -153,6 +153,9 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".artifact-row" in components
     assert ".stage-document-workbench" in components
     assert ".workbench-side-row" in components
+    assert ".interview-loop-screen" in components
+    assert ".validation-repair-center" in components
+    assert ".repair-action-band" in components
     assert ".project-setup-grid" in components
     assert ".setup-mode-card.selected" in components
     assert ".flow-complete-state" in components
@@ -175,6 +178,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".source-finding-groups" in responsive
     assert ".follow-up-definition-grid" in responsive
     assert ".launch-confirmation-grid" in responsive
+    assert ".interview-loop-screen" in responsive
+    assert ".validation-repair-center" in responsive
     assert "scroll-padding-inline: 10px" in responsive
 
 
@@ -198,7 +203,10 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function renderArtifacts()" in artifacts
     assert "async function inspectArtifactReference({stage, key, path, kind})" in artifacts
     assert "function questionControlId(prefix, questionId, index)" in questions
+    assert "function renderInterviewSummary(view)" in questions
+    assert "function renderBlockedStageContext(view)" in questions
     assert "async function answerAndResume(questionId)" in questions
+    assert "async function resumeAfterAnswers()" in questions
     assert "async function renderApprovals()" in approvals
     assert "async function submitIntervention()" in approvals
     assert "async function renderLogs()" in logs
@@ -208,6 +216,8 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function renderFlowCompleteState()" in next_flow
     assert "function renderRunHistory()" in next_flow
     assert "async function renderCockpit()" in cockpit
+    assert "function renderRecoveryActionBand(diagnostics)" in cockpit
+    assert "function renderRepairTimeline(validation)" in cockpit
     assert "return renderFlowCompleteState();" in cockpit
     assert 'state.activeTab === "history"' in cockpit
     assert "function renderActivityTable()" in cockpit
@@ -382,14 +392,49 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
                 '<select id="${resolutionId}" name="${resolutionId}" '
                 'aria-describedby="${questionTextId}"'
             ),
-            'const savedAnswer = resolved && question.answer_text',
+            "function questionDisplayStatus(question)",
+            "function renderInterviewSummary(view)",
+            "function renderBlockedStageContext(view)",
+            "Questions / Interview Loop",
+            "Required answers",
+            "Blocked stage",
+            'const savedAnswer = question.answer_resolution',
             'class="saved-answer"',
-            "Saved answer",
-            "${escapeHtml(question.answer_text)}",
+            "Saved ${escapeHtml(question.answer_resolution)} answer",
+            "Answer recorded in answers.md",
+            "data-answer-resume-all",
             'resolution: resolution?.value || "resolved"',
             'option value="partial"',
             'option value="deferred"',
             "async function answerAndResume(questionId)",
+            "async function resumeAfterAnswers()",
+        ),
+    )
+
+
+def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+
+    _assert_contains_all(
+        cockpit,
+        (
+            "function repairCenterStatus(validation, stopped)",
+            "repair-exhausted",
+            "explicit-stop",
+            "function renderRecoveryActionBand(diagnostics)",
+            "function renderRepairTimeline(validation)",
+            "function renderBlockedStageRecovery(diagnostics)",
+            "Validation / Repair Center",
+            "Repair Available",
+            "Run Repair",
+            "Stop Run",
+            "Request Change",
+            "Validation attempt timeline",
+            "Blocked questions",
+            "Answers path",
+            "data-run-repair",
+            "data-stop-run",
+            'data-tab-shortcut="request"',
         ),
     )
 
@@ -574,6 +619,10 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'closest("[data-artifact-key]")',
             "data-log-filter",
             "data-log-raw",
+            'closest("[data-answer-resume-all]")',
+            'closest("[data-run-repair]")',
+            'closest("[data-stop-run]")',
+            "Stop Run requires an active UI-started job.",
             "refresh();",
         ),
     )
@@ -655,6 +704,9 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".stage-document-workbench" in css
     assert ".workbench-main" in css
     assert ".workbench-side-row" in css
+    assert ".interview-loop-screen" in css
+    assert ".validation-repair-center" in css
+    assert ".repair-action-band" in css
     assert ".saved-answer" in css
     assert ".saved-answer-text" in css
     assert ".setup-mode-card" in css

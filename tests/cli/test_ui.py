@@ -22,9 +22,11 @@ from aidd.cli.ui import (
     _read_json_body,
 )
 from aidd.cli.ui_assets import operator_static_asset_for_route, operator_static_asset_manifest
+from aidd.core.repair import persist_repair_history_snapshot
 from aidd.core.run_store import (
     OPERATOR_DECISIONS_FILENAME,
     OPERATOR_REQUESTS_FILENAME,
+    RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_EXIT_METADATA_FILENAME,
     create_next_attempt_directory,
     create_run_manifest,
@@ -769,6 +771,129 @@ def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> 
     assert payload["questions"][0]["answer_resolution"] == "resolved"  # type: ignore[index]
     answers_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "answers.md"
     assert "Release target is 0.2.0." in answers_path.read_text(encoding="utf-8")
+
+
+def test_ui_stage_endpoint_exposes_interview_recovery_answer_states(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    questions_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "questions.md"
+    questions_path.write_text(
+        "\n".join(
+            (
+                "# Questions",
+                "",
+                "## Questions",
+                "",
+                "- `Q1` `[blocking]` Confirm release target.",
+                "- `Q2` `[blocking]` Confirm rollout risk.",
+                "- `Q3` `[blocking]` Confirm owner signoff.",
+            )
+        ),
+        encoding="utf-8",
+    )
+    service = _service(workspace_root)
+    for question_id, resolution in (
+        ("Q1", "resolved"),
+        ("Q2", "partial"),
+        ("Q3", "deferred"),
+    ):
+        _payload(
+            service.handle_post(
+                "/api/answers",
+                {
+                    "stage": "plan",
+                    "question_id": question_id,
+                    "text": f"{question_id} answer",
+                    "resolution": resolution,
+                },
+            )
+        )
+
+    payload = _payload(service.handle_get("/api/stage", {"stage": ["plan"], "run_id": ["run-ui"]}))
+    questions = {item["question_id"]: item for item in payload["questions"]["questions"]}  # type: ignore[index]
+
+    assert payload["diagnostics"]["blocking_questions"]["unresolved_question_ids"] == [  # type: ignore[index]
+        "Q2",
+        "Q3",
+    ]
+    assert questions["Q1"]["status"] == "resolved"
+    assert questions["Q1"]["answer_resolution"] == "resolved"
+    assert questions["Q2"]["status"] == "pending-blocking"
+    assert questions["Q2"]["answer_resolution"] == "partial"
+    assert questions["Q3"]["status"] == "pending-blocking"
+    assert questions["Q3"]["answer_resolution"] == "deferred"
+
+
+def test_ui_stage_endpoint_exposes_repair_and_explicit_stop_recovery_states(
+    tmp_path: Path,
+) -> None:
+    repair_root = tmp_path / "repair" / ".aidd"
+    _prepare_run(repair_root)
+    repair_stage_root = repair_root / "workitems" / "WI-UI" / "stages" / "plan"
+    persist_repair_history_snapshot(
+        workspace_root=repair_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+        trigger="repair",
+        outcome="failed validation",
+        stage_status="repair-needed",
+        validator_report_path=repair_stage_root / "validator-report.md",
+        repair_brief_path=repair_stage_root / "repair-brief.md",
+    )
+    persist_stage_status(
+        workspace_root=repair_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="repair-needed",
+    )
+    repair_payload = _payload(
+        _service(repair_root).handle_get("/api/stage", {"stage": ["plan"], "run_id": ["run-ui"]})
+    )
+
+    validation = repair_payload["diagnostics"]["validation"]  # type: ignore[index]
+    assert repair_payload["diagnostics"]["status"] == "repair-available"  # type: ignore[index]
+    assert validation["status"] == "repair-available"
+    assert validation["repair_attempts"][0]["trigger"] == "repair"
+    assert validation["repair_attempts"][0]["outcome"] == "failed validation"
+
+    stopped_root = tmp_path / "stopped" / ".aidd"
+    _prepare_run(stopped_root)
+    stopped_stage_root = stopped_root / "workitems" / "WI-UI" / "stages" / "plan"
+    stopped_stage_root.joinpath("validator-report.md").write_text(
+        "# Validator Report\n\n- Verdict: `pass`\n",
+        encoding="utf-8",
+    )
+    persist_stage_status(
+        workspace_root=stopped_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    events_path = run_attempt_root(
+        workspace_root=stopped_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ) / RUN_EVENTS_JSONL_FILENAME
+    events_path.write_text(
+        '{"timestamp":"2026-05-28T00:00:00Z","level":"error","event":"stopped",'
+        '"message":"Workflow stopped at plan"}\n',
+        encoding="utf-8",
+    )
+    stopped_payload = _payload(
+        _service(stopped_root).handle_get("/api/stage", {"stage": ["plan"], "run_id": ["run-ui"]})
+    )
+
+    assert stopped_payload["diagnostics"]["status"] == "stopped"  # type: ignore[index]
+    assert stopped_payload["diagnostics"]["stopped"]["stopped"] is True  # type: ignore[index]
+    assert stopped_payload["diagnostics"]["stopped"]["detail"] == "Workflow stopped at plan"  # type: ignore[index]
 
 
 def test_ui_service_hardening_regression_metadata_surface(tmp_path: Path) -> None:

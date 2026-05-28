@@ -65,6 +65,10 @@
   .source-finding-groups,
   .follow-up-definition-grid,
   .launch-confirmation-grid,
+  .interview-loop-screen,
+  .validation-repair-center,
+  .interview-summary,
+  .repair-timeline,
   .bottom-dock {
     grid-template-columns: 1fr;
   }

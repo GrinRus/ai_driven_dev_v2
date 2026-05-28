@@ -6723,7 +6723,7 @@ Local tasks:
   - Scope: packaged static UI document workbench.
   - Verification: static and endpoint tests cover document loading, source/preview state,
     truncation labels, and contract/validation sidebars.
-- `W26-E2-S3-T2` Render Questions / Interview Loop and Validation / Repair Center as
+- `W26-E2-S3-T2` (done) Render Questions / Interview Loop and Validation / Repair Center as
   first-class recovery screens with required answers, blocked stages, repair attempt
   timeline, Run Repair, Stop Run, and Request Change actions.
   - Scope: packaged static UI recovery surfaces.

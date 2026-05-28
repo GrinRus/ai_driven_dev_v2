@@ -6,6 +6,69 @@ function questionControlId(prefix, questionId, index) {
   return `${prefix}-${index + 1}-${safeQuestionId || "question"}`;
 }
 
+function questionDisplayStatus(question) {
+  if (question.answer_resolution && question.answer_resolution !== "resolved") {
+    return question.answer_resolution;
+  }
+  return question.status || "pending";
+}
+
+function questionStatusClass(question) {
+  const status = questionDisplayStatus(question);
+  if (status === "resolved") return "good";
+  if (status === "partial" || status === "deferred") return "warn";
+  if (status === "pending-blocking") return "bad";
+  return "";
+}
+
+function renderInterviewSummary(view) {
+  const questions = view?.questions || [];
+  const unresolved = view?.unresolved_blocking_question_ids || [];
+  const answered = questions.filter((question) => question.answer_resolution === "resolved").length;
+  const partial = questions.filter((question) => question.answer_resolution === "partial").length;
+  const deferred = questions.filter((question) => question.answer_resolution === "deferred").length;
+  return `
+    <div class="interview-summary">
+      <div class="metric"><span>Required answers</span><strong>${escapeHtml(unresolved.length)}</strong></div>
+      <div class="metric"><span>Resolved</span><strong>${escapeHtml(answered)}</strong></div>
+      <div class="metric"><span>Partial</span><strong>${escapeHtml(partial)}</strong></div>
+      <div class="metric"><span>Deferred</span><strong>${escapeHtml(deferred)}</strong></div>
+    </div>
+    <div class="panel-item">
+      <strong>Answers document</strong>
+      ${pathLine(view?.answers_path || "answers.md not materialized", 88)}
+    </div>
+  `;
+}
+
+function renderBlockedStageContext(view) {
+  const diagnostics = activeStageView()?.diagnostics;
+  const blocking = diagnostics?.blocking_questions;
+  const unresolved = blocking?.unresolved_question_ids || view?.unresolved_blocking_question_ids || [];
+  const blocked = unresolved.length > 0;
+  return `
+    <aside class="surface interview-context-panel">
+      <div class="surface-title">
+        <span>Interview Loop</span>
+        <span class="small-badge ${blocked ? "bad" : "good"}">${blocked ? "blocked" : "clear"}</span>
+      </div>
+      <div class="panel-item">
+        <strong>Blocked stage</strong>
+        <span>${blocked ? escapeHtml(stageTitle(state.activeStage)) : "No blocked stage"}</span>
+      </div>
+      <div class="panel-item">
+        <strong>Required question ids</strong>
+        <span>${escapeHtml(unresolved.join(", ") || "none")}</span>
+      </div>
+      <div class="panel-item">
+        <strong>Resume rule</strong>
+        <span>${blocked ? "Resolve all blocking questions before continuing the runtime." : "Stage can resume when runtime readiness allows."}</span>
+      </div>
+      <button data-answer-resume-all type="button" ${blocked ? "disabled" : ""}>Resume stage</button>
+    </aside>
+  `;
+}
+
 function renderQuestionCards({showResume}) {
   const view = activeStageView()?.questions;
   const questions = view?.questions || [];
@@ -20,14 +83,19 @@ function renderQuestionCards({showResume}) {
         const questionTextId = questionControlId("question-text", question.question_id, index);
         const answerId = questionControlId("answer", question.question_id, index);
         const resolutionId = questionControlId("resolution", question.question_id, index);
-        const savedAnswer = resolved && question.answer_text
-          ? `<div class="saved-answer"><span class="saved-answer-label">Saved answer</span><span class="saved-answer-text">${escapeHtml(question.answer_text)}</span></div>`
+        const displayStatus = questionDisplayStatus(question);
+        const savedAnswer = question.answer_resolution
+          ? `<div class="saved-answer"><span class="saved-answer-label">Saved ${escapeHtml(question.answer_resolution)} answer</span><span class="saved-answer-text">${escapeHtml(question.answer_text || "Answer recorded in answers.md; blocking question still requires a resolved answer.")}</span></div>`
           : "";
         return `
           <article class="question-card">
             <div class="question-head">
               <strong>${escapeHtml(question.question_id)}</strong>
-              <span class="small-badge ${question.status === "pending-blocking" ? "warn" : resolved ? "good" : ""}">${escapeHtml(question.status)}</span>
+              <span class="small-badge ${questionStatusClass(question)}">${escapeHtml(displayStatus)}</span>
+            </div>
+            <div class="question-meta">
+              <span>${escapeHtml(question.policy)}</span>
+              <span>${resolved ? "Answer accepted for resume" : "Answer required for recovery"}</span>
             </div>
             <p id="${questionTextId}">${escapeHtml(question.text)}</p>
             ${savedAnswer}
@@ -51,7 +119,20 @@ function renderQuestionCards({showResume}) {
 }
 
 function renderQuestions() {
-  return `<section class="surface">${renderQuestionCards({showResume: true})}</section>`;
+  const view = activeStageView()?.questions;
+  return `
+    <div class="interview-loop-screen">
+      <section class="surface">
+        <div class="surface-title">
+          <span>Questions / Interview Loop</span>
+          <span class="small-badge ${view?.unresolved_blocking_question_ids?.length ? "bad" : "good"}">${escapeHtml(view?.unresolved_blocking_question_ids?.length || 0)} required</span>
+        </div>
+        ${renderInterviewSummary(view)}
+        ${renderQuestionCards({showResume: true})}
+      </section>
+      ${renderBlockedStageContext(view)}
+    </div>
+  `;
 }
 
 async function saveAnswer(questionId) {
@@ -80,6 +161,17 @@ async function answerAndResume(questionId) {
   if (unresolved.length) {
     await renderAll();
     toast("Answer saved; remaining blocking questions must be resolved before resume.");
+    return;
+  }
+  await startStage(state.activeStage);
+}
+
+async function resumeAfterAnswers() {
+  await fetchDashboard();
+  const unresolved = state.dashboard?.active_stage_view?.questions?.unresolved_blocking_question_ids || [];
+  if (unresolved.length) {
+    await renderAll();
+    toast("Resolve blocking questions before resume.");
     return;
   }
   await startStage(state.activeStage);

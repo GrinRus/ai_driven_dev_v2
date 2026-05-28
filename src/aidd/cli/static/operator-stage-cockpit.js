@@ -53,8 +53,95 @@ function renderOverview() {
   `;
 }
 
+function repairCenterStatus(validation, stopped) {
+  if (stopped?.stopped) return "explicit-stop";
+  if (validation?.validator_fail_count && validation?.final_state === "failed" && (validation.repair_attempts || []).length) {
+    return "repair-exhausted";
+  }
+  return validation?.status || "clear";
+}
+
+function renderRecoveryActionBand(diagnostics) {
+  const validation = diagnostics?.validation;
+  const stopped = diagnostics?.stopped;
+  const status = repairCenterStatus(validation, stopped);
+  const repairAvailable = status === "repair-available";
+  const stoppedMessage = stopped?.stopped ? stopped.detail || "Stage stopped." : "";
+  return `
+    <section class="repair-action-band ${repairAvailable ? "repair-available" : ""}">
+      <div>
+        <div class="surface-title">
+          <span>${repairAvailable ? "Repair Available" : status === "repair-exhausted" ? "Repair Exhausted" : status === "explicit-stop" ? "Explicit Stop" : "Repair Center"}</span>
+          <span class="small-badge ${status === "clear" ? "good" : status === "explicit-stop" || status === "repair-exhausted" ? "bad" : "warn"}">${escapeHtml(status)}</span>
+        </div>
+        <p>${escapeHtml(stoppedMessage || (repairAvailable ? "Validation failed. Run Repair starts the selected stage through the normal stage runner." : "Review validation evidence, repair history, and recovery actions before continuing."))}</p>
+      </div>
+      <div class="repair-actions">
+        <button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>
+        <button data-stop-run type="button" class="danger">Stop Run</button>
+        <button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderRepairTimeline(validation) {
+  const attempts = validation?.repair_attempts || [];
+  if (!attempts.length) {
+    return `<div class="empty-state">No repair attempts recorded.</div>`;
+  }
+  return `
+    <div class="repair-timeline">
+      ${attempts.map((attempt) => `
+        <article class="repair-timeline-card">
+          <div class="question-head">
+            <strong>Attempt ${escapeHtml(attempt.attempt_number)}</strong>
+            <span class="small-badge ${attempt.outcome === "succeeded" ? "good" : "warn"}">${escapeHtml(attempt.outcome)}</span>
+          </div>
+          <div class="question-meta">
+            <span>${escapeHtml(attempt.trigger)}</span>
+            <span>${escapeHtml(attempt.recorded_at_utc)}</span>
+          </div>
+          ${attempt.validator_report_path ? pathLine(attempt.validator_report_path, 78) : ""}
+          ${attempt.repair_brief_path ? pathLine(attempt.repair_brief_path, 78) : ""}
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderBlockedStageRecovery(diagnostics) {
+  const blocking = diagnostics?.blocking_questions;
+  const stopped = diagnostics?.stopped;
+  const requestChange = diagnostics?.request_change;
+  return `
+    <aside class="surface repair-context-panel">
+      <div class="surface-title">Recovery context</div>
+      <div class="panel-item">
+        <strong>Blocked questions</strong>
+        <span>${escapeHtml(blocking?.unresolved_question_ids?.join(", ") || "none")}</span>
+      </div>
+      <div class="panel-item">
+        <strong>Answers path</strong>
+        ${pathLine(blocking?.answers_path || "not available", 78)}
+      </div>
+      <div class="panel-item">
+        <strong>Stopped state</strong>
+        <span>${escapeHtml(stopped?.stopped ? stopped.detail || "stopped" : "not stopped")}</span>
+      </div>
+      <div class="panel-item">
+        <strong>Request change</strong>
+        <span>${escapeHtml(requestChange?.reason || "Stage-scoped intervention can be opened from Request Change.")}</span>
+      </div>
+    </aside>
+  `;
+}
+
 function renderValidation() {
-  const result = activeStageView()?.result;
+  const view = activeStageView();
+  const result = view?.result;
+  const diagnostics = view?.diagnostics;
+  const validation = diagnostics?.validation;
   if (!result) return `<div class="empty-state">No validation evidence for this stage yet.</div>`;
   const repairs = (result.repair_output_paths || []).map((path) => `
     <button class="artifact-row" data-open-artifact="${escapeHtml(path)}" type="button">
@@ -63,23 +150,32 @@ function renderValidation() {
     </button>
   `).join("") || `<div class="empty-state">No repair outputs recorded.</div>`;
   return `
-    <section class="surface">
-      <div class="surface-title">Validation</div>
-      <div class="metric-grid">
-        <div class="metric"><span>Pass</span><strong>${escapeHtml(result.validator_pass_count)}</strong></div>
-        <div class="metric"><span>Fail</span><strong>${escapeHtml(result.validator_fail_count)}</strong></div>
-        <div class="metric"><span>Final state</span><strong>${escapeHtml(result.final_state)}</strong></div>
-        <div class="metric"><span>Attempts</span><strong>${escapeHtml(result.attempt_count)}</strong></div>
-      </div>
-      <div class="panel-item">
-        <strong>Validator report</strong>
-        ${pathLine(result.validator_report_path)}
-      </div>
-      <div class="panel-item">
-        <strong>Repair evidence</strong>
-        <div class="recent-artifacts">${repairs}</div>
-      </div>
-    </section>
+    <div class="validation-repair-center">
+      <section class="surface">
+        <div class="surface-title">
+          <span>Validation / Repair Center</span>
+          <span class="small-badge ${result.validator_fail_count ? "bad" : "good"}">${escapeHtml(repairCenterStatus(validation, diagnostics?.stopped))}</span>
+        </div>
+        <div class="metric-grid">
+          <div class="metric"><span>Pass</span><strong>${escapeHtml(result.validator_pass_count)}</strong></div>
+          <div class="metric"><span>Fail</span><strong>${escapeHtml(result.validator_fail_count)}</strong></div>
+          <div class="metric"><span>Final state</span><strong>${escapeHtml(result.final_state)}</strong></div>
+          <div class="metric"><span>Attempts</span><strong>${escapeHtml(result.attempt_count)}</strong></div>
+        </div>
+        ${renderRecoveryActionBand(diagnostics)}
+        <div class="panel-item">
+          <strong>Validator report</strong>
+          ${pathLine(result.validator_report_path)}
+        </div>
+        <div class="panel-item">
+          <strong>Repair evidence</strong>
+          <div class="recent-artifacts">${repairs}</div>
+        </div>
+        <div class="surface-title compact">Validation attempt timeline</div>
+        ${renderRepairTimeline(validation)}
+      </section>
+      ${renderBlockedStageRecovery(diagnostics)}
+    </div>
   `;
 }
 

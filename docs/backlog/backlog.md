@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E2-S3-T2`
+- `W26-E2-S3-T3`
 
 ## Soon
 
-- `W26-E2-S3-T3`
+- `W26-E2-S3-T4`
 
 ## Parking lot
 
-- `W26-E2-S3-T4`
 - `W26-E3-S1-T1`
 - `W26-E3-S1-T2`
 - `W26-E3-S1-T3`
@@ -263,3 +262,8 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   Document Workbench with artifact tree, Preview/Source/Diff controls, contract
   requirements, validation results, missing evidence, references, and version history.
   `W26-E2-S3-T2` is promoted to `Next`, and `W26-E2-S3-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S3-T2`; Questions and Validation now render first-class
+  recovery screens for required answers, partial/deferred interview states, repair
+  availability, repair timelines, explicit stop context, and Run Repair / Stop Run /
+  Request Change actions. `W26-E2-S3-T3` is promoted to `Next`, and `W26-E2-S3-T4`
+  is promoted to `Soon`.

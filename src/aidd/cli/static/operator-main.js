@@ -210,6 +210,22 @@ document.addEventListener("click", async (event) => {
     if (event.target.closest("[data-log-raw]")) {
       state.rawLogMode = !state.rawLogMode;
       await renderLogs();
+      return;
+    }
+    if (event.target.closest("[data-answer-resume-all]")) {
+      await resumeAfterAnswers();
+      return;
+    }
+    if (event.target.closest("[data-run-repair]")) {
+      await startStage(state.activeStage);
+      return;
+    }
+    if (event.target.closest("[data-stop-run]")) {
+      if (state.activeJobId) {
+        await cancelActiveJob();
+      } else {
+        toast("Stop Run requires an active UI-started job.");
+      }
     }
   } catch (error) {
     toast(error.message);
