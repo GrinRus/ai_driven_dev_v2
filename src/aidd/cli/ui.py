@@ -33,7 +33,7 @@ from aidd.cli.support import (
     _runtime_execution_mode_for_runtime,
     console,
 )
-from aidd.cli.ui_assets import _INDEX_HTML, _OPERATOR_CSS, _OPERATOR_JS
+from aidd.cli.ui_assets import operator_static_asset_for_route
 from aidd.cli.ui_http import (
     UiRequestBodyTooLarge,
     UiResponse,
@@ -681,23 +681,11 @@ class OperatorUiService:
 
     def handle_get(self, path: str, params: dict[str, list[str]]) -> UiResponse:
         try:
-            if path == "/":
+            if static_asset := operator_static_asset_for_route(path):
                 return UiResponse(
                     status=int(HTTPStatus.OK),
-                    content_type="text/html; charset=utf-8",
-                    body=_INDEX_HTML.encode("utf-8"),
-                )
-            if path == "/operator.js":
-                return UiResponse(
-                    status=int(HTTPStatus.OK),
-                    content_type="text/javascript; charset=utf-8",
-                    body=_OPERATOR_JS.encode("utf-8"),
-                )
-            if path == "/operator.css":
-                return UiResponse(
-                    status=int(HTTPStatus.OK),
-                    content_type="text/css; charset=utf-8",
-                    body=_OPERATOR_CSS.encode("utf-8"),
+                    content_type=static_asset.content_type,
+                    body=static_asset.text.encode("utf-8"),
                 )
             if path == "/favicon.ico":
                 return UiResponse(

@@ -3,7 +3,13 @@ from __future__ import annotations
 from html.parser import HTMLParser
 from importlib.resources import files
 
-from aidd.cli.ui_assets import _INDEX_HTML, _OPERATOR_CSS, _OPERATOR_JS
+from aidd.cli.ui_assets import (
+    _INDEX_HTML,
+    _OPERATOR_CSS,
+    _OPERATOR_JS,
+    operator_static_asset_for_route,
+    operator_static_asset_manifest,
+)
 
 
 class _StartTagCollector(HTMLParser):
@@ -36,6 +42,22 @@ def test_operator_assets_are_loaded_from_packaged_static_resources() -> None:
     assert static_files.joinpath("index.html").read_text(encoding="utf-8") == _INDEX_HTML
     assert static_files.joinpath("operator.css").read_text(encoding="utf-8") == _OPERATOR_CSS
     assert static_files.joinpath("operator.js").read_text(encoding="utf-8") == _OPERATOR_JS
+
+
+def test_operator_static_asset_manifest_preserves_compatibility_routes() -> None:
+    manifest = operator_static_asset_manifest()
+    routes = {asset.route: asset for asset in manifest}
+    filenames = {asset.filename for asset in manifest}
+
+    assert len(routes) == len(manifest)
+    assert filenames == {"index.html", "operator.css", "operator.js"}
+    assert routes["/"].filename == "index.html"
+    assert routes["/operator.js"].content_type == "text/javascript; charset=utf-8"
+    assert routes["/operator.css"].content_type == "text/css; charset=utf-8"
+    assert operator_static_asset_for_route("/").text == _INDEX_HTML
+    assert operator_static_asset_for_route("/operator.js").text == _OPERATOR_JS
+    assert operator_static_asset_for_route("/operator.css").text == _OPERATOR_CSS
+    assert operator_static_asset_for_route("/missing.js") is None
 
 
 def test_index_html_exposes_named_operator_landmarks() -> None:

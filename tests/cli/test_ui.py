@@ -21,6 +21,7 @@ from aidd.cli.ui import (
     _is_loopback_host,
     _read_json_body,
 )
+from aidd.cli.ui_assets import operator_static_asset_for_route
 from aidd.core.run_store import (
     RUN_RUNTIME_EXIT_METADATA_FILENAME,
     create_next_attempt_directory,
@@ -358,6 +359,27 @@ def test_ui_dashboard_endpoint_exposes_operator_console_payload(tmp_path: Path) 
         artifact["path"] == "workitems/WI-UI/stages/plan/plan.md"
         for artifact in dashboard["recent_artifacts"]  # type: ignore[index]
     )
+
+
+def test_ui_static_asset_routes_are_served_from_manifest(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    html_response = service.handle_get("/", {})
+    script_response = service.handle_get("/operator.js", {})
+    css_response = service.handle_get("/operator.css", {})
+
+    index_asset = operator_static_asset_for_route("/")
+    script_asset = operator_static_asset_for_route("/operator.js")
+    css_asset = operator_static_asset_for_route("/operator.css")
+    assert index_asset is not None
+    assert script_asset is not None
+    assert css_asset is not None
+    assert html_response.content_type == index_asset.content_type
+    assert script_response.content_type == script_asset.content_type
+    assert css_response.content_type == css_asset.content_type
+    assert html_response.body.decode("utf-8") == index_asset.text
+    assert script_response.body.decode("utf-8") == script_asset.text
+    assert css_response.body.decode("utf-8") == css_asset.text
 
 
 def test_ui_run_endpoint_uses_empty_state_when_no_run_exists(tmp_path: Path) -> None:

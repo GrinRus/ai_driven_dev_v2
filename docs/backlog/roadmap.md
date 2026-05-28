@@ -6567,7 +6567,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E2-S0-T1` Add a packaged static asset manifest or loader that can serve multiple
+- `W26-E2-S0-T1` (done) Add a packaged static asset manifest or loader that can serve multiple
   UI JavaScript and CSS resources while preserving the existing `/operator.js` and
   `/operator.css` compatibility routes.
   - Scope: static resource loader and UI HTTP serving only.
