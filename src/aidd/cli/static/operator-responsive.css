@@ -58,6 +58,8 @@
   .flow-complete-hero,
   .handoff-metric-grid,
   .terminal-summary-grid,
+  .lineage-flow,
+  .lineage-actions,
   .bottom-dock {
     grid-template-columns: 1fr;
   }

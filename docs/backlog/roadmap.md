@@ -6598,7 +6598,7 @@ Exit evidence:
 - existing local UI behavior, package resource loading, and no-Node packaging remain
   compatibility-preserved.
 
-#### Slice W26-E2-S1 — Mission Control shell updates (`planned`)
+#### Slice W26-E2-S1 — Mission Control shell updates (`done`)
 Goal: update the existing static operator console shell to match the accepted screen
 inventory while preserving the no-Node packaging model.
 
@@ -6634,7 +6634,7 @@ Local tasks:
   - Scope: dashboard UI state for terminal runs.
   - Verification: static and service-level UI tests cover completed-run action visibility
     and no hidden generic runtime fallback.
-- `W26-E2-S1-T3` Render run history lineage with parent run, child work item, next-action
+- `W26-E2-S1-T3` (done) Render run history lineage with parent run, child work item, next-action
   badges, and actions for follow-up, clone, eval batch, and archive.
   - Scope: run-history UI and read model consumption.
   - Verification: UI tests prove lineage rows link to existing run/artifact data and

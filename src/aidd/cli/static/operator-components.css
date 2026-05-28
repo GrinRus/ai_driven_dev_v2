@@ -235,6 +235,62 @@
 .terminal-summary-grid section {
   min-width: 0;
 }
+.run-history-state {
+  display: grid;
+  gap: 14px;
+}
+.lineage-flow {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(220px, 1fr);
+}
+.lineage-children {
+  display: grid;
+  gap: 8px;
+}
+.lineage-node {
+  background: #fbfcfb;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 11px;
+}
+.lineage-node.current {
+  background: #eaf5f3;
+  border-color: var(--teal);
+}
+.lineage-node.pending {
+  border-style: dashed;
+}
+.lineage-node strong {
+  font-family: var(--mono);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.lineage-node p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.lineage-actions {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+.lineage-actions button {
+  min-height: 36px;
+}
+.lineage-table td {
+  overflow-wrap: anywhere;
+}
+.surface-title.compact {
+  margin-top: 10px;
+}
 .question-list {
   display: grid;
   gap: 10px;

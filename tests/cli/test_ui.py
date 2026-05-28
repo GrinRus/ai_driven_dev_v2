@@ -190,7 +190,11 @@ def _prepare_run(workspace_root: Path) -> None:
     )
 
 
-def _prepare_completed_qa_run(workspace_root: Path) -> None:
+def _prepare_completed_qa_run(
+    workspace_root: Path,
+    *,
+    lineage: dict[str, object] | None = None,
+) -> None:
     create_run_manifest(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -200,6 +204,7 @@ def _prepare_completed_qa_run(workspace_root: Path) -> None:
         config_snapshot={"mode": "ui-terminal-test"},
         workflow_stage_start="idea",
         workflow_stage_end="qa",
+        lineage=lineage,
     )
     for stage in STAGES:
         create_next_attempt_directory(
@@ -526,6 +531,50 @@ def test_ui_dashboard_endpoint_exposes_flow_complete_handoff(
     }
     assert "codex" in actions["clone-flow"]["detail"]
     assert "generic-cli" not in actions["clone-flow"]["detail"]
+
+
+def test_ui_dashboard_endpoint_exposes_run_history_lineage_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(
+        workspace_root,
+        lineage={
+            "source_run_id": "run-source<script>",
+            "source_work_item_id": "WI-SOURCE<&>",
+            "baseline_id": "baseline-main",
+            "baseline_label": "main before UI handoff <candidate>",
+            "child_work_item_candidates": [
+                {
+                    "work_item_id": "WI-CHILD",
+                    "label": "Retry risky QA <script>",
+                    "relationship": "follow-up",
+                    "source_run_id": "run-ui",
+                }
+            ],
+        },
+    )
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+
+    dashboard = payload["dashboard"]
+    lineage = dashboard["run"]["lineage"]  # type: ignore[index]
+    assert lineage["source_run_id"] == "run-source<script>"  # type: ignore[index]
+    assert lineage["source_work_item_id"] == "WI-SOURCE<&>"  # type: ignore[index]
+    assert lineage["baseline_label"] == "main before UI handoff <candidate>"  # type: ignore[index]
+    assert lineage["child_work_item_candidates"][0] == {  # type: ignore[index]
+        "work_item_id": "WI-CHILD",
+        "label": "Retry risky QA <script>",
+        "relationship": "follow-up",
+        "source_run_id": "run-ui",
+    }
+    assert any(
+        artifact["key"] == "runtime_log"
+        for artifact in dashboard["recent_artifacts"]  # type: ignore[index]
+    )
 
 
 def test_ui_static_asset_routes_are_served_from_manifest(tmp_path: Path) -> None:
@@ -1615,6 +1664,11 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert 'class="tabs" role="tablist" aria-label="Stage cockpit views"' in html
     assert (
         'id="tab-overview" data-tab="overview" role="tab" aria-selected="true" '
+        'aria-controls="cockpitContent"'
+        in html
+    )
+    assert (
+        'id="tab-history" data-tab="history" role="tab" aria-selected="false" '
         'aria-controls="cockpitContent"'
         in html
     )

@@ -289,6 +289,162 @@ function renderFlowCompleteState() {
   `;
 }
 
+function lineageValue(value, fallback = "not recorded") {
+  const normalized = String(value || "").trim();
+  return normalized || fallback;
+}
+
+function lineageCandidateAction(candidate) {
+  const relationship = String(candidate.relationship || "").toLowerCase();
+  if (relationship.includes("clone")) return "Clone Flow";
+  if (relationship.includes("eval")) return "Run Eval Batch";
+  return "Start Follow-up";
+}
+
+function renderLineageActions(handoff) {
+  const actions = handoff?.recommended_next_flow_actions || [];
+  if (!actions.length) {
+    return `<div class="empty-state">No next-flow actions recorded for this run.</div>`;
+  }
+  return `
+    <div class="lineage-actions">
+      ${actions.map((action) => `
+        <button data-next-flow-action="${escapeHtml(action.action)}" type="button" ${action.enabled ? "" : "disabled"}>
+          ${escapeHtml(nextFlowButtonLabel(action))}
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderLineageArtifactRefs() {
+  const artifacts = state.dashboard?.recent_artifacts || [];
+  if (!artifacts.length) {
+    return `<div class="empty-state">No linked artifacts recorded for this run.</div>`;
+  }
+  return artifacts.slice(0, 4).map((artifact) => `
+    <button class="artifact-row" data-artifact-stage="${escapeHtml(artifact.stage)}" data-artifact-key="${escapeHtml(artifact.key)}" data-artifact-kind="${escapeHtml(artifact.kind)}" type="button">
+      <span>
+        <strong>${escapeHtml(`${artifact.stage} / ${artifact.key}`)}</strong>
+        ${pathLine(artifact.path, 76)}
+      </span>
+      <span class="small-badge">${escapeHtml(artifact.kind)}</span>
+    </button>
+  `).join("");
+}
+
+function renderLineageCandidates(candidates) {
+  if (!candidates.length) {
+    return `
+      <article class="lineage-node pending">
+        <span class="small-badge">next work item</span>
+        <strong>Not created yet</strong>
+        <p>Follow-up, clone, and eval actions will create independent work instead of mutating this run.</p>
+      </article>
+    `;
+  }
+  return candidates.map((candidate) => `
+    <article class="lineage-node child" data-lineage-work-item="${escapeHtml(candidate.work_item_id)}">
+      <span class="small-badge good">${escapeHtml(lineageCandidateAction(candidate))}</span>
+      <strong>${escapeHtml(candidate.label || candidate.work_item_id)}</strong>
+      <p>${escapeHtml(candidate.relationship || "child work item")}</p>
+      <div class="panel-item"><strong>Work item</strong><span>${escapeHtml(candidate.work_item_id)}</span></div>
+      <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(candidate.source_run_id || state.dashboard?.run?.run_id || "not recorded")}</span></div>
+    </article>
+  `).join("");
+}
+
+function renderLineageRows({run, lineage, candidates}) {
+  const sourceRun = lineageValue(lineage.source_run_id, run.run_id || "not recorded");
+  const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
+  const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
+  const childRows = candidates.map((candidate) => `
+    <tr>
+      <td><span class="small-badge good">${escapeHtml(lineageCandidateAction(candidate))}</span></td>
+      <td>${escapeHtml(candidate.work_item_id)}</td>
+      <td>${escapeHtml(candidate.label || candidate.relationship || "child work item")}</td>
+      <td>${escapeHtml(candidate.source_run_id || run.run_id || "not recorded")}</td>
+    </tr>
+  `).join("");
+  return `
+    <table class="activity-table lineage-table">
+      <thead><tr><th>Relationship</th><th>Run / work item</th><th>Next action</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="small-badge">parent</span></td>
+          <td data-lineage-run-id="${escapeHtml(sourceRun)}">${escapeHtml(sourceRun)}</td>
+          <td>${escapeHtml(baseline)}</td>
+          <td>${escapeHtml(sourceWorkItem)}</td>
+        </tr>
+        <tr>
+          <td><span class="small-badge good">current</span></td>
+          <td data-lineage-run-id="${escapeHtml(run.run_id || "")}">${escapeHtml(run.run_id || "none")}</td>
+          <td>${escapeHtml(state.dashboard?.next_action?.label || "Review run")}</td>
+          <td>${escapeHtml(state.dashboard?.work_item || "not recorded")}</td>
+        </tr>
+        ${childRows || `
+          <tr>
+            <td><span class="small-badge warn">child</span></td>
+            <td>not created</td>
+            <td>Start Next Flow</td>
+            <td>${escapeHtml(run.run_id || "not recorded")}</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderRunHistory() {
+  const run = state.dashboard?.run || {};
+  if (!run.run_id) {
+    return `<div class="empty-state">No run history is available before the first run starts.</div>`;
+  }
+  const lineage = run.lineage || {};
+  const candidates = lineage.child_work_item_candidates || [];
+  const handoff = state.dashboard?.terminal_handoff || null;
+  const sourceRun = lineageValue(lineage.source_run_id, run.run_id);
+  const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
+  const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
+  return `
+    <section class="surface run-history-state">
+      <div class="surface-title">
+        <span>Run History / Lineage</span>
+        <span class="small-badge">${escapeHtml(run.run_id)}</span>
+      </div>
+      <div class="lineage-flow">
+        <article class="lineage-node parent" data-lineage-run-id="${escapeHtml(sourceRun)}">
+          <span class="small-badge">parent run</span>
+          <strong>${escapeHtml(sourceRun)}</strong>
+          <p>${escapeHtml(sourceWorkItem)}</p>
+          <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(baseline)}</span></div>
+        </article>
+        <article class="lineage-node current" data-lineage-run-id="${escapeHtml(run.run_id)}">
+          <span class="small-badge good">current run</span>
+          <strong>${escapeHtml(run.run_id)}</strong>
+          <p>${escapeHtml(run.runtime_id || "runtime not recorded")}</p>
+          <div class="panel-item"><strong>Status</strong><span>${escapeHtml(handoff?.status || state.dashboard?.next_action?.label || "in progress")}</span></div>
+        </article>
+        <div class="lineage-children">
+          ${renderLineageCandidates(candidates)}
+        </div>
+      </div>
+      <div class="terminal-summary-grid">
+        <section>
+          <div class="surface-title">Lineage rows</div>
+          ${renderLineageRows({run, lineage, candidates})}
+        </section>
+        <section>
+          <div class="surface-title">Run actions</div>
+          ${renderLineageActions(handoff)}
+          <div class="surface-title compact">Linked artifacts</div>
+          <div class="recent-artifacts">${renderLineageArtifactRefs()}</div>
+        </section>
+      </div>
+    </section>
+  `;
+}
+
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;

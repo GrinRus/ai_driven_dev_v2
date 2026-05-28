@@ -156,10 +156,13 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".flow-complete-state" in components
     assert ".next-flow-action-card.recommended" in components
     assert ".terminal-summary-grid" in components
+    assert ".run-history-state" in components
+    assert ".lineage-node.current" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
     assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
+    assert ".lineage-flow" in responsive
     assert "scroll-padding-inline: 10px" in responsive
 
 
@@ -191,8 +194,10 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function startWorkflow()" in next_flow
     assert "async function handleNextAction()" in next_flow
     assert "function renderFlowCompleteState()" in next_flow
+    assert "function renderRunHistory()" in next_flow
     assert "async function renderCockpit()" in cockpit
     assert "return renderFlowCompleteState();" in cockpit
+    assert 'state.activeTab === "history"' in cockpit
     assert "function renderActivityTable()" in cockpit
     assert 'document.addEventListener("click"' in main
     assert "refresh();" in main
@@ -438,9 +443,18 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderNextFlowActions(handoff)",
             "function renderTerminalArtifacts(artifacts)",
             "function renderTerminalBlockers(blockers)",
+            "function renderRunHistory()",
+            "function renderLineageRows({run, lineage, candidates})",
+            "function renderLineageCandidates(candidates)",
             "first-launch-state",
             "project-setup-state",
             "flow-complete-state",
+            "run-history-state",
+            "Run History / Lineage",
+            "data-lineage-run-id",
+            "data-lineage-work-item",
+            'data-lineage-run-id="${escapeHtml(sourceRun)}"',
+            "${escapeHtml(candidate.label || candidate.work_item_id)}",
             "Project Setup",
             "Flow Complete",
             "Start Next Flow",
@@ -515,14 +529,18 @@ def test_index_html_exposes_tab_and_panel_semantics() -> None:
     assert _attrs_for("div", role="tablist", **{"aria-label": "Stage cockpit views"})
     overview_tab = _attrs_for("button", id="tab-overview", role="tab")
     questions_tab = _attrs_for("button", id="tab-questions", role="tab")
+    history_tab = _attrs_for("button", id="tab-history", role="tab")
     panel = _attrs_for("div", id="cockpitContent", role="tabpanel")
 
     assert overview_tab["aria-selected"] == "true"
     assert overview_tab["aria-controls"] == "cockpitContent"
     assert questions_tab["aria-selected"] == "false"
     assert questions_tab["aria-controls"] == "cockpitContent"
+    assert history_tab["aria-selected"] == "false"
+    assert history_tab["aria-controls"] == "cockpitContent"
     assert panel["aria-labelledby"] == "tab-overview"
     assert panel["tabindex"] == "0"
+    assert 'data-tab-shortcut="history"' in _asset_text("/")
 
 
 def test_index_html_exposes_runtime_and_loading_contracts() -> None:

@@ -89,6 +89,7 @@ async function renderCockpit() {
   if (state.activeTab === "logs") await renderLogs();
   if (state.activeTab === "approvals") await renderApprovals();
   if (state.activeTab === "request") await renderRequestChange();
+  if (state.activeTab === "history") content.innerHTML = renderRunHistory();
 }
 
 function renderBlockersPanel() {
