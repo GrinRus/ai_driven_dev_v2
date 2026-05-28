@@ -158,15 +158,19 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".repair-action-band" in components
     assert ".project-setup-grid" in components
     assert ".setup-mode-card.selected" in components
+    assert ".setup-readiness-checklist" in components
     assert ".flow-complete-state" in components
     assert ".next-flow-action-card.recommended" in components
     assert ".terminal-summary-grid" in components
     assert ".run-history-state" in components
     assert ".lineage-node.current" in components
     assert ".next-flow-wizard" in components
+    assert ".next-flow-wizard-frame" in components
+    assert ".next-flow-stepper" in components
     assert ".source-finding-groups" in components
     assert ".evidence-screen-stack" in components
     assert ".evidence-workbench-grid" in components
+    assert ".workbench-toc" in components
     assert ".follow-up-definition-grid" in components
     assert '.editable-list-row input[type="text"]' in components
     assert ".inherited-context-toggle" in components
@@ -178,11 +182,13 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
     assert ".lineage-flow" in responsive
+    assert ".next-flow-wizard-frame" in responsive
     assert ".source-finding-groups" in responsive
     assert ".follow-up-definition-grid" in responsive
     assert ".launch-confirmation-grid" in responsive
     assert ".interview-loop-screen" in responsive
     assert ".validation-repair-center" in responsive
+    assert ".workbench-toc-list" in responsive
     assert "scroll-padding-inline: 10px" in responsive
 
 
@@ -353,6 +359,9 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "function renderWorkbenchTree(workbench)",
             "function renderWorkbenchViewer(workbench)",
             "function renderWorkbenchDiff(workbench)",
+            "function renderWorkbenchTableOfContents(workbench)",
+            "function markdownHeadingSummary(text)",
+            "Table of Contents",
             "function renderRequirementList(requirements)",
             "function renderValidationResults(results)",
             "function renderMissingEvidence(requirements)",
@@ -566,11 +575,17 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function setupPreviousRunContext()",
             "function renderSetupModeSelector(context)",
             "function renderPreviousRunContext(context)",
+            "function renderSetupReadinessChecklist({ready, context})",
+            "Readiness Checklist",
             'aria-disabled="true" disabled',
             "function renderFlowCompleteState()",
             "function renderNextFlowActions(handoff)",
             "function renderTerminalArtifacts(artifacts)",
             "function renderTerminalBlockers(blockers)",
+            "function renderFollowUpCandidates(handoff)",
+            "function renderBaselineSnapshot()",
+            "Follow-up candidates",
+            "Baseline snapshot",
             "function renderRunHistory()",
             "function renderLineageRows({run, lineage, candidates})",
             "function renderLineageCandidates(candidates)",
@@ -579,11 +594,24 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderNextFlowSourceSelection()",
             "function renderFollowUpDefinition()",
             "function renderLaunchConfirmation()",
+            "function renderNextFlowWizardProgress()",
+            (
+                "function renderNextFlowWizardShell({sectionClass = "
+                "\"next-flow-wizard\", title, badge, badgeTone = \"\", body})"
+            ),
+            "Flow Launch Wizard",
+            "Choose Flow Type",
+            "Select Source Findings",
+            "Define Work Item",
+            "Confirm Launch",
             "function renderPreflightChecks(preflight)",
             "function renderAuditPreview(draft, preflight)",
             "async function loadLaunchConfirmation()",
             "async function launchNextFlowNow()",
             "async function createFollowUpDraftForLaunch(draft)",
+            "function invalidateFollowUpDraftPreview()",
+            "At least one acceptance criterion is required before preflight.",
+            "At least one required evidence item is required before preflight.",
             "async function openCloneFlowDraft()",
             "function renderNewWorkItemHandoff()",
             "function renderEvalBatchHandoff()",
@@ -691,8 +719,9 @@ def test_operator_static_screen_landmarks_cover_accepted_mission_control_surface
             '<section class="surface flow-complete-state">',
             '<section class="surface run-history-state">',
             '<section class="surface next-flow-wizard">',
-            '<section class="surface next-flow-wizard follow-up-definition">',
-            '<section class="surface next-flow-wizard launch-confirmation">',
+            'sectionClass: "next-flow-wizard follow-up-definition"',
+            'sectionClass: "next-flow-wizard launch-confirmation"',
+            '<aside class="next-flow-stepper" aria-label="Flow Launch Wizard">',
             '<div class="source-finding-groups">',
             '<div class="lineage-flow">',
         ),
@@ -729,6 +758,8 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "recommended",
             "Final artifacts",
             "Blockers / safety",
+            "Follow-up candidates",
+            "Baseline snapshot",
             "Source run policy",
             "Runtime fallback",
             "No final artifacts recorded.",
@@ -753,6 +784,7 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "data-source-selection-id",
             "data-close-next-flow-wizard",
             "data-next-flow-continue",
+            "Continue to Define Work Item",
             "data-next-flow-back-to-sources",
             "data-next-flow-confirm-preview",
             "data-next-flow-back-to-definition",
@@ -766,6 +798,8 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "No source links selected.",
             "Preflight blocked",
             "Running launch preflight...",
+            "Flow Launch Wizard",
+            "Independent flow",
         ),
     )
 
@@ -865,6 +899,11 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'closest("[data-next-flow-back-to-definition]")',
             'closest("[data-launch-flow-now]")',
             "await launchNextFlowNow();",
+            'closest("[data-follow-up-field]")',
+            'closest("[data-follow-up-list-text]")',
+            'closest("[data-follow-up-list]")',
+            'closest("[data-inherited-context]")',
+            "invalidateFollowUpDraftPreview();",
             'event.target.id === "operatorRequestText"',
             'closest("[data-intervention-target]")',
             "updateInterventionPreview();",

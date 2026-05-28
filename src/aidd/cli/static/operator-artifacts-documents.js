@@ -189,6 +189,58 @@ function renderWorkbenchDiff(workbench) {
   `;
 }
 
+function workbenchSelectedDocumentView(workbench) {
+  const documentView = workbench.document;
+  if (!documentView || documentView.status !== "present") return null;
+  return state.artifactViewMode === "source"
+    ? documentView.source || documentView.preview
+    : documentView.preview || documentView.source;
+}
+
+function markdownHeadingSummary(text) {
+  return String(text ?? "")
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = line.match(/^(#{1,4})\s+(.+)$/);
+      if (!match) return null;
+      return {
+        level: match[1].length,
+        label: match[2]
+          .replace(/[`*_#[\]]/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+      };
+    })
+    .filter((heading) => heading && heading.label)
+    .slice(0, 10);
+}
+
+function renderWorkbenchTableOfContents(workbench) {
+  if (state.artifactViewMode === "diff") {
+    return `
+      <section class="workbench-toc" aria-label="Table of Contents">
+        <div class="surface-title compact">Table of Contents</div>
+        <div class="empty-state">Switch to Preview or Source to inspect document headings.</div>
+      </section>
+    `;
+  }
+  const view = workbenchSelectedDocumentView(workbench);
+  const headings = markdownHeadingSummary(view?.text || "");
+  return `
+    <section class="workbench-toc" aria-label="Table of Contents">
+      <div class="surface-title compact">
+        <span>Table of Contents</span>
+        <span class="small-badge">${escapeHtml(headings.length)} headings</span>
+      </div>
+      <ol class="workbench-toc-list">
+        ${headings.length ? headings.map((heading) => `
+          <li class="toc-level-${escapeHtml(heading.level)}">${escapeHtml(heading.label)}</li>
+        `).join("") : `<li>No headings in the visible document window.</li>`}
+      </ol>
+    </section>
+  `;
+}
+
 function renderWorkbenchDocumentBody(workbench) {
   const documentView = workbench.document;
   if (!documentView || documentView.status !== "present") {
@@ -200,9 +252,7 @@ function renderWorkbenchDocumentBody(workbench) {
     `;
   }
   if (state.artifactViewMode === "diff") return renderWorkbenchDiff(workbench);
-  const view = state.artifactViewMode === "source"
-    ? documentView.source || documentView.preview
-    : documentView.preview || documentView.source;
+  const view = workbenchSelectedDocumentView(workbench);
   if (!view) {
     return `<div class="empty-state">No bounded ${escapeHtml(state.artifactViewMode)} view available.</div>`;
   }
@@ -232,6 +282,7 @@ function renderWorkbenchViewer(workbench) {
     </div>
     <div class="workbench-main">
       <section class="workbench-document-pane">
+        ${renderWorkbenchTableOfContents(workbench)}
         ${renderWorkbenchDocumentBody(workbench)}
       </section>
       <aside class="workbench-sidebar">

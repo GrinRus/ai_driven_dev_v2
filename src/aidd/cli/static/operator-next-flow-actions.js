@@ -81,6 +81,58 @@ function renderPreviousRunContext(context) {
   `;
 }
 
+function renderSetupReadinessChecklist({ready, context}) {
+  const checklist = [
+    {
+      label: "Runtime adapter",
+      status: state.readinessLoading
+        ? "checking"
+        : state.selectedRuntime
+          ? ready
+            ? "ready"
+            : "needs check"
+          : "not selected",
+      tone: ready ? "good" : state.selectedRuntime || state.readinessLoading ? "warn" : ""
+    },
+    {
+      label: "Contracts path",
+      status: "local contract surface",
+      tone: "good"
+    },
+    {
+      label: "Validators",
+      status: "enforced before progression",
+      tone: "good"
+    },
+    {
+      label: "Previous-run context",
+      status: context.available ? "available" : "none selected",
+      tone: context.available ? "good" : ""
+    },
+    {
+      label: "Log stream",
+      status: "enabled for workflow runs",
+      tone: "good"
+    }
+  ];
+  return `
+    <section class="setup-readiness-checklist" aria-label="Readiness Checklist">
+      <div class="surface-title compact">
+        <span>Readiness Checklist</span>
+        <span class="small-badge ${ready ? "good" : "warn"}">${ready ? "runnable" : "review"}</span>
+      </div>
+      <div class="setup-readiness-list">
+        ${checklist.map((item) => `
+          <div class="setup-readiness-item">
+            <span class="small-badge ${escapeHtml(item.tone)}">${escapeHtml(item.tone === "good" ? "pass" : item.tone === "warn" ? "check" : "info")}</span>
+            <span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.status)}</small></span>
+          </div>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderFirstLaunchState() {
   const runtime = selectedRuntimeView();
   const ready = selectedRuntimeReady();
@@ -112,6 +164,7 @@ function renderFirstLaunchState() {
             <span class="small-badge ${context.available ? "good" : ""}">${context.available ? "available" : "none"}</span>
           </div>
           ${renderPreviousRunContext(context)}
+          ${renderSetupReadinessChecklist({ready, context})}
         </aside>
       </div>
     </section>
@@ -246,6 +299,46 @@ function renderTerminalBlockers(blockers) {
   `).join("");
 }
 
+function renderFollowUpCandidates(handoff) {
+  const blockerCandidates = (handoff.blockers || []).map((blocker) => ({
+    label: blocker.title,
+    detail: blocker.detail,
+    tone: blocker.severity === "error" ? "bad" : "warn"
+  }));
+  const statusCandidate = handoff.status !== "completed"
+    ? [{
+        label: "Final QA needs follow-up",
+        detail: `Terminal status ${handoff.status}; carry source findings into a new work item.`,
+        tone: handoff.status === "failed" ? "bad" : "warn"
+      }]
+    : [];
+  const candidates = [...blockerCandidates, ...statusCandidate];
+  if (!candidates.length) {
+    return `<div class="panel-item"><strong>No forced follow-up</strong><span>Create New Work Item is recommended unless the operator selects manual scope.</span></div>`;
+  }
+  return candidates.slice(0, 4).map((candidate) => `
+    <div class="panel-item">
+      <strong>${escapeHtml(candidate.label)}</strong>
+      <span>${escapeHtml(candidate.detail)}</span>
+      <span class="small-badge ${escapeHtml(candidate.tone)}">candidate</span>
+    </div>
+  `).join("");
+}
+
+function renderBaselineSnapshot() {
+  const run = state.dashboard?.run || {};
+  const lineage = run.lineage || {};
+  const baseline = lineage.baseline_label || lineage.baseline_id || run.run_id || "current run";
+  return `
+    <div class="panel-list">
+      <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(lineage.source_run_id || run.run_id || "not recorded")}</span></div>
+      <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(lineage.source_work_item_id || state.dashboard?.work_item || "not recorded")}</span></div>
+      <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(baseline)}</span></div>
+      <div class="panel-item"><strong>Safety</strong><span>Follow-up, clone, and eval actions create independent work and keep source artifacts read-only.</span></div>
+    </div>
+  `;
+}
+
 function renderFlowCompleteState() {
   const handoff = state.dashboard?.terminal_handoff;
   if (!handoff) return "";
@@ -300,6 +393,14 @@ function renderFlowCompleteState() {
             <div class="panel-item"><strong>Source run policy</strong><span>Next-flow actions create new work or navigation decisions; they do not continue the completed run.</span></div>
             <div class="panel-item"><strong>Runtime fallback</strong><span>Uses recorded runtime ${escapeHtml(runtimeId)}; no generic runtime fallback is hidden in the UI.</span></div>
           </div>
+        </section>
+        <section>
+          <div class="surface-title">Follow-up candidates</div>
+          <div class="panel-list">${renderFollowUpCandidates(handoff)}</div>
+        </section>
+        <section>
+          <div class="surface-title">Baseline snapshot</div>
+          ${renderBaselineSnapshot()}
         </section>
       </div>
     </section>
@@ -710,6 +811,12 @@ function followUpDraftValidationError(draft) {
   if (!String(draft?.new_work_item || "").trim()) return "Work item id is required before preflight.";
   if (!String(draft?.title || "").trim()) return "Title is required before preflight.";
   if (!String(draft?.first_stage_input_preview || "").trim()) return "First-stage input preview is required before preflight.";
+  if (!(draft?.acceptance_criteria || []).some((item) => String(item || "").trim())) {
+    return "At least one acceptance criterion is required before preflight.";
+  }
+  if (!(draft?.required_evidence || []).some((item) => String(item || "").trim())) {
+    return "At least one required evidence item is required before preflight.";
+  }
   return "";
 }
 
@@ -726,6 +833,14 @@ function readFollowUpDraftForm() {
   draft.required_evidence = selectedFollowUpListValues("required_evidence", draft.required_evidence);
   draft.inherited_context_lines = selectedInheritedContextLines(draft.inherited_context, draft.inherited_context_lines);
   return draft;
+}
+
+function invalidateFollowUpDraftPreview() {
+  if (!state.nextFlowWizard.active || state.nextFlowWizard.step !== "definition") return;
+  state.nextFlowWizard.preflight = null;
+  state.nextFlowWizard.preflightError = "";
+  state.nextFlowWizard.createdDraft = null;
+  state.nextFlowWizard.launchError = "";
 }
 
 async function createFollowUpDraftForLaunch(draft) {
@@ -861,6 +976,85 @@ function renderSourceFindingGroup(group) {
   `;
 }
 
+function nextFlowWizardStepState(stepId) {
+  const current = state.nextFlowWizard.step;
+  const selected = state.nextFlowWizard.selectedSourceIds.length;
+  if (stepId === "type") return "done";
+  if (stepId === "sources") {
+    if (current === "sources") return "active";
+    if (current === "definition" || current === "confirm") return "done";
+    return selected ? "done" : "pending";
+  }
+  if (stepId === "definition") {
+    if (current === "definition") return "active";
+    if (current === "confirm") return "done";
+    return "pending";
+  }
+  if (stepId === "confirm") return current === "confirm" ? "active" : "pending";
+  return "pending";
+}
+
+function nextFlowWizardTypeLabel() {
+  const labels = {
+    "create-new-work-item": "New Work Item",
+    "start-follow-up-flow": "Follow-up Flow",
+    "clone-flow": "Clone This Flow",
+    "run-eval-batch": "Eval / Scenario Batch"
+  };
+  return labels[state.nextFlowWizard.action] || "Next Flow";
+}
+
+function renderNextFlowWizardProgress() {
+  const selected = state.nextFlowWizard.selectedSourceIds.length;
+  const draft = state.nextFlowWizard.followUpDraft;
+  const steps = [
+    ["type", "Choose Flow Type", nextFlowWizardTypeLabel()],
+    ["sources", "Select Source Findings", selected ? `${selected} selected` : "Select findings to carry forward"],
+    ["definition", "Define Work Item", draft?.new_work_item || "Configure new work item"],
+    ["confirm", "Confirm Launch", "Review preflight and audit preview"]
+  ];
+  return `
+    <aside class="next-flow-stepper" aria-label="Flow Launch Wizard">
+      <div class="surface-title compact">Flow Launch Wizard</div>
+      <ol>
+        ${steps.map(([id, label, detail], index) => {
+          const stepState = nextFlowWizardStepState(id);
+          return `
+            <li class="${escapeHtml(stepState)}">
+              <span class="wizard-step-index">${escapeHtml(index + 1)}</span>
+              <span>
+                <strong>${escapeHtml(label)}</strong>
+                <small>${escapeHtml(detail)}</small>
+              </span>
+            </li>
+          `;
+        }).join("")}
+      </ol>
+      <div class="wizard-policy-note">
+        <strong>Independent flow</strong>
+        <span>The completed source run stays immutable; launch creates a new work item and run identity.</span>
+      </div>
+    </aside>
+  `;
+}
+
+function renderNextFlowWizardShell({sectionClass = "next-flow-wizard", title, badge, badgeTone = "", body}) {
+  return `
+    <section class="surface ${sectionClass}">
+      <div class="next-flow-wizard-frame">
+        ${renderNextFlowWizardProgress()}
+        <div class="next-flow-wizard-content">
+          <div class="surface-title">
+            <span>${escapeHtml(title)}</span>
+            <span class="small-badge ${escapeHtml(badgeTone)}">${escapeHtml(badge)}</span>
+          </div>
+          ${body}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function renderNextFlowSourceSelection() {
   const wizard = state.nextFlowWizard;
   if (wizard.step === "new-work-item") {
@@ -886,12 +1080,10 @@ function renderNextFlowSourceSelection() {
     return `<section class="surface next-flow-wizard"><div class="empty-state">No source findings loaded.</div></section>`;
   }
   const selectedCount = wizard.selectedSourceIds.length;
-  return `
-    <section class="surface next-flow-wizard">
-      <div class="surface-title">
-        <span>Start Next Flow</span>
-        <span class="small-badge">source findings</span>
-      </div>
+  return renderNextFlowWizardShell({
+    title: "Start Next Flow",
+    badge: "source findings",
+    body: `
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(payload.source_run_id)}</span></div>
         <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(payload.source_work_item)}</span></div>
@@ -903,10 +1095,10 @@ function renderNextFlowSourceSelection() {
       </div>
       <div class="wizard-actions">
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
-        <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue</button>
+        <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue to Define Work Item</button>
       </div>
-    </section>
-  `;
+    `
+  });
 }
 
 function renderNewWorkItemHandoff() {
@@ -1033,12 +1225,12 @@ function renderLaunchConfirmation() {
   const preflight = wizard.preflight;
   const blocked = !preflight?.can_launch;
   const backLabel = wizard.action === "clone-flow" ? "Back to handoff" : "Back to definition";
-  return `
-    <section class="surface next-flow-wizard launch-confirmation">
-      <div class="surface-title">
-        <span>Confirm and Launch Next Flow</span>
-        <span class="small-badge ${preflightTone(preflight?.status || "blocked")}">${escapeHtml(preflight?.status || "blocked")}</span>
-      </div>
+  return renderNextFlowWizardShell({
+    sectionClass: "next-flow-wizard launch-confirmation",
+    title: "Confirm and Launch Next Flow",
+    badge: preflight?.status || "blocked",
+    badgeTone: preflightTone(preflight?.status || "blocked"),
+    body: `
       ${wizard.preflightError ? `<div class="truncation-notice"><strong>Preflight blocked</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
       ${wizard.launchError ? `<div class="truncation-notice"><strong>Launch failed</strong><span>${escapeHtml(wizard.launchError)}</span></div>` : ""}
       <div class="launch-confirmation-grid">
@@ -1057,8 +1249,8 @@ function renderLaunchConfirmation() {
         <button data-next-flow-back-to-definition type="button" class="secondary">${escapeHtml(backLabel)}</button>
         <button data-launch-flow-now type="button" ${blocked || wizard.launchLoading ? "disabled" : ""}>${wizard.launchLoading ? "Launching..." : "Launch Flow Now"}</button>
       </div>
-    </section>
-  `;
+    `
+  });
 }
 
 function renderEditableList(name, items) {
@@ -1094,12 +1286,11 @@ function renderFollowUpDefinition() {
   if (!draft) {
     return `<section class="surface next-flow-wizard"><div class="empty-state">No follow-up definition generated.</div></section>`;
   }
-  return `
-    <section class="surface next-flow-wizard follow-up-definition">
-      <div class="surface-title">
-        <span>Define Follow-up Work Item</span>
-        <span class="small-badge">editable draft</span>
-      </div>
+  return renderNextFlowWizardShell({
+    sectionClass: "next-flow-wizard follow-up-definition",
+    title: "Define Follow-up Work Item",
+    badge: "editable draft",
+    body: `
       ${wizard.preflightError ? `<div class="truncation-notice"><strong>Definition needs attention</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
@@ -1135,8 +1326,8 @@ function renderFollowUpDefinition() {
         <button data-next-flow-back-to-sources type="button" class="secondary">Back to sources</button>
         <button data-next-flow-confirm-preview type="button">Continue to preflight</button>
       </div>
-    </section>
-  `;
+    `
+  });
 }
 
 function renderNextActionPanel() {

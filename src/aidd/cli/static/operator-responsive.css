@@ -61,6 +61,7 @@
   .terminal-summary-grid,
   .lineage-flow,
   .lineage-actions,
+  .next-flow-wizard-frame,
   .wizard-context-grid,
   .source-finding-groups,
   .follow-up-definition-grid,
@@ -95,5 +96,8 @@
   }
   .log-source {
     display: none;
+  }
+  .workbench-toc-list {
+    columns: 1;
   }
 }

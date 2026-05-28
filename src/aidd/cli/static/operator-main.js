@@ -298,11 +298,23 @@ document.addEventListener("change", async (event) => {
   if (event.target.closest("[data-intervention-target]")) {
     updateInterventionPreview();
   }
+  if (
+    event.target.closest("[data-follow-up-list]")
+    || event.target.closest("[data-inherited-context]")
+  ) {
+    invalidateFollowUpDraftPreview();
+  }
 });
 
 document.addEventListener("input", (event) => {
   if (event.target.id === "operatorRequestText") {
     updateInterventionPreview();
+  }
+  if (
+    event.target.closest("[data-follow-up-field]")
+    || event.target.closest("[data-follow-up-list-text]")
+  ) {
+    invalidateFollowUpDraftPreview();
   }
 });
 
