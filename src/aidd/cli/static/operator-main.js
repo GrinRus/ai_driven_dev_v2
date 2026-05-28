@@ -56,7 +56,26 @@ document.addEventListener("click", async (event) => {
     }
     const nextFlowAction = event.target.closest("[data-next-flow-action]");
     if (nextFlowAction) {
+      if (nextFlowAction.dataset.nextFlowAction === "start-follow-up-flow") {
+        await openNextFlowWizard(nextFlowAction.dataset.nextFlowAction);
+        return;
+      }
       toast("Start Next Flow wizard is queued for the next UI slice.");
+      return;
+    }
+    const sourceSelection = event.target.closest("[data-source-selection-id]");
+    if (sourceSelection) {
+      setSourceFindingSelection(sourceSelection.dataset.sourceSelectionId, sourceSelection.checked);
+      await renderCockpit();
+      return;
+    }
+    if (event.target.closest("[data-close-next-flow-wizard]")) {
+      state.nextFlowWizard.active = false;
+      await renderCockpit();
+      return;
+    }
+    if (event.target.closest("[data-next-flow-continue]")) {
+      toast("Follow-up definition is queued for the next UI slice.");
       return;
     }
     const cancelJob = event.target.closest("[data-cancel-job]");

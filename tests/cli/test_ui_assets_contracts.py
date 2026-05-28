@@ -158,11 +158,14 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".terminal-summary-grid" in components
     assert ".run-history-state" in components
     assert ".lineage-node.current" in components
+    assert ".next-flow-wizard" in components
+    assert ".source-finding-groups" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
     assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
     assert ".lineage-flow" in responsive
+    assert ".source-finding-groups" in responsive
     assert "scroll-padding-inline: 10px" in responsive
 
 
@@ -222,6 +225,11 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'label: "Eval / Scenario Batch"',
             'activeRunId: ""',
             'setupMode: "new-work-item"',
+            "nextFlowWizard: {",
+            "sourceFindings: null",
+            "selectedSourceIds: []",
+            "function sourceFindingsUrl()",
+            "/api/next-flow/source-findings",
             "readinessLoading: true",
             'readinessError: ""',
             "function escapeHtml(value)",
@@ -446,6 +454,12 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderRunHistory()",
             "function renderLineageRows({run, lineage, candidates})",
             "function renderLineageCandidates(candidates)",
+            "async function openNextFlowWizard(action)",
+            "function renderNextFlowSourceSelection()",
+            "function renderSourceFindingGroup(group)",
+            "function renderSourceFindingItem(group, item)",
+            "data-source-selection-id",
+            "selectedSourceIds",
             "first-launch-state",
             "project-setup-state",
             "flow-complete-state",
@@ -498,6 +512,13 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             "requestedMode.requiresPreviousRun",
             "setupPreviousRunContext().available",
             'closest("[data-next-flow-action]")',
+            'nextFlowAction.dataset.nextFlowAction === "start-follow-up-flow"',
+            "await openNextFlowWizard(nextFlowAction.dataset.nextFlowAction)",
+            'closest("[data-source-selection-id]")',
+            "setSourceFindingSelection",
+            'closest("[data-close-next-flow-wizard]")',
+            'closest("[data-next-flow-continue]")',
+            "Follow-up definition is queued for the next UI slice.",
             "Start Next Flow wizard is queued for the next UI slice.",
             'event.target.id === "operatorRequestText"',
             'if (state.activeTab === "overview") await renderCockpit();',
@@ -589,5 +610,7 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".previous-run-context" in css
     assert ".flow-complete-state" in css
     assert ".next-flow-action-card" in css
+    assert ".next-flow-wizard" in css
+    assert ".source-finding-card" in css
     assert ".loading-state" in css
     assert "scroll-padding-inline: 10px" in css

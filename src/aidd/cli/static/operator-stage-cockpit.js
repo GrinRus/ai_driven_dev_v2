@@ -2,6 +2,9 @@ function renderOverview() {
   if (!state.dashboard?.run?.run_id) {
     return renderFirstLaunchState();
   }
+  if (state.nextFlowWizard.active) {
+    return renderNextFlowSourceSelection();
+  }
   if (state.dashboard?.terminal_handoff) {
     return renderFlowCompleteState();
   }

@@ -6669,7 +6669,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E2-S2-T1` Render source findings selection grouped by QA findings, review notes,
+- `W26-E2-S2-T1` (done) Render source findings selection grouped by QA findings, review notes,
   failed evidence, and manual request.
   - Scope: wizard UI and API payload rendering.
   - Verification: tests cover selection state, source artifact links, and required

@@ -55,7 +55,15 @@ const state = {
   logFilter: "all",
   rawLogMode: false,
   savedLogText: "",
-  setupMode: "new-work-item"
+  setupMode: "new-work-item",
+  nextFlowWizard: {
+    active: false,
+    action: "",
+    loading: false,
+    error: "",
+    sourceFindings: null,
+    selectedSourceIds: []
+  }
 };
 
 function escapeHtml(value) {
@@ -154,6 +162,12 @@ function dashboardUrl() {
   const params = new URLSearchParams({stage: state.activeStage});
   if (state.activeRunId) params.set("run_id", state.activeRunId);
   return `/api/dashboard?${params.toString()}`;
+}
+
+function sourceFindingsUrl() {
+  const params = new URLSearchParams();
+  if (state.activeRunId) params.set("run_id", state.activeRunId);
+  return `/api/next-flow/source-findings?${params.toString()}`;
 }
 
 async function fetchDashboard() {

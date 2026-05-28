@@ -577,6 +577,52 @@ def test_ui_dashboard_endpoint_exposes_run_history_lineage_payload(
     )
 
 
+def test_ui_next_flow_source_findings_endpoint_groups_source_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get("/api/next-flow/source-findings", {"run_id": ["run-ui"]})
+    )
+
+    groups = {group["id"]: group for group in payload["groups"]}  # type: ignore[index]
+    assert set(groups) == {
+        "qa-findings",
+        "review-notes",
+        "failed-evidence",
+        "manual-request",
+    }
+    qa_items = groups["qa-findings"]["items"]
+    assert groups["qa-findings"]["count"] == len(qa_items)
+    assert any(
+        item["kind"] == "qa-finding"
+        and item["artifact_key"] == "qa_report"
+        and item["source_path"].endswith("qa-report.md")
+        and item["selected"] is True
+        for item in qa_items
+    )
+    manual_items = groups["manual-request"]["items"]
+    assert manual_items == [
+        {
+            "id": "manual-request:operator-note",
+            "kind": "manual-request",
+            "title": "Manual operator request",
+            "detail": "Add a scoped operator note in the follow-up definition step.",
+            "stage": None,
+            "artifact_key": None,
+            "artifact_kind": None,
+            "source_path": None,
+            "selected": False,
+        }
+    ]
+    assert payload["counts"]["required_context_groups"] == 4  # type: ignore[index]
+    assert payload["counts"]["selected_defaults"] >= 1  # type: ignore[index]
+    assert payload["counts"]["source_artifact_links"] >= 4  # type: ignore[index]
+
+
 def test_ui_static_asset_routes_are_served_from_manifest(tmp_path: Path) -> None:
     service = _service(tmp_path / ".aidd")
 

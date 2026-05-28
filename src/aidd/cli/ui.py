@@ -520,6 +520,143 @@ def _workflow_bounds_from_payload(payload: dict[str, Any]) -> tuple[str, str]:
     return stage_start, stage_end
 
 
+def _next_flow_source_item(
+    *,
+    item_id: str,
+    kind: str,
+    title: str,
+    detail: str,
+    stage: str | None = None,
+    artifact_key: str | None = None,
+    artifact_kind: str | None = None,
+    source_path: str | None = None,
+    selected: bool = False,
+) -> dict[str, object]:
+    return {
+        "id": item_id,
+        "kind": kind,
+        "title": title,
+        "detail": detail,
+        "stage": stage,
+        "artifact_key": artifact_key,
+        "artifact_kind": artifact_kind,
+        "source_path": source_path,
+        "selected": selected,
+    }
+
+
+def _next_flow_source_group(
+    *,
+    group_id: str,
+    label: str,
+    detail: str,
+    items: list[dict[str, object]],
+) -> dict[str, object]:
+    return {
+        "id": group_id,
+        "label": label,
+        "detail": detail,
+        "count": len(items),
+        "items": items,
+    }
+
+
+def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
+    run = dashboard.run
+    handoff = dashboard.terminal_handoff
+    final_artifacts = tuple(handoff.final_artifacts) if handoff is not None else ()
+    qa_items = [
+        _next_flow_source_item(
+            item_id=f"qa-finding:{artifact.stage}:{artifact.key}",
+            kind="qa-finding",
+            title=f"QA artifact: {artifact.key}",
+            detail="Use this final QA artifact as follow-up source context.",
+            stage=artifact.stage,
+            artifact_key=artifact.key,
+            artifact_kind=artifact.kind,
+            source_path=artifact.path,
+            selected=artifact.key == "qa_report",
+        )
+        for artifact in final_artifacts
+        if artifact.stage == "qa"
+    ]
+    review_items = [
+        _next_flow_source_item(
+            item_id=f"review-note:{artifact.stage}:{artifact.key}",
+            kind="review-note",
+            title=f"Review artifact: {artifact.key}",
+            detail="Carry forward review-stage notes or accepted risks.",
+            stage=artifact.stage,
+            artifact_key=artifact.key,
+            artifact_kind=artifact.kind,
+            source_path=artifact.path,
+        )
+        for artifact in dashboard.recent_artifacts
+        if artifact.stage == "review"
+    ]
+    failed_items = [
+        _next_flow_source_item(
+            item_id=f"failed-evidence:blocker:{index}",
+            kind="failed-evidence",
+            title=blocker.title,
+            detail=blocker.detail,
+            stage=blocker.stage,
+            artifact_key=blocker.kind,
+            artifact_kind="blocker",
+            source_path=blocker.path,
+            selected=blocker.severity == "error",
+        )
+        for index, blocker in enumerate(dashboard.blockers, start=1)
+    ]
+    manual_items = [
+        _next_flow_source_item(
+            item_id="manual-request:operator-note",
+            kind="manual-request",
+            title="Manual operator request",
+            detail="Add a scoped operator note in the follow-up definition step.",
+        )
+    ]
+    groups = (
+        _next_flow_source_group(
+            group_id="qa-findings",
+            label="QA findings",
+            detail="Final QA outputs that can become follow-up source selections.",
+            items=qa_items,
+        ),
+        _next_flow_source_group(
+            group_id="review-notes",
+            label="Review notes",
+            detail="Review-stage artifacts and accepted-risk notes available for handoff.",
+            items=review_items,
+        ),
+        _next_flow_source_group(
+            group_id="failed-evidence",
+            label="Failed evidence",
+            detail="Validation failures, blockers, or unresolved evidence to carry forward.",
+            items=failed_items,
+        ),
+        _next_flow_source_group(
+            group_id="manual-request",
+            label="Manual request",
+            detail="Operator-authored context that is captured before follow-up launch.",
+            items=manual_items,
+        ),
+    )
+    all_items = [*qa_items, *review_items, *failed_items, *manual_items]
+    return {
+        "source_work_item": dashboard.work_item,
+        "source_run_id": run.run_id,
+        "source_runtime_id": run.runtime_id,
+        "groups": groups,
+        "counts": {
+            "total_items": len(all_items),
+            "selected_defaults": sum(1 for item in all_items if item["selected"]),
+            "source_artifact_links": sum(1 for item in all_items if item["source_path"]),
+            "required_context_groups": len(groups),
+        },
+    }
+
+
 def _exit_code_from_result(result: object) -> int:
     if isinstance(result, Mapping):
         raw_exit_code = result.get("exit_code", 0)
@@ -722,6 +859,15 @@ class OperatorUiService:
                         ),
                     }
                 )
+            if path == "/api/next-flow/source-findings":
+                dashboard = resolve_operator_dashboard_view(
+                    workspace_root=self.workspace_root,
+                    work_item=self.options.work_item,
+                    active_stage="qa",
+                    run_id=_first_param(params, "run_id"),
+                    project_root=Path.cwd(),
+                )
+                return _json_response(_next_flow_source_findings_payload(dashboard))
             if path == "/api/runtime-readiness":
                 return _json_response(self._runtime_readiness())
             if path == "/api/stage":

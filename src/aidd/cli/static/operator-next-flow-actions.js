@@ -445,6 +445,120 @@ function renderRunHistory() {
   `;
 }
 
+function allSourceFindingItems(payload = state.nextFlowWizard.sourceFindings) {
+  return (payload?.groups || []).flatMap((group) => group.items || []);
+}
+
+function sourceFindingSelected(id) {
+  return state.nextFlowWizard.selectedSourceIds.includes(id);
+}
+
+function setSourceFindingSelection(id, selected) {
+  const current = new Set(state.nextFlowWizard.selectedSourceIds);
+  if (selected) current.add(id);
+  else current.delete(id);
+  state.nextFlowWizard.selectedSourceIds = Array.from(current);
+}
+
+async function openNextFlowWizard(action) {
+  state.nextFlowWizard.active = true;
+  state.nextFlowWizard.action = action;
+  state.nextFlowWizard.loading = true;
+  state.nextFlowWizard.error = "";
+  state.nextFlowWizard.sourceFindings = null;
+  state.nextFlowWizard.selectedSourceIds = [];
+  activateTab("overview");
+  await renderCockpit();
+  try {
+    const payload = await api(sourceFindingsUrl());
+    state.nextFlowWizard.sourceFindings = payload;
+    state.nextFlowWizard.selectedSourceIds = allSourceFindingItems(payload)
+      .filter((item) => item.selected)
+      .map((item) => item.id);
+  } catch (error) {
+    state.nextFlowWizard.error = error.message;
+  } finally {
+    state.nextFlowWizard.loading = false;
+    await renderCockpit();
+  }
+}
+
+function renderSourceFindingItem(group, item) {
+  const checked = sourceFindingSelected(item.id);
+  const artifactButton = item.source_path
+    ? `
+      <button class="artifact-row" data-artifact-stage="${escapeHtml(item.stage)}" data-artifact-key="${escapeHtml(item.artifact_key)}" data-artifact-kind="${escapeHtml(item.artifact_kind)}" type="button">
+        <span><strong>${escapeHtml(item.artifact_key || item.title)}</strong>${pathLine(item.source_path, 76)}</span>
+        <span class="small-badge">${escapeHtml(item.artifact_kind || item.kind)}</span>
+      </button>
+    `
+    : `<div class="empty-state">Manual request text will be captured in the next wizard step.</div>`;
+  return `
+    <article class="source-finding-card">
+      <label>
+        <input data-source-selection-id="${escapeHtml(item.id)}" type="checkbox" ${checked ? "checked" : ""}>
+        <span>
+          <strong>${escapeHtml(item.title)}</strong>
+          <small>${escapeHtml(group.label)} / ${escapeHtml(item.kind)}</small>
+        </span>
+      </label>
+      <p>${escapeHtml(item.detail)}</p>
+      ${artifactButton}
+    </article>
+  `;
+}
+
+function renderSourceFindingGroup(group) {
+  return `
+    <section class="source-finding-group">
+      <div class="surface-title">
+        <span>${escapeHtml(group.label)}</span>
+        <span class="small-badge">${escapeHtml(group.count)}</span>
+      </div>
+      <p>${escapeHtml(group.detail)}</p>
+      <div class="source-finding-list">
+        ${(group.items || []).map((item) => renderSourceFindingItem(group, item)).join("") || `<div class="empty-state">No ${escapeHtml(group.label.toLowerCase())} found for this source run.</div>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderNextFlowSourceSelection() {
+  const wizard = state.nextFlowWizard;
+  if (wizard.loading) {
+    return `<section class="surface next-flow-wizard"><div class="empty-state loading-state">Loading source findings...</div></section>`;
+  }
+  if (wizard.error) {
+    return `<section class="surface next-flow-wizard"><div class="empty-state">Unable to load source findings: ${escapeHtml(wizard.error)}</div></section>`;
+  }
+  const payload = wizard.sourceFindings;
+  if (!payload) {
+    return `<section class="surface next-flow-wizard"><div class="empty-state">No source findings loaded.</div></section>`;
+  }
+  const selectedCount = wizard.selectedSourceIds.length;
+  return `
+    <section class="surface next-flow-wizard">
+      <div class="surface-title">
+        <span>Start Next Flow</span>
+        <span class="small-badge">source findings</span>
+      </div>
+      <div class="wizard-context-grid">
+        <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(payload.source_run_id)}</span></div>
+        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(payload.source_work_item)}</span></div>
+        <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(selectedCount)} / ${escapeHtml(payload.counts.total_items)}</span></div>
+        <div class="panel-item"><strong>Linked artifacts</strong><span>${escapeHtml(payload.counts.source_artifact_links)}</span></div>
+      </div>
+      <div class="source-finding-groups">
+        ${(payload.groups || []).map((group) => renderSourceFindingGroup(group)).join("")}
+      </div>
+      <div class="wizard-actions">
+        <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
+        <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;

@@ -60,6 +60,8 @@
   .terminal-summary-grid,
   .lineage-flow,
   .lineage-actions,
+  .wizard-context-grid,
+  .source-finding-groups,
   .bottom-dock {
     grid-template-columns: 1fr;
   }
