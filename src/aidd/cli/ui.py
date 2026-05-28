@@ -726,9 +726,11 @@ def _follow_up_source_selections_from_items(
         item_id = str(item.get("id") or "")
         source_path = item.get("source_path")
         if not isinstance(source_path, str) or not source_path.strip():
-            raise ValueError(
-                f"Selected source '{item_id}' has no source artifact path."
-            )
+            if item.get("kind") != "manual-request":
+                raise ValueError(
+                    f"Selected source '{item_id}' has no source artifact path."
+                )
+            source_path = None
         raw_stage = item.get("stage")
         selections.append(
             FollowUpSourceSelection(

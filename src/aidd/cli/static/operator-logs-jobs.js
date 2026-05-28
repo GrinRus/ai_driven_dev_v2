@@ -207,7 +207,9 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
 
 function liveJobMatchesStage() {
   if (!state.activeJobStatus) return false;
-  return state.activeJobStatus.kind === "workflow" || state.activeJobStatus.stage === state.activeStage;
+  return state.activeJobStatus.kind === "workflow"
+    || state.activeJobStatus.kind === "next-flow-launch"
+    || state.activeJobStatus.stage === state.activeStage;
 }
 
 function activeJobStatusClass() {

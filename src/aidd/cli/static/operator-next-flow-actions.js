@@ -200,6 +200,23 @@ function renderNextFlowActions(handoff) {
   `;
 }
 
+function nextFlowSourceRunId() {
+  return state.activeRunId || state.dashboard?.run?.run_id || "";
+}
+
+function nextFlowSourceWorkItem() {
+  return state.dashboard?.run?.lineage?.source_work_item_id || state.dashboard?.work_item || "";
+}
+
+function nextFlowDefaultWorkItem(suffix) {
+  const source = nextFlowSourceWorkItem() || "WI";
+  return `${source}-${suffix}`;
+}
+
+function nextFlowRuntimeId() {
+  return state.selectedRuntime || state.dashboard?.run?.runtime_id || "";
+}
+
 function renderTerminalArtifacts(artifacts) {
   const visible = (artifacts || []).slice(0, 5);
   if (!visible.length) return `<div class="empty-state">No final artifacts recorded.</div>`;
@@ -473,6 +490,9 @@ async function openNextFlowWizard(action) {
   state.nextFlowWizard.followUpDraftError = "";
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.preflightError = "";
+  state.nextFlowWizard.createdDraft = null;
+  state.nextFlowWizard.launchLoading = false;
+  state.nextFlowWizard.launchError = "";
   state.nextFlowWizard.selectedSourceIds = [];
   activateTab("overview");
   await renderCockpit();
@@ -490,9 +510,111 @@ async function openNextFlowWizard(action) {
   }
 }
 
+async function openNewWorkItemHandoff() {
+  state.nextFlowWizard.active = true;
+  state.nextFlowWizard.action = "create-new-work-item";
+  state.nextFlowWizard.step = "new-work-item";
+  state.nextFlowWizard.loading = false;
+  state.nextFlowWizard.error = "";
+  state.nextFlowWizard.followUpDraft = null;
+  state.nextFlowWizard.preflight = null;
+  state.nextFlowWizard.createdDraft = null;
+  state.nextFlowWizard.launchError = "";
+  activateTab("overview");
+  await renderCockpit();
+}
+
+async function openEvalBatchHandoff() {
+  state.nextFlowWizard.active = true;
+  state.nextFlowWizard.action = "run-eval-batch";
+  state.nextFlowWizard.step = "eval-batch";
+  state.nextFlowWizard.loading = false;
+  state.nextFlowWizard.error = "";
+  state.nextFlowWizard.followUpDraft = null;
+  state.nextFlowWizard.preflight = null;
+  state.nextFlowWizard.createdDraft = null;
+  state.nextFlowWizard.launchError = "";
+  activateTab("overview");
+  await renderCockpit();
+}
+
+function cloneDraftFromPayload(payload) {
+  const draft = payload.draft || {};
+  const created = payload.created || {};
+  const config = created.config || {};
+  return {
+    kind: "clone-flow",
+    source_work_item: draft.source_work_item || nextFlowSourceWorkItem(),
+    source_run_id: draft.source_run_id || nextFlowSourceRunId(),
+    new_work_item: draft.new_work_item || created.work_item || nextFlowDefaultWorkItem("CLONE"),
+    title: draft.title || `Clone ${nextFlowSourceWorkItem()} from ${nextFlowSourceRunId()}`,
+    selected_sources: [],
+    acceptance_criteria: [
+      "Review cloned runtime, prompt pack, contracts, branch, resource, and baseline configuration before launch."
+    ],
+    required_evidence: [
+      created.draft_path ? `Clone draft: ${created.draft_path}` : "Clone draft recorded before launch."
+    ],
+    inherited_context: [
+      {
+        id: "clone-runtime-config",
+        label: "Runtime and prompt configuration",
+        detail: `${config.runtime_id || "runtime"} / ${config.stage_target || "workflow"}`,
+        enabled: true
+      },
+      {
+        id: "clone-baseline",
+        label: "Baseline reference",
+        detail: config.baseline_label || config.baseline_id || "source run",
+        enabled: true
+      }
+    ],
+    created
+  };
+}
+
+async function openCloneFlowDraft() {
+  const wizard = state.nextFlowWizard;
+  wizard.active = true;
+  wizard.action = "clone-flow";
+  wizard.step = "confirm";
+  wizard.loading = false;
+  wizard.error = "";
+  wizard.followUpDraft = null;
+  wizard.preflight = null;
+  wizard.preflightError = "";
+  wizard.launchError = "";
+  wizard.createdDraft = null;
+  wizard.preflightLoading = true;
+  activateTab("overview");
+  await renderCockpit();
+  try {
+    const payload = await postJson("/api/next-flow/clone-draft/create", {
+      source_work_item: nextFlowSourceWorkItem(),
+      source_run_id: nextFlowSourceRunId(),
+      new_work_item: nextFlowDefaultWorkItem("CLONE"),
+      title: `Clone ${nextFlowSourceWorkItem()} from ${nextFlowSourceRunId()}`
+    });
+    wizard.followUpDraft = cloneDraftFromPayload(payload);
+    wizard.createdDraft = payload.created;
+    toast("Clone draft created for launch review.");
+    await loadLaunchConfirmation();
+  } catch (error) {
+    wizard.preflightLoading = false;
+    wizard.preflightError = error.message;
+    await renderCockpit();
+  }
+}
+
 async function loadLaunchConfirmation() {
   const wizard = state.nextFlowWizard;
-  const draft = wizard.followUpDraft;
+  const draft = readFollowUpDraftForm() || wizard.followUpDraft;
+  if (!draft) {
+    wizard.preflightError = "No next-flow draft is available for preflight.";
+    wizard.step = "confirm";
+    await renderCockpit();
+    return;
+  }
   wizard.preflightLoading = true;
   wizard.preflightError = "";
   wizard.step = "confirm";
@@ -530,6 +652,69 @@ async function loadLaunchConfirmation() {
   } finally {
     wizard.preflightLoading = false;
     await renderCockpit();
+  }
+}
+
+function readFollowUpDraftForm() {
+  const draft = state.nextFlowWizard.followUpDraft;
+  if (!draft || state.nextFlowWizard.action !== "start-follow-up-flow") return draft;
+  const newWorkItem = document.querySelector('[data-follow-up-field="new_work_item"]')?.value?.trim();
+  const title = document.querySelector('[data-follow-up-field="title"]')?.value?.trim();
+  const preview = document.querySelector('[data-follow-up-field="first_stage_input_preview"]')?.value;
+  if (newWorkItem) draft.new_work_item = newWorkItem;
+  if (title) draft.title = title;
+  if (preview !== undefined) draft.first_stage_input_preview = preview;
+  return draft;
+}
+
+async function createFollowUpDraftForLaunch(draft) {
+  if (state.nextFlowWizard.createdDraft) return state.nextFlowWizard.createdDraft;
+  const payload = await postJson("/api/next-flow/follow-up-draft/create", {
+    source_work_item: draft.source_work_item,
+    source_run_id: draft.source_run_id,
+    selected_source_ids: state.nextFlowWizard.selectedSourceIds,
+    new_work_item: draft.new_work_item,
+    title: draft.title
+  });
+  state.nextFlowWizard.createdDraft = payload.created;
+  return payload.created;
+}
+
+async function launchNextFlowNow() {
+  const wizard = state.nextFlowWizard;
+  const draft = readFollowUpDraftForm() || wizard.followUpDraft;
+  if (!draft) {
+    toast("No next-flow draft is ready to launch.");
+    return;
+  }
+  if (!ensureRunnableRuntime()) return;
+  wizard.launchLoading = true;
+  wizard.launchError = "";
+  await renderCockpit();
+  try {
+    if (wizard.action === "start-follow-up-flow") {
+      await createFollowUpDraftForLaunch(draft);
+    }
+    const job = await postJson("/api/next-flow/launch", {
+      source_work_item: draft.source_work_item,
+      source_run_id: draft.source_run_id,
+      new_work_item: draft.new_work_item,
+      runtime: nextFlowRuntimeId(),
+      baseline_id: state.nextFlowWizard.preflight?.resolved_baseline_id || draft.source_run_id,
+      relationship: wizard.action === "clone-flow" ? "clone" : "follow-up",
+      from_stage: "idea",
+      to_stage: "qa",
+      log_follow: true
+    });
+    wizard.active = false;
+    toast(`Launching ${draft.new_work_item}.`);
+    await startJobPolling(job);
+  } catch (error) {
+    wizard.launchError = error.message;
+    toast(error.message);
+    await renderCockpit();
+  } finally {
+    wizard.launchLoading = false;
   }
 }
 
@@ -613,6 +798,12 @@ function renderSourceFindingGroup(group) {
 
 function renderNextFlowSourceSelection() {
   const wizard = state.nextFlowWizard;
+  if (wizard.step === "new-work-item") {
+    return renderNewWorkItemHandoff();
+  }
+  if (wizard.step === "eval-batch") {
+    return renderEvalBatchHandoff();
+  }
   if (wizard.step === "definition") {
     return renderFollowUpDefinition();
   }
@@ -648,6 +839,63 @@ function renderNextFlowSourceSelection() {
       <div class="wizard-actions">
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
         <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderNewWorkItemHandoff() {
+  const sourceRun = nextFlowSourceRunId() || "not recorded";
+  const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
+  return `
+    <section class="surface next-flow-wizard">
+      <div class="surface-title">
+        <span>Create New Work Item</span>
+        <span class="small-badge">fresh scope</span>
+      </div>
+      <div class="wizard-context-grid">
+        <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(sourceRun)}</span></div>
+        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
+        <div class="panel-item"><strong>Inheritance</strong><span>none by default</span></div>
+        <div class="panel-item"><strong>Policy</strong><span>source run stays immutable</span></div>
+      </div>
+      <div class="truncation-notice" role="status">
+        <strong>Fresh work item handoff</strong>
+        <span>Create unrelated work from the target project root with a new request. Use Follow-up or Clone when this completed run should be inherited.</span>
+      </div>
+      <pre>aidd init --work-item &lt;new-id&gt; --request "&lt;new request&gt;" --root .aidd
+aidd ui --work-item &lt;new-id&gt; --root .aidd</pre>
+      <div class="wizard-actions">
+        <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderEvalBatchHandoff() {
+  const sourceRun = nextFlowSourceRunId() || "not recorded";
+  const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
+  const artifacts = state.dashboard?.terminal_handoff?.final_artifacts || [];
+  return `
+    <section class="surface next-flow-wizard">
+      <div class="surface-title">
+        <span>Run Eval / Scenario Batch</span>
+        <span class="small-badge">handoff</span>
+      </div>
+      <div class="wizard-context-grid">
+        <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(sourceRun)}</span></div>
+        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
+        <div class="panel-item"><strong>Final artifacts</strong><span>${escapeHtml(artifacts.length)}</span></div>
+        <div class="panel-item"><strong>Live E2E</strong><span>manual checkpoint only</span></div>
+      </div>
+      <div class="truncation-notice" role="status">
+        <strong>Eval batch handoff only</strong>
+        <span>Use the completed-run evidence for scenario planning or manual live E2E checkpoint review. This UI action does not launch a nested public-repository flow.</span>
+      </div>
+      <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
+      <div class="wizard-actions">
+        <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
+        <button data-tab-shortcut="history" type="button">Open Run History</button>
       </div>
     </section>
   `;
@@ -696,13 +944,14 @@ function renderLaunchConfirmation() {
   const wizard = state.nextFlowWizard;
   const draft = wizard.followUpDraft;
   if (!draft) {
-    return `<section class="surface next-flow-wizard"><div class="empty-state">No follow-up draft available for launch confirmation.</div></section>`;
+    return `<section class="surface next-flow-wizard"><div class="empty-state">${escapeHtml(wizard.preflightError || "No next-flow draft available for launch confirmation.")}</div></section>`;
   }
   if (wizard.preflightLoading) {
     return `<section class="surface next-flow-wizard"><div class="empty-state loading-state">Running launch preflight...</div></section>`;
   }
   const preflight = wizard.preflight;
   const blocked = !preflight?.can_launch;
+  const backLabel = wizard.action === "clone-flow" ? "Back to handoff" : "Back to definition";
   return `
     <section class="surface next-flow-wizard launch-confirmation">
       <div class="surface-title">
@@ -710,6 +959,7 @@ function renderLaunchConfirmation() {
         <span class="small-badge ${preflightTone(preflight?.status || "blocked")}">${escapeHtml(preflight?.status || "blocked")}</span>
       </div>
       ${wizard.preflightError ? `<div class="truncation-notice"><strong>Preflight blocked</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
+      ${wizard.launchError ? `<div class="truncation-notice"><strong>Launch failed</strong><span>${escapeHtml(wizard.launchError)}</span></div>` : ""}
       <div class="launch-confirmation-grid">
         <section>
           <div class="surface-title">Preflight results</div>
@@ -723,8 +973,8 @@ function renderLaunchConfirmation() {
         </aside>
       </div>
       <div class="wizard-actions">
-        <button data-next-flow-back-to-definition type="button" class="secondary">Back to definition</button>
-        <button data-launch-flow-now type="button" ${blocked ? "disabled" : ""}>Launch Flow Now</button>
+        <button data-next-flow-back-to-definition type="button" class="secondary">${escapeHtml(backLabel)}</button>
+        <button data-launch-flow-now type="button" ${blocked || wizard.launchLoading ? "disabled" : ""}>${wizard.launchLoading ? "Launching..." : "Launch Flow Now"}</button>
       </div>
     </section>
   `;

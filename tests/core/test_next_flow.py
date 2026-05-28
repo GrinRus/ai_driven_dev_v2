@@ -126,6 +126,33 @@ def test_create_follow_up_work_item_draft_rejects_absolute_source_paths(
         )
 
 
+def test_create_follow_up_work_item_draft_accepts_manual_request_without_source_path(
+    tmp_path: Path,
+) -> None:
+    result = create_follow_up_work_item_draft(
+        FollowUpDraftRequest(
+            workspace_root=tmp_path / ".aidd",
+            source_work_item="WI-SOURCE",
+            source_run_id="run-source",
+            new_work_item="WI-FOLLOW-UP",
+            title="Capture operator follow-up note",
+            selections=(
+                FollowUpSourceSelection(
+                    kind="manual-request",
+                    title="Operator requested a smaller follow-up",
+                    source_path=None,
+                    note="Split the risky rollout into a separate task.",
+                ),
+            ),
+        )
+    )
+
+    request_text = result.request_path.read_text(encoding="utf-8")
+    assert result.source_artifact_paths == ()
+    assert "- Source artifact: manual operator request only" in request_text
+    assert "Split the risky rollout into a separate task." in request_text
+
+
 def test_create_clone_flow_draft_writes_editable_configuration_from_source_run(
     tmp_path: Path,
 ) -> None:

@@ -904,6 +904,8 @@ def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
         "/api/next-flow/follow-up-draft/create",
         {
             "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-MANUAL-FOLLOW-UP",
+            "title": "Manual follow-up request",
             "selected_source_ids": ["manual-request:operator-note"],
         },
     )
@@ -916,8 +918,19 @@ def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
     assert _error_payload(malformed_follow_up)["error"] == (
         "selected_source_ids must be a list."
     )
-    assert manual_without_artifact.status == HTTPStatus.BAD_REQUEST
-    assert "has no source artifact path" in _error_payload(manual_without_artifact)["error"]  # type: ignore[operator]
+    assert manual_without_artifact.status == HTTPStatus.CREATED
+    manual_payload = json.loads(manual_without_artifact.body.decode("utf-8"))
+    assert manual_payload["created"]["source_artifact_paths"] == []
+    assert (
+        "- Source artifact: manual operator request only"
+        in (
+            workspace_root
+            / "workitems"
+            / "WI-UI-MANUAL-FOLLOW-UP"
+            / "context"
+            / "follow-up-request.md"
+        ).read_text(encoding="utf-8")
+    )
     assert malformed_clone.status == HTTPStatus.BAD_REQUEST
     assert _error_payload(malformed_clone)["error"] == "source_run_id is required."
 

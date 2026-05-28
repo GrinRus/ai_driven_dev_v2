@@ -56,15 +56,28 @@ document.addEventListener("click", async (event) => {
     }
     const nextFlowAction = event.target.closest("[data-next-flow-action]");
     if (nextFlowAction) {
-      if (nextFlowAction.dataset.nextFlowAction === "start-follow-up-flow") {
-        await openNextFlowWizard(nextFlowAction.dataset.nextFlowAction);
+      const action = nextFlowAction.dataset.nextFlowAction;
+      if (action === "create-new-work-item") {
+        await openNewWorkItemHandoff();
         return;
       }
-      if (nextFlowAction.dataset.nextFlowAction === "archive-run") {
+      if (action === "start-follow-up-flow") {
+        await openNextFlowWizard(action);
+        return;
+      }
+      if (action === "clone-flow") {
+        await openCloneFlowDraft();
+        return;
+      }
+      if (action === "run-eval-batch") {
+        await openEvalBatchHandoff();
+        return;
+      }
+      if (action === "archive-run") {
         await archiveCompletedRun();
         return;
       }
-      toast("Start Next Flow wizard is queued for the next UI slice.");
+      toast("Unsupported next-flow action.");
       return;
     }
     const sourceSelection = event.target.closest("[data-source-selection-id]");
@@ -92,12 +105,15 @@ document.addEventListener("click", async (event) => {
       return;
     }
     if (event.target.closest("[data-next-flow-back-to-definition]")) {
-      state.nextFlowWizard.step = "definition";
+      state.nextFlowWizard.step = state.nextFlowWizard.action === "clone-flow" ? "sources" : "definition";
+      if (state.nextFlowWizard.action === "clone-flow") {
+        state.nextFlowWizard.active = false;
+      }
       await renderCockpit();
       return;
     }
     if (event.target.closest("[data-launch-flow-now]")) {
-      toast("Launch endpoint is queued for the private next-flow API slice.");
+      await launchNextFlowNow();
       return;
     }
     const cancelJob = event.target.closest("[data-cancel-job]");

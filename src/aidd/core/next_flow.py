@@ -38,7 +38,7 @@ _SUPPORTED_FOLLOW_UP_SOURCE_KINDS = frozenset(
 class FollowUpSourceSelection:
     kind: str
     title: str
-    source_path: str
+    source_path: str | None = None
     stage: str | None = None
     note: str | None = None
 
@@ -184,7 +184,11 @@ def create_follow_up_work_item_draft(request: FollowUpDraftRequest) -> FollowUpD
         work_item=normalized_new_work_item,
         request_path=request_path,
         context_seed=context_seed,
-        source_artifact_paths=tuple(selection.source_path for selection in normalized_selections),
+        source_artifact_paths=tuple(
+            selection.source_path
+            for selection in normalized_selections
+            if selection.source_path
+        ),
     )
 
 
@@ -563,10 +567,13 @@ def _normalize_selection(
     if kind not in _SUPPORTED_FOLLOW_UP_SOURCE_KINDS:
         supported = ", ".join(sorted(_SUPPORTED_FOLLOW_UP_SOURCE_KINDS))
         raise ValueError(f"Unsupported follow-up source kind '{kind}'. Supported: {supported}.")
-    source_path = _workspace_relative_source_path(
-        workspace_root=workspace_root,
-        source_path=selection.source_path,
-    )
+    if kind == "manual-request" and not str(selection.source_path or "").strip():
+        source_path = None
+    else:
+        source_path = _workspace_relative_source_path(
+            workspace_root=workspace_root,
+            source_path=selection.source_path,
+        )
     return FollowUpSourceSelection(
         kind=kind,
         title=_required_text(selection.title, field_name="selection title"),
@@ -576,8 +583,8 @@ def _normalize_selection(
     )
 
 
-def _workspace_relative_source_path(*, workspace_root: Path, source_path: str) -> str:
-    relative_path = Path(_required_text(source_path, field_name="selection source_path"))
+def _workspace_relative_source_path(*, workspace_root: Path, source_path: str | None) -> str:
+    relative_path = Path(_required_text(source_path or "", field_name="selection source_path"))
     if relative_path.is_absolute():
         raise ValueError("Follow-up source artifact path must be workspace-relative.")
     resolved_workspace = workspace_root.resolve(strict=False)
@@ -646,9 +653,12 @@ def _render_follow_up_request_markdown(
                 f"### FUP-{index}: {selection.title}",
                 "",
                 f"- Kind: `{selection.kind}`",
-                f"- Source artifact: `{selection.source_path}`",
             ]
         )
+        if selection.source_path:
+            lines.append(f"- Source artifact: `{selection.source_path}`")
+        else:
+            lines.append("- Source artifact: manual operator request only")
         if selection.stage is not None:
             lines.append(f"- Stage: `{selection.stage}`")
         if selection.note is not None:

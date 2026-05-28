@@ -71,6 +71,9 @@ const state = {
     preflight: null,
     preflightLoading: false,
     preflightError: "",
+    createdDraft: null,
+    launchLoading: false,
+    launchError: "",
     selectedSourceIds: []
   }
 };
