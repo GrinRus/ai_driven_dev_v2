@@ -80,12 +80,6 @@ document.addEventListener("click", async (event) => {
       toast("Unsupported next-flow action.");
       return;
     }
-    const sourceSelection = event.target.closest("[data-source-selection-id]");
-    if (sourceSelection) {
-      setSourceFindingSelection(sourceSelection.dataset.sourceSelectionId, sourceSelection.checked);
-      await renderCockpit();
-      return;
-    }
     if (event.target.closest("[data-close-next-flow-wizard]")) {
       state.nextFlowWizard.active = false;
       await renderCockpit();
@@ -297,6 +291,12 @@ document.addEventListener("change", async (event) => {
   }
   if (event.target.closest("[data-intervention-target]")) {
     updateInterventionPreview();
+  }
+  const sourceSelection = event.target.closest("[data-source-selection-id]");
+  if (sourceSelection) {
+    setSourceFindingSelection(sourceSelection.dataset.sourceSelectionId, sourceSelection.checked);
+    await renderCockpit();
+    return;
   }
   if (
     event.target.closest("[data-follow-up-list]")

@@ -258,7 +258,7 @@ function nextFlowSourceRunId() {
 }
 
 function nextFlowSourceWorkItem() {
-  return state.dashboard?.run?.lineage?.source_work_item_id || state.dashboard?.work_item || "";
+  return state.dashboard?.work_item || state.dashboard?.run?.lineage?.source_work_item_id || "";
 }
 
 function nextFlowDefaultWorkItem(suffix) {
@@ -782,6 +782,15 @@ function selectedFollowUpListValues(name, fallbackItems = []) {
     .filter((value) => String(value || "").trim());
 }
 
+function allFollowUpListValues(name, fallbackItems = []) {
+  const controls = Array.from(document.querySelectorAll("[data-follow-up-list-text]"))
+    .filter((control) => control.dataset.followUpListText === name);
+  if (!controls.length) return fallbackItems || [];
+  return controls
+    .sort((left, right) => Number(left.dataset.followUpIndex) - Number(right.dataset.followUpIndex))
+    .map((control) => control.value);
+}
+
 function inheritedContextLinesFromItems(items = []) {
   return (items || [])
     .map((item) => {
@@ -829,8 +838,16 @@ function readFollowUpDraftForm() {
   if (newWorkItemField) draft.new_work_item = newWorkItemField.value.trim();
   if (titleField) draft.title = titleField.value.trim();
   if (previewField) draft.first_stage_input_preview = previewField.value;
-  draft.acceptance_criteria = selectedFollowUpListValues("acceptance_criteria", draft.acceptance_criteria);
-  draft.required_evidence = selectedFollowUpListValues("required_evidence", draft.required_evidence);
+  draft.acceptance_criteria_all = allFollowUpListValues(
+    "acceptance_criteria",
+    draft.acceptance_criteria_all || draft.acceptance_criteria
+  );
+  draft.required_evidence_all = allFollowUpListValues(
+    "required_evidence",
+    draft.required_evidence_all || draft.required_evidence
+  );
+  draft.acceptance_criteria = selectedFollowUpListValues("acceptance_criteria", draft.acceptance_criteria_all);
+  draft.required_evidence = selectedFollowUpListValues("required_evidence", draft.required_evidence_all);
   draft.inherited_context_lines = selectedInheritedContextLines(draft.inherited_context, draft.inherited_context_lines);
   return draft;
 }
@@ -841,6 +858,7 @@ function invalidateFollowUpDraftPreview() {
   state.nextFlowWizard.preflightError = "";
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
+  document.querySelector("[data-follow-up-definition-error]")?.remove();
 }
 
 async function createFollowUpDraftForLaunch(draft) {
@@ -979,6 +997,16 @@ function renderSourceFindingGroup(group) {
 function nextFlowWizardStepState(stepId) {
   const current = state.nextFlowWizard.step;
   const selected = state.nextFlowWizard.selectedSourceIds.length;
+  if (state.nextFlowWizard.action === "clone-flow") {
+    if (stepId === "type") return "done";
+    if (stepId === "definition") {
+      if (current === "definition") return "active";
+      if (current === "confirm") return "done";
+      return "pending";
+    }
+    if (stepId === "confirm") return current === "confirm" ? "active" : "pending";
+    return "pending";
+  }
   if (stepId === "type") return "done";
   if (stepId === "sources") {
     if (current === "sources") return "active";
@@ -1007,12 +1035,18 @@ function nextFlowWizardTypeLabel() {
 function renderNextFlowWizardProgress() {
   const selected = state.nextFlowWizard.selectedSourceIds.length;
   const draft = state.nextFlowWizard.followUpDraft;
-  const steps = [
-    ["type", "Choose Flow Type", nextFlowWizardTypeLabel()],
-    ["sources", "Select Source Findings", selected ? `${selected} selected` : "Select findings to carry forward"],
-    ["definition", "Define Work Item", draft?.new_work_item || "Configure new work item"],
-    ["confirm", "Confirm Launch", "Review preflight and audit preview"]
-  ];
+  const steps = state.nextFlowWizard.action === "clone-flow"
+    ? [
+        ["type", "Choose Flow Type", nextFlowWizardTypeLabel()],
+        ["definition", "Review Clone Draft", draft?.new_work_item || "Review inherited configuration"],
+        ["confirm", "Confirm Launch", "Review preflight and audit preview"]
+      ]
+    : [
+        ["type", "Choose Flow Type", nextFlowWizardTypeLabel()],
+        ["sources", "Select Source Findings", selected ? `${selected} selected` : "Select findings to carry forward"],
+        ["definition", "Define Work Item", draft?.new_work_item || "Configure new work item"],
+        ["confirm", "Confirm Launch", "Review preflight and audit preview"]
+      ];
   return `
     <aside class="next-flow-stepper" aria-label="Flow Launch Wizard">
       <div class="surface-title compact">Flow Launch Wizard</div>
@@ -1253,10 +1287,11 @@ function renderLaunchConfirmation() {
   });
 }
 
-function renderEditableList(name, items) {
+function renderEditableList(name, items, selectedItems = null) {
+  const selected = selectedItems ? new Set(selectedItems.map((item) => String(item))) : null;
   return (items || []).map((item, index) => `
     <div class="editable-list-row">
-      <input data-follow-up-list="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="checkbox" checked aria-label="Include ${escapeHtml(item)}">
+      <input data-follow-up-list="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="checkbox" ${!selected || selected.has(String(item)) ? "checked" : ""} aria-label="Include ${escapeHtml(item || name)}">
       <input data-follow-up-list-text="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="text" value="${escapeHtml(item)}">
     </div>
   `).join("") || `<div class="empty-state">No ${escapeHtml(name)} generated.</div>`;
@@ -1286,12 +1321,14 @@ function renderFollowUpDefinition() {
   if (!draft) {
     return `<section class="surface next-flow-wizard"><div class="empty-state">No follow-up definition generated.</div></section>`;
   }
+  const acceptanceItems = draft.acceptance_criteria_all || draft.acceptance_criteria;
+  const evidenceItems = draft.required_evidence_all || draft.required_evidence;
   return renderNextFlowWizardShell({
     sectionClass: "next-flow-wizard follow-up-definition",
     title: "Define Follow-up Work Item",
     badge: "editable draft",
     body: `
-      ${wizard.preflightError ? `<div class="truncation-notice"><strong>Definition needs attention</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
+      ${wizard.preflightError ? `<div class="truncation-notice" data-follow-up-definition-error><strong>Definition needs attention</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
         <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(draft.source_work_item)}</span></div>
@@ -1315,9 +1352,9 @@ function renderFollowUpDefinition() {
         </section>
         <aside class="definition-side">
           <div class="surface-title">Acceptance criteria</div>
-          <div class="editable-list">${renderEditableList("acceptance_criteria", draft.acceptance_criteria)}</div>
+          <div class="editable-list">${renderEditableList("acceptance_criteria", acceptanceItems, draft.acceptance_criteria_all ? draft.acceptance_criteria : null)}</div>
           <div class="surface-title compact">Required evidence</div>
-          <div class="editable-list">${renderEditableList("required_evidence", draft.required_evidence)}</div>
+          <div class="editable-list">${renderEditableList("required_evidence", evidenceItems, draft.required_evidence_all ? draft.required_evidence : null)}</div>
           <div class="surface-title compact">Inherited context</div>
           <div class="inherited-context-list">${renderInheritedContextToggles(draft.inherited_context)}</div>
         </aside>

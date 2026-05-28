@@ -596,6 +596,10 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderLaunchConfirmation()",
             "function renderNextFlowWizardProgress()",
             (
+                "return state.dashboard?.work_item || "
+                'state.dashboard?.run?.lineage?.source_work_item_id || "";'
+            ),
+            (
                 "function renderNextFlowWizardShell({sectionClass = "
                 "\"next-flow-wizard\", title, badge, badgeTone = \"\", body})"
             ),
@@ -603,6 +607,7 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Choose Flow Type",
             "Select Source Findings",
             "Define Work Item",
+            "Review Clone Draft",
             "Confirm Launch",
             "function renderPreflightChecks(preflight)",
             "function renderAuditPreview(draft, preflight)",
@@ -610,12 +615,18 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "async function launchNextFlowNow()",
             "async function createFollowUpDraftForLaunch(draft)",
             "function invalidateFollowUpDraftPreview()",
+            'document.querySelector("[data-follow-up-definition-error]")?.remove();',
+            "data-follow-up-definition-error",
             "At least one acceptance criterion is required before preflight.",
             "At least one required evidence item is required before preflight.",
             "async function openCloneFlowDraft()",
             "function renderNewWorkItemHandoff()",
             "function renderEvalBatchHandoff()",
             "function selectedFollowUpListValues(name, fallbackItems = [])",
+            "function allFollowUpListValues(name, fallbackItems = [])",
+            "acceptance_criteria_all",
+            "required_evidence_all",
+            "selectedItems.map((item) => String(item))",
             'document.querySelectorAll("[data-follow-up-list-text]")',
             "textControl ? textControl.value : fallbackItems[index]",
             "function inheritedContextLinesFromItems(items = [])",
@@ -929,6 +940,9 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
     assert "queued for the private next-flow API slice" not in main
     assert "Promise.all([fetchDashboard(), fetchReadiness()])" not in main
     assert 'body: JSON.stringify({runtime: "generic-cli"})' not in bundle
+    click_handler, change_handler = main.split('document.addEventListener("change"', 1)
+    assert 'closest("[data-source-selection-id]")' not in click_handler
+    assert 'closest("[data-source-selection-id]")' in change_handler
     assert main.index('closest("[data-artifact-stage]")') < main.index(
         'closest("[data-artifact-key]")'
     )
