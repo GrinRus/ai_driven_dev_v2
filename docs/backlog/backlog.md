@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E4-S2-T1`
+- `W26-E4-S2-T2`
 
 ## Soon
 
-- `W26-E4-S2-T2`
+- `W26-E4-S2-T3`
 
 ## Parking lot
 
-- `W26-E4-S2-T3`
 - `W26-E5-S1-T1`
 
 ## Update rules
@@ -301,3 +300,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   required completed-run evidence fields, browser/viewport/runtime metadata, blocker
   capture, archive decision, and cleanup rules for generated `.aidd/` state.
   `W26-E4-S2-T1` is promoted to `Next`, and `W26-E4-S2-T2` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S2-T1`; manual live E2E policy now requires a
+  terminal next-flow checkpoint after `qa`, records the operator decision, and keeps
+  second public-repository flow launch optional, manual-only, and outside CI/CD.
+  `W26-E4-S2-T2` is promoted to `Next`, and `W26-E4-S2-T3` is promoted to `Soon`.

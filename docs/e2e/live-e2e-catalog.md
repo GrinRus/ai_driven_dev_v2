@@ -109,6 +109,28 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
 - Manual checkpoint notes should include an operator-intervention checkpoint when
   the run uses `aidd stage interact` or the UI `Request change` panel.
 
+## Next-Flow Terminal Checkpoint Policy
+
+After a public-repository live run reaches terminal `qa`, the launching operator must
+inspect the completed-run handoff before deciding whether the run is counted:
+
+- open the loopback UI or UI/API checkpoint evidence and confirm **Flow Complete** is
+  visible for the terminal run;
+- record the final QA status, visible blockers, final artifacts, approval counts,
+  repair counts, answered-question counts, and recommended next-flow actions;
+- record the operator next-flow decision as one of `no-follow-up`, `follow-up-draft`,
+  `clone-draft`, `eval-batch`, `archive`, or `blocked`;
+- if the operator records `follow-up-draft`, `clone-draft`, or `eval-batch`, preserve
+  source-run references and selected source artifact links as evidence only;
+- if the operator records `archive`, verify the completed run remains readable through
+  dashboard/history/artifact inspection evidence.
+
+Launching a second public-repository flow is **not** required for a clean live E2E run.
+The default policy is to stop after the terminal checkpoint and operator-quality
+analysis. Any child-flow proof must be explicitly enabled by a manual operator in a
+separate future option, remain outside CI/CD and release automation, and record separate
+lineage evidence instead of mutating the completed source run.
+
 ## Maintained Repository Set
 
 ### `fastapi/typer`

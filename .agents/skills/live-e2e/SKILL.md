@@ -223,6 +223,25 @@ The operator audit cannot upgrade machine `fail` or `warn` to a counted clean
 pass. It can only reject or downgrade a machine-clean run after inspecting the
 artifacts.
 
+## Next-flow terminal checkpoint
+
+After terminal `qa`, inspect the completed-run handoff before writing the final
+operator decision:
+
+1. Open the loopback UI or recorded UI/API checkpoint evidence.
+2. Confirm **Flow Complete** is visible for the terminal run.
+3. Record final QA status, blockers, final artifacts, approval counts, repair counts,
+   answered-question counts, and recommended next-flow actions.
+4. Record the operator next-flow decision as `no-follow-up`, `follow-up-draft`,
+   `clone-draft`, `eval-batch`, `archive`, or `blocked`.
+5. If a draft/eval/archive decision is recorded, preserve source-run references and
+   selected source artifact links as evidence.
+
+Do not launch a second public-repository flow by default. Child-flow proof is a
+separate manual-only option when the evaluator explicitly supports it; it must stay
+outside CI/CD and release automation and must write separate lineage evidence instead
+of mutating the completed source run.
+
 ## Validations and blockers
 
 The live run can be rejected or downgraded at several layers:
@@ -336,15 +355,18 @@ operator loop instead of relying on a self-mutating product command:
 5. Preserve the resulting bundle and inspect `verdict.md`, `grader.json`, `quality-report.md`, and transcripts before judging the run.
 6. For `blocked` runs, answer questions yourself as the launching operator-agent,
    write `answer-analysis.md`, and rerun the same command to resume.
-7. For terminal runs, write `operator-quality-analysis.md` before deciding
+7. For terminal `qa`, inspect Flow Complete and record the next-flow terminal
+   checkpoint decision before judging the run.
+8. For terminal runs, write `operator-quality-analysis.md` before deciding
    counted/not-counted.
-8. If the setup, provider coverage, size classification, quality recipe, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
+9. If the setup, provider coverage, size classification, quality recipe, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
 
 ## Hard rules
 
 - Never treat live E2E as a CI or release lane.
 - Never assume this skill provisions runtime auth, wrappers, or provider setup.
 - Never route live E2E through GitHub Actions, CI/CD, or release workflows.
+- Never require launching a second public-repository flow for a clean live E2E result.
 - Never run a live scenario without storing the resolved repo pin.
 - Never run a live scenario without storing the selected authored task snapshot.
 - Never treat a live scenario as canonical unless it executes `idea -> qa`.

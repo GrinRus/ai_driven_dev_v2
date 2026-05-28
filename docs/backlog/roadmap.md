@@ -6905,7 +6905,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E4-S2-T1` Define the manual live E2E next-flow checkpoint policy: after terminal
+- `W26-E4-S2-T1` (done) Define the manual live E2E next-flow checkpoint policy: after terminal
   `qa`, inspect Flow Complete and record the operator's next-flow decision, but do not
   require launching a second public-repository flow by default.
   - Scope: live E2E docs and live-e2e skill guidance.
