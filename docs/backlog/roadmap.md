@@ -6674,7 +6674,7 @@ Local tasks:
   - Scope: wizard UI and API payload rendering.
   - Verification: tests cover selection state, source artifact links, and required
     context counts.
-- `W26-E2-S2-T2` Render follow-up work item definition with generated acceptance
+- `W26-E2-S2-T2` (done) Render follow-up work item definition with generated acceptance
   criteria, required evidence, inherited context toggles, and first-stage input preview.
   - Scope: wizard UI and follow-up draft payload.
   - Verification: tests prove generated fields remain editable and source-run context is

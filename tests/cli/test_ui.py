@@ -623,6 +623,38 @@ def test_ui_next_flow_source_findings_endpoint_groups_source_context(
     assert payload["counts"]["source_artifact_links"] >= 4  # type: ignore[index]
 
 
+def test_ui_next_flow_follow_up_draft_endpoint_returns_editable_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/follow-up-draft",
+        {
+            "source_run_id": "run-ui",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+        },
+    )
+
+    payload = _payload(response)
+    draft = payload["draft"]
+    assert draft["source_work_item"] == "WI-UI"  # type: ignore[index]
+    assert draft["source_run_id"] == "run-ui"  # type: ignore[index]
+    assert draft["new_work_item"] == "WI-UI-FOLLOW-UP"  # type: ignore[index]
+    assert "Follow-up for WI-UI from run-ui" == draft["title"]  # type: ignore[index]
+    assert draft["selected_sources"][0]["source_path"].endswith("qa-report.md")  # type: ignore[index]
+    assert "Resolve follow-up source: QA artifact: qa_report" in draft["acceptance_criteria"]  # type: ignore[index]
+    assert "Updated evidence for QA artifact: qa_report" in draft["required_evidence"]  # type: ignore[index]
+    assert any(
+        item["id"] == "source-run-lineage" and item["enabled"] is True
+        for item in draft["inherited_context"]  # type: ignore[index]
+    )
+    assert "Source run: `run-ui`." in draft["first_stage_input_preview"]  # type: ignore[index]
+    assert "`qa-finding` QA artifact: qa_report" in draft["first_stage_input_preview"]  # type: ignore[index]
+
+
 def test_ui_static_asset_routes_are_served_from_manifest(tmp_path: Path) -> None:
     service = _service(tmp_path / ".aidd")
 

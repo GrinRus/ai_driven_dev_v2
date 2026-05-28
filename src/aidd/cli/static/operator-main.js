@@ -75,7 +75,16 @@ document.addEventListener("click", async (event) => {
       return;
     }
     if (event.target.closest("[data-next-flow-continue]")) {
-      toast("Follow-up definition is queued for the next UI slice.");
+      await loadFollowUpDraft();
+      return;
+    }
+    if (event.target.closest("[data-next-flow-back-to-sources]")) {
+      state.nextFlowWizard.step = "sources";
+      await renderCockpit();
+      return;
+    }
+    if (event.target.closest("[data-next-flow-confirm-preview]")) {
+      toast("Launch confirmation is queued for the next UI slice.");
       return;
     }
     const cancelJob = event.target.closest("[data-cancel-job]");

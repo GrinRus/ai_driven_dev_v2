@@ -160,12 +160,15 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".lineage-node.current" in components
     assert ".next-flow-wizard" in components
     assert ".source-finding-groups" in components
+    assert ".follow-up-definition-grid" in components
+    assert ".inherited-context-toggle" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
     assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
     assert ".lineage-flow" in responsive
     assert ".source-finding-groups" in responsive
+    assert ".follow-up-definition-grid" in responsive
     assert "scroll-padding-inline: 10px" in responsive
 
 
@@ -226,7 +229,9 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'activeRunId: ""',
             'setupMode: "new-work-item"',
             "nextFlowWizard: {",
+            'step: "sources"',
             "sourceFindings: null",
+            "followUpDraft: null",
             "selectedSourceIds: []",
             "function sourceFindingsUrl()",
             "/api/next-flow/source-findings",
@@ -456,6 +461,13 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderLineageCandidates(candidates)",
             "async function openNextFlowWizard(action)",
             "function renderNextFlowSourceSelection()",
+            "function renderFollowUpDefinition()",
+            "async function loadFollowUpDraft()",
+            "Define Follow-up Work Item",
+            "data-follow-up-field",
+            "data-inherited-context",
+            "data-next-flow-back-to-sources",
+            "data-next-flow-confirm-preview",
             "function renderSourceFindingGroup(group)",
             "function renderSourceFindingItem(group, item)",
             "data-source-selection-id",
@@ -518,7 +530,10 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             "setSourceFindingSelection",
             'closest("[data-close-next-flow-wizard]")',
             'closest("[data-next-flow-continue]")',
-            "Follow-up definition is queued for the next UI slice.",
+            "await loadFollowUpDraft()",
+            'closest("[data-next-flow-back-to-sources]")',
+            'closest("[data-next-flow-confirm-preview]")',
+            "Launch confirmation is queued for the next UI slice.",
             "Start Next Flow wizard is queued for the next UI slice.",
             'event.target.id === "operatorRequestText"',
             'if (state.activeTab === "overview") await renderCockpit();',
@@ -612,5 +627,7 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".next-flow-action-card" in css
     assert ".next-flow-wizard" in css
     assert ".source-finding-card" in css
+    assert ".follow-up-definition-grid" in css
+    assert ".inherited-context-toggle" in css
     assert ".loading-state" in css
     assert "scroll-padding-inline: 10px" in css

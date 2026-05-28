@@ -657,6 +657,99 @@ def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
     }
 
 
+def _selected_source_ids_from_payload(payload: dict[str, Any]) -> tuple[str, ...]:
+    raw_ids = payload.get("selected_source_ids")
+    if not isinstance(raw_ids, list):
+        raise ValueError("selected_source_ids must be a list.")
+    selected = tuple(item.strip() for item in raw_ids if isinstance(item, str) and item.strip())
+    if not selected:
+        raise ValueError("At least one source finding must be selected.")
+    return selected
+
+
+def _next_flow_follow_up_draft_payload(
+    *,
+    dashboard: Any,
+    selected_source_ids: tuple[str, ...],
+) -> dict[str, object]:
+    findings = _next_flow_source_findings_payload(dashboard)
+    groups = cast(tuple[dict[str, object], ...], findings["groups"])
+    items_by_id = {
+        str(item["id"]): item
+        for group in groups
+        for item in cast(list[dict[str, object]], group["items"])
+    }
+    selected_items = [items_by_id[item_id] for item_id in selected_source_ids if item_id in items_by_id]
+    if not selected_items:
+        raise ValueError("Selected source findings do not match this source run.")
+    source_run_id = str(findings["source_run_id"] or "")
+    source_work_item = str(findings["source_work_item"] or "")
+    new_work_item = f"{source_work_item}-FOLLOW-UP"
+    title = f"Follow-up for {source_work_item} from {source_run_id}"
+    acceptance_criteria = tuple(
+        f"Resolve follow-up source: {item['title']}" for item in selected_items
+    )
+    required_evidence = tuple(
+        f"Updated evidence for {item['title']}"
+        for item in selected_items
+        if item.get("source_path")
+    )
+    selected_lines = "\n".join(
+        f"- `{item['kind']}` {item['title']} ({item.get('source_path') or 'manual request'})"
+        for item in selected_items
+    )
+    criteria_lines = "\n".join(f"- {criterion}" for criterion in acceptance_criteria)
+    preview = "\n".join(
+        (
+            f"# {title}",
+            "",
+            f"Source work item: `{source_work_item}`.",
+            f"Source run: `{source_run_id}`.",
+            "",
+            "## Selected source findings",
+            "",
+            selected_lines,
+            "",
+            "## Acceptance criteria",
+            "",
+            criteria_lines,
+            "",
+        )
+    )
+    return {
+        "draft": {
+            "source_work_item": source_work_item,
+            "source_run_id": source_run_id,
+            "new_work_item": new_work_item,
+            "title": title,
+            "selected_sources": selected_items,
+            "acceptance_criteria": acceptance_criteria,
+            "required_evidence": required_evidence,
+            "inherited_context": (
+                {
+                    "id": "source-run-lineage",
+                    "label": "Source run lineage",
+                    "detail": f"Keep parent run {source_run_id} visible on the new work item.",
+                    "enabled": True,
+                },
+                {
+                    "id": "selected-artifacts",
+                    "label": "Selected artifact links",
+                    "detail": f"{len(required_evidence)} selected source artifacts stay linked.",
+                    "enabled": True,
+                },
+                {
+                    "id": "baseline-snapshot",
+                    "label": "Baseline snapshot",
+                    "detail": "Use the source run as launch baseline until preflight resolves a newer baseline.",
+                    "enabled": True,
+                },
+            ),
+            "first_stage_input_preview": preview,
+        }
+    }
+
+
 def _exit_code_from_result(result: object) -> int:
     if isinstance(result, Mapping):
         raw_exit_code = result.get("exit_code", 0)
@@ -987,6 +1080,8 @@ class OperatorUiService:
                 return _json_response(self._start_stage_interact_job(payload))
             if path == "/api/next-flow/preflight":
                 return self._next_flow_preflight(payload)
+            if path == "/api/next-flow/follow-up-draft":
+                return self._next_flow_follow_up_draft(payload)
             if path == "/api/workflow/run":
                 return _json_response(self._start_workflow_job(payload))
             if path == "/api/open-folder":
@@ -1370,6 +1465,21 @@ class OperatorUiService:
         if result.status == "blocked":
             return _json_response(result.error_payload, status=HTTPStatus.CONFLICT)
         return _json_response({"preflight": result})
+
+    def _next_flow_follow_up_draft(self, payload: dict[str, Any]) -> UiResponse:
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=self.options.work_item,
+            active_stage="qa",
+            run_id=_source_run_id_from_payload(payload),
+            project_root=Path.cwd(),
+        )
+        return _json_response(
+            _next_flow_follow_up_draft_payload(
+                dashboard=dashboard,
+                selected_source_ids=_selected_source_ids_from_payload(payload),
+            )
+        )
 
     def _start_job(
         self,

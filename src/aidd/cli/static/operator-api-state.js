@@ -59,9 +59,13 @@ const state = {
   nextFlowWizard: {
     active: false,
     action: "",
+    step: "sources",
     loading: false,
     error: "",
     sourceFindings: null,
+    followUpDraft: null,
+    followUpDraftLoading: false,
+    followUpDraftError: "",
     selectedSourceIds: []
   }
 };

@@ -463,9 +463,12 @@ function setSourceFindingSelection(id, selected) {
 async function openNextFlowWizard(action) {
   state.nextFlowWizard.active = true;
   state.nextFlowWizard.action = action;
+  state.nextFlowWizard.step = "sources";
   state.nextFlowWizard.loading = true;
   state.nextFlowWizard.error = "";
   state.nextFlowWizard.sourceFindings = null;
+  state.nextFlowWizard.followUpDraft = null;
+  state.nextFlowWizard.followUpDraftError = "";
   state.nextFlowWizard.selectedSourceIds = [];
   activateTab("overview");
   await renderCockpit();
@@ -479,6 +482,26 @@ async function openNextFlowWizard(action) {
     state.nextFlowWizard.error = error.message;
   } finally {
     state.nextFlowWizard.loading = false;
+    await renderCockpit();
+  }
+}
+
+async function loadFollowUpDraft() {
+  const wizard = state.nextFlowWizard;
+  wizard.followUpDraftLoading = true;
+  wizard.followUpDraftError = "";
+  wizard.step = "definition";
+  await renderCockpit();
+  try {
+    const payload = await postJson("/api/next-flow/follow-up-draft", {
+      source_run_id: state.activeRunId,
+      selected_source_ids: wizard.selectedSourceIds
+    });
+    wizard.followUpDraft = payload.draft;
+  } catch (error) {
+    wizard.followUpDraftError = error.message;
+  } finally {
+    wizard.followUpDraftLoading = false;
     await renderCockpit();
   }
 }
@@ -525,6 +548,9 @@ function renderSourceFindingGroup(group) {
 
 function renderNextFlowSourceSelection() {
   const wizard = state.nextFlowWizard;
+  if (wizard.step === "definition") {
+    return renderFollowUpDefinition();
+  }
   if (wizard.loading) {
     return `<section class="surface next-flow-wizard"><div class="empty-state loading-state">Loading source findings...</div></section>`;
   }
@@ -554,6 +580,83 @@ function renderNextFlowSourceSelection() {
       <div class="wizard-actions">
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
         <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderEditableList(name, items) {
+  return (items || []).map((item, index) => `
+    <label class="editable-list-row">
+      <input data-follow-up-list="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="checkbox" checked>
+      <span>${escapeHtml(item)}</span>
+    </label>
+  `).join("") || `<div class="empty-state">No ${escapeHtml(name)} generated.</div>`;
+}
+
+function renderInheritedContextToggles(items) {
+  return (items || []).map((item) => `
+    <label class="inherited-context-toggle">
+      <input data-inherited-context="${escapeHtml(item.id)}" type="checkbox" ${item.enabled ? "checked" : ""}>
+      <span>
+        <strong>${escapeHtml(item.label)}</strong>
+        <small>${escapeHtml(item.detail)}</small>
+      </span>
+    </label>
+  `).join("");
+}
+
+function renderFollowUpDefinition() {
+  const wizard = state.nextFlowWizard;
+  if (wizard.followUpDraftLoading) {
+    return `<section class="surface next-flow-wizard"><div class="empty-state loading-state">Generating follow-up definition...</div></section>`;
+  }
+  if (wizard.followUpDraftError) {
+    return `<section class="surface next-flow-wizard"><div class="empty-state">Unable to generate follow-up definition: ${escapeHtml(wizard.followUpDraftError)}</div></section>`;
+  }
+  const draft = wizard.followUpDraft;
+  if (!draft) {
+    return `<section class="surface next-flow-wizard"><div class="empty-state">No follow-up definition generated.</div></section>`;
+  }
+  return `
+    <section class="surface next-flow-wizard follow-up-definition">
+      <div class="surface-title">
+        <span>Define Follow-up Work Item</span>
+        <span class="small-badge">editable draft</span>
+      </div>
+      <div class="wizard-context-grid">
+        <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
+        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(draft.source_work_item)}</span></div>
+        <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(draft.selected_sources.length)}</span></div>
+        <div class="panel-item"><strong>New work item</strong><span>${escapeHtml(draft.new_work_item)}</span></div>
+      </div>
+      <div class="follow-up-definition-grid">
+        <section class="definition-form">
+          <label class="form-field">
+            <span>Work item id</span>
+            <input data-follow-up-field="new_work_item" type="text" value="${escapeHtml(draft.new_work_item)}">
+          </label>
+          <label class="form-field">
+            <span>Title</span>
+            <input data-follow-up-field="title" type="text" value="${escapeHtml(draft.title)}">
+          </label>
+          <label class="form-field">
+            <span>First-stage input preview</span>
+            <textarea data-follow-up-field="first_stage_input_preview" rows="10">${escapeHtml(draft.first_stage_input_preview)}</textarea>
+          </label>
+        </section>
+        <aside class="definition-side">
+          <div class="surface-title">Acceptance criteria</div>
+          <div class="editable-list">${renderEditableList("acceptance_criteria", draft.acceptance_criteria)}</div>
+          <div class="surface-title compact">Required evidence</div>
+          <div class="editable-list">${renderEditableList("required_evidence", draft.required_evidence)}</div>
+          <div class="surface-title compact">Inherited context</div>
+          <div class="inherited-context-list">${renderInheritedContextToggles(draft.inherited_context)}</div>
+        </aside>
+      </div>
+      <div class="wizard-actions">
+        <button data-next-flow-back-to-sources type="button" class="secondary">Back to sources</button>
+        <button data-next-flow-confirm-preview type="button">Continue to preflight</button>
       </div>
     </section>
   `;
