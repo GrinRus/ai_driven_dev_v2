@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from aidd.core.operator_frontend_artifacts import (
@@ -10,15 +11,19 @@ from aidd.core.operator_frontend_artifacts import (
 from aidd.core.operator_frontend_common import validate_operator_stage
 from aidd.core.operator_frontend_models import (
     OperatorActivityEvent,
+    OperatorApprovalCounts,
     OperatorArtifactRef,
     OperatorBlocker,
     OperatorDashboardView,
     OperatorEvidenceRef,
     OperatorNextAction,
+    OperatorNextFlowRecommendation,
     OperatorPrimaryArtifact,
+    OperatorRepairCounts,
     OperatorRunSummary,
     OperatorStageRailItem,
     OperatorStageView,
+    OperatorTerminalRunHandoff,
 )
 from aidd.core.operator_frontend_questions import (
     resolve_operator_questions_view,
@@ -41,6 +46,12 @@ from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     load_stage_metadata,
     run_attempt_root,
+)
+from aidd.core.runtime_operator import (
+    OPERATOR_DECISIONS_FILENAME,
+    OPERATOR_REQUESTS_FILENAME,
+    load_operator_decisions,
+    load_operator_requests,
 )
 from aidd.core.stage_graph import StageAdvancementSummary, summarize_workflow_advancement
 from aidd.core.stage_paths import workspace_relative_path
@@ -78,6 +89,11 @@ _PRIMARY_ARTIFACT_KEYS: tuple[str, ...] = (
 _MAX_ACTIVITY_EVENTS = 24
 _MAX_RECENT_ARTIFACTS = 12
 _MAX_ARTIFACT_EXCERPT_CHARS = 6000
+_QA_VERDICT_PATTERN = re.compile(
+    r"\b(ready-with-risks|not-ready|ready)\b",
+    flags=re.IGNORECASE,
+)
+
 
 def _empty_run_summary(*, work_item: str) -> OperatorRunSummary:
     return OperatorRunSummary(
@@ -857,6 +873,273 @@ def _recent_artifacts(
     )
 
 
+def _read_qa_verdict(*, workspace_root: Path, work_item: str) -> str | None:
+    qa_report = workspace_root / "workitems" / work_item / "stages" / "qa" / "qa-report.md"
+    if not qa_report.exists():
+        return None
+    matched = _QA_VERDICT_PATTERN.search(
+        qa_report.read_text(encoding="utf-8", errors="replace")
+    )
+    return matched.group(1).lower() if matched is not None else None
+
+
+def _terminal_handoff_status(*, qa_stage_state: str, final_qa_status: str) -> str:
+    if qa_stage_state == StageState.SUCCEEDED.value:
+        if final_qa_status == "ready-with-risks":
+            return "completed-with-warning"
+        return "completed"
+    return qa_stage_state
+
+
+def _terminal_final_artifacts(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary,
+) -> tuple[OperatorArtifactRef, ...]:
+    try:
+        artifacts = resolve_run_artifacts_summary(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage="qa",
+            run_id=metadata.run_id,
+        )
+    except ValueError:
+        return ()
+
+    updated_at_utc = next(
+        (
+            stage_summary.updated_at_utc
+            for stage_summary in metadata.stages
+            if stage_summary.stage == "qa"
+        ),
+        metadata.updated_at_utc,
+    )
+    refs: list[OperatorArtifactRef] = []
+    for kind, entries in (("document", artifacts.documents), ("log", artifacts.logs)):
+        for key, path in entries.items():
+            byte_size = _artifact_size(
+                workspace_root=workspace_root,
+                relative_path=path,
+            )
+            if byte_size is None:
+                continue
+            refs.append(
+                OperatorArtifactRef(
+                    stage="qa",
+                    key=key,
+                    kind=kind,
+                    path=path,
+                    byte_size=byte_size,
+                    updated_at_utc=updated_at_utc,
+                )
+            )
+    return tuple(sorted(refs, key=lambda ref: (ref.kind, ref.key, ref.path)))
+
+
+def _terminal_repair_counts(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary,
+) -> OperatorRepairCounts:
+    attempts = 0
+    succeeded = 0
+    failed = 0
+    for stage in STAGES:
+        stage_metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=metadata.run_id,
+            stage=stage,
+        )
+        if stage_metadata is None:
+            continue
+        for entry in stage_metadata.repair_history:
+            if entry.trigger != "repair":
+                continue
+            attempts += 1
+            outcome = entry.outcome.lower()
+            if "fail" in outcome or "block" in outcome:
+                failed += 1
+            elif "pass" in outcome or "succeed" in outcome:
+                succeeded += 1
+    return OperatorRepairCounts(attempts=attempts, succeeded=succeeded, failed=failed)
+
+
+def _terminal_approval_counts(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary,
+) -> OperatorApprovalCounts:
+    requested = 0
+    approved = 0
+    denied = 0
+    cancelled = 0
+    pending = 0
+    for stage_summary in metadata.stages:
+        for attempt_number in range(1, stage_summary.attempt_count + 1):
+            attempt_path = run_attempt_root(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=metadata.run_id,
+                stage=stage_summary.stage,
+                attempt_number=attempt_number,
+            )
+            requests = load_operator_requests(attempt_path / OPERATOR_REQUESTS_FILENAME)
+            decisions = load_operator_decisions(attempt_path / OPERATOR_DECISIONS_FILENAME)
+            decisions_by_request_id = {decision.request_id: decision for decision in decisions}
+            requested += len(requests)
+            for request in requests:
+                decision = decisions_by_request_id.get(request.id)
+                if decision is None:
+                    pending += 1
+                elif decision.is_approval:
+                    approved += 1
+                elif decision.action.value == "deny":
+                    denied += 1
+                elif decision.action.value == "cancel":
+                    cancelled += 1
+    return OperatorApprovalCounts(
+        requested=requested,
+        approved=approved,
+        denied=denied,
+        cancelled=cancelled,
+        pending=pending,
+    )
+
+
+def _terminal_question_counts(
+    *,
+    workspace_root: Path,
+    work_item: str,
+) -> tuple[int, int]:
+    answered = 0
+    total = 0
+    for stage in STAGES:
+        questions = resolve_operator_questions_view(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
+        total += len(questions.questions)
+        answered += sum(1 for question in questions.questions if question.status == "resolved")
+    return answered, total
+
+
+def _next_flow_recommendations(
+    *,
+    status: str,
+    runtime_id: str,
+) -> tuple[OperatorNextFlowRecommendation, ...]:
+    if status == "completed":
+        follow_up_detail = "Create a scoped follow-up only when the operator selects new work."
+    else:
+        follow_up_detail = "Create a scoped follow-up from QA findings, blockers, or manual notes."
+    return (
+        OperatorNextFlowRecommendation(
+            action="create-new-work-item",
+            label="Create New Work Item",
+            detail="Start unrelated work without inheriting completed-run context.",
+            enabled=True,
+        ),
+        OperatorNextFlowRecommendation(
+            action="start-follow-up-flow",
+            label="Start Follow-up Flow",
+            detail=follow_up_detail,
+            enabled=True,
+        ),
+        OperatorNextFlowRecommendation(
+            action="clone-flow",
+            label="Clone This Flow",
+            detail=f"Reuse runtime `{runtime_id}` and configuration in a new run identity.",
+            enabled=True,
+        ),
+        OperatorNextFlowRecommendation(
+            action="run-eval-batch",
+            label="Run Eval / Scenario Batch",
+            detail="Use completed-run evidence for comparison without mutating the source run.",
+            enabled=True,
+        ),
+        OperatorNextFlowRecommendation(
+            action="archive-run",
+            label="Archive Run",
+            detail="Close the run for navigation while preserving read-only artifacts.",
+            enabled=True,
+        ),
+    )
+
+
+def _terminal_handoff(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary | None,
+    blockers: tuple[OperatorBlocker, ...],
+) -> OperatorTerminalRunHandoff | None:
+    if metadata is None:
+        return None
+    terminal_stage = _optional_manifest_stage(metadata.workflow_stage_end) or metadata.stage_target
+    if terminal_stage != "qa":
+        return None
+    try:
+        qa_result = resolve_stage_result_summary(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage="qa",
+            run_id=metadata.run_id,
+        )
+    except ValueError:
+        return None
+    if qa_result.final_state not in {
+        StageState.SUCCEEDED.value,
+        StageState.FAILED.value,
+        StageState.BLOCKED.value,
+    }:
+        return None
+
+    final_qa_status = (
+        _read_qa_verdict(workspace_root=workspace_root, work_item=work_item)
+        or qa_result.final_state
+    )
+    handoff_status = _terminal_handoff_status(
+        qa_stage_state=qa_result.final_state,
+        final_qa_status=final_qa_status,
+    )
+    questions_answered, questions_total = _terminal_question_counts(
+        workspace_root=workspace_root,
+        work_item=work_item,
+    )
+    return OperatorTerminalRunHandoff(
+        status=handoff_status,
+        final_qa_status=final_qa_status,
+        qa_stage_state=qa_result.final_state,
+        final_artifacts=_terminal_final_artifacts(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            metadata=metadata,
+        ),
+        blockers=blockers,
+        repair_counts=_terminal_repair_counts(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            metadata=metadata,
+        ),
+        approval_counts=_terminal_approval_counts(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            metadata=metadata,
+        ),
+        questions_answered_count=questions_answered,
+        questions_total_count=questions_total,
+        recommended_next_flow_actions=_next_flow_recommendations(
+            status=handoff_status,
+            runtime_id=metadata.runtime_id,
+        ),
+    )
+
+
 def resolve_operator_dashboard_view(
     *,
     workspace_root: Path,
@@ -909,6 +1192,11 @@ def resolve_operator_dashboard_view(
         work_item=work_item,
         run_id=metadata.run_id if metadata is not None else None,
     )
+    blockers = _blockers(
+        active_stage=active_stage,
+        active_stage_view=active_stage_view,
+        rail_by_stage=rail_by_stage,
+    )
     return OperatorDashboardView(
         work_item=work_item,
         workspace_root=workspace_root,
@@ -925,11 +1213,7 @@ def resolve_operator_dashboard_view(
             rail_by_stage=rail_by_stage,
             stages_with_operator_requests=stages_with_operator_requests,
         ),
-        blockers=_blockers(
-            active_stage=active_stage,
-            active_stage_view=active_stage_view,
-            rail_by_stage=rail_by_stage,
-        ),
+        blockers=blockers,
         evidence_refs=_evidence_refs(
             workspace_root=workspace_root,
             work_item=work_item,
@@ -945,6 +1229,12 @@ def resolve_operator_dashboard_view(
             workspace_root=workspace_root,
             work_item=work_item,
             metadata=metadata,
+        ),
+        terminal_handoff=_terminal_handoff(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            metadata=metadata,
+            blockers=blockers,
         ),
     )
 

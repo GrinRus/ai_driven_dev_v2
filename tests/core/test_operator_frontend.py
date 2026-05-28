@@ -26,11 +26,25 @@ from aidd.core.run_store import (
     run_attempt_root,
     run_attempt_runtime_log_path,
 )
+from aidd.core.runtime_operator import (
+    OPERATOR_DECISIONS_FILENAME,
+    OPERATOR_REQUESTS_FILENAME,
+    RuntimeOperatorDecision,
+    RuntimeOperatorRequest,
+    append_operator_decision,
+    append_operator_request,
+)
 from aidd.core.runtime_readiness import (
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
 )
 from aidd.core.stages import STAGES
+from aidd.runtime_permissions import (
+    RuntimeOperatorDecisionAction,
+    RuntimeOperatorDecisionSource,
+    RuntimeOperatorRequestKind,
+    RuntimeOperatorRisk,
+)
 
 
 def _prepare_run(workspace_root: Path) -> None:
@@ -80,6 +94,112 @@ def _write_questions(workspace_root: Path) -> None:
             )
         ),
         encoding="utf-8",
+    )
+
+
+def _prepare_terminal_qa_run(
+    workspace_root: Path,
+    *,
+    qa_stage_status: str = "succeeded",
+    qa_verdict: str = "ready",
+    validator_verdict: str = "pass",
+) -> None:
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="codex",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+        workflow_stage_start="idea",
+        workflow_stage_end="qa",
+    )
+    for stage in STAGES:
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+        )
+        status = qa_stage_status if stage == "qa" else "succeeded"
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            status=status,
+        )
+        stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / stage
+        stage_root.mkdir(parents=True, exist_ok=True)
+        stage_validator_verdict = validator_verdict if stage == "qa" else "pass"
+        stage_root.joinpath("validator-report.md").write_text(
+            f"# Validator Report\n\n- Verdict: `{stage_validator_verdict}`\n",
+            encoding="utf-8",
+        )
+        stage_root.joinpath("stage-result.md").write_text(
+            f"# Stage Result\n\n## Status\n\n- `{status}`\n",
+            encoding="utf-8",
+        )
+        run_attempt_runtime_log_path(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            attempt_number=1,
+        ).write_text(f"{stage} runtime log\n", encoding="utf-8")
+
+    qa_root = workspace_root / "workitems" / "WI-UI" / "stages" / "qa"
+    qa_root.joinpath("qa-report.md").write_text(
+        "\n".join(
+            (
+                "# QA Report",
+                "",
+                "## Verification summary",
+                "",
+                "- Verification completed.",
+                "",
+                "## Release recommendation",
+                "",
+                "- Release recommendation: `proceed`.",
+                "",
+                "## Evidence",
+                "",
+                "- EV-1 `workitems/WI-UI/stages/qa/stage-result.md`",
+                "",
+                "## Known issues",
+                "",
+                "- Known issues: none.",
+                "",
+                "## Readiness",
+                "",
+                f"- QA verdict: `{qa_verdict}`.",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_operator_approval(attempt_path: Path) -> None:
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="qa",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "uv run --extra dev pytest tests/core/test_operator_frontend.py"},
+        risk=RuntimeOperatorRisk.MEDIUM,
+    )
+    append_operator_request(
+        path=attempt_path / OPERATOR_REQUESTS_FILENAME,
+        request=request,
+    )
+    append_operator_decision(
+        path=attempt_path / OPERATOR_DECISIONS_FILENAME,
+        decision=RuntimeOperatorDecision(
+            request_id=request.id,
+            action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+            source=RuntimeOperatorDecisionSource.UI,
+            reason="approved in operator UI",
+        ),
     )
 
 
@@ -385,36 +505,40 @@ def test_operator_dashboard_reports_missing_prerequisite_blockers(
 
 def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
-    create_run_manifest(
+    _prepare_terminal_qa_run(workspace_root)
+    _write_questions(workspace_root)
+    persist_operator_answer(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        question_id="Q1",
+        text="The target release is 0.2.0.",
+    )
+    persist_repair_history_snapshot(
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
-        runtime_id="codex",
-        stage_target="qa",
-        config_snapshot={"mode": "test"},
-        workflow_stage_start="idea",
-        workflow_stage_end="qa",
+        stage="plan",
+        attempt_number=1,
+        trigger="repair",
+        outcome="succeeded",
+        stage_status="succeeded",
+        validator_report_path=(
+            workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "validator-report.md"
+        ),
+        repair_brief_path=(
+            workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "repair-brief.md"
+        ),
     )
-    for stage in STAGES:
-        create_next_attempt_directory(
+    _write_operator_approval(
+        run_attempt_root(
             workspace_root=workspace_root,
             work_item="WI-UI",
             run_id="run-ui",
-            stage=stage,
+            stage="qa",
+            attempt_number=1,
         )
-        persist_stage_status(
-            workspace_root=workspace_root,
-            work_item="WI-UI",
-            run_id="run-ui",
-            stage=stage,
-            status="succeeded",
-        )
-        stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / stage
-        stage_root.mkdir(parents=True, exist_ok=True)
-        stage_root.joinpath("validator-report.md").write_text(
-            "# Validator Report\n\n- Verdict: `pass`\n",
-            encoding="utf-8",
-        )
+    )
 
     dashboard = resolve_operator_dashboard_view(
         workspace_root=workspace_root,
@@ -425,6 +549,88 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
 
     assert dashboard.next_action.action == "review-complete"
     assert dashboard.next_action.enabled is True
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "completed"
+    assert dashboard.terminal_handoff.final_qa_status == "ready"
+    assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
+    assert dashboard.terminal_handoff.repair_counts.attempts == 1
+    assert dashboard.terminal_handoff.repair_counts.succeeded == 1
+    assert dashboard.terminal_handoff.approval_counts.requested == 1
+    assert dashboard.terminal_handoff.approval_counts.approved == 1
+    assert dashboard.terminal_handoff.questions_answered_count == 1
+    assert dashboard.terminal_handoff.questions_total_count == 2
+    assert {artifact.key for artifact in dashboard.terminal_handoff.final_artifacts} >= {
+        "qa_report",
+        "stage_result",
+        "validator_report",
+        "runtime_log",
+    }
+    assert {
+        action.action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+    } == {
+        "create-new-work-item",
+        "start-follow-up-flow",
+        "clone-flow",
+        "run-eval-batch",
+        "archive-run",
+    }
+
+
+def test_operator_dashboard_terminal_handoff_reports_failed_qa(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(
+        workspace_root,
+        qa_stage_status="failed",
+        qa_verdict="not-ready",
+        validator_verdict="fail",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "failed"
+    assert dashboard.terminal_handoff.final_qa_status == "not-ready"
+    assert dashboard.terminal_handoff.qa_stage_state == "failed"
+    assert any(blocker.kind == "validation" for blocker in dashboard.terminal_handoff.blockers)
+    follow_up = next(
+        action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        if action.action == "start-follow-up-flow"
+    )
+    assert follow_up.enabled is True
+    assert "blockers" in follow_up.detail
+
+
+def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(
+        workspace_root,
+        qa_stage_status="succeeded",
+        qa_verdict="ready-with-risks",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "completed-with-warning"
+    assert dashboard.terminal_handoff.final_qa_status == "ready-with-risks"
+    assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
+    assert dashboard.terminal_handoff.blockers == ()
 
 
 def test_operator_read_models_expose_run_stage_logs_artifacts_and_questions(

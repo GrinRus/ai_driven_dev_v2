@@ -6414,7 +6414,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E1-S1-T1` Add a terminal-run handoff read model that exposes final QA status,
+- `W26-E1-S1-T1` (done) Add a terminal-run handoff read model that exposes final QA status,
   final artifacts, blockers, repair counts, approval counts, questions answered, and
   recommended next-flow actions.
   - Scope: core operator frontend read models only.

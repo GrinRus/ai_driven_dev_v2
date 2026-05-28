@@ -144,6 +144,44 @@ class OperatorPrimaryArtifact:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorRepairCounts:
+    attempts: int
+    succeeded: int
+    failed: int
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorApprovalCounts:
+    requested: int
+    approved: int
+    denied: int
+    cancelled: int
+    pending: int
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorNextFlowRecommendation:
+    action: str
+    label: str
+    detail: str
+    enabled: bool
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorTerminalRunHandoff:
+    status: str
+    final_qa_status: str
+    qa_stage_state: str
+    final_artifacts: tuple[OperatorArtifactRef, ...]
+    blockers: tuple[OperatorBlocker, ...]
+    repair_counts: OperatorRepairCounts
+    approval_counts: OperatorApprovalCounts
+    questions_answered_count: int
+    questions_total_count: int
+    recommended_next_flow_actions: tuple[OperatorNextFlowRecommendation, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorArtifactDocumentView:
     run_id: str
     stage: str
@@ -178,22 +216,27 @@ class OperatorDashboardView:
     evidence_refs: tuple[OperatorEvidenceRef, ...]
     activity: tuple[OperatorActivityEvent, ...]
     recent_artifacts: tuple[OperatorArtifactRef, ...]
+    terminal_handoff: OperatorTerminalRunHandoff | None
 
 
 __all__ = [
     "OperatorActivityEvent",
+    "OperatorApprovalCounts",
     "OperatorArtifactDocumentView",
     "OperatorArtifactRef",
     "OperatorBlocker",
     "OperatorDashboardView",
     "OperatorEvidenceRef",
     "OperatorNextAction",
+    "OperatorNextFlowRecommendation",
     "OperatorPrimaryArtifact",
     "OperatorQuestionView",
     "OperatorQuestionsView",
+    "OperatorRepairCounts",
     "OperatorRunLogView",
     "OperatorRunSummary",
     "OperatorRunView",
     "OperatorStageRailItem",
     "OperatorStageView",
+    "OperatorTerminalRunHandoff",
 ]

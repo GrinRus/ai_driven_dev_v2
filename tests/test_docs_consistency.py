@@ -400,13 +400,14 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
 
     assert "## Wave 26 — completed-flow lineage operator experience (`next`)" in roadmap
     assert "`W26-E0-S1-T1` (done)" in w26
-    assert "`W26-E1-S1-T1` Add a terminal-run handoff read model" in w26
+    assert "`W26-E1-S1-T1` (done) Add a terminal-run handoff read model" in w26
     assert (
         "`W26-E4-S2-T1` Define the manual live E2E next-flow checkpoint policy"
         in w26
     )
-    assert "`W26-E1-S1-T1`" in backlog_next
-    assert "`W26-E1-S1-T2`" in backlog_soon
+    assert "`W26-E1-S1-T2`" in backlog_next
+    assert "`W26-E1-S1-T1`" not in backlog_next
+    assert "`W26-E1-S1-T2`" not in backlog_soon
     assert "`W26-E1-S2-T1`" in backlog_soon
     assert "`W26-E2-S0-T1`" in backlog_soon
     assert "`W26-E2-S0-T2`" in backlog_soon
