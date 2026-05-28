@@ -51,6 +51,10 @@ class FollowUpDraftRequest:
     new_work_item: str
     title: str
     selections: tuple[FollowUpSourceSelection, ...]
+    first_stage_input: str | None = None
+    acceptance_criteria: tuple[str, ...] = ()
+    required_evidence: tuple[str, ...] = ()
+    inherited_context: tuple[str, ...] = ()
     project_root: Path | None = None
 
 
@@ -147,16 +151,32 @@ def create_follow_up_work_item_draft(request: FollowUpDraftRequest) -> FollowUpD
         )
         for selection in request.selections
     )
+    normalized_first_stage_input = _optional_follow_up_text(
+        request.first_stage_input,
+        field_name="first_stage_input",
+    ) or _follow_up_user_request_text(
+        title=normalized_title,
+        source_work_item=normalized_source_work_item,
+        source_run_id=normalized_source_run,
+    )
+    normalized_acceptance_criteria = _normalized_follow_up_lines(
+        request.acceptance_criteria,
+        field_name="acceptance_criteria",
+    )
+    normalized_required_evidence = _normalized_follow_up_lines(
+        request.required_evidence,
+        field_name="required_evidence",
+    )
+    normalized_inherited_context = _normalized_follow_up_lines(
+        request.inherited_context,
+        field_name="inherited_context",
+    )
 
     init_workspace(root=request.workspace_root, work_item=normalized_new_work_item)
     context_seed = seed_work_item_context(
         root=request.workspace_root,
         work_item=normalized_new_work_item,
-        request_text=_follow_up_user_request_text(
-            title=normalized_title,
-            source_work_item=normalized_source_work_item,
-            source_run_id=normalized_source_run,
-        ),
+        request_text=normalized_first_stage_input,
         project_root=request.project_root,
     )
 
@@ -171,6 +191,9 @@ def create_follow_up_work_item_draft(request: FollowUpDraftRequest) -> FollowUpD
             source_work_item=normalized_source_work_item,
             source_run_id=normalized_source_run,
             selections=normalized_selections,
+            acceptance_criteria=normalized_acceptance_criteria,
+            required_evidence=normalized_required_evidence,
+            inherited_context=normalized_inherited_context,
         ),
         encoding="utf-8",
     )
@@ -331,6 +354,33 @@ def _required_preflight_text(value: str, *, field_name: str) -> str:
     if not normalized:
         raise ValueError(f"Next-flow launch preflight {field_name} is required.")
     return normalized
+
+
+def _optional_follow_up_text(value: str | None, *, field_name: str) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"Follow-up draft {field_name} is required when provided.")
+    return normalized
+
+
+def _normalized_follow_up_lines(
+    values: tuple[str, ...],
+    *,
+    field_name: str,
+) -> tuple[str, ...]:
+    normalized: list[str] = []
+    for index, value in enumerate(values, 1):
+        text = value.strip()
+        if not text:
+            continue
+        if "\x00" in text:
+            raise ValueError(
+                f"Follow-up draft {field_name}[{index}] contains an invalid NUL byte."
+            )
+        normalized.append(text)
+    return tuple(normalized)
 
 
 def _workspace_writable_check(workspace_root: Path) -> NextFlowLaunchPreflightCheck:
@@ -630,6 +680,9 @@ def _render_follow_up_request_markdown(
     source_work_item: str,
     source_run_id: str,
     selections: tuple[FollowUpSourceSelection, ...],
+    acceptance_criteria: tuple[str, ...],
+    required_evidence: tuple[str, ...],
+    inherited_context: tuple[str, ...],
 ) -> str:
     lines = [
         "# Follow-up work item request",
@@ -644,9 +697,40 @@ def _render_follow_up_request_markdown(
         "",
         f"- {title}",
         "",
-        "## Selected source findings",
-        "",
     ]
+    if acceptance_criteria:
+        lines.extend(
+            [
+                "## Acceptance criteria",
+                "",
+            ]
+        )
+        lines.extend(f"- {criterion}" for criterion in acceptance_criteria)
+        lines.append("")
+    if required_evidence:
+        lines.extend(
+            [
+                "## Required evidence",
+                "",
+            ]
+        )
+        lines.extend(f"- {evidence}" for evidence in required_evidence)
+        lines.append("")
+    if inherited_context:
+        lines.extend(
+            [
+                "## Inherited context requested",
+                "",
+            ]
+        )
+        lines.extend(f"- {context}" for context in inherited_context)
+        lines.append("")
+    lines.extend(
+        [
+            "## Selected source findings",
+            "",
+        ]
+    )
     for index, selection in enumerate(selections, 1):
         lines.extend(
             [

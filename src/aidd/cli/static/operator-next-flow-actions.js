@@ -655,6 +655,48 @@ async function loadLaunchConfirmation() {
   }
 }
 
+function selectedFollowUpListValues(name, fallbackItems = []) {
+  const controls = Array.from(document.querySelectorAll("[data-follow-up-list]"))
+    .filter((control) => control.dataset.followUpList === name);
+  if (!controls.length) return fallbackItems || [];
+  return controls
+    .filter((control) => control.checked)
+    .map((control) => {
+      const index = Number(control.dataset.followUpIndex);
+      const textControl = Array.from(document.querySelectorAll("[data-follow-up-list-text]"))
+        .find((candidate) => (
+          candidate.dataset.followUpListText === name
+          && Number(candidate.dataset.followUpIndex) === index
+        ));
+      return textControl?.value || fallbackItems[index];
+    })
+    .filter((value) => String(value || "").trim());
+}
+
+function inheritedContextLinesFromItems(items = []) {
+  return (items || [])
+    .map((item) => {
+      const label = String(item?.label || "").trim();
+      const detail = String(item?.detail || "").trim();
+      if (!label) return "";
+      return detail ? `${label}: ${detail}` : label;
+    })
+    .filter(Boolean);
+}
+
+function selectedInheritedContextLines(items = [], fallbackLines = null) {
+  const controls = Array.from(document.querySelectorAll("[data-inherited-context]"));
+  if (!controls.length) return fallbackLines || inheritedContextLinesFromItems(items);
+  const selectedIds = new Set(
+    controls
+      .filter((control) => control.checked)
+      .map((control) => control.dataset.inheritedContext)
+  );
+  return inheritedContextLinesFromItems(
+    (items || []).filter((item) => selectedIds.has(String(item?.id || "")))
+  );
+}
+
 function readFollowUpDraftForm() {
   const draft = state.nextFlowWizard.followUpDraft;
   if (!draft || state.nextFlowWizard.action !== "start-follow-up-flow") return draft;
@@ -664,6 +706,9 @@ function readFollowUpDraftForm() {
   if (newWorkItem) draft.new_work_item = newWorkItem;
   if (title) draft.title = title;
   if (preview !== undefined) draft.first_stage_input_preview = preview;
+  draft.acceptance_criteria = selectedFollowUpListValues("acceptance_criteria", draft.acceptance_criteria);
+  draft.required_evidence = selectedFollowUpListValues("required_evidence", draft.required_evidence);
+  draft.inherited_context_lines = selectedInheritedContextLines(draft.inherited_context, draft.inherited_context_lines);
   return draft;
 }
 
@@ -674,7 +719,11 @@ async function createFollowUpDraftForLaunch(draft) {
     source_run_id: draft.source_run_id,
     selected_source_ids: state.nextFlowWizard.selectedSourceIds,
     new_work_item: draft.new_work_item,
-    title: draft.title
+    title: draft.title,
+    first_stage_input: draft.first_stage_input_preview,
+    acceptance_criteria: draft.acceptance_criteria || [],
+    required_evidence: draft.required_evidence || [],
+    inherited_context: draft.inherited_context_lines || inheritedContextLinesFromItems(draft.inherited_context)
   });
   state.nextFlowWizard.createdDraft = payload.created;
   return payload.created;
@@ -919,23 +968,39 @@ function renderPreflightChecks(preflight) {
   `).join("") || `<div class="empty-state">No preflight checks returned.</div>`;
 }
 
-function renderLaunchSourceLinks(draft) {
-  return (draft?.selected_sources || []).map((item) => `
+function renderLaunchSourceLink(item) {
+  if (!item.source_path) {
+    return `
+      <div class="panel-item manual-source-row">
+        <strong>${escapeHtml(item.title)}</strong>
+        <span>${escapeHtml(item.detail || "Manual request text is captured in the follow-up request context.")}</span>
+      </div>
+    `;
+  }
+  return `
     <button class="artifact-row" data-artifact-stage="${escapeHtml(item.stage)}" data-artifact-key="${escapeHtml(item.artifact_key)}" data-artifact-kind="${escapeHtml(item.artifact_kind)}" type="button">
-      <span><strong>${escapeHtml(item.title)}</strong>${pathLine(item.source_path || item.detail, 76)}</span>
+      <span><strong>${escapeHtml(item.title)}</strong>${pathLine(item.source_path, 76)}</span>
       <span class="small-badge">${escapeHtml(item.kind)}</span>
     </button>
-  `).join("") || `<div class="empty-state">No source artifact links selected.</div>`;
+  `;
+}
+
+function renderLaunchSourceLinks(draft) {
+  return (draft?.selected_sources || []).map((item) => renderLaunchSourceLink(item)).join("")
+    || `<div class="empty-state">No source links selected.</div>`;
 }
 
 function renderAuditPreview(draft, preflight) {
+  const sources = draft.selected_sources || [];
+  const artifactLinks = sources.filter((item) => item.source_path).length;
   return `
     <div class="audit-preview">
       <div class="panel-item"><strong>New work item</strong><span>${escapeHtml(draft.new_work_item)}</span></div>
       <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
       <div class="panel-item"><strong>Runtime</strong><span>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "not selected")}</span></div>
       <div class="panel-item"><strong>Resolved baseline</strong><span>${escapeHtml(preflight?.resolved_baseline_id || "not resolved")}</span></div>
-      <div class="panel-item"><strong>Selected source links</strong><span>${escapeHtml(draft.selected_sources.length)}</span></div>
+      <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(sources.length)}</span></div>
+      <div class="panel-item"><strong>Source artifact links</strong><span>${escapeHtml(artifactLinks)}</span></div>
     </div>
   `;
 }
@@ -982,10 +1047,10 @@ function renderLaunchConfirmation() {
 
 function renderEditableList(name, items) {
   return (items || []).map((item, index) => `
-    <label class="editable-list-row">
-      <input data-follow-up-list="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="checkbox" checked>
-      <span>${escapeHtml(item)}</span>
-    </label>
+    <div class="editable-list-row">
+      <input data-follow-up-list="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="checkbox" checked aria-label="Include ${escapeHtml(item)}">
+      <input data-follow-up-list-text="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="text" value="${escapeHtml(item)}">
+    </div>
   `).join("") || `<div class="empty-state">No ${escapeHtml(name)} generated.</div>`;
 }
 

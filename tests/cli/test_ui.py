@@ -837,6 +837,13 @@ def test_ui_next_flow_follow_up_draft_create_endpoint_writes_core_draft(
             "new_work_item": "WI-UI-FOLLOW-UP",
             "title": "Fix QA follow-up from UI",
             "selected_source_ids": ["qa-finding:qa:qa_report"],
+            "first_stage_input": (
+                "# Edited UI follow-up\n\n"
+                "Persist this edited first-stage input before launch."
+            ),
+            "acceptance_criteria": ["Edited UI acceptance criterion"],
+            "required_evidence": ["Edited UI evidence bundle"],
+            "inherited_context": ["Source run lineage: run-ui"],
         },
     )
 
@@ -845,12 +852,28 @@ def test_ui_next_flow_follow_up_draft_create_endpoint_writes_core_draft(
     draft = payload["draft"]
     created = payload["created"]
     assert draft["title"] == "Fix QA follow-up from UI"
+    assert draft["acceptance_criteria"] == ["Edited UI acceptance criterion"]
+    assert draft["required_evidence"] == ["Edited UI evidence bundle"]
+    assert draft["inherited_context_lines"] == ["Source run lineage: run-ui"]
+    assert "Persist this edited first-stage input" in draft["first_stage_input_preview"]
     assert created["work_item"] == "WI-UI-FOLLOW-UP"
     assert created["request_path"] == (
         "workitems/WI-UI-FOLLOW-UP/context/follow-up-request.md"
     )
     request_path = workspace_root / created["request_path"]
     assert request_path.exists()
+    request_text = request_path.read_text(encoding="utf-8")
+    user_request_text = (
+        workspace_root
+        / "workitems"
+        / "WI-UI-FOLLOW-UP"
+        / "context"
+        / "user-request.md"
+    ).read_text(encoding="utf-8")
+    assert "Persist this edited first-stage input before launch." in user_request_text
+    assert "Edited UI acceptance criterion" in request_text
+    assert "Edited UI evidence bundle" in request_text
+    assert "Source run lineage: run-ui" in request_text
     assert "`workitems/WI-UI/stages/qa/qa-report.md`" in request_path.read_text(
         encoding="utf-8"
     )
@@ -900,6 +923,14 @@ def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
         "/api/next-flow/follow-up-draft/create",
         {"source_run_id": "run-ui", "selected_source_ids": "qa-finding:qa:qa_report"},
     )
+    malformed_editable_fields = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+            "acceptance_criteria": "not-a-list",
+        },
+    )
     manual_without_artifact = service.handle_post(
         "/api/next-flow/follow-up-draft/create",
         {
@@ -917,6 +948,10 @@ def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
     assert malformed_follow_up.status == HTTPStatus.BAD_REQUEST
     assert _error_payload(malformed_follow_up)["error"] == (
         "selected_source_ids must be a list."
+    )
+    assert malformed_editable_fields.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(malformed_editable_fields)["error"] == (
+        "acceptance_criteria must be a list."
     )
     assert manual_without_artifact.status == HTTPStatus.CREATED
     manual_payload = json.loads(manual_without_artifact.body.decode("utf-8"))

@@ -494,6 +494,37 @@ def _text_from_payload(
     return value
 
 
+def _optional_text_from_payload(payload: dict[str, Any], name: str) -> str | None:
+    raw_value = payload.get(name)
+    if raw_value is None:
+        return None
+    if not isinstance(raw_value, str):
+        raise ValueError(f"{name} must be a string.")
+    value = raw_value.strip()
+    if not value:
+        raise ValueError(f"{name} is required when provided.")
+    return value
+
+
+def _optional_string_tuple_from_payload(
+    payload: dict[str, Any],
+    name: str,
+) -> tuple[str, ...] | None:
+    raw_values = payload.get(name)
+    if raw_values is None:
+        return None
+    if not isinstance(raw_values, list):
+        raise ValueError(f"{name} must be a list.")
+    values: list[str] = []
+    for index, item in enumerate(raw_values, 1):
+        if not isinstance(item, str):
+            raise ValueError(f"{name}[{index}] must be a string.")
+        normalized = item.strip()
+        if normalized:
+            values.append(normalized)
+    return tuple(values)
+
+
 def _contracts_root_from_payload(payload: dict[str, Any]) -> Path:
     raw_contracts_root = payload.get("contracts_root")
     if raw_contracts_root is None:
@@ -848,6 +879,38 @@ def _follow_up_creation_payload(
             ),
         },
     }
+
+
+def _draft_string_tuple(
+    draft: Mapping[str, object],
+    name: str,
+) -> tuple[str, ...]:
+    raw_values = draft.get(name, ())
+    if not isinstance(raw_values, (list, tuple)):
+        return ()
+    values: list[str] = []
+    for item in raw_values:
+        normalized = str(item).strip()
+        if normalized:
+            values.append(normalized)
+    return tuple(values)
+
+
+def _draft_inherited_context_lines(draft: Mapping[str, object]) -> tuple[str, ...]:
+    raw_values = draft.get("inherited_context", ())
+    if not isinstance(raw_values, (list, tuple)):
+        return ()
+    lines: list[str] = []
+    for item in raw_values:
+        if not isinstance(item, Mapping):
+            continue
+        label = str(item.get("label") or "").strip()
+        detail = str(item.get("detail") or "").strip()
+        if label and detail:
+            lines.append(f"{label}: {detail}")
+        elif label:
+            lines.append(label)
+    return tuple(lines)
 
 
 def _clone_creation_payload(
@@ -1692,6 +1755,42 @@ class OperatorUiService:
             tuple[dict[str, object], ...],
             draft["selected_sources"],
         )
+        first_stage_input = (
+            _optional_text_from_payload(payload, "first_stage_input")
+            or _optional_text_from_payload(payload, "first_stage_input_preview")
+            or str(draft["first_stage_input_preview"]).strip()
+        )
+        acceptance_criteria = _optional_string_tuple_from_payload(
+            payload,
+            "acceptance_criteria",
+        )
+        required_evidence = _optional_string_tuple_from_payload(
+            payload,
+            "required_evidence",
+        )
+        inherited_context = _optional_string_tuple_from_payload(
+            payload,
+            "inherited_context",
+        )
+        resolved_acceptance_criteria = (
+            acceptance_criteria
+            if acceptance_criteria is not None
+            else _draft_string_tuple(draft, "acceptance_criteria")
+        )
+        resolved_required_evidence = (
+            required_evidence
+            if required_evidence is not None
+            else _draft_string_tuple(draft, "required_evidence")
+        )
+        resolved_inherited_context = (
+            inherited_context
+            if inherited_context is not None
+            else _draft_inherited_context_lines(draft)
+        )
+        draft["first_stage_input_preview"] = first_stage_input
+        draft["acceptance_criteria"] = resolved_acceptance_criteria
+        draft["required_evidence"] = resolved_required_evidence
+        draft["inherited_context_lines"] = resolved_inherited_context
         result = create_follow_up_work_item_draft(
             FollowUpDraftRequest(
                 workspace_root=self.workspace_root,
@@ -1700,6 +1799,10 @@ class OperatorUiService:
                 new_work_item=str(draft["new_work_item"]),
                 title=str(draft["title"]),
                 selections=_follow_up_source_selections_from_items(selected_sources),
+                first_stage_input=first_stage_input,
+                acceptance_criteria=resolved_acceptance_criteria,
+                required_evidence=resolved_required_evidence,
+                inherited_context=resolved_inherited_context,
                 project_root=Path.cwd(),
             )
         )

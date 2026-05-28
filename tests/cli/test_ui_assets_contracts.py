@@ -168,6 +168,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".evidence-screen-stack" in components
     assert ".evidence-workbench-grid" in components
     assert ".follow-up-definition-grid" in components
+    assert '.editable-list-row input[type="text"]' in components
     assert ".inherited-context-toggle" in components
     assert ".launch-confirmation-grid" in components
     assert ".preflight-check" in components
@@ -586,6 +587,12 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "async function openCloneFlowDraft()",
             "function renderNewWorkItemHandoff()",
             "function renderEvalBatchHandoff()",
+            "function selectedFollowUpListValues(name, fallbackItems = [])",
+            'document.querySelectorAll("[data-follow-up-list-text]")',
+            "textControl?.value || fallbackItems[index]",
+            "function inheritedContextLinesFromItems(items = [])",
+            "function selectedInheritedContextLines(items = [], fallbackLines = null)",
+            "function renderLaunchSourceLink(item)",
             'result.status === "blocked"',
             "wizard.preflightError = result.error",
             "async function loadFollowUpDraft()",
@@ -595,6 +602,7 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Audit preview",
             "Launch Flow Now",
             "data-follow-up-field",
+            "data-follow-up-list-text",
             "data-inherited-context",
             "data-next-flow-back-to-sources",
             "data-next-flow-confirm-preview",
@@ -641,6 +649,10 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             'postJson("/api/next-flow/clone-draft/create", {',
             'postJson("/api/next-flow/launch", {',
             'postJson("/api/next-flow/archive", {',
+            "first_stage_input: draft.first_stage_input_preview",
+            "acceptance_criteria: draft.acceptance_criteria || []",
+            "required_evidence: draft.required_evidence || []",
+            "inherited_context: draft.inherited_context_lines",
             "Run archived for operator navigation.",
         ),
     )
@@ -745,6 +757,8 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "Preflight results",
             "Audit preview",
             "Source artifact links",
+            "manual-source-row",
+            "No source links selected.",
             "Preflight blocked",
             "Running launch preflight...",
         ),

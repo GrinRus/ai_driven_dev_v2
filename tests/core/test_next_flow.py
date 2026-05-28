@@ -52,14 +52,26 @@ def test_create_follow_up_work_item_draft_writes_durable_context_with_references
                     note="Add mobile viewport proof before launch.",
                 ),
             ),
+            first_stage_input=(
+                "# Fix risky mobile QA gap\n\n"
+                "Carry the edited first-stage input into the child work item."
+            ),
+            acceptance_criteria=("Edited acceptance criteria survives launch.",),
+            required_evidence=("Edited required evidence survives launch.",),
+            inherited_context=("Source run lineage: run-source",),
         )
     )
 
     request_text = result.request_path.read_text(encoding="utf-8")
+    user_request_text = result.context_seed.user_request_path.read_text(encoding="utf-8")
     assert result.work_item == "WI-FOLLOW-UP"
     assert result.source_artifact_paths == (
         "workitems/WI-SOURCE/stages/qa/qa-report.md",
     )
+    assert "Carry the edited first-stage input into the child work item." in user_request_text
+    assert "Edited acceptance criteria survives launch." in request_text
+    assert "Edited required evidence survives launch." in request_text
+    assert "Source run lineage: run-source" in request_text
     assert "QAF-1 Mobile viewport evidence is missing" in request_text
     assert "Add mobile viewport proof before launch." in request_text
     assert "`workitems/WI-SOURCE/stages/qa/qa-report.md`" in request_text
