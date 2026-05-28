@@ -3,6 +3,7 @@ from __future__ import annotations
 from aidd.core.operator_frontend_artifacts import (
     resolve_operator_artifact_document_content,
     resolve_operator_artifacts_view,
+    resolve_operator_stage_document_workbench,
 )
 from aidd.core.operator_frontend_dashboard import resolve_operator_dashboard_view
 from aidd.core.operator_frontend_logs import (
@@ -28,8 +29,15 @@ from aidd.core.operator_frontend_models import (
     OperatorRunLogView,
     OperatorRunSummary,
     OperatorRunView,
+    OperatorStageDocumentDiffInput,
+    OperatorStageDocumentReference,
+    OperatorStageDocumentRequirement,
+    OperatorStageDocumentValidationResult,
+    OperatorStageDocumentVersion,
+    OperatorStageDocumentWorkbench,
     OperatorStageRailItem,
     OperatorStageView,
+    OperatorStageWorkbenchDocument,
     OperatorTerminalRunHandoff,
 )
 from aidd.core.operator_frontend_questions import (
@@ -58,6 +66,13 @@ __all__ = [
     "OperatorRunSummary",
     "OperatorRunView",
     "OperatorStageRailItem",
+    "OperatorStageDocumentDiffInput",
+    "OperatorStageDocumentReference",
+    "OperatorStageDocumentRequirement",
+    "OperatorStageDocumentValidationResult",
+    "OperatorStageDocumentVersion",
+    "OperatorStageDocumentWorkbench",
+    "OperatorStageWorkbenchDocument",
     "OperatorStageView",
     "OperatorTerminalRunHandoff",
     "persist_operator_answer",
@@ -67,5 +82,6 @@ __all__ = [
     "resolve_operator_questions_view",
     "resolve_operator_run_log_view",
     "resolve_operator_run_view",
+    "resolve_operator_stage_document_workbench",
     "resolve_operator_stage_view",
 ]

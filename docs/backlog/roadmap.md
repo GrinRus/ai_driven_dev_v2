@@ -6503,7 +6503,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E1-S3-T1` Add a stage document workbench read model for Markdown preview/source
+- `W26-E1-S3-T1` (done) Add a stage document workbench read model for Markdown preview/source
   metadata, available diff inputs, contract requirements, validation results, references,
   and version or model-authored change history when present.
   - Scope: core operator frontend document/artifact read models only.

@@ -15,6 +15,7 @@ from aidd.core.operator_frontend import (
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
     resolve_operator_run_view,
+    resolve_operator_stage_document_workbench,
     resolve_operator_stage_view,
 )
 from aidd.core.operator_intervention import persist_operator_intervention_request
@@ -96,6 +97,62 @@ def _write_questions(workspace_root: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def _write_valid_plan_outputs(workspace_root: Path, *, body_suffix: str = "") -> Path:
+    stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    plan_path = stage_root / "plan.md"
+    plan_path.write_text(
+        "\n".join(
+            (
+                "# Plan",
+                "",
+                "## Goals",
+                "",
+                "- Ship the operator workbench.",
+                "",
+                "## Out of scope",
+                "",
+                "- No runtime mutation.",
+                "",
+                "## Milestones",
+                "",
+                "- Add a read model.",
+                "",
+                "## Implementation strategy",
+                "",
+                "- Read existing artifacts only.",
+                "",
+                "## Risks",
+                "",
+                "- Truncated files can hide headings; mark unknown.",
+                "",
+                "## Dependencies",
+                "",
+                "- Existing artifact index.",
+                "",
+                "## Verification approach",
+                "",
+                "- Run core read-model tests.",
+                "",
+                "## Verification notes",
+                "",
+                "- Check present, missing, truncated, and invalid documents.",
+                body_suffix,
+            )
+        ),
+        encoding="utf-8",
+    )
+    stage_root.joinpath("stage-result.md").write_text(
+        "# Stage Result\n\n## Status\n\n- `blocked`\n",
+        encoding="utf-8",
+    )
+    stage_root.joinpath("validator-report.md").write_text(
+        "# Validator Report\n\n- Verdict: `pass`\n",
+        encoding="utf-8",
+    )
+    return plan_path
 
 
 def _prepare_terminal_qa_run(
@@ -835,6 +892,177 @@ def test_operator_artifact_document_content_returns_bounded_text_with_metadata(
     assert source.mode == "source"
     assert source.requested_bytes == 64
     assert source.end_byte == 64
+
+
+def test_operator_stage_document_workbench_returns_present_markdown_contract_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_valid_plan_outputs(workspace_root)
+
+    workbench = resolve_operator_stage_document_workbench(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        key="plan",
+        run_id="run-ui",
+        attempt_number=1,
+    )
+
+    assert workbench.document.status == "present"
+    assert workbench.document.preview is not None
+    assert workbench.document.preview.mode == "preview"
+    assert workbench.document.source is not None
+    assert workbench.document.source.mode == "source"
+    assert "Ship the operator workbench" in workbench.document.preview.text
+    requirements = {(item.kind, item.label): item for item in workbench.requirements}
+    assert requirements[("required-output", "plan.md")].status == "satisfied"
+    assert requirements[("required-section", "Goals")].status == "satisfied"
+    assert requirements[("required-section", "Verification notes")].status == "satisfied"
+    validation = {item.label: item for item in workbench.validation_results}
+    assert validation["validator-report"].status == "pass"
+    assert validation["stage-result"].status == "blocked"
+    assert any(
+        ref.kind == "document" and ref.label == "validator_report"
+        for ref in workbench.references
+    )
+    assert any(
+        item.kind == "current-document" and item.key == "stage_result"
+        for item in workbench.diff_inputs
+    )
+    assert [(version.attempt_number, version.source) for version in workbench.versions] == [
+        (1, "model-authored")
+    ]
+
+
+def test_operator_stage_document_workbench_reports_missing_required_document(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+
+    workbench = resolve_operator_stage_document_workbench(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        key="plan",
+        run_id="run-ui",
+        attempt_number=1,
+    )
+
+    assert workbench.document.status == "missing"
+    assert workbench.document.preview is None
+    assert workbench.document.source is None
+    assert "does not exist" in str(workbench.document.message)
+    requirements = {(item.kind, item.label): item for item in workbench.requirements}
+    assert requirements[("required-output", "plan.md")].status == "missing"
+    assert requirements[("required-section", "Goals")].status == "unknown"
+
+
+def test_operator_stage_document_workbench_reports_truncated_large_document(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_valid_plan_outputs(workspace_root, body_suffix="\n" + ("large-line\n" * 256))
+
+    workbench = resolve_operator_stage_document_workbench(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        key="plan",
+        run_id="run-ui",
+        attempt_number=1,
+        preview_limit_bytes=64,
+        source_limit_bytes=96,
+    )
+
+    assert workbench.document.status == "present"
+    assert workbench.document.preview is not None
+    assert workbench.document.preview.truncated is True
+    assert workbench.document.preview.truncated_tail is True
+    assert workbench.document.source is not None
+    assert workbench.document.source.requested_bytes == 96
+    assert workbench.document.source.truncated_tail is True
+    requirements = {(item.kind, item.label): item for item in workbench.requirements}
+    assert requirements[("required-section", "Goals")].status == "satisfied"
+    assert requirements[("required-section", "Verification notes")].status == "unknown"
+
+
+def test_operator_stage_document_workbench_reports_invalid_utf8_without_mutating_artifact(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_bytes = b"\xff\xfe\x00"
+    plan_path.write_bytes(raw_bytes)
+
+    workbench = resolve_operator_stage_document_workbench(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        key="plan",
+        run_id="run-ui",
+        attempt_number=1,
+    )
+
+    assert workbench.document.status == "invalid"
+    assert workbench.document.byte_size == len(raw_bytes)
+    assert "not UTF-8 text" in str(workbench.document.message)
+    assert workbench.document.preview is None
+    assert workbench.document.source is None
+    assert plan_path.read_bytes() == raw_bytes
+
+
+def test_operator_stage_document_workbench_lists_previous_attempt_diff_and_versions(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_valid_plan_outputs(workspace_root)
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=2,
+        trigger="repair",
+        outcome="succeeded",
+        stage_status="blocked",
+        validator_report_path=(
+            workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "validator-report.md"
+        ),
+        repair_brief_path=(
+            workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "repair-brief.md"
+        ),
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+    )
+
+    workbench = resolve_operator_stage_document_workbench(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        key="plan",
+        run_id="run-ui",
+        attempt_number=2,
+    )
+
+    assert any(
+        item.kind == "previous-version" and item.attempt_number == 1
+        for item in workbench.diff_inputs
+    )
+    assert [(version.attempt_number, version.source) for version in workbench.versions] == [
+        (1, "model-authored"),
+        (2, "repair"),
+    ]
 
 
 def test_operator_artifacts_view_exposes_project_set_context(tmp_path: Path) -> None:

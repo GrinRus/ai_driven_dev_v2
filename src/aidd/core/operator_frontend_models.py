@@ -220,6 +220,77 @@ class OperatorArtifactDocumentView:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorStageWorkbenchDocument:
+    key: str
+    path: str
+    status: str
+    message: str | None
+    content_type: str | None
+    byte_size: int | None
+    preview: OperatorArtifactDocumentView | None
+    source: OperatorArtifactDocumentView | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorStageDocumentRequirement:
+    kind: str
+    label: str
+    path: str | None
+    status: str
+    source: str
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorStageDocumentValidationResult:
+    label: str
+    status: str
+    path: str | None
+    detail: str
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorStageDocumentReference:
+    label: str
+    kind: str
+    path: str
+    stage: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorStageDocumentDiffInput:
+    label: str
+    kind: str
+    key: str
+    path: str
+    attempt_number: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorStageDocumentVersion:
+    label: str
+    key: str
+    path: str
+    run_id: str
+    attempt_number: int
+    updated_at_utc: str | None
+    source: str
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorStageDocumentWorkbench:
+    run_id: str
+    stage: str
+    attempt_number: int
+    selected_key: str
+    document: OperatorStageWorkbenchDocument
+    requirements: tuple[OperatorStageDocumentRequirement, ...]
+    validation_results: tuple[OperatorStageDocumentValidationResult, ...]
+    references: tuple[OperatorStageDocumentReference, ...]
+    diff_inputs: tuple[OperatorStageDocumentDiffInput, ...]
+    versions: tuple[OperatorStageDocumentVersion, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorDashboardView:
     work_item: str
     workspace_root: Path
@@ -257,6 +328,13 @@ __all__ = [
     "OperatorRunSummary",
     "OperatorRunView",
     "OperatorStageRailItem",
+    "OperatorStageDocumentDiffInput",
+    "OperatorStageDocumentReference",
+    "OperatorStageDocumentRequirement",
+    "OperatorStageDocumentValidationResult",
+    "OperatorStageDocumentVersion",
+    "OperatorStageDocumentWorkbench",
+    "OperatorStageWorkbenchDocument",
     "OperatorStageView",
     "OperatorTerminalRunHandoff",
 ]
