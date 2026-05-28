@@ -6509,7 +6509,7 @@ Local tasks:
   - Scope: core operator frontend document/artifact read models only.
   - Verification: core tests cover present, missing, large/truncated, and invalid
     document states without editing runtime-authored artifacts.
-- `W26-E1-S3-T2` Add recovery and diagnostics read-model fields for blocking questions,
+- `W26-E1-S3-T2` (done) Add recovery and diagnostics read-model fields for blocking questions,
   validation/repair attempts, raw-log source summaries, runtime approval queues, and
   stage-scoped request-change context.
   - Scope: core operator frontend question, validation, log, and approval summaries.

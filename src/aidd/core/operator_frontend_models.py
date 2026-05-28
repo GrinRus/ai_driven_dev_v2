@@ -54,9 +54,92 @@ class OperatorRunLogView:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorBlockingQuestionDiagnostics:
+    status: str
+    unresolved_count: int
+    unresolved_question_ids: tuple[str, ...]
+    answers_path: str
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorRepairAttemptDiagnostics:
+    attempt_number: int
+    trigger: str
+    outcome: str
+    recorded_at_utc: str
+    validator_report_path: str | None
+    repair_brief_path: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorValidationRepairDiagnostics:
+    status: str
+    final_state: str
+    validator_pass_count: int
+    validator_fail_count: int
+    validator_report_path: str
+    repair_attempts: tuple[OperatorRepairAttemptDiagnostics, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorRawLogSourceDiagnostics:
+    status: str
+    path: str | None
+    byte_size: int | None
+    start_byte: int | None
+    end_byte: int | None
+    truncated: bool
+    truncated_head: bool
+    truncated_tail: bool
+    message: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorRuntimeApprovalQueueDiagnostics:
+    status: str
+    requests_path: str
+    decisions_path: str
+    requested_count: int
+    pending_count: int
+    approved_count: int
+    denied_count: int
+    cancelled_count: int
+    pending_request_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorRequestChangeContext:
+    status: str
+    latest_request_id: str | None
+    latest_request_path: str | None
+    latest_request_excerpt: str | None
+    target_documents: tuple[str, ...]
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorStoppedDiagnostics:
+    stopped: bool
+    source: str | None
+    detail: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorStageDiagnostics:
+    status: str
+    blocking_questions: OperatorBlockingQuestionDiagnostics
+    validation: OperatorValidationRepairDiagnostics
+    raw_log: OperatorRawLogSourceDiagnostics
+    approvals: OperatorRuntimeApprovalQueueDiagnostics
+    request_change: OperatorRequestChangeContext
+    stopped: OperatorStoppedDiagnostics
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorStageView:
     result: StageResultSummary
     questions: OperatorQuestionsView
+    diagnostics: OperatorStageDiagnostics
 
 
 @dataclass(frozen=True, slots=True)
@@ -314,6 +397,7 @@ __all__ = [
     "OperatorArtifactDocumentView",
     "OperatorArtifactRef",
     "OperatorBlocker",
+    "OperatorBlockingQuestionDiagnostics",
     "OperatorChildWorkItemCandidate",
     "OperatorDashboardView",
     "OperatorEvidenceRef",
@@ -322,11 +406,16 @@ __all__ = [
     "OperatorPrimaryArtifact",
     "OperatorQuestionView",
     "OperatorQuestionsView",
+    "OperatorRawLogSourceDiagnostics",
+    "OperatorRepairAttemptDiagnostics",
+    "OperatorRequestChangeContext",
     "OperatorRepairCounts",
     "OperatorRunLogView",
     "OperatorRunLineage",
     "OperatorRunSummary",
     "OperatorRunView",
+    "OperatorRuntimeApprovalQueueDiagnostics",
+    "OperatorStageDiagnostics",
     "OperatorStageRailItem",
     "OperatorStageDocumentDiffInput",
     "OperatorStageDocumentReference",
@@ -336,5 +425,7 @@ __all__ = [
     "OperatorStageDocumentWorkbench",
     "OperatorStageWorkbenchDocument",
     "OperatorStageView",
+    "OperatorStoppedDiagnostics",
     "OperatorTerminalRunHandoff",
+    "OperatorValidationRepairDiagnostics",
 ]

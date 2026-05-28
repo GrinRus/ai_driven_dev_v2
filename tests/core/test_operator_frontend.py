@@ -810,6 +810,215 @@ def test_operator_read_models_expose_run_stage_logs_artifacts_and_questions(
     )
 
 
+def test_operator_stage_view_diagnostics_report_blocked_questions(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_questions(workspace_root)
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    diagnostics = stage_view.diagnostics
+    assert diagnostics.status == "blocked"
+    assert diagnostics.blocking_questions.status == "blocked"
+    assert diagnostics.blocking_questions.unresolved_count == 1
+    assert diagnostics.blocking_questions.unresolved_question_ids == ("Q1",)
+    assert diagnostics.blocking_questions.answers_path == (
+        "workitems/WI-UI/stages/plan/answers.md"
+    )
+
+
+def test_operator_stage_view_diagnostics_report_repair_available(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    validator_report = stage_root / "validator-report.md"
+    repair_brief = stage_root / "repair-brief.md"
+    validator_report.write_text("# Validator Report\n\n- Verdict: `fail`\n", encoding="utf-8")
+    repair_brief.write_text("# Repair Brief\n\n- Add missing risk evidence.\n", encoding="utf-8")
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+        trigger="repair",
+        outcome="failed validation",
+        stage_status="repair-needed",
+        validator_report_path=validator_report,
+        repair_brief_path=repair_brief,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="repair-needed",
+    )
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    validation = stage_view.diagnostics.validation
+    assert stage_view.diagnostics.status == "repair-available"
+    assert validation.status == "repair-available"
+    assert validation.final_state == "repair-needed"
+    assert validation.validator_fail_count == 1
+    assert len(validation.repair_attempts) == 1
+    assert validation.repair_attempts[0].trigger == "repair"
+    assert validation.repair_attempts[0].outcome == "failed validation"
+
+
+def test_operator_stage_view_diagnostics_report_stopped_event(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    events_path = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ) / RUN_EVENTS_JSONL_FILENAME
+    events_path.write_text(
+        (
+            '{"timestamp":"2026-05-25T00:00:00Z","level":"error",'
+            '"source":"runtime","event":"stopped","message":"Workflow stopped at plan"}\n'
+        ),
+        encoding="utf-8",
+    )
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    assert stage_view.diagnostics.status == "stopped"
+    assert stage_view.diagnostics.stopped.stopped is True
+    assert stage_view.diagnostics.stopped.source == (
+        "reports/runs/WI-UI/run-ui/stages/plan/attempts/attempt-0001/events.jsonl"
+    )
+    assert stage_view.diagnostics.stopped.detail == "Workflow stopped at plan"
+
+
+def test_operator_stage_view_diagnostics_report_pending_approval_queue(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="plan",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "uv run --extra dev pytest tests/core/test_operator_frontend.py"},
+        risk=RuntimeOperatorRisk.MEDIUM,
+    )
+    append_operator_request(
+        path=(
+            run_attempt_root(
+                workspace_root=workspace_root,
+                work_item="WI-UI",
+                run_id="run-ui",
+                stage="plan",
+                attempt_number=1,
+            )
+            / OPERATOR_REQUESTS_FILENAME
+        ),
+        request=request,
+    )
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    approvals = stage_view.diagnostics.approvals
+    assert stage_view.diagnostics.status == "approval-waiting"
+    assert approvals.status == "approval-waiting"
+    assert approvals.requested_count == 1
+    assert approvals.pending_count == 1
+    assert approvals.pending_request_ids == (request.id,)
+    assert approvals.approved_count == 0
+
+
+def test_operator_stage_view_diagnostics_report_truncated_log_source(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ).write_text("x" * (33 * 1024), encoding="utf-8")
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    raw_log = stage_view.diagnostics.raw_log
+    assert stage_view.diagnostics.status == "log-truncated"
+    assert raw_log.status == "truncated"
+    assert raw_log.byte_size == 33 * 1024
+    assert raw_log.truncated is True
+    assert raw_log.truncated_head is True
+    assert raw_log.truncated_tail is False
+
+
+def test_operator_stage_view_diagnostics_exposes_request_change_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_valid_plan_outputs(workspace_root)
+    request = persist_operator_intervention_request(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        request_text="Add rollback risk coverage to the plan.",
+        target_documents=("plan.md",),
+    )
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    request_change = stage_view.diagnostics.request_change
+    assert request_change.status == "has-request"
+    assert request_change.latest_request_id == request.request_id
+    assert request_change.latest_request_path == (
+        f"workitems/WI-UI/stages/plan/operator-requests/{request.request_id}.md"
+    )
+    assert request_change.latest_request_excerpt == "Add rollback risk coverage to the plan."
+    assert request_change.target_documents == ("workitems/WI-UI/stages/plan/plan.md",)
+
+
 def test_operator_run_log_view_returns_bounded_text_with_metadata(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
