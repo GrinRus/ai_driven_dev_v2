@@ -63,6 +63,7 @@
   .wizard-context-grid,
   .source-finding-groups,
   .follow-up-definition-grid,
+  .launch-confirmation-grid,
   .bottom-dock {
     grid-template-columns: 1fr;
   }

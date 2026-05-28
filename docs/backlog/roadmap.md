@@ -6645,7 +6645,7 @@ Exit evidence:
 - operators can see where the current run ended and what can safely happen next;
 - setup and history screens can both start the next-flow path.
 
-#### Slice W26-E2-S2 — Start Next Flow wizard (`planned`)
+#### Slice W26-E2-S2 — Start Next Flow wizard (`done`)
 Goal: provide a safe handoff wizard for selecting source findings, defining a new work
 item, and confirming launch.
 
@@ -6679,9 +6679,9 @@ Local tasks:
   - Scope: wizard UI and follow-up draft payload.
   - Verification: tests prove generated fields remain editable and source-run context is
     visible before launch.
-- `W26-E2-S2-T3` Render launch confirmation with preflight results, audit preview,
+- `W26-E2-S2-T3` (done) Render launch confirmation with preflight results, audit preview,
   source artifact links, and the Launch Flow Now action.
-  - Scope: wizard UI and private launch endpoint integration.
+  - Scope: wizard UI and private launch preflight integration.
   - Verification: tests cover pass, warning, and blocked preflight states.
 
 Exit evidence:

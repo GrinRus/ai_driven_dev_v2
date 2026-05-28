@@ -162,6 +162,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".source-finding-groups" in components
     assert ".follow-up-definition-grid" in components
     assert ".inherited-context-toggle" in components
+    assert ".launch-confirmation-grid" in components
+    assert ".preflight-check" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
     assert ".setup-mode-grid" in responsive
@@ -169,6 +171,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".lineage-flow" in responsive
     assert ".source-finding-groups" in responsive
     assert ".follow-up-definition-grid" in responsive
+    assert ".launch-confirmation-grid" in responsive
     assert "scroll-padding-inline: 10px" in responsive
 
 
@@ -462,12 +465,24 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "async function openNextFlowWizard(action)",
             "function renderNextFlowSourceSelection()",
             "function renderFollowUpDefinition()",
+            "function renderLaunchConfirmation()",
+            "function renderPreflightChecks(preflight)",
+            "function renderAuditPreview(draft, preflight)",
+            "async function loadLaunchConfirmation()",
+            'result.status === "blocked"',
+            "wizard.preflightError = result.error",
             "async function loadFollowUpDraft()",
             "Define Follow-up Work Item",
+            "Confirm and Launch Next Flow",
+            "Preflight results",
+            "Audit preview",
+            "Launch Flow Now",
             "data-follow-up-field",
             "data-inherited-context",
             "data-next-flow-back-to-sources",
             "data-next-flow-confirm-preview",
+            "data-next-flow-back-to-definition",
+            "data-launch-flow-now",
             "function renderSourceFindingGroup(group)",
             "function renderSourceFindingItem(group, item)",
             "data-source-selection-id",
@@ -533,7 +548,10 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             "await loadFollowUpDraft()",
             'closest("[data-next-flow-back-to-sources]")',
             'closest("[data-next-flow-confirm-preview]")',
-            "Launch confirmation is queued for the next UI slice.",
+            "await loadLaunchConfirmation()",
+            'closest("[data-next-flow-back-to-definition]")',
+            'closest("[data-launch-flow-now]")',
+            "Launch endpoint is queued for the private next-flow API slice.",
             "Start Next Flow wizard is queued for the next UI slice.",
             'event.target.id === "operatorRequestText"',
             'if (state.activeTab === "overview") await renderCockpit();',
@@ -629,5 +647,7 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".source-finding-card" in css
     assert ".follow-up-definition-grid" in css
     assert ".inherited-context-toggle" in css
+    assert ".launch-confirmation-grid" in css
+    assert ".preflight-check" in css
     assert ".loading-state" in css
     assert "scroll-padding-inline: 10px" in css

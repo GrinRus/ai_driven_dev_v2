@@ -416,8 +416,10 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E2-S1-T1` (done) Render the Project Setup mode selector" in w26
     assert "`W26-E2-S1-T2` (done) Render Flow Complete" in w26
     assert "`W26-E2-S1-T3` (done) Render run history lineage" in w26
+    assert "#### Slice W26-E2-S2 — Start Next Flow wizard (`done`)" in w26
     assert "`W26-E2-S2-T1` (done) Render source findings selection" in w26
     assert "`W26-E2-S2-T2` (done) Render follow-up work item definition" in w26
+    assert "`W26-E2-S2-T3` (done) Render launch confirmation" in w26
     assert "`W26-E1-S3-T1` (done) Add a stage document workbench read model" in w26
     assert "`W26-E1-S3-T2` (done) Add recovery and diagnostics read-model fields" in w26
     assert "`W26-E1-S3-T3` (done) Add an evidence graph read model" in w26
@@ -425,7 +427,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
         "`W26-E4-S2-T1` Define the manual live E2E next-flow checkpoint policy"
         in w26
     )
-    assert "`W26-E2-S2-T3`" in backlog_next
+    assert "`W26-E2-S3-T1`" in backlog_next
     assert "`W26-E1-S1-T1`" not in backlog_next
     assert "`W26-E1-S1-T2`" not in backlog_next
     assert "`W26-E1-S2-T1`" not in backlog_next
@@ -443,6 +445,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E2-S1-T3`" not in backlog_next
     assert "`W26-E2-S2-T1`" not in backlog_next
     assert "`W26-E2-S2-T2`" not in backlog_next
+    assert "`W26-E2-S2-T3`" not in backlog_next
     assert "`W26-E1-S3-T1`" not in backlog_soon
     assert "`W26-E1-S1-T2`" not in backlog_soon
     assert "`W26-E1-S2-T1`" not in backlog_soon
@@ -460,7 +463,8 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E2-S2-T1`" not in backlog_soon
     assert "`W26-E2-S2-T2`" not in backlog_soon
     assert "`W26-E2-S2-T3`" not in backlog_soon
-    assert "`W26-E2-S3-T1`" in backlog_soon
+    assert "`W26-E2-S3-T1`" not in backlog_soon
+    assert "`W26-E2-S3-T2`" in backlog_soon
     assert "`W26-E2-S0-T3`" not in backlog_parking
     assert "`W26-E2-S0-T4`" not in backlog_parking
     assert "`W26-E1-S3-T1`" not in backlog_parking
@@ -473,12 +477,12 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E2-S2-T2`" not in backlog_parking
     assert "`W26-E2-S2-T3`" not in backlog_parking
     assert "`W26-E2-S3-T1`" not in backlog_parking
+    assert "`W26-E2-S3-T2`" not in backlog_parking
     assert "`W26-E4-S2-T1`" in backlog_parking
     assert "`W26-E4-S2-T2`" in backlog_parking
     assert "`W26-E4-S2-T3`" in backlog_parking
     assert "`W26-E5-S1-T1`" in backlog_parking
     for expected_screen_task in (
-        "`W26-E2-S3-T2`",
         "`W26-E2-S3-T3`",
         "`W26-E2-S3-T4`",
     ):

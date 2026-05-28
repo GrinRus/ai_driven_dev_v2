@@ -469,6 +469,8 @@ async function openNextFlowWizard(action) {
   state.nextFlowWizard.sourceFindings = null;
   state.nextFlowWizard.followUpDraft = null;
   state.nextFlowWizard.followUpDraftError = "";
+  state.nextFlowWizard.preflight = null;
+  state.nextFlowWizard.preflightError = "";
   state.nextFlowWizard.selectedSourceIds = [];
   activateTab("overview");
   await renderCockpit();
@@ -482,6 +484,49 @@ async function openNextFlowWizard(action) {
     state.nextFlowWizard.error = error.message;
   } finally {
     state.nextFlowWizard.loading = false;
+    await renderCockpit();
+  }
+}
+
+async function loadLaunchConfirmation() {
+  const wizard = state.nextFlowWizard;
+  const draft = wizard.followUpDraft;
+  wizard.preflightLoading = true;
+  wizard.preflightError = "";
+  wizard.step = "confirm";
+  await renderCockpit();
+  try {
+    const payload = {
+      source_work_item: draft.source_work_item,
+      source_run_id: draft.source_run_id,
+      runtime: state.selectedRuntime || state.dashboard?.run?.runtime_id || "",
+      baseline_id: state.dashboard?.run?.lineage?.baseline_id || draft.source_run_id
+    };
+    const response = await fetch("/api/next-flow/preflight", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (response.ok) {
+      wizard.preflight = result.preflight;
+    } else if (result.status === "blocked") {
+      wizard.preflight = {
+        status: "blocked",
+        can_launch: false,
+        checks: result.checks || [],
+        blocking_codes: result.blocking_codes || [],
+        warning_codes: result.warning_codes || [],
+        resolved_baseline_id: null
+      };
+      wizard.preflightError = result.error || "next-flow launch preflight blocked";
+    } else {
+      throw new Error(result.error || response.statusText);
+    }
+  } catch (error) {
+    wizard.preflightError = error.message;
+  } finally {
+    wizard.preflightLoading = false;
     await renderCockpit();
   }
 }
@@ -551,6 +596,9 @@ function renderNextFlowSourceSelection() {
   if (wizard.step === "definition") {
     return renderFollowUpDefinition();
   }
+  if (wizard.step === "confirm") {
+    return renderLaunchConfirmation();
+  }
   if (wizard.loading) {
     return `<section class="surface next-flow-wizard"><div class="empty-state loading-state">Loading source findings...</div></section>`;
   }
@@ -580,6 +628,83 @@ function renderNextFlowSourceSelection() {
       <div class="wizard-actions">
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
         <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue</button>
+      </div>
+    </section>
+  `;
+}
+
+function preflightTone(status) {
+  if (status === "pass") return "good";
+  if (status === "warning") return "warn";
+  if (status === "blocked") return "bad";
+  return "";
+}
+
+function renderPreflightChecks(preflight) {
+  return (preflight?.checks || []).map((check) => `
+    <div class="preflight-check">
+      <span class="small-badge ${check.severity === "blocking" ? "bad" : check.severity === "warning" ? "warn" : "good"}">${escapeHtml(check.severity)}</span>
+      <strong>${escapeHtml(check.code)}</strong>
+      <p>${escapeHtml(check.message)}</p>
+      ${check.detail ? pathLine(check.detail, 74) : ""}
+    </div>
+  `).join("") || `<div class="empty-state">No preflight checks returned.</div>`;
+}
+
+function renderLaunchSourceLinks(draft) {
+  return (draft?.selected_sources || []).map((item) => `
+    <button class="artifact-row" data-artifact-stage="${escapeHtml(item.stage)}" data-artifact-key="${escapeHtml(item.artifact_key)}" data-artifact-kind="${escapeHtml(item.artifact_kind)}" type="button">
+      <span><strong>${escapeHtml(item.title)}</strong>${pathLine(item.source_path || item.detail, 76)}</span>
+      <span class="small-badge">${escapeHtml(item.kind)}</span>
+    </button>
+  `).join("") || `<div class="empty-state">No source artifact links selected.</div>`;
+}
+
+function renderAuditPreview(draft, preflight) {
+  return `
+    <div class="audit-preview">
+      <div class="panel-item"><strong>New work item</strong><span>${escapeHtml(draft.new_work_item)}</span></div>
+      <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
+      <div class="panel-item"><strong>Runtime</strong><span>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "not selected")}</span></div>
+      <div class="panel-item"><strong>Resolved baseline</strong><span>${escapeHtml(preflight?.resolved_baseline_id || "not resolved")}</span></div>
+      <div class="panel-item"><strong>Selected source links</strong><span>${escapeHtml(draft.selected_sources.length)}</span></div>
+    </div>
+  `;
+}
+
+function renderLaunchConfirmation() {
+  const wizard = state.nextFlowWizard;
+  const draft = wizard.followUpDraft;
+  if (!draft) {
+    return `<section class="surface next-flow-wizard"><div class="empty-state">No follow-up draft available for launch confirmation.</div></section>`;
+  }
+  if (wizard.preflightLoading) {
+    return `<section class="surface next-flow-wizard"><div class="empty-state loading-state">Running launch preflight...</div></section>`;
+  }
+  const preflight = wizard.preflight;
+  const blocked = !preflight?.can_launch;
+  return `
+    <section class="surface next-flow-wizard launch-confirmation">
+      <div class="surface-title">
+        <span>Confirm and Launch Next Flow</span>
+        <span class="small-badge ${preflightTone(preflight?.status || "blocked")}">${escapeHtml(preflight?.status || "blocked")}</span>
+      </div>
+      ${wizard.preflightError ? `<div class="truncation-notice"><strong>Preflight blocked</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
+      <div class="launch-confirmation-grid">
+        <section>
+          <div class="surface-title">Preflight results</div>
+          <div class="preflight-check-list">${renderPreflightChecks(preflight)}</div>
+        </section>
+        <aside>
+          <div class="surface-title">Audit preview</div>
+          ${renderAuditPreview(draft, preflight)}
+          <div class="surface-title compact">Source artifact links</div>
+          <div class="recent-artifacts">${renderLaunchSourceLinks(draft)}</div>
+        </aside>
+      </div>
+      <div class="wizard-actions">
+        <button data-next-flow-back-to-definition type="button" class="secondary">Back to definition</button>
+        <button data-launch-flow-now type="button" ${blocked ? "disabled" : ""}>Launch Flow Now</button>
       </div>
     </section>
   `;

@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E2-S2-T3`
+- `W26-E2-S3-T1`
 
 ## Soon
 
-- `W26-E2-S3-T1`
+- `W26-E2-S3-T2`
 
 ## Parking lot
 
-- `W26-E2-S3-T2`
 - `W26-E2-S3-T3`
 - `W26-E2-S3-T4`
 - `W26-E3-S1-T1`
@@ -257,3 +256,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   work item definition with generated acceptance criteria, required evidence,
   inherited context toggles, and first-stage input preview. `W26-E2-S2-T3` is
   promoted to `Next`, and `W26-E2-S3-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S2-T3`; the next-flow wizard now renders launch
+  confirmation with preflight results, audit preview, source artifact links, and an
+  honest queued launch action. `W26-E2-S3-T1` is promoted to `Next`, and
+  `W26-E2-S3-T2` is promoted to `Soon`.

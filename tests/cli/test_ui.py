@@ -840,6 +840,31 @@ def test_ui_next_flow_preflight_endpoint_returns_launchable_warning_payload(
     assert preflight["resolved_baseline_id"] == "run-ui"  # type: ignore[index]
 
 
+def test_ui_next_flow_preflight_endpoint_returns_pass_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/preflight",
+        {
+            "source_run_id": "run-ui",
+            "runtime": "generic-cli",
+            "baseline_id": "run-ui",
+        },
+    )
+
+    payload = _payload(response)
+    preflight = payload["preflight"]
+    assert preflight["status"] == "pass"  # type: ignore[index]
+    assert preflight["can_launch"] is True  # type: ignore[index]
+    assert preflight["blocking_codes"] == []  # type: ignore[index]
+    assert preflight["warning_codes"] == []  # type: ignore[index]
+    assert preflight["resolved_baseline_id"] == "run-ui"  # type: ignore[index]
+
+
 def test_ui_next_flow_preflight_endpoint_returns_structured_blocking_payload(
     tmp_path: Path,
 ) -> None:

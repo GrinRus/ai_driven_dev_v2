@@ -66,6 +66,9 @@ const state = {
     followUpDraft: null,
     followUpDraftLoading: false,
     followUpDraftError: "",
+    preflight: null,
+    preflightLoading: false,
+    preflightError: "",
     selectedSourceIds: []
   }
 };
