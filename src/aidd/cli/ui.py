@@ -44,7 +44,12 @@ from aidd.cli.ui_http import (
 from aidd.config import AiddConfig, load_config
 from aidd.core.interview import AnswerResolution
 from aidd.core.next_flow import (
+    CloneFlowDraftRequest,
+    FollowUpDraftRequest,
+    FollowUpSourceSelection,
     NextFlowLaunchPreflightRequest,
+    create_clone_flow_draft,
+    create_follow_up_work_item_draft,
     validate_next_flow_launch_preflight,
 )
 from aidd.core.operator_frontend import (
@@ -76,6 +81,7 @@ from aidd.core.runtime_readiness import (
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
 )
+from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.workflow_service import (
@@ -469,6 +475,21 @@ def _source_work_item_from_payload(payload: dict[str, Any], *, default: str) -> 
     return source_work_item
 
 
+def _text_from_payload(
+    payload: dict[str, Any],
+    name: str,
+    *,
+    default: str | None = None,
+) -> str:
+    raw_value = payload.get(name, default)
+    if not isinstance(raw_value, str):
+        raise ValueError(f"{name} must be a string.")
+    value = raw_value.strip()
+    if not value:
+        raise ValueError(f"{name} is required.")
+    return value
+
+
 def _contracts_root_from_payload(payload: dict[str, Any]) -> Path:
     raw_contracts_root = payload.get("contracts_root")
     if raw_contracts_root is None:
@@ -669,11 +690,11 @@ def _selected_source_ids_from_payload(payload: dict[str, Any]) -> tuple[str, ...
     return selected
 
 
-def _next_flow_follow_up_draft_payload(
+def _selected_next_flow_source_items(
     *,
     dashboard: Any,
     selected_source_ids: tuple[str, ...],
-) -> dict[str, object]:
+) -> tuple[dict[str, object], ...]:
     findings = _next_flow_source_findings_payload(dashboard)
     groups = cast(tuple[dict[str, object], ...], findings["groups"])
     items_by_id = {
@@ -681,13 +702,58 @@ def _next_flow_follow_up_draft_payload(
         for group in groups
         for item in cast(list[dict[str, object]], group["items"])
     }
-    selected_items = [items_by_id[item_id] for item_id in selected_source_ids if item_id in items_by_id]
+    missing_ids = tuple(item_id for item_id in selected_source_ids if item_id not in items_by_id)
+    if missing_ids:
+        raise ValueError(
+            "Selected source findings do not match this source run: "
+            f"{', '.join(missing_ids)}."
+        )
+    selected_items = tuple(items_by_id[item_id] for item_id in selected_source_ids)
     if not selected_items:
         raise ValueError("Selected source findings do not match this source run.")
+    return selected_items
+
+
+def _follow_up_source_selections_from_items(
+    selected_items: tuple[dict[str, object], ...],
+) -> tuple[FollowUpSourceSelection, ...]:
+    selections: list[FollowUpSourceSelection] = []
+    for item in selected_items:
+        item_id = str(item.get("id") or "")
+        source_path = item.get("source_path")
+        if not isinstance(source_path, str) or not source_path.strip():
+            raise ValueError(
+                f"Selected source '{item_id}' has no source artifact path."
+            )
+        raw_stage = item.get("stage")
+        selections.append(
+            FollowUpSourceSelection(
+                kind=str(item.get("kind") or ""),
+                title=str(item.get("title") or ""),
+                source_path=source_path,
+                stage=raw_stage if isinstance(raw_stage, str) else None,
+                note=str(item.get("detail") or "") or None,
+            )
+        )
+    return tuple(selections)
+
+
+def _next_flow_follow_up_draft_payload(
+    *,
+    dashboard: Any,
+    selected_source_ids: tuple[str, ...],
+    new_work_item: str | None = None,
+    title: str | None = None,
+) -> dict[str, object]:
+    findings = _next_flow_source_findings_payload(dashboard)
+    selected_items = _selected_next_flow_source_items(
+        dashboard=dashboard,
+        selected_source_ids=selected_source_ids,
+    )
     source_run_id = str(findings["source_run_id"] or "")
     source_work_item = str(findings["source_work_item"] or "")
-    new_work_item = f"{source_work_item}-FOLLOW-UP"
-    title = f"Follow-up for {source_work_item} from {source_run_id}"
+    resolved_new_work_item = new_work_item or f"{source_work_item}-FOLLOW-UP"
+    resolved_title = title or f"Follow-up for {source_work_item} from {source_run_id}"
     acceptance_criteria = tuple(
         f"Resolve follow-up source: {item['title']}" for item in selected_items
     )
@@ -703,7 +769,7 @@ def _next_flow_follow_up_draft_payload(
     criteria_lines = "\n".join(f"- {criterion}" for criterion in acceptance_criteria)
     preview = "\n".join(
         (
-            f"# {title}",
+            f"# {resolved_title}",
             "",
             f"Source work item: `{source_work_item}`.",
             f"Source run: `{source_run_id}`.",
@@ -722,8 +788,8 @@ def _next_flow_follow_up_draft_payload(
         "draft": {
             "source_work_item": source_work_item,
             "source_run_id": source_run_id,
-            "new_work_item": new_work_item,
-            "title": title,
+            "new_work_item": resolved_new_work_item,
+            "title": resolved_title,
             "selected_sources": selected_items,
             "acceptance_criteria": acceptance_criteria,
             "required_evidence": required_evidence,
@@ -749,6 +815,54 @@ def _next_flow_follow_up_draft_payload(
             ),
             "first_stage_input_preview": preview,
         }
+    }
+
+
+def _workspace_response_path(workspace_root: Path, path: Path) -> str:
+    return workspace_relative_path(workspace_root, path)
+
+
+def _follow_up_creation_payload(
+    *,
+    workspace_root: Path,
+    result: Any,
+) -> dict[str, object]:
+    return {
+        "work_item": result.work_item,
+        "request_path": _workspace_response_path(workspace_root, result.request_path),
+        "source_artifact_paths": result.source_artifact_paths,
+        "context": {
+            "user_request_path": _workspace_response_path(
+                workspace_root,
+                result.context_seed.user_request_path,
+            ),
+            "intake_path": _workspace_response_path(
+                workspace_root,
+                result.context_seed.intake_path,
+            ),
+        },
+    }
+
+
+def _clone_creation_payload(
+    *,
+    workspace_root: Path,
+    result: Any,
+) -> dict[str, object]:
+    return {
+        "work_item": result.work_item,
+        "draft_path": _workspace_response_path(workspace_root, result.draft_path),
+        "context": {
+            "user_request_path": _workspace_response_path(
+                workspace_root,
+                result.context_seed.user_request_path,
+            ),
+            "intake_path": _workspace_response_path(
+                workspace_root,
+                result.context_seed.intake_path,
+            ),
+        },
+        "config": result.config,
     }
 
 
@@ -1115,6 +1229,10 @@ class OperatorUiService:
                 return self._next_flow_preflight(payload)
             if path == "/api/next-flow/follow-up-draft":
                 return self._next_flow_follow_up_draft(payload)
+            if path == "/api/next-flow/follow-up-draft/create":
+                return self._next_flow_create_follow_up_draft(payload)
+            if path == "/api/next-flow/clone-draft/create":
+                return self._next_flow_create_clone_draft(payload)
             if path == "/api/workflow/run":
                 return _json_response(self._start_workflow_job(payload))
             if path == "/api/open-folder":
@@ -1512,6 +1630,103 @@ class OperatorUiService:
                 dashboard=dashboard,
                 selected_source_ids=_selected_source_ids_from_payload(payload),
             )
+        )
+
+    def _next_flow_create_follow_up_draft(self, payload: dict[str, Any]) -> UiResponse:
+        source_work_item = _source_work_item_from_payload(
+            payload,
+            default=self.options.work_item,
+        )
+        source_run_id = _source_run_id_from_payload(payload)
+        selected_source_ids = _selected_source_ids_from_payload(payload)
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=source_work_item,
+            active_stage="qa",
+            run_id=source_run_id,
+            project_root=Path.cwd(),
+        )
+        draft_payload = _next_flow_follow_up_draft_payload(
+            dashboard=dashboard,
+            selected_source_ids=selected_source_ids,
+            new_work_item=_text_from_payload(
+                payload,
+                "new_work_item",
+                default=f"{source_work_item}-FOLLOW-UP",
+            ),
+            title=_text_from_payload(
+                payload,
+                "title",
+                default=f"Follow-up for {source_work_item} from {source_run_id}",
+            ),
+        )
+        draft = cast(dict[str, object], draft_payload["draft"])
+        selected_sources = cast(
+            tuple[dict[str, object], ...],
+            draft["selected_sources"],
+        )
+        result = create_follow_up_work_item_draft(
+            FollowUpDraftRequest(
+                workspace_root=self.workspace_root,
+                source_work_item=source_work_item,
+                source_run_id=source_run_id,
+                new_work_item=str(draft["new_work_item"]),
+                title=str(draft["title"]),
+                selections=_follow_up_source_selections_from_items(selected_sources),
+                project_root=Path.cwd(),
+            )
+        )
+        return _json_response(
+            {
+                "draft": draft,
+                "created": _follow_up_creation_payload(
+                    workspace_root=self.workspace_root,
+                    result=result,
+                ),
+            },
+            status=HTTPStatus.CREATED,
+        )
+
+    def _next_flow_create_clone_draft(self, payload: dict[str, Any]) -> UiResponse:
+        source_work_item = _source_work_item_from_payload(
+            payload,
+            default=self.options.work_item,
+        )
+        source_run_id = _source_run_id_from_payload(payload)
+        new_work_item = _text_from_payload(
+            payload,
+            "new_work_item",
+            default=f"{source_work_item}-CLONE",
+        )
+        title = _text_from_payload(
+            payload,
+            "title",
+            default=f"Clone {source_work_item} from {source_run_id}",
+        )
+        result = create_clone_flow_draft(
+            CloneFlowDraftRequest(
+                workspace_root=self.workspace_root,
+                source_work_item=source_work_item,
+                source_run_id=source_run_id,
+                new_work_item=new_work_item,
+                title=title,
+                project_root=Path.cwd(),
+            )
+        )
+        return _json_response(
+            {
+                "draft": {
+                    "source_work_item": source_work_item,
+                    "source_run_id": source_run_id,
+                    "new_work_item": result.work_item,
+                    "title": title,
+                },
+                "created": _clone_creation_payload(
+                    workspace_root=self.workspace_root,
+                    result=result,
+                ),
+            },
+            status=HTTPStatus.CREATED,
         )
 
     def _start_job(

@@ -6772,7 +6772,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E3-S1-T1` Add private UI endpoints for follow-up and clone draft creation with
+- `W26-E3-S1-T1` (done) Add private UI endpoints for follow-up and clone draft creation with
   request-size limits, escaped response fields, and deterministic malformed-body errors.
   - Scope: local UI HTTP layer.
   - Verification: CLI UI tests cover success and invalid payloads without invoking real

@@ -822,6 +822,105 @@ def test_ui_next_flow_follow_up_draft_endpoint_returns_editable_payload(
     assert "`qa-finding` QA artifact: qa_report" in draft["first_stage_input_preview"]  # type: ignore[index]
 
 
+def test_ui_next_flow_follow_up_draft_create_endpoint_writes_core_draft(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-FOLLOW-UP",
+            "title": "Fix QA follow-up from UI",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+        },
+    )
+
+    assert response.status == HTTPStatus.CREATED
+    payload = json.loads(response.body.decode("utf-8"))
+    draft = payload["draft"]
+    created = payload["created"]
+    assert draft["title"] == "Fix QA follow-up from UI"
+    assert created["work_item"] == "WI-UI-FOLLOW-UP"
+    assert created["request_path"] == (
+        "workitems/WI-UI-FOLLOW-UP/context/follow-up-request.md"
+    )
+    request_path = workspace_root / created["request_path"]
+    assert request_path.exists()
+    assert "`workitems/WI-UI/stages/qa/qa-report.md`" in request_path.read_text(
+        encoding="utf-8"
+    )
+    assert created["context"]["user_request_path"] == (  # type: ignore[index]
+        "workitems/WI-UI-FOLLOW-UP/context/user-request.md"
+    )
+    assert not (workspace_root / "reports" / "runs" / "WI-UI-FOLLOW-UP").exists()
+
+
+def test_ui_next_flow_clone_draft_create_endpoint_writes_core_draft(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/clone-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-CLONE",
+            "title": "Clone completed QA flow",
+        },
+    )
+
+    assert response.status == HTTPStatus.CREATED
+    payload = json.loads(response.body.decode("utf-8"))
+    created = payload["created"]
+    assert payload["draft"]["new_work_item"] == "WI-UI-CLONE"
+    assert created["draft_path"] == "workitems/WI-UI-CLONE/context/clone-flow-draft.md"
+    assert created["config"]["runtime_id"] == "codex"
+    assert created["config"]["stage_target"] == "qa"
+    assert (
+        workspace_root / "workitems" / "WI-UI-CLONE" / "context" / "clone-flow-draft.md"
+    ).exists()
+    assert not (workspace_root / "reports" / "runs" / "WI-UI-CLONE").exists()
+
+
+def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    malformed_follow_up = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {"source_run_id": "run-ui", "selected_source_ids": "qa-finding:qa:qa_report"},
+    )
+    manual_without_artifact = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "selected_source_ids": ["manual-request:operator-note"],
+        },
+    )
+    malformed_clone = service.handle_post(
+        "/api/next-flow/clone-draft/create",
+        {"new_work_item": "WI-UI-CLONE"},
+    )
+
+    assert malformed_follow_up.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(malformed_follow_up)["error"] == (
+        "selected_source_ids must be a list."
+    )
+    assert manual_without_artifact.status == HTTPStatus.BAD_REQUEST
+    assert "has no source artifact path" in _error_payload(manual_without_artifact)["error"]  # type: ignore[operator]
+    assert malformed_clone.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(malformed_clone)["error"] == "source_run_id is required."
+
+
 def test_ui_static_asset_routes_are_served_from_manifest(tmp_path: Path) -> None:
     service = _service(tmp_path / ".aidd")
 
