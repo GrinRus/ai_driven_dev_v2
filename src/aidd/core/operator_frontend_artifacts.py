@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from aidd.core.markdown import (
@@ -11,6 +12,10 @@ from aidd.core.markdown import (
 from aidd.core.operator_frontend_common import validate_operator_stage
 from aidd.core.operator_frontend_models import (
     OperatorArtifactDocumentView,
+    OperatorArtifactRef,
+    OperatorEvidenceGraphEdge,
+    OperatorEvidenceGraphNode,
+    OperatorEvidenceGraphView,
     OperatorStageDocumentDiffInput,
     OperatorStageDocumentReference,
     OperatorStageDocumentRequirement,
@@ -22,11 +27,23 @@ from aidd.core.operator_frontend_models import (
 from aidd.core.resources import resolve_resource_layout_from_contracts_root
 from aidd.core.run_inspection import (
     RunArtifactsSummary,
+    StageResultSummary,
     resolve_run_artifacts_summary,
     resolve_stage_result_summary,
 )
 from aidd.core.run_lookup import latest_attempt_number, latest_run_id
-from aidd.core.run_store import load_attempt_artifact_index, load_stage_metadata
+from aidd.core.run_store import (
+    RUN_EVENTS_JSONL_FILENAME,
+    load_attempt_artifact_index,
+    load_stage_metadata,
+    run_attempt_root,
+)
+from aidd.core.runtime_operator import (
+    OPERATOR_DECISIONS_FILENAME,
+    OPERATOR_REQUESTS_FILENAME,
+    load_operator_decisions,
+    load_operator_requests,
+)
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
@@ -261,6 +278,671 @@ def resolve_operator_stage_document_workbench(
             selected_key=selected_key,
         ),
     )
+
+
+def resolve_operator_evidence_graph_view(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    run_id: str | None = None,
+    attempt_number: int | None = None,
+) -> OperatorEvidenceGraphView:
+    validate_operator_stage(stage)
+    selected_run_id = run_id or latest_run_id(workspace_root=workspace_root, work_item=work_item)
+    if selected_run_id is None:
+        raise ValueError(f"No runs found for work item '{work_item}'.")
+    selected_attempt = attempt_number or latest_attempt_number(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+    )
+    if selected_attempt is None:
+        raise ValueError(
+            "No attempts found for work item "
+            f"'{work_item}', run '{selected_run_id}', stage '{stage}'."
+        )
+
+    artifact_index = load_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+    )
+    if artifact_index is None:
+        return OperatorEvidenceGraphView(
+            run_id=selected_run_id,
+            stage=stage,
+            attempt_number=selected_attempt,
+            mode="flat-table",
+            nodes=(),
+            edges=(),
+            artifact_table=_fallback_artifact_table(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=selected_run_id,
+                stage=stage,
+                attempt_number=selected_attempt,
+            ),
+            incomplete_reasons=("artifact-index-missing",),
+        )
+
+    nodes: dict[str, OperatorEvidenceGraphNode] = {}
+    edges: dict[tuple[str, str, str], OperatorEvidenceGraphEdge] = {}
+    incomplete_reasons: list[str] = []
+    artifact_table = _artifact_table_from_index(
+        workspace_root=workspace_root,
+        stage=stage,
+        updated_at_utc=artifact_index.updated_at_utc,
+        documents=artifact_index.documents,
+        logs=artifact_index.logs,
+    )
+
+    result = _try_stage_result_summary(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        run_id=selected_run_id,
+        incomplete_reasons=incomplete_reasons,
+    )
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+    )
+
+    stage_node_id = f"stage:{stage}"
+    attempt_node_id = f"attempt:{selected_attempt}"
+    _add_node(
+        nodes,
+        OperatorEvidenceGraphNode(
+            node_id=stage_node_id,
+            label=stage,
+            kind="stage",
+            stage=stage,
+            path=None,
+            status=metadata.status if metadata is not None else "unknown",
+            detail=f"Stage {stage}",
+            byte_size=None,
+            updated_at_utc=metadata.updated_at_utc if metadata is not None else None,
+        ),
+    )
+    _add_node(
+        nodes,
+        OperatorEvidenceGraphNode(
+            node_id=attempt_node_id,
+            label=f"Attempt {selected_attempt}",
+            kind="attempt",
+            stage=stage,
+            path=workspace_relative_path(
+                workspace_root,
+                run_attempt_root(
+                    workspace_root=workspace_root,
+                    work_item=work_item,
+                    run_id=selected_run_id,
+                    stage=stage,
+                    attempt_number=selected_attempt,
+                ),
+            ),
+            status="indexed",
+            detail=f"Artifact index updated at {artifact_index.updated_at_utc}.",
+            byte_size=None,
+            updated_at_utc=artifact_index.updated_at_utc,
+        ),
+    )
+    _add_edge(
+        edges,
+        OperatorEvidenceGraphEdge(
+            source_id=stage_node_id,
+            target_id=attempt_node_id,
+            kind="attempt",
+            label="has attempt",
+        ),
+    )
+
+    for key, relative_path in sorted(artifact_index.documents.items()):
+        node = _artifact_graph_node(
+            workspace_root=workspace_root,
+            node_id=f"document:{key}",
+            label=key,
+            kind="document",
+            stage=stage,
+            relative_path=relative_path,
+            updated_at_utc=artifact_index.updated_at_utc,
+            result_status=_document_result_status(key=key, result=result),
+        )
+        _add_node(nodes, node)
+        _add_edge(
+            edges,
+            OperatorEvidenceGraphEdge(
+                source_id=attempt_node_id,
+                target_id=node.node_id,
+                kind="artifact-index",
+                label="indexes document",
+            ),
+        )
+        if _is_stage_output_path(stage=stage, relative_path=relative_path):
+            _add_edge(
+                edges,
+                OperatorEvidenceGraphEdge(
+                    source_id=stage_node_id,
+                    target_id=node.node_id,
+                    kind="stage-output",
+                    label="stage output",
+                ),
+            )
+
+    for key, relative_path in sorted(artifact_index.logs.items()):
+        node = _artifact_graph_node(
+            workspace_root=workspace_root,
+            node_id=f"log:{key}",
+            label=key,
+            kind="log",
+            stage=stage,
+            relative_path=relative_path,
+            updated_at_utc=artifact_index.updated_at_utc,
+            result_status=None,
+        )
+        _add_node(nodes, node)
+        _add_edge(
+            edges,
+            OperatorEvidenceGraphEdge(
+                source_id=attempt_node_id,
+                target_id=node.node_id,
+                kind="runtime-evidence",
+                label="captures log",
+            ),
+        )
+
+    if "document:validator_report" in nodes and "document:stage_result" in nodes:
+        _add_edge(
+            edges,
+            OperatorEvidenceGraphEdge(
+                source_id="document:validator_report",
+                target_id="document:stage_result",
+                kind="validation",
+                label="validates stage result",
+            ),
+        )
+
+    _add_runtime_event_nodes(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+        nodes=nodes,
+        edges=edges,
+        incomplete_reasons=incomplete_reasons,
+    )
+    _add_approval_nodes(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+        nodes=nodes,
+        edges=edges,
+        incomplete_reasons=incomplete_reasons,
+    )
+
+    mode = "graph" if edges else "flat-table"
+    if mode == "flat-table" and "graph-edges-unavailable" not in incomplete_reasons:
+        incomplete_reasons.append("graph-edges-unavailable")
+    return OperatorEvidenceGraphView(
+        run_id=selected_run_id,
+        stage=stage,
+        attempt_number=selected_attempt,
+        mode=mode,
+        nodes=tuple(sorted(nodes.values(), key=lambda node: node.node_id)),
+        edges=tuple(
+            sorted(
+                edges.values(),
+                key=lambda edge: (edge.source_id, edge.target_id, edge.kind),
+            )
+        ),
+        artifact_table=artifact_table,
+        incomplete_reasons=tuple(incomplete_reasons),
+    )
+
+
+def _add_node(
+    nodes: dict[str, OperatorEvidenceGraphNode],
+    node: OperatorEvidenceGraphNode,
+) -> None:
+    nodes.setdefault(node.node_id, node)
+
+
+def _add_edge(
+    edges: dict[tuple[str, str, str], OperatorEvidenceGraphEdge],
+    edge: OperatorEvidenceGraphEdge,
+) -> None:
+    edges.setdefault((edge.source_id, edge.target_id, edge.kind), edge)
+
+
+def _try_stage_result_summary(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    run_id: str,
+    incomplete_reasons: list[str],
+) -> StageResultSummary | None:
+    try:
+        return resolve_stage_result_summary(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            run_id=run_id,
+        )
+    except ValueError as exc:
+        incomplete_reasons.append(f"stage-result-summary-unavailable: {exc}")
+        return None
+
+
+def _document_result_status(*, key: str, result: StageResultSummary | None) -> str | None:
+    if result is None:
+        return None
+    if key == "validator_report":
+        return "fail" if result.validator_fail_count else "pass"
+    if key == "stage_result":
+        return result.final_state
+    return None
+
+
+def _artifact_graph_node(
+    *,
+    workspace_root: Path,
+    node_id: str,
+    label: str,
+    kind: str,
+    stage: str,
+    relative_path: str,
+    updated_at_utc: str | None,
+    result_status: str | None,
+) -> OperatorEvidenceGraphNode:
+    path = _safe_relative_path(workspace_root, relative_path)
+    exists = path is not None and path.exists()
+    status = "missing"
+    if exists:
+        status = result_status or "present"
+    return OperatorEvidenceGraphNode(
+        node_id=node_id,
+        label=label,
+        kind=kind,
+        stage=stage,
+        path=workspace_relative_path(workspace_root, path) if path is not None else relative_path,
+        status=status,
+        detail=(
+            f"Indexed {kind}: {relative_path}"
+            if exists
+            else f"Indexed {kind} is missing: {relative_path}"
+        ),
+        byte_size=path.stat().st_size if exists and path is not None else None,
+        updated_at_utc=updated_at_utc,
+    )
+
+
+def _is_stage_output_path(*, stage: str, relative_path: str) -> bool:
+    return f"/stages/{stage}/" in f"/{relative_path}"
+
+
+def _attempt_root(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> Path:
+    return run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+
+
+def _add_attempt_file_node(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+    filename: str,
+    node_id: str,
+    label: str,
+    kind: str,
+    nodes: dict[str, OperatorEvidenceGraphNode],
+    edges: dict[tuple[str, str, str], OperatorEvidenceGraphEdge],
+) -> Path | None:
+    path = _attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    ) / filename
+    if not path.exists():
+        return None
+    relative_path = workspace_relative_path(workspace_root, path)
+    _add_node(
+        nodes,
+        OperatorEvidenceGraphNode(
+            node_id=node_id,
+            label=label,
+            kind=kind,
+            stage=stage,
+            path=relative_path,
+            status="present",
+            detail=f"Attempt {attempt_number} {kind}: {relative_path}",
+            byte_size=path.stat().st_size,
+            updated_at_utc=None,
+        ),
+    )
+    _add_edge(
+        edges,
+        OperatorEvidenceGraphEdge(
+            source_id=f"attempt:{attempt_number}",
+            target_id=node_id,
+            kind="runtime-evidence",
+            label="captures log",
+        ),
+    )
+    return path
+
+
+def _add_runtime_event_nodes(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+    nodes: dict[str, OperatorEvidenceGraphNode],
+    edges: dict[tuple[str, str, str], OperatorEvidenceGraphEdge],
+    incomplete_reasons: list[str],
+) -> None:
+    events_path = _add_attempt_file_node(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+        filename=RUN_EVENTS_JSONL_FILENAME,
+        node_id="log:events_jsonl",
+        label="events_jsonl",
+        kind="log",
+        nodes=nodes,
+        edges=edges,
+    )
+    if events_path is None:
+        return
+    for line_number, line in enumerate(events_path.read_text(encoding="utf-8").splitlines(), 1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            payload = json.loads(stripped)
+        except json.JSONDecodeError:
+            incomplete_reasons.append(f"events-jsonl-line-{line_number}-invalid")
+            continue
+        if not isinstance(payload, dict):
+            incomplete_reasons.append(f"events-jsonl-line-{line_number}-not-object")
+            continue
+        event_name = str(
+            payload.get("type")
+            or payload.get("event")
+            or payload.get("message_type")
+            or f"runtime.event.{line_number}"
+        )
+        node_id = f"event:{line_number}"
+        _add_node(
+            nodes,
+            OperatorEvidenceGraphNode(
+                node_id=node_id,
+                label=event_name,
+                kind="event",
+                stage=stage,
+                path=workspace_relative_path(workspace_root, events_path),
+                status=str(payload.get("level") or "info").lower(),
+                detail=str(payload.get("message") or payload.get("text") or payload)[:240],
+                byte_size=None,
+                updated_at_utc=(
+                    str(payload.get("timestamp") or payload.get("time"))
+                    if payload.get("timestamp") or payload.get("time")
+                    else None
+                ),
+            ),
+        )
+        _add_edge(
+            edges,
+            OperatorEvidenceGraphEdge(
+                source_id="log:events_jsonl",
+                target_id=node_id,
+                kind="event-entry",
+                label="records event",
+            ),
+        )
+
+
+def _add_approval_nodes(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+    nodes: dict[str, OperatorEvidenceGraphNode],
+    edges: dict[tuple[str, str, str], OperatorEvidenceGraphEdge],
+    incomplete_reasons: list[str],
+) -> None:
+    requests_path = _add_attempt_file_node(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+        filename=OPERATOR_REQUESTS_FILENAME,
+        node_id="log:operator_requests",
+        label="operator_requests",
+        kind="approval-log",
+        nodes=nodes,
+        edges=edges,
+    )
+    decisions_path = _add_attempt_file_node(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+        filename=OPERATOR_DECISIONS_FILENAME,
+        node_id="log:operator_decisions",
+        label="operator_decisions",
+        kind="approval-log",
+        nodes=nodes,
+        edges=edges,
+    )
+    if requests_path is None:
+        return
+    try:
+        requests = load_operator_requests(requests_path)
+        decisions = (
+            load_operator_decisions(decisions_path)
+            if decisions_path is not None
+            else ()
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        incomplete_reasons.append(f"approval-log-unreadable: {exc}")
+        return
+
+    decisions_by_request = {decision.request_id: decision for decision in decisions}
+    for request in requests:
+        decision = decisions_by_request.get(request.id)
+        status = "pending"
+        if decision is not None:
+            status = (
+                "approved"
+                if decision.is_approval
+                else decision.action.value
+            )
+        request_node_id = f"approval-request:{request.id}"
+        _add_node(
+            nodes,
+            OperatorEvidenceGraphNode(
+                node_id=request_node_id,
+                label=request.id,
+                kind="approval-request",
+                stage=stage,
+                path=workspace_relative_path(workspace_root, requests_path),
+                status=status,
+                detail=f"{request.kind.value} request with {request.risk.value} risk.",
+                byte_size=None,
+                updated_at_utc=request.created_at_utc,
+            ),
+        )
+        _add_edge(
+            edges,
+            OperatorEvidenceGraphEdge(
+                source_id="log:operator_requests",
+                target_id=request_node_id,
+                kind="approval-request",
+                label="records request",
+            ),
+        )
+        if decision is None or decisions_path is None:
+            continue
+        decision_node_id = f"approval-decision:{request.id}"
+        _add_node(
+            nodes,
+            OperatorEvidenceGraphNode(
+                node_id=decision_node_id,
+                label=decision.action.value,
+                kind="approval-decision",
+                stage=stage,
+                path=workspace_relative_path(workspace_root, decisions_path),
+                status=decision.action.value,
+                detail=decision.reason or "Operator decision recorded.",
+                byte_size=None,
+                updated_at_utc=decision.created_at_utc,
+            ),
+        )
+        _add_edge(
+            edges,
+            OperatorEvidenceGraphEdge(
+                source_id=request_node_id,
+                target_id=decision_node_id,
+                kind="approval-decision",
+                label="resolved by",
+            ),
+        )
+
+
+def _artifact_table_from_index(
+    *,
+    workspace_root: Path,
+    stage: str,
+    updated_at_utc: str | None,
+    documents: dict[str, str],
+    logs: dict[str, str],
+) -> tuple[OperatorArtifactRef, ...]:
+    refs: list[OperatorArtifactRef] = []
+    for kind, entries in (("document", documents), ("log", logs)):
+        for key, relative_path in sorted(entries.items()):
+            refs.append(
+                OperatorArtifactRef(
+                    stage=stage,
+                    key=key,
+                    kind=kind,
+                    path=relative_path,
+                    byte_size=_artifact_size(
+                        workspace_root=workspace_root,
+                        relative_path=relative_path,
+                    ),
+                    updated_at_utc=updated_at_utc,
+                )
+            )
+    return tuple(refs)
+
+
+def _fallback_artifact_table(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> tuple[OperatorArtifactRef, ...]:
+    refs: list[OperatorArtifactRef] = []
+    seen_paths: set[str] = set()
+    stage_root = workspace_root / "workitems" / work_item / "stages" / stage
+    attempt_root = _attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    for path in sorted(stage_root.glob("*.md")):
+        _append_fallback_artifact_ref(
+            refs=refs,
+            seen_paths=seen_paths,
+            workspace_root=workspace_root,
+            stage=stage,
+            path=path,
+            kind="document",
+        )
+    if attempt_root.exists():
+        for path in sorted(
+            candidate for candidate in attempt_root.iterdir() if candidate.is_file()
+        ):
+            if path.name == "artifact-index.json":
+                continue
+            _append_fallback_artifact_ref(
+                refs=refs,
+                seen_paths=seen_paths,
+                workspace_root=workspace_root,
+                stage=stage,
+                path=path,
+                kind="document" if path.suffix.lower() == ".md" else "log",
+            )
+    return tuple(refs)
+
+
+def _append_fallback_artifact_ref(
+    *,
+    refs: list[OperatorArtifactRef],
+    seen_paths: set[str],
+    workspace_root: Path,
+    stage: str,
+    path: Path,
+    kind: str,
+) -> None:
+    relative_path = workspace_relative_path(workspace_root, path)
+    if relative_path in seen_paths:
+        return
+    seen_paths.add(relative_path)
+    refs.append(
+        OperatorArtifactRef(
+            stage=stage,
+            key=_artifact_key_from_filename(path),
+            kind=kind,
+            path=relative_path,
+            byte_size=path.stat().st_size,
+            updated_at_utc=None,
+        )
+    )
+
+
+def _artifact_key_from_filename(path: Path) -> str:
+    if path.suffix.lower() in {".md", ".markdown"}:
+        return path.stem.replace("-", "_")
+    return path.name.replace(".", "_").replace("-", "_")
 
 
 def _bounded_operator_artifact_document(
@@ -734,5 +1416,6 @@ __all__ = [
     "_safe_relative_path",
     "resolve_operator_artifact_document_content",
     "resolve_operator_artifacts_view",
+    "resolve_operator_evidence_graph_view",
     "resolve_operator_stage_document_workbench",
 ]

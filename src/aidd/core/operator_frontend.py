@@ -3,6 +3,7 @@ from __future__ import annotations
 from aidd.core.operator_frontend_artifacts import (
     resolve_operator_artifact_document_content,
     resolve_operator_artifacts_view,
+    resolve_operator_evidence_graph_view,
     resolve_operator_stage_document_workbench,
 )
 from aidd.core.operator_frontend_dashboard import resolve_operator_dashboard_view
@@ -19,6 +20,9 @@ from aidd.core.operator_frontend_models import (
     OperatorBlockingQuestionDiagnostics,
     OperatorChildWorkItemCandidate,
     OperatorDashboardView,
+    OperatorEvidenceGraphEdge,
+    OperatorEvidenceGraphNode,
+    OperatorEvidenceGraphView,
     OperatorEvidenceRef,
     OperatorNextAction,
     OperatorNextFlowRecommendation,
@@ -64,6 +68,9 @@ __all__ = [
     "OperatorChildWorkItemCandidate",
     "OperatorDashboardView",
     "OperatorEvidenceRef",
+    "OperatorEvidenceGraphEdge",
+    "OperatorEvidenceGraphNode",
+    "OperatorEvidenceGraphView",
     "OperatorNextAction",
     "OperatorNextFlowRecommendation",
     "OperatorPrimaryArtifact",
@@ -94,6 +101,7 @@ __all__ = [
     "persist_operator_answer",
     "resolve_operator_artifact_document_content",
     "resolve_operator_artifacts_view",
+    "resolve_operator_evidence_graph_view",
     "resolve_operator_dashboard_view",
     "resolve_operator_questions_view",
     "resolve_operator_run_log_view",

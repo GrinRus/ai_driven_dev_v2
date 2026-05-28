@@ -6388,7 +6388,7 @@ Exit evidence:
 - `target-architecture.md` records immutable completed runs and lineage-based next flows;
 - Wave 26 local tasks are split and promoted into the short backlog queue.
 
-### Epic W26-E1 — flow lineage core model and launch services (`next`)
+### Epic W26-E1 — flow lineage core model and launch services (`done`)
 Linked stories: `US-02`, `US-03`, `US-07`, `US-10`, `US-11`
 
 #### Slice W26-E1-S1 — completed-run handoff read model (`done`)
@@ -6478,7 +6478,7 @@ Exit evidence:
 - follow-up and cloned flows are independent units with durable source-run links;
 - launch preflight blocks unsafe or ambiguous next-flow starts before runtime execution.
 
-#### Slice W26-E1-S3 — workbench and evidence read models (`planned`)
+#### Slice W26-E1-S3 — workbench and evidence read models (`done`)
 Goal: expose the non-handoff Mission Control screens through core-owned read models so the
 static UI does not infer document, recovery, diagnostic, or provenance state in JavaScript.
 
@@ -6515,7 +6515,7 @@ Local tasks:
   - Scope: core operator frontend question, validation, log, and approval summaries.
   - Verification: core tests cover blocked, repair-available, stopped, approval-waiting,
     and log-truncated states.
-- `W26-E1-S3-T3` Add an evidence graph read model that derives nodes and edges from
+- `W26-E1-S3-T3` (done) Add an evidence graph read model that derives nodes and edges from
   artifact indexes, stage outputs, validator reports, run events, approvals, and logs
   without creating a new canonical artifact format.
   - Scope: core artifact/provenance read model.

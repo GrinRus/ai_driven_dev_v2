@@ -360,6 +360,39 @@ class OperatorStageDocumentVersion:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorEvidenceGraphNode:
+    node_id: str
+    label: str
+    kind: str
+    stage: str | None
+    path: str | None
+    status: str
+    detail: str
+    byte_size: int | None
+    updated_at_utc: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorEvidenceGraphEdge:
+    source_id: str
+    target_id: str
+    kind: str
+    label: str
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorEvidenceGraphView:
+    run_id: str
+    stage: str
+    attempt_number: int
+    mode: str
+    nodes: tuple[OperatorEvidenceGraphNode, ...]
+    edges: tuple[OperatorEvidenceGraphEdge, ...]
+    artifact_table: tuple[OperatorArtifactRef, ...]
+    incomplete_reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorStageDocumentWorkbench:
     run_id: str
     stage: str
@@ -401,6 +434,9 @@ __all__ = [
     "OperatorChildWorkItemCandidate",
     "OperatorDashboardView",
     "OperatorEvidenceRef",
+    "OperatorEvidenceGraphEdge",
+    "OperatorEvidenceGraphNode",
+    "OperatorEvidenceGraphView",
     "OperatorNextAction",
     "OperatorNextFlowRecommendation",
     "OperatorPrimaryArtifact",

@@ -12,6 +12,7 @@ from aidd.core.operator_frontend import (
     resolve_operator_artifact_document_content,
     resolve_operator_artifacts_view,
     resolve_operator_dashboard_view,
+    resolve_operator_evidence_graph_view,
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
     resolve_operator_run_view,
@@ -25,6 +26,7 @@ from aidd.core.run_store import (
     create_next_attempt_directory,
     create_run_manifest,
     persist_stage_status,
+    run_attempt_artifact_index_path,
     run_attempt_root,
     run_attempt_runtime_log_path,
 )
@@ -1101,6 +1103,117 @@ def test_operator_artifact_document_content_returns_bounded_text_with_metadata(
     assert source.mode == "source"
     assert source.requested_bytes == 64
     assert source.end_byte == 64
+
+
+def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_valid_plan_outputs(workspace_root)
+    attempt_path = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    attempt_path.joinpath(RUN_EVENTS_JSONL_FILENAME).write_text(
+        (
+            '{"timestamp":"2026-05-25T00:00:00Z","level":"info",'
+            '"source":"runtime","event":"stage.started","message":"Plan stage started"}\n'
+        ),
+        encoding="utf-8",
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="plan",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "uv run --extra dev pytest tests/core/test_operator_frontend.py"},
+        risk=RuntimeOperatorRisk.MEDIUM,
+    )
+    append_operator_request(path=attempt_path / OPERATOR_REQUESTS_FILENAME, request=request)
+    append_operator_decision(
+        path=attempt_path / OPERATOR_DECISIONS_FILENAME,
+        decision=RuntimeOperatorDecision(
+            request_id=request.id,
+            action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+            source=RuntimeOperatorDecisionSource.UI,
+            reason="approved for graph test",
+        ),
+    )
+
+    graph = resolve_operator_evidence_graph_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    nodes = {node.node_id: node for node in graph.nodes}
+    edges = {(edge.source_id, edge.target_id, edge.kind) for edge in graph.edges}
+    assert graph.mode == "graph"
+    assert graph.incomplete_reasons == ()
+    assert nodes["stage:plan"].status == "blocked"
+    assert nodes["document:plan"].path == "workitems/WI-UI/stages/plan/plan.md"
+    assert nodes["document:validator_report"].status == "pass"
+    assert nodes["document:stage_result"].status == "blocked"
+    assert nodes["log:runtime_log"].path == (
+        "reports/runs/WI-UI/run-ui/stages/plan/attempts/attempt-0001/runtime.log"
+    )
+    assert nodes["event:1"].detail == "Plan stage started"
+    assert nodes[f"approval-request:{request.id}"].status == "approved"
+    assert nodes[f"approval-decision:{request.id}"].status == "allow_once"
+    assert ("stage:plan", "attempt:1", "attempt") in edges
+    assert ("attempt:1", "document:plan", "artifact-index") in edges
+    assert ("document:validator_report", "document:stage_result", "validation") in edges
+    assert ("log:events_jsonl", "event:1", "event-entry") in edges
+    assert (
+        f"approval-request:{request.id}",
+        f"approval-decision:{request.id}",
+        "approval-decision",
+    ) in edges
+    assert any(ref.key == "plan" for ref in graph.artifact_table)
+    assert any(ref.key == "runtime_log" for ref in graph.artifact_table)
+    assert all(
+        node.path is None or not Path(node.path).is_absolute()
+        for node in graph.nodes
+    )
+    assert all(not Path(ref.path).is_absolute() for ref in graph.artifact_table)
+
+
+def test_operator_evidence_graph_view_degrades_to_flat_table_without_artifact_index(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_valid_plan_outputs(workspace_root)
+    run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ).unlink()
+
+    graph = resolve_operator_evidence_graph_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    table = {(ref.key, ref.kind, ref.path) for ref in graph.artifact_table}
+    assert graph.mode == "flat-table"
+    assert graph.nodes == ()
+    assert graph.edges == ()
+    assert graph.incomplete_reasons == ("artifact-index-missing",)
+    assert ("plan", "document", "workitems/WI-UI/stages/plan/plan.md") in table
+    assert (
+        "runtime_log",
+        "log",
+        "reports/runs/WI-UI/run-ui/stages/plan/attempts/attempt-0001/runtime.log",
+    ) in table
 
 
 def test_operator_stage_document_workbench_returns_present_markdown_contract_context(
