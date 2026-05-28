@@ -6336,7 +6336,7 @@ Exit evidence:
 - validation can surface independent semantic defects earlier without silently continuing
   past blocking structural failures.
 
-## Wave 26 — completed-flow lineage operator experience (`next`)
+## Wave 26 — completed-flow lineage operator experience (`done`)
 
 Goal: implement the accepted Mission Control operator UI direction, including the
 completed-run handoff that can launch a new work item, follow-up flow, cloned flow,
@@ -6930,10 +6930,10 @@ Exit evidence:
   provider work by default;
 - optional follow-up proof records lineage when a maintainer deliberately runs it.
 
-### Epic W26-E5 — operator documentation and rollout clarity (`planned`)
+### Epic W26-E5 — operator documentation and rollout clarity (`done`)
 Linked stories: `US-09`, `US-11`
 
-#### Slice W26-E5-S1 — completed-flow operator documentation (`planned`)
+#### Slice W26-E5-S1 — completed-flow operator documentation (`done`)
 Goal: document the completed-run handoff and lineage model for operators after the UI and
 core services land.
 
@@ -6957,7 +6957,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E5-S1-T1` Document completed-run handoff, follow-up flow creation, clone flow,
+- `W26-E5-S1-T1` (done) Document completed-run handoff, follow-up flow creation, clone flow,
   eval batch handoff, archive behavior, and source-run lineage in operator-facing docs.
   - Scope: operator documentation only.
   - Verification: docs consistency tests assert the operator docs describe next-flow

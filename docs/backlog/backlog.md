@@ -6,8 +6,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E5-S1-T1`
-
 ## Soon
 
 ## Parking lot
@@ -309,3 +307,8 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   flag now creates a follow-up draft from terminal QA findings and records
   `next-flow-lineage.json` without launching a child public-repository flow. Wave 26
   live E2E integration is done, and `W26-E5-S1-T1` is promoted to `Next`.
+- `2026-05-28` Completed `W26-E5-S1-T1`; operator-facing docs now describe
+  completed-run Flow Complete handoff, next-flow actions, source-run lineage,
+  launch-preflight troubleshooting, archive behavior, and the boundary between
+  local-project UI proof and public-repository live E2E checkpoint evidence. Wave 26 is
+  done and the active backlog queue is empty.

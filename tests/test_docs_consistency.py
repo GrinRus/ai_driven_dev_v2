@@ -398,7 +398,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W24-E1-S2-T2` (done)" in w24_s2
     assert "`W24-E1-S2-T3` (done)" in w24_s2
 
-    assert "## Wave 26 — completed-flow lineage operator experience (`next`)" in roadmap
+    assert "## Wave 26 — completed-flow lineage operator experience (`done`)" in roadmap
     assert "`W26-E0-S1-T1` (done)" in w26
     assert "### Epic W26-E1 — flow lineage core model and launch services (`done`)" in w26
     assert "`W26-E1-S1-T1` (done) Add a terminal-run handoff read model" in w26
@@ -450,7 +450,10 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E4-S2-T1` (done) Define the manual live E2E next-flow checkpoint policy" in w26
     assert "`W26-E4-S2-T2` (done) Extend the black-box live evaluator final checkpoint" in w26
     assert "`W26-E4-S2-T3` (done) Add an optional maintained-scenario follow-up proof path" in w26
-    assert "`W26-E5-S1-T1`" in backlog_next
+    assert "### Epic W26-E5 — operator documentation and rollout clarity (`done`)" in w26
+    assert "#### Slice W26-E5-S1 — completed-flow operator documentation (`done`)" in w26
+    assert "`W26-E5-S1-T1` (done) Document completed-run handoff" in w26
+    assert "`W26-E5-S1-T1`" not in backlog_next
     assert "`W26-E1-S1-T1`" not in backlog_next
     assert "`W26-E1-S1-T2`" not in backlog_next
     assert "`W26-E1-S2-T1`" not in backlog_next
@@ -666,6 +669,76 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
 
     assert "Public GitHub repositories are live" in readme
     assert "Public GitHub repositories are live E2E targets" in live_catalog
+
+
+def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
+    readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
+    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
+        encoding="utf-8"
+    )
+    operator_troubleshooting = (
+        _repo_root() / "docs" / "operator-troubleshooting.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "After terminal `qa`, the command center switches to **Flow Complete**",
+        "final QA status",
+        "final artifacts",
+        "repair counts",
+        "approval counts",
+        "answered questions",
+        "recommended next-flow actions",
+        "source-run lineage",
+        "create a new work item",
+        "start a follow-up flow",
+        "clone the previous flow",
+        "eval / scenario batch",
+        "archive the run",
+        "without deleting artifacts or mutating the completed source run",
+    ):
+        assert expected in readme
+
+    for expected in (
+        "### 6.6 Completed-run handoff and next-flow actions",
+        "**Create New Work Item**",
+        "**Start Follow-up Flow**",
+        "QA findings, review notes, failed",
+        "evidence, or a manual operator request",
+        "**Clone This Flow**",
+        "id, prompt pack, contracts path",
+        "branch or commit, resources, and baseline references",
+        "**Run Eval / Scenario Batch**",
+        "must not silently launch a",
+        "nested public-repository live flow",
+        "**Archive Run**",
+        "Archive does not delete artifacts",
+        "Follow-up and cloned flows are independent child work items or runs.",
+        "`.aidd/` workspace",
+        "explicit runtime selection",
+        "source-run",
+        "baseline availability",
+        "Local-project UI evidence proves the product operator behavior",
+        "Public-repository live E2E records a terminal next-flow checkpoint",
+        "does not require launching a second",
+        "public-repository flow by default",
+    ):
+        assert expected in operator_handbook
+
+    for expected in (
+        "### 3.6 Next-flow launch preflight is blocked",
+        "the **Flow Complete** screen is visible, but **Launch Flow Now** is disabled",
+        "blocked launch preflight",
+        "writable `.aidd/` workspace",
+        "explicit runtime selection",
+        "contracts path availability",
+        "source-run existence",
+        "baseline",
+        "hidden `generic-cli` fallback",
+        "Keep local UI troubleshooting separate from public-repository live E2E evidence.",
+        "next-flow-checkpoint.json",
+        "next-flow-checkpoint.md",
+    ):
+        assert expected in operator_troubleshooting
 
 
 def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> None:

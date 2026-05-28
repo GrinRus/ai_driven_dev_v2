@@ -192,6 +192,14 @@ durable Markdown input under `.aidd/workitems/<id>/stages/<stage>/operator-reque
 and are shown in Activity, Evidence Refs, and Recent Artifacts. The UI is a local no-auth
 operator surface: the default host is loopback, and non-loopback binds print a warning.
 
+After terminal `qa`, the command center switches to **Flow Complete**. The completed-run
+handoff shows final QA status, final artifacts, blockers, repair counts, approval counts,
+answered questions, recommended next-flow actions, and source-run lineage. Operators can
+create a new work item, start a follow-up flow, clone the previous flow, hand off to an
+eval / scenario batch, or archive the run. Follow-up and clone actions create new
+independent work item or run identities with source-run references; archive records local
+operator intent without deleting artifacts or mutating the completed source run.
+
 For the local UI evidence lane, see `docs/e2e/operator-ui-local-project.md`.
 
 ## How AIDD works
