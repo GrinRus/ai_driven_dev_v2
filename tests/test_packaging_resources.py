@@ -5,6 +5,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+from aidd.cli.ui_assets import operator_static_asset_manifest
 from aidd.core.contracts import repo_root_from
 from aidd.core.stages import STAGES
 
@@ -33,9 +34,8 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
         assert f"aidd/_resources/contracts/stages/{stage}.md" in archive_names
     assert "aidd/_resources/contracts/documents/stage-result.md" in archive_names
     assert "aidd/_resources/prompt-packs/stages/plan/system.md" in archive_names
-    assert "aidd/cli/static/index.html" in archive_names
-    assert "aidd/cli/static/operator.css" in archive_names
-    assert "aidd/cli/static/operator.js" in archive_names
+    for asset in operator_static_asset_manifest():
+        assert f"aidd/cli/static/{asset.filename}" in archive_names
 
     installed_check = subprocess.run(
         [
@@ -52,12 +52,13 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
             (
                 "from aidd.core.resources import default_stage_contracts_root; "
                 "from aidd.core.stages import STAGES; "
-                "from aidd.cli.ui_assets import operator_static_asset_for_route; "
+                "from aidd.cli.ui_assets import "
+                "operator_static_asset_for_route, operator_static_asset_manifest; "
                 "root = default_stage_contracts_root(); "
                 "missing = [stage for stage in STAGES if not (root / f'{stage}.md').exists()]; "
-                "assets = [operator_static_asset_for_route(route) for route in "
-                "('/', '/operator.js', '/operator.css')]; "
-                "missing_assets = [asset for asset in assets if asset is None]; "
+                "assets = [operator_static_asset_for_route(asset.route) "
+                "for asset in operator_static_asset_manifest()]; "
+                "missing_assets = [asset for asset in assets if asset is None or not asset.text]; "
                 "raise SystemExit("
                 "f'missing stage contracts: {missing}' if missing else "
                 "f'missing static assets: {missing_assets}' if missing_assets else 0)"

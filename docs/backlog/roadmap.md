@@ -6573,7 +6573,7 @@ Local tasks:
   - Scope: static resource loader and UI HTTP serving only.
   - Verification: package resource tests and UI endpoint tests prove old routes still
     work and new static resources are included in source and wheel builds.
-- `W26-E2-S0-T2` Split `operator.js` into smaller packaged browser modules for API/state,
+- `W26-E2-S0-T2` (done) Split `operator.js` into smaller packaged browser modules for API/state,
   shell rendering, stage cockpit rendering, artifacts/documents, logs/jobs, questions,
   approvals/interventions, and next-flow actions.
   - Scope: static JavaScript resources only.

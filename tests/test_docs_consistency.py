@@ -406,26 +406,29 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E1-S2-T2` (done) Implement a clone-flow draft service" in w26
     assert "`W26-E1-S2-T3` (done) Add launch preflight validation" in w26
     assert "`W26-E2-S0-T1` (done) Add a packaged static asset manifest" in w26
+    assert "`W26-E2-S0-T2` (done) Split `operator.js`" in w26
     assert (
         "`W26-E4-S2-T1` Define the manual live E2E next-flow checkpoint policy"
         in w26
     )
-    assert "`W26-E2-S0-T2`" in backlog_next
+    assert "`W26-E2-S0-T3`" in backlog_next
     assert "`W26-E1-S1-T1`" not in backlog_next
     assert "`W26-E1-S1-T2`" not in backlog_next
     assert "`W26-E1-S2-T1`" not in backlog_next
     assert "`W26-E1-S2-T2`" not in backlog_next
     assert "`W26-E1-S2-T3`" not in backlog_next
     assert "`W26-E2-S0-T1`" not in backlog_next
+    assert "`W26-E2-S0-T2`" not in backlog_next
     assert "`W26-E1-S1-T2`" not in backlog_soon
     assert "`W26-E1-S2-T1`" not in backlog_soon
     assert "`W26-E1-S2-T2`" not in backlog_soon
     assert "`W26-E1-S2-T3`" not in backlog_soon
     assert "`W26-E2-S0-T1`" not in backlog_soon
     assert "`W26-E2-S0-T2`" not in backlog_soon
-    assert "`W26-E2-S0-T3`" in backlog_soon
+    assert "`W26-E2-S0-T3`" not in backlog_soon
+    assert "`W26-E2-S0-T4`" in backlog_soon
     assert "`W26-E2-S0-T3`" not in backlog_parking
-    assert "`W26-E2-S0-T4`" in backlog_parking
+    assert "`W26-E2-S0-T4`" not in backlog_parking
     assert "`W26-E2-S1-T1`" in backlog_parking
     assert "`W26-E4-S2-T1`" in backlog_parking
     assert "`W26-E4-S2-T2`" in backlog_parking

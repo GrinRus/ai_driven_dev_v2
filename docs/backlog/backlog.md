@@ -6,18 +6,17 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E2-S0-T2`
+- `W26-E2-S0-T3`
 
 ## Soon
 
-- `W26-E2-S0-T3`
+- `W26-E2-S0-T4`
 
 ## Parking lot
 
 - `W26-E1-S3-T1`
 - `W26-E1-S3-T2`
 - `W26-E1-S3-T3`
-- `W26-E2-S0-T4`
 - `W26-E2-S1-T1`
 - `W26-E2-S1-T2`
 - `W26-E2-S1-T3`
@@ -225,3 +224,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   through a manifest-backed loader while preserving `/operator.js` and `/operator.css`
   compatibility routes. `W26-E2-S0-T2` is promoted to `Next`, and `W26-E2-S0-T3` is
   promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S0-T2`; `operator.js` is now a compatibility bootstrap
+  that loads smaller packaged browser modules for API/state, shell rendering, cockpit,
+  artifacts, logs/jobs, questions, approvals/interventions, and next-flow actions.
+  `W26-E2-S0-T3` is promoted to `Next`, and `W26-E2-S0-T4` is promoted to `Soon`.

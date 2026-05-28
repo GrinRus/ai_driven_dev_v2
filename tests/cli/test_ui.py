@@ -21,7 +21,7 @@ from aidd.cli.ui import (
     _is_loopback_host,
     _read_json_body,
 )
-from aidd.cli.ui_assets import operator_static_asset_for_route
+from aidd.cli.ui_assets import operator_static_asset_for_route, operator_static_asset_manifest
 from aidd.core.run_store import (
     RUN_RUNTIME_EXIT_METADATA_FILENAME,
     create_next_attempt_directory,
@@ -117,6 +117,14 @@ def _wait_job_status(
             return payload
         time.sleep(0.01)
     raise AssertionError(f"job did not reach {expected_status}: {job_id}")
+
+
+def _operator_script_bundle(service: OperatorUiService) -> str:
+    return "\n".join(
+        service.handle_get(asset.route, {}).body.decode("utf-8")
+        for asset in operator_static_asset_manifest()
+        if asset.content_type == "text/javascript; charset=utf-8"
+    )
 
 
 class _BodyHandler:
@@ -364,22 +372,12 @@ def test_ui_dashboard_endpoint_exposes_operator_console_payload(tmp_path: Path) 
 def test_ui_static_asset_routes_are_served_from_manifest(tmp_path: Path) -> None:
     service = _service(tmp_path / ".aidd")
 
-    html_response = service.handle_get("/", {})
-    script_response = service.handle_get("/operator.js", {})
-    css_response = service.handle_get("/operator.css", {})
-
-    index_asset = operator_static_asset_for_route("/")
-    script_asset = operator_static_asset_for_route("/operator.js")
-    css_asset = operator_static_asset_for_route("/operator.css")
-    assert index_asset is not None
-    assert script_asset is not None
-    assert css_asset is not None
-    assert html_response.content_type == index_asset.content_type
-    assert script_response.content_type == script_asset.content_type
-    assert css_response.content_type == css_asset.content_type
-    assert html_response.body.decode("utf-8") == index_asset.text
-    assert script_response.body.decode("utf-8") == script_asset.text
-    assert css_response.body.decode("utf-8") == css_asset.text
+    for manifest_asset in operator_static_asset_manifest():
+        response = service.handle_get(manifest_asset.route, {})
+        asset = operator_static_asset_for_route(manifest_asset.route)
+        assert asset is not None
+        assert response.content_type == asset.content_type
+        assert response.body.decode("utf-8") == asset.text
 
 
 def test_ui_run_endpoint_uses_empty_state_when_no_run_exists(tmp_path: Path) -> None:
@@ -1741,8 +1739,7 @@ def test_ui_artifact_document_endpoint_rejects_non_utf8_documents(tmp_path: Path
 def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     service = _service(tmp_path / ".aidd")
 
-    response = service.handle_get("/operator.js", {})
-    script = response.body.decode("utf-8")
+    script = _operator_script_bundle(service)
 
     assert "function escapeHtml(value)" in script
     assert "function compactPath(value, maxLength = 56)" in script
@@ -1945,7 +1942,7 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
 def test_operator_question_controls_have_screen_reader_labels(tmp_path: Path) -> None:
     service = _service(tmp_path / ".aidd")
 
-    script = service.handle_get("/operator.js", {}).body.decode("utf-8")
+    script = _operator_script_bundle(service)
     css = service.handle_get("/operator.css", {}).body.decode("utf-8")
 
     assert '<label class="sr-only" for="${answerId}">Answer for' in script

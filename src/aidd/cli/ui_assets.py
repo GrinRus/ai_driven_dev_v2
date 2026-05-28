@@ -33,6 +33,51 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-api-state.js",
+        filename="operator-api-state.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-shell-rendering.js",
+        filename="operator-shell-rendering.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-artifacts-documents.js",
+        filename="operator-artifacts-documents.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-questions.js",
+        filename="operator-questions.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-approvals-interventions.js",
+        filename="operator-approvals-interventions.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-logs-jobs.js",
+        filename="operator-logs-jobs.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-next-flow-actions.js",
+        filename="operator-next-flow-actions.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-stage-cockpit.js",
+        filename="operator-stage-cockpit.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-main.js",
+        filename="operator-main.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator.css",
         filename="operator.css",
         content_type="text/css; charset=utf-8",
