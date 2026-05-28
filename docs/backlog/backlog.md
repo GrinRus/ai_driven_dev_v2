@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E1-S2-T2`
+- `W26-E1-S2-T3`
 
 ## Soon
 
-- `W26-E1-S2-T3`
 - `W26-E2-S0-T1`
 - `W26-E2-S0-T2`
 
@@ -218,3 +217,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-28` Completed `W26-E1-S2-T1`; follow-up draft creation now writes durable
   work-item context with source-run lineage and referenced source artifacts. `W26-E1-S2-T2`
   is promoted to `Next`, and `W26-E1-S2-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E1-S2-T2`; clone-flow draft creation now records editable
+  runtime, prompt-pack, resource, commit, and baseline configuration before launch.
+  `W26-E1-S2-T3` is promoted to `Next`.

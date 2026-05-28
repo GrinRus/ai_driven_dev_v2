@@ -6,10 +6,13 @@ from pathlib import Path
 import pytest
 
 from aidd.core.next_flow import (
+    CloneFlowDraftRequest,
     FollowUpDraftRequest,
     FollowUpSourceSelection,
+    create_clone_flow_draft,
     create_follow_up_work_item_draft,
 )
+from aidd.core.run_store import create_run_manifest, run_manifest_path
 
 
 def test_create_follow_up_work_item_draft_writes_durable_context_with_references(
@@ -116,5 +119,99 @@ def test_create_follow_up_work_item_draft_rejects_absolute_source_paths(
                         source_path=source_artifact.as_posix(),
                     ),
                 ),
+            )
+        )
+
+
+def test_create_clone_flow_draft_writes_editable_configuration_from_source_run(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-SOURCE",
+        run_id="run-source",
+        runtime_id="codex",
+        adapter_id="codex-adapter",
+        stage_target="qa",
+        workflow_stage_start="idea",
+        workflow_stage_end="qa",
+        config_snapshot={"mode": "test"},
+    )
+    manifest_path = run_manifest_path(workspace_root, "WI-SOURCE", "run-source")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.update(
+        {
+            "repository_git_sha": "a" * 40,
+            "resource_root": "/repo/contracts-source",
+            "resource_revision": "resource-rev-1",
+            "prompt_pack_provenance": [
+                {
+                    "path": "prompt-packs/stages/qa/run.md",
+                    "sha256": "b" * 64,
+                }
+            ],
+            "lineage": {
+                "baseline_id": "baseline-run",
+                "baseline_label": "main before handoff",
+            },
+        }
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+
+    result = create_clone_flow_draft(
+        CloneFlowDraftRequest(
+            workspace_root=workspace_root,
+            source_work_item="WI-SOURCE",
+            source_run_id="run-source",
+            new_work_item="WI-CLONE",
+            title="Retry the completed flow with a different implementation strategy",
+        )
+    )
+
+    draft_text = result.draft_path.read_text(encoding="utf-8")
+    assert result.work_item == "WI-CLONE"
+    assert result.config.runtime_id == "codex"
+    assert result.config.adapter_id == "codex-adapter"
+    assert result.config.stage_target == "qa"
+    assert result.config.workflow_stage_start == "idea"
+    assert result.config.workflow_stage_end == "qa"
+    assert result.config.resource_root == "/repo/contracts-source"
+    assert result.config.repository_git_sha == "a" * 40
+    assert result.config.resource_revision == "resource-rev-1"
+    assert result.config.baseline_id == "baseline-run"
+    assert result.config.baseline_label == "main before handoff"
+    assert result.config.prompt_pack_provenance[0].path == "prompt-packs/stages/qa/run.md"
+    assert "## Editable configuration" in draft_text
+    assert "- Runtime id: `codex`" in draft_text
+    assert "- Resource/contracts root: `/repo/contracts-source`" in draft_text
+    assert "- `prompt-packs/stages/qa/run.md` sha256" in draft_text
+    assert result.context_seed.user_request_path.exists()
+    assert not (workspace_root / "reports" / "runs" / "WI-CLONE").exists()
+
+    metadata = json.loads(
+        (workspace_root / "workitems" / "WI-CLONE" / "work-item.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert metadata["lineage"] == {
+        "baseline_id": "baseline-run",
+        "baseline_label": "main before handoff",
+        "source_run_id": "run-source",
+        "source_work_item_id": "WI-SOURCE",
+    }
+
+
+def test_create_clone_flow_draft_rejects_missing_source_run(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="No runs found|missing"):
+        create_clone_flow_draft(
+            CloneFlowDraftRequest(
+                workspace_root=tmp_path / ".aidd",
+                source_work_item="WI-SOURCE",
+                source_run_id="run-source",
+                new_work_item="WI-CLONE",
+                title="Clone missing run",
             )
         )

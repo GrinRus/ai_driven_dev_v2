@@ -6461,7 +6461,7 @@ Local tasks:
   - Scope: core work-item creation service.
   - Verification: core tests prove selected findings become durable Markdown context and
     source artifacts are referenced, not rewritten.
-- `W26-E1-S2-T2` Implement a clone-flow draft service that reuses runtime id, prompt pack,
+- `W26-E1-S2-T2` (done) Implement a clone-flow draft service that reuses runtime id, prompt pack,
   contracts path, branch or commit, and baseline references while assigning a new run or
   work item identity.
   - Scope: core launch draft service.
