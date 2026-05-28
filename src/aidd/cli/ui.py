@@ -52,6 +52,7 @@ from aidd.core.operator_frontend import (
     resolve_operator_artifact_document_content,
     resolve_operator_artifacts_view,
     resolve_operator_dashboard_view,
+    resolve_operator_evidence_graph_view,
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
     resolve_operator_run_view,
@@ -1044,6 +1045,18 @@ class OperatorUiService:
                         source_limit_bytes=_optional_positive_int_param(
                             params, "source_limit"
                         ),
+                    )
+                )
+            if path == "/api/artifacts/evidence-graph":
+                stage = _first_param(params, "stage", STAGES[0])
+                assert stage is not None
+                return _json_response(
+                    resolve_operator_evidence_graph_view(
+                        workspace_root=self.workspace_root,
+                        work_item=self.options.work_item,
+                        stage=stage,
+                        run_id=_first_param(params, "run_id"),
+                        attempt_number=_optional_attempt(params),
                     )
                 )
             if path == "/api/artifacts/document":

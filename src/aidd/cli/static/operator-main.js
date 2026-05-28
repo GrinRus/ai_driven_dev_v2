@@ -118,7 +118,41 @@ document.addEventListener("click", async (event) => {
     const artifactKey = event.target.closest("[data-artifact-key]")?.dataset.artifactKey;
     if (artifactKey) {
       state.activeArtifactKey = artifactKey;
+      state.selectedEvidenceNodeId = `document:${artifactKey}`;
+      state.selectedEvidenceEdgeId = "";
       await renderArtifacts();
+      return;
+    }
+    const evidenceNode = event.target.closest("[data-evidence-node]")?.dataset.evidenceNode;
+    if (evidenceNode) {
+      state.selectedEvidenceNodeId = evidenceNode;
+      state.selectedEvidenceEdgeId = "";
+      if (evidenceNode.startsWith("document:")) {
+        state.activeArtifactKey = evidenceNode.split(":").slice(1).join(":");
+      }
+      await renderArtifacts();
+      return;
+    }
+    const evidenceEdge = event.target.closest("[data-evidence-edge]")?.dataset.evidenceEdge;
+    if (evidenceEdge) {
+      state.selectedEvidenceEdgeId = evidenceEdge;
+      state.selectedEvidenceNodeId = "";
+      await renderArtifacts();
+      return;
+    }
+    const copyArtifact = event.target.closest("[data-copy-artifact-path]")?.dataset.copyArtifactPath;
+    if (copyArtifact) {
+      await copyArtifactPath(copyArtifact);
+      return;
+    }
+    const downloadButton = event.target.closest("[data-download-artifact]");
+    if (downloadButton) {
+      await downloadArtifact({
+        path: downloadButton.dataset.downloadArtifact,
+        key: downloadButton.dataset.downloadArtifactKey,
+        kind: downloadButton.dataset.downloadArtifactKind,
+        stage: downloadButton.dataset.downloadArtifactStage || state.activeStage
+      });
       return;
     }
     const artifactMode = event.target.closest("[data-artifact-mode]")?.dataset.artifactMode;

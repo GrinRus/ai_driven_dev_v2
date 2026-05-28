@@ -165,6 +165,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".lineage-node.current" in components
     assert ".next-flow-wizard" in components
     assert ".source-finding-groups" in components
+    assert ".evidence-screen-stack" in components
+    assert ".evidence-workbench-grid" in components
     assert ".follow-up-definition-grid" in components
     assert ".inherited-context-toggle" in components
     assert ".launch-confirmation-grid" in components
@@ -243,6 +245,8 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'id: "eval-scenario-batch"',
             'label: "Eval / Scenario Batch"',
             'activeRunId: ""',
+            'selectedEvidenceNodeId: ""',
+            'selectedEvidenceEdgeId: ""',
             'setupMode: "new-work-item"',
             "nextFlowWizard: {",
             'step: "sources"',
@@ -357,6 +361,27 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "Missing evidence",
             "References",
             "Version history",
+            "function evidenceEdgeId(edge)",
+            "function selectedEvidenceSelection(view)",
+            "function renderEvidenceGraphBrowser(view, selection)",
+            "function renderEvidenceGraphCanvas(view, selection)",
+            "function renderArtifactInspector(view, selection)",
+            "function renderEvidenceArtifactTable(view, selection)",
+            "function renderEvidenceWorkbenchShell(selection)",
+            "function renderEvidenceWorkbenchUnavailable(view)",
+            "function renderEvidenceGraphScreen(view, selection)",
+            "async function copyArtifactPath(path)",
+            "async function downloadArtifact({stage, key, kind, path})",
+            "Artifacts / Evidence Graph",
+            "Stage Document Workbench",
+            "Flat Table Fallback",
+            "Selected Artifact",
+            "data-evidence-node",
+            "data-evidence-edge",
+            "data-download-artifact",
+            "data-copy-artifact-path",
+            "/api/artifacts/evidence-graph?${params.toString()}",
+            "/api/artifacts/document?${params.toString()}",
             "/api/stage/workbench?${params.toString()}",
             'params.set("source_limit", String(MAX_ARTIFACT_READ_BYTES));',
             'data-artifact-mode="diff"',
@@ -644,6 +669,12 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'if (state.activeTab === "overview") await renderCockpit();',
             'closest("[data-artifact-stage]")',
             'closest("[data-artifact-key]")',
+            'closest("[data-evidence-node]")',
+            'closest("[data-evidence-edge]")',
+            'closest("[data-copy-artifact-path]")',
+            'closest("[data-download-artifact]")',
+            "await copyArtifactPath(copyArtifact);",
+            "await downloadArtifact({",
             "data-log-filter",
             "data-log-raw",
             'closest("[data-answer-resume-all]")',
@@ -745,6 +776,14 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".log-source-strip" in css
     assert ".bounded-log-notice" in css
     assert ".audit-log-panel" in css
+    assert ".evidence-graph-screen" in css
+    assert ".evidence-artifact-browser" in css
+    assert ".evidence-graph-canvas" in css
+    assert ".evidence-node.selected" in css
+    assert ".evidence-edge.selected" in css
+    assert ".artifact-inspector" in css
+    assert ".artifact-action-row" in css
+    assert ".evidence-artifact-table" in css
     assert ".saved-answer" in css
     assert ".saved-answer-text" in css
     assert ".setup-mode-card" in css

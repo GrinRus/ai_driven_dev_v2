@@ -52,6 +52,8 @@ const state = {
   activeJobTimer: null,
   activeArtifactKey: "",
   artifactViewMode: "preview",
+  selectedEvidenceNodeId: "",
+  selectedEvidenceEdgeId: "",
   logFilter: "all",
   rawLogMode: false,
   savedLogText: "",

@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E2-S3-T4`
+- `W26-E3-S1-T1`
 
 ## Soon
 
-- `W26-E3-S1-T1`
+- `W26-E3-S1-T2`
 
 ## Parking lot
 
-- `W26-E3-S1-T2`
 - `W26-E3-S1-T3`
 - `W26-E3-S2-T1`
 - `W26-E3-S2-T2`
@@ -266,3 +265,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   availability, repair timelines, explicit stop context, and Run Repair / Stop Run /
   Request Change actions. `W26-E2-S3-T3` is promoted to `Next`, and `W26-E2-S3-T4`
   is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S3-T3`; Runtime Logs / Live Console and Approvals /
+  Request Change now render raw log filters, bounded-log notices, approval queues,
+  diff previews, intervention composer controls, and audit logs. `W26-E2-S3-T4` is
+  promoted to `Next`, and `W26-E3-S1-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S3-T4`; Artifacts / Evidence Graph now renders
+  provenance nodes, selectable edges, selected-artifact inspector actions, flat table
+  fallback, and open/download/copy-path controls. `W26-E3-S1-T1` is promoted to
+  `Next`, and `W26-E3-S1-T2` is promoted to `Soon`.

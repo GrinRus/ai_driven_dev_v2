@@ -71,10 +71,17 @@
   .approval-summary-grid,
   .approval-meta-grid,
   .log-source-strip,
+  .evidence-graph-screen,
+  .evidence-graph-canvas,
+  .evidence-edge-list,
   .interview-summary,
   .repair-timeline,
   .bottom-dock {
     grid-template-columns: 1fr;
+  }
+  .evidence-artifact-browser,
+  .artifact-inspector {
+    position: static;
   }
   .diff-preview-row {
     grid-template-columns: 1fr;

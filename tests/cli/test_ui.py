@@ -447,6 +447,111 @@ def test_ui_stage_workbench_endpoint_returns_document_state_and_sidebars(
     assert versions[0]["label"] == "Attempt 1"  # type: ignore[index]
 
 
+def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    attempt_root.joinpath(RUN_EVENTS_JSONL_FILENAME).write_text(
+        (
+            '{"timestamp":"2026-05-28T00:00:00Z","level":"info",'
+            '"source":"runtime","event":"stage.started","message":"Plan started"}\n'
+        ),
+        encoding="utf-8",
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="plan",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "uv run --extra dev pytest tests/cli/test_ui.py"},
+    )
+    append_operator_request(path=attempt_root / OPERATOR_REQUESTS_FILENAME, request=request)
+    append_operator_decision(
+        path=attempt_root / OPERATOR_DECISIONS_FILENAME,
+        decision=RuntimeOperatorDecision(
+            request_id=request.id,
+            action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+            source=RuntimeOperatorDecisionSource.UI,
+            reason="approved for UI evidence graph endpoint test",
+        ),
+    )
+    service = _service(workspace_root)
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    runtime_log_path = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    original_plan = plan_path.read_text(encoding="utf-8")
+    original_runtime_log = runtime_log_path.read_text(encoding="utf-8")
+    original_artifact_index = artifact_index_path.read_text(encoding="utf-8")
+
+    graph_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/evidence-graph",
+            {"stage": ["plan"], "run_id": ["run-ui"]},
+        )
+    )
+
+    nodes = {node["node_id"]: node for node in graph_payload["nodes"]}  # type: ignore[index]
+    edges = {
+        (edge["source_id"], edge["target_id"], edge["kind"])
+        for edge in graph_payload["edges"]  # type: ignore[index]
+    }
+    assert graph_payload["mode"] == "graph"
+    assert nodes["document:plan"]["path"] == "workitems/WI-UI/stages/plan/plan.md"
+    assert nodes["event:1"]["detail"] == "Plan started"
+    assert nodes[f"approval-request:{request.id}"]["status"] == "approved"
+    assert ("document:validator_report", "document:stage_result", "validation") in edges
+    assert all(
+        not Path(str(node["path"])).is_absolute()
+        for node in graph_payload["nodes"]  # type: ignore[index]
+        if node["path"] is not None
+    )
+    assert any(
+        ref["key"] == "runtime_log" and ref["kind"] == "log"
+        for ref in graph_payload["artifact_table"]  # type: ignore[index]
+    )
+    assert plan_path.read_text(encoding="utf-8") == original_plan
+    assert runtime_log_path.read_text(encoding="utf-8") == original_runtime_log
+    assert artifact_index_path.read_text(encoding="utf-8") == original_artifact_index
+
+    artifact_index_path.unlink()
+    fallback_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/evidence-graph",
+            {"stage": ["plan"], "run_id": ["run-ui"]},
+        )
+    )
+
+    assert fallback_payload["mode"] == "flat-table"
+    assert fallback_payload["nodes"] == []
+    assert fallback_payload["edges"] == []
+    assert fallback_payload["incomplete_reasons"] == ["artifact-index-missing"]
+    assert any(
+        ref["key"] == "plan" and ref["path"] == "workitems/WI-UI/stages/plan/plan.md"
+        for ref in fallback_payload["artifact_table"]  # type: ignore[index]
+    )
+    assert plan_path.read_text(encoding="utf-8") == original_plan
+    assert runtime_log_path.read_text(encoding="utf-8") == original_runtime_log
+
+
 def test_ui_logs_endpoint_defaults_to_bounded_tail_and_accepts_limit_params(
     tmp_path: Path,
 ) -> None:

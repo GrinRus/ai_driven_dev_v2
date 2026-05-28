@@ -6527,7 +6527,7 @@ Exit evidence:
 - workbench, recovery, diagnostics, and evidence screens consume typed core payloads;
 - no visual graph or document state becomes a JavaScript-only source of truth.
 
-### Epic W26-E2 — accepted operator UI screens (`planned`)
+### Epic W26-E2 — accepted operator UI screens (`done`)
 Linked stories: `US-05`, `US-06`, `US-11`
 
 #### Slice W26-E2-S0 — static UI refactoring foundation (`done`)
@@ -6689,7 +6689,7 @@ Exit evidence:
 - the wizard makes it explicit that follow-up creates a new work item and run;
 - launch cannot proceed without visible lineage and preflight evidence.
 
-#### Slice W26-E2-S3 — workbench, recovery, diagnostics, and evidence screens (`planned`)
+#### Slice W26-E2-S3 — workbench, recovery, diagnostics, and evidence screens (`done`)
 Goal: update the remaining accepted Mission Control screens so the whole visual reference
 set is implementable, not only setup, run history, and next-flow handoff.
 
@@ -6735,7 +6735,7 @@ Local tasks:
   - Scope: packaged static UI diagnostics and human-control surfaces.
   - Verification: UI tests cover raw/saved logs, truncation visibility, approval decisions,
     request-change submission, and escaped dynamic runtime values.
-- `W26-E2-S3-T4` Render Artifacts / Evidence Graph with provenance nodes, edge selection,
+- `W26-E2-S3-T4` (done) Render Artifacts / Evidence Graph with provenance nodes, edge selection,
   artifact inspector, flat table fallback, and open/download/copy-path actions.
   - Scope: packaged static UI evidence graph and artifact explorer.
   - Verification: UI tests cover complete graph, incomplete graph fallback, selected node
