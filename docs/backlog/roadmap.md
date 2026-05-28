@@ -6455,7 +6455,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E1-S2-T1` Implement a follow-up draft service that selects QA findings, review
+- `W26-E1-S2-T1` (done) Implement a follow-up draft service that selects QA findings, review
   notes, failed evidence, or manual requests and produces a new work item request
   document with source-run references.
   - Scope: core work-item creation service.
