@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -103,6 +104,7 @@ def _prepare_terminal_qa_run(
     qa_stage_status: str = "succeeded",
     qa_verdict: str = "ready",
     validator_verdict: str = "pass",
+    lineage: dict[str, object] | None = None,
 ) -> None:
     create_run_manifest(
         workspace_root=workspace_root,
@@ -113,6 +115,7 @@ def _prepare_terminal_qa_run(
         config_snapshot={"mode": "test"},
         workflow_stage_start="idea",
         workflow_stage_end="qa",
+        lineage=lineage,
     )
     for stage in STAGES:
         create_next_attempt_directory(
@@ -631,6 +634,81 @@ def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
     assert dashboard.terminal_handoff.final_qa_status == "ready-with-risks"
     assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
     assert dashboard.terminal_handoff.blockers == ()
+
+
+def test_operator_dashboard_run_summary_exposes_optional_lineage_references(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(
+        workspace_root,
+        lineage={
+            "source_run_id": "run-source<script>",
+            "source_work_item_id": "WI-SOURCE<&>",
+            "baseline_id": "baseline-main@abc123",
+            "baseline_label": "main before UI handoff <candidate>",
+        },
+    )
+    work_item_metadata_path = workspace_root / "workitems" / "WI-UI" / "work-item.json"
+    work_item_metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    work_item_metadata_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "work_item_id": "WI-UI",
+                "lineage": {
+                    "child_work_item_candidates": [
+                        {
+                            "work_item_id": "WI-CHILD<&>",
+                            "label": "Follow-up for <risk>",
+                            "relationship": "follow-up",
+                            "source_run_id": "run-ui",
+                        }
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    lineage = dashboard.run.lineage
+    assert lineage.source_run_id == "run-source<script>"
+    assert lineage.source_work_item_id == "WI-SOURCE<&>"
+    assert lineage.baseline_id == "baseline-main@abc123"
+    assert lineage.baseline_label == "main before UI handoff <candidate>"
+    assert len(lineage.child_work_item_candidates) == 1
+    candidate = lineage.child_work_item_candidates[0]
+    assert candidate.work_item_id == "WI-CHILD<&>"
+    assert candidate.label == "Follow-up for <risk>"
+    assert candidate.relationship == "follow-up"
+    assert candidate.source_run_id == "run-ui"
+
+
+def test_operator_dashboard_run_summary_keeps_lineage_empty_for_old_runs(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root)
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.run.lineage.source_run_id is None
+    assert dashboard.run.lineage.source_work_item_id is None
+    assert dashboard.run.lineage.baseline_id is None
+    assert dashboard.run.lineage.baseline_label is None
+    assert dashboard.run.lineage.child_work_item_candidates == ()
 
 
 def test_operator_read_models_expose_run_stage_logs_artifacts_and_questions(

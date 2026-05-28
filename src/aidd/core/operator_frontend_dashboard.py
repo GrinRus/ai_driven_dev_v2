@@ -14,12 +14,14 @@ from aidd.core.operator_frontend_models import (
     OperatorApprovalCounts,
     OperatorArtifactRef,
     OperatorBlocker,
+    OperatorChildWorkItemCandidate,
     OperatorDashboardView,
     OperatorEvidenceRef,
     OperatorNextAction,
     OperatorNextFlowRecommendation,
     OperatorPrimaryArtifact,
     OperatorRepairCounts,
+    OperatorRunLineage,
     OperatorRunSummary,
     OperatorStageRailItem,
     OperatorStageView,
@@ -95,6 +97,16 @@ _QA_VERDICT_PATTERN = re.compile(
 )
 
 
+def _empty_run_lineage() -> OperatorRunLineage:
+    return OperatorRunLineage(
+        source_run_id=None,
+        source_work_item_id=None,
+        baseline_id=None,
+        baseline_label=None,
+        child_work_item_candidates=(),
+    )
+
+
 def _empty_run_summary(*, work_item: str) -> OperatorRunSummary:
     return OperatorRunSummary(
         run_id=None,
@@ -106,6 +118,7 @@ def _empty_run_summary(*, work_item: str) -> OperatorRunSummary:
         workflow_stage_end=None,
         created_at_utc=None,
         updated_at_utc=None,
+        lineage=_empty_run_lineage(),
     )
 
 
@@ -117,6 +130,7 @@ def _optional_manifest_stage(value: str | None) -> str | None:
 
 
 def _run_summary(metadata: RunMetadataSummary) -> OperatorRunSummary:
+    lineage = metadata.lineage
     return OperatorRunSummary(
         run_id=metadata.run_id,
         work_item=metadata.work_item,
@@ -127,6 +141,21 @@ def _run_summary(metadata: RunMetadataSummary) -> OperatorRunSummary:
         workflow_stage_end=_optional_manifest_stage(metadata.workflow_stage_end),
         created_at_utc=metadata.created_at_utc,
         updated_at_utc=metadata.updated_at_utc,
+        lineage=OperatorRunLineage(
+            source_run_id=lineage.source_run_id,
+            source_work_item_id=lineage.source_work_item_id,
+            baseline_id=lineage.baseline_id,
+            baseline_label=lineage.baseline_label,
+            child_work_item_candidates=tuple(
+                OperatorChildWorkItemCandidate(
+                    work_item_id=candidate.work_item_id,
+                    label=candidate.label,
+                    relationship=candidate.relationship,
+                    source_run_id=candidate.source_run_id,
+                )
+                for candidate in lineage.child_work_item_candidates
+            ),
+        ),
     )
 
 

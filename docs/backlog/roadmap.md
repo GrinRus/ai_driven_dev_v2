@@ -6391,7 +6391,7 @@ Exit evidence:
 ### Epic W26-E1 — flow lineage core model and launch services (`next`)
 Linked stories: `US-02`, `US-03`, `US-07`, `US-10`, `US-11`
 
-#### Slice W26-E1-S1 — completed-run handoff read model (`next`)
+#### Slice W26-E1-S1 — completed-run handoff read model (`done`)
 Goal: expose terminal-run summaries, follow-up candidates, and lineage references through
 runtime-agnostic operator frontend services.
 
@@ -6420,7 +6420,7 @@ Local tasks:
   - Scope: core operator frontend read models only.
   - Verification: `tests/core/test_operator_frontend.py` covers completed, failed, and
     completed-with-warning run summaries.
-- `W26-E1-S1-T2` Add lineage reference fields for source run, source work item, baseline,
+- `W26-E1-S1-T2` (done) Add lineage reference fields for source run, source work item, baseline,
   and child work item candidates without changing adapter semantics.
   - Scope: core run/work-item metadata read path.
   - Verification: core tests prove old runs still render and new lineage fields are

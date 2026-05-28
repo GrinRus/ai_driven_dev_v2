@@ -24,6 +24,7 @@ from aidd.core.run_store import (
     work_item_runs_root,
 )
 from aidd.core.run_store import run_stages_root as run_stage_roots_path
+from aidd.core.workspace import work_item_metadata_path
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +67,23 @@ class PromptPackProvenance:
 
 
 @dataclass(frozen=True, slots=True)
+class ChildWorkItemCandidateSummary:
+    work_item_id: str
+    label: str | None
+    relationship: str | None
+    source_run_id: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class RunLineageSummary:
+    source_run_id: str | None
+    source_work_item_id: str | None
+    baseline_id: str | None
+    baseline_label: str | None
+    child_work_item_candidates: tuple[ChildWorkItemCandidateSummary, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class RunMetadataSummary:
     run_id: str
     work_item: str
@@ -77,6 +95,7 @@ class RunMetadataSummary:
     repository_git_sha: str | None
     resource_revision: str | None
     prompt_pack_provenance: tuple[PromptPackProvenance, ...]
+    lineage: RunLineageSummary
     created_at_utc: str
     updated_at_utc: str
     stages: tuple[RunStageMetadataSummary, ...]
@@ -188,6 +207,21 @@ def _load_manifest_payload(
     return payload
 
 
+def _load_work_item_payload(
+    *,
+    workspace_root: Path,
+    work_item: str,
+) -> dict[str, Any]:
+    metadata_path = work_item_metadata_path(root=workspace_root, work_item=work_item)
+    if not metadata_path.exists():
+        return {}
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def _resolve_selected_run_id(
     *,
     workspace_root: Path,
@@ -233,6 +267,72 @@ def _resolve_selected_run_id(
     return candidate_ids[0]
 
 
+def _optional_lineage_value(payload: dict[str, Any], key: str) -> str | None:
+    normalized = str(payload.get(key, "")).strip()
+    return normalized or None
+
+
+def _lineage_mapping(payload: dict[str, Any]) -> dict[str, Any]:
+    lineage = payload.get("lineage")
+    return lineage if isinstance(lineage, dict) else {}
+
+
+def _child_work_item_candidates(
+    payload: dict[str, Any],
+) -> tuple[ChildWorkItemCandidateSummary, ...]:
+    raw_candidates = payload.get("child_work_item_candidates")
+    if not isinstance(raw_candidates, list):
+        return ()
+
+    candidates: list[ChildWorkItemCandidateSummary] = []
+    for candidate in raw_candidates:
+        if not isinstance(candidate, dict):
+            continue
+        work_item_id = _optional_lineage_value(candidate, "work_item_id")
+        if work_item_id is None:
+            continue
+        candidates.append(
+            ChildWorkItemCandidateSummary(
+                work_item_id=work_item_id,
+                label=_optional_lineage_value(candidate, "label"),
+                relationship=_optional_lineage_value(candidate, "relationship"),
+                source_run_id=_optional_lineage_value(candidate, "source_run_id"),
+            )
+        )
+    return tuple(candidates)
+
+
+def _lineage_summary(
+    *,
+    manifest_payload: dict[str, Any],
+    work_item_payload: dict[str, Any],
+) -> RunLineageSummary:
+    manifest_lineage = _lineage_mapping(manifest_payload)
+    work_item_lineage = _lineage_mapping(work_item_payload)
+    child_work_item_candidates = _child_work_item_candidates(manifest_lineage)
+    if not child_work_item_candidates:
+        child_work_item_candidates = _child_work_item_candidates(work_item_lineage)
+    return RunLineageSummary(
+        source_run_id=(
+            _optional_lineage_value(manifest_lineage, "source_run_id")
+            or _optional_lineage_value(work_item_lineage, "source_run_id")
+        ),
+        source_work_item_id=(
+            _optional_lineage_value(manifest_lineage, "source_work_item_id")
+            or _optional_lineage_value(work_item_lineage, "source_work_item_id")
+        ),
+        baseline_id=(
+            _optional_lineage_value(manifest_lineage, "baseline_id")
+            or _optional_lineage_value(work_item_lineage, "baseline_id")
+        ),
+        baseline_label=(
+            _optional_lineage_value(manifest_lineage, "baseline_label")
+            or _optional_lineage_value(work_item_lineage, "baseline_label")
+        ),
+        child_work_item_candidates=child_work_item_candidates,
+    )
+
+
 def resolve_run_metadata_summary(
     workspace_root: Path,
     work_item: str,
@@ -249,6 +349,10 @@ def resolve_run_metadata_summary(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=selected_run_id,
+    )
+    work_item_payload = _load_work_item_payload(
+        workspace_root=workspace_root,
+        work_item=work_item,
     )
     runtime_id = str(manifest_payload.get("runtime_id", "")).strip()
     if not runtime_id:
@@ -332,6 +436,10 @@ def resolve_run_metadata_summary(
         repository_git_sha=repository_git_sha,
         resource_revision=resource_revision,
         prompt_pack_provenance=tuple(prompt_pack_provenance),
+        lineage=_lineage_summary(
+            manifest_payload=manifest_payload,
+            work_item_payload=work_item_payload,
+        ),
         created_at_utc=created_at_utc,
         updated_at_utc=updated_at_utc,
         stages=tuple(stage_summaries),

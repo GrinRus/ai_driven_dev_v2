@@ -715,6 +715,7 @@ def create_run_manifest(
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
     adapter_id: str | None = None,
+    lineage: dict[str, Any] | None = None,
 ) -> Path:
     manifest_path = run_manifest_path(
         workspace_root=workspace_root,
@@ -768,6 +769,8 @@ def create_run_manifest(
         "created_at_utc": now,
         "updated_at_utc": now,
     }
+    if lineage is not None:
+        payload["lineage"] = dict(lineage)
     _write_json_payload(manifest_path, payload)
     return manifest_path
 

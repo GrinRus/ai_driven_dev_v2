@@ -60,6 +60,23 @@ class OperatorStageView:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorChildWorkItemCandidate:
+    work_item_id: str
+    label: str | None
+    relationship: str | None
+    source_run_id: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorRunLineage:
+    source_run_id: str | None
+    source_work_item_id: str | None
+    baseline_id: str | None
+    baseline_label: str | None
+    child_work_item_candidates: tuple[OperatorChildWorkItemCandidate, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorRunSummary:
     run_id: str | None
     work_item: str
@@ -70,6 +87,7 @@ class OperatorRunSummary:
     workflow_stage_end: str | None
     created_at_utc: str | None
     updated_at_utc: str | None
+    lineage: OperatorRunLineage
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,6 +243,7 @@ __all__ = [
     "OperatorArtifactDocumentView",
     "OperatorArtifactRef",
     "OperatorBlocker",
+    "OperatorChildWorkItemCandidate",
     "OperatorDashboardView",
     "OperatorEvidenceRef",
     "OperatorNextAction",
@@ -234,6 +253,7 @@ __all__ = [
     "OperatorQuestionsView",
     "OperatorRepairCounts",
     "OperatorRunLogView",
+    "OperatorRunLineage",
     "OperatorRunSummary",
     "OperatorRunView",
     "OperatorStageRailItem",

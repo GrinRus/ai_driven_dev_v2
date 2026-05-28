@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E1-S1-T2`
+- `W26-E1-S2-T1`
 
 ## Soon
 
-- `W26-E1-S2-T1`
 - `W26-E2-S0-T1`
 - `W26-E2-S0-T2`
 
@@ -214,3 +213,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-28` Completed `W26-E1-S1-T1`; terminal-run handoff now exposes final QA
   status, final artifacts, blockers, repair counts, approval counts, answered
   questions, and recommended next-flow actions. `W26-E1-S1-T2` is promoted to `Next`.
+- `2026-05-28` Completed `W26-E1-S1-T2`; lineage references for source run, source work
+  item, baseline, and child work item candidates now flow through core run/work-item read
+  models. `W26-E1-S2-T1` is promoted to `Next`.
