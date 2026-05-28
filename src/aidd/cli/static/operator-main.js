@@ -241,11 +241,14 @@ document.addEventListener("change", async (event) => {
     renderSidebar();
     if (state.activeTab === "overview") await renderCockpit();
   }
+  if (event.target.closest("[data-intervention-target]")) {
+    updateInterventionPreview();
+  }
 });
 
 document.addEventListener("input", (event) => {
   if (event.target.id === "operatorRequestText") {
-    updateSubmitInterventionState();
+    updateInterventionPreview();
   }
 });
 

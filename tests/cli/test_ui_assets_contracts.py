@@ -449,8 +449,23 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "async function renderApprovals()",
             "async function submitApproval(requestId, action)",
             "async function submitIntervention()",
+            "function requestChangeTargetEntries(documents, context)",
+            "function selectedInterventionTargets()",
+            "function renderInterventionDiffPreview(requestText, targetDocuments)",
+            "function updateInterventionPreview()",
+            "function renderRequestChangeAuditLog(context)",
+            "function renderApprovalQueueSummary({requests, decisions, pendingIds, diagnostics})",
+            "function renderApprovalDiffPreview(request)",
+            "function renderApprovalAuditLog(requests, decisions, pendingIds, diagnostics = null)",
+            "function renderApprovalsSurface({view, diagnostics, requests, decisions, pendingIds})",
+            "Request Change / Intervention Composer",
+            "Approvals / Runtime Requests",
+            "Diff Preview",
+            "Approval Audit Log",
+            "Saved approval ledger",
             'id="operatorRequestText"',
             'id="submitInterventionButton"',
+            'id="interventionDiffPreview"',
             "data-intervention-target",
             '"validator_report"',
             '"questions.md"',
@@ -459,6 +474,8 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "function updateSubmitInterventionState()",
             "/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests",
             "target_documents: targetDocuments",
+            "request.created_at_utc",
+            "escapeHtml(JSON.stringify(payload, null, 2))",
             "if (state.activeRunId) payload.run_id = state.activeRunId;",
             'postJson("/api/stage/interact", payload)',
         ),
@@ -474,10 +491,18 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "function logEntriesFromChunks(chunks)",
             "function logEntriesFromText(text)",
             "rawText.match(/^\\[(stdout|stderr|system)\\]\\s?(.*)$/i)",
+            "function logEntryCounts(entries)",
+            "function renderLogBoundedNotice(view)",
+            "function renderLogSourceStrip(entries, truncation)",
+            "function renderLogAuditLog(entries, sourceLabel, truncation)",
             (
                 "function renderLogPanel({title, meta, entries, rawText, emptyText, "
                 "actions = \"\", truncation = null})"
             ),
+            "Runtime Logs / Live Console",
+            "Correlated Events / Audit Log",
+            "bounded-log-notice",
+            'renderTruncationNotice("log", view)',
             "No runtime log for this stage yet",
             "data-log-filter",
             "data-log-raw",
@@ -614,6 +639,8 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             "Launch endpoint is queued for the private next-flow API slice.",
             "Start Next Flow wizard is queued for the next UI slice.",
             'event.target.id === "operatorRequestText"',
+            'closest("[data-intervention-target]")',
+            "updateInterventionPreview();",
             'if (state.activeTab === "overview") await renderCockpit();',
             'closest("[data-artifact-stage]")',
             'closest("[data-artifact-key]")',
@@ -707,6 +734,17 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".interview-loop-screen" in css
     assert ".validation-repair-center" in css
     assert ".repair-action-band" in css
+    assert ".request-change-screen" in css
+    assert ".request-change-grid" in css
+    assert ".intervention-diff-preview" in css
+    assert ".approval-console-screen" in css
+    assert ".approval-summary-grid" in css
+    assert ".approval-meta-grid" in css
+    assert ".approval-audit-wrap" in css
+    assert ".log-console-screen" in css
+    assert ".log-source-strip" in css
+    assert ".bounded-log-notice" in css
+    assert ".audit-log-panel" in css
     assert ".saved-answer" in css
     assert ".saved-answer-text" in css
     assert ".setup-mode-card" in css

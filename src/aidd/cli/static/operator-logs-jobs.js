@@ -52,11 +52,118 @@ function rawTextFromEntries(entries) {
   return entries.map((entry) => `[${entry.stream}] ${entry.source ? `${entry.source}: ` : ""}${entry.text}`).join("\n");
 }
 
+function logEntryCounts(entries) {
+  return entries.reduce((counts, entry) => {
+    const stream = String(entry.stream || "stdout").toLowerCase();
+    counts.total += 1;
+    counts[stream] = (counts[stream] || 0) + 1;
+    return counts;
+  }, {total: 0, stdout: 0, stderr: 0, system: 0});
+}
+
+function renderLogBoundedNotice(view) {
+  if (!view) return "";
+  const truncated = renderTruncationNotice("log", view);
+  if (truncated) return truncated;
+  return `
+    <div class="truncation-notice bounded-log-notice" role="status">
+      <strong>Runtime log bounded read</strong>
+      <span>Showing API read window (${escapeHtml(byteRangeSummary(view))}). Full runtime.log remains on disk and available through CLI log inspection.</span>
+    </div>
+  `;
+}
+
+function renderLogSourceStrip(entries, truncation) {
+  const counts = logEntryCounts(entries);
+  const source = truncation ? "saved runtime.log" : "live UI job stream";
+  const windowLabel = truncation
+    ? `${byteRangeSummary(truncation)}${truncation.truncated ? " / bounded" : ""}`
+    : "unbounded live buffer";
+  return `
+    <div class="log-source-strip" aria-label="Runtime log source filter summary">
+      <div class="log-source-pill">
+        <span>Source</span>
+        <strong>${escapeHtml(source)}</strong>
+      </div>
+      <div class="log-source-pill">
+        <span>Filter</span>
+        <strong>${escapeHtml(state.logFilter)}</strong>
+      </div>
+      <div class="log-source-pill">
+        <span>Entries</span>
+        <strong>${escapeHtml(counts.total)}</strong>
+      </div>
+      <div class="log-source-pill">
+        <span>STDOUT</span>
+        <strong>${escapeHtml(counts.stdout)}</strong>
+      </div>
+      <div class="log-source-pill">
+        <span>STDERR</span>
+        <strong>${escapeHtml(counts.stderr)}</strong>
+      </div>
+      <div class="log-source-pill">
+        <span>System</span>
+        <strong>${escapeHtml(counts.system)}</strong>
+      </div>
+      <div class="log-source-pill wide">
+        <span>Window</span>
+        <strong>${escapeHtml(windowLabel)}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function renderLogAuditLog(entries, sourceLabel, truncation) {
+  const dashboardEvents = typeof activityEvents === "function" ? activityEvents().slice(0, 6) : [];
+  const streamEvents = entries.slice(-6).reverse().map((entry) => ({
+    time_utc: "visible window",
+    level: entry.stream === "stderr" ? "warn" : "info",
+    source: entry.source || entry.stream || sourceLabel,
+    event: `log.${entry.stream || "stdout"}`,
+    details: entry.text
+  }));
+  const boundedEvent = truncation ? [{
+    time_utc: "api window",
+    level: truncation.truncated ? "warn" : "info",
+    source: sourceLabel,
+    event: truncation.truncated ? "log.bounded-truncated" : "log.bounded-read",
+    details: byteRangeSummary(truncation)
+  }] : [];
+  const rows = [...boundedEvent, ...streamEvents, ...dashboardEvents].slice(0, 10);
+  if (!rows.length) {
+    return `<section class="surface audit-log-panel"><div class="surface-title"><span>Correlated Events / Audit Log</span></div><div class="empty-state">No log events available yet.</div></section>`;
+  }
+  return `
+    <section class="surface audit-log-panel">
+      <div class="surface-title">
+        <span>Correlated Events / Audit Log</span>
+        <span class="small-badge">${escapeHtml(rows.length)} events</span>
+      </div>
+      <div class="table-wrap log-audit-wrap">
+        <table class="activity-table log-audit-table">
+          <thead><tr><th>Time</th><th>Level</th><th>Source / event</th><th>Details</th></tr></thead>
+          <tbody>
+            ${rows.map((event) => `
+              <tr>
+                <td>${escapeHtml(event.time_utc || "-")}</td>
+                <td><span class="small-badge ${event.level === "error" ? "bad" : event.level === "warn" ? "warn" : ""}">${escapeHtml(event.level || "info")}</span></td>
+                <td>${escapeHtml(event.source || sourceLabel)} / ${escapeHtml(event.event || "log")}</td>
+                <td>${escapeHtml(event.details || "")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
 function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "", truncation = null}) {
   const filtered = filteredLogEntries(entries);
   const rawBody = state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered);
+  const sourceLabel = truncation ? "saved runtime.log" : "live console";
   const filterButtons = ["all", "stdout", "stderr", "system"].map((filter) => (
-    `<button data-log-filter="${filter}" class="${state.logFilter === filter ? "active" : ""}" type="button">${filter}</button>`
+    `<button data-log-filter="${filter}" class="${state.logFilter === filter ? "active" : ""}" type="button" aria-label="Show ${filter} source filter">${filter}</button>`
   )).join("");
   const rows = state.rawLogMode
     ? `<pre>${escapeHtml(rawBody)}</pre>`
@@ -70,22 +177,30 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
         `).join("")}</div>`
       : `<div class="empty-state" style="padding:18px 12px">${escapeHtml(emptyText)}</div>`;
   return `
-    <section class="log-panel">
-      <div class="log-toolbar">
-        <div>
-          <strong>${escapeHtml(title)}</strong>
-          ${pathLine(meta.filter(Boolean).join(" / "), 72)}
-        </div>
-        <div class="log-actions">
-          ${actions}
-          <div class="log-filter">
-            ${filterButtons}
-            <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button">Raw</button>
+    <section class="log-console-screen">
+      <div class="surface-title">
+        <span>Runtime Logs / Live Console</span>
+        <span class="small-badge">${escapeHtml(sourceLabel)}</span>
+      </div>
+      ${renderLogSourceStrip(entries, truncation)}
+      <section class="log-panel">
+        <div class="log-toolbar">
+          <div>
+            <strong>${escapeHtml(title)}</strong>
+            ${pathLine(meta.filter(Boolean).join(" / "), 72)}
+          </div>
+          <div class="log-actions">
+            ${actions}
+            <div class="log-filter">
+              ${filterButtons}
+              <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button">Raw</button>
+            </div>
           </div>
         </div>
-      </div>
-      ${renderTruncationNotice("log", truncation)}
-      ${rows}
+        ${renderLogBoundedNotice(truncation)}
+        ${rows}
+      </section>
+      ${renderLogAuditLog(filtered, sourceLabel, truncation)}
     </section>
   `;
 }

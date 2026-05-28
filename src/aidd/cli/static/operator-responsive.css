@@ -67,9 +67,16 @@
   .launch-confirmation-grid,
   .interview-loop-screen,
   .validation-repair-center,
+  .request-change-grid,
+  .approval-summary-grid,
+  .approval-meta-grid,
+  .log-source-strip,
   .interview-summary,
   .repair-timeline,
   .bottom-dock {
+    grid-template-columns: 1fr;
+  }
+  .diff-preview-row {
     grid-template-columns: 1fr;
   }
   .artifacts-panel {

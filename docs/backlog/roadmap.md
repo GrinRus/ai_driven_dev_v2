@@ -6729,7 +6729,7 @@ Local tasks:
   - Scope: packaged static UI recovery surfaces.
   - Verification: UI tests cover unresolved, resolved, partial, deferred, repair-available,
     repair-exhausted, and explicit-stop states.
-- `W26-E2-S3-T3` Render Runtime Logs / Live Console and Approvals / Request Change with
+- `W26-E2-S3-T3` (done) Render Runtime Logs / Live Console and Approvals / Request Change with
   raw log source filters, bounded-log notices, approval queue, diff preview, intervention
   composer, and audit log.
   - Scope: packaged static UI diagnostics and human-control surfaces.
