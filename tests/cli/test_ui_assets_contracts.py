@@ -637,6 +637,172 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
     )
 
 
+def test_operator_static_screen_landmarks_cover_accepted_mission_control_surfaces() -> None:
+    html = _asset_text("/")
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    artifacts = _asset_text("/operator-artifacts-documents.js")
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+    questions = _asset_text("/operator-questions.js")
+    logs = _asset_text("/operator-logs-jobs.js")
+    approvals = _asset_text("/operator-approvals-interventions.js")
+
+    _assert_contains_all(
+        html,
+        (
+            'aria-label="Operator controls"',
+            'aria-label="Operator workspace"',
+            'aria-label="Workflow navigation"',
+            'aria-label="Stage cockpit"',
+            'aria-label="Run details"',
+            'aria-label="Activity and recent artifacts"',
+            'role="tablist" aria-label="Stage cockpit views"',
+            'role="tabpanel" aria-labelledby="tab-overview" tabindex="0"',
+        ),
+    )
+    _assert_contains_all(
+        next_flow,
+        (
+            '<section class="surface flow-complete-state">',
+            '<section class="surface run-history-state">',
+            '<section class="surface next-flow-wizard">',
+            '<section class="surface next-flow-wizard follow-up-definition">',
+            '<section class="surface next-flow-wizard launch-confirmation">',
+            '<div class="source-finding-groups">',
+            '<div class="lineage-flow">',
+        ),
+    )
+    _assert_contains_all(
+        artifacts + cockpit + questions + logs + approvals,
+        (
+            "Artifacts / Evidence Graph",
+            "Stage Document Workbench",
+            "Questions / Interview Loop",
+            "Validation / Repair Center",
+            "Runtime Logs / Live Console",
+            "Approvals / Runtime Requests",
+            "Request Change / Intervention Composer",
+        ),
+    )
+
+
+def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function renderFlowCompleteState()",
+            "terminalHandoffTitle(handoff)",
+            "terminalHandoffTone(handoff.status)",
+            "handoff.final_qa_status",
+            "QA terminal handoff is ready for operator review",
+            "Start Next Flow",
+            "terminal handoff",
+            "renderNextFlowActions(handoff)",
+            "next-flow-action-card",
+            "recommended",
+            "Final artifacts",
+            "Blockers / safety",
+            "Source run policy",
+            "Runtime fallback",
+            "No final artifacts recorded.",
+            "No blockers detected in the final QA handoff.",
+            'data-next-flow-action="${escapeHtml(action.action)}"',
+        ),
+    )
+
+
+def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function renderNextFlowSourceSelection()",
+            "function renderFollowUpDefinition()",
+            "function renderLaunchConfirmation()",
+            "source findings",
+            "Selected sources",
+            "Linked artifacts",
+            "data-source-selection-id",
+            "data-close-next-flow-wizard",
+            "data-next-flow-continue",
+            "data-next-flow-back-to-sources",
+            "data-next-flow-confirm-preview",
+            "data-next-flow-back-to-definition",
+            "data-launch-flow-now",
+            "Back to handoff",
+            "Continue to preflight",
+            "Preflight results",
+            "Audit preview",
+            "Source artifact links",
+            "Preflight blocked",
+            "Running launch preflight...",
+        ),
+    )
+
+
+def test_operator_run_history_static_contract_covers_lineage_and_archive_labels() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function renderRunHistory()",
+            "Run History / Lineage",
+            "parent run",
+            "current run",
+            "next work item",
+            "not created",
+            "Lineage rows",
+            "Run actions",
+            "Linked artifacts",
+            "Relationship",
+            "Run / work item",
+            "Next action",
+            "Source",
+            "Baseline",
+            "Archive",
+            "archived",
+            "data-lineage-run-id",
+            "data-lineage-work-item",
+            "renderLineageActions(handoff)",
+            "renderLineageArtifactRefs()",
+            "renderLineageRows({run, lineage, candidates})",
+        ),
+    )
+
+
+def test_operator_focus_visible_contract_covers_keyboard_reachable_surfaces() -> None:
+    html = _asset_text("/")
+    css = _css_bundle()
+
+    _assert_contains_all(
+        css,
+        (
+            "button:focus-visible",
+            "select:focus-visible",
+            "textarea:focus-visible",
+            "[tabindex]:focus-visible",
+            "box-shadow: 0 0 0 4px var(--focus-ring-soft)",
+            "outline: 3px solid var(--focus-ring)",
+            "outline-offset: 2px",
+            "--focus-ring:",
+            "--focus-ring-soft:",
+        ),
+    )
+    _assert_contains_all(
+        html,
+        (
+            'id="cockpitContent"',
+            'role="tabpanel"',
+            'tabindex="0"',
+            'id="runtimeSelect"',
+            'role="status" aria-live="polite"',
+        ),
+    )
+
+
 def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -> None:
     main = _asset_text("/operator-main.js")
     bundle = _js_bundle()

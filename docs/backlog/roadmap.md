@@ -6818,7 +6818,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E3-S2-T1` Add static DOM contract tests for the accepted screen landmarks, flow
+- `W26-E3-S2-T1` (done) Add static DOM contract tests for the accepted screen landmarks, flow
   complete state, wizard controls, lineage labels, and focus-visible affordances.
   - Scope: `tests/cli/test_ui_assets_contracts.py`.
   - Verification: focused static UI asset tests pass.
