@@ -42,6 +42,14 @@ def _asset_text(route: str) -> str:
     return asset.text
 
 
+def _css_bundle() -> str:
+    return "\n".join(
+        _asset_text(asset.route)
+        for asset in operator_static_asset_manifest()
+        if asset.content_type == "text/css; charset=utf-8"
+    )
+
+
 def test_operator_assets_are_loaded_from_packaged_static_resources() -> None:
     static_files = files("aidd.cli.static")
 
@@ -57,7 +65,16 @@ def test_operator_static_asset_manifest_preserves_compatibility_routes() -> None
     filenames = {asset.filename for asset in manifest}
 
     assert len(routes) == len(manifest)
-    assert {"index.html", "operator.css", "operator.js"}.issubset(filenames)
+    assert {
+        "index.html",
+        "operator.css",
+        "operator-tokens.css",
+        "operator-base.css",
+        "operator-layout.css",
+        "operator-components.css",
+        "operator-responsive.css",
+        "operator.js",
+    }.issubset(filenames)
     assert "operator-api-state.js" in filenames
     assert "operator-main.js" in filenames
     assert routes["/"].filename == "index.html"
@@ -74,12 +91,56 @@ def test_operator_js_bootstrap_loads_manifested_browser_modules() -> None:
     module_routes = [
         asset.route
         for asset in operator_static_asset_manifest()
-        if asset.route.startswith("/operator-") and asset.route != "/operator.js"
+        if asset.content_type == "text/javascript; charset=utf-8"
+        and asset.route.startswith("/operator-")
+        and asset.route != "/operator.js"
     ]
 
     assert module_routes
     for route in module_routes:
         assert f'"{route}"' in loader
+
+
+def test_operator_css_loader_imports_manifested_layers() -> None:
+    loader = _asset_text("/operator.css")
+    layer_routes = [
+        asset.route
+        for asset in operator_static_asset_manifest()
+        if asset.content_type == "text/css; charset=utf-8" and asset.route != "/operator.css"
+    ]
+
+    assert layer_routes == [
+        "/operator-tokens.css",
+        "/operator-base.css",
+        "/operator-layout.css",
+        "/operator-components.css",
+        "/operator-responsive.css",
+    ]
+    for route in layer_routes:
+        assert f'@import url("{route}")' in loader
+
+
+def test_operator_css_layers_own_static_ui_surfaces() -> None:
+    tokens = _asset_text("/operator-tokens.css")
+    base = _asset_text("/operator-base.css")
+    layout = _asset_text("/operator-layout.css")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    assert ":root {" in tokens
+    assert "--focus-ring:" in tokens
+    assert "button:focus-visible" in base
+    assert ".sr-only" in base
+    assert "textarea {" in base
+    assert ".operator-shell" in layout
+    assert ".stage-rail" in layout
+    assert ".cockpit" in layout
+    assert ".truncation-notice" in components
+    assert ".saved-answer" in components
+    assert ".artifact-row" in components
+    assert ".log-panel" in components
+    assert "@media (max-width: 760px)" in responsive
+    assert "scroll-padding-inline: 10px" in responsive
 
 
 def test_operator_script_modules_own_static_ui_surfaces() -> None:
@@ -164,8 +225,10 @@ def test_operator_script_keeps_dynamic_accessibility_contracts() -> None:
 
 
 def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
-    assert ".sr-only" in _OPERATOR_CSS
-    assert "button:focus-visible" in _OPERATOR_CSS
-    assert "outline: 3px solid var(--focus-ring)" in _OPERATOR_CSS
-    assert ".truncation-notice" in _OPERATOR_CSS
-    assert ".saved-answer" in _OPERATOR_CSS
+    css = _css_bundle()
+
+    assert ".sr-only" in css
+    assert "button:focus-visible" in css
+    assert "outline: 3px solid var(--focus-ring)" in css
+    assert ".truncation-notice" in css
+    assert ".saved-answer" in css

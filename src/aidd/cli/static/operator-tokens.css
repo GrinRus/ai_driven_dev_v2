@@ -1,0 +1,22 @@
+:root {
+  color-scheme: light;
+  --bg: #f8f9f7;
+  --surface: #ffffff;
+  --surface-soft: #f2f6f3;
+  --line: #e2e6e1;
+  --line-strong: #ccd5ce;
+  --text: #17201b;
+  --muted: #66726a;
+  --teal: #0f7a7b;
+  --teal-dark: #0b5e60;
+  --green: #16824a;
+  --amber: #9a6a12;
+  --red: #b4232a;
+  --blue: #225d9c;
+  --focus-ring: #245fb3;
+  --focus-ring-soft: rgba(36, 95, 179, 0.2);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}

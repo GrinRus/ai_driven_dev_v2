@@ -82,6 +82,31 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         filename="operator.css",
         content_type="text/css; charset=utf-8",
     ),
+    OperatorStaticAsset(
+        route="/operator-tokens.css",
+        filename="operator-tokens.css",
+        content_type="text/css; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-base.css",
+        filename="operator-base.css",
+        content_type="text/css; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-layout.css",
+        filename="operator-layout.css",
+        content_type="text/css; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-components.css",
+        filename="operator-components.css",
+        content_type="text/css; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-responsive.css",
+        filename="operator-responsive.css",
+        content_type="text/css; charset=utf-8",
+    ),
 )
 
 

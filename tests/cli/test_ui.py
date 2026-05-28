@@ -127,6 +127,14 @@ def _operator_script_bundle(service: OperatorUiService) -> str:
     )
 
 
+def _operator_css_bundle(service: OperatorUiService) -> str:
+    return "\n".join(
+        service.handle_get(asset.route, {}).body.decode("utf-8")
+        for asset in operator_static_asset_manifest()
+        if asset.content_type == "text/css; charset=utf-8"
+    )
+
+
 class _BodyHandler:
     def __init__(self, body: bytes, *, content_length: str | None = None) -> None:
         self.headers = {"Content-Length": content_length or str(len(body))}
@@ -1922,7 +1930,7 @@ def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
     )
     assert 'body: JSON.stringify({runtime: "generic-cli"})' not in script
 
-    css = service.handle_get("/operator.css", {}).body.decode("utf-8")
+    css = _operator_css_bundle(service)
     assert ".status-badge.cancelled" in css
     assert ".small-badge.running" in css
     assert ".small-badge.cancelling" in css
@@ -1943,7 +1951,7 @@ def test_operator_question_controls_have_screen_reader_labels(tmp_path: Path) ->
     service = _service(tmp_path / ".aidd")
 
     script = _operator_script_bundle(service)
-    css = service.handle_get("/operator.css", {}).body.decode("utf-8")
+    css = _operator_css_bundle(service)
 
     assert '<label class="sr-only" for="${answerId}">Answer for' in script
     assert (

@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E2-S0-T3`
+- `W26-E2-S0-T4`
 
 ## Soon
 
-- `W26-E2-S0-T4`
+- `W26-E1-S3-T1`
 
 ## Parking lot
 
-- `W26-E1-S3-T1`
 - `W26-E1-S3-T2`
 - `W26-E1-S3-T3`
 - `W26-E2-S1-T1`
@@ -228,3 +227,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   that loads smaller packaged browser modules for API/state, shell rendering, cockpit,
   artifacts, logs/jobs, questions, approvals/interventions, and next-flow actions.
   `W26-E2-S0-T3` is promoted to `Next`, and `W26-E2-S0-T4` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S0-T3`; `operator.css` is now a compatibility loader
+  for packaged token, base, layout, component, and responsive CSS layers. `W26-E2-S0-T4`
+  is promoted to `Next`, and `W26-E1-S3-T1` is promoted to `Soon`.

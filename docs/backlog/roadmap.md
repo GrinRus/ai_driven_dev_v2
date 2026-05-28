@@ -6580,7 +6580,7 @@ Local tasks:
   - Verification: existing UI tests pass and static contract tests assert each module owns
     its intended surface without removing escaping, accessibility, or runtime-selection
     safeguards.
-- `W26-E2-S0-T3` Split `operator.css` into token, layout, component, and responsive layers
+- `W26-E2-S0-T3` (done) Split `operator.css` into token, layout, component, and responsive layers
   or equivalent clearly bounded sections before adding Mission Control-specific styles.
   - Scope: static CSS resources only.
   - Verification: CSS contract tests keep focus, screen-reader, truncation, saved-answer,
@@ -6613,6 +6613,7 @@ Touched areas:
 - `src/aidd/cli/static/index.html`
 - `src/aidd/cli/static/operator.css`
 - `src/aidd/cli/static/operator.js`
+- `src/aidd/cli/static/operator-*.css`
 - `tests/cli/test_ui_assets_contracts.py`
 - `tests/cli/test_ui.py`
 
