@@ -615,6 +615,14 @@ async function loadLaunchConfirmation() {
     await renderCockpit();
     return;
   }
+  const definitionError = followUpDraftValidationError(draft);
+  if (definitionError) {
+    wizard.preflightLoading = false;
+    wizard.preflightError = definitionError;
+    wizard.step = "definition";
+    await renderCockpit();
+    return;
+  }
   wizard.preflightLoading = true;
   wizard.preflightError = "";
   wizard.step = "confirm";
@@ -668,7 +676,7 @@ function selectedFollowUpListValues(name, fallbackItems = []) {
           candidate.dataset.followUpListText === name
           && Number(candidate.dataset.followUpIndex) === index
         ));
-      return textControl?.value || fallbackItems[index];
+      return textControl ? textControl.value : fallbackItems[index];
     })
     .filter((value) => String(value || "").trim());
 }
@@ -697,15 +705,23 @@ function selectedInheritedContextLines(items = [], fallbackLines = null) {
   );
 }
 
+function followUpDraftValidationError(draft) {
+  if (state.nextFlowWizard.action !== "start-follow-up-flow") return "";
+  if (!String(draft?.new_work_item || "").trim()) return "Work item id is required before preflight.";
+  if (!String(draft?.title || "").trim()) return "Title is required before preflight.";
+  if (!String(draft?.first_stage_input_preview || "").trim()) return "First-stage input preview is required before preflight.";
+  return "";
+}
+
 function readFollowUpDraftForm() {
   const draft = state.nextFlowWizard.followUpDraft;
   if (!draft || state.nextFlowWizard.action !== "start-follow-up-flow") return draft;
-  const newWorkItem = document.querySelector('[data-follow-up-field="new_work_item"]')?.value?.trim();
-  const title = document.querySelector('[data-follow-up-field="title"]')?.value?.trim();
-  const preview = document.querySelector('[data-follow-up-field="first_stage_input_preview"]')?.value;
-  if (newWorkItem) draft.new_work_item = newWorkItem;
-  if (title) draft.title = title;
-  if (preview !== undefined) draft.first_stage_input_preview = preview;
+  const newWorkItemField = document.querySelector('[data-follow-up-field="new_work_item"]');
+  const titleField = document.querySelector('[data-follow-up-field="title"]');
+  const previewField = document.querySelector('[data-follow-up-field="first_stage_input_preview"]');
+  if (newWorkItemField) draft.new_work_item = newWorkItemField.value.trim();
+  if (titleField) draft.title = titleField.value.trim();
+  if (previewField) draft.first_stage_input_preview = previewField.value;
   draft.acceptance_criteria = selectedFollowUpListValues("acceptance_criteria", draft.acceptance_criteria);
   draft.required_evidence = selectedFollowUpListValues("required_evidence", draft.required_evidence);
   draft.inherited_context_lines = selectedInheritedContextLines(draft.inherited_context, draft.inherited_context_lines);
@@ -1084,6 +1100,7 @@ function renderFollowUpDefinition() {
         <span>Define Follow-up Work Item</span>
         <span class="small-badge">editable draft</span>
       </div>
+      ${wizard.preflightError ? `<div class="truncation-notice"><strong>Definition needs attention</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
         <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(draft.source_work_item)}</span></div>
