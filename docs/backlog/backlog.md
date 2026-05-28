@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E3-S2-T2`
+- `W26-E3-S2-T3`
 
 ## Soon
 
-- `W26-E3-S2-T3`
+- `W26-E4-S1-T1`
 
 ## Parking lot
 
-- `W26-E4-S1-T1`
 - `W26-E4-S1-T2`
 - `W26-E4-S1-T3`
 - `W26-E4-S2-T1`
@@ -286,3 +285,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   Mission Control landmarks, Flow Complete handoff, next-flow wizard controls, run
   lineage labels, and focus-visible affordances. `W26-E3-S2-T2` is promoted to
   `Next`, and `W26-E3-S2-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E3-S2-T2`; service-level UI regressions now cover
+  completed-run next actions, follow-up draft creation, clone draft creation, launch
+  preflight, and archive decisions while preserving source artifacts. `W26-E3-S2-T3`
+  is promoted to `Next`, and `W26-E4-S1-T1` is promoted to `Soon`.

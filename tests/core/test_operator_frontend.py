@@ -734,6 +734,56 @@ def test_operator_dashboard_exposes_archive_state_without_hiding_artifacts(
     assert "# QA Report" in qa_document.text
 
 
+def test_operator_terminal_handoff_next_action_contract_survives_archive_decision(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root)
+
+    before_archive = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+    assert before_archive.next_action.action == "review-complete"
+    assert before_archive.terminal_handoff is not None
+    expected_actions = {
+        "create-new-work-item",
+        "start-follow-up-flow",
+        "clone-flow",
+        "run-eval-batch",
+        "archive-run",
+    }
+    assert {
+        action.action
+        for action in before_archive.terminal_handoff.recommended_next_flow_actions
+    } == expected_actions
+
+    persist_run_archive_decision(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        reason="Archive after selecting next action.",
+        source="ui",
+    )
+
+    after_archive = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert after_archive.next_action.action == "review-complete"
+    assert after_archive.run.archive.archived is True
+    assert after_archive.terminal_handoff is not None
+    assert {
+        action.action
+        for action in after_archive.terminal_handoff.recommended_next_flow_actions
+    } == expected_actions
+
+
 def test_operator_dashboard_run_summary_exposes_optional_lineage_references(
     tmp_path: Path,
 ) -> None:

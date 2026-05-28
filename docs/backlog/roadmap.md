@@ -6822,7 +6822,7 @@ Local tasks:
   complete state, wizard controls, lineage labels, and focus-visible affordances.
   - Scope: `tests/cli/test_ui_assets_contracts.py`.
   - Verification: focused static UI asset tests pass.
-- `W26-E3-S2-T2` Add service-level UI regressions for completed-run next action,
+- `W26-E3-S2-T2` (done) Add service-level UI regressions for completed-run next action,
   follow-up draft creation, clone draft creation, launch preflight, and archive decision.
   - Scope: `tests/cli/test_ui.py` and `tests/core/test_operator_frontend.py`.
   - Verification: focused UI/core pytest suite passes.

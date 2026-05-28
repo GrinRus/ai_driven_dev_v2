@@ -437,11 +437,12 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S1-T2` (done) Add a launch endpoint" in w26
     assert "`W26-E3-S1-T3` (done) Add an archive decision endpoint" in w26
     assert "`W26-E3-S2-T1` (done) Add static DOM contract tests" in w26
+    assert "`W26-E3-S2-T2` (done) Add service-level UI regressions" in w26
     assert (
         "`W26-E4-S2-T1` Define the manual live E2E next-flow checkpoint policy"
         in w26
     )
-    assert "`W26-E3-S2-T2`" in backlog_next
+    assert "`W26-E3-S2-T3`" in backlog_next
     assert "`W26-E1-S1-T1`" not in backlog_next
     assert "`W26-E1-S1-T2`" not in backlog_next
     assert "`W26-E1-S2-T1`" not in backlog_next
@@ -468,6 +469,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S1-T2`" not in backlog_next
     assert "`W26-E3-S1-T3`" not in backlog_next
     assert "`W26-E3-S2-T1`" not in backlog_next
+    assert "`W26-E3-S2-T2`" not in backlog_next
     assert "`W26-E1-S3-T1`" not in backlog_soon
     assert "`W26-E1-S1-T2`" not in backlog_soon
     assert "`W26-E1-S2-T1`" not in backlog_soon
@@ -494,7 +496,8 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S1-T3`" not in backlog_soon
     assert "`W26-E3-S2-T1`" not in backlog_soon
     assert "`W26-E3-S2-T2`" not in backlog_soon
-    assert "`W26-E3-S2-T3`" in backlog_soon
+    assert "`W26-E3-S2-T3`" not in backlog_soon
+    assert "`W26-E4-S1-T1`" in backlog_soon
     assert "`W26-E2-S0-T3`" not in backlog_parking
     assert "`W26-E2-S0-T4`" not in backlog_parking
     assert "`W26-E1-S3-T1`" not in backlog_parking
@@ -516,6 +519,9 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S2-T1`" not in backlog_parking
     assert "`W26-E3-S2-T2`" not in backlog_parking
     assert "`W26-E3-S2-T3`" not in backlog_parking
+    assert "`W26-E4-S1-T1`" not in backlog_parking
+    assert "`W26-E4-S1-T2`" in backlog_parking
+    assert "`W26-E4-S1-T3`" in backlog_parking
     assert "`W26-E4-S2-T1`" in backlog_parking
     assert "`W26-E4-S2-T2`" in backlog_parking
     assert "`W26-E4-S2-T3`" in backlog_parking

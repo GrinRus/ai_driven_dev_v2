@@ -1458,6 +1458,89 @@ def test_ui_next_flow_archive_endpoint_rejects_malformed_or_non_terminal_request
     )
 
 
+def test_ui_completed_run_next_action_service_regression_sequence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    source_manifest_path = run_manifest_path(workspace_root, "WI-UI", "run-ui")
+    source_manifest_before = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+    qa_report_path = workspace_root / "workitems" / "WI-UI" / "stages" / "qa" / "qa-report.md"
+    qa_report_before = qa_report_path.read_text(encoding="utf-8")
+    service = _service(workspace_root)
+
+    dashboard_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+    handoff = dashboard_payload["dashboard"]["terminal_handoff"]  # type: ignore[index]
+    actions = {
+        action["action"]
+        for action in handoff["recommended_next_flow_actions"]  # type: ignore[index]
+    }
+    follow_up = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-FOLLOW-UP",
+            "title": "Fix completed-run QA finding",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+        },
+    )
+    clone = service.handle_post(
+        "/api/next-flow/clone-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-CLONE",
+            "title": "Clone completed flow",
+        },
+    )
+    preflight_payload = _payload(
+        service.handle_post(
+            "/api/next-flow/preflight",
+            {
+                "source_run_id": "run-ui",
+                "runtime": "codex",
+                "baseline_id": "run-ui",
+            },
+        )
+    )
+    archive_payload = _payload(
+        service.handle_post(
+            "/api/next-flow/archive",
+            {
+                "source_run_id": "run-ui",
+                "reason": "Archive after service-level next-action regression.",
+            },
+        )
+    )
+    source_manifest_after = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+    follow_up_payload = json.loads(follow_up.body.decode("utf-8"))
+    clone_payload = json.loads(clone.body.decode("utf-8"))
+
+    assert dashboard_payload["dashboard"]["next_action"]["action"] == "review-complete"  # type: ignore[index]
+    assert actions == {
+        "create-new-work-item",
+        "start-follow-up-flow",
+        "clone-flow",
+        "run-eval-batch",
+        "archive-run",
+    }
+    assert follow_up.status == HTTPStatus.CREATED
+    assert follow_up_payload["created"]["work_item"] == "WI-UI-FOLLOW-UP"
+    assert clone.status == HTTPStatus.CREATED
+    assert clone_payload["created"]["work_item"] == "WI-UI-CLONE"
+    assert preflight_payload["preflight"]["status"] == "pass"  # type: ignore[index]
+    assert preflight_payload["preflight"]["can_launch"] is True  # type: ignore[index]
+    assert archive_payload["dashboard"]["run"]["archive"]["archived"] is True  # type: ignore[index]
+    assert source_manifest_after["operator_archive"]["archived"] is True
+    assert source_manifest_after["run_id"] == source_manifest_before["run_id"]
+    assert source_manifest_after["runtime_id"] == source_manifest_before["runtime_id"]
+    assert source_manifest_after["stage_target"] == source_manifest_before["stage_target"]
+    assert qa_report_path.read_text(encoding="utf-8") == qa_report_before
+    assert not (workspace_root / "reports" / "runs" / "WI-UI-FOLLOW-UP").exists()
+    assert not (workspace_root / "reports" / "runs" / "WI-UI-CLONE").exists()
+
+
 def test_ui_workflow_stage_executor_passes_cancel_callback(
     tmp_path: Path,
 ) -> None:
