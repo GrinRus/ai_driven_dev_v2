@@ -55,6 +55,9 @@
   .artifact-layout,
   .project-setup-grid,
   .setup-mode-grid,
+  .flow-complete-hero,
+  .handoff-metric-grid,
+  .terminal-summary-grid,
   .bottom-dock {
     grid-template-columns: 1fr;
   }

@@ -118,6 +118,177 @@ function renderFirstLaunchState() {
   `;
 }
 
+function terminalHandoffTone(status) {
+  if (status === "completed") return "good";
+  if (status === "completed-with-warning" || status === "blocked") return "warn";
+  if (status === "failed") return "bad";
+  return "";
+}
+
+function terminalHandoffTitle(handoff) {
+  if (handoff.status === "completed" || handoff.status === "completed-with-warning") {
+    return "Flow Complete";
+  }
+  return "Flow Needs Attention";
+}
+
+function renderHandoffMetric({label, value, detail, tone = ""}) {
+  return `
+    <div class="metric handoff-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong class="${tone ? `metric-${tone}` : ""}">${escapeHtml(value)}</strong>
+      <small>${escapeHtml(detail)}</small>
+    </div>
+  `;
+}
+
+function approvalSummary(counts) {
+  if (!counts) return {value: "0 / 0", detail: "No approvals requested."};
+  const value = `${counts.approved || 0} / ${counts.requested || 0}`;
+  const details = [];
+  if (counts.pending) details.push(`${counts.pending} pending`);
+  if (counts.denied) details.push(`${counts.denied} denied`);
+  if (counts.cancelled) details.push(`${counts.cancelled} cancelled`);
+  return {value, detail: details.length ? details.join(", ") : "All requested approvals resolved."};
+}
+
+function repairSummary(counts) {
+  if (!counts) return {value: "0", detail: "No repair attempts recorded."};
+  const details = [];
+  if (counts.succeeded) details.push(`${counts.succeeded} succeeded`);
+  if (counts.failed) details.push(`${counts.failed} failed`);
+  return {value: counts.attempts || 0, detail: details.length ? details.join(", ") : "No repairs applied."};
+}
+
+function nextFlowButtonLabel(action) {
+  if (action.action === "create-new-work-item") return "Create New";
+  if (action.action === "start-follow-up-flow") return "Start Follow-up";
+  if (action.action === "clone-flow") return "Clone Flow";
+  if (action.action === "run-eval-batch") return "Run Batch";
+  if (action.action === "archive-run") return "Archive Run";
+  return action.label;
+}
+
+function recommendedNextFlowAction(handoff) {
+  if (handoff.status === "completed" && !handoff.blockers?.length) {
+    return "create-new-work-item";
+  }
+  return "start-follow-up-flow";
+}
+
+function renderNextFlowActions(handoff) {
+  const recommended = recommendedNextFlowAction(handoff);
+  const actions = handoff.recommended_next_flow_actions || [];
+  return `
+    <div class="next-flow-actions-grid">
+      ${actions.map((action) => {
+        const isRecommended = action.action === recommended;
+        return `
+          <article class="next-flow-action-card${isRecommended ? " recommended" : ""}">
+            <div class="action-card-title">
+              <strong>${escapeHtml(action.label)}</strong>
+              ${isRecommended ? '<span class="small-badge good">recommended</span>' : ""}
+            </div>
+            <p>${escapeHtml(action.detail)}</p>
+            <button data-next-flow-action="${escapeHtml(action.action)}" type="button" ${action.enabled ? "" : "disabled"}>
+              ${escapeHtml(nextFlowButtonLabel(action))}
+            </button>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderTerminalArtifacts(artifacts) {
+  const visible = (artifacts || []).slice(0, 5);
+  if (!visible.length) return `<div class="empty-state">No final artifacts recorded.</div>`;
+  return visible.map((artifact) => `
+    <button class="artifact-row" data-artifact-stage="${escapeHtml(artifact.stage)}" data-artifact-key="${escapeHtml(artifact.key)}" data-artifact-kind="${escapeHtml(artifact.kind)}" type="button">
+      <span>
+        <strong>${escapeHtml(artifact.key)}</strong>
+        ${pathLine(`${artifact.path} / ${artifact.byte_size || 0} bytes`, 76)}
+      </span>
+      <span class="small-badge">${escapeHtml(artifact.kind)}</span>
+    </button>
+  `).join("");
+}
+
+function renderTerminalBlockers(blockers) {
+  if (!blockers?.length) {
+    return `<div class="panel-item"><strong>Open blockers</strong><span>No blockers detected in the final QA handoff.</span></div>`;
+  }
+  return blockers.slice(0, 4).map((blocker) => `
+    <button class="artifact-row" data-blocker-stage="${escapeHtml(blocker.stage || state.activeStage)}" data-blocker-kind="${escapeHtml(blocker.kind)}" type="button">
+      <span>
+        <strong>${escapeHtml(blocker.title)}</strong>
+        <span>${escapeHtml(blocker.detail)}</span>
+      </span>
+      <span class="small-badge ${blocker.severity === "error" ? "bad" : "warn"}">${escapeHtml(blocker.kind)}</span>
+    </button>
+  `).join("");
+}
+
+function renderFlowCompleteState() {
+  const handoff = state.dashboard?.terminal_handoff;
+  if (!handoff) return "";
+  const approvals = approvalSummary(handoff.approval_counts);
+  const repairs = repairSummary(handoff.repair_counts);
+  const questionsValue = `${handoff.questions_answered_count || 0} / ${handoff.questions_total_count || 0}`;
+  const artifactCount = (handoff.final_artifacts || []).length;
+  const blockerCount = (handoff.blockers || []).length;
+  const evidenceCount = (state.dashboard?.evidence_refs || []).length;
+  const runtimeId = state.dashboard?.run?.runtime_id || "not recorded";
+  return `
+    <section class="surface flow-complete-state">
+      <div class="flow-complete-hero">
+        <div>
+          <div class="surface-title">
+            <span>${escapeHtml(terminalHandoffTitle(handoff))}</span>
+            <span class="small-badge ${terminalHandoffTone(handoff.status)}">${escapeHtml(handoff.status)}</span>
+          </div>
+          <h2>${escapeHtml(handoff.final_qa_status)}</h2>
+          <p>The QA terminal handoff is ready for operator review and next-flow selection.</p>
+        </div>
+        <div class="handoff-runtime">
+          <strong>Runtime</strong>
+          <span>${escapeHtml(runtimeId)}</span>
+        </div>
+      </div>
+      <div class="handoff-metric-grid">
+        ${renderHandoffMetric({label: "Final artifacts", value: artifactCount, detail: "QA documents and logs available.", tone: artifactCount ? "good" : "warn"})}
+        ${renderHandoffMetric({label: "Open blockers", value: blockerCount, detail: blockerCount ? "Inspect before launch." : "No blockers detected.", tone: blockerCount ? "bad" : "good"})}
+        ${renderHandoffMetric({label: "Evidence refs", value: evidenceCount, detail: "Linked stage evidence references.", tone: evidenceCount ? "good" : "warn"})}
+        ${renderHandoffMetric({label: "Repair attempts", value: repairs.value, detail: repairs.detail, tone: handoff.repair_counts?.failed ? "warn" : ""})}
+        ${renderHandoffMetric({label: "Approvals", value: approvals.value, detail: approvals.detail, tone: handoff.approval_counts?.pending ? "warn" : "good"})}
+        ${renderHandoffMetric({label: "Questions answered", value: questionsValue, detail: "Resolved product interview questions.", tone: "good"})}
+      </div>
+      <div class="start-next-flow-band">
+        <div class="surface-title">
+          <span>Start Next Flow</span>
+          <span class="small-badge">terminal handoff</span>
+        </div>
+        <p>Choose the next operator action without mutating the completed source run.</p>
+        ${renderNextFlowActions(handoff)}
+      </div>
+      <div class="terminal-summary-grid">
+        <section>
+          <div class="surface-title">Final artifacts</div>
+          <div class="recent-artifacts">${renderTerminalArtifacts(handoff.final_artifacts || [])}</div>
+        </section>
+        <section>
+          <div class="surface-title">Blockers / safety</div>
+          <div class="panel-list">
+            ${renderTerminalBlockers(handoff.blockers || [])}
+            <div class="panel-item"><strong>Source run policy</strong><span>Next-flow actions create new work or navigation decisions; they do not continue the completed run.</span></div>
+            <div class="panel-item"><strong>Runtime fallback</strong><span>Uses recorded runtime ${escapeHtml(runtimeId)}; no generic runtime fallback is hidden in the UI.</span></div>
+          </div>
+        </section>
+      </div>
+    </section>
+  `;
+}
+
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;

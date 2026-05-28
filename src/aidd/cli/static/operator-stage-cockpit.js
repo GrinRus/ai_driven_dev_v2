@@ -2,6 +2,9 @@ function renderOverview() {
   if (!state.dashboard?.run?.run_id) {
     return renderFirstLaunchState();
   }
+  if (state.dashboard?.terminal_handoff) {
+    return renderFlowCompleteState();
+  }
   const item = activeStageItem();
   const view = activeStageView();
   const unresolved = view?.questions?.unresolved_blocking_question_ids || [];

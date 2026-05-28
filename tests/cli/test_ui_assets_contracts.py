@@ -153,9 +153,13 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".artifact-row" in components
     assert ".project-setup-grid" in components
     assert ".setup-mode-card.selected" in components
+    assert ".flow-complete-state" in components
+    assert ".next-flow-action-card.recommended" in components
+    assert ".terminal-summary-grid" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
     assert ".setup-mode-grid" in responsive
+    assert ".handoff-metric-grid" in responsive
     assert "scroll-padding-inline: 10px" in responsive
 
 
@@ -186,7 +190,9 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function startJobPolling(job)" in logs
     assert "async function startWorkflow()" in next_flow
     assert "async function handleNextAction()" in next_flow
+    assert "function renderFlowCompleteState()" in next_flow
     assert "async function renderCockpit()" in cockpit
+    assert "return renderFlowCompleteState();" in cockpit
     assert "function renderActivityTable()" in cockpit
     assert 'document.addEventListener("click"' in main
     assert "refresh();" in main
@@ -428,11 +434,22 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderSetupModeSelector(context)",
             "function renderPreviousRunContext(context)",
             'aria-disabled="true" disabled',
+            "function renderFlowCompleteState()",
+            "function renderNextFlowActions(handoff)",
+            "function renderTerminalArtifacts(artifacts)",
+            "function renderTerminalBlockers(blockers)",
             "first-launch-state",
             "project-setup-state",
+            "flow-complete-state",
             "Project Setup",
+            "Flow Complete",
+            "Start Next Flow",
+            "Final artifacts",
+            "Blockers / safety",
+            "Runtime fallback",
             "Previous-run context",
             "data-setup-mode",
+            "data-next-flow-action",
             "Select a runtime to start the first governed workflow run.",
             "data-first-launch-run",
             "function renderNextActionPanel()",
@@ -466,6 +483,8 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'closest("[data-setup-mode]")',
             "requestedMode.requiresPreviousRun",
             "setupPreviousRunContext().available",
+            'closest("[data-next-flow-action]")',
+            "Start Next Flow wizard is queued for the next UI slice.",
             'event.target.id === "operatorRequestText"',
             'if (state.activeTab === "overview") await renderCockpit();',
             'closest("[data-artifact-stage]")',
@@ -550,5 +569,7 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".saved-answer-text" in css
     assert ".setup-mode-card" in css
     assert ".previous-run-context" in css
+    assert ".flow-complete-state" in css
+    assert ".next-flow-action-card" in css
     assert ".loading-state" in css
     assert "scroll-padding-inline: 10px" in css

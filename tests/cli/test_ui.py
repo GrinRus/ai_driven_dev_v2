@@ -23,11 +23,14 @@ from aidd.cli.ui import (
 )
 from aidd.cli.ui_assets import operator_static_asset_for_route, operator_static_asset_manifest
 from aidd.core.run_store import (
+    OPERATOR_DECISIONS_FILENAME,
+    OPERATOR_REQUESTS_FILENAME,
     RUN_RUNTIME_EXIT_METADATA_FILENAME,
     create_next_attempt_directory,
     create_run_manifest,
     persist_stage_status,
     run_attempt_artifact_index_path,
+    run_attempt_root,
     run_attempt_runtime_log_path,
 )
 from aidd.core.runtime_operator import (
@@ -35,10 +38,12 @@ from aidd.core.runtime_operator import (
     RuntimeOperatorDecision,
     RuntimeOperatorPolicy,
     RuntimeOperatorRequest,
+    append_operator_decision,
     append_operator_request,
 )
 from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
 from aidd.core.stage_runner import prepare_stage_bundle
+from aidd.core.stages import STAGES
 from aidd.core.workflow_service import (
     WorkflowRunRequest,
     WorkflowRunResult,
@@ -48,7 +53,9 @@ from aidd.core.workflow_service import (
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeOperatorDecisionAction,
+    RuntimeOperatorDecisionSource,
     RuntimeOperatorRequestKind,
+    RuntimeOperatorRisk,
     RuntimePermissionPolicy,
 )
 
@@ -180,6 +187,92 @@ def _prepare_run(workspace_root: Path) -> None:
         "- `SEM-INCOMPLETE-SECTION` `medium` in "
         "`workitems/WI-UI/stages/plan/plan.md`: Missing validation evidence.\n",
         encoding="utf-8",
+    )
+
+
+def _prepare_completed_qa_run(workspace_root: Path) -> None:
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="codex",
+        stage_target="qa",
+        config_snapshot={"mode": "ui-terminal-test"},
+        workflow_stage_start="idea",
+        workflow_stage_end="qa",
+    )
+    for stage in STAGES:
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+        )
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            status="succeeded",
+        )
+        stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / stage
+        stage_root.mkdir(parents=True, exist_ok=True)
+        stage_root.joinpath("validator-report.md").write_text(
+            "# Validator Report\n\n- Verdict: `pass`\n",
+            encoding="utf-8",
+        )
+        stage_root.joinpath("stage-result.md").write_text(
+            "# Stage Result\n\n## Status\n\n- `succeeded`\n",
+            encoding="utf-8",
+        )
+        run_attempt_runtime_log_path(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            attempt_number=1,
+        ).write_text(f"{stage} runtime log\n", encoding="utf-8")
+
+    qa_root = workspace_root / "workitems" / "WI-UI" / "stages" / "qa"
+    qa_root.joinpath("qa-report.md").write_text(
+        "\n".join(
+            (
+                "# QA Report",
+                "",
+                "## Readiness",
+                "",
+                "- QA verdict: `ready`.",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="qa",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "uv run --extra dev pytest tests/cli/test_ui.py"},
+        risk=RuntimeOperatorRisk.MEDIUM,
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+        attempt_number=1,
+    )
+    append_operator_request(
+        path=attempt_root / OPERATOR_REQUESTS_FILENAME,
+        request=request,
+    )
+    append_operator_decision(
+        path=attempt_root / OPERATOR_DECISIONS_FILENAME,
+        decision=RuntimeOperatorDecision(
+            request_id=request.id,
+            action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+            source=RuntimeOperatorDecisionSource.UI,
+            reason="approved in UI terminal handoff fixture",
+        ),
     )
 
 
@@ -393,6 +486,46 @@ def test_ui_dashboard_endpoint_exposes_previous_run_context_for_setup(
     assert lineage["source_work_item_id"] == "WI-SOURCE"  # type: ignore[index]
     assert lineage["baseline_id"] == "baseline-main"  # type: ignore[index]
     assert lineage["baseline_label"] == "main before setup"  # type: ignore[index]
+
+
+def test_ui_dashboard_endpoint_exposes_flow_complete_handoff(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+
+    dashboard = payload["dashboard"]
+    handoff = dashboard["terminal_handoff"]  # type: ignore[index]
+    assert dashboard["next_action"]["action"] == "review-complete"  # type: ignore[index]
+    assert dashboard["run"]["runtime_id"] == "codex"  # type: ignore[index]
+    assert handoff["status"] == "completed"  # type: ignore[index]
+    assert handoff["final_qa_status"] == "ready"  # type: ignore[index]
+    assert handoff["approval_counts"]["requested"] == 1  # type: ignore[index]
+    assert handoff["approval_counts"]["approved"] == 1  # type: ignore[index]
+    assert {artifact["key"] for artifact in handoff["final_artifacts"]} >= {  # type: ignore[index]
+        "qa_report",
+        "runtime_log",
+        "stage_result",
+        "validator_report",
+    }
+    actions = {
+        action["action"]: action
+        for action in handoff["recommended_next_flow_actions"]  # type: ignore[index]
+    }
+    assert set(actions) == {
+        "create-new-work-item",
+        "start-follow-up-flow",
+        "clone-flow",
+        "run-eval-batch",
+        "archive-run",
+    }
+    assert "codex" in actions["clone-flow"]["detail"]
+    assert "generic-cli" not in actions["clone-flow"]["detail"]
 
 
 def test_ui_static_asset_routes_are_served_from_manifest(tmp_path: Path) -> None:

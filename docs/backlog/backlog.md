@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E2-S1-T2`
+- `W26-E2-S1-T3`
 
 ## Soon
 
-- `W26-E2-S1-T3`
+- `W26-E2-S2-T1`
 
 ## Parking lot
 
-- `W26-E2-S2-T1`
 - `W26-E2-S2-T2`
 - `W26-E2-S2-T3`
 - `W26-E2-S3-T1`
@@ -245,3 +244,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   Follow-up Flow, Clone Previous Flow, and Eval / Scenario Batch modes with inherited
   previous-run context from work-item lineage. `W26-E2-S1-T2` is promoted to `Next`,
   and `W26-E2-S1-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S1-T2`; terminal QA handoffs now render Flow Complete,
+  Start Next Flow actions, final artifacts, blockers, evidence, approval counts, and
+  safety/runtime summaries without a generic runtime fallback. `W26-E2-S1-T3` is
+  promoted to `Next`, and `W26-E2-S2-T1` is promoted to `Soon`.

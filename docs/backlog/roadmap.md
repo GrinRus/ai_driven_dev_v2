@@ -6629,7 +6629,7 @@ Local tasks:
   - Scope: packaged static UI shell and dashboard payload rendering.
   - Verification: UI endpoint and static DOM tests cover mode selection and inherited
     context rendering.
-- `W26-E2-S1-T2` Render Flow Complete in the command center with Start Next Flow actions
+- `W26-E2-S1-T2` (done) Render Flow Complete in the command center with Start Next Flow actions
   and final artifact, blocker, evidence, approval, and safety summaries.
   - Scope: dashboard UI state for terminal runs.
   - Verification: static and service-level UI tests cover completed-run action visibility

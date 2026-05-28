@@ -54,6 +54,11 @@ document.addEventListener("click", async (event) => {
       await renderCockpit();
       return;
     }
+    const nextFlowAction = event.target.closest("[data-next-flow-action]");
+    if (nextFlowAction) {
+      toast("Start Next Flow wizard is queued for the next UI slice.");
+      return;
+    }
     const cancelJob = event.target.closest("[data-cancel-job]");
     if (cancelJob) {
       await cancelActiveJob();
