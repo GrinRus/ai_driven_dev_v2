@@ -173,14 +173,65 @@ and any blockers in roadmap evidence.
 - Activity and Evidence Refs show `operator.request.created` after refresh.
 - Validation and repair evidence remain inspectable after the intervention attempt.
 
+### Flow Complete Handoff
+
+- A terminal `qa` run switches the command center from active-stage operation to
+  **Flow Complete** without hiding stage rail, Activity / Events, or Recent artifacts.
+- The handoff summary shows final QA status, runtime id, final artifacts, open blockers,
+  evidence refs, repair counts, approval counts, and answered-question counts.
+- Final artifacts open in the Artifacts view and remain readable in Preview and Source
+  mode after refresh.
+- The **Start Next Flow** action band shows Create New Work Item, Start Follow-up Flow,
+  Clone This Flow, Run Eval / Scenario Batch, and Archive Run.
+- Recommended next action badges match final QA status: completed runs without blockers
+  recommend new work, while failed or blocked handoffs recommend follow-up work.
+- Choosing Archive Run records the local archive decision and leaves final QA artifacts
+  and run-history inspection available.
+
+### Start Next Flow Wizard
+
+- Start Follow-up Flow opens the source-finding step and groups QA findings, review
+  notes, failed evidence, and manual request options.
+- Source-finding checkboxes can be toggled with pointer and keyboard input; Continue
+  stays disabled until at least one source is selected.
+- The follow-up work item definition step shows editable title, generated acceptance
+  criteria, required evidence, inherited context toggles, and first-stage input preview.
+- Back to sources returns to the source-finding step without losing selected sources.
+- Continue to preflight shows launch preflight status, audit preview, resolved baseline,
+  source artifact links, and a disabled Launch Flow Now button when preflight blocks.
+- The wizard close/back controls return to the Flow Complete handoff without mutating
+  the completed source run.
+
+### Run History / Lineage
+
+- Run History shows parent/source run, current run, baseline, child work item candidates,
+  archive status, and linked artifacts.
+- Parent, current, and child lineage rows expose source run ids and work item ids without
+  truncating the information needed for audit.
+- Run actions in history match the Flow Complete action set and keep disabled states
+  visible when an action is not launchable.
+- Archived runs show the archive timestamp/reason while keeping linked artifacts and
+  final handoff details inspectable.
+- Refreshing the browser preserves selected run lineage and does not create child work
+  items unless the operator explicitly launches a new flow.
+
 ### Viewports
 
 - Desktop width shows stage rail, cockpit, right sidebar, and bottom dock together.
+- Desktop completed-flow view keeps Flow Complete, Start Next Flow, final artifacts,
+  and run-history lineage visible without overlapping panels.
 - Tablet width keeps the right sidebar below the cockpit without overlapping content.
+- Tablet completed-flow view keeps the wizard action row, source-finding groups, and
+  launch preflight cards readable after wrapping.
 - Mobile width turns the stage rail into horizontal navigation, auto-scrolls the active
   stage into view on load and stage switch, and preserves readable tab/action buttons.
+- Mobile completed-flow view keeps Flow Complete actions, wizard controls, lineage
+  nodes, and artifact rows reachable without horizontal page scrolling.
 - Keyboard focus is visible on runtime select, stage cards, cockpit tabs, action buttons,
   artifact rows, textareas, and source/preview controls.
+- Keyboard-only traversal reaches Start Next Flow cards, source-finding checkboxes,
+  follow-up fields, inherited context toggles, preflight back/launch buttons, Run
+  History actions, and Archive Run.
 
 ## Brokered Approval Proof
 

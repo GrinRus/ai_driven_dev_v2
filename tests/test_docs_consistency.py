@@ -432,17 +432,20 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E1-S3-T1` (done) Add a stage document workbench read model" in w26
     assert "`W26-E1-S3-T2` (done) Add recovery and diagnostics read-model fields" in w26
     assert "`W26-E1-S3-T3` (done) Add an evidence graph read model" in w26
+    assert "### Epic W26-E3 — API, safety, and regression coverage (`done`)" in w26
     assert "#### Slice W26-E3-S1 — private UI next-flow API (`done`)" in w26
     assert "`W26-E3-S1-T1` (done) Add private UI endpoints" in w26
     assert "`W26-E3-S1-T2` (done) Add a launch endpoint" in w26
     assert "`W26-E3-S1-T3` (done) Add an archive decision endpoint" in w26
+    assert "#### Slice W26-E3-S2 — deterministic UI and accessibility coverage (`done`)" in w26
     assert "`W26-E3-S2-T1` (done) Add static DOM contract tests" in w26
     assert "`W26-E3-S2-T2` (done) Add service-level UI regressions" in w26
+    assert "`W26-E3-S2-T3` (done) Extend the manual browser checklist" in w26
     assert (
         "`W26-E4-S2-T1` Define the manual live E2E next-flow checkpoint policy"
         in w26
     )
-    assert "`W26-E3-S2-T3`" in backlog_next
+    assert "`W26-E4-S1-T1`" in backlog_next
     assert "`W26-E1-S1-T1`" not in backlog_next
     assert "`W26-E1-S1-T2`" not in backlog_next
     assert "`W26-E1-S2-T1`" not in backlog_next
@@ -470,6 +473,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S1-T3`" not in backlog_next
     assert "`W26-E3-S2-T1`" not in backlog_next
     assert "`W26-E3-S2-T2`" not in backlog_next
+    assert "`W26-E3-S2-T3`" not in backlog_next
     assert "`W26-E1-S3-T1`" not in backlog_soon
     assert "`W26-E1-S1-T2`" not in backlog_soon
     assert "`W26-E1-S2-T1`" not in backlog_soon
@@ -497,7 +501,8 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S2-T1`" not in backlog_soon
     assert "`W26-E3-S2-T2`" not in backlog_soon
     assert "`W26-E3-S2-T3`" not in backlog_soon
-    assert "`W26-E4-S1-T1`" in backlog_soon
+    assert "`W26-E4-S1-T1`" not in backlog_soon
+    assert "`W26-E4-S1-T2`" in backlog_soon
     assert "`W26-E2-S0-T3`" not in backlog_parking
     assert "`W26-E2-S0-T4`" not in backlog_parking
     assert "`W26-E1-S3-T1`" not in backlog_parking
@@ -520,7 +525,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S2-T2`" not in backlog_parking
     assert "`W26-E3-S2-T3`" not in backlog_parking
     assert "`W26-E4-S1-T1`" not in backlog_parking
-    assert "`W26-E4-S1-T2`" in backlog_parking
+    assert "`W26-E4-S1-T2`" not in backlog_parking
     assert "`W26-E4-S1-T3`" in backlog_parking
     assert "`W26-E4-S2-T1`" in backlog_parking
     assert "`W26-E4-S2-T2`" in backlog_parking
@@ -660,11 +665,26 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
         "### Artifacts",
         "### Questions",
         "### Request Change / Intervention",
+        "### Flow Complete Handoff",
+        "### Start Next Flow Wizard",
+        "### Run History / Lineage",
         "### Viewports",
+        "Flow Complete",
+        "Start Next Flow",
+        "Archive Run",
+        "source-finding step",
+        "follow-up work item definition",
+        "launch preflight",
+        "parent/source run",
+        "archive timestamp/reason",
         "Desktop width",
+        "Desktop completed-flow view",
         "Tablet width",
+        "Tablet completed-flow view",
         "Mobile width",
+        "Mobile completed-flow view",
         "Keyboard focus is visible",
+        "Keyboard-only traversal reaches Start Next Flow cards",
     ):
         assert expected in operator_ui_lane
 

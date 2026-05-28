@@ -6746,7 +6746,7 @@ Exit evidence:
 - all accepted visual references have an implementation task and verification path;
 - recovery and diagnostic actions stay auditable and core-backed.
 
-### Epic W26-E3 — API, safety, and regression coverage (`planned`)
+### Epic W26-E3 — API, safety, and regression coverage (`done`)
 Linked stories: `US-03`, `US-06`, `US-10`, `US-11`
 
 #### Slice W26-E3-S1 — private UI next-flow API (`done`)
@@ -6794,7 +6794,7 @@ Exit evidence:
 - every new UI write path has a narrow core-backed service boundary;
 - completed source artifacts remain immutable after next-flow actions.
 
-#### Slice W26-E3-S2 — deterministic UI and accessibility coverage (`planned`)
+#### Slice W26-E3-S2 — deterministic UI and accessibility coverage (`done`)
 Goal: prove the accepted design through tests and manual browser checklist updates without
 introducing a Node build pipeline.
 
@@ -6826,7 +6826,7 @@ Local tasks:
   follow-up draft creation, clone draft creation, launch preflight, and archive decision.
   - Scope: `tests/cli/test_ui.py` and `tests/core/test_operator_frontend.py`.
   - Verification: focused UI/core pytest suite passes.
-- `W26-E3-S2-T3` Extend the manual browser checklist with Flow Complete, Start Next Flow,
+- `W26-E3-S2-T3` (done) Extend the manual browser checklist with Flow Complete, Start Next Flow,
   wizard, run-history lineage, desktop/tablet/mobile, and keyboard paths.
   - Scope: `docs/e2e/operator-ui-local-project.md`.
   - Verification: docs consistency tests assert the checklist sections remain present.
