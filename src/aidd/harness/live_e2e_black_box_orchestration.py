@@ -22,6 +22,11 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 from aidd.core.markdown import MarkdownSectionIndex
+from aidd.core.next_flow import (
+    FollowUpDraftRequest,
+    FollowUpSourceSelection,
+    create_follow_up_work_item_draft,
+)
 from aidd.core.operator_frontend import resolve_operator_dashboard_view
 from aidd.core.run_store import (
     load_stage_metadata,
@@ -164,6 +169,7 @@ UI_UX_CHECKPOINTS_JSON_FILENAME = "ui-ux-checkpoints.json"
 UI_UX_CHECKPOINTS_MARKDOWN_FILENAME = "ui-ux-checkpoints.md"
 NEXT_FLOW_CHECKPOINT_JSON_FILENAME = "next-flow-checkpoint.json"
 NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
+NEXT_FLOW_LINEAGE_FILENAME = "next-flow-lineage.json"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 SUMMARY_REPORT_FILENAME = "summary.md"
 STAGE_AUDITS_DIRNAME = "stage-audits"
@@ -260,6 +266,7 @@ class FlowContext:
     config_path: Path | None
     installed_command: tuple[str, ...]
     started: float
+    enable_next_flow_follow_up_proof: bool = False
 
 
 class LiveE2EInterrupted(Exception):
@@ -655,6 +662,7 @@ def _flow_state_payload(
         "config_path": None if ctx.config_path is None else ctx.config_path.as_posix(),
         "install_home": install_home,
         "installed_command": list(ctx.installed_command),
+        "next_flow_follow_up_proof_enabled": ctx.enable_next_flow_follow_up_proof,
     }
     if ctx.install_result is not None:
         payload["install"] = {
@@ -1013,6 +1021,7 @@ def _initial_context(
     work_root: Path,
     report_root: Path,
     run_id: str | None,
+    enable_next_flow_follow_up_proof: bool,
 ) -> FlowContext:
     scenario = load_scenario(
         scenario_path,
@@ -1030,6 +1039,8 @@ def _initial_context(
     selected_task = select_authored_task(scenario)
     if selected_task is None:
         raise ValueError("Live scenario must provide an authored task pool.")
+    if enable_next_flow_follow_up_proof and scenario.automation_lane != "manual":
+        raise ValueError("Next-flow follow-up proof is manual-only.")
     resolved_run_id = _new_run_id(
         scenario_id=scenario.scenario_id,
         runtime_id=runtime_id,
@@ -1065,6 +1076,7 @@ def _initial_context(
         config_path=None,
         installed_command=tuple(),
         started=time.monotonic(),
+        enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
     )
 
 
@@ -1075,6 +1087,7 @@ def _context_from_state(
     runtime_id: str,
     work_root: Path,
     report_root: Path,
+    enable_next_flow_follow_up_proof: bool,
 ) -> FlowContext:
     state = _read_json_object(state_path)
     state_work_root = state.get("work_root")
@@ -1130,6 +1143,7 @@ def _context_from_state(
     preserved_install_payload = (
         dict(install_payload) if isinstance(install_payload, dict) else None
     )
+    state_follow_up_proof = state.get("next_flow_follow_up_proof_enabled") is True
     return FlowContext(
         scenario_path=scenario_path,
         scenario=scenario,
@@ -1149,6 +1163,9 @@ def _context_from_state(
         config_path=Path(config_path) if isinstance(config_path, str) and config_path else None,
         installed_command=installed_command,
         started=time.monotonic(),
+        enable_next_flow_follow_up_proof=(
+            enable_next_flow_follow_up_proof or state_follow_up_proof
+        ),
     )
 
 
@@ -1159,6 +1176,7 @@ def _load_or_create_context(
     work_root: Path,
     report_root: Path,
     run_id: str | None,
+    enable_next_flow_follow_up_proof: bool,
 ) -> FlowContext:
     resume_state = _find_resume_state(
         report_root=report_root,
@@ -1171,6 +1189,7 @@ def _load_or_create_context(
             runtime_id=runtime_id,
             work_root=work_root,
             report_root=report_root,
+            enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
         )
     ctx = _initial_context(
         scenario_path=scenario_path,
@@ -1178,6 +1197,7 @@ def _load_or_create_context(
         work_root=work_root,
         report_root=report_root,
         run_id=None,
+        enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
     )
     _persist_state(
         ctx=ctx,
@@ -2186,6 +2206,104 @@ def _next_flow_final_artifacts(
     return artifacts
 
 
+def _next_flow_follow_up_work_item_id(ctx: FlowContext) -> str:
+    suffix = re.sub(r"[^A-Za-z0-9._-]+", "-", ctx.run_id).strip("-")
+    return f"{ctx.work_item}-FOLLOW-UP-{suffix or 'live-e2e'}"
+
+
+def _workspace_relative_artifact_path(*, workspace_root: Path, path: Path) -> str:
+    resolved_workspace = workspace_root.resolve(strict=False)
+    resolved_path = path.resolve(strict=False)
+    if not resolved_path.is_relative_to(resolved_workspace):
+        raise ValueError(
+            "Next-flow follow-up proof source artifact is outside the target workspace: "
+            f"{path.as_posix()}."
+        )
+    return resolved_path.relative_to(resolved_workspace).as_posix()
+
+
+def _next_flow_follow_up_source_selection(ctx: FlowContext) -> FollowUpSourceSelection:
+    if ctx.prepared_working_copy is None:
+        raise RuntimeError("Next-flow follow-up proof requires a prepared target working copy.")
+    qa_report_path = _qa_report_path(ctx)
+    if qa_report_path is None:
+        raise RuntimeError("Next-flow follow-up proof requires a terminal QA report.")
+    workspace_root = ctx.prepared_working_copy.working_copy_path / ".aidd"
+    return FollowUpSourceSelection(
+        kind="qa-finding",
+        title="Terminal QA report findings",
+        source_path=_workspace_relative_artifact_path(
+            workspace_root=workspace_root,
+            path=qa_report_path,
+        ),
+        stage="qa",
+        note="Selected by explicit manual live E2E next-flow follow-up proof option.",
+    )
+
+
+def _write_next_flow_lineage_artifact(
+    *,
+    ctx: FlowContext,
+    status: VerdictStatus,
+) -> dict[str, object] | None:
+    if not ctx.enable_next_flow_follow_up_proof:
+        return None
+    lineage_path = ctx.bundle_root / NEXT_FLOW_LINEAGE_FILENAME
+    if lineage_path.exists():
+        return _read_json_object(lineage_path)
+    if status != "pass":
+        return None
+    if ctx.prepared_working_copy is None:
+        raise RuntimeError("Next-flow follow-up proof requires a prepared target working copy.")
+    if ctx.scenario.automation_lane != "manual":
+        raise RuntimeError("Next-flow follow-up proof is manual-only.")
+
+    working_copy = ctx.prepared_working_copy.working_copy_path
+    workspace_root = working_copy / ".aidd"
+    child_work_item = _next_flow_follow_up_work_item_id(ctx)
+    selection = _next_flow_follow_up_source_selection(ctx)
+    result = create_follow_up_work_item_draft(
+        FollowUpDraftRequest(
+            workspace_root=workspace_root,
+            source_work_item=ctx.work_item,
+            source_run_id=ctx.run_id,
+            new_work_item=child_work_item,
+            title="Follow-up from live E2E terminal QA findings",
+            selections=(selection,),
+            project_root=working_copy,
+        )
+    )
+    child_metadata_path = (
+        workspace_root / "workitems" / result.work_item / "work-item.json"
+    )
+    child_metadata = (
+        _read_json_object(child_metadata_path) if child_metadata_path.exists() else {}
+    )
+    lineage_payload: dict[str, object] = {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "enabled": True,
+        "manual_only": True,
+        "launched_child_flow": False,
+        "automation_lane": ctx.scenario.automation_lane,
+        "source_run_id": ctx.run_id,
+        "source_work_item_id": ctx.work_item,
+        "child_work_item_id": result.work_item,
+        "relationship": "follow-up-draft",
+        "follow_up_request_path": result.request_path.as_posix(),
+        "source_artifact_paths": list(result.source_artifact_paths),
+        "child_work_item_lineage": child_metadata.get("lineage", {}),
+        "next_flow_checkpoint": (ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME).as_posix(),
+        "operator_policy": {
+            "second_public_repository_flow_required": False,
+            "child_flow_launch": "not-run",
+        },
+    }
+    lineage_payload["lineage_artifact"] = lineage_path.as_posix()
+    _write_json(lineage_path, lineage_payload)
+    return lineage_payload
+
+
 def _next_flow_recommendation_payloads(
     *,
     status: VerdictStatus,
@@ -2452,6 +2570,7 @@ def _write_next_flow_checkpoint_artifacts(
     acceptance_coverage_status: str,
     ui_ux_gate: str,
     first_failure_note: str | None,
+    next_flow_lineage: dict[str, object] | None = None,
 ) -> tuple[Path, Path, dict[str, object]]:
     dashboard_snapshot = _next_flow_dashboard_snapshot(ctx)
     qa_audit = _qa_stage_audit(ctx) or {}
@@ -2531,6 +2650,24 @@ def _write_next_flow_checkpoint_artifacts(
         "lineage_artifact": None,
         "source_artifact_links": source_artifact_links,
     }
+    if next_flow_lineage is not None:
+        child_work_item = next_flow_lineage.get("child_work_item_id")
+        lineage_artifact = next_flow_lineage.get("lineage_artifact")
+        lineage_metadata.update(
+            {
+                "present": True,
+                "source": "manual-live-follow-up-proof",
+                "child_work_item_id": child_work_item if isinstance(child_work_item, str) else None,
+                "child_flow_enabled": True,
+                "lineage_artifact": (
+                    lineage_artifact if isinstance(lineage_artifact, str) else None
+                ),
+                "source_artifact_links": next_flow_lineage.get(
+                    "source_artifact_paths",
+                    source_artifact_links,
+                ),
+            }
+        )
     payload: dict[str, object] = {
         "schema_version": 1,
         "created_at_utc": _utc_now(),
@@ -2647,10 +2784,13 @@ def _write_next_flow_checkpoint_artifacts(
             "",
             "## Optional Lineage Metadata",
             "",
-            "- Child flow enabled: `false`",
+            f"- Child flow enabled: `{lineage_metadata['child_flow_enabled']}`",
             "- Child flow required: `false`",
             f"- Baseline id: `{lineage_metadata['baseline_id']}`",
-            f"- Source artifact links: `{len(source_artifact_links)}`",
+            "- Lineage artifact: "
+            f"`{lineage_metadata['lineage_artifact'] or 'none'}`",
+            "- Source artifact links: "
+            f"`{len(cast(list[object], lineage_metadata['source_artifact_links']))}`",
         )
     )
     markdown_path = ctx.bundle_root / NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME
@@ -4662,6 +4802,7 @@ def _write_harness_metadata(
             "next_flow_checkpoint": (
                 ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME
             ).as_posix(),
+            "next_flow_lineage": (ctx.bundle_root / NEXT_FLOW_LINEAGE_FILENAME).as_posix(),
             "operator_quality_analysis_validation": (
                 ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME
             ).as_posix(),
@@ -4811,6 +4952,7 @@ def _record_terminal_decision_step(
             ctx.bundle_root / RUNTIME_APPROVAL_ANALYSIS_FILENAME,
             ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME,
             ctx.bundle_root / NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME,
+            ctx.bundle_root / NEXT_FLOW_LINEAGE_FILENAME,
             ctx.bundle_root / STAGE_AUDITS_DIRNAME,
             *evidence_paths,
         ),
@@ -5171,6 +5313,7 @@ def _finalize_reports(
         ),
     )
     write_scenario_verdict_markdown(path=ctx.bundle_root / VERDICT_FILENAME, verdict=verdict)
+    next_flow_lineage = _write_next_flow_lineage_artifact(ctx=ctx, status=status)
     _, _, next_flow_checkpoint = _write_next_flow_checkpoint_artifacts(
         ctx=ctx,
         status=status,
@@ -5180,6 +5323,7 @@ def _finalize_reports(
         acceptance_coverage_status=acceptance_coverage_status,
         ui_ux_gate=ui_ux_gate,
         first_failure_note=first_failure_note,
+        next_flow_lineage=next_flow_lineage,
     )
     _write_json(
         ctx.bundle_root / GRADER_FILENAME,
@@ -5356,6 +5500,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         },
     )
     first_failure_note = _first_failure_from_steps(ctx, status="blocked")[1]
+    next_flow_lineage = _write_next_flow_lineage_artifact(ctx=ctx, status="blocked")
     _, _, next_flow_checkpoint = _write_next_flow_checkpoint_artifacts(
         ctx=ctx,
         status="blocked",
@@ -5365,6 +5510,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         acceptance_coverage_status=acceptance_coverage_status,
         ui_ux_gate=ui_ux_gate,
         first_failure_note=first_failure_note,
+        next_flow_lineage=next_flow_lineage,
     )
     _record_terminal_decision_step(ctx=ctx, status="blocked")
     _write_harness_metadata(
@@ -5443,6 +5589,7 @@ def run_black_box_live_e2e(
     work_root: Path | None = None,
     report_root: Path = Path(".aidd/reports/evals"),
     run_id: str | None = None,
+    enable_next_flow_follow_up_proof: bool = False,
 ) -> BlackBoxLiveE2EResult:
     resolved_work_root = (work_root or _default_work_root()).resolve(strict=False)
     resolved_report_root = report_root.resolve(strict=False)
@@ -5452,6 +5599,7 @@ def run_black_box_live_e2e(
         work_root=resolved_work_root,
         report_root=resolved_report_root,
         run_id=run_id,
+        enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
     )
     try:
         with _live_interruption_handlers():
@@ -5629,6 +5777,14 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         default=None,
         help="Explicit blocked run id to resume; omitted always creates a fresh run.",
     )
+    parser.add_argument(
+        "--enable-next-flow-follow-up-proof",
+        action="store_true",
+        help=(
+            "Manual-only option: create a follow-up draft from terminal QA findings "
+            "and record next-flow-lineage.json without launching a child live flow."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -5641,6 +5797,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             work_root=Path(args.work_root),
             report_root=Path(args.report_root),
             run_id=None if args.run_id is None else str(args.run_id),
+            enable_next_flow_follow_up_proof=bool(args.enable_next_flow_follow_up_proof),
         )
     except ValueError as exc:
         print(f"black-box live e2e: {exc}", file=sys.stderr)

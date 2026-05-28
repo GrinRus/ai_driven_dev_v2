@@ -6,11 +6,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E4-S2-T3`
+- `W26-E5-S1-T1`
 
 ## Soon
-
-- `W26-E5-S1-T1`
 
 ## Parking lot
 
@@ -307,3 +305,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   next-action evidence, source-run summary fields, blocker/repair/approval/question
   counts, and optional lineage metadata. `W26-E4-S2-T3` is promoted to `Next`, and
   `W26-E5-S1-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S2-T3`; the optional manual-only live follow-up proof
+  flag now creates a follow-up draft from terminal QA findings and records
+  `next-flow-lineage.json` without launching a child public-repository flow. Wave 26
+  live E2E integration is done, and `W26-E5-S1-T1` is promoted to `Next`.

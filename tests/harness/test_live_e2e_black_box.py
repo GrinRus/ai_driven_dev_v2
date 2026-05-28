@@ -828,6 +828,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         "next-flow-checkpoint.md",
     ):
         assert (result.bundle_root / filename).exists(), filename
+    assert not (result.bundle_root / "next-flow-lineage.json").exists()
 
     steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     run_stage_steps = [step for step in steps if step["action"] == "run-stage"]
@@ -938,6 +939,52 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     )
     assert "Default decision: `no-follow-up`" in next_flow_markdown
     assert "Requires second public-repository flow: `false`" in next_flow_markdown
+
+
+def test_black_box_live_e2e_follow_up_proof_is_explicit_manual_only_lineage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        enable_next_flow_follow_up_proof=True,
+    )
+
+    lineage_path = result.bundle_root / "next-flow-lineage.json"
+    assert lineage_path.exists()
+    lineage = json.loads(lineage_path.read_text(encoding="utf-8"))
+    assert lineage["enabled"] is True
+    assert lineage["manual_only"] is True
+    assert lineage["automation_lane"] == "manual"
+    assert lineage["launched_child_flow"] is False
+    assert lineage["source_run_id"] == result.run_id
+    assert lineage["source_work_item_id"] == "WI-LIVE-BLACKBOX"
+    assert lineage["child_work_item_id"].startswith("WI-LIVE-BLACKBOX-FOLLOW-UP-")
+    assert lineage["child_work_item_lineage"] == {
+        "source_run_id": result.run_id,
+        "source_work_item_id": "WI-LIVE-BLACKBOX",
+    }
+    assert lineage["source_artifact_paths"] == [
+        "workitems/WI-LIVE-BLACKBOX/stages/qa/output/qa-report.md"
+    ]
+    follow_up_request = Path(lineage["follow_up_request_path"])
+    assert follow_up_request.exists()
+    assert f"Source run: `{result.run_id}`" in follow_up_request.read_text(
+        encoding="utf-8"
+    )
+    checkpoint = json.loads(
+        (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    optional_lineage = checkpoint["optional_lineage_metadata"]
+    assert optional_lineage["child_flow_enabled"] is True
+    assert optional_lineage["child_flow_required"] is False
+    assert optional_lineage["child_work_item_id"] == lineage["child_work_item_id"]
+    assert optional_lineage["lineage_artifact"] == lineage_path.as_posix()
 
 
 def test_black_box_live_e2e_records_complete_acceptance_coverage(

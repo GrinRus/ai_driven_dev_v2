@@ -6836,7 +6836,7 @@ Exit evidence:
 - accepted UI semantics are covered by deterministic tests;
 - manual browser evidence can validate the completed-flow handoff in realistic viewports.
 
-### Epic W26-E4 — live E2E and eval evidence integration (`planned`)
+### Epic W26-E4 — live E2E and eval evidence integration (`done`)
 Linked stories: `US-07`, `US-10`, `US-11`
 
 #### Slice W26-E4-S1 — local-project UI E2E next-flow lane (`done`)
@@ -6880,7 +6880,7 @@ Exit evidence:
 - the local UI lane proves the new completed-flow behavior without depending on public
   repositories or provider credentials.
 
-#### Slice W26-E4-S2 — public live E2E next-flow checkpoint logic (`planned`)
+#### Slice W26-E4-S2 — public live E2E next-flow checkpoint logic (`done`)
 Goal: update the black-box live E2E logic so final run evidence records completed-flow
 handoff readiness and optional next-flow lineage without turning live E2E into a CI gate.
 
@@ -6917,7 +6917,7 @@ Local tasks:
   - Verification: harness tests prove the final bundle contains
     `next-flow-checkpoint.json` and `next-flow-checkpoint.md` for completed, failed, and
     blocked terminal runs.
-- `W26-E4-S2-T3` Add an optional maintained-scenario follow-up proof path that creates a
+- `W26-E4-S2-T3` (done) Add an optional maintained-scenario follow-up proof path that creates a
   follow-up draft from QA findings when the operator explicitly enables it for a manual
   run.
   - Scope: live scenario policy and evaluator option handling.

@@ -131,6 +131,12 @@ analysis. Any child-flow proof must be explicitly enabled by a manual operator i
 separate future option, remain outside CI/CD and release automation, and record separate
 lineage evidence instead of mutating the completed source run.
 
+The optional evaluator flag `--enable-next-flow-follow-up-proof` is off by default.
+When a manual operator explicitly enables it for a terminal passing run, the evaluator
+creates a follow-up draft from the terminal QA report and writes `next-flow-lineage.json`
+with source-run and child work item lineage. The flag must not launch a second public
+repository flow and must remain manual-only.
+
 ## Maintained Repository Set
 
 ### `fastapi/typer`
@@ -266,6 +272,8 @@ operator-authored evidence:
 - `answer-analysis.md` when the launching operator-agent answered blocking questions
 - `operator-intervention-analysis.md` when the launching operator-agent submitted an
   operator intervention request
+- `next-flow-lineage.json` only when the manual operator explicitly enabled
+  `--enable-next-flow-follow-up-proof`
 
 ## Interview Scenarios
 

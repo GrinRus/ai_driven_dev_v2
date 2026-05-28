@@ -242,6 +242,12 @@ separate manual-only option when the evaluator explicitly supports it; it must s
 outside CI/CD and release automation and must write separate lineage evidence instead
 of mutating the completed source run.
 
+The evaluator option `--enable-next-flow-follow-up-proof` is off by default. Use it
+only for a deliberate manual maintained-scenario proof after terminal passing `qa`.
+When enabled, the evaluator creates a follow-up draft from the terminal QA report and
+writes `next-flow-lineage.json`; it still must not launch a child public-repository
+flow.
+
 ## Validations and blockers
 
 The live run can be rejected or downgraded at several layers:
@@ -293,6 +299,7 @@ Expected live artifacts include:
 - `operator-quality-analysis-validation.json`
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
+- `next-flow-lineage.json` only when `--enable-next-flow-follow-up-proof` is explicitly enabled
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
 - `feature-selection.json`
