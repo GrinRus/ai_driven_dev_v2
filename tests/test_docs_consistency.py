@@ -441,13 +441,15 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S2-T1` (done) Add static DOM contract tests" in w26
     assert "`W26-E3-S2-T2` (done) Add service-level UI regressions" in w26
     assert "`W26-E3-S2-T3` (done) Extend the manual browser checklist" in w26
+    assert "#### Slice W26-E4-S1 — local-project UI E2E next-flow lane (`done`)" in w26
     assert "`W26-E4-S1-T1` (done) Update the operator UI local-project E2E lane" in w26
     assert "`W26-E4-S1-T2` (done) Add deterministic local fixture coverage" in w26
+    assert "`W26-E4-S1-T3` (done) Record a manual installed local-project smoke path" in w26
     assert (
         "`W26-E4-S2-T1` Define the manual live E2E next-flow checkpoint policy"
         in w26
     )
-    assert "`W26-E4-S1-T3`" in backlog_next
+    assert "`W26-E4-S2-T1`" in backlog_next
     assert "`W26-E1-S1-T1`" not in backlog_next
     assert "`W26-E1-S1-T2`" not in backlog_next
     assert "`W26-E1-S2-T1`" not in backlog_next
@@ -478,6 +480,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S2-T3`" not in backlog_next
     assert "`W26-E4-S1-T1`" not in backlog_next
     assert "`W26-E4-S1-T2`" not in backlog_next
+    assert "`W26-E4-S1-T3`" not in backlog_next
     assert "`W26-E1-S3-T1`" not in backlog_soon
     assert "`W26-E1-S1-T2`" not in backlog_soon
     assert "`W26-E1-S2-T1`" not in backlog_soon
@@ -508,7 +511,8 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E4-S1-T1`" not in backlog_soon
     assert "`W26-E4-S1-T2`" not in backlog_soon
     assert "`W26-E4-S1-T3`" not in backlog_soon
-    assert "`W26-E4-S2-T1`" in backlog_soon
+    assert "`W26-E4-S2-T1`" not in backlog_soon
+    assert "`W26-E4-S2-T2`" in backlog_soon
     assert "`W26-E2-S0-T3`" not in backlog_parking
     assert "`W26-E2-S0-T4`" not in backlog_parking
     assert "`W26-E1-S3-T1`" not in backlog_parking
@@ -534,7 +538,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E4-S1-T2`" not in backlog_parking
     assert "`W26-E4-S1-T3`" not in backlog_parking
     assert "`W26-E4-S2-T1`" not in backlog_parking
-    assert "`W26-E4-S2-T2`" in backlog_parking
+    assert "`W26-E4-S2-T2`" not in backlog_parking
     assert "`W26-E4-S2-T3`" in backlog_parking
     assert "`W26-E5-S1-T1`" in backlog_parking
     visual_reference_dir = (
@@ -722,6 +726,34 @@ def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> 
         "run launch preflight with an explicit runtime",
         "inspect Run History / Lineage",
         "record the Archive Run decision path",
+    ):
+        assert expected in operator_ui_lane
+
+
+def test_operator_ui_local_project_manual_smoke_template_records_required_evidence() -> None:
+    operator_ui_lane = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "## Completed-Run Manual Smoke Evidence Template",
+        "Manual smoke evidence is recorded in `docs/backlog/roadmap.md`",
+        "Run id: `<terminal-run-id>`",
+        "Source work item: `<source-work-item-id>`",
+        "Child work item: `<created-or-previewed-follow-up-id, or none>`",
+        "Browser: `<browser name and version>`",
+        "Viewport: `<desktop/tablet/mobile dimensions>`",
+        "Runtime id: `<runtime selected in the UI>`",
+        "Flow Complete status:",
+        "Start Next Flow result:",
+        "Run History / Lineage result:",
+        "Archive decision:",
+        "Blockers:",
+        "Cleanup:",
+        "fixture project removed",
+        "do not commit `.aidd/`",
+        "record the blocker",
+        "public-repository live E2E",
     ):
         assert expected in operator_ui_lane
 

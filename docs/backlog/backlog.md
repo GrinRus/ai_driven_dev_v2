@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E4-S1-T3`
+- `W26-E4-S2-T1`
 
 ## Soon
 
-- `W26-E4-S2-T1`
+- `W26-E4-S2-T2`
 
 ## Parking lot
 
-- `W26-E4-S2-T2`
 - `W26-E4-S2-T3`
 - `W26-E5-S1-T1`
 
@@ -298,3 +297,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   a terminal QA run and proves the UI can create a follow-up draft with source-run
   lineage and source artifact references without invoking a provider runtime.
   `W26-E4-S1-T3` is promoted to `Next`, and `W26-E4-S2-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S1-T3`; the local-project manual smoke path now records
+  required completed-run evidence fields, browser/viewport/runtime metadata, blocker
+  capture, archive decision, and cleanup rules for generated `.aidd/` state.
+  `W26-E4-S2-T1` is promoted to `Next`, and `W26-E4-S2-T2` is promoted to `Soon`.

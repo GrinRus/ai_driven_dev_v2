@@ -151,10 +151,43 @@ A manual installed UI smoke should use a disposable local fixture project:
    `Add migration rollback risks`, verify `/api/stage/interact` returns a job id,
    the Logs tab stays visible while polling `/api/jobs/<id>/logs`, and the latest
    request appears as `operator.request.created` in Activity plus an Evidence Ref.
-9. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
+9. For completed-run handoff proof, use a terminal `qa` run or deterministic seeded
+   terminal workspace, open Flow Complete, start the follow-up wizard, create or preview
+   a follow-up draft, run launch preflight, inspect Run History / Lineage, and record
+   the Archive Run decision path.
+10. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
 
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`
 state stays local to the fixture project.
+
+## Completed-Run Manual Smoke Evidence Template
+
+When recording completed-run local UI smoke evidence in roadmap notes, include all of
+these fields:
+
+- Run id: `<terminal-run-id>`
+- Source work item: `<source-work-item-id>`
+- Child work item: `<created-or-previewed-follow-up-id, or none>`
+- Browser: `<browser name and version>`
+- Viewport: `<desktop/tablet/mobile dimensions>`
+- Runtime id: `<runtime selected in the UI>`
+- Flow Complete status: `<completed | completed-with-warning | failed | blocked>`
+- Start Next Flow result: `<source findings | follow-up draft | preflight status>`
+- Run History / Lineage result: `<source/current/child lineage observed>`
+- Archive decision: `<archived | intentionally not archived>`
+- Blockers: `<none, provider unavailable, missing fixture, manual operator blocker>`
+- Cleanup: `<fixture project removed | .aidd removed | retained outside git with reason>`
+
+Cleanup rules:
+
+- keep generated `.aidd/` state inside the disposable local fixture project;
+- do not commit `.aidd/`, runtime logs, prompts, or generated child work items unless a
+  separate repository policy explicitly allows it;
+- if evidence must be retained, move it to a documented external evidence bundle and
+  record only the non-sensitive run id, work item ids, runtime id, viewport, browser,
+  and blocker summary in roadmap notes;
+- if provider credentials or runtime binaries are unavailable, record the blocker
+  instead of replacing the local-project smoke with public-repository live E2E.
 
 ## Manual Browser Checklist
 

@@ -6839,7 +6839,7 @@ Exit evidence:
 ### Epic W26-E4 — live E2E and eval evidence integration (`planned`)
 Linked stories: `US-07`, `US-10`, `US-11`
 
-#### Slice W26-E4-S1 — local-project UI E2E next-flow lane (`planned`)
+#### Slice W26-E4-S1 — local-project UI E2E next-flow lane (`done`)
 Goal: update the local-project operator UI evidence lane so it proves completed-run
 handoff and lineage before public-repository live evidence is refreshed.
 
@@ -6869,7 +6869,7 @@ Local tasks:
   proves the UI can create a follow-up draft without invoking a real provider runtime.
   - Scope: deterministic UI/service tests or smoke fixture data.
   - Verification: focused pytest proves source-run lineage and draft artifact references.
-- `W26-E4-S1-T3` Record a manual installed local-project smoke path for completed-run
+- `W26-E4-S1-T3` (done) Record a manual installed local-project smoke path for completed-run
   handoff, including expected evidence and cleanup rules for generated `.aidd/` state.
   - Scope: E2E docs and roadmap evidence.
   - Verification: manual smoke notes identify run id, source work item, child work item,
