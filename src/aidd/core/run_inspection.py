@@ -84,6 +84,14 @@ class RunLineageSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class RunArchiveSummary:
+    archived: bool
+    archived_at_utc: str | None
+    reason: str | None
+    source: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class RunMetadataSummary:
     run_id: str
     work_item: str
@@ -96,6 +104,7 @@ class RunMetadataSummary:
     resource_revision: str | None
     prompt_pack_provenance: tuple[PromptPackProvenance, ...]
     lineage: RunLineageSummary
+    archive: RunArchiveSummary
     created_at_utc: str
     updated_at_utc: str
     stages: tuple[RunStageMetadataSummary, ...]
@@ -333,6 +342,23 @@ def _lineage_summary(
     )
 
 
+def _archive_summary(manifest_payload: dict[str, Any]) -> RunArchiveSummary:
+    archive = manifest_payload.get("operator_archive")
+    if not isinstance(archive, dict):
+        return RunArchiveSummary(
+            archived=False,
+            archived_at_utc=None,
+            reason=None,
+            source=None,
+        )
+    return RunArchiveSummary(
+        archived=archive.get("archived") is True,
+        archived_at_utc=_optional_lineage_value(archive, "archived_at_utc"),
+        reason=_optional_lineage_value(archive, "reason"),
+        source=_optional_lineage_value(archive, "source"),
+    )
+
+
 def resolve_run_metadata_summary(
     workspace_root: Path,
     work_item: str,
@@ -440,6 +466,7 @@ def resolve_run_metadata_summary(
             manifest_payload=manifest_payload,
             work_item_payload=work_item_payload,
         ),
+        archive=_archive_summary(manifest_payload),
         created_at_utc=created_at_utc,
         updated_at_utc=updated_at_utc,
         stages=tuple(stage_summaries),

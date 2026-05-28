@@ -6749,7 +6749,7 @@ Exit evidence:
 ### Epic W26-E3 — API, safety, and regression coverage (`planned`)
 Linked stories: `US-03`, `US-06`, `US-10`, `US-11`
 
-#### Slice W26-E3-S1 — private UI next-flow API (`planned`)
+#### Slice W26-E3-S1 — private UI next-flow API (`done`)
 Goal: expose next-flow draft, preflight, launch, and archive operations through local UI
 endpoints backed by core services.
 
@@ -6783,7 +6783,7 @@ Local tasks:
   - Scope: UI HTTP integration with core launch services.
   - Verification: tests prove launch delegates to core services and does not mutate the
     source run.
-- `W26-E3-S1-T3` Add an archive decision endpoint for completed runs that records local
+- `W26-E3-S1-T3` (done) Add an archive decision endpoint for completed runs that records local
   operator intent without deleting artifacts or blocking future read-only inspection.
   - Scope: UI HTTP and run metadata.
   - Verification: tests prove archive state is visible in dashboard/history and artifacts
@@ -6792,7 +6792,7 @@ Local tasks:
 Exit evidence:
 
 - every new UI write path has a narrow core-backed service boundary;
-- completed source runs remain immutable after next-flow actions.
+- completed source artifacts remain immutable after next-flow actions.
 
 #### Slice W26-E3-S2 — deterministic UI and accessibility coverage (`planned`)
 Goal: prove the accepted design through tests and manual browser checklist updates without

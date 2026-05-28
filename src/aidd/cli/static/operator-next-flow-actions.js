@@ -403,6 +403,7 @@ function renderRunHistory() {
   const lineage = run.lineage || {};
   const candidates = lineage.child_work_item_candidates || [];
   const handoff = state.dashboard?.terminal_handoff || null;
+  const archive = run.archive || {};
   const sourceRun = lineageValue(lineage.source_run_id, run.run_id);
   const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
   const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
@@ -420,10 +421,11 @@ function renderRunHistory() {
           <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(baseline)}</span></div>
         </article>
         <article class="lineage-node current" data-lineage-run-id="${escapeHtml(run.run_id)}">
-          <span class="small-badge good">current run</span>
+          <span class="small-badge ${archive.archived ? "warn" : "good"}">${archive.archived ? "archived" : "current run"}</span>
           <strong>${escapeHtml(run.run_id)}</strong>
           <p>${escapeHtml(run.runtime_id || "runtime not recorded")}</p>
           <div class="panel-item"><strong>Status</strong><span>${escapeHtml(handoff?.status || state.dashboard?.next_action?.label || "in progress")}</span></div>
+          <div class="panel-item"><strong>Archive</strong><span>${escapeHtml(archive.archived ? `${archive.archived_at_utc || "recorded"} / ${archive.reason || "no reason"}` : "open")}</span></div>
         </article>
         <div class="lineage-children">
           ${renderLineageCandidates(candidates)}
@@ -549,6 +551,24 @@ async function loadFollowUpDraft() {
     wizard.followUpDraftLoading = false;
     await renderCockpit();
   }
+}
+
+async function archiveCompletedRun() {
+  const runId = state.activeRunId || state.dashboard?.run?.run_id || "";
+  if (!runId) {
+    toast("No completed run is selected for archive.");
+    return;
+  }
+  const reason = state.dashboard?.terminal_handoff
+    ? `Archived from Flow Complete handoff with status ${state.dashboard.terminal_handoff.status}.`
+    : "Archived from Run History.";
+  const payload = await postJson("/api/next-flow/archive", {
+    source_run_id: runId,
+    reason
+  });
+  state.dashboard = payload.dashboard;
+  toast("Run archived for operator navigation.");
+  await renderAll();
 }
 
 function renderSourceFindingItem(group, item) {

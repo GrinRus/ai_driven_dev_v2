@@ -21,6 +21,7 @@ from aidd.core.operator_frontend_models import (
     OperatorNextFlowRecommendation,
     OperatorPrimaryArtifact,
     OperatorRepairCounts,
+    OperatorRunArchive,
     OperatorRunLineage,
     OperatorRunSummary,
     OperatorStageRailItem,
@@ -108,6 +109,15 @@ def _empty_run_lineage() -> OperatorRunLineage:
     )
 
 
+def _empty_run_archive() -> OperatorRunArchive:
+    return OperatorRunArchive(
+        archived=False,
+        archived_at_utc=None,
+        reason=None,
+        source=None,
+    )
+
+
 def _lineage_value(payload: dict[str, object], key: str) -> str | None:
     value = payload.get(key)
     if value is None:
@@ -178,6 +188,7 @@ def _empty_run_summary(*, workspace_root: Path, work_item: str) -> OperatorRunSu
         created_at_utc=None,
         updated_at_utc=None,
         lineage=_work_item_lineage(workspace_root=workspace_root, work_item=work_item),
+        archive=_empty_run_archive(),
     )
 
 
@@ -214,6 +225,12 @@ def _run_summary(metadata: RunMetadataSummary) -> OperatorRunSummary:
                 )
                 for candidate in lineage.child_work_item_candidates
             ),
+        ),
+        archive=OperatorRunArchive(
+            archived=metadata.archive.archived,
+            archived_at_utc=metadata.archive.archived_at_utc,
+            reason=metadata.archive.reason,
+            source=metadata.archive.source,
         ),
     )
 

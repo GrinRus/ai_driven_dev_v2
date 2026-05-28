@@ -60,6 +60,10 @@ document.addEventListener("click", async (event) => {
         await openNextFlowWizard(nextFlowAction.dataset.nextFlowAction);
         return;
       }
+      if (nextFlowAction.dataset.nextFlowAction === "archive-run") {
+        await archiveCompletedRun();
+        return;
+      }
       toast("Start Next Flow wizard is queued for the next UI slice.");
       return;
     }

@@ -160,6 +160,14 @@ class OperatorRunLineage:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorRunArchive:
+    archived: bool
+    archived_at_utc: str | None
+    reason: str | None
+    source: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorRunSummary:
     run_id: str | None
     work_item: str
@@ -171,6 +179,7 @@ class OperatorRunSummary:
     created_at_utc: str | None
     updated_at_utc: str | None
     lineage: OperatorRunLineage
+    archive: OperatorRunArchive
 
 
 @dataclass(frozen=True, slots=True)
@@ -446,6 +455,7 @@ __all__ = [
     "OperatorRepairAttemptDiagnostics",
     "OperatorRequestChangeContext",
     "OperatorRepairCounts",
+    "OperatorRunArchive",
     "OperatorRunLogView",
     "OperatorRunLineage",
     "OperatorRunSummary",

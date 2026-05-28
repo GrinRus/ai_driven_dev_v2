@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E3-S1-T3`
+- `W26-E3-S2-T1`
 
 ## Soon
 
-- `W26-E3-S2-T1`
+- `W26-E3-S2-T2`
 
 ## Parking lot
 
-- `W26-E3-S2-T2`
 - `W26-E3-S2-T3`
 - `W26-E4-S1-T1`
 - `W26-E4-S1-T2`
@@ -280,3 +279,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   selection, and passes source-run lineage to the run manifest without mutating the
   source run. `W26-E3-S1-T3` is promoted to `Next`, and `W26-E3-S2-T1` is promoted
   to `Soon`.
+- `2026-05-28` Completed `W26-E3-S1-T3`; private archive decisions now persist
+  operator archive metadata for terminal QA runs while keeping source artifacts
+  readable through dashboard, history, and artifact endpoints. `W26-E3-S2-T1` is
+  promoted to `Next`, and `W26-E3-S2-T2` is promoted to `Soon`.

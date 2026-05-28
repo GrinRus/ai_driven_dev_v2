@@ -65,7 +65,11 @@ from aidd.core.operator_frontend import (
     resolve_operator_stage_view,
 )
 from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
-from aidd.core.run_store import next_attempt_number, run_attempt_root
+from aidd.core.run_store import (
+    next_attempt_number,
+    persist_run_archive_decision,
+    run_attempt_root,
+)
 from aidd.core.runtime_operator import (
     OPERATOR_DECISIONS_FILENAME,
     OPERATOR_REQUESTS_FILENAME,
@@ -1252,6 +1256,8 @@ class OperatorUiService:
                 return self._next_flow_create_clone_draft(payload)
             if path == "/api/next-flow/launch":
                 return self._next_flow_launch(payload)
+            if path == "/api/next-flow/archive":
+                return self._next_flow_archive(payload)
             if path == "/api/workflow/run":
                 return _json_response(self._start_workflow_job(payload))
             if path == "/api/open-folder":
@@ -1807,6 +1813,45 @@ class OperatorUiService:
         job["lineage"] = lineage
         job["preflight"] = preflight
         return _json_response(job, status=HTTPStatus.ACCEPTED)
+
+    def _next_flow_archive(self, payload: dict[str, Any]) -> UiResponse:
+        run_id = _source_run_id_from_payload(payload)
+        work_item = _source_work_item_from_payload(
+            payload,
+            default=self.options.work_item,
+        )
+        reason = payload.get("reason")
+        if reason is not None and not isinstance(reason, str):
+            raise ValueError("reason must be a string.")
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=work_item,
+            active_stage="qa",
+            run_id=run_id,
+            project_root=Path.cwd(),
+        )
+        if dashboard.terminal_handoff is None:
+            raise ValueError("archive decision requires a terminal QA run.")
+        archive = persist_run_archive_decision(
+            workspace_root=self.workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            reason=reason,
+            source="ui",
+        )
+        updated_dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=work_item,
+            active_stage="qa",
+            run_id=run_id,
+            project_root=Path.cwd(),
+        )
+        return _json_response(
+            {
+                "archive": archive,
+                "dashboard": updated_dashboard,
+            }
+        )
 
     def _start_job(
         self,

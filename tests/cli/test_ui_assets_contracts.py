@@ -573,6 +573,7 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderLineageRows({run, lineage, candidates})",
             "function renderLineageCandidates(candidates)",
             "async function openNextFlowWizard(action)",
+            "async function archiveCompletedRun()",
             "function renderNextFlowSourceSelection()",
             "function renderFollowUpDefinition()",
             "function renderLaunchConfirmation()",
@@ -604,6 +605,7 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Run History / Lineage",
             "data-lineage-run-id",
             "data-lineage-work-item",
+            "archive.archived",
             'data-lineage-run-id="${escapeHtml(sourceRun)}"',
             "${escapeHtml(candidate.label || candidate.work_item_id)}",
             "Project Setup",
@@ -629,6 +631,8 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "if (state.activeRunId) payload.run_id = state.activeRunId;",
             'postJson("/api/workflow/run", payload)',
             'postJson("/api/stage/run", payload)',
+            'postJson("/api/next-flow/archive", {',
+            "Run archived for operator navigation.",
         ),
     )
 
@@ -651,6 +655,8 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'closest("[data-next-flow-action]")',
             'nextFlowAction.dataset.nextFlowAction === "start-follow-up-flow"',
             "await openNextFlowWizard(nextFlowAction.dataset.nextFlowAction)",
+            'nextFlowAction.dataset.nextFlowAction === "archive-run"',
+            "await archiveCompletedRun();",
             'closest("[data-source-selection-id]")',
             "setSourceFindingSelection",
             'closest("[data-close-next-flow-wizard]")',

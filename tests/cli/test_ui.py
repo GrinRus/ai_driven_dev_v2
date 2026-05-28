@@ -1381,6 +1381,83 @@ def test_ui_next_flow_launch_endpoint_returns_blocked_preflight_payload(
     assert "source-run-missing" in payload["blocking_codes"]
 
 
+def test_ui_next_flow_archive_endpoint_records_decision_and_keeps_artifacts_readable(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    qa_report_path = (
+        workspace_root / "workitems" / "WI-UI" / "stages" / "qa" / "qa-report.md"
+    )
+    original_qa_report = qa_report_path.read_text(encoding="utf-8")
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/archive",
+        {
+            "source_run_id": "run-ui",
+            "reason": "Archive after QA acceptance.",
+        },
+    )
+
+    payload = _payload(response)
+    manifest = json.loads(
+        run_manifest_path(workspace_root, "WI-UI", "run-ui").read_text(encoding="utf-8")
+    )
+    artifact_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["qa"],
+                "key": ["qa_report"],
+                "run_id": ["run-ui"],
+                "mode": ["source"],
+            },
+        )
+    )
+    history_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+
+    assert payload["archive"]["archived"] is True  # type: ignore[index]
+    assert payload["archive"]["reason"] == "Archive after QA acceptance."  # type: ignore[index]
+    assert payload["dashboard"]["run"]["archive"]["archived"] is True  # type: ignore[index]
+    assert payload["dashboard"]["run"]["archive"]["source"] == "ui"  # type: ignore[index]
+    assert manifest["operator_archive"]["archived"] is True
+    assert manifest["operator_archive"]["reason"] == "Archive after QA acceptance."
+    assert history_payload["dashboard"]["run"]["archive"]["archived"] is True  # type: ignore[index]
+    assert artifact_payload["text"] == original_qa_report
+    assert qa_report_path.read_text(encoding="utf-8") == original_qa_report
+
+
+def test_ui_next_flow_archive_endpoint_rejects_malformed_or_non_terminal_requests(
+    tmp_path: Path,
+) -> None:
+    terminal_workspace = tmp_path / "terminal" / ".aidd"
+    _prepare_completed_qa_run(terminal_workspace)
+    terminal_service = _service(terminal_workspace)
+
+    malformed = terminal_service.handle_post(
+        "/api/next-flow/archive",
+        {"source_run_id": "run-ui", "reason": ["not", "a", "string"]},
+    )
+
+    non_terminal_workspace = tmp_path / "non-terminal" / ".aidd"
+    _prepare_run(non_terminal_workspace)
+    non_terminal_service = _service(non_terminal_workspace)
+    non_terminal = non_terminal_service.handle_post(
+        "/api/next-flow/archive",
+        {"source_run_id": "run-ui", "reason": "Not terminal yet."},
+    )
+
+    assert malformed.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(malformed)["error"] == "reason must be a string."
+    assert non_terminal.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(non_terminal)["error"] == (
+        "archive decision requires a terminal QA run."
+    )
+
+
 def test_ui_workflow_stage_executor_passes_cancel_callback(
     tmp_path: Path,
 ) -> None:

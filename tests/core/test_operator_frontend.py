@@ -25,6 +25,7 @@ from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     create_next_attempt_directory,
     create_run_manifest,
+    persist_run_archive_decision,
     persist_stage_status,
     run_attempt_artifact_index_path,
     run_attempt_root,
@@ -693,6 +694,44 @@ def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
     assert dashboard.terminal_handoff.final_qa_status == "ready-with-risks"
     assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
     assert dashboard.terminal_handoff.blockers == ()
+
+
+def test_operator_dashboard_exposes_archive_state_without_hiding_artifacts(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root)
+
+    archive = persist_run_archive_decision(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        reason="Archived after final QA review.",
+        source="ui",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+    qa_document = resolve_operator_artifact_document_content(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="qa",
+        key="qa_report",
+        run_id="run-ui",
+        attempt_number=1,
+    )
+
+    assert archive["archived"] is True
+    assert dashboard.run.archive.archived is True
+    assert dashboard.run.archive.reason == "Archived after final QA review."
+    assert dashboard.run.archive.source == "ui"
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "completed"
+    assert "# QA Report" in qa_document.text
 
 
 def test_operator_dashboard_run_summary_exposes_optional_lineage_references(
