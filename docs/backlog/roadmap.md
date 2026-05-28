@@ -6432,7 +6432,7 @@ Exit evidence:
   state;
 - lineage references are core-owned and runtime-agnostic.
 
-#### Slice W26-E1-S2 — next-flow draft and launch services (`planned`)
+#### Slice W26-E1-S2 — next-flow draft and launch services (`done`)
 Goal: create new work item or run drafts from completed-run context through core services
 instead of direct UI document mutation.
 
@@ -6467,7 +6467,7 @@ Local tasks:
   - Scope: core launch draft service.
   - Verification: core tests prove cloned flow configuration is explicit and editable
     before launch.
-- `W26-E1-S2-T3` Add launch preflight validation for next-flow drafts, including writable
+- `W26-E1-S2-T3` (done) Add launch preflight validation for next-flow drafts, including writable
   workspace, valid runtime selection, contract availability, baseline availability, and
   source-run existence.
   - Scope: core preflight and CLI/API error payloads.

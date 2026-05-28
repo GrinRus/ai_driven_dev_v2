@@ -43,6 +43,10 @@ from aidd.cli.ui_http import (
 )
 from aidd.config import AiddConfig, load_config
 from aidd.core.interview import AnswerResolution
+from aidd.core.next_flow import (
+    NextFlowLaunchPreflightRequest,
+    validate_next_flow_launch_preflight,
+)
 from aidd.core.operator_frontend import (
     persist_operator_answer,
     resolve_operator_artifact_document_content,
@@ -70,6 +74,7 @@ from aidd.core.runtime_readiness import (
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
 )
+from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.workflow_service import (
     WorkflowRunRequest,
@@ -442,6 +447,47 @@ def _optional_run_id_from_payload(payload: dict[str, Any]) -> str | None:
     return raw_run_id.strip() or None
 
 
+def _source_run_id_from_payload(payload: dict[str, Any]) -> str:
+    raw_source_run = payload.get("source_run_id", payload.get("run_id"))
+    if not isinstance(raw_source_run, str):
+        raise ValueError("source_run_id is required.")
+    source_run_id = raw_source_run.strip()
+    if not source_run_id:
+        raise ValueError("source_run_id is required.")
+    return source_run_id
+
+
+def _source_work_item_from_payload(payload: dict[str, Any], *, default: str) -> str:
+    raw_source_work_item = payload.get("source_work_item", default)
+    if not isinstance(raw_source_work_item, str):
+        raise ValueError("source_work_item must be a string.")
+    source_work_item = raw_source_work_item.strip()
+    if not source_work_item:
+        raise ValueError("source_work_item is required.")
+    return source_work_item
+
+
+def _contracts_root_from_payload(payload: dict[str, Any]) -> Path:
+    raw_contracts_root = payload.get("contracts_root")
+    if raw_contracts_root is None:
+        return DEFAULT_STAGE_CONTRACTS_ROOT
+    if not isinstance(raw_contracts_root, str):
+        raise ValueError("contracts_root must be a string.")
+    contracts_root = raw_contracts_root.strip()
+    if not contracts_root:
+        raise ValueError("contracts_root is required.")
+    return Path(contracts_root)
+
+
+def _optional_baseline_id_from_payload(payload: dict[str, Any]) -> str | None:
+    raw_baseline_id = payload.get("baseline_id")
+    if raw_baseline_id is None:
+        return None
+    if not isinstance(raw_baseline_id, str):
+        raise ValueError("baseline_id must be a string.")
+    return raw_baseline_id.strip() or None
+
+
 def _validate_runtime(runtime: str) -> None:
     supported = {definition.runtime_id for definition in runtime_definitions()}
     if runtime not in supported:
@@ -805,6 +851,8 @@ class OperatorUiService:
                 return _json_response(self._start_stage_job(payload))
             if path == "/api/stage/interact":
                 return _json_response(self._start_stage_interact_job(payload))
+            if path == "/api/next-flow/preflight":
+                return self._next_flow_preflight(payload)
             if path == "/api/workflow/run":
                 return _json_response(self._start_workflow_job(payload))
             if path == "/api/open-folder":
@@ -1170,6 +1218,24 @@ class OperatorUiService:
             return self._run_workflow(prepared_payload, job_id=job_id)
 
         return self._start_job(kind="workflow", stage=None, target=_target)
+
+    def _next_flow_preflight(self, payload: dict[str, Any]) -> UiResponse:
+        result = validate_next_flow_launch_preflight(
+            NextFlowLaunchPreflightRequest(
+                workspace_root=self.workspace_root,
+                source_work_item=_source_work_item_from_payload(
+                    payload,
+                    default=self.options.work_item,
+                ),
+                source_run_id=_source_run_id_from_payload(payload),
+                runtime_id=_runtime_from_payload(payload),
+                contracts_root=_contracts_root_from_payload(payload),
+                baseline_id=_optional_baseline_id_from_payload(payload),
+            )
+        )
+        if result.status == "blocked":
+            return _json_response(result.error_payload, status=HTTPStatus.CONFLICT)
+        return _json_response({"preflight": result})
 
     def _start_job(
         self,

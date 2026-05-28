@@ -9,10 +9,13 @@ from aidd.core.next_flow import (
     CloneFlowDraftRequest,
     FollowUpDraftRequest,
     FollowUpSourceSelection,
+    NextFlowLaunchPreflightRequest,
     create_clone_flow_draft,
     create_follow_up_work_item_draft,
+    validate_next_flow_launch_preflight,
 )
 from aidd.core.run_store import create_run_manifest, run_manifest_path
+from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 
 
 def test_create_follow_up_work_item_draft_writes_durable_context_with_references(
@@ -215,3 +218,132 @@ def test_create_clone_flow_draft_rejects_missing_source_run(
                 title="Clone missing run",
             )
         )
+
+
+def test_validate_next_flow_launch_preflight_passes_for_explicit_available_inputs(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-SOURCE",
+        run_id="run-source",
+        runtime_id="codex",
+        stage_target="qa",
+        config_snapshot={"mode": "preflight-test"},
+    )
+
+    result = validate_next_flow_launch_preflight(
+        NextFlowLaunchPreflightRequest(
+            workspace_root=workspace_root,
+            source_work_item="WI-SOURCE",
+            source_run_id="run-source",
+            runtime_id="codex",
+            contracts_root=DEFAULT_STAGE_CONTRACTS_ROOT,
+            baseline_id="run-source",
+        )
+    )
+
+    assert result.status == "pass"
+    assert result.can_launch is True
+    assert result.blocking_codes == ()
+    assert result.warning_codes == ()
+    assert result.resolved_baseline_id == "run-source"
+    assert result.error_payload == {}
+    assert {check.code for check in result.checks} >= {
+        "workspace-writable",
+        "runtime-supported",
+        "contracts-available",
+        "source-run-exists",
+        "baseline-available",
+    }
+
+
+def test_validate_next_flow_launch_preflight_warns_when_baseline_falls_back_to_source(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-SOURCE",
+        run_id="run-source",
+        runtime_id="codex",
+        stage_target="qa",
+        config_snapshot={"mode": "preflight-test"},
+    )
+
+    result = validate_next_flow_launch_preflight(
+        NextFlowLaunchPreflightRequest(
+            workspace_root=workspace_root,
+            source_work_item="WI-SOURCE",
+            source_run_id="run-source",
+            runtime_id="codex",
+            contracts_root=DEFAULT_STAGE_CONTRACTS_ROOT,
+        )
+    )
+
+    assert result.status == "warning"
+    assert result.can_launch is True
+    assert result.blocking_codes == ()
+    assert result.warning_codes == ("baseline-fallback-source-run",)
+    assert result.resolved_baseline_id == "run-source"
+    assert result.error_payload == {}
+
+
+def test_validate_next_flow_launch_preflight_blocks_missing_baseline(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-SOURCE",
+        run_id="run-source",
+        runtime_id="codex",
+        stage_target="qa",
+        config_snapshot={"mode": "preflight-test"},
+    )
+
+    result = validate_next_flow_launch_preflight(
+        NextFlowLaunchPreflightRequest(
+            workspace_root=workspace_root,
+            source_work_item="WI-SOURCE",
+            source_run_id="run-source",
+            runtime_id="codex",
+            contracts_root=DEFAULT_STAGE_CONTRACTS_ROOT,
+            baseline_id="missing-baseline",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert result.can_launch is False
+    assert result.blocking_codes == ("baseline-missing",)
+    assert result.warning_codes == ()
+    assert result.resolved_baseline_id == "missing-baseline"
+    assert result.error_payload["error"] == "next-flow launch preflight blocked"
+    assert result.error_payload["blocking_codes"] == ["baseline-missing"]
+
+
+def test_validate_next_flow_launch_preflight_blocks_unsafe_missing_launch_inputs(
+    tmp_path: Path,
+) -> None:
+    result = validate_next_flow_launch_preflight(
+        NextFlowLaunchPreflightRequest(
+            workspace_root=tmp_path / ".aidd",
+            source_work_item="WI-SOURCE",
+            source_run_id="run-source",
+            runtime_id="unknown-runtime",
+            contracts_root=tmp_path / "missing" / "contracts" / "stages",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert result.can_launch is False
+    assert set(result.blocking_codes) == {
+        "workspace-missing",
+        "unsupported-runtime",
+        "contracts-missing",
+        "source-run-missing",
+    }
+    assert result.resolved_baseline_id is None
+    assert result.error_payload["status"] == "blocked"
+    assert set(result.error_payload["blocking_codes"]) == set(result.blocking_codes)

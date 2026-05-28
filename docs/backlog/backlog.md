@@ -6,11 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E1-S2-T3`
+- `W26-E2-S0-T1`
 
 ## Soon
 
-- `W26-E2-S0-T1`
 - `W26-E2-S0-T2`
 
 ## Parking lot
@@ -220,3 +219,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-05-28` Completed `W26-E1-S2-T2`; clone-flow draft creation now records editable
   runtime, prompt-pack, resource, commit, and baseline configuration before launch.
   `W26-E1-S2-T3` is promoted to `Next`.
+- `2026-05-28` Completed `W26-E1-S2-T3`; next-flow launch preflight now checks writable
+  workspace state, runtime selection, contract availability, source-run existence, and
+  baseline availability before runtime execution. `W26-E2-S0-T1` is promoted to `Next`.

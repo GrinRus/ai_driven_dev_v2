@@ -513,6 +513,57 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     assert "stage_executor" in captured
 
 
+def test_ui_next_flow_preflight_endpoint_returns_launchable_warning_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/preflight",
+        {"source_run_id": "run-ui", "runtime": "generic-cli"},
+    )
+
+    payload = _payload(response)
+    preflight = payload["preflight"]
+    assert preflight["status"] == "warning"  # type: ignore[index]
+    assert preflight["can_launch"] is True  # type: ignore[index]
+    assert preflight["blocking_codes"] == []  # type: ignore[index]
+    assert preflight["warning_codes"] == ["baseline-fallback-source-run"]  # type: ignore[index]
+    assert preflight["resolved_baseline_id"] == "run-ui"  # type: ignore[index]
+
+
+def test_ui_next_flow_preflight_endpoint_returns_structured_blocking_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/preflight",
+        {
+            "source_run_id": "run-missing",
+            "runtime": "unknown-runtime",
+            "contracts_root": (tmp_path / "missing" / "contracts" / "stages").as_posix(),
+        },
+    )
+
+    assert response.status == HTTPStatus.CONFLICT
+    payload = json.loads(response.body.decode("utf-8"))
+    assert payload["error"] == "next-flow launch preflight blocked"
+    assert set(payload["blocking_codes"]) == {
+        "workspace-missing",
+        "unsupported-runtime",
+        "contracts-missing",
+        "source-run-missing",
+    }
+    assert any(
+        check["code"] == "unsupported-runtime" and check["severity"] == "blocking"
+        for check in payload["checks"]
+    )
+
+
 def test_ui_workflow_stage_executor_passes_cancel_callback(
     tmp_path: Path,
 ) -> None:

@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from aidd.core.run_inspection import RunMetadataSummary, resolve_run_metadata_summary
 from aidd.core.run_store import run_manifest_path
+from aidd.core.stage_registry import (
+    DEFAULT_STAGE_CONTRACTS_ROOT,
+    StageManifestLoadError,
+    load_all_stage_manifests,
+)
 from aidd.core.workspace import (
     WorkItemContextSeedResult,
     init_workspace,
@@ -13,6 +20,7 @@ from aidd.core.workspace import (
     work_item_context_root,
     work_item_metadata_path,
 )
+from aidd.runtime_catalog import get_runtime_definition
 
 _CLONE_FLOW_DRAFT_FILENAME = "clone-flow-draft.md"
 _FOLLOW_UP_REQUEST_FILENAME = "follow-up-request.md"
@@ -91,6 +99,35 @@ class CloneFlowDraftResult:
     draft_path: Path
     context_seed: WorkItemContextSeedResult
     config: CloneFlowDraftConfig
+
+
+@dataclass(frozen=True, slots=True)
+class NextFlowLaunchPreflightRequest:
+    workspace_root: Path
+    source_work_item: str
+    source_run_id: str
+    runtime_id: str
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT
+    baseline_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class NextFlowLaunchPreflightCheck:
+    code: str
+    severity: str
+    message: str
+    detail: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class NextFlowLaunchPreflightResult:
+    status: str
+    can_launch: bool
+    checks: tuple[NextFlowLaunchPreflightCheck, ...]
+    blocking_codes: tuple[str, ...]
+    warning_codes: tuple[str, ...]
+    resolved_baseline_id: str | None
+    error_payload: dict[str, Any]
 
 
 def create_follow_up_work_item_draft(request: FollowUpDraftRequest) -> FollowUpDraftResult:
@@ -213,11 +250,259 @@ def create_clone_flow_draft(request: CloneFlowDraftRequest) -> CloneFlowDraftRes
     )
 
 
+def validate_next_flow_launch_preflight(
+    request: NextFlowLaunchPreflightRequest,
+) -> NextFlowLaunchPreflightResult:
+    normalized_source_work_item = _required_preflight_text(
+        request.source_work_item,
+        field_name="source_work_item",
+    )
+    normalized_source_run = _required_preflight_text(
+        request.source_run_id,
+        field_name="source_run_id",
+    )
+    normalized_runtime = _required_preflight_text(
+        request.runtime_id,
+        field_name="runtime_id",
+    )
+    normalized_baseline = request.baseline_id.strip() or None if request.baseline_id else None
+
+    checks: list[NextFlowLaunchPreflightCheck] = []
+    checks.append(_workspace_writable_check(request.workspace_root))
+    checks.append(_runtime_selection_check(normalized_runtime))
+    checks.append(_contract_availability_check(request.contracts_root))
+
+    source_metadata: RunMetadataSummary | None = None
+    try:
+        source_metadata = resolve_run_metadata_summary(
+            workspace_root=request.workspace_root,
+            work_item=normalized_source_work_item,
+            run_id=normalized_source_run,
+        )
+    except ValueError as exc:
+        checks.append(
+            NextFlowLaunchPreflightCheck(
+                code="source-run-missing",
+                severity="blocking",
+                message="Source run must exist before launching a next flow.",
+                detail=str(exc),
+            )
+        )
+    else:
+        checks.append(
+            NextFlowLaunchPreflightCheck(
+                code="source-run-exists",
+                severity="pass",
+                message="Source run exists and can be used for launch lineage.",
+                detail=f"{normalized_source_work_item}/{source_metadata.run_id}",
+            )
+        )
+
+    resolved_baseline_id: str | None = None
+    if source_metadata is not None:
+        baseline_check, resolved_baseline_id = _baseline_availability_check(
+            workspace_root=request.workspace_root,
+            source_work_item=normalized_source_work_item,
+            source_run_id=normalized_source_run,
+            metadata=source_metadata,
+            requested_baseline_id=normalized_baseline,
+        )
+        checks.append(baseline_check)
+
+    return _next_flow_preflight_result(
+        checks=tuple(checks),
+        resolved_baseline_id=resolved_baseline_id,
+    )
+
+
 def _required_text(value: str, *, field_name: str) -> str:
     normalized = value.strip()
     if not normalized:
         raise ValueError(f"Follow-up draft {field_name} is required.")
     return normalized
+
+
+def _required_preflight_text(value: str, *, field_name: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"Next-flow launch preflight {field_name} is required.")
+    return normalized
+
+
+def _workspace_writable_check(workspace_root: Path) -> NextFlowLaunchPreflightCheck:
+    resolved = workspace_root.resolve(strict=False)
+    if not resolved.exists():
+        return NextFlowLaunchPreflightCheck(
+            code="workspace-missing",
+            severity="blocking",
+            message="Workspace root must exist before launching a next flow.",
+            detail=resolved.as_posix(),
+        )
+    if not resolved.is_dir():
+        return NextFlowLaunchPreflightCheck(
+            code="workspace-not-directory",
+            severity="blocking",
+            message="Workspace root must be a directory.",
+            detail=resolved.as_posix(),
+        )
+    if not os.access(resolved, os.W_OK):
+        return NextFlowLaunchPreflightCheck(
+            code="workspace-not-writable",
+            severity="blocking",
+            message="Workspace root must be writable before launch.",
+            detail=resolved.as_posix(),
+        )
+    return NextFlowLaunchPreflightCheck(
+        code="workspace-writable",
+        severity="pass",
+        message="Workspace root exists and is writable.",
+        detail=resolved.as_posix(),
+    )
+
+
+def _runtime_selection_check(runtime_id: str) -> NextFlowLaunchPreflightCheck:
+    try:
+        definition = get_runtime_definition(runtime_id)
+    except ValueError as exc:
+        return NextFlowLaunchPreflightCheck(
+            code="unsupported-runtime",
+            severity="blocking",
+            message="Runtime id must be one of the maintained runtime catalog entries.",
+            detail=str(exc),
+        )
+    return NextFlowLaunchPreflightCheck(
+        code="runtime-supported",
+        severity="pass",
+        message="Runtime id is supported by the runtime catalog.",
+        detail=f"{definition.runtime_id} ({definition.support_tier})",
+    )
+
+
+def _contract_availability_check(contracts_root: Path) -> NextFlowLaunchPreflightCheck:
+    resolved = contracts_root.resolve(strict=False)
+    if not resolved.exists():
+        return NextFlowLaunchPreflightCheck(
+            code="contracts-missing",
+            severity="blocking",
+            message="Stage contracts root must exist before launch.",
+            detail=resolved.as_posix(),
+        )
+    try:
+        load_all_stage_manifests(contracts_root=resolved)
+    except (OSError, StageManifestLoadError, ValueError) as exc:
+        return NextFlowLaunchPreflightCheck(
+            code="contracts-unavailable",
+            severity="blocking",
+            message="Stage contracts must be loadable before launch.",
+            detail=str(exc),
+        )
+    return NextFlowLaunchPreflightCheck(
+        code="contracts-available",
+        severity="pass",
+        message="Stage contracts and referenced prompt packs are available.",
+        detail=resolved.as_posix(),
+    )
+
+
+def _baseline_availability_check(
+    *,
+    workspace_root: Path,
+    source_work_item: str,
+    source_run_id: str,
+    metadata: RunMetadataSummary,
+    requested_baseline_id: str | None,
+) -> tuple[NextFlowLaunchPreflightCheck, str]:
+    if requested_baseline_id is None and metadata.lineage.baseline_id is None:
+        return (
+            NextFlowLaunchPreflightCheck(
+                code="baseline-fallback-source-run",
+                severity="warning",
+                message="No explicit baseline is recorded; source run will be used as baseline.",
+                detail=source_run_id,
+            ),
+            source_run_id,
+        )
+
+    baseline_id = requested_baseline_id or metadata.lineage.baseline_id or source_run_id
+    baseline_manifest = run_manifest_path(
+        workspace_root=workspace_root,
+        work_item=source_work_item,
+        run_id=baseline_id,
+    )
+    if not baseline_manifest.exists():
+        return (
+            NextFlowLaunchPreflightCheck(
+                code="baseline-missing",
+                severity="blocking",
+                message="Baseline run manifest must exist before launch.",
+                detail=baseline_manifest.as_posix(),
+            ),
+            baseline_id,
+        )
+    return (
+        NextFlowLaunchPreflightCheck(
+            code="baseline-available",
+            severity="pass",
+            message="Baseline run manifest is available.",
+            detail=baseline_id,
+        ),
+        baseline_id,
+    )
+
+
+def _next_flow_preflight_result(
+    *,
+    checks: tuple[NextFlowLaunchPreflightCheck, ...],
+    resolved_baseline_id: str | None,
+) -> NextFlowLaunchPreflightResult:
+    blocking_codes = tuple(check.code for check in checks if check.severity == "blocking")
+    warning_codes = tuple(check.code for check in checks if check.severity == "warning")
+    if blocking_codes:
+        status = "blocked"
+    elif warning_codes:
+        status = "warning"
+    else:
+        status = "pass"
+    return NextFlowLaunchPreflightResult(
+        status=status,
+        can_launch=status != "blocked",
+        checks=checks,
+        blocking_codes=blocking_codes,
+        warning_codes=warning_codes,
+        resolved_baseline_id=resolved_baseline_id,
+        error_payload=(
+            _next_flow_preflight_error_payload(
+                checks=checks,
+                blocking_codes=blocking_codes,
+                warning_codes=warning_codes,
+            )
+            if blocking_codes
+            else {}
+        ),
+    )
+
+
+def _next_flow_preflight_error_payload(
+    *,
+    checks: tuple[NextFlowLaunchPreflightCheck, ...],
+    blocking_codes: tuple[str, ...],
+    warning_codes: tuple[str, ...],
+) -> dict[str, Any]:
+    return {
+        "error": "next-flow launch preflight blocked",
+        "status": "blocked",
+        "blocking_codes": list(blocking_codes),
+        "warning_codes": list(warning_codes),
+        "checks": [
+            {
+                "code": check.code,
+                "severity": check.severity,
+                "message": check.message,
+                "detail": check.detail,
+            }
+            for check in checks
+        ],
+    }
 
 
 def _load_source_run_manifest(
@@ -503,6 +788,10 @@ __all__ = [
     "FollowUpDraftRequest",
     "FollowUpDraftResult",
     "FollowUpSourceSelection",
+    "NextFlowLaunchPreflightCheck",
+    "NextFlowLaunchPreflightRequest",
+    "NextFlowLaunchPreflightResult",
     "create_clone_flow_draft",
     "create_follow_up_work_item_draft",
+    "validate_next_flow_launch_preflight",
 ]
