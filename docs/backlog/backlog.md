@@ -6,15 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W26-E4-S1-T2`
+- `W26-E4-S1-T3`
 
 ## Soon
 
-- `W26-E4-S1-T3`
+- `W26-E4-S2-T1`
 
 ## Parking lot
 
-- `W26-E4-S2-T1`
 - `W26-E4-S2-T2`
 - `W26-E4-S2-T3`
 - `W26-E5-S1-T1`
@@ -295,3 +294,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   completed-run evidence for Flow Complete, Start Next Flow, follow-up draft, launch
   preflight, run-history lineage, archive decision, and artifact preservation.
   `W26-E4-S1-T2` is promoted to `Next`, and `W26-E4-S1-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S1-T2`; deterministic local fixture coverage now seeds
+  a terminal QA run and proves the UI can create a follow-up draft with source-run
+  lineage and source artifact references without invoking a provider runtime.
+  `W26-E4-S1-T3` is promoted to `Next`, and `W26-E4-S2-T1` is promoted to `Soon`.

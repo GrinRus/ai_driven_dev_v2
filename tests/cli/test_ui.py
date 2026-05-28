@@ -2480,6 +2480,67 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     ]
 
 
+def test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_runtime(
+    tmp_path: Path,
+) -> None:
+    fixture_project = tmp_path / "local-fixture"
+    workspace_root = fixture_project / ".aidd"
+    fixture_project.mkdir()
+    _prepare_completed_qa_run(workspace_root)
+
+    def forbidden_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        raise AssertionError("terminal fixture follow-up must not invoke a runtime")
+
+    service = _service(workspace_root, workflow_runner=forbidden_workflow_runner)
+
+    dashboard_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+    findings_payload = _payload(
+        service.handle_get("/api/next-flow/source-findings", {"run_id": ["run-ui"]})
+    )
+    response = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-LOCAL-FOLLOW-UP",
+            "title": "Local fixture completed-run follow-up",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+        },
+    )
+
+    assert response.status == HTTPStatus.CREATED
+    payload = json.loads(response.body.decode("utf-8"))
+    request_path = workspace_root / payload["created"]["request_path"]
+    metadata_path = workspace_root / "workitems" / "WI-LOCAL-FOLLOW-UP" / "work-item.json"
+    request_text = request_path.read_text(encoding="utf-8")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    qa_group = next(
+        group
+        for group in findings_payload["groups"]  # type: ignore[index]
+        if group["id"] == "qa-findings"
+    )
+
+    assert dashboard_payload["dashboard"]["terminal_handoff"]["status"] == "completed"  # type: ignore[index]
+    assert payload["created"]["work_item"] == "WI-LOCAL-FOLLOW-UP"
+    assert payload["created"]["source_artifact_paths"] == [
+        "workitems/WI-UI/stages/qa/qa-report.md"
+    ]
+    assert any(
+        item["id"] == "qa-finding:qa:qa_report"
+        and item["source_path"] == "workitems/WI-UI/stages/qa/qa-report.md"
+        for item in qa_group["items"]
+    )
+    assert "- Source work item: `WI-UI`" in request_text
+    assert "- Source run: `run-ui`" in request_text
+    assert "`workitems/WI-UI/stages/qa/qa-report.md`" in request_text
+    assert metadata["lineage"] == {
+        "source_run_id": "run-ui",
+        "source_work_item_id": "WI-UI",
+    }
+    assert not (workspace_root / "reports" / "runs" / "WI-LOCAL-FOLLOW-UP").exists()
+
+
 def test_operator_ui_artifacts_include_declared_project_set_roots(
     tmp_path: Path,
 ) -> None:

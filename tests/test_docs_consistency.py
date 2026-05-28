@@ -442,11 +442,12 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S2-T2` (done) Add service-level UI regressions" in w26
     assert "`W26-E3-S2-T3` (done) Extend the manual browser checklist" in w26
     assert "`W26-E4-S1-T1` (done) Update the operator UI local-project E2E lane" in w26
+    assert "`W26-E4-S1-T2` (done) Add deterministic local fixture coverage" in w26
     assert (
         "`W26-E4-S2-T1` Define the manual live E2E next-flow checkpoint policy"
         in w26
     )
-    assert "`W26-E4-S1-T2`" in backlog_next
+    assert "`W26-E4-S1-T3`" in backlog_next
     assert "`W26-E1-S1-T1`" not in backlog_next
     assert "`W26-E1-S1-T2`" not in backlog_next
     assert "`W26-E1-S2-T1`" not in backlog_next
@@ -476,6 +477,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S2-T2`" not in backlog_next
     assert "`W26-E3-S2-T3`" not in backlog_next
     assert "`W26-E4-S1-T1`" not in backlog_next
+    assert "`W26-E4-S1-T2`" not in backlog_next
     assert "`W26-E1-S3-T1`" not in backlog_soon
     assert "`W26-E1-S1-T2`" not in backlog_soon
     assert "`W26-E1-S2-T1`" not in backlog_soon
@@ -505,7 +507,8 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E3-S2-T3`" not in backlog_soon
     assert "`W26-E4-S1-T1`" not in backlog_soon
     assert "`W26-E4-S1-T2`" not in backlog_soon
-    assert "`W26-E4-S1-T3`" in backlog_soon
+    assert "`W26-E4-S1-T3`" not in backlog_soon
+    assert "`W26-E4-S2-T1`" in backlog_soon
     assert "`W26-E2-S0-T3`" not in backlog_parking
     assert "`W26-E2-S0-T4`" not in backlog_parking
     assert "`W26-E1-S3-T1`" not in backlog_parking
@@ -530,7 +533,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E4-S1-T1`" not in backlog_parking
     assert "`W26-E4-S1-T2`" not in backlog_parking
     assert "`W26-E4-S1-T3`" not in backlog_parking
-    assert "`W26-E4-S2-T1`" in backlog_parking
+    assert "`W26-E4-S2-T1`" not in backlog_parking
     assert "`W26-E4-S2-T2`" in backlog_parking
     assert "`W26-E4-S2-T3`" in backlog_parking
     assert "`W26-E5-S1-T1`" in backlog_parking
@@ -706,6 +709,7 @@ def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> 
         "Start Next Flow source selection, follow-up draft definition, launch preflight",
         "Run History / Lineage visibility",
         "test_ui_completed_run_next_action_service_regression_sequence",
+        "test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_runtime",
         "test_operator_terminal_handoff_next_action_contract_survives_archive_decision",
         "test_operator_flow_complete_static_contract_covers_terminal_handoff_actions",
         "test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight",

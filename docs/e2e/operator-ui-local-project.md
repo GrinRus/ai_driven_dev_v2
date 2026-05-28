@@ -94,6 +94,7 @@ Current deterministic coverage lives in:
 - `tests/cli/test_ui.py::test_ui_stage_interact_endpoint_delegates_request_and_streams_logs`
 - `tests/cli/test_ui.py::test_ui_artifact_document_endpoint_reads_known_document_content`
 - `tests/cli/test_ui.py::test_ui_completed_run_next_action_service_regression_sequence`
+- `tests/cli/test_ui.py::test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_runtime`
 - `tests/core/test_operator_frontend.py::test_operator_terminal_handoff_next_action_contract_survives_archive_decision`
 - `tests/cli/test_ui_assets_contracts.py::test_operator_flow_complete_static_contract_covers_terminal_handoff_actions`
 - `tests/cli/test_ui_assets_contracts.py::test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight`

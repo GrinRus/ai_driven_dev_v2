@@ -6865,7 +6865,7 @@ Local tasks:
   Start Next Flow, follow-up draft, launch preflight, and run-history lineage checks.
   - Scope: E2E documentation only.
   - Verification: docs consistency test covers the new checklist sections.
-- `W26-E4-S1-T2` Add deterministic local fixture coverage that seeds a terminal run and
+- `W26-E4-S1-T2` (done) Add deterministic local fixture coverage that seeds a terminal run and
   proves the UI can create a follow-up draft without invoking a real provider runtime.
   - Scope: deterministic UI/service tests or smoke fixture data.
   - Verification: focused pytest proves source-run lineage and draft artifact references.
