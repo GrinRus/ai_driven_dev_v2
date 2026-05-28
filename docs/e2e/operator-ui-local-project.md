@@ -43,6 +43,13 @@ The maintained operator UI lane covers:
   stage, next action, blockers, evidence refs, recent activity, and recent artifacts;
 - global next-action classification that routes operators to blocked questions or
   validation evidence even when a different stage is currently selected;
+- completed-run Flow Complete handoff state after terminal `qa`, including final QA
+  artifacts, blockers, evidence counts, repair counts, approval counts, answered
+  questions, and recommended next-flow actions;
+- Start Next Flow source selection, follow-up draft definition, launch preflight, and
+  archive decision surfaces without continuing or mutating the completed source run;
+- Run History / Lineage visibility for source run, current run, baseline, child work
+  item candidates, archive state, linked artifacts, and run actions;
 - workflow-run request delegation through the same core service used by the CLI;
 - selected-stage run request delegation through the same stage execution path used by
   `aidd stage run`;
@@ -86,12 +93,41 @@ Current deterministic coverage lives in:
 - `tests/cli/test_ui.py::test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs`
 - `tests/cli/test_ui.py::test_ui_stage_interact_endpoint_delegates_request_and_streams_logs`
 - `tests/cli/test_ui.py::test_ui_artifact_document_endpoint_reads_known_document_content`
+- `tests/cli/test_ui.py::test_ui_completed_run_next_action_service_regression_sequence`
+- `tests/core/test_operator_frontend.py::test_operator_terminal_handoff_next_action_contract_survives_archive_decision`
+- `tests/cli/test_ui_assets_contracts.py::test_operator_flow_complete_static_contract_covers_terminal_handoff_actions`
+- `tests/cli/test_ui_assets_contracts.py::test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight`
+- `tests/cli/test_ui_assets_contracts.py::test_operator_run_history_static_contract_covers_lineage_and_archive_labels`
 - `tests/core/test_operator_frontend.py`
 
 These tests exercise `OperatorUiService` and the runtime-agnostic operator read/write
 services directly. Workflow-run, stage-run, and stage-intervention endpoints are
 tested through injected execution seams so they prove request shape, UI/Core
 delegation, and live log polling without invoking real runtimes.
+
+## Completed-Run Required Checks
+
+A local-project UI E2E pass is incomplete unless it records completed-flow evidence.
+The evidence may come from an installed local smoke, a deterministic seeded workspace,
+or the service-level UI regression path, but it must stay inside the local project and
+must not use public-repository live E2E as a substitute.
+
+Required completed-flow checks:
+
+- reach or seed a terminal `qa` run and verify **Flow Complete** appears in the
+  command center;
+- inspect final QA artifacts from the handoff and verify they remain readable after
+  refresh;
+- open **Start Next Flow** and verify source findings include QA findings, review notes,
+  failed evidence, and manual request groups;
+- create or preview a follow-up draft with acceptance criteria, required evidence,
+  inherited context toggles, and first-stage input preview;
+- run launch preflight with an explicit runtime and record pass, warning, or blocking
+  status plus resolved baseline;
+- inspect Run History / Lineage for source run, current run, baseline, child work item
+  candidates, linked artifacts, and run actions;
+- record the Archive Run decision path and verify archived runs remain readable through
+  dashboard, history, and artifact inspection.
 
 ## Manual Installed Smoke
 

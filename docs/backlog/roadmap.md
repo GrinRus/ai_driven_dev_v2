@@ -6861,7 +6861,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E4-S1-T1` Update the operator UI local-project E2E lane to require Flow Complete,
+- `W26-E4-S1-T1` (done) Update the operator UI local-project E2E lane to require Flow Complete,
   Start Next Flow, follow-up draft, launch preflight, and run-history lineage checks.
   - Scope: E2E documentation only.
   - Verification: docs consistency test covers the new checklist sections.
