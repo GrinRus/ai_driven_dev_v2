@@ -385,6 +385,66 @@ def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
     assert artifacts_payload["documents"]["input_bundle"].endswith("input-bundle.md")
 
 
+def test_ui_stage_workbench_endpoint_returns_document_state_and_sidebars(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    plan_path.write_text(
+        "# Plan\n\n## Goals\n\n" + "\n".join(f"- Workbench line {index}" for index in range(80)),
+        encoding="utf-8",
+    )
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get(
+            "/api/stage/workbench",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+                "run_id": ["run-ui"],
+                "preview_limit": ["96"],
+                "source_limit": ["128"],
+            },
+        )
+    )
+
+    document = payload["document"]
+    assert payload["run_id"] == "run-ui"
+    assert payload["stage"] == "plan"
+    assert payload["selected_key"] == "plan"
+    assert document["status"] == "present"  # type: ignore[index]
+    assert document["preview"]["mode"] == "preview"  # type: ignore[index]
+    assert document["preview"]["requested_bytes"] == 96  # type: ignore[index]
+    assert document["preview"]["truncated_tail"] is True  # type: ignore[index]
+    assert document["source"]["mode"] == "source"  # type: ignore[index]
+    assert document["source"]["requested_bytes"] == 128  # type: ignore[index]
+    assert document["source"]["truncated_tail"] is True  # type: ignore[index]
+
+    requirements = payload["requirements"]
+    validation_results = payload["validation_results"]
+    references = payload["references"]
+    versions = payload["versions"]
+    assert any(
+        item["kind"] == "required-output" and item["status"] == "satisfied"
+        for item in requirements  # type: ignore[union-attr]
+    )
+    assert any(
+        item["status"] == "missing"
+        for item in requirements  # type: ignore[union-attr]
+    )
+    assert {
+        item["label"]: item["status"]
+        for item in validation_results  # type: ignore[union-attr]
+    } == {"stage-result": "blocked", "validator-report": "fail"}
+    assert any(
+        item["label"] == "plan" and item["kind"] == "document"
+        for item in references  # type: ignore[union-attr]
+    )
+    assert versions[0]["label"] == "Attempt 1"  # type: ignore[index]
+
+
 def test_ui_logs_endpoint_defaults_to_bounded_tail_and_accepts_limit_params(
     tmp_path: Path,
 ) -> None:

@@ -74,36 +74,205 @@ function preferredArtifactKey(documents) {
   return Object.keys(documents)[0] || "";
 }
 
+function workbenchStatusClass(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (["present", "satisfied", "pass", "valid", "succeeded"].includes(normalized)) return "good";
+  if (["missing", "fail", "failed", "invalid", "blocked"].includes(normalized)) return "bad";
+  if (["warning", "warn", "unknown"].includes(normalized)) return "warn";
+  return "";
+}
+
+function renderWorkbenchTree(workbench) {
+  const references = workbench.references || [];
+  const documents = references.filter((ref) => ref.kind === "document");
+  const secondary = references.filter((ref) => ref.kind !== "document");
+  const docs = documents.map((ref) => `
+    <button class="artifact-doc ${ref.label === workbench.selected_key ? "active" : ""}" data-artifact-key="${escapeHtml(ref.label)}" type="button">
+      ${escapeHtml(ref.label)}
+      <small title="${escapeHtml(ref.path)}">${escapeHtml(compactPath(ref.path, 64))}</small>
+    </button>
+  `).join("") || `<div class="empty-state">No document artifacts.</div>`;
+  const refs = secondary.map((ref) => `
+    <button class="artifact-doc" data-open-artifact="${escapeHtml(ref.path)}" type="button">
+      ${escapeHtml(ref.label)}
+      <small>${escapeHtml(ref.kind)} / ${escapeHtml(compactPath(ref.path, 58))}</small>
+    </button>
+  `).join("") || `<div class="empty-state">No logs or repair refs.</div>`;
+  return `
+    <div class="surface-title">Artifact tree</div>
+    <div class="artifact-list">${docs}</div>
+    <div class="surface-title compact">Logs / repair refs</div>
+    <div class="artifact-list">${refs}</div>
+  `;
+}
+
+function renderRequirementList(requirements) {
+  return (requirements || []).map((item) => `
+    <div class="workbench-side-row">
+      <span class="small-badge ${workbenchStatusClass(item.status)}">${escapeHtml(item.status)}</span>
+      <span>
+        <strong>${escapeHtml(item.label)}</strong>
+        <small>${escapeHtml(item.kind)} / ${escapeHtml(item.source)}</small>
+        ${item.path ? pathLine(item.path, 60) : ""}
+      </span>
+    </div>
+  `).join("") || `<div class="empty-state">No contract requirements resolved.</div>`;
+}
+
+function renderValidationResults(results) {
+  return (results || []).map((item) => `
+    <div class="workbench-side-row">
+      <span class="small-badge ${workbenchStatusClass(item.status)}">${escapeHtml(item.status)}</span>
+      <span>
+        <strong>${escapeHtml(item.label)}</strong>
+        <small>${escapeHtml(item.detail)}</small>
+        ${item.path ? pathLine(item.path, 60) : ""}
+      </span>
+    </div>
+  `).join("") || `<div class="empty-state">No validation results yet.</div>`;
+}
+
+function renderMissingEvidence(requirements) {
+  const missing = (requirements || []).filter((item) => item.status === "missing");
+  return missing.map((item) => `
+    <div class="workbench-side-row">
+      <span class="small-badge bad">missing</span>
+      <span>
+        <strong>${escapeHtml(item.label)}</strong>
+        <small>${escapeHtml(item.kind)} from ${escapeHtml(item.source)}</small>
+        ${item.path ? pathLine(item.path, 60) : ""}
+      </span>
+    </div>
+  `).join("") || `<div class="empty-state">No missing evidence for the selected document.</div>`;
+}
+
+function renderWorkbenchReferences(references) {
+  return (references || []).map((ref) => `
+    <button class="artifact-row" data-open-artifact="${escapeHtml(ref.path)}" type="button">
+      <span><strong>${escapeHtml(ref.label)}</strong>${pathLine(ref.path, 58)}</span>
+      <span class="small-badge">${escapeHtml(ref.kind)}</span>
+    </button>
+  `).join("") || `<div class="empty-state">No references linked.</div>`;
+}
+
+function renderVersionHistory(versions) {
+  return (versions || []).map((version) => `
+    <button class="artifact-row" data-open-artifact="${escapeHtml(version.path)}" type="button">
+      <span>
+        <strong>${escapeHtml(version.label)}</strong>
+        <span>${escapeHtml(version.source)} / ${escapeHtml(version.updated_at_utc || "timestamp unavailable")}</span>
+        ${pathLine(version.path, 58)}
+      </span>
+      <span class="small-badge">v${escapeHtml(version.attempt_number)}</span>
+    </button>
+  `).join("") || `<div class="empty-state">No version history for this document.</div>`;
+}
+
+function renderWorkbenchDiff(workbench) {
+  const inputs = workbench.diff_inputs || [];
+  const inputRows = inputs.map((item) => `
+    <button class="artifact-row" data-open-artifact="${escapeHtml(item.path)}" type="button">
+      <span>
+        <strong>${escapeHtml(item.label)}</strong>
+        <span>${escapeHtml(item.kind)}${item.attempt_number ? ` / attempt ${escapeHtml(item.attempt_number)}` : ""}</span>
+        ${pathLine(item.path, 78)}
+      </span>
+      <span class="small-badge">diff</span>
+    </button>
+  `).join("") || `<div class="empty-state">No diff inputs available for this document.</div>`;
+  return `
+    <div class="workbench-diff-panel">
+      <div class="surface-title">Diff controls</div>
+      <p>Compare the selected document with another current artifact or the previous attempt. Source files remain read-only.</p>
+      <div class="recent-artifacts">${inputRows}</div>
+    </div>
+  `;
+}
+
+function renderWorkbenchDocumentBody(workbench) {
+  const documentView = workbench.document;
+  if (!documentView || documentView.status !== "present") {
+    return `
+      <div class="empty-state">
+        <strong>${escapeHtml(documentView?.status || "missing")}</strong>
+        <span>${escapeHtml(documentView?.message || "Selected document is not available.")}</span>
+      </div>
+    `;
+  }
+  if (state.artifactViewMode === "diff") return renderWorkbenchDiff(workbench);
+  const view = state.artifactViewMode === "source"
+    ? documentView.source || documentView.preview
+    : documentView.preview || documentView.source;
+  if (!view) {
+    return `<div class="empty-state">No bounded ${escapeHtml(state.artifactViewMode)} view available.</div>`;
+  }
+  const body = state.artifactViewMode === "source" || view.content_type !== "text/markdown"
+    ? `<pre>${escapeHtml(view.text)}</pre>`
+    : `<div class="markdown-preview">${renderMarkdown(view.text)}</div>`;
+  return `${renderTruncationNotice("artifact", view, state.artifactViewMode)}${body}`;
+}
+
+function renderWorkbenchViewer(workbench) {
+  const previewActive = state.artifactViewMode === "preview" ? " active" : "";
+  const sourceActive = state.artifactViewMode === "source" ? " active" : "";
+  const diffActive = state.artifactViewMode === "diff" ? " active" : "";
+  const documentView = workbench.document || {};
+  return `
+    <div class="viewer-header">
+      <div>
+        <strong>${escapeHtml(documentView.key || workbench.selected_key)}</strong>
+        ${pathLine(`${documentView.path || "path unavailable"} / ${documentView.byte_size ?? "unknown"} bytes`, 78)}
+      </div>
+      <div class="viewer-modes">
+        <button data-artifact-mode="preview" class="${previewActive}" type="button">Preview</button>
+        <button data-artifact-mode="source" class="${sourceActive}" type="button">Source</button>
+        <button data-artifact-mode="diff" class="${diffActive}" type="button">Diff</button>
+        ${documentView.path ? `<button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button>` : ""}
+      </div>
+    </div>
+    <div class="workbench-main">
+      <section class="workbench-document-pane">
+        ${renderWorkbenchDocumentBody(workbench)}
+      </section>
+      <aside class="workbench-sidebar">
+        <section class="surface">
+          <div class="surface-title">Contract requirements</div>
+          ${renderRequirementList(workbench.requirements)}
+        </section>
+        <section class="surface">
+          <div class="surface-title">Validation results</div>
+          ${renderValidationResults(workbench.validation_results)}
+        </section>
+        <section class="surface">
+          <div class="surface-title">Missing evidence</div>
+          ${renderMissingEvidence(workbench.requirements)}
+        </section>
+        <section class="surface">
+          <div class="surface-title">References</div>
+          <div class="recent-artifacts">${renderWorkbenchReferences(workbench.references)}</div>
+        </section>
+        <section class="surface">
+          <div class="surface-title">Version history</div>
+          <div class="recent-artifacts">${renderVersionHistory(workbench.versions)}</div>
+        </section>
+      </aside>
+    </div>
+  `;
+}
+
 async function loadArtifactDocument(key) {
+  const tree = document.getElementById("workbenchTree");
   const viewer = document.getElementById("artifactViewer");
   if (!viewer) return;
   try {
-    const params = new URLSearchParams({stage: state.activeStage, key});
+    const params = new URLSearchParams({stage: state.activeStage});
+    if (key) params.set("key", key);
     if (state.activeRunId) params.set("run_id", state.activeRunId);
-    params.set("mode", state.artifactViewMode);
-    if (state.artifactViewMode === "source") params.set("limit", String(MAX_ARTIFACT_READ_BYTES));
-    const documentView = await api(`/api/artifacts/document?${params.toString()}`);
-    const previewActive = state.artifactViewMode === "preview" ? " active" : "";
-    const sourceActive = state.artifactViewMode === "source" ? " active" : "";
-    const body = state.artifactViewMode === "source"
-      ? `<pre>${escapeHtml(documentView.text)}</pre>`
-      : `<div class="markdown-preview">${renderMarkdown(documentView.text)}</div>`;
-    const truncation = renderTruncationNotice("artifact", documentView, state.artifactViewMode);
-    viewer.innerHTML = `
-      <div class="viewer-header">
-        <div>
-          <strong>${escapeHtml(documentView.key)}</strong>
-          ${pathLine(`${documentView.path} / ${documentView.byte_size} bytes`, 72)}
-        </div>
-        <div class="viewer-modes">
-          <button data-artifact-mode="preview" class="${previewActive}" type="button">Preview</button>
-          <button data-artifact-mode="source" class="${sourceActive}" type="button">Source</button>
-          <button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button>
-        </div>
-      </div>
-      ${truncation}
-      ${body}
-    `;
+    params.set("source_limit", String(MAX_ARTIFACT_READ_BYTES));
+    const workbench = await api(`/api/stage/workbench?${params.toString()}`);
+    state.activeArtifactKey = workbench.selected_key;
+    if (tree) tree.innerHTML = renderWorkbenchTree(workbench);
+    viewer.innerHTML = renderWorkbenchViewer(workbench);
   } catch (error) {
     viewer.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
@@ -115,37 +284,17 @@ async function renderArtifacts() {
     document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">No artifacts for this stage yet.</div>`;
     return;
   }
-  const params = new URLSearchParams({stage: state.activeStage});
-  if (state.activeRunId) params.set("run_id", state.activeRunId);
-  const view = await api(`/api/artifacts?${params.toString()}`);
-  const documents = view.documents || {};
-  if (!state.activeArtifactKey || !Object.prototype.hasOwnProperty.call(documents, state.activeArtifactKey)) {
-    state.activeArtifactKey = preferredArtifactKey(documents);
-  }
-  const docs = Object.entries(documents).map(([key, path]) => `
-    <button class="artifact-doc ${key === state.activeArtifactKey ? "active" : ""}" data-artifact-key="${escapeHtml(key)}" type="button">
-      ${escapeHtml(key)}
-      <small title="${escapeHtml(path)}">${escapeHtml(compactPath(path, 64))}</small>
-    </button>
-  `).join("") || `<div class="empty-state">No document artifacts.</div>`;
-  const logs = Object.entries(view.logs || {}).map(([key, path]) => `
-    <button class="artifact-doc" data-open-artifact="${escapeHtml(path)}" type="button">
-      ${escapeHtml(key)}
-      <small title="${escapeHtml(path)}">${escapeHtml(compactPath(path, 64))}</small>
-    </button>
-  `).join("") || `<div class="empty-state">No log artifacts.</div>`;
   document.getElementById("cockpitContent").innerHTML = `
-    <div class="artifact-layout">
-      <aside class="surface">
-        <div class="surface-title">Documents</div>
-        <div class="artifact-list">${docs}</div>
-        <div class="surface-title" style="margin-top:12px">Logs</div>
-        <div class="artifact-list">${logs}</div>
+    <div class="artifact-layout stage-document-workbench">
+      <aside id="workbenchTree" class="surface workbench-tree">
+        <div class="empty-state loading-state">Loading artifact tree...</div>
       </aside>
-      <section id="artifactViewer" class="artifact-viewer">Select a document</section>
+      <section id="artifactViewer" class="artifact-viewer">
+        <div class="empty-state loading-state">Loading Stage Document Workbench...</div>
+      </section>
     </div>
   `;
-  if (state.activeArtifactKey) await loadArtifactDocument(state.activeArtifactKey);
+  await loadArtifactDocument(state.activeArtifactKey);
 }
 
 function artifactKeyForPath(path, stage) {

@@ -151,6 +151,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".truncation-notice" in components
     assert ".saved-answer" in components
     assert ".artifact-row" in components
+    assert ".stage-document-workbench" in components
+    assert ".workbench-side-row" in components
     assert ".project-setup-grid" in components
     assert ".setup-mode-card.selected" in components
     assert ".flow-complete-state" in components
@@ -166,6 +168,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".preflight-check" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
+    assert ".workbench-main" in responsive
     assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
     assert ".lineage-flow" in responsive
@@ -332,11 +335,23 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "Source view is bounded. Open the folder for the full file.",
             "Full runtime.log remains on disk",
             "No artifacts for this stage yet",
-            "/api/artifacts/document?${params.toString()}",
-            'params.set("mode", state.artifactViewMode);',
-            'params.set("limit", String(MAX_ARTIFACT_READ_BYTES));',
-            'renderTruncationNotice("artifact", documentView, state.artifactViewMode)',
-            "${renderMarkdown(documentView.text)}",
+            "function renderWorkbenchTree(workbench)",
+            "function renderWorkbenchViewer(workbench)",
+            "function renderWorkbenchDiff(workbench)",
+            "function renderRequirementList(requirements)",
+            "function renderValidationResults(results)",
+            "function renderMissingEvidence(requirements)",
+            "Artifact tree",
+            "Contract requirements",
+            "Validation results",
+            "Missing evidence",
+            "References",
+            "Version history",
+            "/api/stage/workbench?${params.toString()}",
+            'params.set("source_limit", String(MAX_ARTIFACT_READ_BYTES));',
+            'data-artifact-mode="diff"',
+            'renderTruncationNotice("artifact", view, state.artifactViewMode)',
+            "${renderMarkdown(view.text)}",
             "async function inspectArtifactReference({stage, key, path, kind})",
             "data-artifact-key",
         ),
@@ -637,6 +652,9 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".small-badge.waiting-for-operator" in css
     assert ".log-actions" in css
     assert ".truncation-notice" in css
+    assert ".stage-document-workbench" in css
+    assert ".workbench-main" in css
+    assert ".workbench-side-row" in css
     assert ".saved-answer" in css
     assert ".saved-answer-text" in css
     assert ".setup-mode-card" in css

@@ -6717,7 +6717,7 @@ Dependencies:
 
 Local tasks:
 
-- `W26-E2-S3-T1` Render the Stage Document Workbench with artifact tree, Markdown
+- `W26-E2-S3-T1` (done) Render the Stage Document Workbench with artifact tree, Markdown
   preview/source/diff controls, contract requirements, validation results, missing
   evidence, references, and version history.
   - Scope: packaged static UI document workbench.

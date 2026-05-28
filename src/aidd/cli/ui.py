@@ -55,6 +55,7 @@ from aidd.core.operator_frontend import (
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
     resolve_operator_run_view,
+    resolve_operator_stage_document_workbench,
     resolve_operator_stage_view,
 )
 from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
@@ -1024,6 +1025,25 @@ class OperatorUiService:
                         stage=stage,
                         run_id=_first_param(params, "run_id"),
                         attempt_number=_optional_attempt(params),
+                    )
+                )
+            if path == "/api/stage/workbench":
+                stage = _first_param(params, "stage", STAGES[0])
+                assert stage is not None
+                return _json_response(
+                    resolve_operator_stage_document_workbench(
+                        workspace_root=self.workspace_root,
+                        work_item=self.options.work_item,
+                        stage=stage,
+                        key=_first_param(params, "key"),
+                        run_id=_first_param(params, "run_id"),
+                        attempt_number=_optional_attempt(params),
+                        preview_limit_bytes=_optional_positive_int_param(
+                            params, "preview_limit"
+                        ),
+                        source_limit_bytes=_optional_positive_int_param(
+                            params, "source_limit"
+                        ),
                     )
                 )
             if path == "/api/artifacts/document":
