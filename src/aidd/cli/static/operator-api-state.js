@@ -1,4 +1,14 @@
 const STAGES = ["idea", "research", "plan", "review-spec", "tasklist", "implement", "review", "qa"];
+const VALID_TABS = [
+  "overview",
+  "questions",
+  "validation",
+  "artifacts",
+  "logs",
+  "approvals",
+  "request",
+  "history"
+];
 const SETUP_MODES = [
   {
     id: "new-work-item",
@@ -168,6 +178,38 @@ function activateTab(tab) {
   });
   const content = document.getElementById("cockpitContent");
   if (content) content.setAttribute("aria-labelledby", `tab-${tab}`);
+  syncLocationState();
+}
+
+function initializeStateFromLocation() {
+  const params = new URLSearchParams(window.location.search);
+  const requestedStage = params.get("stage");
+  if (requestedStage && STAGES.includes(requestedStage)) {
+    state.activeStage = requestedStage;
+  }
+  const requestedRunId = String(params.get("run_id") || "").trim();
+  if (requestedRunId) {
+    state.activeRunId = requestedRunId;
+  }
+  const requestedTab = params.get("tab");
+  if (requestedTab && VALID_TABS.includes(requestedTab)) {
+    state.activeTab = requestedTab;
+  }
+}
+
+function syncLocationState() {
+  const params = new URLSearchParams(window.location.search);
+  params.set("stage", state.activeStage);
+  if (state.activeRunId) params.set("run_id", state.activeRunId);
+  else params.delete("run_id");
+  if (state.activeTab && state.activeTab !== "overview") params.set("tab", state.activeTab);
+  else params.delete("tab");
+  const query = params.toString();
+  const next = `${window.location.pathname}${query ? `?${query}` : ""}`;
+  const current = `${window.location.pathname}${window.location.search}`;
+  if (next !== current) {
+    window.history.replaceState(null, "", next);
+  }
 }
 
 function dashboardUrl() {

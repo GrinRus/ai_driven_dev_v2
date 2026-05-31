@@ -318,4 +318,5 @@ document.addEventListener("input", (event) => {
   }
 });
 
+initializeStateFromLocation();
 refresh();

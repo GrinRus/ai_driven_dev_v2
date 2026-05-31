@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -14,9 +16,13 @@ def _repo_root() -> Path:
     return repo_root_from(Path(__file__).resolve())
 
 
+def _uv_command() -> str:
+    return os.environ.get("UV") or shutil.which("uv") or "uv"
+
+
 def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path: Path) -> None:
     completed = subprocess.run(
-        ["uv", "build", "--wheel", "--out-dir", tmp_path.as_posix()],
+        [_uv_command(), "build", "--wheel", "--out-dir", tmp_path.as_posix()],
         cwd=_repo_root(),
         capture_output=True,
         text=True,
@@ -39,7 +45,7 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
 
     installed_check = subprocess.run(
         [
-            "uv",
+            _uv_command(),
             "run",
             "--isolated",
             "--no-cache",
