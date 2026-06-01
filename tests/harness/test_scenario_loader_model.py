@@ -145,6 +145,10 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
     assert scenario.canonical_runtime == "codex"
     assert scenario.runtime_targets == ("codex", "qwen")
     assert scenario.run.timeout_minutes == 240
+    task = scenario.feature_source.tasks[0]
+    assert "httpx https://httpbin.org/json" in task.intent
+    assert "httpx https://httpbin.org/json" in task.target_change
+    assert "httpx https://httpbin.org/json" in task.acceptance_criteria[0]
     verification_text = "\n".join(scenario.verify.commands)
     quality_text = "\n".join(scenario.quality.commands)
     assert "git\", \"diff\", \"--name-only" in verification_text
