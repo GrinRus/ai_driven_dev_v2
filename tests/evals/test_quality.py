@@ -716,6 +716,45 @@ def test_build_live_quality_assessment_accepts_quality_verdict_label(
     assert "QA verdict is missing from qa-report.md" not in assessment.blocking_findings
 
 
+def test_build_live_quality_assessment_accepts_quality_verdict_state_section(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-QA-STATE"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    qa_root = stage_output_root(root=tmp_path, work_item=work_item, stage="qa")
+    qa_root.joinpath("qa-report.md").write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\n"
+        "- State: ready\n"
+        "- Rationale: Required verification passed.\n\n"
+        "## Release recommendation\n\n"
+        "- proceed\n\n"
+        "## Evidence\n\n"
+        "- EV-1: `verify-transcript.json` records passing checks.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.qa_verdict == "ready"
+    assert assessment.gate == "pass"
+    assert "QA verdict is missing from qa-report.md" not in assessment.blocking_findings
+
+
 def test_build_live_quality_assessment_scores_flow_fidelity_independently(
     tmp_path: Path,
 ) -> None:

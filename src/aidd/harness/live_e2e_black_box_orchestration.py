@@ -2129,7 +2129,10 @@ def _qa_stage_audit(ctx: FlowContext) -> dict[str, object] | None:
     return None
 
 
-_QA_VERDICT_PATTERN = re.compile(r"QA verdict:\s*`?([a-z][a-z0-9-]*)`?", re.IGNORECASE)
+_QA_VERDICT_PATTERN = re.compile(
+    r"\b(ready-with-risks|not-ready|ready)\b",
+    re.IGNORECASE,
+)
 
 
 def _qa_report_path(ctx: FlowContext) -> Path | None:
