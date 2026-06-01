@@ -258,6 +258,74 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
     )
 
 
+def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
+    openapi = load_scenario(
+        Path("harness/scenarios/live/openapi-typescript-discriminator-composition.yaml")
+    )
+    pytest_scenario = load_scenario(
+        Path("harness/scenarios/live/pytest-collection-error-summary.yaml")
+    )
+    starlette = load_scenario(
+        Path("harness/scenarios/live/starlette-streaming-error-boundary.yaml")
+    )
+
+    for scenario in (openapi, pytest_scenario, starlette):
+        _assert_live_contract(scenario)
+        assert scenario.repo.revision
+        assert scenario.run.patch_budget_files is not None
+        assert scenario.run.timeout_minutes is not None
+        assert "generic-cli" not in scenario.runtime_targets
+
+    assert openapi.scenario_id == "AIDD-LIVE-010"
+    assert openapi.scenario_class == "live-full-flow-interview"
+    assert openapi.feature_size == "large"
+    assert openapi.canonical_runtime == "opencode"
+    assert openapi.run.interview_required is True
+    assert openapi.repo.url == "https://github.com/openapi-ts/openapi-typescript"
+    assert openapi.repo.revision == "0cc7ee77d28359c7901d9cd3b5733b70a050ea49"
+    assert (
+        "pnpm --filter openapi-typescript exec vitest run test/discriminators.test.ts "
+        "test/node-api.test.ts"
+        in openapi.verify.commands
+    )
+    assert "pnpm --filter openapi-typescript lint:ts" in openapi.quality.commands
+
+    assert pytest_scenario.scenario_id == "AIDD-LIVE-011"
+    assert pytest_scenario.scenario_class == "live-full-flow-interview"
+    assert pytest_scenario.feature_size == "xlarge"
+    assert pytest_scenario.canonical_runtime == "opencode"
+    assert pytest_scenario.run.interview_required is True
+    assert pytest_scenario.repo.url == "https://github.com/pytest-dev/pytest"
+    assert pytest_scenario.repo.revision == "0a465c8a716f37aca0ce456eb34614699ecd701f"
+    assert pytest_scenario.setup.commands == (
+        "uv venv --python 3.12",
+        'uv pip install -e ".[dev]"',
+    )
+    assert (
+        ".venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py "
+        "testing/test_main.py"
+        in pytest_scenario.verify.commands
+    )
+
+    assert starlette.scenario_id == "AIDD-LIVE-012"
+    assert starlette.scenario_class == "live-full-flow"
+    assert starlette.feature_size == "large"
+    assert starlette.canonical_runtime == "codex"
+    assert starlette.run.interview_required is False
+    assert starlette.repo.url == "https://github.com/Kludex/starlette"
+    assert starlette.repo.revision == "e636c77b15d903ab3ff3968cd43aee1887dd1e48"
+    assert (
+        "uv run pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py "
+        "tests/test_responses.py"
+        in starlette.verify.commands
+    )
+    assert (
+        "uv run ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py "
+        "tests/test_responses.py"
+        in starlette.quality.commands
+    )
+
+
 def test_smoke_plan_stagepack_scenario_declares_cross_runtime_output_checks() -> None:
     scenario = load_scenario(Path("harness/scenarios/smoke/plan-stagepack-smoke.yaml"))
 

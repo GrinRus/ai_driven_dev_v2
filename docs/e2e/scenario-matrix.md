@@ -51,8 +51,9 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | live full flow | `tiny + manual` | `AIDD-LIVE-004` |
 | live full flow | `small + manual` | `AIDD-LIVE-001`, `AIDD-LIVE-003`, `AIDD-LIVE-005` |
 | live full flow | `medium + manual` | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
-| live full flow interview | `large + manual` | `AIDD-LIVE-006` |
-| live full flow interview | `xlarge + manual` | `AIDD-LIVE-008` |
+| live full flow | `large + manual` | `AIDD-LIVE-012` |
+| live full flow interview | `large + manual` | `AIDD-LIVE-006`, `AIDD-LIVE-010` |
+| live full flow interview | `xlarge + manual` | `AIDD-LIVE-008`, `AIDD-LIVE-011` |
 
 `AIDD-LIVE-001` is currently setup-blocked on its pinned Typer baseline and is not the
 canonical README smoke. Use `AIDD-LIVE-005` for installed live smoke evidence until
@@ -85,10 +86,12 @@ manual fixture smoke and does not use public GitHub task intake.
 ## Provider Rollout Policy
 
 - `generic-cli` is the deterministic baseline provider.
-- `codex` is the primary canonical runtime for maintained tiny, small, and medium live lanes.
+- `codex` is the primary canonical runtime for maintained tiny, small, medium, and
+  selected large non-interview live lanes.
 - `qwen` is experimental and may be used for the tiny docs-only live lane when
   `aidd eval doctor` confirms local provider readiness.
-- `opencode` must cover at least one live lane and one deterministic workflow lane.
+- `opencode` must cover at least one live lane and one deterministic workflow lane; it is
+  the canonical runtime for the maintained live interview expansion lanes.
 - `claude-code` remains deterministic by default, keeps `AIDD-LIVE-005` as a
   small smoke lane, and uses `AIDD-LIVE-007` as the planned maintained medium
   live coverage candidate when `aidd eval doctor` confirms provider/auth
@@ -116,6 +119,9 @@ manual fixture smoke and does not use public GitHub task intake.
 | `AIDD-LIVE-007` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex`, `claude-code` | `authored-task-pool` |
 | `AIDD-LIVE-008` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `live-full-flow-interview` | `xlarge` | `manual` | `opencode` | `opencode` | `authored-task-pool` |
 | `AIDD-LIVE-009` | `harness/scenarios/live/sqlite-utils-csv-import-resilience-boundary.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex`, `opencode`, `claude-code` | `authored-task-pool` (`less-scripted`) |
+| `AIDD-LIVE-010` | `harness/scenarios/live/openapi-typescript-discriminator-composition.yaml` | `live-full-flow-interview` | `large` | `manual` | `opencode` | `codex`, `opencode` | `authored-task-pool` |
+| `AIDD-LIVE-011` | `harness/scenarios/live/pytest-collection-error-summary.yaml` | `live-full-flow-interview` | `xlarge` | `manual` | `opencode` | `codex`, `opencode` | `authored-task-pool` |
+| `AIDD-LIVE-012` | `harness/scenarios/live/starlette-streaming-error-boundary.yaml` | `live-full-flow` | `large` | `manual` | `codex` | `codex` | `authored-task-pool` |
 
 ## Feature Selection Policy
 
@@ -124,3 +130,6 @@ manual fixture smoke and does not use public GitHub task intake.
 - Live execution selects the first listed authored task from the manifest.
 - Live manifests using any other feature source mode are invalid.
 - Deterministic execution keeps feature selection inside the fixture-owned seed bundle.
+- Manual live refresh batches should rotate across products, repositories, feature
+  families, and sizes where possible. Repeating a manifest is reserved for targeted blocker
+  confirmation, runtime comparison, repin validation, or canonical smoke evidence.

@@ -171,6 +171,7 @@ def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:
         "AIDD-LIVE-001",
         "AIDD-LIVE-004",
         "AIDD-LIVE-006",
+        "rotate across products",
         "live-full-flow-interview",
         "fixture-seed",
         "authored-task-pool",

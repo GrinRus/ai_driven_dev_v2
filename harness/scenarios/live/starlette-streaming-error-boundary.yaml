@@ -1,0 +1,89 @@
+id: AIDD-LIVE-012
+scenario_class: live-full-flow
+feature_size: large
+automation_lane: manual
+canonical_runtime: codex
+repo:
+  url: https://github.com/Kludex/starlette
+  default_branch: main
+  revision: e636c77b15d903ab3ff3968cd43aee1887dd1e48
+objective: Exercise a Starlette ASGI middleware and streaming response lane with
+  bounded verification across async error and disconnect behavior.
+task: Run the installed AIDD full-flow live audit against the selected Starlette
+  streaming boundary task and preserve reviewable quality evidence.
+stage_scope:
+  start: idea
+  end: qa
+setup:
+  commands:
+  - uv sync
+  rationale:
+  - Install Starlette development dependencies from the pinned uv lockfile.
+  - Keep verification focused on ASGI middleware, error, and streaming response behavior.
+aidd_invocation:
+  work_item: WI-LIVE-STARLETTE-STREAMING
+  expected_stage_scope:
+    start: idea
+    end: qa
+feature_source:
+  mode: authored-task-pool
+  selection_policy: first-listed
+  tasks:
+  - id: TASK-LIVE-STARLETTE-STREAMING-ERROR-BOUNDARY
+    title: streaming error and disconnect boundary
+    summary: Improve a narrow ASGI streaming or middleware boundary where background
+      tasks, client disconnects, and exception propagation can interact unexpectedly.
+    intent: Preserve Starlette's runtime semantics for streaming responses and middleware
+      while making one error or disconnect edge case deterministic.
+    target_change: Identify and implement the smallest compatible fix in the response
+      or middleware boundary, with focused regression tests for background task,
+      disconnect, and exception propagation behavior.
+    expected_scope: Starlette response or middleware runtime code plus focused tests in
+      the existing streaming, error, and BaseHTTPMiddleware coverage.
+    acceptance_criteria:
+    - The selected edge case is stated explicitly in implementation, review, or QA evidence.
+    - Background task execution and exception propagation remain compatible for existing
+      streaming response and middleware paths.
+    - Regression coverage exercises the public ASGI/TestClient behavior for the selected edge case.
+    - The tracked diff stays within response or middleware runtime code and focused tests.
+    verification:
+    - uv run pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+    - uv run ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+    - test -f .aidd/workitems/WI-LIVE-STARLETTE-STREAMING/stages/qa/output/stage-result.md
+    - test -f .aidd/workitems/WI-LIVE-STARLETTE-STREAMING/stages/qa/output/validator-report.md
+    quality_bar: The patch must be localized, async-safe, and regression-covered across
+      the selected streaming or middleware boundary without broad ASGI behavior churn.
+    size_rationale: Large because the behavior crosses ASGI response streaming,
+      background tasks, middleware, and client-disconnect semantics.
+verify:
+  commands:
+  - uv run pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+  - uv run ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+  - test -f .aidd/workitems/WI-LIVE-STARLETTE-STREAMING/stages/qa/output/stage-result.md
+  - test -f .aidd/workitems/WI-LIVE-STARLETTE-STREAMING/stages/qa/output/validator-report.md
+  pass_conditions:
+  - Focused middleware and streaming response tests exit with status 0.
+  - Ruff reports no issues in the touched runtime and focused test surfaces.
+  - QA stage output artifacts exist for the selected work item.
+quality:
+  commands:
+  - uv run pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+  - uv run ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+  rubric_profile: live-full
+  require_review_status: approved
+  allowed_qa_verdicts:
+  - ready
+  - ready-with-risks
+  code_review_required: true
+limits:
+  patch_budget_files: 10
+  timeout_minutes: 45
+interview:
+  required: false
+runtime_targets:
+- codex
+live_flow:
+  driver: stepwise-black-box
+  checkpoint_policy: after-each-step
+  answer_policy: agent-decides
+  frontend_checkpoints: true
