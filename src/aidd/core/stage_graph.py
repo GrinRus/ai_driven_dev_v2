@@ -280,6 +280,12 @@ def summarize_workflow_advancement(
         reason = "not runnable"
         if current_status == StageState.SUCCEEDED.value:
             reason = "already completed"
+        elif current_status in {
+            StageState.PREPARING.value,
+            StageState.EXECUTING.value,
+            StageState.VALIDATING.value,
+        }:
+            reason = "stage is running"
         elif current_status == StageState.BLOCKED.value:
             reason = "stage is blocked"
         elif current_status == StageState.FAILED.value:

@@ -164,6 +164,9 @@ def _prepare_terminal_qa_run(
     qa_stage_status: str = "succeeded",
     qa_verdict: str = "ready",
     validator_verdict: str = "pass",
+    stage_target: str = "qa",
+    workflow_stage_start: str | None = "idea",
+    workflow_stage_end: str | None = "qa",
     lineage: dict[str, object] | None = None,
 ) -> None:
     create_run_manifest(
@@ -171,10 +174,10 @@ def _prepare_terminal_qa_run(
         work_item="WI-UI",
         run_id="run-ui",
         runtime_id="codex",
-        stage_target="qa",
+        stage_target=stage_target,
         config_snapshot={"mode": "test"},
-        workflow_stage_start="idea",
-        workflow_stage_end="qa",
+        workflow_stage_start=workflow_stage_start,
+        workflow_stage_end=workflow_stage_end,
         lineage=lineage,
     )
     for stage in STAGES:
@@ -566,6 +569,112 @@ def test_operator_dashboard_reports_missing_prerequisite_blockers(
     assert "missing prerequisites" in implement.reason
 
 
+def test_operator_dashboard_advances_stepwise_run_without_workflow_bounds(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="codex",
+        stage_target="idea",
+        config_snapshot={"mode": "test"},
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="idea",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="idea",
+        status="succeeded",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="idea",
+        run_id="run-ui",
+    )
+    stages = {item.stage: item for item in dashboard.stages}
+
+    assert dashboard.next_action.action == "run-stage"
+    assert dashboard.next_action.stage == "research"
+    assert dashboard.next_action.enabled is True
+    assert stages["research"].can_run is True
+    assert stages["research"].reason == "next runnable stage"
+
+
+def test_operator_dashboard_prioritizes_running_stage_over_stale_validation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="codex",
+        stage_target="idea",
+        config_snapshot={"mode": "test"},
+    )
+    for stage in ("idea", "research", "plan", "review-spec", "tasklist"):
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+        )
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            status="succeeded",
+        )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="implement",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="implement",
+        status="executing",
+    )
+    stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "implement"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    stage_root.joinpath("stage-result.md").write_text(
+        "# Stage Result\n\n## Status\n\n- `repair-needed`\n",
+        encoding="utf-8",
+    )
+    stage_root.joinpath("validator-report.md").write_text(
+        "# Validator Report\n\n## Result\n\n- Verdict: `fail`\n",
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="implement",
+        run_id="run-ui",
+    )
+    stages = {item.stage: item for item in dashboard.stages}
+
+    assert dashboard.next_action.action == "wait-for-stage"
+    assert dashboard.next_action.stage == "implement"
+    assert dashboard.next_action.enabled is False
+    assert dashboard.next_action.label == "Implement running"
+    assert stages["implement"].reason == "stage is running"
+
+
 def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _prepare_terminal_qa_run(workspace_root)
@@ -694,6 +803,34 @@ def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
     assert dashboard.terminal_handoff.final_qa_status == "ready-with-risks"
     assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
     assert dashboard.terminal_handoff.blockers == ()
+
+
+def test_operator_dashboard_terminal_handoff_accepts_stepwise_final_qa_run(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(
+        workspace_root,
+        stage_target="idea",
+        workflow_stage_start=None,
+        workflow_stage_end=None,
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "review-complete"
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "completed"
+    assert dashboard.terminal_handoff.final_qa_status == "ready"
+    assert {
+        action.action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+    } >= {"start-follow-up-flow", "create-new-work-item"}
 
 
 def test_operator_dashboard_exposes_archive_state_without_hiding_artifacts(

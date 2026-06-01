@@ -97,6 +97,13 @@ _QA_VERDICT_PATTERN = re.compile(
     r"\b(ready-with-risks|not-ready|ready)\b",
     flags=re.IGNORECASE,
 )
+_RUNNING_STAGE_STATES = frozenset(
+    {
+        StageState.PREPARING.value,
+        StageState.EXECUTING.value,
+        StageState.VALIDATING.value,
+    }
+)
 
 
 def _empty_run_lineage() -> OperatorRunLineage:
@@ -264,16 +271,13 @@ def _advancement_by_stage(
     if metadata is None:
         return {}
     try:
+        workflow_stage_end = _optional_manifest_stage(metadata.workflow_stage_end)
         advancement = summarize_workflow_advancement(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=metadata.run_id,
             stage_start=_optional_manifest_stage(metadata.workflow_stage_start) or STAGES[0],
-            stage_end=(
-                _optional_manifest_stage(metadata.workflow_stage_end)
-                or metadata.stage_target
-                or STAGES[-1]
-            ),
+            stage_end=workflow_stage_end or STAGES[-1],
         )
     except ValueError:
         return {}
@@ -564,6 +568,18 @@ def _next_action(
             detail="Resolve stage questions before resuming execution.",
             stage=active_stage_view.result.stage,
             enabled=True,
+        )
+    running_stage = next(
+        (item for item in rail_by_stage.values() if item.status in _RUNNING_STAGE_STATES),
+        None,
+    )
+    if running_stage is not None:
+        return OperatorNextAction(
+            action="wait-for-stage",
+            label=f"{running_stage.title} running",
+            detail="Refresh after the active stage leaves preparing, executing, or validating.",
+            stage=running_stage.stage,
+            enabled=False,
         )
     failed_validation_stage = next(
         (
@@ -1185,8 +1201,8 @@ def _terminal_handoff(
 ) -> OperatorTerminalRunHandoff | None:
     if metadata is None:
         return None
-    terminal_stage = _optional_manifest_stage(metadata.workflow_stage_end) or metadata.stage_target
-    if terminal_stage != "qa":
+    terminal_stage = _optional_manifest_stage(metadata.workflow_stage_end)
+    if terminal_stage is not None and terminal_stage != "qa":
         return None
     try:
         qa_result = resolve_stage_result_summary(
