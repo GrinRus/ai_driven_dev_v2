@@ -84,6 +84,8 @@ const state = {
     createdDraft: null,
     launchLoading: false,
     launchError: "",
+    archiveRunId: "",
+    archiveReason: "",
     selectedSourceIds: []
   }
 };

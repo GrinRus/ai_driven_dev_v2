@@ -74,15 +74,25 @@ document.addEventListener("click", async (event) => {
         return;
       }
       if (action === "archive-run") {
-        await archiveCompletedRun();
+        await openArchiveConfirmation();
         return;
       }
       toast("Unsupported next-flow action.");
       return;
     }
+    const sourceSelectionMode = event.target.closest("[data-source-selection-mode]")?.dataset.sourceSelectionMode;
+    if (sourceSelectionMode) {
+      selectSourceFindings(sourceSelectionMode);
+      await renderCockpit();
+      return;
+    }
     if (event.target.closest("[data-close-next-flow-wizard]")) {
       state.nextFlowWizard.active = false;
       await renderCockpit();
+      return;
+    }
+    if (event.target.closest("[data-archive-confirm]")) {
+      await archiveCompletedRun();
       return;
     }
     if (event.target.closest("[data-next-flow-continue]")) {

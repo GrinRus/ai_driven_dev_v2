@@ -237,13 +237,14 @@ function renderNextFlowActions(handoff) {
       ${actions.map((action) => {
         const isRecommended = action.action === recommended;
         return `
-          <article class="next-flow-action-card${isRecommended ? " recommended" : ""}">
+          <article class="next-flow-action-card${isRecommended ? " recommended" : ""}${action.enabled ? "" : " disabled"}">
             <div class="action-card-title">
               <strong>${escapeHtml(action.label)}</strong>
               ${isRecommended ? '<span class="small-badge good">recommended</span>' : ""}
+              ${action.enabled ? "" : '<span class="small-badge warn">unavailable</span>'}
             </div>
             <p>${escapeHtml(action.detail)}</p>
-            <button data-next-flow-action="${escapeHtml(action.action)}" type="button" ${action.enabled ? "" : "disabled"}>
+            <button data-next-flow-action="${escapeHtml(action.action)}" type="button" ${action.enabled ? "" : 'disabled aria-disabled="true"'}>
               ${escapeHtml(nextFlowButtonLabel(action))}
             </button>
           </article>
@@ -352,13 +353,16 @@ function renderFlowCompleteState() {
   return `
     <section class="surface flow-complete-state">
       <div class="flow-complete-hero">
-        <div>
+        <div class="flow-complete-title-row">
+          <span class="flow-complete-mark" aria-hidden="true">OK</span>
+          <div>
           <div class="surface-title">
             <span>${escapeHtml(terminalHandoffTitle(handoff))}</span>
             <span class="small-badge ${terminalHandoffTone(handoff.status)}">${escapeHtml(handoff.status)}</span>
           </div>
           <h2>${escapeHtml(handoff.final_qa_status)}</h2>
           <p>The QA terminal handoff is ready for operator review and next-flow selection.</p>
+          </div>
         </div>
         <div class="handoff-runtime">
           <strong>Runtime</strong>
@@ -565,8 +569,24 @@ function renderRunHistory() {
   `;
 }
 
+function sourceFindingPriority(item) {
+  return Number.isFinite(Number(item?.priority)) ? Number(item.priority) : 50;
+}
+
+function sourceFindingDisplayLabel(item) {
+  return item.display_label || item.title || item.id || "Source finding";
+}
+
 function allSourceFindingItems(payload = state.nextFlowWizard.sourceFindings) {
-  return (payload?.groups || []).flatMap((group) => group.items || []);
+  return (payload?.groups || [])
+    .flatMap((group) => group.items || [])
+    .sort((left, right) => sourceFindingPriority(left) - sourceFindingPriority(right));
+}
+
+function recommendedSourceFindingIds(payload = state.nextFlowWizard.sourceFindings) {
+  return allSourceFindingItems(payload)
+    .filter((item) => item.recommended)
+    .map((item) => item.id);
 }
 
 function sourceFindingSelected(id) {
@@ -580,10 +600,33 @@ function setSourceFindingSelection(id, selected) {
   state.nextFlowWizard.selectedSourceIds = Array.from(current);
 }
 
+function selectSourceFindings(mode) {
+  if (mode === "clear") {
+    state.nextFlowWizard.selectedSourceIds = [];
+    return;
+  }
+  if (mode === "recommended") {
+    state.nextFlowWizard.selectedSourceIds = recommendedSourceFindingIds();
+  }
+}
+
 async function openNextFlowWizard(action) {
+  const sourceRunId = nextFlowSourceRunId();
+  const canReuseSourceFindings = (
+    state.nextFlowWizard.action === action
+    && state.nextFlowWizard.sourceFindings
+    && state.nextFlowWizard.sourceFindings.source_run_id === sourceRunId
+  );
   state.nextFlowWizard.active = true;
   state.nextFlowWizard.action = action;
   state.nextFlowWizard.step = "sources";
+  if (canReuseSourceFindings) {
+    state.nextFlowWizard.loading = false;
+    state.nextFlowWizard.error = "";
+    activateTab("overview");
+    await renderCockpit();
+    return;
+  }
   state.nextFlowWizard.loading = true;
   state.nextFlowWizard.error = "";
   state.nextFlowWizard.sourceFindings = null;
@@ -594,6 +637,8 @@ async function openNextFlowWizard(action) {
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchLoading = false;
   state.nextFlowWizard.launchError = "";
+  state.nextFlowWizard.archiveRunId = "";
+  state.nextFlowWizard.archiveReason = "";
   state.nextFlowWizard.selectedSourceIds = [];
   activateTab("overview");
   await renderCockpit();
@@ -621,6 +666,8 @@ async function openNewWorkItemHandoff() {
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
+  state.nextFlowWizard.archiveRunId = "";
+  state.nextFlowWizard.archiveReason = "";
   activateTab("overview");
   await renderCockpit();
 }
@@ -635,6 +682,8 @@ async function openEvalBatchHandoff() {
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
+  state.nextFlowWizard.archiveRunId = "";
+  state.nextFlowWizard.archiveReason = "";
   activateTab("overview");
   await renderCockpit();
 }
@@ -686,6 +735,8 @@ async function openCloneFlowDraft() {
   wizard.preflightError = "";
   wizard.launchError = "";
   wizard.createdDraft = null;
+  wizard.archiveRunId = "";
+  wizard.archiveReason = "";
   wizard.preflightLoading = true;
   activateTab("overview");
   await renderCockpit();
@@ -936,41 +987,105 @@ async function loadFollowUpDraft() {
   }
 }
 
-async function archiveCompletedRun() {
+async function openArchiveConfirmation() {
   const runId = state.activeRunId || state.dashboard?.run?.run_id || "";
   if (!runId) {
     toast("No completed run is selected for archive.");
     return;
   }
-  const reason = state.dashboard?.terminal_handoff
+  state.nextFlowWizard.active = true;
+  state.nextFlowWizard.action = "archive-run";
+  state.nextFlowWizard.step = "archive-confirm";
+  state.nextFlowWizard.loading = false;
+  state.nextFlowWizard.error = "";
+  state.nextFlowWizard.followUpDraft = null;
+  state.nextFlowWizard.preflight = null;
+  state.nextFlowWizard.preflightError = "";
+  state.nextFlowWizard.launchError = "";
+  state.nextFlowWizard.archiveRunId = runId;
+  state.nextFlowWizard.archiveReason = state.dashboard?.terminal_handoff
     ? `Archived from Flow Complete handoff with status ${state.dashboard.terminal_handoff.status}.`
     : "Archived from Run History.";
+  activateTab("overview");
+  await renderCockpit();
+}
+
+async function archiveCompletedRun() {
+  const runId = state.nextFlowWizard.archiveRunId || state.activeRunId || state.dashboard?.run?.run_id || "";
+  if (!runId) {
+    toast("No completed run is selected for archive.");
+    return;
+  }
+  const reason = state.nextFlowWizard.archiveReason
+    || (state.dashboard?.terminal_handoff
+      ? `Archived from Flow Complete handoff with status ${state.dashboard.terminal_handoff.status}.`
+      : "Archived from Run History.");
   const payload = await postJson("/api/next-flow/archive", {
     source_run_id: runId,
     reason
   });
   state.dashboard = payload.dashboard;
+  state.nextFlowWizard.active = false;
+  state.nextFlowWizard.action = "";
+  state.nextFlowWizard.step = "sources";
   toast("Run archived for operator navigation.");
   await renderAll();
 }
 
+function renderArchiveConfirmation() {
+  const sourceRun = state.nextFlowWizard.archiveRunId || nextFlowSourceRunId() || "not recorded";
+  const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
+  const reason = state.nextFlowWizard.archiveReason || "Archived from Flow Complete handoff.";
+  const artifacts = state.dashboard?.terminal_handoff?.final_artifacts || [];
+  return `
+    <section class="surface next-flow-wizard archive-confirmation">
+      <div class="surface-title">
+        <span>Confirm Archive Run</span>
+        <span class="small-badge warn">confirmation required</span>
+      </div>
+      <div class="wizard-context-grid">
+        <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(sourceRun)}</span></div>
+        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
+        <div class="panel-item"><strong>Final artifacts</strong><span>${escapeHtml(artifacts.length)}</span></div>
+        <div class="panel-item"><strong>Mutation</strong><span>archive metadata only</span></div>
+      </div>
+      <div class="archive-confirmation-body">
+        <div class="truncation-notice" role="status">
+          <strong>Archive keeps evidence readable</strong>
+          <span>This records a local navigation decision. It does not delete final artifacts, runtime logs, or stage documents.</span>
+        </div>
+        <div class="panel-list">
+          <div class="panel-item"><strong>Reason preview</strong><span>${escapeHtml(reason)}</span></div>
+          <div class="panel-item"><strong>Source-run policy</strong><span>The completed run stays immutable; archive only changes run navigation metadata.</span></div>
+        </div>
+      </div>
+      <div class="wizard-actions">
+        <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
+        <button data-archive-confirm type="button" class="danger">Confirm Archive Run</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderSourceFindingItem(group, item) {
   const checked = sourceFindingSelected(item.id);
+  const recommended = item.recommended ? '<span class="small-badge good">recommended</span>' : "";
+  const supporting = item.collapsible ? '<span class="small-badge">supporting</span>' : "";
   const artifactButton = item.source_path
     ? `
       <button class="artifact-row" data-artifact-stage="${escapeHtml(item.stage)}" data-artifact-key="${escapeHtml(item.artifact_key)}" data-artifact-kind="${escapeHtml(item.artifact_kind)}" type="button">
-        <span><strong>${escapeHtml(item.artifact_key || item.title)}</strong>${pathLine(item.source_path, 76)}</span>
+        <span><strong>${escapeHtml(item.display_label || item.artifact_key || item.title)}</strong>${pathLine(item.source_path, 76)}</span>
         <span class="small-badge">${escapeHtml(item.artifact_kind || item.kind)}</span>
       </button>
     `
     : `<div class="empty-state">Manual request text will be captured in the next wizard step.</div>`;
   return `
-    <article class="source-finding-card">
+    <article class="source-finding-card${item.recommended ? " recommended" : ""}${item.collapsible ? " supporting" : ""}">
       <label>
         <input data-source-selection-id="${escapeHtml(item.id)}" type="checkbox" ${checked ? "checked" : ""}>
         <span>
-          <strong>${escapeHtml(item.title)}</strong>
-          <small>${escapeHtml(group.label)} / ${escapeHtml(item.kind)}</small>
+          <strong>${escapeHtml(sourceFindingDisplayLabel(item))}</strong>
+          <small>${escapeHtml(group.label)} / ${escapeHtml(item.kind)} ${recommended}${supporting}</small>
         </span>
       </label>
       <p>${escapeHtml(item.detail)}</p>
@@ -980,6 +1095,9 @@ function renderSourceFindingItem(group, item) {
 }
 
 function renderSourceFindingGroup(group) {
+  const items = [...(group.items || [])].sort((left, right) => sourceFindingPriority(left) - sourceFindingPriority(right));
+  const primaryItems = items.filter((item) => !item.collapsible || item.recommended || sourceFindingSelected(item.id));
+  const supportingItems = items.filter((item) => item.collapsible && !item.recommended && !sourceFindingSelected(item.id));
   return `
     <section class="source-finding-group">
       <div class="surface-title">
@@ -988,8 +1106,16 @@ function renderSourceFindingGroup(group) {
       </div>
       <p>${escapeHtml(group.detail)}</p>
       <div class="source-finding-list">
-        ${(group.items || []).map((item) => renderSourceFindingItem(group, item)).join("") || `<div class="empty-state">No ${escapeHtml(group.label.toLowerCase())} found for this source run.</div>`}
+        ${primaryItems.map((item) => renderSourceFindingItem(group, item)).join("") || `<div class="empty-state">No primary ${escapeHtml(group.label.toLowerCase())} found for this source run.</div>`}
       </div>
+      ${supportingItems.length ? `
+        <details class="source-finding-supporting">
+          <summary>Supporting evidence (${escapeHtml(supportingItems.length)})</summary>
+          <div class="source-finding-list">
+            ${supportingItems.map((item) => renderSourceFindingItem(group, item)).join("")}
+          </div>
+        </details>
+      ` : ""}
     </section>
   `;
 }
@@ -1089,6 +1215,32 @@ function renderNextFlowWizardShell({sectionClass = "next-flow-wizard", title, ba
   `;
 }
 
+function renderSourceSelectionSummary(payload, selectedCount) {
+  const counts = payload.counts || {};
+  const recommendedCount = Number(counts.recommended_items || 0);
+  const linkedArtifacts = Number(counts.source_artifact_links || 0);
+  const totalItems = Number(counts.total_items || 0);
+  const recommendation = payload.recommendation || "Select the source findings to carry forward.";
+  const noSelection = selectedCount === 0;
+  return `
+    <div class="source-selection-summary" role="status">
+      <div>
+        <strong>${escapeHtml(selectedCount)} selected / ${escapeHtml(totalItems)} available</strong>
+        <span>${escapeHtml(recommendation)}</span>
+      </div>
+      <div class="source-selection-metrics">
+        <span class="small-badge">${escapeHtml(linkedArtifacts)} linked artifacts</span>
+        <span class="small-badge ${recommendedCount ? "good" : ""}">${escapeHtml(recommendedCount)} recommended</span>
+        ${noSelection ? '<span class="small-badge warn">select at least one</span>' : ""}
+      </div>
+      <div class="source-selection-actions">
+        <button data-source-selection-mode="recommended" type="button" class="secondary" ${recommendedCount ? "" : "disabled"}>Select recommended</button>
+        <button data-source-selection-mode="clear" type="button" class="secondary" ${selectedCount ? "" : "disabled"}>Clear selection</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderNextFlowSourceSelection() {
   const wizard = state.nextFlowWizard;
   if (wizard.step === "new-work-item") {
@@ -1096,6 +1248,9 @@ function renderNextFlowSourceSelection() {
   }
   if (wizard.step === "eval-batch") {
     return renderEvalBatchHandoff();
+  }
+  if (wizard.step === "archive-confirm") {
+    return renderArchiveConfirmation();
   }
   if (wizard.step === "definition") {
     return renderFollowUpDefinition();
@@ -1124,9 +1279,11 @@ function renderNextFlowSourceSelection() {
         <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(selectedCount)} / ${escapeHtml(payload.counts.total_items)}</span></div>
         <div class="panel-item"><strong>Linked artifacts</strong><span>${escapeHtml(payload.counts.source_artifact_links)}</span></div>
       </div>
+      ${renderSourceSelectionSummary(payload, selectedCount)}
       <div class="source-finding-groups">
         ${(payload.groups || []).map((group) => renderSourceFindingGroup(group)).join("")}
       </div>
+      ${selectedCount ? "" : '<div class="truncation-notice"><strong>Selection required</strong><span>Choose at least one source finding before defining the follow-up work item.</span></div>'}
       <div class="wizard-actions">
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
         <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue to Define Work Item</button>

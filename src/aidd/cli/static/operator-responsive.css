@@ -9,6 +9,14 @@
   .operator-shell {
     grid-template-columns: 210px minmax(0, 1fr);
   }
+  .handoff-metric-grid,
+  .next-flow-actions-grid,
+  .source-selection-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .source-selection-summary > div:first-child {
+    grid-column: 1 / span 2;
+  }
   .right-sidebar {
     border-left: 0;
     border-top: 1px solid var(--line);
@@ -58,11 +66,13 @@
   .setup-mode-grid,
   .flow-complete-hero,
   .handoff-metric-grid,
+  .next-flow-actions-grid,
   .terminal-summary-grid,
   .lineage-flow,
   .lineage-actions,
   .next-flow-wizard-frame,
   .wizard-context-grid,
+  .source-selection-summary,
   .source-finding-groups,
   .follow-up-definition-grid,
   .launch-confirmation-grid,
@@ -79,6 +89,24 @@
   .repair-timeline,
   .bottom-dock {
     grid-template-columns: 1fr;
+  }
+  .source-selection-summary > div:first-child {
+    grid-column: auto;
+  }
+  .source-selection-metrics,
+  .source-selection-actions,
+  .wizard-actions {
+    justify-content: stretch;
+  }
+  .source-selection-actions button,
+  .wizard-actions button {
+    flex: 1 1 150px;
+  }
+  .next-flow-action-card {
+    min-height: 0;
+  }
+  .next-flow-action-card p {
+    font-size: 11px;
   }
   .evidence-artifact-browser,
   .artifact-inspector {

@@ -3,10 +3,15 @@
   --bg: #f8f9f7;
   --surface: #ffffff;
   --surface-soft: #f2f6f3;
+  --surface-raised: #fbfcfb;
   --line: #e2e6e1;
   --line-strong: #ccd5ce;
   --text: #17201b;
   --muted: #66726a;
+  --topbar-bg: #071b1c;
+  --topbar-line: #1a3838;
+  --topbar-text: #f5fbf9;
+  --topbar-muted: #a9bbb6;
   --teal: #0f7a7b;
   --teal-dark: #0b5e60;
   --green: #16824a;

@@ -618,6 +618,10 @@ def _next_flow_source_item(
     kind: str,
     title: str,
     detail: str,
+    display_label: str | None = None,
+    priority: int = 50,
+    recommended: bool = False,
+    collapsible: bool = False,
     stage: str | None = None,
     artifact_key: str | None = None,
     artifact_kind: str | None = None,
@@ -629,6 +633,10 @@ def _next_flow_source_item(
         "kind": kind,
         "title": title,
         "detail": detail,
+        "display_label": display_label or title,
+        "priority": priority,
+        "recommended": recommended,
+        "collapsible": collapsible,
         "stage": stage,
         "artifact_key": artifact_key,
         "artifact_kind": artifact_kind,
@@ -653,6 +661,45 @@ def _next_flow_source_group(
     }
 
 
+def _source_artifact_display_label(key: str) -> str:
+    labels = {
+        "qa_report": "Final QA report",
+        "stage_result": "QA stage result",
+        "validator_report": "Validator report",
+        "runtime_log": "Runtime log",
+        "runtime_jsonl": "Runtime event stream",
+        "runtime_exit_metadata": "Runtime exit metadata",
+        "events_jsonl": "Stage event log",
+        "input_bundle": "QA input bundle",
+        "questions": "Persisted questions",
+        "answers": "Persisted answers",
+        "stage_brief": "Stage brief",
+    }
+    return labels.get(key, key.replace("_", " ").title())
+
+
+def _qa_source_artifact_priority(key: str) -> int:
+    priorities = {
+        "qa_report": 10,
+        "stage_result": 30,
+        "validator_report": 35,
+        "runtime_log": 70,
+        "runtime_jsonl": 72,
+        "events_jsonl": 74,
+    }
+    return priorities.get(key, 60)
+
+
+def _qa_source_artifact_detail(key: str) -> str:
+    if key == "qa_report":
+        return "Primary completed-run QA evidence for follow-up scoping."
+    if key in {"stage_result", "validator_report"}:
+        return "Supporting pass/fail evidence for audit and acceptance checks."
+    if key.startswith("runtime") or key == "events_jsonl":
+        return "Supporting runtime evidence; use when the follow-up depends on execution traces."
+    return "Supporting QA artifact available for follow-up context when needed."
+
+
 def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
     run = dashboard.run
     handoff = dashboard.terminal_handoff
@@ -662,7 +709,11 @@ def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
             item_id=f"qa-finding:{artifact.stage}:{artifact.key}",
             kind="qa-finding",
             title=f"QA artifact: {artifact.key}",
-            detail="Use this final QA artifact as follow-up source context.",
+            display_label=_source_artifact_display_label(artifact.key),
+            detail=_qa_source_artifact_detail(artifact.key),
+            priority=_qa_source_artifact_priority(artifact.key),
+            recommended=artifact.key == "qa_report",
+            collapsible=artifact.key != "qa_report",
             stage=artifact.stage,
             artifact_key=artifact.key,
             artifact_kind=artifact.kind,
@@ -677,7 +728,9 @@ def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
             item_id=f"review-note:{artifact.stage}:{artifact.key}",
             kind="review-note",
             title=f"Review artifact: {artifact.key}",
+            display_label=_source_artifact_display_label(artifact.key),
             detail="Carry forward review-stage notes or accepted risks.",
+            priority=20,
             stage=artifact.stage,
             artifact_key=artifact.key,
             artifact_kind=artifact.kind,
@@ -691,7 +744,10 @@ def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
             item_id=f"failed-evidence:blocker:{index}",
             kind="failed-evidence",
             title=blocker.title,
+            display_label=blocker.title,
             detail=blocker.detail,
+            priority=5,
+            recommended=True,
             stage=blocker.stage,
             artifact_key=blocker.kind,
             artifact_kind="blocker",
@@ -705,14 +761,22 @@ def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
             item_id="manual-request:operator-note",
             kind="manual-request",
             title="Manual operator request",
+            display_label="Manual request",
             detail="Add a scoped operator note in the follow-up definition step.",
+            priority=40,
         )
     ]
+    qa_items = sorted(qa_items, key=lambda item: int(item["priority"]))
+    review_items = sorted(review_items, key=lambda item: int(item["priority"]))
+    failed_items = sorted(failed_items, key=lambda item: int(item["priority"]))
     groups = (
         _next_flow_source_group(
             group_id="qa-findings",
             label="QA findings",
-            detail="Final QA outputs that can become follow-up source selections.",
+            detail=(
+                "Final QA report is the primary follow-up source; supporting QA "
+                "artifacts stay available as collapsed evidence."
+            ),
             items=qa_items,
         ),
         _next_flow_source_group(
@@ -735,14 +799,28 @@ def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
         ),
     )
     all_items = [*qa_items, *review_items, *failed_items, *manual_items]
+    recommended_items = [item for item in all_items if item["recommended"]]
+    clean_terminal = (
+        handoff is not None
+        and handoff.status == "completed"
+        and not handoff.blockers
+    )
     return {
         "source_work_item": dashboard.work_item,
         "source_run_id": run.run_id,
         "source_runtime_id": run.runtime_id,
+        "recommendation": (
+            "Clean QA run: follow-up is optional. Create New Work Item remains "
+            "the recommended next action unless the operator selects specific context."
+            if clean_terminal
+            else "Carry forward the recommended source findings before starting follow-up work."
+        ),
         "groups": groups,
         "counts": {
             "total_items": len(all_items),
             "selected_defaults": sum(1 for item in all_items if item["selected"]),
+            "recommended_items": len(recommended_items),
+            "collapsible_items": sum(1 for item in all_items if item["collapsible"]),
             "source_artifact_links": sum(1 for item in all_items if item["source_path"]),
             "required_context_groups": len(groups),
         },

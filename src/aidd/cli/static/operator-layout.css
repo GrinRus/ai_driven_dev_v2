@@ -1,12 +1,13 @@
 .topbar {
   align-items: center;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--topbar-line);
+  color: var(--topbar-text);
   display: grid;
-  gap: 10px;
-  grid-template-columns: minmax(250px, 1fr) auto minmax(340px, auto);
+  gap: 12px;
+  grid-template-columns: minmax(250px, 1fr) minmax(280px, auto) minmax(340px, auto);
   min-height: 52px;
-  padding: 8px 12px;
+  padding: 7px 12px;
   position: sticky;
   top: 0;
   z-index: 5;
@@ -19,8 +20,10 @@
 }
 .brand-mark {
   align-items: center;
-  border: 1px solid var(--line-strong);
+  background: var(--teal);
+  border: 1px solid #2fc4bd;
   border-radius: 5px;
+  color: #ffffff;
   display: flex;
   font-weight: 800;
   height: 28px;
@@ -44,6 +47,7 @@
 }
 .brand-meta {
   align-items: baseline;
+  color: var(--topbar-muted);
   display: flex;
   gap: 4px;
   min-width: 0;
@@ -51,6 +55,7 @@
 }
 .brand-meta code {
   background: transparent;
+  color: var(--topbar-text);
   display: inline-block;
   max-width: min(36vw, 420px);
   overflow: hidden;
@@ -130,10 +135,36 @@
   gap: 7px;
 }
 .runtime-picker span {
-  color: var(--muted);
+  color: var(--topbar-muted);
   font-size: 11px;
   font-weight: 750;
   text-transform: uppercase;
+}
+.topbar .version-badge,
+.topbar .status-chip {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--topbar-text);
+}
+.topbar .status-chip.good {
+  background: rgba(22, 130, 74, 0.18);
+  border-color: rgba(82, 205, 138, 0.45);
+  color: #a8efc5;
+}
+.topbar button.secondary,
+.topbar button.danger,
+.topbar select {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--topbar-text);
+}
+.topbar button.secondary:hover {
+  border-color: #5bd0ca;
+  color: #dffdf9;
+}
+.topbar button.danger {
+  border-color: rgba(238, 144, 136, 0.55);
+  color: #ffd3cf;
 }
 .operator-shell {
   display: grid;

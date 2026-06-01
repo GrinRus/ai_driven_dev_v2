@@ -160,6 +160,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".setup-mode-card.selected" in components
     assert ".setup-readiness-checklist" in components
     assert ".flow-complete-state" in components
+    assert ".flow-complete-mark" in components
     assert ".next-flow-action-card.recommended" in components
     assert ".terminal-summary-grid" in components
     assert ".run-history-state" in components
@@ -168,6 +169,9 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".next-flow-wizard-frame" in components
     assert ".next-flow-stepper" in components
     assert ".source-finding-groups" in components
+    assert ".source-selection-summary" in components
+    assert ".source-finding-supporting" in components
+    assert ".archive-confirmation" in components
     assert ".evidence-screen-stack" in components
     assert ".evidence-workbench-grid" in components
     assert ".workbench-toc" in components
@@ -771,6 +775,7 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "terminalHandoffTone(handoff.status)",
             "handoff.final_qa_status",
             "QA terminal handoff is ready for operator review",
+            "flow-complete-mark",
             "Start Next Flow",
             "terminal handoff",
             "renderNextFlowActions(handoff)",
@@ -798,10 +803,17 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "function renderNextFlowSourceSelection()",
             "function renderFollowUpDefinition()",
             "function renderLaunchConfirmation()",
+            "function renderArchiveConfirmation()",
+            "function renderSourceSelectionSummary(payload, selectedCount)",
             "source findings",
             "Selected sources",
             "Linked artifacts",
+            "Select recommended",
+            "Clear selection",
+            "Supporting evidence",
+            "Selection required",
             "data-source-selection-id",
+            "data-source-selection-mode",
             "data-close-next-flow-wizard",
             "data-next-flow-continue",
             "Continue to Define Work Item",
@@ -820,6 +832,8 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "Running launch preflight...",
             "Flow Launch Wizard",
             "Independent flow",
+            "Confirm Archive Run",
+            "data-archive-confirm",
         ),
     )
 
@@ -907,6 +921,10 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             "await openCloneFlowDraft();",
             "await openEvalBatchHandoff();",
             'action === "archive-run"',
+            "await openArchiveConfirmation();",
+            'closest("[data-source-selection-mode]")',
+            "selectSourceFindings(sourceSelectionMode);",
+            'closest("[data-archive-confirm]")',
             "await archiveCompletedRun();",
             'closest("[data-source-selection-id]")',
             "setSourceFindingSelection",
@@ -1058,7 +1076,10 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".flow-complete-state" in css
     assert ".next-flow-action-card" in css
     assert ".next-flow-wizard" in css
+    assert ".source-selection-summary" in css
     assert ".source-finding-card" in css
+    assert ".source-finding-supporting" in css
+    assert ".archive-confirmation" in css
     assert ".follow-up-definition-grid" in css
     assert ".inherited-context-toggle" in css
     assert ".launch-confirmation-grid" in css

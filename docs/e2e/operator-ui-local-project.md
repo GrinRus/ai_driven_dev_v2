@@ -255,13 +255,17 @@ and any blockers in roadmap evidence.
   Clone This Flow, Run Eval / Scenario Batch, and Archive Run.
 - Recommended next action badges match final QA status: completed runs without blockers
   recommend new work, while failed or blocked handoffs recommend follow-up work.
-- Choosing Archive Run records the local archive decision and leaves final QA artifacts
-  and run-history inspection available.
+- Choosing Archive Run first opens a confirmation state with a reason preview; confirming
+  records the local archive decision and leaves final QA artifacts plus run-history
+  inspection available.
 
 ### Start Next Flow Wizard
 
 - Start Follow-up Flow opens the source-finding step and groups QA findings, review
   notes, failed evidence, and manual request options.
+- Clean completed runs keep Create New Work Item as the recommended next action; the
+  source-finding step shows `qa_report` as the primary optional follow-up source and
+  collapses supporting QA artifacts until the operator needs them.
 - Source-finding checkboxes can be toggled with pointer and keyboard input; Continue
   stays disabled until at least one source is selected.
 - The follow-up work item definition step shows editable title, generated acceptance

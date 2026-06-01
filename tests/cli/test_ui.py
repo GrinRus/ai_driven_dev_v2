@@ -795,8 +795,19 @@ def test_ui_next_flow_source_findings_endpoint_groups_source_context(
     assert any(
         item["kind"] == "qa-finding"
         and item["artifact_key"] == "qa_report"
+        and item["display_label"] == "Final QA report"
+        and item["priority"] == 10
+        and item["recommended"] is True
+        and item["collapsible"] is False
         and item["source_path"].endswith("qa-report.md")
         and item["selected"] is True
+        for item in qa_items
+    )
+    assert any(
+        item["kind"] == "qa-finding"
+        and item["artifact_key"] == "runtime_log"
+        and item["collapsible"] is True
+        and item["recommended"] is False
         for item in qa_items
     )
     manual_items = groups["manual-request"]["items"]
@@ -805,7 +816,11 @@ def test_ui_next_flow_source_findings_endpoint_groups_source_context(
             "id": "manual-request:operator-note",
             "kind": "manual-request",
             "title": "Manual operator request",
+            "display_label": "Manual request",
             "detail": "Add a scoped operator note in the follow-up definition step.",
+            "priority": 40,
+            "recommended": False,
+            "collapsible": False,
             "stage": None,
             "artifact_key": None,
             "artifact_kind": None,
@@ -815,7 +830,10 @@ def test_ui_next_flow_source_findings_endpoint_groups_source_context(
     ]
     assert payload["counts"]["required_context_groups"] == 4  # type: ignore[index]
     assert payload["counts"]["selected_defaults"] >= 1  # type: ignore[index]
+    assert payload["counts"]["recommended_items"] >= 1  # type: ignore[index]
+    assert payload["counts"]["collapsible_items"] >= 1  # type: ignore[index]
     assert payload["counts"]["source_artifact_links"] >= 4  # type: ignore[index]
+    assert "Clean QA run" in payload["recommendation"]
 
 
 def test_ui_next_flow_follow_up_draft_endpoint_returns_editable_payload(
