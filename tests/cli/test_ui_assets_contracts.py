@@ -196,6 +196,18 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert "scroll-padding-inline: 10px" in responsive
 
 
+def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> None:
+    responsive = _asset_text("/operator-responsive.css")
+
+    assert ".evidence-graph-screen," in responsive
+    assert ".evidence-artifact-browser," in responsive
+    assert ".artifact-inspector {" in responsive
+    assert "max-width: 100%;" in responsive
+    assert "min-width: 0;" in responsive
+    assert ".evidence-table-wrap {" in responsive
+    assert "overflow-x: auto;" in responsive
+
+
 def test_operator_script_modules_own_static_ui_surfaces() -> None:
     loader = _asset_text("/operator.js")
     api_state = _asset_text("/operator-api-state.js")
