@@ -21,6 +21,7 @@ from aidd.harness.live_e2e_black_box import (
 from aidd.harness.live_e2e_black_box_orchestration import (
     _find_resume_state,
     _live_interruption_handlers,
+    _next_flow_complete_visible,
     _run_black_box_command,
 )
 from aidd.harness.runner import HarnessCommandTranscript
@@ -36,6 +37,16 @@ _PRIMARY_OUTPUTS: dict[str, str] = {
     "review": "review-report.md",
     "qa": "qa-report.md",
 }
+
+
+@pytest.mark.parametrize("qa_stage_state", ("passed", "succeeded", " SUCCEEDED "))
+def test_next_flow_complete_visible_accepts_stage_audit_and_dashboard_states(
+    qa_stage_state: str,
+) -> None:
+    assert _next_flow_complete_visible(
+        status="pass",
+        qa_stage_state=qa_stage_state,
+    )
 
 
 def _run(args: list[str], *, cwd: Path | None = None) -> str:

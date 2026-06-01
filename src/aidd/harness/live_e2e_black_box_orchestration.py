@@ -2560,6 +2560,13 @@ def _default_next_flow_decision(
     )
 
 
+def _next_flow_complete_visible(*, status: str, qa_stage_state: str) -> bool:
+    return status == "pass" and qa_stage_state.strip().lower() in {
+        "passed",
+        "succeeded",
+    }
+
+
 def _write_next_flow_checkpoint_artifacts(
     *,
     ctx: FlowContext,
@@ -2681,7 +2688,10 @@ def _write_next_flow_checkpoint_artifacts(
         "counting_status": counting_status,
         "acceptance_coverage_status": acceptance_coverage_status,
         "ui_ux_gate": ui_ux_gate,
-        "flow_complete_visible": status == "pass" and qa_stage_state == "passed",
+        "flow_complete_visible": _next_flow_complete_visible(
+            status=status,
+            qa_stage_state=qa_stage_state,
+        ),
         "source_run_summary": {
             "source_run_id": ctx.run_id,
             "source_work_item_id": ctx.work_item,
