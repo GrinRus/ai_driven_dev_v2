@@ -15,6 +15,8 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 ## Alpha status and safety
 
 Latest published prerelease: `0.1.0a5`.
+Current release-candidate package version on this branch: `0.1.0a6`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a5`.
 The `main` branch is development source and may contain unreleased changes.
 
 AIDD is alpha software for local evaluation and controlled operator trials. It is not

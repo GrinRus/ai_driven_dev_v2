@@ -9,6 +9,17 @@ stable compatibility window exists.
 
 - Open the next development cycle after accepted `v0.1.0a5` release evidence.
 
+## 0.1.0a6 - 2026-06-01
+
+- Prepare the `0.1.0a6` prerelease candidate after the Operator Mission Control UI
+  redesign and completed-flow next-action rollout landed on `main`.
+- Add completed-run Flow Complete handoff, Start Next Flow source-finding selection,
+  archive confirmation, follow-up/clone/eval handoffs, and lineage-aware run history.
+- Add release-safe local UI evidence for the Mission Control references, including
+  desktop, tablet, and mobile browser smoke coverage without moving live E2E into CI/CD.
+- Refresh manual-live next-flow checkpoint behavior and experimental Codex/Qwen evidence
+  handling while keeping provider runs outside release automation.
+
 ## 0.1.0a5 - 2026-05-25
 
 - Prepare the `0.1.0a5` prerelease candidate after `0.1.0a4` was already published.
