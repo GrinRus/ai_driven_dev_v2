@@ -143,6 +143,7 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
     assert scenario.scenario_id == "AIDD-LIVE-004"
     assert scenario.feature_size == "tiny"
     assert scenario.canonical_runtime == "codex"
+    assert scenario.runtime_targets == ("codex", "qwen")
     assert scenario.run.timeout_minutes == 240
     verification_text = "\n".join(scenario.verify.commands)
     quality_text = "\n".join(scenario.quality.commands)

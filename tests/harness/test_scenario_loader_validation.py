@@ -661,7 +661,7 @@ live_flow:
         + "\n",
     )
 
-    with pytest.raises(ScenarioManifestError, match="real maintained runtimes"):
+    with pytest.raises(ScenarioManifestError, match="supported live runtimes"):
         load_scenario(manifest)
 
 

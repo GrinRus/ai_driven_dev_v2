@@ -172,6 +172,7 @@ interview:
   required: false
 runtime_targets:
 - codex
+- qwen
 live_flow:
   driver: stepwise-black-box
   checkpoint_policy: after-each-step

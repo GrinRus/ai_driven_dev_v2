@@ -26,7 +26,7 @@ _LIVE_SCENARIO_CLASSES = {"live-full-flow", "live-full-flow-interview"}
 _FEATURE_SIZES = {"tiny", "small", "medium", "large", "xlarge"}
 _AUTOMATION_LANES = {"ci", "manual"}
 _SUPPORTED_RUNTIME_IDS = set(runtime_ids())
-_LIVE_RUNTIME_IDS = {"codex", "opencode", "claude-code"}
+_LIVE_RUNTIME_IDS = {"codex", "opencode", "claude-code", "qwen"}
 _LIVE_FLOW_DRIVERS = {"stepwise-black-box"}
 _LIVE_FLOW_CHECKPOINT_POLICIES = {"after-each-step"}
 _LIVE_FLOW_ANSWER_POLICIES = {"agent-decides"}
@@ -539,7 +539,7 @@ def _validate_scenario_contract(
         if unsupported_live_runtimes:
             allowed = ", ".join(sorted(_LIVE_RUNTIME_IDS))
             raise ScenarioManifestError(
-                "Live scenario manifests may only target real maintained runtimes "
+                "Live scenario manifests may only target supported live runtimes "
                 f"({allowed}); unsupported live runtime target(s): "
                 + ", ".join(unsupported_live_runtimes)
                 + "."
@@ -547,7 +547,7 @@ def _validate_scenario_contract(
         if canonical_runtime not in _LIVE_RUNTIME_IDS:
             allowed = ", ".join(sorted(_LIVE_RUNTIME_IDS))
             raise ScenarioManifestError(
-                "Live scenario manifests must use a real maintained canonical runtime "
+                "Live scenario manifests must use a supported live canonical runtime "
                 f"({allowed})."
             )
         if automation_lane != "manual":
