@@ -1,0 +1,140 @@
+id: AIDD-LIVE-011
+scenario_class: live-full-flow-interview
+feature_size: xlarge
+automation_lane: manual
+canonical_runtime: opencode
+repo:
+  url: https://github.com/pytest-dev/pytest
+  default_branch: main
+  revision: 0a465c8a716f37aca0ce456eb34614699ecd701f
+objective: Exercise a live pytest runtime-internals lane where collection error
+  reporting policy must be clarified before implementation.
+task: Run the installed AIDD full-flow live audit against the selected pytest
+  collection-summary task and preserve reviewable quality evidence.
+stage_scope:
+  start: idea
+  end: qa
+setup:
+  commands:
+  - uv venv --python 3.12
+  - uv pip install -e ".[dev]"
+  rationale:
+  - Create a disposable local virtual environment for the pinned pytest checkout.
+  - Install pytest in editable mode with its dev extras before targeted regression verification.
+aidd_invocation:
+  work_item: WI-LIVE-PYTEST-COLLECTION
+  expected_stage_scope:
+    start: idea
+    end: qa
+feature_source:
+  mode: authored-task-pool
+  selection_policy: first-listed
+  tasks:
+  - id: TASK-LIVE-PYTEST-COLLECTION-ERROR-SUMMARY
+    title: collection error summary policy
+    summary: Clarify and improve terminal summary behavior when collection errors
+      interact with `--maxfail` and `--continue-on-collection-errors`.
+    intent: Make pytest collection error reporting easier to diagnose without changing
+      established exit-code or interruption semantics unexpectedly.
+    target_change: Implement the answered terminal-summary policy in the collection
+      or terminal reporting path and add focused regression coverage for collection
+      errors, maxfail, and summary output.
+    expected_scope: Collection error handling, terminal reporting tests, and any
+      narrowly required documentation note about the selected behavior.
+    acceptance_criteria:
+    - Blocking answers define the expected exit-code and interruption semantics before planning.
+    - Collection error summaries include actionable information without duplicating
+      unrelated traceback noise.
+    - Existing `--maxfail` and `--continue-on-collection-errors` behavior remains compatible
+      unless answers explicitly approve a change.
+    - Focused tests cover collection errors with and without maxfail.
+    verification:
+    - uv run aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
+    - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
+    - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
+    - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/stage-result.md
+    - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/validator-report.md
+    quality_bar: The result must preserve pytest compatibility, make the reporting
+      policy explicit, and avoid broad terminal-output churn outside the selected edge case.
+    size_rationale: Xlarge because pytest collection and terminal reporting semantics are
+      runtime-internal, compatibility-sensitive, and interview-gated.
+    interview:
+    - Expected exit code and interruption semantics for collection errors with `--maxfail`.
+    - Whether summary output should prefer first-error detail, aggregate counts, or both.
+    - Required documentation or changelog obligations for any changed reporting behavior.
+verify:
+  commands:
+  - uv run aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
+  - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
+  - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
+  - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/stage-result.md
+  - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/validator-report.md
+  pass_conditions:
+  - The first stage-questions check reports at least one pending blocking question.
+  - Answers file resolves each blocking collection-reporting policy question before stage rerun.
+  - Focused pytest verification exits with status 0 after resume.
+  - QA stage output artifacts exist after the resumed execution path.
+  flow_steps:
+  - step: blocked
+    evidence: questions.md exists with at least one blocking collection-reporting question.
+  - step: resumed
+    evidence: answers.md exists and marks each blocking question as resolved.
+  - step: completed
+    evidence: focused pytest and QA output artifact checks succeed after rerun.
+quality:
+  commands:
+  - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
+  rubric_profile: live-full
+  require_review_status: approved-with-conditions
+  allowed_qa_verdicts:
+  - ready
+  - ready-with-risks
+  code_review_required: true
+limits:
+  patch_budget_files: 12
+  timeout_minutes: 75
+interview:
+  required: true
+  must_ask_at_least_one: true
+  blocking_question_topics:
+  - Expected exit code and interruption semantics for collection errors with `--maxfail`.
+  - Preferred terminal summary shape for first-error detail and aggregate counts.
+  - Documentation or changelog obligations for changed reporting behavior.
+  trigger_conditions:
+  - If exit-code policy is not explicit, ask a blocking question before planning.
+  - If terminal summary detail versus aggregate behavior is ambiguous, ask a blocking question before task decomposition.
+  - If documentation obligations are unclear, ask a blocking question before implementation.
+  answer_flow:
+    mode: answers_markdown_and_stage_rerun
+    answers_file: .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
+    question_check_command:
+    - uv
+    - run
+    - aidd
+    - stage
+    - questions
+    - idea
+    - --work-item
+    - WI-LIVE-PYTEST-COLLECTION
+    resume_command:
+    - uv
+    - run
+    - aidd
+    - stage
+    - run
+    - idea
+    - --work-item
+    - WI-LIVE-PYTEST-COLLECTION
+    - --runtime
+    - opencode
+    answer_requirements:
+    - Resolve each blocking reporting-policy question with explicit exit-code and summary expectations.
+    - Keep compatibility and documentation commitments in the same answers file.
+runtime_targets:
+- codex
+- opencode
+live_flow:
+  driver: stepwise-black-box
+  checkpoint_policy: after-each-step
+  answer_policy: agent-decides
+  frontend_checkpoints: true
