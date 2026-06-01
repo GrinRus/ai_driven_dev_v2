@@ -700,6 +700,11 @@ def _qa_source_artifact_detail(key: str) -> str:
     return "Supporting QA artifact available for follow-up context when needed."
 
 
+def _next_flow_source_priority(item: Mapping[str, object]) -> int:
+    priority = item.get("priority", 50)
+    return priority if isinstance(priority, int) else 50
+
+
 def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
     run = dashboard.run
     handoff = dashboard.terminal_handoff
@@ -766,9 +771,9 @@ def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
             priority=40,
         )
     ]
-    qa_items = sorted(qa_items, key=lambda item: int(item["priority"]))
-    review_items = sorted(review_items, key=lambda item: int(item["priority"]))
-    failed_items = sorted(failed_items, key=lambda item: int(item["priority"]))
+    qa_items = sorted(qa_items, key=_next_flow_source_priority)
+    review_items = sorted(review_items, key=_next_flow_source_priority)
+    failed_items = sorted(failed_items, key=_next_flow_source_priority)
     groups = (
         _next_flow_source_group(
             group_id="qa-findings",
