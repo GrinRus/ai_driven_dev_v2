@@ -7,12 +7,12 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Open the next development cycle after accepted `v0.1.0a5` release evidence.
+- Open the next development cycle after accepted `v0.1.0a6` release evidence.
 
 ## 0.1.0a6 - 2026-06-01
 
-- Prepare the `0.1.0a6` prerelease candidate after the Operator Mission Control UI
-  redesign and completed-flow next-action rollout landed on `main`.
+- Release the `0.1.0a6` prerelease after the Operator Mission Control UI redesign and
+  completed-flow next-action rollout landed on `main`.
 - Add completed-run Flow Complete handoff, Start Next Flow source-finding selection,
   archive confirmation, follow-up/clone/eval handoffs, and lineage-aware run history.
 - Add release-safe local UI evidence for the Mission Control references, including

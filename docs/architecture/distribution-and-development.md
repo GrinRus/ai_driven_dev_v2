@@ -153,7 +153,7 @@ If the release tag fails format, version-alignment, branch-name, or branch-head 
 release workflow fails before package publishing.
 
 After publishing a prerelease, `main` should move to the next development version, for
-example from `0.1.0a5` to `0.1.0a6.dev0`, so source builds cannot collide with an already
+example from `0.1.0a6` to `0.1.0a7.dev0`, so source builds cannot collide with an already
 published artifact.
 
 ## 11. Versioning policy

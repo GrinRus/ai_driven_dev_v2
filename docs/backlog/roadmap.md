@@ -5607,8 +5607,8 @@ Primary outputs:
 - deterministic release workflow quality gate
 - CI/CD guardrails that exclude live E2E
 - source-installed local-project smoke verification
-- release-readiness notes for latest accepted `0.1.0a5` evidence and source
-  `0.1.0a6` state
+- release-readiness notes for latest accepted `0.1.0a6` evidence and source
+  `0.1.0a7.dev0` state
 
 Touched areas:
 
@@ -5632,8 +5632,8 @@ Local tasks:
   commands while preserving the manual-only live E2E boundary.
 - `W24-E1-S1-T3` (done) Verify the source-installed local-project smoke fixture runtime
   path and cover the workspace-relative command with scenario-loader regression checks.
-- `W24-E1-S1-T4` (done) Prepare release-readiness notes for the accepted `0.1.0a5`
-  evidence and post-release `0.1.0a6` source state without creating a tag or
+- `W24-E1-S1-T4` (done) Prepare release-readiness notes for the accepted `0.1.0a6`
+  evidence and post-release `0.1.0a7.dev0` source state without creating a tag or
   publishing artifacts.
 
 Evidence:
@@ -5652,9 +5652,9 @@ Evidence:
 - A source-installed local-project smoke passed on 2026-05-21 against a disposable
   `harness/fixtures/minimal-python` copy, covering `doctor`, `init`, bounded
   `run idea->plan`, `run show`, `run logs`, `run artifacts`, and `stage questions`.
-- `docs/release-notes-v0.1.0a5-draft.md` and `docs/analysis/beta-readiness-source-audit.md`
-  record the latest accepted `0.1.0a5` package-channel evidence and current
-  `0.1.0a6` source development state; accepted package-channel evidence is recorded
+- `docs/release-notes-v0.1.0a6-draft.md` and `docs/analysis/beta-readiness-source-audit.md`
+  record the latest accepted `0.1.0a6` package-channel evidence and current
+  `0.1.0a7.dev0` source development state; accepted package-channel evidence is recorded
   in `docs/release-checklist.md`.
 
 Exit evidence:

@@ -20,8 +20,8 @@ Reviewed sources:
 
 ### README
 
-- The release-candidate package version matches the package state: `0.1.0a6`.
-  The last accepted published prerelease evidence before this candidate is `0.1.0a5`.
+- The source development package version matches the package state: `0.1.0a7.dev0`.
+  The latest accepted published prerelease evidence is `0.1.0a6`.
 - The documented public CLI commands match the registered command surface:
   `doctor`, `init`, `ui`, `stage`, `eval`, and `run`.
 - The removed eval-run product command is not documented as a current product command.
@@ -89,12 +89,12 @@ command so future smoke refactors do not break source-installed local runs.
 - The `AIDD-LIVE-006/opencode` refresh first exposed an AIDD-owned repair-prompt clarity
   defect around malformed interview answer bullets. That defect was fixed in the
   candidate source before the counted rerun.
-- Accepted `0.1.0a5` release/install evidence exists from the published GitHub Release,
-  PyPI publish, `pipx` verification, and `uv tool` verification on 2026-05-25.
-- This branch is the `0.1.0a6` release candidate after the accepted `0.1.0a5`
-  prerelease. It must repeat the GitHub Release, PyPI, `pipx`, and `uv tool`
-  verification path before it can become the latest accepted published prerelease
-  evidence.
+- Accepted `0.1.0a6` release/install evidence exists from the published GitHub Release,
+  PyPI publish, `pipx` verification, and `uv tool` verification on 2026-06-01.
+- This branch is post-release development source after the accepted `0.1.0a6`
+  prerelease. The next release candidate must use a unique unpublished version and repeat
+  the GitHub Release, PyPI, `pipx`, and `uv tool` verification path before it can become
+  the latest accepted published prerelease evidence.
 - Preflight readiness alone is not counted clean live evidence; the counted W24 refresh
   uses terminal black-box bundles and operator overlays.
 
@@ -104,8 +104,8 @@ manual live evidence.
 
 ## Decision
 
-Proceed with `0.1.0a6` release-candidate verification as a documentation,
-release-evidence, and package-channel validation slice.
+Proceed with the post-`0.1.0a6` development cycle only after recording accepted
+release-evidence and package-channel validation.
 
 Do not claim beta completion solely from package publication; keep the beta decision tied
 to maintained operator evidence, release/install evidence, and an explicit readiness call.
