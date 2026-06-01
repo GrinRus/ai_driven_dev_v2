@@ -132,13 +132,14 @@ uv tool uninstall ai-driven-dev-v2
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a6`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a5`.
+Maintainer source development package version: `0.1.0a7.dev0`.
+Latest accepted published prerelease evidence: `0.1.0a6`.
 
-Release candidate `v0.1.0a6` is draft-only until a GitHub Release targets
-`release/v0.1.0a6`, publishes through the GitHub Release `published` event, and passes
-the release workflow quality, build, PyPI publish, `pipx`, and `uv tool` verification
-jobs. Do not add an accepted `v0.1.0a6` evidence log entry until those checks pass.
+No current release candidate is accepted from this development version. The next release
+candidate must use a unique unpublished package version, target a matching
+`release/v<project.version>` branch, publish through the GitHub Release `published`
+event, and pass the release workflow quality, build, PyPI publish, `pipx`, and `uv tool`
+verification jobs before it can be accepted.
 
 W24 manual live evidence refresh on 2026-05-24:
 
@@ -172,6 +173,27 @@ does not replace GitHub Release, PyPI, `pipx`, or `uv tool` verification.
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a6` accepted evidence on 2026-06-01
+
+- Tag: `v0.1.0a6`
+- Release branch: `release/v0.1.0a6`
+- Commit: `1cab7c90f3588624d842657d580e4f42483678ca`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a6`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/26756539146`
+- Result: accepted release/install evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: release tag `v0.1.0a6` matched `project.version` `0.1.0a6`, and the
+  release tag commit matched the remote `release/v0.1.0a6` branch HEAD.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a6/`.
+- `pipx` verification installed `ai-driven-dev-v2==0.1.0a6`; `aidd --version` returned
+  `aidd 0.1.0a6`, and `aidd doctor` reported `Version 0.1.0a6`. The GitHub workflow used
+  `python -m pipx`; the independent local smoke used an isolated `uv tool run --from pipx`
+  runner because local `python3 -m pipx` was unavailable.
+- `uv tool` verification installed `ai-driven-dev-v2==0.1.0a6`; `aidd --version` returned
+  `aidd 0.1.0a6`, and `aidd doctor` reported `Version 0.1.0a6`.
+- No Docker/GHCR artifact is part of the supported `v0.1.0a6` release contract.
 
 ### `v0.1.0a5` accepted evidence on 2026-05-25
 
