@@ -25,7 +25,7 @@ class LiveRuntimeCommand:
 
 
 _PROVIDER_AUTH_CHECK_TIMEOUT_SECONDS = 10
-LIVE_E2E_RUNTIME_ALLOWLIST = ("codex", "opencode", "claude-code")
+LIVE_E2E_RUNTIME_ALLOWLIST = ("codex", "opencode", "claude-code", "qwen")
 
 
 def _toml_string(value: str) -> str:
@@ -95,7 +95,7 @@ def validate_live_runtime_command(
         allowed = ", ".join(LIVE_E2E_RUNTIME_ALLOWLIST)
         raise RuntimeError(
             f"Unsupported live runtime: {runtime_id}. Black-box live E2E allows "
-            f"only real maintained runtimes: {allowed}."
+            f"only supported live runtimes: {allowed}."
         )
     if runtime_id not in scenario.runtime_targets:
         supported = ", ".join(scenario.runtime_targets)
@@ -249,6 +249,21 @@ def write_live_runtime_config(
                 "review-spec = 1500",
                 "tasklist = 1800",
                 "implement = 1800",
+                "review = 1800",
+                "qa = 1800",
+                "",
+                "[runtime.qwen]",
+                f"command = {_toml_string(_runtime_command('qwen'))}",
+                f"mode = {_toml_string(runtime_entries['qwen'].execution_mode.value)}",
+                "timeout_seconds = 1800",
+                "",
+                "[runtime.qwen.stage_timeouts]",
+                "idea = 1800",
+                "research = 2400",
+                "plan = 1800",
+                "review-spec = 1800",
+                "tasklist = 2400",
+                "implement = 2400",
                 "review = 1800",
                 "qa = 1800",
                 "",

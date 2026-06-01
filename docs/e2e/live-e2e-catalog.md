@@ -94,6 +94,7 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`
   - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
+  - `AIDD_EVAL_QWEN_COMMAND` for experimental `qwen`
 - When no override is set, the evaluator validates the default native provider command
   locally before cloning or installing artifacts.
 - Override values must point to locally available wrapper commands that accept the AIDD
@@ -108,6 +109,34 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   CLI, UI, and UI/API surfaces after each stage.
 - Manual checkpoint notes should include an operator-intervention checkpoint when
   the run uses `aidd stage interact` or the UI `Request change` panel.
+
+## Next-Flow Terminal Checkpoint Policy
+
+After a public-repository live run reaches terminal `qa`, the launching operator must
+inspect the completed-run handoff before deciding whether the run is counted:
+
+- open the loopback UI or UI/API checkpoint evidence and confirm **Flow Complete** is
+  visible for the terminal run;
+- record the final QA status, visible blockers, final artifacts, approval counts,
+  repair counts, answered-question counts, and recommended next-flow actions;
+- record the operator next-flow decision as one of `no-follow-up`, `follow-up-draft`,
+  `clone-draft`, `eval-batch`, `archive`, or `blocked`;
+- if the operator records `follow-up-draft`, `clone-draft`, or `eval-batch`, preserve
+  source-run references and selected source artifact links as evidence only;
+- if the operator records `archive`, verify the completed run remains readable through
+  dashboard/history/artifact inspection evidence.
+
+Launching a second public-repository flow is **not** required for a clean live E2E run.
+The default policy is to stop after the terminal checkpoint and operator-quality
+analysis. Any child-flow proof must be explicitly enabled by a manual operator in a
+separate future option, remain outside CI/CD and release automation, and record separate
+lineage evidence instead of mutating the completed source run.
+
+The optional evaluator flag `--enable-next-flow-follow-up-proof` is off by default.
+When a manual operator explicitly enables it for a terminal passing run, the evaluator
+creates a follow-up draft from the terminal QA report and writes `next-flow-lineage.json`
+with source-run and child work item lineage. The flag must not launch a second public
+repository flow and must remain manual-only.
 
 ## Maintained Repository Set
 
@@ -145,6 +174,8 @@ Use [`Scenario Matrix`](./scenario-matrix.md) as the source of truth for:
 For live scenarios in this wave:
 
 - `codex` is the primary canonical runtime for maintained tiny, small, and medium live lanes;
+- `qwen` is experimental and may be used for the tiny docs-only live lane when
+  `aidd eval doctor` confirms local provider readiness;
 - `opencode` covers at least one live lane;
 - `claude-code` keeps `AIDD-LIVE-005` as a small smoke lane and uses
   `AIDD-LIVE-007` as the planned maintained medium coverage candidate when
@@ -160,7 +191,7 @@ Representative matrix coverage for the live lane:
 
 | Scenario class | Feature size | Maintained provider | Representative scenarios |
 | --- | --- | --- | --- |
-| `live-full-flow` | `tiny` | `codex` | `AIDD-LIVE-004` |
+| `live-full-flow` | `tiny` | `codex`, `qwen` experimental | `AIDD-LIVE-004` |
 | `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005`, `AIDD-LIVE-009` |
 | `live-full-flow` | `medium` | `codex`, `claude-code` planned | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
 | `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006` |
@@ -234,6 +265,8 @@ Every live eval bundle must aim to contain:
 - `operator-quality-analysis-validation.json`
 - `ui-ux-checkpoints.json`
 - `ui-ux-checkpoints.md`
+- `next-flow-checkpoint.json`
+- `next-flow-checkpoint.md`
 
 For counted manual clean-pass decisions, the eval bundle must also include
 operator-authored evidence:
@@ -242,6 +275,8 @@ operator-authored evidence:
 - `answer-analysis.md` when the launching operator-agent answered blocking questions
 - `operator-intervention-analysis.md` when the launching operator-agent submitted an
   operator intervention request
+- `next-flow-lineage.json` only when the manual operator explicitly enabled
+  `--enable-next-flow-follow-up-proof`
 
 ## Interview Scenarios
 

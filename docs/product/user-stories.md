@@ -121,7 +121,8 @@ Success signals:
 
 - the frontend can start and resume the full `idea -> qa` flow and individual stages,
 - blocking questions can be answered in the frontend and persist to the standard question and answer documents,
-- runtime logs, validation reports, repair history, and stage artifacts are visible with CLI-equivalent provenance.
+- runtime logs, validation reports, repair history, and stage artifacts are visible with CLI-equivalent provenance,
+- after a run reaches a terminal state, the frontend can guide the operator to create a new work item, follow-up flow, cloned flow, eval batch, or archive decision without mutating the completed run.
 
 ### US-12 — project-set workflow
 

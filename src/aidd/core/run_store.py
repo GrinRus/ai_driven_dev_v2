@@ -715,6 +715,7 @@ def create_run_manifest(
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
     adapter_id: str | None = None,
+    lineage: dict[str, Any] | None = None,
 ) -> Path:
     manifest_path = run_manifest_path(
         workspace_root=workspace_root,
@@ -768,8 +769,46 @@ def create_run_manifest(
         "created_at_utc": now,
         "updated_at_utc": now,
     }
+    if lineage is not None:
+        payload["lineage"] = dict(lineage)
     _write_json_payload(manifest_path, payload)
     return manifest_path
+
+
+def persist_run_archive_decision(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    reason: str | None = None,
+    source: str = "ui",
+    changed_at_utc: datetime | None = None,
+) -> dict[str, Any]:
+    manifest_path = run_manifest_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+    )
+    if not manifest_path.exists():
+        raise ValueError(
+            f"Run manifest is missing for work item '{work_item}', run '{run_id}'."
+        )
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(
+            f"Run manifest must be a JSON object for work item '{work_item}', run '{run_id}'."
+        )
+    timestamp = _format_utc_timestamp(changed_at_utc)
+    archive = {
+        "archived": True,
+        "archived_at_utc": timestamp,
+        "reason": reason.strip() if isinstance(reason, str) and reason.strip() else None,
+        "source": source.strip() or "ui",
+    }
+    payload["operator_archive"] = archive
+    payload["updated_at_utc"] = timestamp
+    _write_json_payload(manifest_path, payload)
+    return archive
 
 
 @dataclass(frozen=True)

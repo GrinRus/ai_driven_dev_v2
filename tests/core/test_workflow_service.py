@@ -60,6 +60,50 @@ def test_run_workflow_executes_stages_without_typer_dependency(tmp_path: Path) -
     assert manifest["workflow_bounds"] == {"start": "idea", "end": "qa"}
 
 
+def test_run_workflow_persists_optional_lineage_in_manifest(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    def _stage_executor(request: WorkflowStageExecutionRequest) -> None:
+        persist_stage_status(
+            workspace_root=request.workspace_root,
+            work_item=request.work_item,
+            run_id=request.run_id,
+            stage=request.stage,
+            status=StageState.SUCCEEDED.value,
+        )
+
+    result = run_workflow(
+        request=WorkflowRunRequest(
+            work_item="WI-FOLLOW-UP",
+            runtime_id="generic-cli",
+            workspace_root=workspace_root,
+            config_path=Path("aidd.test.toml"),
+            config_snapshot={"mode": "test"},
+            lineage={
+                "source_work_item_id": "WI-SOURCE",
+                "source_run_id": "run-source",
+                "baseline_id": "run-source",
+            },
+            stage_start="idea",
+            stage_end="idea",
+        ),
+        stage_executor=_stage_executor,
+    )
+
+    manifest = json.loads(
+        run_manifest_path(
+            workspace_root=workspace_root,
+            work_item="WI-FOLLOW-UP",
+            run_id=result.run_id,
+        ).read_text(encoding="utf-8")
+    )
+    assert manifest["lineage"] == {
+        "baseline_id": "run-source",
+        "source_run_id": "run-source",
+        "source_work_item_id": "WI-SOURCE",
+    }
+
+
 def test_run_workflow_returns_stopped_result_on_stage_failure(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
 

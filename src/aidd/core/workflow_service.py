@@ -23,6 +23,7 @@ class WorkflowRunRequest:
     workspace_root: Path
     config_path: Path
     config_snapshot: Mapping[str, Any]
+    lineage: Mapping[str, Any] | None = None
     stage_start: str = STAGES[0]
     stage_end: str = STAGES[-1]
     log_follow: bool = False
@@ -122,6 +123,7 @@ def run_workflow(
         config_snapshot=dict(request.config_snapshot),
         workflow_stage_start=request.stage_start,
         workflow_stage_end=request.stage_end,
+        lineage=dict(request.lineage) if request.lineage is not None else None,
     )
     if emit is not None:
         emit(WorkflowRunEvent(kind="started", run_id=selected_run_id))

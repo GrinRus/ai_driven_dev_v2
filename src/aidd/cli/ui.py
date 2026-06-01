@@ -33,7 +33,7 @@ from aidd.cli.support import (
     _runtime_execution_mode_for_runtime,
     console,
 )
-from aidd.cli.ui_assets import _INDEX_HTML, _OPERATOR_CSS, _OPERATOR_JS
+from aidd.cli.ui_assets import operator_static_asset_for_route
 from aidd.cli.ui_http import (
     UiRequestBodyTooLarge,
     UiResponse,
@@ -43,18 +43,33 @@ from aidd.cli.ui_http import (
 )
 from aidd.config import AiddConfig, load_config
 from aidd.core.interview import AnswerResolution
+from aidd.core.next_flow import (
+    CloneFlowDraftRequest,
+    FollowUpDraftRequest,
+    FollowUpSourceSelection,
+    NextFlowLaunchPreflightRequest,
+    create_clone_flow_draft,
+    create_follow_up_work_item_draft,
+    validate_next_flow_launch_preflight,
+)
 from aidd.core.operator_frontend import (
     persist_operator_answer,
     resolve_operator_artifact_document_content,
     resolve_operator_artifacts_view,
     resolve_operator_dashboard_view,
+    resolve_operator_evidence_graph_view,
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
     resolve_operator_run_view,
+    resolve_operator_stage_document_workbench,
     resolve_operator_stage_view,
 )
 from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
-from aidd.core.run_store import next_attempt_number, run_attempt_root
+from aidd.core.run_store import (
+    next_attempt_number,
+    persist_run_archive_decision,
+    run_attempt_root,
+)
 from aidd.core.runtime_operator import (
     OPERATOR_DECISIONS_FILENAME,
     OPERATOR_REQUESTS_FILENAME,
@@ -70,6 +85,8 @@ from aidd.core.runtime_readiness import (
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
 )
+from aidd.core.stage_paths import workspace_relative_path
+from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.workflow_service import (
     WorkflowRunRequest,
@@ -411,6 +428,40 @@ def _optional_positive_int_param(params: dict[str, list[str]], name: str) -> int
     return value
 
 
+def _missing_runtime_log_payload(
+    *,
+    stage: str,
+    run_id: str | None,
+    attempt_number: int | None,
+    message: str,
+) -> dict[str, object]:
+    return {
+        "summary": {
+            "run_id": run_id,
+            "stage": stage,
+            "attempt_number": attempt_number,
+            "runtime_log_path": None,
+        },
+        "text": "",
+        "byte_size": 0,
+        "start_byte": 0,
+        "end_byte": 0,
+        "requested_bytes": 0,
+        "max_bytes": 0,
+        "truncated": False,
+        "truncated_head": False,
+        "truncated_tail": False,
+        "available": False,
+        "message": message,
+    }
+
+
+def _is_runtime_log_not_available(message: str) -> bool:
+    return message.startswith("Runtime log file does not exist:") or message.startswith(
+        "Runtime log path is missing in artifact index "
+    )
+
+
 def _cursor_param(params: dict[str, list[str]]) -> int:
     raw_cursor = _first_param(params, "cursor", "0")
     assert raw_cursor is not None
@@ -440,6 +491,93 @@ def _optional_run_id_from_payload(payload: dict[str, Any]) -> str | None:
     if not isinstance(raw_run_id, str):
         raise ValueError("run_id must be a string.")
     return raw_run_id.strip() or None
+
+
+def _source_run_id_from_payload(payload: dict[str, Any]) -> str:
+    raw_source_run = payload.get("source_run_id", payload.get("run_id"))
+    if not isinstance(raw_source_run, str):
+        raise ValueError("source_run_id is required.")
+    source_run_id = raw_source_run.strip()
+    if not source_run_id:
+        raise ValueError("source_run_id is required.")
+    return source_run_id
+
+
+def _source_work_item_from_payload(payload: dict[str, Any], *, default: str) -> str:
+    raw_source_work_item = payload.get("source_work_item", default)
+    if not isinstance(raw_source_work_item, str):
+        raise ValueError("source_work_item must be a string.")
+    source_work_item = raw_source_work_item.strip()
+    if not source_work_item:
+        raise ValueError("source_work_item is required.")
+    return source_work_item
+
+
+def _text_from_payload(
+    payload: dict[str, Any],
+    name: str,
+    *,
+    default: str | None = None,
+) -> str:
+    raw_value = payload.get(name, default)
+    if not isinstance(raw_value, str):
+        raise ValueError(f"{name} must be a string.")
+    value = raw_value.strip()
+    if not value:
+        raise ValueError(f"{name} is required.")
+    return value
+
+
+def _optional_text_from_payload(payload: dict[str, Any], name: str) -> str | None:
+    raw_value = payload.get(name)
+    if raw_value is None:
+        return None
+    if not isinstance(raw_value, str):
+        raise ValueError(f"{name} must be a string.")
+    value = raw_value.strip()
+    if not value:
+        raise ValueError(f"{name} is required when provided.")
+    return value
+
+
+def _optional_string_tuple_from_payload(
+    payload: dict[str, Any],
+    name: str,
+) -> tuple[str, ...] | None:
+    raw_values = payload.get(name)
+    if raw_values is None:
+        return None
+    if not isinstance(raw_values, list):
+        raise ValueError(f"{name} must be a list.")
+    values: list[str] = []
+    for index, item in enumerate(raw_values, 1):
+        if not isinstance(item, str):
+            raise ValueError(f"{name}[{index}] must be a string.")
+        normalized = item.strip()
+        if normalized:
+            values.append(normalized)
+    return tuple(values)
+
+
+def _contracts_root_from_payload(payload: dict[str, Any]) -> Path:
+    raw_contracts_root = payload.get("contracts_root")
+    if raw_contracts_root is None:
+        return DEFAULT_STAGE_CONTRACTS_ROOT
+    if not isinstance(raw_contracts_root, str):
+        raise ValueError("contracts_root must be a string.")
+    contracts_root = raw_contracts_root.strip()
+    if not contracts_root:
+        raise ValueError("contracts_root is required.")
+    return Path(contracts_root)
+
+
+def _optional_baseline_id_from_payload(payload: dict[str, Any]) -> str | None:
+    raw_baseline_id = payload.get("baseline_id")
+    if raw_baseline_id is None:
+        return None
+    if not isinstance(raw_baseline_id, str):
+        raise ValueError("baseline_id must be a string.")
+    return raw_baseline_id.strip() or None
 
 
 def _validate_runtime(runtime: str) -> None:
@@ -472,6 +610,463 @@ def _workflow_bounds_from_payload(payload: dict[str, Any]) -> tuple[str, str]:
             f"Stage start '{stage_start}' must not come after stage end '{stage_end}'."
         )
     return stage_start, stage_end
+
+
+def _next_flow_source_item(
+    *,
+    item_id: str,
+    kind: str,
+    title: str,
+    detail: str,
+    display_label: str | None = None,
+    priority: int = 50,
+    recommended: bool = False,
+    collapsible: bool = False,
+    stage: str | None = None,
+    artifact_key: str | None = None,
+    artifact_kind: str | None = None,
+    source_path: str | None = None,
+    selected: bool = False,
+) -> dict[str, object]:
+    return {
+        "id": item_id,
+        "kind": kind,
+        "title": title,
+        "detail": detail,
+        "display_label": display_label or title,
+        "priority": priority,
+        "recommended": recommended,
+        "collapsible": collapsible,
+        "stage": stage,
+        "artifact_key": artifact_key,
+        "artifact_kind": artifact_kind,
+        "source_path": source_path,
+        "selected": selected,
+    }
+
+
+def _next_flow_source_group(
+    *,
+    group_id: str,
+    label: str,
+    detail: str,
+    items: list[dict[str, object]],
+) -> dict[str, object]:
+    return {
+        "id": group_id,
+        "label": label,
+        "detail": detail,
+        "count": len(items),
+        "items": items,
+    }
+
+
+def _source_artifact_display_label(key: str) -> str:
+    labels = {
+        "qa_report": "Final QA report",
+        "stage_result": "QA stage result",
+        "validator_report": "Validator report",
+        "runtime_log": "Runtime log",
+        "runtime_jsonl": "Runtime event stream",
+        "runtime_exit_metadata": "Runtime exit metadata",
+        "events_jsonl": "Stage event log",
+        "input_bundle": "QA input bundle",
+        "questions": "Persisted questions",
+        "answers": "Persisted answers",
+        "stage_brief": "Stage brief",
+    }
+    return labels.get(key, key.replace("_", " ").title())
+
+
+def _qa_source_artifact_priority(key: str) -> int:
+    priorities = {
+        "qa_report": 10,
+        "stage_result": 30,
+        "validator_report": 35,
+        "runtime_log": 70,
+        "runtime_jsonl": 72,
+        "events_jsonl": 74,
+    }
+    return priorities.get(key, 60)
+
+
+def _qa_source_artifact_detail(key: str) -> str:
+    if key == "qa_report":
+        return "Primary completed-run QA evidence for follow-up scoping."
+    if key in {"stage_result", "validator_report"}:
+        return "Supporting pass/fail evidence for audit and acceptance checks."
+    if key.startswith("runtime") or key == "events_jsonl":
+        return "Supporting runtime evidence; use when the follow-up depends on execution traces."
+    return "Supporting QA artifact available for follow-up context when needed."
+
+
+def _next_flow_source_priority(item: Mapping[str, object]) -> int:
+    priority = item.get("priority", 50)
+    return priority if isinstance(priority, int) else 50
+
+
+def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
+    run = dashboard.run
+    handoff = dashboard.terminal_handoff
+    final_artifacts = tuple(handoff.final_artifacts) if handoff is not None else ()
+    qa_items = [
+        _next_flow_source_item(
+            item_id=f"qa-finding:{artifact.stage}:{artifact.key}",
+            kind="qa-finding",
+            title=f"QA artifact: {artifact.key}",
+            display_label=_source_artifact_display_label(artifact.key),
+            detail=_qa_source_artifact_detail(artifact.key),
+            priority=_qa_source_artifact_priority(artifact.key),
+            recommended=artifact.key == "qa_report",
+            collapsible=artifact.key != "qa_report",
+            stage=artifact.stage,
+            artifact_key=artifact.key,
+            artifact_kind=artifact.kind,
+            source_path=artifact.path,
+            selected=artifact.key == "qa_report",
+        )
+        for artifact in final_artifacts
+        if artifact.stage == "qa"
+    ]
+    review_items = [
+        _next_flow_source_item(
+            item_id=f"review-note:{artifact.stage}:{artifact.key}",
+            kind="review-note",
+            title=f"Review artifact: {artifact.key}",
+            display_label=_source_artifact_display_label(artifact.key),
+            detail="Carry forward review-stage notes or accepted risks.",
+            priority=20,
+            stage=artifact.stage,
+            artifact_key=artifact.key,
+            artifact_kind=artifact.kind,
+            source_path=artifact.path,
+        )
+        for artifact in dashboard.recent_artifacts
+        if artifact.stage == "review"
+    ]
+    failed_items = [
+        _next_flow_source_item(
+            item_id=f"failed-evidence:blocker:{index}",
+            kind="failed-evidence",
+            title=blocker.title,
+            display_label=blocker.title,
+            detail=blocker.detail,
+            priority=5,
+            recommended=True,
+            stage=blocker.stage,
+            artifact_key=blocker.kind,
+            artifact_kind="blocker",
+            source_path=blocker.path,
+            selected=blocker.severity == "error",
+        )
+        for index, blocker in enumerate(dashboard.blockers, start=1)
+    ]
+    manual_items = [
+        _next_flow_source_item(
+            item_id="manual-request:operator-note",
+            kind="manual-request",
+            title="Manual operator request",
+            display_label="Manual request",
+            detail="Add a scoped operator note in the follow-up definition step.",
+            priority=40,
+        )
+    ]
+    qa_items = sorted(qa_items, key=_next_flow_source_priority)
+    review_items = sorted(review_items, key=_next_flow_source_priority)
+    failed_items = sorted(failed_items, key=_next_flow_source_priority)
+    groups = (
+        _next_flow_source_group(
+            group_id="qa-findings",
+            label="QA findings",
+            detail=(
+                "Final QA report is the primary follow-up source; supporting QA "
+                "artifacts stay available as collapsed evidence."
+            ),
+            items=qa_items,
+        ),
+        _next_flow_source_group(
+            group_id="review-notes",
+            label="Review notes",
+            detail="Review-stage artifacts and accepted-risk notes available for handoff.",
+            items=review_items,
+        ),
+        _next_flow_source_group(
+            group_id="failed-evidence",
+            label="Failed evidence",
+            detail="Validation failures, blockers, or unresolved evidence to carry forward.",
+            items=failed_items,
+        ),
+        _next_flow_source_group(
+            group_id="manual-request",
+            label="Manual request",
+            detail="Operator-authored context that is captured before follow-up launch.",
+            items=manual_items,
+        ),
+    )
+    all_items = [*qa_items, *review_items, *failed_items, *manual_items]
+    recommended_items = [item for item in all_items if item["recommended"]]
+    clean_terminal = (
+        handoff is not None
+        and handoff.status == "completed"
+        and not handoff.blockers
+    )
+    return {
+        "source_work_item": dashboard.work_item,
+        "source_run_id": run.run_id,
+        "source_runtime_id": run.runtime_id,
+        "recommendation": (
+            "Clean QA run: follow-up is optional. Create New Work Item remains "
+            "the recommended next action unless the operator selects specific context."
+            if clean_terminal
+            else "Carry forward the recommended source findings before starting follow-up work."
+        ),
+        "groups": groups,
+        "counts": {
+            "total_items": len(all_items),
+            "selected_defaults": sum(1 for item in all_items if item["selected"]),
+            "recommended_items": len(recommended_items),
+            "collapsible_items": sum(1 for item in all_items if item["collapsible"]),
+            "source_artifact_links": sum(1 for item in all_items if item["source_path"]),
+            "required_context_groups": len(groups),
+        },
+    }
+
+
+def _selected_source_ids_from_payload(payload: dict[str, Any]) -> tuple[str, ...]:
+    raw_ids = payload.get("selected_source_ids")
+    if not isinstance(raw_ids, list):
+        raise ValueError("selected_source_ids must be a list.")
+    selected = tuple(item.strip() for item in raw_ids if isinstance(item, str) and item.strip())
+    if not selected:
+        raise ValueError("At least one source finding must be selected.")
+    return selected
+
+
+def _selected_next_flow_source_items(
+    *,
+    dashboard: Any,
+    selected_source_ids: tuple[str, ...],
+) -> tuple[dict[str, object], ...]:
+    findings = _next_flow_source_findings_payload(dashboard)
+    groups = cast(tuple[dict[str, object], ...], findings["groups"])
+    items_by_id = {
+        str(item["id"]): item
+        for group in groups
+        for item in cast(list[dict[str, object]], group["items"])
+    }
+    missing_ids = tuple(item_id for item_id in selected_source_ids if item_id not in items_by_id)
+    if missing_ids:
+        raise ValueError(
+            "Selected source findings do not match this source run: "
+            f"{', '.join(missing_ids)}."
+        )
+    selected_items = tuple(items_by_id[item_id] for item_id in selected_source_ids)
+    if not selected_items:
+        raise ValueError("Selected source findings do not match this source run.")
+    return selected_items
+
+
+def _follow_up_source_selections_from_items(
+    selected_items: tuple[dict[str, object], ...],
+) -> tuple[FollowUpSourceSelection, ...]:
+    selections: list[FollowUpSourceSelection] = []
+    for item in selected_items:
+        item_id = str(item.get("id") or "")
+        source_path = item.get("source_path")
+        if not isinstance(source_path, str) or not source_path.strip():
+            if item.get("kind") != "manual-request":
+                raise ValueError(
+                    f"Selected source '{item_id}' has no source artifact path."
+                )
+            source_path = None
+        raw_stage = item.get("stage")
+        selections.append(
+            FollowUpSourceSelection(
+                kind=str(item.get("kind") or ""),
+                title=str(item.get("title") or ""),
+                source_path=source_path,
+                stage=raw_stage if isinstance(raw_stage, str) else None,
+                note=str(item.get("detail") or "") or None,
+            )
+        )
+    return tuple(selections)
+
+
+def _next_flow_follow_up_draft_payload(
+    *,
+    dashboard: Any,
+    selected_source_ids: tuple[str, ...],
+    new_work_item: str | None = None,
+    title: str | None = None,
+) -> dict[str, object]:
+    findings = _next_flow_source_findings_payload(dashboard)
+    selected_items = _selected_next_flow_source_items(
+        dashboard=dashboard,
+        selected_source_ids=selected_source_ids,
+    )
+    source_run_id = str(findings["source_run_id"] or "")
+    source_work_item = str(findings["source_work_item"] or "")
+    resolved_new_work_item = new_work_item or f"{source_work_item}-FOLLOW-UP"
+    resolved_title = title or f"Follow-up for {source_work_item} from {source_run_id}"
+    acceptance_criteria = tuple(
+        f"Resolve follow-up source: {item['title']}" for item in selected_items
+    )
+    required_evidence = tuple(
+        f"Updated evidence for {item['title']}"
+        for item in selected_items
+        if item.get("source_path")
+    )
+    selected_lines = "\n".join(
+        f"- `{item['kind']}` {item['title']} ({item.get('source_path') or 'manual request'})"
+        for item in selected_items
+    )
+    criteria_lines = "\n".join(f"- {criterion}" for criterion in acceptance_criteria)
+    preview = "\n".join(
+        (
+            f"# {resolved_title}",
+            "",
+            f"Source work item: `{source_work_item}`.",
+            f"Source run: `{source_run_id}`.",
+            "",
+            "## Selected source findings",
+            "",
+            selected_lines,
+            "",
+            "## Acceptance criteria",
+            "",
+            criteria_lines,
+            "",
+        )
+    )
+    return {
+        "draft": {
+            "source_work_item": source_work_item,
+            "source_run_id": source_run_id,
+            "new_work_item": resolved_new_work_item,
+            "title": resolved_title,
+            "selected_sources": selected_items,
+            "acceptance_criteria": acceptance_criteria,
+            "required_evidence": required_evidence,
+            "inherited_context": (
+                {
+                    "id": "source-run-lineage",
+                    "label": "Source run lineage",
+                    "detail": f"Keep parent run {source_run_id} visible on the new work item.",
+                    "enabled": True,
+                },
+                {
+                    "id": "selected-artifacts",
+                    "label": "Selected artifact links",
+                    "detail": f"{len(required_evidence)} selected source artifacts stay linked.",
+                    "enabled": True,
+                },
+                {
+                    "id": "baseline-snapshot",
+                    "label": "Baseline snapshot",
+                    "detail": "Use the source run as launch baseline until preflight resolves a newer baseline.",
+                    "enabled": True,
+                },
+            ),
+            "first_stage_input_preview": preview,
+        }
+    }
+
+
+def _workspace_response_path(workspace_root: Path, path: Path) -> str:
+    return workspace_relative_path(workspace_root, path)
+
+
+def _follow_up_creation_payload(
+    *,
+    workspace_root: Path,
+    result: Any,
+) -> dict[str, object]:
+    return {
+        "work_item": result.work_item,
+        "request_path": _workspace_response_path(workspace_root, result.request_path),
+        "source_artifact_paths": result.source_artifact_paths,
+        "context": {
+            "user_request_path": _workspace_response_path(
+                workspace_root,
+                result.context_seed.user_request_path,
+            ),
+            "intake_path": _workspace_response_path(
+                workspace_root,
+                result.context_seed.intake_path,
+            ),
+        },
+    }
+
+
+def _draft_string_tuple(
+    draft: Mapping[str, object],
+    name: str,
+) -> tuple[str, ...]:
+    raw_values = draft.get(name, ())
+    if not isinstance(raw_values, (list, tuple)):
+        return ()
+    values: list[str] = []
+    for item in raw_values:
+        normalized = str(item).strip()
+        if normalized:
+            values.append(normalized)
+    return tuple(values)
+
+
+def _draft_inherited_context_lines(draft: Mapping[str, object]) -> tuple[str, ...]:
+    raw_values = draft.get("inherited_context", ())
+    if not isinstance(raw_values, (list, tuple)):
+        return ()
+    lines: list[str] = []
+    for item in raw_values:
+        if not isinstance(item, Mapping):
+            continue
+        label = str(item.get("label") or "").strip()
+        detail = str(item.get("detail") or "").strip()
+        if label and detail:
+            lines.append(f"{label}: {detail}")
+        elif label:
+            lines.append(label)
+    return tuple(lines)
+
+
+def _clone_creation_payload(
+    *,
+    workspace_root: Path,
+    result: Any,
+) -> dict[str, object]:
+    return {
+        "work_item": result.work_item,
+        "draft_path": _workspace_response_path(workspace_root, result.draft_path),
+        "context": {
+            "user_request_path": _workspace_response_path(
+                workspace_root,
+                result.context_seed.user_request_path,
+            ),
+            "intake_path": _workspace_response_path(
+                workspace_root,
+                result.context_seed.intake_path,
+            ),
+        },
+        "config": result.config,
+    }
+
+
+def _next_flow_launch_lineage(
+    *,
+    source_work_item: str,
+    source_run_id: str,
+    baseline_id: str | None,
+    relationship: str,
+) -> dict[str, object]:
+    lineage: dict[str, object] = {
+        "source_work_item_id": source_work_item,
+        "source_run_id": source_run_id,
+        "relationship": relationship,
+    }
+    if baseline_id is not None:
+        lineage["baseline_id"] = baseline_id
+    return lineage
 
 
 def _exit_code_from_result(result: object) -> int:
@@ -635,23 +1230,11 @@ class OperatorUiService:
 
     def handle_get(self, path: str, params: dict[str, list[str]]) -> UiResponse:
         try:
-            if path == "/":
+            if static_asset := operator_static_asset_for_route(path):
                 return UiResponse(
                     status=int(HTTPStatus.OK),
-                    content_type="text/html; charset=utf-8",
-                    body=_INDEX_HTML.encode("utf-8"),
-                )
-            if path == "/operator.js":
-                return UiResponse(
-                    status=int(HTTPStatus.OK),
-                    content_type="text/javascript; charset=utf-8",
-                    body=_OPERATOR_JS.encode("utf-8"),
-                )
-            if path == "/operator.css":
-                return UiResponse(
-                    status=int(HTTPStatus.OK),
-                    content_type="text/css; charset=utf-8",
-                    body=_OPERATOR_CSS.encode("utf-8"),
+                    content_type=static_asset.content_type,
+                    body=static_asset.text.encode("utf-8"),
                 )
             if path == "/favicon.ico":
                 return UiResponse(
@@ -688,6 +1271,15 @@ class OperatorUiService:
                         ),
                     }
                 )
+            if path == "/api/next-flow/source-findings":
+                dashboard = resolve_operator_dashboard_view(
+                    workspace_root=self.workspace_root,
+                    work_item=self.options.work_item,
+                    active_stage="qa",
+                    run_id=_first_param(params, "run_id"),
+                    project_root=Path.cwd(),
+                )
+                return _json_response(_next_flow_source_findings_payload(dashboard))
             if path == "/api/runtime-readiness":
                 return _json_response(self._runtime_readiness())
             if path == "/api/stage":
@@ -714,15 +1306,30 @@ class OperatorUiService:
             if path == "/api/logs":
                 stage = _first_param(params, "stage", STAGES[0])
                 assert stage is not None
-                summary = resolve_operator_run_log_view(
-                    workspace_root=self.workspace_root,
-                    work_item=self.options.work_item,
-                    stage=stage,
-                    run_id=_first_param(params, "run_id"),
-                    attempt_number=_optional_attempt(params),
-                    tail_bytes=_optional_positive_int_param(params, "tail"),
-                    limit_bytes=_optional_positive_int_param(params, "limit"),
-                )
+                run_id = _first_param(params, "run_id")
+                attempt_number = _optional_attempt(params)
+                try:
+                    summary = resolve_operator_run_log_view(
+                        workspace_root=self.workspace_root,
+                        work_item=self.options.work_item,
+                        stage=stage,
+                        run_id=run_id,
+                        attempt_number=attempt_number,
+                        tail_bytes=_optional_positive_int_param(params, "tail"),
+                        limit_bytes=_optional_positive_int_param(params, "limit"),
+                    )
+                except ValueError as exc:
+                    message = str(exc)
+                    if _is_runtime_log_not_available(message):
+                        return _json_response(
+                            _missing_runtime_log_payload(
+                                stage=stage,
+                                run_id=run_id,
+                                attempt_number=attempt_number,
+                                message="Runtime log is not available yet.",
+                            )
+                        )
+                    raise
                 return _json_response(
                     {
                         "summary": summary.summary,
@@ -735,6 +1342,8 @@ class OperatorUiService:
                         "truncated": summary.truncated,
                         "truncated_head": summary.truncated_head,
                         "truncated_tail": summary.truncated_tail,
+                        "available": True,
+                        "message": None,
                     }
                 )
             if path == "/api/jobs":
@@ -746,6 +1355,37 @@ class OperatorUiService:
                 assert stage is not None
                 return _json_response(
                     resolve_operator_artifacts_view(
+                        workspace_root=self.workspace_root,
+                        work_item=self.options.work_item,
+                        stage=stage,
+                        run_id=_first_param(params, "run_id"),
+                        attempt_number=_optional_attempt(params),
+                    )
+                )
+            if path == "/api/stage/workbench":
+                stage = _first_param(params, "stage", STAGES[0])
+                assert stage is not None
+                return _json_response(
+                    resolve_operator_stage_document_workbench(
+                        workspace_root=self.workspace_root,
+                        work_item=self.options.work_item,
+                        stage=stage,
+                        key=_first_param(params, "key"),
+                        run_id=_first_param(params, "run_id"),
+                        attempt_number=_optional_attempt(params),
+                        preview_limit_bytes=_optional_positive_int_param(
+                            params, "preview_limit"
+                        ),
+                        source_limit_bytes=_optional_positive_int_param(
+                            params, "source_limit"
+                        ),
+                    )
+                )
+            if path == "/api/artifacts/evidence-graph":
+                stage = _first_param(params, "stage", STAGES[0])
+                assert stage is not None
+                return _json_response(
+                    resolve_operator_evidence_graph_view(
                         workspace_root=self.workspace_root,
                         work_item=self.options.work_item,
                         stage=stage,
@@ -805,6 +1445,18 @@ class OperatorUiService:
                 return _json_response(self._start_stage_job(payload))
             if path == "/api/stage/interact":
                 return _json_response(self._start_stage_interact_job(payload))
+            if path == "/api/next-flow/preflight":
+                return self._next_flow_preflight(payload)
+            if path == "/api/next-flow/follow-up-draft":
+                return self._next_flow_follow_up_draft(payload)
+            if path == "/api/next-flow/follow-up-draft/create":
+                return self._next_flow_create_follow_up_draft(payload)
+            if path == "/api/next-flow/clone-draft/create":
+                return self._next_flow_create_clone_draft(payload)
+            if path == "/api/next-flow/launch":
+                return self._next_flow_launch(payload)
+            if path == "/api/next-flow/archive":
+                return self._next_flow_archive(payload)
             if path == "/api/workflow/run":
                 return _json_response(self._start_workflow_job(payload))
             if path == "/api/open-folder":
@@ -1171,6 +1823,275 @@ class OperatorUiService:
 
         return self._start_job(kind="workflow", stage=None, target=_target)
 
+    def _next_flow_preflight(self, payload: dict[str, Any]) -> UiResponse:
+        result = validate_next_flow_launch_preflight(
+            NextFlowLaunchPreflightRequest(
+                workspace_root=self.workspace_root,
+                source_work_item=_source_work_item_from_payload(
+                    payload,
+                    default=self.options.work_item,
+                ),
+                source_run_id=_source_run_id_from_payload(payload),
+                runtime_id=_runtime_from_payload(payload),
+                contracts_root=_contracts_root_from_payload(payload),
+                baseline_id=_optional_baseline_id_from_payload(payload),
+            )
+        )
+        if result.status == "blocked":
+            return _json_response(result.error_payload, status=HTTPStatus.CONFLICT)
+        return _json_response({"preflight": result})
+
+    def _next_flow_follow_up_draft(self, payload: dict[str, Any]) -> UiResponse:
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=self.options.work_item,
+            active_stage="qa",
+            run_id=_source_run_id_from_payload(payload),
+            project_root=Path.cwd(),
+        )
+        return _json_response(
+            _next_flow_follow_up_draft_payload(
+                dashboard=dashboard,
+                selected_source_ids=_selected_source_ids_from_payload(payload),
+            )
+        )
+
+    def _next_flow_create_follow_up_draft(self, payload: dict[str, Any]) -> UiResponse:
+        source_work_item = _source_work_item_from_payload(
+            payload,
+            default=self.options.work_item,
+        )
+        source_run_id = _source_run_id_from_payload(payload)
+        selected_source_ids = _selected_source_ids_from_payload(payload)
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=source_work_item,
+            active_stage="qa",
+            run_id=source_run_id,
+            project_root=Path.cwd(),
+        )
+        draft_payload = _next_flow_follow_up_draft_payload(
+            dashboard=dashboard,
+            selected_source_ids=selected_source_ids,
+            new_work_item=_text_from_payload(
+                payload,
+                "new_work_item",
+                default=f"{source_work_item}-FOLLOW-UP",
+            ),
+            title=_text_from_payload(
+                payload,
+                "title",
+                default=f"Follow-up for {source_work_item} from {source_run_id}",
+            ),
+        )
+        draft = cast(dict[str, object], draft_payload["draft"])
+        selected_sources = cast(
+            tuple[dict[str, object], ...],
+            draft["selected_sources"],
+        )
+        first_stage_input = (
+            _optional_text_from_payload(payload, "first_stage_input")
+            or _optional_text_from_payload(payload, "first_stage_input_preview")
+            or str(draft["first_stage_input_preview"]).strip()
+        )
+        acceptance_criteria = _optional_string_tuple_from_payload(
+            payload,
+            "acceptance_criteria",
+        )
+        required_evidence = _optional_string_tuple_from_payload(
+            payload,
+            "required_evidence",
+        )
+        inherited_context = _optional_string_tuple_from_payload(
+            payload,
+            "inherited_context",
+        )
+        resolved_acceptance_criteria = (
+            acceptance_criteria
+            if acceptance_criteria is not None
+            else _draft_string_tuple(draft, "acceptance_criteria")
+        )
+        resolved_required_evidence = (
+            required_evidence
+            if required_evidence is not None
+            else _draft_string_tuple(draft, "required_evidence")
+        )
+        resolved_inherited_context = (
+            inherited_context
+            if inherited_context is not None
+            else _draft_inherited_context_lines(draft)
+        )
+        draft["first_stage_input_preview"] = first_stage_input
+        draft["acceptance_criteria"] = resolved_acceptance_criteria
+        draft["required_evidence"] = resolved_required_evidence
+        draft["inherited_context_lines"] = resolved_inherited_context
+        result = create_follow_up_work_item_draft(
+            FollowUpDraftRequest(
+                workspace_root=self.workspace_root,
+                source_work_item=source_work_item,
+                source_run_id=source_run_id,
+                new_work_item=str(draft["new_work_item"]),
+                title=str(draft["title"]),
+                selections=_follow_up_source_selections_from_items(selected_sources),
+                first_stage_input=first_stage_input,
+                acceptance_criteria=resolved_acceptance_criteria,
+                required_evidence=resolved_required_evidence,
+                inherited_context=resolved_inherited_context,
+                project_root=Path.cwd(),
+            )
+        )
+        return _json_response(
+            {
+                "draft": draft,
+                "created": _follow_up_creation_payload(
+                    workspace_root=self.workspace_root,
+                    result=result,
+                ),
+            },
+            status=HTTPStatus.CREATED,
+        )
+
+    def _next_flow_create_clone_draft(self, payload: dict[str, Any]) -> UiResponse:
+        source_work_item = _source_work_item_from_payload(
+            payload,
+            default=self.options.work_item,
+        )
+        source_run_id = _source_run_id_from_payload(payload)
+        new_work_item = _text_from_payload(
+            payload,
+            "new_work_item",
+            default=f"{source_work_item}-CLONE",
+        )
+        title = _text_from_payload(
+            payload,
+            "title",
+            default=f"Clone {source_work_item} from {source_run_id}",
+        )
+        result = create_clone_flow_draft(
+            CloneFlowDraftRequest(
+                workspace_root=self.workspace_root,
+                source_work_item=source_work_item,
+                source_run_id=source_run_id,
+                new_work_item=new_work_item,
+                title=title,
+                project_root=Path.cwd(),
+            )
+        )
+        return _json_response(
+            {
+                "draft": {
+                    "source_work_item": source_work_item,
+                    "source_run_id": source_run_id,
+                    "new_work_item": result.work_item,
+                    "title": title,
+                },
+                "created": _clone_creation_payload(
+                    workspace_root=self.workspace_root,
+                    result=result,
+                ),
+            },
+            status=HTTPStatus.CREATED,
+        )
+
+    def _next_flow_launch(self, payload: dict[str, Any]) -> UiResponse:
+        source_work_item = _source_work_item_from_payload(
+            payload,
+            default=self.options.work_item,
+        )
+        source_run_id = _source_run_id_from_payload(payload)
+        new_work_item = _text_from_payload(payload, "new_work_item")
+        runtime = _runtime_from_payload(payload)
+        _validate_runtime(runtime)
+        preflight = validate_next_flow_launch_preflight(
+            NextFlowLaunchPreflightRequest(
+                workspace_root=self.workspace_root,
+                source_work_item=source_work_item,
+                source_run_id=source_run_id,
+                runtime_id=runtime,
+                contracts_root=_contracts_root_from_payload(payload),
+                baseline_id=_optional_baseline_id_from_payload(payload),
+            )
+        )
+        if preflight.status == "blocked":
+            return _json_response(preflight.error_payload, status=HTTPStatus.CONFLICT)
+        lineage = _next_flow_launch_lineage(
+            source_work_item=source_work_item,
+            source_run_id=source_run_id,
+            baseline_id=preflight.resolved_baseline_id,
+            relationship=_text_from_payload(
+                payload,
+                "relationship",
+                default="follow-up",
+            ),
+        )
+        prepared_payload = dict(payload)
+        prepared_payload["runtime"] = runtime
+        prepared_payload["log_follow"] = bool(payload.get("log_follow", True))
+
+        def _target(job_id: str) -> object:
+            return self._run_workflow(
+                prepared_payload,
+                job_id=job_id,
+                work_item=new_work_item,
+                config_snapshot_extra={
+                    "mode": "ui-next-flow-launch",
+                    "source_work_item": source_work_item,
+                    "source_run_id": source_run_id,
+                    "new_work_item": new_work_item,
+                },
+                lineage=lineage,
+            )
+
+        job = cast(
+            dict[str, object],
+            self._start_job(kind="next-flow-launch", stage=None, target=_target),
+        )
+        job["work_item"] = new_work_item
+        job["source_work_item"] = source_work_item
+        job["source_run_id"] = source_run_id
+        job["lineage"] = lineage
+        job["preflight"] = preflight
+        return _json_response(job, status=HTTPStatus.ACCEPTED)
+
+    def _next_flow_archive(self, payload: dict[str, Any]) -> UiResponse:
+        run_id = _source_run_id_from_payload(payload)
+        work_item = _source_work_item_from_payload(
+            payload,
+            default=self.options.work_item,
+        )
+        reason = payload.get("reason")
+        if reason is not None and not isinstance(reason, str):
+            raise ValueError("reason must be a string.")
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=work_item,
+            active_stage="qa",
+            run_id=run_id,
+            project_root=Path.cwd(),
+        )
+        if dashboard.terminal_handoff is None:
+            raise ValueError("archive decision requires a terminal QA run.")
+        archive = persist_run_archive_decision(
+            workspace_root=self.workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            reason=reason,
+            source="ui",
+        )
+        updated_dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=work_item,
+            active_stage="qa",
+            run_id=run_id,
+            project_root=Path.cwd(),
+        )
+        return _json_response(
+            {
+                "archive": archive,
+                "dashboard": updated_dashboard,
+            }
+        )
+
     def _start_job(
         self,
         *,
@@ -1214,14 +2135,33 @@ class OperatorUiService:
         threading.Thread(target=_run, name=f"aidd-ui-{kind}-{job_id}", daemon=True).start()
         return {"job_id": job_id, "stage": stage, "kind": kind}
 
-    def _run_workflow(self, payload: dict[str, Any], *, job_id: str) -> object:
+    def _run_workflow(
+        self,
+        payload: dict[str, Any],
+        *,
+        job_id: str,
+        work_item: str | None = None,
+        config_snapshot_extra: Mapping[str, Any] | None = None,
+        lineage: Mapping[str, Any] | None = None,
+    ) -> object:
         runtime = _runtime_from_payload(payload)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
         run_id = _optional_run_id_from_payload(payload)
         log_follow = bool(payload.get("log_follow", True))
+        target_work_item = work_item or self.options.work_item
         cfg = load_config(self.options.config)
         runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
         runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
+        config_snapshot: dict[str, Any] = {
+            "config_path": self.options.config.as_posix(),
+            "workspace_root": self.workspace_root.as_posix(),
+            "runtime_command": runtime_command,
+            "runtime_execution_mode": runtime_execution_mode.value,
+            "log_follow": log_follow,
+            "mode": "ui-workflow",
+        }
+        if config_snapshot_extra is not None:
+            config_snapshot.update(config_snapshot_extra)
 
         def _stage_executor(request: WorkflowStageExecutionRequest) -> None:
             try:
@@ -1256,18 +2196,12 @@ class OperatorUiService:
 
         return self._workflow_runner(
             request=WorkflowRunRequest(
-                work_item=self.options.work_item,
+                work_item=target_work_item,
                 runtime_id=runtime,
                 workspace_root=self.workspace_root,
                 config_path=self.options.config,
-                config_snapshot={
-                    "config_path": self.options.config.as_posix(),
-                    "workspace_root": self.workspace_root.as_posix(),
-                    "runtime_command": runtime_command,
-                    "runtime_execution_mode": runtime_execution_mode.value,
-                    "log_follow": log_follow,
-                    "mode": "ui-workflow",
-                },
+                config_snapshot=config_snapshot,
+                lineage=lineage,
                 run_id=run_id,
                 stage_start=stage_start,
                 stage_end=stage_end,

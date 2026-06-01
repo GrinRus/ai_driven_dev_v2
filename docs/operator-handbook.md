@@ -337,7 +337,54 @@ Keep generated `.aidd/` state inside the local project. Do not move it into the
 AIDD source checkout or commit it unless the target repository has its own policy
 for committed operator artifacts.
 
-### 6.6 Product scope boundary
+### 6.6 Completed-run handoff and next-flow actions
+
+When a run reaches terminal `qa`, the local UI command center switches to
+**Flow Complete**. Treat this screen as the operator handoff point, not as a continuation
+of the completed source run. The handoff summarizes final QA status, final artifacts,
+open blockers, repair counts, approval counts, answered-question counts, recommended
+next-flow actions, runtime/config context, and source-run lineage.
+
+Available next-flow actions:
+
+- **Create New Work Item**: start unrelated follow-on work from a new work item. Use this
+  when the completed run is accepted and the next request does not need inherited
+  findings.
+- **Start Follow-up Flow**: select source findings from QA findings, review notes, failed
+  evidence, or a manual operator request. AIDD creates a follow-up draft with editable
+  title, acceptance criteria, required evidence, inherited-context toggles, first-stage
+  input preview, and durable source-run references.
+- **Clone This Flow**: create an editable cloned-flow draft that carries forward runtime
+  id, prompt pack, contracts path, branch or commit, resources, and baseline references
+  before launch. The clone gets a new run or work item identity.
+- **Run Eval / Scenario Batch**: hand the completed source run and selected artifacts to
+  eval or scenario planning. This is an operator handoff; it must not silently launch a
+  nested public-repository live flow.
+- **Archive Run**: record the local operator archive decision, timestamp, and reason.
+  Archive does not delete artifacts, hide final QA evidence, or block read-only run
+  history inspection.
+
+Follow-up and cloned flows are independent child work items or runs. They reference the
+source work item, source run id, selected source artifacts, and baseline metadata, but
+they do not mutate the completed source run. Use Run History / Lineage to verify parent
+run, current run, child work item candidates, archive state, and linked final artifacts.
+
+Before launch, the next-flow preflight must show visible lineage and evaluate a writable
+`.aidd/` workspace, explicit runtime selection, contracts availability, source-run
+existence, and baseline availability. Blocking preflight results disable launch until
+fixed; warning results may proceed only when the operator intentionally accepts the risk.
+
+Keep the two evidence lanes distinct:
+
+- Local-project UI evidence proves the product operator behavior: Flow Complete,
+  Start Next Flow, follow-up draft creation, clone draft review, launch preflight,
+  archive behavior, and Run History / Lineage inside the target local project.
+- Public-repository live E2E records a terminal next-flow checkpoint after `qa`.
+  It is manual audit evidence, not CI/CD. It does not require launching a second
+  public-repository flow by default; the optional maintained-scenario follow-up proof
+  creates draft lineage evidence only when the operator explicitly enables it.
+
+### 6.7 Product scope boundary
 
 There is no supported `aidd init --github-issue <url>` product command. GitHub
 issue URLs may appear in historical live E2E reports or support reports, but current

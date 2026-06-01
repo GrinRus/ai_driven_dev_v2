@@ -28,6 +28,7 @@ def _empty_live_command_env() -> dict[str, str]:
         "AIDD_EVAL_CLAUDE_CODE_COMMAND": "",
         "AIDD_EVAL_CODEX_COMMAND": "",
         "AIDD_EVAL_OPENCODE_COMMAND": "",
+        "AIDD_EVAL_QWEN_COMMAND": "",
     }
 
 
@@ -159,6 +160,29 @@ def test_resolve_live_runtime_command_entries_uses_claude_env_override_as_adapte
     assert entries["claude-code"].source == "environment"
 
 
+def test_resolve_live_runtime_command_entries_defaults_qwen_to_native() -> None:
+    entries = resolve_live_runtime_command_entries(
+        environment=_empty_live_command_env(),
+    )
+
+    assert entries["qwen"].execution_mode is RuntimeExecutionMode.NATIVE
+    assert entries["qwen"].command.startswith("qwen --approval-mode yolo")
+    assert entries["qwen"].source == "default-native"
+
+
+def test_resolve_live_runtime_command_entries_uses_qwen_env_override_as_adapter_flags() -> None:
+    entries = resolve_live_runtime_command_entries(
+        environment={
+            **_empty_live_command_env(),
+            "AIDD_EVAL_QWEN_COMMAND": "/tmp/aidd-qwen-wrapper",
+        },
+    )
+
+    assert entries["qwen"].execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
+    assert entries["qwen"].command == "/tmp/aidd-qwen-wrapper"
+    assert entries["qwen"].source == "environment"
+
+
 def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     config_path = write_live_runtime_config(
         working_copy_path=tmp_path,
@@ -186,7 +210,8 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert 'mode = "native"' in config_text
     assert "[runtime.opencode]" in config_text
     assert 'command = "opencode run --format json --dangerously-skip-permissions"' in config_text
-    assert "[runtime.qwen]" not in config_text
+    assert "[runtime.qwen]" in config_text
+    assert 'command = "qwen --approval-mode yolo --output-format stream-json"' in config_text
     assert "[runtime.generic_cli]" not in config_text
     assert config_text.count("timeout_seconds = 1200") == 2
     assert "[runtime.claude_code.stage_timeouts]" in config_text
@@ -216,6 +241,8 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert "idea = 1500" in config_text
     assert "plan = 1500" in config_text
     assert "review-spec = 1500" in config_text
+    assert config["runtime"]["qwen"]["timeout_seconds"] == 1800
+    assert config["runtime"]["qwen"]["stage_timeouts"] == codex_stage_timeouts
 
 
 def test_write_live_runtime_config_records_env_override_as_adapter_flags(
@@ -341,6 +368,30 @@ def test_validate_live_runtime_command_checks_claude_native_executable(
     assert entry.command.startswith("claude -p")
 
 
+def test_validate_live_runtime_command_checks_qwen_native_executable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    qwen = bin_dir / "qwen"
+    qwen.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    qwen.chmod(0o755)
+    monkeypatch.setenv("PATH", "")
+
+    entry = validate_live_runtime_command(
+        runtime_id="qwen",
+        scenario=_scenario(runtime_targets=("qwen",)),
+        environment={
+            **_empty_live_command_env(),
+            "PATH": bin_dir.as_posix(),
+        },
+    )
+
+    assert entry.execution_mode is RuntimeExecutionMode.NATIVE
+    assert entry.command.startswith("qwen --approval-mode yolo")
+
+
 def test_validate_live_runtime_command_fails_before_repo_prep_when_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -355,7 +406,7 @@ def test_validate_live_runtime_command_fails_before_repo_prep_when_missing(
 
 
 def test_validate_live_runtime_command_rejects_generic_cli_for_live() -> None:
-    with pytest.raises(RuntimeError, match="real maintained runtimes"):
+    with pytest.raises(RuntimeError, match="supported live runtimes"):
         validate_live_runtime_command(
             runtime_id="generic-cli",
             scenario=_scenario(runtime_targets=("generic-cli",)),

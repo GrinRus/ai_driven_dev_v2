@@ -669,9 +669,13 @@ def _print_stage_interact_start(
         f"stage={options.stage} work_item={options.work_item} runtime={options.runtime} "
         f"log_follow={options.log_follow} run_id={run_id}"
     )
-    console.print(f"Operator request: {request_path.as_posix()}")
+    _print_operator_request_path(request_path)
     if options.log_follow:
         console.print("Live-log follow mode enabled for intervention runtime output.")
+
+
+def _print_operator_request_path(request_path: Path) -> None:
+    console.print(f"Operator request: {request_path.as_posix()}", soft_wrap=True)
 
 
 def _print_stage_interact_result(
@@ -685,7 +689,7 @@ def _print_stage_interact_result(
         orchestration=orchestration,
         stage_attempt_count=stage_attempt_count,
     )
-    console.print(f"Operator request: {request_path.as_posix()}")
+    _print_operator_request_path(request_path)
     console.print(f"Intervention attempt: {intervention_attempt_number}")
 
 

@@ -6,15 +6,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-No immediate tasks queued.
-
 ## Soon
 
-No near-term tasks queued.
-
 ## Parking lot
-
-No deferred tasks queued.
 
 ## Update rules
 
@@ -169,3 +163,152 @@ No deferred tasks queued.
   reconcile non-terminal inspected stage metadata to `failed`, write timeout
   reconciliation evidence, and keep the evidence local. Wave 24 is closed and the active
   backlog queue is empty.
+- `2026-05-27` Wave 26 was opened for the accepted Mission Control operator UI and
+  completed-flow lineage behavior; promoted `W26-E1-S1-T1` to `Next`, core lineage
+  follow-up plus static UI refactoring foundation tasks to `Soon`, and kept the
+  remaining core read-model, UI, API, deterministic coverage, local-project E2E, and
+  public live E2E next-flow checkpoint tasks plus operator documentation follow-up in
+  `Parking lot`.
+- `2026-05-27` After rebasing on remote `origin/main`, latest-main UI analysis found no
+  new remote commits beyond the branch base, but confirmed current main already split
+  packaged static assets and core operator frontend read models while leaving
+  `operator.js`, `operator.css`, and script-string UI tests large. `W26-E2-S0` was added
+  so static UI module/CSS/test refactoring happens before Mission Control screen rollout.
+- `2026-05-28` Completed `W26-E1-S1-T1`; terminal-run handoff now exposes final QA
+  status, final artifacts, blockers, repair counts, approval counts, answered
+  questions, and recommended next-flow actions. `W26-E1-S1-T2` is promoted to `Next`.
+- `2026-05-28` Completed `W26-E1-S1-T2`; lineage references for source run, source work
+  item, baseline, and child work item candidates now flow through core run/work-item read
+  models. `W26-E1-S2-T1` is promoted to `Next`.
+- `2026-05-28` Completed `W26-E1-S2-T1`; follow-up draft creation now writes durable
+  work-item context with source-run lineage and referenced source artifacts. `W26-E1-S2-T2`
+  is promoted to `Next`, and `W26-E1-S2-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E1-S2-T2`; clone-flow draft creation now records editable
+  runtime, prompt-pack, resource, commit, and baseline configuration before launch.
+  `W26-E1-S2-T3` is promoted to `Next`.
+- `2026-05-28` Completed `W26-E1-S2-T3`; next-flow launch preflight now checks writable
+  workspace state, runtime selection, contract availability, source-run existence, and
+  baseline availability before runtime execution. `W26-E2-S0-T1` is promoted to `Next`.
+- `2026-05-28` Completed `W26-E2-S0-T1`; the local UI now serves packaged static assets
+  through a manifest-backed loader while preserving `/operator.js` and `/operator.css`
+  compatibility routes. `W26-E2-S0-T2` is promoted to `Next`, and `W26-E2-S0-T3` is
+  promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S0-T2`; `operator.js` is now a compatibility bootstrap
+  that loads smaller packaged browser modules for API/state, shell rendering, cockpit,
+  artifacts, logs/jobs, questions, approvals/interventions, and next-flow actions.
+  `W26-E2-S0-T3` is promoted to `Next`, and `W26-E2-S0-T4` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S0-T3`; `operator.css` is now a compatibility loader
+  for packaged token, base, layout, component, and responsive CSS layers. `W26-E2-S0-T4`
+  is promoted to `Next`, and `W26-E1-S3-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S0-T4`; monolithic UI script-string assertions were
+  split into surface-specific packaged asset contract tests. `W26-E1-S3-T1` is promoted
+  to `Next`, and `W26-E1-S3-T2` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E1-S3-T1`; core now exposes a read-only stage document
+  workbench read model for Markdown preview/source state, contract requirements,
+  validation summaries, references, diff candidates, and version history. `W26-E1-S3-T2`
+  is promoted to `Next`, and `W26-E1-S3-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E1-S3-T2`; core stage views now expose read-only
+  recovery diagnostics for blocking questions, validation repair attempts, raw-log
+  truncation, pending runtime approvals, stopped runs, and request-change context.
+  `W26-E1-S3-T3` is promoted to `Next`, and `W26-E2-S1-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E1-S3-T3`; core now exposes an evidence graph read model
+  that links existing artifact indexes, stage documents, validator reports, runtime
+  events, approval queues, and logs, with a flat artifact table fallback when graph
+  inputs are incomplete. `W26-E2-S1-T1` is promoted to `Next`, and `W26-E2-S1-T2`
+  is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S1-T1`; Project Setup now renders New Work Item,
+  Follow-up Flow, Clone Previous Flow, and Eval / Scenario Batch modes with inherited
+  previous-run context from work-item lineage. `W26-E2-S1-T2` is promoted to `Next`,
+  and `W26-E2-S1-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S1-T2`; terminal QA handoffs now render Flow Complete,
+  Start Next Flow actions, final artifacts, blockers, evidence, approval counts, and
+  safety/runtime summaries without a generic runtime fallback. `W26-E2-S1-T3` is
+  promoted to `Next`, and `W26-E2-S2-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S1-T3`; Run history now renders parent/source run
+  lineage, child work item candidates, next-action badges, linked artifacts, and
+  follow-up/clone/eval/archive actions with escaped dynamic labels. `W26-E2-S2-T1`
+  is promoted to `Next`, and `W26-E2-S2-T2` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S2-T1`; Start Next Flow now renders a read-only
+  source findings selection step grouped by QA findings, review notes, failed
+  evidence, and manual request, backed by `/api/next-flow/source-findings`.
+  `W26-E2-S2-T2` is promoted to `Next`, and `W26-E2-S2-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S2-T2`; the wizard now renders an editable follow-up
+  work item definition with generated acceptance criteria, required evidence,
+  inherited context toggles, and first-stage input preview. `W26-E2-S2-T3` is
+  promoted to `Next`, and `W26-E2-S3-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S2-T3`; the next-flow wizard now renders launch
+  confirmation with preflight results, audit preview, source artifact links, and an
+  honest queued launch action. `W26-E2-S3-T1` is promoted to `Next`, and
+  `W26-E2-S3-T2` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S3-T1`; the Artifacts tab now renders the Stage
+  Document Workbench with artifact tree, Preview/Source/Diff controls, contract
+  requirements, validation results, missing evidence, references, and version history.
+  `W26-E2-S3-T2` is promoted to `Next`, and `W26-E2-S3-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S3-T2`; Questions and Validation now render first-class
+  recovery screens for required answers, partial/deferred interview states, repair
+  availability, repair timelines, explicit stop context, and Run Repair / Stop Run /
+  Request Change actions. `W26-E2-S3-T3` is promoted to `Next`, and `W26-E2-S3-T4`
+  is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S3-T3`; Runtime Logs / Live Console and Approvals /
+  Request Change now render raw log filters, bounded-log notices, approval queues,
+  diff previews, intervention composer controls, and audit logs. `W26-E2-S3-T4` is
+  promoted to `Next`, and `W26-E3-S1-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E2-S3-T4`; Artifacts / Evidence Graph now renders
+  provenance nodes, selectable edges, selected-artifact inspector actions, flat table
+  fallback, and open/download/copy-path controls. `W26-E3-S1-T1` is promoted to
+  `Next`, and `W26-E3-S1-T2` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E3-S1-T1`; private UI endpoints now create durable
+  follow-up and clone drafts through core next-flow services with deterministic bad
+  request responses and no runtime execution. `W26-E3-S1-T2` is promoted to `Next`,
+  and `W26-E3-S1-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E3-S1-T2`; private next-flow launch now runs preflight,
+  starts a normal workflow job for the new work item only after explicit runtime
+  selection, and passes source-run lineage to the run manifest without mutating the
+  source run. `W26-E3-S1-T3` is promoted to `Next`, and `W26-E3-S2-T1` is promoted
+  to `Soon`.
+- `2026-05-28` Completed `W26-E3-S1-T3`; private archive decisions now persist
+  operator archive metadata for terminal QA runs while keeping source artifacts
+  readable through dashboard, history, and artifact endpoints. `W26-E3-S2-T1` is
+  promoted to `Next`, and `W26-E3-S2-T2` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E3-S2-T1`; static UI asset contracts now cover accepted
+  Mission Control landmarks, Flow Complete handoff, next-flow wizard controls, run
+  lineage labels, and focus-visible affordances. `W26-E3-S2-T2` is promoted to
+  `Next`, and `W26-E3-S2-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E3-S2-T2`; service-level UI regressions now cover
+  completed-run next actions, follow-up draft creation, clone draft creation, launch
+  preflight, and archive decisions while preserving source artifacts. `W26-E3-S2-T3`
+  is promoted to `Next`, and `W26-E4-S1-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E3-S2-T3`; the manual browser checklist now covers Flow
+  Complete, Start Next Flow wizard controls, run-history lineage, desktop/tablet/mobile
+  completed-flow layouts, and keyboard traversal. `W26-E4-S1-T1` is promoted to
+  `Next`, and `W26-E4-S1-T2` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S1-T1`; the local-project UI E2E lane now requires
+  completed-run evidence for Flow Complete, Start Next Flow, follow-up draft, launch
+  preflight, run-history lineage, archive decision, and artifact preservation.
+  `W26-E4-S1-T2` is promoted to `Next`, and `W26-E4-S1-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S1-T2`; deterministic local fixture coverage now seeds
+  a terminal QA run and proves the UI can create a follow-up draft with source-run
+  lineage and source artifact references without invoking a provider runtime.
+  `W26-E4-S1-T3` is promoted to `Next`, and `W26-E4-S2-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S1-T3`; the local-project manual smoke path now records
+  required completed-run evidence fields, browser/viewport/runtime metadata, blocker
+  capture, archive decision, and cleanup rules for generated `.aidd/` state.
+  `W26-E4-S2-T1` is promoted to `Next`, and `W26-E4-S2-T2` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S2-T1`; manual live E2E policy now requires a
+  terminal next-flow checkpoint after `qa`, records the operator decision, and keeps
+  second public-repository flow launch optional, manual-only, and outside CI/CD.
+  `W26-E4-S2-T2` is promoted to `Next`, and `W26-E4-S2-T3` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S2-T2`; the black-box live evaluator now writes
+  `next-flow-checkpoint.json` and `next-flow-checkpoint.md` with completed-run
+  next-action evidence, source-run summary fields, blocker/repair/approval/question
+  counts, and optional lineage metadata. `W26-E4-S2-T3` is promoted to `Next`, and
+  `W26-E5-S1-T1` is promoted to `Soon`.
+- `2026-05-28` Completed `W26-E4-S2-T3`; the optional manual-only live follow-up proof
+  flag now creates a follow-up draft from terminal QA findings and records
+  `next-flow-lineage.json` without launching a child public-repository flow. Wave 26
+  live E2E integration is done, and `W26-E5-S1-T1` is promoted to `Next`.
+- `2026-05-28` Completed `W26-E5-S1-T1`; operator-facing docs now describe
+  completed-run Flow Complete handoff, next-flow actions, source-run lineage,
+  launch-preflight troubleshooting, archive behavior, and the boundary between
+  local-project UI proof and public-repository live E2E checkpoint evidence. Wave 26 is
+  done and the active backlog queue is empty.

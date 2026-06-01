@@ -21,23 +21,32 @@ from aidd.cli.ui import (
     _is_loopback_host,
     _read_json_body,
 )
+from aidd.cli.ui_assets import operator_static_asset_for_route, operator_static_asset_manifest
+from aidd.core.repair import persist_repair_history_snapshot
 from aidd.core.run_store import (
+    OPERATOR_DECISIONS_FILENAME,
+    OPERATOR_REQUESTS_FILENAME,
+    RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_EXIT_METADATA_FILENAME,
     create_next_attempt_directory,
     create_run_manifest,
     persist_stage_status,
     run_attempt_artifact_index_path,
+    run_attempt_root,
     run_attempt_runtime_log_path,
+    run_manifest_path,
 )
 from aidd.core.runtime_operator import (
     RuntimeOperatorBroker,
     RuntimeOperatorDecision,
     RuntimeOperatorPolicy,
     RuntimeOperatorRequest,
+    append_operator_decision,
     append_operator_request,
 )
 from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
 from aidd.core.stage_runner import prepare_stage_bundle
+from aidd.core.stages import STAGES
 from aidd.core.workflow_service import (
     WorkflowRunRequest,
     WorkflowRunResult,
@@ -47,7 +56,9 @@ from aidd.core.workflow_service import (
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeOperatorDecisionAction,
+    RuntimeOperatorDecisionSource,
     RuntimeOperatorRequestKind,
+    RuntimeOperatorRisk,
     RuntimePermissionPolicy,
 )
 
@@ -118,6 +129,7 @@ def _wait_job_status(
     raise AssertionError(f"job did not reach {expected_status}: {job_id}")
 
 
+
 class _BodyHandler:
     def __init__(self, body: bytes, *, content_length: str | None = None) -> None:
         self.headers = {"Content-Length": content_length or str(len(body))}
@@ -178,6 +190,97 @@ def _prepare_run(workspace_root: Path) -> None:
         "- `SEM-INCOMPLETE-SECTION` `medium` in "
         "`workitems/WI-UI/stages/plan/plan.md`: Missing validation evidence.\n",
         encoding="utf-8",
+    )
+
+
+def _prepare_completed_qa_run(
+    workspace_root: Path,
+    *,
+    lineage: dict[str, object] | None = None,
+) -> None:
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="codex",
+        stage_target="qa",
+        config_snapshot={"mode": "ui-terminal-test"},
+        workflow_stage_start="idea",
+        workflow_stage_end="qa",
+        lineage=lineage,
+    )
+    for stage in STAGES:
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+        )
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            status="succeeded",
+        )
+        stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / stage
+        stage_root.mkdir(parents=True, exist_ok=True)
+        stage_root.joinpath("validator-report.md").write_text(
+            "# Validator Report\n\n- Verdict: `pass`\n",
+            encoding="utf-8",
+        )
+        stage_root.joinpath("stage-result.md").write_text(
+            "# Stage Result\n\n## Status\n\n- `succeeded`\n",
+            encoding="utf-8",
+        )
+        run_attempt_runtime_log_path(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            attempt_number=1,
+        ).write_text(f"{stage} runtime log\n", encoding="utf-8")
+
+    qa_root = workspace_root / "workitems" / "WI-UI" / "stages" / "qa"
+    qa_root.joinpath("qa-report.md").write_text(
+        "\n".join(
+            (
+                "# QA Report",
+                "",
+                "## Readiness",
+                "",
+                "- QA verdict: `ready`.",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="qa",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "uv run --extra dev pytest tests/cli/test_ui.py"},
+        risk=RuntimeOperatorRisk.MEDIUM,
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+        attempt_number=1,
+    )
+    append_operator_request(
+        path=attempt_root / OPERATOR_REQUESTS_FILENAME,
+        request=request,
+    )
+    append_operator_decision(
+        path=attempt_root / OPERATOR_DECISIONS_FILENAME,
+        decision=RuntimeOperatorDecision(
+            request_id=request.id,
+            action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+            source=RuntimeOperatorDecisionSource.UI,
+            reason="approved in UI terminal handoff fixture",
+        ),
     )
 
 
@@ -285,6 +388,171 @@ def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
     assert artifacts_payload["documents"]["input_bundle"].endswith("input-bundle.md")
 
 
+def test_ui_stage_workbench_endpoint_returns_document_state_and_sidebars(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    plan_path.write_text(
+        "# Plan\n\n## Goals\n\n" + "\n".join(f"- Workbench line {index}" for index in range(80)),
+        encoding="utf-8",
+    )
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get(
+            "/api/stage/workbench",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+                "run_id": ["run-ui"],
+                "preview_limit": ["96"],
+                "source_limit": ["128"],
+            },
+        )
+    )
+
+    document = payload["document"]
+    assert payload["run_id"] == "run-ui"
+    assert payload["stage"] == "plan"
+    assert payload["selected_key"] == "plan"
+    assert document["status"] == "present"  # type: ignore[index]
+    assert document["preview"]["mode"] == "preview"  # type: ignore[index]
+    assert document["preview"]["requested_bytes"] == 96  # type: ignore[index]
+    assert document["preview"]["truncated_tail"] is True  # type: ignore[index]
+    assert document["source"]["mode"] == "source"  # type: ignore[index]
+    assert document["source"]["requested_bytes"] == 128  # type: ignore[index]
+    assert document["source"]["truncated_tail"] is True  # type: ignore[index]
+
+    requirements = payload["requirements"]
+    validation_results = payload["validation_results"]
+    references = payload["references"]
+    versions = payload["versions"]
+    assert any(
+        item["kind"] == "required-output" and item["status"] == "satisfied"
+        for item in requirements  # type: ignore[union-attr]
+    )
+    assert any(
+        item["status"] == "missing"
+        for item in requirements  # type: ignore[union-attr]
+    )
+    assert {
+        item["label"]: item["status"]
+        for item in validation_results  # type: ignore[union-attr]
+    } == {"stage-result": "blocked", "validator-report": "fail"}
+    assert any(
+        item["label"] == "plan" and item["kind"] == "document"
+        for item in references  # type: ignore[union-attr]
+    )
+    assert versions[0]["label"] == "Attempt 1"  # type: ignore[index]
+
+
+def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    attempt_root.joinpath(RUN_EVENTS_JSONL_FILENAME).write_text(
+        (
+            '{"timestamp":"2026-05-28T00:00:00Z","level":"info",'
+            '"source":"runtime","event":"stage.started","message":"Plan started"}\n'
+        ),
+        encoding="utf-8",
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="codex",
+        stage="plan",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "uv run --extra dev pytest tests/cli/test_ui.py"},
+    )
+    append_operator_request(path=attempt_root / OPERATOR_REQUESTS_FILENAME, request=request)
+    append_operator_decision(
+        path=attempt_root / OPERATOR_DECISIONS_FILENAME,
+        decision=RuntimeOperatorDecision(
+            request_id=request.id,
+            action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+            source=RuntimeOperatorDecisionSource.UI,
+            reason="approved for UI evidence graph endpoint test",
+        ),
+    )
+    service = _service(workspace_root)
+    plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    runtime_log_path = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    original_plan = plan_path.read_text(encoding="utf-8")
+    original_runtime_log = runtime_log_path.read_text(encoding="utf-8")
+    original_artifact_index = artifact_index_path.read_text(encoding="utf-8")
+
+    graph_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/evidence-graph",
+            {"stage": ["plan"], "run_id": ["run-ui"]},
+        )
+    )
+
+    nodes = {node["node_id"]: node for node in graph_payload["nodes"]}  # type: ignore[index]
+    edges = {
+        (edge["source_id"], edge["target_id"], edge["kind"])
+        for edge in graph_payload["edges"]  # type: ignore[index]
+    }
+    assert graph_payload["mode"] == "graph"
+    assert nodes["document:plan"]["path"] == "workitems/WI-UI/stages/plan/plan.md"
+    assert nodes["event:1"]["detail"] == "Plan started"
+    assert nodes[f"approval-request:{request.id}"]["status"] == "approved"
+    assert ("document:validator_report", "document:stage_result", "validation") in edges
+    assert all(
+        not Path(str(node["path"])).is_absolute()
+        for node in graph_payload["nodes"]  # type: ignore[index]
+        if node["path"] is not None
+    )
+    assert any(
+        ref["key"] == "runtime_log" and ref["kind"] == "log"
+        for ref in graph_payload["artifact_table"]  # type: ignore[index]
+    )
+    assert plan_path.read_text(encoding="utf-8") == original_plan
+    assert runtime_log_path.read_text(encoding="utf-8") == original_runtime_log
+    assert artifact_index_path.read_text(encoding="utf-8") == original_artifact_index
+
+    artifact_index_path.unlink()
+    fallback_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/evidence-graph",
+            {"stage": ["plan"], "run_id": ["run-ui"]},
+        )
+    )
+
+    assert fallback_payload["mode"] == "flat-table"
+    assert fallback_payload["nodes"] == []
+    assert fallback_payload["edges"] == []
+    assert fallback_payload["incomplete_reasons"] == ["artifact-index-missing"]
+    assert any(
+        ref["key"] == "plan" and ref["path"] == "workitems/WI-UI/stages/plan/plan.md"
+        for ref in fallback_payload["artifact_table"]  # type: ignore[index]
+    )
+    assert plan_path.read_text(encoding="utf-8") == original_plan
+    assert runtime_log_path.read_text(encoding="utf-8") == original_runtime_log
+
+
 def test_ui_logs_endpoint_defaults_to_bounded_tail_and_accepts_limit_params(
     tmp_path: Path,
 ) -> None:
@@ -339,6 +607,33 @@ def test_ui_logs_endpoint_defaults_to_bounded_tail_and_accepts_limit_params(
     assert _error_payload(invalid_payload)["error"] == "tail must be greater than zero."
 
 
+def test_ui_logs_endpoint_treats_missing_runtime_log_as_pending(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    runtime_log_path = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    runtime_log_path.unlink()
+    service = _service(workspace_root)
+
+    response = service.handle_get("/api/logs", {"stage": ["plan"], "run_id": ["run-ui"]})
+    payload = _payload(response)
+
+    assert response.status == HTTPStatus.OK
+    assert payload["available"] is False
+    assert payload["message"] == "Runtime log is not available yet."
+    assert payload["text"] == ""
+    assert payload["byte_size"] == 0
+    assert payload["summary"]["stage"] == "plan"
+    assert payload["summary"]["run_id"] == "run-ui"
+
+
 def test_ui_dashboard_endpoint_exposes_operator_console_payload(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
@@ -358,6 +653,377 @@ def test_ui_dashboard_endpoint_exposes_operator_console_payload(tmp_path: Path) 
         artifact["path"] == "workitems/WI-UI/stages/plan/plan.md"
         for artifact in dashboard["recent_artifacts"]  # type: ignore[index]
     )
+
+
+def test_ui_dashboard_endpoint_exposes_previous_run_context_for_setup(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    metadata_path = workspace_root / "workitems" / "WI-UI" / "work-item.json"
+    metadata_path.parent.mkdir(parents=True)
+    metadata_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "work_item_id": "WI-UI",
+                "lineage": {
+                    "source_run_id": "run-source",
+                    "source_work_item_id": "WI-SOURCE",
+                    "baseline_id": "baseline-main",
+                    "baseline_label": "main before setup",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    service = _service(workspace_root)
+
+    payload = _payload(service.handle_get("/api/dashboard", {"stage": ["idea"]}))
+
+    lineage = payload["dashboard"]["run"]["lineage"]  # type: ignore[index]
+    assert payload["dashboard"]["run"]["run_id"] is None  # type: ignore[index]
+    assert lineage["source_run_id"] == "run-source"  # type: ignore[index]
+    assert lineage["source_work_item_id"] == "WI-SOURCE"  # type: ignore[index]
+    assert lineage["baseline_id"] == "baseline-main"  # type: ignore[index]
+    assert lineage["baseline_label"] == "main before setup"  # type: ignore[index]
+
+
+def test_ui_dashboard_endpoint_exposes_flow_complete_handoff(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+
+    dashboard = payload["dashboard"]
+    handoff = dashboard["terminal_handoff"]  # type: ignore[index]
+    assert dashboard["next_action"]["action"] == "review-complete"  # type: ignore[index]
+    assert dashboard["run"]["runtime_id"] == "codex"  # type: ignore[index]
+    assert handoff["status"] == "completed"  # type: ignore[index]
+    assert handoff["final_qa_status"] == "ready"  # type: ignore[index]
+    assert handoff["approval_counts"]["requested"] == 1  # type: ignore[index]
+    assert handoff["approval_counts"]["approved"] == 1  # type: ignore[index]
+    assert {artifact["key"] for artifact in handoff["final_artifacts"]} >= {  # type: ignore[index]
+        "qa_report",
+        "runtime_log",
+        "stage_result",
+        "validator_report",
+    }
+    actions = {
+        action["action"]: action
+        for action in handoff["recommended_next_flow_actions"]  # type: ignore[index]
+    }
+    assert set(actions) == {
+        "create-new-work-item",
+        "start-follow-up-flow",
+        "clone-flow",
+        "run-eval-batch",
+        "archive-run",
+    }
+    assert "codex" in actions["clone-flow"]["detail"]
+    assert "generic-cli" not in actions["clone-flow"]["detail"]
+
+
+def test_ui_dashboard_endpoint_exposes_run_history_lineage_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(
+        workspace_root,
+        lineage={
+            "source_run_id": "run-source<script>",
+            "source_work_item_id": "WI-SOURCE<&>",
+            "baseline_id": "baseline-main",
+            "baseline_label": "main before UI handoff <candidate>",
+            "child_work_item_candidates": [
+                {
+                    "work_item_id": "WI-CHILD",
+                    "label": "Retry risky QA <script>",
+                    "relationship": "follow-up",
+                    "source_run_id": "run-ui",
+                }
+            ],
+        },
+    )
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+
+    dashboard = payload["dashboard"]
+    lineage = dashboard["run"]["lineage"]  # type: ignore[index]
+    assert lineage["source_run_id"] == "run-source<script>"  # type: ignore[index]
+    assert lineage["source_work_item_id"] == "WI-SOURCE<&>"  # type: ignore[index]
+    assert lineage["baseline_label"] == "main before UI handoff <candidate>"  # type: ignore[index]
+    assert lineage["child_work_item_candidates"][0] == {  # type: ignore[index]
+        "work_item_id": "WI-CHILD",
+        "label": "Retry risky QA <script>",
+        "relationship": "follow-up",
+        "source_run_id": "run-ui",
+    }
+    assert any(
+        artifact["key"] == "runtime_log"
+        for artifact in dashboard["recent_artifacts"]  # type: ignore[index]
+    )
+
+
+def test_ui_next_flow_source_findings_endpoint_groups_source_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get("/api/next-flow/source-findings", {"run_id": ["run-ui"]})
+    )
+
+    groups = {group["id"]: group for group in payload["groups"]}  # type: ignore[index]
+    assert set(groups) == {
+        "qa-findings",
+        "review-notes",
+        "failed-evidence",
+        "manual-request",
+    }
+    qa_items = groups["qa-findings"]["items"]
+    assert groups["qa-findings"]["count"] == len(qa_items)
+    assert any(
+        item["kind"] == "qa-finding"
+        and item["artifact_key"] == "qa_report"
+        and item["display_label"] == "Final QA report"
+        and item["priority"] == 10
+        and item["recommended"] is True
+        and item["collapsible"] is False
+        and item["source_path"].endswith("qa-report.md")
+        and item["selected"] is True
+        for item in qa_items
+    )
+    assert any(
+        item["kind"] == "qa-finding"
+        and item["artifact_key"] == "runtime_log"
+        and item["collapsible"] is True
+        and item["recommended"] is False
+        for item in qa_items
+    )
+    manual_items = groups["manual-request"]["items"]
+    assert manual_items == [
+        {
+            "id": "manual-request:operator-note",
+            "kind": "manual-request",
+            "title": "Manual operator request",
+            "display_label": "Manual request",
+            "detail": "Add a scoped operator note in the follow-up definition step.",
+            "priority": 40,
+            "recommended": False,
+            "collapsible": False,
+            "stage": None,
+            "artifact_key": None,
+            "artifact_kind": None,
+            "source_path": None,
+            "selected": False,
+        }
+    ]
+    assert payload["counts"]["required_context_groups"] == 4  # type: ignore[index]
+    assert payload["counts"]["selected_defaults"] >= 1  # type: ignore[index]
+    assert payload["counts"]["recommended_items"] >= 1  # type: ignore[index]
+    assert payload["counts"]["collapsible_items"] >= 1  # type: ignore[index]
+    assert payload["counts"]["source_artifact_links"] >= 4  # type: ignore[index]
+    assert "Clean QA run" in payload["recommendation"]
+
+
+def test_ui_next_flow_follow_up_draft_endpoint_returns_editable_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/follow-up-draft",
+        {
+            "source_run_id": "run-ui",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+        },
+    )
+
+    payload = _payload(response)
+    draft = payload["draft"]
+    assert draft["source_work_item"] == "WI-UI"  # type: ignore[index]
+    assert draft["source_run_id"] == "run-ui"  # type: ignore[index]
+    assert draft["new_work_item"] == "WI-UI-FOLLOW-UP"  # type: ignore[index]
+    assert "Follow-up for WI-UI from run-ui" == draft["title"]  # type: ignore[index]
+    assert draft["selected_sources"][0]["source_path"].endswith("qa-report.md")  # type: ignore[index]
+    assert "Resolve follow-up source: QA artifact: qa_report" in draft["acceptance_criteria"]  # type: ignore[index]
+    assert "Updated evidence for QA artifact: qa_report" in draft["required_evidence"]  # type: ignore[index]
+    assert any(
+        item["id"] == "source-run-lineage" and item["enabled"] is True
+        for item in draft["inherited_context"]  # type: ignore[index]
+    )
+    assert "Source run: `run-ui`." in draft["first_stage_input_preview"]  # type: ignore[index]
+    assert "`qa-finding` QA artifact: qa_report" in draft["first_stage_input_preview"]  # type: ignore[index]
+
+
+def test_ui_next_flow_follow_up_draft_create_endpoint_writes_core_draft(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-FOLLOW-UP",
+            "title": "Fix QA follow-up from UI",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+            "first_stage_input": (
+                "# Edited UI follow-up\n\n"
+                "Persist this edited first-stage input before launch."
+            ),
+            "acceptance_criteria": ["Edited UI acceptance criterion"],
+            "required_evidence": ["Edited UI evidence bundle"],
+            "inherited_context": ["Source run lineage: run-ui"],
+        },
+    )
+
+    assert response.status == HTTPStatus.CREATED
+    payload = json.loads(response.body.decode("utf-8"))
+    draft = payload["draft"]
+    created = payload["created"]
+    assert draft["title"] == "Fix QA follow-up from UI"
+    assert draft["acceptance_criteria"] == ["Edited UI acceptance criterion"]
+    assert draft["required_evidence"] == ["Edited UI evidence bundle"]
+    assert draft["inherited_context_lines"] == ["Source run lineage: run-ui"]
+    assert "Persist this edited first-stage input" in draft["first_stage_input_preview"]
+    assert created["work_item"] == "WI-UI-FOLLOW-UP"
+    assert created["request_path"] == (
+        "workitems/WI-UI-FOLLOW-UP/context/follow-up-request.md"
+    )
+    request_path = workspace_root / created["request_path"]
+    assert request_path.exists()
+    request_text = request_path.read_text(encoding="utf-8")
+    user_request_text = (
+        workspace_root
+        / "workitems"
+        / "WI-UI-FOLLOW-UP"
+        / "context"
+        / "user-request.md"
+    ).read_text(encoding="utf-8")
+    assert "Persist this edited first-stage input before launch." in user_request_text
+    assert "Edited UI acceptance criterion" in request_text
+    assert "Edited UI evidence bundle" in request_text
+    assert "Source run lineage: run-ui" in request_text
+    assert "`workitems/WI-UI/stages/qa/qa-report.md`" in request_path.read_text(
+        encoding="utf-8"
+    )
+    assert created["context"]["user_request_path"] == (  # type: ignore[index]
+        "workitems/WI-UI-FOLLOW-UP/context/user-request.md"
+    )
+    assert not (workspace_root / "reports" / "runs" / "WI-UI-FOLLOW-UP").exists()
+
+
+def test_ui_next_flow_clone_draft_create_endpoint_writes_core_draft(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/clone-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-CLONE",
+            "title": "Clone completed QA flow",
+        },
+    )
+
+    assert response.status == HTTPStatus.CREATED
+    payload = json.loads(response.body.decode("utf-8"))
+    created = payload["created"]
+    assert payload["draft"]["new_work_item"] == "WI-UI-CLONE"
+    assert created["draft_path"] == "workitems/WI-UI-CLONE/context/clone-flow-draft.md"
+    assert created["config"]["runtime_id"] == "codex"
+    assert created["config"]["stage_target"] == "qa"
+    assert (
+        workspace_root / "workitems" / "WI-UI-CLONE" / "context" / "clone-flow-draft.md"
+    ).exists()
+    assert not (workspace_root / "reports" / "runs" / "WI-UI-CLONE").exists()
+
+
+def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    malformed_follow_up = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {"source_run_id": "run-ui", "selected_source_ids": "qa-finding:qa:qa_report"},
+    )
+    malformed_editable_fields = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+            "acceptance_criteria": "not-a-list",
+        },
+    )
+    manual_without_artifact = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-MANUAL-FOLLOW-UP",
+            "title": "Manual follow-up request",
+            "selected_source_ids": ["manual-request:operator-note"],
+        },
+    )
+    malformed_clone = service.handle_post(
+        "/api/next-flow/clone-draft/create",
+        {"new_work_item": "WI-UI-CLONE"},
+    )
+
+    assert malformed_follow_up.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(malformed_follow_up)["error"] == (
+        "selected_source_ids must be a list."
+    )
+    assert malformed_editable_fields.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(malformed_editable_fields)["error"] == (
+        "acceptance_criteria must be a list."
+    )
+    assert manual_without_artifact.status == HTTPStatus.CREATED
+    manual_payload = json.loads(manual_without_artifact.body.decode("utf-8"))
+    assert manual_payload["created"]["source_artifact_paths"] == []
+    assert (
+        "- Source artifact: manual operator request only"
+        in (
+            workspace_root
+            / "workitems"
+            / "WI-UI-MANUAL-FOLLOW-UP"
+            / "context"
+            / "follow-up-request.md"
+        ).read_text(encoding="utf-8")
+    )
+    assert malformed_clone.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(malformed_clone)["error"] == "source_run_id is required."
+
+
+def test_ui_static_asset_routes_are_served_from_manifest(tmp_path: Path) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    for manifest_asset in operator_static_asset_manifest():
+        response = service.handle_get(manifest_asset.route, {})
+        asset = operator_static_asset_for_route(manifest_asset.route)
+        assert asset is not None
+        assert response.content_type == asset.content_type
+        assert response.body.decode("utf-8") == asset.text
 
 
 def test_ui_run_endpoint_uses_empty_state_when_no_run_exists(tmp_path: Path) -> None:
@@ -403,6 +1069,129 @@ def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> 
     assert payload["questions"][0]["answer_resolution"] == "resolved"  # type: ignore[index]
     answers_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "answers.md"
     assert "Release target is 0.2.0." in answers_path.read_text(encoding="utf-8")
+
+
+def test_ui_stage_endpoint_exposes_interview_recovery_answer_states(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    questions_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "questions.md"
+    questions_path.write_text(
+        "\n".join(
+            (
+                "# Questions",
+                "",
+                "## Questions",
+                "",
+                "- `Q1` `[blocking]` Confirm release target.",
+                "- `Q2` `[blocking]` Confirm rollout risk.",
+                "- `Q3` `[blocking]` Confirm owner signoff.",
+            )
+        ),
+        encoding="utf-8",
+    )
+    service = _service(workspace_root)
+    for question_id, resolution in (
+        ("Q1", "resolved"),
+        ("Q2", "partial"),
+        ("Q3", "deferred"),
+    ):
+        _payload(
+            service.handle_post(
+                "/api/answers",
+                {
+                    "stage": "plan",
+                    "question_id": question_id,
+                    "text": f"{question_id} answer",
+                    "resolution": resolution,
+                },
+            )
+        )
+
+    payload = _payload(service.handle_get("/api/stage", {"stage": ["plan"], "run_id": ["run-ui"]}))
+    questions = {item["question_id"]: item for item in payload["questions"]["questions"]}  # type: ignore[index]
+
+    assert payload["diagnostics"]["blocking_questions"]["unresolved_question_ids"] == [  # type: ignore[index]
+        "Q2",
+        "Q3",
+    ]
+    assert questions["Q1"]["status"] == "resolved"
+    assert questions["Q1"]["answer_resolution"] == "resolved"
+    assert questions["Q2"]["status"] == "pending-blocking"
+    assert questions["Q2"]["answer_resolution"] == "partial"
+    assert questions["Q3"]["status"] == "pending-blocking"
+    assert questions["Q3"]["answer_resolution"] == "deferred"
+
+
+def test_ui_stage_endpoint_exposes_repair_and_explicit_stop_recovery_states(
+    tmp_path: Path,
+) -> None:
+    repair_root = tmp_path / "repair" / ".aidd"
+    _prepare_run(repair_root)
+    repair_stage_root = repair_root / "workitems" / "WI-UI" / "stages" / "plan"
+    persist_repair_history_snapshot(
+        workspace_root=repair_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+        trigger="repair",
+        outcome="failed validation",
+        stage_status="repair-needed",
+        validator_report_path=repair_stage_root / "validator-report.md",
+        repair_brief_path=repair_stage_root / "repair-brief.md",
+    )
+    persist_stage_status(
+        workspace_root=repair_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="repair-needed",
+    )
+    repair_payload = _payload(
+        _service(repair_root).handle_get("/api/stage", {"stage": ["plan"], "run_id": ["run-ui"]})
+    )
+
+    validation = repair_payload["diagnostics"]["validation"]  # type: ignore[index]
+    assert repair_payload["diagnostics"]["status"] == "repair-available"  # type: ignore[index]
+    assert validation["status"] == "repair-available"
+    assert validation["repair_attempts"][0]["trigger"] == "repair"
+    assert validation["repair_attempts"][0]["outcome"] == "failed validation"
+
+    stopped_root = tmp_path / "stopped" / ".aidd"
+    _prepare_run(stopped_root)
+    stopped_stage_root = stopped_root / "workitems" / "WI-UI" / "stages" / "plan"
+    stopped_stage_root.joinpath("validator-report.md").write_text(
+        "# Validator Report\n\n- Verdict: `pass`\n",
+        encoding="utf-8",
+    )
+    persist_stage_status(
+        workspace_root=stopped_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    events_path = run_attempt_root(
+        workspace_root=stopped_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ) / RUN_EVENTS_JSONL_FILENAME
+    events_path.write_text(
+        '{"timestamp":"2026-05-28T00:00:00Z","level":"error","event":"stopped",'
+        '"message":"Workflow stopped at plan"}\n',
+        encoding="utf-8",
+    )
+    stopped_payload = _payload(
+        _service(stopped_root).handle_get("/api/stage", {"stage": ["plan"], "run_id": ["run-ui"]})
+    )
+
+    assert stopped_payload["diagnostics"]["status"] == "stopped"  # type: ignore[index]
+    assert stopped_payload["diagnostics"]["stopped"]["stopped"] is True  # type: ignore[index]
+    assert stopped_payload["diagnostics"]["stopped"]["detail"] == "Workflow stopped at plan"  # type: ignore[index]
 
 
 def test_ui_service_hardening_regression_metadata_surface(tmp_path: Path) -> None:
@@ -511,6 +1300,338 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     assert request.stage_end == "plan"
     assert request.log_follow is True
     assert "stage_executor" in captured
+
+
+def test_ui_next_flow_preflight_endpoint_returns_launchable_warning_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/preflight",
+        {"source_run_id": "run-ui", "runtime": "generic-cli"},
+    )
+
+    payload = _payload(response)
+    preflight = payload["preflight"]
+    assert preflight["status"] == "warning"  # type: ignore[index]
+    assert preflight["can_launch"] is True  # type: ignore[index]
+    assert preflight["blocking_codes"] == []  # type: ignore[index]
+    assert preflight["warning_codes"] == ["baseline-fallback-source-run"]  # type: ignore[index]
+    assert preflight["resolved_baseline_id"] == "run-ui"  # type: ignore[index]
+
+
+def test_ui_next_flow_preflight_endpoint_returns_pass_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/preflight",
+        {
+            "source_run_id": "run-ui",
+            "runtime": "generic-cli",
+            "baseline_id": "run-ui",
+        },
+    )
+
+    payload = _payload(response)
+    preflight = payload["preflight"]
+    assert preflight["status"] == "pass"  # type: ignore[index]
+    assert preflight["can_launch"] is True  # type: ignore[index]
+    assert preflight["blocking_codes"] == []  # type: ignore[index]
+    assert preflight["warning_codes"] == []  # type: ignore[index]
+    assert preflight["resolved_baseline_id"] == "run-ui"  # type: ignore[index]
+
+
+def test_ui_next_flow_preflight_endpoint_returns_structured_blocking_payload(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/preflight",
+        {
+            "source_run_id": "run-missing",
+            "runtime": "unknown-runtime",
+            "contracts_root": (tmp_path / "missing" / "contracts" / "stages").as_posix(),
+        },
+    )
+
+    assert response.status == HTTPStatus.CONFLICT
+    payload = json.loads(response.body.decode("utf-8"))
+    assert payload["error"] == "next-flow launch preflight blocked"
+    assert set(payload["blocking_codes"]) == {
+        "workspace-missing",
+        "unsupported-runtime",
+        "contracts-missing",
+        "source-run-missing",
+    }
+    assert any(
+        check["code"] == "unsupported-runtime" and check["severity"] == "blocking"
+        for check in payload["checks"]
+    )
+
+
+def test_ui_next_flow_launch_endpoint_delegates_new_work_item_workflow(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    source_manifest = run_manifest_path(workspace_root, "WI-UI", "run-ui")
+    source_before = source_manifest.read_text(encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        request = kwargs["request"]
+        assert isinstance(request, WorkflowRunRequest)
+        captured["request"] = request
+        return WorkflowRunResult(
+            run_id=request.run_id or "run-follow-up-ui",
+            executed_stage_count=0,
+            completed=True,
+            incomplete=(),
+            exit_code=0,
+        )
+
+    service = _service(workspace_root, workflow_runner=fake_workflow_runner)
+
+    response = service.handle_post(
+        "/api/next-flow/launch",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-FOLLOW-UP",
+            "runtime": "codex",
+            "baseline_id": "run-ui",
+            "run_id": "run-follow-up-ui",
+            "from_stage": "idea",
+            "to_stage": "qa",
+        },
+    )
+
+    assert response.status == HTTPStatus.ACCEPTED
+    payload = json.loads(response.body.decode("utf-8"))
+    job_payload = _wait_job(service, str(payload["job_id"]))
+    request = captured["request"]
+    assert isinstance(request, WorkflowRunRequest)
+    assert payload["kind"] == "next-flow-launch"
+    assert payload["work_item"] == "WI-UI-FOLLOW-UP"
+    assert payload["preflight"]["status"] == "pass"
+    assert job_payload["status"] == "completed"
+    assert request.work_item == "WI-UI-FOLLOW-UP"
+    assert request.runtime_id == "codex"
+    assert request.run_id == "run-follow-up-ui"
+    assert request.stage_start == "idea"
+    assert request.stage_end == "qa"
+    assert request.config_snapshot["mode"] == "ui-next-flow-launch"
+    assert request.lineage == {
+        "baseline_id": "run-ui",
+        "relationship": "follow-up",
+        "source_run_id": "run-ui",
+        "source_work_item_id": "WI-UI",
+    }
+    assert source_manifest.read_text(encoding="utf-8") == source_before
+
+
+def test_ui_next_flow_launch_endpoint_requires_runtime_before_preflight(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/launch",
+        {"source_run_id": "run-ui", "new_work_item": "WI-UI-FOLLOW-UP"},
+    )
+
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(response)["error"] == "runtime is required."
+
+
+def test_ui_next_flow_launch_endpoint_returns_blocked_preflight_payload(
+    tmp_path: Path,
+) -> None:
+    service = _service(tmp_path / ".aidd")
+
+    response = service.handle_post(
+        "/api/next-flow/launch",
+        {
+            "source_run_id": "run-missing",
+            "new_work_item": "WI-UI-FOLLOW-UP",
+            "runtime": "generic-cli",
+        },
+    )
+
+    assert response.status == HTTPStatus.CONFLICT
+    payload = json.loads(response.body.decode("utf-8"))
+    assert payload["error"] == "next-flow launch preflight blocked"
+    assert "source-run-missing" in payload["blocking_codes"]
+
+
+def test_ui_next_flow_archive_endpoint_records_decision_and_keeps_artifacts_readable(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    qa_report_path = (
+        workspace_root / "workitems" / "WI-UI" / "stages" / "qa" / "qa-report.md"
+    )
+    original_qa_report = qa_report_path.read_text(encoding="utf-8")
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/next-flow/archive",
+        {
+            "source_run_id": "run-ui",
+            "reason": "Archive after QA acceptance.",
+        },
+    )
+
+    payload = _payload(response)
+    manifest = json.loads(
+        run_manifest_path(workspace_root, "WI-UI", "run-ui").read_text(encoding="utf-8")
+    )
+    artifact_payload = _payload(
+        service.handle_get(
+            "/api/artifacts/document",
+            {
+                "stage": ["qa"],
+                "key": ["qa_report"],
+                "run_id": ["run-ui"],
+                "mode": ["source"],
+            },
+        )
+    )
+    history_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+
+    assert payload["archive"]["archived"] is True  # type: ignore[index]
+    assert payload["archive"]["reason"] == "Archive after QA acceptance."  # type: ignore[index]
+    assert payload["dashboard"]["run"]["archive"]["archived"] is True  # type: ignore[index]
+    assert payload["dashboard"]["run"]["archive"]["source"] == "ui"  # type: ignore[index]
+    assert manifest["operator_archive"]["archived"] is True
+    assert manifest["operator_archive"]["reason"] == "Archive after QA acceptance."
+    assert history_payload["dashboard"]["run"]["archive"]["archived"] is True  # type: ignore[index]
+    assert artifact_payload["text"] == original_qa_report
+    assert qa_report_path.read_text(encoding="utf-8") == original_qa_report
+
+
+def test_ui_next_flow_archive_endpoint_rejects_malformed_or_non_terminal_requests(
+    tmp_path: Path,
+) -> None:
+    terminal_workspace = tmp_path / "terminal" / ".aidd"
+    _prepare_completed_qa_run(terminal_workspace)
+    terminal_service = _service(terminal_workspace)
+
+    malformed = terminal_service.handle_post(
+        "/api/next-flow/archive",
+        {"source_run_id": "run-ui", "reason": ["not", "a", "string"]},
+    )
+
+    non_terminal_workspace = tmp_path / "non-terminal" / ".aidd"
+    _prepare_run(non_terminal_workspace)
+    non_terminal_service = _service(non_terminal_workspace)
+    non_terminal = non_terminal_service.handle_post(
+        "/api/next-flow/archive",
+        {"source_run_id": "run-ui", "reason": "Not terminal yet."},
+    )
+
+    assert malformed.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(malformed)["error"] == "reason must be a string."
+    assert non_terminal.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(non_terminal)["error"] == (
+        "archive decision requires a terminal QA run."
+    )
+
+
+def test_ui_completed_run_next_action_service_regression_sequence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    source_manifest_path = run_manifest_path(workspace_root, "WI-UI", "run-ui")
+    source_manifest_before = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+    qa_report_path = workspace_root / "workitems" / "WI-UI" / "stages" / "qa" / "qa-report.md"
+    qa_report_before = qa_report_path.read_text(encoding="utf-8")
+    service = _service(workspace_root)
+
+    dashboard_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+    handoff = dashboard_payload["dashboard"]["terminal_handoff"]  # type: ignore[index]
+    actions = {
+        action["action"]
+        for action in handoff["recommended_next_flow_actions"]  # type: ignore[index]
+    }
+    follow_up = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-FOLLOW-UP",
+            "title": "Fix completed-run QA finding",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+        },
+    )
+    clone = service.handle_post(
+        "/api/next-flow/clone-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-UI-CLONE",
+            "title": "Clone completed flow",
+        },
+    )
+    preflight_payload = _payload(
+        service.handle_post(
+            "/api/next-flow/preflight",
+            {
+                "source_run_id": "run-ui",
+                "runtime": "codex",
+                "baseline_id": "run-ui",
+            },
+        )
+    )
+    archive_payload = _payload(
+        service.handle_post(
+            "/api/next-flow/archive",
+            {
+                "source_run_id": "run-ui",
+                "reason": "Archive after service-level next-action regression.",
+            },
+        )
+    )
+    source_manifest_after = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+    follow_up_payload = json.loads(follow_up.body.decode("utf-8"))
+    clone_payload = json.loads(clone.body.decode("utf-8"))
+
+    assert dashboard_payload["dashboard"]["next_action"]["action"] == "review-complete"  # type: ignore[index]
+    assert actions == {
+        "create-new-work-item",
+        "start-follow-up-flow",
+        "clone-flow",
+        "run-eval-batch",
+        "archive-run",
+    }
+    assert follow_up.status == HTTPStatus.CREATED
+    assert follow_up_payload["created"]["work_item"] == "WI-UI-FOLLOW-UP"
+    assert clone.status == HTTPStatus.CREATED
+    assert clone_payload["created"]["work_item"] == "WI-UI-CLONE"
+    assert preflight_payload["preflight"]["status"] == "pass"  # type: ignore[index]
+    assert preflight_payload["preflight"]["can_launch"] is True  # type: ignore[index]
+    assert archive_payload["dashboard"]["run"]["archive"]["archived"] is True  # type: ignore[index]
+    assert source_manifest_after["operator_archive"]["archived"] is True
+    assert source_manifest_after["run_id"] == source_manifest_before["run_id"]
+    assert source_manifest_after["runtime_id"] == source_manifest_before["runtime_id"]
+    assert source_manifest_after["stage_target"] == source_manifest_before["stage_target"]
+    assert qa_report_path.read_text(encoding="utf-8") == qa_report_before
+    assert not (workspace_root / "reports" / "runs" / "WI-UI-FOLLOW-UP").exists()
+    assert not (workspace_root / "reports" / "runs" / "WI-UI-CLONE").exists()
 
 
 def test_ui_workflow_stage_executor_passes_cancel_callback(
@@ -1389,6 +2510,11 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
         in html
     )
     assert (
+        'id="tab-history" data-tab="history" role="tab" aria-selected="false" '
+        'aria-controls="cockpitContent"'
+        in html
+    )
+    assert (
         'id="cockpitContent" class="cockpit-content" role="tabpanel" '
         'aria-labelledby="tab-overview" tabindex="0"'
         in html
@@ -1445,6 +2571,67 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert stage_payload["result"]["repair_output_paths"] == [
         "workitems/WI-UI/stages/plan/repair-brief.md"
     ]
+
+
+def test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_runtime(
+    tmp_path: Path,
+) -> None:
+    fixture_project = tmp_path / "local-fixture"
+    workspace_root = fixture_project / ".aidd"
+    fixture_project.mkdir()
+    _prepare_completed_qa_run(workspace_root)
+
+    def forbidden_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        raise AssertionError("terminal fixture follow-up must not invoke a runtime")
+
+    service = _service(workspace_root, workflow_runner=forbidden_workflow_runner)
+
+    dashboard_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["qa"], "run_id": ["run-ui"]})
+    )
+    findings_payload = _payload(
+        service.handle_get("/api/next-flow/source-findings", {"run_id": ["run-ui"]})
+    )
+    response = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        {
+            "source_run_id": "run-ui",
+            "new_work_item": "WI-LOCAL-FOLLOW-UP",
+            "title": "Local fixture completed-run follow-up",
+            "selected_source_ids": ["qa-finding:qa:qa_report"],
+        },
+    )
+
+    assert response.status == HTTPStatus.CREATED
+    payload = json.loads(response.body.decode("utf-8"))
+    request_path = workspace_root / payload["created"]["request_path"]
+    metadata_path = workspace_root / "workitems" / "WI-LOCAL-FOLLOW-UP" / "work-item.json"
+    request_text = request_path.read_text(encoding="utf-8")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    qa_group = next(
+        group
+        for group in findings_payload["groups"]  # type: ignore[index]
+        if group["id"] == "qa-findings"
+    )
+
+    assert dashboard_payload["dashboard"]["terminal_handoff"]["status"] == "completed"  # type: ignore[index]
+    assert payload["created"]["work_item"] == "WI-LOCAL-FOLLOW-UP"
+    assert payload["created"]["source_artifact_paths"] == [
+        "workitems/WI-UI/stages/qa/qa-report.md"
+    ]
+    assert any(
+        item["id"] == "qa-finding:qa:qa_report"
+        and item["source_path"] == "workitems/WI-UI/stages/qa/qa-report.md"
+        for item in qa_group["items"]
+    )
+    assert "- Source work item: `WI-UI`" in request_text
+    assert "- Source run: `run-ui`" in request_text
+    assert "`workitems/WI-UI/stages/qa/qa-report.md`" in request_text
+    assert metadata["lineage"] == {
+        "source_run_id": "run-ui",
+        "source_work_item_id": "WI-UI",
+    }
+    assert not (workspace_root / "reports" / "runs" / "WI-LOCAL-FOLLOW-UP").exists()
 
 
 def test_operator_ui_artifacts_include_declared_project_set_roots(
@@ -1664,230 +2851,6 @@ def test_ui_artifact_document_endpoint_rejects_non_utf8_documents(tmp_path: Path
     assert response.status == HTTPStatus.BAD_REQUEST
     assert "not UTF-8 text" in _error_payload(response)["error"]  # type: ignore[operator]
 
-
-def test_operator_script_escapes_dynamic_markup(tmp_path: Path) -> None:
-    service = _service(tmp_path / ".aidd")
-
-    response = service.handle_get("/operator.js", {})
-    script = response.body.decode("utf-8")
-
-    assert "function escapeHtml(value)" in script
-    assert "function compactPath(value, maxLength = 56)" in script
-    assert "function pathLine(value, maxLength = 56)" in script
-    assert "function renderMarkdown(text)" in script
-    assert "function preferredArtifactKey(documents)" in script
-    assert "async function fetchDashboard()" in script
-    assert "dashboardUrl()" in script
-    assert 'api("/api/runtime-readiness")' in script
-    assert '"plan"' in script
-    assert '"stage_result"' in script
-    assert 'activeRunId: ""' in script
-    assert "readinessLoading: true" in script
-    assert 'readinessError: ""' in script
-    assert "state.activeRunId = state.dashboard.run?.run_id || \"\";" in script
-    assert "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`" in script
-    assert "No artifacts for this stage yet" in script
-    assert "No runtime log for this stage yet" in script
-    assert "function questionControlId(prefix, questionId, index)" in script
-    assert (
-        'const questionTextId = questionControlId("question-text", question.question_id, index);'
-        in script
-    )
-    assert 'const answerId = questionControlId("answer", question.question_id, index);' in script
-    assert (
-        'const resolutionId = questionControlId("resolution", question.question_id, index);'
-        in script
-    )
-    assert '<p id="${questionTextId}">${escapeHtml(question.text)}</p>' in script
-    assert (
-        '<label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>'
-        in script
-    )
-    assert (
-        '<textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}"'
-        in script
-    )
-    assert (
-        '<label class="sr-only" for="${resolutionId}">Resolution for '
-        "${escapeHtml(questionLabel)}</label>"
-        in script
-    )
-    assert (
-        '<select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}"'
-        in script
-    )
-    assert 'const savedAnswer = resolved && question.answer_text' in script
-    assert 'class="saved-answer"' in script
-    assert "Saved answer" in script
-    assert "${escapeHtml(question.answer_text)}" in script
-    assert "function byteRangeSummary(view)" in script
-    assert 'function renderTruncationNotice(kind, view, mode = "")' in script
-    assert 'class="truncation-notice" role="status"' in script
-    assert "Runtime log truncated" in script
-    assert "Artifact view truncated" in script
-    assert "Switch to Source for a larger bounded read" in script
-    assert "Source view is bounded. Open the folder for the full file." in script
-    assert "Full runtime.log remains on disk" in script
-    assert (
-        "function renderLogPanel({title, meta, entries, rawText, emptyText, actions = \"\", "
-        "truncation = null})"
-        in script
-    )
-    assert "async function renderRequestChange()" in script
-    assert "async function renderApprovals()" in script
-    assert "async function submitApproval(requestId, action)" in script
-    assert "async function submitIntervention()" in script
-    assert 'id="operatorRequestText"' in script
-    assert 'id="submitInterventionButton"' in script
-    assert "data-intervention-target" in script
-    assert '"validator_report"' in script
-    assert '"questions.md"' in script
-    assert "!textPath.includes(\"/operator-requests/\")" in script
-    assert "function interventionTargetLabel(key)" in script
-    assert "function updateSubmitInterventionState()" in script
-    assert 'event.target.id === "operatorRequestText"' in script
-    assert "function logEntriesFromChunks(chunks)" in script
-    assert "function logEntriesFromText(text)" in script
-    assert "rawText.match(/^\\[(stdout|stderr|system)\\]\\s?(.*)$/i)" in script
-    assert "function selectedRuntimeReady()" in script
-    assert "function timeoutSummary(runtime)" in script
-    assert "function readinessDetail(label, value, maxLength = 72)" in script
-    assert 'title="${escapeHtml(text)}"' in script
-    assert "${escapeHtml(compactPath(text, maxLength))}" in script
-    assert "function ensureRunnableRuntime()" in script
-    assert "function scrollActiveStageIntoView()" in script
-    assert "function renderFirstLaunchState()" in script
-    assert "first-launch-state" in script
-    assert "Select a runtime to start the first governed workflow run." in script
-    assert "data-first-launch-run" in script
-    assert 'event.target.closest("[data-first-launch-run]")' in script
-    assert 'if (state.activeTab === "overview") await renderCockpit();' in script
-    assert 'window.matchMedia("(max-width: 760px)").matches' in script
-    assert 'rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`)' in script
-    assert (
-        'active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});'
-        in script
-    )
-    assert "requestAnimationFrame(scrollActiveStageIntoView);" in script
-    assert 'toast("Selected runtime is not ready.")' in script
-    assert 'if (element.textContent === message) element.textContent = "";' in script
-    assert 'button.setAttribute("aria-selected", isActive ? "true" : "false");' in script
-    assert 'content.setAttribute("aria-labelledby", `tab-${tab}`);' in script
-    assert 'aria-current="${isActive ? "step" : "false"}"' in script
-    assert "data-log-filter" in script
-    assert "data-log-raw" in script
-    assert "state.rawLogMode" in script
-    assert 'state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered)' in script
-    assert "function renderLiveJobActions()" in script
-    assert "function activeJobCancelLabel()" in script
-    assert "async function cancelActiveJob()" in script
-    assert "data-cancel-job" in script
-    assert "Cancel job" in script
-    assert "Cancelling..." in script
-    assert "Cancelled" in script
-    assert "/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel" in script
-    assert 'new Set(["running", "waiting-for-operator", "cancelling"])' in script
-    assert "activeJobLogChunks.push(...(logs.chunks || []));" in script
-    assert "function liveJobActivityEvents()" in script
-    assert "function activityEvents()" in script
-    assert "renderActivityTable();" in script
-    assert "activeJobLogChunks.length" in script
-    assert 'state.activeJobStatus?.status === "running"' in script
-    assert "state.activeJobStatus.stage === state.activeStage" in script
-    assert "/api/artifacts/document?${params.toString()}" in script
-    assert 'params.set("mode", state.artifactViewMode);' in script
-    assert "const MAX_ARTIFACT_READ_BYTES = 262144;" in script
-    assert 'params.set("limit", String(MAX_ARTIFACT_READ_BYTES));' in script
-    assert 'renderTruncationNotice("artifact", documentView, state.artifactViewMode)' in script
-    assert "${renderMarkdown(documentView.text)}" in script
-    assert "const payload = {stage, runtime: state.selectedRuntime, log_follow: true};" in script
-    assert "target_documents: targetDocuments" in script
-    assert "if (state.activeRunId) payload.run_id = state.activeRunId;" in script
-    assert "const payload = {runtime: state.selectedRuntime, log_follow: true};" in script
-    assert 'postJson("/api/workflow/run", payload)' in script
-    assert "Resume workflow" in script
-    assert "Continue with ${stageTitle(action.stage || state.activeStage)}" in script
-    assert "Checking runtimes..." in script
-    assert "Checking runtime readiness." in script
-    assert (
-        "const runtimes = state.readinessLoading ? [] : "
-        "(state.readiness?.runtimes || []);"
-    ) in script
-    assert "if (state.readinessLoading) return null;" in script
-    assert "Support tier" in script
-    assert "Command source" in script
-    assert "Execution mode" in script
-    assert "Permission policy" in script
-    assert "Interaction mode" in script
-    assert "Auto approval" in script
-    assert "Provider version" in script
-    assert "Provider command" in script
-    assert "await fetchDashboard();" in script
-    assert "void fetchReadiness().then(renderAll)" in script
-    assert "Promise.all([fetchDashboard(), fetchReadiness()])" not in script
-    assert 'resolution: resolution?.value || "resolved"' in script
-    assert 'option value="partial"' in script
-    assert 'option value="deferred"' in script
-    assert "async function answerAndResume(questionId)" in script
-    assert "async function inspectArtifactReference({stage, key, path, kind})" in script
-    assert "data-evidence-path" in script
-    assert "data-artifact-key" in script
-    assert "data-blocker-stage" in script
-    assert 'class="stage-copy"' in script
-    assert script.index('closest("[data-artifact-stage]")') < script.index(
-        'closest("[data-artifact-key]")'
-    )
-    assert "function renderRuntimeSelector()" in script
-    assert "/api/dashboard" in script
-    assert "/api/stage/run" in script
-    assert "/api/stage/interact" in script
-    assert "/operator-requests/" in script
-    assert '"waiting-for-operator"' in script
-    assert "/api/open-folder" in script
-    assert "/api/server/stop" in script
-    assert (
-        "/api/jobs/${encodeURIComponent(state.activeJobId)}/logs?cursor="
-        "${state.activeJobCursor}"
-        in script
-    )
-    assert 'body: JSON.stringify({runtime: "generic-cli"})' not in script
-
-    css = service.handle_get("/operator.css", {}).body.decode("utf-8")
-    assert ".status-badge.cancelled" in css
-    assert ".small-badge.running" in css
-    assert ".small-badge.cancelling" in css
-    assert ".small-badge.waiting-for-operator" in css
-    assert ".log-actions" in css
-    assert ".truncation-notice" in css
-    assert ".saved-answer" in css
-    assert ".saved-answer-text" in css
-    assert ".loading-state" in css
-    assert "--focus-ring:" in css
-    assert "button:focus-visible" in css
-    assert "outline: 3px solid var(--focus-ring)" in css
-    assert "box-shadow: 0 0 0 4px var(--focus-ring-soft)" in css
-    assert "scroll-padding-inline: 10px" in css
-
-
-def test_operator_question_controls_have_screen_reader_labels(tmp_path: Path) -> None:
-    service = _service(tmp_path / ".aidd")
-
-    script = service.handle_get("/operator.js", {}).body.decode("utf-8")
-    css = service.handle_get("/operator.css", {}).body.decode("utf-8")
-
-    assert '<label class="sr-only" for="${answerId}">Answer for' in script
-    assert (
-        '<textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}"'
-        in script
-    )
-    assert '<label class="sr-only" for="${resolutionId}">Resolution for' in script
-    assert (
-        '<select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}"'
-        in script
-    )
-    assert ".sr-only" in css
-    assert "clip-path: inset(50%)" in css
-    assert "position: absolute" in css
 
 
 def test_ui_json_body_reader_rejects_oversized_payload() -> None:

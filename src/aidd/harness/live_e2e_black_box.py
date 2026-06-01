@@ -28,6 +28,7 @@ def run_black_box_live_e2e(
     work_root: Path | None = None,
     report_root: Path = Path(".aidd/reports/evals"),
     run_id: str | None = None,
+    enable_next_flow_follow_up_proof: bool = False,
 ) -> BlackBoxLiveE2EResult:
     _sync_monkeypatchable_dependencies()
     return _orchestration.run_black_box_live_e2e(
@@ -36,6 +37,7 @@ def run_black_box_live_e2e(
         work_root=work_root,
         report_root=report_root,
         run_id=run_id,
+        enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
     )
 
 

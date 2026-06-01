@@ -29,14 +29,16 @@ feature_source:
     title: CLI docs sync
     summary: Update docs and examples after a small CLI behavior change and prove
       docs, examples, and verification still align.
-    intent: Improve the HTTPX CLI documentation with a concrete, runnable example
-      that remains consistent with current command behavior.
-    target_change: Update the CLI-facing documentation surfaces only; no runtime HTTPX
+    intent: Improve the HTTPX CLI documentation with the exact concrete command
+      `httpx https://httpbin.org/json` so the authored task and counted gate stay
+      aligned with current command behavior.
+    target_change: Update the CLI-facing documentation surfaces only; the expected
+      docs example is exactly `httpx https://httpbin.org/json`, and no runtime HTTPX
       behavior change is expected.
     expected_scope: Documentation-only change in one or two Markdown files.
     acceptance_criteria:
-    - CLI documentation includes a concrete example that uses a real inspectable endpoint
-      or explains any local test server requirement.
+    - CLI documentation includes the exact concrete command `httpx https://httpbin.org/json`
+      using a real inspectable endpoint, without calling that endpoint during verification.
     - README and docs index content stay consistent if both mention CLI behavior.
     - The change does not introduce placeholder URLs as if they were runnable examples.
     - Verification checks documentation text and diff scope only; it must not call
@@ -172,6 +174,7 @@ interview:
   required: false
 runtime_targets:
 - codex
+- qwen
 live_flow:
   driver: stepwise-black-box
   checkpoint_policy: after-each-step

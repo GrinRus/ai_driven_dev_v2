@@ -6335,3 +6335,637 @@ Exit evidence:
 - invalid scalar config values produce actionable errors;
 - validation can surface independent semantic defects earlier without silently continuing
   past blocking structural failures.
+
+## Wave 26 — completed-flow lineage operator experience (`done`)
+
+Goal: implement the accepted Mission Control operator UI direction, including the
+completed-run handoff that can launch a new work item, follow-up flow, cloned flow,
+eval batch, or archive decision without mutating the completed source run.
+
+Opening note:
+
+- `2026-05-27` Wave 26 opened after the operator frontend design freeze. The accepted
+  direction is documented in `docs/architecture/operator-frontend.md`; this wave turns
+  that direction into reviewable core, UI, regression, and live E2E work.
+
+### Epic W26-E0 — design freeze and planning handoff (`done`)
+Linked stories: `US-07`, `US-10`, `US-11`
+
+#### Slice W26-E0-S1 — accepted Mission Control UX contract (`done`)
+Goal: freeze the chosen operator UI direction and reopen the backlog with reviewable
+implementation tasks.
+
+Primary outputs:
+
+- accepted screen inventory
+- completed-flow handoff contract
+- reopened Wave 26 backlog queue
+
+Touched areas:
+
+- `docs/product/`
+- `docs/architecture/`
+- `docs/backlog/`
+- `tests/`
+
+Dependencies:
+
+- `W25-E4-S3`
+
+Local tasks:
+
+- `W26-E0-S1-T1` (done) Document the accepted Mission Control UI direction, completed-run
+  next-flow semantics, and implementation backlog.
+  - Scope: product, architecture, and planning docs only.
+  - Verification: docs consistency checks and backlog sync checks pass.
+
+Exit evidence:
+
+- `US-11` includes terminal-run next-flow handoff as a frontend success signal;
+- `operator-frontend.md` records the 12 accepted screens and completed-run actions;
+- `docs/architecture/assets/operator-ui-mission-control/` stores the accepted visual
+  references, including active and completed command-center states;
+- `target-architecture.md` records immutable completed runs and lineage-based next flows;
+- Wave 26 local tasks are split and promoted into the short backlog queue.
+
+### Epic W26-E1 — flow lineage core model and launch services (`done`)
+Linked stories: `US-02`, `US-03`, `US-07`, `US-10`, `US-11`
+
+#### Slice W26-E1-S1 — completed-run handoff read model (`done`)
+Goal: expose terminal-run summaries, follow-up candidates, and lineage references through
+runtime-agnostic operator frontend services.
+
+Primary outputs:
+
+- terminal run summary read model
+- next-flow action recommendations
+- source-run and baseline lineage references
+
+Touched areas:
+
+- `src/aidd/core/operator_frontend_models.py`
+- `src/aidd/core/operator_frontend_dashboard.py`
+- `src/aidd/core/run_store*.py`
+- `tests/core/test_operator_frontend.py`
+
+Dependencies:
+
+- `W26-E0-S1`
+
+Local tasks:
+
+- `W26-E1-S1-T1` (done) Add a terminal-run handoff read model that exposes final QA status,
+  final artifacts, blockers, repair counts, approval counts, questions answered, and
+  recommended next-flow actions.
+  - Scope: core operator frontend read models only.
+  - Verification: `tests/core/test_operator_frontend.py` covers completed, failed, and
+    completed-with-warning run summaries.
+- `W26-E1-S1-T2` (done) Add lineage reference fields for source run, source work item, baseline,
+  and child work item candidates without changing adapter semantics.
+  - Scope: core run/work-item metadata read path.
+  - Verification: core tests prove old runs still render and new lineage fields are
+    optional, escaped, and source-of-truth derived.
+
+Exit evidence:
+
+- completed runs render actionable handoff data without JavaScript inferring workflow
+  state;
+- lineage references are core-owned and runtime-agnostic.
+
+#### Slice W26-E1-S2 — next-flow draft and launch services (`done`)
+Goal: create new work item or run drafts from completed-run context through core services
+instead of direct UI document mutation.
+
+Primary outputs:
+
+- follow-up work item draft service
+- clone flow draft service
+- launch preflight service
+
+Touched areas:
+
+- `src/aidd/core/`
+- `src/aidd/cli/`
+- `tests/core/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W26-E1-S1`
+
+Local tasks:
+
+- `W26-E1-S2-T1` (done) Implement a follow-up draft service that selects QA findings, review
+  notes, failed evidence, or manual requests and produces a new work item request
+  document with source-run references.
+  - Scope: core work-item creation service.
+  - Verification: core tests prove selected findings become durable Markdown context and
+    source artifacts are referenced, not rewritten.
+- `W26-E1-S2-T2` (done) Implement a clone-flow draft service that reuses runtime id, prompt pack,
+  contracts path, branch or commit, and baseline references while assigning a new run or
+  work item identity.
+  - Scope: core launch draft service.
+  - Verification: core tests prove cloned flow configuration is explicit and editable
+    before launch.
+- `W26-E1-S2-T3` (done) Add launch preflight validation for next-flow drafts, including writable
+  workspace, valid runtime selection, contract availability, baseline availability, and
+  source-run existence.
+  - Scope: core preflight and CLI/API error payloads.
+  - Verification: focused tests cover pass, warning, and blocking preflight outcomes.
+
+Exit evidence:
+
+- follow-up and cloned flows are independent units with durable source-run links;
+- launch preflight blocks unsafe or ambiguous next-flow starts before runtime execution.
+
+#### Slice W26-E1-S3 — workbench and evidence read models (`done`)
+Goal: expose the non-handoff Mission Control screens through core-owned read models so the
+static UI does not infer document, recovery, diagnostic, or provenance state in JavaScript.
+
+Primary outputs:
+
+- stage document workbench read model
+- recovery and diagnostics read-model extensions
+- evidence graph read model
+
+Touched areas:
+
+- `src/aidd/core/operator_frontend_models.py`
+- `src/aidd/core/operator_frontend_artifacts.py`
+- `src/aidd/core/operator_frontend_logs.py`
+- `src/aidd/core/operator_frontend_questions.py`
+- `src/aidd/core/operator_frontend_dashboard.py`
+- `tests/core/test_operator_frontend.py`
+
+Dependencies:
+
+- `W26-E1-S1`
+
+Local tasks:
+
+- `W26-E1-S3-T1` (done) Add a stage document workbench read model for Markdown preview/source
+  metadata, available diff inputs, contract requirements, validation results, references,
+  and version or model-authored change history when present.
+  - Scope: core operator frontend document/artifact read models only.
+  - Verification: core tests cover present, missing, large/truncated, and invalid
+    document states without editing runtime-authored artifacts.
+- `W26-E1-S3-T2` (done) Add recovery and diagnostics read-model fields for blocking questions,
+  validation/repair attempts, raw-log source summaries, runtime approval queues, and
+  stage-scoped request-change context.
+  - Scope: core operator frontend question, validation, log, and approval summaries.
+  - Verification: core tests cover blocked, repair-available, stopped, approval-waiting,
+    and log-truncated states.
+- `W26-E1-S3-T3` (done) Add an evidence graph read model that derives nodes and edges from
+  artifact indexes, stage outputs, validator reports, run events, approvals, and logs
+  without creating a new canonical artifact format.
+  - Scope: core artifact/provenance read model.
+  - Verification: core tests prove graph nodes link back to existing artifacts and degrade
+    to a flat artifact table when graph inputs are incomplete.
+
+Exit evidence:
+
+- workbench, recovery, diagnostics, and evidence screens consume typed core payloads;
+- no visual graph or document state becomes a JavaScript-only source of truth.
+
+### Epic W26-E2 — accepted operator UI screens (`done`)
+Linked stories: `US-05`, `US-06`, `US-11`
+
+#### Slice W26-E2-S0 — static UI refactoring foundation (`done`)
+Goal: reduce the current packaged static UI monolith before adding the larger Mission
+Control screen set, while preserving the no-Node and no-Vite packaging model.
+
+Current-main analysis:
+
+- `origin/main` is currently `36dc558`; rebasing `codex/operator-ui-mission-control-backlog`
+  onto `origin/main` was a no-op.
+- Main already split packaged assets into `src/aidd/cli/static/` and split operator
+  frontend read models into smaller core modules.
+- The remaining UI implementation is still concentrated in `operator.js` and
+  `operator.css`; before adding the new screens, the static UI needs explicit
+  module/resource boundaries so rendering, state, API, logs, artifacts, questions,
+  approvals, and next-flow controls do not become one larger file.
+
+Primary outputs:
+
+- multi-resource static asset loader
+- smaller browser JavaScript modules or equivalent packaged static boundaries
+- CSS token, layout, and component boundaries
+- targeted static UI contract tests
+
+Touched areas:
+
+- `src/aidd/cli/ui_assets.py`
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/static/`
+- `tests/cli/test_ui_assets_contracts.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W25-E4-S2`
+- `W26-E1-S1`
+
+Local tasks:
+
+- `W26-E2-S0-T1` (done) Add a packaged static asset manifest or loader that can serve multiple
+  UI JavaScript and CSS resources while preserving the existing `/operator.js` and
+  `/operator.css` compatibility routes.
+  - Scope: static resource loader and UI HTTP serving only.
+  - Verification: package resource tests and UI endpoint tests prove old routes still
+    work and new static resources are included in source and wheel builds.
+- `W26-E2-S0-T2` (done) Split `operator.js` into smaller packaged browser modules for API/state,
+  shell rendering, stage cockpit rendering, artifacts/documents, logs/jobs, questions,
+  approvals/interventions, and next-flow actions.
+  - Scope: static JavaScript resources only.
+  - Verification: existing UI tests pass and static contract tests assert each module owns
+    its intended surface without removing escaping, accessibility, or runtime-selection
+    safeguards.
+- `W26-E2-S0-T3` (done) Split `operator.css` into token, layout, component, and responsive layers
+  or equivalent clearly bounded sections before adding Mission Control-specific styles.
+  - Scope: static CSS resources only.
+  - Verification: CSS contract tests keep focus, screen-reader, truncation, saved-answer,
+    mobile rail, and density rules present.
+- `W26-E2-S0-T4` (done) Split monolithic script-string assertions in `tests/cli/test_ui.py` into
+  targeted UI asset contract tests organized by surface.
+  - Scope: UI tests only.
+  - Verification: focused UI asset and UI endpoint tests pass with the same behavior
+    checks but smaller failure surfaces.
+
+Exit evidence:
+
+- Mission Control UI work can add new screens without extending the current static
+  JavaScript/CSS monoliths;
+- existing local UI behavior, package resource loading, and no-Node packaging remain
+  compatibility-preserved.
+
+#### Slice W26-E2-S1 — Mission Control shell updates (`done`)
+Goal: update the existing static operator console shell to match the accepted screen
+inventory while preserving the no-Node packaging model.
+
+Primary outputs:
+
+- setup screen with previous-run context
+- active and completed command center states
+- run history lineage view
+
+Touched areas:
+
+- `src/aidd/cli/static/index.html`
+- `src/aidd/cli/static/operator.css`
+- `src/aidd/cli/static/operator.js`
+- `src/aidd/cli/static/operator-*.css`
+- `tests/cli/test_ui_assets_contracts.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W26-E1-S1`
+- `W26-E2-S0`
+
+Local tasks:
+
+- `W26-E2-S1-T1` (done) Render the Project Setup mode selector with New Work Item,
+  Follow-up Flow, Clone Previous Flow, Eval / Scenario Batch, and previous-run context.
+  - Scope: packaged static UI shell and dashboard payload rendering.
+  - Verification: UI endpoint and static DOM tests cover mode selection and inherited
+    context rendering.
+- `W26-E2-S1-T2` (done) Render Flow Complete in the command center with Start Next Flow actions
+  and final artifact, blocker, evidence, approval, and safety summaries.
+  - Scope: dashboard UI state for terminal runs.
+  - Verification: static and service-level UI tests cover completed-run action visibility
+    and no hidden generic runtime fallback.
+- `W26-E2-S1-T3` (done) Render run history lineage with parent run, child work item, next-action
+  badges, and actions for follow-up, clone, eval batch, and archive.
+  - Scope: run-history UI and read model consumption.
+  - Verification: UI tests prove lineage rows link to existing run/artifact data and
+    escape dynamic labels.
+
+Exit evidence:
+
+- operators can see where the current run ended and what can safely happen next;
+- setup and history screens can both start the next-flow path.
+
+#### Slice W26-E2-S2 — Start Next Flow wizard (`done`)
+Goal: provide a safe handoff wizard for selecting source findings, defining a new work
+item, and confirming launch.
+
+Primary outputs:
+
+- source findings selection screen
+- follow-up work item definition screen
+- launch confirmation screen
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `src/aidd/cli/ui_http.py`
+- `tests/cli/test_ui.py`
+- `tests/cli/test_ui_assets_contracts.py`
+
+Dependencies:
+
+- `W26-E1-S2`
+- `W26-E2-S1`
+
+Local tasks:
+
+- `W26-E2-S2-T1` (done) Render source findings selection grouped by QA findings, review notes,
+  failed evidence, and manual request.
+  - Scope: wizard UI and API payload rendering.
+  - Verification: tests cover selection state, source artifact links, and required
+    context counts.
+- `W26-E2-S2-T2` (done) Render follow-up work item definition with generated acceptance
+  criteria, required evidence, inherited context toggles, and first-stage input preview.
+  - Scope: wizard UI and follow-up draft payload.
+  - Verification: tests prove generated fields remain editable and source-run context is
+    visible before launch.
+- `W26-E2-S2-T3` (done) Render launch confirmation with preflight results, audit preview,
+  source artifact links, and the Launch Flow Now action.
+  - Scope: wizard UI and private launch preflight integration.
+  - Verification: tests cover pass, warning, and blocked preflight states.
+
+Exit evidence:
+
+- the wizard makes it explicit that follow-up creates a new work item and run;
+- launch cannot proceed without visible lineage and preflight evidence.
+
+#### Slice W26-E2-S3 — workbench, recovery, diagnostics, and evidence screens (`done`)
+Goal: update the remaining accepted Mission Control screens so the whole visual reference
+set is implementable, not only setup, run history, and next-flow handoff.
+
+Primary outputs:
+
+- Stage Document Workbench screen
+- Questions / Interview Loop screen
+- Validation / Repair Center screen
+- Runtime Logs / Live Console screen
+- Artifacts / Evidence Graph screen
+- Approvals / Request Change screen
+
+Touched areas:
+
+- `src/aidd/cli/static/index.html`
+- `src/aidd/cli/static/operator.css`
+- `src/aidd/cli/static/operator.js`
+- `tests/cli/test_ui_assets_contracts.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W26-E1-S3`
+- `W26-E2-S1`
+
+Local tasks:
+
+- `W26-E2-S3-T1` (done) Render the Stage Document Workbench with artifact tree, Markdown
+  preview/source/diff controls, contract requirements, validation results, missing
+  evidence, references, and version history.
+  - Scope: packaged static UI document workbench.
+  - Verification: static and endpoint tests cover document loading, source/preview state,
+    truncation labels, and contract/validation sidebars.
+- `W26-E2-S3-T2` (done) Render Questions / Interview Loop and Validation / Repair Center as
+  first-class recovery screens with required answers, blocked stages, repair attempt
+  timeline, Run Repair, Stop Run, and Request Change actions.
+  - Scope: packaged static UI recovery surfaces.
+  - Verification: UI tests cover unresolved, resolved, partial, deferred, repair-available,
+    repair-exhausted, and explicit-stop states.
+- `W26-E2-S3-T3` (done) Render Runtime Logs / Live Console and Approvals / Request Change with
+  raw log source filters, bounded-log notices, approval queue, diff preview, intervention
+  composer, and audit log.
+  - Scope: packaged static UI diagnostics and human-control surfaces.
+  - Verification: UI tests cover raw/saved logs, truncation visibility, approval decisions,
+    request-change submission, and escaped dynamic runtime values.
+- `W26-E2-S3-T4` (done) Render Artifacts / Evidence Graph with provenance nodes, edge selection,
+  artifact inspector, flat table fallback, and open/download/copy-path actions.
+  - Scope: packaged static UI evidence graph and artifact explorer.
+  - Verification: UI tests cover complete graph, incomplete graph fallback, selected node
+    inspector, artifact path escaping, and no mutation of source artifacts.
+
+Exit evidence:
+
+- all accepted visual references have an implementation task and verification path;
+- recovery and diagnostic actions stay auditable and core-backed.
+
+### Epic W26-E3 — API, safety, and regression coverage (`done`)
+Linked stories: `US-03`, `US-06`, `US-10`, `US-11`
+
+#### Slice W26-E3-S1 — private UI next-flow API (`done`)
+Goal: expose next-flow draft, preflight, launch, and archive operations through local UI
+endpoints backed by core services.
+
+Primary outputs:
+
+- private follow-up and clone draft endpoints
+- launch endpoint
+- archive decision endpoint
+
+Touched areas:
+
+- `src/aidd/cli/ui_http.py`
+- `src/aidd/cli/ui.py`
+- `src/aidd/core/`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W26-E1-S2`
+
+Local tasks:
+
+- `W26-E3-S1-T1` (done) Add private UI endpoints for follow-up and clone draft creation with
+  request-size limits, escaped response fields, and deterministic malformed-body errors.
+  - Scope: local UI HTTP layer.
+  - Verification: CLI UI tests cover success and invalid payloads without invoking real
+    runtimes.
+- `W26-E3-S1-T2` (done) Add a launch endpoint that creates the new independent work item or run,
+  writes audit lineage, and dispatches normal workflow execution only after explicit
+  runtime selection.
+  - Scope: UI HTTP integration with core launch services.
+  - Verification: tests prove launch delegates to core services and does not mutate the
+    source run.
+- `W26-E3-S1-T3` (done) Add an archive decision endpoint for completed runs that records local
+  operator intent without deleting artifacts or blocking future read-only inspection.
+  - Scope: UI HTTP and run metadata.
+  - Verification: tests prove archive state is visible in dashboard/history and artifacts
+    remain readable.
+
+Exit evidence:
+
+- every new UI write path has a narrow core-backed service boundary;
+- completed source artifacts remain immutable after next-flow actions.
+
+#### Slice W26-E3-S2 — deterministic UI and accessibility coverage (`done`)
+Goal: prove the accepted design through tests and manual browser checklist updates without
+introducing a Node build pipeline.
+
+Primary outputs:
+
+- static DOM contract coverage
+- service-level next-flow regressions
+- manual browser checklist update
+
+Touched areas:
+
+- `tests/cli/`
+- `tests/core/`
+- `docs/e2e/operator-ui-local-project.md`
+
+Dependencies:
+
+- `W26-E2-S1`
+- `W26-E2-S2`
+- `W26-E3-S1`
+
+Local tasks:
+
+- `W26-E3-S2-T1` (done) Add static DOM contract tests for the accepted screen landmarks, flow
+  complete state, wizard controls, lineage labels, and focus-visible affordances.
+  - Scope: `tests/cli/test_ui_assets_contracts.py`.
+  - Verification: focused static UI asset tests pass.
+- `W26-E3-S2-T2` (done) Add service-level UI regressions for completed-run next action,
+  follow-up draft creation, clone draft creation, launch preflight, and archive decision.
+  - Scope: `tests/cli/test_ui.py` and `tests/core/test_operator_frontend.py`.
+  - Verification: focused UI/core pytest suite passes.
+- `W26-E3-S2-T3` (done) Extend the manual browser checklist with Flow Complete, Start Next Flow,
+  wizard, run-history lineage, desktop/tablet/mobile, and keyboard paths.
+  - Scope: `docs/e2e/operator-ui-local-project.md`.
+  - Verification: docs consistency tests assert the checklist sections remain present.
+
+Exit evidence:
+
+- accepted UI semantics are covered by deterministic tests;
+- manual browser evidence can validate the completed-flow handoff in realistic viewports.
+
+### Epic W26-E4 — live E2E and eval evidence integration (`done`)
+Linked stories: `US-07`, `US-10`, `US-11`
+
+#### Slice W26-E4-S1 — local-project UI E2E next-flow lane (`done`)
+Goal: update the local-project operator UI evidence lane so it proves completed-run
+handoff and lineage before public-repository live evidence is refreshed.
+
+Primary outputs:
+
+- local-project completed-run checklist
+- deterministic fixture or service path for terminal run state
+- manual smoke evidence instructions
+
+Touched areas:
+
+- `docs/e2e/operator-ui-local-project.md`
+- `harness/scenarios/smoke/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W26-E3-S2`
+
+Local tasks:
+
+- `W26-E4-S1-T1` (done) Update the operator UI local-project E2E lane to require Flow Complete,
+  Start Next Flow, follow-up draft, launch preflight, and run-history lineage checks.
+  - Scope: E2E documentation only.
+  - Verification: docs consistency test covers the new checklist sections.
+- `W26-E4-S1-T2` (done) Add deterministic local fixture coverage that seeds a terminal run and
+  proves the UI can create a follow-up draft without invoking a real provider runtime.
+  - Scope: deterministic UI/service tests or smoke fixture data.
+  - Verification: focused pytest proves source-run lineage and draft artifact references.
+- `W26-E4-S1-T3` (done) Record a manual installed local-project smoke path for completed-run
+  handoff, including expected evidence and cleanup rules for generated `.aidd/` state.
+  - Scope: E2E docs and roadmap evidence.
+  - Verification: manual smoke notes identify run id, source work item, child work item,
+    browser, viewport, runtime id, and blockers.
+
+Exit evidence:
+
+- the local UI lane proves the new completed-flow behavior without depending on public
+  repositories or provider credentials.
+
+#### Slice W26-E4-S2 — public live E2E next-flow checkpoint logic (`done`)
+Goal: update the black-box live E2E logic so final run evidence records completed-flow
+handoff readiness and optional next-flow lineage without turning live E2E into a CI gate.
+
+Primary outputs:
+
+- live catalog next-flow checkpoint policy
+- black-box evaluator final checkpoint evidence:
+  `next-flow-checkpoint.json` and `next-flow-checkpoint.md`
+- optional child-flow lineage evidence: `next-flow-lineage.json`
+- result-bundle tests for next-flow evidence
+
+Touched areas:
+
+- `docs/e2e/live-e2e-catalog.md`
+- `.agents/skills/live-e2e/`
+- `src/aidd/harness/live_e2e_black_box*.py`
+- `tests/harness/`
+
+Dependencies:
+
+- `W26-E4-S1`
+
+Local tasks:
+
+- `W26-E4-S2-T1` (done) Define the manual live E2E next-flow checkpoint policy: after terminal
+  `qa`, inspect Flow Complete and record the operator's next-flow decision, but do not
+  require launching a second public-repository flow by default.
+  - Scope: live E2E docs and live-e2e skill guidance.
+  - Verification: docs consistency tests cover the policy and keep live E2E manual-only.
+- `W26-E4-S2-T2` (done) Extend the black-box live evaluator final checkpoint to capture
+  completed-run next-action evidence, source-run summary, and optional lineage metadata in
+  the result bundle.
+  - Scope: live evaluator orchestration and report writer modules.
+  - Verification: harness tests prove the final bundle contains
+    `next-flow-checkpoint.json` and `next-flow-checkpoint.md` for completed, failed, and
+    blocked terminal runs.
+- `W26-E4-S2-T3` (done) Add an optional maintained-scenario follow-up proof path that creates a
+  follow-up draft from QA findings when the operator explicitly enables it for a manual
+  run.
+  - Scope: live scenario policy and evaluator option handling.
+  - Verification: unit tests prove the option is off by default, manual-only, and records
+    `next-flow-lineage.json` with child work item lineage when enabled.
+
+Exit evidence:
+
+- public live E2E validates the new UX decision point without requiring nested live
+  provider work by default;
+- optional follow-up proof records lineage when a maintainer deliberately runs it.
+
+### Epic W26-E5 — operator documentation and rollout clarity (`done`)
+Linked stories: `US-09`, `US-11`
+
+#### Slice W26-E5-S1 — completed-flow operator documentation (`done`)
+Goal: document the completed-run handoff and lineage model for operators after the UI and
+core services land.
+
+Primary outputs:
+
+- README operator UI summary update
+- operator handbook next-flow section
+- troubleshooting notes for blocked next-flow preflight
+
+Touched areas:
+
+- `README.md`
+- `docs/operator-handbook.md`
+- `docs/operator-troubleshooting.md`
+- `tests/test_docs_consistency.py`
+
+Dependencies:
+
+- `W26-E3-S1`
+- `W26-E4-S1`
+
+Local tasks:
+
+- `W26-E5-S1-T1` (done) Document completed-run handoff, follow-up flow creation, clone flow,
+  eval batch handoff, archive behavior, and source-run lineage in operator-facing docs.
+  - Scope: operator documentation only.
+  - Verification: docs consistency tests assert the operator docs describe next-flow
+    actions and keep local-project UI and live E2E boundaries distinct.
+
+Exit evidence:
+
+- operators can understand when to create a new work item, follow-up, clone, eval batch,
+  or archive decision without reading implementation code;
+- docs preserve the distinction between local-project UI proof and public-repository live
+  E2E checkpoint evidence.

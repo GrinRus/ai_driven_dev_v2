@@ -21,6 +21,7 @@ from aidd.harness.live_e2e_black_box import (
 from aidd.harness.live_e2e_black_box_orchestration import (
     _find_resume_state,
     _live_interruption_handlers,
+    _next_flow_complete_visible,
     _run_black_box_command,
 )
 from aidd.harness.runner import HarnessCommandTranscript
@@ -36,6 +37,16 @@ _PRIMARY_OUTPUTS: dict[str, str] = {
     "review": "review-report.md",
     "qa": "qa-report.md",
 }
+
+
+@pytest.mark.parametrize("qa_stage_state", ("passed", "succeeded", " SUCCEEDED "))
+def test_next_flow_complete_visible_accepts_stage_audit_and_dashboard_states(
+    qa_stage_state: str,
+) -> None:
+    assert _next_flow_complete_visible(
+        status="pass",
+        qa_stage_state=qa_stage_state,
+    )
 
 
 def _run(args: list[str], *, cwd: Path | None = None) -> str:
@@ -824,8 +835,11 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         "operator-quality-analysis-validation.json",
         "ui-ux-checkpoints.json",
         "ui-ux-checkpoints.md",
+        "next-flow-checkpoint.json",
+        "next-flow-checkpoint.md",
     ):
         assert (result.bundle_root / filename).exists(), filename
+    assert not (result.bundle_root / "next-flow-lineage.json").exists()
 
     steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     run_stage_steps = [step for step in steps if step["action"] == "run-stage"]
@@ -903,6 +917,85 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         (result.bundle_root / "acceptance-coverage.json").read_text(encoding="utf-8")
     )
     assert acceptance_payload["acceptance_coverage_status"] == "missing"
+    next_flow_payload = json.loads(
+        (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    assert next_flow_payload["terminal_status"] == "pass"
+    assert next_flow_payload["flow_complete_visible"] is True
+    assert next_flow_payload["source_run_summary"]["source_run_id"] == result.run_id
+    assert next_flow_payload["source_run_summary"]["source_work_item_id"] == (
+        "WI-LIVE-BLACKBOX"
+    )
+    assert next_flow_payload["source_run_summary"]["final_qa_status"] == "ready"
+    assert next_flow_payload["source_run_summary"]["qa_stage_state"] == "passed"
+    assert next_flow_payload["next_flow_actions"]["operator_decision"]["decision"] == (
+        "no-follow-up"
+    )
+    assert (
+        next_flow_payload["next_flow_actions"]["operator_decision"][
+            "requires_second_public_repository_flow"
+        ]
+        is False
+    )
+    assert next_flow_payload["optional_lineage_metadata"]["child_flow_required"] is False
+    assert next_flow_payload["optional_lineage_metadata"]["source_run_id"] == result.run_id
+    assert "start-follow-up-flow" in {
+        action["action"]
+        for action in next_flow_payload["next_flow_actions"][
+            "recommended_next_flow_actions"
+        ]
+    }
+    next_flow_markdown = (result.bundle_root / "next-flow-checkpoint.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Default decision: `no-follow-up`" in next_flow_markdown
+    assert "Requires second public-repository flow: `false`" in next_flow_markdown
+
+
+def test_black_box_live_e2e_follow_up_proof_is_explicit_manual_only_lineage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        enable_next_flow_follow_up_proof=True,
+    )
+
+    lineage_path = result.bundle_root / "next-flow-lineage.json"
+    assert lineage_path.exists()
+    lineage = json.loads(lineage_path.read_text(encoding="utf-8"))
+    assert lineage["enabled"] is True
+    assert lineage["manual_only"] is True
+    assert lineage["automation_lane"] == "manual"
+    assert lineage["launched_child_flow"] is False
+    assert lineage["source_run_id"] == result.run_id
+    assert lineage["source_work_item_id"] == "WI-LIVE-BLACKBOX"
+    assert lineage["child_work_item_id"].startswith("WI-LIVE-BLACKBOX-FOLLOW-UP-")
+    assert lineage["child_work_item_lineage"] == {
+        "source_run_id": result.run_id,
+        "source_work_item_id": "WI-LIVE-BLACKBOX",
+    }
+    assert lineage["source_artifact_paths"] == [
+        "workitems/WI-LIVE-BLACKBOX/stages/qa/output/qa-report.md"
+    ]
+    follow_up_request = Path(lineage["follow_up_request_path"])
+    assert follow_up_request.exists()
+    assert f"Source run: `{result.run_id}`" in follow_up_request.read_text(
+        encoding="utf-8"
+    )
+    checkpoint = json.loads(
+        (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    optional_lineage = checkpoint["optional_lineage_metadata"]
+    assert optional_lineage["child_flow_enabled"] is True
+    assert optional_lineage["child_flow_required"] is False
+    assert optional_lineage["child_work_item_id"] == lineage["child_work_item_id"]
+    assert optional_lineage["lineage_artifact"] == lineage_path.as_posix()
 
 
 def test_black_box_live_e2e_records_complete_acceptance_coverage(
@@ -1066,6 +1159,14 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     assert first.status == "blocked"
     first_grader = json.loads((first.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert first_grader["steps"][-1]["action"] == "stop"
+    first_next_flow = json.loads(
+        (first.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    assert first_next_flow["terminal_status"] == "blocked"
+    assert first_next_flow["flow_complete_visible"] is False
+    assert first_next_flow["next_flow_actions"]["operator_decision"]["decision"] == "blocked"
+    assert first_next_flow["source_run_summary"]["questions"]["total_count"] == 1
+    assert first_next_flow["source_run_summary"]["questions"]["answered_count"] == 0
     request_markdown = (first.bundle_root / "operator-action-request.md").read_text(
         encoding="utf-8"
     )
@@ -1112,6 +1213,11 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     resumed_grader = json.loads((resumed.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert resumed_grader["steps"][-1]["action"] == "finish"
     assert resumed_grader["execution"]["first_failure_note"] is None
+    resumed_next_flow = json.loads(
+        (resumed.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    assert resumed_next_flow["terminal_status"] == "pass"
+    assert resumed_next_flow["source_run_summary"]["questions"]["answered_count"] == 1
     assert resumed_grader["selected_task"]["title"] == "exercise live black-box evaluator"
     assert "First Failure Boundary: `none`" in (
         resumed.bundle_root / "log-analysis.md"
@@ -1551,6 +1657,16 @@ def test_black_box_live_e2e_stops_when_public_inspection_fails_after_stage_pass(
     assert inspect_steps[0]["classification"] == "fail"
     assert "public inspection failed" in (
         result.bundle_root / "flow-state.json"
+    ).read_text(encoding="utf-8")
+    next_flow_payload = json.loads(
+        (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
+    )
+    assert next_flow_payload["terminal_status"] == "fail"
+    assert next_flow_payload["flow_complete_visible"] is False
+    assert next_flow_payload["next_flow_actions"]["operator_decision"]["decision"] == "blocked"
+    assert next_flow_payload["source_run_summary"]["blockers"]
+    assert "Default decision: `blocked`" in (
+        result.bundle_root / "next-flow-checkpoint.md"
     ).read_text(encoding="utf-8")
 
 

@@ -351,7 +351,7 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
         ) in release_notes
 
 
-def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
+def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     repo_root = _repo_root()
     source_version = _project_version(repo_root)
     release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
@@ -362,6 +362,9 @@ def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
     roadmap = (repo_root / "docs" / "backlog" / "roadmap.md").read_text(
         encoding="utf-8"
     )
+    operator_frontend = (
+        repo_root / "docs" / "architecture" / "operator-frontend.md"
+    ).read_text(encoding="utf-8")
     backlog = (repo_root / "docs" / "backlog" / "backlog.md").read_text(
         encoding="utf-8"
     )
@@ -370,6 +373,7 @@ def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
         1,
     )[0]
     w24_s2 = roadmap.split("#### Slice W24-E1-S2", 1)[1].split("## Wave", 1)[0]
+    w26 = roadmap.split("## Wave 26", 1)[1]
     backlog_next = backlog.split("## Next", 1)[1].split("## Soon", 1)[0]
     backlog_soon = backlog.split("## Soon", 1)[1].split("## Parking lot", 1)[0]
     backlog_parking = backlog.split("## Parking lot", 1)[1].split("## Update rules", 1)[0]
@@ -393,9 +397,180 @@ def test_operator_ui_docs_and_w24_queue_stay_synchronized() -> None:
     assert "`W24-E1-S2-T1` (done)" in w24_s2
     assert "`W24-E1-S2-T2` (done)" in w24_s2
     assert "`W24-E1-S2-T3` (done)" in w24_s2
-    assert "No immediate tasks queued." in backlog_next
-    assert "No near-term tasks queued." in backlog_soon
-    assert "No deferred tasks queued." in backlog_parking
+
+    assert "## Wave 26 — completed-flow lineage operator experience (`done`)" in roadmap
+    assert "`W26-E0-S1-T1` (done)" in w26
+    assert "### Epic W26-E1 — flow lineage core model and launch services (`done`)" in w26
+    assert "`W26-E1-S1-T1` (done) Add a terminal-run handoff read model" in w26
+    assert "`W26-E1-S1-T2` (done) Add lineage reference fields" in w26
+    assert "`W26-E1-S2-T1` (done) Implement a follow-up draft service" in w26
+    assert "`W26-E1-S2-T2` (done) Implement a clone-flow draft service" in w26
+    assert "`W26-E1-S2-T3` (done) Add launch preflight validation" in w26
+    assert "#### Slice W26-E1-S3 — workbench and evidence read models (`done`)" in w26
+    assert "#### Slice W26-E2-S0 — static UI refactoring foundation (`done`)" in w26
+    assert "`W26-E2-S0-T1` (done) Add a packaged static asset manifest" in w26
+    assert "`W26-E2-S0-T2` (done) Split `operator.js`" in w26
+    assert "`W26-E2-S0-T3` (done) Split `operator.css`" in w26
+    assert "`W26-E2-S0-T4` (done) Split monolithic script-string assertions" in w26
+    assert "#### Slice W26-E2-S1 — Mission Control shell updates (`done`)" in w26
+    assert "`W26-E2-S1-T1` (done) Render the Project Setup mode selector" in w26
+    assert "`W26-E2-S1-T2` (done) Render Flow Complete" in w26
+    assert "`W26-E2-S1-T3` (done) Render run history lineage" in w26
+    assert "### Epic W26-E2 — accepted operator UI screens (`done`)" in w26
+    assert "#### Slice W26-E2-S2 — Start Next Flow wizard (`done`)" in w26
+    assert "`W26-E2-S2-T1` (done) Render source findings selection" in w26
+    assert "`W26-E2-S2-T2` (done) Render follow-up work item definition" in w26
+    assert "`W26-E2-S2-T3` (done) Render launch confirmation" in w26
+    assert (
+        "#### Slice W26-E2-S3 — workbench, recovery, diagnostics, and evidence screens (`done`)"
+        in w26
+    )
+    assert "`W26-E2-S3-T1` (done) Render the Stage Document Workbench" in w26
+    assert "`W26-E2-S3-T2` (done) Render Questions / Interview Loop" in w26
+    assert "`W26-E2-S3-T3` (done) Render Runtime Logs / Live Console" in w26
+    assert "`W26-E2-S3-T4` (done) Render Artifacts / Evidence Graph" in w26
+    assert "`W26-E1-S3-T1` (done) Add a stage document workbench read model" in w26
+    assert "`W26-E1-S3-T2` (done) Add recovery and diagnostics read-model fields" in w26
+    assert "`W26-E1-S3-T3` (done) Add an evidence graph read model" in w26
+    assert "### Epic W26-E3 — API, safety, and regression coverage (`done`)" in w26
+    assert "#### Slice W26-E3-S1 — private UI next-flow API (`done`)" in w26
+    assert "`W26-E3-S1-T1` (done) Add private UI endpoints" in w26
+    assert "`W26-E3-S1-T2` (done) Add a launch endpoint" in w26
+    assert "`W26-E3-S1-T3` (done) Add an archive decision endpoint" in w26
+    assert "#### Slice W26-E3-S2 — deterministic UI and accessibility coverage (`done`)" in w26
+    assert "`W26-E3-S2-T1` (done) Add static DOM contract tests" in w26
+    assert "`W26-E3-S2-T2` (done) Add service-level UI regressions" in w26
+    assert "`W26-E3-S2-T3` (done) Extend the manual browser checklist" in w26
+    assert "### Epic W26-E4 — live E2E and eval evidence integration (`done`)" in w26
+    assert "#### Slice W26-E4-S1 — local-project UI E2E next-flow lane (`done`)" in w26
+    assert "`W26-E4-S1-T1` (done) Update the operator UI local-project E2E lane" in w26
+    assert "`W26-E4-S1-T2` (done) Add deterministic local fixture coverage" in w26
+    assert "`W26-E4-S1-T3` (done) Record a manual installed local-project smoke path" in w26
+    assert "#### Slice W26-E4-S2 — public live E2E next-flow checkpoint logic (`done`)" in w26
+    assert "`W26-E4-S2-T1` (done) Define the manual live E2E next-flow checkpoint policy" in w26
+    assert "`W26-E4-S2-T2` (done) Extend the black-box live evaluator final checkpoint" in w26
+    assert "`W26-E4-S2-T3` (done) Add an optional maintained-scenario follow-up proof path" in w26
+    assert "### Epic W26-E5 — operator documentation and rollout clarity (`done`)" in w26
+    assert "#### Slice W26-E5-S1 — completed-flow operator documentation (`done`)" in w26
+    assert "`W26-E5-S1-T1` (done) Document completed-run handoff" in w26
+    assert "`W26-E5-S1-T1`" not in backlog_next
+    assert "`W26-E1-S1-T1`" not in backlog_next
+    assert "`W26-E1-S1-T2`" not in backlog_next
+    assert "`W26-E1-S2-T1`" not in backlog_next
+    assert "`W26-E1-S2-T2`" not in backlog_next
+    assert "`W26-E1-S2-T3`" not in backlog_next
+    assert "`W26-E2-S0-T1`" not in backlog_next
+    assert "`W26-E2-S0-T2`" not in backlog_next
+    assert "`W26-E2-S0-T3`" not in backlog_next
+    assert "`W26-E2-S0-T4`" not in backlog_next
+    assert "`W26-E1-S3-T1`" not in backlog_next
+    assert "`W26-E1-S3-T2`" not in backlog_next
+    assert "`W26-E1-S3-T3`" not in backlog_next
+    assert "`W26-E2-S1-T1`" not in backlog_next
+    assert "`W26-E2-S1-T2`" not in backlog_next
+    assert "`W26-E2-S1-T3`" not in backlog_next
+    assert "`W26-E2-S2-T1`" not in backlog_next
+    assert "`W26-E2-S2-T2`" not in backlog_next
+    assert "`W26-E2-S2-T3`" not in backlog_next
+    assert "`W26-E2-S3-T1`" not in backlog_next
+    assert "`W26-E2-S3-T2`" not in backlog_next
+    assert "`W26-E2-S3-T3`" not in backlog_next
+    assert "`W26-E2-S3-T4`" not in backlog_next
+    assert "`W26-E3-S1-T1`" not in backlog_next
+    assert "`W26-E3-S1-T2`" not in backlog_next
+    assert "`W26-E3-S1-T3`" not in backlog_next
+    assert "`W26-E3-S2-T1`" not in backlog_next
+    assert "`W26-E3-S2-T2`" not in backlog_next
+    assert "`W26-E3-S2-T3`" not in backlog_next
+    assert "`W26-E4-S1-T1`" not in backlog_next
+    assert "`W26-E4-S1-T2`" not in backlog_next
+    assert "`W26-E4-S1-T3`" not in backlog_next
+    assert "`W26-E4-S2-T1`" not in backlog_next
+    assert "`W26-E4-S2-T2`" not in backlog_next
+    assert "`W26-E4-S2-T3`" not in backlog_next
+    assert "`W26-E1-S3-T1`" not in backlog_soon
+    assert "`W26-E1-S1-T2`" not in backlog_soon
+    assert "`W26-E1-S2-T1`" not in backlog_soon
+    assert "`W26-E1-S2-T2`" not in backlog_soon
+    assert "`W26-E1-S2-T3`" not in backlog_soon
+    assert "`W26-E2-S0-T1`" not in backlog_soon
+    assert "`W26-E2-S0-T2`" not in backlog_soon
+    assert "`W26-E2-S0-T3`" not in backlog_soon
+    assert "`W26-E2-S0-T4`" not in backlog_soon
+    assert "`W26-E1-S3-T2`" not in backlog_soon
+    assert "`W26-E1-S3-T3`" not in backlog_soon
+    assert "`W26-E2-S1-T1`" not in backlog_soon
+    assert "`W26-E2-S1-T2`" not in backlog_soon
+    assert "`W26-E2-S1-T3`" not in backlog_soon
+    assert "`W26-E2-S2-T1`" not in backlog_soon
+    assert "`W26-E2-S2-T2`" not in backlog_soon
+    assert "`W26-E2-S2-T3`" not in backlog_soon
+    assert "`W26-E2-S3-T1`" not in backlog_soon
+    assert "`W26-E2-S3-T2`" not in backlog_soon
+    assert "`W26-E2-S3-T3`" not in backlog_soon
+    assert "`W26-E2-S3-T4`" not in backlog_soon
+    assert "`W26-E3-S1-T1`" not in backlog_soon
+    assert "`W26-E3-S1-T2`" not in backlog_soon
+    assert "`W26-E3-S1-T3`" not in backlog_soon
+    assert "`W26-E3-S2-T1`" not in backlog_soon
+    assert "`W26-E3-S2-T2`" not in backlog_soon
+    assert "`W26-E3-S2-T3`" not in backlog_soon
+    assert "`W26-E4-S1-T1`" not in backlog_soon
+    assert "`W26-E4-S1-T2`" not in backlog_soon
+    assert "`W26-E4-S1-T3`" not in backlog_soon
+    assert "`W26-E4-S2-T1`" not in backlog_soon
+    assert "`W26-E4-S2-T2`" not in backlog_soon
+    assert "`W26-E4-S2-T3`" not in backlog_soon
+    assert "`W26-E5-S1-T1`" not in backlog_soon
+    assert "`W26-E2-S0-T3`" not in backlog_parking
+    assert "`W26-E2-S0-T4`" not in backlog_parking
+    assert "`W26-E1-S3-T1`" not in backlog_parking
+    assert "`W26-E1-S3-T2`" not in backlog_parking
+    assert "`W26-E1-S3-T3`" not in backlog_parking
+    assert "`W26-E2-S1-T1`" not in backlog_parking
+    assert "`W26-E2-S1-T2`" not in backlog_parking
+    assert "`W26-E2-S1-T3`" not in backlog_parking
+    assert "`W26-E2-S2-T1`" not in backlog_parking
+    assert "`W26-E2-S2-T2`" not in backlog_parking
+    assert "`W26-E2-S2-T3`" not in backlog_parking
+    assert "`W26-E2-S3-T1`" not in backlog_parking
+    assert "`W26-E2-S3-T2`" not in backlog_parking
+    assert "`W26-E2-S3-T3`" not in backlog_parking
+    assert "`W26-E2-S3-T4`" not in backlog_parking
+    assert "`W26-E3-S1-T1`" not in backlog_parking
+    assert "`W26-E3-S1-T2`" not in backlog_parking
+    assert "`W26-E3-S1-T3`" not in backlog_parking
+    assert "`W26-E3-S2-T1`" not in backlog_parking
+    assert "`W26-E3-S2-T2`" not in backlog_parking
+    assert "`W26-E3-S2-T3`" not in backlog_parking
+    assert "`W26-E4-S1-T1`" not in backlog_parking
+    assert "`W26-E4-S1-T2`" not in backlog_parking
+    assert "`W26-E4-S1-T3`" not in backlog_parking
+    assert "`W26-E4-S2-T1`" not in backlog_parking
+    assert "`W26-E4-S2-T2`" not in backlog_parking
+    assert "`W26-E4-S2-T3`" not in backlog_parking
+    assert "`W26-E5-S1-T1`" not in backlog_parking
+    visual_reference_dir = (
+        repo_root / "docs" / "architecture" / "assets" / "operator-ui-mission-control"
+    )
+    visual_references = (
+        "01-project-setup-previous-run.png",
+        "02-active-run-command-center.png",
+        "02b-flow-complete-start-next-flow.png",
+        "03-stage-document-workbench.png",
+        "04-questions-interview-loop.png",
+        "05-validation-repair-center.png",
+        "06-runtime-logs-live-console.png",
+        "07-artifacts-evidence-graph.png",
+        "08-approvals-request-change.png",
+        "09-run-history-lineage.png",
+        "10-start-next-flow-source-findings.png",
+        "11-define-follow-up-work-item.png",
+        "12-confirm-launch-next-flow.png",
+    )
+    for filename in visual_references:
+        assert filename in operator_frontend
+        assert (visual_reference_dir / filename).is_file()
 
 
 def test_release_docs_describe_release_branch_publish_flow() -> None:
@@ -496,6 +671,76 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
     assert "Public GitHub repositories are live E2E targets" in live_catalog
 
 
+def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
+    readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
+    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
+        encoding="utf-8"
+    )
+    operator_troubleshooting = (
+        _repo_root() / "docs" / "operator-troubleshooting.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "After terminal `qa`, the command center switches to **Flow Complete**",
+        "final QA status",
+        "final artifacts",
+        "repair counts",
+        "approval counts",
+        "answered questions",
+        "recommended next-flow actions",
+        "source-run lineage",
+        "create a new work item",
+        "start a follow-up flow",
+        "clone the previous flow",
+        "eval / scenario batch",
+        "archive the run",
+        "without deleting artifacts or mutating the completed source run",
+    ):
+        assert expected in readme
+
+    for expected in (
+        "### 6.6 Completed-run handoff and next-flow actions",
+        "**Create New Work Item**",
+        "**Start Follow-up Flow**",
+        "QA findings, review notes, failed",
+        "evidence, or a manual operator request",
+        "**Clone This Flow**",
+        "id, prompt pack, contracts path",
+        "branch or commit, resources, and baseline references",
+        "**Run Eval / Scenario Batch**",
+        "must not silently launch a",
+        "nested public-repository live flow",
+        "**Archive Run**",
+        "Archive does not delete artifacts",
+        "Follow-up and cloned flows are independent child work items or runs.",
+        "`.aidd/` workspace",
+        "explicit runtime selection",
+        "source-run",
+        "baseline availability",
+        "Local-project UI evidence proves the product operator behavior",
+        "Public-repository live E2E records a terminal next-flow checkpoint",
+        "does not require launching a second",
+        "public-repository flow by default",
+    ):
+        assert expected in operator_handbook
+
+    for expected in (
+        "### 3.6 Next-flow launch preflight is blocked",
+        "the **Flow Complete** screen is visible, but **Launch Flow Now** is disabled",
+        "blocked launch preflight",
+        "writable `.aidd/` workspace",
+        "explicit runtime selection",
+        "contracts path availability",
+        "source-run existence",
+        "baseline",
+        "hidden `generic-cli` fallback",
+        "Keep local UI troubleshooting separate from public-repository live E2E evidence.",
+        "next-flow-checkpoint.json",
+        "next-flow-checkpoint.md",
+    ):
+        assert expected in operator_troubleshooting
+
+
 def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> None:
     operator_ui_lane = (
         _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
@@ -509,11 +754,85 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
         "### Artifacts",
         "### Questions",
         "### Request Change / Intervention",
+        "### Flow Complete Handoff",
+        "### Start Next Flow Wizard",
+        "### Run History / Lineage",
         "### Viewports",
+        "Flow Complete",
+        "Start Next Flow",
+        "Archive Run",
+        "source-finding step",
+        "follow-up work item definition",
+        "launch preflight",
+        "parent/source run",
+        "archive timestamp/reason",
         "Desktop width",
+        "Desktop completed-flow view",
         "Tablet width",
+        "Tablet completed-flow view",
         "Mobile width",
+        "Mobile completed-flow view",
         "Keyboard focus is visible",
+        "Keyboard-only traversal reaches Start Next Flow cards",
+    ):
+        assert expected in operator_ui_lane
+
+
+def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> None:
+    operator_ui_lane = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "## Completed-Run Required Checks",
+        "A local-project UI E2E pass is incomplete unless it records completed-flow evidence.",
+        "must stay inside the local project",
+        "must not use public-repository live E2E as a substitute",
+        "completed-run Flow Complete handoff state after terminal `qa`",
+        "Start Next Flow source selection, follow-up draft definition, launch preflight",
+        "Run History / Lineage visibility",
+        "test_ui_completed_run_next_action_service_regression_sequence",
+        "test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_runtime",
+        "test_operator_terminal_handoff_next_action_contract_survives_archive_decision",
+        "test_operator_flow_complete_static_contract_covers_terminal_handoff_actions",
+        "test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight",
+        "test_operator_run_history_static_contract_covers_lineage_and_archive_labels",
+        "reach or seed a terminal `qa` run",
+        "inspect final QA artifacts",
+        "source findings include QA findings",
+        "failed evidence, and manual request groups",
+        "follow-up draft with acceptance criteria",
+        "run launch preflight with an explicit runtime",
+        "inspect Run History / Lineage",
+        "record the Archive Run decision path",
+    ):
+        assert expected in operator_ui_lane
+
+
+def test_operator_ui_local_project_manual_smoke_template_records_required_evidence() -> None:
+    operator_ui_lane = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "## Completed-Run Manual Smoke Evidence Template",
+        "Manual smoke evidence is recorded in `docs/backlog/roadmap.md`",
+        "Run id: `<terminal-run-id>`",
+        "Source work item: `<source-work-item-id>`",
+        "Child work item: `<created-or-previewed-follow-up-id, or none>`",
+        "Browser: `<browser name and version>`",
+        "Viewport: `<desktop/tablet/mobile dimensions>`",
+        "Runtime id: `<runtime selected in the UI>`",
+        "Flow Complete status:",
+        "Start Next Flow result:",
+        "Run History / Lineage result:",
+        "Archive decision:",
+        "Blockers:",
+        "Cleanup:",
+        "fixture project removed",
+        "do not commit `.aidd/`",
+        "record the blocker",
+        "public-repository live E2E",
     ):
         assert expected in operator_ui_lane
 
@@ -576,6 +895,14 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "`- Q1 [resolved] answer text`",
         "answer-analysis.md",
         "operator-quality-analysis.md",
+        "next-flow-checkpoint.json",
+        "next-flow-checkpoint.md",
+        "--enable-next-flow-follow-up-proof",
+        "next-flow-lineage.json",
+        "Next-flow terminal checkpoint",
+        "Confirm **Flow Complete** is visible for the terminal run.",
+        "Record the operator next-flow decision",
+        "Do not launch a second public-repository flow by default.",
         "The operator audit cannot upgrade machine `fail` or `warn`",
     ):
         assert needle in live_e2e_skill
@@ -586,6 +913,47 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     assert "stage-audits/<stage>.json" in aidd_eval_skill
     assert "${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd" in aidd_eval_skill
     assert "operator-quality-analysis.md" in aidd_eval_skill
+
+
+def test_live_e2e_next_flow_checkpoint_policy_is_manual_only() -> None:
+    live_catalog = (_repo_root() / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
+        encoding="utf-8"
+    )
+    live_e2e_skill = (
+        _repo_root() / ".agents" / "skills" / "live-e2e" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "## Next-Flow Terminal Checkpoint Policy",
+        "After a public-repository live run reaches terminal `qa`",
+        "confirm **Flow Complete** is",
+        "record the operator next-flow decision",
+        "`no-follow-up`",
+        "`follow-up-draft`",
+        "`clone-draft`",
+        "`eval-batch`",
+        "`archive`",
+        "Launching a second public-repository flow is **not** required",
+        "--enable-next-flow-follow-up-proof",
+        "next-flow-lineage.json",
+        "creates a follow-up draft from the terminal QA report",
+        "outside CI/CD and release automation",
+        "record separate",
+        "lineage evidence instead of mutating the completed source run",
+    ):
+        assert expected in live_catalog
+
+    for expected in (
+        "## Next-flow terminal checkpoint",
+        "After terminal `qa`, inspect the completed-run handoff",
+        "Do not launch a second public-repository flow by default.",
+        "--enable-next-flow-follow-up-proof",
+        "next-flow-lineage.json",
+        "separate manual-only option",
+        "outside CI/CD and release automation",
+        "Never require launching a second public-repository flow",
+    ):
+        assert expected in live_e2e_skill
 
 
 def test_live_docs_describe_temp_install_layout_and_stage_audits() -> None:
@@ -657,6 +1025,16 @@ def test_docs_do_not_reference_removed_eval_run_command() -> None:
         paths = [root] if root.is_file() else list(root.rglob("*"))
         for path in paths:
             if not path.is_file():
+                continue
+            if path.suffix.lower() not in {
+                ".md",
+                ".txt",
+                ".yml",
+                ".yaml",
+                ".toml",
+                ".json",
+                ".jsonl",
+            }:
                 continue
             text = path.read_text(encoding="utf-8")
             if "aidd eval run" in text:

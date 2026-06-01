@@ -43,6 +43,13 @@ The maintained operator UI lane covers:
   stage, next action, blockers, evidence refs, recent activity, and recent artifacts;
 - global next-action classification that routes operators to blocked questions or
   validation evidence even when a different stage is currently selected;
+- completed-run Flow Complete handoff state after terminal `qa`, including final QA
+  artifacts, blockers, evidence counts, repair counts, approval counts, answered
+  questions, and recommended next-flow actions;
+- Start Next Flow source selection, follow-up draft definition, launch preflight, and
+  archive decision surfaces without continuing or mutating the completed source run;
+- Run History / Lineage visibility for source run, current run, baseline, child work
+  item candidates, archive state, linked artifacts, and run actions;
 - workflow-run request delegation through the same core service used by the CLI;
 - selected-stage run request delegation through the same stage execution path used by
   `aidd stage run`;
@@ -86,12 +93,42 @@ Current deterministic coverage lives in:
 - `tests/cli/test_ui.py::test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs`
 - `tests/cli/test_ui.py::test_ui_stage_interact_endpoint_delegates_request_and_streams_logs`
 - `tests/cli/test_ui.py::test_ui_artifact_document_endpoint_reads_known_document_content`
+- `tests/cli/test_ui.py::test_ui_completed_run_next_action_service_regression_sequence`
+- `tests/cli/test_ui.py::test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_runtime`
+- `tests/core/test_operator_frontend.py::test_operator_terminal_handoff_next_action_contract_survives_archive_decision`
+- `tests/cli/test_ui_assets_contracts.py::test_operator_flow_complete_static_contract_covers_terminal_handoff_actions`
+- `tests/cli/test_ui_assets_contracts.py::test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight`
+- `tests/cli/test_ui_assets_contracts.py::test_operator_run_history_static_contract_covers_lineage_and_archive_labels`
 - `tests/core/test_operator_frontend.py`
 
 These tests exercise `OperatorUiService` and the runtime-agnostic operator read/write
 services directly. Workflow-run, stage-run, and stage-intervention endpoints are
 tested through injected execution seams so they prove request shape, UI/Core
 delegation, and live log polling without invoking real runtimes.
+
+## Completed-Run Required Checks
+
+A local-project UI E2E pass is incomplete unless it records completed-flow evidence.
+The evidence may come from an installed local smoke, a deterministic seeded workspace,
+or the service-level UI regression path, but it must stay inside the local project and
+must not use public-repository live E2E as a substitute.
+
+Required completed-flow checks:
+
+- reach or seed a terminal `qa` run and verify **Flow Complete** appears in the
+  command center;
+- inspect final QA artifacts from the handoff and verify they remain readable after
+  refresh;
+- open **Start Next Flow** and verify source findings include QA findings, review notes,
+  failed evidence, and manual request groups;
+- create or preview a follow-up draft with acceptance criteria, required evidence,
+  inherited context toggles, and first-stage input preview;
+- run launch preflight with an explicit runtime and record pass, warning, or blocking
+  status plus resolved baseline;
+- inspect Run History / Lineage for source run, current run, baseline, child work item
+  candidates, linked artifacts, and run actions;
+- record the Archive Run decision path and verify archived runs remain readable through
+  dashboard, history, and artifact inspection.
 
 ## Manual Installed Smoke
 
@@ -114,10 +151,43 @@ A manual installed UI smoke should use a disposable local fixture project:
    `Add migration rollback risks`, verify `/api/stage/interact` returns a job id,
    the Logs tab stays visible while polling `/api/jobs/<id>/logs`, and the latest
    request appears as `operator.request.created` in Activity plus an Evidence Ref.
-9. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
+9. For completed-run handoff proof, use a terminal `qa` run or deterministic seeded
+   terminal workspace, open Flow Complete, start the follow-up wizard, create or preview
+   a follow-up draft, run launch preflight, inspect Run History / Lineage, and record
+   the Archive Run decision path.
+10. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
 
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`
 state stays local to the fixture project.
+
+## Completed-Run Manual Smoke Evidence Template
+
+When recording completed-run local UI smoke evidence in roadmap notes, include all of
+these fields:
+
+- Run id: `<terminal-run-id>`
+- Source work item: `<source-work-item-id>`
+- Child work item: `<created-or-previewed-follow-up-id, or none>`
+- Browser: `<browser name and version>`
+- Viewport: `<desktop/tablet/mobile dimensions>`
+- Runtime id: `<runtime selected in the UI>`
+- Flow Complete status: `<completed | completed-with-warning | failed | blocked>`
+- Start Next Flow result: `<source findings | follow-up draft | preflight status>`
+- Run History / Lineage result: `<source/current/child lineage observed>`
+- Archive decision: `<archived | intentionally not archived>`
+- Blockers: `<none, provider unavailable, missing fixture, manual operator blocker>`
+- Cleanup: `<fixture project removed | .aidd removed | retained outside git with reason>`
+
+Cleanup rules:
+
+- keep generated `.aidd/` state inside the disposable local fixture project;
+- do not commit `.aidd/`, runtime logs, prompts, or generated child work items unless a
+  separate repository policy explicitly allows it;
+- if evidence must be retained, move it to a documented external evidence bundle and
+  record only the non-sensitive run id, work item ids, runtime id, viewport, browser,
+  and blocker summary in roadmap notes;
+- if provider credentials or runtime binaries are unavailable, record the blocker
+  instead of replacing the local-project smoke with public-repository live E2E.
 
 ## Manual Browser Checklist
 
@@ -173,14 +243,69 @@ and any blockers in roadmap evidence.
 - Activity and Evidence Refs show `operator.request.created` after refresh.
 - Validation and repair evidence remain inspectable after the intervention attempt.
 
+### Flow Complete Handoff
+
+- A terminal `qa` run switches the command center from active-stage operation to
+  **Flow Complete** without hiding stage rail, Activity / Events, or Recent artifacts.
+- The handoff summary shows final QA status, runtime id, final artifacts, open blockers,
+  evidence refs, repair counts, approval counts, and answered-question counts.
+- Final artifacts open in the Artifacts view and remain readable in Preview and Source
+  mode after refresh.
+- The **Start Next Flow** action band shows Create New Work Item, Start Follow-up Flow,
+  Clone This Flow, Run Eval / Scenario Batch, and Archive Run.
+- Recommended next action badges match final QA status: completed runs without blockers
+  recommend new work, while failed or blocked handoffs recommend follow-up work.
+- Choosing Archive Run first opens a confirmation state with a reason preview; confirming
+  records the local archive decision and leaves final QA artifacts plus run-history
+  inspection available.
+
+### Start Next Flow Wizard
+
+- Start Follow-up Flow opens the source-finding step and groups QA findings, review
+  notes, failed evidence, and manual request options.
+- Clean completed runs keep Create New Work Item as the recommended next action; the
+  source-finding step shows `qa_report` as the primary optional follow-up source and
+  collapses supporting QA artifacts until the operator needs them.
+- Source-finding checkboxes can be toggled with pointer and keyboard input; Continue
+  stays disabled until at least one source is selected.
+- The follow-up work item definition step shows editable title, generated acceptance
+  criteria, required evidence, inherited context toggles, and first-stage input preview.
+- Back to sources returns to the source-finding step without losing selected sources.
+- Continue to preflight shows launch preflight status, audit preview, resolved baseline,
+  source artifact links, and a disabled Launch Flow Now button when preflight blocks.
+- The wizard close/back controls return to the Flow Complete handoff without mutating
+  the completed source run.
+
+### Run History / Lineage
+
+- Run History shows parent/source run, current run, baseline, child work item candidates,
+  archive status, and linked artifacts.
+- Parent, current, and child lineage rows expose source run ids and work item ids without
+  truncating the information needed for audit.
+- Run actions in history match the Flow Complete action set and keep disabled states
+  visible when an action is not launchable.
+- Archived runs show the archive timestamp/reason while keeping linked artifacts and
+  final handoff details inspectable.
+- Refreshing the browser preserves selected run lineage and does not create child work
+  items unless the operator explicitly launches a new flow.
+
 ### Viewports
 
 - Desktop width shows stage rail, cockpit, right sidebar, and bottom dock together.
+- Desktop completed-flow view keeps Flow Complete, Start Next Flow, final artifacts,
+  and run-history lineage visible without overlapping panels.
 - Tablet width keeps the right sidebar below the cockpit without overlapping content.
+- Tablet completed-flow view keeps the wizard action row, source-finding groups, and
+  launch preflight cards readable after wrapping.
 - Mobile width turns the stage rail into horizontal navigation, auto-scrolls the active
   stage into view on load and stage switch, and preserves readable tab/action buttons.
+- Mobile completed-flow view keeps Flow Complete actions, wizard controls, lineage
+  nodes, and artifact rows reachable without horizontal page scrolling.
 - Keyboard focus is visible on runtime select, stage cards, cockpit tabs, action buttons,
   artifact rows, textareas, and source/preview controls.
+- Keyboard-only traversal reaches Start Next Flow cards, source-finding checkboxes,
+  follow-up fields, inherited context toggles, preflight back/launch buttons, Run
+  History actions, and Archive Run.
 
 ## Brokered Approval Proof
 

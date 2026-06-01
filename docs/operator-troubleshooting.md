@@ -9,7 +9,7 @@ This guide explains how to diagnose the most common operator-visible failures in
 - harness and eval failures.
 
 It is aligned with the current local AIDD CLI, adapter, validator, and harness behavior as of
-May 4, 2026.
+May 28, 2026.
 
 ## 2. Fast Triage Flow
 
@@ -105,6 +105,36 @@ Actions:
 
 1. For missing runs: verify the correct `--work-item` and `--root`.
 2. For ambiguous runs: pass explicit `--run-id` and, for logs/artifacts, explicit `--attempt`.
+
+### 3.6 Next-flow launch preflight is blocked
+
+Symptoms:
+
+- the **Flow Complete** screen is visible, but **Launch Flow Now** is disabled;
+- the Start Next Flow wizard shows a blocked launch preflight;
+- follow-up or clone draft creation succeeds, but launch does not create a child work item
+  or run;
+- archive state is visible, but final artifacts remain read-only and no new flow starts.
+
+Actions:
+
+1. Confirm the source run is terminal after `qa` and still readable in Run History /
+   Lineage. Archive decisions must not delete artifacts or mutate the completed source run.
+2. Verify the preflight inputs: writable `.aidd/` workspace, explicit runtime selection,
+   contracts path availability, source-run existence, source work item id, and baseline
+   availability.
+3. Open the source findings step and confirm at least one QA finding, review note, failed
+   evidence item, or manual request is selected for a follow-up draft. Clone drafts should
+   show editable runtime, prompt pack, resource, commit, and baseline configuration before
+   launch.
+4. If the blocker is runtime readiness, run `aidd doctor` and select a configured runtime
+   in the browser. The UI does not launch through a hidden `generic-cli` fallback.
+5. If the blocker is missing source-run or baseline metadata, inspect
+   `aidd run show --work-item <id> --root .aidd` and the final QA artifacts before creating
+   the next-flow draft again.
+6. Keep local UI troubleshooting separate from public-repository live E2E evidence. Live
+   E2E records `next-flow-checkpoint.json` and `next-flow-checkpoint.md` after terminal
+   `qa`; it does not require launching a second public-repository flow by default.
 
 ## 4. Validator Failures
 
