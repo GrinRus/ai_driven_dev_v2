@@ -428,6 +428,40 @@ def _optional_positive_int_param(params: dict[str, list[str]], name: str) -> int
     return value
 
 
+def _missing_runtime_log_payload(
+    *,
+    stage: str,
+    run_id: str | None,
+    attempt_number: int | None,
+    message: str,
+) -> dict[str, object]:
+    return {
+        "summary": {
+            "run_id": run_id,
+            "stage": stage,
+            "attempt_number": attempt_number,
+            "runtime_log_path": None,
+        },
+        "text": "",
+        "byte_size": 0,
+        "start_byte": 0,
+        "end_byte": 0,
+        "requested_bytes": 0,
+        "max_bytes": 0,
+        "truncated": False,
+        "truncated_head": False,
+        "truncated_tail": False,
+        "available": False,
+        "message": message,
+    }
+
+
+def _is_runtime_log_not_available(message: str) -> bool:
+    return message.startswith("Runtime log file does not exist:") or message.startswith(
+        "Runtime log path is missing in artifact index "
+    )
+
+
 def _cursor_param(params: dict[str, list[str]]) -> int:
     raw_cursor = _first_param(params, "cursor", "0")
     assert raw_cursor is not None
@@ -1189,15 +1223,30 @@ class OperatorUiService:
             if path == "/api/logs":
                 stage = _first_param(params, "stage", STAGES[0])
                 assert stage is not None
-                summary = resolve_operator_run_log_view(
-                    workspace_root=self.workspace_root,
-                    work_item=self.options.work_item,
-                    stage=stage,
-                    run_id=_first_param(params, "run_id"),
-                    attempt_number=_optional_attempt(params),
-                    tail_bytes=_optional_positive_int_param(params, "tail"),
-                    limit_bytes=_optional_positive_int_param(params, "limit"),
-                )
+                run_id = _first_param(params, "run_id")
+                attempt_number = _optional_attempt(params)
+                try:
+                    summary = resolve_operator_run_log_view(
+                        workspace_root=self.workspace_root,
+                        work_item=self.options.work_item,
+                        stage=stage,
+                        run_id=run_id,
+                        attempt_number=attempt_number,
+                        tail_bytes=_optional_positive_int_param(params, "tail"),
+                        limit_bytes=_optional_positive_int_param(params, "limit"),
+                    )
+                except ValueError as exc:
+                    message = str(exc)
+                    if _is_runtime_log_not_available(message):
+                        return _json_response(
+                            _missing_runtime_log_payload(
+                                stage=stage,
+                                run_id=run_id,
+                                attempt_number=attempt_number,
+                                message="Runtime log is not available yet.",
+                            )
+                        )
+                    raise
                 return _json_response(
                     {
                         "summary": summary.summary,
@@ -1210,6 +1259,8 @@ class OperatorUiService:
                         "truncated": summary.truncated,
                         "truncated_head": summary.truncated_head,
                         "truncated_tail": summary.truncated_tail,
+                        "available": True,
+                        "message": None,
                     }
                 )
             if path == "/api/jobs":

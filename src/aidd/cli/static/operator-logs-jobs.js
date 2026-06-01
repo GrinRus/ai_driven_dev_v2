@@ -263,12 +263,13 @@ async function renderLogs() {
     const view = await api(`/api/logs?${params.toString()}`);
     state.savedLogText = view.text || "";
     const summary = view.summary || {};
+    const logAvailable = view.available !== false;
     document.getElementById("cockpitContent").innerHTML = renderLogPanel({
-      title: "Saved runtime.log",
+      title: logAvailable ? "Saved runtime.log" : "Saved runtime.log (pending)",
       meta: [summary.run_id ? `run ${summary.run_id}` : "", summary.stage ? `stage ${summary.stage}` : "", summary.attempt_number ? `attempt ${summary.attempt_number}` : ""],
       entries: logEntriesFromText(state.savedLogText),
       rawText: state.savedLogText,
-      emptyText: "Saved runtime log is empty",
+      emptyText: logAvailable ? "Saved runtime log is empty" : (view.message || "Runtime log is not available yet."),
       truncation: view
     });
   } catch (error) {

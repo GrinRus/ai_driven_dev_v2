@@ -607,6 +607,33 @@ def test_ui_logs_endpoint_defaults_to_bounded_tail_and_accepts_limit_params(
     assert _error_payload(invalid_payload)["error"] == "tail must be greater than zero."
 
 
+def test_ui_logs_endpoint_treats_missing_runtime_log_as_pending(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    runtime_log_path = run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    runtime_log_path.unlink()
+    service = _service(workspace_root)
+
+    response = service.handle_get("/api/logs", {"stage": ["plan"], "run_id": ["run-ui"]})
+    payload = _payload(response)
+
+    assert response.status == HTTPStatus.OK
+    assert payload["available"] is False
+    assert payload["message"] == "Runtime log is not available yet."
+    assert payload["text"] == ""
+    assert payload["byte_size"] == 0
+    assert payload["summary"]["stage"] == "plan"
+    assert payload["summary"]["run_id"] == "run-ui"
+
+
 def test_ui_dashboard_endpoint_exposes_operator_console_payload(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)

@@ -546,6 +546,8 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "bounded-log-notice",
             'renderTruncationNotice("log", view)',
             "No runtime log for this stage yet",
+            "Saved runtime.log (pending)",
+            "Runtime log is not available yet.",
             "data-log-filter",
             "data-log-raw",
             "state.rawLogMode",
