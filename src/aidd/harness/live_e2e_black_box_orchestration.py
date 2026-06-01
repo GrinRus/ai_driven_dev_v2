@@ -4554,17 +4554,46 @@ def _line_matches_criterion(line: str, criterion: str) -> bool:
     return len(overlap) >= required
 
 
+def _line_mentions_criterion_id(line: str, criterion_id: str) -> bool:
+    match = re.fullmatch(r"AC-(\d+)", criterion_id.strip(), flags=re.IGNORECASE)
+    if match is None:
+        return False
+    target = int(match.group(1))
+    normalized = line.lower().replace("criterion", "ac").replace("criteria", "ac")
+    if re.search(rf"\bac[-\s]*0*{target}\b", normalized):
+        return True
+    range_pattern = re.compile(
+        r"\bac[-\s]*(\d+)\s*(?:through|thru|to|[-–—])\s*(?:ac[-\s]*)?(\d+)\b",
+        flags=re.IGNORECASE,
+    )
+    for start_text, end_text in range_pattern.findall(normalized):
+        start = int(start_text)
+        end = int(end_text)
+        lower = min(start, end)
+        upper = max(start, end)
+        if lower <= target <= upper:
+            return True
+    return False
+
+
 def _evidence_refs_for_source(
     *,
     source: str,
     path: Path,
     text: str,
     criterion: str,
+    criterion_id: str | None = None,
 ) -> list[dict[str, object]]:
     refs: list[dict[str, object]] = []
     for line_number, raw_line in enumerate(text.splitlines(), start=1):
         line = raw_line.strip()
-        if not line or not _line_matches_criterion(line, criterion):
+        if not line:
+            continue
+        matches_criterion = _line_matches_criterion(line, criterion)
+        matches_criterion_id = (
+            criterion_id is not None and _line_mentions_criterion_id(line, criterion_id)
+        )
+        if not matches_criterion and not matches_criterion_id:
             continue
         refs.append(
             {
@@ -4629,6 +4658,7 @@ def _build_acceptance_coverage(ctx: FlowContext) -> dict[str, object]:
     source_entries = _acceptance_evidence_sources(ctx)
     criterion_payloads: list[dict[str, object]] = []
     for index, criterion in enumerate(criteria, start=1):
+        criterion_id = f"AC-{index}"
         refs: list[dict[str, object]] = []
         source_text_by_name: dict[str, str] = {}
         for source, path, text in source_entries:
@@ -4639,6 +4669,7 @@ def _build_acceptance_coverage(ctx: FlowContext) -> dict[str, object]:
                     path=path,
                     text=text,
                     criterion=criterion,
+                    criterion_id=criterion_id,
                 )
             )
         evidence_sources = sorted({str(ref["source"]) for ref in refs})
@@ -4649,7 +4680,7 @@ def _build_acceptance_coverage(ctx: FlowContext) -> dict[str, object]:
         status = "confirmed" if confirmed else "claimed-only" if refs else "missing"
         criterion_payloads.append(
             {
-                "criterion_id": f"AC-{index}",
+                "criterion_id": criterion_id,
                 "text": criterion,
                 "status": status,
                 "evidence_sources": evidence_sources,

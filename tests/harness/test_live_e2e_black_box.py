@@ -19,6 +19,7 @@ from aidd.harness.live_e2e_black_box import (
     run_black_box_live_e2e,
 )
 from aidd.harness.live_e2e_black_box_orchestration import (
+    _evidence_refs_for_source,
     _find_resume_state,
     _live_interruption_handlers,
     _next_flow_complete_visible,
@@ -58,6 +59,30 @@ def _run(args: list[str], *, cwd: Path | None = None) -> str:
         text=True,
     )
     return completed.stdout.strip()
+
+
+def test_acceptance_evidence_refs_match_explicit_criterion_ranges(tmp_path: Path) -> None:
+    qa_report = (
+        "# QA Report\n\n"
+        "- Acceptance criteria AC-1 through AC-4 are met per review evidence.\n"
+    )
+
+    refs = _evidence_refs_for_source(
+        source="qa-report",
+        path=tmp_path / "qa-report.md",
+        text=qa_report,
+        criterion="Existing Error object handling remains unchanged.",
+        criterion_id="AC-2",
+    )
+
+    assert refs == [
+        {
+            "source": "qa-report",
+            "path": (tmp_path / "qa-report.md").as_posix(),
+            "line": 3,
+            "snippet": "- Acceptance criteria AC-1 through AC-4 are met per review evidence.",
+        }
+    ]
 
 
 def _init_source_repo(path: Path) -> None:
