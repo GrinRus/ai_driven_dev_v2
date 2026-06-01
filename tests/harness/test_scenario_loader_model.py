@@ -112,7 +112,7 @@ def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
     assert scenario.scenario_id == "AIDD-LIVE-007"
     assert scenario.feature_size == "medium"
     assert scenario.canonical_runtime == "codex"
-    assert scenario.runtime_targets == ("codex", "claude-code")
+    assert scenario.runtime_targets == ("codex", "claude-code", "qwen")
     task = scenario.feature_source.tasks[0]
     assert task.task_id == "TASK-LIVE-HONO-NON-ERROR-THROW"
     assert "without widening the public error handler" in task.target_change

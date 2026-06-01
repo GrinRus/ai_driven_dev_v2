@@ -86,8 +86,8 @@ manual fixture smoke and does not use public GitHub task intake.
 
 - `generic-cli` is the deterministic baseline provider.
 - `codex` is the primary canonical runtime for maintained tiny, small, and medium live lanes.
-- `qwen` is experimental and may be used for the tiny docs-only live lane when
-  `aidd eval doctor` confirms local provider readiness.
+- `qwen` is experimental and may be used for the tiny docs-only live lane and
+  the Hono medium lane when `aidd eval doctor` confirms local provider readiness.
 - `opencode` must cover at least one live lane and one deterministic workflow lane.
 - `claude-code` remains deterministic by default, keeps `AIDD-LIVE-005` as a
   small smoke lane, and uses `AIDD-LIVE-007` as the planned maintained medium
@@ -113,7 +113,7 @@ manual fixture smoke and does not use public GitHub task intake.
 | `AIDD-LIVE-004` | `harness/scenarios/live/httpx-cli-docs-sync.yaml` | `live-full-flow` | `tiny` | `manual` | `codex` | `codex`, `qwen` | `authored-task-pool` |
 | `AIDD-LIVE-005` | `harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex`, `opencode`, `claude-code` | `authored-task-pool` |
 | `AIDD-LIVE-006` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `live-full-flow-interview` | `large` | `manual` | `opencode` | `codex`, `opencode` | `authored-task-pool` |
-| `AIDD-LIVE-007` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex`, `claude-code` | `authored-task-pool` |
+| `AIDD-LIVE-007` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `live-full-flow` | `medium` | `manual` | `codex` | `codex`, `claude-code`, `qwen` | `authored-task-pool` |
 | `AIDD-LIVE-008` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `live-full-flow-interview` | `xlarge` | `manual` | `opencode` | `opencode` | `authored-task-pool` |
 | `AIDD-LIVE-009` | `harness/scenarios/live/sqlite-utils-csv-import-resilience-boundary.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex`, `opencode`, `claude-code` | `authored-task-pool` (`less-scripted`) |
 
