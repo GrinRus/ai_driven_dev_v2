@@ -43,6 +43,7 @@
       <div class="quick-links">
         <div class="rail-header small">Quick links</div>
         <button data-tab-shortcut="logs" class="quick-link" type="button">Run status</button>
+        <button data-tab-shortcut="timeline" class="quick-link" type="button">Timeline</button>
         <button data-tab-shortcut="artifacts" class="quick-link" type="button">Artifacts</button>
         <button data-tab-shortcut="validation" class="quick-link" type="button">Validation</button>
         <button data-tab-shortcut="questions" class="quick-link" type="button">Questions</button>
@@ -63,7 +64,11 @@
         <button id="tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="cockpitContent" class="active" type="button">Overview</button>
         <button id="tab-questions" data-tab="questions" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Questions</button>
         <button id="tab-validation" data-tab="validation" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Validation</button>
+        <button id="tab-timeline" data-tab="timeline" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Timeline</button>
         <button id="tab-artifacts" data-tab="artifacts" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Artifacts</button>
+        <button id="tab-implement-review" data-tab="implement-review" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Implement Review</button>
+        <button id="tab-review-findings" data-tab="review-findings" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Review Findings</button>
+        <button id="tab-qa-verdict" data-tab="qa-verdict" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">QA Verdict</button>
         <button id="tab-logs" data-tab="logs" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Logs</button>
         <button id="tab-approvals" data-tab="approvals" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Approvals</button>
         <button id="tab-request" data-tab="request" role="tab" aria-selected="false" aria-controls="cockpitContent" type="button">Request change</button>
@@ -75,6 +80,7 @@
     </section>
 
     <aside class="right-sidebar" aria-label="Run details">
+      <section class="panel" id="activeRunPanel"></section>
       <section class="panel" id="nextActionPanel"></section>
       <section class="panel" id="blockersPanel"></section>
       <section class="panel" id="evidencePanel"></section>

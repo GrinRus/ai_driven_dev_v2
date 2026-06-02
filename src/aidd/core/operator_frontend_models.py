@@ -195,6 +195,9 @@ class OperatorStageRailItem:
     unresolved_blocking_count: int
     validator_pass_count: int
     validator_fail_count: int
+    stale: bool = False
+    stale_reason: str | None = None
+    stale_invalidated_by: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

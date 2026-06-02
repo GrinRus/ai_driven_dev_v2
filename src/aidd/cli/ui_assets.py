@@ -73,6 +73,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-control-center.js",
+        filename="operator-control-center.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator-stage-cockpit.js",
         filename="operator-stage-cockpit.js",
         content_type="text/javascript; charset=utf-8",

@@ -184,7 +184,11 @@ async function renderCockpit() {
   if (state.activeTab === "overview") content.innerHTML = renderOverview();
   if (state.activeTab === "questions") content.innerHTML = renderQuestions();
   if (state.activeTab === "validation") content.innerHTML = renderValidation();
+  if (state.activeTab === "timeline") await renderTimeline();
   if (state.activeTab === "artifacts") await renderArtifacts();
+  if (state.activeTab === "implement-review") await renderImplementReview();
+  if (state.activeTab === "review-findings") await renderReviewFindings();
+  if (state.activeTab === "qa-verdict") await renderQaVerdict();
   if (state.activeTab === "logs") await renderLogs();
   if (state.activeTab === "approvals") await renderApprovals();
   if (state.activeTab === "request") await renderRequestChange();
@@ -276,6 +280,7 @@ function renderSafetyPanel() {
 }
 
 function renderSidebar() {
+  if (typeof renderActiveRunPanel === "function") renderActiveRunPanel();
   renderNextActionPanel();
   renderBlockersPanel();
   renderEvidencePanel();

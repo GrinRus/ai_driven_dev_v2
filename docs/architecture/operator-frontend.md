@@ -86,7 +86,44 @@ The first frontend contract covers these flows:
      and available `questions.md` / `answers.md` in the input bundle;
    - validate and publish through the normal post-runtime chain;
    - reject the request when downstream stages have already succeeded in the same run
-     until a downstream invalidation/rerun policy exists.
+     unless the operator uses the separate remediation flow described below.
+
+8. **Long-run visibility**
+   - expose `/api/jobs/<job_id>` elapsed time, last output time, last output age,
+     last output text, and silence warning state for UI-started jobs;
+   - expose `/api/run/timeline?run_id=...&stage=...` as a rebuildable timeline over
+     stage metadata, attempts, runtime logs, `events.jsonl`, repair history, and
+     questions;
+   - show real milestones only. The UI must not invent percentage progress.
+
+9. **Implement diff review**
+   - expose `/api/repository/diff?stage=implement&run_id=...` as a read-only view over
+     the selected project root;
+   - separate source file changes from `.aidd/` artifacts;
+   - include tracked, deleted, and untracked file changes with bounded unified diff text;
+   - show allowed write scope status and whether each changed file was mentioned in
+     `implementation-report.md`;
+   - keep `implementation-report.md` claims visible beside the real repository diff.
+
+10. **Structured review and QA**
+   - parse `implementation-report.md`, `review-report.md`, and `qa-report.md` through
+     tolerant UI-neutral parsers;
+   - return warnings instead of throwing when Markdown is malformed or incomplete;
+   - keep stage validators as the canonical progression gate. Parsed UI summaries are
+     operator guidance, not replacement validators.
+
+11. **Review/QA remediation to implement**
+   - let an operator create a durable remediation request from selected review findings
+     or QA risks/issues;
+   - store the request under
+     `.aidd/workitems/<id>/remediations/<run_id>/request-000N.md`;
+   - include the latest remediation request as additional input for a new `implement`
+     attempt;
+   - require an explicit runtime id for remediation launch and downstream rerun;
+   - after a successful remediation `implement` attempt, mark downstream `review` and
+     `qa` stale through overlay metadata instead of adding a new `StageState`;
+   - block stale `qa` from being treated as a fresh terminal handoff in the UI;
+   - let the operator explicitly rerun stale downstream stages, currently `review -> qa`.
 
 ## 4. Write boundaries
 
@@ -99,6 +136,11 @@ Frontend writes are intentionally narrow:
   runner used by the CLI;
 - run or stage execution may be requested only through core workflow commands or
   equivalent application services;
+- remediation requests may be written through the durable
+  `remediations/<run_id>/request-000N.md` path and then executed by the same stage
+  runner used by the CLI for `implement`;
+- downstream invalidation metadata may be written as a UI/core overlay under the run
+  reports root, but it must not rewrite canonical stage status documents;
 - runtime-authored stage outputs, validator reports, repair briefs, runtime logs,
   and eval artifacts must not be edited by the frontend.
 
@@ -144,8 +186,9 @@ Current W20 implementation status:
 - workflow and selected-stage launch requests require an explicit operator-selected
   runtime and do not fall back to `generic-cli`;
 - UI launch requests create process-local jobs; `/api/jobs/<job_id>` exposes
-  `running`, `completed`, or `failed` status and `/api/jobs/<job_id>/logs` exposes
-  cursor-based live chunks;
+  `running`, `waiting-for-operator`, `completed`, `failed`, or `cancelled` status,
+  elapsed time, last-output metadata, silence warning state, and
+  `/api/jobs/<job_id>/logs` cursor-based live chunks;
 - selected-stage launch uses the CLI-equivalent single-stage execution path, not a
   workflow range shortcut;
 - the private local JSON API enforces a small request-body limit and deterministic
@@ -155,6 +198,10 @@ Current W20 implementation status:
   persisted logs, artifact summaries, artifact document content, workflow run
   requests, stage run requests, stage intervention requests, and job status/log
   polling over the operator services;
+- private JSON endpoints also expose run timeline, read-only repository diff for
+  `implement`, parsed implementation evidence, parsed review findings, parsed QA
+  verdict, remediation requests, remediation status, remediation launch, and stale
+  downstream rerun;
 - `POST /api/workflow/run` accepts optional `{run_id}`; when present, the UI asks the
   workflow service to continue that run through normal stage eligibility and the same
   backend config snapshot used by CLI launches;
@@ -194,6 +241,18 @@ Current W20 implementation status:
 - long workspace-relative paths are retained in payloads and element titles, but
   rendered in compact form so evidence lanes stay scannable in the right sidebar
   and bottom dock;
+- the command center includes an Active Run panel with job id, stage, selected runner,
+  elapsed time, last output age, timeout summary, runner command, cancel action, and
+  logs shortcut;
+- the stage cockpit includes Timeline, Implement Review, Review Findings, and QA Verdict
+  tabs. Implement Review renders source diff separately from `.aidd/` artifacts and
+  flags changed-but-not-mentioned, mentioned-but-unchanged, outside-scope, and truncated
+  diff evidence;
+- review and QA tabs can launch remediation back to `implement` with selected source ids,
+  operator note, selected runtime, and current run id; downstream stages are marked stale
+  only after the remediation `implement` attempt succeeds;
+- stale downstream stages keep their existing canonical status but show a stale badge and
+  reason in the UI. The run-global next action becomes explicit stale downstream rerun;
 - workflow and stage launches are primarily routed through the right-side Next
   Action button so the top bar stays status/control-plane focused;
 - `POST /api/open-folder` is a loopback-only convenience action for allowlisted
@@ -262,10 +321,14 @@ The locked screen inventory is:
 6. Runtime Logs / Live Console for raw adapter/runtime logs and correlated events.
 7. Artifacts / Evidence Graph for provenance between documents, logs, reports, and stages.
 8. Approvals / Request Change for runtime approvals and stage-scoped interventions.
-9. Run History / Scenario Matrix / Eval Reports for comparisons and systemic issues.
-10. Start Next Flow Wizard for completed-run handoff.
-11. Define Follow-up Work Item for new work item scope and inherited context.
-12. Confirm and Launch Next Flow for preflight, audit preview, and launch.
+9. Timeline / Active Run Control for long-running job visibility and silence warnings.
+10. Implement Review for real repository diff and claim-to-evidence checks.
+11. Review Findings for structured approval state and remediation source selection.
+12. QA Verdict for readiness, residual risks, known issues, and remediation source selection.
+13. Run History / Scenario Matrix / Eval Reports for comparisons and systemic issues.
+14. Start Next Flow Wizard for completed-run handoff.
+15. Define Follow-up Work Item for new work item scope and inherited context.
+16. Confirm and Launch Next Flow for preflight, audit preview, and launch.
 
 The visual references for this direction are stored in
 `docs/architecture/assets/operator-ui-mission-control/`:
@@ -319,4 +382,12 @@ Before implementation is considered done, the local UI evidence lane must prove:
 - follow-up creation records selected source findings and inherited context explicitly;
 - launch preflight creates a new work item/run identity and source-run lineage evidence;
 - run history can show parent and child relationships and still open raw logs/artifacts;
+- long-running UI-started jobs show real timeline events and silence warnings without
+  fake progress;
+- `implement` shows the real repository diff, untracked files, `.aidd/` artifact
+  separation, and mismatches between `implementation-report.md` claims and file changes;
+- rejected review findings or not-ready QA risks can be sent back to `implement` through
+  durable remediation requests;
+- remediation marks downstream `review` and `qa` stale through overlay metadata and stale
+  `qa` is not shown as a terminal handoff until downstream rerun succeeds;
 - mobile and keyboard paths can reach completed-run actions and the wizard controls.

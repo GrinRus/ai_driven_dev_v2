@@ -68,6 +68,20 @@ from aidd.core.operator_frontend import (
     resolve_operator_stage_document_workbench,
     resolve_operator_stage_view,
 )
+from aidd.core.operator_reports import (
+    resolve_implementation_evidence,
+    resolve_qa_verdict,
+    resolve_review_findings,
+)
+from aidd.core.operator_timeline import resolve_operator_run_timeline
+from aidd.core.remediation import (
+    clear_stale_stages,
+    create_remediation_request,
+    list_remediation_requests,
+    load_remediation_status,
+    mark_downstream_stale,
+)
+from aidd.core.repository_diff import resolve_repository_diff
 from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
 from aidd.core.run_store import (
     next_attempt_number,
@@ -147,6 +161,8 @@ class _UiRunJob:
     attempt_path: str | None = None
     cancel_requested_at_utc: str | None = None
     cancelled_at_utc: str | None = None
+    last_output_at_utc: str | None = None
+    last_output_text: str | None = None
     chunks: list[dict[str, object]] = field(default_factory=list)
 
 
@@ -337,13 +353,17 @@ class UiRunJobStore:
             raise ValueError(f"Unknown UI job '{job_id}'.") from exc
 
     def _append_chunk_locked(self, job: _UiRunJob, *, stream: str, text: str) -> None:
+        timestamp = _utc_now()
         job.chunks.append(
             {
                 "sequence": len(job.chunks) + 1,
                 "stream": stream,
                 "text": text,
+                "time_utc": timestamp,
             }
         )
+        job.last_output_at_utc = timestamp
+        job.last_output_text = text.strip().splitlines()[-1] if text.strip() else None
 
     def _mark_cancelled_locked(self, job: _UiRunJob, *, message: str) -> None:
         timestamp = _utc_now()
@@ -363,6 +383,13 @@ class UiRunJobStore:
             cancel_state = "cancelling"
         else:
             cancel_state = "none"
+        last_output_age_seconds = _seconds_since(job.last_output_at_utc)
+        elapsed_seconds = _seconds_since(job.created_at_utc)
+        silence_warning = (
+            job.status not in _TERMINAL_JOB_STATUSES
+            and last_output_age_seconds is not None
+            and last_output_age_seconds >= 120
+        )
         return {
             "job_id": job.job_id,
             "kind": job.kind,
@@ -374,6 +401,11 @@ class UiRunJobStore:
             "attempt_path": job.attempt_path,
             "created_at_utc": job.created_at_utc,
             "updated_at_utc": job.updated_at_utc,
+            "elapsed_seconds": elapsed_seconds,
+            "last_output_at_utc": job.last_output_at_utc,
+            "last_output_age_seconds": last_output_age_seconds,
+            "last_output_text": job.last_output_text,
+            "silence_warning": silence_warning,
             "cancel_requested": job.cancel_requested_at_utc is not None,
             "cancel_requested_at_utc": job.cancel_requested_at_utc,
             "cancelled_at_utc": job.cancelled_at_utc,
@@ -408,6 +440,22 @@ class _UiRuntimeOperatorDecisionProvider:
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _parse_utc_timestamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC)
+    except ValueError:
+        return None
+
+
+def _seconds_since(value: str | None) -> int | None:
+    timestamp = _parse_utc_timestamp(value)
+    if timestamp is None:
+        return None
+    return max(0, int((datetime.now(UTC) - timestamp).total_seconds()))
 
 
 def _first_param(params: dict[str, list[str]], name: str, default: str | None = None) -> str | None:
@@ -856,6 +904,24 @@ def _selected_source_ids_from_payload(payload: dict[str, Any]) -> tuple[str, ...
     if not selected:
         raise ValueError("At least one source finding must be selected.")
     return selected
+
+
+def _remediation_source_ids_from_payload(payload: dict[str, Any]) -> tuple[str, ...]:
+    raw_ids = payload.get("source_ids", payload.get("selected_source_ids"))
+    if not isinstance(raw_ids, list):
+        raise ValueError("source_ids must be a list.")
+    source_ids: list[str] = []
+    seen: set[str] = set()
+    for index, item in enumerate(raw_ids, 1):
+        if not isinstance(item, str):
+            raise ValueError(f"source_ids[{index}] must be a string.")
+        normalized = item.strip()
+        if normalized and normalized not in seen:
+            source_ids.append(normalized)
+            seen.add(normalized)
+    if not source_ids:
+        raise ValueError("At least one source id is required.")
+    return tuple(source_ids)
 
 
 def _selected_next_flow_source_items(
@@ -1417,6 +1483,257 @@ class OperatorUiService:
         )
         return {"created": created, "context": self._onboarding_state()["context"]}
 
+    def _selected_run_id_from_params(self, params: dict[str, list[str]]) -> str:
+        run_id = _first_param(params, "run_id")
+        if run_id:
+            return run_id
+        latest = resolve_latest_run_id(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+        )
+        if latest is None:
+            raise ValueError(f"No run found for work item '{self.work_item}'.")
+        return latest
+
+    def _run_timeline(self, params: dict[str, list[str]]) -> object:
+        stage = _first_param(params, "stage")
+        return resolve_operator_run_timeline(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=self._selected_run_id_from_params(params),
+            stage=stage,
+        )
+
+    def _repository_diff(self, params: dict[str, list[str]]) -> object:
+        stage = _first_param(params, "stage", "implement")
+        if stage != "implement":
+            raise ValueError("Repository diff is currently available for implement stage only.")
+        _ = self._selected_run_id_from_params(params)
+        return resolve_repository_diff(
+            project_root=self.project_root,
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+        )
+
+    def _implementation_evidence(self, _params: dict[str, list[str]]) -> object:
+        return resolve_implementation_evidence(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+        )
+
+    def _review_findings(self, _params: dict[str, list[str]]) -> object:
+        return resolve_review_findings(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+        )
+
+    def _qa_verdict(self, _params: dict[str, list[str]]) -> object:
+        return resolve_qa_verdict(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+        )
+
+    def _remediation_requests(self, params: dict[str, list[str]]) -> object:
+        run_id = self._selected_run_id_from_params(params)
+        return {
+            "run_id": run_id,
+            "requests": list_remediation_requests(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                run_id=run_id,
+            ),
+        }
+
+    def _remediation_status(self, params: dict[str, list[str]]) -> object:
+        return load_remediation_status(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=self._selected_run_id_from_params(params),
+        )
+
+    def _validated_remediation_source_ids(
+        self,
+        *,
+        source_stage: str,
+        source_ids: tuple[str, ...],
+    ) -> tuple[str, ...]:
+        if source_stage == "review":
+            valid_ids = tuple(
+                finding.finding_id
+                for finding in resolve_review_findings(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                ).findings
+            )
+        elif source_stage == "qa":
+            verdict = resolve_qa_verdict(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+            )
+            valid_ids = tuple(
+                f"risk-{index}" for index, _ in enumerate(verdict.residual_risks, 1)
+            ) + tuple(f"issue-{index}" for index, _ in enumerate(verdict.known_issues, 1))
+        else:
+            return source_ids
+        valid_lookup = {item.lower(): item for item in valid_ids}
+        missing = tuple(item for item in source_ids if item.lower() not in valid_lookup)
+        if missing:
+            raise ValueError(
+                f"source_ids do not match {source_stage} report: {', '.join(missing)}."
+            )
+        return tuple(valid_lookup[item.lower()] for item in source_ids)
+
+    def _create_remediation_request(self, payload: dict[str, Any]) -> object:
+        source_stage = _text_from_payload(payload, "source_stage")
+        source_ids = self._validated_remediation_source_ids(
+            source_stage=source_stage,
+            source_ids=_remediation_source_ids_from_payload(payload),
+        )
+        return create_remediation_request(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=_source_run_id_from_payload(payload),
+            source_stage=source_stage,
+            source_ids=source_ids,
+            operator_note=_text_from_payload(payload, "operator_note"),
+            target_stage=_text_from_payload(payload, "target_stage", default="implement"),
+        )
+
+    def _launch_remediation(self, payload: dict[str, Any]) -> object:
+        runtime = _runtime_from_payload(payload)
+        _validate_runtime(runtime)
+        source_stage = _text_from_payload(payload, "source_stage")
+        source_ids = self._validated_remediation_source_ids(
+            source_stage=source_stage,
+            source_ids=_remediation_source_ids_from_payload(payload),
+        )
+        request = create_remediation_request(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=_source_run_id_from_payload(payload),
+            source_stage=source_stage,
+            source_ids=source_ids,
+            operator_note=_text_from_payload(payload, "operator_note"),
+            target_stage=_text_from_payload(payload, "target_stage", default="implement"),
+        )
+        log_follow = bool(payload.get("log_follow", True))
+
+        def _target(job_id: str) -> object:
+            result = self._run_stage(
+                stage="implement",
+                runtime=runtime,
+                run_id=request.run_id,
+                log_follow=log_follow,
+                job_id=job_id,
+            )
+            completed = bool(
+                result.get("completed", False) if isinstance(result, Mapping) else False
+            )
+            status = (
+                mark_downstream_stale(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=request.run_id,
+                    invalidated_by=request.request_id,
+                    target_stage=request.target_stage,
+                )
+                if completed
+                else load_remediation_status(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=request.run_id,
+                )
+            )
+            return {
+                "request": request,
+                "stage_result": result,
+                "status": status,
+                "exit_code": result.get("exit_code", 0) if isinstance(result, Mapping) else 1,
+                "completed": completed,
+            }
+
+        job = cast(
+            dict[str, object],
+            self._start_job(kind="remediation", stage="implement", target=_target),
+        )
+        job["request"] = request
+        job["run_id"] = request.run_id
+        job["runtime"] = runtime
+        return job
+
+    def _stale_downstream_stages(self, run_id: str) -> tuple[str, ...]:
+        status = load_remediation_status(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=run_id,
+        )
+        stale = {entry.stage for entry in status.stale_stages}
+        return tuple(stage for stage in STAGES if stage in stale)
+
+    def _rerun_stale_downstream(self, payload: dict[str, Any]) -> object:
+        runtime = _runtime_from_payload(payload)
+        _validate_runtime(runtime)
+        run_id = _source_run_id_from_payload(payload)
+        stale_stages = self._stale_downstream_stages(run_id)
+        if not stale_stages:
+            raise ValueError("No stale downstream stages found for this run.")
+        log_follow = bool(payload.get("log_follow", True))
+
+        def _target(job_id: str) -> object:
+            results: list[object] = []
+            completed_stages: list[str] = []
+            exit_code = 0
+            completed = True
+            for stage in stale_stages:
+                result = self._run_stage(
+                    stage=stage,
+                    runtime=runtime,
+                    run_id=run_id,
+                    log_follow=log_follow,
+                    job_id=job_id,
+                )
+                results.append(result)
+                result_exit = (
+                    int(result.get("exit_code", 1)) if isinstance(result, Mapping) else 1
+                )
+                if result_exit != 0:
+                    exit_code = result_exit
+                    completed = False
+                    break
+                completed_stages.append(stage)
+            status = (
+                clear_stale_stages(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=run_id,
+                    stages=tuple(completed_stages),
+                )
+                if completed_stages
+                else load_remediation_status(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=run_id,
+                )
+            )
+            return {
+                "run_id": run_id,
+                "runtime": runtime,
+                "rerun_stages": stale_stages,
+                "stage_results": tuple(results),
+                "status": status,
+                "exit_code": exit_code,
+                "completed": completed,
+            }
+
+        job = cast(
+            dict[str, object],
+            self._start_job(kind="remediation-rerun", stage=None, target=_target),
+        )
+        job["run_id"] = run_id
+        job["runtime"] = runtime
+        job["rerun_stages"] = stale_stages
+        return job
+
     def handle_get(self, path: str, params: dict[str, list[str]]) -> UiResponse:
         try:
             if static_asset := operator_static_asset_for_route(path):
@@ -1462,6 +1779,20 @@ class OperatorUiService:
                         ),
                     }
                 )
+            if path == "/api/run/timeline":
+                return _json_response(self._run_timeline(params))
+            if path == "/api/repository/diff":
+                return _json_response(self._repository_diff(params))
+            if path == "/api/implement/evidence":
+                return _json_response(self._implementation_evidence(params))
+            if path == "/api/review/findings":
+                return _json_response(self._review_findings(params))
+            if path == "/api/qa/verdict":
+                return _json_response(self._qa_verdict(params))
+            if path == "/api/remediation/requests":
+                return _json_response(self._remediation_requests(params))
+            if path == "/api/remediation/status":
+                return _json_response(self._remediation_status(params))
             if path == "/api/next-flow/source-findings":
                 dashboard = resolve_operator_dashboard_view(
                     workspace_root=self.workspace_root,
@@ -1642,6 +1973,21 @@ class OperatorUiService:
                 return _json_response(self._start_stage_job(payload))
             if path == "/api/stage/interact":
                 return _json_response(self._start_stage_interact_job(payload))
+            if path == "/api/remediation/request":
+                return _json_response(
+                    self._create_remediation_request(payload),
+                    status=HTTPStatus.CREATED,
+                )
+            if path == "/api/remediation/launch":
+                return _json_response(
+                    self._launch_remediation(payload),
+                    status=HTTPStatus.ACCEPTED,
+                )
+            if path == "/api/remediation/rerun-downstream":
+                return _json_response(
+                    self._rerun_stale_downstream(payload),
+                    status=HTTPStatus.ACCEPTED,
+                )
             if path == "/api/next-flow/preflight":
                 return self._next_flow_preflight(payload)
             if path == "/api/next-flow/follow-up-draft":

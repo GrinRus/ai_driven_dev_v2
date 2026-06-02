@@ -202,12 +202,25 @@ the next eligible stage, or submit **Request change -> Submit & run** from the s
 stage cockpit; these actions require an explicit runtime selection and there is no hidden
 `generic-cli` fallback. New UI launches stream live job logs while the process runs, and
 the saved `runtime.log` remains available afterward through the normal log view and CLI.
+The command center also shows an Active Run panel and Timeline tab for long-running jobs:
+elapsed time, last output age, runner command, stage timeout summary, cancel action, and
+real stage milestones are shown without fake progress percentages.
 The UI can write question answers as `[resolved]`, `[partial]`, or `[deferred]` entries
 in the standard `answers.md`; only `[resolved]` answers unblock blocking questions, then
 rerun the selected stage or workflow after answering. Intervention requests are stored as
 durable Markdown input under `.aidd/workitems/<id>/stages/<stage>/operator-requests/`
 and are shown in Activity, Evidence Refs, and Recent Artifacts. The UI is a local no-auth
 operator surface: the default host is loopback, and non-loopback binds print a warning.
+
+For `implement`, the **Implement Review** tab shows the real project repository diff,
+including untracked files, deleted files, bounded diff hunks, `.aidd/` artifacts separated
+from source files, allowed-scope status, and mismatches between changed files and
+`implementation-report.md`. For `review` and `qa`, structured tabs surface findings,
+approval status, QA verdict, residual risks, known issues, and evidence ids. Selected
+review findings or QA risks can be sent back to `implement` as a durable remediation
+request; the UI then marks downstream `review` and `qa` stale until the operator explicitly
+reruns `review -> qa` with a selected runtime. CLI behavior remains document/validator
+driven and does not get new default gates from these UI controls.
 
 After terminal `qa`, the command center switches to **Flow Complete**. The completed-run
 handoff shows final QA status, final artifacts, blockers, repair counts, approval counts,

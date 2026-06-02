@@ -144,6 +144,12 @@
   .diff-preview-row {
     grid-template-columns: 1fr;
   }
+  .diff-review-layout {
+    grid-template-columns: 1fr;
+  }
+  .diff-file-list {
+    max-height: 260px;
+  }
   .artifacts-panel {
     border-left: 0;
     border-top: 1px solid var(--line);

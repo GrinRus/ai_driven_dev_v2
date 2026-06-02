@@ -154,6 +154,48 @@ document.addEventListener("click", async (event) => {
       await cancelActiveJob();
       return;
     }
+    const diffFilter = event.target.closest("[data-implement-diff-filter]")?.dataset.implementDiffFilter;
+    if (diffFilter) {
+      state.implementDiffFilter = diffFilter;
+      state.implementDiffPath = "";
+      await renderImplementReview();
+      return;
+    }
+    const diffFile = event.target.closest("[data-open-diff-file]")?.dataset.openDiffFile;
+    if (diffFile) {
+      state.implementDiffPath = diffFile;
+      await renderImplementReview();
+      return;
+    }
+    const proceedStage = event.target.closest("[data-proceed-stage]")?.dataset.proceedStage;
+    if (proceedStage) {
+      await startStage(proceedStage);
+      return;
+    }
+    if (event.target.closest("[data-rerun-implement]")) {
+      await startStage("implement");
+      return;
+    }
+    if (event.target.closest("[data-open-request-tab]")) {
+      activateTab("request");
+      await renderCockpit();
+      return;
+    }
+    const remediationLaunch = event.target.closest("[data-remediation-launch]")?.dataset.remediationLaunch;
+    if (remediationLaunch) {
+      await launchRemediation(remediationLaunch);
+      return;
+    }
+    if (event.target.closest("[data-accept-qa]")) {
+      toast("QA acceptance stays recorded by the completed QA artifacts.");
+      activateTab("artifacts");
+      await renderCockpit();
+      return;
+    }
+    if (event.target.closest("[data-next-flow-start]")) {
+      await openNextFlowWizard("start-follow-up-flow");
+      return;
+    }
     const approvalButton = event.target.closest("[data-operator-request][data-operator-action]");
     if (approvalButton) {
       await submitApproval(approvalButton.dataset.operatorRequest, approvalButton.dataset.operatorAction);

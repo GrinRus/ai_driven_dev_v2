@@ -10,7 +10,7 @@ This guide explains how to diagnose the most common operator-visible failures in
 - harness and eval failures.
 
 It is aligned with the current local AIDD CLI, adapter, validator, and harness behavior as of
-May 28, 2026.
+June 2, 2026.
 
 ## 2. Fast Triage Flow
 
@@ -185,6 +185,67 @@ Actions:
    E2E records `next-flow-checkpoint.json` and `next-flow-checkpoint.md` after terminal
    `qa`; it does not require launching a second public-repository flow by default.
 
+### 4.7 UI job appears silent for a long time
+
+Symptoms:
+
+- the **Active Run** panel shows `No output for N minutes`;
+- the job is still `running`, but the Logs tab has not received new chunks;
+- the stage timeout has not yet expired.
+
+Actions:
+
+1. Open the **Logs** tab and inspect the last runtime line.
+2. Check the **Active Run** panel for runner command and timeout summary.
+3. Confirm the provider CLI is still expected to stream output; some tools are quiet while
+   planning or waiting on a long subprocess.
+4. If the command is clearly stuck, use **Cancel job** in the UI. Cancellation requests are
+   best-effort against the UI-started job and preserve the log evidence already captured.
+5. If the same runtime repeatedly goes silent before writing artifacts, run the configured
+   provider command directly and collect the raw `runtime.log` for maintainer triage.
+
+### 4.8 Implement Review diff is missing or truncated
+
+Symptoms:
+
+- **Implement Review** reports that repository diff is unavailable;
+- changed files are visible, but a diff hunk is marked truncated;
+- `.aidd/` artifacts appear separately from source changes;
+- a file is marked `changed but not mentioned`, `mentioned but unchanged`, or `outside scope`.
+
+Actions:
+
+1. Confirm the selected project root is a git repository. The diff service reads git status
+   and diff output from the selected project root only.
+2. Keep `.aidd/` project-local, but do not treat `.aidd/` artifacts as source changes. The
+   UI separates them intentionally.
+3. For truncated hunks, open the file or run local git commands outside AIDD if you need the
+   full diff. The UI API uses bounded reads.
+4. If a changed source file is not mentioned in `implementation-report.md`, treat it as an
+   operator warning and ask the runtime to update the report or rerun implement.
+5. If a file is outside allowed scope, verify `allowed-write-scope.md` and decide whether to
+   remediate before review.
+
+### 4.9 Review/QA remediation or stale downstream rerun is blocked
+
+Symptoms:
+
+- **Send selected to implement** is disabled;
+- remediation launch fails with `runtime is required`;
+- `review` or `qa` shows a stale badge after a remediation attempt;
+- terminal handoff is not visible even though `qa` previously succeeded.
+
+Actions:
+
+1. Select a ready runtime explicitly in the top bar. Remediation launches never use a hidden
+   `generic-cli` fallback.
+2. Select at least one review finding or QA risk/issue before sending to implement.
+3. Add a concise operator note explaining what the new implement attempt should fix.
+4. Wait for the remediation `implement` job to complete successfully. Downstream stages are
+   marked stale only after that successful implement attempt.
+5. Use the run-global next action **Rerun stale downstream** to explicitly run `review -> qa`.
+6. Treat stale `qa` as not ready for terminal handoff until the downstream rerun succeeds.
+
 ## 5. Validator Failures
 
 ### 5.1 Determine validator state for a stage
@@ -240,8 +301,9 @@ Common failures:
 - `Operator request must not be empty.`: provide non-empty `--request` or `--request-file`.
 - `Target document is outside current stage scope`: use a current-stage Markdown document
   such as `plan.md` or omit `--target-document`.
-- `downstream stages already succeeded`: V1 does not invalidate completed downstream
-  stages; start a new run or wait for downstream rerun policy work.
+- `downstream stages already succeeded`: stage-scoped intervention still cannot mutate a
+  stage after downstream success. For review or QA problems, use UI remediation to send
+  selected findings or risks back to `implement`, then rerun stale downstream stages.
 
 ## 6. Harness and Eval Failures
 

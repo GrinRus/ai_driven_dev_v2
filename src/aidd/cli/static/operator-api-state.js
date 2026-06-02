@@ -3,7 +3,11 @@ const VALID_TABS = [
   "overview",
   "questions",
   "validation",
+  "timeline",
   "artifacts",
+  "implement-review",
+  "review-findings",
+  "qa-verdict",
   "logs",
   "approvals",
   "request",
@@ -61,6 +65,8 @@ const state = {
   activeJobStatus: null,
   activeJobTimer: null,
   activeArtifactKey: "",
+  implementDiffFilter: "all",
+  implementDiffPath: "",
   artifactViewMode: "preview",
   selectedEvidenceNodeId: "",
   selectedEvidenceEdgeId: "",
@@ -184,7 +190,7 @@ function activeStageView() {
 }
 
 function needsRuntime(action) {
-  return ["run-workflow", "run-stage", "resume-stage"].includes(action);
+  return ["run-workflow", "run-stage", "resume-stage", "rerun-stale-downstream"].includes(action);
 }
 
 function setRunButtonState() {

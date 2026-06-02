@@ -1649,6 +1649,92 @@ pre {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+.panel-actions,
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.filter-row button.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #ffffff;
+}
+.operator-timeline {
+  display: grid;
+  gap: 8px;
+}
+.timeline-event {
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 14px minmax(0, 1fr);
+  padding: 10px 0;
+}
+.timeline-event:last-child {
+  border-bottom: 0;
+}
+.timeline-event p {
+  margin: 6px 0;
+}
+.implement-review-screen {
+  display: grid;
+  gap: 12px;
+}
+.diff-review-layout {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  margin-top: 12px;
+}
+.diff-file-list {
+  display: grid;
+  gap: 6px;
+  max-height: 560px;
+  overflow: auto;
+}
+.diff-file-card {
+  align-items: start;
+  background: #fbfcfb;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  text-align: left;
+}
+.diff-file-card.selected {
+  border-color: var(--teal);
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+.diff-file-card strong,
+.diff-file-card span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.diff-viewer {
+  min-width: 0;
+}
+.diff-pre {
+  max-height: 640px;
+}
+.compact-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+}
+.compact-list span {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  padding: 6px 8px;
+}
 .empty-state {
   color: var(--muted);
   padding: 18px 0;

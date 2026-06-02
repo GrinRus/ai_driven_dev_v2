@@ -26,6 +26,9 @@ Today:
 - `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
 - `aidd stage interact` records a stage-scoped operator request and runs an
   intervention attempt in the current run through the same adapter boundary;
+- `aidd ui` opens local setup mode or the command center with explicit runtime selection,
+  long-run visibility, Implement Review diff, structured review/QA tabs, and
+  review/QA remediation back to `implement`;
 - `python -m aidd.harness.live_e2e_black_box` executes the manual black-box
   live E2E evaluator and writes a result bundle;
 - live scenarios under `harness/scenarios/live/` are a manual external-audit lane:
@@ -337,14 +340,21 @@ artifact, use `aidd stage interact <stage> --request "..."` or the UI **Request 
 tab. AIDD writes the request to
 `.aidd/workitems/<id>/stages/<stage>/operator-requests/request-000N.md`, runs an
 `intervention` attempt in the current run, and still gates the result through normal
-validation. V1 blocks this action when downstream stages have already succeeded in the
-same run.
+validation. Stage-scoped intervention is for editing or rechecking the current stage.
+When `review` or `qa` finds problems after `implement`, use the remediation flow below
+instead of mutating downstream artifacts.
 
 During a UI-triggered run, the **Logs** tab follows the in-memory job stream from the
 runtime stdout/stderr callbacks. After completion, `aidd run logs` and the UI persisted
 log view read the durable attempt `runtime.log`. The **Artifacts** tab renders known
 stage document keys from the artifact index as read-only Markdown preview/source views;
 it does not allow arbitrary path reads.
+
+For long-running UI jobs, use the right-side **Active Run** panel and the **Timeline** tab.
+They show job id, active stage, runner, elapsed time, last output age, stage timeout
+summary, runner command, cancel action, live logs shortcut, and real milestones from
+stage metadata, attempts, `events.jsonl`, repair history, questions, and artifacts. The
+UI does not show fake percentage progress.
 
 The local UI has no authentication in this release. The default bind host is
 `127.0.0.1`; binding to `0.0.0.0`, a LAN address, or another non-loopback host is
@@ -356,6 +366,40 @@ multi-user web service.
 Keep generated `.aidd/` state inside the local project. Do not move it into the
 AIDD source checkout or commit it unless the target repository has its own policy
 for committed operator artifacts.
+
+### 6.6.1 Implement review and review/QA remediation
+
+After `implement`, use the UI **Implement Review** tab before moving to `review`.
+It reads the selected project repository diff without mutating git state and separates:
+
+- source file changes;
+- `.aidd/` artifacts;
+- untracked files;
+- deleted or modified tracked files;
+- bounded/truncated diff hunks;
+- files mentioned in `implementation-report.md`;
+- files changed but not mentioned;
+- files mentioned but unchanged;
+- allowed write scope status.
+
+The **Review Findings** tab parses `review-report.md` into approval status and findings.
+Use **Proceed to QA** only when the review status and validators allow it. If review is
+`rejected` or contains unresolved `must-fix` findings, select the findings and choose
+**Send selected to implement**.
+
+The **QA Verdict** tab parses `qa-report.md` into quality verdict, release recommendation,
+residual risks, known issues, and evidence ids. If QA is `not-ready`, select the relevant
+risks or issues and send them back to `implement`. `ready-with-risks` remains an explicit
+operator decision: accept the risk, create follow-up work, or remediate before final
+handoff.
+
+Remediation is durable and distinct from stage-scoped intervention. The UI writes
+`.aidd/workitems/<id>/remediations/<run_id>/request-000N.md`, includes the latest request
+as input to a new `implement` attempt, and requires a selected runtime. After the
+remediation `implement` attempt succeeds, downstream `review` and `qa` are marked stale
+as overlay metadata. Their canonical stage status is not rewritten, but stale `qa` is not
+treated as a fresh terminal handoff. Use the next action **Rerun stale downstream** to
+explicitly run `review -> qa` with a selected runtime.
 
 ### 6.7 Completed-run handoff and next-flow actions
 

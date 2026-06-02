@@ -36,6 +36,7 @@ from aidd.core.operator_intervention import (
     latest_operator_intervention_request,
     list_operator_intervention_requests,
 )
+from aidd.core.remediation import RemediationStaleStage, load_remediation_status
 from aidd.core.run_inspection import (
     RunMetadataSummary,
     StageResultSummary,
@@ -289,6 +290,7 @@ def _stage_rail_items(
     workspace_root: Path,
     work_item: str,
     metadata: RunMetadataSummary | None,
+    stale_by_stage: dict[str, RemediationStaleStage] | None = None,
 ) -> tuple[OperatorStageRailItem, ...]:
     metadata_by_stage = (
         {stage.stage: stage for stage in metadata.stages} if metadata is not None else {}
@@ -299,6 +301,7 @@ def _stage_rail_items(
         metadata=metadata,
     )
     items: list[OperatorStageRailItem] = []
+    stale_lookup = stale_by_stage or {}
     for stage in STAGES:
         title, subtitle = _STAGE_UI_COPY[stage]
         metadata_summary = metadata_by_stage.get(stage)
@@ -314,6 +317,7 @@ def _stage_rail_items(
             work_item=work_item,
             stage=stage,
         )
+        stale_entry = stale_lookup.get(stage)
         items.append(
             OperatorStageRailItem(
                 stage=stage,
@@ -331,6 +335,11 @@ def _stage_rail_items(
                 unresolved_blocking_count=len(questions.unresolved_blocking_question_ids),
                 validator_pass_count=result.validator_pass_count if result else 0,
                 validator_fail_count=result.validator_fail_count if result else 0,
+                stale=stale_entry is not None,
+                stale_reason=stale_entry.reason if stale_entry is not None else None,
+                stale_invalidated_by=(
+                    stale_entry.invalidated_by if stale_entry is not None else None
+                ),
             )
         )
     return tuple(items)
@@ -546,6 +555,16 @@ def _next_action(
             detail="Choose a runtime before starting the workflow.",
             stage=None,
             enabled=False,
+        )
+    stale_stage = next((item for item in rail_by_stage.values() if item.stale), None)
+    if stale_stage is not None:
+        return OperatorNextAction(
+            action="rerun-stale-downstream",
+            label="Rerun stale downstream",
+            detail=stale_stage.stale_reason
+            or "A remediation attempt invalidated downstream stage evidence.",
+            stage=stale_stage.stage,
+            enabled=True,
         )
     blocked_question_stage = next(
         (item for item in rail_by_stage.values() if item.unresolved_blocking_count),
@@ -1198,8 +1217,11 @@ def _terminal_handoff(
     work_item: str,
     metadata: RunMetadataSummary | None,
     blockers: tuple[OperatorBlocker, ...],
+    stale_by_stage: dict[str, RemediationStaleStage] | None = None,
 ) -> OperatorTerminalRunHandoff | None:
     if metadata is None:
+        return None
+    if stale_by_stage and "qa" in stale_by_stage:
         return None
     terminal_stage = _optional_manifest_stage(metadata.workflow_stage_end)
     if terminal_stage is not None and terminal_stage != "qa":
@@ -1285,7 +1307,14 @@ def resolve_operator_dashboard_view(
         metadata = None
 
     active_stage_view: OperatorStageView | None = None
+    stale_by_stage: dict[str, RemediationStaleStage] = {}
     if metadata is not None:
+        remediation_status = load_remediation_status(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=metadata.run_id,
+        )
+        stale_by_stage = {entry.stage: entry for entry in remediation_status.stale_stages}
         try:
             active_stage_view = resolve_operator_stage_view(
                 workspace_root=workspace_root,
@@ -1300,6 +1329,7 @@ def resolve_operator_dashboard_view(
         workspace_root=workspace_root,
         work_item=work_item,
         metadata=metadata,
+        stale_by_stage=stale_by_stage,
     )
     rail_by_stage = {stage.stage: stage for stage in stages}
     primary_artifact = _primary_artifact(
@@ -1360,6 +1390,7 @@ def resolve_operator_dashboard_view(
             work_item=work_item,
             metadata=metadata,
             blockers=blockers,
+            stale_by_stage=stale_by_stage,
         ),
     )
 
