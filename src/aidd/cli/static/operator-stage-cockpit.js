@@ -352,6 +352,8 @@ function renderBottomDock() {
 }
 
 async function renderAll() {
+  document.body.classList.remove("setup-active");
+  document.getElementById("openWorkspaceButton").disabled = false;
   renderRuntimeSelector();
   renderTopbar();
   renderStageRail();

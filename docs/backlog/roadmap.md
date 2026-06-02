@@ -6969,3 +6969,313 @@ Exit evidence:
   or archive decision without reading implementation code;
 - docs preserve the distinction between local-project UI proof and public-repository live
   E2E checkpoint evidence.
+
+## Wave 27 — onboarding-first operator startup (`planned`)
+
+Goal: make the first-run operator path UI-first while preserving the existing governed
+workflow, project-local `.aidd/` ownership, explicit runner selection, and CLI-equivalent
+provenance. Existing CLI subcommands and scripted flows remain compatible; onboarding
+extends the UI surface instead of replacing CLI operation.
+
+### Epic W27-E1 — onboarding UX and startup contract (`planned`)
+Linked stories: `US-01`, `US-06`, `US-09`, `US-11`, `US-12`
+
+#### Slice W27-E1-S1 — onboarding-first contract (`planned`)
+Goal: define the UI-first startup flow before implementation changes the public command
+surface or workspace setup behavior.
+
+Primary outputs:
+
+- onboarding-first operator frontend contract
+- CLI compatibility and no-regression acceptance criteria
+- project scope and multi-project boundary decision
+- mandatory runner-selection decision
+- operator-facing startup documentation plan
+
+Touched areas:
+
+- `docs/architecture/operator-frontend.md`
+- `README.md`
+- `docs/operator-handbook.md`
+- `tests/test_docs_consistency.py`
+- `docs/backlog/`
+
+Dependencies:
+
+- `W26-E5-S1`
+
+Local tasks:
+
+- `W27-E1-S1-T1` Define the onboarding-first operator UI contract covering preserved CLI
+  behavior, no-work-item `aidd ui`, optional explicit onboarding launcher, project root
+  selection, `.aidd` workspace ownership, work-item create/resume, runner selection, and
+  multi-project isolation.
+  - Scope: architecture and planning documents only.
+  - Verification: docs consistency or `rg` checks prove the contract names CLI
+    compatibility requirements, the startup entrypoint, project root rules,
+    runner-selection requirement, and multi-project boundary.
+- `W27-E1-S1-T2` Document the operator-facing UI-first startup path in README and the
+  operator handbook without removing explicit CLI subcommand examples.
+  - Scope: operator documentation only.
+  - Verification: docs consistency tests prove README and handbook describe UI onboarding,
+    explicit runner selection, project-local `.aidd/` ownership, and unchanged scripted CLI
+    command examples.
+
+Exit evidence:
+
+- maintainers can implement onboarding without debating whether the UI owns workflow
+  semantics;
+- operators can see that the recommended first-run path starts in the UI, while scripted
+  CLI paths keep their existing behavior and examples;
+- unrelated projects stay isolated even if a launcher UI lists recent projects.
+
+### Epic W27-E2 — onboarding launch shell and project setup (`planned`)
+Linked stories: `US-09`, `US-11`, `US-12`
+
+#### Slice W27-E2-S1 — rootless UI launch (`planned`)
+Goal: let the operator start the local UI before a work item exists while preserving the
+existing initialized-work-item command center path.
+
+Primary outputs:
+
+- no-work-item `aidd ui` setup mode
+- explicit onboarding launcher decision without changing existing CLI behavior
+- command compatibility coverage for explicit subcommands and help
+
+Touched areas:
+
+- `src/aidd/cli/main.py`
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/static/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W27-E1-S1`
+
+Local tasks:
+
+- `W27-E2-S1-T1` Allow `aidd ui` to start without `--work-item` and serve setup mode
+  before a project/work-item context exists.
+  - Scope: local UI command options, server options, and setup-mode routing.
+  - Verification: CLI UI tests prove no-work-item launch serves setup mode and existing
+    `--work-item` launch still opens the command center.
+- `W27-E2-S1-T2` Add an explicit onboarding launcher only after the contract preserves bare
+  `aidd`, `aidd --help`, and existing subcommand behavior.
+  - Scope: Typer command entrypoint only.
+  - Verification: CLI tests prove existing no-arg/help/subcommand behavior remains
+    unchanged and the explicit onboarding launcher reaches setup mode.
+
+Exit evidence:
+
+- a new operator can run one command and reach the setup UI;
+- existing CLI workflows and help behavior keep their current command behavior.
+
+#### Slice W27-E2-S2 — project and work-item setup wizard (`planned`)
+Goal: create or resume project-local AIDD work from the UI without writing workflow
+artifacts outside the selected project root.
+
+Primary outputs:
+
+- UI-neutral onboarding project validation service
+- project root entry and validation UI
+- work-item create/resume UI backed by existing workspace bootstrap behavior
+
+Touched areas:
+
+- `src/aidd/core/`
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/static/`
+- `tests/core/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W27-E2-S1`
+- `W20-E4-S2`
+
+Local tasks:
+
+- `W27-E2-S2-T1` Add an onboarding service that validates a selected local project root,
+  resolves the project-local `.aidd` workspace, discovers existing work items, and rejects
+  path escapes.
+  - Scope: UI-neutral core onboarding service.
+  - Verification: core tests cover valid roots, missing roots, file paths, parent escapes,
+    symlink escapes, existing `.aidd`, and empty-project initialization.
+- `W27-E2-S2-T2` Render the Project Setup wizard for path entry, existing workspace
+  detection, work-item create/resume, and request seeding.
+  - Scope: packaged static UI setup screens and local UI endpoints.
+  - Verification: UI tests cover setup rendering, validation errors, create/resume
+    payloads, escaped paths, and no direct mutation of generated stage artifacts.
+- `W27-E2-S2-T3` Route completed setup into the existing command center with the selected
+  project root, work item, root, and config snapshot.
+  - Scope: UI service context switching after setup completion.
+  - Verification: UI tests prove the command center reads the selected `.aidd` workspace
+    and workflow launches use the selected context.
+
+Exit evidence:
+
+- UI onboarding can initialize the same state as `aidd init`;
+- existing `.aidd` work items can be resumed without creating duplicate workspaces;
+- selected project context is explicit in subsequent run requests.
+
+### Epic W27-E3 — runner selection during onboarding (`planned`)
+Linked stories: `US-01`, `US-06`, `US-09`, `US-11`
+
+#### Slice W27-E3-S1 — mandatory runner selection (`planned`)
+Goal: make runner choice part of onboarding and every launch while keeping readiness
+observational and runtime-specific behavior inside adapters.
+
+Primary outputs:
+
+- project-scoped runtime readiness query for onboarding
+- runner selection cards with unavailable/setup states
+- optional project-local runner preference that never replaces explicit launch payloads
+
+Touched areas:
+
+- `src/aidd/core/runtime_readiness.py`
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/static/`
+- `tests/core/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W27-E2-S2`
+- `W21-E1-S1`
+
+Local tasks:
+
+- `W27-E3-S1-T1` Expose runtime readiness for the selected project/config during
+  onboarding before a work item run exists.
+  - Scope: runtime readiness read model and local UI endpoint plumbing.
+  - Verification: core/UI tests cover default and project config command sources,
+    provider unavailable, execution command unavailable, and timeout profile display.
+- `W27-E3-S1-T2` Render onboarding runner selection cards and disable launch until the
+  operator explicitly selects a ready or intentionally degraded runner.
+  - Scope: packaged static onboarding UI.
+  - Verification: UI tests cover ready, unavailable, degraded, and missing-selection
+    states without hardcoded `generic-cli` fallback.
+- `W27-E3-S1-T3` Persist an optional project-local runner preference only as operator UI
+  convenience while every workflow, stage, intervention, follow-up, and clone launch still
+  sends an explicit runtime id.
+  - Scope: UI preference storage and launch request construction.
+  - Verification: tests prove saved preference preselects UI state but run manifests and
+    API payloads still contain explicit operator-selected runtime ids.
+
+Exit evidence:
+
+- onboarding cannot start hidden-runtime work;
+- readiness tells the operator what is installed/authenticated without becoming workflow
+  source of truth;
+- runner preference improves ergonomics without weakening run provenance.
+
+### Epic W27-E4 — multi-project onboarding boundaries (`planned`)
+Linked stories: `US-11`, `US-12`
+
+#### Slice W27-E4-S1 — project-set setup and project switching (`planned`)
+Goal: support multi-root local work as declared project sets while keeping unrelated
+projects isolated from one another.
+
+Primary outputs:
+
+- project-set declaration UI for monorepo or related local roots
+- noncanonical recent-project switcher for unrelated projects
+- isolation tests for per-project `.aidd` state and active UI jobs
+
+Touched areas:
+
+- `src/aidd/core/project_set.py`
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/static/`
+- `tests/core/`
+- `tests/cli/`
+- `docs/e2e/operator-ui-local-project.md`
+
+Dependencies:
+
+- `W27-E2-S2`
+- `W27-E3-S1`
+- `W20-E3-S4`
+
+Local tasks:
+
+- `W27-E4-S1-T1` Add a project-set declaration step for multiple roots inside the
+  selected local project, using the existing bounded project-set resolver.
+  - Scope: onboarding UI and project-set config/write path.
+  - Verification: tests cover stable ids, duplicate ids, duplicate roots, missing roots,
+    parent escapes, symlink escapes, and `project-set.md` context persistence.
+- `W27-E4-S1-T2` Add a recent-project switcher as noncanonical UI cache while keeping
+  each active workflow, job, and `.aidd` workspace scoped to one selected project.
+  - Scope: local UI cache and context-switching guardrails.
+  - Verification: UI tests prove switching projects does not mix work items, logs,
+    runtime jobs, answers, or artifacts across project roots.
+
+Exit evidence:
+
+- one UI can help the operator choose among recent projects, but each flow remains
+  scoped to exactly one project-local `.aidd` workspace;
+- multiple roots inside one monorepo use project-set declarations rather than ad hoc
+  cross-project state;
+- concurrent unrelated-project execution remains separated unless a later design adds a
+  multi-context job registry.
+
+### Epic W27-E5 — onboarding evidence and rollout docs (`planned`)
+Linked stories: `US-07`, `US-09`, `US-11`, `US-12`
+
+#### Slice W27-E5-S1 — onboarding local-project evidence (`planned`)
+Goal: prove the UI-first onboarding path with deterministic local fixtures and manual
+installed smoke instructions before treating it as the default operator entrypoint.
+
+Primary outputs:
+
+- deterministic onboarding UI fixture coverage
+- source-installed onboarding smoke path
+- operator troubleshooting notes for setup and runner blockers
+
+Touched areas:
+
+- `tests/cli/`
+- `tests/core/`
+- `harness/scenarios/smoke/`
+- `docs/e2e/operator-ui-local-project.md`
+- `docs/operator-troubleshooting.md`
+
+Dependencies:
+
+- `W27-E4-S1`
+
+Local tasks:
+
+- `W27-E5-S1-T1` Add deterministic local UI onboarding coverage for project selection,
+  work-item creation, runner readiness, bounded fixture execution, questions, logs, and
+  artifacts.
+  - Scope: service/static UI tests and fixture-backed smoke scenario updates.
+  - Verification: focused pytest and scenario-loader tests prove the onboarding fixture
+    path without provider credentials.
+- `W27-E5-S1-T2` Record the source-installed manual onboarding smoke path and cleanup
+  rules for generated `.aidd` state.
+  - Scope: E2E/operator docs only.
+  - Verification: docs consistency tests assert the smoke checklist names setup URL,
+    selected project root, work item, runtime id, browser/viewport, evidence files, and
+    cleanup rules.
+- `W27-E5-S1-T3` Add troubleshooting notes for invalid project roots, missing runtime
+  binaries, unauthenticated providers, unavailable execution commands, and stale UI
+  project preferences.
+  - Scope: operator troubleshooting docs only.
+  - Verification: docs consistency tests cover the setup and runner blocker sections.
+
+Exit evidence:
+
+- UI-first onboarding is proven through local deterministic evidence before release docs
+  present it as the default path;
+- operators have recovery guidance for the likely first-run blockers.
+
+Sync notes:
+
+- `2026-06-02` Wave 27 opened from operator feedback that first-run AIDD should guide
+  onboarding through the UI while existing CLI commands remain compatible.
+  `W27-E1-S1-T1` is promoted to `Next`, `W27-E1-S1-T2` and `W27-E2-S1-T1` are promoted
+  to `Soon`, and the remaining implementation/evidence tasks stay in `Parking lot` until
+  the onboarding contract is accepted.

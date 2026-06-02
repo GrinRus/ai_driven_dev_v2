@@ -60,6 +60,8 @@
     white-space: nowrap;
   }
   .overview-grid,
+  .onboarding-shell,
+  .inline-form-row,
   .artifact-layout,
   .workbench-main,
   .project-setup-grid,

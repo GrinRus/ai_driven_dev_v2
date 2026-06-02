@@ -196,7 +196,26 @@ not installed globally, prefix each command with:
 uv tool run --from /path/to/ai_driven_dev_v2 aidd
 ```
 
-### 6.1 Probe local environment
+### 6.1 Start UI onboarding
+
+The recommended first-run path is the local UI setup mode:
+
+```bash
+cd /path/to/local-project
+aidd ui
+```
+
+Setup mode opens before a work item exists. It validates the selected local project root,
+resolves the project-local `.aidd/` workspace, discovers existing work items, creates or
+resumes a work item, seeds the operator request, shows runtime readiness, and requires the
+operator to select a runtime before any workflow or stage execution starts. It uses the
+same workspace creation and request seeding behavior as `aidd init`; it does not
+introduce a second workflow engine or a hidden `generic-cli` fallback.
+
+Bare `aidd`, `aidd --help`, and scripted subcommands keep their existing CLI behavior. Use
+the CLI steps below when you need a terminal-first or scripted setup.
+
+### 6.2 Probe local environment
 
 ```bash
 aidd doctor --config /path/to/aidd.example.toml
@@ -209,7 +228,7 @@ Confirm:
 - each runtime availability result matches your machine state.
 - the command is being executed from the intended local project root.
 
-### 6.2 Initialize a work item workspace
+### 6.3 Initialize a work item workspace from the CLI
 
 ```bash
 aidd init --work-item WI-001 --request "Implement a small, specific task" --root .aidd
@@ -229,7 +248,7 @@ intentionally want to overwrite `intake.md`, `user-request.md`, and `repository-
 Running `aidd init` without a request still initializes the workspace tree, but the work
 item is not runnable until the intake context exists.
 
-### 6.3 Inspect generated workspace artifacts
+### 6.4 Inspect generated workspace artifacts
 
 Recommended quick checks:
 
@@ -244,13 +263,14 @@ Verify that:
 - initialization is repeatable and deterministic for operator use.
 - `.aidd/` is rooted inside the local project, not beside it.
 
-### 6.4 Validate execution surfaces
+### 6.5 Validate execution surfaces
 
 ```bash
 aidd run --work-item WI-001 --runtime codex --root .aidd --config /path/to/aidd.example.toml
 aidd run --work-item WI-001 --runtime claude-code --root .aidd --config /path/to/aidd.example.toml
 aidd stage run plan --work-item WI-001 --runtime opencode --root .aidd --config /path/to/aidd.example.toml
 aidd stage interact plan --work-item WI-001 --runtime codex --request "Add rollback risks" --root .aidd --config /path/to/aidd.example.toml
+aidd ui --root .aidd --config /path/to/aidd.example.toml
 aidd ui --work-item WI-001 --root .aidd --config /path/to/aidd.example.toml
 ```
 
@@ -283,7 +303,7 @@ Expected behavior in the current local implementation:
 - public-repository live evals always build a local wheel from clean tracked `HEAD`;
   published-package install proof is recorded in the separate release/install lane.
 
-### 6.5 Inspect logs and artifacts
+### 6.6 Inspect logs and artifacts
 
 Use either the local UI or CLI read commands:
 
@@ -337,7 +357,7 @@ Keep generated `.aidd/` state inside the local project. Do not move it into the
 AIDD source checkout or commit it unless the target repository has its own policy
 for committed operator artifacts.
 
-### 6.6 Completed-run handoff and next-flow actions
+### 6.7 Completed-run handoff and next-flow actions
 
 When a run reaches terminal `qa`, the local UI command center switches to
 **Flow Complete**. Treat this screen as the operator handoff point, not as a continuation
@@ -384,7 +404,7 @@ Keep the two evidence lanes distinct:
   public-repository flow by default; the optional maintained-scenario follow-up proof
   creates draft lineage evidence only when the operator explicitly enables it.
 
-### 6.7 Product scope boundary
+### 6.8 Product scope boundary
 
 There is no supported `aidd init --github-issue <url>` product command. GitHub
 issue URLs may appear in historical live E2E reports or support reports, but current

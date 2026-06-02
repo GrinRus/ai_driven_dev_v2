@@ -6,9 +6,48 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
+- `W27-E1-S1-T1` Define the onboarding-first operator UI contract covering preserved CLI
+  behavior, no-work-item `aidd ui`, optional explicit onboarding launcher, project root
+  selection, `.aidd` workspace ownership, work-item create/resume, runner selection, and
+  multi-project isolation.
+
 ## Soon
 
+- `W27-E1-S1-T2` Document the operator-facing UI-first startup path in README and the
+  operator handbook without removing explicit CLI subcommand examples.
+- `W27-E2-S1-T1` Allow `aidd ui` to start without `--work-item` and serve setup mode
+  before a project/work-item context exists.
+
 ## Parking lot
+
+- `W27-E2-S1-T2` Add an explicit onboarding launcher only after the contract preserves bare
+  `aidd`, `aidd --help`, and existing subcommand behavior.
+- `W27-E2-S2-T1` Add an onboarding service that validates a selected local project root,
+  resolves the project-local `.aidd` workspace, discovers existing work items, and rejects
+  path escapes.
+- `W27-E2-S2-T2` Render the Project Setup wizard for path entry, existing workspace
+  detection, work-item create/resume, and request seeding.
+- `W27-E2-S2-T3` Route completed setup into the existing command center with the selected
+  project root, work item, root, and config snapshot.
+- `W27-E3-S1-T1` Expose runtime readiness for the selected project/config during
+  onboarding before a work item run exists.
+- `W27-E3-S1-T2` Render onboarding runner selection cards and disable launch until the
+  operator explicitly selects a ready or intentionally degraded runner.
+- `W27-E3-S1-T3` Persist an optional project-local runner preference only as operator UI
+  convenience while every workflow, stage, intervention, follow-up, and clone launch still
+  sends an explicit runtime id.
+- `W27-E4-S1-T1` Add a project-set declaration step for multiple roots inside the
+  selected local project, using the existing bounded project-set resolver.
+- `W27-E4-S1-T2` Add a recent-project switcher as noncanonical UI cache while keeping
+  each active workflow, job, and `.aidd` workspace scoped to one selected project.
+- `W27-E5-S1-T1` Add deterministic local UI onboarding coverage for project selection,
+  work-item creation, runner readiness, bounded fixture execution, questions, logs, and
+  artifacts.
+- `W27-E5-S1-T2` Record the source-installed manual onboarding smoke path and cleanup
+  rules for generated `.aidd` state.
+- `W27-E5-S1-T3` Add troubleshooting notes for invalid project roots, missing runtime
+  binaries, unauthenticated providers, unavailable execution commands, and stale UI
+  project preferences.
 
 ## Update rules
 
@@ -312,3 +351,8 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   launch-preflight troubleshooting, archive behavior, and the boundary between
   local-project UI proof and public-repository live E2E checkpoint evidence. Wave 26 is
   done and the active backlog queue is empty.
+- `2026-06-02` Wave 27 opened for UI-first onboarding while preserving existing CLI
+  behavior. Promoted `W27-E1-S1-T1` to `Next`, `W27-E1-S1-T2` and `W27-E2-S1-T1` to
+  `Soon`, and kept the explicit launcher, project setup, runner selection,
+  project-set/recent-project, and onboarding evidence tasks in `Parking lot` until the
+  contract is accepted.

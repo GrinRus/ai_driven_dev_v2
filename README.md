@@ -98,6 +98,18 @@ Start from the local project root that should receive AIDD workflow state:
 
 ```bash
 cd /path/to/local-project
+aidd ui
+```
+
+The UI opens setup mode when no work item is provided. Use it to confirm the local project
+root, create or resume a work item, seed the request, inspect runtime readiness, select a
+runtime, and start the governed flow. The UI still writes the same project-local `.aidd/`
+workspace as the CLI and still requires explicit runtime selection before execution.
+
+Scripted and terminal-first flows remain supported:
+
+```bash
+cd /path/to/local-project
 aidd doctor
 aidd init --work-item WI-001 --request "Implement a small, specific task" --root .aidd
 aidd run --work-item WI-001 --runtime codex --from-stage idea --to-stage plan --root .aidd
@@ -171,11 +183,16 @@ stage attempt in the current run.
 
 ## Operator UI
 
-Start the local UI for an initialized work item:
+Start setup mode for a local project, or open an initialized work item directly:
 
 ```bash
+aidd ui
 aidd ui --work-item WI-001 --root .aidd
 ```
+
+Without `--work-item`, the UI validates the selected project root, resolves `.aidd/`,
+discovers existing work items, and creates new work items through the same bootstrap path as
+`aidd init`. With `--work-item`, it opens the existing command center directly.
 
 The UI reads the same `.aidd/` state as the CLI. It can show stage status, render stage
 Markdown artifacts, show runtime logs, answer questions, show repair history, submit

@@ -212,7 +212,41 @@ Current W20 implementation status:
   open-folder/server-stop actions, stage intervention request dispatch, and
   workflow-run delegation through the internal service seam.
 
-## 7. Accepted next-generation UX direction
+## 7. Onboarding-first startup
+
+The recommended first-run operator path starts in the local UI, but existing CLI
+subcommands remain compatible scripted surfaces. Bare `aidd` and `aidd --help` keep their
+current help behavior in this release. `aidd ui` can start without `--work-item` and then
+serves setup mode; `aidd ui --work-item <id> --root <path>` bypasses setup mode and opens
+the existing command center for initialized work items.
+
+Setup mode is a launcher over the same repository-local state model, not a separate
+workflow authority. It must let the operator:
+
+- enter or confirm a local project root;
+- validate that the selected path is a directory and does not escape the local filesystem
+  root through parent traversal or symlink resolution;
+- resolve the project-local `.aidd/` workspace;
+- discover existing work items in that workspace;
+- create a new work item through the same workspace bootstrap and request-seeding behavior
+  as `aidd init --work-item ... --request ... --root .aidd`;
+- resume an existing work item without creating duplicate workspace state;
+- inspect runtime readiness before any workflow run exists;
+- explicitly select a runtime before workflow, stage, intervention, follow-up, or clone
+  execution starts.
+
+Runtime readiness remains observational. The UI may preselect a project-local runtime
+preference as a convenience, but every launch request must still include the operator-selected
+runtime id. There is no hidden `generic-cli` fallback.
+
+One UI process may maintain a noncanonical recent-project list, but each active workflow,
+job, answer write, log read, artifact read, and `.aidd/` workspace mutation is scoped to one
+selected project root. Multiple roots inside a monorepo or related local workspace use the
+existing declared `project_set` model. Unrelated repositories must not be combined into one
+governed `.aidd/` workspace unless a future architecture decision introduces a multi-context
+job registry.
+
+## 8. Accepted next-generation UX direction
 
 The accepted operator frontend direction is a Mission Control console. It keeps the
 canonical stage timeline visible, gives the run-global next action primary weight, and
@@ -271,10 +305,14 @@ context references, but they must not continue or mutate the completed source ru
 must show source run, source work item, baseline, inherited artifacts, and audit preview
 before launch.
 
-## 8. UX validation checklist for the accepted direction
+## 9. UX validation checklist for the accepted direction
 
 Before implementation is considered done, the local UI evidence lane must prove:
 
+- setup mode can create or resume a work item from a selected project root without changing
+  existing CLI command behavior;
+- runtime selection remains explicit before any workflow, stage, intervention, follow-up,
+  or clone launch;
 - a completed `qa` run renders the Flow Complete state and handoff summary;
 - Start Next Flow actions are visible without hiding final artifacts, logs, approvals,
   and validation evidence;

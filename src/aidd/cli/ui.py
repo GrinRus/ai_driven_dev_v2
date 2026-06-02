@@ -52,6 +52,10 @@ from aidd.core.next_flow import (
     create_follow_up_work_item_draft,
     validate_next_flow_launch_preflight,
 )
+from aidd.core.onboarding import (
+    OnboardingProjectDeclaration,
+    OnboardingService,
+)
 from aidd.core.operator_frontend import (
     persist_operator_answer,
     resolve_operator_artifact_document_content,
@@ -113,12 +117,20 @@ _TERMINAL_JOB_STATUSES = frozenset({"cancelled", "completed", "failed"})
 
 @dataclass(frozen=True, slots=True)
 class UiServerOptions:
-    work_item: str
+    work_item: str | None
     root: Path
     config: Path
     host: str
     port: int
     allow_remote_approvals: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class UiProjectContext:
+    work_item: str
+    root: Path
+    config: Path
+    project_root: Path
 
 
 @dataclass(slots=True)
@@ -313,6 +325,10 @@ class UiRunJobStore:
                 "cursor": len(job.chunks),
                 "chunks": tuple(job.chunks[safe_cursor:]),
             }
+
+    def has_active_jobs(self) -> bool:
+        with self._lock:
+            return any(job.status not in _TERMINAL_JOB_STATUSES for job in self._jobs.values())
 
     def _require_job(self, job_id: str) -> _UiRunJob:
         try:
@@ -1221,12 +1237,185 @@ class OperatorUiService:
         self._folder_opener = folder_opener
         self._jobs = UiRunJobStore()
         self._shutdown_requested = False
+        self._context: UiProjectContext | None = (
+            UiProjectContext(
+                work_item=options.work_item,
+                root=options.root,
+                config=options.config,
+                project_root=Path.cwd().resolve(strict=False),
+            )
+            if options.work_item is not None
+            else None
+        )
+        self._recent_project_roots: list[Path] = []
         self._operator_waiters_lock = threading.Lock()
         self._operator_waiters: dict[str, _UiOperatorDecisionWaiter] = {}
 
     @property
     def workspace_root(self) -> Path:
-        return self.options.root
+        return self._require_context().root
+
+    @property
+    def work_item(self) -> str:
+        return self._require_context().work_item
+
+    @property
+    def config_path(self) -> Path:
+        return self._require_context().config
+
+    @property
+    def project_root(self) -> Path:
+        return self._require_context().project_root
+
+    @property
+    def setup_required(self) -> bool:
+        return self._context is None
+
+    def _require_context(self) -> UiProjectContext:
+        if self._context is None:
+            raise ValueError("Complete project setup before using this UI action.")
+        return self._context
+
+    def _onboarding_service(self) -> OnboardingService:
+        return OnboardingService(
+            launch_root=Path.cwd().resolve(strict=False),
+            workspace_root=self.options.root,
+        )
+
+    def _remember_recent_project(self, project_root: Path) -> None:
+        resolved = project_root.resolve(strict=False)
+        self._recent_project_roots = [
+            path for path in self._recent_project_roots if path != resolved
+        ]
+        self._recent_project_roots.insert(0, resolved)
+        del self._recent_project_roots[8:]
+
+    def _context_config_path(self, project_root: Path) -> Path:
+        config = self.options.config
+        return config if config.is_absolute() else project_root / config
+
+    def _activate_context(
+        self,
+        *,
+        project_root: Path,
+        workspace_root: Path,
+        work_item: str,
+    ) -> None:
+        if self._jobs.has_active_jobs():
+            raise ValueError("Cannot switch project while a UI runtime job is active.")
+        resolved_project_root = project_root.resolve(strict=False)
+        self._context = UiProjectContext(
+            work_item=work_item,
+            root=workspace_root.resolve(strict=False),
+            config=self._context_config_path(resolved_project_root),
+            project_root=resolved_project_root,
+        )
+        self._remember_recent_project(resolved_project_root)
+
+    def _project_set_from_payload(
+        self,
+        payload: dict[str, Any],
+    ) -> tuple[OnboardingProjectDeclaration, ...]:
+        raw_projects = payload.get("project_set") or payload.get("projects") or ()
+        if raw_projects in (None, "") or raw_projects == ():
+            return ()
+        if not isinstance(raw_projects, list):
+            raise ValueError("project_set must be an array.")
+        projects: list[OnboardingProjectDeclaration] = []
+        for index, raw_project in enumerate(raw_projects):
+            if not isinstance(raw_project, dict):
+                raise ValueError(f"project_set[{index}] must be an object.")
+            project_id = str(raw_project.get("id", "")).strip()
+            root = str(raw_project.get("root", "")).strip()
+            role = raw_project.get("role")
+            if not project_id:
+                raise ValueError(f"project_set[{index}].id is required.")
+            if not root:
+                raise ValueError(f"project_set[{index}].root is required.")
+            projects.append(
+                OnboardingProjectDeclaration(
+                    id=project_id,
+                    root=Path(root),
+                    role=None if role is None else str(role).strip() or None,
+                )
+            )
+        return tuple(projects)
+
+    def _onboarding_state(self) -> dict[str, object]:
+        context = self._context
+        return {
+            "app_version": __version__,
+            "setup_required": context is None,
+            "context": None
+            if context is None
+            else {
+                "project_root": context.project_root,
+                "workspace_root": context.root,
+                "work_item": context.work_item,
+                "config": context.config,
+            },
+            "recent_projects": tuple(
+                path.as_posix() for path in self._recent_project_roots if path.exists()
+            ),
+            "active_jobs": self._jobs.has_active_jobs(),
+        }
+
+    def _inspect_onboarding_project(self, payload: dict[str, Any]) -> object:
+        project_root = _text_from_payload(payload, "project_root", default=".")
+        summary = self._onboarding_service().inspect_project(project_root)
+        self._remember_recent_project(summary.project_root)
+        config_path = self._context_config_path(summary.project_root)
+        return {
+            "project": summary,
+            "config_path": config_path,
+            "readiness": self._runtime_readiness_for_config(config_path),
+            "recent_projects": self._onboarding_state()["recent_projects"],
+        }
+
+    def _validate_onboarding_project_set(self, payload: dict[str, Any]) -> object:
+        project_root = _text_from_payload(payload, "project_root", default=".")
+        project_set = self._project_set_from_payload(payload)
+        resolved = self._onboarding_service().resolve_project_set(
+            raw_project_root=project_root,
+            project_set=project_set,
+        )
+        return {"project_set": resolved}
+
+    def _setup_onboarding_work_item(self, payload: dict[str, Any]) -> object:
+        project_root = _text_from_payload(payload, "project_root", default=".")
+        work_item = _text_from_payload(payload, "work_item")
+        action = _text_from_payload(payload, "action", default="create")
+        if action not in {"create", "resume"}:
+            raise ValueError("action must be create or resume.")
+        service = self._onboarding_service()
+        if action == "resume":
+            project = service.inspect_project(project_root)
+            if work_item not in {item.work_item for item in project.work_items}:
+                raise ValueError(f"Work item '{work_item}' does not exist in selected project.")
+            self._activate_context(
+                project_root=project.project_root,
+                workspace_root=project.workspace_root,
+                work_item=work_item,
+            )
+            return {
+                "project": project,
+                "work_item": work_item,
+                "context": self._onboarding_state()["context"],
+            }
+
+        created = service.create_work_item(
+            raw_project_root=project_root,
+            work_item=work_item,
+            request_text=_text_from_payload(payload, "request", default=""),
+            force_context=bool(payload.get("force_context", False)),
+            project_set=self._project_set_from_payload(payload),
+        )
+        self._activate_context(
+            project_root=created.project.project_root,
+            workspace_root=created.project.workspace_root,
+            work_item=created.work_item,
+        )
+        return {"created": created, "context": self._onboarding_state()["context"]}
 
     def handle_get(self, path: str, params: dict[str, list[str]]) -> UiResponse:
         try:
@@ -1242,12 +1431,14 @@ class OperatorUiService:
                     content_type="image/x-icon",
                     body=b"",
                 )
+            if path == "/api/onboarding/state":
+                return _json_response(self._onboarding_state())
             if path == "/api/run":
                 try:
                     return _json_response(
                         resolve_operator_run_view(
                             workspace_root=self.workspace_root,
-                            work_item=self.options.work_item,
+                            work_item=self.work_item,
                             run_id=_first_param(params, "run_id"),
                         )
                     )
@@ -1264,20 +1455,20 @@ class OperatorUiService:
                         "app_version": __version__,
                         "dashboard": resolve_operator_dashboard_view(
                             workspace_root=self.workspace_root,
-                            work_item=self.options.work_item,
+                            work_item=self.work_item,
                             active_stage=stage,
                             run_id=_first_param(params, "run_id"),
-                            project_root=Path.cwd(),
+                            project_root=self.project_root,
                         ),
                     }
                 )
             if path == "/api/next-flow/source-findings":
                 dashboard = resolve_operator_dashboard_view(
                     workspace_root=self.workspace_root,
-                    work_item=self.options.work_item,
+                    work_item=self.work_item,
                     active_stage="qa",
                     run_id=_first_param(params, "run_id"),
-                    project_root=Path.cwd(),
+                    project_root=self.project_root,
                 )
                 return _json_response(_next_flow_source_findings_payload(dashboard))
             if path == "/api/runtime-readiness":
@@ -1288,7 +1479,7 @@ class OperatorUiService:
                 return _json_response(
                     resolve_operator_stage_view(
                         workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
+                        work_item=self.work_item,
                         stage=stage,
                         run_id=_first_param(params, "run_id"),
                     )
@@ -1299,7 +1490,7 @@ class OperatorUiService:
                 return _json_response(
                     resolve_operator_questions_view(
                         workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
+                        work_item=self.work_item,
                         stage=stage,
                     )
                 )
@@ -1311,7 +1502,7 @@ class OperatorUiService:
                 try:
                     summary = resolve_operator_run_log_view(
                         workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
+                        work_item=self.work_item,
                         stage=stage,
                         run_id=run_id,
                         attempt_number=attempt_number,
@@ -1356,7 +1547,7 @@ class OperatorUiService:
                 return _json_response(
                     resolve_operator_artifacts_view(
                         workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
+                        work_item=self.work_item,
                         stage=stage,
                         run_id=_first_param(params, "run_id"),
                         attempt_number=_optional_attempt(params),
@@ -1368,7 +1559,7 @@ class OperatorUiService:
                 return _json_response(
                     resolve_operator_stage_document_workbench(
                         workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
+                        work_item=self.work_item,
                         stage=stage,
                         key=_first_param(params, "key"),
                         run_id=_first_param(params, "run_id"),
@@ -1387,7 +1578,7 @@ class OperatorUiService:
                 return _json_response(
                     resolve_operator_evidence_graph_view(
                         workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
+                        work_item=self.work_item,
                         stage=stage,
                         run_id=_first_param(params, "run_id"),
                         attempt_number=_optional_attempt(params),
@@ -1402,7 +1593,7 @@ class OperatorUiService:
                 return _json_response(
                     resolve_operator_artifact_document_content(
                         workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
+                        work_item=self.work_item,
                         stage=stage,
                         key=key,
                         run_id=_first_param(params, "run_id"),
@@ -1422,6 +1613,12 @@ class OperatorUiService:
                 return remote_mutation_error
             if path.startswith("/api/jobs/"):
                 return self._handle_job_post(path=path, payload=payload)
+            if path == "/api/onboarding/project":
+                return _json_response(self._inspect_onboarding_project(payload))
+            if path == "/api/onboarding/project-set":
+                return _json_response(self._validate_onboarding_project_set(payload))
+            if path == "/api/onboarding/work-item":
+                return _json_response(self._setup_onboarding_work_item(payload))
             if path == "/api/answers":
                 stage = str(payload.get("stage", STAGES[0])).strip() or STAGES[0]
                 question_id = str(payload.get("question_id", "")).strip()
@@ -1434,7 +1631,7 @@ class OperatorUiService:
                 return _json_response(
                     persist_operator_answer(
                         workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
+                        work_item=self.work_item,
                         stage=stage,
                         question_id=question_id,
                         text=text,
@@ -1543,14 +1740,14 @@ class OperatorUiService:
             if isinstance(run_id, str) and run_id
             else resolve_latest_run_id(
                 workspace_root=self.workspace_root,
-                work_item=self.options.work_item,
+                work_item=self.work_item,
             )
         )
         if selected_run_id is None:
             return None
         return _latest_attempt_path(
             workspace_root=self.workspace_root,
-            work_item=self.options.work_item,
+            work_item=self.work_item,
             run_id=selected_run_id,
             stage=stage,
         )
@@ -1698,11 +1895,11 @@ class OperatorUiService:
             self._stage_runner(
                 StageRunOptions(
                     stage=stage,
-                    work_item=self.options.work_item,
+                    work_item=self.work_item,
                     runtime=runtime,
                     run_id=run_id,
                     root=self.workspace_root,
-                    config=self.options.config,
+                    config=self.config_path,
                     log_follow=log_follow,
                     runtime_chunk_sink=lambda stream, text: self._jobs.append_chunk(
                         job_id,
@@ -1720,13 +1917,13 @@ class OperatorUiService:
             exit_code = int(exc.exit_code or 0)
             selected_run_id = selected_run_id or resolve_latest_run_id(
                 workspace_root=self.workspace_root,
-                work_item=self.options.work_item,
+                work_item=self.work_item,
             )
             operator_view = (
                 _operator_request_view(
                     _latest_attempt_path(
                         workspace_root=self.workspace_root,
-                        work_item=self.options.work_item,
+                        work_item=self.work_item,
                         run_id=selected_run_id,
                         stage=stage,
                     )
@@ -1744,7 +1941,7 @@ class OperatorUiService:
             }
         selected_run_id = selected_run_id or resolve_latest_run_id(
             workspace_root=self.workspace_root,
-            work_item=self.options.work_item,
+            work_item=self.work_item,
         )
         return {
             "stage": stage,
@@ -1769,11 +1966,11 @@ class OperatorUiService:
             self._stage_interact_runner(
                 StageInteractOptions(
                     stage=stage,
-                    work_item=self.options.work_item,
+                    work_item=self.work_item,
                     runtime=runtime,
                     run_id=run_id,
                     root=self.workspace_root,
-                    config=self.options.config,
+                    config=self.config_path,
                     request=request,
                     request_file=None,
                     target_documents=target_documents,
@@ -1829,7 +2026,7 @@ class OperatorUiService:
                 workspace_root=self.workspace_root,
                 source_work_item=_source_work_item_from_payload(
                     payload,
-                    default=self.options.work_item,
+                    default=self.work_item,
                 ),
                 source_run_id=_source_run_id_from_payload(payload),
                 runtime_id=_runtime_from_payload(payload),
@@ -1844,10 +2041,10 @@ class OperatorUiService:
     def _next_flow_follow_up_draft(self, payload: dict[str, Any]) -> UiResponse:
         dashboard = resolve_operator_dashboard_view(
             workspace_root=self.workspace_root,
-            work_item=self.options.work_item,
+            work_item=self.work_item,
             active_stage="qa",
             run_id=_source_run_id_from_payload(payload),
-            project_root=Path.cwd(),
+            project_root=self.project_root,
         )
         return _json_response(
             _next_flow_follow_up_draft_payload(
@@ -1859,7 +2056,7 @@ class OperatorUiService:
     def _next_flow_create_follow_up_draft(self, payload: dict[str, Any]) -> UiResponse:
         source_work_item = _source_work_item_from_payload(
             payload,
-            default=self.options.work_item,
+            default=self.work_item,
         )
         source_run_id = _source_run_id_from_payload(payload)
         selected_source_ids = _selected_source_ids_from_payload(payload)
@@ -1868,7 +2065,7 @@ class OperatorUiService:
             work_item=source_work_item,
             active_stage="qa",
             run_id=source_run_id,
-            project_root=Path.cwd(),
+            project_root=self.project_root,
         )
         draft_payload = _next_flow_follow_up_draft_payload(
             dashboard=dashboard,
@@ -1937,7 +2134,7 @@ class OperatorUiService:
                 acceptance_criteria=resolved_acceptance_criteria,
                 required_evidence=resolved_required_evidence,
                 inherited_context=resolved_inherited_context,
-                project_root=Path.cwd(),
+                project_root=self.project_root,
             )
         )
         return _json_response(
@@ -1954,7 +2151,7 @@ class OperatorUiService:
     def _next_flow_create_clone_draft(self, payload: dict[str, Any]) -> UiResponse:
         source_work_item = _source_work_item_from_payload(
             payload,
-            default=self.options.work_item,
+            default=self.work_item,
         )
         source_run_id = _source_run_id_from_payload(payload)
         new_work_item = _text_from_payload(
@@ -1974,7 +2171,7 @@ class OperatorUiService:
                 source_run_id=source_run_id,
                 new_work_item=new_work_item,
                 title=title,
-                project_root=Path.cwd(),
+                project_root=self.project_root,
             )
         )
         return _json_response(
@@ -1996,7 +2193,7 @@ class OperatorUiService:
     def _next_flow_launch(self, payload: dict[str, Any]) -> UiResponse:
         source_work_item = _source_work_item_from_payload(
             payload,
-            default=self.options.work_item,
+            default=self.work_item,
         )
         source_run_id = _source_run_id_from_payload(payload)
         new_work_item = _text_from_payload(payload, "new_work_item")
@@ -2057,7 +2254,7 @@ class OperatorUiService:
         run_id = _source_run_id_from_payload(payload)
         work_item = _source_work_item_from_payload(
             payload,
-            default=self.options.work_item,
+            default=self.work_item,
         )
         reason = payload.get("reason")
         if reason is not None and not isinstance(reason, str):
@@ -2067,7 +2264,7 @@ class OperatorUiService:
             work_item=work_item,
             active_stage="qa",
             run_id=run_id,
-            project_root=Path.cwd(),
+            project_root=self.project_root,
         )
         if dashboard.terminal_handoff is None:
             raise ValueError("archive decision requires a terminal QA run.")
@@ -2083,7 +2280,7 @@ class OperatorUiService:
             work_item=work_item,
             active_stage="qa",
             run_id=run_id,
-            project_root=Path.cwd(),
+            project_root=self.project_root,
         )
         return _json_response(
             {
@@ -2148,12 +2345,12 @@ class OperatorUiService:
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
         run_id = _optional_run_id_from_payload(payload)
         log_follow = bool(payload.get("log_follow", True))
-        target_work_item = work_item or self.options.work_item
-        cfg = load_config(self.options.config)
+        target_work_item = work_item or self.work_item
+        cfg = load_config(self.config_path)
         runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
         runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
         config_snapshot: dict[str, Any] = {
-            "config_path": self.options.config.as_posix(),
+            "config_path": self.config_path.as_posix(),
             "workspace_root": self.workspace_root.as_posix(),
             "runtime_command": runtime_command,
             "runtime_execution_mode": runtime_execution_mode.value,
@@ -2199,7 +2396,7 @@ class OperatorUiService:
                 work_item=target_work_item,
                 runtime_id=runtime,
                 workspace_root=self.workspace_root,
-                config_path=self.options.config,
+                config_path=self.config_path,
                 config_snapshot=config_snapshot,
                 lineage=lineage,
                 run_id=run_id,
@@ -2219,13 +2416,16 @@ class OperatorUiService:
             ),
         )
 
-    def _runtime_readiness(self) -> object:
-        cfg = load_config(self.options.config)
+    def _runtime_readiness_for_config(self, config_path: Path) -> object:
+        cfg = load_config(config_path)
         return resolve_runtime_readiness(
             config=cfg,
             probe_reports=self._readiness_probe_provider(cfg),
-            command_sources=_runtime_command_sources_from_config(self.options.config),
+            command_sources=_runtime_command_sources_from_config(config_path),
         )
+
+    def _runtime_readiness(self) -> object:
+        return self._runtime_readiness_for_config(self.config_path)
 
     def _ensure_local_only_action(self) -> None:
         if not _is_loopback_host(self.options.host):
@@ -2243,7 +2443,7 @@ class OperatorUiService:
             stage = str(payload.get("stage", "")).strip()
             if not is_valid_stage(stage):
                 raise ValueError(f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}.")
-            folder = self.workspace_root / "workitems" / self.options.work_item / "stages" / stage
+            folder = self.workspace_root / "workitems" / self.work_item / "stages" / stage
         elif target == "artifact":
             raw_path = payload.get("path")
             if not isinstance(raw_path, str) or not raw_path.strip():
@@ -2332,7 +2532,7 @@ def run_ui_server(options: UiServerOptions) -> None:
 
 
 def ui_command(
-    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    work_item: Annotated[str | None, typer.Option("--work-item", help="Work item id")] = None,
     root: Annotated[
         Path,
         typer.Option("--root", help="Root AIDD storage directory."),
@@ -2358,10 +2558,11 @@ def ui_command(
     ] = False,
 ) -> None:
     """Start the local operator UI."""
+    workspace_root = root.resolve(strict=False) if work_item is not None else root
     run_ui_server(
         UiServerOptions(
             work_item=work_item,
-            root=root.resolve(strict=False),
+            root=workspace_root,
             config=config,
             host=host,
             port=port,

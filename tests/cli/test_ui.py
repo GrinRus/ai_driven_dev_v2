@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import shlex
 import sys
@@ -20,6 +21,7 @@ from aidd.cli.ui import (
     UiServerOptions,
     _is_loopback_host,
     _read_json_body,
+    ui_command,
 )
 from aidd.cli.ui_assets import operator_static_asset_for_route, operator_static_asset_manifest
 from aidd.core.repair import persist_repair_history_snapshot
@@ -53,6 +55,7 @@ from aidd.core.workflow_service import (
     WorkflowStageExecutionError,
     WorkflowStageExecutionRequest,
 )
+from aidd.runtime_catalog import runtime_definitions
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeOperatorDecisionAction,
@@ -95,6 +98,44 @@ def _service(
     if folder_opener is not None:
         kwargs["folder_opener"] = folder_opener
     return OperatorUiService(options, **kwargs)
+
+
+def _onboarding_service(tmp_path: Path, monkeypatch: Any) -> OperatorUiService:
+    return _onboarding_service_with_runner(tmp_path, monkeypatch)
+
+
+def _onboarding_service_with_runner(
+    tmp_path: Path,
+    monkeypatch: Any,
+    *,
+    workflow_runner: Any | None = None,
+) -> OperatorUiService:
+    monkeypatch.chdir(tmp_path)
+
+    def _ready_probe(_config: object) -> dict[str, RuntimeReadinessProbeReport]:
+        return {
+            definition.runtime_id: RuntimeReadinessProbeReport(
+                provider_available=True,
+                execution_command_available=True,
+                provider_version="test",
+                provider_command=definition.probe_command,
+            )
+            for definition in runtime_definitions()
+        }
+
+    kwargs: dict[str, Any] = {"readiness_probe_provider": _ready_probe}
+    if workflow_runner is not None:
+        kwargs["workflow_runner"] = workflow_runner
+    return OperatorUiService(
+        UiServerOptions(
+            work_item=None,
+            root=Path(".aidd"),
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        ),
+        **kwargs,
+    )
 
 
 def _payload(response) -> dict[str, object]:
@@ -1046,6 +1087,169 @@ def test_ui_dashboard_endpoint_uses_empty_state_when_no_run_exists(tmp_path: Pat
     assert dashboard["run"]["run_id"] is None  # type: ignore[index]
     assert dashboard["next_action"]["action"] == "choose-runtime"  # type: ignore[index]
     assert dashboard["stages"][0]["stage"] == "idea"  # type: ignore[index]
+
+
+def test_ui_onboarding_mode_serves_setup_until_context_handoff(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    captured: dict[str, object] = {}
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        captured.update(kwargs)
+        return WorkflowRunResult(
+            run_id="run-onboarding-generic",
+            executed_stage_count=2,
+            completed=True,
+            incomplete=(),
+        )
+
+    service = _onboarding_service_with_runner(
+        tmp_path,
+        monkeypatch,
+        workflow_runner=fake_workflow_runner,
+    )
+
+    state_payload = _payload(service.handle_get("/api/onboarding/state", {}))
+    blocked_dashboard = service.handle_get("/api/dashboard", {})
+
+    assert state_payload["setup_required"] is True
+    assert "Complete project setup" in _error_payload(blocked_dashboard)["error"]
+
+    inspect_payload = _payload(
+        service.handle_post("/api/onboarding/project", {"project_root": "project"})
+    )
+    assert inspect_payload["project"]["project_root"] == project_root.as_posix()  # type: ignore[index]
+    assert inspect_payload["project"]["workspace_exists"] is False  # type: ignore[index]
+    assert {
+        runtime["runtime_id"]
+        for runtime in inspect_payload["readiness"]["runtimes"]  # type: ignore[index]
+    } >= {"codex", "claude-code", "opencode", "qwen", "generic-cli"}
+
+    created_payload = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": "project",
+                "work_item": "WI-ONBOARD",
+                "request": "Implement UI onboarding smoke.",
+            },
+        )
+    )
+
+    assert created_payload["context"]["work_item"] == "WI-ONBOARD"  # type: ignore[index]
+    assert created_payload["context"]["workspace_root"] == (  # type: ignore[index]
+        project_root / ".aidd"
+    ).as_posix()
+    assert (
+        project_root
+        / ".aidd"
+        / "workitems"
+        / "WI-ONBOARD"
+        / "context"
+        / "user-request.md"
+    ).read_text(encoding="utf-8").endswith("Implement UI onboarding smoke.\n")
+
+    active_state_payload = _payload(service.handle_get("/api/onboarding/state", {}))
+    dashboard_payload = _payload(service.handle_get("/api/dashboard", {}))
+    missing_runtime = service.handle_post("/api/workflow/run", {})
+    workflow_payload = _payload(
+        service.handle_post(
+            "/api/workflow/run",
+            {"runtime": "generic-cli", "from_stage": "idea", "to_stage": "plan"},
+        )
+    )
+    workflow_job = _wait_job(service, str(workflow_payload["job_id"]))
+    workflow_request = captured["request"]
+
+    assert active_state_payload["setup_required"] is False
+    assert dashboard_payload["dashboard"]["work_item"] == "WI-ONBOARD"  # type: ignore[index]
+    assert _error_payload(missing_runtime)["error"] == "runtime is required."
+    assert workflow_job["result"]["run_id"] == "run-onboarding-generic"  # type: ignore[index]
+    assert isinstance(workflow_request, WorkflowRunRequest)
+    assert workflow_request.work_item == "WI-ONBOARD"
+    assert workflow_request.runtime_id == "generic-cli"
+    assert workflow_request.workspace_root == project_root.resolve() / ".aidd"
+    assert workflow_request.config_path == project_root.resolve() / "aidd.test.toml"
+    assert workflow_request.stage_start == "idea"
+    assert workflow_request.stage_end == "plan"
+
+
+def test_ui_onboarding_can_resume_existing_project_work_item(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    creator = _onboarding_service(tmp_path, monkeypatch)
+    _payload(
+        creator.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": "project",
+                "work_item": "WI-RESUME",
+                "request": "Resume from setup.",
+            },
+        )
+    )
+    service = _onboarding_service(tmp_path, monkeypatch)
+
+    inspect_payload = _payload(
+        service.handle_post("/api/onboarding/project", {"project_root": "project"})
+    )
+    resumed_payload = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "resume",
+                "project_root": "project",
+                "work_item": "WI-RESUME",
+            },
+        )
+    )
+
+    assert inspect_payload["project"]["work_items"] == [  # type: ignore[index]
+        {"has_request_context": True, "work_item": "WI-RESUME"}
+    ]
+    assert resumed_payload["context"]["work_item"] == "WI-RESUME"  # type: ignore[index]
+    assert _payload(service.handle_get("/api/dashboard", {}))["dashboard"]["work_item"] == (
+        "WI-RESUME"
+    )
+
+
+def test_ui_onboarding_create_requires_request_and_safe_work_item_id(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    service = _onboarding_service(tmp_path, monkeypatch)
+
+    missing_request = service.handle_post(
+        "/api/onboarding/work-item",
+        {
+            "action": "create",
+            "project_root": "project",
+            "work_item": "WI-NO-REQUEST",
+        },
+    )
+    unsafe_work_item = service.handle_post(
+        "/api/onboarding/work-item",
+        {
+            "action": "create",
+            "project_root": "project",
+            "work_item": "../WI-ESCAPE",
+            "request": "Keep the work item inside the selected workspace.",
+        },
+    )
+
+    assert _error_payload(missing_request)["error"] == "request is required."
+    assert "work_item" in _error_payload(unsafe_work_item)["error"]  # type: ignore[operator]
+    assert not (project_root / ".aidd" / "WI-ESCAPE").exists()
 
 
 def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> None:
@@ -2883,5 +3087,7 @@ def test_ui_loopback_detection_for_warn_only_bind_policy() -> None:
 
 def test_ui_command_is_registered() -> None:
     command_names = {command.name for command in cli_main.app.registered_commands}
+    work_item_parameter = inspect.signature(ui_command).parameters["work_item"]
 
     assert "ui" in command_names
+    assert work_item_parameter.default is None
