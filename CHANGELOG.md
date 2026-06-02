@@ -7,7 +7,21 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Open the next development cycle after accepted `v0.1.0a6` release evidence.
+- Open the next development cycle after accepted `v0.1.0a7` release evidence.
+
+## 0.1.0a7 - 2026-06-02
+
+- Prepare the `0.1.0a7` prerelease candidate after the UI-first onboarding and
+  operator control center work landed on `main`.
+- Add setup-mode `aidd ui` onboarding for project-root selection, work item
+  create/resume, runtime readiness, and mandatory explicit runner selection while
+  preserving existing CLI behavior.
+- Add long-run visibility in the operator UI with an Active Run panel, timeline
+  milestones, silence warnings, and live log access.
+- Add implement diff review, structured review/QA evidence views, and remediation
+  backflow from review or QA findings to a new explicit implement attempt.
+- Keep release-readiness docs explicit about `0.1.0a7` as the current candidate and
+  `0.1.0a6` as the latest accepted published prerelease evidence before this candidate.
 
 ## 0.1.0a6 - 2026-06-01
 
