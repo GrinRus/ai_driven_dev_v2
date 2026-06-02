@@ -808,6 +808,79 @@ def test_operator_dashboard_next_action_surfaces_succeeded_not_ready_qa(
     assert dashboard.terminal_handoff.final_qa_status == "not-ready"
 
 
+def test_operator_dashboard_does_not_block_on_historical_validator_failure_after_success(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root)
+    validator_report = (
+        workspace_root / "workitems" / "WI-UI" / "stages" / "qa" / "validator-report.md"
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+        attempt_number=2,
+        trigger="initial",
+        outcome="failed validation",
+        stage_status="failed",
+        validator_report_path=validator_report,
+        repair_brief_path=None,
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+        attempt_number=3,
+        trigger="initial",
+        outcome="succeeded",
+        stage_status="succeeded",
+        validator_report_path=validator_report,
+        repair_brief_path=None,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+        status="succeeded",
+    )
+    validator_report.write_text("# Validator Report\n\n- Verdict: `pass`\n", encoding="utf-8")
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "review-complete"
+    assert not [blocker for blocker in dashboard.blockers if blocker.kind == "validation"]
+    assert stage_view.result.validator_fail_count == 0
+    assert stage_view.diagnostics.validation.status == "repair-history"
+    assert len(stage_view.diagnostics.validation.repair_attempts) == 2
+
+
 def test_operator_dashboard_terminal_handoff_reports_failed_qa(
     tmp_path: Path,
 ) -> None:
@@ -861,7 +934,9 @@ def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
     assert dashboard.terminal_handoff.status == "completed-with-warning"
     assert dashboard.terminal_handoff.final_qa_status == "ready-with-risks"
     assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
-    assert dashboard.terminal_handoff.blockers == ()
+    assert [blocker.kind for blocker in dashboard.terminal_handoff.blockers] == [
+        "qa-ready-with-risks"
+    ]
 
 
 def test_operator_dashboard_terminal_handoff_accepts_stepwise_final_qa_run(
