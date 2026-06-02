@@ -75,9 +75,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    Read `context/selected-task.md` and use its expected scope, quality bar, and acceptance context
    to separate required scenario evidence from optional exploratory checks.
 3. Build `qa-report.md` with these exact H2 sections:
-   `Verification summary`, `Release recommendation`, `Evidence`, `Known issues`, and `Readiness`.
-   Put the quality decision on its own machine-readable line near the top, for example
-   `- QA verdict: ready` (or `ready-with-risks` / `not-ready`), then add rationale separately.
+   `Quality verdict`, `Verification summary`, `Release recommendation`, `Evidence`,
+   `Known issues`, and `Readiness`.
+   In `Quality verdict`, put the quality decision on its own machine-readable line near the
+   top, for example `- QA verdict: ready` (or `ready-with-risks` / `not-ready`), then add
+   rationale separately.
 4. In `Release recommendation`, put exactly one supported state on its own bullet:
    `proceed`, `proceed-with-conditions`, or `hold`.
 5. In `Evidence`, label material evidence entries as `EV-1`, `EV-2`, ... and include command

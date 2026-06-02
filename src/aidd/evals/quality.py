@@ -95,7 +95,7 @@ def _normalized_status_line_value(line: str) -> str:
     normalized = normalized.replace("**", "")
     normalized = normalized.strip("` \t.")
     label_match = re.match(
-        r"^(?:review status|approval status|qa verdict|quality verdict|verdict|status)"
+        r"^(?:review status|approval status|qa verdict|quality verdict|verdict|status|state)"
         r"\s*:\s*(?P<value>.+)$",
         normalized,
         flags=re.IGNORECASE,
@@ -406,7 +406,7 @@ def _collect_live_quality_evidence(
         qa_verdict=_extract_markdown_status_value(
             qa_report_text,
             allowed=_QA_VERDICT_VALUES,
-            section_candidates=("readiness", "verdict"),
+            section_candidates=("quality verdict", "readiness", "verdict"),
         ),
         unresolved_must_fix_count=_count_must_fix_findings(review_report_text),
         evidence_reference_count=_count_evidence_references(qa_report_text),

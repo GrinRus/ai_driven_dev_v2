@@ -110,7 +110,34 @@
   }
   .evidence-artifact-browser,
   .artifact-inspector {
+    max-width: 100%;
+    min-width: 0;
     position: static;
+  }
+  .evidence-screen-stack,
+  .evidence-graph-screen,
+  .evidence-graph-main,
+  .evidence-artifact-table,
+  .evidence-workbench,
+  .artifact-viewer {
+    max-width: 100%;
+    min-width: 0;
+  }
+  .evidence-artifact-browser .surface-title,
+  .artifact-inspector-head {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .evidence-browser-row {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+  .evidence-browser-row > * {
+    min-width: 0;
+  }
+  .evidence-table-wrap {
+    overflow-x: auto;
   }
   .diff-preview-row {
     grid-template-columns: 1fr;

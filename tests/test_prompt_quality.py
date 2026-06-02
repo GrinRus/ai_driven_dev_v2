@@ -86,6 +86,7 @@ def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
     run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
 
     assert "quality decision on its own machine-readable line" in run_prompt
+    assert "`Quality verdict`" in run_prompt
     assert "- QA verdict: ready" in run_prompt
 
 

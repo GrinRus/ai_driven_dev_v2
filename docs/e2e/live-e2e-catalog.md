@@ -201,8 +201,8 @@ For live scenarios in this wave:
 
 - `codex` is the primary canonical runtime for maintained tiny, small, medium, and
   selected large non-interview live lanes;
-- `qwen` is experimental and may be used for the tiny docs-only live lane when
-  `aidd eval doctor` confirms local provider readiness;
+- `qwen` is experimental and may be used for the tiny docs-only live lane and
+  the Hono medium lane when `aidd eval doctor` confirms local provider readiness;
 - `opencode` covers at least one live lane and remains the canonical runtime for the
   maintained live interview expansion lanes;
 - `claude-code` keeps `AIDD-LIVE-005` as a small smoke lane and uses
@@ -221,7 +221,7 @@ Representative matrix coverage for the live lane:
 | --- | --- | --- | --- |
 | `live-full-flow` | `tiny` | `codex`, `qwen` experimental | `AIDD-LIVE-004` |
 | `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005`, `AIDD-LIVE-009` |
-| `live-full-flow` | `medium` | `codex`, `claude-code` planned | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
+| `live-full-flow` | `medium` | `codex`, `claude-code` planned, `qwen` experimental | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
 | `live-full-flow` | `large` | `codex` | `AIDD-LIVE-012` |
 | `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006`, `AIDD-LIVE-010` |
 | `live-full-flow-interview` | `xlarge` | `opencode` | `AIDD-LIVE-008`, `AIDD-LIVE-011` |
