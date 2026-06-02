@@ -1,0 +1,142 @@
+id: AIDD-LIVE-010
+scenario_class: live-full-flow-interview
+feature_size: large
+automation_lane: manual
+canonical_runtime: opencode
+repo:
+  url: https://github.com/openapi-ts/openapi-typescript
+  default_branch: main
+  revision: 0cc7ee77d28359c7901d9cd3b5733b70a050ea49
+objective: Exercise a live codegen lane where discriminator composition semantics
+  must be clarified before implementation.
+task: Run the installed AIDD full-flow live audit against the selected
+  openapi-typescript discriminator task and preserve reviewable quality evidence.
+stage_scope:
+  start: idea
+  end: qa
+setup:
+  commands:
+  - pnpm install --frozen-lockfile
+  rationale:
+  - Install the pinned pnpm workspace dependencies before the live audit.
+  - Keep verification focused on the openapi-typescript package codegen surface.
+aidd_invocation:
+  work_item: WI-LIVE-OPENAPI-DISCRIMINATOR
+  expected_stage_scope:
+    start: idea
+    end: qa
+feature_source:
+  mode: authored-task-pool
+  selection_policy: first-listed
+  tasks:
+  - id: TASK-LIVE-OPENAPI-DISCRIMINATOR-COMPOSITION
+    title: discriminator composition edge case
+    summary: Clarify and implement generated TypeScript output for a discriminator
+      schema that combines `oneOf`, `allOf`, nullable values, and mapped references.
+    intent: Make a complex OpenAPI 3.1 polymorphism edge case produce predictable
+      and type-safe generated output.
+    target_change: Implement the answered discriminator policy in the schema transform
+      path, update focused tests or fixtures, and document any intentionally unsupported
+      composition behavior.
+    expected_scope: TypeScript schema transformation, discriminator tests, and narrowly
+      relevant documentation or changelog notes.
+    acceptance_criteria:
+    - Blocking answers define the intended generated shape for mapped and unmapped
+      discriminator values before planning.
+    - The generated type output remains stable for existing discriminator fixtures.
+    - Regression coverage includes the selected `oneOf` plus `allOf` composition edge case.
+    - The patch does not broaden unrelated OpenAPI schema transforms.
+    verification:
+    - uv run aidd stage questions idea --work-item WI-LIVE-OPENAPI-DISCRIMINATOR
+    - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/idea/answers.md
+    - pnpm --filter openapi-typescript exec vitest run test/discriminators.test.ts test/node-api.test.ts
+    - pnpm --filter openapi-typescript lint:ts
+    - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/qa/output/stage-result.md
+    - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/qa/output/validator-report.md
+    quality_bar: The result must be policy-explicit, covered by focused codegen tests,
+      and free of unrelated generator output churn.
+    size_rationale: Large because the task touches code generation semantics and
+      requires interview answers about API-sensitive type output.
+    interview:
+    - Expected generated shape for mapped versus implicit discriminator values.
+    - Whether nullable or const discriminator values should be preserved, narrowed, or
+      documented as unsupported.
+    - Required documentation or changelog obligations for the selected policy.
+verify:
+  commands:
+  - uv run aidd stage questions idea --work-item WI-LIVE-OPENAPI-DISCRIMINATOR
+  - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/idea/answers.md
+  - pnpm --filter openapi-typescript exec vitest run test/discriminators.test.ts test/node-api.test.ts
+  - pnpm --filter openapi-typescript lint:ts
+  - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/qa/output/stage-result.md
+  - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/qa/output/validator-report.md
+  pass_conditions:
+  - The first stage-questions check reports at least one pending blocking question.
+  - Answers file resolves each blocking discriminator-policy question before stage rerun.
+  - Focused Vitest and TypeScript verification commands exit with status 0 after resume.
+  - QA stage output artifacts exist after the resumed execution path.
+  flow_steps:
+  - step: blocked
+    evidence: questions.md exists with at least one blocking discriminator policy question.
+  - step: resumed
+    evidence: answers.md exists and marks each blocking question as resolved.
+  - step: completed
+    evidence: focused codegen tests, TypeScript checks, and QA output artifact checks succeed.
+quality:
+  commands:
+  - pnpm --filter openapi-typescript exec vitest run test/discriminators.test.ts test/node-api.test.ts
+  - pnpm --filter openapi-typescript lint:ts
+  rubric_profile: live-full
+  require_review_status: approved-with-conditions
+  allowed_qa_verdicts:
+  - ready
+  - ready-with-risks
+  code_review_required: true
+limits:
+  patch_budget_files: 10
+  timeout_minutes: 60
+interview:
+  required: true
+  must_ask_at_least_one: true
+  blocking_question_topics:
+  - Expected generated shape for mapped versus implicit discriminator values.
+  - Nullable or const discriminator handling in composed schemas.
+  - Documentation or changelog obligations for the selected policy.
+  trigger_conditions:
+  - If discriminator output semantics are not explicit, ask a blocking question before planning.
+  - If nullable or const handling is ambiguous, ask a blocking question before task decomposition.
+  - If compatibility documentation obligations are unclear, ask a blocking question before implementation.
+  answer_flow:
+    mode: answers_markdown_and_stage_rerun
+    answers_file: .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/idea/answers.md
+    question_check_command:
+    - uv
+    - run
+    - aidd
+    - stage
+    - questions
+    - idea
+    - --work-item
+    - WI-LIVE-OPENAPI-DISCRIMINATOR
+    resume_command:
+    - uv
+    - run
+    - aidd
+    - stage
+    - run
+    - idea
+    - --work-item
+    - WI-LIVE-OPENAPI-DISCRIMINATOR
+    - --runtime
+    - opencode
+    answer_requirements:
+    - Resolve each blocking codegen-policy question with an explicit generated-type policy.
+    - Keep compatibility and documentation commitments in the same answers file.
+runtime_targets:
+- codex
+- opencode
+live_flow:
+  driver: stepwise-black-box
+  checkpoint_policy: after-each-step
+  answer_policy: agent-decides
+  frontend_checkpoints: true

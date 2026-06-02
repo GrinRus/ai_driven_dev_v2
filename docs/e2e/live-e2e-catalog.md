@@ -110,6 +110,20 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
 - Manual checkpoint notes should include an operator-intervention checkpoint when
   the run uses `aidd stage interact` or the UI `Request change` panel.
 
+## Manual Evidence Rotation Policy
+
+When refreshing live E2E evidence, operators should prefer rotating across different
+products, repositories, feature families, and scenario sizes instead of repeatedly choosing
+the same product and feature shape. Diversity is part of the success analysis: it helps
+separate AIDD workflow quality from one repository's setup quirks, one runtime's behavior
+on a familiar task, or one narrow class of changes.
+
+Repeating a scenario is still appropriate when the goal is a targeted rerun: confirming a
+fixed blocker, comparing runtimes on the same manifest, validating a repin, or preserving a
+canonical smoke proof. Otherwise, manual refresh batches should choose a different product
+or feature family from the most recent counted run whenever provider readiness and local
+environment constraints allow it.
+
 ## Next-Flow Terminal Checkpoint Policy
 
 After a public-repository live run reaches terminal `qa`, the launching operator must
@@ -161,6 +175,18 @@ repository flow and must remain manual-only.
 - `AIDD-LIVE-007` - authored non-Error throw handling task
 - `AIDD-LIVE-008` - authored router parity with `/**` syntax interview
 
+### `openapi-ts/openapi-typescript`
+
+- `AIDD-LIVE-010` - authored discriminator composition codegen task with interview
+
+### `pytest-dev/pytest`
+
+- `AIDD-LIVE-011` - authored collection error summary task with interview
+
+### `Kludex/starlette`
+
+- `AIDD-LIVE-012` - authored streaming error and disconnect boundary task
+
 ## Matrix Source Of Truth
 
 Use [`Scenario Matrix`](./scenario-matrix.md) as the source of truth for:
@@ -173,10 +199,12 @@ Use [`Scenario Matrix`](./scenario-matrix.md) as the source of truth for:
 
 For live scenarios in this wave:
 
-- `codex` is the primary canonical runtime for maintained tiny, small, and medium live lanes;
+- `codex` is the primary canonical runtime for maintained tiny, small, medium, and
+  selected large non-interview live lanes;
 - `qwen` is experimental and may be used for the tiny docs-only live lane and
   the Hono medium lane when `aidd eval doctor` confirms local provider readiness;
-- `opencode` covers at least one live lane;
+- `opencode` covers at least one live lane and remains the canonical runtime for the
+  maintained live interview expansion lanes;
 - `claude-code` keeps `AIDD-LIVE-005` as a small smoke lane and uses
   `AIDD-LIVE-007` as the planned maintained medium coverage candidate when
   `aidd eval doctor` confirms provider/auth readiness; generated live runtime
@@ -194,8 +222,9 @@ Representative matrix coverage for the live lane:
 | `live-full-flow` | `tiny` | `codex`, `qwen` experimental | `AIDD-LIVE-004` |
 | `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005`, `AIDD-LIVE-009` |
 | `live-full-flow` | `medium` | `codex`, `claude-code` planned, `qwen` experimental | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
-| `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006` |
-| `live-full-flow-interview` | `xlarge` | `opencode` | `AIDD-LIVE-008` |
+| `live-full-flow` | `large` | `codex` | `AIDD-LIVE-012` |
+| `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006`, `AIDD-LIVE-010` |
+| `live-full-flow-interview` | `xlarge` | `opencode` | `AIDD-LIVE-008`, `AIDD-LIVE-011` |
 
 `AIDD-LIVE-001` remains in the maintained set for historical evidence, but its current
 Typer pin is setup-blocked before the runtime boundary. Use `AIDD-LIVE-005` as the
@@ -284,6 +313,8 @@ The maintained interview scenarios are:
 
 - `AIDD-LIVE-006`
 - `AIDD-LIVE-008`
+- `AIDD-LIVE-010`
+- `AIDD-LIVE-011`
 
 Any live scenario may block when questions are unresolved and resume only after
 standard `answers.md` content is present in the target-repository workspace path.

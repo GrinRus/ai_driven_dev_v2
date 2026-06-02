@@ -21,6 +21,9 @@ manifest with explicit acceptance criteria and verification intent.
 | `AIDD-LIVE-006` | `large` | Interview flow commonly blocks without prepared answers. | Trust-boundary decisions cannot be invented by the model. | Encode interview topics directly on the authored task and keep answer evidence mandatory. |
 | `AIDD-LIVE-007` | `medium` | Historical verification failure in reference evidence. | Middleware error handling can affect runtime semantics beyond one test. | Define non-Error throw normalization with primitive/object regression coverage. |
 | `AIDD-LIVE-008` | `xlarge` | Historical interview run blocked before answers. | Router compatibility is API-sensitive and requires explicit policy choice. | Treat as xlarge interview task with compatibility, docs, and router test obligations. |
+| `AIDD-LIVE-010` | `large` | New candidate; no counted local run yet. | Codegen output compatibility depends on explicit discriminator policy. | Encode mapped/unmapped discriminator decisions as interview answers with focused Vitest and type checks. |
+| `AIDD-LIVE-011` | `xlarge` | New candidate; no counted local run yet. | Pytest collection and terminal reporting semantics are compatibility-sensitive. | Treat as xlarge interview task with exit-code, maxfail, and summary-output policy answers. |
+| `AIDD-LIVE-012` | `large` | New candidate; no counted local run yet. | ASGI streaming, disconnect, background-task, and middleware behavior can regress across async boundaries. | Keep the task bounded to focused Starlette response/middleware tests and ruff checks. |
 
 ## Matrix Quality Notes
 
@@ -48,6 +51,14 @@ manifest with explicit acceptance criteria and verification intent.
   a maintained clean-run gate for this medium scenario.
 - `AIDD-LIVE-008` is intentionally `xlarge`; router wildcard semantics are API-sensitive and
   should not be treated as an ordinary large feature.
+- `AIDD-LIVE-010`, `AIDD-LIVE-011`, and `AIDD-LIVE-012` expand the maintained
+  public-repository set for complex live exercises only. They are manual evidence lanes,
+  not release gates, until at least one clean counted run is preserved for the selected
+  runtime and manifest pin.
+- Future live evidence refreshes should normally rotate across products and feature
+  families before repeating the same manifest. Repeats are still useful for targeted
+  blocker confirmation, runtime comparison, repin validation, or canonical smoke proof, but
+  diverse products and feature shapes make the live E2E success analysis more meaningful.
 - Interview scenarios must keep top-level `interview.required: true` plus authored task
   `interview` guidance so the manifest, bootstrap context, and quality review agree.
 - `feature-selection.json` is the durable selection artifact.
