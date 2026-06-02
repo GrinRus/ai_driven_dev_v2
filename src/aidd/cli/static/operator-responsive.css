@@ -60,6 +60,8 @@
     white-space: nowrap;
   }
   .overview-grid,
+  .onboarding-shell,
+  .inline-form-row,
   .artifact-layout,
   .workbench-main,
   .project-setup-grid,
@@ -141,6 +143,12 @@
   }
   .diff-preview-row {
     grid-template-columns: 1fr;
+  }
+  .diff-review-layout {
+    grid-template-columns: 1fr;
+  }
+  .diff-file-list {
+    max-height: 260px;
   }
   .artifacts-panel {
     border-left: 0;

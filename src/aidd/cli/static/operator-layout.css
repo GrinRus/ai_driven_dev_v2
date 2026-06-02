@@ -172,6 +172,21 @@
   grid-template-rows: minmax(500px, calc(100vh - 252px)) minmax(200px, auto);
   min-height: calc(100vh - 52px);
 }
+body.setup-active .operator-shell {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+}
+body.setup-active .stage-rail,
+body.setup-active .right-sidebar,
+body.setup-active .bottom-dock,
+body.setup-active .cockpit-header,
+body.setup-active .tabs {
+  display: none;
+}
+body.setup-active .cockpit {
+  grid-column: 1;
+  grid-row: 1;
+}
 .stage-rail {
   background: #f6f8f5;
   border-right: 1px solid var(--line);

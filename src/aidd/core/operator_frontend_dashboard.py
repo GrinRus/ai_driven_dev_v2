@@ -36,6 +36,7 @@ from aidd.core.operator_intervention import (
     latest_operator_intervention_request,
     list_operator_intervention_requests,
 )
+from aidd.core.remediation import RemediationStaleStage, load_remediation_status
 from aidd.core.run_inspection import (
     RunMetadataSummary,
     StageResultSummary,
@@ -95,6 +96,10 @@ _MAX_RECENT_ARTIFACTS = 12
 _MAX_ARTIFACT_EXCERPT_CHARS = 6000
 _QA_VERDICT_PATTERN = re.compile(
     r"\b(ready-with-risks|not-ready|ready)\b",
+    flags=re.IGNORECASE,
+)
+_REVIEW_APPROVAL_PATTERN = re.compile(
+    r"\b(approved-with-conditions|approved|rejected)\b",
     flags=re.IGNORECASE,
 )
 _RUNNING_STAGE_STATES = frozenset(
@@ -289,6 +294,7 @@ def _stage_rail_items(
     workspace_root: Path,
     work_item: str,
     metadata: RunMetadataSummary | None,
+    stale_by_stage: dict[str, RemediationStaleStage] | None = None,
 ) -> tuple[OperatorStageRailItem, ...]:
     metadata_by_stage = (
         {stage.stage: stage for stage in metadata.stages} if metadata is not None else {}
@@ -299,6 +305,7 @@ def _stage_rail_items(
         metadata=metadata,
     )
     items: list[OperatorStageRailItem] = []
+    stale_lookup = stale_by_stage or {}
     for stage in STAGES:
         title, subtitle = _STAGE_UI_COPY[stage]
         metadata_summary = metadata_by_stage.get(stage)
@@ -314,6 +321,7 @@ def _stage_rail_items(
             work_item=work_item,
             stage=stage,
         )
+        stale_entry = stale_lookup.get(stage)
         items.append(
             OperatorStageRailItem(
                 stage=stage,
@@ -331,6 +339,11 @@ def _stage_rail_items(
                 unresolved_blocking_count=len(questions.unresolved_blocking_question_ids),
                 validator_pass_count=result.validator_pass_count if result else 0,
                 validator_fail_count=result.validator_fail_count if result else 0,
+                stale=stale_entry is not None,
+                stale_reason=stale_entry.reason if stale_entry is not None else None,
+                stale_invalidated_by=(
+                    stale_entry.invalidated_by if stale_entry is not None else None
+                ),
             )
         )
     return tuple(items)
@@ -531,12 +544,97 @@ def _blockers(
     return tuple(blockers)
 
 
+def _read_review_approval_status(*, workspace_root: Path, work_item: str) -> str | None:
+    review_report = workspace_root / "workitems" / work_item / "stages" / "review" / (
+        "review-report.md"
+    )
+    if not review_report.exists():
+        return None
+    matched = _REVIEW_APPROVAL_PATTERN.search(
+        review_report.read_text(encoding="utf-8", errors="replace")
+    )
+    return matched.group(1).lower() if matched is not None else None
+
+
+def _structured_report_blockers(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    rail_by_stage: dict[str, OperatorStageRailItem],
+) -> tuple[OperatorBlocker, ...]:
+    blockers: list[OperatorBlocker] = []
+    review = rail_by_stage.get("review")
+    if review is not None and review.status == StageState.SUCCEEDED.value:
+        approval_status = _read_review_approval_status(
+            workspace_root=workspace_root,
+            work_item=work_item,
+        )
+        if approval_status == "rejected":
+            blockers.append(
+                OperatorBlocker(
+                    kind="review-rejected",
+                    title="Review rejected",
+                    detail=(
+                        "review-report.md rejected the implementation. Send selected "
+                        "findings back to implement before treating the run as complete."
+                    ),
+                    severity="error",
+                    stage="review",
+                )
+            )
+        elif approval_status == "approved-with-conditions":
+            blockers.append(
+                OperatorBlocker(
+                    kind="review-conditions",
+                    title="Review approved with conditions",
+                    detail=(
+                        "review-report.md requires an explicit operator decision before "
+                        "the QA handoff is considered clean."
+                    ),
+                    severity="warning",
+                    stage="review",
+                )
+            )
+
+    qa = rail_by_stage.get("qa")
+    if qa is not None and qa.status == StageState.SUCCEEDED.value:
+        qa_verdict = _read_qa_verdict(workspace_root=workspace_root, work_item=work_item)
+        if qa_verdict == "not-ready":
+            blockers.append(
+                OperatorBlocker(
+                    kind="qa-not-ready",
+                    title="QA not ready",
+                    detail=(
+                        "qa-report.md is not ready. Send selected risks or issues back "
+                        "to implement, or start a follow-up instead of completing the run."
+                    ),
+                    severity="error",
+                    stage="qa",
+                )
+            )
+        elif qa_verdict == "ready-with-risks":
+            blockers.append(
+                OperatorBlocker(
+                    kind="qa-ready-with-risks",
+                    title="QA ready with risks",
+                    detail=(
+                        "qa-report.md is ready with risks. The operator must explicitly "
+                        "accept risk or start a follow-up."
+                    ),
+                    severity="warning",
+                    stage="qa",
+                )
+            )
+    return tuple(blockers)
+
+
 def _next_action(
     *,
     metadata: RunMetadataSummary | None,
     active_stage: str,
     active_stage_view: OperatorStageView | None,
     rail_by_stage: dict[str, OperatorStageRailItem],
+    report_blockers: tuple[OperatorBlocker, ...] = (),
     stages_with_operator_requests: frozenset[str] = frozenset(),
 ) -> OperatorNextAction:
     if metadata is None:
@@ -546,6 +644,16 @@ def _next_action(
             detail="Choose a runtime before starting the workflow.",
             stage=None,
             enabled=False,
+        )
+    stale_stage = next((item for item in rail_by_stage.values() if item.stale), None)
+    if stale_stage is not None:
+        return OperatorNextAction(
+            action="rerun-stale-downstream",
+            label="Rerun stale downstream",
+            detail=stale_stage.stale_reason
+            or "A remediation attempt invalidated downstream stage evidence.",
+            stage=stale_stage.stage,
+            enabled=True,
         )
     blocked_question_stage = next(
         (item for item in rail_by_stage.values() if item.unresolved_blocking_count),
@@ -625,6 +733,38 @@ def _next_action(
             label=f"Resume {blocked_stage.title}",
             detail="Answers are present; rerun the blocked stage in the same run.",
             stage=blocked_stage.stage,
+            enabled=True,
+        )
+    review_blocker = next(
+        (
+            blocker
+            for blocker in report_blockers
+            if blocker.kind in {"review-rejected", "review-conditions"}
+        ),
+        None,
+    )
+    if review_blocker is not None:
+        return OperatorNextAction(
+            action="review-findings",
+            label="Resolve review findings",
+            detail=review_blocker.detail,
+            stage="review",
+            enabled=True,
+        )
+    qa_blocker = next(
+        (
+            blocker
+            for blocker in report_blockers
+            if blocker.kind in {"qa-not-ready", "qa-ready-with-risks"}
+        ),
+        None,
+    )
+    if qa_blocker is not None:
+        return OperatorNextAction(
+            action="qa-verdict",
+            label="Resolve QA verdict",
+            detail=qa_blocker.detail,
+            stage="qa",
             enabled=True,
         )
 
@@ -1006,6 +1146,8 @@ def _read_qa_verdict(*, workspace_root: Path, work_item: str) -> str | None:
 
 def _terminal_handoff_status(*, qa_stage_state: str, final_qa_status: str) -> str:
     if qa_stage_state == StageState.SUCCEEDED.value:
+        if final_qa_status == "not-ready":
+            return "failed"
         if final_qa_status == "ready-with-risks":
             return "completed-with-warning"
         return "completed"
@@ -1198,8 +1340,11 @@ def _terminal_handoff(
     work_item: str,
     metadata: RunMetadataSummary | None,
     blockers: tuple[OperatorBlocker, ...],
+    stale_by_stage: dict[str, RemediationStaleStage] | None = None,
 ) -> OperatorTerminalRunHandoff | None:
     if metadata is None:
+        return None
+    if stale_by_stage and "qa" in stale_by_stage:
         return None
     terminal_stage = _optional_manifest_stage(metadata.workflow_stage_end)
     if terminal_stage is not None and terminal_stage != "qa":
@@ -1285,7 +1430,14 @@ def resolve_operator_dashboard_view(
         metadata = None
 
     active_stage_view: OperatorStageView | None = None
+    stale_by_stage: dict[str, RemediationStaleStage] = {}
     if metadata is not None:
+        remediation_status = load_remediation_status(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=metadata.run_id,
+        )
+        stale_by_stage = {entry.stage: entry for entry in remediation_status.stale_stages}
         try:
             active_stage_view = resolve_operator_stage_view(
                 workspace_root=workspace_root,
@@ -1300,6 +1452,7 @@ def resolve_operator_dashboard_view(
         workspace_root=workspace_root,
         work_item=work_item,
         metadata=metadata,
+        stale_by_stage=stale_by_stage,
     )
     rail_by_stage = {stage.stage: stage for stage in stages}
     primary_artifact = _primary_artifact(
@@ -1318,6 +1471,12 @@ def resolve_operator_dashboard_view(
         active_stage_view=active_stage_view,
         rail_by_stage=rail_by_stage,
     )
+    report_blockers = _structured_report_blockers(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        rail_by_stage=rail_by_stage,
+    )
+    blockers = (*blockers, *report_blockers)
     return OperatorDashboardView(
         work_item=work_item,
         workspace_root=workspace_root,
@@ -1336,6 +1495,7 @@ def resolve_operator_dashboard_view(
             active_stage=active_stage,
             active_stage_view=active_stage_view,
             rail_by_stage=rail_by_stage,
+            report_blockers=report_blockers,
             stages_with_operator_requests=stages_with_operator_requests,
         ),
         blockers=blockers,
@@ -1360,6 +1520,7 @@ def resolve_operator_dashboard_view(
             work_item=work_item,
             metadata=metadata,
             blockers=blockers,
+            stale_by_stage=stale_by_stage,
         ),
     )
 

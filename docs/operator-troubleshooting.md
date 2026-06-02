@@ -4,12 +4,13 @@
 
 This guide explains how to diagnose the most common operator-visible failures in AIDD:
 
+- UI onboarding and setup failures;
 - runtime failures;
 - validator failures;
 - harness and eval failures.
 
 It is aligned with the current local AIDD CLI, adapter, validator, and harness behavior as of
-May 28, 2026.
+June 2, 2026.
 
 ## 2. Fast Triage Flow
 
@@ -21,6 +22,7 @@ uv run aidd doctor
 
 2. Identify the failing lane:
 
+- local UI onboarding (`aidd ui` before work-item selection);
 - workflow/stage runtime gate (`aidd run`, `aidd stage run`, `aidd stage interact`);
 - stage artifacts and validator state (`aidd stage summary`, `aidd stage questions`);
 - eval lane (`python -m aidd.harness.live_e2e_black_box`, `aidd eval summary`).
@@ -33,9 +35,56 @@ uv run aidd run artifacts --work-item WI-001 --stage plan
 uv run aidd run logs --work-item WI-001 --stage plan --tail --lines 80
 ```
 
-## 3. Runtime Failures
+## 3. UI Onboarding Failures
 
-### 3.1 Runtime command is unavailable
+### 3.1 Project root is rejected
+
+Symptoms:
+
+- setup mode reports that the project path is missing, not a directory, or outside the
+  allowed local root;
+- work item discovery does not show the expected `.aidd/` workspace.
+
+Actions:
+
+1. Start `aidd ui` from the target local project root when possible.
+2. Use an existing directory path, not a file path.
+3. Avoid `..` traversal and symlinks that resolve outside the selected project root.
+4. Confirm the `.aidd/` workspace should live inside the selected project, then retry setup.
+
+### 3.2 Runner cards show unavailable runtimes
+
+Symptoms:
+
+- setup mode or the command center shows a runtime as unavailable;
+- workflow launch remains disabled until a runtime is selected and ready.
+
+Actions:
+
+1. Run `aidd doctor` from the same project root and config path used by the UI.
+2. Install the missing runtime binary or fix `PATH`.
+3. Authenticate the provider CLI outside AIDD.
+4. Check `aidd.example.toml` if the execution command is custom.
+5. Select a ready runtime explicitly in the browser. The UI does not launch through a
+   hidden `generic-cli` fallback.
+
+### 3.3 Recent project points to stale state
+
+Symptoms:
+
+- a recent project entry no longer exists;
+- the UI opens a project but work items, logs, or artifacts are missing.
+
+Actions:
+
+1. Re-enter the current project root manually in setup mode.
+2. Confirm `.aidd/workitems/` exists in that project if you expect resumable work.
+3. Treat recent projects as UI convenience only. Canonical workflow state remains in the
+   selected project-local `.aidd/` workspace.
+
+## 4. Runtime Failures
+
+### 4.1 Runtime command is unavailable
 
 Symptoms:
 
@@ -47,7 +96,7 @@ Actions:
 2. Ensure the binary is visible in `PATH`.
 3. If needed, set the runtime command in `aidd.example.toml` and rerun `uv run aidd doctor`.
 
-### 3.2 Runtime version is `unknown`
+### 4.2 Runtime version is `unknown`
 
 Symptoms:
 
@@ -58,7 +107,7 @@ Actions:
 1. Verify the runtime binary works directly (`<runtime> --version`).
 2. If the runtime command succeeds but AIDD still shows `unknown`, treat this as a probe-parsing gap and capture the full `aidd doctor` output for maintainer triage.
 
-### 3.3 Workflow or stage runtime is not supported for execution
+### 4.3 Workflow or stage runtime is not supported for execution
 
 Symptoms:
 
@@ -77,7 +126,7 @@ Actions:
 3. If the runtime id is not in the supported list, treat it as unsupported until roadmap adds explicit adapter support.
 4. For product onboarding, prefer a real configured runtime such as `codex`, `claude-code`, `opencode`, or experimental `qwen`; use `generic-cli` only for an explicit AIDD-compatible wrapper/test lane.
 
-### 3.4 Intake context is missing
+### 4.4 Intake context is missing
 
 Symptoms:
 
@@ -94,7 +143,7 @@ Actions:
 4. Confirm these files exist before rerunning:
    `context/intake.md`, `context/user-request.md`, and `context/repository-state.md`.
 
-### 3.5 Run lookup errors in inspection commands
+### 4.5 Run lookup errors in inspection commands
 
 Symptoms:
 
@@ -106,7 +155,7 @@ Actions:
 1. For missing runs: verify the correct `--work-item` and `--root`.
 2. For ambiguous runs: pass explicit `--run-id` and, for logs/artifacts, explicit `--attempt`.
 
-### 3.6 Next-flow launch preflight is blocked
+### 4.6 Next-flow launch preflight is blocked
 
 Symptoms:
 
@@ -136,9 +185,70 @@ Actions:
    E2E records `next-flow-checkpoint.json` and `next-flow-checkpoint.md` after terminal
    `qa`; it does not require launching a second public-repository flow by default.
 
-## 4. Validator Failures
+### 4.7 UI job appears silent for a long time
 
-### 4.1 Determine validator state for a stage
+Symptoms:
+
+- the **Active Run** panel shows `No output for N minutes`;
+- the job is still `running`, but the Logs tab has not received new chunks;
+- the stage timeout has not yet expired.
+
+Actions:
+
+1. Open the **Logs** tab and inspect the last runtime line.
+2. Check the **Active Run** panel for runner command and timeout summary.
+3. Confirm the provider CLI is still expected to stream output; some tools are quiet while
+   planning or waiting on a long subprocess.
+4. If the command is clearly stuck, use **Cancel job** in the UI. Cancellation requests are
+   best-effort against the UI-started job and preserve the log evidence already captured.
+5. If the same runtime repeatedly goes silent before writing artifacts, run the configured
+   provider command directly and collect the raw `runtime.log` for maintainer triage.
+
+### 4.8 Implement Review diff is missing or truncated
+
+Symptoms:
+
+- **Implement Review** reports that repository diff is unavailable;
+- changed files are visible, but a diff hunk is marked truncated;
+- `.aidd/` artifacts appear separately from source changes;
+- a file is marked `changed but not mentioned`, `mentioned but unchanged`, or `outside scope`.
+
+Actions:
+
+1. Confirm the selected project root is a git repository. The diff service reads git status
+   and diff output from the selected project root only.
+2. Keep `.aidd/` project-local, but do not treat `.aidd/` artifacts as source changes. The
+   UI separates them intentionally.
+3. For truncated hunks, open the file or run local git commands outside AIDD if you need the
+   full diff. The UI API uses bounded reads.
+4. If a changed source file is not mentioned in `implementation-report.md`, treat it as an
+   operator warning and ask the runtime to update the report or rerun implement.
+5. If a file is outside allowed scope, verify `allowed-write-scope.md` and decide whether to
+   remediate before review.
+
+### 4.9 Review/QA remediation or stale downstream rerun is blocked
+
+Symptoms:
+
+- **Send selected to implement** is disabled;
+- remediation launch fails with `runtime is required`;
+- `review` or `qa` shows a stale badge after a remediation attempt;
+- terminal handoff is not visible even though `qa` previously succeeded.
+
+Actions:
+
+1. Select a ready runtime explicitly in the top bar. Remediation launches never use a hidden
+   `generic-cli` fallback.
+2. Select at least one review finding or QA risk/issue before sending to implement.
+3. Add a concise operator note explaining what the new implement attempt should fix.
+4. Wait for the remediation `implement` job to complete successfully. Downstream stages are
+   marked stale only after that successful implement attempt.
+5. Use the run-global next action **Rerun stale downstream** to explicitly run `review -> qa`.
+6. Treat stale `qa` as not ready for terminal handoff until the downstream rerun succeeds.
+
+## 5. Validator Failures
+
+### 5.1 Determine validator state for a stage
 
 Use:
 
@@ -154,7 +264,7 @@ Read these fields first:
 - `validator report`
 - `repair outputs`
 
-### 4.2 Investigate failing validator verdicts
+### 5.2 Investigate failing validator verdicts
 
 If `validator fail count > 0`:
 
@@ -162,7 +272,7 @@ If `validator fail count > 0`:
 2. Review finding codes, affected files, and missing sections.
 3. Open `repair-brief.md` if present and compare required fixes to current stage documents.
 
-### 4.3 Resolve blocking question gates
+### 5.3 Resolve blocking question gates
 
 Use:
 
@@ -178,7 +288,7 @@ If status is `pending-blocking`:
    colon after `[resolved]`.
 4. Re-run `stage questions` until it reports no unresolved blocking questions.
 
-### 4.4 Stage intervention is rejected
+### 5.4 Stage intervention is rejected
 
 Use intervention only for current-stage, document-first corrections:
 
@@ -191,12 +301,13 @@ Common failures:
 - `Operator request must not be empty.`: provide non-empty `--request` or `--request-file`.
 - `Target document is outside current stage scope`: use a current-stage Markdown document
   such as `plan.md` or omit `--target-document`.
-- `downstream stages already succeeded`: V1 does not invalidate completed downstream
-  stages; start a new run or wait for downstream rerun policy work.
+- `downstream stages already succeeded`: stage-scoped intervention still cannot mutate a
+  stage after downstream success. For review or QA problems, use UI remediation to send
+  selected findings or risks back to `implement`, then rerun stale downstream stages.
 
-## 5. Harness and Eval Failures
+## 6. Harness and Eval Failures
 
-### 5.1 Scenario path is invalid
+### 6.1 Scenario path is invalid
 
 Symptoms:
 
@@ -207,7 +318,7 @@ Actions:
 1. Use a repository-relative scenario path under `harness/scenarios/`.
 2. Confirm the path exists before running eval.
 
-### 5.2 Local-wheel live eval cannot locate source checkout
+### 6.2 Local-wheel live eval cannot locate source checkout
 
 Symptoms:
 
@@ -229,7 +340,7 @@ The default mutable live work root is `${TMPDIR:-/tmp}/aidd-live-e2e`. Durable
 evidence remains under `.aidd/reports/evals/<run_id>/` unless `--report-root`
 overrides it.
 
-### 5.3 Black-box live E2E reports `fail`, `blocked`, or `infra-fail`
+### 6.3 Black-box live E2E reports `fail`, `blocked`, or `infra-fail`
 
 Symptoms:
 
@@ -261,7 +372,7 @@ Actions:
 5. For any terminal live run, inspect the full eval bundle and write
    `operator-quality-analysis.md` before marking the run counted or not counted.
 
-### 5.4 Eval summary is missing
+### 6.4 Eval summary is missing
 
 Symptoms:
 

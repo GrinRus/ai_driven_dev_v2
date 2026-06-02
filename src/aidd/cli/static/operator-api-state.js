@@ -3,7 +3,11 @@ const VALID_TABS = [
   "overview",
   "questions",
   "validation",
+  "timeline",
   "artifacts",
+  "implement-review",
+  "review-findings",
+  "qa-verdict",
   "logs",
   "approvals",
   "request",
@@ -61,6 +65,8 @@ const state = {
   activeJobStatus: null,
   activeJobTimer: null,
   activeArtifactKey: "",
+  implementDiffFilter: "all",
+  implementDiffPath: "",
   artifactViewMode: "preview",
   selectedEvidenceNodeId: "",
   selectedEvidenceEdgeId: "",
@@ -68,6 +74,26 @@ const state = {
   rawLogMode: false,
   savedLogText: "",
   setupMode: "new-work-item",
+  onboarding: {
+    setupRequired: false,
+    loading: true,
+    error: "",
+    projectRootInput: ".",
+    project: null,
+    configPath: "",
+    recentProjects: [],
+    inspecting: false,
+    inspectError: "",
+    workItemInput: "",
+    requestText: "",
+    forceContext: false,
+    projectSetText: "",
+    projectSetResult: null,
+    projectSetError: "",
+    projectSetLoading: false,
+    createError: "",
+    creating: false
+  },
   nextFlowWizard: {
     active: false,
     action: "",
@@ -164,7 +190,7 @@ function activeStageView() {
 }
 
 function needsRuntime(action) {
-  return ["run-workflow", "run-stage", "resume-stage"].includes(action);
+  return ["run-workflow", "run-stage", "resume-stage", "rerun-stale-downstream"].includes(action);
 }
 
 function setRunButtonState() {
@@ -235,6 +261,29 @@ async function fetchDashboard() {
   state.activeRunId = state.dashboard.run?.run_id || "";
   if (!state.selectedRuntime && state.dashboard.run?.runtime_id) {
     state.selectedRuntime = state.dashboard.run.runtime_id;
+  }
+}
+
+async function fetchOnboardingState() {
+  state.onboarding.loading = true;
+  state.onboarding.error = "";
+  try {
+    const payload = await api("/api/onboarding/state");
+    state.onboarding.setupRequired = Boolean(payload.setup_required);
+    state.onboarding.recentProjects = payload.recent_projects || [];
+    const context = payload.context || null;
+    if (context) {
+      state.onboarding.projectRootInput = context.project_root || state.onboarding.projectRootInput;
+      state.onboarding.workItemInput = context.work_item || state.onboarding.workItemInput;
+      state.onboarding.configPath = context.config || state.onboarding.configPath;
+    }
+    const version = String(payload.app_version || "").trim();
+    document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
+  } catch (error) {
+    state.onboarding.error = error.message || "setup state unavailable";
+    state.onboarding.setupRequired = true;
+  } finally {
+    state.onboarding.loading = false;
   }
 }
 

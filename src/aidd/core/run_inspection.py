@@ -771,15 +771,17 @@ def resolve_stage_result_summary(
 
     stage_root = workspace_root / "workitems" / work_item / "stages" / stage
     validator_report = stage_root / "validator-report.md"
-    pass_count, fail_count = _validator_counts_from_history(
-        outcomes=tuple(entry.outcome for entry in stage_metadata.repair_history)
-    )
-    if pass_count == 0 and fail_count == 0:
-        verdict = _validator_verdict_from_report(validator_report)
-        if verdict == "pass":
-            pass_count = 1
-        elif verdict == "fail":
-            fail_count = 1
+    verdict = _validator_verdict_from_report(validator_report)
+    if verdict == "pass":
+        pass_count = 1
+        fail_count = 0
+    elif verdict == "fail":
+        pass_count = 0
+        fail_count = 1
+    else:
+        pass_count, fail_count = _validator_counts_from_history(
+            outcomes=tuple(entry.outcome for entry in stage_metadata.repair_history)
+        )
 
     artifact_paths = resolve_attempt_artifact_paths(
         workspace_root=workspace_root,

@@ -98,6 +98,18 @@ Start from the local project root that should receive AIDD workflow state:
 
 ```bash
 cd /path/to/local-project
+aidd ui
+```
+
+The UI opens setup mode when no work item is provided. Use it to confirm the local project
+root, create or resume a work item, seed the request, inspect runtime readiness, select a
+runtime, and start the governed flow. The UI still writes the same project-local `.aidd/`
+workspace as the CLI and still requires explicit runtime selection before execution.
+
+Scripted and terminal-first flows remain supported:
+
+```bash
+cd /path/to/local-project
 aidd doctor
 aidd init --work-item WI-001 --request "Implement a small, specific task" --root .aidd
 aidd run --work-item WI-001 --runtime codex --from-stage idea --to-stage plan --root .aidd
@@ -171,11 +183,16 @@ stage attempt in the current run.
 
 ## Operator UI
 
-Start the local UI for an initialized work item:
+Start setup mode for a local project, or open an initialized work item directly:
 
 ```bash
+aidd ui
 aidd ui --work-item WI-001 --root .aidd
 ```
+
+Without `--work-item`, the UI validates the selected project root, resolves `.aidd/`,
+discovers existing work items, and creates new work items through the same bootstrap path as
+`aidd init`. With `--work-item`, it opens the existing command center directly.
 
 The UI reads the same `.aidd/` state as the CLI. It can show stage status, render stage
 Markdown artifacts, show runtime logs, answer questions, show repair history, submit
@@ -185,12 +202,25 @@ the next eligible stage, or submit **Request change -> Submit & run** from the s
 stage cockpit; these actions require an explicit runtime selection and there is no hidden
 `generic-cli` fallback. New UI launches stream live job logs while the process runs, and
 the saved `runtime.log` remains available afterward through the normal log view and CLI.
+The command center also shows an Active Run panel and Timeline tab for long-running jobs:
+elapsed time, last output age, runner command, stage timeout summary, cancel action, and
+real stage milestones are shown without fake progress percentages.
 The UI can write question answers as `[resolved]`, `[partial]`, or `[deferred]` entries
 in the standard `answers.md`; only `[resolved]` answers unblock blocking questions, then
 rerun the selected stage or workflow after answering. Intervention requests are stored as
 durable Markdown input under `.aidd/workitems/<id>/stages/<stage>/operator-requests/`
 and are shown in Activity, Evidence Refs, and Recent Artifacts. The UI is a local no-auth
 operator surface: the default host is loopback, and non-loopback binds print a warning.
+
+For `implement`, the **Implement Review** tab shows the real project repository diff,
+including untracked files, deleted files, bounded diff hunks, `.aidd/` artifacts separated
+from source files, allowed-scope status, and mismatches between changed files and
+`implementation-report.md`. For `review` and `qa`, structured tabs surface findings,
+approval status, QA verdict, residual risks, known issues, and evidence ids. Selected
+review findings or QA risks can be sent back to `implement` as a durable remediation
+request; the UI then marks downstream `review` and `qa` stale until the operator explicitly
+reruns `review -> qa` with a selected runtime. CLI behavior remains document/validator
+driven and does not get new default gates from these UI controls.
 
 After terminal `qa`, the command center switches to **Flow Complete**. The completed-run
 handoff shows final QA status, final artifacts, blockers, repair counts, approval counts,

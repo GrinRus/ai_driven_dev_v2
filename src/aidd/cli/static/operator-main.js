@@ -2,6 +2,14 @@ async function refresh() {
   state.readinessLoading = true;
   state.readinessError = "";
   try {
+    await fetchOnboardingState();
+    if (state.onboarding.setupRequired) {
+      state.dashboard = null;
+      await renderOnboarding();
+      return;
+    }
+    document.body.classList.remove("setup-active");
+    document.getElementById("openWorkspaceButton").disabled = false;
     await fetchDashboard();
     await renderAll();
     void fetchReadiness().then(renderAll).catch((error) => {
@@ -25,6 +33,27 @@ async function stopServer() {
 
 document.addEventListener("click", async (event) => {
   try {
+    const onboardingRecentProject = event.target.closest("[data-onboarding-recent-project]")?.dataset.onboardingRecentProject;
+    if (onboardingRecentProject) {
+      state.onboarding.projectRootInput = onboardingRecentProject;
+      await inspectOnboardingProject();
+      return;
+    }
+    const onboardingRuntime = event.target.closest("[data-onboarding-runtime]")?.dataset.onboardingRuntime;
+    if (onboardingRuntime) {
+      state.selectedRuntime = onboardingRuntime;
+      renderOnboarding();
+      return;
+    }
+    if (event.target.id === "onboardingValidateProjectSet") {
+      await validateOnboardingProjectSet();
+      return;
+    }
+    const onboardingResume = event.target.closest("[data-onboarding-resume]")?.dataset.onboardingResume;
+    if (onboardingResume) {
+      await completeOnboardingWorkItem("resume", onboardingResume);
+      return;
+    }
     const stageButton = event.target.closest("[data-stage]");
     if (stageButton) {
       state.activeStage = stageButton.dataset.stage;
@@ -123,6 +152,48 @@ document.addEventListener("click", async (event) => {
     const cancelJob = event.target.closest("[data-cancel-job]");
     if (cancelJob) {
       await cancelActiveJob();
+      return;
+    }
+    const diffFilter = event.target.closest("[data-implement-diff-filter]")?.dataset.implementDiffFilter;
+    if (diffFilter) {
+      state.implementDiffFilter = diffFilter;
+      state.implementDiffPath = "";
+      await renderImplementReview();
+      return;
+    }
+    const diffFile = event.target.closest("[data-open-diff-file]")?.dataset.openDiffFile;
+    if (diffFile) {
+      state.implementDiffPath = diffFile;
+      await renderImplementReview();
+      return;
+    }
+    const proceedStage = event.target.closest("[data-proceed-stage]")?.dataset.proceedStage;
+    if (proceedStage) {
+      await startStage(proceedStage);
+      return;
+    }
+    if (event.target.closest("[data-rerun-implement]")) {
+      await startStage("implement");
+      return;
+    }
+    if (event.target.closest("[data-open-request-tab]")) {
+      activateTab("request");
+      await renderCockpit();
+      return;
+    }
+    const remediationLaunch = event.target.closest("[data-remediation-launch]")?.dataset.remediationLaunch;
+    if (remediationLaunch) {
+      await launchRemediation(remediationLaunch);
+      return;
+    }
+    if (event.target.closest("[data-accept-qa]")) {
+      toast("QA acceptance stays recorded by the completed QA artifacts.");
+      activateTab("artifacts");
+      await renderCockpit();
+      return;
+    }
+    if (event.target.closest("[data-next-flow-start]")) {
+      await openNextFlowWizard("start-follow-up-flow");
       return;
     }
     const approvalButton = event.target.closest("[data-operator-request][data-operator-action]");
@@ -293,6 +364,10 @@ document.addEventListener("click", async (event) => {
 document.addEventListener("change", async (event) => {
   if (event.target.id === "runtimeSelect") {
     state.selectedRuntime = event.target.value;
+    if (state.onboarding.setupRequired) {
+      renderOnboarding();
+      return;
+    }
     setRunButtonState();
     updateSubmitInterventionState();
     renderTopbar();
@@ -317,6 +392,20 @@ document.addEventListener("change", async (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  if (event.target.id === "onboardingProjectRoot") {
+    state.onboarding.projectRootInput = event.target.value;
+  }
+  if (event.target.id === "onboardingWorkItem") {
+    state.onboarding.workItemInput = event.target.value;
+  }
+  if (event.target.id === "onboardingRequest") {
+    state.onboarding.requestText = event.target.value;
+  }
+  if (event.target.id === "onboardingProjectSet") {
+    state.onboarding.projectSetText = event.target.value;
+    state.onboarding.projectSetResult = null;
+    state.onboarding.projectSetError = "";
+  }
   if (event.target.id === "operatorRequestText") {
     updateInterventionPreview();
   }
@@ -325,6 +414,28 @@ document.addEventListener("input", (event) => {
     || event.target.closest("[data-follow-up-list-text]")
   ) {
     invalidateFollowUpDraftPreview();
+  }
+});
+
+document.addEventListener("change", (event) => {
+  if (event.target.id === "onboardingForceContext") {
+    state.onboarding.forceContext = event.target.checked;
+  }
+});
+
+document.addEventListener("submit", async (event) => {
+  try {
+    if (event.target.id === "onboardingProjectForm") {
+      event.preventDefault();
+      await inspectOnboardingProject();
+      return;
+    }
+    if (event.target.id === "onboardingCreateForm") {
+      event.preventDefault();
+      await completeOnboardingWorkItem("create", state.onboarding.workItemInput.trim());
+    }
+  } catch (error) {
+    toast(error.message);
   }
 });
 

@@ -9,6 +9,7 @@ from aidd.core.interview import (
     render_answers_markdown,
 )
 from aidd.core.project_set import ResolvedProjectSet
+from aidd.core.remediation import latest_remediation_input_documents
 from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
 from aidd.core.run_store import (
     load_stage_metadata,
@@ -322,6 +323,27 @@ def run_single_stage_orchestration(
     )
     if intervention_request_path is not None:
         include_existing_stage_outputs = True
+    extra_input_documents = (
+        ()
+        if intervention_request_path is None
+        else _intervention_context_documents(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            operator_request_path=intervention_request_path,
+        )
+    )
+    if stage == "implement":
+        extra_input_documents = (
+            *extra_input_documents,
+            *latest_remediation_input_documents(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                target_stage=stage,
+            ),
+        )
+
     preparation_bundle = prepare_stage_bundle(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -329,16 +351,7 @@ def run_single_stage_orchestration(
         contracts_root=contracts_root,
         project_set=project_set,
         include_existing_stage_outputs=include_existing_stage_outputs,
-        extra_input_documents=(
-            ()
-            if intervention_request_path is None
-            else _intervention_context_documents(
-                workspace_root=workspace_root,
-                work_item=work_item,
-                stage=stage,
-                operator_request_path=intervention_request_path,
-            )
-        ),
+        extra_input_documents=extra_input_documents,
     )
     execution_state = persist_execution_state(
         workspace_root=workspace_root,
@@ -348,13 +361,32 @@ def run_single_stage_orchestration(
         contracts_root=contracts_root,
         changed_at_utc=changed_at_utc,
     )
-    adapter_invocation = prepare_adapter_invocation(
-        workspace_root=workspace_root,
-        preparation_bundle=preparation_bundle,
-        execution_state=execution_state,
-        contracts_root=contracts_root,
-        intervention_request_path=intervention_request_path,
-    )
+    try:
+        adapter_invocation = prepare_adapter_invocation(
+            workspace_root=workspace_root,
+            preparation_bundle=preparation_bundle,
+            execution_state=execution_state,
+            contracts_root=contracts_root,
+            intervention_request_path=intervention_request_path,
+        )
+    except Exception:
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            status=StageState.FAILED.value,
+            changed_at_utc=changed_at_utc,
+        )
+        write_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=execution_state.attempt_number,
+            contracts_root=contracts_root,
+        )
+        raise
     try:
         adapter_outcome = adapter_executor(adapter_invocation, execution_state)
     finally:

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import inspect
 import json
 import shlex
+import subprocess
 import sys
 import threading
 import time
@@ -20,8 +22,13 @@ from aidd.cli.ui import (
     UiServerOptions,
     _is_loopback_host,
     _read_json_body,
+    ui_command,
 )
 from aidd.cli.ui_assets import operator_static_asset_for_route, operator_static_asset_manifest
+from aidd.core.remediation import (
+    create_remediation_request,
+    mark_downstream_stale,
+)
 from aidd.core.repair import persist_repair_history_snapshot
 from aidd.core.run_store import (
     OPERATOR_DECISIONS_FILENAME,
@@ -53,6 +60,7 @@ from aidd.core.workflow_service import (
     WorkflowStageExecutionError,
     WorkflowStageExecutionRequest,
 )
+from aidd.runtime_catalog import runtime_definitions
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeOperatorDecisionAction,
@@ -97,8 +105,51 @@ def _service(
     return OperatorUiService(options, **kwargs)
 
 
+def _onboarding_service(tmp_path: Path, monkeypatch: Any) -> OperatorUiService:
+    return _onboarding_service_with_runner(tmp_path, monkeypatch)
+
+
+def _onboarding_service_with_runner(
+    tmp_path: Path,
+    monkeypatch: Any,
+    *,
+    workflow_runner: Any | None = None,
+) -> OperatorUiService:
+    monkeypatch.chdir(tmp_path)
+
+    def _ready_probe(_config: object) -> dict[str, RuntimeReadinessProbeReport]:
+        return {
+            definition.runtime_id: RuntimeReadinessProbeReport(
+                provider_available=True,
+                execution_command_available=True,
+                provider_version="test",
+                provider_command=definition.probe_command,
+            )
+            for definition in runtime_definitions()
+        }
+
+    kwargs: dict[str, Any] = {"readiness_probe_provider": _ready_probe}
+    if workflow_runner is not None:
+        kwargs["workflow_runner"] = workflow_runner
+    return OperatorUiService(
+        UiServerOptions(
+            work_item=None,
+            root=Path(".aidd"),
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        ),
+        **kwargs,
+    )
+
+
 def _payload(response) -> dict[str, object]:
     assert response.status == 200
+    return json.loads(response.body.decode("utf-8"))
+
+
+def _payload_with_status(response, status: int) -> dict[str, object]:
+    assert response.status == status
     return json.loads(response.body.decode("utf-8"))
 
 
@@ -281,6 +332,88 @@ def _prepare_completed_qa_run(
             source=RuntimeOperatorDecisionSource.UI,
             reason="approved in UI terminal handoff fixture",
         ),
+    )
+
+
+def _git(project_root: Path, *args: str) -> None:
+    subprocess.run(
+        ("git", "-C", project_root.as_posix(), *args),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _prepare_ui_project_repo(tmp_path: Path, monkeypatch: Any) -> Path:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _git(project_root, "init")
+    _git(project_root, "config", "user.email", "aidd@example.test")
+    _git(project_root, "config", "user.name", "AIDD Test")
+    project_root.joinpath("app.py").write_text("print('old')\n", encoding="utf-8")
+    _git(project_root, "add", "app.py")
+    _git(project_root, "commit", "-m", "initial")
+    monkeypatch.chdir(project_root)
+    return project_root
+
+
+def _write_operator_control_reports(workspace_root: Path) -> None:
+    implement_root = workspace_root / "workitems" / "WI-UI" / "stages" / "implement"
+    implement_root.mkdir(parents=True, exist_ok=True)
+    implement_root.joinpath("implementation-report.md").write_text(
+        "\n".join(
+            (
+                "# Implementation Report",
+                "",
+                "- Selected task id: `TASK-1`",
+                "",
+                "## Touched files",
+                "",
+                "- `app.py`",
+                "",
+                "## Verification",
+                "",
+                "- `uv run pytest` -> exit 0.",
+            )
+        ),
+        encoding="utf-8",
+    )
+    review_root = workspace_root / "workitems" / "WI-UI" / "stages" / "review"
+    review_root.mkdir(parents=True, exist_ok=True)
+    review_root.joinpath("review-report.md").write_text(
+        "\n".join(
+            (
+                "# Review Report",
+                "",
+                "- Approval status: `rejected`",
+                "",
+                "## Findings",
+                "",
+                "- RV-1 Missing guard",
+                "  - Severity: `high`",
+                "  - Disposition: `must-fix`",
+                "  - Evidence: `app.py`",
+            )
+        ),
+        encoding="utf-8",
+    )
+    qa_root = workspace_root / "workitems" / "WI-UI" / "stages" / "qa"
+    qa_root.mkdir(parents=True, exist_ok=True)
+    qa_root.joinpath("qa-report.md").write_text(
+        "\n".join(
+            (
+                "# QA Report",
+                "",
+                "- Quality verdict: `not-ready`",
+                "- Release recommendation: `hold`",
+                "- Evidence: EV-1",
+                "",
+                "## Residual risks",
+                "",
+                "- Retry path is unverified.",
+            )
+        ),
+        encoding="utf-8",
     )
 
 
@@ -1048,6 +1181,169 @@ def test_ui_dashboard_endpoint_uses_empty_state_when_no_run_exists(tmp_path: Pat
     assert dashboard["stages"][0]["stage"] == "idea"  # type: ignore[index]
 
 
+def test_ui_onboarding_mode_serves_setup_until_context_handoff(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    captured: dict[str, object] = {}
+
+    def fake_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        captured.update(kwargs)
+        return WorkflowRunResult(
+            run_id="run-onboarding-generic",
+            executed_stage_count=2,
+            completed=True,
+            incomplete=(),
+        )
+
+    service = _onboarding_service_with_runner(
+        tmp_path,
+        monkeypatch,
+        workflow_runner=fake_workflow_runner,
+    )
+
+    state_payload = _payload(service.handle_get("/api/onboarding/state", {}))
+    blocked_dashboard = service.handle_get("/api/dashboard", {})
+
+    assert state_payload["setup_required"] is True
+    assert "Complete project setup" in _error_payload(blocked_dashboard)["error"]
+
+    inspect_payload = _payload(
+        service.handle_post("/api/onboarding/project", {"project_root": "project"})
+    )
+    assert inspect_payload["project"]["project_root"] == project_root.as_posix()  # type: ignore[index]
+    assert inspect_payload["project"]["workspace_exists"] is False  # type: ignore[index]
+    assert {
+        runtime["runtime_id"]
+        for runtime in inspect_payload["readiness"]["runtimes"]  # type: ignore[index]
+    } >= {"codex", "claude-code", "opencode", "qwen", "generic-cli"}
+
+    created_payload = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": "project",
+                "work_item": "WI-ONBOARD",
+                "request": "Implement UI onboarding smoke.",
+            },
+        )
+    )
+
+    assert created_payload["context"]["work_item"] == "WI-ONBOARD"  # type: ignore[index]
+    assert created_payload["context"]["workspace_root"] == (  # type: ignore[index]
+        project_root / ".aidd"
+    ).as_posix()
+    assert (
+        project_root
+        / ".aidd"
+        / "workitems"
+        / "WI-ONBOARD"
+        / "context"
+        / "user-request.md"
+    ).read_text(encoding="utf-8").endswith("Implement UI onboarding smoke.\n")
+
+    active_state_payload = _payload(service.handle_get("/api/onboarding/state", {}))
+    dashboard_payload = _payload(service.handle_get("/api/dashboard", {}))
+    missing_runtime = service.handle_post("/api/workflow/run", {})
+    workflow_payload = _payload(
+        service.handle_post(
+            "/api/workflow/run",
+            {"runtime": "generic-cli", "from_stage": "idea", "to_stage": "plan"},
+        )
+    )
+    workflow_job = _wait_job(service, str(workflow_payload["job_id"]))
+    workflow_request = captured["request"]
+
+    assert active_state_payload["setup_required"] is False
+    assert dashboard_payload["dashboard"]["work_item"] == "WI-ONBOARD"  # type: ignore[index]
+    assert _error_payload(missing_runtime)["error"] == "runtime is required."
+    assert workflow_job["result"]["run_id"] == "run-onboarding-generic"  # type: ignore[index]
+    assert isinstance(workflow_request, WorkflowRunRequest)
+    assert workflow_request.work_item == "WI-ONBOARD"
+    assert workflow_request.runtime_id == "generic-cli"
+    assert workflow_request.workspace_root == project_root.resolve() / ".aidd"
+    assert workflow_request.config_path == project_root.resolve() / "aidd.test.toml"
+    assert workflow_request.stage_start == "idea"
+    assert workflow_request.stage_end == "plan"
+
+
+def test_ui_onboarding_can_resume_existing_project_work_item(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    creator = _onboarding_service(tmp_path, monkeypatch)
+    _payload(
+        creator.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": "project",
+                "work_item": "WI-RESUME",
+                "request": "Resume from setup.",
+            },
+        )
+    )
+    service = _onboarding_service(tmp_path, monkeypatch)
+
+    inspect_payload = _payload(
+        service.handle_post("/api/onboarding/project", {"project_root": "project"})
+    )
+    resumed_payload = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "resume",
+                "project_root": "project",
+                "work_item": "WI-RESUME",
+            },
+        )
+    )
+
+    assert inspect_payload["project"]["work_items"] == [  # type: ignore[index]
+        {"has_request_context": True, "work_item": "WI-RESUME"}
+    ]
+    assert resumed_payload["context"]["work_item"] == "WI-RESUME"  # type: ignore[index]
+    assert _payload(service.handle_get("/api/dashboard", {}))["dashboard"]["work_item"] == (
+        "WI-RESUME"
+    )
+
+
+def test_ui_onboarding_create_requires_request_and_safe_work_item_id(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    service = _onboarding_service(tmp_path, monkeypatch)
+
+    missing_request = service.handle_post(
+        "/api/onboarding/work-item",
+        {
+            "action": "create",
+            "project_root": "project",
+            "work_item": "WI-NO-REQUEST",
+        },
+    )
+    unsafe_work_item = service.handle_post(
+        "/api/onboarding/work-item",
+        {
+            "action": "create",
+            "project_root": "project",
+            "work_item": "../WI-ESCAPE",
+            "request": "Keep the work item inside the selected workspace.",
+        },
+    )
+
+    assert _error_payload(missing_request)["error"] == "request is required."
+    assert "work_item" in _error_payload(unsafe_work_item)["error"]  # type: ignore[operator]
+    assert not (project_root / ".aidd" / "WI-ESCAPE").exists()
+
+
 def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_questions(workspace_root)
@@ -1739,6 +2035,11 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     options = captured["options"]
     assert isinstance(options, StageRunOptions)
     assert running_payload["status"] == "running"
+    assert isinstance(running_payload["elapsed_seconds"], int)
+    assert running_payload["last_output_at_utc"] is not None
+    assert running_payload["last_output_age_seconds"] is not None
+    assert running_payload["last_output_text"] == "runtime-output-line"
+    assert running_payload["silence_warning"] is False
     assert options.stage == "plan"
     assert options.runtime == "codex"
     assert options.run_id == "run-ui-flow"
@@ -1749,11 +2050,259 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
         chunk["stream"] == "stdout" and chunk["text"] == "runtime-output-line\n"
         for chunk in logs_payload["chunks"]  # type: ignore[index]
     )
+    assert all("time_utc" in chunk for chunk in logs_payload["chunks"])  # type: ignore[operator]
 
     release.set()
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+
+
+def test_ui_operator_control_center_endpoints_return_structured_views(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = _prepare_ui_project_repo(tmp_path, monkeypatch)
+    workspace_root = project_root / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    _write_operator_control_reports(workspace_root)
+    project_root.joinpath("app.py").write_text("print('new')\n", encoding="utf-8")
+    project_root.joinpath("untracked.py").write_text("print('new')\n", encoding="utf-8")
+    service = _service(workspace_root)
+
+    timeline = _payload(
+        service.handle_get(
+            "/api/run/timeline",
+            {"run_id": ["run-ui"], "stage": ["implement"]},
+        )
+    )
+    diff = _payload(
+        service.handle_get(
+            "/api/repository/diff",
+            {"run_id": ["run-ui"], "stage": ["implement"]},
+        )
+    )
+    implementation = _payload(
+        service.handle_get("/api/implement/evidence", {"run_id": ["run-ui"]})
+    )
+    review = _payload(service.handle_get("/api/review/findings", {"run_id": ["run-ui"]}))
+    qa = _payload(service.handle_get("/api/qa/verdict", {"run_id": ["run-ui"]}))
+
+    assert timeline["events"]
+    source_paths = {item["path"] for item in diff["source_files"]}  # type: ignore[index]
+    assert {"app.py", "untracked.py"}.issubset(source_paths)
+    assert diff["aidd_artifacts"]  # type: ignore[index]
+    assert implementation["selected_task_id"] == "TASK-1"
+    assert review["approval_status"] == "rejected"
+    assert review["findings"][0]["finding_id"] == "RV-1"  # type: ignore[index]
+    assert qa["quality_verdict"] == "not-ready"
+
+
+def test_ui_remediation_launch_requires_runtime_before_request_creation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/remediation/launch",
+        {
+            "source_stage": "review",
+            "source_ids": ["RV-1"],
+            "target_stage": "implement",
+            "operator_note": "Fix it.",
+            "run_id": "run-ui",
+        },
+    )
+
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(response)["error"] == "runtime is required."
+    requests = _payload(
+        service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]})
+    )
+    assert requests["requests"] == []
+
+
+def test_ui_remediation_launch_runs_implement_and_marks_downstream_stale(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    _write_operator_control_reports(workspace_root)
+    captured: list[StageRunOptions] = []
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        captured.append(options)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/remediation/launch",
+        {
+            "source_stage": "review",
+            "source_ids": ["RV-1"],
+            "target_stage": "implement",
+            "operator_note": "Fix rejected review finding.",
+            "runtime": "generic-cli",
+            "run_id": "run-ui",
+        },
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
+    completed = _wait_job(service, str(payload["job_id"]))
+    status = _payload(service.handle_get("/api/remediation/status", {"run_id": ["run-ui"]}))
+    dashboard = _payload(
+        service.handle_get("/api/dashboard", {"run_id": ["run-ui"], "stage": ["qa"]})
+    )
+    stages = {
+        item["stage"]: item
+        for item in dashboard["dashboard"]["stages"]  # type: ignore[index]
+    }
+    assert [options.stage for options in captured] == ["implement"]
+    assert captured[0].runtime == "generic-cli"
+    assert captured[0].run_id == "run-ui"
+    assert completed["status"] == "completed"
+    assert completed["result"]["completed"] is True  # type: ignore[index]
+    assert [item["stage"] for item in status["stale_stages"]] == ["review", "qa"]  # type: ignore[index]
+    assert stages["review"]["stale"] is True
+    assert stages["qa"]["stale"] is True
+    assert dashboard["dashboard"]["terminal_handoff"] is None  # type: ignore[index]
+
+
+def test_ui_remediation_request_rejects_ids_missing_from_source_report(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    _write_operator_control_reports(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/remediation/request",
+        {
+            "source_stage": "review",
+            "source_ids": ["RV-404"],
+            "target_stage": "implement",
+            "operator_note": "Fix missing finding.",
+            "run_id": "run-ui",
+        },
+    )
+
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert "source_ids do not match review report" in _error_payload(response)["error"]
+    requests = _payload(
+        service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]})
+    )
+    assert requests["requests"] == []
+
+
+def test_ui_remediation_request_accepts_structured_qa_risk_id(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    _write_operator_control_reports(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/remediation/request",
+        {
+            "source_stage": "qa",
+            "source_ids": ["risk-1"],
+            "target_stage": "implement",
+            "operator_note": "Fix QA risk.",
+            "run_id": "run-ui",
+        },
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.CREATED)
+    assert payload["source_ids"] == ["risk-1"]
+    assert payload["source_stage"] == "qa"
+
+
+def test_ui_remediation_rerun_downstream_runs_review_qa_and_clears_stale(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    request = create_remediation_request(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        source_stage="qa",
+        source_ids=("risk-1",),
+        operator_note="Fix QA risk.",
+    )
+    mark_downstream_stale(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        invalidated_by=request.request_id,
+    )
+    captured: list[StageRunOptions] = []
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        captured.append(options)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/remediation/rerun-downstream",
+        {"runtime": "generic-cli", "run_id": "run-ui"},
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
+    completed = _wait_job(service, str(payload["job_id"]))
+    status = _payload(service.handle_get("/api/remediation/status", {"run_id": ["run-ui"]}))
+    assert [options.stage for options in captured] == ["review", "qa"]
+    assert all(options.runtime == "generic-cli" for options in captured)
+    assert completed["status"] == "completed"
+    assert completed["result"]["rerun_stages"] == ["review", "qa"]  # type: ignore[index]
+    assert status["stale_stages"] == []
+
+
+def test_ui_remediation_rerun_downstream_clears_successful_stages_before_failure(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    request = create_remediation_request(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        source_stage="review",
+        source_ids=("RV-1",),
+        operator_note="Fix review finding.",
+    )
+    mark_downstream_stale(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        invalidated_by=request.request_id,
+    )
+    captured: list[StageRunOptions] = []
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        captured.append(options)
+        if options.stage == "qa":
+            raise typer.Exit(1)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/remediation/rerun-downstream",
+        {"runtime": "generic-cli", "run_id": "run-ui"},
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
+    failed = _wait_job_status(service, str(payload["job_id"]), "failed")
+    status = _payload(service.handle_get("/api/remediation/status", {"run_id": ["run-ui"]}))
+
+    assert [options.stage for options in captured] == ["review", "qa"]
+    assert failed["result"]["completed"] is False  # type: ignore[index]
+    assert failed["result"]["exit_code"] == 1  # type: ignore[index]
+    assert [item["stage"] for item in status["stale_stages"]] == ["qa"]  # type: ignore[index]
 
 
 def test_ui_job_cancel_endpoint_marks_running_job_cancelling_then_cancelled(
@@ -2883,5 +3432,7 @@ def test_ui_loopback_detection_for_warn_only_bind_policy() -> None:
 
 def test_ui_command_is_registered() -> None:
     command_names = {command.name for command in cli_main.app.registered_commands}
+    work_item_parameter = inspect.signature(ui_command).parameters["work_item"]
 
     assert "ui" in command_names
+    assert work_item_parameter.default is None

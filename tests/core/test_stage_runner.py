@@ -23,6 +23,7 @@ from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
 from aidd.core.run_store import (
     create_next_attempt_directory,
     create_run_manifest,
+    load_stage_metadata,
     persist_stage_status,
     run_attempt_artifact_index_path,
     run_stage_metadata_path,
@@ -745,6 +746,55 @@ def test_prepare_adapter_invocation_requires_existing_input_documents(tmp_path: 
             preparation_bundle=preparation_bundle,
             execution_state=execution_state,
         )
+
+
+def test_run_single_stage_marks_failed_when_input_bundle_preparation_fails(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+
+    def _unused_adapter_executor(
+        _invocation: AdapterInvocationBundle,
+        _execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        raise AssertionError("adapter must not run without a prepared input bundle")
+
+    with pytest.raises(FileNotFoundError, match="Input bundle preparation requires an existing"):
+        run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            adapter_executor=_unused_adapter_executor,
+        )
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    assert [entry.status for entry in metadata.status_history] == [
+        StageState.EXECUTING.value,
+        StageState.FAILED.value,
+    ]
+    assert run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+    ).exists()
 
 
 def test_discover_stage_markdown_outputs_returns_discovered_and_missing_documents(

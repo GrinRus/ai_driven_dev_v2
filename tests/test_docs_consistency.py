@@ -671,6 +671,43 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
     assert "Public GitHub repositories are live E2E targets" in live_catalog
 
 
+def test_operator_docs_describe_ui_onboarding_without_cli_regression() -> None:
+    readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
+    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
+        encoding="utf-8"
+    )
+    operator_troubleshooting = (
+        _repo_root() / "docs" / "operator-troubleshooting.md"
+    ).read_text(encoding="utf-8")
+    operator_frontend = (
+        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
+    ).read_text(encoding="utf-8")
+
+    for document in (readme, operator_handbook):
+        assert "aidd ui" in document
+        assert "create" in document and "resume" in document and "work item" in document
+        assert "explicit runtime selection" in document or "select a runtime" in document
+        assert "project-local `.aidd/`" in document
+        assert "aidd init --work-item" in document
+
+    assert "Without `--work-item`" in readme
+    assert "Bare `aidd`, `aidd --help`, and scripted subcommands keep" in operator_handbook
+    assert "Bare `aidd` and `aidd --help` keep" in operator_frontend
+    assert "current help behavior" in operator_frontend
+    assert "`aidd ui` can start without `--work-item`" in operator_frontend
+    assert "`aidd ui --work-item <id> --root <path>` bypasses setup mode" in (
+        operator_frontend
+    )
+    assert "hidden `generic-cli` fallback" in operator_frontend
+    assert "One UI process may maintain a noncanonical recent-project list" in (
+        operator_frontend
+    )
+    assert "## 3. UI Onboarding Failures" in operator_troubleshooting
+    assert "Project root is rejected" in operator_troubleshooting
+    assert "Runner cards show unavailable runtimes" in operator_troubleshooting
+    assert "Recent project points to stale state" in operator_troubleshooting
+
+
 def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
     operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
@@ -699,7 +736,7 @@ def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
         assert expected in readme
 
     for expected in (
-        "### 6.6 Completed-run handoff and next-flow actions",
+        "### 6.7 Completed-run handoff and next-flow actions",
         "**Create New Work Item**",
         "**Start Follow-up Flow**",
         "QA findings, review notes, failed",
@@ -725,7 +762,7 @@ def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
         assert expected in operator_handbook
 
     for expected in (
-        "### 3.6 Next-flow launch preflight is blocked",
+        "### 4.6 Next-flow launch preflight is blocked",
         "the **Flow Complete** screen is visible, but **Launch Flow Now** is disabled",
         "blocked launch preflight",
         "writable `.aidd/` workspace",

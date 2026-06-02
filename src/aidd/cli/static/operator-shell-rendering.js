@@ -117,6 +117,7 @@ function renderStageRail() {
     const active = isActive ? " active" : "";
     const status = statusClass(item.status);
     const markers = [
+      item.stale ? `<span class="small-badge warn" title="${escapeHtml(item.stale_reason || "downstream evidence is stale")}">stale</span>` : "",
       item.unresolved_blocking_count ? `<span class="small-badge warn">Q${item.unresolved_blocking_count}</span>` : "",
       item.validator_fail_count ? `<span class="small-badge bad">V${item.validator_fail_count}</span>` : "",
       item.attempt_count ? `<span class="small-badge">${escapeHtml(item.attempt_count)}x</span>` : ""
@@ -144,9 +145,10 @@ function renderStageHeader() {
   document.getElementById("stageSubtitle").textContent = item?.subtitle || stageSubtitle(state.activeStage);
   document.getElementById("stageBadges").innerHTML = [
     `<span class="status-badge ${escapeHtml(statusClass(item?.status))}">${escapeHtml(item?.status || "pending")}</span>`,
+    item?.stale ? `<span class="status-badge warn" title="${escapeHtml(item.stale_reason || "downstream evidence is stale")}">stale</span>` : "",
     `<span class="status-badge">Attempts ${escapeHtml(item?.attempt_count || 0)}</span>`,
     `<span class="status-badge">Validation ${escapeHtml(item?.validator_pass_count || 0)}/${escapeHtml(item?.validator_fail_count || 0)}</span>`
-  ].join("");
+  ].filter(Boolean).join("");
 }
 
 function renderInlineMarkdown(value) {

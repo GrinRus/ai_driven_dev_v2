@@ -43,6 +43,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-onboarding.js",
+        filename="operator-onboarding.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator-artifacts-documents.js",
         filename="operator-artifacts-documents.js",
         content_type="text/javascript; charset=utf-8",
@@ -65,6 +70,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
     OperatorStaticAsset(
         route="/operator-next-flow-actions.js",
         filename="operator-next-flow-actions.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-control-center.js",
+        filename="operator-control-center.js",
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(

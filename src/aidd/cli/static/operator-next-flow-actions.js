@@ -1562,6 +1562,20 @@ async function startStage(stage = state.activeStage) {
   await startJobPolling(job);
 }
 
+async function rerunStaleDownstream() {
+  if (!ensureRunnableRuntime()) return;
+  if (!state.activeRunId) {
+    toast("No run selected.");
+    return;
+  }
+  const job = await postJson("/api/remediation/rerun-downstream", {
+    runtime: state.selectedRuntime,
+    run_id: state.activeRunId,
+    log_follow: true
+  });
+  await startJobPolling(job);
+}
+
 async function handleNextAction() {
   const action = state.dashboard?.next_action || {action: "choose-runtime"};
   if (action.action === "choose-runtime") {
@@ -1587,6 +1601,10 @@ async function handleNextAction() {
     await startStage(action.stage || state.activeStage);
     return;
   }
+  if (action.action === "rerun-stale-downstream") {
+    await rerunStaleDownstream();
+    return;
+  }
   if (action.action === "answer-questions") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
@@ -1606,6 +1624,17 @@ async function handleNextAction() {
       await renderAll();
     }
     activateTab("validation");
+    await renderCockpit();
+    return;
+  }
+  if (action.action === "review-findings" || action.action === "qa-verdict") {
+    if (action.stage && action.stage !== state.activeStage) {
+      state.activeStage = action.stage;
+      state.activeArtifactKey = "";
+      await fetchDashboard();
+      await renderAll();
+    }
+    activateTab(action.action);
     await renderCockpit();
     return;
   }
