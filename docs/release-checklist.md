@@ -132,14 +132,12 @@ uv tool uninstall ai-driven-dev-v2
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a7.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a6`.
+Current release-candidate package version: `0.1.0a7`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a6`.
 
-No current release candidate is accepted from this development version. The next release
-candidate must use a unique unpublished package version, target a matching
-`release/v<project.version>` branch, publish through the GitHub Release `published`
-event, and pass the release workflow quality, build, PyPI publish, `pipx`, and `uv tool`
-verification jobs before it can be accepted.
+This release candidate is prepared for `release/v0.1.0a7` but is not accepted release
+evidence until the draft GitHub Release is published and the release workflow quality,
+build, PyPI publish, `pipx`, and `uv tool` verification jobs all pass. The accepted `v0.1.0a7` evidence log entry must be added only after that package-channel evidence exists.
 
 W24 manual live evidence refresh on 2026-05-24:
 

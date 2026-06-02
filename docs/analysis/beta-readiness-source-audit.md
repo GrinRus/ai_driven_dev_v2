@@ -1,6 +1,6 @@
 # Beta Readiness Source Audit
 
-Date: 2026-06-01
+Date: 2026-06-02
 
 ## Purpose
 
@@ -20,8 +20,8 @@ Reviewed sources:
 
 ### README
 
-- The source development package version matches the package state: `0.1.0a7.dev0`.
-  The latest accepted published prerelease evidence is `0.1.0a6`.
+- The release-candidate package version matches the package state: `0.1.0a7`.
+  The last accepted published prerelease evidence before this candidate is `0.1.0a6`.
 - The documented public CLI commands match the registered command surface:
   `doctor`, `init`, `ui`, `stage`, `eval`, and `run`.
 - The removed eval-run product command is not documented as a current product command.
@@ -91,10 +91,10 @@ command so future smoke refactors do not break source-installed local runs.
   candidate source before the counted rerun.
 - Accepted `0.1.0a6` release/install evidence exists from the published GitHub Release,
   PyPI publish, `pipx` verification, and `uv tool` verification on 2026-06-01.
-- This branch is post-release development source after the accepted `0.1.0a6`
-  prerelease. The next release candidate must use a unique unpublished version and repeat
-  the GitHub Release, PyPI, `pipx`, and `uv tool` verification path before it can become
-  the latest accepted published prerelease evidence.
+- This branch is the `0.1.0a7` release candidate after the accepted `0.1.0a6`
+  prerelease. It must still repeat the GitHub Release, PyPI, `pipx`, and `uv tool`
+  verification path before it can become the latest accepted published prerelease
+  evidence.
 - Preflight readiness alone is not counted clean live evidence; the counted W24 refresh
   uses terminal black-box bundles and operator overlays.
 
@@ -104,8 +104,8 @@ manual live evidence.
 
 ## Decision
 
-Proceed with the post-`0.1.0a6` development cycle only after recording accepted
-release-evidence and package-channel validation.
+Proceed with `0.1.0a7` publication only after recording release-branch dry-run evidence
+and receiving explicit approval to publish the draft GitHub Release.
 
 Do not claim beta completion solely from package publication; keep the beta decision tied
 to maintained operator evidence, release/install evidence, and an explicit readiness call.

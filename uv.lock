@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "ai-driven-dev-v2"
-version = "0.1.0a7.dev0"
+version = "0.1.0a7"
 source = { editable = "." }
 dependencies = [
     { name = "markdown-it-py" },
