@@ -11,7 +11,7 @@ stable compatibility window exists.
 
 ## 0.1.0a7 - 2026-06-02
 
-- Prepare the `0.1.0a7` prerelease candidate after the UI-first onboarding and
+- Publish the `0.1.0a7` prerelease after the UI-first onboarding and
   operator control center work landed on `main`.
 - Add setup-mode `aidd ui` onboarding for project-root selection, work item
   create/resume, runtime readiness, and mandatory explicit runner selection while
@@ -20,8 +20,8 @@ stable compatibility window exists.
   milestones, silence warnings, and live log access.
 - Add implement diff review, structured review/QA evidence views, and remediation
   backflow from review or QA findings to a new explicit implement attempt.
-- Keep release-readiness docs explicit about `0.1.0a7` as the current candidate and
-  `0.1.0a6` as the latest accepted published prerelease evidence before this candidate.
+- Keep release-readiness docs explicit about `0.1.0a7` as the latest accepted published
+  prerelease evidence.
 
 ## 0.1.0a6 - 2026-06-01
 
