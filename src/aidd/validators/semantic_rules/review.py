@@ -133,12 +133,20 @@ def _declares_no_review_findings(text: str) -> bool:
     return NO_REVIEW_FINDINGS_PATTERN.search(normalized) is not None
 
 
+def _contains_no_review_findings_declaration(text: str) -> bool:
+    return any(_declares_no_review_findings(line) for line in text.splitlines())
+
+
 def _validate_findings_section(
     *,
     context: SemanticDocumentContext,
     findings_section: SemanticSection,
 ) -> tuple[int, tuple[ValidationFinding, ...]]:
     finding_items = extract_review_finding_blocks(findings_section.content)
+    if _contains_no_review_findings_declaration(
+        findings_section.content
+    ) and REVIEW_FINDING_ID_PATTERN.search(findings_section.content) is None:
+        return 0, tuple()
     if _declares_no_review_findings(findings_section.content) and (
         not finding_items
         or all(_declares_no_review_findings(finding_item) for finding_item in finding_items)

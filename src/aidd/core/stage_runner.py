@@ -361,13 +361,32 @@ def run_single_stage_orchestration(
         contracts_root=contracts_root,
         changed_at_utc=changed_at_utc,
     )
-    adapter_invocation = prepare_adapter_invocation(
-        workspace_root=workspace_root,
-        preparation_bundle=preparation_bundle,
-        execution_state=execution_state,
-        contracts_root=contracts_root,
-        intervention_request_path=intervention_request_path,
-    )
+    try:
+        adapter_invocation = prepare_adapter_invocation(
+            workspace_root=workspace_root,
+            preparation_bundle=preparation_bundle,
+            execution_state=execution_state,
+            contracts_root=contracts_root,
+            intervention_request_path=intervention_request_path,
+        )
+    except Exception:
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            status=StageState.FAILED.value,
+            changed_at_utc=changed_at_utc,
+        )
+        write_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=execution_state.attempt_number,
+            contracts_root=contracts_root,
+        )
+        raise
     try:
         adapter_outcome = adapter_executor(adapter_invocation, execution_state)
     finally:

@@ -5,6 +5,7 @@ import sys
 import threading
 import tomllib
 from collections.abc import Callable, Mapping
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from http import HTTPStatus
@@ -1270,17 +1271,34 @@ def _collect_runtime_readiness_probe_reports(
     cfg: AiddConfig,
 ) -> dict[str, RuntimeReadinessProbeReport]:
     reports: dict[str, RuntimeReadinessProbeReport] = {}
-    for definition in runtime_definitions():
+    definitions = runtime_definitions()
+
+    def _probe_runtime(runtime_id: str) -> tuple[str, RuntimeReadinessProbeReport]:
+        definition = next(item for item in definitions if item.runtime_id == runtime_id)
         provider_report = get_runtime_adapter_surface(definition.runtime_id).probe(
             definition.probe_command
         )
         runtime_config = cfg.runtime_config(definition.runtime_id)
-        reports[definition.runtime_id] = RuntimeReadinessProbeReport(
-            provider_available=provider_report.available,
-            execution_command_available=_execution_command_available(runtime_config.command),
-            provider_version=provider_report.version_text,
-            provider_command=provider_report.command,
+        return (
+            definition.runtime_id,
+            RuntimeReadinessProbeReport(
+                provider_available=provider_report.available,
+                execution_command_available=_execution_command_available(
+                    runtime_config.command
+                ),
+                provider_version=provider_report.version_text,
+                provider_command=provider_report.command,
+            ),
         )
+
+    with ThreadPoolExecutor(max_workers=max(1, len(definitions))) as executor:
+        futures = {
+            executor.submit(_probe_runtime, definition.runtime_id): definition.runtime_id
+            for definition in definitions
+        }
+        for future in as_completed(futures):
+            runtime_id, report = future.result()
+            reports[runtime_id] = report
     return reports
 
 

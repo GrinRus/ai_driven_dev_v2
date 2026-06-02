@@ -749,6 +749,65 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
     }
 
 
+def test_operator_dashboard_next_action_surfaces_rejected_review_report(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root)
+    review_root = workspace_root / "workitems" / "WI-UI" / "stages" / "review"
+    review_root.joinpath("review-report.md").write_text(
+        "\n".join(
+            (
+                "# Review Report",
+                "",
+                "## Findings",
+                "",
+                "- RV-1 (`high`, `must-fix`): implementation evidence is incomplete.",
+                "",
+                "## Approval status",
+                "",
+                "- `rejected`",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "review-findings"
+    assert dashboard.next_action.stage == "review"
+    assert dashboard.next_action.enabled is True
+    assert any(blocker.kind == "review-rejected" for blocker in dashboard.blockers)
+
+
+def test_operator_dashboard_next_action_surfaces_succeeded_not_ready_qa(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root, qa_verdict="not-ready")
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "qa-verdict"
+    assert dashboard.next_action.stage == "qa"
+    assert dashboard.next_action.enabled is True
+    assert any(blocker.kind == "qa-not-ready" for blocker in dashboard.blockers)
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "failed"
+    assert dashboard.terminal_handoff.final_qa_status == "not-ready"
+
+
 def test_operator_dashboard_terminal_handoff_reports_failed_qa(
     tmp_path: Path,
 ) -> None:

@@ -2551,6 +2551,36 @@ def test_validate_semantic_outputs_accepts_none_review_findings_bullet(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_none_review_findings_with_evidence_note(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_report(
+        workspace_root,
+        "WI-SEM-REVIEW-NONE-FINDINGS-EVIDENCE",
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Status: `approved`\n\n"
+            "## Findings\n\n"
+            "- none\n\n"
+            "Evidence: `implementation-report.md` records AC-1 coverage.\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item="WI-SEM-REVIEW-NONE-FINDINGS-EVIDENCE",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_review_subheading_findings(
     tmp_path: Path,
 ) -> None:

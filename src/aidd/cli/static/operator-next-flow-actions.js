@@ -1627,6 +1627,17 @@ async function handleNextAction() {
     await renderCockpit();
     return;
   }
+  if (action.action === "review-findings" || action.action === "qa-verdict") {
+    if (action.stage && action.stage !== state.activeStage) {
+      state.activeStage = action.stage;
+      state.activeArtifactKey = "";
+      await fetchDashboard();
+      await renderAll();
+    }
+    activateTab(action.action);
+    await renderCockpit();
+    return;
+  }
   if (action.action === "review-complete") {
     activateTab("artifacts");
     await renderCockpit();

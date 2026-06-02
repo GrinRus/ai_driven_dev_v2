@@ -110,6 +110,22 @@ def _extract_list_items(lines: tuple[str, ...]) -> tuple[str, ...]:
     return _unique(items)
 
 
+def _is_none_marker(value: str) -> bool:
+    normalized = _normalize_line(value).lower().rstrip(".").strip()
+    if normalized == "none":
+        return True
+    return normalized in {
+        "known issues: none",
+        "no known issues",
+        "no review findings were identified",
+        "no review findings identified",
+    }
+
+
+def _contains_none_marker(lines: tuple[str, ...]) -> bool:
+    return any(_is_none_marker(line) for line in lines)
+
+
 def _extract_selected_task_id(text: str) -> str | None:
     patterns = (
         r"(?:selected\s+task|task\s+id|selected\s+task\s+id)\s*[:\-]\s*`?([A-Za-z0-9_.:-]+)`?",
@@ -232,6 +248,18 @@ def _extract_labeled_value(block: str, label: str, allowed: set[str] | None = No
     return value
 
 
+def _extract_inline_allowed_value(block: str, allowed: set[str]) -> str | None:
+    first_line = block.splitlines()[0] if block.splitlines() else ""
+    for value in sorted(allowed, key=len, reverse=True):
+        if re.search(
+            rf"(?:^|[\s(`,])`?{re.escape(value)}`?(?:$|[\s)`,:])",
+            first_line,
+            flags=re.IGNORECASE,
+        ):
+            return value
+    return None
+
+
 def _extract_evidence(block: str) -> tuple[str, ...]:
     values: list[str] = []
     for line in block.splitlines():
@@ -249,22 +277,34 @@ def parse_review_report_text(text: str, warnings: tuple[str, ...] = ()) -> Revie
         findings.append(
             ReviewFindingView(
                 finding_id=finding_id,
-                severity=_extract_labeled_value(
-                    block,
-                    "severity",
-                    {"critical", "high", "medium", "low", "info"},
+                severity=(
+                    _extract_labeled_value(
+                        block,
+                        "severity",
+                        {"critical", "high", "medium", "low", "info"},
+                    )
+                    or _extract_inline_allowed_value(
+                        block,
+                        {"critical", "high", "medium", "low", "info"},
+                    )
                 ),
-                disposition=_extract_labeled_value(
-                    block,
-                    "disposition",
-                    {"must-fix", "follow-up", "accepted-risk", "invalid"},
+                disposition=(
+                    _extract_labeled_value(
+                        block,
+                        "disposition",
+                        {"must-fix", "follow-up", "accepted-risk", "invalid"},
+                    )
+                    or _extract_inline_allowed_value(
+                        block,
+                        {"must-fix", "follow-up", "accepted-risk", "invalid"},
+                    )
                 ),
                 summary=first_line,
                 evidence=_extract_evidence(block),
                 related_paths=_extract_backtick_paths(tuple(block.splitlines())),
             )
         )
-    if not findings and "no review findings" not in text.lower():
+    if not findings and not _contains_none_marker(_section_lines(text, ("findings",))):
         local_warnings.append("No structured review findings were detected.")
 
     required_changes = _extract_list_items(
@@ -324,9 +364,15 @@ def parse_qa_report_text(text: str, warnings: tuple[str, ...] = ()) -> QaVerdict
     return QaVerdictView(
         quality_verdict=verdict,
         release_recommendation=_release_recommendation(text),
-        residual_risks=_extract_list_items(risk_lines),
+        residual_risks=tuple(
+            item for item in _extract_list_items(risk_lines) if not _is_none_marker(item)
+        ),
         evidence_ids=evidence_ids,
-        known_issues=_extract_list_items(known_issue_lines),
+        known_issues=tuple(
+            item
+            for item in _extract_list_items(known_issue_lines)
+            if not _is_none_marker(item)
+        ),
         warnings=tuple(local_warnings),
     )
 

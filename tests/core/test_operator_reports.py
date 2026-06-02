@@ -83,6 +83,61 @@ def test_parse_review_findings_extracts_severity_disposition_and_evidence() -> N
     assert "src/app.py" in view.findings[0].related_paths
 
 
+def test_parse_review_findings_extracts_inline_severity_and_disposition() -> None:
+    view = parse_review_report_text(
+        "\n".join(
+            (
+                "# Review Report",
+                "",
+                "## Approval status",
+                "",
+                "- `rejected`",
+                "",
+                "## Findings",
+                "",
+                "- RV-1 (`high`, `must-fix`): Missing remediation proof",
+                "  - Evidence: EV-1 shows `src/app.py` is not rerun.",
+            )
+        )
+    )
+
+    assert view.approval_status == "rejected"
+    assert view.findings[0].severity == "high"
+    assert view.findings[0].disposition == "must-fix"
+
+
+def test_parse_review_findings_accepts_none_marker_without_warning() -> None:
+    view = parse_review_report_text(
+        "\n".join(
+            (
+                "# Review Report",
+                "",
+                "## Verdict",
+                "",
+                "- Status: `approved`",
+                "",
+                "## Findings",
+                "",
+                "- none",
+                "",
+                "Evidence: `implementation-report.md` records AC-1 coverage.",
+                "",
+                "## Risks",
+                "",
+                "- No material review risk remains.",
+                "",
+                "## Required follow-up",
+                "",
+                "- none",
+            )
+        )
+    )
+
+    assert view.approval_status == "approved"
+    assert view.findings == ()
+    assert view.warnings == ()
+
+
 def test_parse_qa_verdict_extracts_risks_issues_and_evidence() -> None:
     view = parse_qa_report_text(
         "\n".join(
@@ -109,3 +164,36 @@ def test_parse_qa_verdict_extracts_risks_issues_and_evidence() -> None:
     assert view.evidence_ids == ("EV-1", "EV-2")
     assert view.residual_risks == ("Retry path unverified.",)
     assert view.known_issues == ("QAI-1 missing production smoke.",)
+
+
+def test_parse_qa_verdict_ignores_known_issues_none_marker() -> None:
+    view = parse_qa_report_text(
+        "\n".join(
+            (
+                "# QA Report",
+                "",
+                "## Verification summary",
+                "",
+                "- Quality verdict: `ready`.",
+                "",
+                "## Release recommendation",
+                "",
+                "- `proceed`",
+                "",
+                "## Evidence",
+                "",
+                "- EV-1: `implementation-report.md` records remediation.",
+                "",
+                "## Known issues",
+                "",
+                "- Known issues: none.",
+                "",
+                "## Readiness",
+                "",
+                "- Ready.",
+            )
+        )
+    )
+
+    assert view.quality_verdict == "ready"
+    assert view.known_issues == ()
