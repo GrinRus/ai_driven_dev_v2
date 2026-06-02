@@ -1,9 +1,8 @@
 # Release Notes: v0.1.0a7
 
-Status: draft, not tagged or published.
+Status: published on 2026-06-02.
 
-Current release-candidate package version: `0.1.0a7`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a6`.
+Latest accepted published prerelease: `0.1.0a7`.
 
 ## Summary
 
@@ -45,14 +44,15 @@ Docker/GHCR remains outside the supported prerelease contract.
 - Live E2E remains local manual audit evidence and is not CI/CD, not a release workflow,
   not GitHub Actions, and not a release gate.
 - Runtime binaries and authentication are external operator prerequisites.
-- The `0.1.0a7` package must not be described as the latest accepted published prerelease
-  until the GitHub Release publish, PyPI publish, `pipx`, and `uv tool` verification jobs
-  have passed.
+- GitHub Release, PyPI publish, `pipx`, and `uv tool` verification passed before this
+  package was accepted as the latest published prerelease.
 
 ## Release checklist
 
-- GitHub Release: draft, target `release/v0.1.0a7`.
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a7`,
+  target `release/v0.1.0a7`.
 - Release branch: `release/v0.1.0a7`.
-- Release workflow dry-run: pending.
-- PyPI: pending, `https://pypi.org/project/ai-driven-dev-v2/0.1.0a7/`.
-- Publish only after explicit approval.
+- Release workflow:
+  `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/26820675806`.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a7/`.
