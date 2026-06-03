@@ -155,6 +155,7 @@ function renderFirstLaunchState() {
           ${renderSetupModeSelector(context)}
           <div class="setup-actions">
             <button data-first-launch-run type="button" ${ready && runtime ? "" : "disabled"}>Run workflow</button>
+            <button data-first-launch-stage type="button" class="secondary" ${ready && runtime ? "" : "disabled"}>Run selected stage</button>
             <span class="muted">Work item ${escapeHtml(state.dashboard?.work_item || "unknown")}</span>
           </div>
         </div>

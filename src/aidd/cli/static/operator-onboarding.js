@@ -113,6 +113,14 @@ function onboardingCanCreate() {
   );
 }
 
+function syncOnboardingCreateActionState() {
+  const form = document.getElementById("onboardingCreateForm");
+  if (!form) return;
+  const button = form.querySelector('button[type="submit"]');
+  if (!button) return;
+  button.disabled = !(onboardingCanCreate() && !state.onboarding.creating);
+}
+
 function renderOnboardingTopbar() {
   document.body.classList.add("setup-active");
   const project = onboardingProject();

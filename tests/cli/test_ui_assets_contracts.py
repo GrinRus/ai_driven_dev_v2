@@ -217,6 +217,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     approvals = _asset_text("/operator-approvals-interventions.js")
     logs = _asset_text("/operator-logs-jobs.js")
     next_flow = _asset_text("/operator-next-flow-actions.js")
+    onboarding = _asset_text("/operator-onboarding.js")
     cockpit = _asset_text("/operator-stage-cockpit.js")
     main = _asset_text("/operator-main.js")
 
@@ -236,6 +237,8 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function submitIntervention()" in approvals
     assert "async function renderLogs()" in logs
     assert "async function startJobPolling(job)" in logs
+    assert "function renderOnboarding()" in onboarding
+    assert "function syncOnboardingCreateActionState()" in onboarding
     assert "async function startWorkflow()" in next_flow
     assert "async function handleNextAction()" in next_flow
     assert "function renderFlowCompleteState()" in next_flow
@@ -303,6 +306,36 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'content.setAttribute("aria-labelledby", `tab-${tab}`);',
         ),
     )
+
+
+def test_operator_onboarding_static_contract_syncs_create_action_state() -> None:
+    onboarding = _asset_text("/operator-onboarding.js")
+    main = _asset_text("/operator-main.js")
+
+    _assert_contains_all(
+        onboarding,
+        (
+            "function onboardingCanCreate()",
+            "function syncOnboardingCreateActionState()",
+            'document.getElementById("onboardingCreateForm")',
+            'form.querySelector(\'button[type="submit"]\')',
+            "button.disabled = !(onboardingCanCreate() && !state.onboarding.creating);",
+            'id="onboardingWorkItem"',
+            'id="onboardingRequest"',
+            'id="onboardingCreateForm"',
+        ),
+    )
+    _assert_contains_all(
+        main,
+        (
+            'event.target.id === "onboardingWorkItem"',
+            "state.onboarding.workItemInput = event.target.value;",
+            'event.target.id === "onboardingRequest"',
+            "state.onboarding.requestText = event.target.value;",
+            "syncOnboardingCreateActionState();",
+        ),
+    )
+    assert main.count("syncOnboardingCreateActionState();") == 2
 
 
 def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_contracts() -> None:
@@ -702,6 +735,8 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "data-next-flow-action",
             "Select a runtime to start the first governed workflow run.",
             "data-first-launch-run",
+            "data-first-launch-stage",
+            "Run selected stage",
             "function renderNextActionPanel()",
             "Resume workflow",
             "Continue with ${stageTitle(action.stage || state.activeStage)}",
@@ -923,6 +958,8 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             "/api/open-folder",
             "/api/server/stop",
             'event.target.closest("[data-first-launch-run]")',
+            'event.target.closest("[data-first-launch-stage]")',
+            "await startStage(state.activeStage);",
             'closest("[data-setup-mode]")',
             "requestedMode.requiresPreviousRun",
             "setupPreviousRunContext().available",
