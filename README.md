@@ -14,7 +14,7 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 
 ## Alpha status and safety
 
-Latest published prerelease: `0.1.0a7`.
+Latest published prerelease: `0.1.0a8`.
 The `main` branch is development source and may contain unreleased changes.
 
 AIDD is alpha software for local evaluation and controlled operator trials. It is not
@@ -54,7 +54,7 @@ Claude Code, Codex, OpenCode, or other runtime CLIs separately.
 Install the latest published prerelease:
 
 ```bash
-pipx install "ai-driven-dev-v2==0.1.0a7"
+pipx install "ai-driven-dev-v2==0.1.0a8"
 aidd --version
 aidd doctor
 ```
@@ -64,7 +64,7 @@ aidd doctor
 Install the latest published prerelease:
 
 ```bash
-uv tool install "ai-driven-dev-v2==0.1.0a7"
+uv tool install "ai-driven-dev-v2==0.1.0a8"
 aidd --version
 aidd doctor
 ```
@@ -87,7 +87,7 @@ uv run aidd --version
 uv run aidd doctor
 ```
 
-The latest published prerelease with accepted install evidence is `v0.1.0a7`. Source
+The latest published prerelease with accepted install evidence is `v0.1.0a8`. Source
 checkouts from `main` may contain unreleased changes; future release candidates must again
 pass GitHub Release, PyPI publish, `pipx`, and `uv tool` verification before they are
 accepted.

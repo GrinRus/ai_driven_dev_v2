@@ -132,8 +132,8 @@ uv tool uninstall ai-driven-dev-v2
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a8.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a7`.
+Maintainer source development package version: `0.1.0a9.dev0`.
+Latest accepted published prerelease evidence: `0.1.0a8`.
 
 No current release candidate is accepted from this development version. Future release
 candidates must again use a unique `release/v<project.version>` branch, a GitHub Release
@@ -172,6 +172,27 @@ does not replace GitHub Release, PyPI, `pipx`, or `uv tool` verification.
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a8` accepted evidence on 2026-06-04
+
+- Tag: `v0.1.0a8`
+- Release branch: `release/v0.1.0a8`
+- Commit: `1b65dbded7ab55ddc8ef8ef8a823f5674f83c20a`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a8`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/26936369016`
+- Result: accepted release/install evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: release tag `v0.1.0a8` matched `project.version` `0.1.0a8`, and the
+  release tag commit matched the remote `release/v0.1.0a8` branch HEAD.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a8/`.
+- `pipx` verification installed `ai-driven-dev-v2==0.1.0a8`; `aidd --version` returned
+  `aidd 0.1.0a8`, and `aidd doctor` reported `Version 0.1.0a8`. The GitHub workflow used
+  `python -m pipx`; the independent local smoke used an isolated `uv tool run --from pipx`
+  runner because local `python3 -m pipx` was unavailable.
+- `uv tool` verification installed `ai-driven-dev-v2==0.1.0a8`; `aidd --version` returned
+  `aidd 0.1.0a8`, and `aidd doctor` reported `Version 0.1.0a8`.
+- No Docker/GHCR artifact is part of the supported `v0.1.0a8` release contract.
 
 ### `v0.1.0a7` accepted evidence on 2026-06-02
 
