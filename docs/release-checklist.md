@@ -174,21 +174,18 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a9.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a8`.
+Current release-candidate package version: `0.1.0a9`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a8`.
 
-No current release candidate is accepted from this development version. Future release
-candidates must again use a unique `release/v<project.version>` branch, a GitHub Release
-`published` event, PyPI publish, `pipx`, and `uv tool` verification before they become
-accepted package-channel evidence.
+This release candidate is not accepted package-channel evidence until GitHub Release
+publication, PyPI publishing, `pipx`, and `uv tool` verification all pass. The accepted `v0.1.0a9` evidence log entry is intentionally pending until post-publish verification.
 
-### Next prerelease readiness note for `0.1.0a9.dev0`
+### Release candidate readiness note for `0.1.0a9`
 
-This source version is a development line only. It is not a release candidate until
-maintainers intentionally change `project.version` to the next unique prerelease version
-on a `release/v<version>` branch.
+This branch sets `project.version` to `0.1.0a9` for the `release/v0.1.0a9` candidate.
+The tag and PyPI version must not exist before draft release creation and publication.
 
-Post-`v0.1.0a8` evidence now recorded on `main`:
+Post-`v0.1.0a8` evidence included in this candidate:
 
 - post-release evidence PR #65 was merged and `main` is back on `0.1.0a9.dev0`;
 - Wave 27 UI-first onboarding work was reconciled as shipped or superseded against the
@@ -310,16 +307,16 @@ Required gates for the next prerelease remain unchanged:
 
 Wave 30 go/no-go input for `v0.1.0a9` candidate preparation:
 
-- Security posture: go after this branch merges and Dependabot re-evaluates the patched
-  lockfile; no alert was left untriaged.
+- Security posture: go; Dependabot re-evaluated the patched lockfile and no alert was
+  left untriaged.
 - Deterministic source UI smoke: go for clean onboarding, explicit runtime requirement,
   selected-stage `idea -> research`, logs, timeline, artifacts, and terminal job cleanup.
 - Provider/browser evidence: Wave 29 all-pass source evidence exists for Codex, Claude
   Code, OpenCode, optional Qwen, and Manual+Browser operator surfaces, but any release
   candidate notes must cite fresh candidate-specific evidence if they make a beta-oriented
   claim.
-- Release action: no-go for `release/v0.1.0a9`, draft prerelease, or publish until a
-  separate explicit approval starts release preparation.
+- Release action: go for release branch, dry-runs, and draft prerelease; no-go for
+  publication until a separate explicit publish approval is given.
 
 W24 manual live evidence refresh on 2026-05-24:
 

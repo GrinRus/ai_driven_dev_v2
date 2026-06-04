@@ -16,6 +16,8 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 
 Latest published prerelease: `0.1.0a8`.
 The `main` branch is development source and may contain unreleased changes.
+Current release-candidate package version on this branch: `0.1.0a9`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a8`.
 
 AIDD is alpha software for local evaluation and controlled operator trials. It is not
 ready for unattended production automation. AIDD launches external runtime CLIs against a
@@ -92,10 +94,9 @@ uv run aidd --version
 uv run aidd doctor
 ```
 
-The latest published prerelease with accepted install evidence is `v0.1.0a8`. Source
-checkouts from `main` may contain unreleased changes; future release candidates must again
-pass GitHub Release, PyPI publish, `pipx`, and `uv tool` verification before they are
-accepted.
+The latest published prerelease with accepted install evidence is `v0.1.0a8`. This branch
+is the `v0.1.0a9` release candidate only; it must still pass GitHub Release, PyPI publish,
+`pipx`, and `uv tool` verification before it is accepted.
 
 ## Run your first local workflow
 

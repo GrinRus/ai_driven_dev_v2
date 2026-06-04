@@ -7,6 +7,8 @@ stable compatibility window exists.
 
 ## Unreleased
 
+## 0.1.0a9 - 2026-06-04
+
 - Open the next development cycle after accepted `v0.1.0a8` release evidence.
 - Reconcile UI-first onboarding roadmap state with the shipped `v0.1.0a7`/`v0.1.0a8`
   operator path and add post-a8 audit evidence for clean UI onboarding.

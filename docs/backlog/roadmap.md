@@ -5608,7 +5608,7 @@ Primary outputs:
 - CI/CD guardrails that exclude live E2E
 - source-installed local-project smoke verification
 - release-readiness notes for latest accepted `0.1.0a8` package-channel evidence and
-  `0.1.0a9.dev0` source development state
+  `0.1.0a9` source development state
 
 Touched areas:
 
@@ -5633,7 +5633,7 @@ Local tasks:
 - `W24-E1-S1-T3` (done) Verify the source-installed local-project smoke fixture runtime
   path and cover the workspace-relative command with scenario-loader regression checks.
 - `W24-E1-S1-T4` (done) Prepare release-readiness notes for the accepted `0.1.0a8`
-  package-channel evidence and post-release `0.1.0a9.dev0` source development state
+  package-channel evidence and post-release `0.1.0a9` source development state
   without creating a tag or
   publishing artifacts.
 
@@ -5655,7 +5655,7 @@ Evidence:
   `run idea->plan`, `run show`, `run logs`, `run artifacts`, and `stage questions`.
 - `docs/release-notes-v0.1.0a8-draft.md` and `docs/analysis/beta-readiness-source-audit.md`
   record the latest accepted `0.1.0a8` package-channel evidence and current
-  `0.1.0a9.dev0` source development state; accepted package-channel evidence is recorded
+  `0.1.0a9` source development state; accepted package-channel evidence is recorded
   in `docs/release-checklist.md`.
 
 Exit evidence:
@@ -8121,10 +8121,10 @@ Exit evidence:
 - maintainers have a current release-candidate decision input;
 - README and release docs do not imply that `0.1.0a9` is already published.
 
-### Epic W30-E3 — approved release preparation (`blocked`)
+### Epic W30-E3 — approved release preparation (`in progress`)
 Linked stories: `US-09`, `US-10`
 
-#### Slice W30-E3-S1 — `v0.1.0a9` release branch and dry-runs (`blocked`)
+#### Slice W30-E3-S1 — `v0.1.0a9` release branch and dry-runs (`in progress`)
 Goal: only after explicit maintainer approval, create the release candidate branch,
 prepare the draft prerelease, and run remote dry-runs without bypassing the established
 GitHub Release published-event model.
@@ -8146,11 +8146,11 @@ Dependencies:
 
 - completed `W30-E1-S1`
 - completed `W30-E2-S1`
-- separate explicit approval to start release preparation
+- explicit approval to start release preparation
 
 Local tasks:
 
-- `W30-E3-S1-T1` (blocked) Prepare the `v0.1.0a9` release branch and draft prerelease
+- `W30-E3-S1-T1` (in progress) Prepare the `v0.1.0a9` release branch and draft prerelease
   after explicit approval.
   - Scope: release preparation only.
   - Verification: local deterministic checks, `uv build`, remote CI/release dry-runs,
@@ -8185,3 +8185,7 @@ Sync notes:
   `job-52f8e71e3a564672becae1084bf27d71` with job status `completed`, stage rail status
   `succeeded`, fixture runtime logs, seven timeline events per stage, and expected
   Markdown artifacts. Release prep remains blocked on separate explicit approval.
+- `2026-06-04` Release-prep approval moved `W30-E3-S1-T1` into progress for candidate
+  branch `release/v0.1.0a9`, exact version `0.1.0a9`, local deterministic gate, remote
+  `ci.yml`/`release.yml` dry-runs, and draft prerelease creation. Publication remains
+  blocked until a separate explicit publish approval.
