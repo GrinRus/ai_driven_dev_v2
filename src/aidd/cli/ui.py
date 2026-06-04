@@ -84,6 +84,7 @@ from aidd.core.remediation import (
 )
 from aidd.core.repository_diff import resolve_repository_diff
 from aidd.core.run_accountability import resolve_run_accountability
+from aidd.core.run_comparison import resolve_run_comparison
 from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
 from aidd.core.run_store import (
     next_attempt_number,
@@ -1610,6 +1611,20 @@ class OperatorUiService:
             run_id=self._selected_run_id_from_params(params),
         )
 
+    def _run_comparison(self, params: dict[str, list[str]]) -> object:
+        baseline_run_id = _first_param(params, "baseline_run_id")
+        target_run_id = _first_param(params, "target_run_id")
+        if not baseline_run_id:
+            raise ValueError("baseline_run_id is required.")
+        if not target_run_id:
+            raise ValueError("target_run_id is required.")
+        return resolve_run_comparison(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            baseline_run_id=baseline_run_id,
+            target_run_id=target_run_id,
+        )
+
     def _repository_diff(self, params: dict[str, list[str]]) -> object:
         stage = _first_param(params, "stage", "implement")
         if stage != "implement":
@@ -1889,6 +1904,8 @@ class OperatorUiService:
                 return _json_response(self._run_timeline(params))
             if path == "/api/run/accountability":
                 return _json_response(self._run_accountability(params))
+            if path == "/api/run/comparison":
+                return _json_response(self._run_comparison(params))
             if path == "/api/repository/diff":
                 return _json_response(self._repository_diff(params))
             if path == "/api/implement/evidence":

@@ -2105,6 +2105,75 @@ def test_ui_operator_control_center_endpoints_return_structured_views(
     assert qa["quality_verdict"] == "not-ready"
 
 
+def test_ui_run_comparison_endpoint_is_bounded_and_work_item_scoped(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    for run_id, status, text in (
+        ("run-a", "blocked", "baseline input\n"),
+        ("run-b", "succeeded", "target input\n"),
+    ):
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            runtime_id="generic-cli",
+            stage_target="plan",
+            config_snapshot={"mode": "comparison-test"},
+        )
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            stage="plan",
+        )
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            stage="plan",
+            status=status,
+        )
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            stage="plan",
+            attempt_number=1,
+        ).joinpath("input-bundle.md").write_text(text, encoding="utf-8")
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-OTHER",
+        run_id="run-other",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "comparison-test"},
+    )
+    service = _service(workspace_root)
+
+    missing = service.handle_get("/api/run/comparison", {"target_run_id": ["run-b"]})
+    assert "baseline_run_id is required" in _error_payload(missing)["error"]  # type: ignore[operator]
+    payload = _payload(
+        service.handle_get(
+            "/api/run/comparison",
+            {"baseline_run_id": ["run-a"], "target_run_id": ["run-b"]},
+        )
+    )
+    assert payload["baseline"]["run_id"] == "run-a"  # type: ignore[index]
+    assert payload["target"]["run_id"] == "run-b"  # type: ignore[index]
+    stage_delta = next(
+        item for item in payload["stage_status_deltas"] if item["stage"] == "plan"  # type: ignore[index]
+    )
+    assert stage_delta["status"] == "changed"
+    assert stage_delta["baseline_status"] == "blocked"
+    assert stage_delta["target_status"] == "succeeded"
+
+    cross_work_item = service.handle_get(
+        "/api/run/comparison",
+        {"baseline_run_id": ["run-a"], "target_run_id": ["run-other"]},
+    )
+    assert cross_work_item.status == 400
+    assert "run-other" in _error_payload(cross_work_item)["error"]  # type: ignore[operator]
+
+
 def test_ui_remediation_launch_requires_runtime_before_request_creation(
     tmp_path: Path,
 ) -> None:

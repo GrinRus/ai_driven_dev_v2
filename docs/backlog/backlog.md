@@ -6,12 +6,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W29-E4-S1-T4` Add a bounded run-to-run comparison view for prompt and artifact drift.
-
-## Soon
-
 - `W29-E7-S1-T3` Prepare beta-oriented release note criteria after provider and browser
   evidence plus run comparison are available.
+
+## Soon
 
 ## Parking lot
 
@@ -375,3 +373,7 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   blockers, and runtime readiness. No repeatable AIDD-owned browser UX defect was found,
   so `W29-E2-S1-T4` is superseded for this pass. Active queue advances to
   `W29-E4-S1-T4`; `W29-E7-S1-T3` moves to `Soon` after comparison work.
+- `2026-06-04` Completed `W29-E4-S1-T4`: added a read-only core/UI run comparison
+  surface for two run ids in the active work item, covering prompt hash, stage status,
+  bounded artifact hash, and validator outcome deltas with legacy/unsafe-path warnings.
+  Active queue advances to beta-oriented release note criteria `W29-E7-S1-T3`.

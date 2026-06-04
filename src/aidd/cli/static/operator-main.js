@@ -133,6 +133,10 @@ document.addEventListener("click", async (event) => {
       await renderCockpit();
       return;
     }
+    if (event.target.closest("[data-run-comparison-refresh]")) {
+      await loadRunComparisonPanel();
+      return;
+    }
     if (event.target.closest("[data-next-flow-confirm-preview]")) {
       await loadLaunchConfirmation();
       return;
@@ -414,6 +418,11 @@ document.addEventListener("input", (event) => {
   }
   if (event.target.id === "operatorRequestText") {
     updateInterventionPreview();
+  }
+  if (event.target.id === "runComparisonBaseline") {
+    state.runComparisonBaselineInput = event.target.value;
+    state.runComparison = null;
+    state.runComparisonError = "";
   }
   if (
     event.target.closest("[data-follow-up-field]")

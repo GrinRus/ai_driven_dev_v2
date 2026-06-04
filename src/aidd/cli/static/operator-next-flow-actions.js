@@ -518,6 +518,187 @@ function renderLineageRows({run, lineage, candidates}) {
   `;
 }
 
+function defaultComparisonBaselineRunId(run, lineage) {
+  return lineage.source_run_id || lineage.baseline_id || run.run_id || "";
+}
+
+function comparisonBaselineRunId(run, lineage) {
+  return (state.runComparisonBaselineInput || defaultComparisonBaselineRunId(run, lineage)).trim();
+}
+
+function comparisonDeltasByStatus(items) {
+  const counts = {changed: 0, added: 0, removed: 0, same: 0};
+  (items || []).forEach((item) => {
+    const status = item.status || "same";
+    counts[status] = (counts[status] || 0) + 1;
+  });
+  return counts;
+}
+
+function renderComparisonStatusBadge(status) {
+  const normalized = status || "same";
+  const tone = normalized === "same" ? "good" : normalized === "changed" ? "warn" : "bad";
+  return `<span class="small-badge ${tone}">${escapeHtml(normalized)}</span>`;
+}
+
+function renderComparisonHash(value) {
+  return value ? escapeHtml(value.slice(0, 12)) : "not present";
+}
+
+function renderRunComparisonRows(items, mapper, emptyMessage) {
+  const rows = (items || []).filter((item) => item.status !== "same").slice(0, 8);
+  if (!rows.length) return `<div class="empty-state">${escapeHtml(emptyMessage)}</div>`;
+  return `
+    <table class="activity-table comparison-table">
+      <thead><tr><th>Item</th><th>Baseline</th><th>Target</th><th>Status</th></tr></thead>
+      <tbody>
+        ${rows.map(mapper).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderRunComparisonPanel() {
+  const run = state.dashboard?.run || {};
+  if (!run.run_id) return "";
+  const lineage = run.lineage || {};
+  const baselineRunId = comparisonBaselineRunId(run, lineage);
+  const targetRunId = run.run_id || "";
+  const loadedComparison = state.runComparison;
+  const comparison = loadedComparison
+    && loadedComparison.baseline?.run_id === baselineRunId
+    && loadedComparison.target?.run_id === targetRunId
+      ? loadedComparison
+      : null;
+  const error = state.runComparisonError;
+  const loading = state.runComparisonLoading;
+  const promptCounts = comparisonDeltasByStatus(comparison?.prompt_hash_deltas);
+  const stageCounts = comparisonDeltasByStatus(comparison?.stage_status_deltas);
+  const artifactCounts = comparisonDeltasByStatus(comparison?.artifact_hash_deltas);
+  const validatorCounts = comparisonDeltasByStatus(comparison?.validator_outcome_deltas);
+  return `
+    <section id="runComparisonPanel" class="surface run-comparison-panel">
+      <div class="surface-title">
+        <span>Run comparison</span>
+        <span class="small-badge">${escapeHtml(baselineRunId || "baseline")} -> ${escapeHtml(targetRunId || "target")}</span>
+      </div>
+      <div class="comparison-controls">
+        <label>
+          <span>Baseline run id</span>
+          <input id="runComparisonBaseline" type="text" value="${escapeHtml(baselineRunId)}" placeholder="run-..." autocomplete="off">
+        </label>
+        <button data-run-comparison-refresh type="button" ${loading ? "disabled" : ""}>Refresh comparison</button>
+      </div>
+      ${error ? `<div class="empty-state bad">${escapeHtml(error)}</div>` : ""}
+      ${loading ? `<div class="empty-state loading-state">Loading run comparison...</div>` : ""}
+      ${comparison ? `
+        ${renderWarnings(comparison.warnings)}
+        <div class="metric-grid">
+          <div class="metric"><span>Prompt drift</span><strong>${escapeHtml(promptCounts.changed + promptCounts.added + promptCounts.removed)}</strong></div>
+          <div class="metric"><span>Stage status drift</span><strong>${escapeHtml(stageCounts.changed + stageCounts.added + stageCounts.removed)}</strong></div>
+          <div class="metric"><span>Artifact drift</span><strong>${escapeHtml(artifactCounts.changed + artifactCounts.added + artifactCounts.removed)}</strong></div>
+          <div class="metric"><span>Validator drift</span><strong>${escapeHtml(validatorCounts.changed + validatorCounts.added + validatorCounts.removed)}</strong></div>
+        </div>
+        <div class="terminal-summary-grid">
+          <section>
+            <div class="surface-title compact">Prompt hash deltas</div>
+            ${renderRunComparisonRows(
+              comparison.prompt_hash_deltas,
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(item.path)}</td>
+                  <td>${renderComparisonHash(item.baseline_sha256)}</td>
+                  <td>${renderComparisonHash(item.target_sha256)}</td>
+                  <td>${renderComparisonStatusBadge(item.status)}</td>
+                </tr>
+              `,
+              "No prompt hash drift detected."
+            )}
+          </section>
+          <section>
+            <div class="surface-title compact">Stage status deltas</div>
+            ${renderRunComparisonRows(
+              comparison.stage_status_deltas,
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(item.stage)}</td>
+                  <td>${escapeHtml(item.baseline_status || "missing")}</td>
+                  <td>${escapeHtml(item.target_status || "missing")}</td>
+                  <td>${renderComparisonStatusBadge(item.status)}</td>
+                </tr>
+              `,
+              "No stage status drift detected."
+            )}
+          </section>
+          <section>
+            <div class="surface-title compact">Artifact hash deltas</div>
+            ${renderRunComparisonRows(
+              comparison.artifact_hash_deltas,
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(`${item.stage}/${item.kind}/${item.key}`)}</td>
+                  <td>${renderComparisonHash(item.baseline_sha256)}${item.baseline_truncated ? " truncated" : ""}</td>
+                  <td>${renderComparisonHash(item.target_sha256)}${item.target_truncated ? " truncated" : ""}</td>
+                  <td>${renderComparisonStatusBadge(item.status)}</td>
+                </tr>
+              `,
+              "No artifact hash drift detected."
+            )}
+          </section>
+          <section>
+            <div class="surface-title compact">Validator outcome deltas</div>
+            ${renderRunComparisonRows(
+              comparison.validator_outcome_deltas,
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(item.stage)}</td>
+                  <td>${escapeHtml(item.baseline_verdict || "missing")}</td>
+                  <td>${escapeHtml(item.target_verdict || "missing")}</td>
+                  <td>${renderComparisonStatusBadge(item.status)}</td>
+                </tr>
+              `,
+              "No validator outcome drift detected."
+            )}
+          </section>
+        </div>
+      ` : !loading && !error ? `<div class="empty-state">Run comparison has not loaded yet.</div>` : ""}
+    </section>
+  `;
+}
+
+async function loadRunComparisonPanel() {
+  const panel = document.getElementById("runComparisonPanel");
+  const run = state.dashboard?.run || {};
+  if (!panel || !run.run_id) return;
+  const lineage = run.lineage || {};
+  const baselineRunId = comparisonBaselineRunId(run, lineage);
+  const targetRunId = run.run_id;
+  if (!baselineRunId || !targetRunId) {
+    state.runComparison = null;
+    state.runComparisonError = "baseline and target run ids are required";
+    panel.outerHTML = renderRunComparisonPanel();
+    return;
+  }
+  state.runComparisonLoading = true;
+  state.runComparisonError = "";
+  panel.outerHTML = renderRunComparisonPanel();
+  const params = new URLSearchParams({
+    baseline_run_id: baselineRunId,
+    target_run_id: targetRunId
+  });
+  try {
+    state.runComparison = await api(`/api/run/comparison?${params.toString()}`);
+    state.runComparisonError = "";
+  } catch (error) {
+    state.runComparison = null;
+    state.runComparisonError = error.message || "run comparison unavailable";
+  } finally {
+    state.runComparisonLoading = false;
+    const updatedPanel = document.getElementById("runComparisonPanel");
+    if (updatedPanel) updatedPanel.outerHTML = renderRunComparisonPanel();
+  }
+}
+
 function renderRunHistory() {
   const run = state.dashboard?.run || {};
   if (!run.run_id) {
@@ -567,6 +748,7 @@ function renderRunHistory() {
         </section>
       </div>
     </section>
+    ${renderRunComparisonPanel()}
   `;
 }
 
