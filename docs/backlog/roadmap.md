@@ -6971,17 +6971,17 @@ Exit evidence:
 - docs preserve the distinction between local-project UI proof and public-repository live
   E2E checkpoint evidence.
 
-## Wave 27 — onboarding-first operator startup (`planned`)
+## Wave 27 — onboarding-first operator startup (`done`)
 
 Goal: make the first-run operator path UI-first while preserving the existing governed
 workflow, project-local `.aidd/` ownership, explicit runner selection, and CLI-equivalent
 provenance. Existing CLI subcommands and scripted flows remain compatible; onboarding
 extends the UI surface instead of replacing CLI operation.
 
-### Epic W27-E1 — onboarding UX and startup contract (`planned`)
+### Epic W27-E1 — onboarding UX and startup contract (`done`)
 Linked stories: `US-01`, `US-06`, `US-09`, `US-11`, `US-12`
 
-#### Slice W27-E1-S1 — onboarding-first contract (`planned`)
+#### Slice W27-E1-S1 — onboarding-first contract (`done`)
 Goal: define the UI-first startup flow before implementation changes the public command
 surface or workspace setup behavior.
 
@@ -7007,7 +7007,7 @@ Dependencies:
 
 Local tasks:
 
-- `W27-E1-S1-T1` Define the onboarding-first operator UI contract covering preserved CLI
+- `W27-E1-S1-T1` (done) Define the onboarding-first operator UI contract covering preserved CLI
   behavior, no-work-item `aidd ui`, optional explicit onboarding launcher, project root
   selection, `.aidd` workspace ownership, work-item create/resume, runner selection, and
   multi-project isolation.
@@ -7015,7 +7015,7 @@ Local tasks:
   - Verification: docs consistency or `rg` checks prove the contract names CLI
     compatibility requirements, the startup entrypoint, project root rules,
     runner-selection requirement, and multi-project boundary.
-- `W27-E1-S1-T2` Document the operator-facing UI-first startup path in README and the
+- `W27-E1-S1-T2` (done) Document the operator-facing UI-first startup path in README and the
   operator handbook without removing explicit CLI subcommand examples.
   - Scope: operator documentation only.
   - Verification: docs consistency tests prove README and handbook describe UI onboarding,
@@ -7030,10 +7030,10 @@ Exit evidence:
   CLI paths keep their existing behavior and examples;
 - unrelated projects stay isolated even if a launcher UI lists recent projects.
 
-### Epic W27-E2 — onboarding launch shell and project setup (`planned`)
+### Epic W27-E2 — onboarding launch shell and project setup (`done`)
 Linked stories: `US-09`, `US-11`, `US-12`
 
-#### Slice W27-E2-S1 — rootless UI launch (`planned`)
+#### Slice W27-E2-S1 — rootless UI launch (`done`)
 Goal: let the operator start the local UI before a work item exists while preserving the
 existing initialized-work-item command center path.
 
@@ -7056,23 +7056,23 @@ Dependencies:
 
 Local tasks:
 
-- `W27-E2-S1-T1` Allow `aidd ui` to start without `--work-item` and serve setup mode
+- `W27-E2-S1-T1` (done) Allow `aidd ui` to start without `--work-item` and serve setup mode
   before a project/work-item context exists.
   - Scope: local UI command options, server options, and setup-mode routing.
   - Verification: CLI UI tests prove no-work-item launch serves setup mode and existing
     `--work-item` launch still opens the command center.
-- `W27-E2-S1-T2` Add an explicit onboarding launcher only after the contract preserves bare
+- `W27-E2-S1-T2` (superseded) Add an explicit onboarding launcher only after the contract preserves bare
   `aidd`, `aidd --help`, and existing subcommand behavior.
-  - Scope: Typer command entrypoint only.
-  - Verification: CLI tests prove existing no-arg/help/subcommand behavior remains
-    unchanged and the explicit onboarding launcher reaches setup mode.
+  - Decision: no separate launcher is needed for the accepted path. `aidd ui` without
+    `--work-item` is the supported UI-first setup entrypoint, while bare `aidd` and
+    `aidd --help` keep their existing behavior.
 
 Exit evidence:
 
 - a new operator can run one command and reach the setup UI;
 - existing CLI workflows and help behavior keep their current command behavior.
 
-#### Slice W27-E2-S2 — project and work-item setup wizard (`planned`)
+#### Slice W27-E2-S2 — project and work-item setup wizard (`done`)
 Goal: create or resume project-local AIDD work from the UI without writing workflow
 artifacts outside the selected project root.
 
@@ -7097,18 +7097,18 @@ Dependencies:
 
 Local tasks:
 
-- `W27-E2-S2-T1` Add an onboarding service that validates a selected local project root,
+- `W27-E2-S2-T1` (done) Add an onboarding service that validates a selected local project root,
   resolves the project-local `.aidd` workspace, discovers existing work items, and rejects
   path escapes.
   - Scope: UI-neutral core onboarding service.
   - Verification: core tests cover valid roots, missing roots, file paths, parent escapes,
     symlink escapes, existing `.aidd`, and empty-project initialization.
-- `W27-E2-S2-T2` Render the Project Setup wizard for path entry, existing workspace
+- `W27-E2-S2-T2` (done) Render the Project Setup wizard for path entry, existing workspace
   detection, work-item create/resume, and request seeding.
   - Scope: packaged static UI setup screens and local UI endpoints.
   - Verification: UI tests cover setup rendering, validation errors, create/resume
     payloads, escaped paths, and no direct mutation of generated stage artifacts.
-- `W27-E2-S2-T3` Route completed setup into the existing command center with the selected
+- `W27-E2-S2-T3` (done) Route completed setup into the existing command center with the selected
   project root, work item, root, and config snapshot.
   - Scope: UI service context switching after setup completion.
   - Verification: UI tests prove the command center reads the selected `.aidd` workspace
@@ -7120,10 +7120,10 @@ Exit evidence:
 - existing `.aidd` work items can be resumed without creating duplicate workspaces;
 - selected project context is explicit in subsequent run requests.
 
-### Epic W27-E3 — runner selection during onboarding (`planned`)
+### Epic W27-E3 — runner selection during onboarding (`done`)
 Linked stories: `US-01`, `US-06`, `US-09`, `US-11`
 
-#### Slice W27-E3-S1 — mandatory runner selection (`planned`)
+#### Slice W27-E3-S1 — mandatory runner selection (`done`)
 Goal: make runner choice part of onboarding and every launch while keeping readiness
 observational and runtime-specific behavior inside adapters.
 
@@ -7148,17 +7148,17 @@ Dependencies:
 
 Local tasks:
 
-- `W27-E3-S1-T1` Expose runtime readiness for the selected project/config during
+- `W27-E3-S1-T1` (done) Expose runtime readiness for the selected project/config during
   onboarding before a work item run exists.
   - Scope: runtime readiness read model and local UI endpoint plumbing.
   - Verification: core/UI tests cover default and project config command sources,
     provider unavailable, execution command unavailable, and timeout profile display.
-- `W27-E3-S1-T2` Render onboarding runner selection cards and disable launch until the
+- `W27-E3-S1-T2` (done) Render onboarding runner selection cards and disable launch until the
   operator explicitly selects a ready or intentionally degraded runner.
   - Scope: packaged static onboarding UI.
   - Verification: UI tests cover ready, unavailable, degraded, and missing-selection
     states without hardcoded `generic-cli` fallback.
-- `W27-E3-S1-T3` Persist an optional project-local runner preference only as operator UI
+- `W27-E3-S1-T3` (done) Persist an optional project-local runner preference only as operator UI
   convenience while every workflow, stage, intervention, follow-up, and clone launch still
   sends an explicit runtime id.
   - Scope: UI preference storage and launch request construction.
@@ -7172,10 +7172,10 @@ Exit evidence:
   source of truth;
 - runner preference improves ergonomics without weakening run provenance.
 
-### Epic W27-E4 — multi-project onboarding boundaries (`planned`)
+### Epic W27-E4 — multi-project onboarding boundaries (`done`)
 Linked stories: `US-11`, `US-12`
 
-#### Slice W27-E4-S1 — project-set setup and project switching (`planned`)
+#### Slice W27-E4-S1 — project-set setup and project switching (`done`)
 Goal: support multi-root local work as declared project sets while keeping unrelated
 projects isolated from one another.
 
@@ -7202,16 +7202,16 @@ Dependencies:
 
 Local tasks:
 
-- `W27-E4-S1-T1` Add a project-set declaration step for multiple roots inside the
+- `W27-E4-S1-T1` (done) Add a project-set declaration step for multiple roots inside the
   selected local project, using the existing bounded project-set resolver.
   - Scope: onboarding UI and project-set config/write path.
   - Verification: tests cover stable ids, duplicate ids, duplicate roots, missing roots,
     parent escapes, symlink escapes, and `project-set.md` context persistence.
-- `W27-E4-S1-T2` Add a recent-project switcher as noncanonical UI cache while keeping
+- `W27-E4-S1-T2` (superseded) Add a recent-project switcher as noncanonical UI cache while keeping
   each active workflow, job, and `.aidd` workspace scoped to one selected project.
-  - Scope: local UI cache and context-switching guardrails.
-  - Verification: UI tests prove switching projects does not mix work items, logs,
-    runtime jobs, answers, or artifacts across project roots.
+  - Decision: recent unrelated project switching remains deferred. The shipped UI keeps
+    one active selected project/workspace per process and uses project-set declarations
+    for related roots inside that selected project.
 
 Exit evidence:
 
@@ -7222,10 +7222,10 @@ Exit evidence:
 - concurrent unrelated-project execution remains separated unless a later design adds a
   multi-context job registry.
 
-### Epic W27-E5 — onboarding evidence and rollout docs (`planned`)
+### Epic W27-E5 — onboarding evidence and rollout docs (`done`)
 Linked stories: `US-07`, `US-09`, `US-11`, `US-12`
 
-#### Slice W27-E5-S1 — onboarding local-project evidence (`planned`)
+#### Slice W27-E5-S1 — onboarding local-project evidence (`done`)
 Goal: prove the UI-first onboarding path with deterministic local fixtures and manual
 installed smoke instructions before treating it as the default operator entrypoint.
 
@@ -7249,19 +7249,19 @@ Dependencies:
 
 Local tasks:
 
-- `W27-E5-S1-T1` Add deterministic local UI onboarding coverage for project selection,
+- `W27-E5-S1-T1` (done) Add deterministic local UI onboarding coverage for project selection,
   work-item creation, runner readiness, bounded fixture execution, questions, logs, and
   artifacts.
   - Scope: service/static UI tests and fixture-backed smoke scenario updates.
   - Verification: focused pytest and scenario-loader tests prove the onboarding fixture
     path without provider credentials.
-- `W27-E5-S1-T2` Record the source-installed manual onboarding smoke path and cleanup
+- `W27-E5-S1-T2` (done) Record the source-installed manual onboarding smoke path and cleanup
   rules for generated `.aidd` state.
   - Scope: E2E/operator docs only.
   - Verification: docs consistency tests assert the smoke checklist names setup URL,
     selected project root, work item, runtime id, browser/viewport, evidence files, and
     cleanup rules.
-- `W27-E5-S1-T3` Add troubleshooting notes for invalid project roots, missing runtime
+- `W27-E5-S1-T3` (done) Add troubleshooting notes for invalid project roots, missing runtime
   binaries, unauthenticated providers, unavailable execution commands, and stale UI
   project preferences.
   - Scope: operator troubleshooting docs only.
@@ -7280,3 +7280,226 @@ Sync notes:
   `W27-E1-S1-T1` is promoted to `Next`, `W27-E1-S1-T2` and `W27-E2-S1-T1` are promoted
   to `Soon`, and the remaining implementation/evidence tasks stay in `Parking lot` until
   the onboarding contract is accepted.
+- `2026-06-04` Wave 27 was reconciled after accepted `v0.1.0a7` and `v0.1.0a8`
+  release evidence. The supported path is `aidd ui` without `--work-item`; the optional
+  explicit launcher and unrelated recent-project switcher are superseded/deferred rather
+  than active requirements. UI onboarding, explicit runner selection, command-center
+  handoff, bounded selected-stage run, operator-control-center visibility, and rollout
+  docs are shipped.
+
+---
+
+## Wave 28 — post-a8 operator hardening and release ergonomics (`done`)
+
+Goal: keep the newly published UI-first operator path honest by auditing the installed
+package, hardening the next source smoke lane, and tightening maintainer release
+ergonomics without changing CLI compatibility or release immutability.
+
+### Epic W28-E1 — post-release closure and evidence (`done`)
+Linked stories: `US-07`, `US-09`, `US-11`
+
+#### Slice W28-E1-S1 — accepted-release closure (`done`)
+Goal: finish the post-`v0.1.0a8` release bookkeeping and prove `main` is ready for the
+next development slice.
+
+Primary outputs:
+
+- release evidence PR merged into `main`
+- local `main` synchronized to the accepted post-release version
+- release branch/tag traceability retained
+
+Touched areas:
+
+- GitHub PR/release state
+- `docs/release-checklist.md`
+- `pyproject.toml`
+- `uv.lock`
+
+Dependencies:
+
+- accepted `v0.1.0a8` GitHub Release and PyPI evidence
+
+Local tasks:
+
+- `W28-E1-S1-T1` (done) Merge the post-`v0.1.0a8` release evidence PR after CI is green.
+  - Scope: GitHub release-follow-up PR only.
+  - Verification: PR merge evidence shows green CI, `main` is at `0.1.0a9.dev0`, and
+    `docs/release-checklist.md` records the accepted `v0.1.0a8` package evidence.
+- `W28-E1-S1-T2` (done) Document PATH-safe GitHub CLI release operations for local maintainer
+  shells where `gh` is installed outside the default `PATH`.
+  - Scope: release documentation only.
+  - Verification: docs checks prove the release checklist names `command -v gh`,
+    explicit binary fallback, and no direct tag-push release trigger.
+
+Exit evidence:
+
+- release evidence is on `main`;
+- maintainers can run release checks even when the GitHub CLI binary is not in the
+  interactive shell `PATH`.
+
+Sync notes:
+
+- `2026-06-04` `W28-E1-S1` completed: PR #65 was merged into `main`, source development
+  is back on `0.1.0a9.dev0`, accepted `v0.1.0a8` evidence remains recorded, and the
+  release checklist now includes a PATH-safe GitHub CLI fallback for maintainer shells.
+
+### Epic W28-E2 — published UI onboarding audit (`done`)
+Linked stories: `US-07`, `US-09`, `US-11`
+
+#### Slice W28-E2-S1 — installed package clean UI smoke (`done`)
+Goal: verify the published package path, not the source checkout, can install and run
+clean UI onboarding through the first bounded stages.
+
+Primary outputs:
+
+- disposable `/tmp` published-package audit transcript
+- API/UI evidence for setup mode, runner selection, stage runs, logs, timeline, artifacts
+- defect intake when published behavior differs from docs
+
+Touched areas:
+
+- manual audit evidence outside the source checkout
+- `docs/e2e/operator-ui-local-project.md`
+- `docs/backlog/`
+
+Dependencies:
+
+- `W28-E1-S1`
+- accepted `ai-driven-dev-v2==0.1.0a8` on PyPI
+
+Local tasks:
+
+- `W28-E2-S1-T1` (done) Run a published `ai-driven-dev-v2==0.1.0a8` clean UI onboarding smoke
+  from an isolated `uv tool`/`pipx` install.
+  - Scope: disposable audit workspace outside the repo.
+  - Verification: audit transcript records `aidd 0.1.0a8`, setup-required state,
+    project-local work-item creation, explicit `generic-cli` selection, successful
+    `idea` and `research` selected-stage jobs, logs, timeline, artifacts, and cleanup.
+- `W28-E2-S1-T2` (done) Record any published-package UI defects as next-prerelease tasks without
+  rewriting `v0.1.0a8`.
+  - Scope: planning documents only.
+  - Verification: each recorded defect has exact repro, expected/actual behavior,
+    affected UI/API surface, and one reviewable fix task.
+
+Exit evidence:
+
+- the published package onboarding claim is revalidated after release;
+- generated `.aidd` state remains outside the source repository;
+- any defect found in the immutable release has a next-version fix path.
+
+Sync notes:
+
+- `2026-06-04` `W28-E2-S1` completed with disposable audit root
+  `/tmp/aidd-a8-ui-audit-20260604T081222Z`. Isolated `uv tool` install and isolated
+  `pipx run` both returned `aidd 0.1.0a8`; release tag clone resolved to
+  `1b65dbded7ab55ddc8ef8ef8a823f5674f83c20a`; `aidd ui` served setup mode without
+  `--work-item`; `/api/dashboard` blocked before setup; onboarding created
+  `WI-A8-UI-SMOKE`; `/api/stage/run` without runtime returned `runtime is required.`;
+  explicit `generic-cli` selected-stage runs completed `idea` and `research` in
+  `run-20260604T081502Z`; stage rail reported both stages `succeeded`; live and
+  persisted logs contained `fixture-runtime stage=idea` and
+  `fixture-runtime stage=research`; timeline and Markdown artifact endpoints were
+  readable. No published-package UI defect was found, so no next-prerelease defect task
+  was added from this audit.
+
+### Epic W28-E3 — source operator control smoke (`done`)
+Linked stories: `US-02`, `US-03`, `US-06`, `US-11`
+
+#### Slice W28-E3-S1 — source checkout control-center smoke (`done`)
+Goal: verify the next development source keeps the operator-control-center surfaces usable
+after onboarding and selected-stage execution.
+
+Primary outputs:
+
+- deterministic source checkout smoke for long-run visibility, implement diff review,
+  structured review/QA, remediation, and stale downstream rerun
+- focused regression fixes for any source-only defect found
+
+Touched areas:
+
+- `tests/cli/`
+- `tests/core/`
+- `src/aidd/cli/static/`
+- `src/aidd/core/`
+- `docs/e2e/operator-ui-local-project.md`
+
+Dependencies:
+
+- `W28-E2-S1`
+
+Local tasks:
+
+- `W28-E3-S1-T1` (done) Run a source checkout UI smoke that exercises Active Run, Timeline,
+  Implement Review, Review Findings, QA Verdict, and remediation backflow on a disposable
+  fixture project.
+  - Scope: local manual/source smoke evidence only.
+  - Verification: smoke notes show terminal job cleanup, real timeline milestones,
+    source diff separated from `.aidd` artifacts, parsed review/QA summaries, stale
+    downstream badges, and explicit rerun of `review -> qa`.
+- `W28-E3-S1-T2` (superseded) Fix the first confirmed source-only operator-control-center defect from
+  the W28 smoke.
+  - Decision: the W28 source smoke and focused deterministic checks found no source-only
+    operator-control-center defect requiring a fix task.
+
+Exit evidence:
+
+- post-a8 source remains compatible with the published operator path;
+- remediation and stale downstream behavior are checked through an operator-facing lane.
+
+Sync notes:
+
+- `2026-06-04` `W28-E3-S1` completed with disposable source smoke root
+  `/tmp/aidd-a8-source-control-smoke-20260604T082001Z`. Source `aidd 0.1.0a9.dev0`
+  served a seeded `WI-UI` command center; dashboard surfaced rejected review findings as
+  next action; Implement diff showed tracked `app.py` plus untracked project files while
+  keeping `.aidd` artifacts separate; implementation evidence parsed `TASK-1`; review
+  findings parsed `RV-1`; QA verdict parsed `not-ready`; remediation request creation
+  succeeded and remediation launch without runtime returned `runtime is required.` The
+  focused source checks in `tests/cli/test_ui.py` for operator-control endpoints,
+  remediation launch, stale downstream marking, QA-risk requests, and downstream rerun
+  passed together with `tests/cli/test_ui_assets_contracts.py`. No source-only defect was
+  found.
+
+### Epic W28-E4 — next prerelease readiness (`done`)
+Linked stories: `US-07`, `US-09`, `US-10`
+
+#### Slice W28-E4-S1 — next alpha readiness checklist (`done`)
+Goal: prepare the next prerelease decision with a clean list of verified fixes and open
+operator risks.
+
+Primary outputs:
+
+- next-prerelease readiness note
+- updated release checklist placeholders for the next candidate
+- local deterministic check evidence
+
+Touched areas:
+
+- `docs/release-checklist.md`
+- `CHANGELOG.md`
+- `README.md`
+- `docs/backlog/`
+
+Dependencies:
+
+- `W28-E3-S1`
+
+Local tasks:
+
+- `W28-E4-S1-T1` (done) Write the next-prerelease readiness note summarizing shipped post-a8
+  fixes, remaining operator risks, and required release gates.
+  - Scope: release-facing docs only.
+  - Verification: docs consistency tests pass and the note keeps published release claims
+    separate from source development version claims.
+
+Exit evidence:
+
+- maintainers have a bounded go/no-go input for the next prerelease;
+- deterministic checks and manual operator evidence remain separate from publish gates.
+
+Sync notes:
+
+- `2026-06-04` `W28-E4-S1` completed: `CHANGELOG.md` records the unreleased
+  roadmap/audit/release-ergonomics updates, and `docs/release-checklist.md` now has a
+  next-prerelease readiness note for `0.1.0a9.dev0` with post-a8 evidence, remaining
+  operator risks, and unchanged release gates. Wave 28 is closed.

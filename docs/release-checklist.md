@@ -23,6 +23,22 @@ uv run --extra dev pytest -q
 uv run aidd doctor
 ```
 
+- [ ] GitHub CLI is available to the maintainer shell. If `command -v gh` is empty but
+  Homebrew installed the binary, use an explicit path for the release session, for
+  example:
+
+```bash
+command -v gh || true
+/opt/homebrew/bin/gh --version
+GH_CLI="${GH_CLI:-/opt/homebrew/bin/gh}"
+"${GH_CLI}" auth status
+```
+
+  Use `"${GH_CLI}" ...` for `pr`, `workflow`, `run`, and `release` commands in that
+  shell. This is only a local maintainer ergonomics fallback; it does not change the
+  release trigger. Releases still publish only through a GitHub Release `published`
+  event, and direct tag-push publishing remains forbidden.
+
 - [ ] Source-of-truth audit is current for the release-prep slice:
   `README.md`, `docs/product/user-stories.md`, and
   `docs/architecture/target-architecture.md` match the code and release claims.
@@ -139,6 +155,49 @@ No current release candidate is accepted from this development version. Future r
 candidates must again use a unique `release/v<project.version>` branch, a GitHub Release
 `published` event, PyPI publish, `pipx`, and `uv tool` verification before they become
 accepted package-channel evidence.
+
+### Next prerelease readiness note for `0.1.0a9.dev0`
+
+This source version is a development line only. It is not a release candidate until
+maintainers intentionally change `project.version` to the next unique prerelease version
+on a `release/v<version>` branch.
+
+Post-`v0.1.0a8` evidence now recorded on `main`:
+
+- post-release evidence PR #65 was merged and `main` is back on `0.1.0a9.dev0`;
+- Wave 27 UI-first onboarding work was reconciled as shipped or superseded against the
+  accepted `v0.1.0a7` and `v0.1.0a8` release evidence;
+- release docs include a PATH-safe GitHub CLI fallback for shells where `gh` is installed
+  outside the default `PATH`;
+- published-package audit installed `ai-driven-dev-v2==0.1.0a8` through isolated
+  `uv tool` and `pipx` paths, started clean `aidd ui` onboarding, created
+  `WI-A8-UI-SMOKE`, explicitly selected `generic-cli`, and completed `idea` plus
+  `research` selected-stage jobs with logs, timeline, artifacts, and no runtime fallback;
+- source control-center smoke against `0.1.0a9.dev0` checked Implement diff, structured
+  implementation/review/QA parsing, remediation request creation, explicit runtime gate,
+  and deterministic remediation/stale-downstream service coverage.
+
+Known operator risks before cutting the next prerelease:
+
+- W28 evidence used deterministic `generic-cli` and seeded source workspaces; real
+  provider auth/runtime behavior still belongs to the manual live lane when maintainers
+  need provider-specific confidence.
+- Browser automation was not available in this local shell, so the W28 smoke evidence is
+  API/static-contract based rather than screenshot based.
+- The local shell lacked a `python` alias; the published-package fixture used
+  `/usr/bin/python3` explicitly. This is an environment note, not a hidden AIDD runtime
+  fallback.
+
+Required gates for the next prerelease remain unchanged:
+
+- update release-facing notes for the exact candidate version before branching;
+- run locked local deterministic checks: `ruff`, `mypy`, full `pytest`, and `uv build`;
+- create a unique `release/v<version>` branch and run remote `ci.yml` plus
+  `release.yml` dry-runs;
+- create a draft GitHub prerelease targeting the release branch;
+- publish only after explicit approval through the GitHub Release `published` event;
+- verify PyPI, `pipx`, and `uv tool` installability before accepting the release
+  evidence.
 
 W24 manual live evidence refresh on 2026-05-24:
 
