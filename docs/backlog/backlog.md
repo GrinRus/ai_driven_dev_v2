@@ -6,59 +6,28 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W29-E1-S1-T1` Define the real-provider UI E2E acceptance matrix for `codex`,
-  `claude-code`, `opencode`, and optional `qwen` runs through clean UI onboarding.
+- `W29-E1-S2-T1` Run the Codex clean UI onboarding smoke through at least
+  `idea -> research` and record evidence or a provider-auth blocker.
 
 ## Soon
 
-- `W29-E1-S1-T2` Add the provider readiness preflight checklist for UI-first smokes.
-- `W29-E2-S1-T1` Define the browser-verified operator UI smoke checklist for onboarding,
-  runner cards, selected-stage launch, Active Run, Timeline, Implement Review, Review
-  Findings, QA Verdict, and remediation.
-- `W29-E7-S1-T1` Define the beta-readiness acceptance matrix for install, clean UI
-  onboarding, real provider execution, operator remediation, project-set boundaries,
-  docs, security posture, and release evidence.
+- `W29-E2-S1-T2` Add a browser-driven local UI smoke for clean onboarding and
+  selected-stage launch against the deterministic fixture.
+- `W29-E2-S1-T3` Capture browser screenshots for the primary operator control center
+  states.
+- `W29-E1-S2-T5` Write a provider UI failure triage matrix from the completed smokes.
 
 ## Parking lot
 
-- `W29-E1-S2-T1` Run the Codex clean UI onboarding smoke through at least
-  `idea -> research` and record evidence or a provider-auth blocker.
 - `W29-E1-S2-T2` Run the Claude Code clean UI onboarding smoke through at least
   `idea -> research` and record evidence or a provider-auth blocker.
 - `W29-E1-S2-T3` Run the OpenCode clean UI onboarding smoke through at least
   `idea -> research` and record evidence or a provider-auth blocker.
 - `W29-E1-S2-T4` Run the Qwen clean UI onboarding smoke through at least
   `idea -> research` when the experimental runtime is locally authenticated.
-- `W29-E1-S2-T5` Write a provider UI failure triage matrix from the completed smokes.
-- `W29-E2-S1-T2` Add a browser-driven local UI smoke for clean onboarding and
-  selected-stage launch against the deterministic fixture.
-- `W29-E2-S1-T3` Capture browser screenshots for the primary operator control center
-  states.
 - `W29-E2-S1-T4` Convert the first repeatable browser UX defect into a targeted fix task
   after evidence exists.
-- `W29-E3-S1-T1` Define the project-set UI behavior contract for declared roots,
-  per-root ownership, and unrelated-project boundaries.
-- `W29-E3-S1-T2` Expose per-root artifact and source-diff grouping in the operator read
-  model.
-- `W29-E3-S1-T3` Render project-set grouping and out-of-scope warnings in the operator
-  UI.
-- `W29-E3-S1-T4` Add deterministic project-set UI regression coverage.
-- `W29-E4-S1-T1` Define the prompt/workflow accountability contract for the operator UI.
-- `W29-E4-S1-T2` Expose prompt hash and workflow input provenance in a core
-  run-accountability read model.
-- `W29-E4-S1-T3` Render prompt/workflow provenance in the operator UI.
 - `W29-E4-S1-T4` Add a bounded run-to-run comparison view for prompt and artifact drift.
-- `W29-E5-S1-T1` Define the runtime approval UX contract for pending, approved, denied,
-  expired, and policy-blocked requests.
-- `W29-E5-S1-T2` Render sensitive command and denied request panels in the operator UI.
-- `W29-E5-S1-T3` Add approval audit trail API coverage for operator UI reads.
-- `W29-E6-S1-T1` Add a PATH-safe release preflight helper for `uv`, `gh`, source
-  version, branch, tag absence, and PyPI version absence checks.
-- `W29-E6-S1-T2` Add a release evidence collector for workflow, PyPI, `pipx`, and
-  `uv tool` verification links.
-- `W29-E6-S1-T3` Update the next prerelease checklist to use the preflight and evidence
-  collector.
-- `W29-E7-S1-T2` Reconcile user stories and target architecture against the beta matrix.
 - `W29-E7-S1-T3` Prepare beta-oriented release note criteria after provider and browser
   evidence are available.
 
@@ -393,3 +362,8 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   Promoted `W29-E1-S1-T1` to `Next`; `W29-E1-S1-T2`, `W29-E2-S1-T1`, and
   `W29-E7-S1-T1` to `Soon`; and parked the remaining Wave 29 implementation/evidence
   tasks until the acceptance contract is written.
+- `2026-06-04` Wave 29 contract/tooling pass completed `W29-E1-S1`,
+  `W29-E2-S1-T1`, `W29-E3-S1`, `W29-E4-S1-T1` through `T3`, `W29-E5-S1`,
+  `W29-E6-S1`, and `W29-E7-S1-T1` through `T2`. Active queue advances to
+  `W29-E1-S2-T1`; Claude Code, OpenCode, and Qwen smokes stay parked as `auth/env`
+  blockers because those binaries were not present in the current shell `PATH`.

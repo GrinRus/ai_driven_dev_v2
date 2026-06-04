@@ -64,6 +64,8 @@ const state = {
   activeJobLogChunks: [],
   activeJobStatus: null,
   activeJobTimer: null,
+  runAccountability: null,
+  runAccountabilityError: "",
   activeArtifactKey: "",
   implementDiffFilter: "all",
   implementDiffPath: "",

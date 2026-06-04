@@ -55,6 +55,13 @@ wants a custom wrapper:
 Those values should point to wrapper commands that accept the AIDD adapter flags;
 when they are unset, the harness validates the default native provider command.
 
+For UI-first real-provider smokes, use the manual
+[`Real-Provider UI E2E Lane`](./e2e/real-provider-ui-e2e.md). That lane starts with
+`codex`, then repeats the same clean `aidd ui` onboarding path for `claude-code`,
+`opencode`, and optional experimental `qwen` when local auth is available. Missing
+runtime binaries, missing auth, provider quota, and local config problems are recorded as
+`auth/env` blockers rather than AIDD defects.
+
 ## 3. Prerequisites
 
 Required:

@@ -198,6 +198,18 @@ Planned operator frontend and project-set workflow support must preserve this ow
 
 Detailed contracts live in `operator-frontend.md` and `project-set-workspace.md`.
 
+Wave 29 beta-hardening keeps the same boundary:
+
+- browser evidence is Manual+Browser evidence, not a new Playwright/Selenium dependency;
+- real-provider UI smokes are Codex-first, then Claude Code and OpenCode, with Qwen
+  optional while experimental authentication and transport behavior stabilize;
+- project-set UI grouping is a read model over declared related roots inside one selected
+  project-local `.aidd/`, not concurrent unrelated multi-project execution;
+- prompt/workflow accountability is read-only provenance over run manifests, prompt hashes,
+  config snapshots, runtime id, Git SHA, and the canonical stage graph;
+- runtime approval audit is a bounded read surface over existing request/decision ledgers,
+  not a replacement permission engine.
+
 Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
 state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a
 separate unit:

@@ -39,6 +39,20 @@ GH_CLI="${GH_CLI:-/opt/homebrew/bin/gh}"
   release trigger. Releases still publish only through a GitHub Release `published`
   event, and direct tag-push publishing remains forbidden.
 
+- [ ] Run the read-only release preflight helper before publishing. It checks local
+  `uv`/`gh` availability, source version, branch name, remote tag absence, and PyPI
+  version absence. It never creates tags, releases, or uploads:
+
+```bash
+python -m scripts.release.preflight --project-root . --version <version>
+```
+
+  If `gh` is installed outside `PATH`, pass the explicit binary:
+
+```bash
+python -m scripts.release.preflight --project-root . --version <version> --gh-binary "${GH_CLI}"
+```
+
 - [ ] Source-of-truth audit is current for the release-prep slice:
   `README.md`, `docs/product/user-stories.md`, and
   `docs/architecture/target-architecture.md` match the code and release claims.
@@ -146,6 +160,18 @@ aidd doctor
 uv tool uninstall ai-driven-dev-v2
 ```
 
+For checklist copy-in, maintainers may collect bounded release evidence with the
+read-only evidence helper. The helper validates URLs and captured command outputs only;
+it does not query GitHub, create releases, publish packages, or mutate local state:
+
+```bash
+python -m scripts.release.evidence_collector release-evidence.json
+```
+
+`release-evidence.json` should include `version`, `github_release_url`,
+`release_workflow_url`, `pypi_url`, `pipx_version_output`, `pipx_doctor_output`,
+`uv_tool_version_output`, and `uv_tool_doctor_output`.
+
 ## Maintainer release state
 
 Maintainer source development package version: `0.1.0a9.dev0`.
@@ -187,6 +213,12 @@ Known operator risks before cutting the next prerelease:
 - The local shell lacked a `python` alias; the published-package fixture used
   `/usr/bin/python3` explicitly. This is an environment note, not a hidden AIDD runtime
   fallback.
+
+Future beta readiness is not implied by the alpha package evidence above. A beta-oriented
+release note must wait for current Wave 29 evidence across install, clean UI onboarding,
+Codex-first real-provider UI execution, Browser-verified operator states, remediation,
+project-set boundaries, prompt/workflow accountability, approval audit visibility, docs,
+security posture, and GitHub Release/PyPI install evidence.
 
 Required gates for the next prerelease remain unchanged:
 

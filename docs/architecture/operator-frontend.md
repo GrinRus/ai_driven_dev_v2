@@ -103,7 +103,10 @@ The first frontend contract covers these flows:
    - include tracked, deleted, and untracked file changes with bounded unified diff text;
    - show allowed write scope status and whether each changed file was mentioned in
      `implementation-report.md`;
-   - keep `implementation-report.md` claims visible beside the real repository diff.
+   - keep `implementation-report.md` claims visible beside the real repository diff;
+   - when a `project-set.md` context is declared, group changed source files by
+     `root_id`, `root_label`, and `root_relative_root`, and flag source changes outside
+     declared roots without mixing unrelated repositories into one `.aidd/` workspace.
 
 10. **Structured review and QA**
    - parse `implementation-report.md`, `review-report.md`, and `qa-report.md` through
@@ -124,6 +127,29 @@ The first frontend contract covers these flows:
      `qa` stale through overlay metadata instead of adding a new `StageState`;
    - block stale `qa` from being treated as a fresh terminal handoff in the UI;
    - let the operator explicitly rerun stale downstream stages, currently `review -> qa`.
+
+12. **Prompt/workflow accountability**
+   - expose `/api/run/accountability?run_id=...` as a private read-only UI endpoint;
+   - show the run id, work item, runtime id, config snapshot summary, config root,
+     resource root, Git SHA when available, prompt-pack provenance entries, and canonical
+     stage graph;
+   - treat missing prompt hashes, missing resource roots, or legacy manifests as warnings,
+     not UI crashes;
+   - keep prompt paths, content hashes, Git SHA, config root, runtime id, and stage graph
+     inputs read-only provenance. The frontend must not edit prompt packs or run
+     manifests.
+
+13. **Runtime approval audit**
+   - expose bounded approval audit rows beside the existing `requests` and `decisions`
+     payloads;
+   - status values are `pending`, `approved`, `denied`, `cancelled`, `policy-blocked`,
+     or `recorded`. Future `expired` handling may be added only when the runtime ledger
+     records expiry explicitly;
+   - each row should include runtime id, stage, request kind, risk, sensitive command
+     summary, cwd/path scope, decision source, decision reason, and ledger paths when
+     present;
+   - remote approval decisions remain loopback-only by default and require explicit
+     `--allow-remote-approvals` opt-in for non-loopback binds.
 
 ## 4. Write boundaries
 
@@ -248,6 +274,14 @@ Current W20 implementation status:
   tabs. Implement Review renders source diff separately from `.aidd/` artifacts and
   flags changed-but-not-mentioned, mentioned-but-unchanged, outside-scope, and truncated
   diff evidence;
+- when a project-set declaration is present, Implement Review groups source diff rows by
+  declared root labels and flags `outside-project-set` source changes without changing
+  single-project clients that ignore the optional grouping fields;
+- the overview cockpit includes Prompt / Workflow Accountability cards backed by
+  `/api/run/accountability`, showing prompt provenance, config snapshot keys, runtime id,
+  stage graph, Git SHA, and legacy-provenance warnings;
+- approval views render server-provided `audit_history` rows in addition to existing
+  request and decision payloads, preserving the current runtime approval write semantics;
 - review and QA tabs can launch remediation back to `implement` with selected source ids,
   operator note, selected runtime, and current run id; downstream stages are marked stale
   only after the remediation `implement` attempt succeeds;

@@ -117,8 +117,10 @@ async function renderTimeline() {
 function diffFileWarning(file) {
   const warnings = [];
   if (file.allowed_scope_status === "outside") warnings.push("outside scope");
+  if (file.scope_status === "outside-project-set") warnings.push("outside project set");
   if (!file.mentioned_in_report) warnings.push("not mentioned");
   if (file.truncated) warnings.push("truncated");
+  (file.warnings || []).forEach((item) => warnings.push(item));
   return warnings;
 }
 
@@ -195,6 +197,11 @@ async function renderImplementReview() {
             <span>Repository diff</span>
             <span class="small-badge">${escapeHtml(files.length)} source changes</span>
           </div>
+          ${diffView.project_set_roots?.length ? `
+            <div class="compact-list">
+              ${diffView.project_set_roots.map((root) => `<span>${escapeHtml(root.root_id)}: ${escapeHtml(root.relative_root)}</span>`).join("")}
+            </div>
+          ` : ""}
           ${renderWarnings([...(diffView.warnings || []), ...unchanged.map((path) => `Mentioned but unchanged: ${path}`)])}
           ${renderDiffFilters(files)}
           <div class="diff-review-layout">
@@ -203,11 +210,12 @@ async function renderImplementReview() {
                 const selectedClass = selected && selected.path === file.path ? " selected" : "";
                 const warnings = diffFileWarning(file);
                 return `
-                  <button data-open-diff-file="${escapeHtml(file.path)}" class="diff-file-card${selectedClass}" type="button">
-                    <strong>${escapeHtml(file.path)}</strong>
-                    <span>${escapeHtml(file.status)} / ${escapeHtml(file.allowed_scope_status)}</span>
-                    <span>${warnings.map((item) => `<span class="small-badge warn">${escapeHtml(item)}</span>`).join("")}</span>
-                  </button>
+	                  <button data-open-diff-file="${escapeHtml(file.path)}" class="diff-file-card${selectedClass}" type="button">
+	                    <strong>${escapeHtml(file.path)}</strong>
+	                    <span>${escapeHtml(file.status)} / ${escapeHtml(file.allowed_scope_status)} / ${escapeHtml(file.scope_status || "single-project")}</span>
+	                    ${file.root_id ? `<span class="small-badge">${escapeHtml(file.root_label || file.root_id)} ${escapeHtml(file.root_relative_root || "")}</span>` : ""}
+	                    <span>${warnings.map((item) => `<span class="small-badge warn">${escapeHtml(item)}</span>`).join("")}</span>
+	                  </button>
                 `;
               }).join("") : `<div class="empty-state">No files match this filter.</div>`}
             </aside>

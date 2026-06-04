@@ -77,6 +77,11 @@ The supported alpha installation paths are PyPI via pipx, uv tool, and source ch
 Container support may be reconsidered after the runtime permission model, release
 provenance, and operator workflows stabilize.
 
+Beta readiness is a future evidence gate, not a current alpha claim. It requires fresh
+install evidence, clean UI onboarding, real-provider UI smokes, Browser-verified operator
+states, project-set boundaries, remediation, provenance, approval audit, and release
+evidence.
+
 ## Source checkout
 
 ```bash

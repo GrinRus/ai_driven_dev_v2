@@ -7516,7 +7516,7 @@ immutability.
 ### Epic W29-E1 — real-provider UI E2E evidence (`next`)
 Linked stories: `US-01`, `US-06`, `US-07`, `US-11`
 
-#### Slice W29-E1-S1 — provider UI acceptance contract (`next`)
+#### Slice W29-E1-S1 — provider UI acceptance contract (`done`)
 Goal: define the real-provider UI-first E2E lane before running provider-authenticated
 smokes.
 
@@ -7539,13 +7539,13 @@ Dependencies:
 
 Local tasks:
 
-- `W29-E1-S1-T1` (next) Define the real-provider UI E2E acceptance matrix for `codex`,
+- `W29-E1-S1-T1` (done) Define the real-provider UI E2E acceptance matrix for `codex`,
   `claude-code`, `opencode`, and optional `qwen` runs through clean UI onboarding.
   - Scope: E2E/operator documentation only.
   - Verification: docs checks and roadmap sync prove the matrix names provider auth
     prerequisites, `aidd ui` setup flow, explicit runtime selection, stage targets,
     expected artifacts, blocker classes, and cleanup rules.
-- `W29-E1-S1-T2` (planned) Add the provider readiness preflight checklist for UI-first
+- `W29-E1-S1-T2` (done) Add the provider readiness preflight checklist for UI-first
   smokes.
   - Scope: E2E/operator documentation only.
   - Verification: docs checks prove each maintained provider has binary, auth, command,
@@ -7557,7 +7557,7 @@ Exit evidence:
   defect is opened;
 - environment blockers and AIDD-owned failures are classified consistently.
 
-#### Slice W29-E1-S2 — provider-authenticated UI smokes (`planned`)
+#### Slice W29-E1-S2 — provider-authenticated UI smokes (`next`)
 Goal: run the UI-first flow against real provider runtimes and record exact evidence or
 environment blockers.
 
@@ -7581,25 +7581,25 @@ Dependencies:
 
 Local tasks:
 
-- `W29-E1-S2-T1` (planned) Run the Codex clean UI onboarding smoke through at least
+- `W29-E1-S2-T1` (next) Run the Codex clean UI onboarding smoke through at least
   `idea -> research` and record evidence or a provider-auth blocker.
   - Scope: manual live evidence outside the repo.
   - Verification: evidence records install/source channel, UI URL, selected project root,
     selected `codex` runtime, job ids, logs, timeline, artifacts, terminal status, and
     cleanup.
-- `W29-E1-S2-T2` (planned) Run the Claude Code clean UI onboarding smoke through at
+- `W29-E1-S2-T2` (blocked) Run the Claude Code clean UI onboarding smoke through at
   least `idea -> research` and record evidence or a provider-auth blocker.
   - Scope: manual live evidence outside the repo.
   - Verification: evidence records install/source channel, UI URL, selected project root,
     selected `claude-code` runtime, job ids, logs, timeline, artifacts, terminal status,
     and cleanup.
-- `W29-E1-S2-T3` (planned) Run the OpenCode clean UI onboarding smoke through at least
+- `W29-E1-S2-T3` (blocked) Run the OpenCode clean UI onboarding smoke through at least
   `idea -> research` and record evidence or a provider-auth blocker.
   - Scope: manual live evidence outside the repo.
   - Verification: evidence records install/source channel, UI URL, selected project root,
     selected `opencode` runtime, job ids, logs, timeline, artifacts, terminal status, and
     cleanup.
-- `W29-E1-S2-T4` (later) Run the Qwen clean UI onboarding smoke through at least
+- `W29-E1-S2-T4` (blocked) Run the Qwen clean UI onboarding smoke through at least
   `idea -> research` when the experimental runtime is locally authenticated.
   - Scope: manual live evidence outside the repo.
   - Verification: evidence records install/source channel, UI URL, selected project root,
@@ -7619,7 +7619,7 @@ Exit evidence:
 - runtime-specific failures become targeted follow-up tasks instead of vague product
   risk.
 
-### Epic W29-E2 — browser-verified operator UX (`planned`)
+### Epic W29-E2 — browser-verified operator UX (`next`)
 Linked stories: `US-02`, `US-03`, `US-06`, `US-11`
 
 #### Slice W29-E2-S1 — browser smoke contract and automation (`planned`)
@@ -7644,7 +7644,7 @@ Dependencies:
 
 Local tasks:
 
-- `W29-E2-S1-T1` (planned) Define the browser-verified operator UI smoke checklist for
+- `W29-E2-S1-T1` (done) Define the browser-verified operator UI smoke checklist for
   onboarding, runner cards, selected-stage launch, Active Run, Timeline, Implement
   Review, Review Findings, QA Verdict, and remediation.
   - Scope: E2E documentation only.
@@ -7672,10 +7672,10 @@ Exit evidence:
 - operator UI quality is checked through actual browser interactions;
 - visual and interaction regressions are separated from backend/API health.
 
-### Epic W29-E3 — project-set and monorepo UX (`planned`)
+### Epic W29-E3 — project-set and monorepo UX (`done`)
 Linked stories: `US-11`, `US-12`
 
-#### Slice W29-E3-S1 — project-set operator visibility (`planned`)
+#### Slice W29-E3-S1 — project-set operator visibility (`done`)
 Goal: make declared project-set roots understandable in the UI without mixing unrelated
 repositories into one `.aidd` workspace.
 
@@ -7699,22 +7699,22 @@ Dependencies:
 
 Local tasks:
 
-- `W29-E3-S1-T1` (planned) Define the project-set UI behavior contract for declared
+- `W29-E3-S1-T1` (done) Define the project-set UI behavior contract for declared
   roots, per-root ownership, and unrelated-project boundaries.
   - Scope: architecture documentation only.
   - Verification: docs checks prove the contract preserves one active project-local
     `.aidd/`, declared related roots, and no unrelated multi-project execution.
-- `W29-E3-S1-T2` (planned) Expose per-root artifact and source-diff grouping in the
+- `W29-E3-S1-T2` (done) Expose per-root artifact and source-diff grouping in the
   operator read model.
   - Scope: core read model/API only.
   - Verification: service tests prove changed files and artifacts are grouped by declared
     root and out-of-scope paths are reported without traversal escapes.
-- `W29-E3-S1-T3` (planned) Render project-set grouping and out-of-scope warnings in the
+- `W29-E3-S1-T3` (done) Render project-set grouping and out-of-scope warnings in the
   operator UI.
   - Scope: packaged static UI assets only.
   - Verification: static UI contract tests prove root labels, grouping, and warning states
     render with escaped dynamic values.
-- `W29-E3-S1-T4` (planned) Add deterministic project-set UI regression coverage.
+- `W29-E3-S1-T4` (done) Add deterministic project-set UI regression coverage.
   - Scope: CLI/UI tests only.
   - Verification: fixture-backed tests prove duplicate roots, root escapes, per-root
     artifacts, and source diff grouping behave deterministically.
@@ -7724,10 +7724,10 @@ Exit evidence:
 - monorepo operators can see which declared root owns each artifact or diff;
 - unrelated repositories remain out of scope for one UI session.
 
-### Epic W29-E4 — prompt and workflow accountability (`planned`)
+### Epic W29-E4 — prompt and workflow accountability (`next`)
 Linked stories: `US-07`, `US-10`, `US-11`
 
-#### Slice W29-E4-S1 — run accountability read model (`planned`)
+#### Slice W29-E4-S1 — run accountability read model (`next`)
 Goal: make prompt/workflow inputs visible enough to compare runs and diagnose behavior
 drift.
 
@@ -7752,17 +7752,17 @@ Dependencies:
 
 Local tasks:
 
-- `W29-E4-S1-T1` (planned) Define the prompt/workflow accountability contract for the
+- `W29-E4-S1-T1` (done) Define the prompt/workflow accountability contract for the
   operator UI.
   - Scope: architecture documentation only.
   - Verification: docs checks prove prompt paths, content hashes, Git SHA, config roots,
     runtime id, and stage graph inputs are named as read-only evidence.
-- `W29-E4-S1-T2` (planned) Expose prompt hash and workflow input provenance in a core
+- `W29-E4-S1-T2` (done) Expose prompt hash and workflow input provenance in a core
   run-accountability read model.
   - Scope: core read model only.
   - Verification: core tests prove prompt paths, hashes, config, runtime id, and run
     manifest references are returned without mutating artifacts.
-- `W29-E4-S1-T3` (planned) Render prompt/workflow provenance in the operator UI.
+- `W29-E4-S1-T3` (done) Render prompt/workflow provenance in the operator UI.
   - Scope: packaged static UI assets only.
   - Verification: static UI contract tests prove provenance cards and missing-evidence
     states render with escaped values.
@@ -7777,10 +7777,10 @@ Exit evidence:
 - maintainers can explain which prompt/workflow inputs produced a run;
 - eval and operator reviews can detect prompt or configuration drift.
 
-### Epic W29-E5 — runtime safety and approval UX (`planned`)
+### Epic W29-E5 — runtime safety and approval UX (`done`)
 Linked stories: `US-06`, `US-11`
 
-#### Slice W29-E5-S1 — approval and safety control surfaces (`planned`)
+#### Slice W29-E5-S1 — approval and safety control surfaces (`done`)
 Goal: make runtime approval, denial, and sensitive-command decisions understandable in
 the operator UI.
 
@@ -7803,17 +7803,17 @@ Dependencies:
 
 Local tasks:
 
-- `W29-E5-S1-T1` (planned) Define the runtime approval UX contract for pending,
+- `W29-E5-S1-T1` (done) Define the runtime approval UX contract for pending,
   approved, denied, expired, and policy-blocked requests.
   - Scope: architecture/operator documentation only.
   - Verification: docs checks prove each approval state, operator action, and safety log
     field is named.
-- `W29-E5-S1-T2` (planned) Render sensitive command and denied request panels in the
+- `W29-E5-S1-T2` (done) Render sensitive command and denied request panels in the
   operator UI.
   - Scope: packaged static UI assets only.
   - Verification: static UI contract tests prove command summaries, policy reasons,
     runtime ids, timestamps, and operator actions render safely.
-- `W29-E5-S1-T3` (planned) Add approval audit trail API coverage for operator UI reads.
+- `W29-E5-S1-T3` (done) Add approval audit trail API coverage for operator UI reads.
   - Scope: private UI API/tests only.
   - Verification: API tests prove approval history is readable, bounded, ordered, and not
     mixed across work items or runs.
@@ -7823,10 +7823,10 @@ Exit evidence:
 - operators can understand runtime safety decisions without leaving the UI;
 - approval history remains auditable and scoped to the active project/work item.
 
-### Epic W29-E6 — release and install ergonomics v2 (`planned`)
+### Epic W29-E6 — release and install ergonomics v2 (`done`)
 Linked stories: `US-09`, `US-10`
 
-#### Slice W29-E6-S1 — maintainer release preflight tooling (`planned`)
+#### Slice W29-E6-S1 — maintainer release preflight tooling (`done`)
 Goal: reduce manual release friction without changing the GitHub Release published-event
 release model.
 
@@ -7849,17 +7849,17 @@ Dependencies:
 
 Local tasks:
 
-- `W29-E6-S1-T1` (planned) Add a PATH-safe release preflight helper for `uv`, `gh`,
+- `W29-E6-S1-T1` (done) Add a PATH-safe release preflight helper for `uv`, `gh`,
   source version, branch, tag absence, and PyPI version absence checks.
   - Scope: release helper script only.
   - Verification: unit tests or dry-run tests prove missing binaries, mismatched version,
     existing tag, and existing PyPI version produce explicit non-mutating failures.
-- `W29-E6-S1-T2` (planned) Add a release evidence collector for workflow, PyPI, `pipx`,
+- `W29-E6-S1-T2` (done) Add a release evidence collector for workflow, PyPI, `pipx`,
   and `uv tool` verification links.
   - Scope: release helper script/docs only.
   - Verification: tests prove evidence fields are bounded, required links are validated,
     and no release tag is created by the helper.
-- `W29-E6-S1-T3` (planned) Update the next prerelease checklist to use the preflight and
+- `W29-E6-S1-T3` (done) Update the next prerelease checklist to use the preflight and
   evidence collector.
   - Scope: release documentation only.
   - Verification: docs checks prove the release flow still requires draft release,
@@ -7871,10 +7871,10 @@ Exit evidence:
 - maintainers have a repeatable preflight before publishing the next prerelease;
 - release helpers cannot bypass the accepted tag/publication model.
 
-### Epic W29-E7 — beta-readiness acceptance matrix (`planned`)
+### Epic W29-E7 — beta-readiness acceptance matrix (`next`)
 Linked stories: `US-01`, `US-07`, `US-09`, `US-10`, `US-11`, `US-12`
 
-#### Slice W29-E7-S1 — beta gate definition (`planned`)
+#### Slice W29-E7-S1 — beta gate definition (`next`)
 Goal: define the product gate for a future beta-oriented release before claiming beta
 readiness.
 
@@ -7898,13 +7898,13 @@ Dependencies:
 
 Local tasks:
 
-- `W29-E7-S1-T1` (planned) Define the beta-readiness acceptance matrix for install,
+- `W29-E7-S1-T1` (done) Define the beta-readiness acceptance matrix for install,
   clean UI onboarding, real provider execution, operator remediation, project-set
   boundaries, docs, security posture, and release evidence.
   - Scope: product/release documentation only.
   - Verification: docs checks prove beta readiness is described as a future gate, not a
     current production claim.
-- `W29-E7-S1-T2` (planned) Reconcile user stories and target architecture against the
+- `W29-E7-S1-T2` (done) Reconcile user stories and target architecture against the
   beta matrix.
   - Scope: product and architecture documentation only.
   - Verification: docs checks prove user story success signals and architecture
@@ -7929,3 +7929,12 @@ Sync notes:
   readiness. Initial queue restoration promotes `W29-E1-S1-T1` to `Next`,
   `W29-E1-S1-T2`, `W29-E2-S1-T1`, and `W29-E7-S1-T1` to `Soon`, with implementation
   and evidence follow-ups kept in `Parking lot` until the acceptance contract is written.
+- `2026-06-04` Wave 29 contract/tooling pass completed the real-provider UI acceptance
+  contract, browser smoke contract, project-set operator grouping, run accountability
+  endpoint/UI cards, approval audit payload/UI rows, release preflight/evidence helpers,
+  and beta-readiness matrix docs. Local provider preflight found Codex CLI
+  `codex-cli 0.133.0` at `/Applications/Codex.app/Contents/Resources/codex`; Claude
+  Code, OpenCode, and Qwen binaries were not present in the current shell `PATH`, so
+  their smoke tasks remain `auth/env` blockers until installed/authenticated. Active
+  queue advances to `W29-E1-S2-T1` for Codex smoke evidence and keeps browser/live
+  evidence plus run-to-run comparison/release-note criteria as follow-up work.

@@ -83,6 +83,7 @@ from aidd.core.remediation import (
     mark_downstream_stale,
 )
 from aidd.core.repository_diff import resolve_repository_diff
+from aidd.core.run_accountability import resolve_run_accountability
 from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
 from aidd.core.run_store import (
     next_attempt_number,
@@ -1232,23 +1233,103 @@ def _operator_request_view(attempt_path: Path | None) -> dict[str, object]:
             "pending_request_ids": (),
             "unapproved_request_ids": (),
             "decisions": (),
+            "audit_history": (),
         }
     requests_path = attempt_path / OPERATOR_REQUESTS_FILENAME
     decisions_path = attempt_path / OPERATOR_DECISIONS_FILENAME
     requests = load_operator_requests(requests_path)
     decisions = load_operator_decisions(decisions_path)
     decided_ids = {decision.request_id for decision in decisions}
+    pending_ids = tuple(request.id for request in requests if request.id not in decided_ids)
+    unapproved_ids = unapproved_operator_request_ids(attempt_path=attempt_path)
     return {
         "attempt_path": attempt_path.as_posix(),
         "requests_path": requests_path.as_posix() if requests_path.exists() else None,
         "decisions_path": decisions_path.as_posix() if decisions_path.exists() else None,
         "requests": tuple(request.to_dict() for request in requests),
-        "pending_request_ids": tuple(
-            request.id for request in requests if request.id not in decided_ids
-        ),
-        "unapproved_request_ids": unapproved_operator_request_ids(attempt_path=attempt_path),
+        "pending_request_ids": pending_ids,
+        "unapproved_request_ids": unapproved_ids,
         "decisions": tuple(decision.to_dict() for decision in decisions),
+        "audit_history": _operator_approval_audit_history(
+            requests=requests,
+            decisions=decisions,
+            pending_ids=frozenset(pending_ids),
+            unapproved_ids=frozenset(unapproved_ids),
+            requests_path=requests_path if requests_path.exists() else None,
+            decisions_path=decisions_path if decisions_path.exists() else None,
+        ),
     }
+
+
+def _operator_approval_audit_history(
+    *,
+    requests: tuple[RuntimeOperatorRequest, ...],
+    decisions: tuple[RuntimeOperatorDecision, ...],
+    pending_ids: frozenset[str],
+    unapproved_ids: frozenset[str],
+    requests_path: Path | None,
+    decisions_path: Path | None,
+) -> tuple[dict[str, object], ...]:
+    decisions_by_request = {decision.request_id: decision for decision in decisions}
+    rows: list[dict[str, object]] = []
+    for request in requests:
+        decision = decisions_by_request.get(request.id)
+        status = _operator_approval_status(
+            request_id=request.id,
+            decision=decision,
+            pending_ids=pending_ids,
+            unapproved_ids=unapproved_ids,
+        )
+        rows.append(
+            {
+                "request_id": request.id,
+                "status": status,
+                "runtime_id": request.runtime_id,
+                "stage": request.stage,
+                "kind": request.kind.value,
+                "tool_name": request.tool_name,
+                "risk": request.risk.value,
+                "created_at_utc": request.created_at_utc,
+                "command": request.payload.get("command"),
+                "cwd": request.cwd.as_posix() if request.cwd is not None else None,
+                "paths": tuple(path.as_posix() for path in request.paths),
+                "decision_action": decision.action.value if decision is not None else None,
+                "decision_source": decision.source.value if decision is not None else None,
+                "decision_reason": decision.reason if decision is not None else None,
+                "decision_at_utc": (
+                    decision.created_at_utc if decision is not None else None
+                ),
+                "requests_path": (
+                    requests_path.as_posix() if requests_path is not None else None
+                ),
+                "decisions_path": (
+                    decisions_path.as_posix() if decisions_path is not None else None
+                ),
+            }
+        )
+    return tuple(rows)
+
+
+def _operator_approval_status(
+    *,
+    request_id: str,
+    decision: RuntimeOperatorDecision | None,
+    pending_ids: frozenset[str],
+    unapproved_ids: frozenset[str],
+) -> str:
+    if decision is not None and decision.is_approval:
+        return "approved"
+    if decision is not None:
+        if decision.action is RuntimeOperatorDecisionAction.DENY:
+            return "denied"
+        if decision.action is RuntimeOperatorDecisionAction.CANCEL:
+            return "cancelled"
+        return decision.action.value
+    if request_id in pending_ids:
+        return "pending"
+    if request_id in unapproved_ids:
+        return "policy-blocked"
+    return "recorded"
 
 
 def _runtime_command_sources_from_config(path: Path) -> dict[str, RuntimeCommandSource]:
@@ -1520,6 +1601,13 @@ class OperatorUiService:
             work_item=self.work_item,
             run_id=self._selected_run_id_from_params(params),
             stage=stage,
+        )
+
+    def _run_accountability(self, params: dict[str, list[str]]) -> object:
+        return resolve_run_accountability(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=self._selected_run_id_from_params(params),
         )
 
     def _repository_diff(self, params: dict[str, list[str]]) -> object:
@@ -1799,6 +1887,8 @@ class OperatorUiService:
                 )
             if path == "/api/run/timeline":
                 return _json_response(self._run_timeline(params))
+            if path == "/api/run/accountability":
+                return _json_response(self._run_accountability(params))
             if path == "/api/repository/diff":
                 return _json_response(self._repository_diff(params))
             if path == "/api/implement/evidence":

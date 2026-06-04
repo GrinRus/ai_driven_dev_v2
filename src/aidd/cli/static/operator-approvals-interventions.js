@@ -284,7 +284,40 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
   `;
 }
 
-function renderApprovalAuditLog(requests, decisions, pendingIds, diagnostics = null) {
+function renderApprovalAuditLog(requests, decisions, pendingIds, diagnostics = null, auditHistory = null) {
+  const serverRows = Array.isArray(auditHistory) ? auditHistory : [];
+  if (serverRows.length) {
+    return `
+      <section class="surface audit-log-panel">
+        <div class="surface-title">
+          <span>Approval Audit Log</span>
+          <span class="small-badge">${escapeHtml(serverRows.length)} records</span>
+        </div>
+        <div class="table-wrap approval-audit-wrap">
+          <table class="activity-table approval-audit-table">
+            <thead><tr><th>Requested</th><th>Status</th><th>Runtime / stage</th><th>Command / scope</th><th>Decision</th></tr></thead>
+            <tbody>
+              ${serverRows.map((row) => {
+                const status = row.status || "recorded";
+                const tone = status === "pending" ? "warn" : status === "denied" || status === "cancelled" || status === "policy-blocked" ? "bad" : "good";
+                const command = row.command || row.tool_name || row.kind || "runtime request";
+                const scope = [row.cwd, ...(Array.isArray(row.paths) ? row.paths : [])].filter(Boolean).join(" / ");
+                return `
+                  <tr>
+                    <td>${escapeHtml(row.created_at_utc || "-")}</td>
+                    <td><span class="small-badge ${tone}">${escapeHtml(status)}</span></td>
+                    <td>${escapeHtml(row.runtime_id || "-")} / ${escapeHtml(row.stage || "-")}</td>
+                    <td><strong>${escapeHtml(command)}</strong>${scope ? `<br><span class="muted">${escapeHtml(scope)}</span>` : ""}</td>
+                    <td>${escapeHtml(row.decision_action || "-")} ${row.decision_source ? `by ${escapeHtml(row.decision_source)}` : ""}${row.decision_reason ? `<br><span class="muted">${escapeHtml(row.decision_reason)}</span>` : ""}</td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  }
   const decisionByRequest = new Map();
   decisions.forEach((decision) => decisionByRequest.set(decision.request_id, decision));
   const rows = requests.map((request) => {
@@ -364,7 +397,7 @@ function renderApprovalsSurface({view, diagnostics, requests, decisions, pending
         </div>
         <div class="question-list approval-queue">${cards}</div>
       </section>
-      ${renderApprovalAuditLog(requests, decisions, pendingIds, diagnostics)}
+      ${renderApprovalAuditLog(requests, decisions, pendingIds, diagnostics, view?.audit_history || [])}
     </section>
   `;
 }

@@ -134,6 +134,26 @@ Success signals:
 - stage artifacts, questions, logs, and validation evidence preserve project ownership and cross-project links,
 - execution stays bounded to the declared project set while runtime-specific discovery remains outside core workflow semantics.
 
+## Future beta readiness gate
+
+Beta readiness is a future acceptance gate, not a claim about the current alpha
+prerelease line. Before a beta label is used, AIDD needs current evidence for:
+
+- install and upgrade from PyPI through `pipx` and `uv tool`;
+- clean `aidd ui` onboarding with no existing `.aidd/` or work item;
+- Codex-first real-provider UI execution through at least `idea -> research`, with
+  Claude Code and OpenCode evidence or explicit provider/auth blockers;
+- browser-verified operator UX for onboarding, runner selection, selected-stage launch,
+  long-run visibility, Implement Review, Review Findings, QA Verdict, remediation, and
+  stale downstream rerun;
+- project-set boundaries that group declared roots and flag out-of-scope changes without
+  mixing unrelated repositories;
+- prompt/workflow accountability surfaces with prompt paths, hashes, config snapshot,
+  runtime id, Git SHA when available, and stage graph;
+- runtime approval audit visibility for pending, approved, denied, cancelled, and
+  policy-blocked requests;
+- release evidence showing GitHub Release, PyPI, `pipx`, and `uv tool` verification.
+
 ## Out of scope for the first release
 
 The first release is not trying to:

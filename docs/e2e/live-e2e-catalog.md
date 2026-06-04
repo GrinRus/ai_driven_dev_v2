@@ -59,6 +59,9 @@ Public-repository live E2E always builds and installs a local wheel from clean t
 The local operator UI has a separate E2E evidence lane in
 [`Operator UI Local-Project E2E Lane`](./operator-ui-local-project.md). That lane uses
 local fixture projects and service-level UI tests, not public-repository live manifests.
+Authenticated native-runtime UI proof is tracked separately in
+[`Real-Provider UI E2E Lane`](./real-provider-ui-e2e.md). That lane is manual,
+Codex-first, and starts from clean `aidd ui` onboarding with explicit runtime selection.
 
 ## Product Scope Boundary
 

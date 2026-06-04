@@ -149,6 +149,51 @@ def test_repository_diff_handles_renamed_and_space_paths(tmp_path: Path) -> None
     assert "app.py" not in source_by_path
 
 
+def test_repository_diff_groups_source_changes_by_declared_project_set_roots(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "project"
+    _init_repo(project_root)
+    workspace_root = project_root / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        text="# Implementation Report\n\n## Touched files\n\n- `services/api/app.py`\n",
+    )
+    (project_root / "services" / "api").mkdir(parents=True)
+    (project_root / "apps" / "web").mkdir(parents=True)
+    project_context_path = workspace_root / "workitems" / "WI-UI" / "context" / "project-set.md"
+    project_context_path.parent.mkdir(parents=True, exist_ok=True)
+    project_context_path.write_text(
+        "# Project set\n\n"
+        "## Projects\n\n"
+        "| Project id | Root | Role |\n"
+        "| --- | --- | --- |\n"
+        "| `api` | `services/api` | `primary` |\n"
+        "| `web` | `apps/web` | `unspecified` |\n",
+        encoding="utf-8",
+    )
+    (project_root / "services" / "api" / "app.py").write_text(
+        "print('api')\n",
+        encoding="utf-8",
+    )
+    (project_root / "loose.py").write_text("print('loose')\n", encoding="utf-8")
+
+    view = resolve_repository_diff(
+        project_root=project_root,
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+    )
+
+    assert [root.root_id for root in view.project_set_roots] == ["api", "web"]
+    source_by_path = {item.path: item for item in view.source_files}
+    assert source_by_path["services/api/app.py"].root_id == "api"
+    assert source_by_path["services/api/app.py"].root_relative_root == "services/api"
+    assert source_by_path["services/api/app.py"].scope_status == "inside-project-set"
+    assert source_by_path["loose.py"].root_id is None
+    assert source_by_path["loose.py"].scope_status == "outside-project-set"
+    assert "outside declared project-set roots" in source_by_path["loose.py"].warnings[0]
+
+
 def test_repository_diff_rejects_symlink_escape(tmp_path: Path) -> None:
     project_root = tmp_path / "project"
     _init_repo(project_root)
