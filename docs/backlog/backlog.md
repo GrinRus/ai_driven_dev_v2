@@ -6,16 +6,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W29-E1-S2-T1` Run the Codex clean UI onboarding smoke through at least
-  `idea -> research` and record evidence or a provider-auth blocker.
+- `W29-E2-S1-T2` Add a browser-driven local UI smoke for clean onboarding and
+  selected-stage launch against the deterministic fixture.
 
 ## Soon
 
-- `W29-E2-S1-T2` Add a browser-driven local UI smoke for clean onboarding and
-  selected-stage launch against the deterministic fixture.
 - `W29-E2-S1-T3` Capture browser screenshots for the primary operator control center
   states.
-- `W29-E1-S2-T5` Write a provider UI failure triage matrix from the completed smokes.
+- `W29-E4-S1-T4` Add a bounded run-to-run comparison view for prompt and artifact drift.
 
 ## Parking lot
 
@@ -27,7 +25,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   `idea -> research` when the experimental runtime is locally authenticated.
 - `W29-E2-S1-T4` Convert the first repeatable browser UX defect into a targeted fix task
   after evidence exists.
-- `W29-E4-S1-T4` Add a bounded run-to-run comparison view for prompt and artifact drift.
 - `W29-E7-S1-T3` Prepare beta-oriented release note criteria after provider and browser
   evidence are available.
 
@@ -367,3 +364,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   `W29-E6-S1`, and `W29-E7-S1-T1` through `T2`. Active queue advances to
   `W29-E1-S2-T1`; Claude Code, OpenCode, and Qwen smokes stay parked as `auth/env`
   blockers because those binaries were not present in the current shell `PATH`.
+- `2026-06-04` Completed `W29-E1-S2-T1` and `W29-E1-S2-T5`: disposable Codex UI smoke
+  at `/tmp/aidd-w29-codex-ui-smoke-20260604T101201Z` passed clean onboarding,
+  explicit `codex` runner selection, missing-runtime API rejection, selected-stage
+  `idea` and `research`, terminal cleanup, logs, timeline, and artifacts. The provider
+  triage matrix is recorded in the roadmap; Claude Code remains unavailable, and
+  OpenCode/Qwen binary readiness still requires separate authenticated smoke lanes.
+  Active queue advances to `W29-E2-S1-T2`; `W29-E2-S1-T3` and `W29-E4-S1-T4` move to
+  `Soon`.
