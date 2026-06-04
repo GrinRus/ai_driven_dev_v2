@@ -6,14 +6,12 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W29-E2-S1-T2` Add a browser-driven local UI smoke for clean onboarding and
-  selected-stage launch against the deterministic fixture.
+- `W29-E4-S1-T4` Add a bounded run-to-run comparison view for prompt and artifact drift.
 
 ## Soon
 
-- `W29-E2-S1-T3` Capture browser screenshots for the primary operator control center
-  states.
-- `W29-E4-S1-T4` Add a bounded run-to-run comparison view for prompt and artifact drift.
+- `W29-E7-S1-T3` Prepare beta-oriented release note criteria after provider and browser
+  evidence plus run comparison are available.
 
 ## Parking lot
 
@@ -23,10 +21,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   `idea -> research` and record evidence or a provider-auth blocker.
 - `W29-E1-S2-T4` Run the Qwen clean UI onboarding smoke through at least
   `idea -> research` when the experimental runtime is locally authenticated.
-- `W29-E2-S1-T4` Convert the first repeatable browser UX defect into a targeted fix task
-  after evidence exists.
-- `W29-E7-S1-T3` Prepare beta-oriented release note criteria after provider and browser
-  evidence are available.
 
 ## Update rules
 
@@ -372,3 +366,12 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   OpenCode/Qwen binary readiness still requires separate authenticated smoke lanes.
   Active queue advances to `W29-E2-S1-T2`; `W29-E2-S1-T3` and `W29-E4-S1-T4` move to
   `Soon`.
+- `2026-06-04` Completed `W29-E2-S1-T2` and `W29-E2-S1-T3`: Manual+Browser evidence
+  in `/tmp/aidd-w29-browser-ui-smoke-pass-20260604T103044Z` covered clean onboarding,
+  runner cards, create-form enablement, explicit `generic-cli`, selected-stage
+  `idea` and `research`, terminal cleanup, logs, timeline, and artifacts. Seeded
+  evidence in `/tmp/aidd-w29-browser-seeded-20260604T103356Z` covered Implement Review,
+  Review Findings, QA Verdict, remediation requests/status, stale downstream badges,
+  blockers, and runtime readiness. No repeatable AIDD-owned browser UX defect was found,
+  so `W29-E2-S1-T4` is superseded for this pass. Active queue advances to
+  `W29-E4-S1-T4`; `W29-E7-S1-T3` moves to `Soon` after comparison work.

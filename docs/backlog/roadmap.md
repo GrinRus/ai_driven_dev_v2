@@ -7645,10 +7645,10 @@ Provider triage matrix:
   command availability, but the experimental provider auth was not verified in this PR;
   next action is an opt-in Qwen auth preflight and smoke if it becomes release-relevant.
 
-### Epic W29-E2 — browser-verified operator UX (`next`)
+### Epic W29-E2 — browser-verified operator UX (`done`)
 Linked stories: `US-02`, `US-03`, `US-06`, `US-11`
 
-#### Slice W29-E2-S1 — browser smoke contract and automation (`next`)
+#### Slice W29-E2-S1 — browser smoke contract and automation (`done`)
 Goal: verify the operator UI in a browser, not only through API and static asset
 contracts.
 
@@ -7676,23 +7676,24 @@ Local tasks:
   - Scope: E2E documentation only.
   - Verification: docs checks prove required viewport, keyboard, screenshot, API snapshot,
     and cleanup fields are named.
-- `W29-E2-S1-T2` (next) Add a browser-driven local UI smoke for clean onboarding and
+- `W29-E2-S1-T2` (done) Add a browser-driven local UI smoke for clean onboarding and
   selected-stage launch against the deterministic fixture.
   - Scope: documented Manual+Browser smoke or static/API contracts; no Playwright or
     Selenium dev dependency.
   - Verification: the smoke creates a disposable project, completes onboarding, selects
     `generic-cli`, launches one selected stage, observes terminal cleanup, and leaves no
     `.aidd/` state in the repo.
-- `W29-E2-S1-T3` (planned) Capture browser screenshots for the primary operator control
+- `W29-E2-S1-T3` (done) Capture browser screenshots for the primary operator control
   center states.
   - Scope: manual/browser evidence outside generated source artifacts.
   - Verification: evidence includes onboarding, command center, logs/timeline, artifacts,
     implement diff, review findings, QA verdict, remediation, and stale downstream states.
-- `W29-E2-S1-T4` (later) Convert the first repeatable browser UX defect into a targeted
+- `W29-E2-S1-T4` (superseded) Convert the first repeatable browser UX defect into a targeted
   fix task after evidence exists.
   - Scope: planning documents only.
-  - Verification: the defect task names one UI surface, exact repro steps, expected and
-    actual behavior, and one focused verification path.
+  - Verification: superseded for this evidence pass because the Manual+Browser smoke found
+    no repeatable AIDD-owned UX defect; future browser defects should be added as fresh,
+    focused roadmap tasks with repro, expected/actual behavior, and one verification path.
 
 Exit evidence:
 
@@ -7793,7 +7794,7 @@ Local tasks:
   - Scope: packaged static UI assets only.
   - Verification: static UI contract tests prove provenance cards and missing-evidence
     states render with escaped values.
-- `W29-E4-S1-T4` (later) Add a bounded run-to-run comparison view for prompt and artifact
+- `W29-E4-S1-T4` (next) Add a bounded run-to-run comparison view for prompt and artifact
   drift.
   - Scope: core/UI read-only comparison only.
   - Verification: tests prove two runs can be compared by prompt hash, stage status,
@@ -7936,7 +7937,7 @@ Local tasks:
   - Scope: product and architecture documentation only.
   - Verification: docs checks prove user story success signals and architecture
     non-goals match the beta gate wording.
-- `W29-E7-S1-T3` (later) Prepare beta-oriented release note criteria after provider and
+- `W29-E7-S1-T3` (soon) Prepare beta-oriented release note criteria after provider and
   browser evidence are available.
   - Scope: release documentation only.
   - Verification: the note criteria require fresh evidence links and do not describe an
@@ -7976,3 +7977,17 @@ Sync notes:
   smokes remain `blocked/auth-env` until explicit authenticated lanes are run; Claude
   Code remains unavailable locally. Backlog advances to Browser evidence
   `W29-E2-S1-T2`.
+- `2026-06-04` `W29-E2-S1-T2` and `W29-E2-S1-T3` completed through Manual+Browser
+  evidence, without adding Playwright or Selenium dependencies. Session A used
+  disposable root `/tmp/aidd-w29-browser-ui-smoke-pass-20260604T103044Z`, source
+  checkout `aidd 0.1.0a9.dev0`, clean `aidd ui` onboarding, work item
+  `WI-W29-BROWSER-SMOKE`, explicit `generic-cli`, and selected-stage launches for
+  `idea` and `research` in `run-20260604T103202Z`; both jobs reached API status
+  `completed`, stage status `succeeded`, terminal active-run cleanup, logs, timeline,
+  and artifacts. Session B used seeded disposable root
+  `/tmp/aidd-w29-browser-seeded-20260604T103356Z`, work item `WI-BROWSER-B`, and
+  run `run-browser-b` to capture browser/API evidence for Implement Review, Review
+  Findings, QA Verdict, remediation requests/status, stale downstream badges, blockers,
+  and runtime readiness. No repeatable AIDD-owned browser UX defect was found, so
+  `W29-E2-S1-T4` is superseded for this pass. Active queue advances to
+  `W29-E4-S1-T4`; beta release-note criteria moves to `Soon` after comparison work.
