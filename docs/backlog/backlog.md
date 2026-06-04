@@ -10,6 +10,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Parking lot
 
+- `W30-E3-S1-T1` — Prepare the `v0.1.0a9` release branch and draft prerelease after
+  explicit approval.
+
 ## Update rules
 
 - Keep `roadmap.md` as the canonical plan and `backlog.md` as the short queue.
@@ -381,3 +384,12 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   provider lanes are no longer blocked; future provider smokes should use a login shell
   or explicit PATH prefix when provider binaries are outside the Codex app's default
   non-interactive PATH.
+- `2026-06-04` Wave 30 opened for security posture and `v0.1.0a9` release readiness:
+  `W30-E1-S1-T1` is promoted to `Next`, `W30-E2-S1-T1` and `W30-E2-S1-T2` are in
+  `Soon`, and `W30-E3-S1-T1` remains parked until a separate explicit release-prep
+  approval exists.
+- `2026-06-04` Completed `W30-E1-S1-T1`, `W30-E2-S1-T1`, and `W30-E2-S1-T2`: Dependabot
+  alerts were triaged and patched through `uv.lock`, fresh source clean-UI smoke evidence
+  passed in `/tmp/aidd-w30-release-readiness-smoke-20260604T121108Z`, and release
+  readiness notes now keep `0.1.0a9.dev0` as development source. `W30-E3-S1-T1` remains
+  parked until explicit release-prep approval.
