@@ -552,6 +552,33 @@ def test_operator_overview_static_contract_covers_run_accountability_card() -> N
     assert "runAccountabilityError" in api_state
 
 
+def test_operator_run_history_static_contract_covers_run_comparison_panel() -> None:
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    api_state = _asset_text("/operator-api-state.js")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function renderRunComparisonPanel()",
+            "async function loadRunComparisonPanel()",
+            "/api/run/comparison",
+            "baseline_run_id",
+            "target_run_id",
+            "Run comparison",
+            "Prompt hash deltas",
+            "Stage status deltas",
+            "Artifact hash deltas",
+            "Validator outcome deltas",
+            'id="runComparisonBaseline"',
+            "data-run-comparison-refresh",
+        ),
+    )
+    assert "void loadRunComparisonPanel()" in cockpit
+    assert "runComparison" in api_state
+    assert "runComparisonBaselineInput" in api_state
+
+
 def test_operator_implement_review_static_contract_covers_project_set_grouping() -> None:
     control = _asset_text("/operator-control-center.js")
 

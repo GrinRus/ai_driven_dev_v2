@@ -445,6 +445,28 @@
 .lineage-table td {
   overflow-wrap: anywhere;
 }
+.run-comparison-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+.comparison-controls {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+.comparison-controls label {
+  display: grid;
+  gap: 5px;
+}
+.comparison-controls label span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.comparison-table td {
+  overflow-wrap: anywhere;
+}
 .surface-title.compact {
   margin-top: 10px;
 }

@@ -7752,10 +7752,10 @@ Exit evidence:
 - monorepo operators can see which declared root owns each artifact or diff;
 - unrelated repositories remain out of scope for one UI session.
 
-### Epic W29-E4 — prompt and workflow accountability (`next`)
+### Epic W29-E4 — prompt and workflow accountability (`done`)
 Linked stories: `US-07`, `US-10`, `US-11`
 
-#### Slice W29-E4-S1 — run accountability read model (`next`)
+#### Slice W29-E4-S1 — run accountability read model (`done`)
 Goal: make prompt/workflow inputs visible enough to compare runs and diagnose behavior
 drift.
 
@@ -7794,7 +7794,7 @@ Local tasks:
   - Scope: packaged static UI assets only.
   - Verification: static UI contract tests prove provenance cards and missing-evidence
     states render with escaped values.
-- `W29-E4-S1-T4` (next) Add a bounded run-to-run comparison view for prompt and artifact
+- `W29-E4-S1-T4` (done) Add a bounded run-to-run comparison view for prompt and artifact
   drift.
   - Scope: core/UI read-only comparison only.
   - Verification: tests prove two runs can be compared by prompt hash, stage status,
@@ -7937,7 +7937,7 @@ Local tasks:
   - Scope: product and architecture documentation only.
   - Verification: docs checks prove user story success signals and architecture
     non-goals match the beta gate wording.
-- `W29-E7-S1-T3` (soon) Prepare beta-oriented release note criteria after provider and
+- `W29-E7-S1-T3` (next) Prepare beta-oriented release note criteria after provider and
   browser evidence are available.
   - Scope: release documentation only.
   - Verification: the note criteria require fresh evidence links and do not describe an
@@ -7991,3 +7991,10 @@ Sync notes:
   and runtime readiness. No repeatable AIDD-owned browser UX defect was found, so
   `W29-E2-S1-T4` is superseded for this pass. Active queue advances to
   `W29-E4-S1-T4`; beta release-note criteria moves to `Soon` after comparison work.
+- `2026-06-04` `W29-E4-S1-T4` completed a read-only run comparison surface:
+  `GET /api/run/comparison?baseline_run_id=...&target_run_id=...` compares two run ids
+  from the active work item by prompt hashes, stage statuses, bounded artifact hashes,
+  and validator outcomes, returning warnings for missing legacy provenance or unsafe
+  artifact paths instead of reading outside `.aidd/`. The Run History UI now renders a
+  comparison panel with lineage-derived default baseline selection and manual baseline
+  input. Active queue advances to beta-oriented release note criteria `W29-E7-S1-T3`.

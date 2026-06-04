@@ -130,14 +130,19 @@ The first frontend contract covers these flows:
 
 12. **Prompt/workflow accountability**
    - expose `/api/run/accountability?run_id=...` as a private read-only UI endpoint;
+   - expose `/api/run/comparison?baseline_run_id=...&target_run_id=...` as a
+     private read-only UI endpoint for comparing two runs from the active work item;
    - show the run id, work item, runtime id, config snapshot summary, config root,
      resource root, Git SHA when available, prompt-pack provenance entries, and canonical
      stage graph;
+   - compare runs by prompt hash deltas, stage status deltas, bounded artifact hash
+     deltas, and validator outcome deltas without reading outside the project-local
+     `.aidd/` workspace;
    - treat missing prompt hashes, missing resource roots, or legacy manifests as warnings,
      not UI crashes;
    - keep prompt paths, content hashes, Git SHA, config root, runtime id, and stage graph
-     inputs read-only provenance. The frontend must not edit prompt packs or run
-     manifests.
+     inputs read-only provenance. The frontend must not edit prompt packs, run manifests,
+     or historical artifacts while rendering accountability/comparison views.
 
 13. **Runtime approval audit**
    - expose bounded approval audit rows beside the existing `requests` and `decisions`
@@ -280,6 +285,10 @@ Current W20 implementation status:
 - the overview cockpit includes Prompt / Workflow Accountability cards backed by
   `/api/run/accountability`, showing prompt provenance, config snapshot keys, runtime id,
   stage graph, Git SHA, and legacy-provenance warnings;
+- the Run History cockpit includes a read-only run comparison panel backed by
+  `/api/run/comparison`, defaulting baseline selection from lineage/source-run context
+  when available and allowing manual baseline run id entry for bounded prompt, stage,
+  artifact, and validator drift review;
 - approval views render server-provided `audit_history` rows in addition to existing
   request and decision payloads, preserving the current runtime approval write semantics;
 - review and QA tabs can launch remediation back to `implement` with selected source ids,
@@ -416,6 +425,8 @@ Before implementation is considered done, the local UI evidence lane must prove:
 - follow-up creation records selected source findings and inherited context explicitly;
 - launch preflight creates a new work item/run identity and source-run lineage evidence;
 - run history can show parent and child relationships and still open raw logs/artifacts;
+- run history can compare two run ids from the active work item by prompt hashes, stage
+  statuses, artifact hashes, and validator outcomes without mutating `.aidd/`;
 - long-running UI-started jobs show real timeline events and silence warnings without
   fake progress;
 - `implement` shows the real repository diff, untracked files, `.aidd/` artifact

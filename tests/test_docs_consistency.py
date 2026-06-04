@@ -1165,7 +1165,9 @@ def test_wave29_operator_hardening_docs_cover_beta_contracts() -> None:
     for needle in (
         "`root_id`, `root_label`, and `root_relative_root`",
         "`/api/run/accountability?run_id=...`",
+        "`/api/run/comparison?baseline_run_id=...&target_run_id=...`",
         "prompt paths, content hashes, Git SHA, config root, runtime id",
+        "bounded artifact hash",
         "status values are `pending`, `approved`, `denied`, `cancelled`, `policy-blocked`",
         "`audit_history` rows",
     ):
