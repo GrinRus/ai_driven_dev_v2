@@ -198,10 +198,13 @@ The UI reads the same `.aidd/` state as the CLI. It can show stage status, rende
 Markdown artifacts, show runtime logs, answer questions, show repair history, submit
 stage-scoped operator intervention requests, and display runtime readiness details without
 introducing a separate workflow engine. Operators can run the full workflow, run or resume
-the next eligible stage, or submit **Request change -> Submit & run** from the selected
+the next eligible stage, run the active stage with **Run selected stage**, or submit
+**Request change -> Submit & run** from the selected
 stage cockpit; these actions require an explicit runtime selection and there is no hidden
 `generic-cli` fallback. New UI launches stream live job logs while the process runs, and
 the saved `runtime.log` remains available afterward through the normal log view and CLI.
+Successful UI jobs report `/api/jobs/<job_id>` status `completed`; successful stage
+progress remains visible as stage state `succeeded` in the rail and artifacts.
 The command center also shows an Active Run panel and Timeline tab for long-running jobs:
 elapsed time, last output age, runner command, stage timeout summary, cancel action, and
 real stage milestones are shown without fake progress percentages.

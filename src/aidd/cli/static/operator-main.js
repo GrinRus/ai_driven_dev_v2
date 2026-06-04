@@ -317,6 +317,10 @@ document.addEventListener("click", async (event) => {
       await handleNextAction();
       return;
     }
+    if (event.target.closest("[data-first-launch-stage]")) {
+      await startStage(state.activeStage);
+      return;
+    }
     if (event.target.closest("[data-first-launch-run]")) {
       await startWorkflow();
       return;
@@ -397,9 +401,11 @@ document.addEventListener("input", (event) => {
   }
   if (event.target.id === "onboardingWorkItem") {
     state.onboarding.workItemInput = event.target.value;
+    syncOnboardingCreateActionState();
   }
   if (event.target.id === "onboardingRequest") {
     state.onboarding.requestText = event.target.value;
+    syncOnboardingCreateActionState();
   }
   if (event.target.id === "onboardingProjectSet") {
     state.onboarding.projectSetText = event.target.value;

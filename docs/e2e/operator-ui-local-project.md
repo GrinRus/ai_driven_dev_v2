@@ -21,15 +21,20 @@ The local-project UI lane follows the product operator path:
 1. Install or run AIDD locally.
 2. Change into the target local project root.
 3. Run `aidd doctor` with the intended config.
-4. Run `aidd init --work-item <id> --request "<task>" --root .aidd`.
-5. Run the workflow through `aidd run --runtime <runtime>` or continue through `aidd ui`.
-6. Run a single selected stage through the UI or `aidd stage run <stage>` when the
+4. Start `aidd ui` without `--work-item` for clean setup mode, validate the project
+   root, create or resume a work item, seed the request, inspect runner readiness, and
+   select a runtime explicitly.
+5. Use **Run workflow** for full progression or **Run selected stage** for a bounded
+   active-stage run from the command center.
+6. For scripted setup, `aidd init --work-item <id> --request "<task>" --root .aidd`
+   remains supported before opening `aidd ui --work-item <id>`.
+7. Run a single selected stage through the UI or `aidd stage run <stage>` when the
    operator needs a bounded retry.
-7. Request a stage-scoped correction through the UI `Request change` panel or
+8. Request a stage-scoped correction through the UI `Request change` panel or
    `aidd stage interact <stage>` when the operator needs a documented intervention.
-8. Inspect live UI job logs, persisted logs, and rendered artifacts through the UI or
+9. Inspect live UI job logs, persisted logs, and rendered artifacts through the UI or
    `aidd run logs` / `aidd run artifacts`.
-9. Keep `.aidd/` inside the local project root.
+10. Keep `.aidd/` inside the local project root.
 
 `aidd init --github-issue <url>` is out of product scope for this lane.
 
@@ -137,25 +142,36 @@ A manual installed UI smoke should use a disposable local fixture project:
 1. Install or run the AIDD artifact under test locally.
 2. Change into the local fixture project root.
 3. Run `aidd doctor` with the fixture config.
-4. Run `aidd init --work-item <id> --request "<task>" --root .aidd` so `.aidd/` and intake context are created inside the fixture project.
-5. Seed request context with `--request` or `--request-file`, then execute a local deterministic work item through `aidd run --runtime <runtime>`.
-6. Start `aidd ui --work-item <id> --root .aidd --host 127.0.0.1 --port <port>`.
-7. Verify the page loads, the dashboard shell renders stage rail/sidebar/bottom dock,
+4. Start `aidd ui --config <fixture-config> --host 127.0.0.1 --port <port>` without
+   `--work-item`.
+5. In setup mode, validate the absolute fixture project root, select the deterministic
+   runtime explicitly, then create a work item and request through the onboarding form.
+   Verify the create action becomes enabled even when the runtime was selected before
+   the work item id and request text were entered.
+6. Confirm `.aidd/workitems/<id>/context/user-request.md` is created inside the fixture
+   project without running `aidd init`.
+7. From the command center, use **Run selected stage** for `idea`, wait until
+   `/api/jobs/<job_id>` reports `completed`, and verify the stage rail reports
+   `idea` as `succeeded`.
+8. Run `research` through **Run selected stage** or the next-action continue path, wait
+   until the UI job reports `completed`, and verify the stage rail reports `research`
+   as `succeeded`.
+9. Verify the page loads, the dashboard shell renders stage rail/sidebar/bottom dock,
    runtime selection is required before `/api/workflow/run` and `/api/stage/run`
    dispatch, blocking answers persist, answer-and-resume keeps the same run id,
    `Request change -> Submit & run` creates a durable operator request and switches
    to live logs, persisted logs remain readable after completion, Markdown artifacts
    render as preview/source, validation state is visible, repair and operator-request
    evidence is linked, and recent activity/artifact rows remain visible after refresh.
-8. For a blocked or failed `plan` stage, submit a request such as
+10. For a blocked or failed `plan` stage, submit a request such as
    `Add migration rollback risks`, verify `/api/stage/interact` returns a job id,
    the Logs tab stays visible while polling `/api/jobs/<id>/logs`, and the latest
    request appears as `operator.request.created` in Activity plus an Evidence Ref.
-9. For completed-run handoff proof, use a terminal `qa` run or deterministic seeded
+11. For completed-run handoff proof, use a terminal `qa` run or deterministic seeded
    terminal workspace, open Flow Complete, start the follow-up wizard, create or preview
    a follow-up draft, run launch preflight, inspect Run History / Lineage, and record
    the Archive Run decision path.
-10. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
+12. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
 
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`
 state stays local to the fixture project.
@@ -198,8 +214,8 @@ and any blockers in roadmap evidence.
 ### Dashboard Shell
 
 - First launch shows the loading state before `/api/dashboard` resolves.
-- No-run state explains the first action and exposes a runtime-gated `Run workflow`
-  action after a runtime is selected.
+- No-run state explains the first action and exposes runtime-gated `Run workflow` and
+  `Run selected stage` actions after a runtime is selected.
 - Work item, run chip, runtime readiness, stage rail, stage cockpit, right sidebar,
   Activity / Events, and Recent artifacts are visible after refresh.
 - The active stage is marked in the rail and remains visible after selecting another

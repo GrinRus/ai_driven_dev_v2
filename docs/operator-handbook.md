@@ -215,6 +215,11 @@ operator to select a runtime before any workflow or stage execution starts. It u
 same workspace creation and request seeding behavior as `aidd init`; it does not
 introduce a second workflow engine or a hidden `generic-cli` fallback.
 
+After setup completes, the first command-center screen exposes both **Run workflow** for
+normal full progression and **Run selected stage** for a bounded active-stage smoke or
+retry. Successful UI jobs report `/api/jobs/<job_id>` status `completed`; the stage rail
+reports the completed stage state as `succeeded`.
+
 Bare `aidd`, `aidd --help`, and scripted subcommands keep their existing CLI behavior. Use
 the CLI steps below when you need a terminal-first or scripted setup.
 
