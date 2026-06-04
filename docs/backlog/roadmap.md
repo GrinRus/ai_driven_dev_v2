@@ -7557,7 +7557,7 @@ Exit evidence:
   defect is opened;
 - environment blockers and AIDD-owned failures are classified consistently.
 
-#### Slice W29-E1-S2 — provider-authenticated UI smokes (`next`)
+#### Slice W29-E1-S2 — provider-authenticated UI smokes (`partial; external blockers remain`)
 Goal: run the UI-first flow against real provider runtimes and record exact evidence or
 environment blockers.
 
@@ -7581,31 +7581,31 @@ Dependencies:
 
 Local tasks:
 
-- `W29-E1-S2-T1` (next) Run the Codex clean UI onboarding smoke through at least
+- `W29-E1-S2-T1` (done) Run the Codex clean UI onboarding smoke through at least
   `idea -> research` and record evidence or a provider-auth blocker.
   - Scope: manual live evidence outside the repo.
   - Verification: evidence records install/source channel, UI URL, selected project root,
     selected `codex` runtime, job ids, logs, timeline, artifacts, terminal status, and
     cleanup.
-- `W29-E1-S2-T2` (blocked) Run the Claude Code clean UI onboarding smoke through at
+- `W29-E1-S2-T2` (blocked/auth-env) Run the Claude Code clean UI onboarding smoke through at
   least `idea -> research` and record evidence or a provider-auth blocker.
   - Scope: manual live evidence outside the repo.
   - Verification: evidence records install/source channel, UI URL, selected project root,
     selected `claude-code` runtime, job ids, logs, timeline, artifacts, terminal status,
     and cleanup.
-- `W29-E1-S2-T3` (blocked) Run the OpenCode clean UI onboarding smoke through at least
+- `W29-E1-S2-T3` (blocked/auth-env) Run the OpenCode clean UI onboarding smoke through at least
   `idea -> research` and record evidence or a provider-auth blocker.
   - Scope: manual live evidence outside the repo.
   - Verification: evidence records install/source channel, UI URL, selected project root,
     selected `opencode` runtime, job ids, logs, timeline, artifacts, terminal status, and
     cleanup.
-- `W29-E1-S2-T4` (blocked) Run the Qwen clean UI onboarding smoke through at least
+- `W29-E1-S2-T4` (blocked/auth-env) Run the Qwen clean UI onboarding smoke through at least
   `idea -> research` when the experimental runtime is locally authenticated.
   - Scope: manual live evidence outside the repo.
   - Verification: evidence records install/source channel, UI URL, selected project root,
     selected `qwen` runtime, job ids, logs, timeline, artifacts, terminal status, and
     cleanup.
-- `W29-E1-S2-T5` (planned) Write a provider UI failure triage matrix from the completed
+- `W29-E1-S2-T5` (done) Write a provider UI failure triage matrix from the completed
   smokes.
   - Scope: analysis/backlog documentation only.
   - Verification: each finding is classified as AIDD-owned, provider-auth/environment,
@@ -7614,15 +7614,41 @@ Local tasks:
 
 Exit evidence:
 
-- at least one authenticated provider path is either proven or blocked by a documented
-  external condition;
+- Codex authenticated UI-first path is proven through `idea -> research`;
+- other provider lanes remain blocked by documented local auth/environment readiness, not
+  replaced by `generic-cli`;
 - runtime-specific failures become targeted follow-up tasks instead of vague product
   risk.
+
+Provider triage matrix:
+
+- `codex`: `pass`; source checkout `aidd 0.1.0a9.dev0`; Codex CLI
+  `codex-cli 0.133.0` from `/Applications/Codex.app/Contents/Resources/codex`;
+  disposable audit root `/tmp/aidd-w29-codex-ui-smoke-20260604T101201Z`; UI
+  onboarding created `WI-W29-CODEX-UI-SMOKE`; explicit `runtime=codex` selected;
+  `/api/stage/run` without `runtime` returned `runtime is required`; run
+  `run-20260604T101327Z` completed selected-stage `idea` and `research`; job ids
+  `job-1d6a8ed5746541d895b4146792aea3f3` and
+  `job-bd2ecfba5fa841c9a0e7803f5221757e` ended `completed` with exit code `0`;
+  stage rail shows `idea` and `research` as `succeeded`; logs, timelines, and artifacts
+  are available; `active_jobs=false` after terminal state. Provider emitted repeated
+  plugin/skill manifest warnings and one Codex SSE `HTTP 504` warning during `idea`, but
+  both stages completed successfully, so this is recorded as provider warning only.
+- `claude-code`: `blocked/auth-env`; local readiness reports `provider_available=false`
+  and `execution_command_available=false` for probe command `claude`; next action is to
+  install/authenticate Claude Code before running the UI smoke.
+- `opencode`: `blocked/auth-env`; local readiness reports binary `opencode 1.14.30` and
+  execution command availability, but the Wave 29 Codex-first PR did not verify
+  authentication or run the provider smoke; next action is an explicit OpenCode auth
+  preflight and smoke, not a `generic-cli` substitution.
+- `qwen`: `blocked/auth-env`; local readiness reports binary `qwen 0.17.0` and execution
+  command availability, but the experimental provider auth was not verified in this PR;
+  next action is an opt-in Qwen auth preflight and smoke if it becomes release-relevant.
 
 ### Epic W29-E2 — browser-verified operator UX (`next`)
 Linked stories: `US-02`, `US-03`, `US-06`, `US-11`
 
-#### Slice W29-E2-S1 — browser smoke contract and automation (`planned`)
+#### Slice W29-E2-S1 — browser smoke contract and automation (`next`)
 Goal: verify the operator UI in a browser, not only through API and static asset
 contracts.
 
@@ -7650,9 +7676,10 @@ Local tasks:
   - Scope: E2E documentation only.
   - Verification: docs checks prove required viewport, keyboard, screenshot, API snapshot,
     and cleanup fields are named.
-- `W29-E2-S1-T2` (planned) Add a browser-driven local UI smoke for clean onboarding and
+- `W29-E2-S1-T2` (next) Add a browser-driven local UI smoke for clean onboarding and
   selected-stage launch against the deterministic fixture.
-  - Scope: UI smoke tests or documented Browser/Playwright runner.
+  - Scope: documented Manual+Browser smoke or static/API contracts; no Playwright or
+    Selenium dev dependency.
   - Verification: the smoke creates a disposable project, completes onboarding, selects
     `generic-cli`, launches one selected stage, observes terminal cleanup, and leaves no
     `.aidd/` state in the repo.
@@ -7938,3 +7965,14 @@ Sync notes:
   their smoke tasks remain `auth/env` blockers until installed/authenticated. Active
   queue advances to `W29-E1-S2-T1` for Codex smoke evidence and keeps browser/live
   evidence plus run-to-run comparison/release-note criteria as follow-up work.
+- `2026-06-04` `W29-E1-S2-T1` and `W29-E1-S2-T5` completed in disposable audit root
+  `/tmp/aidd-w29-codex-ui-smoke-20260604T101201Z`: source checkout `aidd 0.1.0a9.dev0`
+  launched `aidd ui` clean onboarding, created `WI-W29-CODEX-UI-SMOKE`, explicitly
+  selected Codex CLI `codex-cli 0.133.0`, verified `/api/stage/run` rejects missing
+  `runtime`, and ran selected stages `idea` and `research` in
+  `run-20260604T101327Z` to `succeeded`. The UI/API evidence shows no active jobs after
+  terminal state and available logs, timelines, and artifacts. Updated local readiness
+  also found OpenCode `1.14.30` and Qwen `0.17.0` binaries, but their auth/provider
+  smokes remain `blocked/auth-env` until explicit authenticated lanes are run; Claude
+  Code remains unavailable locally. Backlog advances to Browser evidence
+  `W29-E2-S1-T2`.
