@@ -7503,3 +7503,429 @@ Sync notes:
   roadmap/audit/release-ergonomics updates, and `docs/release-checklist.md` now has a
   next-prerelease readiness note for `0.1.0a9.dev0` with post-a8 evidence, remaining
   operator risks, and unchanged release gates. Wave 28 is closed.
+
+---
+
+## Wave 29 — real-provider operator beta hardening (`next`)
+
+Goal: move the shipped UI-first operator path from deterministic local confidence to
+real-provider, browser-verified, beta-readiness evidence while preserving CLI
+compatibility, explicit runtime selection, project-local `.aidd/` ownership, and release
+immutability.
+
+### Epic W29-E1 — real-provider UI E2E evidence (`next`)
+Linked stories: `US-01`, `US-06`, `US-07`, `US-11`
+
+#### Slice W29-E1-S1 — provider UI acceptance contract (`next`)
+Goal: define the real-provider UI-first E2E lane before running provider-authenticated
+smokes.
+
+Primary outputs:
+
+- real-provider UI E2E acceptance matrix
+- provider readiness and blocker taxonomy
+- evidence capture checklist for authenticated local smokes
+
+Touched areas:
+
+- `docs/e2e/`
+- `docs/operator-handbook.md`
+- `docs/backlog/`
+
+Dependencies:
+
+- accepted `v0.1.0a8` package evidence
+- Wave 28 published-package and source checkout UI smoke evidence
+
+Local tasks:
+
+- `W29-E1-S1-T1` (next) Define the real-provider UI E2E acceptance matrix for `codex`,
+  `claude-code`, `opencode`, and optional `qwen` runs through clean UI onboarding.
+  - Scope: E2E/operator documentation only.
+  - Verification: docs checks and roadmap sync prove the matrix names provider auth
+    prerequisites, `aidd ui` setup flow, explicit runtime selection, stage targets,
+    expected artifacts, blocker classes, and cleanup rules.
+- `W29-E1-S1-T2` (planned) Add the provider readiness preflight checklist for UI-first
+  smokes.
+  - Scope: E2E/operator documentation only.
+  - Verification: docs checks prove each maintained provider has binary, auth, command,
+    timeout, runtime id, and evidence-location checks before launch.
+
+Exit evidence:
+
+- provider-authenticated UI smokes have a common contract before any runtime-specific
+  defect is opened;
+- environment blockers and AIDD-owned failures are classified consistently.
+
+#### Slice W29-E1-S2 — provider-authenticated UI smokes (`planned`)
+Goal: run the UI-first flow against real provider runtimes and record exact evidence or
+environment blockers.
+
+Primary outputs:
+
+- Codex UI smoke evidence or blocker note
+- Claude Code UI smoke evidence or blocker note
+- OpenCode UI smoke evidence or blocker note
+- optional Qwen UI smoke evidence or blocker note
+
+Touched areas:
+
+- disposable audit workspaces outside the repository
+- `docs/e2e/`
+- `docs/backlog/`
+
+Dependencies:
+
+- `W29-E1-S1`
+- local provider binaries and authentication where available
+
+Local tasks:
+
+- `W29-E1-S2-T1` (planned) Run the Codex clean UI onboarding smoke through at least
+  `idea -> research` and record evidence or a provider-auth blocker.
+  - Scope: manual live evidence outside the repo.
+  - Verification: evidence records install/source channel, UI URL, selected project root,
+    selected `codex` runtime, job ids, logs, timeline, artifacts, terminal status, and
+    cleanup.
+- `W29-E1-S2-T2` (planned) Run the Claude Code clean UI onboarding smoke through at
+  least `idea -> research` and record evidence or a provider-auth blocker.
+  - Scope: manual live evidence outside the repo.
+  - Verification: evidence records install/source channel, UI URL, selected project root,
+    selected `claude-code` runtime, job ids, logs, timeline, artifacts, terminal status,
+    and cleanup.
+- `W29-E1-S2-T3` (planned) Run the OpenCode clean UI onboarding smoke through at least
+  `idea -> research` and record evidence or a provider-auth blocker.
+  - Scope: manual live evidence outside the repo.
+  - Verification: evidence records install/source channel, UI URL, selected project root,
+    selected `opencode` runtime, job ids, logs, timeline, artifacts, terminal status, and
+    cleanup.
+- `W29-E1-S2-T4` (later) Run the Qwen clean UI onboarding smoke through at least
+  `idea -> research` when the experimental runtime is locally authenticated.
+  - Scope: manual live evidence outside the repo.
+  - Verification: evidence records install/source channel, UI URL, selected project root,
+    selected `qwen` runtime, job ids, logs, timeline, artifacts, terminal status, and
+    cleanup.
+- `W29-E1-S2-T5` (planned) Write a provider UI failure triage matrix from the completed
+  smokes.
+  - Scope: analysis/backlog documentation only.
+  - Verification: each finding is classified as AIDD-owned, provider-auth/environment,
+    model-output, adapter, documentation, or deferred product scope with exact evidence
+    links.
+
+Exit evidence:
+
+- at least one authenticated provider path is either proven or blocked by a documented
+  external condition;
+- runtime-specific failures become targeted follow-up tasks instead of vague product
+  risk.
+
+### Epic W29-E2 — browser-verified operator UX (`planned`)
+Linked stories: `US-02`, `US-03`, `US-06`, `US-11`
+
+#### Slice W29-E2-S1 — browser smoke contract and automation (`planned`)
+Goal: verify the operator UI in a browser, not only through API and static asset
+contracts.
+
+Primary outputs:
+
+- browser smoke checklist for onboarding and command center surfaces
+- automated or semi-automated browser smoke lane for disposable local projects
+- screenshot and interaction evidence requirements
+
+Touched areas:
+
+- `docs/e2e/operator-ui-local-project.md`
+- `tests/cli/`
+- `src/aidd/cli/static/`
+
+Dependencies:
+
+- Wave 28 source checkout operator-control smoke
+
+Local tasks:
+
+- `W29-E2-S1-T1` (planned) Define the browser-verified operator UI smoke checklist for
+  onboarding, runner cards, selected-stage launch, Active Run, Timeline, Implement
+  Review, Review Findings, QA Verdict, and remediation.
+  - Scope: E2E documentation only.
+  - Verification: docs checks prove required viewport, keyboard, screenshot, API snapshot,
+    and cleanup fields are named.
+- `W29-E2-S1-T2` (planned) Add a browser-driven local UI smoke for clean onboarding and
+  selected-stage launch against the deterministic fixture.
+  - Scope: UI smoke tests or documented Browser/Playwright runner.
+  - Verification: the smoke creates a disposable project, completes onboarding, selects
+    `generic-cli`, launches one selected stage, observes terminal cleanup, and leaves no
+    `.aidd/` state in the repo.
+- `W29-E2-S1-T3` (planned) Capture browser screenshots for the primary operator control
+  center states.
+  - Scope: manual/browser evidence outside generated source artifacts.
+  - Verification: evidence includes onboarding, command center, logs/timeline, artifacts,
+    implement diff, review findings, QA verdict, remediation, and stale downstream states.
+- `W29-E2-S1-T4` (later) Convert the first repeatable browser UX defect into a targeted
+  fix task after evidence exists.
+  - Scope: planning documents only.
+  - Verification: the defect task names one UI surface, exact repro steps, expected and
+    actual behavior, and one focused verification path.
+
+Exit evidence:
+
+- operator UI quality is checked through actual browser interactions;
+- visual and interaction regressions are separated from backend/API health.
+
+### Epic W29-E3 — project-set and monorepo UX (`planned`)
+Linked stories: `US-11`, `US-12`
+
+#### Slice W29-E3-S1 — project-set operator visibility (`planned`)
+Goal: make declared project-set roots understandable in the UI without mixing unrelated
+repositories into one `.aidd` workspace.
+
+Primary outputs:
+
+- project-set UI behavior contract
+- per-root artifact and diff grouping read model
+- out-of-scope write warnings for operator review
+
+Touched areas:
+
+- `docs/architecture/project-set-workspace.md`
+- `docs/architecture/operator-frontend.md`
+- `src/aidd/core/`
+- `src/aidd/cli/static/`
+
+Dependencies:
+
+- existing project-set resolver and onboarding root validation
+- implement diff review service
+
+Local tasks:
+
+- `W29-E3-S1-T1` (planned) Define the project-set UI behavior contract for declared
+  roots, per-root ownership, and unrelated-project boundaries.
+  - Scope: architecture documentation only.
+  - Verification: docs checks prove the contract preserves one active project-local
+    `.aidd/`, declared related roots, and no unrelated multi-project execution.
+- `W29-E3-S1-T2` (planned) Expose per-root artifact and source-diff grouping in the
+  operator read model.
+  - Scope: core read model/API only.
+  - Verification: service tests prove changed files and artifacts are grouped by declared
+    root and out-of-scope paths are reported without traversal escapes.
+- `W29-E3-S1-T3` (planned) Render project-set grouping and out-of-scope warnings in the
+  operator UI.
+  - Scope: packaged static UI assets only.
+  - Verification: static UI contract tests prove root labels, grouping, and warning states
+    render with escaped dynamic values.
+- `W29-E3-S1-T4` (planned) Add deterministic project-set UI regression coverage.
+  - Scope: CLI/UI tests only.
+  - Verification: fixture-backed tests prove duplicate roots, root escapes, per-root
+    artifacts, and source diff grouping behave deterministically.
+
+Exit evidence:
+
+- monorepo operators can see which declared root owns each artifact or diff;
+- unrelated repositories remain out of scope for one UI session.
+
+### Epic W29-E4 — prompt and workflow accountability (`planned`)
+Linked stories: `US-07`, `US-10`, `US-11`
+
+#### Slice W29-E4-S1 — run accountability read model (`planned`)
+Goal: make prompt/workflow inputs visible enough to compare runs and diagnose behavior
+drift.
+
+Primary outputs:
+
+- prompt/workflow provenance UI contract
+- run input and prompt hash read model
+- run-to-run comparison surface for operator/evaluator use
+
+Touched areas:
+
+- `docs/architecture/operator-frontend.md`
+- `src/aidd/core/`
+- `src/aidd/cli/static/`
+- `tests/core/`
+- `tests/cli/`
+
+Dependencies:
+
+- existing run manifest provenance fields
+- evidence graph read model
+
+Local tasks:
+
+- `W29-E4-S1-T1` (planned) Define the prompt/workflow accountability contract for the
+  operator UI.
+  - Scope: architecture documentation only.
+  - Verification: docs checks prove prompt paths, content hashes, Git SHA, config roots,
+    runtime id, and stage graph inputs are named as read-only evidence.
+- `W29-E4-S1-T2` (planned) Expose prompt hash and workflow input provenance in a core
+  run-accountability read model.
+  - Scope: core read model only.
+  - Verification: core tests prove prompt paths, hashes, config, runtime id, and run
+    manifest references are returned without mutating artifacts.
+- `W29-E4-S1-T3` (planned) Render prompt/workflow provenance in the operator UI.
+  - Scope: packaged static UI assets only.
+  - Verification: static UI contract tests prove provenance cards and missing-evidence
+    states render with escaped values.
+- `W29-E4-S1-T4` (later) Add a bounded run-to-run comparison view for prompt and artifact
+  drift.
+  - Scope: core/UI read-only comparison only.
+  - Verification: tests prove two runs can be compared by prompt hash, stage status,
+    changed artifacts, and validator outcomes without reading outside `.aidd/`.
+
+Exit evidence:
+
+- maintainers can explain which prompt/workflow inputs produced a run;
+- eval and operator reviews can detect prompt or configuration drift.
+
+### Epic W29-E5 — runtime safety and approval UX (`planned`)
+Linked stories: `US-06`, `US-11`
+
+#### Slice W29-E5-S1 — approval and safety control surfaces (`planned`)
+Goal: make runtime approval, denial, and sensitive-command decisions understandable in
+the operator UI.
+
+Primary outputs:
+
+- approval state and policy UX contract
+- sensitive command and denied request panels
+- durable safety audit trail view
+
+Touched areas:
+
+- `docs/architecture/operator-frontend.md`
+- `src/aidd/core/`
+- `src/aidd/cli/static/`
+- `tests/cli/`
+
+Dependencies:
+
+- existing runtime permission and approval queue surfaces
+
+Local tasks:
+
+- `W29-E5-S1-T1` (planned) Define the runtime approval UX contract for pending,
+  approved, denied, expired, and policy-blocked requests.
+  - Scope: architecture/operator documentation only.
+  - Verification: docs checks prove each approval state, operator action, and safety log
+    field is named.
+- `W29-E5-S1-T2` (planned) Render sensitive command and denied request panels in the
+  operator UI.
+  - Scope: packaged static UI assets only.
+  - Verification: static UI contract tests prove command summaries, policy reasons,
+    runtime ids, timestamps, and operator actions render safely.
+- `W29-E5-S1-T3` (planned) Add approval audit trail API coverage for operator UI reads.
+  - Scope: private UI API/tests only.
+  - Verification: API tests prove approval history is readable, bounded, ordered, and not
+    mixed across work items or runs.
+
+Exit evidence:
+
+- operators can understand runtime safety decisions without leaving the UI;
+- approval history remains auditable and scoped to the active project/work item.
+
+### Epic W29-E6 — release and install ergonomics v2 (`planned`)
+Linked stories: `US-09`, `US-10`
+
+#### Slice W29-E6-S1 — maintainer release preflight tooling (`planned`)
+Goal: reduce manual release friction without changing the GitHub Release published-event
+release model.
+
+Primary outputs:
+
+- PATH-safe local release preflight command
+- release evidence collector
+- updated release checklist for next prerelease gates
+
+Touched areas:
+
+- `docs/release-checklist.md`
+- `scripts/`
+- `tests/`
+
+Dependencies:
+
+- accepted `v0.1.0a8` release flow
+- PATH-safe `gh` documentation from Wave 28
+
+Local tasks:
+
+- `W29-E6-S1-T1` (planned) Add a PATH-safe release preflight helper for `uv`, `gh`,
+  source version, branch, tag absence, and PyPI version absence checks.
+  - Scope: release helper script only.
+  - Verification: unit tests or dry-run tests prove missing binaries, mismatched version,
+    existing tag, and existing PyPI version produce explicit non-mutating failures.
+- `W29-E6-S1-T2` (planned) Add a release evidence collector for workflow, PyPI, `pipx`,
+  and `uv tool` verification links.
+  - Scope: release helper script/docs only.
+  - Verification: tests prove evidence fields are bounded, required links are validated,
+    and no release tag is created by the helper.
+- `W29-E6-S1-T3` (planned) Update the next prerelease checklist to use the preflight and
+  evidence collector.
+  - Scope: release documentation only.
+  - Verification: docs checks prove the release flow still requires draft release,
+    explicit publish approval, GitHub Release-created tag, PyPI verification, `pipx`, and
+    `uv tool` smoke evidence.
+
+Exit evidence:
+
+- maintainers have a repeatable preflight before publishing the next prerelease;
+- release helpers cannot bypass the accepted tag/publication model.
+
+### Epic W29-E7 — beta-readiness acceptance matrix (`planned`)
+Linked stories: `US-01`, `US-07`, `US-09`, `US-10`, `US-11`, `US-12`
+
+#### Slice W29-E7-S1 — beta gate definition (`planned`)
+Goal: define the product gate for a future beta-oriented release before claiming beta
+readiness.
+
+Primary outputs:
+
+- beta acceptance matrix
+- explicit non-goals and residual alpha risks
+- go/no-go evidence checklist
+
+Touched areas:
+
+- `README.md`
+- `docs/product/user-stories.md`
+- `docs/architecture/target-architecture.md`
+- `docs/release-checklist.md`
+
+Dependencies:
+
+- Wave 29 real-provider and browser evidence begins
+- accepted alpha release evidence remains immutable
+
+Local tasks:
+
+- `W29-E7-S1-T1` (planned) Define the beta-readiness acceptance matrix for install,
+  clean UI onboarding, real provider execution, operator remediation, project-set
+  boundaries, docs, security posture, and release evidence.
+  - Scope: product/release documentation only.
+  - Verification: docs checks prove beta readiness is described as a future gate, not a
+    current production claim.
+- `W29-E7-S1-T2` (planned) Reconcile user stories and target architecture against the
+  beta matrix.
+  - Scope: product and architecture documentation only.
+  - Verification: docs checks prove user story success signals and architecture
+    non-goals match the beta gate wording.
+- `W29-E7-S1-T3` (later) Prepare beta-oriented release note criteria after provider and
+  browser evidence are available.
+  - Scope: release documentation only.
+  - Verification: the note criteria require fresh evidence links and do not describe an
+    unpublished dev version as accepted.
+
+Exit evidence:
+
+- maintainers know exactly what remains before a beta-oriented claim;
+- alpha/prerelease language remains honest until the gate is satisfied.
+
+Sync notes:
+
+- `2026-06-04` Wave 29 opened via `W8-E3-S1` queue-restoration policy after Wave 28
+  closed with an empty active backlog. The wave groups the next product scopes into one
+  large roadmap lane: real-provider UI E2E, browser-verified operator UX, project-set
+  UX, prompt/workflow accountability, runtime safety, release ergonomics, and beta
+  readiness. Initial queue restoration promotes `W29-E1-S1-T1` to `Next`,
+  `W29-E1-S1-T2`, `W29-E2-S1-T1`, and `W29-E7-S1-T1` to `Soon`, with implementation
+  and evidence follow-ups kept in `Parking lot` until the acceptance contract is written.
