@@ -344,16 +344,16 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-06-04` Wave 29 contract/tooling pass completed `W29-E1-S1`,
   `W29-E2-S1-T1`, `W29-E3-S1`, `W29-E4-S1-T1` through `T3`, `W29-E5-S1`,
   `W29-E6-S1`, and `W29-E7-S1-T1` through `T2`. Active queue advances to
-  `W29-E1-S2-T1`; Claude Code, OpenCode, and Qwen smokes stay parked as `auth/env`
-  blockers because those binaries were not present in the current shell `PATH`.
+  `W29-E1-S2-T1`; Claude Code, OpenCode, and Qwen smokes were initially parked as
+  `auth/env` blockers because those binaries were not present in the non-interactive
+  Codex app shell `PATH`.
 - `2026-06-04` Completed `W29-E1-S2-T1` and `W29-E1-S2-T5`: disposable Codex UI smoke
   at `/tmp/aidd-w29-codex-ui-smoke-20260604T101201Z` passed clean onboarding,
   explicit `codex` runner selection, missing-runtime API rejection, selected-stage
   `idea` and `research`, terminal cleanup, logs, timeline, and artifacts. The provider
-  triage matrix is recorded in the roadmap; Claude Code remains unavailable, and
-  OpenCode/Qwen binary readiness still requires separate authenticated smoke lanes.
-  Active queue advances to `W29-E2-S1-T2`; `W29-E2-S1-T3` and `W29-E4-S1-T4` move to
-  `Soon`.
+  triage matrix is recorded in the roadmap; OpenCode/Qwen binary readiness and Claude
+  Code login-shell readiness still required separate authenticated smoke lanes. Active
+  queue advances to `W29-E2-S1-T2`; `W29-E2-S1-T3` and `W29-E4-S1-T4` move to `Soon`.
 - `2026-06-04` Completed `W29-E2-S1-T2` and `W29-E2-S1-T3`: Manual+Browser evidence
   in `/tmp/aidd-w29-browser-ui-smoke-pass-20260604T103044Z` covered clean onboarding,
   runner cards, create-form enablement, explicit `generic-cli`, selected-stage
@@ -371,5 +371,13 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   release note criteria that require fresh provider, Browser, install, remediation,
   project-set, provenance/comparison, approval audit, security, and package-channel
   evidence, and it keeps `0.1.0a9.dev0` separate from accepted releases. Wave 29 is
-  closed; Claude Code, OpenCode, and Qwen provider UI smokes remain roadmap-level
-  `blocked/auth-env` lanes, not active backlog work. The queue is empty again.
+  closed with the provider lanes still pending login-shell verification. The queue is
+  empty again.
+- `2026-06-04` Completed the W29 provider-auth rerun from a login shell: disposable
+  evidence root `/tmp/aidd-w29-provider-auth-rerun-20260604T113402Z` proves
+  `claude-code`, `opencode`, and optional `qwen` clean UI onboarding plus selected-stage
+  `idea -> research` all pass with explicit runtime selection, missing-runtime rejection,
+  completed jobs, succeeded stage rail statuses, logs, timelines, and artifacts. W29
+  provider lanes are no longer blocked; future provider smokes should use a login shell
+  or explicit PATH prefix when provider binaries are outside the Codex app's default
+  non-interactive PATH.

@@ -1198,8 +1198,12 @@ def test_wave29_operator_hardening_docs_cover_beta_contracts() -> None:
         "project-set grouping",
         "approval audit visibility",
         "Do not describe a `.dev0` source version as an accepted package release",
+        "Wave 29 provider-auth rerun",
+        "login-shell provider commands",
+        "shell or an explicit PATH prefix",
     ):
         assert needle in release_checklist
+    assert "Claude Code remains `blocked/auth-env`" not in release_checklist
 
 
 def test_release_publish_skill_describes_release_flow_guardrails() -> None:
