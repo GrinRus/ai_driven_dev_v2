@@ -8,6 +8,10 @@ stable compatibility window exists.
 ## Unreleased
 
 - Open the next development cycle after accepted `v0.1.0a8` release evidence.
+- Reconcile UI-first onboarding roadmap state with the shipped `v0.1.0a7`/`v0.1.0a8`
+  operator path and add post-a8 audit evidence for clean UI onboarding.
+- Document PATH-safe GitHub CLI release operations for maintainer shells where `gh` is
+  installed outside the default `PATH`.
 
 ## 0.1.0a8 - 2026-06-04
 
