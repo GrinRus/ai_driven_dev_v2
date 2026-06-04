@@ -224,6 +224,29 @@ Post-`v0.1.0a8` evidence now recorded on `main`:
   `GET /api/run/comparison?baseline_run_id=...&target_run_id=...` and the Run History UI
   comparison panel for prompt hash, stage status, artifact hash, and validator outcome
   deltas.
+- Wave 30 security triage inspected the four open GitHub Dependabot alerts on the default
+  branch. All four were transitive docs-extra lockfile dependencies through
+  `mkdocs-material`/`requests`, not AIDD runtime core or provider adapters, and the
+  lockfile was patched from `idna 3.13` to `3.18`, `pymdown-extensions 10.21.2` to
+  `10.21.3`, and `urllib3 2.6.3` to `2.7.0`.
+- Wave 30 fresh source smoke used disposable audit root
+  `/tmp/aidd-w30-release-readiness-smoke-20260604T121108Z`, source checkout
+  `aidd 0.1.0a9.dev0`, clean `aidd ui` onboarding, work item
+  `WI-W30-RELEASE-READINESS-SMOKE`, explicit `generic-cli`, and selected-stage
+  `idea -> research` in run `run-20260604T121116Z`; jobs
+  `job-add2c133fdee4cff90c4232a20911b8c` and
+  `job-52f8e71e3a564672becae1084bf27d71` ended `completed`, stage rail statuses were
+  `succeeded`, `/api/stage/run` without `runtime` returned `runtime is required.`, and
+  logs, timelines, artifacts, and `context/user-request.md` were present.
+
+Wave 30 Dependabot triage:
+
+| Alert | Package | Severity | Dependency type / surface | Affected lock version | Fixed version | Action |
+| --- | --- | --- | --- | --- | --- | --- |
+| `#4` / `CVE-2026-45409` | `idna` | Medium | Transitive docs-extra dependency through `requests`; not AIDD runtime core/provider adapter execution | `3.13` | `3.15` or later | Updated lock to `3.18` |
+| `#3` / `CVE-2026-46338` | `pymdown-extensions` | Medium | Transitive docs-extra dependency through `mkdocs-material`; documentation build surface | `10.21.2` | `10.21.3` | Updated lock to `10.21.3` |
+| `#2` / `CVE-2026-44431` | `urllib3` | High | Transitive docs-extra dependency through `requests`; not AIDD runtime core/provider adapter execution | `2.6.3` | `2.7.0` | Updated lock to `2.7.0` |
+| `#1` / `CVE-2026-44432` | `urllib3` | High | Same locked `urllib3` transitive docs-extra dependency as alert `#2` | `2.6.3` | `2.7.0` | Updated lock to `2.7.0` |
 
 Known operator risks before cutting the next prerelease:
 
@@ -242,6 +265,9 @@ Known operator risks before cutting the next prerelease:
 - The local shell lacked a `python` alias; the published-package fixture used
   `/usr/bin/python3` explicitly. This is an environment note, not a hidden AIDD runtime
   fallback.
+- GitHub Dependabot alerts may remain visible until this lockfile remediation is merged to
+  the default branch and GitHub re-evaluates `uv.lock`; do not treat local lock evidence
+  alone as default-branch closure.
 
 Future beta readiness is not implied by the alpha package evidence above. A beta-oriented
 release note must cite fresh evidence for the exact candidate across install, clean UI
@@ -281,6 +307,19 @@ Required gates for the next prerelease remain unchanged:
 - publish only after explicit approval through the GitHub Release `published` event;
 - verify PyPI, `pipx`, and `uv tool` installability before accepting the release
   evidence.
+
+Wave 30 go/no-go input for `v0.1.0a9` candidate preparation:
+
+- Security posture: go after this branch merges and Dependabot re-evaluates the patched
+  lockfile; no alert was left untriaged.
+- Deterministic source UI smoke: go for clean onboarding, explicit runtime requirement,
+  selected-stage `idea -> research`, logs, timeline, artifacts, and terminal job cleanup.
+- Provider/browser evidence: Wave 29 all-pass source evidence exists for Codex, Claude
+  Code, OpenCode, optional Qwen, and Manual+Browser operator surfaces, but any release
+  candidate notes must cite fresh candidate-specific evidence if they make a beta-oriented
+  claim.
+- Release action: no-go for `release/v0.1.0a9`, draft prerelease, or publish until a
+  separate explicit approval starts release preparation.
 
 W24 manual live evidence refresh on 2026-05-24:
 

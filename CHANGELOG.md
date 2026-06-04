@@ -12,6 +12,9 @@ stable compatibility window exists.
   operator path and add post-a8 audit evidence for clean UI onboarding.
 - Document PATH-safe GitHub CLI release operations for maintainer shells where `gh` is
   installed outside the default `PATH`.
+- Open Wave 30 release-readiness work for `v0.1.0a9`, including Dependabot alert
+  triage, patched locked docs dependencies, and a fresh source UI smoke before any
+  release candidate branch is prepared.
 
 ## 0.1.0a8 - 2026-06-04
 

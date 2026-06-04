@@ -8034,3 +8034,154 @@ Sync notes:
   artifacts. W29 provider matrix is now all-pass for `codex`, `claude-code`, `opencode`,
   and optional `qwen`; future smokes should use a login shell or explicit PATH prefix
   when provider binaries live outside the Codex app's default non-interactive PATH.
+
+---
+
+## Wave 30 — security posture and `v0.1.0a9` release readiness (`in progress`)
+
+Goal: close current default-branch dependency security alerts, then prepare an honest
+go/no-go input for the next alpha prerelease without changing CLI/UI behavior or starting
+publication before explicit approval.
+
+### Epic W30-E1 — Dependabot security posture (`done`)
+Linked stories: `US-09`, `US-10`
+
+#### Slice W30-E1-S1 — dependency alert triage and lock remediation (`done`)
+Goal: inspect the open Dependabot alerts, classify reachable surface, and remediate
+straightforward locked dependency updates before release candidate preparation.
+
+Primary outputs:
+
+- default-branch Dependabot alert triage table
+- patched lockfile for simple dependency fixes
+- security posture note for release readiness
+
+Touched areas:
+
+- `uv.lock`
+- `docs/release-checklist.md`
+- `docs/backlog/`
+
+Dependencies:
+
+- merged Wave 29 provider/browser evidence on `main`
+- GitHub Dependabot alert read access through `gh`
+
+Local tasks:
+
+- `W30-E1-S1-T1` (done) Triage the four default-branch Dependabot alerts and fix
+  simple lockfile remediations.
+  - Scope: dependency lock plus release/backlog documentation only.
+  - Verification: alert table names package, severity, dependency type, reachable
+    surface, affected version, fixed version, action, and local deterministic gates pass.
+
+Exit evidence:
+
+- release readiness has no untriaged Dependabot alert from the current default branch;
+- any remaining dependency risk is explicit rather than hidden.
+
+### Epic W30-E2 — next alpha release readiness (`done`)
+Linked stories: `US-01`, `US-07`, `US-09`, `US-10`, `US-11`
+
+#### Slice W30-E2-S1 — `v0.1.0a9` source readiness evidence (`done`)
+Goal: collect a fresh source-checkout operator smoke and summarize whether `main` is
+ready for a release-candidate branch.
+
+Primary outputs:
+
+- fresh clean UI onboarding source smoke evidence
+- README/release wording audit for unpublished `0.1.0a9.dev0`
+- go/no-go summary for release candidate preparation
+
+Touched areas:
+
+- disposable `/tmp` smoke workspace
+- `README.md`
+- `docs/release-checklist.md`
+- `docs/backlog/`
+
+Dependencies:
+
+- `W30-E1-S1`
+
+Local tasks:
+
+- `W30-E2-S1-T1` (done) Run a fresh source smoke from `main` through clean `aidd ui`
+  onboarding, explicit runner selection, and selected-stage `idea -> research`.
+  - Scope: manual deterministic source evidence outside the repository.
+  - Verification: evidence records project root, work item, runtime id, run id, job ids,
+    missing-runtime rejection, stage statuses, logs, timeline, artifacts, and cleanup.
+- `W30-E2-S1-T2` (done) Write the `v0.1.0a9` release-readiness go/no-go summary.
+  - Scope: release-facing documentation only.
+  - Verification: docs keep `0.1.0a9.dev0` as development source, list security/test/UI
+    smoke/provider evidence, and require explicit approval before release prep/publish.
+
+Exit evidence:
+
+- maintainers have a current release-candidate decision input;
+- README and release docs do not imply that `0.1.0a9` is already published.
+
+### Epic W30-E3 — approved release preparation (`blocked`)
+Linked stories: `US-09`, `US-10`
+
+#### Slice W30-E3-S1 — `v0.1.0a9` release branch and dry-runs (`blocked`)
+Goal: only after explicit maintainer approval, create the release candidate branch,
+prepare the draft prerelease, and run remote dry-runs without bypassing the established
+GitHub Release published-event model.
+
+Primary outputs:
+
+- `release/v0.1.0a9` branch with candidate version `0.1.0a9`
+- remote `ci.yml` and `release.yml` dry-run evidence
+- draft GitHub prerelease targeting the release branch
+
+Touched areas:
+
+- `pyproject.toml`
+- `uv.lock`
+- release notes/checklist docs
+- GitHub release workflows
+
+Dependencies:
+
+- completed `W30-E1-S1`
+- completed `W30-E2-S1`
+- separate explicit approval to start release preparation
+
+Local tasks:
+
+- `W30-E3-S1-T1` (blocked) Prepare the `v0.1.0a9` release branch and draft prerelease
+  after explicit approval.
+  - Scope: release preparation only.
+  - Verification: local deterministic checks, `uv build`, remote CI/release dry-runs,
+    absence of a preexisting `v0.1.0a9` tag/PyPI version, and draft release metadata.
+
+Exit evidence:
+
+- release candidate prep is ready for a separate publish approval;
+- no tag is pushed manually and no package is published from this planning/dependency pass.
+
+Sync notes:
+
+- `2026-06-04` Wave 30 opened after PR #72 merged Wave 29 and local `main` was clean at
+  `20e52df`. Initial queue restoration promoted `W30-E1-S1-T1` for Dependabot security
+  triage, kept `W30-E2-S1-T1` and `W30-E2-S1-T2` behind security triage, and parked
+  `W30-E3-S1-T1` behind a separate explicit release-prep approval.
+- `2026-06-04` `W30-E1-S1-T1` completed: GitHub Dependabot reported four open alerts on
+  default branch, all in `uv.lock` transitive docs-extra dependencies through
+  `mkdocs-material`/`requests`, not AIDD runtime core or provider adapters. The lockfile
+  was updated from `idna 3.13` to `3.18`, `pymdown-extensions 10.21.2` to `10.21.3`,
+  and `urllib3 2.6.3` to `2.7.0`, covering the reported patched versions. The alerts are
+  expected to close after this lock update reaches default branch and Dependabot
+  re-evaluates the dependency graph.
+- `2026-06-04` `W30-E2-S1-T1` and `W30-E2-S1-T2` completed with fresh source evidence in
+  disposable audit root `/tmp/aidd-w30-release-readiness-smoke-20260604T121108Z`.
+  Source checkout `aidd 0.1.0a9.dev0` started clean `aidd ui`, `GET /api/onboarding/state`
+  returned `setup_required=true`, `GET /api/dashboard` before setup returned
+  `Complete project setup before using this UI action.`, onboarding created
+  `WI-W30-RELEASE-READINESS-SMOKE`, explicit `generic-cli` was selected, missing-runtime
+  selected-stage launch returned `runtime is required.`, and run `run-20260604T121116Z`
+  completed `idea` and `research` jobs `job-add2c133fdee4cff90c4232a20911b8c` and
+  `job-52f8e71e3a564672becae1084bf27d71` with job status `completed`, stage rail status
+  `succeeded`, fixture runtime logs, seven timeline events per stage, and expected
+  Markdown artifacts. Release prep remains blocked on separate explicit approval.
