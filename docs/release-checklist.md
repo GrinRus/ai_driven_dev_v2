@@ -132,13 +132,13 @@ uv tool uninstall ai-driven-dev-v2
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a8.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a7`.
+Current release-candidate package version: `0.1.0a8`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a7`.
 
-No current release candidate is accepted from this development version. Future release
-candidates must again use a unique `release/v<project.version>` branch, a GitHub Release
-`published` event, PyPI publish, `pipx`, and `uv tool` verification before they become
-accepted package-channel evidence.
+Current release candidate branch: `release/v0.1.0a8`. This candidate is not accepted
+package-channel evidence until a GitHub Release `published` event, PyPI publish, `pipx`,
+and `uv tool` verification all succeed. README install instructions must continue to name
+`0.1.0a7` until that evidence exists.
 
 W24 manual live evidence refresh on 2026-05-24:
 
@@ -172,6 +172,32 @@ does not replace GitHub Release, PyPI, `pipx`, or `uv tool` verification.
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a8` candidate preparation on 2026-06-04
+
+- Target tag: `v0.1.0a8`
+- Release branch: `release/v0.1.0a8`
+- Base commit: `20261ca40f7360e0cf6baa173057c79030b5ab7f`
+- Candidate scope: UI audit hotfixes after `v0.1.0a7`, including onboarding form state
+  refresh after runner-first selection, a visible `Run selected stage` action for bounded
+  operator smoke flows, and docs/audit wording that distinguishes job status `completed`
+  from stage status `succeeded`.
+- Publish status: pending. Do not treat this candidate as accepted package evidence until
+  the GitHub Release publish workflow completes and PyPI, `pipx`, and `uv tool`
+  verification are recorded.
+- Pre-publish uniqueness checks: remote tag `v0.1.0a8` absent; GitHub Release
+  `v0.1.0a8` absent; PyPI package `ai-driven-dev-v2==0.1.0a8` absent.
+- Local source smoke evidence from `main` after PR #64 merge:
+  `/tmp/aidd-main-ui-smoke-20260604T062616Z/project/.aidd`.
+- Local candidate checks on 2026-06-04: `uv sync --locked --extra dev` passed; `ruff`
+  passed; `mypy src` passed; full `pytest -q` passed with 1137 tests; `uv build`
+  produced `ai_driven_dev_v2-0.1.0a8.tar.gz` and
+  `ai_driven_dev_v2-0.1.0a8-py3-none-any.whl` in a temporary build directory.
+- Remote dry-run evidence: pending.
+- Draft GitHub Release: pending.
+- Publish workflow and install verification: pending.
+- Acceptance note: do not add an accepted `v0.1.0a8` evidence log entry until publish,
+  PyPI, `pipx`, and `uv tool` verification have all succeeded.
 
 ### `v0.1.0a7` accepted evidence on 2026-06-02
 

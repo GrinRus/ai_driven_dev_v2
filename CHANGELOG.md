@@ -7,7 +7,18 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Open the next development cycle after accepted `v0.1.0a7` release evidence.
+- No changes yet after `0.1.0a8` candidate preparation.
+
+## 0.1.0a8 - 2026-06-04
+
+- Prepare the `0.1.0a8` prerelease candidate after the clean UI audit hotfixes landed on
+  `main`.
+- Fix onboarding form state so `Create work item` enables immediately after work item id
+  and request text entry, including the runner-first selection path.
+- Add a visible `Run selected stage` command center action for bounded operator smoke
+  flows while keeping `Run workflow` as the primary full-flow action.
+- Keep release docs explicit that `0.1.0a7` remains the latest accepted published
+  prerelease until `0.1.0a8` publish and install verification succeeds.
 
 ## 0.1.0a7 - 2026-06-02
 
