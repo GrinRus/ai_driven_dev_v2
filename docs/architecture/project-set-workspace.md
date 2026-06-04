@@ -78,6 +78,23 @@ The core should keep canonical stage documents in the existing work-item tree.
 Project-specific evidence may be referenced from those documents or from reports,
 but it must remain traceable from the stage result.
 
+## 4.1 Operator UI grouping
+
+The operator UI may group read-only surfaces by declared root, but it must not create a
+second project-set authority.
+
+Required UI behavior:
+
+- `Implement Review` groups source diff rows by `root_id`, `root_label`, and
+  `root_relative_root` when `workitems/<id>/context/project-set.md` exists;
+- source changes outside declared roots are flagged as `outside-project-set`;
+- `.aidd/` artifacts stay separate from source changes and are not treated as editable
+  project roots;
+- single-project clients that ignore optional grouping fields continue to see the same
+  source and artifact arrays;
+- unrelated repositories must be opened through separate UI sessions or work items, not
+  mixed into one project-local `.aidd/`.
+
 ## 5. Execution bounds
 
 Declared project roots are execution bounds for AIDD-owned planning and

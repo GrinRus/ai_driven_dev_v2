@@ -49,8 +49,64 @@ function renderOverview() {
           ${pathLine(result?.validator_report_path || "not available")}
         </div>
       </aside>
+      <section id="runAccountabilityCard" class="surface run-accountability-card">
+        ${renderRunAccountabilityCard()}
+      </section>
     </div>
   `;
+}
+
+function renderRunAccountabilityCard() {
+  const view = state.runAccountability;
+  if (state.runAccountabilityError) {
+    return `<div class="empty-state bad">${escapeHtml(state.runAccountabilityError)}</div>`;
+  }
+  if (!view) {
+    return `<div class="empty-state loading-state">Loading run provenance...</div>`;
+  }
+  const prompts = view.prompt_pack_provenance || [];
+  const configKeys = Object.keys(view.config_snapshot || {});
+  return `
+    <div class="surface-title">
+      <span>Run provenance</span>
+      <span class="small-badge">${escapeHtml(prompts.length)} prompts</span>
+    </div>
+    ${renderWarnings(view.warnings)}
+    <div class="metric-grid">
+      <div class="metric"><span>Runtime</span><strong>${escapeHtml(view.runtime_id)}</strong></div>
+      <div class="metric"><span>Adapter</span><strong>${escapeHtml(view.adapter_id || "unknown")}</strong></div>
+      <div class="metric"><span>Resource</span><strong>${escapeHtml(view.resource_source || "unknown")}</strong></div>
+      <div class="metric"><span>Config keys</span><strong>${escapeHtml(configKeys.length)}</strong></div>
+    </div>
+    <div class="panel-item">
+      <strong>Git SHA</strong>
+      <span>${escapeHtml(view.repository_git_sha || "not recorded")}</span>
+    </div>
+    <div class="panel-item">
+      <strong>Resource revision</strong>
+      <span>${escapeHtml(view.resource_revision || "not recorded")}</span>
+    </div>
+    <div class="panel-item">
+      <strong>Stage graph</strong>
+      <span>${escapeHtml((view.stage_graph || []).join(" -> "))}</span>
+    </div>
+    <div class="compact-list">
+      ${prompts.slice(0, 4).map((entry) => `<span>${escapeHtml(entry.path)} ${escapeHtml(entry.sha256.slice(0, 12))}</span>`).join("") || "<span>No prompt provenance recorded.</span>"}
+    </div>
+  `;
+}
+
+async function loadRunAccountabilityCard() {
+  const card = document.getElementById("runAccountabilityCard");
+  if (!card || !state.activeRunId) return;
+  try {
+    state.runAccountabilityError = "";
+    state.runAccountability = await api(`/api/run/accountability?${runScopedQuery()}`);
+  } catch (error) {
+    state.runAccountability = null;
+    state.runAccountabilityError = error.message || "run provenance unavailable";
+  }
+  card.innerHTML = renderRunAccountabilityCard();
 }
 
 function repairCenterStatus(validation, stopped) {
@@ -181,7 +237,10 @@ function renderValidation() {
 
 async function renderCockpit() {
   const content = document.getElementById("cockpitContent");
-  if (state.activeTab === "overview") content.innerHTML = renderOverview();
+  if (state.activeTab === "overview") {
+    content.innerHTML = renderOverview();
+    void loadRunAccountabilityCard();
+  }
   if (state.activeTab === "questions") content.innerHTML = renderQuestions();
   if (state.activeTab === "validation") content.innerHTML = renderValidation();
   if (state.activeTab === "timeline") await renderTimeline();

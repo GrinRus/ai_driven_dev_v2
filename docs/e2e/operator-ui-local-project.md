@@ -14,6 +14,10 @@ Operator UI E2E answers one question:
 This lane does not use GitHub issue intake. Public GitHub repositories remain inputs for
 manual live E2E evals only.
 
+Authenticated native-provider UI smokes build on this lane and are documented in
+[`Real-Provider UI E2E Lane`](./real-provider-ui-e2e.md). They remain manual,
+Codex-first, and outside CI/CD.
+
 ## Supported Operator Path
 
 The local-project UI lane follows the product operator path:
@@ -211,6 +215,11 @@ Run these checks in a real browser against the local URL printed by `aidd ui`. U
 disposable `.aidd/` workspace and record the AIDD version, runtime id, browser, viewport,
 and any blockers in roadmap evidence.
 
+Wave 29 browser evidence uses this manual checklist plus the Codex-first real-provider
+lane. Do not add Playwright or Selenium dependencies for this lane. Capture screenshots
+and API snapshots outside the repository unless they are deliberately curated as docs
+assets.
+
 ### Dashboard Shell
 
 - First launch shows the loading state before `/api/dashboard` resolves.
@@ -258,6 +267,23 @@ and any blockers in roadmap evidence.
   intervention job.
 - Activity and Evidence Refs show `operator.request.created` after refresh.
 - Validation and repair evidence remain inspectable after the intervention attempt.
+
+### Wave 29 Operator Control States
+
+- Onboarding shows project validation, work-item creation, runner cards, recent projects,
+  and project-set validation without overlapping controls.
+- Active Run shows runner, stage, run id, attempt, elapsed time, last output, status,
+  cancel, and link to logs during long jobs.
+- Timeline shows concrete milestones without fake progress and silence warnings clear
+  after new runtime output.
+- Implement Review shows source diff, untracked files, `.aidd` artifacts separately,
+  claim-to-evidence warnings, and selected file diff.
+- Review Findings shows approval status, selectable findings, evidence, and remediation
+  action.
+- QA Verdict shows quality verdict, residual risks, known issues, and remediation or
+  follow-up actions.
+- Remediation shows selected review/QA items sent back to `implement`, stale downstream
+  badges for `review`/`qa`, and explicit rerun of `review -> qa`.
 
 ### Flow Complete Handoff
 

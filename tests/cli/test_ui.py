@@ -2082,6 +2082,9 @@ def test_ui_operator_control_center_endpoints_return_structured_views(
             {"run_id": ["run-ui"], "stage": ["implement"]},
         )
     )
+    accountability = _payload(
+        service.handle_get("/api/run/accountability", {"run_id": ["run-ui"]})
+    )
     implementation = _payload(
         service.handle_get("/api/implement/evidence", {"run_id": ["run-ui"]})
     )
@@ -2089,6 +2092,10 @@ def test_ui_operator_control_center_endpoints_return_structured_views(
     qa = _payload(service.handle_get("/api/qa/verdict", {"run_id": ["run-ui"]}))
 
     assert timeline["events"]
+    assert accountability["runtime_id"] == "codex"
+    assert accountability["stage_graph"][:3] == ["idea", "research", "plan"]
+    assert "config_snapshot" in accountability
+    assert "prompt_pack_provenance" in accountability
     source_paths = {item["path"] for item in diff["source_files"]}  # type: ignore[index]
     assert {"app.py", "untracked.py"}.issubset(source_paths)
     assert diff["aidd_artifacts"]  # type: ignore[index]
@@ -2523,6 +2530,11 @@ def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> N
         service.handle_get(f"/api/jobs/{job_id}/operator-requests", {})
     )
     assert pending_payload["pending_request_ids"] == [request_id]
+    assert pending_payload["audit_history"][0]["request_id"] == request_id  # type: ignore[index]
+    assert pending_payload["audit_history"][0]["status"] == "pending"  # type: ignore[index]
+    assert pending_payload["audit_history"][0]["runtime_id"] == "codex"  # type: ignore[index]
+    assert pending_payload["audit_history"][0]["stage"] == "plan"  # type: ignore[index]
+    assert pending_payload["audit_history"][0]["command"] == "npm install"  # type: ignore[index]
 
     decision_payload = _payload(
         service.handle_post(
@@ -2534,6 +2546,9 @@ def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> N
     assert decision_payload["pending_request_ids"] == []
     assert decision_payload["unapproved_request_ids"] == []
     assert decision_payload["decisions"][0]["source"] == "ui"  # type: ignore[index]
+    assert decision_payload["audit_history"][0]["status"] == "approved"  # type: ignore[index]
+    assert decision_payload["audit_history"][0]["decision_action"] == "allow_once"  # type: ignore[index]
+    assert decision_payload["audit_history"][0]["decision_source"] == "ui"  # type: ignore[index]
     assert (
         workspace_root
         / "reports"

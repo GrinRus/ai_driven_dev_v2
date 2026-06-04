@@ -530,6 +530,46 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
     )
 
 
+def test_operator_overview_static_contract_covers_run_accountability_card() -> None:
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+    api_state = _asset_text("/operator-api-state.js")
+
+    _assert_contains_all(
+        cockpit,
+        (
+            "function renderRunAccountabilityCard()",
+            "async function loadRunAccountabilityCard()",
+            "/api/run/accountability",
+            "Run provenance",
+            "prompt_pack_provenance",
+            "repository_git_sha",
+            "resource_revision",
+            "stage_graph",
+            'id="runAccountabilityCard"',
+        ),
+    )
+    assert "runAccountability" in api_state
+    assert "runAccountabilityError" in api_state
+
+
+def test_operator_implement_review_static_contract_covers_project_set_grouping() -> None:
+    control = _asset_text("/operator-control-center.js")
+
+    _assert_contains_all(
+        control,
+        (
+            "async function renderImplementReview()",
+            "diffView.project_set_roots",
+            "file.scope_status",
+            "outside-project-set",
+            "outside project set",
+            "file.root_id",
+            "file.root_label",
+            "file.root_relative_root",
+        ),
+    )
+
+
 def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> None:
     approvals = _asset_text("/operator-approvals-interventions.js")
 
@@ -547,12 +587,19 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "function renderRequestChangeAuditLog(context)",
             "function renderApprovalQueueSummary({requests, decisions, pendingIds, diagnostics})",
             "function renderApprovalDiffPreview(request)",
-            "function renderApprovalAuditLog(requests, decisions, pendingIds, diagnostics = null)",
+            (
+                "function renderApprovalAuditLog(requests, decisions, pendingIds, "
+                "diagnostics = null, auditHistory = null)"
+            ),
             "function renderApprovalsSurface({view, diagnostics, requests, decisions, pendingIds})",
             "Request Change / Intervention Composer",
             "Approvals / Runtime Requests",
             "Diff Preview",
             "Approval Audit Log",
+            "view?.audit_history",
+            "policy-blocked",
+            "row.runtime_id",
+            "row.decision_action",
             "Saved approval ledger",
             'id="operatorRequestText"',
             'id="submitInterventionButton"',

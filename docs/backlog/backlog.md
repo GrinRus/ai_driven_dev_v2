@@ -6,12 +6,30 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
+- `W29-E1-S2-T1` Run the Codex clean UI onboarding smoke through at least
+  `idea -> research` and record evidence or a provider-auth blocker.
 
 ## Soon
 
+- `W29-E2-S1-T2` Add a browser-driven local UI smoke for clean onboarding and
+  selected-stage launch against the deterministic fixture.
+- `W29-E2-S1-T3` Capture browser screenshots for the primary operator control center
+  states.
+- `W29-E1-S2-T5` Write a provider UI failure triage matrix from the completed smokes.
 
 ## Parking lot
 
+- `W29-E1-S2-T2` Run the Claude Code clean UI onboarding smoke through at least
+  `idea -> research` and record evidence or a provider-auth blocker.
+- `W29-E1-S2-T3` Run the OpenCode clean UI onboarding smoke through at least
+  `idea -> research` and record evidence or a provider-auth blocker.
+- `W29-E1-S2-T4` Run the Qwen clean UI onboarding smoke through at least
+  `idea -> research` when the experimental runtime is locally authenticated.
+- `W29-E2-S1-T4` Convert the first repeatable browser UX defect into a targeted fix task
+  after evidence exists.
+- `W29-E4-S1-T4` Add a bounded run-to-run comparison view for prompt and artifact drift.
+- `W29-E7-S1-T3` Prepare beta-oriented release note criteria after provider and browser
+  evidence are available.
 
 ## Update rules
 
@@ -338,3 +356,14 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `2026-06-04` Completed `W28-E4-S1-T1`; next-prerelease readiness evidence and remaining
   operator risks are recorded in the release checklist. Wave 28 is closed and the active
   backlog queue is empty again.
+- `2026-06-04` Wave 29 was opened via `W8-E3-S1` queue-restoration policy as one large
+  product scope for real-provider UI E2E, browser-verified operator UX, project-set UX,
+  prompt/workflow accountability, runtime safety, release ergonomics, and beta readiness.
+  Promoted `W29-E1-S1-T1` to `Next`; `W29-E1-S1-T2`, `W29-E2-S1-T1`, and
+  `W29-E7-S1-T1` to `Soon`; and parked the remaining Wave 29 implementation/evidence
+  tasks until the acceptance contract is written.
+- `2026-06-04` Wave 29 contract/tooling pass completed `W29-E1-S1`,
+  `W29-E2-S1-T1`, `W29-E3-S1`, `W29-E4-S1-T1` through `T3`, `W29-E5-S1`,
+  `W29-E6-S1`, and `W29-E7-S1-T1` through `T2`. Active queue advances to
+  `W29-E1-S2-T1`; Claude Code, OpenCode, and Qwen smokes stay parked as `auth/env`
+  blockers because those binaries were not present in the current shell `PATH`.

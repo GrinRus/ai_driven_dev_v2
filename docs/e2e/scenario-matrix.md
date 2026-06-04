@@ -83,6 +83,11 @@ The installed/source local-project smoke path is tracked as
 `harness/scenarios/smoke/installed-local-project-fixture.yaml`. It remains a
 manual fixture smoke and does not use public GitHub task intake.
 
+Real-provider UI E2E is a manual local-project lane, not a new scenario class. Its
+acceptance matrix lives in [`Real-Provider UI E2E Lane`](./real-provider-ui-e2e.md).
+Provider priority is Codex first, then Claude Code, OpenCode, and optional experimental
+Qwen when local auth is ready.
+
 ## Provider Rollout Policy
 
 - `generic-cli` is the deterministic baseline provider.

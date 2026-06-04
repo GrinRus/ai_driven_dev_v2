@@ -1107,6 +1107,89 @@ def test_live_docs_do_not_limit_questions_to_interview_scenarios() -> None:
     assert offenders == []
 
 
+def test_wave29_real_provider_ui_e2e_docs_define_manual_codex_first_lane() -> None:
+    repo_root = _repo_root()
+    real_provider = (repo_root / "docs" / "e2e" / "real-provider-ui-e2e.md").read_text(
+        encoding="utf-8"
+    )
+    operator_ui = (
+        repo_root / "docs" / "e2e" / "operator-ui-local-project.md"
+    ).read_text(encoding="utf-8")
+    handbook = (repo_root / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+    scenario_matrix = (
+        repo_root / "docs" / "e2e" / "scenario-matrix.md"
+    ).read_text(encoding="utf-8")
+
+    assert "| `codex` | first |" in real_provider
+    assert "| `claude-code` | second |" in real_provider
+    assert "| `opencode` | third |" in real_provider
+    assert "| `qwen` | optional |" in real_provider
+    assert "`generic-cli` remains the deterministic baseline" in real_provider
+    assert "selected-stage execution through `idea -> research`" in real_provider
+    for blocker in (
+        "`auth/env`",
+        "`provider`",
+        "`adapter`",
+        "`model-output`",
+        "`AIDD bug`",
+        "`docs mismatch`",
+        "`deferred scope`",
+    ):
+        assert blocker in real_provider
+    assert "must fail with `runtime is required`" in real_provider
+    assert "Do not add Playwright or Selenium dependencies" in operator_ui
+    assert "Codex-first" in operator_ui
+    assert "Real-Provider UI E2E Lane" in handbook
+    assert "Provider priority is Codex first" in scenario_matrix
+
+
+def test_wave29_operator_hardening_docs_cover_beta_contracts() -> None:
+    repo_root = _repo_root()
+    operator_frontend = (
+        repo_root / "docs" / "architecture" / "operator-frontend.md"
+    ).read_text(encoding="utf-8")
+    project_set = (
+        repo_root / "docs" / "architecture" / "project-set-workspace.md"
+    ).read_text(encoding="utf-8")
+    target_architecture = (
+        repo_root / "docs" / "architecture" / "target-architecture.md"
+    ).read_text(encoding="utf-8")
+    user_stories = (
+        repo_root / "docs" / "product" / "user-stories.md"
+    ).read_text(encoding="utf-8")
+    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
+        encoding="utf-8"
+    )
+    readme = (repo_root / "README.md").read_text(encoding="utf-8")
+
+    for needle in (
+        "`root_id`, `root_label`, and `root_relative_root`",
+        "`/api/run/accountability?run_id=...`",
+        "prompt paths, content hashes, Git SHA, config root, runtime id",
+        "status values are `pending`, `approved`, `denied`, `cancelled`, `policy-blocked`",
+        "`audit_history` rows",
+    ):
+        assert needle in operator_frontend
+    assert "## 4.1 Operator UI grouping" in project_set
+    assert "`outside-project-set`" in project_set
+    assert "unrelated repositories must be opened through separate UI sessions" in project_set
+
+    for needle in (
+        "Manual+Browser evidence",
+        "Codex-first",
+        "project-set UI grouping is a read model",
+        "prompt/workflow accountability is read-only provenance",
+        "runtime approval audit is a bounded read surface",
+    ):
+        assert needle in target_architecture
+
+    assert "## Future beta readiness gate" in user_stories
+    assert "Beta readiness is a future evidence gate" in readme
+    assert "Future beta readiness is not implied" in release_checklist
+    assert "python -m scripts.release.preflight" in release_checklist
+    assert "python -m scripts.release.evidence_collector" in release_checklist
+
+
 def test_release_publish_skill_describes_release_flow_guardrails() -> None:
     skill = (
         _repo_root() / ".agents" / "skills" / "release-publish" / "SKILL.md"
