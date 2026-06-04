@@ -213,6 +213,13 @@ Post-`v0.1.0a8` evidence now recorded on `main`:
   selected-stage launches, Active Run, Timeline, artifacts, Implement Review, Review
   Findings, QA Verdict, remediation requests/status, stale downstream badges, and
   terminal cleanup without adding Playwright or Selenium dependencies;
+- Wave 29 provider-auth rerun used disposable root
+  `/tmp/aidd-w29-provider-auth-rerun-20260604T113402Z`, source checkout
+  `aidd 0.1.0a9.dev0`, login-shell provider commands `claude 2.1.85 (Claude Code)`,
+  `opencode 1.14.30`, and `qwen 0.17.0`, and proved clean UI onboarding plus explicit
+  runtime selected-stage `idea -> research` for `claude-code`, `opencode`, and optional
+  `qwen` with missing-runtime rejection, completed job status, succeeded stage rail
+  status, logs, timelines, and artifacts;
 - source `0.1.0a9.dev0` now includes a read-only run comparison surface:
   `GET /api/run/comparison?baseline_run_id=...&target_run_id=...` and the Run History UI
   comparison panel for prompt hash, stage status, artifact hash, and validator outcome
@@ -221,12 +228,14 @@ Post-`v0.1.0a8` evidence now recorded on `main`:
 Known operator risks before cutting the next prerelease:
 
 - W28 evidence used deterministic `generic-cli` and seeded source workspaces; Wave 29
-  adds Codex-first real-provider and Manual+Browser evidence, but every future candidate
-  still needs fresh evidence for the exact version being released.
-- Claude Code remains `blocked/auth-env` until its local binary and authentication are
-  available; OpenCode and Qwen have local binaries in the observed environment but their
-  authenticated UI smokes remain `blocked/auth-env` until explicit provider preflights
-  pass.
+  adds Codex-first, Claude Code, OpenCode, optional Qwen, and Manual+Browser evidence,
+  but every future candidate still needs fresh evidence for the exact version being
+  released.
+- Provider smoke reproducibility depends on the shell environment: the Codex app's
+  default non-interactive PATH may omit `/Users/griogrii_riabov/.local/bin` and
+  `/opt/homebrew/bin`, while the login shell used for the provider-auth rerun resolved
+  Claude Code, OpenCode, and Qwen correctly. Future provider smokes should use a login
+  shell or an explicit PATH prefix and record that environment in evidence.
 - Wave 29 browser screenshots and API snapshots are local `/tmp` audit evidence, not
   curated release artifacts. Release notes may link or summarize only non-sensitive
   evidence paths that maintainers intentionally preserve.
