@@ -1190,6 +1190,16 @@ def test_wave29_operator_hardening_docs_cover_beta_contracts() -> None:
     assert "Future beta readiness is not implied" in release_checklist
     assert "python -m scripts.release.preflight" in release_checklist
     assert "python -m scripts.release.evidence_collector" in release_checklist
+    for needle in (
+        "Beta-oriented release note criteria",
+        "fresh evidence for the exact candidate",
+        "`auth/env` blockers and must not be replaced by `generic-cli`",
+        "Run History comparison",
+        "project-set grouping",
+        "approval audit visibility",
+        "Do not describe a `.dev0` source version as an accepted package release",
+    ):
+        assert needle in release_checklist
 
 
 def test_release_publish_skill_describes_release_flow_guardrails() -> None:

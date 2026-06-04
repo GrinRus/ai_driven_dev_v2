@@ -7506,14 +7506,14 @@ Sync notes:
 
 ---
 
-## Wave 29 — real-provider operator beta hardening (`next`)
+## Wave 29 — real-provider operator beta hardening (`done`)
 
 Goal: move the shipped UI-first operator path from deterministic local confidence to
 real-provider, browser-verified, beta-readiness evidence while preserving CLI
 compatibility, explicit runtime selection, project-local `.aidd/` ownership, and release
 immutability.
 
-### Epic W29-E1 — real-provider UI E2E evidence (`next`)
+### Epic W29-E1 — real-provider UI E2E evidence (`blocked/auth-env for remaining providers`)
 Linked stories: `US-01`, `US-06`, `US-07`, `US-11`
 
 #### Slice W29-E1-S1 — provider UI acceptance contract (`done`)
@@ -7899,10 +7899,10 @@ Exit evidence:
 - maintainers have a repeatable preflight before publishing the next prerelease;
 - release helpers cannot bypass the accepted tag/publication model.
 
-### Epic W29-E7 — beta-readiness acceptance matrix (`next`)
+### Epic W29-E7 — beta-readiness acceptance matrix (`done`)
 Linked stories: `US-01`, `US-07`, `US-09`, `US-10`, `US-11`, `US-12`
 
-#### Slice W29-E7-S1 — beta gate definition (`next`)
+#### Slice W29-E7-S1 — beta gate definition (`done`)
 Goal: define the product gate for a future beta-oriented release before claiming beta
 readiness.
 
@@ -7937,7 +7937,7 @@ Local tasks:
   - Scope: product and architecture documentation only.
   - Verification: docs checks prove user story success signals and architecture
     non-goals match the beta gate wording.
-- `W29-E7-S1-T3` (next) Prepare beta-oriented release note criteria after provider and
+- `W29-E7-S1-T3` (done) Prepare beta-oriented release note criteria after provider and
   browser evidence are available.
   - Scope: release documentation only.
   - Verification: the note criteria require fresh evidence links and do not describe an
@@ -7998,3 +7998,12 @@ Sync notes:
   artifact paths instead of reading outside `.aidd/`. The Run History UI now renders a
   comparison panel with lineage-derived default baseline selection and manual baseline
   input. Active queue advances to beta-oriented release note criteria `W29-E7-S1-T3`.
+- `2026-06-04` `W29-E7-S1-T3` completed beta-oriented release note criteria in
+  `docs/release-checklist.md`: candidate notes must cite fresh provider, Browser,
+  install, remediation, project-set, provenance/run-comparison, approval audit, security,
+  and package-channel evidence before making any beta-oriented claim. The checklist also
+  preserves the rule that `0.1.0a9.dev0` is a development line, not an accepted release.
+  Wave 29 is closed with Codex provider evidence, Manual+Browser evidence, run
+  comparison, and release-note criteria done; Claude Code, OpenCode, and Qwen UI smokes
+  remain documented `blocked/auth-env` lanes until local binaries/authentication are
+  explicitly available. The active backlog queue is empty.

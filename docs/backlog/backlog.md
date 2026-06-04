@@ -6,19 +6,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W29-E7-S1-T3` Prepare beta-oriented release note criteria after provider and browser
-  evidence plus run comparison are available.
-
 ## Soon
 
 ## Parking lot
-
-- `W29-E1-S2-T2` Run the Claude Code clean UI onboarding smoke through at least
-  `idea -> research` and record evidence or a provider-auth blocker.
-- `W29-E1-S2-T3` Run the OpenCode clean UI onboarding smoke through at least
-  `idea -> research` and record evidence or a provider-auth blocker.
-- `W29-E1-S2-T4` Run the Qwen clean UI onboarding smoke through at least
-  `idea -> research` when the experimental runtime is locally authenticated.
 
 ## Update rules
 
@@ -377,3 +367,9 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   surface for two run ids in the active work item, covering prompt hash, stage status,
   bounded artifact hash, and validator outcome deltas with legacy/unsafe-path warnings.
   Active queue advances to beta-oriented release note criteria `W29-E7-S1-T3`.
+- `2026-06-04` Completed `W29-E7-S1-T3`: release checklist now defines beta-oriented
+  release note criteria that require fresh provider, Browser, install, remediation,
+  project-set, provenance/comparison, approval audit, security, and package-channel
+  evidence, and it keeps `0.1.0a9.dev0` separate from accepted releases. Wave 29 is
+  closed; Claude Code, OpenCode, and Qwen provider UI smokes remain roadmap-level
+  `blocked/auth-env` lanes, not active backlog work. The queue is empty again.

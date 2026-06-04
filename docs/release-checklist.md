@@ -201,24 +201,66 @@ Post-`v0.1.0a8` evidence now recorded on `main`:
   `research` selected-stage jobs with logs, timeline, artifacts, and no runtime fallback;
 - source control-center smoke against `0.1.0a9.dev0` checked Implement diff, structured
   implementation/review/QA parsing, remediation request creation, explicit runtime gate,
-  and deterministic remediation/stale-downstream service coverage.
+  and deterministic remediation/stale-downstream service coverage;
+- Wave 29 Codex-first provider smoke used source checkout `aidd 0.1.0a9.dev0`,
+  disposable audit root `/tmp/aidd-w29-codex-ui-smoke-20260604T101201Z`, explicit
+  `codex` runtime `codex-cli 0.133.0`, clean UI onboarding, selected-stage `idea` and
+  `research`, missing-runtime rejection, logs, timelines, artifacts, and terminal
+  active-run cleanup;
+- Wave 29 Manual+Browser evidence used disposable roots
+  `/tmp/aidd-w29-browser-ui-smoke-pass-20260604T103044Z` and
+  `/tmp/aidd-w29-browser-seeded-20260604T103356Z` to observe onboarding, runner cards,
+  selected-stage launches, Active Run, Timeline, artifacts, Implement Review, Review
+  Findings, QA Verdict, remediation requests/status, stale downstream badges, and
+  terminal cleanup without adding Playwright or Selenium dependencies;
+- source `0.1.0a9.dev0` now includes a read-only run comparison surface:
+  `GET /api/run/comparison?baseline_run_id=...&target_run_id=...` and the Run History UI
+  comparison panel for prompt hash, stage status, artifact hash, and validator outcome
+  deltas.
 
 Known operator risks before cutting the next prerelease:
 
-- W28 evidence used deterministic `generic-cli` and seeded source workspaces; real
-  provider auth/runtime behavior still belongs to the manual live lane when maintainers
-  need provider-specific confidence.
-- Browser automation was not available in this local shell, so the W28 smoke evidence is
-  API/static-contract based rather than screenshot based.
+- W28 evidence used deterministic `generic-cli` and seeded source workspaces; Wave 29
+  adds Codex-first real-provider and Manual+Browser evidence, but every future candidate
+  still needs fresh evidence for the exact version being released.
+- Claude Code remains `blocked/auth-env` until its local binary and authentication are
+  available; OpenCode and Qwen have local binaries in the observed environment but their
+  authenticated UI smokes remain `blocked/auth-env` until explicit provider preflights
+  pass.
+- Wave 29 browser screenshots and API snapshots are local `/tmp` audit evidence, not
+  curated release artifacts. Release notes may link or summarize only non-sensitive
+  evidence paths that maintainers intentionally preserve.
 - The local shell lacked a `python` alias; the published-package fixture used
   `/usr/bin/python3` explicitly. This is an environment note, not a hidden AIDD runtime
   fallback.
 
 Future beta readiness is not implied by the alpha package evidence above. A beta-oriented
-release note must wait for current Wave 29 evidence across install, clean UI onboarding,
-Codex-first real-provider UI execution, Browser-verified operator states, remediation,
-project-set boundaries, prompt/workflow accountability, approval audit visibility, docs,
-security posture, and GitHub Release/PyPI install evidence.
+release note must cite fresh evidence for the exact candidate across install, clean UI
+onboarding, Codex-first real-provider UI execution, Browser-verified operator states,
+remediation, project-set boundaries, prompt/workflow accountability and run comparison,
+approval audit visibility, docs, security posture, and GitHub Release/PyPI install
+evidence. A development version such as `0.1.0a9.dev0` must never be described as an
+accepted release.
+
+Beta-oriented release note criteria:
+
+- candidate identity is explicit: exact package version, release branch, GitHub Release
+  target, commit, PyPI URL, and `pipx` plus `uv tool` verification evidence;
+- clean UI onboarding evidence is fresh for the candidate and covers project selection,
+  work item creation or resume, mandatory runner selection, selected-stage launch, logs,
+  timeline, artifacts, and terminal active-run cleanup;
+- provider evidence names the blocker class or pass result for `codex`, `claude-code`,
+  `opencode`, and optional `qwen`; unavailable providers must remain explicit
+  `auth/env` blockers and must not be replaced by `generic-cli`;
+- Browser evidence covers onboarding, runner cards, selected-stage controls, Active Run,
+  Timeline, Implement Review, Review Findings, QA Verdict, remediation, stale downstream
+  badges, and Run History comparison, with screenshots/API snapshots kept out of Git
+  unless they are intentionally curated;
+- product-surface status is explicit for project-set grouping, prompt/workflow
+  accountability, run comparison, remediation/backflow, and approval audit visibility;
+- release notes include known limitations and blocked items without implying beta
+  readiness, production readiness, or accepted package-channel evidence before publish
+  verification succeeds.
 
 Required gates for the next prerelease remain unchanged:
 
@@ -250,6 +292,10 @@ does not replace GitHub Release, PyPI, `pipx`, or `uv tool` verification.
 - [ ] Summarize user-visible changes for this release.
 - [ ] Include task ids and major behavior/contract updates.
 - [ ] Include known limitations and blocked items if they affect operators.
+- [ ] If release notes make a beta-oriented claim, cite the fresh candidate-specific
+  provider, Browser, install, remediation, project-set, provenance/comparison, approval
+  audit, and security evidence required above.
+- [ ] Do not describe a `.dev0` source version as an accepted package release.
 - [ ] Publish GitHub release notes through the GitHub Release.
 
 ## 7. Post-release follow-up
