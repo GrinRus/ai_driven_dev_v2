@@ -5607,8 +5607,8 @@ Primary outputs:
 - deterministic release workflow quality gate
 - CI/CD guardrails that exclude live E2E
 - source-installed local-project smoke verification
-- release-readiness notes for latest accepted `0.1.0a8` package-channel evidence and
-  `0.1.0a9.dev0` source development state
+- release-readiness notes for latest accepted `0.1.0a9` package-channel evidence and
+  `0.1.0a10.dev0` source development state
 
 Touched areas:
 
@@ -5632,8 +5632,8 @@ Local tasks:
   commands while preserving the manual-only live E2E boundary.
 - `W24-E1-S1-T3` (done) Verify the source-installed local-project smoke fixture runtime
   path and cover the workspace-relative command with scenario-loader regression checks.
-- `W24-E1-S1-T4` (done) Prepare release-readiness notes for the accepted `0.1.0a8`
-  package-channel evidence and post-release `0.1.0a9.dev0` source development state
+- `W24-E1-S1-T4` (done) Prepare release-readiness notes for the accepted `0.1.0a9`
+  package-channel evidence and `0.1.0a10.dev0` source development state
   without creating a tag or
   publishing artifacts.
 
@@ -5653,10 +5653,10 @@ Evidence:
 - A source-installed local-project smoke passed on 2026-05-21 against a disposable
   `harness/fixtures/minimal-python` copy, covering `doctor`, `init`, bounded
   `run idea->plan`, `run show`, `run logs`, `run artifacts`, and `stage questions`.
-- `docs/release-notes-v0.1.0a8-draft.md` and `docs/analysis/beta-readiness-source-audit.md`
-  record the latest accepted `0.1.0a8` package-channel evidence and current
-  `0.1.0a9.dev0` source development state; accepted package-channel evidence is recorded
-  in `docs/release-checklist.md`.
+- `docs/release-notes-v0.1.0a9-draft.md` and `docs/analysis/beta-readiness-source-audit.md`
+  record the latest accepted `0.1.0a9` package-channel evidence and
+  `0.1.0a10.dev0` source development state; accepted package-channel evidence is recorded in
+  `docs/release-checklist.md`.
 
 Exit evidence:
 
@@ -8037,7 +8037,7 @@ Sync notes:
 
 ---
 
-## Wave 30 — security posture and `v0.1.0a9` release readiness (`in progress`)
+## Wave 30 — security posture and `v0.1.0a9` release readiness (`done`)
 
 Goal: close current default-branch dependency security alerts, then prepare an honest
 go/no-go input for the next alpha prerelease without changing CLI/UI behavior or starting
@@ -8121,19 +8121,20 @@ Exit evidence:
 - maintainers have a current release-candidate decision input;
 - README and release docs do not imply that `0.1.0a9` is already published.
 
-### Epic W30-E3 — approved release preparation (`blocked`)
+### Epic W30-E3 — approved release preparation (`done`)
 Linked stories: `US-09`, `US-10`
 
-#### Slice W30-E3-S1 — `v0.1.0a9` release branch and dry-runs (`blocked`)
+#### Slice W30-E3-S1 — `v0.1.0a9` release branch and publication (`done`)
 Goal: only after explicit maintainer approval, create the release candidate branch,
-prepare the draft prerelease, and run remote dry-runs without bypassing the established
-GitHub Release published-event model.
+prepare the draft prerelease, run remote dry-runs, and publish through the established
+GitHub Release published-event model after a separate publish approval.
 
 Primary outputs:
 
 - `release/v0.1.0a9` branch with candidate version `0.1.0a9`
 - remote `ci.yml` and `release.yml` dry-run evidence
-- draft GitHub prerelease targeting the release branch
+- GitHub prerelease targeting the release branch
+- accepted PyPI, `pipx`, and `uv tool` install evidence
 
 Touched areas:
 
@@ -8146,20 +8147,23 @@ Dependencies:
 
 - completed `W30-E1-S1`
 - completed `W30-E2-S1`
-- separate explicit approval to start release preparation
+- explicit approval to start release preparation
 
 Local tasks:
 
-- `W30-E3-S1-T1` (blocked) Prepare the `v0.1.0a9` release branch and draft prerelease
-  after explicit approval.
-  - Scope: release preparation only.
+- `W30-E3-S1-T1` (done) Prepare and publish the `v0.1.0a9` prerelease after explicit
+  approval.
+  - Scope: release preparation and accepted package-channel evidence only.
   - Verification: local deterministic checks, `uv build`, remote CI/release dry-runs,
-    absence of a preexisting `v0.1.0a9` tag/PyPI version, and draft release metadata.
+    absence of a preexisting `v0.1.0a9` tag/PyPI version before publication, release tag
+    and branch SHA match, release workflow success, PyPI page availability, and `pipx`
+    plus `uv tool` install smoke.
 
 Exit evidence:
 
-- release candidate prep is ready for a separate publish approval;
-- no tag is pushed manually and no package is published from this planning/dependency pass.
+- `v0.1.0a9` is accepted package-channel evidence;
+- no tag was pushed manually and publication happened through the GitHub Release
+  published-event flow.
 
 Sync notes:
 
@@ -8185,3 +8189,17 @@ Sync notes:
   `job-52f8e71e3a564672becae1084bf27d71` with job status `completed`, stage rail status
   `succeeded`, fixture runtime logs, seven timeline events per stage, and expected
   Markdown artifacts. Release prep remains blocked on separate explicit approval.
+- `2026-06-04` Release-prep approval moved `W30-E3-S1-T1` into progress for candidate
+  branch `release/v0.1.0a9`, exact version `0.1.0a9`, local deterministic gate, remote
+  `ci.yml`/`release.yml` dry-runs, and draft prerelease creation. Publication remains
+  blocked until a separate explicit publish approval.
+- `2026-06-04` Publish approval completed `W30-E3-S1-T1`: GitHub Release
+  `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a9` published tag
+  `v0.1.0a9`, tag commit matched `origin/release/v0.1.0a9` at
+  `5757fe890d22a981dcc9624263b61a59fd767bec`, release workflow
+  `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/26969522555` passed
+  `quality`, `build`, `publish-pypi`, `verify-pypi-install`, and
+  `verify-uv-tool-install`, PyPI served
+  `https://pypi.org/project/ai-driven-dev-v2/0.1.0a9/`, independent local `pipx`
+  fallback and `uv tool` smokes returned `aidd 0.1.0a9`, and the post-release follow-up
+  moved `main` to `0.1.0a10.dev0`.

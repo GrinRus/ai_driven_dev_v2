@@ -10,9 +10,6 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Parking lot
 
-- `W30-E3-S1-T1` — Prepare the `v0.1.0a9` release branch and draft prerelease after
-  explicit approval.
-
 ## Update rules
 
 - Keep `roadmap.md` as the canonical plan and `backlog.md` as the short queue.
@@ -393,3 +390,13 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   passed in `/tmp/aidd-w30-release-readiness-smoke-20260604T121108Z`, and release
   readiness notes now keep `0.1.0a9.dev0` as development source. `W30-E3-S1-T1` remains
   parked until explicit release-prep approval.
+- `2026-06-04` Release-prep approval promoted `W30-E3-S1-T1` out of `Parking lot` for the
+  `release/v0.1.0a9` branch, local deterministic gate, remote dry-runs, and draft
+  prerelease creation. At that point, publish remained blocked until a separate explicit
+  publish approval.
+- `2026-06-04` Publish approval completed `W30-E3-S1-T1` and closed Wave 30:
+  `v0.1.0a9` was published through the GitHub Release published-event flow, release
+  workflow `26969522555` passed `quality`, `build`, `publish-pypi`,
+  `verify-pypi-install`, and `verify-uv-tool-install`, PyPI serves
+  `ai-driven-dev-v2==0.1.0a9`, independent local `pipx` fallback and `uv tool` smokes
+  returned `aidd 0.1.0a9`, and the active backlog queue remains empty.

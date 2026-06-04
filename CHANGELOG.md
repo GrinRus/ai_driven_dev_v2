@@ -7,14 +7,21 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Open the next development cycle after accepted `v0.1.0a8` release evidence.
+- Open the next source development cycle after accepted `v0.1.0a9` release evidence.
+
+## 0.1.0a9 - 2026-06-04
+
+- Publish the `0.1.0a9` prerelease after Wave 29 beta-hardening and Wave 30 release
+  readiness evidence landed on `main`.
 - Reconcile UI-first onboarding roadmap state with the shipped `v0.1.0a7`/`v0.1.0a8`
   operator path and add post-a8 audit evidence for clean UI onboarding.
 - Document PATH-safe GitHub CLI release operations for maintainer shells where `gh` is
   installed outside the default `PATH`.
-- Open Wave 30 release-readiness work for `v0.1.0a9`, including Dependabot alert
-  triage, patched locked docs dependencies, and a fresh source UI smoke before any
-  release candidate branch is prepared.
+- Add Wave 29 provider/browser evidence, run comparison, release helper coverage, and
+  beta-readiness release-note criteria.
+- Close Wave 30 release-readiness work for `v0.1.0a9`, including Dependabot alert
+  triage, patched locked docs dependencies, a fresh source UI smoke, and accepted GitHub
+  Release/PyPI/`pipx`/`uv tool` evidence.
 
 ## 0.1.0a8 - 2026-06-04
 
