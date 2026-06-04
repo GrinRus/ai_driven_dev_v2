@@ -20,8 +20,8 @@ Reviewed sources:
 
 ### README
 
-- The source development package version matches the package state: `0.1.0a8.dev0`.
-  The latest accepted published prerelease evidence is `0.1.0a7`.
+- The source development package version matches the package state: `0.1.0a9.dev0`.
+  The latest accepted published prerelease evidence is `0.1.0a8`.
 - The documented public CLI commands match the registered command surface:
   `doctor`, `init`, `ui`, `stage`, `eval`, and `run`.
 - The removed eval-run product command is not documented as a current product command.
@@ -89,9 +89,9 @@ command so future smoke refactors do not break source-installed local runs.
 - The `AIDD-LIVE-006/opencode` refresh first exposed an AIDD-owned repair-prompt clarity
   defect around malformed interview answer bullets. That defect was fixed in the
   candidate source before the counted rerun.
-- Accepted `0.1.0a7` release/install evidence exists from the published GitHub Release,
-  PyPI publish, `pipx` verification, and `uv tool` verification on 2026-06-02.
-- This branch is back on `0.1.0a8.dev0` source development after the accepted `0.1.0a7`
+- Accepted `0.1.0a8` release/install evidence exists from the published GitHub Release,
+  PyPI publish, `pipx` verification, and `uv tool` verification on 2026-06-04.
+- This branch is back on `0.1.0a9.dev0` source development after the accepted `0.1.0a8`
   prerelease. Any future release candidate must still repeat the GitHub Release, PyPI,
   `pipx`, and `uv tool` verification path before it can become the latest accepted
   published prerelease evidence.
