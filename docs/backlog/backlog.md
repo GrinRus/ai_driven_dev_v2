@@ -6,10 +6,52 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
+- `W31-E1-S1-T1` — Define the integrated operator workbench information architecture
+  from `13-integrated-operator-workbench.png`.
+
 ## Soon
+
+- `W31-E1-S1-T2` — Update the local-project UI checklist for the redesigned workbench
+  surfaces.
+- `W31-E2-S1-T1` — Expose a project home read model for selected project root, `.aidd`
+  root, discovered work items, latest run, stage progress, blockers, and terminal state.
+- `W31-E3-S1-T1` — Fix first-run Next Action copy when a runtime is already selected and
+  ready.
 
 ## Parking lot
 
+- `W31-E2-S1-T2` — Add private UI endpoints for project home and work-item resume
+  context.
+- `W31-E2-S2-T1` — Render the Project Home and Work Item Board shell from the project
+  home endpoint.
+- `W31-E2-S2-T2` — Replace raw project-set JSON onboarding with a structured project-root
+  editor.
+- `W31-E3-S1-T2` — Render a primary run-global Next Action strip above the selected-stage
+  workbench.
+- `W31-E3-S1-T3` — Reorder the compact viewport so Next Action appears before logs,
+  artifacts, and secondary evidence.
+- `W31-E4-S1-T1` — Define artifact categories for canonical stage documents, runtime
+  inputs, validation evidence, runtime evidence, project evidence, and lineage evidence.
+- `W31-E4-S1-T2` — Expose workbench document metadata for preview/source/diff selection
+  without arbitrary path reads.
+- `W31-E4-S2-T1` — Render the central Document Workbench with category tree and selected
+  Markdown preview/source/diff.
+- `W31-E4-S2-T2` — Render document contract and validation context beside the selected
+  artifact.
+- `W31-E5-S1-T1` — Expose the first decisive failure signal from runtime exit metadata,
+  validator reports, blocking questions, repair exhaustion, and stopped events.
+- `W31-E5-S1-T2` — Convert runtime and configuration failures into visible blockers and
+  recovery-oriented next actions.
+- `W31-E5-S2-T1` — Render the Run Diagnostics panel with pipeline, attempts, repairs,
+  question markers, and first-failure summary.
+- `W31-E5-S2-T2` — Split logs into Summary, Timeline, and Raw Runtime Log views.
+- `W31-E5-S2-T3` — Render Recovery Assistant cards for questions, validation failures,
+  repair, request change, and remediation.
+- `W31-E6-S1-T1` — Render contextual navigation rules for stage-specific tabs and
+  secondary evidence surfaces.
+- `W31-E6-S1-T2` — Add service and static regression coverage for the integrated
+  workbench hierarchy.
+- `W31-E6-S1-T3` — Record a deterministic browser smoke for the redesigned workbench.
 - `W30-E3-S1-T1` — Prepare the `v0.1.0a9` release branch and draft prerelease after
   explicit approval.
 
@@ -393,3 +435,8 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   passed in `/tmp/aidd-w30-release-readiness-smoke-20260604T121108Z`, and release
   readiness notes now keep `0.1.0a9.dev0` as development source. `W30-E3-S1-T1` remains
   parked until explicit release-prep approval.
+- `2026-06-09` Wave 31 opened for the integrated operator workbench redesign:
+  `W31-E1-S1-T1` is promoted to `Next`; `W31-E1-S1-T2`, `W31-E2-S1-T1`, and
+  `W31-E3-S1-T1` are in `Soon`; the broader project/work-item, document workbench,
+  diagnostics, recovery, contextual navigation, and browser evidence rollout remains
+  parked until the UX contract lands.

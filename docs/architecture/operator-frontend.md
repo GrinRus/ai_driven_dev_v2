@@ -376,6 +376,7 @@ The locked screen inventory is:
 The visual references for this direction are stored in
 `docs/architecture/assets/operator-ui-mission-control/`:
 
+- `13-integrated-operator-workbench.png`
 - `01-project-setup-previous-run.png`
 - `02-active-run-command-center.png`
 - `02b-flow-complete-start-next-flow.png`
@@ -389,6 +390,15 @@ The visual references for this direction are stored in
 - `10-start-next-flow-source-findings.png`
 - `11-define-follow-up-work-item.png`
 - `12-confirm-launch-next-flow.png`
+
+`13-integrated-operator-workbench.png` is the current integrated reference for future
+UI implementation. It combines the project/work-item layer, active-run command center,
+Markdown document workbench, run timeline diagnostics, and question/repair recovery
+assistant into one operator workbench direction. Future UI changes should preserve the
+same hierarchy: project and work item context first, one run-global next action with
+primary weight, documents and artifacts as the central work surface, timeline/log
+diagnostics as drill-down evidence, and guided recovery cards for questions, validation
+failures, repairs, and interventions.
 
 When the current run is active, the command center prioritizes blocked questions,
 validation failures, approvals, resumable stages, and log visibility. When the run reaches

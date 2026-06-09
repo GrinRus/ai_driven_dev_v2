@@ -8185,3 +8185,401 @@ Sync notes:
   `job-52f8e71e3a564672becae1084bf27d71` with job status `completed`, stage rail status
   `succeeded`, fixture runtime logs, seven timeline events per stage, and expected
   Markdown artifacts. Release prep remains blocked on separate explicit approval.
+
+---
+
+## Wave 31 — integrated operator workbench redesign (`planned`)
+
+Goal: redesign the local operator UI around the integrated workbench reference so project
+selection, work-item navigation, run execution, Markdown artifacts, logs, diagnostics, and
+recovery actions form one coherent operator path without changing core workflow semantics
+or adapter boundaries.
+
+### Epic W31-E1 — workbench UX contract and rollout plan (`planned`)
+Linked stories: `US-02`, `US-03`, `US-05`, `US-06`, `US-11`, `US-12`
+
+#### Slice W31-E1-S1 — integrated workbench contract (`planned`)
+Goal: turn the saved workbench reference into implementation-ready UX rules before code
+changes.
+
+Primary outputs:
+
+- operator workbench information architecture
+- contextual navigation and state hierarchy rules
+- browser validation checklist updates
+
+Touched areas:
+
+- `docs/architecture/operator-frontend.md`
+- `docs/e2e/operator-ui-local-project.md`
+- `docs/backlog/`
+
+Dependencies:
+
+- `docs/architecture/assets/operator-ui-mission-control/13-integrated-operator-workbench.png`
+- completed Wave 29 browser evidence
+
+Local tasks:
+
+- `W31-E1-S1-T1` Define the integrated operator workbench information architecture from
+  `13-integrated-operator-workbench.png`.
+  - Scope: architecture documentation only.
+  - Verification: docs name the required hierarchy: project/work-item context, one
+    run-global next action, document workbench, timeline/log diagnostics, and guided
+    recovery cards.
+- `W31-E1-S1-T2` Update the local-project UI checklist for the redesigned workbench
+  surfaces.
+  - Scope: E2E documentation only.
+  - Verification: checklist covers Project Home, Work Item Console, Document Workbench,
+    Run Diagnostics, Recovery Assistant, contextual tabs, and compact viewport ordering.
+
+Exit evidence:
+
+- future UI implementation can be reviewed against one integrated UX contract;
+- browser evidence expectations match the new workbench direction.
+
+### Epic W31-E2 — project and work-item operating layer (`planned`)
+Linked stories: `US-11`, `US-12`
+
+#### Slice W31-E2-S1 — project home read model (`planned`)
+Goal: expose a project/work-item home surface that lets operators select local projects
+and resume work before entering stage internals.
+
+Primary outputs:
+
+- project home read model
+- work-item status summary rows
+- private UI endpoint coverage
+
+Touched areas:
+
+- `src/aidd/core/`
+- `src/aidd/cli/ui.py`
+- `tests/core/`
+- `tests/cli/`
+
+Dependencies:
+
+- `W31-E1-S1`
+- existing onboarding and run lookup services
+
+Local tasks:
+
+- `W31-E2-S1-T1` Expose a project home read model for selected project root, `.aidd`
+  root, discovered work items, latest run, stage progress, blockers, and terminal state.
+  - Scope: core read model only.
+  - Verification: core tests cover empty project, multiple work items, blocked run,
+    completed run, and stale/missing run metadata.
+- `W31-E2-S1-T2` Add private UI endpoints for project home and work-item resume context.
+  - Scope: CLI UI API only.
+  - Verification: CLI tests prove endpoint payload shape, project scoping, missing
+    workspace behavior, and no cross-project state mixing.
+
+Exit evidence:
+
+- the UI can open on project/work-item context instead of immediately entering a stage
+  cockpit;
+- project-set metadata remains visible without mixing unrelated repositories.
+
+#### Slice W31-E2-S2 — project home UI shell (`planned`)
+Goal: render project and work-item navigation as the first operator layer.
+
+Primary outputs:
+
+- Project Home / Work Item Board shell
+- structured project-set root editor
+- resume/create work-item controls
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `tests/cli/test_ui_assets_contracts.py`
+
+Dependencies:
+
+- `W31-E2-S1`
+
+Local tasks:
+
+- `W31-E2-S2-T1` Render the Project Home and Work Item Board shell from the project home
+  endpoint.
+  - Scope: packaged static UI assets only.
+  - Verification: static UI tests prove work-item cards, status groups, latest run chips,
+    resume actions, and empty states render with escaped dynamic values.
+- `W31-E2-S2-T2` Replace raw project-set JSON onboarding with a structured project-root
+  editor.
+  - Scope: packaged static UI assets only.
+  - Verification: static UI tests prove add/remove root rows, id/root/role fields,
+    validation status, duplicate-root warnings, and payload compatibility.
+
+Exit evidence:
+
+- operators can start from projects and work items before inspecting stage artifacts;
+- monorepo roots are edited through UI controls rather than raw JSON.
+
+### Epic W31-E3 — active run command center (`planned`)
+Linked stories: `US-03`, `US-06`, `US-11`
+
+#### Slice W31-E3-S1 — run-global next action clarity (`planned`)
+Goal: make the next safe operator action the dominant control in every active-run state.
+
+Primary outputs:
+
+- fixed first-run next-action copy
+- primary Next Action strip
+- compact viewport action ordering
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `tests/cli/test_ui_assets_contracts.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W31-E1-S1`
+- existing dashboard `next_action` payload
+
+Local tasks:
+
+- `W31-E3-S1-T1` Fix first-run Next Action copy when a runtime is already selected and
+  ready.
+  - Scope: packaged static UI assets only.
+  - Verification: static/UI tests prove selected-ready runtime shows runnable copy rather
+    than `Choose a runtime before starting the workflow`.
+- `W31-E3-S1-T2` Render a primary run-global Next Action strip above the selected-stage
+  workbench.
+  - Scope: packaged static UI assets only.
+  - Verification: static tests prove the strip renders one primary action, demotes
+    duplicate run buttons, and preserves disabled/runtime-required states.
+- `W31-E3-S1-T3` Reorder the compact viewport so Next Action appears before logs,
+  artifacts, and secondary evidence.
+  - Scope: packaged static UI CSS/assets only.
+  - Verification: static responsive tests and manual browser checklist prove primary
+    action ordering on mobile/tablet widths.
+
+Exit evidence:
+
+- the operator can always identify the next safe action before reading logs or artifacts;
+- active-run controls no longer contradict runtime readiness state.
+
+### Epic W31-E4 — document and artifact workbench (`planned`)
+Linked stories: `US-02`, `US-03`, `US-10`, `US-11`
+
+#### Slice W31-E4-S1 — artifact taxonomy read model (`planned`)
+Goal: make generated documents, runtime inputs, validation evidence, logs, project
+evidence, and lineage distinguishable without path guessing.
+
+Primary outputs:
+
+- artifact category vocabulary
+- latest/stale/canonical/attempt-local flags
+- workbench-oriented artifact read model
+
+Touched areas:
+
+- `src/aidd/core/operator_frontend_artifacts.py`
+- `src/aidd/core/operator_frontend_documents.py`
+- `tests/core/`
+
+Dependencies:
+
+- `W31-E1-S1`
+- existing artifact indexes and evidence graph read model
+
+Local tasks:
+
+- `W31-E4-S1-T1` Define artifact categories for canonical stage documents, runtime
+  inputs, validation evidence, runtime evidence, project evidence, and lineage evidence.
+  - Scope: core artifact read model only.
+  - Verification: core tests prove category, stage, attempt, canonical/latest, stale, and
+    source/generated flags for representative artifacts.
+- `W31-E4-S1-T2` Expose workbench document metadata for preview/source/diff selection
+  without arbitrary path reads.
+  - Scope: core document workbench read model only.
+  - Verification: core tests cover known document keys, missing documents, large
+    truncation, invalid UTF-8, and previous-attempt diff candidates.
+
+Exit evidence:
+
+- UI consumers can organize artifacts by role rather than by raw path shape;
+- document-first contracts remain Markdown files and do not become UI-authored schemas.
+
+#### Slice W31-E4-S2 — central document workbench UI (`planned`)
+Goal: make Markdown artifacts the central work surface for active stage review.
+
+Primary outputs:
+
+- document tree grouped by artifact category
+- Preview / Source / Diff mode controls
+- contract and validation side inspector
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `tests/cli/test_ui_assets_contracts.py`
+
+Dependencies:
+
+- `W31-E4-S1`
+
+Local tasks:
+
+- `W31-E4-S2-T1` Render the central Document Workbench with category tree and selected
+  Markdown preview/source/diff.
+  - Scope: packaged static UI assets only.
+  - Verification: static tests prove category groups, selected document state, preview
+    and source controls, diff mode, truncation notices, and empty states.
+- `W31-E4-S2-T2` Render document contract and validation context beside the selected
+  artifact.
+  - Scope: packaged static UI assets only.
+  - Verification: static tests prove required document status, validator counts,
+    missing evidence warnings, references, and version history render safely.
+
+Exit evidence:
+
+- operators can inspect source artifacts without leaving the active workbench;
+- raw logs and evidence remain available as drill-down surfaces.
+
+### Epic W31-E5 — diagnostics, logs, and recovery assistant (`planned`)
+Linked stories: `US-03`, `US-04`, `US-05`, `US-06`, `US-11`
+
+#### Slice W31-E5-S1 — first failure and recovery read models (`planned`)
+Goal: surface the first decisive failure or blocking signal before raw log inspection.
+
+Primary outputs:
+
+- first-failure read model
+- runtime/config failure blockers
+- recovery action recommendations
+
+Touched areas:
+
+- `src/aidd/core/operator_frontend_dashboard.py`
+- `src/aidd/core/operator_timeline.py`
+- `tests/core/`
+
+Dependencies:
+
+- `W31-E1-S1`
+- existing stage metadata, runtime exit metadata, validator reports, and question state
+
+Local tasks:
+
+- `W31-E5-S1-T1` Expose the first decisive failure signal from runtime exit metadata,
+  validator reports, blocking questions, repair exhaustion, and stopped events.
+  - Scope: core dashboard/timeline read models only.
+  - Verification: core tests cover runtime non-zero exit, timeout/provider error,
+    validation failure, blocking questions, repair exhausted, and explicit stop.
+- `W31-E5-S1-T2` Convert runtime and configuration failures into visible blockers and
+  recovery-oriented next actions.
+  - Scope: core dashboard next-action/blocker read model only.
+  - Verification: core tests prove failed runtime attempts do not show `Blockers 0` while
+    asking the operator to inspect blockers.
+
+Exit evidence:
+
+- operators can diagnose failed runs from a summary before opening raw logs;
+- validation and runtime failures route to repair or explicit stop, never silent
+  continuation.
+
+#### Slice W31-E5-S2 — diagnostics and recovery UI (`planned`)
+Goal: render logs, timeline, questions, repair, and intervention as guided recovery
+surfaces instead of always-visible dense tabs.
+
+Primary outputs:
+
+- Run Diagnostics panel
+- Summary / Timeline / Raw Logs layout
+- Recovery Assistant cards
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `tests/cli/test_ui_assets_contracts.py`
+- `tests/cli/test_ui.py`
+
+Dependencies:
+
+- `W31-E5-S1`
+
+Local tasks:
+
+- `W31-E5-S2-T1` Render the Run Diagnostics panel with pipeline, attempts, repairs,
+  question markers, and first-failure summary.
+  - Scope: packaged static UI assets only.
+  - Verification: static tests prove timeline nodes, attempt markers, repair markers,
+    question markers, first-failure callout, and empty states render safely.
+- `W31-E5-S2-T2` Split logs into Summary, Timeline, and Raw Runtime Log views.
+  - Scope: packaged static UI assets only.
+  - Verification: static/UI tests prove raw stdout/stderr/system filters, truncation
+    notices, saved-log fallback, and summary/timeline navigation.
+- `W31-E5-S2-T3` Render Recovery Assistant cards for questions, validation failures,
+  repair, request change, and remediation.
+  - Scope: packaged static UI assets only.
+  - Verification: static/UI tests prove answer, rerun, request change, repair, and
+    remediation actions stay gated by runtime and stage eligibility.
+
+Exit evidence:
+
+- recovery paths are visible as guided actions rather than hidden in separate tabs;
+- raw runtime logs remain one click away and preserve native evidence.
+
+### Epic W31-E6 — contextual navigation and verification (`planned`)
+Linked stories: `US-02`, `US-03`, `US-06`, `US-11`
+
+#### Slice W31-E6-S1 — contextual navigation and regression coverage (`planned`)
+Goal: reduce always-visible UI clutter while preserving access to artifacts, logs,
+questions, validation, and review/QA surfaces.
+
+Primary outputs:
+
+- contextual tab visibility rules
+- static/service regressions for workbench hierarchy
+- updated manual browser evidence path
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `tests/cli/`
+- `docs/e2e/operator-ui-local-project.md`
+
+Dependencies:
+
+- `W31-E3-S1`
+- `W31-E4-S2`
+- `W31-E5-S2`
+
+Local tasks:
+
+- `W31-E6-S1-T1` Render contextual navigation rules for stage-specific tabs and
+  secondary evidence surfaces.
+  - Scope: packaged static UI assets only.
+  - Verification: static tests prove implement/review/QA tabs appear only when relevant
+    while Documents, Logs, Timeline, and Recovery remain reachable.
+- `W31-E6-S1-T2` Add service and static regression coverage for the integrated workbench
+  hierarchy.
+  - Scope: UI tests only.
+  - Verification: tests prove Project Home, Next Action strip, Document Workbench,
+    Run Diagnostics, Recovery Assistant, and Evidence/Logs drill-down render from seeded
+    workspaces.
+- `W31-E6-S1-T3` Record a deterministic browser smoke for the redesigned workbench.
+  - Scope: manual browser evidence outside the repository plus checklist note.
+  - Verification: evidence records clean onboarding, project/work-item selection,
+    selected-stage run, document workbench, diagnostics, recovery, raw logs, compact
+    viewport ordering, and cleanup.
+
+Exit evidence:
+
+- the redesigned workbench is proven through static, service, and browser evidence;
+- reduced navigation clutter does not hide required logs, artifacts, validation, or
+  questions.
+
+Sync notes:
+
+- `2026-06-09` Wave 31 was opened from the integrated UI concept review. The wave uses
+  `13-integrated-operator-workbench.png` as the visual reference and decomposes the
+  redesign into contract, project/work-item layer, active-run next action, document
+  workbench, diagnostics/recovery, and contextual navigation evidence tasks. Initial
+  queue promotion sets `W31-E1-S1-T1` as `Next`, keeps the checklist and first read-model
+  tasks in `Soon`, and parks the broader UI rollout until the contract lands.
