@@ -25,7 +25,11 @@ from aidd.core.stage_models import (
     ValidationVerdict,
 )
 from aidd.core.stage_outputs import publish_stage_outputs_after_validation_pass
-from aidd.core.stage_preparation import persist_execution_state, prepare_stage_bundle
+from aidd.core.stage_preparation import (
+    persist_execution_state,
+    prepare_stage_bundle,
+    validate_required_stage_inputs,
+)
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 from aidd.validators.cross_document import BLOCKING_UNANSWERED_CODE
@@ -300,6 +304,10 @@ def prepare_stage_resume_after_answers(
         stage=stage,
         contracts_root=contracts_root,
         include_existing_stage_outputs=True,
+    )
+    validate_required_stage_inputs(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
     )
     execution_state = persist_execution_state(
         workspace_root=workspace_root,

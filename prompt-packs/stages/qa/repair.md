@@ -14,8 +14,9 @@ verdict/recommendation coherence, and truthful stage status.
    `contracts/documents/validator-report.md`,
    `contracts/documents/stage-result.md`
 5. `contracts/documents/questions.md` and `contracts/documents/answers.md`
-6. stage input bundle for this attempt, especially `context/selected-task.md`,
-   `context/verification-output.md`, and `context/verification-artifacts.md`
+6. stage input bundle for this attempt, especially provided optional context such as
+   `context/selected-task.md`, `context/verification-output.md`, and
+   `context/verification-artifacts.md`
 7. current outputs:
    - `qa-report.md`
    - `stage-result.md`
@@ -50,9 +51,9 @@ For each finding:
 Use concrete repair actions:
 
 - unsupported claim: remove claim or rewrite with explicit verification evidence reference;
-- missing evidence: add direct references to `verification-output.md` or
-  `verification-artifacts.md` for each material QA claim, using `EV-1`, `EV-2`, ...
-  evidence ids and/or backticked artifact paths;
+- missing evidence: add direct references to available verification output, verification artifacts,
+  or upstream evidence for each material QA claim, using `EV-1`, `EV-2`, ... evidence ids and/or
+  backticked artifact paths;
 - verdict mismatch: align verdict and release recommendation with unresolved findings and
   critical-check availability;
 - risk gaps: add residual risk entries with severity plus mitigation/ownership; keep

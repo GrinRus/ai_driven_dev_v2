@@ -119,12 +119,6 @@ def bootstrap_live_work_item(
             f"- Runtime targets: `{', '.join(scenario.runtime_targets)}`",
             f"- Authored task selection policy: `{selection_policy}`",
         ),
-        "review-context.md": _markdown(
-            "# Review Context",
-            "",
-            f"- Review the live-scenario artifacts for `{scenario.scenario_id}`.",
-            "- Keep the verdict tied to repository evidence, validator output, and runtime logs.",
-        ),
         "task-selection.md": _markdown(
             "# Task Selection",
             "",

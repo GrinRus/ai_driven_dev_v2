@@ -58,8 +58,10 @@ from aidd.core.stage_paths import (
     workspace_relative_paths as _to_workspace_relative_paths,
 )
 from aidd.core.stage_preparation import (
+    StageInputPreflightError,
     persist_execution_state,
     prepare_stage_bundle,
+    validate_required_stage_inputs,
 )
 from aidd.core.stage_preparation import (
     render_stage_brief as _render_stage_brief,
@@ -353,6 +355,10 @@ def run_single_stage_orchestration(
         include_existing_stage_outputs=include_existing_stage_outputs,
         extra_input_documents=extra_input_documents,
     )
+    validate_required_stage_inputs(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+    )
     execution_state = persist_execution_state(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -590,6 +596,7 @@ __all__ = [
     "PostValidationTransition",
     "RepairBudgetValidationTransition",
     "StageExecutionState",
+    "StageInputPreflightError",
     "StageInterviewRouting",
     "StageOrchestrationResult",
     "StageOutputDiscovery",
@@ -613,6 +620,7 @@ __all__ = [
     "prepare_adapter_invocation",
     "prepare_stage_bundle",
     "prepare_stage_resume_after_answers",
+    "validate_required_stage_inputs",
     "publish_stage_outputs_after_validation_pass",
     "restore_core_owned_repair_brief",
     "route_stage_questions_to_interview",

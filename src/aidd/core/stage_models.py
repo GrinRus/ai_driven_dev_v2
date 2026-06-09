@@ -13,6 +13,8 @@ class StagePreparationBundle:
     stage: str
     work_item: str
     stage_brief_markdown: str
+    required_input_documents: tuple[Path, ...]
+    optional_input_documents: tuple[Path, ...]
     expected_input_bundle: tuple[Path, ...]
     expected_output_documents: tuple[Path, ...]
     project_set_context_path: Path | None = None

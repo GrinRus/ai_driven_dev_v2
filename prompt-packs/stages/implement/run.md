@@ -15,11 +15,11 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
   - `../tasklist/output/stage-result.md`
   - `../tasklist/output/validator-report.md`
   - `context/repository-state.md`
+- optional context when available:
   - `context/task-selection.md`
   - `context/allowed-write-scope.md`
   - `context/acceptance-criteria.md`
   - `context/verification-output.md`
-- optional context when available:
   - `context/constraints.md`
   - `context/previous-decisions.md`
   - `context/runtime-capabilities.md`
@@ -47,11 +47,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Implementation discipline
 
-1. Selected task id from `context/task-selection.md` must be explicit in the implementation
+1. When `context/task-selection.md` is provided, the selected task id must be explicit in the implementation
    report. If upstream `tasklist.md` decomposes that selected task into local ids such as `T1` or
    `TL-1`, use those local ids to structure touched-file and verification evidence where practical.
-2. `context/allowed-write-scope.md` is a hard boundary for touched files.
-3. `context/acceptance-criteria.md` and `context/verification-output.md` define the
+2. When `context/allowed-write-scope.md` is provided, it is a hard boundary for touched files.
+3. When provided, `context/acceptance-criteria.md` and `context/verification-output.md` define the
    authored live acceptance and verification baseline for the implementation.
 4. Change summary must describe what changed, why it changed, and how it maps to the selected task id.
 5. Touched-files list must include concrete path + short intent per entry and never claim unobserved edits.
@@ -64,9 +64,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Execution instructions
 
-1. Read all required inputs and `contracts/stages/implement.md` before drafting outputs.
+1. Read all required inputs, existing optional context, and `contracts/stages/implement.md` before drafting outputs.
 2. Confirm selected task id, acceptance criteria, scope limits, verification commands, and
-   repository baseline before editing outputs.
+   repository baseline when those inputs are provided before editing outputs.
 3. Produce `implementation-report.md` with selected task id, scoped change summary, touched-files list,
    verification notes, and residual risk/deferred notes when applicable.
 4. Keep touched-files entries bounded to allowed scope and aligned with observable repository changes.
@@ -85,8 +85,8 @@ normalize if canonical validation proves the terminal status inconsistent.
    When `context/verification-output.md` lists authored or scenario verification commands, run those
    commands after the implementation or explicitly mark each skipped command as not-run with a reason.
    For skipped checks, write `not-run: <reason>` in the verification note.
-6. If required inputs are missing or scope/task constraints conflict, raise a `[blocking]` question
-   instead of inventing assumptions.
+6. If required inputs are missing or provided scope/task constraints conflict, raise a `[blocking]`
+   question instead of inventing assumptions.
 7. Update `validator-report.md` and `stage-result.md` so readiness, blockers, and next actions remain
    consistent with implementation evidence.
 
@@ -99,8 +99,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Completion checklist
 
-- selected task id is explicit and traced to implementation summary,
-- edits stay within allowed write scope,
+- selected task id is explicit and traced to implementation summary when provided,
+- edits stay within allowed write scope when provided,
 - touched-files list is concrete and evidence-backed,
 - verification notes are factual and command-specific,
 - no-op handling (if any) includes justification, evidence, and next action,

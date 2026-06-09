@@ -14,9 +14,10 @@ sign-off state is coherent with required changes.
   - `../plan/output/plan.md`
   - `../plan/output/stage-result.md`
   - `../plan/output/validator-report.md`
-  - `context/review-context.md`
-- optional context when available:
+  - `context/intake.md`
+  - `context/user-request.md`
   - `context/repository-state.md`
+- optional context when available:
   - `context/constraints.md`
   - `context/previous-decisions.md`
 - contract of record:
@@ -69,19 +70,21 @@ containing only `ready-with-conditions`.
    consistent with readiness state and required changes.
    Use this exact mapping: `ready` -> `approved`, `ready-with-conditions` ->
    `approved-with-conditions`, and `not-ready` -> `rejected`.
-6. Blocking uncertainty must be turned into questions instead of implied assumptions.
+6. Review readiness against the operator request, repository state, plan coherence, risk coverage,
+   dependency clarity, acceptance and verification coverage, and readiness for task decomposition.
+7. Blocking uncertainty must be turned into questions instead of implied assumptions.
 
 ## Execution instructions
 
-1. Read required plan artifacts, review context, and `contracts/stages/review-spec.md` before
-   drafting outputs.
+1. Read required plan artifacts, intake/user request/repository context, optional context, and
+   `contracts/stages/review-spec.md` before drafting outputs.
 2. If required plan artifacts are missing or inconsistent, do not mark stage as `succeeded`.
 3. Draft `review-spec-report.md` with the exact required headings: `Readiness state`,
    `Issue list`, `Strengths`, `Recommendation summary`, `Required changes`, and `Decision`.
 4. Keep issue wording tied to observable plan gaps or risks, not generic quality statements.
 5. Map recommended actions to issue ids/severity where possible so remediation order is clear.
-6. If contradictory constraints or missing decision authority block sign-off, raise a `[blocking]`
-   question instead of forcing approval status.
+6. If contradictory constraints, missing decision authority, or missing acceptance policy block
+   sign-off, raise a `[blocking]` question instead of forcing approval status.
 7. Update `validator-report.md` and `stage-result.md` so verdict, blockers, and next actions remain
    consistent with report conclusions.
 

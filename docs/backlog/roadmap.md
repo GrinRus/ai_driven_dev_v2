@@ -310,7 +310,7 @@ Dependencies:
 
 Local tasks:
 
-- `W2-E1-S5-T1` (done) Define the required `review-spec` inputs, especially the plan artifact and review context.
+- `W2-E1-S5-T1` (done) Define the required `review-spec` inputs, especially the plan artifact and declared review inputs.
 - `W2-E1-S5-T2` (done) Define the required `review-spec` outputs, including issue lists, recommendation summaries, and readiness states.
 - `W2-E1-S5-T3` (done) Define validator rules for issue quality, actionable recommendations, and explicit sign-off status.
 - `W2-E1-S5-T4` (done) Define interview triggers for contradictory constraints or missing baseline assumptions.

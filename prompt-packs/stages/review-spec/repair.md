@@ -61,7 +61,8 @@ Use concrete repair actions:
   `ready-with-conditions` -> `approved-with-conditions`, and `not-ready` -> `rejected`.
   If the decision is `approved-with-conditions`, the readiness state must be
   `ready-with-conditions`; do not replace it with prose such as `conditionally ready`;
-- contradiction in review context: keep/add a blocking question instead of forcing approval;
+- contradiction in plan, operator request, repository state, or optional context: keep/add a
+  blocking question instead of forcing approval;
 - cross-document drift: align `stage-result.md` blockers/next actions with validator/report outcome.
 
 ## Targeted repair discipline

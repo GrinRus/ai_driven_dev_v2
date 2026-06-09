@@ -11,6 +11,7 @@ from aidd.core.run_store import (
     run_attempt_artifact_index_path,
     run_attempt_root,
     run_manifest_path,
+    write_attempt_artifact_index,
 )
 
 
@@ -113,6 +114,13 @@ def _prepare_comparison_run(
         attempt_number=1,
     )
     attempt_root.joinpath("input-bundle.md").write_text(input_bundle, encoding="utf-8")
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item="WI-CMP",
+        run_id=run_id,
+        stage="plan",
+        attempt_number=1,
+    )
     attempt_root.joinpath("runtime.log").write_text(f"{run_id} runtime\n", encoding="utf-8")
     _write_run_artifact(
         workspace_root,

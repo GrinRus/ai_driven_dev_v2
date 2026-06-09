@@ -43,6 +43,7 @@ def _extract_declared_stage_id(markdown_text: str) -> str | None:
 def _validate_stage_contract_references(
     *,
     required_inputs: tuple[str, ...],
+    optional_inputs: tuple[str, ...],
     required_outputs: tuple[str, ...],
     prompt_pack_paths: tuple[str, ...],
     contracts_root: Path,
@@ -51,7 +52,7 @@ def _validate_stage_contract_references(
     layout = resolve_resource_layout_from_contracts_root(contracts_root)
     document_contracts_root = layout.document_contracts_root
 
-    for declaration in (*required_inputs, *required_outputs):
+    for declaration in (*required_inputs, *optional_inputs, *required_outputs):
         candidate = Path(declaration)
         if len(candidate.parts) != 1 or candidate.suffix.lower() != ".md":
             continue
@@ -95,12 +96,17 @@ def load_stage_manifest(
         )
 
     required_inputs = extract_bullets(markdown_text=markdown_text, heading="Required inputs")
+    optional_inputs = extract_bullets(
+        markdown_text=markdown_text,
+        heading="Optional context inputs",
+    )
     required_outputs = extract_bullets(markdown_text=markdown_text, heading="Primary output")
     prompt_pack_paths = extract_bullets(markdown_text=markdown_text, heading="Prompt pack")
     purpose = extract_paragraph(markdown_text=markdown_text, heading="Purpose")
 
     _validate_stage_contract_references(
         required_inputs=required_inputs,
+        optional_inputs=optional_inputs,
         required_outputs=required_outputs,
         prompt_pack_paths=prompt_pack_paths,
         contracts_root=contracts_root,
@@ -110,6 +116,7 @@ def load_stage_manifest(
         return StageManifest.from_document_paths(
             stage=stage,
             required_inputs=required_inputs,
+            optional_inputs=optional_inputs,
             required_outputs=required_outputs,
             purpose=purpose,
         )
@@ -219,6 +226,25 @@ def resolve_required_input_documents(
             declaration=declaration.path,
         )
         for declaration in manifest.required_inputs
+    )
+
+
+def resolve_optional_input_documents(
+    *,
+    stage: str,
+    work_item: str,
+    workspace_root: Path,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[Path, ...]:
+    manifest = load_stage_manifest(stage=stage, contracts_root=contracts_root)
+    return tuple(
+        _resolve_declared_document_path(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            declaration=declaration.path,
+        )
+        for declaration in manifest.optional_inputs
     )
 
 

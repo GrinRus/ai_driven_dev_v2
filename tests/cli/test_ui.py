@@ -42,6 +42,7 @@ from aidd.core.run_store import (
     run_attempt_root,
     run_attempt_runtime_log_path,
     run_manifest_path,
+    write_attempt_artifact_index,
 )
 from aidd.core.runtime_operator import (
     RuntimeOperatorBroker,
@@ -201,6 +202,23 @@ def _prepare_run(workspace_root: Path) -> None:
         work_item="WI-UI",
         run_id="run-ui",
         stage="plan",
+    )
+    (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage="plan",
+            attempt_number=1,
+        )
+        / "input-bundle.md"
+    ).write_text("# Input bundle\n\nPrepared UI fixture.\n", encoding="utf-8")
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
     )
     persist_stage_status(
         workspace_root=workspace_root,

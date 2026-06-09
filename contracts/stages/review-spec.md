@@ -24,15 +24,16 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `../plan/output/plan.md`
 - `../plan/output/stage-result.md`
 - `../plan/output/validator-report.md`
-- `context/review-context.md`
+- `context/intake.md`
+- `context/user-request.md`
+- `context/repository-state.md`
 
 ## Optional context inputs
 
-- `context/repository-state.md`
 - `context/constraints.md`
 - `context/previous-decisions.md`
 
-Optional context documents may refine review quality, but they must not replace required plan and review-context artifacts.
+Optional context documents may refine review quality, but they must not replace required plan and intake artifacts.
 
 ## Upstream dependency rule
 
@@ -45,6 +46,9 @@ Optional context documents may refine review quality, but they must not replace 
   - an explicit issue list with severity and rationale,
   - a recommendation summary that prioritizes remediation steps,
   - a readiness state suitable for go/no-go decision on task decomposition.
+- `review-spec` must evaluate readiness against the original operator request, repository
+  context, plan coherence, risk coverage, dependency clarity, acceptance and verification
+  coverage, and decomposition readiness.
 - `stage-result.md` and `validator-report.md` must remain consistent with the declared readiness state.
 
 ## Validation focus
@@ -71,7 +75,7 @@ Validators for `review-spec` should check:
 
 ## Interview policy
 
-`review-spec` may ask user questions when review conclusions cannot be made safely from available plan artifacts and review context.
+`review-spec` may ask user questions when review conclusions cannot be made safely from available plan artifacts, operator request, repository state, and optional context.
 
 Mandatory question triggers:
 

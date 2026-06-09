@@ -253,6 +253,14 @@ def prepare_adapter_invocation(
         attempt_path=execution_state.attempt_path,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
     )
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=execution_state.work_item,
+        run_id=execution_state.run_id,
+        stage=execution_state.stage,
+        attempt_number=execution_state.attempt_number,
+        contracts_root=contracts_root,
+    )
 
     return AdapterInvocationBundle(
         stage=execution_state.stage,

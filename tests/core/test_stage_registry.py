@@ -10,6 +10,7 @@ from aidd.core.stage_registry import (
     load_all_stage_manifests,
     load_stage_manifest,
     resolve_expected_output_documents,
+    resolve_optional_input_documents,
     resolve_prompt_pack_file_paths,
     resolve_required_input_documents,
     resolve_validator_targets,
@@ -21,6 +22,7 @@ def _write_stage_contract(
     contracts_root: Path,
     stage: str,
     required_inputs: tuple[str, ...],
+    optional_inputs: tuple[str, ...] = (),
     required_outputs: tuple[str, ...],
     prompt_pack_paths: tuple[str, ...],
 ) -> None:
@@ -40,6 +42,10 @@ def _write_stage_contract(
                 "## Required inputs",
                 "",
                 *[f"- `{item}`" for item in required_inputs],
+                "",
+                "## Optional context inputs",
+                "",
+                *[f"- `{item}`" for item in optional_inputs],
                 "",
                 "## Prompt pack",
                 "",
@@ -77,6 +83,7 @@ def test_load_stage_manifest_parses_required_inputs_outputs(tmp_path: Path) -> N
         contracts_root=contracts_root,
         stage="idea",
         required_inputs=("context/intake.md", "context/user-request.md"),
+        optional_inputs=("context/constraints.md",),
         required_outputs=required_outputs,
         prompt_pack_paths=prompt_paths,
     )
@@ -91,6 +98,7 @@ def test_load_stage_manifest_parses_required_inputs_outputs(tmp_path: Path) -> N
     assert manifest.stage == "idea"
     assert manifest.purpose == "Shape the incoming request into a reviewable brief."
     assert manifest.required_input_paths == ("context/intake.md", "context/user-request.md")
+    assert manifest.optional_input_paths == ("context/constraints.md",)
     assert manifest.required_output_paths == ("idea-brief.md", "stage-result.md")
 
 
@@ -247,14 +255,10 @@ def test_resolve_required_input_documents_maps_context_and_upstream_paths(
         / "output"
         / "validator-report.md",
         workspace_root / "workitems" / "WI-001" / "context" / "repository-state.md",
-        workspace_root / "workitems" / "WI-001" / "context" / "task-selection.md",
-        workspace_root / "workitems" / "WI-001" / "context" / "allowed-write-scope.md",
-        workspace_root / "workitems" / "WI-001" / "context" / "acceptance-criteria.md",
-        workspace_root / "workitems" / "WI-001" / "context" / "verification-output.md",
     )
 
 
-def test_resolve_required_input_documents_includes_qa_selected_task_context(
+def test_resolve_required_input_documents_excludes_optional_qa_context(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -265,17 +269,23 @@ def test_resolve_required_input_documents_includes_qa_selected_task_context(
         workspace_root=workspace_root,
     )
 
-    assert (
-        workspace_root / "workitems" / "WI-001" / "context" / "selected-task.md"
-        in resolved
+    assert all("/context/" not in path.as_posix() for path in resolved)
+
+
+def test_resolve_optional_input_documents_maps_optional_context_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    resolved = resolve_optional_input_documents(
+        stage="review-spec",
+        work_item="WI-001",
+        workspace_root=workspace_root,
     )
-    assert (
-        workspace_root / "workitems" / "WI-001" / "context" / "verification-output.md"
-        in resolved
-    )
-    assert (
-        workspace_root / "workitems" / "WI-001" / "context" / "verification-artifacts.md"
-        in resolved
+
+    assert resolved == (
+        workspace_root / "workitems" / "WI-001" / "context" / "constraints.md",
+        workspace_root / "workitems" / "WI-001" / "context" / "previous-decisions.md",
     )
 
 

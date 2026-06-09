@@ -17,10 +17,10 @@ findings, the `Findings` section must say exactly `- none` or
   - `../implement/output/implementation-report.md`
   - `../implement/output/stage-result.md`
   - `../implement/output/validator-report.md`
+- optional context when available:
   - `context/diff-summary.md`
   - `context/acceptance-criteria.md`
-  - `context/verification-output.md` when available
-- optional context when available:
+  - `context/verification-output.md`
   - `context/repository-state.md`
   - `context/constraints.md`
   - `context/review-baseline.md`
@@ -62,9 +62,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    sections.
 3. `must-fix` findings block `approved` status until resolved.
 4. Required changes must map to concrete finding ids when status is conditional or rejected.
-5. Missing/contradictory baseline context must become explicit questions, not silent assumptions.
-6. The selected task, acceptance criteria, and `context/verification-output.md` define the
-   authored verification boundary. Do not convert optional broader checks outside that boundary
+5. Missing or contradictory baseline context needed for a defensible decision must become explicit
+   questions, not silent assumptions.
+6. When present, selected task evidence, acceptance criteria, and `context/verification-output.md`
+   define the authored verification boundary. Do not convert optional broader checks outside that boundary
    into `approved-with-conditions` unless they reveal a concrete defect, contradict acceptance
    criteria, are required by review baseline or release policy, or leave required selected-task
    verification inconclusive.
@@ -85,9 +86,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Execution instructions
 
-1. Read required `implement` artifacts, diff summary, acceptance criteria,
-   `context/verification-output.md` when present, and `contracts/stages/review.md` before
-   drafting outputs.
+1. Read required `implement` artifacts, existing optional context such as diff summary, acceptance
+   criteria, `context/verification-output.md`, and `contracts/stages/review.md` before drafting outputs.
 2. Do not mark stage `succeeded` when `implement` status is unresolved or validator verdict is
    `fail`.
 3. Draft `review-report.md` with sections for findings, approval decision, and required changes.

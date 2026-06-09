@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.core.run_store import load_stage_metadata
-from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, load_all_stage_manifests
+from aidd.core.stage_paths import workspace_relative_path
+from aidd.core.stage_registry import (
+    DEFAULT_STAGE_CONTRACTS_ROOT,
+    load_all_stage_manifests,
+    resolve_required_input_documents,
+)
 from aidd.core.stages import STAGES, is_valid_stage, stage_index
 from aidd.core.state_machine import StageState
 
@@ -23,6 +28,7 @@ class StageEligibility:
     missing_prerequisites: tuple[str, ...]
     blocked_upstream_stages: tuple[str, ...]
     failed_upstream_stages: tuple[str, ...]
+    missing_input_documents: tuple[str, ...] = ()
 
     @property
     def is_eligible(self) -> bool:
@@ -30,6 +36,7 @@ class StageEligibility:
             self.missing_prerequisites
             or self.blocked_upstream_stages
             or self.failed_upstream_stages
+            or self.missing_input_documents
         )
 
 
@@ -43,6 +50,7 @@ class StageAdvancementSummary:
     missing_prerequisites: tuple[str, ...]
     blocked_upstream_stages: tuple[str, ...]
     failed_upstream_stages: tuple[str, ...]
+    missing_input_documents: tuple[str, ...] = ()
 
 
 def stage_graph() -> tuple[str, ...]:
@@ -174,12 +182,24 @@ def evaluate_stage_eligibility(
             continue
         missing.append(dependency)
 
+    missing_inputs = tuple(
+        workspace_relative_path(workspace_root, path)
+        for path in resolve_required_input_documents(
+            stage=stage,
+            work_item=work_item,
+            workspace_root=workspace_root,
+            contracts_root=contracts_root,
+        )
+        if not path.exists()
+    )
+
     return StageEligibility(
         stage=stage,
         dependencies=dependencies,
         missing_prerequisites=tuple(missing),
         blocked_upstream_stages=tuple(blocked),
         failed_upstream_stages=tuple(failed),
+        missing_input_documents=missing_inputs,
     )
 
 
@@ -237,6 +257,10 @@ def _summarize_eligibility_blockers(eligibility: StageEligibility) -> str:
     if eligibility.failed_upstream_stages:
         reasons.append(
             "failed upstream stages: " + ", ".join(eligibility.failed_upstream_stages)
+        )
+    if eligibility.missing_input_documents:
+        reasons.append(
+            "missing required inputs: " + ", ".join(eligibility.missing_input_documents)
         )
     return "; ".join(reasons)
 
@@ -310,6 +334,7 @@ def summarize_workflow_advancement(
                 missing_prerequisites=eligibility.missing_prerequisites,
                 blocked_upstream_stages=eligibility.blocked_upstream_stages,
                 failed_upstream_stages=eligibility.failed_upstream_stages,
+                missing_input_documents=eligibility.missing_input_documents,
             )
         )
 

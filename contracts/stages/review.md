@@ -24,23 +24,24 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `../implement/output/implementation-report.md`
 - `../implement/output/stage-result.md`
 - `../implement/output/validator-report.md`
-- `context/diff-summary.md`
-- `context/acceptance-criteria.md`
-- `context/verification-output.md` when available
 
 ## Optional context inputs
 
+- `context/diff-summary.md`
+- `context/acceptance-criteria.md`
+- `context/verification-output.md`
 - `context/repository-state.md`
 - `context/constraints.md`
 - `context/review-baseline.md`
 
-Optional context documents may improve review depth, but they must not replace implementation artifacts, diff context, and acceptance criteria.
+Optional context documents may improve review depth, but they must not replace implementation artifacts.
 
 ## Upstream dependency rule
 
 - `review` depends on artifacts from the latest completed `implement` attempt.
 - `review` must not declare `succeeded` when `implement` validator verdict is `fail` or stage status is unresolved.
-- `review` must not declare `succeeded` when diff context or acceptance criteria are missing.
+- When `context/diff-summary.md` or `context/acceptance-criteria.md` exists, `review` must keep
+  findings and approval status consistent with that evidence.
 
 ## Review output expectations
 
