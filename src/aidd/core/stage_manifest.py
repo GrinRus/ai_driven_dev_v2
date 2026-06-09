@@ -27,6 +27,7 @@ class StageManifest:
     stage: str
     required_inputs: tuple[StageDocumentDeclaration, ...]
     required_outputs: tuple[StageDocumentDeclaration, ...]
+    optional_inputs: tuple[StageDocumentDeclaration, ...] = ()
     purpose: str | None = None
 
     def __post_init__(self) -> None:
@@ -38,7 +39,14 @@ class StageManifest:
             raise ValueError("Stage manifest must declare at least one required output document.")
 
         self._assert_unique_paths(self.required_inputs, "required_inputs")
+        self._assert_unique_paths(self.optional_inputs, "optional_inputs")
         self._assert_unique_paths(self.required_outputs, "required_outputs")
+        self._assert_disjoint_paths(
+            left=self.required_inputs,
+            left_name="required_inputs",
+            right=self.optional_inputs,
+            right_name="optional_inputs",
+        )
 
     @staticmethod
     def _assert_unique_paths(
@@ -53,6 +61,24 @@ class StageManifest:
                 )
             seen_paths.add(declaration.path)
 
+    @staticmethod
+    def _assert_disjoint_paths(
+        *,
+        left: tuple[StageDocumentDeclaration, ...],
+        left_name: str,
+        right: tuple[StageDocumentDeclaration, ...],
+        right_name: str,
+    ) -> None:
+        left_paths = {declaration.path for declaration in left}
+        right_paths = {declaration.path for declaration in right}
+        overlap = sorted(left_paths & right_paths)
+        if overlap:
+            joined = ", ".join(overlap)
+            raise ValueError(
+                f"Document declaration cannot appear in both {left_name} and "
+                f"{right_name}: {joined}"
+            )
+
     @classmethod
     def from_document_paths(
         cls,
@@ -60,12 +86,16 @@ class StageManifest:
         stage: str,
         required_inputs: Iterable[str],
         required_outputs: Iterable[str],
+        optional_inputs: Iterable[str] = (),
         purpose: str | None = None,
     ) -> StageManifest:
         return cls(
             stage=stage,
             required_inputs=tuple(
                 StageDocumentDeclaration(path=path, required=True) for path in required_inputs
+            ),
+            optional_inputs=tuple(
+                StageDocumentDeclaration(path=path, required=False) for path in optional_inputs
             ),
             required_outputs=tuple(
                 StageDocumentDeclaration(path=path, required=True) for path in required_outputs
@@ -76,6 +106,10 @@ class StageManifest:
     @property
     def required_input_paths(self) -> tuple[str, ...]:
         return tuple(declaration.path for declaration in self.required_inputs)
+
+    @property
+    def optional_input_paths(self) -> tuple[str, ...]:
+        return tuple(declaration.path for declaration in self.optional_inputs)
 
     @property
     def required_output_paths(self) -> tuple[str, ...]:

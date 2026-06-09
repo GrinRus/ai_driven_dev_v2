@@ -16,6 +16,7 @@ from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
     load_stage_manifest,
     resolve_expected_output_documents,
+    resolve_optional_input_documents,
     resolve_required_input_documents,
 )
 from aidd.core.state_machine import StageState
@@ -89,6 +90,10 @@ _COMMON_OUTPUT_SKELETONS = {
     "validator-report.md": _VALIDATOR_REPORT_SKELETON,
 }
 _SKIPPED_CONTRACT_SKELETONS = {"answers.md", "questions.md"}
+
+
+class StageInputPreflightError(FileNotFoundError):
+    """Raised before attempt creation when required stage inputs are unavailable."""
 
 
 def _document_title_from_name(document_name: str) -> str:
@@ -229,6 +234,18 @@ def prepare_stage_bundle(
         workspace_root=workspace_root,
         contracts_root=contracts_root,
     )
+    required_inputs = expected_inputs
+    optional_inputs = tuple(
+        path
+        for path in resolve_optional_input_documents(
+            stage=stage,
+            work_item=work_item,
+            workspace_root=workspace_root,
+            contracts_root=contracts_root,
+        )
+        if path.exists()
+    )
+    expected_inputs = (*expected_inputs, *optional_inputs)
     expected_outputs = resolve_expected_output_documents(
         stage=stage,
         work_item=work_item,
@@ -256,6 +273,7 @@ def prepare_stage_bundle(
             project_set=project_set,
         )
         expected_inputs = (*expected_inputs, project_set_context_path)
+        required_inputs = (*required_inputs, project_set_context_path)
 
     stage_brief = render_stage_brief(
         stage=stage,
@@ -274,10 +292,44 @@ def prepare_stage_bundle(
         stage=stage,
         work_item=work_item,
         stage_brief_markdown=stage_brief,
+        required_input_documents=required_inputs,
+        optional_input_documents=optional_inputs,
         expected_input_bundle=expected_inputs,
         expected_output_documents=expected_outputs,
         project_set_context_path=project_set_context_path,
     )
+
+
+def validate_required_stage_inputs(
+    *,
+    workspace_root: Path,
+    preparation_bundle: StagePreparationBundle,
+) -> None:
+    def _validate_document(document_path: Path, *, input_kind: str) -> None:
+        relative_path = workspace_relative_paths(workspace_root, (document_path,))[0]
+        if not document_path.exists():
+            raise StageInputPreflightError(
+                f"Stage input preflight failed: missing {input_kind} input document: "
+                f"{relative_path}"
+            )
+        try:
+            document_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            raise StageInputPreflightError(
+                f"Stage input preflight failed: {input_kind} input document is not "
+                "UTF-8 text: "
+                f"{relative_path}"
+            ) from exc
+        except OSError as exc:
+            raise StageInputPreflightError(
+                f"Stage input preflight failed: {input_kind} input document is not readable: "
+                f"{relative_path}"
+            ) from exc
+
+    for document_path in preparation_bundle.required_input_documents:
+        _validate_document(document_path, input_kind="required")
+    for document_path in preparation_bundle.optional_input_documents:
+        _validate_document(document_path, input_kind="optional")
 
 
 def attempt_number_from_path(attempt_path: Path) -> int:
@@ -328,4 +380,6 @@ __all__ = [
     "persist_execution_state",
     "prepare_stage_bundle",
     "render_stage_brief",
+    "StageInputPreflightError",
+    "validate_required_stage_inputs",
 ]

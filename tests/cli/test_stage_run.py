@@ -1071,8 +1071,8 @@ def test_stage_run_reports_actionable_missing_intake_context(tmp_path: Path) -> 
     )
 
     assert result.exit_code != 0
-    assert "Intake context is missing" in result.output
-    assert "aidd init --work-item <id> --request" in result.output
+    assert "Stage input preflight failed: missing required input document" in result.output
+    assert "workitems/WI-MISSING-INTAKE/context/intake.md" in result.output
 
 
 def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Path) -> None:

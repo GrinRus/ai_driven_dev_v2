@@ -12,8 +12,10 @@ from typer.testing import CliRunner
 from aidd.cli import main as cli_main
 from aidd.core.run_store import persist_stage_status, run_manifest_path, work_item_runs_root
 from aidd.core.stage_graph import StageAdvancementSummary
+from aidd.core.stage_registry import resolve_expected_output_documents
 from aidd.core.stages import STAGES
 from aidd.core.state_machine import StageState
+from aidd.core.workspace import WorkspaceBootstrapService
 
 runner = CliRunner()
 _RUNTIME_COMMANDS: dict[str, str] = {
@@ -42,6 +44,57 @@ def _write_config(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return config_path
+
+
+def _seed_required_context(workspace_root: Path, *, work_item: str) -> None:
+    bootstrap = WorkspaceBootstrapService(root=workspace_root)
+    bootstrap.bootstrap_work_item(work_item=work_item)
+    bootstrap.seed_request_context(
+        work_item=work_item,
+        request_text=f"Run workflow test for {work_item}.",
+        project_root=workspace_root.parent,
+        force=True,
+    )
+
+
+def _write_fake_stage_outputs(
+    workspace_root: Path,
+    *,
+    work_item: str,
+    stage: str,
+) -> None:
+    for draft_path in resolve_expected_output_documents(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    ):
+        content = f"# {draft_path.stem.title()}\n\nSynthetic output for {stage}.\n"
+        draft_path.parent.mkdir(parents=True, exist_ok=True)
+        draft_path.write_text(content, encoding="utf-8")
+        published_path = draft_path.parent / "output" / draft_path.name
+        published_path.parent.mkdir(parents=True, exist_ok=True)
+        published_path.write_text(content, encoding="utf-8")
+
+
+def _mark_fake_stage_succeeded(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> None:
+    _write_fake_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        status=StageState.SUCCEEDED.value,
+    )
 
 
 def _write_black_box_runtime_script(tmp_path: Path) -> Path:
@@ -184,6 +237,7 @@ def test_run_executes_runnable_stages_in_dependency_order(
     workspace_root = tmp_path / ".aidd"
     config_path = _write_config(tmp_path)
     executed_stages: list[str] = []
+    _seed_required_context(workspace_root, work_item="WI-010")
 
     def _fake_stage_run(
         *,
@@ -201,12 +255,11 @@ def test_run_executes_runnable_stages_in_dependency_order(
         assert config == config_path
         _ = log_follow
         executed_stages.append(stage)
-        persist_stage_status(
+        _mark_fake_stage_succeeded(
             workspace_root=root,
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-            status=StageState.SUCCEEDED.value,
         )
 
     monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
@@ -243,6 +296,7 @@ def test_run_stops_when_stage_execution_returns_nonzero_exit(
     workspace_root = tmp_path / ".aidd"
     config_path = _write_config(tmp_path)
     executed_stages: list[str] = []
+    _seed_required_context(workspace_root, work_item="WI-011")
 
     def _fake_stage_run(
         *,
@@ -261,12 +315,11 @@ def test_run_stops_when_stage_execution_returns_nonzero_exit(
         _ = log_follow
         executed_stages.append(stage)
         if stage == "idea":
-            persist_stage_status(
+            _mark_fake_stage_succeeded(
                 workspace_root=root,
                 work_item=work_item,
                 run_id=run_id,
                 stage=stage,
-                status=StageState.SUCCEEDED.value,
             )
             return
         persist_stage_status(
@@ -313,6 +366,7 @@ def test_run_dispatches_workflow_for_supported_non_generic_runtimes(
     workspace_root = tmp_path / ".aidd"
     config_path = _write_config(tmp_path)
     executed_stages: list[str] = []
+    _seed_required_context(workspace_root, work_item="WI-012")
 
     def _fake_stage_run(
         *,
@@ -330,12 +384,11 @@ def test_run_dispatches_workflow_for_supported_non_generic_runtimes(
         assert config == config_path
         _ = log_follow
         executed_stages.append(stage)
-        persist_stage_status(
+        _mark_fake_stage_succeeded(
             workspace_root=root,
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-            status=StageState.SUCCEEDED.value,
         )
 
     monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
@@ -423,8 +476,8 @@ def test_run_reports_actionable_missing_intake_context(tmp_path: Path) -> None:
     )
 
     assert result.exit_code != 0
-    assert "Intake context is missing" in result.output
-    assert "aidd init --work-item <id> --request" in result.output
+    assert "missing required inputs:" in result.output
+    assert "workitems/WI-MISSING-INTAKE/context/intake.md" in result.output
 
 
 def test_run_black_box_local_project_from_request_init_through_inspection(
@@ -527,6 +580,7 @@ def test_run_manifest_persists_runtime_specific_command_snapshot(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     config_path = _write_config(tmp_path)
+    _seed_required_context(workspace_root, work_item="WI-014")
 
     def _fake_stage_run(
         *,
@@ -543,12 +597,11 @@ def test_run_manifest_persists_runtime_specific_command_snapshot(
         assert root is not None
         assert config == config_path
         _ = log_follow
-        persist_stage_status(
+        _mark_fake_stage_succeeded(
             workspace_root=root,
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-            status=StageState.SUCCEEDED.value,
         )
 
     monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
@@ -596,6 +649,7 @@ def test_run_stops_for_non_generic_runtime_when_stage_execution_fails(
     workspace_root = tmp_path / ".aidd"
     config_path = _write_config(tmp_path)
     executed_stages: list[str] = []
+    _seed_required_context(workspace_root, work_item="WI-015")
 
     def _fake_stage_run(
         *,
@@ -614,12 +668,11 @@ def test_run_stops_for_non_generic_runtime_when_stage_execution_fails(
         _ = log_follow
         executed_stages.append(stage)
         if stage == "idea":
-            persist_stage_status(
+            _mark_fake_stage_succeeded(
                 workspace_root=root,
                 work_item=work_item,
                 run_id=run_id,
                 stage=stage,
-                status=StageState.SUCCEEDED.value,
             )
             return
         persist_stage_status(
@@ -730,6 +783,7 @@ def test_run_respects_custom_stage_bounds(tmp_path: Path, monkeypatch: pytest.Mo
     workspace_root = tmp_path / ".aidd"
     config_path = _write_config(tmp_path)
     executed_stages: list[str] = []
+    _seed_required_context(workspace_root, work_item="WI-017")
 
     def _fake_stage_run(
         *,
@@ -748,12 +802,11 @@ def test_run_respects_custom_stage_bounds(tmp_path: Path, monkeypatch: pytest.Mo
         assert config == config_path
         _ = log_follow
         executed_stages.append(stage)
-        persist_stage_status(
+        _mark_fake_stage_succeeded(
             workspace_root=root,
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-            status=StageState.SUCCEEDED.value,
         )
 
     monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)

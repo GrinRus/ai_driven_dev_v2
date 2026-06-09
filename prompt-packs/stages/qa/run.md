@@ -21,10 +21,10 @@ The stage is complete only when verdict, recommendation, and evidence are cohere
   - `../review/output/review-report.md`
   - `../review/output/stage-result.md`
   - `../review/output/validator-report.md`
+- optional context when available:
   - `context/selected-task.md`
   - `context/verification-output.md`
   - `context/verification-artifacts.md`
-- optional context when available:
   - `context/repository-state.md`
   - `context/constraints.md`
   - `context/release-policy.md`
@@ -54,12 +54,12 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 1. Do not declare `succeeded`, `ready`, or `proceed` when upstream `review` is unresolved or
    explicitly `rejected`.
-2. Do not pass QA when required verification output/artifacts are missing for material claims.
+2. Do not pass QA when verification output/artifacts are missing for material claims.
 3. Every material verdict/recommendation claim must point to concrete verification evidence.
 4. Residual risks must include severity and explicit mitigation/ownership notes.
 5. Blocking uncertainty must become a `[blocking]` question with release recommendation `hold`.
-6. The selected task and `context/verification-output.md` define the authored verification
-   boundary. Do not downgrade to `ready-with-risks` or `proceed-with-conditions` only because
+6. When present, the selected task and `context/verification-output.md` define the authored
+   verification boundary. Do not downgrade to `ready-with-risks` or `proceed-with-conditions` only because
    optional broader checks outside that boundary were not run or were blocked by local sandbox
    policy, unless they reveal a concrete defect or contradict acceptance criteria/review evidence.
 7. Intentional design constraints selected by the authored task or resolved interview answers are
@@ -70,10 +70,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Execution instructions
 
-1. Read all required upstream artifacts and `contracts/stages/qa.md` before drafting outputs.
+1. Read all required upstream artifacts, existing optional context, and `contracts/stages/qa.md`
+   before drafting outputs.
 2. Verify upstream `review` outcome is not `rejected` and is consistent with implementation status.
-   Read `context/selected-task.md` and use its expected scope, quality bar, and acceptance context
-   to separate required scenario evidence from optional exploratory checks.
+   When `context/selected-task.md` is provided, use its expected scope, quality bar, and acceptance
+   context to separate required scenario evidence from optional exploratory checks.
 3. Build `qa-report.md` with these exact H2 sections:
    `Quality verdict`, `Verification summary`, `Release recommendation`, `Evidence`,
    `Known issues`, and `Readiness`.
@@ -85,7 +86,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 5. In `Evidence`, label material evidence entries as `EV-1`, `EV-2`, ... and include command
    outcomes or artifact paths in backticks.
 6. Tie verdict and recommendation claims to `verification-output.md` and/or
-   `verification-artifacts.md` references.
+   `verification-artifacts.md` references when those documents are provided, and otherwise cite
+   concrete upstream evidence.
 7. In `Known issues`, use `- Known issues: none.` only as an empty known-defect marker.
    Put residual risks in separate bullets such as
    `- Residual risk RR-1: Severity: low. ... Mitigation/ownership: ...`.

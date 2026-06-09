@@ -49,6 +49,16 @@ def test_stage_manifest_rejects_duplicate_required_documents() -> None:
         )
 
 
+def test_stage_manifest_rejects_required_optional_input_overlap() -> None:
+    with pytest.raises(ValueError, match="cannot appear in both required_inputs"):
+        StageManifest.from_document_paths(
+            stage="idea",
+            required_inputs=("context/intake.md",),
+            optional_inputs=("context/intake.md",),
+            required_outputs=("idea-brief.md",),
+        )
+
+
 def test_stage_document_declaration_rejects_empty_or_absolute_path() -> None:
     with pytest.raises(ValueError, match="non-empty"):
         StageDocumentDeclaration(path="  ")

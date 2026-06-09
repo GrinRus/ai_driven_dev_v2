@@ -363,12 +363,13 @@ def _canonical_attempt_documents(
         stage=stage,
         attempt_number=attempt_number,
     )
-    documents = {
-        "input_bundle": _workspace_relative_canonical_path(
+    input_bundle_path = attempt_root / RUN_ATTEMPT_INPUT_BUNDLE_FILENAME
+    documents: dict[str, str] = {}
+    if input_bundle_path.exists():
+        documents["input_bundle"] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
-            path=attempt_root / RUN_ATTEMPT_INPUT_BUNDLE_FILENAME,
+            path=input_bundle_path,
         )
-    }
     repair_context_path = attempt_root / RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME
     if repair_context_path.exists():
         documents["repair_context"] = _workspace_relative_canonical_path(

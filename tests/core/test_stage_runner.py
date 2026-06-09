@@ -26,6 +26,7 @@ from aidd.core.run_store import (
     load_stage_metadata,
     persist_stage_status,
     run_attempt_artifact_index_path,
+    run_attempts_root,
     run_stage_metadata_path,
 )
 from aidd.core.runtime_operator import (
@@ -43,6 +44,7 @@ from aidd.core.stage_runner import (
     PostValidationAction,
     RepairBudgetValidationTransition,
     StageExecutionState,
+    StageInputPreflightError,
     StageInterviewRouting,
     StageOrchestrationResult,
     StageOutputDiscovery,
@@ -168,7 +170,7 @@ def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Pat
 
     assert bundle.stage == "implement"
     assert bundle.work_item == "WI-001"
-    assert bundle.expected_input_bundle == (
+    expected_required_inputs = (
         workspace_root
         / "workitems"
         / "WI-001"
@@ -191,10 +193,28 @@ def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Pat
         / "output"
         / "validator-report.md",
         workspace_root / "workitems" / "WI-001" / "context" / "repository-state.md",
-        workspace_root / "workitems" / "WI-001" / "context" / "task-selection.md",
-        workspace_root / "workitems" / "WI-001" / "context" / "allowed-write-scope.md",
-        workspace_root / "workitems" / "WI-001" / "context" / "acceptance-criteria.md",
-        workspace_root / "workitems" / "WI-001" / "context" / "verification-output.md",
+    )
+    assert bundle.required_input_documents == expected_required_inputs
+    assert bundle.optional_input_documents == ()
+    assert bundle.expected_input_bundle == expected_required_inputs
+    optional_constraints = (
+        workspace_root / "workitems" / "WI-001" / "context" / "constraints.md"
+    )
+    optional_constraints.parent.mkdir(parents=True, exist_ok=True)
+    optional_constraints.write_text("# Constraints\n\n- Keep scope narrow.\n", encoding="utf-8")
+
+    bundle_with_optional = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="implement",
+    )
+    assert bundle_with_optional.optional_input_documents == (optional_constraints,)
+    assert bundle_with_optional.expected_input_bundle == (
+        *expected_required_inputs,
+        optional_constraints,
+    )
+    assert bundle.expected_input_bundle == (
+        *expected_required_inputs,
     )
     assert bundle.expected_output_documents == (
         workspace_root
@@ -748,7 +768,7 @@ def test_prepare_adapter_invocation_requires_existing_input_documents(tmp_path: 
         )
 
 
-def test_run_single_stage_marks_failed_when_input_bundle_preparation_fails(
+def test_run_single_stage_preflight_blocks_missing_required_inputs_before_attempt(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -767,7 +787,13 @@ def test_run_single_stage_marks_failed_when_input_bundle_preparation_fails(
     ) -> AdapterExecutionOutcome:
         raise AssertionError("adapter must not run without a prepared input bundle")
 
-    with pytest.raises(FileNotFoundError, match="Input bundle preparation requires an existing"):
+    with pytest.raises(
+        StageInputPreflightError,
+        match=(
+            "Stage input preflight failed: missing required input document: "
+            "workitems/WI-001/stages/idea/output/idea-brief.md"
+        ),
+    ):
         run_single_stage_orchestration(
             workspace_root=workspace_root,
             work_item="WI-001",
@@ -782,18 +808,79 @@ def test_run_single_stage_marks_failed_when_input_bundle_preparation_fails(
         run_id="run-001",
         stage="plan",
     )
-    assert metadata is not None
-    assert metadata.status == StageState.FAILED.value
-    assert [entry.status for entry in metadata.status_history] == [
-        StageState.EXECUTING.value,
-        StageState.FAILED.value,
-    ]
-    assert run_attempt_artifact_index_path(
+    assert metadata is None
+    assert not run_attempts_root(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    ).exists()
+    assert not run_attempt_artifact_index_path(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
         attempt_number=1,
+    ).exists()
+
+
+def test_run_single_stage_preflight_blocks_invalid_optional_inputs_before_attempt(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="implement",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="implement",
+    )
+    _materialize_expected_inputs(preparation_bundle.required_input_documents)
+    optional_constraints = (
+        workspace_root / "workitems" / "WI-001" / "context" / "constraints.md"
+    )
+    optional_constraints.parent.mkdir(parents=True, exist_ok=True)
+    optional_constraints.write_bytes(b"\xff")
+
+    def _unused_adapter_executor(
+        _invocation: AdapterInvocationBundle,
+        _execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        raise AssertionError("adapter must not run without valid stage inputs")
+
+    with pytest.raises(
+        StageInputPreflightError,
+        match=(
+            "Stage input preflight failed: optional input document is not UTF-8 text: "
+            "workitems/WI-001/context/constraints.md"
+        ),
+    ):
+        run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="implement",
+            adapter_executor=_unused_adapter_executor,
+        )
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="implement",
+    )
+    assert metadata is None
+    assert not run_attempts_root(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="implement",
     ).exists()
 
 

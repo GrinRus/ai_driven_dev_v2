@@ -96,7 +96,10 @@ def test_review_prompt_respects_authored_verification_boundary() -> None:
         encoding="utf-8"
     )
 
-    assert "`context/verification-output.md` define the" in run_prompt
+    assert (
+        "When present, selected task evidence, acceptance criteria, and "
+        "`context/verification-output.md`"
+    ) in run_prompt
     assert "Do not convert optional broader checks outside that boundary" in run_prompt
     assert "Keep out-of-boundary exploratory check limitations as non-blocking notes" in (
         run_prompt

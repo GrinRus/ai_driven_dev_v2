@@ -43,6 +43,7 @@ from aidd.core.runtime_readiness import (
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
 )
+from aidd.core.stage_registry import resolve_required_input_documents
 from aidd.core.stages import STAGES
 from aidd.runtime_permissions import (
     RuntimeOperatorDecisionAction,
@@ -81,6 +82,24 @@ def _prepare_run(workspace_root: Path) -> None:
         stage="plan",
         attempt_number=1,
     ).write_text("runtime-line\n", encoding="utf-8")
+
+
+def _materialize_required_inputs(
+    workspace_root: Path,
+    *,
+    work_item: str,
+    stage: str,
+) -> None:
+    for input_path in resolve_required_input_documents(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    ):
+        input_path.parent.mkdir(parents=True, exist_ok=True)
+        input_path.write_text(
+            f"# {input_path.name}\n\nSynthetic required input for {stage}.\n",
+            encoding="utf-8",
+        )
 
 
 def _write_questions(workspace_root: Path) -> None:
@@ -593,6 +612,11 @@ def test_operator_dashboard_advances_stepwise_run_without_workflow_bounds(
         run_id="run-ui",
         stage="idea",
         status="succeeded",
+    )
+    _materialize_required_inputs(
+        workspace_root,
+        work_item="WI-UI",
+        stage="research",
     )
 
     dashboard = resolve_operator_dashboard_view(

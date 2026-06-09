@@ -530,6 +530,7 @@ def _blockers(
             ("missing prerequisites:", "missing-prerequisite", "Missing prerequisites"),
             ("blocked upstream stages:", "blocked-upstream", "Blocked upstream stage"),
             ("failed upstream stages:", "failed-upstream", "Failed upstream stage"),
+            ("missing required inputs:", "missing-input", "Missing required input"),
         ):
             if active_rail.reason.startswith(prefix):
                 blockers.append(

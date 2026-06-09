@@ -16,6 +16,7 @@ from aidd.core.stage_graph import (
     select_next_runnable_stage,
     summarize_workflow_advancement,
 )
+from aidd.core.stage_registry import resolve_required_input_documents
 from aidd.core.stages import STAGES, stage_index
 from aidd.core.state_machine import StageState
 
@@ -30,6 +31,24 @@ def _summary_by_stage(
     workflow_summaries: tuple[StageAdvancementSummary, ...],
 ) -> dict[str, StageAdvancementSummary]:
     return {summary.stage: summary for summary in workflow_summaries}
+
+
+def _materialize_required_inputs(
+    workspace_root: Path,
+    *,
+    work_item: str,
+    stage: str,
+) -> None:
+    for input_path in resolve_required_input_documents(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    ):
+        input_path.parent.mkdir(parents=True, exist_ok=True)
+        input_path.write_text(
+            f"# {input_path.name}\n\nSynthetic required input for {stage}.\n",
+            encoding="utf-8",
+        )
 
 
 def test_resolve_stage_dependencies_uses_manifest_declared_upstream_stages() -> None:
@@ -150,6 +169,7 @@ def test_evaluate_stage_eligibility_accepts_satisfied_dependencies(tmp_path: Pat
         stage="research",
         status=StageState.SUCCEEDED.value,
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="plan")
 
     eligibility = evaluate_stage_eligibility(
         workspace_root=workspace_root,
@@ -164,6 +184,49 @@ def test_evaluate_stage_eligibility_accepts_satisfied_dependencies(tmp_path: Pat
     assert eligibility.is_eligible is True
 
 
+def test_evaluate_stage_eligibility_reports_missing_required_input_documents(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-001"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="review-spec",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-001",
+        stage="plan",
+        status=StageState.SUCCEEDED.value,
+    )
+    _materialize_required_inputs(
+        workspace_root,
+        work_item=work_item,
+        stage="review-spec",
+    )
+    missing_input = workspace_root / "workitems" / work_item / "context" / "repository-state.md"
+    missing_input.unlink()
+
+    eligibility = evaluate_stage_eligibility(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-001",
+        stage="review-spec",
+    )
+
+    assert eligibility.dependencies == ("plan",)
+    assert eligibility.missing_prerequisites == ()
+    assert eligibility.missing_input_documents == (
+        "workitems/WI-001/context/repository-state.md",
+    )
+    assert eligibility.is_eligible is False
+
+
 def test_select_next_runnable_stage_returns_first_stage_for_new_run(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     create_run_manifest(
@@ -174,6 +237,7 @@ def test_select_next_runnable_stage_returns_first_stage_for_new_run(tmp_path: Pa
         stage_target="qa",
         config_snapshot={"mode": "test"},
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="idea")
 
     assert (
         select_next_runnable_stage(
@@ -211,6 +275,7 @@ def test_select_next_runnable_stage_skips_completed_stages(tmp_path: Path) -> No
         stage="idea",
         status=StageState.SUCCEEDED.value,
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="research")
 
     assert (
         select_next_runnable_stage(
@@ -240,6 +305,11 @@ def test_select_next_runnable_stage_respects_stage_bounds(tmp_path: Path) -> Non
             stage=stage,
             status=StageState.SUCCEEDED.value,
         )
+    _materialize_required_inputs(
+        workspace_root,
+        work_item="WI-001",
+        stage="review-spec",
+    )
 
     assert (
         select_next_runnable_stage(
@@ -277,6 +347,7 @@ def test_select_next_runnable_stage_prefers_repair_needed_stage(tmp_path: Path) 
         stage="research",
         status=StageState.REPAIR_NEEDED.value,
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="research")
 
     assert (
         select_next_runnable_stage(
@@ -305,6 +376,7 @@ def test_select_next_runnable_stage_returns_none_when_upstream_is_blocked(tmp_pa
         stage="idea",
         status=StageState.BLOCKED.value,
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="research")
 
     assert (
         select_next_runnable_stage(
@@ -356,6 +428,8 @@ def test_summarize_workflow_advancement_explains_runnable_and_missing_cases(
         stage_target="qa",
         config_snapshot={"mode": "test"},
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="idea")
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="research")
 
     summaries = summarize_workflow_advancement(
         workspace_root=workspace_root,
@@ -389,6 +463,7 @@ def test_summarize_workflow_advancement_explains_blocked_and_blocked_upstream(
         stage="idea",
         status=StageState.BLOCKED.value,
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="research")
 
     summaries = summarize_workflow_advancement(
         workspace_root=workspace_root,
@@ -427,6 +502,7 @@ def test_summarize_workflow_advancement_explains_failed_and_failed_upstream(
         stage="research",
         status=StageState.FAILED.value,
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="plan")
 
     summaries = summarize_workflow_advancement(
         workspace_root=workspace_root,
@@ -456,6 +532,7 @@ def test_evaluate_stage_eligibility_handles_branching_dependencies(tmp_path: Pat
         stage="idea",
         status=StageState.SUCCEEDED.value,
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="plan")
 
     eligibility = evaluate_stage_eligibility(
         workspace_root=workspace_root,
@@ -489,6 +566,7 @@ def test_select_next_runnable_stage_skips_completed_chain(tmp_path: Path) -> Non
             stage=stage,
             status=StageState.SUCCEEDED.value,
         )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="plan")
 
     assert (
         select_next_runnable_stage(
@@ -519,6 +597,7 @@ def test_summarize_workflow_advancement_keeps_blocked_upstream_reason_for_downst
         stage="idea",
         status=StageState.BLOCKED.value,
     )
+    _materialize_required_inputs(workspace_root, work_item="WI-001", stage="plan")
 
     summaries = summarize_workflow_advancement(
         workspace_root=workspace_root,

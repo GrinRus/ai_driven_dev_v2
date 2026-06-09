@@ -247,18 +247,7 @@ def test_resolve_attempt_artifact_paths_returns_absolute_document_and_log_paths(
     assert resolved.documents["stage_brief"] == (
         workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "stage-brief.md"
     )
-    assert resolved.documents["input_bundle"] == (
-        workspace_root
-        / "reports"
-        / "runs"
-        / "WI-001"
-        / "run-001"
-        / "stages"
-        / "plan"
-        / "attempts"
-        / "attempt-0001"
-        / "input-bundle.md"
-    )
+    assert "input_bundle" not in resolved.documents
     assert resolved.logs["runtime_log"] == (
         workspace_root
         / "reports"

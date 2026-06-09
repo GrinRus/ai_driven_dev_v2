@@ -25,29 +25,30 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `../tasklist/output/stage-result.md`
 - `../tasklist/output/validator-report.md`
 - `context/repository-state.md`
+
+## Optional context inputs
+
 - `context/task-selection.md`
 - `context/allowed-write-scope.md`
 - `context/acceptance-criteria.md`
 - `context/verification-output.md`
-
-## Optional context inputs
-
 - `context/constraints.md`
 - `context/previous-decisions.md`
 - `context/runtime-capabilities.md`
 
-Optional context documents may improve implementation quality, but they must not replace task selection, repository state, and write-scope controls.
+Optional context documents may improve implementation quality, but they must not replace tasklist artifacts and repository state.
 
 ## Upstream dependency rule
 
 - `implement` depends on artifacts from the latest completed `tasklist` attempt.
-- `implement` must not declare `succeeded` when the selected task id from
-  `context/task-selection.md` is missing from the implementation report. When upstream
+- When `context/task-selection.md` exists, `implement` must not declare `succeeded` when the
+  selected task id is missing from the implementation report. When upstream
   `tasklist.md` decomposes that selected task into local task ids such as `T1` or `TL-1`, the
   report must trace implementation and verification evidence to those local ids where practical.
-- `implement` must not declare `succeeded` when edits exceed `context/allowed-write-scope.md` or the scope definition is missing.
-- `implement` must not declare `succeeded` when authored verification commands in
-  `context/verification-output.md` were skipped without an explicit not-run reason.
+- When `context/allowed-write-scope.md` exists, `implement` must not declare `succeeded` when
+  edits exceed that scope.
+- When `context/verification-output.md` exists, `implement` must not declare `succeeded` when
+  authored verification commands were skipped without an explicit not-run reason.
 
 ## Implementation output expectations
 
