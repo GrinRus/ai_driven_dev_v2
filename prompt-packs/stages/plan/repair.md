@@ -44,10 +44,12 @@ For each finding:
 Use concrete repair actions:
 
 - vague sequencing: rewrite milestone order so dependencies are explicit and executable;
+- missing milestone ids: give every milestone a stable `M<N>` id such as `M1` or `M2` and keep
+  those ids consistent in dependencies and verification notes;
 - missing dependency logic: add explicit `depends on` / ordering constraints in `Dependencies`;
 - weak risk handling: add concrete risk statement with mitigation intent;
-- verification mismatch: map verification notes to specific milestones/risks, including highest-risk
-  work;
+- verification mismatch: map verification notes to specific milestone ids and risks, including
+  highest-risk work;
 - unclear approval readiness: clarify `Out of scope`, trade-offs, and acceptance signals;
 - unresolved ambiguity: keep or add a blocking question instead of inventing assumptions.
 
@@ -75,6 +77,7 @@ Use concrete repair actions:
 
 - every blocking finding is resolved or explicitly retained as active blocker,
 - milestone sequencing and dependency constraints are coherent and explicit,
+- every milestone has a stable `M<N>` id and verification notes reference those ids,
 - risk mitigation and verification expectations are linked for highest-risk work,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

@@ -96,6 +96,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    details under that file entry.
    If `git status --short` or equivalent repository evidence shows untracked files created for the
    task, list and describe those files rather than relying only on `git diff --name-only`.
+   Before declaring `succeeded`, self-check the `Touched files` section: every top-level file
+   bullet must have a backticked path, a separator (`-`, `:`, or `->`), and a short intent on the
+   same line.
 6. Record verification using concrete commands/checks and outcomes; include observed results such as
    `-> pass`, `exit code 0`, or the captured tool summary on the same bullet. Do not imply execution that did
    not happen.
@@ -131,7 +134,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 - selected task id is explicit and traced to implementation summary when provided,
 - edits stay within allowed write scope when provided,
-- touched-files list is concrete and evidence-backed,
+- touched-files list is concrete and evidence-backed, with path + same-line intent for every
+  top-level file entry,
 - verification notes are factual and command-specific,
 - every verification bullet with a pass/fail/success claim has the command/check and observed
   outcome on the same bullet,

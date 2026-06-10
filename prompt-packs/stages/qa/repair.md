@@ -64,9 +64,12 @@ Use concrete repair actions:
 - verdict mismatch: align verdict and release recommendation with unresolved findings and
   critical-check availability;
 - missed tasklist/plan requirement: when upstream tasklist or plan artifacts name a nontrivial
-  implementation detail, risk mitigation, or verification promise that is absent from the diff,
-  tests, or implementation evidence, do not keep `QA verdict: ready`; use `not-ready` and `hold`
-  unless the upstream artifact explicitly supersedes that requirement;
+  implementation detail, risk mitigation, named mechanism, or verification promise that is absent
+  from the diff, tests, or implementation evidence, do not keep `QA verdict: ready`; use
+  `not-ready` and `hold` unless the upstream artifact explicitly supersedes that requirement.
+  Named mechanisms include concrete APIs/library calls, synchronization primitives such as
+  `anyio.Event`, exception chaining such as `raise ... from ...`, and required regression
+  assertions;
 - risk gaps: add residual risk entries with severity plus mitigation/ownership; keep
   `Known issues: none.` only as an empty known-defect marker, not as a residual risk item;
   do not pair `QA verdict: ready` with residual risk bullets. Use `ready-with-risks` and
@@ -120,6 +123,8 @@ Use concrete repair actions:
   mitigations and evidence are complete,
 - available tasklist/plan task details and risk mitigations were cross-checked before declaring
   `ready` or `proceed`,
+- named plan/tasklist mechanisms were either found in code/tests or explicitly superseded before
+  declaring `ready` or `proceed`,
 - no evidence-free material claim remains,
 - every `AC-N` from acceptance context has its own same-bullet evidence reference when acceptance
   criteria are provided,

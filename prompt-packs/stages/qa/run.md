@@ -77,9 +77,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 9. When upstream tasklist or plan artifacts are available, cross-check nontrivial task details,
    required mitigations, and explicit risk-verification promises against the diff, tests, and
    implementation evidence. Do not declare `QA verdict: ready` solely because review approved:
-   if a planned behavior is missing, such as an exception cause/context preservation promise that
-   has no code or test evidence, set `QA verdict: not-ready` and release recommendation `hold`
-   unless upstream artifacts explicitly supersede that requirement.
+   if a planned behavior or named mechanism is missing, such as an exception cause/context
+   preservation promise, a required `anyio.Event` synchronization primitive, a concrete API call, or
+   a required regression assertion that has no code or test evidence, set `QA verdict: not-ready`
+   and release recommendation `hold` unless upstream artifacts explicitly supersede that
+   requirement.
 
 ## Execution instructions
 
@@ -150,4 +152,6 @@ normalize if canonical validation proves the terminal status inconsistent.
   mitigations and evidence are complete,
 - available tasklist/plan task details and risk mitigations were cross-checked before declaring
   `ready` or `proceed`,
+- named plan/tasklist mechanisms were either found in code/tests or explicitly superseded before
+  declaring `ready` or `proceed`,
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.

@@ -139,11 +139,31 @@ def test_review_and_qa_prompts_cross_check_tasklist_and_plan_obligations() -> No
 
     assert "audit the\n   implementation against task-level details" in review_prompt
     assert "planned risk mitigations" in review_prompt
-    assert "missing a promised exception cause/context preservation check" in review_prompt
+    assert "exception cause/context preservation check" in review_prompt
+    assert "named mechanisms as requirements" in review_prompt
+    assert "synchronization primitive such as `anyio.Event`" in review_prompt
     assert "missed tasklist/plan requirement" in review_repair_prompt
+    assert "named mechanism" in review_repair_prompt
     assert "cross-check nontrivial task details" in qa_prompt
-    assert "exception cause/context preservation promise" in qa_prompt
+    assert "exception cause/context" in qa_prompt
+    assert "required `anyio.Event` synchronization primitive" in qa_prompt
     assert "missed tasklist/plan requirement" in qa_repair_prompt
+    assert "Named mechanisms include concrete APIs/library calls" in qa_repair_prompt
+
+
+def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
+    contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
+    run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "use stable ids such as `M1`, `M2`" in contract
+    assert "tie checks to milestone ids such as `M1`" in contract
+    assert "must start with a stable id such as `M1`, `M2`, or `M3`" in run_prompt
+    assert "Verification notes` must reference the milestone ids" in run_prompt
+    assert "missing milestone ids" in repair_prompt
+    assert "reference those ids" in repair_prompt
 
 
 def test_qa_prompt_respects_selected_design_constraints() -> None:
@@ -268,6 +288,8 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "copy this exact shape for every file" in run_prompt
     assert "``- `path/to/file.ext` - changed <short intent>``" in run_prompt
     assert "Do not write a top-level bullet that only names" in run_prompt
+    assert "self-check the `Touched files` section" in run_prompt
+    assert "same-line\n  path + intent" in repair_prompt
     assert "Keep debugging bounded" in run_prompt
     assert "at most one focused fix attempt" in run_prompt
     assert "truthful failed verification report" in run_prompt

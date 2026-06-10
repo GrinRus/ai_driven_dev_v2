@@ -63,6 +63,9 @@ Use concrete repair actions:
 
 - `missing diffs`: remove unsupported touched-files claims or add missing concrete entries that match
   observed edits;
+- `incomplete touched-files intent`: rewrite each top-level touched-files bullet in the exact shape
+  ``- `path/to/file.ext` - changed <short intent>`` so the path, separator, and intent are on the
+  same line;
 - `unverifiable claims`: replace vague assertions with concrete command/check outcomes, or mark as
   `not-run: <reason>` explicitly;
 - unresolved failing verification: keep the failure visible in `implementation-report.md`,
@@ -103,7 +106,8 @@ Use concrete repair actions:
   outcome on the same bullet,
 - unresolved failed verification is explicit instead of hidden by open-ended debugging,
 - selected task id, change summary, touched-files list, and verification notes are mutually consistent,
-- touched-files entries stay within allowed write scope and match observed edits,
+- touched-files entries stay within allowed write scope, match observed edits, and include same-line
+  path + intent for every top-level file entry,
 - no-op outcomes (if any) include evidence-backed rationale and actionable next step,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

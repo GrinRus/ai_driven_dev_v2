@@ -88,9 +88,12 @@ normalize if canonical validation proves the terminal status inconsistent.
 9. When `../tasklist/output/tasklist.md` or `../plan/output/plan.md` is available, audit the
    implementation against task-level details and planned risk mitigations, not only acceptance
    criteria. For each nontrivial task detail or mitigation in those upstream artifacts, verify it is
-   present in the diff, tests, or implementation evidence. If the implementation omits it, such as
-   missing a promised exception cause/context preservation check, record a `must-fix` finding unless
-   the upstream artifact explicitly supersedes that requirement.
+   present in the diff, tests, or implementation evidence. Treat named mechanisms as requirements
+   when the plan/tasklist made them concrete: examples include a specific API/library call,
+   synchronization primitive such as `anyio.Event`, exception chaining such as `raise ... from ...`,
+   or a required regression assertion. If the implementation omits it, such as missing a promised
+   exception cause/context preservation check, record a `must-fix` finding unless the upstream
+   artifact explicitly supersedes that requirement.
 10. In `review-report.md`, write the approval decision as a machine-readable line:
    `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
    `Approval status` or `Verdict`, then add rationale separately.
@@ -143,5 +146,6 @@ normalize if canonical validation proves the terminal status inconsistent.
   required mitigations and evidence are complete,
 - available tasklist/plan task details and risk mitigations were cross-checked against the diff,
   tests, and implementation evidence,
+- named plan/tasklist mechanisms were either found in code/tests or explicitly superseded,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.

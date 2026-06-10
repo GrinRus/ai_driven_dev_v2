@@ -90,9 +90,11 @@ Optional context documents may improve QA depth, but they must not replace imple
 - `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.
 - When upstream `tasklist` or `plan` artifacts are available, `QA verdict: ready` requires
   evidence that nontrivial task details, required mitigations, and explicit risk-verification
-  promises were satisfied or intentionally superseded. A clean review report alone is not enough
-  to proceed when QA can observe a missed planned requirement in the diff, tests, or implementation
-  evidence.
+  promises were satisfied or intentionally superseded. This includes named implementation
+  mechanisms such as specific APIs, synchronization primitives, exception chaining, or library
+  calls when the upstream artifacts made them part of the plan. A clean review report alone is not
+  enough to proceed when QA can observe a missed planned requirement or mechanism in the diff,
+  tests, or implementation evidence.
 
 ## Validation focus
 

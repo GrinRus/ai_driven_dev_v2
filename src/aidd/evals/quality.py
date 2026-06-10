@@ -664,15 +664,15 @@ def _score_artifact_quality(
     if (
         evidence.review_status == "approved-with-conditions"
         or evidence.qa_verdict == "ready-with-risks"
-        or evidence.repair_attempt_count >= 3
+        or evidence.repair_attempt_count > 0
     ):
-        if evidence.repair_attempt_count >= 3:
+        if evidence.repair_attempt_count > 0:
             follow_ups.append(
                 "Reduce repair burden by tightening stage skeleton guidance or task context."
             )
             rationale = (
-                "Artifacts are valid and usable, but repeated repair attempts indicate "
-                "the stage guidance or task context still creates avoidable churn."
+                "Artifacts are valid and usable, but repair attempts indicate the stage "
+                "guidance or task context still creates avoidable churn."
             )
         else:
             rationale = (
@@ -784,11 +784,11 @@ def _quality_gate_for_dimensions(
     quality_verdict: QualityVerdict,
 ) -> QualityGate:
     any_zero = any(dimension.score == 0 for dimension in dimensions)
-    any_one = any(dimension.score == 1 for dimension in dimensions)
+    any_below_clean = any(dimension.score < 3 for dimension in dimensions)
     if any_zero:
         return "fail"
     if (
-        any_one
+        any_below_clean
         or evidence.review_status == "approved-with-conditions"
         or quality_verdict == "ready-with-risks"
     ):

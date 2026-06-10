@@ -904,11 +904,12 @@ def test_build_live_quality_assessment_accounts_for_repair_burden(
     )
 
     assert assessment.dimensions[1].score == 2
-    assert "repeated repair attempts" in assessment.dimensions[1].rationale
+    assert "repair attempts" in assessment.dimensions[1].rationale
+    assert assessment.gate == "warn"
     assert any("Reduce repair burden" in item for item in assessment.suggested_follow_ups)
 
 
-def test_build_live_quality_assessment_ignores_non_repair_attempt_history(
+def test_build_live_quality_assessment_flags_single_repair_attempt(
     tmp_path: Path,
 ) -> None:
     scenario = _build_live_scenario()
@@ -964,8 +965,10 @@ def test_build_live_quality_assessment_ignores_non_repair_attempt_history(
         quality_error=None,
     )
 
-    assert assessment.dimensions[1].score == 3
-    assert not any("Reduce repair burden" in item for item in assessment.suggested_follow_ups)
+    assert assessment.dimensions[1].score == 2
+    assert "repair attempts" in assessment.dimensions[1].rationale
+    assert assessment.gate == "warn"
+    assert any("Reduce repair burden" in item for item in assessment.suggested_follow_ups)
 
 
 def test_build_live_quality_assessment_flags_small_patch_for_medium_scope(

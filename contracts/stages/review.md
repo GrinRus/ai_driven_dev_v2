@@ -80,9 +80,11 @@ Optional context documents may improve review depth, but they must not replace i
   requires a tracked-only patch artifact.
 - When upstream `tasklist` or `plan` artifacts are available, review must check the implementation
   against their nontrivial task details, required mitigations, and explicit risk-verification
-  promises, not only the high-level acceptance criteria. If a planned behavior, mitigation, or
-  verification detail is missing from code, tests, or implementation evidence, record a finding
-  unless upstream artifacts explicitly supersede that requirement.
+  promises, not only the high-level acceptance criteria. This includes named implementation
+  mechanisms such as specific APIs, synchronization primitives, exception chaining, or library
+  calls when the upstream artifacts made them part of the plan. If a planned behavior, mitigation,
+  mechanism, or verification detail is missing from code, tests, or implementation evidence, record
+  a finding unless upstream artifacts explicitly supersede that requirement.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation
