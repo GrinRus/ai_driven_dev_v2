@@ -1719,13 +1719,55 @@ function renderNextActionPanel() {
     : runStageResume
       ? `Continue with ${stageTitle(action.stage || state.activeStage)}`
       : action.label;
-  const detail = runtimeBlocked && state.selectedRuntime
-    ? `${action.detail} ${state.readinessLoading ? "Checking runtime readiness." : "Selected runtime is not ready."}`
+  const baseDetail = noRunWithRuntime
+    ? runtimeBlocked
+      ? "Runtime selected. Resolve readiness before starting the governed workflow."
+      : "Runtime selected and ready to start the governed workflow."
     : action.detail;
+  const detail = runtimeBlocked && state.selectedRuntime && !noRunWithRuntime
+    ? `${baseDetail} ${state.readinessLoading ? "Checking runtime readiness." : "Selected runtime is not ready."}`
+    : baseDetail;
   document.getElementById("nextActionPanel").innerHTML = `
     <div class="panel-title">Next action</div>
     <p>${escapeHtml(detail)}</p>
     <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+  `;
+}
+
+function renderGlobalNextActionStrip() {
+  const host = document.getElementById("globalNextActionStrip");
+  if (!host) return;
+  const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
+  const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
+  const runtimeNeeded = needsRuntime(action.action) || noRunWithRuntime;
+  const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
+  const disabled = !(action.enabled || noRunWithRuntime) || runtimeBlocked;
+  const label = noRunWithRuntime
+    ? (state.activeRunId ? "Resume workflow" : "Run workflow")
+    : action.action === "run-stage" && state.activeRunId && action.enabled
+      ? `Continue with ${stageTitle(action.stage || state.activeStage)}`
+      : action.label;
+  const detail = noRunWithRuntime
+    ? runtimeBlocked
+      ? "Runtime selected. Resolve readiness before starting the workflow."
+      : "Runtime selected. Start the workflow from the current work item."
+    : action.detail;
+  const stage = action.stage ? stageTitle(action.stage) : state.dashboard?.active_stage || "run";
+  host.innerHTML = `
+    <div class="next-action-copy">
+      <span class="next-action-icon" aria-hidden="true">&gt;</span>
+      <div>
+        <p class="eyebrow">Next Action</p>
+        <h2>${escapeHtml(label)}</h2>
+        <p>${escapeHtml(detail)}</p>
+      </div>
+    </div>
+    <div class="next-action-meta">
+      <span><strong>Stage</strong>${escapeHtml(stage)}</span>
+      <span><strong>Runtime</strong>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "required")}</span>
+      <span><strong>Run</strong>${escapeHtml(state.activeRunId || "not started")}</span>
+    </div>
+    <button id="globalNextActionButton" class="next-button" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
   `;
 }
 

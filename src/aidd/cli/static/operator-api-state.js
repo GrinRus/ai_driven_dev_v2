@@ -1,10 +1,12 @@
 const STAGES = ["idea", "research", "plan", "review-spec", "tasklist", "implement", "review", "qa"];
 const VALID_TABS = [
+  "project-home",
   "overview",
   "questions",
   "validation",
   "timeline",
   "artifacts",
+  "recovery",
   "implement-review",
   "review-findings",
   "qa-verdict",
@@ -52,6 +54,7 @@ const STAGE_COPY = {
 
 const state = {
   dashboard: null,
+  projectHome: null,
   readiness: null,
   readinessLoading: true,
   readinessError: "",
@@ -77,6 +80,7 @@ const state = {
   selectedEvidenceNodeId: "",
   selectedEvidenceEdgeId: "",
   logFilter: "all",
+  logViewMode: "summary",
   rawLogMode: false,
   savedLogText: "",
   setupMode: "new-work-item",
@@ -94,6 +98,7 @@ const state = {
     requestText: "",
     forceContext: false,
     projectSetText: "",
+    projectSetRows: [{id: "", root: "", role: ""}],
     projectSetResult: null,
     projectSetError: "",
     projectSetLoading: false,
@@ -200,6 +205,7 @@ function needsRuntime(action) {
 }
 
 function setRunButtonState() {
+  if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
   renderNextActionPanel();
 }
 
@@ -252,6 +258,13 @@ function dashboardUrl() {
   return `/api/dashboard?${params.toString()}`;
 }
 
+function projectHomeUrl(workItem = "") {
+  const params = new URLSearchParams();
+  if (workItem) params.set("work_item", workItem);
+  const query = params.toString();
+  return `/api/project-home${query ? `?${query}` : ""}`;
+}
+
 function sourceFindingsUrl() {
   const params = new URLSearchParams();
   if (state.activeRunId) params.set("run_id", state.activeRunId);
@@ -268,6 +281,13 @@ async function fetchDashboard() {
   if (!state.selectedRuntime && state.dashboard.run?.runtime_id) {
     state.selectedRuntime = state.dashboard.run.runtime_id;
   }
+}
+
+async function fetchProjectHome(workItem = "") {
+  const payload = await api(projectHomeUrl(workItem));
+  state.projectHome = payload.project_home || null;
+  const version = String(payload.app_version || "").trim();
+  document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
 }
 
 async function fetchOnboardingState() {

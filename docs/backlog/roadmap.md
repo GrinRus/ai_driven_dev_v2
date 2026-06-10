@@ -8188,17 +8188,17 @@ Sync notes:
 
 ---
 
-## Wave 31 — integrated operator workbench redesign (`planned`)
+## Wave 31 — integrated operator workbench redesign (`done`)
 
 Goal: redesign the local operator UI around the integrated workbench reference so project
 selection, work-item navigation, run execution, Markdown artifacts, logs, diagnostics, and
 recovery actions form one coherent operator path without changing core workflow semantics
 or adapter boundaries.
 
-### Epic W31-E1 — workbench UX contract and rollout plan (`planned`)
+### Epic W31-E1 — workbench UX contract and rollout plan (`done`)
 Linked stories: `US-02`, `US-03`, `US-05`, `US-06`, `US-11`, `US-12`
 
-#### Slice W31-E1-S1 — integrated workbench contract (`planned`)
+#### Slice W31-E1-S1 — integrated workbench contract (`done`)
 Goal: turn the saved workbench reference into implementation-ready UX rules before code
 changes.
 
@@ -8238,10 +8238,10 @@ Exit evidence:
 - future UI implementation can be reviewed against one integrated UX contract;
 - browser evidence expectations match the new workbench direction.
 
-### Epic W31-E2 — project and work-item operating layer (`planned`)
+### Epic W31-E2 — project and work-item operating layer (`done`)
 Linked stories: `US-11`, `US-12`
 
-#### Slice W31-E2-S1 — project home read model (`planned`)
+#### Slice W31-E2-S1 — project home read model (`done`)
 Goal: expose a project/work-item home surface that lets operators select local projects
 and resume work before entering stage internals.
 
@@ -8281,7 +8281,7 @@ Exit evidence:
   cockpit;
 - project-set metadata remains visible without mixing unrelated repositories.
 
-#### Slice W31-E2-S2 — project home UI shell (`planned`)
+#### Slice W31-E2-S2 — project home UI shell (`done`)
 Goal: render project and work-item navigation as the first operator layer.
 
 Primary outputs:
@@ -8317,10 +8317,10 @@ Exit evidence:
 - operators can start from projects and work items before inspecting stage artifacts;
 - monorepo roots are edited through UI controls rather than raw JSON.
 
-### Epic W31-E3 — active run command center (`planned`)
+### Epic W31-E3 — active run command center (`done`)
 Linked stories: `US-03`, `US-06`, `US-11`
 
-#### Slice W31-E3-S1 — run-global next action clarity (`planned`)
+#### Slice W31-E3-S1 — run-global next action clarity (`done`)
 Goal: make the next safe operator action the dominant control in every active-run state.
 
 Primary outputs:
@@ -8363,10 +8363,10 @@ Exit evidence:
 - the operator can always identify the next safe action before reading logs or artifacts;
 - active-run controls no longer contradict runtime readiness state.
 
-### Epic W31-E4 — document and artifact workbench (`planned`)
+### Epic W31-E4 — document and artifact workbench (`done`)
 Linked stories: `US-02`, `US-03`, `US-10`, `US-11`
 
-#### Slice W31-E4-S1 — artifact taxonomy read model (`planned`)
+#### Slice W31-E4-S1 — artifact taxonomy read model (`done`)
 Goal: make generated documents, runtime inputs, validation evidence, logs, project
 evidence, and lineage distinguishable without path guessing.
 
@@ -8405,7 +8405,7 @@ Exit evidence:
 - UI consumers can organize artifacts by role rather than by raw path shape;
 - document-first contracts remain Markdown files and do not become UI-authored schemas.
 
-#### Slice W31-E4-S2 — central document workbench UI (`planned`)
+#### Slice W31-E4-S2 — central document workbench UI (`done`)
 Goal: make Markdown artifacts the central work surface for active stage review.
 
 Primary outputs:
@@ -8441,10 +8441,10 @@ Exit evidence:
 - operators can inspect source artifacts without leaving the active workbench;
 - raw logs and evidence remain available as drill-down surfaces.
 
-### Epic W31-E5 — diagnostics, logs, and recovery assistant (`planned`)
+### Epic W31-E5 — diagnostics, logs, and recovery assistant (`done`)
 Linked stories: `US-03`, `US-04`, `US-05`, `US-06`, `US-11`
 
-#### Slice W31-E5-S1 — first failure and recovery read models (`planned`)
+#### Slice W31-E5-S1 — first failure and recovery read models (`done`)
 Goal: surface the first decisive failure or blocking signal before raw log inspection.
 
 Primary outputs:
@@ -8483,7 +8483,7 @@ Exit evidence:
 - validation and runtime failures route to repair or explicit stop, never silent
   continuation.
 
-#### Slice W31-E5-S2 — diagnostics and recovery UI (`planned`)
+#### Slice W31-E5-S2 — diagnostics and recovery UI (`done`)
 Goal: render logs, timeline, questions, repair, and intervention as guided recovery
 surfaces instead of always-visible dense tabs.
 
@@ -8525,10 +8525,10 @@ Exit evidence:
 - recovery paths are visible as guided actions rather than hidden in separate tabs;
 - raw runtime logs remain one click away and preserve native evidence.
 
-### Epic W31-E6 — contextual navigation and verification (`planned`)
+### Epic W31-E6 — contextual navigation and verification (`done`)
 Linked stories: `US-02`, `US-03`, `US-06`, `US-11`
 
-#### Slice W31-E6-S1 — contextual navigation and regression coverage (`planned`)
+#### Slice W31-E6-S1 — contextual navigation and regression coverage (`done`)
 Goal: reduce always-visible UI clutter while preserving access to artifacts, logs,
 questions, validation, and review/QA surfaces.
 
@@ -8583,3 +8583,15 @@ Sync notes:
   workbench, diagnostics/recovery, and contextual navigation evidence tasks. Initial
   queue promotion sets `W31-E1-S1-T1` as `Next`, keeps the checklist and first read-model
   tasks in `Soon`, and parks the broader UI rollout until the contract lands.
+- `2026-06-09` Wave 31 was completed as one integrated local implementation pass:
+  Project Home, work-item resume APIs, run-global Next Action, artifact taxonomy,
+  Document Workbench, first-failure/recovery read models, Diagnostics/Recovery UI,
+  contextual tabs, and responsive ordering are covered by core/API/static regressions.
+  Verification passed with the focused operator/docs suite (`174 passed`), the full
+  suite (`1159 passed`), and an in-app browser smoke recorded outside the repository at
+  `/tmp/aidd-w31-smoke-CZ2xso/w31-smoke-evidence.txt`.
+- `2026-06-10` Wave 31 UI audit found two Artifacts-tab UX issues and fixed them:
+  Stage Document Workbench now renders before evidence graph/table, and the default
+  selected document uses preferred artifact priority instead of alphabetic order. Fresh
+  evidence was recorded outside the repository at
+  `/tmp/aidd-w31-audit-X1WAMg/w31-ui-audit-evidence.txt`.

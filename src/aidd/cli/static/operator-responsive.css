@@ -32,6 +32,12 @@
   .operator-shell {
     display: block;
   }
+  .global-next-action-strip {
+    grid-template-columns: 1fr;
+  }
+  .next-action-meta {
+    grid-template-columns: 1fr;
+  }
   .stage-rail {
     border-bottom: 1px solid var(--line);
     border-right: 0;
@@ -60,6 +66,9 @@
     white-space: nowrap;
   }
   .overview-grid,
+  .project-home-hero,
+  .project-home-grid,
+  .project-set-row,
   .onboarding-shell,
   .inline-form-row,
   .artifact-layout,

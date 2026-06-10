@@ -61,6 +61,7 @@ from aidd.core.workflow_service import (
     WorkflowStageExecutionError,
     WorkflowStageExecutionRequest,
 )
+from aidd.core.workspace import seed_work_item_metadata
 from aidd.runtime_catalog import runtime_definitions
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
@@ -189,6 +190,7 @@ class _BodyHandler:
 
 
 def _prepare_run(workspace_root: Path) -> None:
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
     create_run_manifest(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -526,6 +528,10 @@ def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
     stage_payload = _payload(service.handle_get("/api/stage", {"stage": ["plan"]}))
     logs_payload = _payload(service.handle_get("/api/logs", {"stage": ["plan"]}))
     artifacts_payload = _payload(service.handle_get("/api/artifacts", {"stage": ["plan"]}))
+    project_home_payload = _payload(service.handle_get("/api/project-home", {}))
+    resume_payload = _payload(
+        service.handle_get("/api/work-item/resume", {"work_item": ["WI-UI"]})
+    )
 
     assert run_payload["metadata"]["runtime_id"] == "generic-cli"
     assert stage_payload["result"]["final_state"] == "blocked"
@@ -537,6 +543,54 @@ def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
     assert logs_payload["truncated"] is False
     assert logs_payload["byte_size"] == len(b"runtime-line\n")
     assert artifacts_payload["documents"]["input_bundle"].endswith("input-bundle.md")
+    assert project_home_payload["project_home"]["work_items"][0]["work_item"] == "WI-UI"  # type: ignore[index]
+    assert resume_payload["resume"]["latest_run"]["run_id"] == "run-ui"  # type: ignore[index]
+
+
+def test_ui_project_home_resume_switches_active_context_with_absolute_workspace_root(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    seed_work_item_metadata(root=workspace_root, work_item="WI-OTHER")
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-OTHER",
+        run_id="run-other",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-OTHER",
+        run_id="run-other",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-OTHER",
+        run_id="run-other",
+        stage="plan",
+        status="blocked",
+    )
+    service = _service(workspace_root)
+
+    resume = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "resume",
+                "project_root": tmp_path.as_posix(),
+                "work_item": "WI-OTHER",
+            },
+        )
+    )
+    dashboard = _payload(service.handle_get("/api/dashboard", {}))
+
+    assert resume["context"]["work_item"] == "WI-OTHER"  # type: ignore[index]
+    assert dashboard["dashboard"]["work_item"] == "WI-OTHER"  # type: ignore[index]
+    assert dashboard["dashboard"]["run"]["run_id"] == "run-other"  # type: ignore[index]
 
 
 def test_ui_stage_workbench_endpoint_returns_document_state_and_sidebars(
@@ -2728,7 +2782,7 @@ def test_ui_operator_decision_endpoint_wakes_live_stage_job(tmp_path: Path) -> N
     )
     assert decision_payload["pending_request_ids"] == []
 
-    completed_payload = _wait_job(service, job_id)
+    completed_payload = _wait_job_status(service, job_id, "completed")
     decision = captured["decision"]
     assert isinstance(decision, RuntimeOperatorDecision)
     assert completed_payload["status"] == "completed"

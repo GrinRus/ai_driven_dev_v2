@@ -139,6 +139,64 @@ function renderStageRail() {
   requestAnimationFrame(scrollActiveStageIntoView);
 }
 
+function workItemStatusClass(item) {
+  const stateName = String(item?.terminal_state || "ready");
+  if (stateName === "completed") return "good";
+  if (stateName === "blocked") return "warn";
+  if (stateName === "running") return "running";
+  return "";
+}
+
+function projectHomeWorkItems() {
+  return state.projectHome?.work_items || [];
+}
+
+function currentWorkItemSummary() {
+  const workItem = state.dashboard?.work_item || state.projectHome?.selected_work_item || "";
+  return projectHomeWorkItems().find((item) => item.work_item === workItem) || null;
+}
+
+function renderProjectSetRootChips(item) {
+  const roots = item?.project_set_roots || [];
+  if (!roots.length) return `<span class="small-badge">single root</span>`;
+  return roots.slice(0, 3).map((root) => (
+    `<span class="small-badge" title="${escapeHtml(root.root)}">${escapeHtml(root.root_id)}:${escapeHtml(root.relative_root)}</span>`
+  )).join("");
+}
+
+function renderProjectHomeRail() {
+  const host = document.getElementById("projectHomeRail");
+  if (!host) return;
+  const home = state.projectHome;
+  if (!home) {
+    host.innerHTML = `<div class="empty-state compact">Project Home loading...</div>`;
+    return;
+  }
+  const current = currentWorkItemSummary();
+  const items = projectHomeWorkItems();
+  host.innerHTML = `
+    <div class="project-home-tabs" role="group" aria-label="Project and work item navigation">
+      <button data-tab-shortcut="project-home" class="${state.activeTab === "project-home" ? "active" : ""}" type="button">Projects</button>
+      <button data-tab-shortcut="project-home" class="${state.activeTab === "project-home" ? "active" : ""}" type="button">Work items</button>
+    </div>
+    <div class="rail-header small">
+      <span>Active work items</span>
+      <span class="counter">${escapeHtml(items.length)}</span>
+    </div>
+    <div class="work-item-board-rail">
+      ${items.length ? items.slice(0, 6).map((item) => `
+        <button class="work-item-card ${item.work_item === current?.work_item ? "active" : ""}" data-project-home-resume="${escapeHtml(item.work_item)}" type="button">
+          <span>
+            <strong>${escapeHtml(item.work_item)}</strong>
+            <small>${escapeHtml(item.active_stage)} / ${escapeHtml(item.stage_progress_label)}</small>
+          </span>
+          <span class="small-badge ${workItemStatusClass(item)}">${escapeHtml(item.terminal_state)}</span>
+        </button>
+      `).join("") : `<div class="empty-state compact">No work items in this project.</div>`}
+    </div>
+  `;
+}
+
 function renderStageHeader() {
   const item = activeStageItem();
   document.getElementById("stageTitle").textContent = item?.title || stageTitle(state.activeStage);
@@ -150,6 +208,39 @@ function renderStageHeader() {
     `<span class="status-badge">Validation ${escapeHtml(item?.validator_pass_count || 0)}/${escapeHtml(item?.validator_fail_count || 0)}</span>`
   ].filter(Boolean).join("");
 }
+
+function stageHasEvidence(stage) {
+  return (state.dashboard?.stages || []).some((item) => item.stage === stage && Number(item.attempt_count || 0) > 0);
+}
+
+function updateContextualTabs() {
+  const alwaysVisible = new Set([
+    "project-home",
+    "overview",
+    "questions",
+    "validation",
+    "timeline",
+    "artifacts",
+    "recovery",
+    "logs",
+    "approvals",
+    "request",
+    "history"
+  ]);
+  const visible = new Set(alwaysVisible);
+  if (state.activeStage === "implement" || stageHasEvidence("implement")) visible.add("implement-review");
+  if (state.activeStage === "review" || stageHasEvidence("review")) visible.add("review-findings");
+  if (state.activeStage === "qa" || stageHasEvidence("qa") || state.dashboard?.terminal_handoff) visible.add("qa-verdict");
+  document.querySelectorAll("[data-tab]").forEach((button) => {
+    const tab = button.dataset.tab;
+    const isVisible = visible.has(tab);
+    button.hidden = !isVisible;
+  });
+  if (!visible.has(state.activeTab)) {
+    state.activeTab = "overview";
+  }
+}
+
 
 function renderInlineMarkdown(value) {
   return escapeHtml(value).replace(/`([^`]+)`/g, "<code>$1</code>");

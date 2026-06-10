@@ -104,6 +104,53 @@ function onboardingProjectSetStatus() {
   `;
 }
 
+function projectSetRows() {
+  return state.onboarding.projectSetRows || [];
+}
+
+function projectSetDuplicateRoots() {
+  const seen = new Set();
+  const duplicates = new Set();
+  projectSetRows().forEach((row) => {
+    const root = String(row.root || "").trim();
+    if (!root) return;
+    if (seen.has(root)) duplicates.add(root);
+    seen.add(root);
+  });
+  return duplicates;
+}
+
+function renderProjectSetEditor() {
+  const duplicates = projectSetDuplicateRoots();
+  const rows = projectSetRows();
+  return `
+    <div class="project-set-editor" aria-label="Project set root editor">
+      <div class="project-set-row header" aria-hidden="true">
+        <span>Project id</span>
+        <span>Root</span>
+        <span>Role</span>
+        <span></span>
+      </div>
+      ${rows.map((row, index) => {
+        const duplicate = duplicates.has(String(row.root || "").trim());
+        return `
+          <div class="project-set-row ${duplicate ? "duplicate" : ""}">
+            <input data-project-set-field="id" data-project-set-index="${index}" type="text" value="${escapeHtml(row.id || "")}" placeholder="api" autocomplete="off" spellcheck="false" aria-label="Project id ${index + 1}">
+            <input data-project-set-field="root" data-project-set-index="${index}" type="text" value="${escapeHtml(row.root || "")}" placeholder="services/api" autocomplete="off" spellcheck="false" aria-label="Project root ${index + 1}">
+            <input data-project-set-field="role" data-project-set-index="${index}" type="text" value="${escapeHtml(row.role || "")}" placeholder="owner" autocomplete="off" spellcheck="false" aria-label="Project role ${index + 1}">
+            <button data-project-set-remove="${index}" class="secondary" type="button" ${rows.length <= 1 ? "disabled" : ""}>Remove</button>
+            ${duplicate ? `<span class="form-error">Duplicate root</span>` : ""}
+          </div>
+        `;
+      }).join("")}
+      <div class="setup-actions">
+        <button data-project-set-add type="button" class="secondary">Add root</button>
+        <button id="onboardingValidateProjectSet" class="secondary" type="button" ${onboardingProject() ? "" : "disabled"}>Validate project set</button>
+      </div>
+    </div>
+  `;
+}
+
 function onboardingCanCreate() {
   return Boolean(
     onboardingProject()
@@ -204,11 +251,7 @@ function renderOnboarding() {
           <span class="small-badge">optional</span>
         </div>
         <div class="form-grid">
-          <label class="field-label" for="onboardingProjectSet">Projects JSON</label>
-          <textarea id="onboardingProjectSet" rows="4" spellcheck="false" placeholder='[{"id":"api","root":"services/api"}]'>${escapeHtml(state.onboarding.projectSetText)}</textarea>
-          <div class="setup-actions">
-            <button id="onboardingValidateProjectSet" class="secondary" type="button" ${onboardingProject() ? "" : "disabled"}>Validate project set</button>
-          </div>
+          ${renderProjectSetEditor()}
           ${onboardingProjectSetStatus()}
         </div>
       </section>
@@ -252,18 +295,50 @@ async function inspectOnboardingProject() {
 }
 
 function onboardingProjectSetPayload() {
-  const text = state.onboarding.projectSetText.trim();
-  if (!text) return [];
-  const parsed = JSON.parse(text);
-  if (!Array.isArray(parsed)) throw new Error("Project set must be a JSON array.");
-  return parsed.map((item, index) => {
-    if (!item || typeof item !== "object") throw new Error(`Project set item ${index + 1} must be an object.`);
+  const rows = projectSetRows()
+    .map((row) => ({
+      id: String(row.id || "").trim(),
+      root: String(row.root || "").trim(),
+      role: String(row.role || "").trim()
+    }))
+    .filter((row) => row.id || row.root || row.role);
+  if (!rows.length) return [];
+  const roots = new Set();
+  rows.forEach((row, index) => {
+    if (!row.id) throw new Error(`Project set row ${index + 1} requires an id.`);
+    if (!row.root) throw new Error(`Project set row ${index + 1} requires a root.`);
+    if (roots.has(row.root)) throw new Error(`Project set root is duplicated: ${row.root}.`);
+    roots.add(row.root);
+  });
+  return rows.map((item) => {
     return {
-      id: String(item.id || "").trim(),
-      root: String(item.root || "").trim(),
-      role: item.role == null ? null : String(item.role).trim()
+      id: item.id,
+      root: item.root,
+      role: item.role || null
     };
   });
+}
+
+function updateProjectSetRow(index, field, value) {
+  const rows = projectSetRows().map((row) => ({...row}));
+  if (!rows[index]) return;
+  rows[index][field] = value;
+  state.onboarding.projectSetRows = rows;
+  state.onboarding.projectSetResult = null;
+  state.onboarding.projectSetError = "";
+}
+
+function addProjectSetRow() {
+  state.onboarding.projectSetRows = [...projectSetRows(), {id: "", root: "", role: ""}];
+  state.onboarding.projectSetResult = null;
+  renderOnboarding();
+}
+
+function removeProjectSetRow(index) {
+  const rows = projectSetRows().filter((_, rowIndex) => rowIndex !== index);
+  state.onboarding.projectSetRows = rows.length ? rows : [{id: "", root: "", role: ""}];
+  state.onboarding.projectSetResult = null;
+  renderOnboarding();
 }
 
 async function validateOnboardingProjectSet() {
@@ -312,4 +387,25 @@ async function completeOnboardingWorkItem(action, workItem) {
     state.onboarding.creating = false;
     if (state.onboarding.setupRequired) renderOnboarding();
   }
+}
+
+async function resumeProjectHomeWorkItem(workItem, options = {}) {
+  const item = projectHomeWorkItems().find((candidate) => candidate.work_item === workItem) || null;
+  await postJson("/api/onboarding/work-item", {
+    action: "resume",
+    project_root: state.projectHome?.project_root || state.onboarding.projectRootInput || ".",
+    work_item: workItem
+  });
+  state.onboarding.setupRequired = false;
+  state.activeStage = item?.active_stage || state.activeStage;
+  state.activeRunId = item?.latest_run?.run_id || "";
+  state.activeArtifactKey = "";
+  state.selectedEvidenceNodeId = "";
+  state.selectedEvidenceEdgeId = "";
+  state.activeTab = options.openLatestRun || item ? "overview" : "project-home";
+  document.body.classList.remove("setup-active");
+  document.getElementById("openWorkspaceButton").disabled = false;
+  await fetchDashboard();
+  await fetchProjectHome(workItem);
+  await renderAll();
 }

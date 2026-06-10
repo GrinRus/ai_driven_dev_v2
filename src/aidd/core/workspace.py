@@ -175,6 +175,7 @@ def seed_work_item_metadata(root: Path, work_item: str) -> Path:
     metadata_path = work_item_metadata_path(root=root, work_item=work_item)
     if metadata_path.exists():
         return metadata_path
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
 
     now = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     payload = {

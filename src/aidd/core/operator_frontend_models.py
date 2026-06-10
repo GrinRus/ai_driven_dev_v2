@@ -183,6 +183,39 @@ class OperatorRunSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorProjectSetRootSummary:
+    root_id: str
+    root: str
+    relative_root: str
+    role: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorWorkItemSummary:
+    work_item: str
+    has_request_context: bool
+    latest_run: OperatorRunSummary
+    active_stage: str
+    stage_progress_label: str
+    stage_progress_count: int
+    stage_total_count: int
+    blocker_count: int
+    terminal_state: str
+    project_set_roots: tuple[OperatorProjectSetRootSummary, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorProjectHomeView:
+    project_root: Path
+    workspace_root: Path
+    workspace_exists: bool
+    work_items: tuple[OperatorWorkItemSummary, ...]
+    recent_project_roots: tuple[str, ...]
+    selected_work_item: str | None
+    selected_work_item_resume: OperatorWorkItemSummary | None
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorStageRailItem:
     stage: str
     title: str
@@ -220,6 +253,25 @@ class OperatorBlocker:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorFirstFailure:
+    kind: str
+    title: str
+    detail: str
+    stage: str | None
+    path: str | None
+    time_utc: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorRecoveryAction:
+    action: str
+    label: str
+    detail: str
+    stage: str | None
+    enabled: bool
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorEvidenceRef:
     label: str
     kind: str
@@ -244,6 +296,13 @@ class OperatorArtifactRef:
     path: str
     byte_size: int | None
     updated_at_utc: str | None
+    category: str = "canonical-stage-document"
+    canonical: bool = False
+    latest: bool = True
+    stale: bool = False
+    generated: bool = True
+    available: bool = True
+    safe_key: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -349,6 +408,7 @@ class OperatorStageDocumentReference:
     kind: str
     path: str
     stage: str | None = None
+    category: str = "canonical-stage-document"
 
 
 @dataclass(frozen=True, slots=True)
@@ -430,6 +490,8 @@ class OperatorDashboardView:
     primary_artifact: OperatorPrimaryArtifact | None
     next_action: OperatorNextAction
     blockers: tuple[OperatorBlocker, ...]
+    first_failure: OperatorFirstFailure | None
+    recovery_actions: tuple[OperatorRecoveryAction, ...]
     evidence_refs: tuple[OperatorEvidenceRef, ...]
     activity: tuple[OperatorActivityEvent, ...]
     recent_artifacts: tuple[OperatorArtifactRef, ...]
@@ -451,13 +513,18 @@ __all__ = [
     "OperatorEvidenceGraphView",
     "OperatorNextAction",
     "OperatorNextFlowRecommendation",
+    "OperatorFirstFailure",
     "OperatorPrimaryArtifact",
+    "OperatorProjectHomeView",
+    "OperatorProjectSetRootSummary",
+    "OperatorWorkItemSummary",
     "OperatorQuestionView",
     "OperatorQuestionsView",
     "OperatorRawLogSourceDiagnostics",
     "OperatorRepairAttemptDiagnostics",
     "OperatorRequestChangeContext",
     "OperatorRepairCounts",
+    "OperatorRecoveryAction",
     "OperatorRunArchive",
     "OperatorRunLogView",
     "OperatorRunLineage",

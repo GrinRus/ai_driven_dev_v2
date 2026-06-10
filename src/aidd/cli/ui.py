@@ -55,7 +55,9 @@ from aidd.core.next_flow import (
 )
 from aidd.core.onboarding import (
     OnboardingProjectDeclaration,
+    OnboardingProjectSummary,
     OnboardingService,
+    OnboardingWorkItemSummary,
 )
 from aidd.core.operator_frontend import (
     persist_operator_answer,
@@ -63,6 +65,7 @@ from aidd.core.operator_frontend import (
     resolve_operator_artifacts_view,
     resolve_operator_dashboard_view,
     resolve_operator_evidence_graph_view,
+    resolve_operator_project_home_view,
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
     resolve_operator_run_view,
@@ -1396,6 +1399,7 @@ class OperatorUiService:
         folder_opener: LocalFolderOpener = _open_local_folder,
     ) -> None:
         self.options = options
+        project_root = options.root.resolve(strict=False).parent
         self._workflow_runner = workflow_runner
         self._stage_runner = stage_runner
         self._stage_interact_runner = stage_interact_runner
@@ -1408,12 +1412,12 @@ class OperatorUiService:
                 work_item=options.work_item,
                 root=options.root,
                 config=options.config,
-                project_root=Path.cwd().resolve(strict=False),
+                project_root=project_root,
             )
             if options.work_item is not None
             else None
         )
-        self._recent_project_roots: list[Path] = []
+        self._recent_project_roots: list[Path] = [project_root] if options.work_item is not None else []
         self._operator_waiters_lock = threading.Lock()
         self._operator_waiters: dict[str, _UiOperatorDecisionWaiter] = {}
 
@@ -1526,6 +1530,52 @@ class OperatorUiService:
             "active_jobs": self._jobs.has_active_jobs(),
         }
 
+    def _project_home(self, params: dict[str, list[str]]) -> object:
+        selected_work_item = _first_param(params, "work_item")
+        return {
+            "app_version": __version__,
+            "project_home": resolve_operator_project_home_view(
+                project_root=self.project_root,
+                workspace_root=self.workspace_root,
+                selected_work_item=selected_work_item,
+                recent_project_roots=tuple(self._recent_project_roots),
+            ),
+        }
+
+    def _work_item_resume_context(self, params: dict[str, list[str]]) -> object:
+        work_item = _first_param(params, "work_item")
+        if not work_item:
+            raise ValueError("work_item is required.")
+        return {
+            "app_version": __version__,
+            "resume": resolve_operator_project_home_view(
+                project_root=self.project_root,
+                workspace_root=self.workspace_root,
+                selected_work_item=work_item,
+                recent_project_roots=tuple(self._recent_project_roots),
+            ).selected_work_item_resume,
+        }
+
+    def _active_onboarding_project_summary(self) -> OnboardingProjectSummary:
+        home = resolve_operator_project_home_view(
+            project_root=self.project_root,
+            workspace_root=self.workspace_root,
+            selected_work_item=self.work_item,
+            recent_project_roots=tuple(self._recent_project_roots),
+        )
+        return OnboardingProjectSummary(
+            project_root=home.project_root,
+            workspace_root=home.workspace_root,
+            workspace_exists=home.workspace_exists,
+            work_items=tuple(
+                OnboardingWorkItemSummary(
+                    work_item=item.work_item,
+                    has_request_context=item.has_request_context,
+                )
+                for item in home.work_items
+            ),
+        )
+
     def _inspect_onboarding_project(self, payload: dict[str, Any]) -> object:
         project_root = _text_from_payload(payload, "project_root", default=".")
         summary = self._onboarding_service().inspect_project(project_root)
@@ -1555,6 +1605,23 @@ class OperatorUiService:
             raise ValueError("action must be create or resume.")
         service = self._onboarding_service()
         if action == "resume":
+            if self._context is not None:
+                resolve_operator_project_home_view(
+                    project_root=self.project_root,
+                    workspace_root=self.workspace_root,
+                    selected_work_item=work_item,
+                    recent_project_roots=tuple(self._recent_project_roots),
+                )
+                self._activate_context(
+                    project_root=self.project_root,
+                    workspace_root=self.workspace_root,
+                    work_item=work_item,
+                )
+                return {
+                    "project": self._active_onboarding_project_summary(),
+                    "work_item": work_item,
+                    "context": self._onboarding_state()["context"],
+                }
             project = service.inspect_project(project_root)
             if work_item not in {item.work_item for item in project.work_items}:
                 raise ValueError(f"Work item '{work_item}' does not exist in selected project.")
@@ -1871,6 +1938,10 @@ class OperatorUiService:
                 )
             if path == "/api/onboarding/state":
                 return _json_response(self._onboarding_state())
+            if path == "/api/project-home":
+                return _json_response(self._project_home(params))
+            if path == "/api/work-item/resume":
+                return _json_response(self._work_item_resume_context(params))
             if path == "/api/run":
                 try:
                     return _json_response(
