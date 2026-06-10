@@ -21,9 +21,9 @@ Record whether the plan is coherent and ready for task decomposition.
 - `Issue list`
   - Must enumerate concrete issues as top-level bullet items or `###` issue subsections.
   - Each issue item/subsection must include explicit severity (`critical`, `high`, `medium`,
-    `low`, or `info`) and rationale.
-  - If no material issue exists, may use an explicit no-issue marker such as `No material issues
-    identified.` or a no-defect item with `Severity: none`.
+    `low`, `info`, or `none`) and rationale.
+  - If no material issue exists, must use a no-defect item/subsection with `Severity: none` and
+    rationale. Bare no-issue prose such as `No material issues identified.` is invalid.
   - Must prioritize issues that block safe task decomposition.
 - `Recommendation summary`
   - Must summarize actionable review recommendations as prioritized Markdown list items in priority

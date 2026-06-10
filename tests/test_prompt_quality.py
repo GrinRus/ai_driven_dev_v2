@@ -56,6 +56,9 @@ def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     repair_prompt = Path("prompt-packs/stages/idea/repair.md").read_text(encoding="utf-8")
 
     assert "avoid unsupported absolute claims" in run_prompt
+    assert "Do not assert source-code root causes" in run_prompt
+    assert "leave source" in run_prompt
+    assert "diagnosis to `research`" in run_prompt
     assert "tie them to the selected request, constraints, and acceptance context" in run_prompt
     assert "`Open questions` as Markdown bullet items, or exactly `- none`" in run_prompt
     assert "prose-only text is invalid" in run_prompt
@@ -93,6 +96,9 @@ def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
     assert "`context/diff-summary.md`" in run_prompt
     assert "lockfile, dependency manifest, generated resolver output" in run_prompt
     assert "set `QA verdict: not-ready` and release recommendation" in run_prompt
+    assert "one top-level bullet per criterion" in run_prompt
+    assert "Each bullet must name exactly one `AC-N` id" in run_prompt
+    assert "Do not use range claims such as `AC-1 through AC-4`" in run_prompt
 
 
 def test_review_prompt_respects_authored_verification_boundary() -> None:
@@ -204,7 +210,9 @@ def test_review_spec_prompt_requires_issue_severity_and_rationale_shape() -> Non
     )
 
     assert "`- I1: Severity: medium. Rationale: because ...`" in run_prompt
-    assert "`Severity: none` and `Rationale: because ...`" in run_prompt
+    assert "`Severity: none`" in run_prompt
+    assert "`Rationale: because ...`" in run_prompt
+    assert "do not write bare prose such as `No material issues identified.`" in run_prompt
 
 
 def test_implement_prompts_require_executable_verification_evidence() -> None:
@@ -224,4 +232,11 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "captured assertion result" in repair_prompt
     assert "`not-run: <reason>` explicitly" in repair_prompt
     assert "short intent on the same line" in run_prompt
+    assert "copy this exact shape for every file" in run_prompt
+    assert "``- `path/to/file.ext` - changed <short intent>``" in run_prompt
     assert "Do not write a top-level bullet that only names" in run_prompt
+    assert "Keep debugging bounded" in run_prompt
+    assert "at most one focused fix attempt" in run_prompt
+    assert "truthful failed verification report" in run_prompt
+    assert "timing out without stage artifacts" in run_prompt
+    assert "continuing ad hoc debugging until timeout" in repair_prompt

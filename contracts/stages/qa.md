@@ -57,6 +57,9 @@ Optional context documents may improve QA depth, but they must not replace imple
   - an explicit quality verdict (`ready`, `ready-with-risks`, `not-ready`),
   - a machine-readable verdict line, preferably `QA verdict: ready` (or
     `ready-with-risks` / `not-ready`) under `Quality verdict` or `Readiness`,
+  - when `context/acceptance-criteria.md` exists, an explicit acceptance coverage checklist with
+    one top-level bullet per `AC-N`; each bullet must name exactly one acceptance criterion id and
+    cite same-bullet evidence using an `EV-N` id and/or backticked artifact path,
   - residual risk summary with severity and mitigation/ownership notes,
   - a dedicated `Release recommendation` section aligned to verdict and risk profile,
   - evidence references linking verdict claims to verification artifacts.

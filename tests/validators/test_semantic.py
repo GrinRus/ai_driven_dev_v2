@@ -130,6 +130,13 @@ def _write_qa_report(workspace_root: Path, work_item: str, body: str) -> Path:
     return path
 
 
+def _write_acceptance_criteria(workspace_root: Path, work_item: str, body: str) -> Path:
+    path = workspace_root / "workitems" / work_item / "context" / "acceptance-criteria.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
 def _write_review_spec_report(workspace_root: Path, work_item: str, body: str) -> Path:
     path = (
         workspace_root
@@ -1430,7 +1437,7 @@ def test_validate_semantic_outputs_accepts_review_spec_no_issue_markers(
     assert findings == ()
 
 
-def test_validate_semantic_outputs_accepts_review_spec_no_issue_prose(
+def test_validate_semantic_outputs_flags_review_spec_no_issue_prose_without_metadata(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -1460,7 +1467,23 @@ def test_validate_semantic_outputs_accepts_review_spec_no_issue_prose(
         workspace_root=workspace_root,
     )
 
-    assert findings == ()
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Required section `Issue list` must use bullet items with "
+                "severity and rationale."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-REVIEW-SPEC-NO-ISSUE-PROSE/stages/review-spec/"
+                    "review-spec-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+    )
 
 
 def test_validate_semantic_outputs_accepts_review_spec_ordered_recommendations(
@@ -2933,6 +2956,161 @@ def test_validate_semantic_outputs_accepts_valid_qa_fixture_bundle() -> None:
     )
 
     assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_qa_acceptance_coverage_checklist(
+    tmp_path: Path,
+) -> None:
+    work_item = "WI-SEM-QA-ACCEPTANCE-COVERAGE"
+    _write_acceptance_criteria(
+        tmp_path,
+        work_item,
+        """# Acceptance Criteria
+
+- AC-1: Regression exercises the public CLI behavior.
+- AC-2: The tracked diff stays within the selected command module and tests.
+""",
+    )
+    _write_qa_report(
+        tmp_path,
+        work_item,
+        """# QA Report
+
+## Quality verdict
+
+- QA verdict: ready
+
+## Verification summary
+
+- Verification passed with acceptance evidence tracked by `EV-1`.
+
+## Release recommendation
+
+- proceed
+
+## Evidence
+
+- EV-1: `context/verification-output.md` reports the targeted tests passed.
+
+## Known issues
+
+- Known issues: none.
+
+## Readiness
+
+- AC-1: confirmed. Evidence: EV-1, `context/verification-output.md`.
+  The public CLI regression test passed.
+- AC-2: confirmed. Evidence: EV-1, `context/verification-output.md`.
+  Diff review stayed within the selected files.
+- Ready because each acceptance criterion has evidence and no known issue remains.
+""",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item=work_item,
+        workspace_root=tmp_path,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_qa_bundled_acceptance_coverage(
+    tmp_path: Path,
+) -> None:
+    work_item = "WI-SEM-QA-BUNDLED-ACCEPTANCE"
+    _write_acceptance_criteria(
+        tmp_path,
+        work_item,
+        """# Acceptance Criteria
+
+- AC-1: Regression exercises the public CLI behavior.
+- AC-2: The tracked diff stays within the selected command module and tests.
+- AC-3: Verification transcript captures the targeted command.
+""",
+    )
+    _write_qa_report(
+        tmp_path,
+        work_item,
+        """# QA Report
+
+## Quality verdict
+
+- QA verdict: ready
+
+## Verification summary
+
+- Verification passed with acceptance evidence tracked by `EV-1`.
+
+## Release recommendation
+
+- proceed
+
+## Evidence
+
+- EV-1: `context/verification-output.md` reports the targeted tests passed.
+
+## Known issues
+
+- Known issues: none.
+
+## Readiness
+
+- AC-1 through AC-3: confirmed. Evidence: EV-1.
+- Ready because the authored verification passed.
+""",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item=work_item,
+        workspace_root=tmp_path,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Acceptance coverage must use a separate top-level bullet for "
+                "`AC-1` instead of bundling multiple `AC-N` ids."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-BUNDLED-ACCEPTANCE/stages/qa/qa-report.md"
+                ),
+                line_number=1,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "QA report must include an acceptance coverage bullet for "
+                "`AC-2` from `context/acceptance-criteria.md`."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-BUNDLED-ACCEPTANCE/stages/qa/qa-report.md"
+                ),
+                line_number=1,
+            ),
+        ),
+        ValidationFinding(
+            code=INCOMPLETE_SECTION_CODE,
+            message=(
+                "Acceptance coverage must use a separate top-level bullet for "
+                "`AC-3` instead of bundling multiple `AC-N` ids."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-BUNDLED-ACCEPTANCE/stages/qa/qa-report.md"
+                ),
+                line_number=1,
+            ),
+        ),
+    )
 
 
 def test_validate_semantic_outputs_accepts_known_issue_blocks_with_metadata(

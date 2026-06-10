@@ -3704,11 +3704,29 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             evidence_paths=(answer_analysis_path, _answers_path(ctx, stage)),
         )
 
+    stage_command = _stage_run_command(ctx, stage)
+    stage_timeout_seconds = _flow_timeout_seconds(ctx.scenario)
+    _persist_state(
+        ctx=ctx,
+        status="running",
+        next_action="run-stage",
+        current_stage=stage,
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra={
+            "active_step": {
+                "action": "run-stage",
+                "stage": stage,
+                "started_at_utc": _utc_now(),
+                "timeout_seconds": stage_timeout_seconds,
+                "command": list(stage_command),
+            }
+        },
+    )
     stage_result = _run_black_box_command(
-        command=_stage_run_command(ctx, stage),
+        command=stage_command,
         cwd=working_copy,
         environment=environment,
-        timeout_seconds=_flow_timeout_seconds(ctx.scenario),
+        timeout_seconds=stage_timeout_seconds,
     )
     classification = _classify_stage_run(stage_result)
     timeout_evidence_paths, timeout_reconciliation = _reconcile_timed_out_stage_run(

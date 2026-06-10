@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.semantic_rules.common import (
     INCOMPLETE_SECTION_CODE,
-    REVIEW_SPEC_NO_ISSUES_PATTERN,
     REVIEW_SPEC_RATIONALE_PATTERN,
     SemanticDocumentContext,
     SemanticRule,
@@ -47,8 +46,6 @@ def validate_review_spec_report(context: SemanticDocumentContext) -> tuple[Valid
 
         if normalized_section == "issue list":
             issue_blocks = extract_review_spec_issue_blocks(section.content)
-            if not issue_blocks and REVIEW_SPEC_NO_ISSUES_PATTERN.search(compact_content):
-                continue
 
             if not issue_blocks:
                 findings.append(

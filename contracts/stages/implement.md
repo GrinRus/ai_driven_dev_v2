@@ -64,6 +64,8 @@ Optional context documents may improve implementation quality, but they must not
 - touched-files validation is based on top-level file entries; nested bullets and fenced diffs may
   provide supporting detail, but each top-level file entry must include a backticked path and a short
   intent using a clear separator such as `-`, `:`, or `->`.
+  The most reliable shape is `- `path/to/file` - changed <intent>`; a top-level bullet containing
+  only a path is invalid even when nested bullets describe the change.
 - verification notes may be grouped by task or evidence heading; executed command/check entries must
   pair command evidence with an observed outcome such as `-> pass`, `exit 0`, `exit code 0`, or a
   captured tool summary. Bounded-diff checks may summarize the observed path set, for example

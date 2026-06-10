@@ -68,6 +68,13 @@ normalize if canonical validation proves the terminal status inconsistent.
    changed unless the selected task explicitly requires dependency/config updates. If such files
    change incidentally, stop and report the out-of-scope change instead of silently treating it as
    part of the implementation.
+11. Keep debugging bounded. Prefer authored verification commands and existing regression tests.
+    If a check fails, make at most one focused fix attempt for that failure class, then rerun the
+    narrow check. If it still fails or the root cause is unclear, stop editing and write the
+    required output documents with the exact failing command/output and `stage-result.md` status
+    `failed` or `blocked` as appropriate. Do not create an open-ended series of ad hoc debug
+    scripts, and do not spend the stage trying to make optional broad checks pass before recording
+    the required implementation report.
 
 ## Execution instructions
 
@@ -83,7 +90,8 @@ normalize if canonical validation proves the terminal status inconsistent.
    explain why it is excluded.
 5. Keep touched-files entries bounded to allowed scope and aligned with observable repository changes.
    Use top-level bullets for each file, with a backticked path plus short intent on the same line;
-   the safest form is a single bullet shaped like `- src/file.ts - changed ...`. Do not write a top-level bullet that only names
+   copy this exact shape for every file: ``- `path/to/file.ext` - changed <short intent>``.
+   Do not write a top-level bullet that only names
    a path, and do not rely on nested bullets to supply the file-level intent. Put line-level
    details under that file entry.
    If `git status --short` or equivalent repository evidence shows untracked files created for the
@@ -99,9 +107,12 @@ normalize if canonical validation proves the terminal status inconsistent.
    When `context/verification-output.md` lists authored or scenario verification commands, run those
    commands after the implementation or explicitly mark each skipped command as not-run with a reason.
    For skipped checks, write `not-run: <reason>` in the verification note.
-7. If required inputs are missing or provided scope/task constraints conflict, raise a `[blocking]`
+7. Write or update `implementation-report.md`, `stage-result.md`, and `validator-report.md` before
+   optional broad-suite verification or exploratory debugging. A truthful failed verification report
+   is better than timing out without stage artifacts.
+8. If required inputs are missing or provided scope/task constraints conflict, raise a `[blocking]`
    question instead of inventing assumptions.
-8. Update `validator-report.md` and `stage-result.md` so readiness, blockers, and next actions remain
+9. Update `validator-report.md` and `stage-result.md` so readiness, blockers, and next actions remain
    consistent with implementation evidence.
 
 ## Common output skeleton discipline
@@ -117,5 +128,6 @@ normalize if canonical validation proves the terminal status inconsistent.
 - edits stay within allowed write scope when provided,
 - touched-files list is concrete and evidence-backed,
 - verification notes are factual and command-specific,
+- failed verification is reported promptly instead of hidden behind open-ended debugging,
 - no-op handling (if any) includes justification, evidence, and next action,
 - `implementation-report.md`, `validator-report.md`, and `stage-result.md` are consistent.

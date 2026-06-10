@@ -41,6 +41,7 @@ For each finding:
 1. identify root cause class:
    - unsupported or evidence-free verdict/recommendation claim,
    - missing evidence references for material QA claims,
+   - missing or bundled acceptance coverage bullets for `AC-N` criteria,
    - verdict/recommendation mismatch with unresolved findings or missing critical checks,
    - residual-risk incompleteness (severity/mitigation/ownership gaps),
    - cross-document status drift (`qa-report.md` vs `stage-result.md` vs `validator-report.md`);
@@ -54,6 +55,11 @@ Use concrete repair actions:
 - missing evidence: add direct references to available verification output, verification artifacts,
   or upstream evidence for each material QA claim, using `EV-1`, `EV-2`, ... evidence ids and/or
   backticked artifact paths;
+- missing acceptance coverage: when `context/acceptance-criteria.md` exists, add one top-level
+  checklist bullet per criterion using the shape
+  ``- AC-1: confirmed. Evidence: EV-1, `context/verification-output.md`. <criterion-specific sentence>.``;
+  each bullet must name exactly one `AC-N` id and cite same-bullet evidence. Replace range claims
+  such as `AC-1 through AC-4` with separate criterion bullets;
 - verdict mismatch: align verdict and release recommendation with unresolved findings and
   critical-check availability;
 - risk gaps: add residual risk entries with severity plus mitigation/ownership; keep
@@ -103,6 +109,8 @@ Use concrete repair actions:
 - intentional selected design constraints are not treated as residual risks when required
   mitigations and evidence are complete,
 - no evidence-free material claim remains,
+- every `AC-N` from acceptance context has its own same-bullet evidence reference when acceptance
+  criteria are provided,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no conflict remains between `qa-report.md`, `validator-report.md`, and `stage-result.md`.

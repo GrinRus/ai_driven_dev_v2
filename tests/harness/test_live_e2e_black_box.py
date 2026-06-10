@@ -1408,6 +1408,64 @@ def test_black_box_command_timeout_kills_child_process_group(tmp_path: Path) -> 
         pytest.fail(f"child process {child_pid} survived command group timeout cleanup")
 
 
+def test_black_box_live_e2e_records_active_step_while_stage_runs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        timeout_stage="idea",
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._flow_timeout_seconds",
+        lambda scenario: 2.0,
+    )
+    result_box: list[object] = []
+    errors: list[BaseException] = []
+
+    def _target() -> None:
+        try:
+            result_box.append(
+                run_black_box_live_e2e(
+                    scenario_path=scenario_path,
+                    runtime_id="opencode",
+                    work_root=work_root,
+                    report_root=report_root,
+                )
+            )
+        except BaseException as exc:  # pragma: no cover - surfaced by assertion below
+            errors.append(exc)
+
+    thread = threading.Thread(target=_target)
+    thread.start()
+
+    active_step: dict[str, object] | None = None
+    for _ in range(100):
+        state_paths = sorted(report_root.glob("*/flow-state.json"))
+        if state_paths:
+            state_path = state_paths[0]
+            payload = json.loads(state_path.read_text(encoding="utf-8"))
+            raw_active_step = payload.get("active_step")
+            if isinstance(raw_active_step, dict):
+                active_step = raw_active_step
+                break
+        time.sleep(0.05)
+
+    thread.join(timeout=10.0)
+
+    assert not thread.is_alive()
+    assert errors == []
+    assert result_box
+    assert active_step is not None
+    assert active_step["action"] == "run-stage"
+    assert active_step["stage"] == "idea"
+    assert active_step["timeout_seconds"] == 2.0
+    command = active_step["command"]
+    assert isinstance(command, list)
+    assert command[1:3] == ["stage", "run"]
+
+
 def test_live_interruption_handlers_are_noop_outside_main_thread() -> None:
     errors: list[BaseException] = []
 
