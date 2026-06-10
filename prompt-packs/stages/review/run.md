@@ -18,6 +18,8 @@ findings, the `Findings` section must say exactly `- none` or
   - `../implement/output/stage-result.md`
   - `../implement/output/validator-report.md`
 - optional context when available:
+  - `../tasklist/output/tasklist.md`
+  - `../plan/output/plan.md`
   - `context/diff-summary.md`
   - `context/acceptance-criteria.md`
   - `context/verification-output.md`
@@ -83,14 +85,21 @@ normalize if canonical validation proves the terminal status inconsistent.
    implementation requires explicit confirmation, documents the trust boundary, and stays within
    the selected scope. Write a finding only for missing mitigation/evidence, broadened scope,
    contradictory artifacts, or a concrete defect.
-9. In `review-report.md`, write the approval decision as a machine-readable line:
+9. When `../tasklist/output/tasklist.md` or `../plan/output/plan.md` is available, audit the
+   implementation against task-level details and planned risk mitigations, not only acceptance
+   criteria. For each nontrivial task detail or mitigation in those upstream artifacts, verify it is
+   present in the diff, tests, or implementation evidence. If the implementation omits it, such as
+   missing a promised exception cause/context preservation check, record a `must-fix` finding unless
+   the upstream artifact explicitly supersedes that requirement.
+10. In `review-report.md`, write the approval decision as a machine-readable line:
    `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
    `Approval status` or `Verdict`, then add rationale separately.
 
 ## Execution instructions
 
-1. Read required `implement` artifacts, existing optional context such as diff summary, acceptance
-   criteria, `context/verification-output.md`, and `contracts/stages/review.md` before drafting outputs.
+1. Read required `implement` artifacts, upstream tasklist/plan artifacts when present, existing
+   optional context such as diff summary, acceptance criteria, `context/verification-output.md`,
+   and `contracts/stages/review.md` before drafting outputs.
 2. Do not mark stage `succeeded` when `implement` status is unresolved or validator verdict is
    `fail`.
 3. Draft `review-report.md` with sections for findings, approval decision, and required changes.
@@ -132,5 +141,7 @@ normalize if canonical validation proves the terminal status inconsistent.
   conditions unless they expose a concrete defect or selected-task evidence gap,
 - intentional selected design constraints are not emitted as `accepted-risk` findings when their
   required mitigations and evidence are complete,
+- available tasklist/plan task details and risk mitigations were cross-checked against the diff,
+  tests, and implementation evidence,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.

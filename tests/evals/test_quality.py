@@ -904,6 +904,7 @@ def test_build_live_quality_assessment_accounts_for_repair_burden(
     )
 
     assert assessment.dimensions[1].score == 2
+    assert "repeated repair attempts" in assessment.dimensions[1].rationale
     assert any("Reduce repair burden" in item for item in assessment.suggested_follow_ups)
 
 

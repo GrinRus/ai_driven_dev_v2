@@ -70,6 +70,9 @@ Optional context documents may improve implementation quality, but they must not
   pair command evidence with an observed outcome such as `-> pass`, `exit 0`, `exit code 0`, or a
   captured tool summary. Bounded-diff checks may summarize the observed path set, for example
   `git diff --name-only -> changes bounded to src/example.py and tests/test_example.py`.
+  Each verification bullet with a pass/fail/success claim must contain the command/check and
+  observed outcome on that same bullet; do not split the command and outcome across separate prose
+  paragraphs.
 - touched-files entries must stay within `context/allowed-write-scope.md`.
 - The implementation deliverable is the local workspace state, not a tracked-only patch. Newly
   created untracked files under the allowed write scope count as touched files and must be listed
@@ -87,6 +90,7 @@ Validators for `implement` should check:
   - claimed modifications without observable file-level change evidence are rejected,
 - unverifiable claims:
   - verification notes reference concrete executed checks and outcomes,
+  - pass/fail/success verification bullets pair command/check evidence with same-bullet outcome,
   - claims about tests, lint, or runtime behavior without supporting evidence are rejected,
 - incomplete execution summaries:
   - change summary, touched-files list, and verification notes are all present and mutually consistent,

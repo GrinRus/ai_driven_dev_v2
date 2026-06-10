@@ -670,13 +670,19 @@ def _score_artifact_quality(
             follow_ups.append(
                 "Reduce repair burden by tightening stage skeleton guidance or task context."
             )
+            rationale = (
+                "Artifacts are valid and usable, but repeated repair attempts indicate "
+                "the stage guidance or task context still creates avoidable churn."
+            )
+        else:
+            rationale = (
+                "Artifacts are valid and usable, but review or QA still carries "
+                "bounded caveats."
+            )
         return QualityDimensionScore(
             name="artifact_quality",
             score=2,
-            rationale=(
-                "Artifacts are valid and usable, but review or QA still carries "
-                "bounded caveats."
-            ),
+            rationale=rationale,
         )
     return QualityDimensionScore(
         name="artifact_quality",

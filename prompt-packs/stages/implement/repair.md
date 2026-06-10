@@ -52,7 +52,9 @@ For each finding:
    any pass/fail/success outcome claim without executable/check evidence in the same bullet is still
    invalid. Manual or `CliRunner` checks must cite the executed command/snippet, artifact path, or
    captured assertion result; replace unevidenced `manual inspection -> pass` claims with concrete
-   evidence or `not-run: <reason>`.
+   evidence or `not-run: <reason>`. Use one bullet per command/check with this exact shape:
+   ``- `command goes here` -> pass (observed summary)`` or
+   ``- `command goes here` -> fail (exit code N; observed summary)``.
 5. keep repair bounded: if verification still fails after one focused fix attempt, record the exact
    failing command/output and terminal status instead of continuing ad hoc debugging until timeout.
 6. re-check `stage-result.md` and `validator-report.md` for status/blocker consistency.
@@ -97,6 +99,8 @@ Use concrete repair actions:
 ## Repair exit checks
 
 - no edit or verification claim remains without observable evidence,
+- every verification bullet with a pass/fail/success claim has the command/check and observed
+  outcome on the same bullet,
 - unresolved failed verification is explicit instead of hidden by open-ended debugging,
 - selected task id, change summary, touched-files list, and verification notes are mutually consistent,
 - touched-files entries stay within allowed write scope and match observed edits,

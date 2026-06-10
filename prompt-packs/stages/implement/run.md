@@ -99,6 +99,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 6. Record verification using concrete commands/checks and outcomes; include observed results such as
    `-> pass`, `exit code 0`, or the captured tool summary on the same bullet. Do not imply execution that did
    not happen.
+   Use one bullet per command/check and copy this shape for executed checks:
+   ``- `command goes here` -> pass (observed summary)`` or
+   ``- `command goes here` -> fail (exit code N; observed summary)``.
+   Do not write grouped verification prose where the command appears in one sentence and the
+   outcome appears only in another bullet or paragraph.
    A verification note with any pass/fail/success outcome claim is invalid unless the same bullet
    includes executable/check evidence: a shell command in backticks, a test or code snippet path, an
    artifact path, or a captured assertion/tool summary.
@@ -128,6 +133,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - edits stay within allowed write scope when provided,
 - touched-files list is concrete and evidence-backed,
 - verification notes are factual and command-specific,
+- every verification bullet with a pass/fail/success claim has the command/check and observed
+  outcome on the same bullet,
 - failed verification is reported promptly instead of hidden behind open-ended debugging,
 - no-op handling (if any) includes justification, evidence, and next action,
 - `implementation-report.md`, `validator-report.md`, and `stage-result.md` are consistent.

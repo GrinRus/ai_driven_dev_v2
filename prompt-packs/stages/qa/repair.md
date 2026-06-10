@@ -16,7 +16,8 @@ verdict/recommendation coherence, and truthful stage status.
 5. `contracts/documents/questions.md` and `contracts/documents/answers.md`
 6. stage input bundle for this attempt, especially provided optional context such as
    `context/selected-task.md`, `context/verification-output.md`, and
-   `context/verification-artifacts.md`
+   `context/verification-artifacts.md`, plus upstream `../tasklist/output/tasklist.md`
+   and `../plan/output/plan.md` when present
 7. current outputs:
    - `qa-report.md`
    - `stage-result.md`
@@ -62,6 +63,10 @@ Use concrete repair actions:
   such as `AC-1 through AC-4` with separate criterion bullets;
 - verdict mismatch: align verdict and release recommendation with unresolved findings and
   critical-check availability;
+- missed tasklist/plan requirement: when upstream tasklist or plan artifacts name a nontrivial
+  implementation detail, risk mitigation, or verification promise that is absent from the diff,
+  tests, or implementation evidence, do not keep `QA verdict: ready`; use `not-ready` and `hold`
+  unless the upstream artifact explicitly supersedes that requirement;
 - risk gaps: add residual risk entries with severity plus mitigation/ownership; keep
   `Known issues: none.` only as an empty known-defect marker, not as a residual risk item;
   do not pair `QA verdict: ready` with residual risk bullets. Use `ready-with-risks` and
@@ -113,6 +118,8 @@ Use concrete repair actions:
   conditions unless they expose a concrete defect,
 - intentional selected design constraints are not treated as residual risks when required
   mitigations and evidence are complete,
+- available tasklist/plan task details and risk mitigations were cross-checked before declaring
+  `ready` or `proceed`,
 - no evidence-free material claim remains,
 - every `AC-N` from acceptance context has its own same-bullet evidence reference when acceptance
   criteria are provided,

@@ -30,6 +30,8 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 
 ## Optional context inputs
 
+- `../tasklist/output/tasklist.md`
+- `../plan/output/plan.md`
 - `context/selected-task.md`
 - `context/diff-summary.md`
 - `context/verification-output.md`
@@ -86,6 +88,11 @@ Optional context documents may improve QA depth, but they must not replace imple
 - evidence entries must use stable ids in the `EV-1`, `EV-2`, ... style and/or backticked
   artifact paths so validators can trace claims mechanically.
 - `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.
+- When upstream `tasklist` or `plan` artifacts are available, `QA verdict: ready` requires
+  evidence that nontrivial task details, required mitigations, and explicit risk-verification
+  promises were satisfied or intentionally superseded. A clean review report alone is not enough
+  to proceed when QA can observe a missed planned requirement in the diff, tests, or implementation
+  evidence.
 
 ## Validation focus
 
@@ -101,6 +108,7 @@ Validators for `qa` should check:
   - material QA claims must reference concrete verification artifacts or execution outputs,
   - evidence-free pass/ready claims are rejected,
 - cross-document consistency between QA verdict, residual risk summary, validator findings, and terminal status in `stage-result.md`.
+- consistency with available tasklist/plan obligations and their verification evidence.
 
 ## Interview policy
 

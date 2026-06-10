@@ -63,6 +63,8 @@ containing only `ready-with-conditions`.
    item/subsection must include explicit `Severity` and `Rationale` text.
    For bullet issues, use this shape on the same top-level bullet:
    `- I1: Severity: medium. Rationale: because ...`.
+   For subsection issues, put these exact metadata bullets immediately under each heading:
+   `- Severity: medium` and `- Rationale: because ...`.
    If no material issue exists, write a no-defect item with `Severity: none` and
    `Rationale: because ...`; do not write bare prose such as `No material issues identified.`,
    and do not invent advisory issues just to satisfy format.
@@ -101,7 +103,7 @@ containing only `ready-with-conditions`.
 ## Completion checklist
 
 - issue list is concrete, severity-tagged, and rationale-backed in either bullet or `### I<N>`
-  subsection form,
+  subsection form; every subsection issue has immediate `Severity:` and `Rationale:` bullets,
 - recommendations are prioritized Markdown list items and mapped to identified issues,
 - readiness state, required changes, and sign-off decision are coherent,
 - unresolved blocking ambiguity is captured as explicit questions,

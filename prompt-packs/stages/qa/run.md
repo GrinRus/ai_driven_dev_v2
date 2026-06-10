@@ -22,6 +22,8 @@ The stage is complete only when verdict, recommendation, and evidence are cohere
   - `../review/output/stage-result.md`
   - `../review/output/validator-report.md`
 - optional context when available:
+  - `../tasklist/output/tasklist.md`
+  - `../plan/output/plan.md`
   - `context/selected-task.md`
   - `context/diff-summary.md`
   - `context/verification-output.md`
@@ -72,6 +74,12 @@ normalize if canonical validation proves the terminal status inconsistent.
    evidence shows lockfile, dependency manifest, generated resolver output, or project config
    changes outside the selected task scope, set `QA verdict: not-ready` and release recommendation
    `hold`.
+9. When upstream tasklist or plan artifacts are available, cross-check nontrivial task details,
+   required mitigations, and explicit risk-verification promises against the diff, tests, and
+   implementation evidence. Do not declare `QA verdict: ready` solely because review approved:
+   if a planned behavior is missing, such as an exception cause/context preservation promise that
+   has no code or test evidence, set `QA verdict: not-ready` and release recommendation `hold`
+   unless upstream artifacts explicitly supersede that requirement.
 
 ## Execution instructions
 
@@ -108,12 +116,12 @@ normalize if canonical validation proves the terminal status inconsistent.
    remains, use `ready-with-risks` and `proceed-with-conditions`; if the note is an
    intentional selected-boundary tradeoff already covered by evidence, keep it out of
    `Known issues` and summarize it under `Readiness` instead.
-9. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
-10. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
+10. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
+11. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
    instead of inventing assumptions.
-11. Keep optional broader-check limitations as non-blocking notes when authored verification,
+12. Keep optional broader-check limitations as non-blocking notes when authored verification,
    review, and acceptance criteria are clean.
-12. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
+13. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
 
 ## Common output skeleton discipline
 
@@ -140,4 +148,6 @@ normalize if canonical validation proves the terminal status inconsistent.
   conditions unless they expose a concrete defect,
 - intentional selected design constraints are not treated as residual risks when their required
   mitigations and evidence are complete,
+- available tasklist/plan task details and risk mitigations were cross-checked before declaring
+  `ready` or `proceed`,
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.

@@ -125,6 +125,27 @@ def test_review_prompt_respects_authored_verification_boundary() -> None:
     assert "do not write an `accepted-risk`" in run_prompt
 
 
+def test_review_and_qa_prompts_cross_check_tasklist_and_plan_obligations() -> None:
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_repair_prompt = Path("prompt-packs/stages/review/repair.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    qa_repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "audit the\n   implementation against task-level details" in review_prompt
+    assert "planned risk mitigations" in review_prompt
+    assert "missing a promised exception cause/context preservation check" in review_prompt
+    assert "missed tasklist/plan requirement" in review_repair_prompt
+    assert "cross-check nontrivial task details" in qa_prompt
+    assert "exception cause/context preservation promise" in qa_prompt
+    assert "missed tasklist/plan requirement" in qa_repair_prompt
+
+
 def test_qa_prompt_respects_selected_design_constraints() -> None:
     run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
@@ -211,8 +232,14 @@ def test_review_spec_prompt_requires_issue_severity_and_rationale_shape() -> Non
     run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
         encoding="utf-8"
     )
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "`- I1: Severity: medium. Rationale: because ...`" in run_prompt
+    assert "`- Severity: medium`" in run_prompt
+    assert "metadata bullets immediately under each heading" in run_prompt
+    assert "every subsection issue has immediate `Severity:`" in repair_prompt
     assert "`Severity: none`" in run_prompt
     assert "`Rationale: because ...`" in run_prompt
     assert "do not write bare prose such as `No material issues identified.`" in run_prompt
@@ -234,6 +261,9 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "outcome claim without executable/check evidence" in repair_prompt
     assert "captured assertion result" in repair_prompt
     assert "`not-run: <reason>` explicitly" in repair_prompt
+    assert "Use one bullet per command/check" in run_prompt
+    assert "``- `command goes here` -> pass (observed summary)``" in run_prompt
+    assert "one bullet per command/check" in repair_prompt
     assert "short intent on the same line" in run_prompt
     assert "copy this exact shape for every file" in run_prompt
     assert "``- `path/to/file.ext` - changed <short intent>``" in run_prompt

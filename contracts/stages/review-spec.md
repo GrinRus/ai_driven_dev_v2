@@ -61,6 +61,8 @@ Validators for `review-spec` should check:
   - issue severity and rationale are explicit and non-generic,
   - issue list may use top-level bullets or `###` issue subsections, but each item/subsection
     must carry severity and rationale,
+  - `### I<N>` issue subsections should put `Severity:` and `Rationale:` as immediate metadata
+    bullets under the heading so repair attempts cannot hide them in surrounding prose,
   - an approved review with no material issues must use a no-defect issue item/subsection with
     `Severity: none` and explicit rationale instead of bare prose such as
     `No material issues identified.`,

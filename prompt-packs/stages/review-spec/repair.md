@@ -53,6 +53,8 @@ Use concrete repair actions:
   issue item/subsection must include explicit `Severity` and `Rationale` text; if no material issue
   exists, use a `Severity: none` no-defect item with explicit rationale instead of inventing
   artificial advisory issues; do not use bare prose such as `No material issues identified.`;
+  for every `### I<N>` subsection, put `- Severity: ...` and `- Rationale: because ...` as
+  immediate metadata bullets under that heading before any description or recommendation text;
 - weak recommendation actionability: rewrite recommendation summary with prioritized, concrete
   Markdown list items tied to issues;
 - sign-off inconsistency: align readiness state, decision, and required changes so go/no-go status
@@ -91,7 +93,8 @@ Use concrete repair actions:
 
 - every blocking finding is resolved or explicitly retained as active blocker,
 - issue list accepts either bullet or `### I<N>` subsection issue blocks and every issue/no-defect
-  block includes severity and rationale; bare no-issue prose is not allowed,
+  block includes severity and rationale; every subsection issue has immediate `Severity:` and
+  `Rationale:` bullets; bare no-issue prose is not allowed,
 - recommendation summary uses prioritized Markdown list items that are concrete and traceable,
 - readiness state, required changes, and sign-off decision are coherent,
 - `approved-with-conditions` is paired with `ready-with-conditions`,
