@@ -184,6 +184,11 @@ QA_VERDICT_PATTERN = re.compile(
     r"\b(ready-with-risks|not-ready|ready)\b",
     flags=re.IGNORECASE,
 )
+QA_VERDICT_LABEL_PATTERN = re.compile(
+    r"^\s*[-*]?\s*(?:\*\*)?(?:QA verdict|Quality verdict)\s*:?(?:\*\*)?\s*:?\s*`?"
+    r"(ready-with-risks|not-ready|ready)`?\b",
+    flags=re.IGNORECASE | re.MULTILINE,
+)
 QA_RELEASE_RECOMMENDATION_PATTERN = re.compile(
     r"\b(proceed-with-conditions|hold|proceed)\b",
     flags=re.IGNORECASE,
@@ -458,7 +463,11 @@ def has_explicit_severity(finding_or_issue_block: str) -> bool:
     return INLINE_FINDING_SEVERITY_PATTERN.search(first_line) is not None
 
 
-def extract_qa_verdict(text: str) -> str | None:
+def extract_qa_verdict(text: str, *, prefer_labeled: bool = False) -> str | None:
+    if prefer_labeled:
+        labeled_match = QA_VERDICT_LABEL_PATTERN.search(text)
+        if labeled_match is not None:
+            return labeled_match.group(1).lower()
     match = QA_VERDICT_PATTERN.search(text)
     if match is None:
         return None

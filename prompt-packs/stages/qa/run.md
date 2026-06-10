@@ -104,6 +104,10 @@ normalize if canonical validation proves the terminal status inconsistent.
 8. In `Known issues`, use `- Known issues: none.` only as an empty known-defect marker.
    Put residual risks in separate bullets such as
    `- Residual risk RR-1: Severity: low. ... Mitigation/ownership: ...`.
+   Do not pair `QA verdict: ready` with residual risk bullets. If a real residual risk
+   remains, use `ready-with-risks` and `proceed-with-conditions`; if the note is an
+   intentional selected-boundary tradeoff already covered by evidence, keep it out of
+   `Known issues` and summarize it under `Readiness` instead.
 9. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
 10. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
    instead of inventing assumptions.
@@ -125,6 +129,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 - quality verdict is explicit and evidence-backed,
 - residual risks include severity plus mitigation/ownership,
+- `QA verdict: ready` has no residual risk bullets; remaining real risks use
+  `ready-with-risks` and `proceed-with-conditions`,
 - release recommendation is actionable and consistent with verdict,
 - material claims reference concrete verification evidence,
 - each `AC-N` from acceptance context has its own evidence-backed checklist bullet when acceptance

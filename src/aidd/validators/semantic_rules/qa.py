@@ -45,6 +45,11 @@ def _validate_quality_verdict(
     context: SemanticDocumentContext,
     verdict: SemanticSection,
 ) -> tuple[str | None, tuple[ValidationFinding, ...]]:
+    document_text = "\n".join(context.markdown_lines)
+    qa_verdict = extract_qa_verdict(document_text, prefer_labeled=True)
+    if qa_verdict is not None:
+        return qa_verdict, tuple()
+
     qa_verdict = extract_qa_verdict(verdict.content)
     if qa_verdict is not None:
         return qa_verdict, tuple()
@@ -101,6 +106,20 @@ def _validate_residual_risks(
 ) -> tuple[ValidationFinding, ...]:
     findings: list[ValidationFinding] = []
     has_residual_risk_entries = bool(risk_entry_items)
+    if qa_verdict == "ready" and has_residual_risk_entries:
+        findings.append(
+            context.finding(
+                code=UNSUPPORTED_VERDICT_CODE,
+                message=(
+                    "Verdict `ready` cannot include residual risk entries; use "
+                    "`ready-with-risks` or `proceed-with-conditions` for true "
+                    "residual risk, or move satisfied selected-boundary notes out "
+                    "of `Known issues`."
+                ),
+                severity="high",
+                location=risks.location,
+            )
+        )
     if qa_verdict == "ready-with-risks" and not has_residual_risk_entries:
         findings.append(
             context.finding(

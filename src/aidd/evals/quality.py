@@ -10,6 +10,7 @@ from aidd.core.markdown import (
     MarkdownSectionIndex,
     extract_inline_code_tokens,
 )
+from aidd.core.run_store import RUN_ATTEMPT_PREFIX, work_item_runs_root
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.evals.repository_changes import RepositoryChanges, collect_repository_changes
 from aidd.harness.runner import HarnessQualityResult
@@ -395,7 +396,53 @@ def _count_weak_doc_examples(
     return weak_count
 
 
+def _run_attempt_number(path: Path) -> int | None:
+    if not path.name.startswith(RUN_ATTEMPT_PREFIX):
+        return None
+    suffix = path.name.removeprefix(RUN_ATTEMPT_PREFIX)
+    if not suffix.isdigit():
+        return None
+    return int(suffix)
+
+
+def _count_run_store_repair_attempts(*, workspace_root: Path, work_item: str) -> int | None:
+    runs_root = work_item_runs_root(workspace_root=workspace_root, work_item=work_item)
+    if not runs_root.exists():
+        return None
+
+    found_attempt_dirs = False
+    count = 0
+    for run_root in sorted(child for child in runs_root.iterdir() if child.is_dir()):
+        stages_root = run_root / "stages"
+        if not stages_root.exists():
+            continue
+        for stage in _FULL_FLOW_PRIMARY_OUTPUTS:
+            attempts_root = stages_root / stage / "attempts"
+            if not attempts_root.exists():
+                continue
+            attempt_numbers = {
+                attempt_number
+                for child in attempts_root.iterdir()
+                if child.is_dir()
+                and (attempt_number := _run_attempt_number(child)) is not None
+            }
+            if not attempt_numbers:
+                continue
+            found_attempt_dirs = True
+            count += max(len(attempt_numbers) - 1, 0)
+    if not found_attempt_dirs:
+        return None
+    return count
+
+
 def _count_repair_attempt_signals(*, workspace_root: Path, work_item: str) -> int:
+    run_store_count = _count_run_store_repair_attempts(
+        workspace_root=workspace_root,
+        work_item=work_item,
+    )
+    if run_store_count is not None:
+        return run_store_count
+
     count = 0
     for stage in _FULL_FLOW_PRIMARY_OUTPUTS:
         output_root = workspace_stage_output_root(
@@ -404,7 +451,14 @@ def _count_repair_attempt_signals(*, workspace_root: Path, work_item: str) -> in
             stage=stage,
         )
         stage_result_text = _read_text_if_exists(output_root / "stage-result.md") or ""
-        count += len(re.findall(r"\brepair\b|attempt-000[2-9]", stage_result_text, re.I))
+        count += len(
+            re.findall(
+                r"\brepair-needed\b|\brepair\b[^\n]*\battempt-000[2-9]\b|"
+                r"\battempt-000[2-9]\b[^\n]*\brepair\b",
+                stage_result_text,
+                re.I,
+            )
+        )
     return count
 
 

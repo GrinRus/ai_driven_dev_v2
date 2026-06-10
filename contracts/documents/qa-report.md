@@ -24,6 +24,9 @@ Summarize verification evidence, remaining risks, and release readiness.
   bullet per `AC-N`, each naming exactly one criterion id and citing same-bullet evidence,
 - `Known issues` may include an empty marker such as `- Known issues: none.`;
   residual risk entries are separate items and must include severity plus mitigation or ownership,
+- `QA verdict: ready` must not include residual risk entries; use `ready-with-risks`
+  and `proceed-with-conditions` for real remaining risks, or move satisfied
+  selected-boundary tradeoff notes out of residual-risk bullets,
 - upstream references are present when the stage requires them.
 
 ## Notes

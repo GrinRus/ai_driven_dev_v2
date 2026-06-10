@@ -67,6 +67,10 @@ Optional context documents may improve QA depth, but they must not replace imple
 - `Known issues` may use an explicit empty marker such as `- Known issues: none.`;
   validators must not treat that marker as a residual risk entry. Any separate residual
   risk item must include explicit severity plus mitigation or ownership.
+- `QA verdict: ready` must not include residual risk entries. If a real residual risk
+  remains, use `ready-with-risks` plus `proceed-with-conditions`; if the note is an
+  intentional selected-boundary tradeoff already covered by evidence, keep it out of
+  `Known issues`/residual-risk bullets.
 - Optional exploratory checks outside the selected task's authored verification boundary
   must not force `ready-with-risks` or `proceed-with-conditions` unless they reveal a
   concrete defect, contradict acceptance criteria, or are required by review findings.
@@ -92,6 +96,7 @@ Validators for `qa` should check:
 - unsupported verdicts:
   - quality verdict and release recommendation must follow from cited evidence and risk profile,
   - verdicts that contradict material unresolved findings or missing checks are rejected,
+  - `ready` with residual risk entries is rejected as internally inconsistent,
 - missing evidence references:
   - material QA claims must reference concrete verification artifacts or execution outputs,
   - evidence-free pass/ready claims are rejected,

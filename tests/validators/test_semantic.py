@@ -3213,10 +3213,10 @@ def test_validate_semantic_outputs_accepts_flat_known_issue_metadata(
     assert findings == ()
 
 
-def test_validate_semantic_outputs_ignores_known_issues_none_marker(
+def test_validate_semantic_outputs_flags_ready_with_residual_risk_entry(
     tmp_path: Path,
 ) -> None:
-    work_item = "WI-SEM-QA-KNOWN-ISSUES-NONE-MARKER"
+    work_item = "WI-SEM-QA-READY-WITH-RESIDUAL-RISK"
     _write_qa_report(
         tmp_path,
         work_item,
@@ -3253,7 +3253,25 @@ def test_validate_semantic_outputs_ignores_known_issues_none_marker(
         workspace_root=tmp_path,
     )
 
-    assert findings == ()
+    assert findings == (
+        ValidationFinding(
+            code=UNSUPPORTED_VERDICT_CODE,
+            message=(
+                "Verdict `ready` cannot include residual risk entries; use "
+                "`ready-with-risks` or `proceed-with-conditions` for true "
+                "residual risk, or move satisfied selected-boundary notes out "
+                "of `Known issues`."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-READY-WITH-RESIDUAL-RISK/stages/qa/"
+                    "qa-report.md"
+                ),
+                line_number=16,
+            ),
+        ),
+    )
 
 
 def test_validate_semantic_outputs_flags_known_issue_block_missing_severity(

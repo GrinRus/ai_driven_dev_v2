@@ -64,6 +64,9 @@ Use concrete repair actions:
   critical-check availability;
 - risk gaps: add residual risk entries with severity plus mitigation/ownership; keep
   `Known issues: none.` only as an empty known-defect marker, not as a residual risk item;
+  do not pair `QA verdict: ready` with residual risk bullets. Use `ready-with-risks` and
+  `proceed-with-conditions` for real remaining risks, or move satisfied selected-boundary
+  tradeoff notes out of `Known issues`;
 - optional-check overreach: if authored verification, acceptance criteria, and review are clean,
   do not turn a non-required broader check into `ready-with-risks` or
   `proceed-with-conditions` unless it reveals a concrete defect;
@@ -102,6 +105,8 @@ Use concrete repair actions:
 - quality verdict is evidence-backed and explicitly stated,
 - release recommendation is actionable and coherent with verdict/risk profile,
 - residual risks include severity plus mitigation/ownership where needed,
+- `QA verdict: ready` has no residual risk bullets; remaining real risks use
+  `ready-with-risks` and `proceed-with-conditions`,
 - empty known-issue markers such as `Known issues: none.` are not the only risk evidence when
   the report also declares residual risk,
 - optional checks outside the authored verification boundary are not treated as release
