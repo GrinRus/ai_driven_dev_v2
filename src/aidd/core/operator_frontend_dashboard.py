@@ -6,6 +6,9 @@ from pathlib import Path
 
 from aidd.core.operator_frontend_artifacts import (
     _artifact_size,
+    operator_artifact_category,
+    operator_artifact_is_canonical,
+    operator_artifact_safe_key,
     resolve_operator_artifact_document_content,
 )
 from aidd.core.operator_frontend_common import validate_operator_stage
@@ -17,9 +20,11 @@ from aidd.core.operator_frontend_models import (
     OperatorChildWorkItemCandidate,
     OperatorDashboardView,
     OperatorEvidenceRef,
+    OperatorFirstFailure,
     OperatorNextAction,
     OperatorNextFlowRecommendation,
     OperatorPrimaryArtifact,
+    OperatorRecoveryAction,
     OperatorRepairCounts,
     OperatorRunArchive,
     OperatorRunLineage,
@@ -48,6 +53,7 @@ from aidd.core.run_lookup import latest_attempt_number
 from aidd.core.run_store import (
     RUN_ATTEMPT_INPUT_BUNDLE_FILENAME,
     RUN_EVENTS_JSONL_FILENAME,
+    RUN_RUNTIME_EXIT_METADATA_FILENAME,
     load_stage_metadata,
     run_attempt_root,
 )
@@ -629,6 +635,224 @@ def _structured_report_blockers(
     return tuple(blockers)
 
 
+def _runtime_exit_signal(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> OperatorFirstFailure | None:
+    attempt_number = latest_attempt_number(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if attempt_number is None:
+        return None
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    path = attempt_root / RUN_RUNTIME_EXIT_METADATA_FILENAME
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return OperatorFirstFailure(
+            kind="runtime-exit-metadata-invalid",
+            title="Runtime exit metadata invalid",
+            detail="runtime-exit.json is not valid JSON.",
+            stage=stage,
+            path=workspace_relative_path(workspace_root, path),
+            time_utc=None,
+        )
+    if not isinstance(payload, dict):
+        return None
+    exit_code = payload.get("exit_code")
+    classification = str(payload.get("exit_classification") or "").strip().lower()
+    adapter_outcome = str(payload.get("adapter_outcome") or "").strip().lower()
+    decisive = classification not in {"", "success"} or adapter_outcome in {
+        "timeout",
+        "provider_error",
+        "failed",
+        "cancelled",
+    }
+    if exit_code not in {None, 0}:
+        decisive = True
+    if not decisive:
+        return None
+    title = {
+        "timeout": "Runtime timeout",
+        "provider_error": "Provider error",
+        "cancelled": "Runtime cancelled",
+    }.get(classification or adapter_outcome, "Runtime failure")
+    detail_parts = [
+        f"exit_code={exit_code}" if exit_code is not None else "",
+        f"classification={classification}" if classification else "",
+        f"adapter_outcome={adapter_outcome}" if adapter_outcome else "",
+    ]
+    return OperatorFirstFailure(
+        kind=classification or adapter_outcome or "runtime-failure",
+        title=title,
+        detail=", ".join(part for part in detail_parts if part) or "Runtime exit failed.",
+        stage=stage,
+        path=workspace_relative_path(workspace_root, path),
+        time_utc=str(payload.get("completed_at_utc") or payload.get("updated_at_utc") or "")
+        or None,
+    )
+
+
+def _first_failure(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary | None,
+    rail_by_stage: dict[str, OperatorStageRailItem],
+) -> OperatorFirstFailure | None:
+    if metadata is None:
+        return None
+    for stage in STAGES:
+        stage_metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=metadata.run_id,
+            stage=stage,
+        )
+        rail_item = rail_by_stage.get(stage)
+        runtime_signal = _runtime_exit_signal(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=metadata.run_id,
+            stage=stage,
+        )
+        if runtime_signal is not None:
+            return runtime_signal
+        if rail_item is not None and rail_item.validator_fail_count:
+            return OperatorFirstFailure(
+                kind="validation-failed",
+                title="Validation failed",
+                detail=f"{rail_item.validator_fail_count} validator result(s) failed.",
+                stage=stage,
+                path=f"workitems/{work_item}/stages/{stage}/validator-report.md",
+                time_utc=stage_metadata.updated_at_utc if stage_metadata else None,
+            )
+        if rail_item is not None and rail_item.unresolved_blocking_count:
+            return OperatorFirstFailure(
+                kind="blocking-questions",
+                title="Blocking questions",
+                detail=f"{rail_item.unresolved_blocking_count} unresolved blocking question(s).",
+                stage=stage,
+                path=f"workitems/{work_item}/stages/{stage}/questions.md",
+                time_utc=stage_metadata.updated_at_utc if stage_metadata else None,
+            )
+        if stage_metadata is None:
+            continue
+        latest_repair = stage_metadata.repair_history[-1] if stage_metadata.repair_history else None
+        if latest_repair is not None and any(
+            marker in latest_repair.outcome.lower()
+            for marker in ("exhaust", "failed", "invalid")
+        ):
+            return OperatorFirstFailure(
+                kind="repair-exhausted",
+                title="Repair did not recover the stage",
+                detail=f"Attempt {latest_repair.attempt_number}: {latest_repair.outcome}.",
+                stage=stage,
+                path=latest_repair.repair_brief_path or latest_repair.validator_report_path,
+                time_utc=latest_repair.recorded_at_utc,
+            )
+        if stage_metadata.status == StageState.FAILED.value:
+            return OperatorFirstFailure(
+                kind="stage-failed",
+                title="Stage failed",
+                detail=f"{stage} ended as failed without a more specific validator/runtime signal.",
+                stage=stage,
+                path=None,
+                time_utc=stage_metadata.updated_at_utc,
+            )
+        if stage_metadata.status == StageState.BLOCKED.value:
+            return OperatorFirstFailure(
+                kind="stage-blocked",
+                title="Stage blocked",
+                detail=f"{stage} is blocked until operator input or remediation is supplied.",
+                stage=stage,
+                path=None,
+                time_utc=stage_metadata.updated_at_utc,
+            )
+    return None
+
+
+def _recovery_actions(
+    *,
+    next_action: OperatorNextAction,
+    first_failure: OperatorFirstFailure | None,
+    blockers: tuple[OperatorBlocker, ...],
+) -> tuple[OperatorRecoveryAction, ...]:
+    actions: list[OperatorRecoveryAction] = []
+    if next_action.action in {
+        "answer-questions",
+        "inspect-validation",
+        "resume-stage",
+        "review-findings",
+        "qa-verdict",
+        "rerun-stale-downstream",
+    }:
+        actions.append(
+            OperatorRecoveryAction(
+                action=next_action.action,
+                label=next_action.label,
+                detail=next_action.detail,
+                stage=next_action.stage,
+                enabled=next_action.enabled,
+            )
+        )
+    if first_failure is not None:
+        if first_failure.kind in {"validation-failed", "repair-exhausted"}:
+            actions.append(
+                OperatorRecoveryAction(
+                    action="request-change",
+                    label="Request change",
+                    detail="Create a durable selected-stage intervention request.",
+                    stage=first_failure.stage,
+                    enabled=True,
+                )
+            )
+        if first_failure.kind in {
+            "runtime-exit-metadata-invalid",
+            "timeout",
+            "provider_error",
+            "runtime-failure",
+            "stage-failed",
+            "cancelled",
+        }:
+            actions.append(
+                OperatorRecoveryAction(
+                    action="inspect-runtime-log",
+                    label="Inspect runtime log",
+                    detail="Open runtime log and runtime-exit metadata before retrying.",
+                    stage=first_failure.stage,
+                    enabled=True,
+                )
+            )
+    for blocker in blockers:
+        if blocker.kind == "missing-input":
+            actions.append(
+                OperatorRecoveryAction(
+                    action="inspect-blocker",
+                    label="Inspect missing input",
+                    detail=blocker.detail,
+                    stage=blocker.stage,
+                    enabled=True,
+                )
+            )
+            break
+    return tuple(actions[:4])
+
+
 def _next_action(
     *,
     metadata: RunMetadataSummary | None,
@@ -1104,6 +1328,17 @@ def _recent_artifacts(
                         path=path,
                         byte_size=byte_size,
                         updated_at_utc=stage_summary.updated_at_utc,
+                        category=operator_artifact_category(
+                            key=key,
+                            kind=kind,
+                            path=path,
+                        ),
+                        canonical=operator_artifact_is_canonical(
+                            key=key,
+                            kind=kind,
+                            path=path,
+                        ),
+                        safe_key=operator_artifact_safe_key(key),
                     )
                 )
         for request in list_operator_intervention_requests(
@@ -1126,6 +1361,13 @@ def _recent_artifacts(
                     path=relative_path,
                     byte_size=byte_size,
                     updated_at_utc=request.created_at_utc,
+                    category=operator_artifact_category(
+                        key="operator_request",
+                        kind="operator-request",
+                        path=relative_path,
+                    ),
+                    canonical=False,
+                    safe_key=operator_artifact_safe_key("operator_request"),
                 )
             )
     return tuple(
@@ -1196,6 +1438,17 @@ def _terminal_final_artifacts(
                     path=path,
                     byte_size=byte_size,
                     updated_at_utc=updated_at_utc,
+                    category=operator_artifact_category(
+                        key=key,
+                        kind=kind,
+                        path=path,
+                    ),
+                    canonical=operator_artifact_is_canonical(
+                        key=key,
+                        kind=kind,
+                        path=path,
+                    ),
+                    safe_key=operator_artifact_safe_key(key),
                 )
             )
     return tuple(sorted(refs, key=lambda ref: (ref.kind, ref.key, ref.path)))
@@ -1478,6 +1731,39 @@ def resolve_operator_dashboard_view(
         rail_by_stage=rail_by_stage,
     )
     blockers = (*blockers, *report_blockers)
+    first_failure = _first_failure(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        metadata=metadata,
+        rail_by_stage=rail_by_stage,
+    )
+    if first_failure is not None and first_failure.kind in {
+        "runtime-exit-metadata-invalid",
+        "timeout",
+        "provider_error",
+        "runtime-failure",
+        "stage-failed",
+        "cancelled",
+    }:
+        blockers = (
+            *blockers,
+            OperatorBlocker(
+                kind=first_failure.kind,
+                title=first_failure.title,
+                detail=first_failure.detail,
+                severity="error",
+                stage=first_failure.stage,
+                path=first_failure.path,
+            ),
+        )
+    next_action = _next_action(
+        metadata=metadata,
+        active_stage=active_stage,
+        active_stage_view=active_stage_view,
+        rail_by_stage=rail_by_stage,
+        report_blockers=report_blockers,
+        stages_with_operator_requests=stages_with_operator_requests,
+    )
     return OperatorDashboardView(
         work_item=work_item,
         workspace_root=workspace_root,
@@ -1491,15 +1777,14 @@ def resolve_operator_dashboard_view(
         stages=stages,
         active_stage_view=active_stage_view,
         primary_artifact=primary_artifact,
-        next_action=_next_action(
-            metadata=metadata,
-            active_stage=active_stage,
-            active_stage_view=active_stage_view,
-            rail_by_stage=rail_by_stage,
-            report_blockers=report_blockers,
-            stages_with_operator_requests=stages_with_operator_requests,
-        ),
+        next_action=next_action,
         blockers=blockers,
+        first_failure=first_failure,
+        recovery_actions=_recovery_actions(
+            next_action=next_action,
+            first_failure=first_failure,
+            blockers=blockers,
+        ),
         evidence_refs=_evidence_refs(
             workspace_root=workspace_root,
             work_item=work_item,

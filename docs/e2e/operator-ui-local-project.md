@@ -223,8 +223,15 @@ assets.
 ### Dashboard Shell
 
 - First launch shows the loading state before `/api/dashboard` resolves.
+- Project Home loads from `/api/project-home` and shows selected project root, `.aidd`
+  root, discovered work items, latest run, stage progress, blockers, terminal state, and
+  project-set roots before the operator enters stage internals.
+- Work Item Board cards can resume a work item through the standard setup/resume path
+  without creating duplicate workspace state.
 - No-run state explains the first action and exposes runtime-gated `Run workflow` and
   `Run selected stage` actions after a runtime is selected.
+- The primary run-global Next Action strip appears above the selected-stage workbench and
+  shows runnable copy when a runtime is already selected and ready.
 - Work item, run chip, runtime readiness, stage rail, stage cockpit, right sidebar,
   Activity / Events, and Recent artifacts are visible after refresh.
 - The active stage is marked in the rail and remains visible after selecting another
@@ -232,25 +239,42 @@ assets.
 
 ### Cockpit Tabs
 
-- Overview, Questions, Validation, Artifacts, Logs, Approvals, and Request change tabs
-  switch content without losing the selected stage.
+- Overview, Questions, Validation, Artifacts, Recovery, Logs, Approvals, and Request
+  change tabs switch content without losing the selected stage.
+- Implement Review, Review Findings, and QA Verdict tabs appear only when the selected
+  stage or available run evidence makes them relevant.
 - Tab semantics expose the selected tab and the cockpit panel remains keyboard-focusable.
-- Quick links route to Logs, Artifacts, Validation, and Questions consistently.
+- Quick links route to Project Home, Logs, Artifacts, Validation, and Questions
+  consistently.
 
 ### Logs
 
 - A running workflow, stage run, or intervention shows live stdout/stderr/system chunks.
 - Cancelled or completed jobs keep their live log chunks visible.
 - Saved `runtime.log` loads after completion and shows a truncation notice when bounded.
+- Summary, Timeline, and Raw Runtime Log views remain switchable for live and saved logs.
 - Raw mode and stdout/stderr/system filters do not hide the truncation notice.
 
 ### Artifacts
 
 - Artifact list renders document and log artifacts for the selected stage.
+- Stage Document Workbench groups artifacts by canonical stage documents, runtime inputs,
+  validation evidence, runtime evidence, project evidence, and lineage evidence.
+- The Artifacts tab opens with the Stage Document Workbench first; the evidence graph and
+  artifact table stay in a secondary drill-down below it.
 - Markdown preview and Source mode load through `/api/artifacts/document`.
+- Preview, Source, and Diff modes remain available from known artifact keys only.
 - Large artifacts show byte-range truncation states and keep Open folder available for
   full-file inspection.
 - Evidence Refs and Recent Artifacts navigate into the artifact inspection view.
+
+### Diagnostics / Recovery
+
+- The right rail shows Recovery Assistant counts for questions, failures, and suggestions.
+- First failure summarizes runtime exit/provider/timeout, validation, blocking questions,
+  repair exhaustion, or stopped-stage evidence before raw log inspection.
+- Recovery cards route to Questions, Validation, Request change, Logs, Review Findings,
+  or QA Verdict while preserving runtime and stage eligibility gates.
 
 ### Questions
 
@@ -341,6 +365,8 @@ assets.
   launch preflight cards readable after wrapping.
 - Mobile width turns the stage rail into horizontal navigation, auto-scrolls the active
   stage into view on load and stage switch, and preserves readable tab/action buttons.
+- Mobile and tablet widths keep order as Next Action, selected-stage/document workbench,
+  diagnostics/recovery, logs/evidence, and secondary history surfaces.
 - Mobile completed-flow view keeps Flow Complete actions, wizard controls, lineage
   nodes, and artifact rows reachable without horizontal page scrolling.
 - Keyboard focus is visible on runtime select, stage cards, cockpit tabs, action buttons,

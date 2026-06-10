@@ -165,6 +165,13 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
   const filterButtons = ["all", "stdout", "stderr", "system"].map((filter) => (
     `<button data-log-filter="${filter}" class="${state.logFilter === filter ? "active" : ""}" type="button" aria-label="Show ${filter} source filter">${filter}</button>`
   )).join("");
+  const viewButtons = [
+    ["summary", "Summary"],
+    ["timeline", "Timeline"],
+    ["raw", "Raw Runtime Log"]
+  ].map(([mode, label]) => (
+    `<button data-log-view="${mode}" class="${state.logViewMode === mode ? "active" : ""}" type="button">${label}</button>`
+  )).join("");
   const rows = state.rawLogMode
     ? `<pre>${escapeHtml(rawBody)}</pre>`
     : filtered.length
@@ -176,6 +183,45 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
           </div>
         `).join("")}</div>`
       : `<div class="empty-state" style="padding:18px 12px">${escapeHtml(emptyText)}</div>`;
+  const counts = logEntryCounts(entries);
+  const summary = `
+    <section class="surface log-summary-panel">
+      <div class="metric-grid compact">
+        <div class="metric"><span>Total</span><strong>${escapeHtml(counts.total)}</strong></div>
+        <div class="metric"><span>STDOUT</span><strong>${escapeHtml(counts.stdout)}</strong></div>
+        <div class="metric"><span>STDERR</span><strong>${escapeHtml(counts.stderr)}</strong></div>
+        <div class="metric"><span>System</span><strong>${escapeHtml(counts.system)}</strong></div>
+      </div>
+      ${renderLogBoundedNotice(truncation)}
+      <div class="compact-list">
+        ${filtered.slice(-5).reverse().map((entry) => `<span>${escapeHtml(entry.stream)} / ${escapeHtml(entry.text)}</span>`).join("") || `<span>${escapeHtml(emptyText)}</span>`}
+      </div>
+    </section>
+  `;
+  const rawRuntimeLog = `
+    <section class="log-panel">
+      <div class="log-toolbar">
+        <div>
+          <strong>${escapeHtml(title)}</strong>
+          ${pathLine(meta.filter(Boolean).join(" / "), 72)}
+        </div>
+        <div class="log-actions">
+          ${actions}
+          <div class="log-filter">
+            ${filterButtons}
+            <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button">Raw</button>
+          </div>
+        </div>
+      </div>
+      ${renderLogBoundedNotice(truncation)}
+      ${rows}
+    </section>
+  `;
+  const modeBody = state.logViewMode === "timeline"
+    ? renderLogAuditLog(filtered, sourceLabel, truncation)
+    : state.logViewMode === "raw"
+      ? rawRuntimeLog
+      : summary;
   return `
     <section class="log-console-screen">
       <div class="surface-title">
@@ -183,24 +229,8 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
         <span class="small-badge">${escapeHtml(sourceLabel)}</span>
       </div>
       ${renderLogSourceStrip(entries, truncation)}
-      <section class="log-panel">
-        <div class="log-toolbar">
-          <div>
-            <strong>${escapeHtml(title)}</strong>
-            ${pathLine(meta.filter(Boolean).join(" / "), 72)}
-          </div>
-          <div class="log-actions">
-            ${actions}
-            <div class="log-filter">
-              ${filterButtons}
-              <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button">Raw</button>
-            </div>
-          </div>
-        </div>
-        ${renderLogBoundedNotice(truncation)}
-        ${rows}
-      </section>
-      ${renderLogAuditLog(filtered, sourceLabel, truncation)}
+      <div class="filter-row log-view-tabs">${viewButtons}</div>
+      ${modeBody}
     </section>
   `;
 }
@@ -314,6 +344,7 @@ async function pollActiveJob() {
       if (state.activeJobTimer) clearInterval(state.activeJobTimer);
       state.activeJobTimer = null;
       await fetchDashboard();
+      await fetchProjectHome(state.dashboard?.work_item || "");
       await renderAll();
     }
   } catch (error) {

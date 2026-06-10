@@ -6,7 +6,11 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
+No local task is promoted right now.
+
 ## Soon
+
+No near-term local task is queued right now.
 
 ## Parking lot
 
@@ -393,3 +397,10 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   passed in `/tmp/aidd-w30-release-readiness-smoke-20260604T121108Z`, and release
   readiness notes now keep `0.1.0a9.dev0` as development source. `W30-E3-S1-T1` remains
   parked until explicit release-prep approval.
+- `2026-06-09` Wave 31 opened for the integrated operator workbench redesign:
+  `W31-E1-S1-T1` is promoted to `Next`; `W31-E1-S1-T2`, `W31-E2-S1-T1`, and
+  `W31-E3-S1-T1` are in `Soon`; the broader project/work-item, document workbench,
+  diagnostics, recovery, contextual navigation, and browser evidence rollout remains
+  parked until the UX contract lands.
+- `2026-06-09` Wave 31 completed and was removed from the active queue. The only parked
+  item remains `W30-E3-S1-T1`, which still requires explicit release-prep approval.

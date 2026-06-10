@@ -237,6 +237,10 @@ function renderValidation() {
 
 async function renderCockpit() {
   const content = document.getElementById("cockpitContent");
+  if (state.activeTab === "project-home") {
+    content.innerHTML = renderProjectHome();
+    return;
+  }
   if (state.activeTab === "overview") {
     content.innerHTML = renderOverview();
     void loadRunAccountabilityCard();
@@ -245,6 +249,7 @@ async function renderCockpit() {
   if (state.activeTab === "validation") content.innerHTML = renderValidation();
   if (state.activeTab === "timeline") await renderTimeline();
   if (state.activeTab === "artifacts") await renderArtifacts();
+  if (state.activeTab === "recovery") content.innerHTML = renderRecoveryScreen();
   if (state.activeTab === "implement-review") await renderImplementReview();
   if (state.activeTab === "review-findings") await renderReviewFindings();
   if (state.activeTab === "qa-verdict") await renderQaVerdict();
@@ -255,6 +260,135 @@ async function renderCockpit() {
     content.innerHTML = renderRunHistory();
     void loadRunComparisonPanel();
   }
+}
+
+function renderProjectHomeWorkItemCard(item) {
+  const selected = item.work_item === state.dashboard?.work_item;
+  const run = item.latest_run || {};
+  const rootChips = renderProjectSetRootChips(item);
+  const blockerBadge = item.blocker_count
+    ? `<span class="small-badge warn">${escapeHtml(item.blocker_count)} blocker${item.blocker_count === 1 ? "" : "s"}</span>`
+    : `<span class="small-badge good">clear</span>`;
+  return `
+    <article class="project-work-item-card ${selected ? "selected" : ""}">
+      <div class="surface-title compact">
+        <span>${escapeHtml(item.work_item)}</span>
+        <span class="small-badge ${workItemStatusClass(item)}">${escapeHtml(item.terminal_state)}</span>
+      </div>
+      <p>${escapeHtml(item.has_request_context ? "Request context ready" : "Request context missing")}</p>
+      <div class="metric-grid compact">
+        <div class="metric"><span>Stage</span><strong>${escapeHtml(item.active_stage)}</strong></div>
+        <div class="metric"><span>Progress</span><strong>${escapeHtml(item.stage_progress_label)}</strong></div>
+        <div class="metric"><span>Run</span><strong>${escapeHtml(run.run_id || "none")}</strong></div>
+        <div class="metric"><span>Runtime</span><strong>${escapeHtml(run.runtime_id || "not selected")}</strong></div>
+      </div>
+      <div class="badge-row">${rootChips}${blockerBadge}</div>
+      <div class="wizard-actions">
+        <button data-project-home-resume="${escapeHtml(item.work_item)}" type="button">${selected ? "Open workbench" : "Resume"}</button>
+        ${run.run_id ? `<button data-project-home-open-run="${escapeHtml(item.work_item)}" class="secondary" type="button">Open latest run</button>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderProjectHome() {
+  const home = state.projectHome;
+  if (!home) return `<div class="empty-state loading-state">Loading Project Home...</div>`;
+  const items = projectHomeWorkItems();
+  const selected = currentWorkItemSummary();
+  const blocked = items.filter((item) => item.blocker_count);
+  const running = items.filter((item) => item.terminal_state === "running");
+  const complete = items.filter((item) => item.terminal_state === "completed");
+  return `
+    <section class="project-home-screen">
+      <div class="surface project-home-hero">
+        <div>
+          <p class="eyebrow">Project Home</p>
+          <h2>Work item console</h2>
+          <p class="muted">Project, work item, run, stage progress, blockers, and project-set roots are rebuilt from the selected local <code>.aidd</code> workspace.</p>
+        </div>
+        <div class="panel-list compact">
+          <div class="panel-item"><strong>Project root</strong>${pathLine(home.project_root, 82)}</div>
+          <div class="panel-item"><strong>.aidd root</strong>${pathLine(home.workspace_root, 82)}</div>
+          <div class="panel-item"><strong>Selected</strong><span>${escapeHtml(selected?.work_item || "none")}</span></div>
+        </div>
+      </div>
+      <div class="project-home-grid">
+        <section class="surface">
+          <div class="surface-title">
+            <span>Work Item Board</span>
+            <span class="small-badge">${escapeHtml(items.length)} total</span>
+          </div>
+          <div class="metric-grid compact">
+            <div class="metric"><span>Running</span><strong>${escapeHtml(running.length)}</strong></div>
+            <div class="metric"><span>Blocked</span><strong>${escapeHtml(blocked.length)}</strong></div>
+            <div class="metric"><span>Done</span><strong>${escapeHtml(complete.length)}</strong></div>
+            <div class="metric"><span>Workspace</span><strong>${home.workspace_exists ? "exists" : "new"}</strong></div>
+          </div>
+          <div class="project-work-item-grid">
+            ${items.length ? items.map(renderProjectHomeWorkItemCard).join("") : `<div class="empty-state">No work items in this project yet.</div>`}
+          </div>
+        </section>
+        <aside class="surface">
+          <div class="surface-title">
+            <span>Resume context</span>
+            <span class="small-badge">${escapeHtml(selected?.terminal_state || "none")}</span>
+          </div>
+          ${selected ? `
+            <div class="panel-list">
+              <div class="panel-item"><strong>Work item</strong><span>${escapeHtml(selected.work_item)}</span></div>
+              <div class="panel-item"><strong>Latest run</strong><span>${escapeHtml(selected.latest_run?.run_id || "none")}</span></div>
+              <div class="panel-item"><strong>Next stage</strong><span>${escapeHtml(selected.active_stage)}</span></div>
+              <div class="panel-item"><strong>Blockers</strong><span>${escapeHtml(selected.blocker_count)}</span></div>
+            </div>
+            <div class="surface-title compact">Project-set roots</div>
+            <div class="compact-list">
+              ${(selected.project_set_roots || []).map((root) => `<span title="${escapeHtml(root.root)}">${escapeHtml(root.root_id)} / ${escapeHtml(root.relative_root)}${root.role ? ` / ${escapeHtml(root.role)}` : ""}</span>`).join("") || "<span>Single project root</span>"}
+            </div>
+          ` : `<div class="empty-state">Select a work item to inspect resume context.</div>`}
+        </aside>
+      </div>
+    </section>
+  `;
+}
+
+function renderRecoveryScreen() {
+  const firstFailure = state.dashboard?.first_failure || null;
+  const actions = state.dashboard?.recovery_actions || [];
+  return `
+    <section class="recovery-assistant-screen">
+      <div class="surface">
+        <div class="surface-title">
+          <span>Recovery Assistant</span>
+          <span class="small-badge">${escapeHtml(actions.length)} suggestions</span>
+        </div>
+        ${firstFailure ? `
+          <article class="recovery-card failure">
+            <div class="question-head">
+              <strong>${escapeHtml(firstFailure.title)}</strong>
+              <span class="small-badge bad">${escapeHtml(firstFailure.kind)}</span>
+            </div>
+            <p>${escapeHtml(firstFailure.detail)}</p>
+            ${firstFailure.path ? pathLine(firstFailure.path, 88) : ""}
+          </article>
+        ` : `<div class="empty-state">No decisive failure signal detected.</div>`}
+        <div class="project-work-item-grid">
+          ${actions.length ? actions.map((action) => `
+            <article class="project-work-item-card">
+              <div class="surface-title compact">
+                <span>${escapeHtml(action.label)}</span>
+                <span class="small-badge">${escapeHtml(action.action)}</span>
+              </div>
+              <p>${escapeHtml(action.detail)}</p>
+              <div class="wizard-actions">
+                <button data-recovery-action="${escapeHtml(action.action)}" data-recovery-stage="${escapeHtml(action.stage || state.activeStage)}" type="button" ${action.enabled ? "" : "disabled"}>Open</button>
+              </div>
+            </article>
+          `).join("") : `<div class="empty-state">No guided recovery actions for this state.</div>`}
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderBlockersPanel() {
@@ -286,6 +420,44 @@ function renderEvidencePanel() {
   document.getElementById("evidencePanel").innerHTML = `
     <div class="panel-title">Evidence refs <span class="small-badge">${escapeHtml(refs.length)}</span></div>
     <div class="panel-list">${body}</div>
+  `;
+}
+
+function renderRecoveryAssistantPanel() {
+  const host = document.getElementById("recoveryAssistantPanel");
+  if (!host) return;
+  const firstFailure = state.dashboard?.first_failure || null;
+  const actions = state.dashboard?.recovery_actions || [];
+  const questionCount = (state.dashboard?.stages || []).reduce((total, item) => total + Number(item.unresolved_blocking_count || 0), 0);
+  const failureCount = firstFailure ? 1 : 0;
+  const actionRows = actions.length ? actions.map((action) => `
+    <button class="artifact-row" data-recovery-action="${escapeHtml(action.action)}" data-recovery-stage="${escapeHtml(action.stage || state.activeStage)}" type="button" ${action.enabled ? "" : "disabled"}>
+      <span>
+        <strong>${escapeHtml(action.label)}</strong>
+        <span>${escapeHtml(action.detail)}</span>
+      </span>
+      <span class="small-badge">${escapeHtml(action.action)}</span>
+    </button>
+  `).join("") : `<div class="empty-state compact">No recovery action needed for the current state.</div>`;
+  const failure = firstFailure ? `
+    <article class="recovery-card failure">
+      <div class="question-head">
+        <strong>${escapeHtml(firstFailure.title)}</strong>
+        <span class="small-badge bad">${escapeHtml(firstFailure.kind)}</span>
+      </div>
+      <p>${escapeHtml(firstFailure.detail)}</p>
+      ${firstFailure.path ? pathLine(firstFailure.path, 72) : ""}
+    </article>
+  ` : `<div class="empty-state compact">No decisive failure signal detected.</div>`;
+  host.innerHTML = `
+    <div class="panel-title">Recovery Assistant</div>
+    <div class="filter-row compact">
+      <span class="small-badge ${questionCount ? "warn" : ""}">Questions ${escapeHtml(questionCount)}</span>
+      <span class="small-badge ${failureCount ? "bad" : ""}">Failures ${escapeHtml(failureCount)}</span>
+      <span class="small-badge">Suggestions ${escapeHtml(actions.length)}</span>
+    </div>
+    ${failure}
+    <div class="panel-list">${actionRows}</div>
   `;
 }
 
@@ -345,6 +517,7 @@ function renderSidebar() {
   if (typeof renderActiveRunPanel === "function") renderActiveRunPanel();
   renderNextActionPanel();
   renderBlockersPanel();
+  renderRecoveryAssistantPanel();
   renderEvidencePanel();
   renderRuntimeRootPanel();
   renderSafetyPanel();
@@ -423,8 +596,11 @@ async function renderAll() {
   document.getElementById("openWorkspaceButton").disabled = false;
   renderRuntimeSelector();
   renderTopbar();
+  renderProjectHomeRail();
   renderStageRail();
   renderStageHeader();
+  renderGlobalNextActionStrip();
+  updateContextualTabs();
   renderSidebar();
   renderBottomDock();
   activateTab(state.activeTab);

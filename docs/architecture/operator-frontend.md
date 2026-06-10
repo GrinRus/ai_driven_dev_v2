@@ -251,14 +251,29 @@ Current W20 implementation status:
   `OperatorDashboardView` containing project/work-item/run summary, canonical
   stage rail, selected-stage cockpit data, next action, blockers, evidence refs,
   recent activity, and recent artifacts derived from existing `.aidd/` state;
+- `GET /api/project-home` returns the integrated Project Home read model for the selected
+  local project root, `.aidd` root, discovered work items, latest run summaries, stage
+  progress, blockers, terminal state, and project-set roots;
+- `GET /api/work-item/resume?work_item=<id>` returns read-only resume context for a
+  selected work item before the UI switches the active command-center context;
 - dashboard `next_action` is run-global, not only selected-stage-local: unresolved
   blocking questions are surfaced before runnable-stage suggestions, failed
   validation points to validation inspection, and only existing artifact files are
   shown in Recent Artifacts;
-- the static UI is organized as an operator console: top status bar, canonical
-  stage rail, selected-stage cockpit with Overview/Questions/Validation/Artifacts/Logs
-  tabs, right-side Next Action/Blockers/Evidence/Runtime Root/Safety panels, and a
-  bottom Activity/Events plus Recent Artifacts dock;
+- the static UI is organized as an integrated workbench matching
+  `13-integrated-operator-workbench.png`: Project Home and Work Item Board sit before the
+  active-run workbench; a primary run-global Next Action strip sits above the selected
+  stage work area; the central Document Workbench groups known artifacts by category;
+  the Artifacts tab opens the Stage Document Workbench first and keeps the evidence
+  graph/table behind a secondary drill-down; the right rail shows Recovery Assistant,
+  blockers, evidence, runtime root, and safety; the bottom dock keeps Activity / Events
+  and Recent Artifacts available;
+- artifact read models classify documents and logs as canonical stage documents, runtime
+  inputs, validation evidence, runtime evidence, project evidence, or lineage evidence,
+  while preserving the existing artifact-index and workspace-relative path safety model;
+- dashboard `first_failure` and `recovery_actions` summarize the first decisive runtime,
+  validation, question, repair, or stopped-stage signal without replacing validators,
+  repair policy, or stage progression rules;
 - Recent Activity includes run/stage metadata and `events.jsonl` entries across
   all attempted stages plus `operator.request.created` entries for durable
   intervention requests; the static UI overlays process-local live job chunks into
@@ -376,6 +391,7 @@ The locked screen inventory is:
 The visual references for this direction are stored in
 `docs/architecture/assets/operator-ui-mission-control/`:
 
+- `13-integrated-operator-workbench.png`
 - `01-project-setup-previous-run.png`
 - `02-active-run-command-center.png`
 - `02b-flow-complete-start-next-flow.png`
@@ -389,6 +405,15 @@ The visual references for this direction are stored in
 - `10-start-next-flow-source-findings.png`
 - `11-define-follow-up-work-item.png`
 - `12-confirm-launch-next-flow.png`
+
+`13-integrated-operator-workbench.png` is the current integrated reference for future
+UI implementation. It combines the project/work-item layer, active-run command center,
+Markdown document workbench, run timeline diagnostics, and question/repair recovery
+assistant into one operator workbench direction. Future UI changes should preserve the
+same hierarchy: project and work item context first, one run-global next action with
+primary weight, documents and artifacts as the central work surface, timeline/log
+diagnostics as drill-down evidence, and guided recovery cards for questions, validation
+failures, repairs, and interventions.
 
 When the current run is active, the command center prioritizes blocked questions,
 validation failures, approvals, resumable stages, and log visibility. When the run reaches

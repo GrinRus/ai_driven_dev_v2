@@ -153,6 +153,12 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".artifact-row" in components
     assert ".stage-document-workbench" in components
     assert ".workbench-side-row" in components
+    assert ".project-home-rail" in components
+    assert ".project-work-item-card" in components
+    assert ".project-set-row" in components
+    assert ".global-next-action-strip" in components
+    assert ".recovery-card" in components
+    assert ".evidence-drilldown" in components
     assert ".interview-loop-screen" in components
     assert ".validation-repair-center" in components
     assert ".repair-action-band" in components
@@ -183,6 +189,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
     assert ".workbench-main" in responsive
+    assert ".global-next-action-strip" in responsive
+    assert ".project-home-grid" in responsive
     assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
     assert ".lineage-flow" in responsive
@@ -279,6 +287,8 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "sourceFindings: null",
             "followUpDraft: null",
             "selectedSourceIds: []",
+            "projectHome: null",
+            'logViewMode: "summary"',
             "const VALID_TABS",
             "function initializeStateFromLocation()",
             "new URLSearchParams(window.location.search)",
@@ -287,7 +297,9 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "function syncLocationState()",
             "window.history.replaceState(null, \"\", next);",
             "function sourceFindingsUrl()",
+            "function projectHomeUrl(workItem = \"\")",
             "/api/next-flow/source-findings",
+            "/api/project-home",
             "readinessLoading: true",
             'readinessError: ""',
             "function escapeHtml(value)",
@@ -296,6 +308,7 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'title="${escapeHtml(text)}"',
             "${escapeHtml(compactPath(text, maxLength))}",
             "async function fetchDashboard()",
+            "async function fetchProjectHome(workItem = \"\")",
             "dashboardUrl()",
             "/api/dashboard",
             'state.activeRunId = state.dashboard.run?.run_id || "";',
@@ -316,13 +329,23 @@ def test_operator_onboarding_static_contract_syncs_create_action_state() -> None
         onboarding,
         (
             "function onboardingCanCreate()",
+            "function renderProjectSetEditor()",
+            "function updateProjectSetRow(index, field, value)",
+            "function addProjectSetRow()",
+            "function removeProjectSetRow(index)",
             "function syncOnboardingCreateActionState()",
+            "async function resumeProjectHomeWorkItem(workItem, options = {})",
+            'state.activeRunId = item?.latest_run?.run_id || "";',
+            'state.selectedEvidenceNodeId = "";',
+            'state.selectedEvidenceEdgeId = "";',
             'document.getElementById("onboardingCreateForm")',
             'form.querySelector(\'button[type="submit"]\')',
             "button.disabled = !(onboardingCanCreate() && !state.onboarding.creating);",
             'id="onboardingWorkItem"',
             'id="onboardingRequest"',
             'id="onboardingCreateForm"',
+            'data-project-set-field="id"',
+            "Duplicate root",
         ),
     )
     _assert_contains_all(
@@ -332,10 +355,11 @@ def test_operator_onboarding_static_contract_syncs_create_action_state() -> None
             "state.onboarding.workItemInput = event.target.value;",
             'event.target.id === "onboardingRequest"',
             "state.onboarding.requestText = event.target.value;",
+            "const projectSetField = event.target.dataset?.projectSetField;",
             "syncOnboardingCreateActionState();",
         ),
     )
-    assert main.count("syncOnboardingCreateActionState();") == 2
+    assert main.count("syncOnboardingCreateActionState();") == 3
 
 
 def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_contracts() -> None:
@@ -349,6 +373,12 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "Checking runtimes...",
             "if (state.readinessLoading) return null;",
             "function selectedRuntimeReady()",
+            "function renderProjectHomeRail()",
+            "function currentWorkItemSummary()",
+            "function updateContextualTabs()",
+            'visible.add("implement-review")',
+            'visible.add("review-findings")',
+            'visible.add("qa-verdict")',
             "function timeoutSummary(runtime)",
             "function readinessDetail(label, value, maxLength = 72)",
             "function ensureRunnableRuntime()",
@@ -421,13 +451,20 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "function renderRequirementList(requirements)",
             "function renderValidationResults(results)",
             "function renderMissingEvidence(requirements)",
-            "Artifact tree",
+            "Artifact categories",
+            "Canonical stage documents",
+            "Runtime inputs",
+            "Validation evidence",
+            "Runtime evidence",
+            "Project evidence",
+            "Lineage evidence",
             "Contract requirements",
             "Validation results",
             "Missing evidence",
             "References",
             "Version history",
             "function evidenceEdgeId(edge)",
+            "function preferredEvidenceArtifactKey(view)",
             "function selectedEvidenceSelection(view)",
             "function renderEvidenceGraphBrowser(view, selection)",
             "function renderEvidenceGraphCanvas(view, selection)",
@@ -446,6 +483,7 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "data-evidence-edge",
             "data-download-artifact",
             "data-copy-artifact-path",
+            'ref.available === false ? "missing" : "available"',
             "/api/artifacts/evidence-graph?${params.toString()}",
             "/api/artifacts/document?${params.toString()}",
             "/api/stage/workbench?${params.toString()}",
@@ -456,6 +494,18 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "async function inspectArtifactReference({stage, key, path, kind})",
             "data-artifact-key",
         ),
+    )
+    assert (
+        "const preferredKey = state.activeArtifactKey || preferredEvidenceArtifactKey(view);"
+        in artifacts
+    )
+    assert (
+        'const selectedArtifactKey = selection.node?.kind === "document"'
+        in artifacts
+    )
+    assert "await loadArtifactDocument(selectedArtifactKey);" in artifacts
+    assert artifacts.index("${renderEvidenceWorkbenchShell(selection)}") < artifacts.index(
+        '<details class="surface evidence-drilldown">'
     )
 
 
@@ -665,6 +715,9 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
                 "actions = \"\", truncation = null})"
             ),
             "Runtime Logs / Live Console",
+            "Summary",
+            "Timeline",
+            "Raw Runtime Log",
             "Correlated Events / Audit Log",
             "bounded-log-notice",
             'renderTruncationNotice("log", view)',
@@ -672,6 +725,7 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "Saved runtime.log (pending)",
             "Runtime log is not available yet.",
             "data-log-filter",
+            "data-log-view",
             "data-log-raw",
             "state.rawLogMode",
             'state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered)',
@@ -812,7 +866,12 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "data-first-launch-stage",
             "Run selected stage",
             "function renderNextActionPanel()",
+            "function renderGlobalNextActionStrip()",
             "Resume workflow",
+            "Runtime selected and ready to start the governed workflow.",
+            "Runtime selected. Resolve readiness before starting the governed workflow.",
+            "Runtime selected. Start the workflow from the current work item.",
+            "Runtime selected. Resolve readiness before starting the workflow.",
             "Continue with ${stageTitle(action.stage || state.activeStage)}",
             "Checking runtime readiness.",
             "Selected runtime is not ready.",

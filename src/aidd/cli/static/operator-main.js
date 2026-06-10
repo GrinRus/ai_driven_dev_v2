@@ -11,6 +11,7 @@ async function refresh() {
     document.body.classList.remove("setup-active");
     document.getElementById("openWorkspaceButton").disabled = false;
     await fetchDashboard();
+    await fetchProjectHome(state.dashboard?.work_item || "");
     await renderAll();
     void fetchReadiness().then(renderAll).catch((error) => {
       toast(error.message);
@@ -49,6 +50,15 @@ document.addEventListener("click", async (event) => {
       await validateOnboardingProjectSet();
       return;
     }
+    if (event.target.closest("[data-project-set-add]")) {
+      addProjectSetRow();
+      return;
+    }
+    const projectSetRemove = event.target.closest("[data-project-set-remove]")?.dataset.projectSetRemove;
+    if (projectSetRemove !== undefined) {
+      removeProjectSetRow(Number(projectSetRemove));
+      return;
+    }
     const onboardingResume = event.target.closest("[data-onboarding-resume]")?.dataset.onboardingResume;
     if (onboardingResume) {
       await completeOnboardingWorkItem("resume", onboardingResume);
@@ -58,8 +68,20 @@ document.addEventListener("click", async (event) => {
     if (stageButton) {
       state.activeStage = stageButton.dataset.stage;
       state.activeArtifactKey = "";
+      if (state.activeTab === "project-home") state.activeTab = "overview";
       await fetchDashboard();
+      await fetchProjectHome(state.dashboard?.work_item || "");
       await renderAll();
+      return;
+    }
+    const projectHomeResume = event.target.closest("[data-project-home-resume]")?.dataset.projectHomeResume;
+    if (projectHomeResume) {
+      await resumeProjectHomeWorkItem(projectHomeResume);
+      return;
+    }
+    const projectHomeRun = event.target.closest("[data-project-home-open-run]")?.dataset.projectHomeOpenRun;
+    if (projectHomeRun) {
+      await resumeProjectHomeWorkItem(projectHomeRun, {openLatestRun: true});
       return;
     }
     const tab = event.target.closest("[data-tab]")?.dataset.tab;
@@ -289,6 +311,26 @@ document.addEventListener("click", async (event) => {
       await renderAll();
       return;
     }
+    const recoveryAction = event.target.closest("[data-recovery-action]");
+    if (recoveryAction) {
+      state.activeStage = recoveryAction.dataset.recoveryStage || state.activeStage;
+      const action = recoveryAction.dataset.recoveryAction;
+      state.activeArtifactKey = "";
+      if (action === "answer-questions") state.activeTab = "questions";
+      else if (action === "inspect-validation" || action === "inspect-blocker") state.activeTab = "validation";
+      else if (action === "request-change") state.activeTab = "request";
+      else if (action === "inspect-runtime-log") state.activeTab = "logs";
+      else if (action === "review-findings") state.activeTab = "review-findings";
+      else if (action === "qa-verdict") state.activeTab = "qa-verdict";
+      else if (action === "resume-stage") {
+        await startStage(state.activeStage);
+        return;
+      }
+      await fetchDashboard();
+      await fetchProjectHome(state.dashboard?.work_item || "");
+      await renderAll();
+      return;
+    }
     const saveAnswerButton = event.target.closest("[data-save-answer]");
     if (saveAnswerButton) {
       await saveAnswer(saveAnswerButton.dataset.saveAnswer);
@@ -317,7 +359,7 @@ document.addEventListener("click", async (event) => {
       await stopServer();
       return;
     }
-    if (event.target.id === "nextActionButton") {
+    if (event.target.id === "nextActionButton" || event.target.id === "globalNextActionButton") {
       await handleNextAction();
       return;
     }
@@ -341,6 +383,12 @@ document.addEventListener("click", async (event) => {
     const logFilter = event.target.closest("[data-log-filter]")?.dataset.logFilter;
     if (logFilter) {
       state.logFilter = logFilter;
+      await renderLogs();
+      return;
+    }
+    const logView = event.target.closest("[data-log-view]")?.dataset.logView;
+    if (logView) {
+      state.logViewMode = logView;
       await renderLogs();
       return;
     }
@@ -400,6 +448,13 @@ document.addEventListener("change", async (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  const projectSetField = event.target.dataset?.projectSetField;
+  const projectSetIndex = event.target.dataset?.projectSetIndex;
+  if (projectSetField && projectSetIndex !== undefined) {
+    updateProjectSetRow(Number(projectSetIndex), projectSetField, event.target.value);
+    syncOnboardingCreateActionState();
+    return;
+  }
   if (event.target.id === "onboardingProjectRoot") {
     state.onboarding.projectRootInput = event.target.value;
   }
@@ -410,11 +465,6 @@ document.addEventListener("input", (event) => {
   if (event.target.id === "onboardingRequest") {
     state.onboarding.requestText = event.target.value;
     syncOnboardingCreateActionState();
-  }
-  if (event.target.id === "onboardingProjectSet") {
-    state.onboarding.projectSetText = event.target.value;
-    state.onboarding.projectSetResult = null;
-    state.onboarding.projectSetError = "";
   }
   if (event.target.id === "operatorRequestText") {
     updateInterventionPreview();

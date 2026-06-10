@@ -68,6 +68,38 @@ _SYSTEM_DOCUMENT_KEYS = {
 }
 
 
+def operator_artifact_category(*, key: str, kind: str, path: str) -> str:
+    normalized_key = key.replace("-", "_").lower()
+    normalized_path = path.replace("\\", "/").lower()
+    if kind == "log" or normalized_key in {"runtime_log", "events_jsonl"}:
+        return "runtime-evidence"
+    if (
+        normalized_key
+        in {"input_bundle", "stage_brief", "repair_context", "operator_request"}
+        or "/operator-requests/" in normalized_path
+    ):
+        return "runtime-input"
+    if normalized_key in {"validator_report", "repair_brief"}:
+        return "validation-evidence"
+    if "project-set.md" in normalized_path or normalized_key == "project_set_context":
+        return "project-evidence"
+    if "/remediations/" in normalized_path or "lineage" in normalized_key:
+        return "lineage-evidence"
+    return "canonical-stage-document"
+
+
+def operator_artifact_safe_key(key: str) -> str:
+    return key.strip().replace("/", "_").replace("\\", "_")
+
+
+def operator_artifact_is_canonical(*, key: str, kind: str, path: str) -> bool:
+    return (
+        kind == "document"
+        and operator_artifact_category(key=key, kind=kind, path=path)
+        == "canonical-stage-document"
+    )
+
+
 def resolve_operator_artifacts_view(
     *,
     workspace_root: Path,
@@ -854,6 +886,7 @@ def _artifact_table_from_index(
     refs: list[OperatorArtifactRef] = []
     for kind, entries in (("document", documents), ("log", logs)):
         for key, relative_path in sorted(entries.items()):
+            available = (workspace_root / relative_path).is_file()
             refs.append(
                 OperatorArtifactRef(
                     stage=stage,
@@ -865,6 +898,18 @@ def _artifact_table_from_index(
                         relative_path=relative_path,
                     ),
                     updated_at_utc=updated_at_utc,
+                    category=operator_artifact_category(
+                        key=key,
+                        kind=kind,
+                        path=relative_path,
+                    ),
+                    canonical=operator_artifact_is_canonical(
+                        key=key,
+                        kind=kind,
+                        path=relative_path,
+                    ),
+                    available=available,
+                    safe_key=operator_artifact_safe_key(key),
                 )
             )
     return tuple(refs)
@@ -935,6 +980,17 @@ def _append_fallback_artifact_ref(
             path=relative_path,
             byte_size=path.stat().st_size,
             updated_at_utc=None,
+            category=operator_artifact_category(
+                key=_artifact_key_from_filename(path),
+                kind=kind,
+                path=relative_path,
+            ),
+            canonical=operator_artifact_is_canonical(
+                key=_artifact_key_from_filename(path),
+                kind=kind,
+                path=relative_path,
+            ),
+            safe_key=operator_artifact_safe_key(_artifact_key_from_filename(path)),
         )
     )
 
@@ -1245,11 +1301,23 @@ def _document_references(
     artifact_logs: dict[str, str],
 ) -> tuple[OperatorStageDocumentReference, ...]:
     refs: list[OperatorStageDocumentReference] = [
-        OperatorStageDocumentReference(label=key, kind="document", path=path, stage=stage)
+        OperatorStageDocumentReference(
+            label=key,
+            kind="document",
+            path=path,
+            stage=stage,
+            category=operator_artifact_category(key=key, kind="document", path=path),
+        )
         for key, path in sorted(artifact_documents.items())
     ]
     refs.extend(
-        OperatorStageDocumentReference(label=key, kind="log", path=path, stage=stage)
+        OperatorStageDocumentReference(
+            label=key,
+            kind="log",
+            path=path,
+            stage=stage,
+            category=operator_artifact_category(key=key, kind="log", path=path),
+        )
         for key, path in sorted(artifact_logs.items())
     )
     try:
@@ -1267,6 +1335,11 @@ def _document_references(
             kind="repair",
             path=path,
             stage=stage,
+            category=operator_artifact_category(
+                key=Path(path).stem,
+                kind="repair",
+                path=path,
+            ),
         )
         for path in result.repair_output_paths
     )

@@ -84,25 +84,38 @@ function workbenchStatusClass(status) {
 
 function renderWorkbenchTree(workbench) {
   const references = workbench.references || [];
-  const documents = references.filter((ref) => ref.kind === "document");
-  const secondary = references.filter((ref) => ref.kind !== "document");
-  const docs = documents.map((ref) => `
-    <button class="artifact-doc ${ref.label === workbench.selected_key ? "active" : ""}" data-artifact-key="${escapeHtml(ref.label)}" type="button">
-      ${escapeHtml(ref.label)}
-      <small title="${escapeHtml(ref.path)}">${escapeHtml(compactPath(ref.path, 64))}</small>
-    </button>
-  `).join("") || `<div class="empty-state">No document artifacts.</div>`;
-  const refs = secondary.map((ref) => `
-    <button class="artifact-doc" data-open-artifact="${escapeHtml(ref.path)}" type="button">
-      ${escapeHtml(ref.label)}
-      <small>${escapeHtml(ref.kind)} / ${escapeHtml(compactPath(ref.path, 58))}</small>
-    </button>
-  `).join("") || `<div class="empty-state">No logs or repair refs.</div>`;
+  const categories = [
+    ["canonical-stage-document", "Canonical stage documents"],
+    ["runtime-input", "Runtime inputs"],
+    ["validation-evidence", "Validation evidence"],
+    ["runtime-evidence", "Runtime evidence"],
+    ["project-evidence", "Project evidence"],
+    ["lineage-evidence", "Lineage evidence"]
+  ];
+  const grouped = categories.map(([category, label]) => {
+    const refs = references.filter((ref) => (ref.category || "canonical-stage-document") === category);
+    if (!refs.length) return "";
+    return `
+      <div class="surface-title compact">${escapeHtml(label)} <span class="small-badge">${escapeHtml(refs.length)}</span></div>
+      <div class="artifact-list">
+        ${refs.map((ref) => {
+          const document = ref.kind === "document";
+          const actionAttr = document
+            ? `data-artifact-key="${escapeHtml(ref.label)}"`
+            : `data-open-artifact="${escapeHtml(ref.path)}"`;
+          return `
+            <button class="artifact-doc ${ref.label === workbench.selected_key ? "active" : ""}" ${actionAttr} type="button">
+              ${escapeHtml(ref.label)}
+              <small title="${escapeHtml(ref.path)}">${escapeHtml(ref.kind)} / ${escapeHtml(compactPath(ref.path, 58))}</small>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }).filter(Boolean).join("");
   return `
-    <div class="surface-title">Artifact tree</div>
-    <div class="artifact-list">${docs}</div>
-    <div class="surface-title compact">Logs / repair refs</div>
-    <div class="artifact-list">${refs}</div>
+    <div class="surface-title">Artifact categories</div>
+    ${grouped || `<div class="empty-state">No artifacts indexed for this stage.</div>`}
   `;
 }
 
@@ -341,6 +354,14 @@ function evidenceNodeArtifactKey(node) {
   return "";
 }
 
+function preferredEvidenceArtifactKey(view) {
+  const documents = {};
+  for (const ref of view.artifact_table || []) {
+    if (ref.kind === "document" && ref.key) documents[ref.key] = ref.path || "";
+  }
+  return preferredArtifactKey(documents);
+}
+
 function evidenceStatusClass(status) {
   return workbenchStatusClass(status) || statusClass(status || "unknown");
 }
@@ -364,8 +385,8 @@ function selectedEvidenceSelection(view) {
   const nodes = view.nodes || [];
   const selectedEdge = edges.find((edge) => evidenceEdgeId(edge) === state.selectedEvidenceEdgeId) || null;
   if (selectedEdge) return {edge: selectedEdge, node: null};
-  const preferredNodeId = state.selectedEvidenceNodeId
-    || (state.activeArtifactKey ? `document:${state.activeArtifactKey}` : "");
+  const preferredKey = state.activeArtifactKey || preferredEvidenceArtifactKey(view);
+  const preferredNodeId = state.selectedEvidenceNodeId || (preferredKey ? `document:${preferredKey}` : "");
   const selectedNode = nodes.find((node) => node.node_id === preferredNodeId)
     || nodes.find((node) => node.kind === "document" && node.path)
     || nodes.find((node) => node.path)
@@ -547,7 +568,9 @@ function renderEvidenceArtifactTable(view, selection) {
       <tr class="${selected ? "selected" : ""}">
         <td><button class="link-button" data-evidence-node="${escapeHtml(`${ref.kind}:${ref.key}`)}" type="button">${escapeHtml(ref.key)}</button></td>
         <td>${escapeHtml(ref.kind)}</td>
+        <td>${escapeHtml(ref.category || "canonical-stage-document")}</td>
         <td>${escapeHtml(ref.stage)}</td>
+        <td>${ref.canonical ? "canonical" : ref.generated === false ? "source" : "generated"} / ${ref.latest === false ? "stale" : "latest"} / ${ref.available === false ? "missing" : "available"}</td>
         <td>${escapeHtml(ref.byte_size ?? "unknown")}</td>
         <td>${escapeHtml(ref.updated_at_utc || "unknown")}</td>
         <td>${pathLine(ref.path, 58)}</td>
@@ -560,7 +583,7 @@ function renderEvidenceArtifactTable(view, selection) {
         </td>
       </tr>
     `;
-  }).join("") || `<tr><td colspan="7">No artifact table rows available.</td></tr>`;
+  }).join("") || `<tr><td colspan="9">No artifact table rows available.</td></tr>`;
   return `
     <section class="surface evidence-artifact-table">
       <div class="surface-title">
@@ -569,7 +592,7 @@ function renderEvidenceArtifactTable(view, selection) {
       </div>
       <div class="table-wrap evidence-table-wrap">
         <table class="activity-table evidence-table">
-          <thead><tr><th>Name</th><th>Type</th><th>Stage</th><th>Size</th><th>Updated</th><th>Path</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th>Type</th><th>Category</th><th>Stage</th><th>Flags</th><th>Size</th><th>Updated</th><th>Path</th><th>Actions</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -624,15 +647,21 @@ function renderEvidenceWorkbenchUnavailable(view) {
 function renderEvidenceGraphScreen(view, selection) {
   return `
     <div class="evidence-screen-stack">
-      <section class="evidence-graph-screen">
-        ${renderEvidenceGraphBrowser(view, selection)}
-        <div class="evidence-graph-main">
-          ${renderEvidenceGraphCanvas(view, selection)}
-          ${renderEvidenceArtifactTable(view, selection)}
-        </div>
-        ${renderArtifactInspector(view, selection)}
-      </section>
       ${renderEvidenceWorkbenchShell(selection)}
+      <details class="surface evidence-drilldown">
+        <summary>
+          <span>Evidence graph and artifact table</span>
+          <span class="small-badge">${escapeHtml(view.mode)}</span>
+        </summary>
+        <section class="evidence-graph-screen">
+          ${renderEvidenceGraphBrowser(view, selection)}
+          <div class="evidence-graph-main">
+            ${renderEvidenceGraphCanvas(view, selection)}
+            ${renderEvidenceArtifactTable(view, selection)}
+          </div>
+          ${renderArtifactInspector(view, selection)}
+        </section>
+      </details>
     </div>
   `;
 }
@@ -651,8 +680,13 @@ async function renderArtifacts() {
     const view = await api(`/api/artifacts/evidence-graph?${params.toString()}`);
     const selection = selectedEvidenceSelection(view);
     content.innerHTML = renderEvidenceGraphScreen(view, selection);
-    if (view.mode === "graph" && state.activeArtifactKey) {
-      await loadArtifactDocument(state.activeArtifactKey);
+    const selectedArtifactKey = selection.node?.kind === "document"
+      ? evidenceNodeArtifactKey(selection.node)
+      : state.activeArtifactKey;
+    if (view.mode === "graph" && selectedArtifactKey) {
+      state.activeArtifactKey = selectedArtifactKey;
+      state.selectedEvidenceNodeId = `document:${selectedArtifactKey}`;
+      await loadArtifactDocument(selectedArtifactKey);
     } else {
       renderEvidenceWorkbenchUnavailable(view);
     }

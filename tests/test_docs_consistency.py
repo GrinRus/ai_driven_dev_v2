@@ -554,6 +554,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
         repo_root / "docs" / "architecture" / "assets" / "operator-ui-mission-control"
     )
     visual_references = (
+        "13-integrated-operator-workbench.png",
         "01-project-setup-previous-run.png",
         "02-active-run-command-center.png",
         "02b-flow-complete-start-next-flow.png",

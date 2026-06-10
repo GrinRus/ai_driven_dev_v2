@@ -13,6 +13,7 @@ from aidd.core.operator_frontend import (
     resolve_operator_artifacts_view,
     resolve_operator_dashboard_view,
     resolve_operator_evidence_graph_view,
+    resolve_operator_project_home_view,
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
     resolve_operator_run_view,
@@ -23,6 +24,7 @@ from aidd.core.operator_intervention import persist_operator_intervention_reques
 from aidd.core.repair import persist_repair_history_snapshot
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
+    RUN_RUNTIME_EXIT_METADATA_FILENAME,
     create_next_attempt_directory,
     create_run_manifest,
     persist_run_archive_decision,
@@ -45,6 +47,7 @@ from aidd.core.runtime_readiness import (
 )
 from aidd.core.stage_registry import resolve_required_input_documents
 from aidd.core.stages import STAGES
+from aidd.core.workspace import seed_work_item_metadata
 from aidd.runtime_permissions import (
     RuntimeOperatorDecisionAction,
     RuntimeOperatorDecisionSource,
@@ -119,6 +122,47 @@ def _write_questions(workspace_root: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def test_operator_project_home_view_summarizes_work_items_runs_and_project_set(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path
+    workspace_root = project_root / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
+    _prepare_run(workspace_root)
+    project_context_path = workspace_root / "workitems" / "WI-UI" / "context" / "project-set.md"
+    project_context_path.parent.mkdir(parents=True, exist_ok=True)
+    project_context_path.write_text(
+        "\n".join(
+            (
+                "# Project set",
+                "",
+                "| Project id | Root | Role |",
+                "| --- | --- | --- |",
+                "| `api` | `services/api` | `owner` |",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    home = resolve_operator_project_home_view(
+        project_root=project_root,
+        workspace_root=workspace_root,
+        selected_work_item="WI-UI",
+        recent_project_roots=(project_root,),
+    )
+
+    assert home.project_root == project_root
+    assert home.workspace_root == workspace_root
+    assert home.selected_work_item == "WI-UI"
+    assert home.selected_work_item_resume is not None
+    assert home.selected_work_item_resume.latest_run.run_id == "run-ui"
+    assert home.selected_work_item_resume.active_stage == "plan"
+    assert home.selected_work_item_resume.stage_total_count == len(STAGES)
+    assert home.selected_work_item_resume.blocker_count >= 1
+    assert home.selected_work_item_resume.project_set_roots[0].root_id == "api"
 
 
 def _write_valid_plan_outputs(workspace_root: Path, *, body_suffix: str = "") -> Path:
@@ -375,6 +419,9 @@ def test_operator_dashboard_view_surfaces_blocked_stage_evidence_and_activity(
     assert any(ref.key == "plan" for ref in dashboard.recent_artifacts)
     assert any(ref.key == "operator_request" for ref in dashboard.recent_artifacts)
     assert any(ref.key == "runtime_log" for ref in dashboard.recent_artifacts)
+    recent_by_key = {ref.key: ref for ref in dashboard.recent_artifacts}
+    assert recent_by_key["operator_request"].category == "runtime-input"
+    assert recent_by_key["operator_request"].canonical is False
     assert all(
         (workspace_root / ref.path).exists()
         for ref in dashboard.recent_artifacts
@@ -443,7 +490,101 @@ def test_operator_dashboard_next_action_inspects_failed_validation(
     )
 
     assert dashboard.next_action.action == "inspect-validation"
+    assert dashboard.first_failure is not None
+    assert dashboard.first_failure.kind == "validation-failed"
+    assert dashboard.recovery_actions
     assert any(blocker.kind == "validation" for blocker in dashboard.blockers)
+
+
+def test_operator_dashboard_surfaces_runtime_exit_first_failure_and_blocker(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    attempt_root.joinpath(RUN_RUNTIME_EXIT_METADATA_FILENAME).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "exit_code": 0,
+                "exit_classification": "provider_error",
+                "adapter_outcome": "provider_error",
+                "completed_at_utc": "2026-06-09T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="plan",
+        run_id="run-ui",
+    )
+
+    assert dashboard.first_failure is not None
+    assert dashboard.first_failure.kind == "provider_error"
+    assert dashboard.first_failure.path is not None
+    assert any(blocker.kind == "provider_error" for blocker in dashboard.blockers)
+    assert any(action.action == "inspect-runtime-log" for action in dashboard.recovery_actions)
+
+
+def test_operator_dashboard_surfaces_cancelled_runtime_exit_as_recovery_blocker(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    attempt_root.joinpath(RUN_RUNTIME_EXIT_METADATA_FILENAME).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "exit_code": 130,
+                "exit_classification": "cancelled",
+                "adapter_outcome": "cancelled",
+                "completed_at_utc": "2026-06-09T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="plan",
+        run_id="run-ui",
+    )
+
+    assert dashboard.first_failure is not None
+    assert dashboard.first_failure.kind == "cancelled"
+    assert any(blocker.kind == "cancelled" for blocker in dashboard.blockers)
+    assert any(action.action == "inspect-runtime-log" for action in dashboard.recovery_actions)
 
 
 def test_operator_dashboard_next_action_reviews_failed_intervention_result(
@@ -1557,8 +1698,20 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
         f"approval-decision:{request.id}",
         "approval-decision",
     ) in edges
-    assert any(ref.key == "plan" for ref in graph.artifact_table)
-    assert any(ref.key == "runtime_log" for ref in graph.artifact_table)
+    refs_by_key = {ref.key: ref for ref in graph.artifact_table}
+    assert refs_by_key["plan"].category == "canonical-stage-document"
+    assert refs_by_key["plan"].canonical is True
+    assert refs_by_key["plan"].latest is True
+    assert refs_by_key["plan"].available is True
+    assert refs_by_key["plan"].safe_key == "plan"
+    assert refs_by_key["questions"].category == "canonical-stage-document"
+    assert refs_by_key["questions"].available is False
+    assert refs_by_key["validator_report"].category == "validation-evidence"
+    assert refs_by_key["validator_report"].canonical is False
+    assert refs_by_key["validator_report"].available is True
+    assert refs_by_key["runtime_log"].category == "runtime-evidence"
+    assert refs_by_key["runtime_log"].canonical is False
+    assert refs_by_key["runtime_log"].available is True
     assert all(
         node.path is None or not Path(node.path).is_absolute()
         for node in graph.nodes
@@ -1606,6 +1759,25 @@ def test_operator_stage_document_workbench_returns_present_markdown_contract_con
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
     _write_valid_plan_outputs(workspace_root)
+    run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    ).joinpath("input-bundle.md").write_text("# Input Bundle\n", encoding="utf-8")
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    artifact_index = json.loads(artifact_index_path.read_text(encoding="utf-8"))
+    artifact_index["documents"]["input_bundle"] = (
+        "reports/runs/WI-UI/run-ui/stages/plan/attempts/attempt-0001/input-bundle.md"
+    )
+    artifact_index_path.write_text(json.dumps(artifact_index), encoding="utf-8")
 
     workbench = resolve_operator_stage_document_workbench(
         workspace_root=workspace_root,
@@ -1633,6 +1805,10 @@ def test_operator_stage_document_workbench_returns_present_markdown_contract_con
         ref.kind == "document" and ref.label == "validator_report"
         for ref in workbench.references
     )
+    categories = {ref.label: ref.category for ref in workbench.references}
+    assert categories["plan"] == "canonical-stage-document"
+    assert categories["input_bundle"] == "runtime-input"
+    assert categories["validator_report"] == "validation-evidence"
     assert any(
         item.kind == "current-document" and item.key == "stage_result"
         for item in workbench.diff_inputs
