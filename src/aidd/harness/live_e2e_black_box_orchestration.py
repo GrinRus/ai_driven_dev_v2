@@ -4562,17 +4562,6 @@ def _line_mentions_criterion_id(line: str, criterion_id: str) -> bool:
     normalized = line.lower().replace("criterion", "ac").replace("criteria", "ac")
     if re.search(rf"\bac[-\s]*0*{target}\b", normalized):
         return True
-    range_pattern = re.compile(
-        r"\bac[-\s]*(\d+)\s*(?:through|thru|to|[-–—])\s*(?:ac[-\s]*)?(\d+)\b",
-        flags=re.IGNORECASE,
-    )
-    for start_text, end_text in range_pattern.findall(normalized):
-        start = int(start_text)
-        end = int(end_text)
-        lower = min(start, end)
-        upper = max(start, end)
-        if lower <= target <= upper:
-            return True
     return False
 
 

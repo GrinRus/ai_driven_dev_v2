@@ -55,6 +55,8 @@ def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     run_prompt = Path("prompt-packs/stages/idea/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/idea/repair.md").read_text(encoding="utf-8")
 
+    assert "avoid unsupported absolute claims" in run_prompt
+    assert "tie them to the selected request, constraints, and acceptance context" in run_prompt
     assert "`Open questions` as Markdown bullet items, or exactly `- none`" in run_prompt
     assert "prose-only text is invalid" in run_prompt
     assert "do not put indented or nested bullets under a question" in run_prompt
@@ -196,6 +198,15 @@ def test_review_spec_prompts_require_exact_readiness_vocabulary() -> None:
     assert "do not replace it with prose such as `conditionally ready`" in repair_prompt
 
 
+def test_review_spec_prompt_requires_issue_severity_and_rationale_shape() -> None:
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "`- I1: Severity: medium. Rationale: because ...`" in run_prompt
+    assert "`Severity: none` and `Rationale: because ...`" in run_prompt
+
+
 def test_implement_prompts_require_executable_verification_evidence() -> None:
     run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
         encoding="utf-8"
@@ -212,3 +223,5 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "outcome claim without executable/check evidence" in repair_prompt
     assert "captured assertion result" in repair_prompt
     assert "`not-run: <reason>` explicitly" in repair_prompt
+    assert "short intent on the same line" in run_prompt
+    assert "Do not write a top-level bullet that only names" in run_prompt

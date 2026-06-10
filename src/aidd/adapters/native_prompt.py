@@ -174,6 +174,11 @@ def build_native_prompt_text(
             "under an `output/` subdirectory; AIDD publishes `output/` after canonical "
             "validation passes.",
             "",
+            "If an active prompt pack mentions a `contracts/...` path that is not present "
+            "in the target repository, do not stop, ask a question, or keep probing for it. "
+            "Use the Stage brief, input bundle, active prompt pack text, and repair brief "
+            "already included in this request as the accessible contract evidence.",
+            "",
             "`repair-brief.md` is AIDD-owned read-only repair control evidence. "
             "Read it when present, but do not rewrite it.",
             "",

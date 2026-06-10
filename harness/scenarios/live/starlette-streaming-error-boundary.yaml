@@ -16,7 +16,7 @@ stage_scope:
   end: qa
 setup:
   commands:
-  - uv sync --locked
+  - uv sync --frozen
   rationale:
   - Install Starlette development dependencies from the pinned uv lockfile.
   - Keep verification focused on ASGI middleware, error, and streaming response behavior.
@@ -47,8 +47,8 @@ feature_source:
     - Regression coverage exercises the public ASGI/TestClient behavior for the selected edge case.
     - The tracked diff stays within response or middleware runtime code and focused tests.
     verification:
-    - uv run --locked pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
-    - uv run --locked ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+    - uv run --frozen pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+    - uv run --frozen ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
     - test -f .aidd/workitems/WI-LIVE-STARLETTE-STREAMING/stages/qa/output/stage-result.md
     - test -f .aidd/workitems/WI-LIVE-STARLETTE-STREAMING/stages/qa/output/validator-report.md
     quality_bar: The patch must be localized, async-safe, and regression-covered across
@@ -57,8 +57,8 @@ feature_source:
       background tasks, middleware, and client-disconnect semantics.
 verify:
   commands:
-  - uv run --locked pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
-  - uv run --locked ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+  - uv run --frozen pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+  - uv run --frozen ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
   - test -f .aidd/workitems/WI-LIVE-STARLETTE-STREAMING/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-STARLETTE-STREAMING/stages/qa/output/validator-report.md
   pass_conditions:
@@ -67,8 +67,8 @@ verify:
   - QA stage output artifacts exist for the selected work item.
 quality:
   commands:
-  - uv run --locked pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
-  - uv run --locked ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+  - uv run --frozen pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
+  - uv run --frozen ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
   rubric_profile: live-full
   require_review_status: approved
   allowed_qa_verdicts:

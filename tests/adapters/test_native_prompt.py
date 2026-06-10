@@ -63,6 +63,8 @@ def test_native_prompt_compiler_includes_attempt_bundle_and_contract(
     assert "`answers.md` bullets must reuse the same question id" in prompt
     assert "Do not invent `A1`/`A2` answer ids" in prompt
     assert "When there are no questions, write `# Questions\\n\\n- none\\n`" in prompt
+    assert "If an active prompt pack mentions a `contracts/...` path" in prompt
+    assert "already included in this request as the accessible contract evidence" in prompt
     assert "`git stash`, `git reset`, `git checkout --`, or `git restore`" in prompt
     assert "using ASCII `-> pass`, `-> fail`, or `exit code N` wording" in prompt
     assert "exact path listed in the Stage brief" in prompt

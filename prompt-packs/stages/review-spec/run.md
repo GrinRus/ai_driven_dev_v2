@@ -61,8 +61,11 @@ containing only `ready-with-conditions`.
 1. Every issue must be concrete, scoped, severity-tagged, and rationale-backed.
 2. Use either top-level bullets or `### I<N> - ...` subsections for the `Issue list`; each issue
    item/subsection must include explicit `Severity` and `Rationale` text.
+   For bullet issues, use this shape on the same top-level bullet:
+   `- I1: Severity: medium. Rationale: because ...`.
    If no material issue exists, write `No material issues identified.` or a no-defect item with
-   `Severity: none`; do not invent advisory issues just to satisfy format.
+   `Severity: none` and `Rationale: because ...`; do not invent advisory issues just to satisfy
+   format.
 3. Recommendation summary must use prioritized Markdown list items (ordered or unordered) and map
    remediation steps to identified issues where applicable.
 4. Recommendations must be prioritized and explicit enough for downstream execution.

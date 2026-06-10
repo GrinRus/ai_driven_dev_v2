@@ -315,12 +315,12 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
     assert starlette.repo.url == "https://github.com/Kludex/starlette"
     assert starlette.repo.revision == "e636c77b15d903ab3ff3968cd43aee1887dd1e48"
     assert (
-        "uv run --locked pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py "
+        "uv run --frozen pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py "
         "tests/test_responses.py"
         in starlette.verify.commands
     )
     assert (
-        "uv run --locked ruff check starlette tests/middleware/test_base.py "
+        "uv run --frozen ruff check starlette tests/middleware/test_base.py "
         "tests/middleware/test_errors.py tests/test_responses.py"
         in starlette.quality.commands
     )

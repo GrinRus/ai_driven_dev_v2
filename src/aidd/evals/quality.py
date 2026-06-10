@@ -657,6 +657,12 @@ def _score_code_quality(
                 "or lockfiles changed outside dependency scope."
             ),
         )
+    if quality_result is None:
+        return QualityDimensionScore(
+            name="code_quality",
+            score=0,
+            rationale="No quality command evidence was recorded for the live run.",
+        )
     suspiciously_small = (
         evidence.changed_file_count is not None
         and scenario.feature_size in {"medium", "large", "xlarge"}
@@ -693,12 +699,6 @@ def _score_code_quality(
             name="code_quality",
             score=1,
             rationale="Code result is usable but still carries explicit review or QA conditions.",
-        )
-    if quality_result is None:
-        return QualityDimensionScore(
-            name="code_quality",
-            score=0,
-            rationale="No quality command evidence was recorded for the live run.",
         )
     return QualityDimensionScore(
         name="code_quality",
