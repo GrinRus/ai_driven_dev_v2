@@ -193,6 +193,18 @@ def build_native_prompt_text(
             "`- Q1 [resolved] ...`. Do not put a colon after the marker; "
             "`- Q1 [resolved]: ...` is invalid. Do not invent `A1`/`A2` answer "
             "ids. Render assumptions or metadata as non-bullet continuation prose.",
+            "When there are no questions, write `# Questions\\n\\n- none\\n`. "
+            "When there are no answers, write `# Answers\\n\\n- none\\n`. "
+            "Do not write prose such as `No questions required.` as a bullet.",
+            "",
+            "Do not use `git stash`, `git reset`, `git checkout --`, or `git restore` "
+            "to run negative checks or revert files in the deliverable workspace unless "
+            "the operator explicitly requests it. If a destructive or revert-style check "
+            "is needed, use a disposable copy or record the check as not-run with a reason.",
+            "",
+            "Every verification bullet that claims an outcome must include the exact "
+            "command, artifact path, or check source and the observed outcome on the "
+            "same line, using ASCII `-> pass`, `-> fail`, or `exit code N` wording.",
             "",
             "During repair attempts, do not inspect AIDD validator implementation "
             "files, installed package files, or bundled examples. Use the provided "

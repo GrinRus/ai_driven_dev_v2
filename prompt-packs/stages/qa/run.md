@@ -23,6 +23,7 @@ The stage is complete only when verdict, recommendation, and evidence are cohere
   - `../review/output/validator-report.md`
 - optional context when available:
   - `context/selected-task.md`
+  - `context/diff-summary.md`
   - `context/verification-output.md`
   - `context/verification-artifacts.md`
   - `context/repository-state.md`
@@ -67,6 +68,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    when explicit confirmation, documentation, tests, and scope boundaries required by the selected
    task are complete. Downgrade only for missing mitigation/evidence, broadened scope, contradictory
    review/verification artifacts, or a concrete defect beyond the selected boundary.
+8. When `context/diff-summary.md`, `context/repository-state.md`, or upstream implementation/review
+   evidence shows lockfile, dependency manifest, generated resolver output, or project config
+   changes outside the selected task scope, set `QA verdict: not-ready` and release recommendation
+   `hold`.
 
 ## Execution instructions
 
@@ -75,6 +80,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 2. Verify upstream `review` outcome is not `rejected` and is consistent with implementation status.
    When `context/selected-task.md` is provided, use its expected scope, quality bar, and acceptance
    context to separate required scenario evidence from optional exploratory checks.
+   When repository change evidence is provided, inspect every changed tracked or untracked
+   deliverable file, excluding AIDD workspace/config artifacts, before deciding readiness.
 3. Build `qa-report.md` with these exact H2 sections:
    `Quality verdict`, `Verification summary`, `Release recommendation`, `Evidence`,
    `Known issues`, and `Readiness`.
@@ -103,6 +110,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
+- If no clarification is needed and you create `questions.md` or `answers.md`, write exactly
+  `# Questions\n\n- none\n` or `# Answers\n\n- none\n`; do not write prose such as
+  `No questions required.` as a bullet.
 - Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
 
 ## Completion checklist

@@ -5104,13 +5104,20 @@ def _counting_status(
         return "blocked"
     if machine_status != "pass" or machine_quality_gate != "pass":
         return "failed"
+    operator_decision = operator_validation.get("decision")
+    operator_present = operator_validation.get("present") is True
+    operator_valid = operator_validation.get("valid") is True
+    if (
+        operator_present
+        and operator_decision in OPERATOR_QUALITY_DECISIONS
+        and operator_decision != "counted-clean"
+        and operator_valid
+    ):
+        return "not-counted"
     if acceptance_coverage_status != "complete":
         return "pending-operator-analysis"
     if ui_ux_gate == "fail":
         return "not-counted"
-    operator_decision = operator_validation.get("decision")
-    operator_present = operator_validation.get("present") is True
-    operator_valid = operator_validation.get("valid") is True
     if operator_decision == "counted-clean" and operator_valid:
         return "counted-clean"
     if not operator_present:
@@ -5330,6 +5337,15 @@ def _finalize_reports(
         quality_transcript_path=ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,
         review_report_path=review_report_path,
         qa_report_path=qa_report_path,
+        effective_quality_gate=effective_quality_gate,
+        counting_status=counting_status,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
+        operator_quality_decision=(
+            str(operator_validation.get("decision"))
+            if operator_validation.get("decision") is not None
+            else None
+        ),
     )
     _append_stage_audit_section_to_quality_report(ctx)
     outcome = HarnessOutcome(
@@ -5507,6 +5523,8 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         assessment=quality_assessment,
         feature_selection_path=ctx.bundle_root / FEATURE_SELECTION_FILENAME,
         quality_transcript_path=ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,
+        effective_quality_gate=quality_assessment.gate,
+        counting_status=counting_status,
     )
     _append_stage_audit_section_to_quality_report(ctx)
     _write_frontend_checkpoint_placeholders(ctx)

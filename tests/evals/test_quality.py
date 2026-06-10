@@ -945,6 +945,98 @@ def test_build_live_quality_assessment_flags_placeholder_doc_examples(
     assert any("placeholder" in finding for finding in assessment.blocking_findings)
 
 
+def test_build_live_quality_assessment_fails_for_out_of_scope_lockfile_change(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    workspace_root = tmp_path / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-LOCKFILE"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    (tmp_path / "uv.lock").write_text("resolver churn\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `uv.lock` - incidental resolver output.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "fail"
+    assert assessment.dimensions[2].score == 0
+    assert any(
+        "lockfile changed outside selected task" in finding
+        for finding in assessment.blocking_findings
+    )
+
+
+def test_build_live_quality_assessment_allows_dependency_scoped_lockfile_change(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    workspace_root = tmp_path / ".aidd"
+    scenario = _build_live_scenario()
+    selected_task = replace(
+        scenario.feature_source.tasks[0],
+        target_change="Update package dependency pin and lockfile.",
+        expected_scope="Dependency manifest and lockfile update.",
+    )
+    work_item = "WI-QUALITY-LOCKFILE-ALLOWED"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    (tmp_path / "uv.lock").write_text("intentional dependency update\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `uv.lock` - update the dependency lockfile.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=selected_task,
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert not any(
+        "lockfile changed outside selected task" in finding
+        for finding in assessment.blocking_findings
+    )
+
+
 def test_build_live_quality_assessment_ignores_negated_must_fix_mentions(
     tmp_path: Path,
 ) -> None:
@@ -1058,3 +1150,42 @@ def test_build_live_quality_assessment_returns_fail_when_quality_commands_fail(
     assert assessment.verdict == "ready"
     report = render_live_quality_report_markdown(scenario=scenario, assessment=assessment)
     assert "quality command failed" in report
+
+
+def test_render_live_quality_report_markdown_includes_effective_gate_metadata(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-REPORT-METADATA"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    report = render_live_quality_report_markdown(
+        scenario=scenario,
+        assessment=assessment,
+        effective_quality_gate="warn",
+        counting_status="pending-operator-analysis",
+        acceptance_coverage_status="partial",
+        ui_ux_gate="pass",
+        operator_quality_decision="not-counted",
+    )
+
+    assert "- Quality gate: `warn`" in report
+    assert "- Machine quality gate: `pass`" in report
+    assert "- Counting status: `pending-operator-analysis`" in report
+    assert "- Acceptance coverage: `partial`" in report
+    assert "- UI/UX gate: `pass`" in report
+    assert "- Operator quality decision: `not-counted`" in report

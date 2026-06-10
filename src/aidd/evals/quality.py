@@ -59,6 +59,7 @@ class LiveQualityEvidence:
     evidence_reference_count: int
     repair_attempt_count: int
     changed_file_count: int | None
+    suspicious_lockfile_changes: tuple[str, ...]
     repository_change_errors: tuple[str, ...]
     touched_file_mismatches: tuple[str, ...]
     weak_doc_example_count: int
@@ -219,6 +220,71 @@ def _repository_changes_from_workspace(workspace_root: Path) -> RepositoryChange
     return collect_repository_changes(repo_root)
 
 
+_LOCKFILE_NAMES = {
+    "bun.lock",
+    "bun.lockb",
+    "Cargo.lock",
+    "Gemfile.lock",
+    "go.sum",
+    "package-lock.json",
+    "Pipfile.lock",
+    "pnpm-lock.yaml",
+    "poetry.lock",
+    "uv.lock",
+    "yarn.lock",
+}
+
+_DEPENDENCY_CHANGE_PATTERN = re.compile(
+    r"\b("
+    r"dependenc(?:y|ies)|"
+    r"dependency manifest|"
+    r"package manifest|"
+    r"package manager|"
+    r"lock(?:file| file)?|"
+    r"version (?:pin|bump|upgrade|update)|"
+    r"(?:upgrade|update|bump|pin) (?:a |the )?(?:dependency|dependencies|package)|"
+    r"resolver|"
+    r"uv\.lock|"
+    r"package-lock\.json|"
+    r"pnpm-lock\.yaml|"
+    r"poetry\.lock|"
+    r"yarn\.lock|"
+    r"cargo\.lock"
+    r")\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _task_allows_lockfile_changes(selected_task: ScenarioAuthoredTask | None) -> bool:
+    if selected_task is None:
+        return False
+    text = "\n".join(
+        (
+            selected_task.title,
+            selected_task.summary,
+            selected_task.intent,
+            selected_task.target_change,
+            selected_task.expected_scope,
+            selected_task.quality_bar,
+        )
+    )
+    return _DEPENDENCY_CHANGE_PATTERN.search(text) is not None
+
+
+def _suspicious_lockfile_changes(
+    *,
+    changed_files: tuple[str, ...] | None,
+    selected_task: ScenarioAuthoredTask | None,
+) -> tuple[str, ...]:
+    if changed_files is None or _task_allows_lockfile_changes(selected_task):
+        return tuple()
+    return tuple(
+        path
+        for path in changed_files
+        if Path(path).name in _LOCKFILE_NAMES
+    )
+
+
 def _implementation_report_touched_files(report_text: str | None) -> tuple[str, ...]:
     if report_text is None:
         return tuple()
@@ -364,6 +430,7 @@ def _collect_live_quality_evidence(
     *,
     workspace_root: Path,
     work_item: str,
+    selected_task: ScenarioAuthoredTask | None,
 ) -> LiveQualityEvidence:
     missing_stage_paths = tuple(
         path for path in _required_stage_paths(workspace_root=workspace_root, work_item=work_item)
@@ -415,6 +482,10 @@ def _collect_live_quality_evidence(
             work_item=work_item,
         ),
         changed_file_count=None if changed_files is None else len(changed_files),
+        suspicious_lockfile_changes=_suspicious_lockfile_changes(
+            changed_files=changed_files,
+            selected_task=selected_task,
+        ),
         repository_change_errors=repository_change_errors,
         touched_file_mismatches=_touched_file_mismatches(
             changed_files=changed_files,
@@ -474,6 +545,12 @@ def _blocking_findings_for_live_quality(
         blocking_findings.append(
             "implementation report lists touched files with no matching repository change "
             f"evidence ({preview})"
+        )
+    if evidence.suspicious_lockfile_changes:
+        preview = ", ".join(evidence.suspicious_lockfile_changes[:4])
+        blocking_findings.append(
+            "lockfile changed outside selected task dependency scope "
+            f"({preview})"
         )
     return blocking_findings
 
@@ -568,6 +645,7 @@ def _score_code_quality(
         or evidence.qa_verdict == "not-ready"
         or evidence.repository_change_errors
         or evidence.touched_file_mismatches
+        or evidence.suspicious_lockfile_changes
     ):
         return QualityDimensionScore(
             name="code_quality",
@@ -575,7 +653,8 @@ def _score_code_quality(
             rationale=(
                 "Quality checks failed, review/QA evidence says the code result "
                 "is not ready, repository change evidence could not be collected, "
-                "or implementation file claims do not match repository change evidence."
+                "implementation file claims do not match repository change evidence, "
+                "or lockfiles changed outside dependency scope."
             ),
         )
     suspiciously_small = (
@@ -681,6 +760,7 @@ def build_live_quality_assessment(
     evidence = _collect_live_quality_evidence(
         workspace_root=workspace_root,
         work_item=work_item,
+        selected_task=selected_task,
     )
 
     follow_ups: list[str] = []
@@ -791,6 +871,11 @@ def render_live_quality_report_markdown(
     quality_transcript_path: Path | None = None,
     review_report_path: Path | None = None,
     qa_report_path: Path | None = None,
+    effective_quality_gate: str | None = None,
+    counting_status: str | None = None,
+    acceptance_coverage_status: str | None = None,
+    ui_ux_gate: str | None = None,
+    operator_quality_decision: str | None = None,
 ) -> str:
     report_sections = _build_live_quality_report_sections(
         assessment=assessment,
@@ -800,18 +885,27 @@ def render_live_quality_report_markdown(
         qa_report_path=qa_report_path,
     )
 
+    rendered_quality_gate = effective_quality_gate or assessment.gate
     lines = [
         "# Live Quality Report",
         "",
         "## Overview",
         f"- Scenario: `{scenario.scenario_id}`",
-        f"- Quality gate: `{assessment.gate}`",
+        f"- Quality gate: `{rendered_quality_gate}`",
+        f"- Machine quality gate: `{assessment.gate}`",
         f"- Quality verdict: `{assessment.verdict}`",
         f"- Review status: `{assessment.review_status or 'missing'}`",
         f"- QA verdict: `{assessment.qa_verdict or 'missing'}`",
-        "",
-        "## Dimension Scores",
     ]
+    if counting_status is not None:
+        lines.append(f"- Counting status: `{counting_status}`")
+    if acceptance_coverage_status is not None:
+        lines.append(f"- Acceptance coverage: `{acceptance_coverage_status}`")
+    if ui_ux_gate is not None:
+        lines.append(f"- UI/UX gate: `{ui_ux_gate}`")
+    if operator_quality_decision is not None:
+        lines.append(f"- Operator quality decision: `{operator_quality_decision}`")
+    lines.extend(("", "## Dimension Scores"))
     for dimension in assessment.dimensions:
         lines.extend(
             (
@@ -852,6 +946,11 @@ def write_live_quality_report_markdown(
     quality_transcript_path: Path | None = None,
     review_report_path: Path | None = None,
     qa_report_path: Path | None = None,
+    effective_quality_gate: str | None = None,
+    counting_status: str | None = None,
+    acceptance_coverage_status: str | None = None,
+    ui_ux_gate: str | None = None,
+    operator_quality_decision: str | None = None,
 ) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -862,6 +961,11 @@ def write_live_quality_report_markdown(
             quality_transcript_path=quality_transcript_path,
             review_report_path=review_report_path,
             qa_report_path=qa_report_path,
+            effective_quality_gate=effective_quality_gate,
+            counting_status=counting_status,
+            acceptance_coverage_status=acceptance_coverage_status,
+            ui_ux_gate=ui_ux_gate,
+            operator_quality_decision=operator_quality_decision,
         ),
         encoding="utf-8",
     )

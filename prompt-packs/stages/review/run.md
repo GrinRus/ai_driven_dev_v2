@@ -74,6 +74,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    Do not reject solely because such a file is absent from `git diff --stat`; inspect it and treat
    it as a changed file unless it is missing, outside scope, undocumented by implementation
    evidence, or an explicit release policy requires a tracked-only patch artifact.
+   If `context/diff-summary.md`, `context/repository-state.md`, or implementation evidence shows
+   lockfile, dependency manifest, generated resolver output, or project config changes that are not
+   required by the selected task, record a `must-fix` finding and do not approve the change cleanly.
 8. Intentional design constraints selected by the authored task or resolved interview answers are
    acceptance context, not findings by themselves. For example, do not write an `accepted-risk`
    finding solely because the task intentionally executes trusted local Python when the
@@ -113,6 +116,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
+- If no clarification is needed and you create `questions.md` or `answers.md`, write exactly
+  `# Questions\n\n- none\n` or `# Answers\n\n- none\n`; do not write prose such as
+  `No questions required.` as a bullet.
 - Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
 
 ## Completion checklist

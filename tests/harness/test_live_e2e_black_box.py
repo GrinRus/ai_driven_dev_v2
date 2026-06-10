@@ -19,6 +19,7 @@ from aidd.harness.live_e2e_black_box import (
     run_black_box_live_e2e,
 )
 from aidd.harness.live_e2e_black_box_orchestration import (
+    _counting_status,
     _evidence_refs_for_source,
     _find_resume_state,
     _live_interruption_handlers,
@@ -1161,6 +1162,23 @@ def test_black_box_live_e2e_rejects_invalid_operator_counted_clean(
     )
     assert validation["valid"] is False
     assert "incomplete acceptance coverage" in "\n".join(validation["findings"])
+
+
+def test_counting_status_honors_valid_operator_not_counted_before_complete_coverage() -> None:
+    assert (
+        _counting_status(
+            machine_status="pass",
+            machine_quality_gate="pass",
+            operator_validation={
+                "present": True,
+                "valid": True,
+                "decision": "not-counted",
+            },
+            acceptance_coverage_status="partial",
+            ui_ux_gate="pass",
+        )
+        == "not-counted"
+    )
 
 
 def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(

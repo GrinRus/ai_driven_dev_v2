@@ -88,6 +88,9 @@ def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
     assert "quality decision on its own machine-readable line" in run_prompt
     assert "`Quality verdict`" in run_prompt
     assert "- QA verdict: ready" in run_prompt
+    assert "`context/diff-summary.md`" in run_prompt
+    assert "lockfile, dependency manifest, generated resolver output" in run_prompt
+    assert "set `QA verdict: not-ready` and release recommendation" in run_prompt
 
 
 def test_review_prompt_respects_authored_verification_boundary() -> None:
@@ -140,11 +143,18 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     assert "newly created untracked source files" in implement_prompt
     assert "the deliverable is the" in implement_prompt
     assert "local workspace state, not a tracked-only patch" in implement_prompt
+    assert "`git status --short` and" in implement_prompt
+    assert "`git diff --name-only`" in implement_prompt
+    assert "Do not leave lockfiles, dependency manifests" in implement_prompt
+    assert "`git stash`, `git reset`, `git checkout --`, or `git restore`" in (
+        implement_prompt
+    )
     assert "Newly created untracked source files under the" in review_prompt
     assert "allowed write scope are part of the AIDD deliverable" in review_prompt
     assert "Do not reject solely because such a file is absent from `git diff --stat`" in (
         review_prompt
     )
+    assert "record a `must-fix` finding" in review_prompt
     assert "do not reject a change solely because a newly created file is untracked" in (
         review_system_prompt
     )

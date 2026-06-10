@@ -31,6 +31,7 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 ## Optional context inputs
 
 - `context/selected-task.md`
+- `context/diff-summary.md`
 - `context/verification-output.md`
 - `context/verification-artifacts.md`
 - `context/repository-state.md`
@@ -45,6 +46,9 @@ Optional context documents may improve QA depth, but they must not replace imple
 - `qa` must not declare `succeeded` when review status is unresolved or review decision is `rejected`.
 - When verification output, verification artifacts, or selected-task context exists, `qa` must
   treat those documents as the authored verification boundary for the selected task.
+- When diff summary or repository-state context exists, `qa` must treat the complete local
+  deliverable change set as release evidence, including tracked and untracked files outside the
+  AIDD workspace.
 
 ## QA output expectations
 
@@ -63,6 +67,9 @@ Optional context documents may improve QA depth, but they must not replace imple
 - Optional exploratory checks outside the selected task's authored verification boundary
   must not force `ready-with-risks` or `proceed-with-conditions` unless they reveal a
   concrete defect, contradict acceptance criteria, or are required by review findings.
+- Out-of-scope lockfile, dependency manifest, generated resolver output, or project config changes
+  must force quality verdict `not-ready` and release recommendation `hold` unless the selected task
+  explicitly requires that dependency/config change.
 - Intentional design constraints selected by the authored task or resolved interview answers
   must not force `ready-with-risks` or `proceed-with-conditions` by themselves when the
   implementation exactly follows that selected boundary and required mitigations, tests, and
