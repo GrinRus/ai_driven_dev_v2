@@ -135,7 +135,8 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
         "AIDD-LIVE-005",
         "AIDD-LIVE-007",
         "AIDD-LIVE-009",
-    ], "Claude Code live rollout must include smoke plus planned medium coverage."
+        "AIDD-LIVE-012",
+    ], "Claude Code live rollout must include smoke plus planned medium and large coverage."
 
 
 def test_hono_medium_live_scenario_uses_focused_verification_gate() -> None:

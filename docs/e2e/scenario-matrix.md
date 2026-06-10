@@ -98,8 +98,9 @@ Qwen when local auth is ready.
 - `opencode` must cover at least one live lane and one deterministic workflow lane; it is
   the canonical runtime for the maintained live interview expansion lanes.
 - `claude-code` remains deterministic by default, keeps `AIDD-LIVE-005` as a
-  small smoke lane, and uses `AIDD-LIVE-007` as the planned maintained medium
-  live coverage candidate when `aidd eval doctor` confirms provider/auth
+  small smoke lane, and uses `AIDD-LIVE-007` plus `AIDD-LIVE-012` as planned
+  maintained medium and large live coverage candidates when `aidd eval doctor`
+  confirms provider/auth
   readiness; live config extends native Claude Code budgets for long-running
   `research`, `plan`, `review-spec`, `tasklist`, `implement`, `review`, and
   `qa` attempts.
@@ -126,7 +127,7 @@ Qwen when local auth is ready.
 | `AIDD-LIVE-009` | `harness/scenarios/live/sqlite-utils-csv-import-resilience-boundary.yaml` | `live-full-flow` | `small` | `manual` | `codex` | `codex`, `opencode`, `claude-code` | `authored-task-pool` (`less-scripted`) |
 | `AIDD-LIVE-010` | `harness/scenarios/live/openapi-typescript-discriminator-composition.yaml` | `live-full-flow-interview` | `large` | `manual` | `opencode` | `codex`, `opencode` | `authored-task-pool` |
 | `AIDD-LIVE-011` | `harness/scenarios/live/pytest-collection-error-summary.yaml` | `live-full-flow-interview` | `xlarge` | `manual` | `opencode` | `codex`, `opencode` | `authored-task-pool` |
-| `AIDD-LIVE-012` | `harness/scenarios/live/starlette-streaming-error-boundary.yaml` | `live-full-flow` | `large` | `manual` | `codex` | `codex` | `authored-task-pool` |
+| `AIDD-LIVE-012` | `harness/scenarios/live/starlette-streaming-error-boundary.yaml` | `live-full-flow` | `large` | `manual` | `codex` | `codex`, `claude-code` | `authored-task-pool` |
 
 ## Feature Selection Policy
 

@@ -209,7 +209,8 @@ For live scenarios in this wave:
 - `opencode` covers at least one live lane and remains the canonical runtime for the
   maintained live interview expansion lanes;
 - `claude-code` keeps `AIDD-LIVE-005` as a small smoke lane and uses
-  `AIDD-LIVE-007` as the planned maintained medium coverage candidate when
+  `AIDD-LIVE-007` plus `AIDD-LIVE-012` as maintained medium and large
+  coverage candidates when
   `aidd eval doctor` confirms provider/auth readiness; generated live runtime
   config extends long-running `research`, `plan`, `review-spec`, `tasklist`,
   `implement`, `review`, and `qa` stage attempts;
@@ -225,7 +226,7 @@ Representative matrix coverage for the live lane:
 | `live-full-flow` | `tiny` | `codex`, `qwen` experimental | `AIDD-LIVE-004` |
 | `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005`, `AIDD-LIVE-009` |
 | `live-full-flow` | `medium` | `codex`, `claude-code` planned, `qwen` experimental | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
-| `live-full-flow` | `large` | `codex` | `AIDD-LIVE-012` |
+| `live-full-flow` | `large` | `codex`, `claude-code` planned | `AIDD-LIVE-012` |
 | `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006`, `AIDD-LIVE-010` |
 | `live-full-flow-interview` | `xlarge` | `opencode` | `AIDD-LIVE-008`, `AIDD-LIVE-011` |
 
