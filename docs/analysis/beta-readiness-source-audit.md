@@ -20,8 +20,10 @@ Reviewed sources:
 
 ### README
 
-- The release-candidate package version matches the package state: `0.1.0a10`.
-  The last accepted published prerelease evidence before this candidate is `0.1.0a9`.
+- The source development package version matches the package state: `0.1.0a11.dev0`.
+- The latest accepted published prerelease evidence is `0.1.0a10`.
+- The source checkout may move to a later `.dev0` version after publication; README
+  installation guidance stays pinned to the latest accepted package release.
 - The documented public CLI commands match the registered command surface:
   `doctor`, `init`, `ui`, `stage`, `eval`, and `run`.
 - The removed eval-run product command is not documented as a current product command.
@@ -89,12 +91,8 @@ command so future smoke refactors do not break source-installed local runs.
 - The `AIDD-LIVE-006/opencode` refresh first exposed an AIDD-owned repair-prompt clarity
   defect around malformed interview answer bullets. That defect was fixed in the
   candidate source before the counted rerun.
-- Accepted `0.1.0a9` release/install evidence exists from the published GitHub Release,
-  PyPI publish, `pipx` verification, and `uv tool` verification on 2026-06-04.
-- This branch is the `0.1.0a10` release candidate after the accepted `0.1.0a9`
-  prerelease. It must still repeat the GitHub Release, PyPI, `pipx`, and `uv tool`
-  verification path before it can become the latest accepted published prerelease
-  evidence.
+- Accepted `0.1.0a10` release/install evidence exists from the published GitHub Release,
+  PyPI publish, `pipx` verification, and `uv tool` verification on 2026-06-11.
 - Preflight readiness alone is not counted clean live evidence; the counted W24 refresh
   uses terminal black-box bundles and operator overlays.
 
@@ -104,8 +102,9 @@ manual live evidence.
 
 ## Decision
 
-Proceed with future publication only after recording release-branch dry-run evidence and
-receiving explicit approval to publish the draft GitHub Release.
+Proceed with future publication only after recording release-branch dry-run evidence,
+confirming the target version is unpublished, and receiving explicit approval to publish
+the draft GitHub Release.
 
 Do not claim beta completion solely from package publication; keep the beta decision tied
 to maintained operator evidence, release/install evidence, and an explicit readiness call.
