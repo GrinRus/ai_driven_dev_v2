@@ -67,9 +67,8 @@ Use concrete repair actions:
   implementation detail, risk mitigation, named mechanism, or verification promise that is absent
   from the diff, tests, or implementation evidence, do not keep `QA verdict: ready`; use
   `not-ready` and `hold` unless the upstream artifact explicitly supersedes that requirement.
-  Named mechanisms include concrete APIs/library calls, synchronization primitives such as
-  `anyio.Event`, exception chaining such as `raise ... from ...`, and required regression
-  assertions;
+  Named mechanisms include concrete APIs/library calls, named synchronization primitives,
+  language-appropriate exception cause/chaining mechanisms, and required regression assertions;
 - risk gaps: add residual risk entries with severity plus mitigation/ownership; keep
   `Known issues: none.` only as an empty known-defect marker, not as a residual risk item;
   do not pair `QA verdict: ready` with residual risk bullets. Use `ready-with-risks` and

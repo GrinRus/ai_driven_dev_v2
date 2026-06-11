@@ -90,10 +90,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    criteria. For each nontrivial task detail or mitigation in those upstream artifacts, verify it is
    present in the diff, tests, or implementation evidence. Treat named mechanisms as requirements
    when the plan/tasklist made them concrete: examples include a specific API/library call,
-   synchronization primitive such as `anyio.Event`, exception chaining such as `raise ... from ...`,
+   named synchronization primitive, language-appropriate exception cause/chaining mechanism,
    or a required regression assertion. If the implementation omits it, such as missing a promised
-   exception cause/context preservation check, record a `must-fix` finding unless the upstream
-   artifact explicitly supersedes that requirement.
+   error-cause or diagnostic-context preservation check, record a `must-fix` finding unless the
+   upstream artifact explicitly supersedes that requirement.
 10. In `review-report.md`, write the approval decision as a machine-readable line:
    `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
    `Approval status` or `Verdict`, then add rationale separately.

@@ -69,8 +69,8 @@ Use concrete repair actions:
   implementation detail, risk mitigation, named mechanism, or verification promise that is absent
   from the diff, tests, or implementation evidence, add or keep a `must-fix` finding unless the
   upstream artifact explicitly supersedes that requirement. Named mechanisms include concrete
-  APIs/library calls, synchronization primitives such as `anyio.Event`, exception chaining such as
-  `raise ... from ...`, and required regression assertions;
+  APIs/library calls, named synchronization primitives, language-appropriate exception
+  cause/chaining mechanisms, and required regression assertions;
 - status drift: align validator verdict, stage status, blockers, and next actions.
 
 ## Targeted repair discipline
