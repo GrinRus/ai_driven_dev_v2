@@ -7,6 +7,21 @@ stable compatibility window exists.
 
 ## Unreleased
 
+## 0.1.0a10 - 2026-06-11
+
+- Prepare the `0.1.0a10` prerelease candidate from current `main` after accepted
+  `v0.1.0a9` package-channel evidence.
+- Add the integrated operator workbench shell and project-home surfaces while preserving
+  the existing CLI and `.aidd/` artifact ownership model.
+- Fix stage input preflight behavior so missing prerequisites are surfaced before runtime
+  execution instead of leaking into later stage attempts.
+- Tighten live E2E artifact, content, review, QA, and touched-file quality gates, including
+  Claude large coverage and stronger repair signals for incomplete target-project code.
+- Neutralize live prompt examples so maintained live E2E scenarios do not leak
+  target-specific solutions into reusable AIDD prompts.
+
+## 0.1.0a9 - 2026-06-04
+
 - Open the next development cycle after accepted `v0.1.0a8` release evidence.
 - Reconcile UI-first onboarding roadmap state with the shipped `v0.1.0a7`/`v0.1.0a8`
   operator path and add post-a8 audit evidence for clean UI onboarding.
