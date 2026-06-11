@@ -7,10 +7,11 @@ stable compatibility window exists.
 
 ## Unreleased
 
+- Begin the next development cycle after accepted `v0.1.0a10` package-channel evidence.
+
 ## 0.1.0a10 - 2026-06-11
 
-- Prepare the `0.1.0a10` prerelease candidate from current `main` after accepted
-  `v0.1.0a9` package-channel evidence.
+- Publish the `0.1.0a10` prerelease after accepted `v0.1.0a9` package-channel evidence.
 - Add the integrated operator workbench shell and project-home surfaces while preserving
   the existing CLI and `.aidd/` artifact ownership model.
 - Fix stage input preflight behavior so missing prerequisites are surfaced before runtime

@@ -1,16 +1,12 @@
 # Release Notes: v0.1.0a10
 
-Status: draft, not tagged or published.
+Status: published on 2026-06-11.
 
-Current release-candidate package version: `0.1.0a10`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a9`.
-
-`0.1.0a10` package must not be described as the latest accepted published prerelease until
-GitHub Release publication, PyPI publishing, `pipx`, and `uv tool` verification all pass.
+Latest accepted published prerelease: `0.1.0a10`.
 
 ## Summary
 
-This prerelease candidate rolls up the post-`v0.1.0a9` work on the integrated operator
+This prerelease rolls up the post-`v0.1.0a9` work on the integrated operator
 workbench, stage preflight correctness, and live E2E quality gates. It keeps AIDD in alpha
 and does not make a beta-readiness or unattended-production claim.
 
@@ -54,14 +50,15 @@ Docker/GHCR remains outside the supported alpha release contract.
 - Provider smoke reproducibility depends on the operator shell environment; provider
   binaries outside the Codex app's default non-interactive PATH should be run through a
   login shell or explicit PATH prefix.
-- `0.1.0a10` is not accepted package-channel evidence until the release workflow publishes
-  and verifies PyPI, `pipx`, and `uv tool` installability.
+- Package verification was accepted through the GitHub Release workflow and independent
+  local `pipx` plus `uv tool` install checks.
 
 ## Release checklist
 
-- GitHub Release: pending draft `v0.1.0a10`, target `release/v0.1.0a10`.
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a10`,
+  target `release/v0.1.0a10`.
 - Release branch: `release/v0.1.0a10`.
-- Remote dry-runs: pending.
-- PyPI: must become `https://pypi.org/project/ai-driven-dev-v2/0.1.0a10/` only after
-  publication.
-- Publish remains blocked until separate explicit approval.
+- Release workflow:
+  `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/27344403053`.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a10/`.
