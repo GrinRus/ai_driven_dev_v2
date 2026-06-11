@@ -174,21 +174,18 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a9.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a8`.
+Current release-candidate package version: `0.1.0a10`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a9`.
 
-No current release candidate is accepted from this development version. Future release
-candidates must again use a unique `release/v<project.version>` branch, a GitHub Release
-`published` event, PyPI publish, `pipx`, and `uv tool` verification before they become
-accepted package-channel evidence.
+This release candidate is not accepted package-channel evidence until GitHub Release
+publication, PyPI publishing, `pipx`, and `uv tool` verification all pass. The accepted `v0.1.0a10` evidence log entry is intentionally pending until post-publish verification.
 
-### Next prerelease readiness note for `0.1.0a9.dev0`
+### Release candidate readiness note for `0.1.0a10`
 
-This source version is a development line only. It is not a release candidate until
-maintainers intentionally change `project.version` to the next unique prerelease version
-on a `release/v<version>` branch.
+This branch sets `project.version` to `0.1.0a10` for the `release/v0.1.0a10` candidate.
+The tag and PyPI version must not exist before draft release creation and publication.
 
-Post-`v0.1.0a8` evidence now recorded on `main`:
+Accepted `v0.1.0a9` baseline evidence before this candidate included:
 
 - post-release evidence PR #65 was merged and `main` is back on `0.1.0a9.dev0`;
 - Wave 27 UI-first onboarding work was reconciled as shipped or superseded against the
@@ -238,6 +235,17 @@ Post-`v0.1.0a8` evidence now recorded on `main`:
   `job-52f8e71e3a564672becae1084bf27d71` ended `completed`, stage rail statuses were
   `succeeded`, `/api/stage/run` without `runtime` returned `runtime is required.`, and
   logs, timelines, artifacts, and `context/user-request.md` were present.
+
+Post-`v0.1.0a9` changes included in this `v0.1.0a10` candidate:
+
+- stage input preflight now reports missing prerequisites before runtime execution;
+- the integrated operator workbench adds project-home, stage cockpit, artifact, and
+  next-flow surfaces while preserving CLI-equivalent artifact ownership;
+- live E2E quality gates now enforce stronger artifact completeness, review obligation,
+  QA scoring, repair signal, and target touched-file checks;
+- Claude large live E2E coverage was added to the maintained live catalog;
+- maintained live prompt examples were neutralized so reusable prompts do not encode
+  target-specific live-run solutions.
 
 Wave 30 Dependabot triage:
 
@@ -308,18 +316,16 @@ Required gates for the next prerelease remain unchanged:
 - verify PyPI, `pipx`, and `uv tool` installability before accepting the release
   evidence.
 
-Wave 30 go/no-go input for `v0.1.0a9` candidate preparation:
+Wave 31/32 go/no-go input for `v0.1.0a10` candidate preparation:
 
-- Security posture: go after this branch merges and Dependabot re-evaluates the patched
-  lockfile; no alert was left untriaged.
-- Deterministic source UI smoke: go for clean onboarding, explicit runtime requirement,
-  selected-stage `idea -> research`, logs, timeline, artifacts, and terminal job cleanup.
-- Provider/browser evidence: Wave 29 all-pass source evidence exists for Codex, Claude
-  Code, OpenCode, optional Qwen, and Manual+Browser operator surfaces, but any release
-  candidate notes must cite fresh candidate-specific evidence if they make a beta-oriented
-  claim.
-- Release action: no-go for `release/v0.1.0a9`, draft prerelease, or publish until a
-  separate explicit approval starts release preparation.
+- Security posture: go after accepted `v0.1.0a9` package evidence; current candidate still
+  needs deterministic local checks and release dry-runs.
+- Operator UI scope: go for integrated workbench changes as alpha operator experience, not
+  as a beta-readiness claim.
+- Live E2E scope: go for local evidence and quality-gate coverage; live E2E remains outside
+  GitHub Actions, CI/CD, and release workflows.
+- Release action: go for release branch, dry-runs, and draft prerelease; no-go for
+  publication until a separate explicit publish approval is given.
 
 W24 manual live evidence refresh on 2026-05-24:
 
@@ -357,6 +363,26 @@ does not replace GitHub Release, PyPI, `pipx`, or `uv tool` verification.
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a9` accepted evidence on 2026-06-04
+
+- Tag: `v0.1.0a9`
+- Release branch: `release/v0.1.0a9`
+- Commit: `5757fe890d22a981dcc9624263b61a59fd767bec`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a9`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/26969522555`
+- Result: accepted release/install evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: release tag `v0.1.0a9` matched `project.version` `0.1.0a9`, and the
+  release tag commit matched the remote `release/v0.1.0a9` branch HEAD during the release
+  workflow validation.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a9/`.
+- `pipx` verification installed `ai-driven-dev-v2==0.1.0a9`; `aidd --version` returned
+  `aidd 0.1.0a9`, and `aidd doctor` reported `Version 0.1.0a9`.
+- `uv tool` verification installed `ai-driven-dev-v2==0.1.0a9`; `aidd --version` returned
+  `aidd 0.1.0a9`, and `aidd doctor` reported `Version 0.1.0a9`.
+- No Docker/GHCR artifact is part of the supported `v0.1.0a9` release contract.
 
 ### `v0.1.0a8` accepted evidence on 2026-06-04
 
