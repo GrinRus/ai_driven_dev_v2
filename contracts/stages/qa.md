@@ -30,7 +30,10 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 
 ## Optional context inputs
 
+- `../tasklist/output/tasklist.md`
+- `../plan/output/plan.md`
 - `context/selected-task.md`
+- `context/diff-summary.md`
 - `context/verification-output.md`
 - `context/verification-artifacts.md`
 - `context/repository-state.md`
@@ -45,6 +48,9 @@ Optional context documents may improve QA depth, but they must not replace imple
 - `qa` must not declare `succeeded` when review status is unresolved or review decision is `rejected`.
 - When verification output, verification artifacts, or selected-task context exists, `qa` must
   treat those documents as the authored verification boundary for the selected task.
+- When diff summary or repository-state context exists, `qa` must treat the complete local
+  deliverable change set as release evidence, including tracked and untracked files outside the
+  AIDD workspace.
 
 ## QA output expectations
 
@@ -53,6 +59,9 @@ Optional context documents may improve QA depth, but they must not replace imple
   - an explicit quality verdict (`ready`, `ready-with-risks`, `not-ready`),
   - a machine-readable verdict line, preferably `QA verdict: ready` (or
     `ready-with-risks` / `not-ready`) under `Quality verdict` or `Readiness`,
+  - when `context/acceptance-criteria.md` exists, an explicit acceptance coverage checklist with
+    one top-level bullet per `AC-N`; each bullet must name exactly one acceptance criterion id and
+    cite same-bullet evidence using an `EV-N` id and/or backticked artifact path,
   - residual risk summary with severity and mitigation/ownership notes,
   - a dedicated `Release recommendation` section aligned to verdict and risk profile,
   - evidence references linking verdict claims to verification artifacts.
@@ -60,9 +69,16 @@ Optional context documents may improve QA depth, but they must not replace imple
 - `Known issues` may use an explicit empty marker such as `- Known issues: none.`;
   validators must not treat that marker as a residual risk entry. Any separate residual
   risk item must include explicit severity plus mitigation or ownership.
+- `QA verdict: ready` must not include residual risk entries. If a real residual risk
+  remains, use `ready-with-risks` plus `proceed-with-conditions`; if the note is an
+  intentional selected-boundary tradeoff already covered by evidence, keep it out of
+  `Known issues`/residual-risk bullets.
 - Optional exploratory checks outside the selected task's authored verification boundary
   must not force `ready-with-risks` or `proceed-with-conditions` unless they reveal a
   concrete defect, contradict acceptance criteria, or are required by review findings.
+- Out-of-scope lockfile, dependency manifest, generated resolver output, or project config changes
+  must force quality verdict `not-ready` and release recommendation `hold` unless the selected task
+  explicitly requires that dependency/config change.
 - Intentional design constraints selected by the authored task or resolved interview answers
   must not force `ready-with-risks` or `proceed-with-conditions` by themselves when the
   implementation exactly follows that selected boundary and required mitigations, tests, and
@@ -72,6 +88,13 @@ Optional context documents may improve QA depth, but they must not replace imple
 - evidence entries must use stable ids in the `EV-1`, `EV-2`, ... style and/or backticked
   artifact paths so validators can trace claims mechanically.
 - `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.
+- When upstream `tasklist` or `plan` artifacts are available, `QA verdict: ready` requires
+  evidence that nontrivial task details, required mitigations, and explicit risk-verification
+  promises were satisfied or intentionally superseded. This includes named implementation
+  mechanisms such as specific APIs, synchronization primitives, exception chaining, or library
+  calls when the upstream artifacts made them part of the plan. A clean review report alone is not
+  enough to proceed when QA can observe a missed planned requirement or mechanism in the diff,
+  tests, or implementation evidence.
 
 ## Validation focus
 
@@ -82,10 +105,12 @@ Validators for `qa` should check:
 - unsupported verdicts:
   - quality verdict and release recommendation must follow from cited evidence and risk profile,
   - verdicts that contradict material unresolved findings or missing checks are rejected,
+  - `ready` with residual risk entries is rejected as internally inconsistent,
 - missing evidence references:
   - material QA claims must reference concrete verification artifacts or execution outputs,
   - evidence-free pass/ready claims are rejected,
 - cross-document consistency between QA verdict, residual risk summary, validator findings, and terminal status in `stage-result.md`.
+- consistency with available tasklist/plan obligations and their verification evidence.
 
 ## Interview policy
 

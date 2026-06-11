@@ -43,9 +43,9 @@ Optional context documents may improve planning quality, but they must not repla
 ## Plan output expectations
 
 - `plan.md` must include explicit milestones, risk coverage, dependencies, and verification notes.
-- milestones should be ordered and map to clear execution increments.
+- milestones should be ordered, use stable ids such as `M1`, `M2`, and map to clear execution increments.
 - risk entries should include impact and mitigation intent.
-- verification notes should tie checks to milestones or risk-heavy areas.
+- verification notes should tie checks to milestone ids such as `M1` and risk-heavy areas.
 - `stage-result.md` and `validator-report.md` must stay consistent with the declared plan readiness.
 
 ## Validation focus

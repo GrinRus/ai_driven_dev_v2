@@ -50,12 +50,14 @@ normalize if canonical validation proves the terminal status inconsistent.
 ## Planning discipline
 
 1. `Milestones` must be dependency-ordered execution increments, not unordered wishes.
-2. Each milestone must state the expected outcome and an approval/readiness signal.
-3. `Dependencies` must make sequencing constraints explicit (`depends on`, `before`, `after`).
-4. Major `Risks` must include mitigation intent and a linked verification expectation.
-5. `Verification notes` must map checks to milestones, risks, or both, and cover the highest-risk
+2. Each milestone heading or bullet must start with a stable id such as `M1`, `M2`, or `M3`.
+3. Each milestone must state the expected outcome and an approval/readiness signal.
+4. `Dependencies` must make sequencing constraints explicit (`depends on`, `before`, `after`).
+5. Major `Risks` must include mitigation intent and a linked verification expectation.
+6. `Verification notes` must reference the milestone ids (`M1`, `M2`, ...) that each check covers,
+   map checks to risks where relevant, and cover the highest-risk
    milestone explicitly.
-6. `Out of scope` and trade-offs must be explicit enough for operator approval review.
+7. `Out of scope` and trade-offs must be explicit enough for operator approval review.
 
 ## Execution instructions
 
@@ -83,6 +85,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 - required outputs exist and are Markdown,
 - milestone order and dependencies are explicit and executable,
+- every milestone has a stable `M<N>` id and verification notes reference those ids,
 - risks include mitigation intent with linked verification expectations,
 - verification notes map to milestones/risks and cover highest-risk work,
 - stage status and validator verdict are consistent with blocker/question state.

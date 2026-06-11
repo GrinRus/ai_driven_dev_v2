@@ -55,6 +55,11 @@ def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     run_prompt = Path("prompt-packs/stages/idea/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/idea/repair.md").read_text(encoding="utf-8")
 
+    assert "avoid unsupported absolute claims" in run_prompt
+    assert "Do not assert source-code root causes" in run_prompt
+    assert "leave source" in run_prompt
+    assert "diagnosis to `research`" in run_prompt
+    assert "tie them to the selected request, constraints, and acceptance context" in run_prompt
     assert "`Open questions` as Markdown bullet items, or exactly `- none`" in run_prompt
     assert "prose-only text is invalid" in run_prompt
     assert "do not put indented or nested bullets under a question" in run_prompt
@@ -88,6 +93,14 @@ def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
     assert "quality decision on its own machine-readable line" in run_prompt
     assert "`Quality verdict`" in run_prompt
     assert "- QA verdict: ready" in run_prompt
+    assert "`context/diff-summary.md`" in run_prompt
+    assert "lockfile, dependency manifest, generated resolver output" in run_prompt
+    assert "set `QA verdict: not-ready` and release recommendation" in run_prompt
+    assert "one top-level bullet per criterion" in run_prompt
+    assert "Each bullet must name exactly one `AC-N` id" in run_prompt
+    assert "Do not use range claims such as `AC-1 through AC-4`" in run_prompt
+    assert "Do not pair `QA verdict: ready` with residual risk bullets" in run_prompt
+    assert "use `ready-with-risks` and `proceed-with-conditions`" in run_prompt
 
 
 def test_review_prompt_respects_authored_verification_boundary() -> None:
@@ -112,6 +125,48 @@ def test_review_prompt_respects_authored_verification_boundary() -> None:
     assert "do not write an `accepted-risk`" in run_prompt
 
 
+def test_review_and_qa_prompts_cross_check_tasklist_and_plan_obligations() -> None:
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_repair_prompt = Path("prompt-packs/stages/review/repair.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    qa_repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "audit the\n   implementation against task-level details" in review_prompt
+    assert "planned risk mitigations" in review_prompt
+    assert "error-cause or diagnostic-context preservation check" in review_prompt
+    assert "named mechanisms as requirements" in review_prompt
+    assert "named synchronization primitive" in review_prompt
+    assert "missed tasklist/plan requirement" in review_repair_prompt
+    assert "named mechanism" in review_repair_prompt
+    assert "cross-check nontrivial task details" in qa_prompt
+    assert "error-cause or\n   diagnostic-context preservation promise" in qa_prompt
+    assert "required named synchronization primitive" in qa_prompt
+    assert "missed tasklist/plan requirement" in qa_repair_prompt
+    assert "Named mechanisms include concrete APIs/library calls" in qa_repair_prompt
+    assert "synchronization primitives such as named" not in qa_repair_prompt
+
+
+def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
+    contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
+    run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "use stable ids such as `M1`, `M2`" in contract
+    assert "tie checks to milestone ids such as `M1`" in contract
+    assert "must start with a stable id such as `M1`, `M2`, or `M3`" in run_prompt
+    assert "Verification notes` must reference the milestone ids" in run_prompt
+    assert "missing milestone ids" in repair_prompt
+    assert "reference those ids" in repair_prompt
+
+
 def test_qa_prompt_respects_selected_design_constraints() -> None:
     run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
@@ -123,6 +178,7 @@ def test_qa_prompt_respects_selected_design_constraints() -> None:
     assert "not residual release risks by themselves" in run_prompt
     assert "trusted local code execution is `ready`" in run_prompt
     assert "Do not preserve `ready-with-risks` only because" in repair_prompt
+    assert "do not pair `QA verdict: ready` with residual risk bullets" in repair_prompt
     assert "do not downgrade solely for an intentional design constraint" in system_prompt
 
 
@@ -140,11 +196,18 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     assert "newly created untracked source files" in implement_prompt
     assert "the deliverable is the" in implement_prompt
     assert "local workspace state, not a tracked-only patch" in implement_prompt
+    assert "`git status --short` and" in implement_prompt
+    assert "`git diff --name-only`" in implement_prompt
+    assert "Do not leave lockfiles, dependency manifests" in implement_prompt
+    assert "`git stash`, `git reset`, `git checkout --`, or `git restore`" in (
+        implement_prompt
+    )
     assert "Newly created untracked source files under the" in review_prompt
     assert "allowed write scope are part of the AIDD deliverable" in review_prompt
     assert "Do not reject solely because such a file is absent from `git diff --stat`" in (
         review_prompt
     )
+    assert "record a `must-fix` finding" in review_prompt
     assert "do not reject a change solely because a newly created file is untracked" in (
         review_system_prompt
     )
@@ -186,6 +249,23 @@ def test_review_spec_prompts_require_exact_readiness_vocabulary() -> None:
     assert "do not replace it with prose such as `conditionally ready`" in repair_prompt
 
 
+def test_review_spec_prompt_requires_issue_severity_and_rationale_shape() -> None:
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "`- I1: Severity: medium. Rationale: because ...`" in run_prompt
+    assert "`- Severity: medium`" in run_prompt
+    assert "metadata bullets immediately under each heading" in run_prompt
+    assert "every subsection issue has immediate `Severity:`" in repair_prompt
+    assert "`Severity: none`" in run_prompt
+    assert "`Rationale: because ...`" in run_prompt
+    assert "do not write bare prose such as `No material issues identified.`" in run_prompt
+
+
 def test_implement_prompts_require_executable_verification_evidence() -> None:
     run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
         encoding="utf-8"
@@ -202,3 +282,17 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "outcome claim without executable/check evidence" in repair_prompt
     assert "captured assertion result" in repair_prompt
     assert "`not-run: <reason>` explicitly" in repair_prompt
+    assert "Use one bullet per command/check" in run_prompt
+    assert "``- `command goes here` -> pass (observed summary)``" in run_prompt
+    assert "one bullet per command/check" in repair_prompt
+    assert "short intent on the same line" in run_prompt
+    assert "copy this exact shape for every file" in run_prompt
+    assert "``- `path/to/file.ext` - changed <short intent>``" in run_prompt
+    assert "Do not write a top-level bullet that only names" in run_prompt
+    assert "self-check the `Touched files` section" in run_prompt
+    assert "same-line\n  path + intent" in repair_prompt
+    assert "Keep debugging bounded" in run_prompt
+    assert "at most one focused fix attempt" in run_prompt
+    assert "truthful failed verification report" in run_prompt
+    assert "timing out without stage artifacts" in run_prompt
+    assert "continuing ad hoc debugging until timeout" in repair_prompt

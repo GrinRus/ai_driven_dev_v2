@@ -16,7 +16,8 @@ verdict/recommendation coherence, and truthful stage status.
 5. `contracts/documents/questions.md` and `contracts/documents/answers.md`
 6. stage input bundle for this attempt, especially provided optional context such as
    `context/selected-task.md`, `context/verification-output.md`, and
-   `context/verification-artifacts.md`
+   `context/verification-artifacts.md`, plus upstream `../tasklist/output/tasklist.md`
+   and `../plan/output/plan.md` when present
 7. current outputs:
    - `qa-report.md`
    - `stage-result.md`
@@ -41,6 +42,7 @@ For each finding:
 1. identify root cause class:
    - unsupported or evidence-free verdict/recommendation claim,
    - missing evidence references for material QA claims,
+   - missing or bundled acceptance coverage bullets for `AC-N` criteria,
    - verdict/recommendation mismatch with unresolved findings or missing critical checks,
    - residual-risk incompleteness (severity/mitigation/ownership gaps),
    - cross-document status drift (`qa-report.md` vs `stage-result.md` vs `validator-report.md`);
@@ -54,10 +56,24 @@ Use concrete repair actions:
 - missing evidence: add direct references to available verification output, verification artifacts,
   or upstream evidence for each material QA claim, using `EV-1`, `EV-2`, ... evidence ids and/or
   backticked artifact paths;
+- missing acceptance coverage: when `context/acceptance-criteria.md` exists, add one top-level
+  checklist bullet per criterion using the shape
+  ``- AC-1: confirmed. Evidence: EV-1, `context/verification-output.md`. <criterion-specific sentence>.``;
+  each bullet must name exactly one `AC-N` id and cite same-bullet evidence. Replace range claims
+  such as `AC-1 through AC-4` with separate criterion bullets;
 - verdict mismatch: align verdict and release recommendation with unresolved findings and
   critical-check availability;
+- missed tasklist/plan requirement: when upstream tasklist or plan artifacts name a nontrivial
+  implementation detail, risk mitigation, named mechanism, or verification promise that is absent
+  from the diff, tests, or implementation evidence, do not keep `QA verdict: ready`; use
+  `not-ready` and `hold` unless the upstream artifact explicitly supersedes that requirement.
+  Named mechanisms include concrete APIs/library calls, named synchronization primitives,
+  language-appropriate exception cause/chaining mechanisms, and required regression assertions;
 - risk gaps: add residual risk entries with severity plus mitigation/ownership; keep
   `Known issues: none.` only as an empty known-defect marker, not as a residual risk item;
+  do not pair `QA verdict: ready` with residual risk bullets. Use `ready-with-risks` and
+  `proceed-with-conditions` for real remaining risks, or move satisfied selected-boundary
+  tradeoff notes out of `Known issues`;
 - optional-check overreach: if authored verification, acceptance criteria, and review are clean,
   do not turn a non-required broader check into `ready-with-risks` or
   `proceed-with-conditions` unless it reveals a concrete defect;
@@ -96,13 +112,21 @@ Use concrete repair actions:
 - quality verdict is evidence-backed and explicitly stated,
 - release recommendation is actionable and coherent with verdict/risk profile,
 - residual risks include severity plus mitigation/ownership where needed,
+- `QA verdict: ready` has no residual risk bullets; remaining real risks use
+  `ready-with-risks` and `proceed-with-conditions`,
 - empty known-issue markers such as `Known issues: none.` are not the only risk evidence when
   the report also declares residual risk,
 - optional checks outside the authored verification boundary are not treated as release
   conditions unless they expose a concrete defect,
 - intentional selected design constraints are not treated as residual risks when required
   mitigations and evidence are complete,
+- available tasklist/plan task details and risk mitigations were cross-checked before declaring
+  `ready` or `proceed`,
+- named plan/tasklist mechanisms were either found in code/tests or explicitly superseded before
+  declaring `ready` or `proceed`,
 - no evidence-free material claim remains,
+- every `AC-N` from acceptance context has its own same-bullet evidence reference when acceptance
+  criteria are provided,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no conflict remains between `qa-report.md`, `validator-report.md`, and `stage-result.md`.

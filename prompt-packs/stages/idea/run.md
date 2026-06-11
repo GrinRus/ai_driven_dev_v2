@@ -53,6 +53,14 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 1. Read all required inputs and `contracts/stages/idea.md` before drafting outputs.
 2. Write `idea-brief.md` using only supportable statements from inputs plus explicit assumptions.
+   In `Problem statement`, describe the user-visible problem and affected scope from the request
+   and context. Do not assert source-code root causes, line-level symptoms, shared failure modes,
+   or proof of current behavior unless those facts are already present in the inputs; leave source
+   diagnosis to `research`.
+   In `Desired outcome`, avoid unsupported absolute claims such as guaranteed compatibility,
+   complete elimination of risk, or proof that all downstream behavior is preserved unless the
+   provided inputs already contain that evidence. Phrase outcomes as target goals and explicitly
+   tie them to the selected request, constraints, and acceptance context.
    In `Constraints` and `Open questions`, prose-only text is invalid; write one
    top-level bullet per item, and when there are no items write exactly `- none`.
 3. Replace ambiguity with durable questions in `questions.md` using stable ids and

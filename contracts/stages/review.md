@@ -27,6 +27,8 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 
 ## Optional context inputs
 
+- `../tasklist/output/tasklist.md`
+- `../plan/output/plan.md`
 - `context/diff-summary.md`
 - `context/acceptance-criteria.md`
 - `context/verification-output.md`
@@ -76,6 +78,13 @@ Optional context documents may improve review depth, but they must not replace i
   evidence shows it exists and it is inspectable. Reject only when the file is missing, outside
   scope, undocumented by implementation evidence, not inspectable, or an explicit release policy
   requires a tracked-only patch artifact.
+- When upstream `tasklist` or `plan` artifacts are available, review must check the implementation
+  against their nontrivial task details, required mitigations, and explicit risk-verification
+  promises, not only the high-level acceptance criteria. This includes named implementation
+  mechanisms such as specific APIs, synchronization primitives, exception chaining, or library
+  calls when the upstream artifacts made them part of the plan. If a planned behavior, mitigation,
+  mechanism, or verification detail is missing from code, tests, or implementation evidence, record
+  a finding unless upstream artifacts explicitly supersede that requirement.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation
@@ -88,6 +97,7 @@ Validators for `review` should check:
 
 - required output existence and heading coverage for `review-report.md`, `stage-result.md`, and `validator-report.md`,
 - consistency with implementation evidence, diff context, and acceptance criteria,
+- consistency with available tasklist/plan requirements and risk mitigations,
 - unsupported findings:
   - findings must reference observable implementation evidence or acceptance-criteria mismatch,
   - speculative or evidence-free findings must be rejected,

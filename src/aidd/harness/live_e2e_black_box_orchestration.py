@@ -294,7 +294,10 @@ def _default_work_root() -> Path:
 
 def _write_json(path: Path, payload: object) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    content = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+    tmp_path.write_text(content, encoding="utf-8")
+    os.replace(tmp_path, path)
     return path
 
 
@@ -3704,11 +3707,29 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             evidence_paths=(answer_analysis_path, _answers_path(ctx, stage)),
         )
 
+    stage_command = _stage_run_command(ctx, stage)
+    stage_timeout_seconds = _flow_timeout_seconds(ctx.scenario)
+    _persist_state(
+        ctx=ctx,
+        status="running",
+        next_action="run-stage",
+        current_stage=stage,
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra={
+            "active_step": {
+                "action": "run-stage",
+                "stage": stage,
+                "started_at_utc": _utc_now(),
+                "timeout_seconds": stage_timeout_seconds,
+                "command": list(stage_command),
+            }
+        },
+    )
     stage_result = _run_black_box_command(
-        command=_stage_run_command(ctx, stage),
+        command=stage_command,
         cwd=working_copy,
         environment=environment,
-        timeout_seconds=_flow_timeout_seconds(ctx.scenario),
+        timeout_seconds=stage_timeout_seconds,
     )
     classification = _classify_stage_run(stage_result)
     timeout_evidence_paths, timeout_reconciliation = _reconcile_timed_out_stage_run(
@@ -4562,17 +4583,6 @@ def _line_mentions_criterion_id(line: str, criterion_id: str) -> bool:
     normalized = line.lower().replace("criterion", "ac").replace("criteria", "ac")
     if re.search(rf"\bac[-\s]*0*{target}\b", normalized):
         return True
-    range_pattern = re.compile(
-        r"\bac[-\s]*(\d+)\s*(?:through|thru|to|[-–—])\s*(?:ac[-\s]*)?(\d+)\b",
-        flags=re.IGNORECASE,
-    )
-    for start_text, end_text in range_pattern.findall(normalized):
-        start = int(start_text)
-        end = int(end_text)
-        lower = min(start, end)
-        upper = max(start, end)
-        if lower <= target <= upper:
-            return True
     return False
 
 
@@ -5104,13 +5114,20 @@ def _counting_status(
         return "blocked"
     if machine_status != "pass" or machine_quality_gate != "pass":
         return "failed"
+    operator_decision = operator_validation.get("decision")
+    operator_present = operator_validation.get("present") is True
+    operator_valid = operator_validation.get("valid") is True
+    if (
+        operator_present
+        and operator_decision in OPERATOR_QUALITY_DECISIONS
+        and operator_decision != "counted-clean"
+        and operator_valid
+    ):
+        return "not-counted"
     if acceptance_coverage_status != "complete":
         return "pending-operator-analysis"
     if ui_ux_gate == "fail":
         return "not-counted"
-    operator_decision = operator_validation.get("decision")
-    operator_present = operator_validation.get("present") is True
-    operator_valid = operator_validation.get("valid") is True
     if operator_decision == "counted-clean" and operator_valid:
         return "counted-clean"
     if not operator_present:
@@ -5330,6 +5347,15 @@ def _finalize_reports(
         quality_transcript_path=ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,
         review_report_path=review_report_path,
         qa_report_path=qa_report_path,
+        effective_quality_gate=effective_quality_gate,
+        counting_status=counting_status,
+        acceptance_coverage_status=acceptance_coverage_status,
+        ui_ux_gate=ui_ux_gate,
+        operator_quality_decision=(
+            str(operator_validation.get("decision"))
+            if operator_validation.get("decision") is not None
+            else None
+        ),
     )
     _append_stage_audit_section_to_quality_report(ctx)
     outcome = HarnessOutcome(
@@ -5507,6 +5533,8 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         assessment=quality_assessment,
         feature_selection_path=ctx.bundle_root / FEATURE_SELECTION_FILENAME,
         quality_transcript_path=ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,
+        effective_quality_gate=quality_assessment.gate,
+        counting_status=counting_status,
     )
     _append_stage_audit_section_to_quality_report(ctx)
     _write_frontend_checkpoint_placeholders(ctx)

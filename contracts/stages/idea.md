@@ -47,6 +47,10 @@ Validators for `idea` should check:
 - minimum completeness of `idea-brief.md`:
   - `Problem statement` states the core user or business problem and affected scope;
   - `Desired outcome` states a concrete target result or acceptance signal;
+  - `Problem statement` and `Desired outcome` stay grounded in the provided request and context;
+    they must not assert source-code root causes, line-level symptoms, or complete behavior
+    preservation unless those claims are present in the inputs or explicitly marked as assumptions
+    for downstream research to verify;
   - `Constraints` lists actionable boundaries as Markdown bullet items or explicitly records `- none`;
   - `Open questions` lists unresolved decisions as Markdown bullet items or explicitly records `- none`;
   - prose-only text such as `No open questions.` is invalid under list-required sections,

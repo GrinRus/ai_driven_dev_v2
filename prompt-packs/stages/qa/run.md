@@ -22,7 +22,10 @@ The stage is complete only when verdict, recommendation, and evidence are cohere
   - `../review/output/stage-result.md`
   - `../review/output/validator-report.md`
 - optional context when available:
+  - `../tasklist/output/tasklist.md`
+  - `../plan/output/plan.md`
   - `context/selected-task.md`
+  - `context/diff-summary.md`
   - `context/verification-output.md`
   - `context/verification-artifacts.md`
   - `context/repository-state.md`
@@ -67,6 +70,18 @@ normalize if canonical validation proves the terminal status inconsistent.
    when explicit confirmation, documentation, tests, and scope boundaries required by the selected
    task are complete. Downgrade only for missing mitigation/evidence, broadened scope, contradictory
    review/verification artifacts, or a concrete defect beyond the selected boundary.
+8. When `context/diff-summary.md`, `context/repository-state.md`, or upstream implementation/review
+   evidence shows lockfile, dependency manifest, generated resolver output, or project config
+   changes outside the selected task scope, set `QA verdict: not-ready` and release recommendation
+   `hold`.
+9. When upstream tasklist or plan artifacts are available, cross-check nontrivial task details,
+   required mitigations, and explicit risk-verification promises against the diff, tests, and
+   implementation evidence. Do not declare `QA verdict: ready` solely because review approved:
+   if a planned behavior or named mechanism is missing, such as an error-cause or
+   diagnostic-context preservation promise, a required named synchronization primitive, a concrete
+   API/library call, or a required regression assertion that has no code or test evidence, set
+   `QA verdict: not-ready` and release recommendation `hold` unless upstream artifacts explicitly
+   supersede that requirement.
 
 ## Execution instructions
 
@@ -75,6 +90,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 2. Verify upstream `review` outcome is not `rejected` and is consistent with implementation status.
    When `context/selected-task.md` is provided, use its expected scope, quality bar, and acceptance
    context to separate required scenario evidence from optional exploratory checks.
+   When repository change evidence is provided, inspect every changed tracked or untracked
+   deliverable file, excluding AIDD workspace/config artifacts, before deciding readiness.
 3. Build `qa-report.md` with these exact H2 sections:
    `Quality verdict`, `Verification summary`, `Release recommendation`, `Evidence`,
    `Known issues`, and `Readiness`.
@@ -85,35 +102,56 @@ normalize if canonical validation proves the terminal status inconsistent.
    `proceed`, `proceed-with-conditions`, or `hold`.
 5. In `Evidence`, label material evidence entries as `EV-1`, `EV-2`, ... and include command
    outcomes or artifact paths in backticks.
-6. Tie verdict and recommendation claims to `verification-output.md` and/or
+6. When `context/acceptance-criteria.md` exists, add an acceptance coverage checklist under
+   `Evidence` or `Readiness` with one top-level bullet per criterion. Copy this shape:
+   ``- AC-1: confirmed. Evidence: EV-1, `context/verification-output.md`. <criterion-specific sentence>.``
+   Each bullet must name exactly one `AC-N` id and cite same-bullet evidence using an `EV-N` id
+   and/or a backticked artifact path. Do not use range claims such as `AC-1 through AC-4`, and do
+   not rely on a generic sentence such as `all acceptance criteria passed`.
+7. Tie verdict and recommendation claims to `verification-output.md` and/or
    `verification-artifacts.md` references when those documents are provided, and otherwise cite
    concrete upstream evidence.
-7. In `Known issues`, use `- Known issues: none.` only as an empty known-defect marker.
+8. In `Known issues`, use `- Known issues: none.` only as an empty known-defect marker.
    Put residual risks in separate bullets such as
    `- Residual risk RR-1: Severity: low. ... Mitigation/ownership: ...`.
-8. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
-9. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
+   Do not pair `QA verdict: ready` with residual risk bullets. If a real residual risk
+   remains, use `ready-with-risks` and `proceed-with-conditions`; if the note is an
+   intentional selected-boundary tradeoff already covered by evidence, keep it out of
+   `Known issues` and summarize it under `Readiness` instead.
+10. Use only supported recommendation values (`proceed`, `proceed-with-conditions`, `hold`).
+11. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
    instead of inventing assumptions.
-10. Keep optional broader-check limitations as non-blocking notes when authored verification,
+12. Keep optional broader-check limitations as non-blocking notes when authored verification,
    review, and acceptance criteria are clean.
-11. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
+13. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
 
 ## Common output skeleton discipline
 
 - Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
+- If no clarification is needed and you create `questions.md` or `answers.md`, write exactly
+  `# Questions\n\n- none\n` or `# Answers\n\n- none\n`; do not write prose such as
+  `No questions required.` as a bullet.
 - Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
 
 ## Completion checklist
 
 - quality verdict is explicit and evidence-backed,
 - residual risks include severity plus mitigation/ownership,
+- `QA verdict: ready` has no residual risk bullets; remaining real risks use
+  `ready-with-risks` and `proceed-with-conditions`,
 - release recommendation is actionable and consistent with verdict,
 - material claims reference concrete verification evidence,
+- each `AC-N` from acceptance context has its own evidence-backed checklist bullet when acceptance
+  criteria are provided,
 - unresolved critical uncertainty is surfaced as blocking question with `hold`,
 - optional checks outside the authored verification boundary are not treated as release
   conditions unless they expose a concrete defect,
 - intentional selected design constraints are not treated as residual risks when their required
   mitigations and evidence are complete,
+- available tasklist/plan task details and risk mitigations were cross-checked before declaring
+  `ready` or `proceed`,
+- named plan/tasklist mechanisms were either found in code/tests or explicitly superseded before
+  declaring `ready` or `proceed`,
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.

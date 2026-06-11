@@ -18,6 +18,9 @@ severity/disposition coherence, and approval-decision correctness.
    - `review-report.md`
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
+7. upstream task context when available:
+   - `../tasklist/output/tasklist.md`
+   - `../plan/output/plan.md`
 
 `repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
 any repair summary in `stage-result.md` and reference `repair-brief.md` by path for traceability.
@@ -62,6 +65,12 @@ Use concrete repair actions:
   `invalid`);
 - approval mismatch: align approval status with unresolved `must-fix` findings and required-change
   summary;
+- missed tasklist/plan requirement: if available tasklist or plan artifacts name a nontrivial
+  implementation detail, risk mitigation, named mechanism, or verification promise that is absent
+  from the diff, tests, or implementation evidence, add or keep a `must-fix` finding unless the
+  upstream artifact explicitly supersedes that requirement. Named mechanisms include concrete
+  APIs/library calls, named synchronization primitives, language-appropriate exception
+  cause/chaining mechanisms, and required regression assertions;
 - status drift: align validator verdict, stage status, blockers, and next actions.
 
 ## Targeted repair discipline
@@ -93,6 +102,9 @@ Use concrete repair actions:
   implementation output or acceptance criteria,
 - no unsupported or evidence-free finding remains active,
 - approval status is coherent with unresolved `must-fix` findings,
+- available tasklist/plan task details and risk mitigations were cross-checked against the diff,
+  tests, and implementation evidence,
+- named plan/tasklist mechanisms were either found in code/tests or explicitly superseded,
 - required changes are explicit for non-approved outcomes,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

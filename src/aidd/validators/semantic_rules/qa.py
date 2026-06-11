@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 from aidd.validators.models import ValidationFinding
 from aidd.validators.semantic_rules.common import (
     IMPLEMENT_FILE_ENTRY_PATTERN,
@@ -18,10 +21,13 @@ from aidd.validators.semantic_rules.common import (
     extract_qa_release_recommendation,
     extract_qa_verdict,
     extract_risk_blocks,
+    extract_top_level_bullet_blocks,
     is_empty_risk_entry,
     is_risk_metadata_entry,
     validate_placeholder_sections,
 )
+
+AC_ID_PATTERN = re.compile(r"\bAC-\d+\b", flags=re.IGNORECASE)
 
 
 def _qa_sections(
@@ -39,6 +45,11 @@ def _validate_quality_verdict(
     context: SemanticDocumentContext,
     verdict: SemanticSection,
 ) -> tuple[str | None, tuple[ValidationFinding, ...]]:
+    document_text = "\n".join(context.markdown_lines)
+    qa_verdict = extract_qa_verdict(document_text, prefer_labeled=True)
+    if qa_verdict is not None:
+        return qa_verdict, tuple()
+
     qa_verdict = extract_qa_verdict(verdict.content)
     if qa_verdict is not None:
         return qa_verdict, tuple()
@@ -95,6 +106,20 @@ def _validate_residual_risks(
 ) -> tuple[ValidationFinding, ...]:
     findings: list[ValidationFinding] = []
     has_residual_risk_entries = bool(risk_entry_items)
+    if qa_verdict == "ready" and has_residual_risk_entries:
+        findings.append(
+            context.finding(
+                code=UNSUPPORTED_VERDICT_CODE,
+                message=(
+                    "Verdict `ready` cannot include residual risk entries; use "
+                    "`ready-with-risks` or `proceed-with-conditions` for true "
+                    "residual risk, or move satisfied selected-boundary notes out "
+                    "of `Known issues`."
+                ),
+                severity="high",
+                location=risks.location,
+            )
+        )
     if qa_verdict == "ready-with-risks" and not has_residual_risk_entries:
         findings.append(
             context.finding(
@@ -257,6 +282,107 @@ def _validate_verdict_recommendation_alignment(
     return tuple(findings)
 
 
+def _work_item_root_from_output_path(output_path: Path) -> Path | None:
+    parts = output_path.parts
+    for index, part in enumerate(parts):
+        if part == "workitems" and index + 1 < len(parts):
+            return Path(*parts[: index + 2])
+    return None
+
+
+def _acceptance_criteria_ids(context: SemanticDocumentContext) -> tuple[str, ...]:
+    work_item_root = _work_item_root_from_output_path(context.output_path)
+    if work_item_root is None:
+        return tuple()
+
+    criteria_path = work_item_root / "context" / "acceptance-criteria.md"
+    if not criteria_path.exists():
+        return tuple()
+
+    criteria_text = criteria_path.read_text(encoding="utf-8", errors="replace")
+    ids: list[str] = []
+    seen: set[str] = set()
+    for match in AC_ID_PATTERN.finditer(criteria_text):
+        criterion_id = match.group(0).upper()
+        if criterion_id in seen:
+            continue
+        ids.append(criterion_id)
+        seen.add(criterion_id)
+    return tuple(ids)
+
+
+def _acceptance_bullet_for(
+    *,
+    criterion_id: str,
+    coverage_items: tuple[str, ...],
+) -> tuple[str | None, bool]:
+    bundled_candidate = False
+    for item in coverage_items:
+        ids_in_item = {match.group(0).upper() for match in AC_ID_PATTERN.finditer(item)}
+        if criterion_id not in ids_in_item:
+            continue
+        if ids_in_item == {criterion_id}:
+            return item, False
+        bundled_candidate = True
+    return None, bundled_candidate
+
+
+def _validate_acceptance_coverage(
+    *,
+    context: SemanticDocumentContext,
+) -> tuple[ValidationFinding, ...]:
+    criteria_ids = _acceptance_criteria_ids(context)
+    if not criteria_ids:
+        return tuple()
+
+    coverage_items = extract_top_level_bullet_blocks("\n".join(context.markdown_lines))
+    findings: list[ValidationFinding] = []
+    for criterion_id in criteria_ids:
+        coverage_item, bundled_candidate = _acceptance_bullet_for(
+            criterion_id=criterion_id,
+            coverage_items=coverage_items,
+        )
+        if coverage_item is None:
+            if bundled_candidate:
+                message = (
+                    "Acceptance coverage must use a separate top-level bullet for "
+                    f"`{criterion_id}` instead of bundling multiple `AC-N` ids."
+                )
+            else:
+                message = (
+                    "QA report must include an acceptance coverage bullet for "
+                    f"`{criterion_id}` from `context/acceptance-criteria.md`."
+                )
+            findings.append(
+                context.finding(
+                    code=INCOMPLETE_SECTION_CODE,
+                    message=message,
+                    severity="high",
+                    location=context.location(),
+                )
+            )
+            continue
+
+        has_same_bullet_evidence = (
+            QA_EVIDENCE_ID_PATTERN.search(coverage_item) is not None
+            or IMPLEMENT_FILE_ENTRY_PATTERN.search(coverage_item) is not None
+        )
+        if not has_same_bullet_evidence:
+            findings.append(
+                context.finding(
+                    code=MISSING_EVIDENCE_REF_CODE,
+                    message=(
+                        "Acceptance coverage bullet for "
+                        f"`{criterion_id}` must cite same-bullet evidence "
+                        "using an `EV-N` id and/or backticked artifact path."
+                    ),
+                    severity="high",
+                    location=context.location(),
+                )
+            )
+    return tuple(findings)
+
+
 def validate_qa_report(context: SemanticDocumentContext) -> tuple[ValidationFinding, ...]:
     verdict, risks, recommendation, evidence = _qa_sections(context)
     qa_verdict, verdict_findings = _validate_quality_verdict(
@@ -299,6 +425,7 @@ def validate_qa_report(context: SemanticDocumentContext) -> tuple[ValidationFind
             has_evidence_entries=bool(evidence_entries),
         )
     )
+    findings.extend(_validate_acceptance_coverage(context=context))
     findings.extend(validate_placeholder_sections(context))
     return tuple(findings)
 

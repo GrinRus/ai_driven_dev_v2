@@ -18,6 +18,8 @@ findings, the `Findings` section must say exactly `- none` or
   - `../implement/output/stage-result.md`
   - `../implement/output/validator-report.md`
 - optional context when available:
+  - `../tasklist/output/tasklist.md`
+  - `../plan/output/plan.md`
   - `context/diff-summary.md`
   - `context/acceptance-criteria.md`
   - `context/verification-output.md`
@@ -74,20 +76,33 @@ normalize if canonical validation proves the terminal status inconsistent.
    Do not reject solely because such a file is absent from `git diff --stat`; inspect it and treat
    it as a changed file unless it is missing, outside scope, undocumented by implementation
    evidence, or an explicit release policy requires a tracked-only patch artifact.
+   If `context/diff-summary.md`, `context/repository-state.md`, or implementation evidence shows
+   lockfile, dependency manifest, generated resolver output, or project config changes that are not
+   required by the selected task, record a `must-fix` finding and do not approve the change cleanly.
 8. Intentional design constraints selected by the authored task or resolved interview answers are
    acceptance context, not findings by themselves. For example, do not write an `accepted-risk`
    finding solely because the task intentionally executes trusted local Python when the
    implementation requires explicit confirmation, documents the trust boundary, and stays within
    the selected scope. Write a finding only for missing mitigation/evidence, broadened scope,
    contradictory artifacts, or a concrete defect.
-9. In `review-report.md`, write the approval decision as a machine-readable line:
+9. When `../tasklist/output/tasklist.md` or `../plan/output/plan.md` is available, audit the
+   implementation against task-level details and planned risk mitigations, not only acceptance
+   criteria. For each nontrivial task detail or mitigation in those upstream artifacts, verify it is
+   present in the diff, tests, or implementation evidence. Treat named mechanisms as requirements
+   when the plan/tasklist made them concrete: examples include a specific API/library call,
+   named synchronization primitive, language-appropriate exception cause/chaining mechanism,
+   or a required regression assertion. If the implementation omits it, such as missing a promised
+   error-cause or diagnostic-context preservation check, record a `must-fix` finding unless the
+   upstream artifact explicitly supersedes that requirement.
+10. In `review-report.md`, write the approval decision as a machine-readable line:
    `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
    `Approval status` or `Verdict`, then add rationale separately.
 
 ## Execution instructions
 
-1. Read required `implement` artifacts, existing optional context such as diff summary, acceptance
-   criteria, `context/verification-output.md`, and `contracts/stages/review.md` before drafting outputs.
+1. Read required `implement` artifacts, upstream tasklist/plan artifacts when present, existing
+   optional context such as diff summary, acceptance criteria, `context/verification-output.md`,
+   and `contracts/stages/review.md` before drafting outputs.
 2. Do not mark stage `succeeded` when `implement` status is unresolved or validator verdict is
    `fail`.
 3. Draft `review-report.md` with sections for findings, approval decision, and required changes.
@@ -113,6 +128,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
+- If no clarification is needed and you create `questions.md` or `answers.md`, write exactly
+  `# Questions\n\n- none\n` or `# Answers\n\n- none\n`; do not write prose such as
+  `No questions required.` as a bullet.
 - Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
 
 ## Completion checklist
@@ -126,5 +144,8 @@ normalize if canonical validation proves the terminal status inconsistent.
   conditions unless they expose a concrete defect or selected-task evidence gap,
 - intentional selected design constraints are not emitted as `accepted-risk` findings when their
   required mitigations and evidence are complete,
+- available tasklist/plan task details and risk mitigations were cross-checked against the diff,
+  tests, and implementation evidence,
+- named plan/tasklist mechanisms were either found in code/tests or explicitly superseded,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.

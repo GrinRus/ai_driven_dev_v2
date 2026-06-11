@@ -52,15 +52,24 @@ For each finding:
    any pass/fail/success outcome claim without executable/check evidence in the same bullet is still
    invalid. Manual or `CliRunner` checks must cite the executed command/snippet, artifact path, or
    captured assertion result; replace unevidenced `manual inspection -> pass` claims with concrete
-   evidence or `not-run: <reason>`.
-5. re-check `stage-result.md` and `validator-report.md` for status/blocker consistency.
+   evidence or `not-run: <reason>`. Use one bullet per command/check with this exact shape:
+   ``- `command goes here` -> pass (observed summary)`` or
+   ``- `command goes here` -> fail (exit code N; observed summary)``.
+5. keep repair bounded: if verification still fails after one focused fix attempt, record the exact
+   failing command/output and terminal status instead of continuing ad hoc debugging until timeout.
+6. re-check `stage-result.md` and `validator-report.md` for status/blocker consistency.
 
 Use concrete repair actions:
 
 - `missing diffs`: remove unsupported touched-files claims or add missing concrete entries that match
   observed edits;
+- `incomplete touched-files intent`: rewrite each top-level touched-files bullet in the exact shape
+  ``- `path/to/file.ext` - changed <short intent>`` so the path, separator, and intent are on the
+  same line;
 - `unverifiable claims`: replace vague assertions with concrete command/check outcomes, or mark as
   `not-run: <reason>` explicitly;
+- unresolved failing verification: keep the failure visible in `implementation-report.md`,
+  `stage-result.md`, and `validator-report.md`; do not claim success while debugging is incomplete;
 - `incomplete summary`: rewrite change summary so it maps selected task id -> edits -> outcomes;
 - `invalid no-op`: add evidence-backed justification and actionable next step, or convert run from
   no-op to real scoped edits;
@@ -93,8 +102,12 @@ Use concrete repair actions:
 ## Repair exit checks
 
 - no edit or verification claim remains without observable evidence,
+- every verification bullet with a pass/fail/success claim has the command/check and observed
+  outcome on the same bullet,
+- unresolved failed verification is explicit instead of hidden by open-ended debugging,
 - selected task id, change summary, touched-files list, and verification notes are mutually consistent,
-- touched-files entries stay within allowed write scope and match observed edits,
+- touched-files entries stay within allowed write scope, match observed edits, and include same-line
+  path + intent for every top-level file entry,
 - no-op outcomes (if any) include evidence-backed rationale and actionable next step,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

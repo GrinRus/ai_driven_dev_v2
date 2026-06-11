@@ -17,6 +17,7 @@ Explain what changed, which files were touched, and what verification was run.
 - the file exists in the expected stage directory,
 - the required headings are present,
 - the content is non-placeholder and stage-relevant,
+- touched file entries include a backticked file path plus same-line change intent,
 - upstream references are present when the stage requires them.
 
 ## Notes

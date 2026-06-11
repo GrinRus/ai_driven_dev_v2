@@ -166,6 +166,28 @@ def _write_stage_outputs(
         (output_root / filename).write_text(content, encoding="utf-8")
 
 
+def _write_run_attempt_dirs(
+    workspace_root: Path,
+    *,
+    work_item: str,
+    run_id: str,
+    attempts_by_stage: dict[str, int],
+) -> None:
+    for stage, attempt_count in attempts_by_stage.items():
+        for attempt_number in range(1, attempt_count + 1):
+            (
+                workspace_root
+                / "reports"
+                / "runs"
+                / work_item
+                / run_id
+                / "stages"
+                / stage
+                / "attempts"
+                / f"attempt-{attempt_number:04d}"
+            ).mkdir(parents=True, exist_ok=True)
+
+
 def test_build_live_quality_assessment_returns_pass_for_clean_full_flow(tmp_path: Path) -> None:
     scenario = _build_live_scenario()
     work_item = "WI-QUALITY-PASS"
@@ -860,14 +882,76 @@ def test_build_live_quality_assessment_accounts_for_repair_burden(
         review_status="approved",
         qa_verdict="ready",
     )
-    for stage in ("idea", "research", "plan"):
+    _write_run_attempt_dirs(
+        tmp_path,
+        work_item=work_item,
+        run_id="run-repair-burden",
+        attempts_by_stage={
+            "idea": 2,
+            "research": 2,
+            "plan": 2,
+        },
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.dimensions[1].score == 2
+    assert "repair attempts" in assessment.dimensions[1].rationale
+    assert assessment.gate == "warn"
+    assert any("Reduce repair burden" in item for item in assessment.suggested_follow_ups)
+
+
+def test_build_live_quality_assessment_flags_single_repair_attempt(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-ATTEMPT-HISTORY"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    _write_run_attempt_dirs(
+        tmp_path,
+        work_item=work_item,
+        run_id="run-normal-history",
+        attempts_by_stage={
+            "idea": 1,
+            "research": 1,
+            "plan": 1,
+            "review-spec": 1,
+            "tasklist": 1,
+            "implement": 2,
+            "review": 1,
+            "qa": 1,
+        },
+    )
+    for stage in (
+        "idea",
+        "research",
+        "plan",
+        "review-spec",
+        "tasklist",
+        "implement",
+        "review",
+        "qa",
+    ):
         stage_result = stage_output_root(
             root=tmp_path,
             work_item=work_item,
             stage=stage,
         ) / "stage-result.md"
         stage_result.write_text(
-            "# Stage result\n\n- repair attempt-0002 resolved contract drift\n",
+            "# Stage result\n\n## Attempt history\n\n- attempt-0001 succeeded\n",
             encoding="utf-8",
         )
 
@@ -882,6 +966,8 @@ def test_build_live_quality_assessment_accounts_for_repair_burden(
     )
 
     assert assessment.dimensions[1].score == 2
+    assert "repair attempts" in assessment.dimensions[1].rationale
+    assert assessment.gate == "warn"
     assert any("Reduce repair burden" in item for item in assessment.suggested_follow_ups)
 
 
@@ -943,6 +1029,98 @@ def test_build_live_quality_assessment_flags_placeholder_doc_examples(
 
     assert assessment.dimensions[2].score == 1
     assert any("placeholder" in finding for finding in assessment.blocking_findings)
+
+
+def test_build_live_quality_assessment_fails_for_out_of_scope_lockfile_change(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    workspace_root = tmp_path / ".aidd"
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-LOCKFILE"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    (tmp_path / "uv.lock").write_text("resolver churn\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `uv.lock` - incidental resolver output.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "fail"
+    assert assessment.dimensions[2].score == 0
+    assert any(
+        "lockfile changed outside selected task" in finding
+        for finding in assessment.blocking_findings
+    )
+
+
+def test_build_live_quality_assessment_allows_dependency_scoped_lockfile_change(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    workspace_root = tmp_path / ".aidd"
+    scenario = _build_live_scenario()
+    selected_task = replace(
+        scenario.feature_source.tasks[0],
+        target_change="Update package dependency pin and lockfile.",
+        expected_scope="Dependency manifest and lockfile update.",
+    )
+    work_item = "WI-QUALITY-LOCKFILE-ALLOWED"
+    _write_stage_outputs(
+        workspace_root,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    (tmp_path / "uv.lock").write_text("intentional dependency update\n", encoding="utf-8")
+    implement_root = stage_output_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage="implement",
+    )
+    implement_root.joinpath("implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `uv.lock` - update the dependency lockfile.\n",
+        encoding="utf-8",
+    )
+
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=selected_task,
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    assert assessment.gate == "pass"
+    assert not any(
+        "lockfile changed outside selected task" in finding
+        for finding in assessment.blocking_findings
+    )
 
 
 def test_build_live_quality_assessment_ignores_negated_must_fix_mentions(
@@ -1058,3 +1236,42 @@ def test_build_live_quality_assessment_returns_fail_when_quality_commands_fail(
     assert assessment.verdict == "ready"
     report = render_live_quality_report_markdown(scenario=scenario, assessment=assessment)
     assert "quality command failed" in report
+
+
+def test_render_live_quality_report_markdown_includes_effective_gate_metadata(
+    tmp_path: Path,
+) -> None:
+    scenario = _build_live_scenario()
+    work_item = "WI-QUALITY-REPORT-METADATA"
+    _write_stage_outputs(
+        tmp_path,
+        work_item=work_item,
+        review_status="approved",
+        qa_verdict="ready",
+    )
+    assessment = build_live_quality_assessment(
+        scenario=scenario,
+        workspace_root=tmp_path,
+        work_item=work_item,
+        execution_status="pass",
+        selected_task=scenario.feature_source.tasks[0],
+        quality_result=_quality_result(),
+        quality_error=None,
+    )
+
+    report = render_live_quality_report_markdown(
+        scenario=scenario,
+        assessment=assessment,
+        effective_quality_gate="warn",
+        counting_status="pending-operator-analysis",
+        acceptance_coverage_status="partial",
+        ui_ux_gate="pass",
+        operator_quality_decision="not-counted",
+    )
+
+    assert "- Quality gate: `warn`" in report
+    assert "- Machine quality gate: `pass`" in report
+    assert "- Counting status: `pending-operator-analysis`" in report
+    assert "- Acceptance coverage: `partial`" in report
+    assert "- UI/UX gate: `pass`" in report
+    assert "- Operator quality decision: `not-counted`" in report
