@@ -19,8 +19,6 @@ from aidd.harness.live_e2e_black_box import (
     run_black_box_live_e2e,
 )
 from aidd.harness.live_e2e_black_box_orchestration import (
-    _counting_status,
-    _evidence_refs_for_source,
     _find_resume_state,
     _live_interruption_handlers,
     _next_flow_complete_visible,
@@ -60,47 +58,6 @@ def _run(args: list[str], *, cwd: Path | None = None) -> str:
         text=True,
     )
     return completed.stdout.strip()
-
-
-def test_acceptance_evidence_refs_ignore_generic_criterion_ranges(tmp_path: Path) -> None:
-    qa_report = (
-        "# QA Report\n\n"
-        "- Acceptance criteria AC-1 through AC-4 are met per review evidence.\n"
-    )
-
-    refs = _evidence_refs_for_source(
-        source="qa-report",
-        path=tmp_path / "qa-report.md",
-        text=qa_report,
-        criterion="Existing Error object handling remains unchanged.",
-        criterion_id="AC-2",
-    )
-
-    assert refs == []
-
-
-def test_acceptance_evidence_refs_match_explicit_criterion_id(tmp_path: Path) -> None:
-    qa_report = (
-        "# QA Report\n\n"
-        "- AC-2: Existing Error object handling remains unchanged.\n"
-    )
-
-    refs = _evidence_refs_for_source(
-        source="qa-report",
-        path=tmp_path / "qa-report.md",
-        text=qa_report,
-        criterion="Existing Error object handling remains unchanged.",
-        criterion_id="AC-2",
-    )
-
-    assert refs == [
-        {
-            "source": "qa-report",
-            "path": (tmp_path / "qa-report.md").as_posix(),
-            "line": 3,
-            "snippet": "- AC-2: Existing Error object handling remains unchanged.",
-        }
-    ]
 
 
 def _init_source_repo(path: Path) -> None:
@@ -653,7 +610,6 @@ def _write_scenario_manifest(
     verify_commands: tuple[str, ...] = (
         "test -f .aidd/workitems/WI-LIVE-BLACKBOX/stages/qa/output/stage-result.md",
     ),
-    quality_commands: tuple[str, ...] = ("printf 'quality\\n' > quality.log",),
     interview_required: bool = False,
     frontend_checkpoints: bool = True,
     runtime_targets: tuple[str, ...] = ("opencode",),
@@ -670,15 +626,6 @@ def _write_scenario_manifest(
         "setup": {"commands": list(setup_commands)},
         "aidd_invocation": {"work_item": "WI-LIVE-BLACKBOX"},
         "verify": {"commands": list(verify_commands)},
-        "quality": {
-            "commands": list(quality_commands),
-            "rubric_profile": "live-full",
-            "require_review_status": (
-                "approved-with-conditions" if interview_required else "approved"
-            ),
-            "allowed_qa_verdicts": ["ready", "ready-with-risks"],
-            "code_review_required": True,
-        },
         "stage_scope": {"start": "idea", "end": "qa"},
         "interview": {"required": interview_required},
         "runtime_targets": list(runtime_targets),
@@ -701,7 +648,7 @@ def _write_scenario_manifest(
                     "expected_scope": "Test fixture only.",
                     "acceptance_criteria": list(acceptance_criteria),
                     "verification": list(verify_commands),
-                    "quality_bar": "Quality evidence is complete.",
+                    "quality_bar": "Execution evidence is complete.",
                     "size_rationale": "Small test fixture.",
                     **(
                         {
@@ -788,7 +735,6 @@ def _prepare_live_test(
     ui_operator_request_command: str = "pwd",
     internal_operator_decision_stage: str | None = None,
     setup_commands: tuple[str, ...] = ("printf 'setup\\n' > setup.log",),
-    quality_commands: tuple[str, ...] = ("printf 'quality\\n' > quality.log",),
     interview_required: bool = False,
     frontend_checkpoints: bool = True,
     acceptance_criteria: tuple[str, ...] = ("The fake AIDD stages complete.",),
@@ -824,7 +770,6 @@ def _prepare_live_test(
         path=scenario_path,
         repo_url=source_repo.as_uri(),
         setup_commands=setup_commands,
-        quality_commands=quality_commands,
         interview_required=interview_required,
         frontend_checkpoints=frontend_checkpoints,
         runtime_targets=runtime_targets,
@@ -853,8 +798,6 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     )
 
     assert result.status == "pass"
-    assert result.quality_gate == "warn"
-    assert result.counting_status == "pending-operator-analysis"
     assert result.bundle_root == report_root / result.run_id
     for filename in (
         "flow-state.json",
@@ -864,24 +807,27 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         "verdict.md",
         "grader.json",
         "log-analysis.md",
-        "quality-report.md",
         "stage-timing.json",
         "repair-history.md",
         "install-transcript.json",
         "setup-transcript.json",
         "run-transcript.json",
         "verify-transcript.json",
-        "quality-transcript.json",
         "teardown-transcript.json",
+        "next-flow-checkpoint.json",
+        "next-flow-checkpoint.md",
+    ):
+        assert (result.bundle_root / filename).exists(), filename
+    for filename in (
+        "quality-report.md",
+        "quality-transcript.json",
         "acceptance-coverage.json",
         "acceptance-coverage.md",
         "operator-quality-analysis-validation.json",
         "ui-ux-checkpoints.json",
         "ui-ux-checkpoints.md",
-        "next-flow-checkpoint.json",
-        "next-flow-checkpoint.md",
     ):
-        assert (result.bundle_root / filename).exists(), filename
+        assert not (result.bundle_root / filename).exists(), filename
     assert not (result.bundle_root / "next-flow-lineage.json").exists()
 
     steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
@@ -920,22 +866,17 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         assert stage_audit["unresolved_questions"] is False
     grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
-    assert grader_payload["quality"]["machine_quality_gate"] == "pass"
-    assert grader_payload["quality"]["quality_gate"] == "warn"
-    assert grader_payload["quality"]["counting_status"] == "pending-operator-analysis"
-    assert grader_payload["quality"]["acceptance_coverage_status"] == "missing"
-    assert grader_payload["quality"]["ui_ux_gate"] == "pass"
+    assert "quality" not in grader_payload
     assert len(grader_payload["stage_audits"]) == len(STAGES)
     assert grader_payload["steps"][-1]["action"] == "finish"
-    assert "Stage Audit Evidence" in (result.bundle_root / "quality-report.md").read_text(
-        encoding="utf-8"
-    )
     metadata_payload = json.loads(
         (result.bundle_root / "harness-metadata.json").read_text(encoding="utf-8")
     )
     assert metadata_payload["temp_layout"]["work_root"] == work_root.as_posix()
     assert metadata_payload["temp_layout"]["report_root"] == report_root.as_posix()
-    assert metadata_payload["black_box"]["ui_ux_evidence"]["gate"] == "pass"
+    assert metadata_payload["black_box"]["frontend_checkpoint_evidence"].endswith(
+        "frontend-checkpoints.json"
+    )
     frontend_payload = json.loads(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
@@ -945,25 +886,14 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         checkpoint["classification"] == "pass"
         for checkpoint in frontend_payload["checkpoints"]
     )
-    ui_ux_payload = json.loads(
-        (result.bundle_root / "ui-ux-checkpoints.json").read_text(encoding="utf-8")
-    )
-    assert ui_ux_payload["ui_ux_gate"] == "pass"
-    assert ui_ux_payload["checkpoints"][0]["screenshot"]["status"] == "skipped"
-    operator_validation = json.loads(
-        (result.bundle_root / "operator-quality-analysis-validation.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    assert operator_validation["present"] is False
-    acceptance_payload = json.loads(
-        (result.bundle_root / "acceptance-coverage.json").read_text(encoding="utf-8")
-    )
-    assert acceptance_payload["acceptance_coverage_status"] == "missing"
     next_flow_payload = json.loads(
         (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
     )
     assert next_flow_payload["terminal_status"] == "pass"
+    assert "quality_gate" not in next_flow_payload
+    assert "counting_status" not in next_flow_payload
+    assert "acceptance_coverage_status" not in next_flow_payload
+    assert "ui_ux_gate" not in next_flow_payload
     assert next_flow_payload["flow_complete_visible"] is True
     assert next_flow_payload["source_run_summary"]["source_run_id"] == result.run_id
     assert next_flow_payload["source_run_summary"]["source_work_item_id"] == (
@@ -993,6 +923,53 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     )
     assert "Default decision: `no-follow-up`" in next_flow_markdown
     assert "Requires second public-repository flow: `false`" in next_flow_markdown
+
+
+def test_black_box_live_e2e_preserves_manual_quality_report_without_parsing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+    manual_report = result.bundle_root / "quality-report.md"
+    manual_report_text = "\n".join(
+        (
+            "# Live E2E Quality Report",
+            "",
+            "## Decision",
+            "- Run integrity decision: clean",
+            "- Deliverable quality decision: counted-clean",
+            "- Overall decision: counted-clean",
+            "",
+            "## Notes",
+            "- This report is intentionally human-authored and must not be parsed.",
+            "- machine_quality_gate: fail",
+            "",
+        )
+    )
+    manual_report.write_text(manual_report_text, encoding="utf-8")
+
+    refreshed = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=result.run_id,
+    )
+
+    assert refreshed.status == "pass"
+    assert manual_report.read_text(encoding="utf-8") == manual_report_text
+    grader_payload = json.loads((refreshed.bundle_root / "grader.json").read_text())
+    serialized_grader = json.dumps(grader_payload)
+    assert "quality" not in grader_payload
+    assert "counted-clean" not in serialized_grader
+    assert "machine_quality_gate" not in serialized_grader
 
 
 def test_black_box_live_e2e_follow_up_proof_is_explicit_manual_only_lineage(
@@ -1041,163 +1018,6 @@ def test_black_box_live_e2e_follow_up_proof_is_explicit_manual_only_lineage(
     assert optional_lineage["lineage_artifact"] == lineage_path.as_posix()
 
 
-def test_black_box_live_e2e_records_complete_acceptance_coverage(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    scenario_path, work_root, report_root = _prepare_live_test(
-        tmp_path,
-        monkeypatch,
-        acceptance_criteria=(
-            "Result command evidence runtime log",
-        ),
-    )
-
-    result = run_black_box_live_e2e(
-        scenario_path=scenario_path,
-        runtime_id="opencode",
-        work_root=work_root,
-        report_root=report_root,
-    )
-
-    coverage = json.loads(
-        (result.bundle_root / "acceptance-coverage.json").read_text(encoding="utf-8")
-    )
-    assert coverage["acceptance_coverage_status"] == "complete"
-    assert coverage["criteria"][0]["status"] == "confirmed"
-    assert coverage["criteria"][0]["evidence_refs"]
-    grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
-    assert grader_payload["quality"]["acceptance_coverage_status"] == "complete"
-
-
-def test_black_box_live_e2e_refreshes_counted_clean_after_operator_analysis(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    scenario_path, work_root, report_root = _prepare_live_test(
-        tmp_path,
-        monkeypatch,
-        acceptance_criteria=("Result command evidence runtime log",),
-    )
-
-    first = run_black_box_live_e2e(
-        scenario_path=scenario_path,
-        runtime_id="opencode",
-        work_root=work_root,
-        report_root=report_root,
-    )
-    assert first.counting_status == "pending-operator-analysis"
-    (first.bundle_root / "operator-quality-analysis.md").write_text(
-        "\n".join(
-            (
-                "# Operator Quality Analysis",
-                "",
-                "## Machine Result",
-                "- Execution verdict: pass",
-                "- Quality gate: pass",
-                "- QA verdict: ready",
-                "- Review status: approved",
-                "",
-                "## Decision",
-                "- Decision: counted-clean",
-                "",
-                "## Blockers",
-                "- none",
-                "",
-            )
-        ),
-        encoding="utf-8",
-    )
-
-    refreshed = run_black_box_live_e2e(
-        scenario_path=scenario_path,
-        runtime_id="opencode",
-        work_root=work_root,
-        report_root=report_root,
-        run_id=first.run_id,
-    )
-
-    assert refreshed.status == "pass"
-    assert refreshed.quality_gate == "pass"
-    assert refreshed.counting_status == "counted-clean"
-    validation = json.loads(
-        (refreshed.bundle_root / "operator-quality-analysis-validation.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    assert validation["valid"] is True
-    assert validation["decision"] == "counted-clean"
-
-
-def test_black_box_live_e2e_rejects_invalid_operator_counted_clean(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
-
-    first = run_black_box_live_e2e(
-        scenario_path=scenario_path,
-        runtime_id="opencode",
-        work_root=work_root,
-        report_root=report_root,
-    )
-    (first.bundle_root / "operator-quality-analysis.md").write_text(
-        "\n".join(
-            (
-                "# Operator Quality Analysis",
-                "",
-                "## Machine Result",
-                "- Execution verdict: pass",
-                "- Quality gate: pass",
-                "- QA verdict: ready",
-                "- Review status: approved",
-                "",
-                "## Decision",
-                "- Decision: counted-clean",
-                "",
-                "## Blockers",
-                "- none",
-                "",
-            )
-        ),
-        encoding="utf-8",
-    )
-
-    refreshed = run_black_box_live_e2e(
-        scenario_path=scenario_path,
-        runtime_id="opencode",
-        work_root=work_root,
-        report_root=report_root,
-        run_id=first.run_id,
-    )
-
-    assert refreshed.counting_status == "pending-operator-analysis"
-    validation = json.loads(
-        (refreshed.bundle_root / "operator-quality-analysis-validation.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    assert validation["valid"] is False
-    assert "incomplete acceptance coverage" in "\n".join(validation["findings"])
-
-
-def test_counting_status_honors_valid_operator_not_counted_before_complete_coverage() -> None:
-    assert (
-        _counting_status(
-            machine_status="pass",
-            machine_quality_gate="pass",
-            operator_validation={
-                "present": True,
-                "valid": True,
-                "decision": "not-counted",
-            },
-            acceptance_coverage_status="partial",
-            ui_ux_gate="pass",
-        )
-        == "not-counted"
-    )
-
-
 def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1206,7 +1026,6 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
         tmp_path,
         monkeypatch,
         block_stage="idea",
-        quality_commands=("command -v fake-aidd >/dev/null",),
     )
 
     first = run_black_box_live_e2e(
@@ -1295,7 +1114,6 @@ def test_black_box_live_e2e_does_not_resume_blocked_run_without_run_id(
         tmp_path,
         monkeypatch,
         block_stage="idea",
-        quality_commands=("command -v fake-aidd >/dev/null",),
     )
 
     first = run_black_box_live_e2e(
@@ -1324,7 +1142,6 @@ def test_black_box_live_e2e_adds_suffix_when_generated_run_id_exists(
     scenario_path, work_root, report_root = _prepare_live_test(
         tmp_path,
         monkeypatch,
-        quality_commands=("command -v fake-aidd >/dev/null",),
     )
     monkeypatch.setattr(
         "aidd.harness.live_e2e_black_box.derive_run_id",
@@ -1492,7 +1309,6 @@ def test_black_box_live_e2e_fails_required_interview_without_blocked_resume(
         tmp_path,
         monkeypatch,
         interview_required=True,
-        quality_commands=("command -v fake-aidd >/dev/null",),
     )
 
     result = run_black_box_live_e2e(
@@ -1503,7 +1319,6 @@ def test_black_box_live_e2e_fails_required_interview_without_blocked_resume(
     )
 
     assert result.status == "fail"
-    assert result.quality_gate == "fail"
     assert result.first_failure_note is not None
     assert "Required interview flow was not observed" in result.first_failure_note
     steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
@@ -1526,7 +1341,6 @@ def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
         tmp_path,
         monkeypatch,
         inspect_block_stage="idea",
-        quality_commands=("command -v fake-aidd >/dev/null",),
     )
 
     first = run_black_box_live_e2e(
@@ -1578,7 +1392,6 @@ def test_black_box_live_e2e_reports_first_unresolved_signal_after_resolved_block
         monkeypatch,
         block_stage="idea",
         fail_stage="plan",
-        quality_commands=("command -v fake-aidd >/dev/null",),
     )
 
     first = run_black_box_live_e2e(
@@ -1620,7 +1433,6 @@ def test_black_box_live_e2e_does_not_reblock_on_historical_log_text(
         tmp_path,
         monkeypatch,
         log_blocking_text=True,
-        quality_commands=("command -v fake-aidd >/dev/null",),
     )
 
     result = run_black_box_live_e2e(
@@ -1812,31 +1624,6 @@ def test_black_box_live_e2e_reports_setup_infra_failure_and_partial_bundle(
     )
     assert setup_payload["commands"][0]["exit_code"] == 3
     assert (result.bundle_root / "flow-state.json").exists()
-
-
-def test_black_box_live_e2e_quality_failure_is_additive(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    scenario_path, work_root, report_root = _prepare_live_test(
-        tmp_path,
-        monkeypatch,
-        quality_commands=("printf 'quality failed\\n'; exit 5",),
-    )
-
-    result = run_black_box_live_e2e(
-        scenario_path=scenario_path,
-        runtime_id="opencode",
-        work_root=work_root,
-        report_root=report_root,
-    )
-
-    assert result.status == "pass"
-    assert result.quality_gate == "fail"
-    quality_payload = json.loads(
-        (result.bundle_root / "quality-transcript.json").read_text(encoding="utf-8")
-    )
-    assert quality_payload["commands"][0]["exit_code"] == 5
 
 
 def test_black_box_live_e2e_reports_install_failure(

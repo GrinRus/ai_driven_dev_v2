@@ -16,7 +16,6 @@ from aidd.harness.scenarios import (
     ScenarioCommandSteps,
     ScenarioFeatureSource,
     ScenarioLiveFlowConfig,
-    ScenarioQualityConfig,
     ScenarioRepoSource,
     ScenarioRunConfig,
 )
@@ -94,13 +93,6 @@ def _scenario(
             fixture_path=None,
             seed_id=None,
             summary=None,
-        ),
-        quality=ScenarioQualityConfig(
-            commands=tuple(),
-            rubric_profile="live-full",
-            require_review_status="approved",
-            allowed_qa_verdicts=("ready",),
-            code_review_required=True,
         ),
         live_flow=ScenarioLiveFlowConfig(
             driver="stepwise-black-box",

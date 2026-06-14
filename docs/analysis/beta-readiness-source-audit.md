@@ -86,8 +86,8 @@ command so future smoke refactors do not break source-installed local runs.
   `w24-a4-live-002-codex-20260524`, `w24-a4-live-007-codex-20260524`,
   `w24-a4-live-007-claude-code-20260524`, `w24-a4-live-006-opencode-20260524-r2`,
   and `w24-a4-live-008-opencode-20260524`. The two interview scenarios include
-  `answer-analysis.md` plus `operator-quality-analysis.md`; all five counted bundles
-  include `operator-quality-analysis.md`.
+  `answer-analysis.md` plus `manual quality-report.md`; all five counted bundles
+  include `manual quality-report.md`.
 - The `AIDD-LIVE-006/opencode` refresh first exposed an AIDD-owned repair-prompt clarity
   defect around malformed interview answer bullets. That defect was fixed in the
   candidate source before the counted rerun.

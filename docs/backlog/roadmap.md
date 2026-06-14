@@ -3054,7 +3054,7 @@ Dependencies:
 
 Local tasks:
 
-- `W12-E2-S2-T1` (done) Run `quality.commands` after verification, capture `quality-transcript.json`, and feed the results into the live quality scorer.
+- `W12-E2-S2-T1` (done, legacy) Run the old live quality command block after verification, capture the legacy quality transcript artifact, and feed the results into the removed live quality scorer.
 - `W12-E2-S2-T2` (done) Require full-stage validated outputs plus quality artifacts before a live run is considered clean, and add regression coverage for weak code or weak artifacts escaping execution pass.
 
 Exit evidence:
@@ -4814,10 +4814,10 @@ Evidence:
 
 - `2026-05-06` Forensic inspection of `eval-live-005-opencode-20260506T054902Z` found the exact boundary: the `review` validator already rejected findings without implementation-output or acceptance-criteria evidence, but the final repair brief only repeated the generic stable id/severity/disposition/rationale requirement. The failing `review-report.md` had `REV-*` findings with severity, disposition, and rationale, but no per-finding evidence references.
 - `2026-05-06` `contracts/stages/review.md`, `prompt-packs/stages/review/run.md`, and `prompt-packs/stages/review/repair.md` now make `Evidence:` metadata or equivalent inline implementation/`AC-*` evidence explicit for every finding. The generated repair brief now adds an actionable `SEM-UNSUPPORTED-CLAIM` hint that tells the runtime to add `Evidence:` or remove/mark unsupported findings invalid.
-- `2026-05-06` Focused local checks passed after hardening and quality-parser follow-up: `uv run --extra dev pytest tests/evals/test_quality.py tests/validators/test_semantic.py tests/core/test_repair.py tests/test_prompt_quality.py -q` reported `100 passed`.
+- `2026-05-06` Focused local checks passed after hardening and the then-active legacy quality-parser follow-up: semantic, repair, prompt-quality, and legacy quality-evaluator regressions reported `100 passed`.
 - `2026-05-06` OpenCode preflight passed for `AIDD-LIVE-005`: provider `/opt/homebrew/bin/opencode`, version `1.14.30`, native execution command `opencode run --format json --dangerously-skip-permissions`.
 - `2026-05-06` Post-hardening rerun `eval-live-005-opencode-20260506T094747Z` produced status `pass`, first failure boundary `none`, and bundle path `.aidd/reports/evals/eval-live-005-opencode-20260506T094747Z`. The run reached `idea -> qa`, and `review` succeeded after one repair for a missing `Verdict` section; the previous `SEM-UNSUPPORTED-CLAIM` blocker did not recur.
-- `2026-05-06` The generated live `quality-report.md` still recorded quality gate `fail` because the local quality evaluator only recognized backticked `Review status` lines and missed the contract-valid `## Verdict` / `**approved**` output. That AIDD-owned parser mismatch was fixed in `src/aidd/evals/quality.py`; recomputing the assessment against the same bundle now yields gate `warn`, verdict `ready-with-risks`, review status `approved`, QA verdict `ready-with-risks`, no blocking findings, and scores `flow_fidelity=3`, `artifact_quality=2`, `code_quality=1`. Generated `.aidd/` artifacts were not edited.
+- `2026-05-06` The generated live `quality-report.md` still recorded quality gate `fail` because the then-active local quality evaluator only recognized backticked `Review status` lines and missed the contract-valid `## Verdict` / `**approved**` output. That legacy parser mismatch was fixed at the time and later superseded by the execution-only live E2E model with manual post-run quality reports. Generated `.aidd/` artifacts were not edited.
 
 Exit evidence:
 
@@ -5714,7 +5714,7 @@ Evidence:
   large-scenario evidence: provider quota returned a structured API error payload with
   process exit `0`, so AIDD treated the runtime exit as success, spent repair budget on
   missing `idea-brief.md`, and stopped after validation failed three times.
-- Operator-authored `operator-quality-analysis.md` overlays were written in each
+- Operator-authored `manual quality-report.md` overlays were written in each
   terminal bundle; `.aidd/reports/evals/` remains local evidence and is not committed.
 - `2026-05-26` split the broad evidence-backed fix pass into two reviewable tasks:
   `W24-E1-S2-T2` owns the adapter/runtime error-payload classification issue proven by

@@ -19,10 +19,6 @@ class HarnessVerificationError(RuntimeError):
     """Raised when a verification command fails."""
 
 
-class HarnessQualityError(RuntimeError):
-    """Raised when a quality command fails."""
-
-
 class HarnessTeardownError(RuntimeError):
     """Raised when a teardown command fails."""
 
@@ -63,13 +59,6 @@ class HarnessAiddRunResult:
 class HarnessVerificationResult:
     executed_commands: tuple[str, ...]
     aidd_exit_code: int
-    command_transcripts: tuple[HarnessCommandTranscript, ...]
-    duration_seconds: float
-
-
-@dataclass(frozen=True, slots=True)
-class HarnessQualityResult:
-    executed_commands: tuple[str, ...]
     command_transcripts: tuple[HarnessCommandTranscript, ...]
     duration_seconds: float
 
@@ -296,39 +285,6 @@ def run_verification_steps(
     return HarnessVerificationResult(
         executed_commands=tuple(transcript.command for transcript in command_transcripts),
         aidd_exit_code=aidd_run_result.exit_code,
-        command_transcripts=command_transcripts,
-        duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
-    )
-
-
-def run_quality_steps(
-    *,
-    scenario: Scenario,
-    working_copy_path: Path,
-    environment: Mapping[str, str] | None = None,
-) -> HarnessQualityResult:
-    _validate_working_copy_path(working_copy_path)
-
-    if scenario.quality is None:
-        return HarnessQualityResult(
-            executed_commands=tuple(),
-            command_transcripts=tuple(),
-            duration_seconds=0.0,
-        )
-
-    command_env = dict(os.environ)
-    if environment is not None:
-        command_env.update(environment)
-
-    command_transcripts = _run_shell_commands(
-        commands=scenario.quality.commands,
-        working_copy_path=working_copy_path,
-        command_env=command_env,
-        error_label="Quality",
-        error_type=HarnessQualityError,
-    )
-    return HarnessQualityResult(
-        executed_commands=tuple(transcript.command for transcript in command_transcripts),
         command_transcripts=command_transcripts,
         duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
     )

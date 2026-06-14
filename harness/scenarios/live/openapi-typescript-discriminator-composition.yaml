@@ -10,7 +10,7 @@ repo:
 objective: Exercise a live codegen lane where discriminator composition semantics
   must be clarified before implementation.
 task: Run the installed AIDD full-flow live audit against the selected
-  openapi-typescript discriminator task and preserve reviewable quality evidence.
+  openapi-typescript discriminator task and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -82,16 +82,6 @@ verify:
     evidence: answers.md exists and marks each blocking question as resolved.
   - step: completed
     evidence: focused codegen tests, TypeScript checks, and QA output artifact checks succeed.
-quality:
-  commands:
-  - pnpm --filter openapi-typescript exec vitest run test/discriminators.test.ts test/node-api.test.ts
-  - pnpm --filter openapi-typescript lint:ts
-  rubric_profile: live-full
-  require_review_status: approved-with-conditions
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 10
   timeout_minutes: 60

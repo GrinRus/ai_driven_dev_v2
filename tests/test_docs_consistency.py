@@ -932,7 +932,7 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "write standard `[resolved]` answers",
         "`- Q1 [resolved] answer text`",
         "answer-analysis.md",
-        "operator-quality-analysis.md",
+        "quality-report.md",
         "next-flow-checkpoint.json",
         "next-flow-checkpoint.md",
         "--enable-next-flow-follow-up-proof",
@@ -941,7 +941,7 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "Confirm **Flow Complete** is visible for the terminal run.",
         "Record the operator next-flow decision",
         "Do not launch a second public-repository flow by default.",
-        "The operator audit cannot upgrade machine `fail` or `warn`",
+        "Keep `Run Integrity` separate from artifact, code, test, and UI/UX quality.",
     ):
         assert needle in live_e2e_skill
 
@@ -950,7 +950,7 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     assert "`- Q1 [resolved] answer text`" in aidd_eval_skill
     assert "stage-audits/<stage>.json" in aidd_eval_skill
     assert "${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd" in aidd_eval_skill
-    assert "operator-quality-analysis.md" in aidd_eval_skill
+    assert "quality-report.md" in aidd_eval_skill
 
 
 def test_live_e2e_next_flow_checkpoint_policy_is_manual_only() -> None:

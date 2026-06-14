@@ -309,6 +309,8 @@ Expected behavior in the current local implementation:
 - live eval bundles include `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`,
   and `self-repair-matrix.md` for per-step duration, deterministic repair-probe coverage,
   and terminal document consistency audit.
+- live eval bundles are execution-only; write `quality-report.md` manually after
+  the terminal run when artifact, code, test, or UI/UX quality must be judged.
 - repair retries persist `repair-context.md` in the run attempt directory, which lets
   operators trace the exact validator findings that caused each retry.
 - live E2E is manual local operator audit evidence, not CI/CD, not a release workflow,

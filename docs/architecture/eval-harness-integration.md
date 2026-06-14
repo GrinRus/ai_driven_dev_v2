@@ -75,7 +75,10 @@ This layer runs one stage or one bounded workflow subset and verifies:
 
 ### 4.4 Manual installed live operator layer
 
-This layer answers: can an operator manually install AIDD, enter a real repository, select a reproducible authored task, run the governed flow from `idea` through `qa`, and prove both execution and quality?
+This layer answers: can an operator manually install AIDD, enter a real repository,
+select a reproducible authored task, run the governed flow from `idea` through `qa`,
+preserve execution evidence, and write any deliverable-quality decision manually
+after the terminal run?
 
 Its contract is:
 
@@ -86,7 +89,7 @@ Its contract is:
 - AIDD runs from the target repository root;
 - `.aidd/` is rooted inside that repository;
 - the harness seeds a target-repository `aidd.example.toml` for the installed run;
-- install, setup, run, verify, quality, and teardown evidence is preserved;
+- install, setup, run, verify, and teardown evidence is preserved;
 - automation for this lane is manual-only and must not be treated as a CI or release gate.
 
 ## 5. Scenario model
@@ -103,7 +106,6 @@ Harness scenarios are defined in YAML and describe:
 - runtime targets;
 - setup and verify commands;
 - feature source policy;
-- quality gate policy;
 - live answer policy and interview expectations;
 - grading rules;
 - timeout and patch-budget limits.
@@ -117,7 +119,9 @@ Live scenarios additionally imply:
 - `.aidd` workspace rooted inside that target repository.
 - a live runtime config written into the prepared working copy, with optional command overrides from `AIDD_EVAL_<RUNTIME>_COMMAND`.
 - `agent-decides` answer handling for any live scenario that blocks on questions.
-- one post-verification quality phase that writes quality artifacts without mutating roadmap or backlog files.
+- an execution-only bundle lifecycle that stops after verification and teardown;
+  any deliverable quality review is a manual post-run `quality-report.md` written
+  by the launching SWE agent, not by the runner.
 
 Deterministic scenarios additionally imply:
 
@@ -146,10 +150,11 @@ Deterministic scenarios additionally imply:
 11. Capture validator outcomes and repair attempts.
 12. Write per-stage audits after every live stage.
 13. Run scenario verification commands.
-14. Run scenario quality commands.
-15. Run graders and quality scoring.
-16. Run log analysis.
-17. Write verdict and durable bundle metadata, including install provenance when applicable.
+14. Run log analysis.
+15. Write execution-only grader data, verdict, summary, and durable bundle metadata,
+    including install provenance when applicable.
+16. After the terminal run, the launching SWE agent may write the manual
+    `quality-report.md`; the runner does not create, parse, or score it.
 
 ## 7. Mandatory output artifacts
 
@@ -175,14 +180,16 @@ Every black-box live E2E run should aim to write:
 - `.aidd/reports/evals/<run_id>/self-repair-matrix.md`
 - `.aidd/reports/evals/<run_id>/grader.json`
 - `.aidd/reports/evals/<run_id>/verdict.md`
-- `.aidd/reports/evals/<run_id>/quality-report.md`
 - `.aidd/reports/evals/<run_id>/summary.md`
 - `.aidd/reports/evals/<run_id>/feature-selection.json`
 - `.aidd/reports/evals/<run_id>/setup-transcript.json`
 - `.aidd/reports/evals/<run_id>/run-transcript.json`
 - `.aidd/reports/evals/<run_id>/verify-transcript.json`
-- `.aidd/reports/evals/<run_id>/quality-transcript.json`
 - `.aidd/reports/evals/<run_id>/teardown-transcript.json`
+
+`.aidd/reports/evals/<run_id>/quality-report.md` is a manual post-run SWE-agent
+artifact. It is not part of execution bundle completeness and must not affect
+`verdict.md` or `grader.json`.
 
 `self-repair-matrix.json` and `.md` include the deterministic repair-probe catalog for
 all stages from `idea` to `qa`. Each probe row records the observed initial verdict,
@@ -204,7 +211,9 @@ Installed live runs should additionally preserve install provenance in harness m
 - workspace root;
 - packaged-resource source.
 
-The machine-readable grader payload must preserve separate execution and quality sections so execution verdict taxonomy remains stable while the quality gate can still downgrade or fail a run.
+The machine-readable grader payload is execution-only. Manual deliverable quality
+belongs in the optional post-run `quality-report.md` and must not downgrade or
+mutate the execution verdict.
 
 ## 8. Log analysis requirements
 
@@ -223,11 +232,10 @@ The analysis should detect at least:
 - excessive question churn;
 - install-path mismatches between target cwd and artifact expectations.
 
-Quality analysis is also mandatory for live E2E because a technically completed run can still produce weak artifacts or weak code. The quality layer should score:
-
-- `flow_fidelity`
-- `artifact_quality`
-- `code_quality`
+Manual post-run quality review is still expected when the launching SWE agent needs a
+deliverable-quality decision: a technically completed run can still produce weak
+artifacts, weak code, weak tests, or poor operator UI/UX. That review belongs in
+`quality-report.md` and is not a runner score.
 
 ## 9. Converting failures into regression cases
 

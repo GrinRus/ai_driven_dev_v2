@@ -10,7 +10,7 @@ repo:
 objective: Keep Hono smoke lane deterministic by targeting the non-Error throw
   handling defect with bounded patch scope.
 task: Run the installed AIDD full-flow live audit against the selected Hono authored task
-  and preserve reviewable quality evidence.
+  and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -74,16 +74,6 @@ verify:
   - Focused Hono runtime and compose regression tests report no failing tests.
   - TypeScript compile check reports no type errors.
   - QA stage output artifacts exist for the selected work item.
-quality:
-  commands:
-  - ./node_modules/.bin/vitest --run src/hono.test.ts src/compose.test.ts
-  - ./node_modules/.bin/tsc --noEmit
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 8
   timeout_minutes: 20

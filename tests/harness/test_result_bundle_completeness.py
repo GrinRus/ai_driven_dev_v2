@@ -51,7 +51,6 @@ def _build_scenario() -> Scenario:
         ),
         verify=ScenarioCommandSteps(commands=("echo verify",)),
         feature_source=None,
-        quality=None,
         live_flow=None,
         runtime_targets=("generic-cli",),
         is_live=False,
@@ -92,13 +91,11 @@ def _assert_required_bundle_files(layout_root: Path) -> None:
         "setup-transcript.json",
         "run-transcript.json",
         "verify-transcript.json",
-        "quality-transcript.json",
         "teardown-transcript.json",
         "feature-selection.json",
         "runtime.log",
         "validator-report.md",
         "verdict.md",
-        "quality-report.md",
         "stage-timing.json",
         "stage-timing.md",
         "self-repair-matrix.json",
@@ -196,7 +193,6 @@ def test_result_bundle_completeness_for_terminal_outcomes(
         layout=layout,
         payload={"scenario_id": "AIDD-TEST-BUNDLE-COMPLETENESS", "selected_task": None},
     )
-    layout.quality_report_path.write_text("# Live Quality Report\n\n- none\n", encoding="utf-8")
     layout.stage_timing_json_path.write_text("{}\n", encoding="utf-8")
     layout.stage_timing_markdown_path.write_text("# Stage Timing\n", encoding="utf-8")
     layout.self_repair_matrix_json_path.write_text("{}\n", encoding="utf-8")

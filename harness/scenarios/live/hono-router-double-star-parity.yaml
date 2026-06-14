@@ -9,7 +9,7 @@ repo:
 objective: Keep Hono interview live coverage deterministic with an authored router
   parity task that requires explicit compatibility clarification.
 task: Run the installed AIDD full-flow live audit against the selected Hono interview
-  task and preserve reviewable quality evidence.
+  task and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -73,16 +73,6 @@ verify:
     evidence: answers.md exists and marks each blocking question as resolved.
   - step: completed
     evidence: verification commands and QA output artifact checks succeed after rerun.
-quality:
-  commands:
-  - bunx vitest run src/router/ src/utils/url.test.ts
-  - bunx tsc --noEmit
-  rubric_profile: live-full
-  require_review_status: approved-with-conditions
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 12
   timeout_minutes: 60

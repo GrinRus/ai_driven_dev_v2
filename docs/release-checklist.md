@@ -245,8 +245,8 @@ Post-`v0.1.0a9` changes accepted in `v0.1.0a10`:
 - stage input preflight now reports missing prerequisites before runtime execution;
 - the integrated operator workbench adds project-home, stage cockpit, artifact, and
   next-flow surfaces while preserving CLI-equivalent artifact ownership;
-- live E2E quality gates now enforce stronger artifact completeness, review obligation,
-  QA scoring, repair signal, and target touched-file checks;
+- live E2E evidence now separates execution integrity from manual post-run quality
+  reports for artifacts, code, tests, and operator UI/UX;
 - Claude large live E2E coverage was added to the maintained live catalog;
 - maintained live prompt examples were neutralized so reusable prompts do not encode
   target-specific live-run solutions.
@@ -335,11 +335,11 @@ W24 manual live evidence refresh on 2026-05-24:
 
 | Scenario / runtime | Manifest | Preflight result | Counted live evidence |
 | --- | --- | --- | --- |
-| `AIDD-LIVE-002` / `codex` | `harness/scenarios/live/typer-boolean-help-rendering.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Counted clean: `w24-a4-live-002-codex-20260524`; quality gate `pass`; `operator-quality-analysis.md` present |
-| `AIDD-LIVE-007` / `codex` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Counted clean: `w24-a4-live-007-codex-20260524`; quality gate `pass`; `operator-quality-analysis.md` present |
-| `AIDD-LIVE-007` / `claude-code` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `2.1.85 (Claude Code)`; native default command | Counted clean: `w24-a4-live-007-claude-code-20260524`; quality gate `pass`; `operator-quality-analysis.md` present |
-| `AIDD-LIVE-006` / `opencode` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Counted clean after blocked/resumed interview path: `w24-a4-live-006-opencode-20260524-r2`; quality gate `pass`; `answer-analysis.md` and `operator-quality-analysis.md` present |
-| `AIDD-LIVE-008` / `opencode` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Counted clean after blocked/resumed interview path: `w24-a4-live-008-opencode-20260524`; quality gate `pass`; `answer-analysis.md` and `operator-quality-analysis.md` present |
+| `AIDD-LIVE-002` / `codex` | `harness/scenarios/live/typer-boolean-help-rendering.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-002-codex-20260524`; `manual quality-report.md` present |
+| `AIDD-LIVE-007` / `codex` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-007-codex-20260524`; `manual quality-report.md` present |
+| `AIDD-LIVE-007` / `claude-code` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `2.1.85 (Claude Code)`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-007-claude-code-20260524`; `manual quality-report.md` present |
+| `AIDD-LIVE-006` / `opencode` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Manual deliverable decision counted-clean after blocked/resumed interview path: `w24-a4-live-006-opencode-20260524-r2`; `answer-analysis.md` and `manual quality-report.md` present |
+| `AIDD-LIVE-008` / `opencode` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Manual deliverable decision counted-clean after blocked/resumed interview path: `w24-a4-live-008-opencode-20260524`; `answer-analysis.md` and `manual quality-report.md` present |
 
 This counted manual live evidence is local operator audit evidence only. It supported the
 `0.1.0a5` release-preparation slice, but it is separate from package-channel acceptance and

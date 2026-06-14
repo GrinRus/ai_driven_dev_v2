@@ -18,11 +18,7 @@ def _assert_live_contract(scenario) -> None:
     assert scenario.feature_source.mode == "authored-task-pool"
     assert scenario.feature_source.selection_policy == "first-listed"
     assert scenario.feature_source.tasks
-    assert scenario.quality is not None
-    assert scenario.quality.rubric_profile == "live-full"
-    assert scenario.quality.code_review_required is True
-    assert "ready" in scenario.quality.allowed_qa_verdicts
-    assert "ready-with-risks" in scenario.quality.allowed_qa_verdicts
+    assert "quality" not in scenario.raw
     assert scenario.live_flow is not None
     assert scenario.live_flow.driver == "stepwise-black-box"
     assert scenario.live_flow.checkpoint_policy == "after-each-step"
@@ -30,7 +26,7 @@ def _assert_live_contract(scenario) -> None:
     assert scenario.live_flow.frontend_checkpoints is True
 
 
-def test_live_scenario_exposes_full_flow_repo_steps_and_quality_contract() -> None:
+def test_live_scenario_exposes_full_flow_repo_steps_and_execution_contract() -> None:
     scenario = load_scenario(Path("harness/scenarios/live/typer-styled-help-alignment.yaml"))
 
     assert scenario.scenario_id == "AIDD-LIVE-001"
@@ -62,8 +58,6 @@ def test_live_scenario_exposes_full_flow_repo_steps_and_quality_contract() -> No
     assert first_task.title == "styled help alignment bugfix"
     assert "regression coverage" in first_task.summary
     assert first_task.acceptance_criteria
-    assert scenario.quality.commands == ("uv run pytest -q",)
-    assert scenario.quality.require_review_status == "approved"
 
 
 def test_typer_boolean_live_scenario_uses_extended_budget_and_focused_help_checks() -> None:
@@ -98,11 +92,6 @@ def test_typer_boolean_live_scenario_uses_extended_budget_and_focused_help_check
         "test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/validator-report.md",
     )
     assert scenario.verify.commands == task.verification
-    assert scenario.quality.commands == (
-        focused_help_pytest,
-        focused_help_pytest_no_rich,
-    )
-    assert scenario.quality.require_review_status == "approved"
 
 
 def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
@@ -150,7 +139,6 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
     assert "httpx https://httpbin.org/json" in task.target_change
     assert "httpx https://httpbin.org/json" in task.acceptance_criteria[0]
     verification_text = "\n".join(scenario.verify.commands)
-    quality_text = "\n".join(scenario.quality.commands)
     assert "git\", \"diff\", \"--name-only" in verification_text
     assert ".venv/bin/python" in verification_text
     assert "README.md" in verification_text
@@ -159,7 +147,6 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
     assert "https://httpbin.org/json" not in verification_text
     assert "placeholder runnable example introduced" in verification_text
     assert "pytest -q" not in verification_text
-    assert "pytest -q" not in quality_text
     assert scenario.verify.commands[-2:] == (
         "test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md",
         (
@@ -167,7 +154,6 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
             "validator-report.md"
         ),
     )
-    assert scenario.quality.commands == scenario.verify.commands[:2]
 
 
 def test_sqlite_utils_canonical_live_scenario_declares_black_box_operator_contract() -> None:
@@ -208,7 +194,6 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
     assert scenario.live_flow is not None
     assert scenario.live_flow.answer_policy == "agent-decides"
     assert scenario.raw["interview"]["must_ask_at_least_one"] is True
-    assert scenario.quality.require_review_status == "approved-with-conditions"
     assert scenario.feature_source.tasks[0].task_id == "TASK-LIVE-SQLITE-YIELDED-ROWS"
     assert scenario.feature_source.tasks[0].interview
     assert scenario.raw["interview"]["blocking_question_topics"] == [
@@ -242,7 +227,6 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
     assert scenario.live_flow.answer_policy == "agent-decides"
     assert scenario.feature_source.tasks[0].task_id == "TASK-LIVE-HONO-ROUTER-DOUBLE-STAR"
     assert scenario.feature_source.tasks[0].interview
-    assert scenario.quality.require_review_status == "approved-with-conditions"
     assert scenario.raw["interview"]["must_ask_at_least_one"] is True
     assert (
         scenario.raw["interview"]["answer_flow"]["answers_file"]
@@ -288,7 +272,7 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
         "test/node-api.test.ts"
         in openapi.verify.commands
     )
-    assert "pnpm --filter openapi-typescript lint:ts" in openapi.quality.commands
+    assert "pnpm --filter openapi-typescript lint:ts" in openapi.verify.commands
 
     assert pytest_scenario.scenario_id == "AIDD-LIVE-011"
     assert pytest_scenario.scenario_class == "live-full-flow-interview"
@@ -322,7 +306,7 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
     assert (
         "uv run --frozen ruff check starlette tests/middleware/test_base.py "
         "tests/middleware/test_errors.py tests/test_responses.py"
-        in starlette.quality.commands
+        in starlette.verify.commands
     )
 
 

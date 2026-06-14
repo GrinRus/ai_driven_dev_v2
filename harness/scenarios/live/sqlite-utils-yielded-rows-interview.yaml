@@ -9,7 +9,7 @@ repo:
 objective: Keep sqlite-utils interview live coverage deterministic with an authored
   yielded-rows task that requires explicit requirement clarification.
 task: Run the installed AIDD full-flow live audit against the selected sqlite-utils
-  interview task and preserve reviewable quality evidence.
+  interview task and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -78,15 +78,6 @@ verify:
     evidence: answers.md exists and marks each blocking question as resolved.
   - step: completed
     evidence: verification command and QA output artifact checks succeed after rerun.
-quality:
-  commands:
-  - uv run pytest -q
-  rubric_profile: live-full
-  require_review_status: approved-with-conditions
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 12
   timeout_minutes: 45

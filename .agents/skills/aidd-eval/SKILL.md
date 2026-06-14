@@ -44,14 +44,15 @@ and manual-live lanes.
 6. Always keep question/answer events as durable artifacts.
 7. Always generate log-analysis output.
 8. Keep infrastructure failures separate from model or document failures.
-9. For live scenarios, preserve install evidence, feature-selection evidence, and quality artifacts.
-10. Never mutate roadmap or backlog files as part of live quality auditing.
+9. For live scenarios, preserve install evidence, feature-selection evidence, and execution artifacts.
+10. Never mutate roadmap or backlog files as part of live manual quality reporting.
 11. For manual live lanes, the launching agent is the operator-agent: answer blocking
     questions in `answers.md` with exact lines such as
     `- Q1 [resolved] answer text`, write `answer-analysis.md`, and write
-    `operator-quality-analysis.md` as operator-authored eval bundle evidence.
+    `quality-report.md` as the manual post-run report when a deliverable quality
+    decision is needed.
 12. Do not hand-edit runtime-generated stage output documents while adding
-    operator-authored answer or quality evidence.
+    operator-authored answers or the manual quality report.
 
 ## Default procedure
 
@@ -73,11 +74,11 @@ and manual-live lanes.
    - validator outcomes,
    - repair attempts.
 6. Validate all required output documents.
-7. Run live quality commands and score artifact/code quality when the scenario requires it.
-8. Run graders.
-9. Run log analysis.
-10. Write the final audit artifacts.
-11. Report the final execution verdict and quality conclusion explicitly.
+7. Run graders and log analysis.
+8. Write the final execution audit artifacts.
+9. Report the final execution verdict explicitly.
+10. For terminal live runs, write manual `quality-report.md` only after inspecting
+    the execution bundle and any additional manual checks.
 
 ## Canonical output locations
 
@@ -91,14 +92,12 @@ and manual-live lanes.
 - `.aidd/reports/evals/<run_id>/log-analysis.md`
 - `.aidd/reports/evals/<run_id>/grader.json`
 - `.aidd/reports/evals/<run_id>/verdict.md`
-- `.aidd/reports/evals/<run_id>/quality-report.md`
-- `.aidd/reports/evals/<run_id>/quality-transcript.json`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
 - `.aidd/reports/evals/<run_id>/answer-analysis.md` when the launching
   operator-agent answered blocking questions
-- `.aidd/reports/evals/<run_id>/operator-quality-analysis.md` for counted manual
-  live clean-pass decisions
+- `.aidd/reports/evals/<run_id>/quality-report.md` only when the launching SWE
+  agent writes the manual post-run quality report
 
 Manual live mutable execution is outside the source checkout by default:
 `${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd`,
@@ -116,12 +115,9 @@ For eval harness runs, preserve the stable execution verdict taxonomy:
 - `blocked`
 - `infra-fail`
 
-Quality remains additive and must be reported separately as:
-
-- `pass`
-- `warn`
-- `fail`
-- `none`
+Live deliverable quality is not an eval runner verdict. For terminal live runs,
+record it only in the manual post-run `quality-report.md`; the runner must not
+parse that report or use it to change the execution verdict.
 
 ## Example command shape
 

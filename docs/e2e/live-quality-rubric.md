@@ -1,133 +1,148 @@
-# Live Quality Rubric
+# Live E2E Manual Quality Report Guide
 
-This rubric defines the second live-E2E decision layer that sits next to the execution verdict.
+Live E2E has two separate decisions:
 
-Execution verdict answers:
+- the runner's execution verdict in `verdict.md`, `grader.json`, `summary.md`, and
+  `harness-metadata.json`;
+- the launching SWE agent's manual quality decision in
+  `.aidd/reports/evals/<run_id>/quality-report.md`.
 
-> Did the installed live run complete, verify, and preserve the required evidence?
+The runner does not create, parse, validate, or score `quality-report.md`. It also
+does not compute counted-clean status. A missing manual quality report must not
+change a passing execution verdict.
 
-Quality gate answers:
+## Execution Bundle
 
-> Is the resulting flow, artifact set, and generated code strong enough to treat the run as clean?
+The live runner owns execution evidence only. It records whether the installed
+`idea -> qa` flow ran through public CLI/UI surfaces, whether verification passed,
+whether questions blocked the run, and whether provider or harness failures occurred.
 
-## Canonical outputs
+Runner-owned artifacts include:
 
-Every live eval bundle should write:
+- `flow-state.json`
+- `flow-steps.json`
+- `flow-report.md`
+- `operator-actions.jsonl`
+- `frontend-checkpoints.json`
+- `frontend-checkpoints.md`
+- `stage-audits/<stage>.json`
+- `stage-audits/<stage>.md`
+- `runtime.log`
+- `runtime.jsonl` when attempts emitted structured JSONL
+- `events.jsonl` when attempts emitted normalized JSONL
+- `validator-report.md`
+- `repair-history.md`
+- `log-analysis.md`
+- `stage-timing.json`
+- `stage-timing.md`
+- `grader.json`
+- `verdict.md`
+- `summary.md`
+- `feature-selection.json`
+- `install-transcript.json`
+- `setup-transcript.json`
+- `run-transcript.json`
+- `verify-transcript.json`
+- `teardown-transcript.json`
+- `harness-metadata.json`
+- `next-flow-checkpoint.json`
+- `next-flow-checkpoint.md`
 
-- `quality-report.md`
-- `quality-transcript.json`
-- a `quality` section in `grader.json`
-- `stage-audits/<stage>.json` and `.md` so the final quality report can cite
-  stage-local state, validator verdict, repair/interview behavior, runtime log
-  visibility, and implement evidence shape
+The runner no longer emits `quality-transcript.json`, `acceptance-coverage.*`,
+`ui-ux-checkpoints.*`, `operator-quality-analysis.md`, or
+`operator-quality-analysis-validation.json`.
 
-The default durable bundle root for these artifacts is `.aidd/reports/evals/<run_id>/`.
+`frontend-checkpoints.*` are raw run-integrity evidence for the public operator
+surfaces. They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
 
-## Manual operator overlay
+## Manual Report
 
-The machine quality gate is the minimum clean-pass requirement. For manual live
-E2E, the launching agent is also the operator-agent and must write
-`operator-quality-analysis.md` before counting a terminal run.
+After the terminal run, the launching SWE agent may write:
 
-The operator audit can only downgrade the counted/not-counted decision. It cannot
-upgrade a machine `fail` or `warn` quality gate to a counted clean pass.
+`.aidd/reports/evals/<run_id>/quality-report.md`
 
-For counted manual clean passes, `operator-quality-analysis.md` records:
+Use this exact structure:
 
-- runtime, manifest, run id, and bundle path;
-- execution verdict, quality gate, QA verdict, and review status;
-- flow fidelity, artifact quality, and code quality assessment;
-- final decision: `counted-clean`, `not-counted`, `blocked/infra`,
-  `blocked/provider`, `blocked/model-quality`, or `blocked/product-defect`;
-- explicit blockers, or `none`.
+```markdown
+# Live E2E Quality Report
 
-If the operator used a stage intervention during the live run, the bundle must also
-include `operator-intervention-analysis.md`. It records the target stage, request
-artifact path, reason for the intervention, validation outcome, and whether downstream
-state was untouched or rerun by a separately documented policy.
+## Decision
+- Run integrity decision: clean | defective | blocked-infra | blocked-provider | blocked-harness
+- Deliverable quality decision: counted-clean | not-counted | blocked-model-quality | blocked-product-defect
+- Overall decision: counted-clean | not-counted | blocked
 
-## Dimensions
+## Run Integrity
+- Execution verdict:
+- Stages reached:
+- Evidence completeness:
+- Runtime/provider/log issues:
+- Repair/interview behavior:
+- Run blockers:
 
-Each dimension uses a fixed integer score from `0` to `3`.
+## Artifact Quality
+- Stage artifact completeness:
+- Idea/research/plan/review-spec/tasklist quality:
+- Cross-stage consistency:
+- Validator report quality:
+- Repair burden analysis:
+- Artifact evidence links:
 
-### `flow_fidelity`
+## Code Quality
+- Diff scope, including tracked and untracked files:
+- Acceptance criteria evidence:
+- Architecture/maintainability/API compatibility:
+- Edge cases/security/performance risks:
+- Test quality and regression relevance:
+- Baseline/before-after evidence:
+- Code evidence links:
 
-What it measures:
+## UI/UX Quality
+- User workflows inspected:
+- Visual/readability/layout evidence:
+- Accessibility/keyboard/focus notes:
+- Responsive behavior notes:
+- Empty/loading/error/blocking states:
+- UX evidence links:
 
-- the run stayed inside the installed live contract;
-- the selected authored task was recorded;
-- workflow bounds stayed `idea -> qa`;
-- question, repair, and verification behavior remained truthful;
-- the run did not silently skip required stages or artifacts.
-- `stage-audits/<stage>.json` exists for every reached stage and agrees with
-  final `flow-state.json`.
+## Evidence Reviewed
+- Flow evidence:
+- Stage audits:
+- Logs/transcripts:
+- Target repo diff:
+- Review/QA artifacts:
+- UI/API or screenshot evidence:
+- Extra manual checks run by SWE agent:
 
-Interpretation:
+## Notes
+- Follow-ups:
+- Residual risks:
+```
 
-- `0` — contract break or no-op path
-- `1` — major drift or incomplete full-flow evidence
-- `2` — acceptable full-flow evidence with minor caveats
-- `3` — strong full-flow evidence with no material drift
+## Decision Boundaries
 
-### `artifact_quality`
+`Run Integrity` evaluates only the live run and evidence bundle: execution verdict,
+stage reachability, log completeness, provider behavior, repair/interview flow, and
+harness defects.
 
-What it measures:
+`Artifact Quality`, `Code Quality`, and `UI/UX Quality` evaluate the deliverable
+produced by the full flow. These sections are manual review, not runner state.
 
-- stage outputs validate against contracts;
-- review and QA documents are evidence-backed;
-- cross-stage consistency is preserved;
-- required findings, risks, and recommendations are explicit and usable.
-- repair burden is bounded and does not show repeated first-pass contract misses.
+The manual `counted-clean` phrase is only a human-authored deliverable-quality
+decision inside `quality-report.md`. AIDD does not parse it.
 
-Interpretation:
+## Required Manual Review Coverage
 
-- `0` — invalid or unsupported artifacts
-- `1` — weak or incomplete but partially usable artifacts
-- `2` — solid artifacts with bounded weaknesses
-- `3` — strong, review-ready artifact set
+Artifact review should cover the content depth of all stage outputs, cross-stage
+traceability, validator report usefulness, and repair burden cause. Classify repair
+burden as format issue, prompt/context issue, validator/contract issue, model
+quality issue, or product ambiguity.
 
-### `code_quality`
+Code review should cover the full target repository diff, including untracked files.
+It should address acceptance criteria evidence, architectural fit, maintainability,
+API compatibility, edge cases, security, performance, test relevance, and any
+baseline or before/after proof.
 
-What it measures:
-
-- repo-local quality commands passed;
-- verification is adequate for the selected authored task;
-- unresolved `must-fix` review findings are absent;
-- QA did not conclude `not-ready`;
-- the resulting change remains bounded and reviewable.
-- implementation size is plausible for the authored task's declared scope.
-- implement-stage audit records changed files, diff summary, and whether
-  implementation-report verification claims are backed by executable/check
-  evidence or explicit `not-run:` reasons.
-- implement-stage audit includes both tracked diffs and untracked target-repository
-  files so runtime-authored touched-file claims cannot hide new files.
-- documentation examples avoid placeholder or non-runnable endpoints presented as runnable.
-- optional broader checks outside the authored task's verification boundary do not become
-  release conditions unless they expose a concrete defect or contradict acceptance criteria.
-
-Interpretation:
-
-- `0` — quality gate failure or clearly unsafe code result
-- `1` — technically working but materially weak code result
-- `2` — acceptable code result with bounded risks
-- `3` — strong code result with clean evidence
-
-## Gate mapping
-
-- `quality_gate = fail` when any quality command fails, any dimension score is `0`, review leaves unresolved `must-fix` findings, or QA verdict is `not-ready`.
-- `quality_gate = warn` when execution passed but review is `approved-with-conditions`, QA is `ready-with-risks`, or any dimension score is `1`.
-- `quality_gate = pass` only when all dimensions are `2` or higher, review is `approved`, QA is `ready`, and all quality commands pass.
-
-## Quality verdict
-
-The quality layer records:
-
-- `ready`
-- `ready-with-risks`
-- `not-ready`
-
-This verdict comes from the generated QA evidence and does not replace the execution verdict in `verdict.md`.
-
-## Follow-up policy
-
-Quality reporting may include suggested backlog follow-ups, but it must not update `docs/backlog/roadmap.md` or `docs/backlog/backlog.md` automatically during a live run.
+UI/UX review should inspect real operator/user workflows. API probes alone are not
+UX evidence. Cite screenshots or browser evidence manually when available, and
+record visual layout/readability, accessibility, keyboard/focus, responsive behavior,
+and empty/loading/error/blocking states.

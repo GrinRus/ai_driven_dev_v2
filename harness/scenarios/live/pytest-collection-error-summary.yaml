@@ -10,7 +10,7 @@ repo:
 objective: Exercise a live pytest runtime-internals lane where collection error
   reporting policy must be clarified before implementation.
 task: Run the installed AIDD full-flow live audit against the selected pytest
-  collection-summary task and preserve reviewable quality evidence.
+  collection-summary task and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -81,15 +81,6 @@ verify:
     evidence: answers.md exists and marks each blocking question as resolved.
   - step: completed
     evidence: focused pytest and QA output artifact checks succeed after rerun.
-quality:
-  commands:
-  - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
-  rubric_profile: live-full
-  require_review_status: approved-with-conditions
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 12
   timeout_minutes: 75

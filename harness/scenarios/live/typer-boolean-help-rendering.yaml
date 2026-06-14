@@ -9,7 +9,7 @@ repo:
 objective: Keep Typer full-flow live coverage deterministic by targeting the boolean
   help rendering authored task through the installed operator path.
 task: Run the installed AIDD full-flow live audit against the selected Typer authored task
-  and preserve reviewable quality evidence.
+  and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -62,18 +62,6 @@ verify:
   - Focused Rich/default and non-Rich verification commands exit with status 0,
     including paired and false-only boolean help assertions.
   - QA stage output artifacts exist for the selected work item.
-quality:
-  commands:
-  - uv run pytest -q tests/test_tutorial/test_parameter_types/test_bool tests/test_tutorial/test_options/test_help/test_tutorial003.py
-    tests/test_tutorial/test_options/test_help/test_tutorial004.py
-  - TYPER_USE_RICH=0 uv run pytest -q tests/test_tutorial/test_parameter_types/test_bool
-    tests/test_tutorial/test_options/test_help/test_tutorial003.py tests/test_tutorial/test_options/test_help/test_tutorial004.py
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 8
   timeout_minutes: 90

@@ -369,8 +369,9 @@ Actions:
      same manifest/runtime command to resume;
    - `fail`: verification or run command failed.
 4. Re-run the same scenario/runtime after fixing the first failure boundary.
-5. For any terminal live run, inspect the full eval bundle and write
-   `operator-quality-analysis.md` before marking the run counted or not counted.
+5. For any terminal live run, inspect the full eval bundle and, when a quality
+   decision is needed, write `.aidd/reports/evals/<run_id>/quality-report.md`.
+   Keep run-integrity findings separate from artifact, code, and UI/UX quality.
 
 ### 6.4 Eval summary is missing
 

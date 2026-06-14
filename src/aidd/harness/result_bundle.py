@@ -14,7 +14,6 @@ from aidd.harness.install_artifact import HarnessInstallResult
 from aidd.harness.runner import (
     HarnessAiddRunResult,
     HarnessCommandTranscript,
-    HarnessQualityResult,
     HarnessSetupResult,
     HarnessTeardownResult,
     HarnessVerificationResult,
@@ -33,14 +32,12 @@ SELF_REPAIR_MATRIX_JSON_FILENAME = "self-repair-matrix.json"
 SELF_REPAIR_MATRIX_FILENAME = "self-repair-matrix.md"
 GRADER_FILENAME = "grader.json"
 VERDICT_FILENAME = "verdict.md"
-QUALITY_REPORT_FILENAME = "quality-report.md"
 HARNESS_METADATA_FILENAME = "harness-metadata.json"
 FEATURE_SELECTION_FILENAME = "feature-selection.json"
 INSTALL_TRANSCRIPT_FILENAME = "install-transcript.json"
 SETUP_TRANSCRIPT_FILENAME = "setup-transcript.json"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 VERIFY_TRANSCRIPT_FILENAME = "verify-transcript.json"
-QUALITY_TRANSCRIPT_FILENAME = "quality-transcript.json"
 TEARDOWN_TRANSCRIPT_FILENAME = "teardown-transcript.json"
 
 
@@ -52,7 +49,6 @@ class ResultBundleLayout:
     setup_transcript_path: Path
     run_transcript_path: Path
     verify_transcript_path: Path
-    quality_transcript_path: Path
     teardown_transcript_path: Path
     feature_selection_path: Path
     runtime_log_path: Path
@@ -67,7 +63,6 @@ class ResultBundleLayout:
     self_repair_matrix_path: Path
     grader_path: Path
     verdict_path: Path
-    quality_report_path: Path
 
 
 def _validate_run_id(run_id: str) -> str:
@@ -92,7 +87,6 @@ def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBu
         setup_transcript_path=run_root / SETUP_TRANSCRIPT_FILENAME,
         run_transcript_path=run_root / RUN_TRANSCRIPT_FILENAME,
         verify_transcript_path=run_root / VERIFY_TRANSCRIPT_FILENAME,
-        quality_transcript_path=run_root / QUALITY_TRANSCRIPT_FILENAME,
         teardown_transcript_path=run_root / TEARDOWN_TRANSCRIPT_FILENAME,
         feature_selection_path=run_root / FEATURE_SELECTION_FILENAME,
         runtime_log_path=run_root / RUNTIME_LOG_FILENAME,
@@ -107,7 +101,6 @@ def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBu
         self_repair_matrix_path=run_root / SELF_REPAIR_MATRIX_FILENAME,
         grader_path=run_root / GRADER_FILENAME,
         verdict_path=run_root / VERDICT_FILENAME,
-        quality_report_path=run_root / QUALITY_REPORT_FILENAME,
     )
 
 
@@ -121,7 +114,6 @@ def build_result_bundle_layout_at_run_root(*, run_root: Path) -> ResultBundleLay
         setup_transcript_path=normalized_run_root / SETUP_TRANSCRIPT_FILENAME,
         run_transcript_path=normalized_run_root / RUN_TRANSCRIPT_FILENAME,
         verify_transcript_path=normalized_run_root / VERIFY_TRANSCRIPT_FILENAME,
-        quality_transcript_path=normalized_run_root / QUALITY_TRANSCRIPT_FILENAME,
         teardown_transcript_path=normalized_run_root / TEARDOWN_TRANSCRIPT_FILENAME,
         feature_selection_path=normalized_run_root / FEATURE_SELECTION_FILENAME,
         runtime_log_path=normalized_run_root / RUNTIME_LOG_FILENAME,
@@ -136,7 +128,6 @@ def build_result_bundle_layout_at_run_root(*, run_root: Path) -> ResultBundleLay
         self_repair_matrix_path=normalized_run_root / SELF_REPAIR_MATRIX_FILENAME,
         grader_path=normalized_run_root / GRADER_FILENAME,
         verdict_path=normalized_run_root / VERDICT_FILENAME,
-        quality_report_path=normalized_run_root / QUALITY_REPORT_FILENAME,
     )
 
 
@@ -282,9 +273,8 @@ def write_command_transcripts(
     setup_result: HarnessSetupResult | None = None,
     aidd_run_result: HarnessAiddRunResult | None = None,
     verification_result: HarnessVerificationResult | None = None,
-    quality_result: HarnessQualityResult | None = None,
     teardown_result: HarnessTeardownResult | None = None,
-) -> tuple[Path, Path, Path, Path, Path, Path]:
+) -> tuple[Path, Path, Path, Path, Path]:
     install_path = _write_json(
         layout.install_transcript_path,
         _step_transcript_payload(
@@ -337,16 +327,6 @@ def write_command_transcripts(
             ),
         ),
     )
-    quality_path = _write_json(
-        layout.quality_transcript_path,
-        _step_transcript_payload(
-            step="quality",
-            command_transcripts=(
-                quality_result.command_transcripts if quality_result is not None else tuple()
-            ),
-            duration_seconds=quality_result.duration_seconds if quality_result is not None else 0.0,
-        ),
-    )
     teardown_path = _write_json(
         layout.teardown_transcript_path,
         _step_transcript_payload(
@@ -359,7 +339,7 @@ def write_command_transcripts(
             ),
         ),
     )
-    return install_path, setup_path, run_path, verify_path, quality_path, teardown_path
+    return install_path, setup_path, run_path, verify_path, teardown_path
 
 
 def write_feature_selection(*, layout: ResultBundleLayout, payload: Mapping[str, Any]) -> Path:

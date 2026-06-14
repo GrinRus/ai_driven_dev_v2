@@ -39,12 +39,6 @@ from aidd.core.runtime_operator import (
     RuntimeOperatorRequest,
 )
 from aidd.core.stages import STAGES
-from aidd.core.workspace import stage_output_root as workspace_stage_output_root
-from aidd.evals.quality import (
-    LiveQualityAssessment,
-    build_live_quality_assessment,
-    write_live_quality_report_markdown,
-)
 from aidd.evals.reporting import build_scenario_summary_row, write_eval_summary_markdown
 from aidd.evals.repository_changes import collect_repository_changes
 from aidd.evals.stage_timing import (
@@ -88,8 +82,6 @@ from aidd.harness.result_bundle import (
     HARNESS_METADATA_FILENAME,
     INSTALL_TRANSCRIPT_FILENAME,
     LOG_ANALYSIS_FILENAME,
-    QUALITY_REPORT_FILENAME,
-    QUALITY_TRANSCRIPT_FILENAME,
     REPAIR_HISTORY_FILENAME,
     RUNTIME_JSONL_FILENAME,
     RUNTIME_LOG_FILENAME,
@@ -107,15 +99,12 @@ from aidd.harness.result_bundle import (
 from aidd.harness.runner import (
     HarnessAiddRunResult,
     HarnessCommandTranscript,
-    HarnessQualityError,
-    HarnessQualityResult,
     HarnessSetupError,
     HarnessSetupResult,
     HarnessTeardownError,
     HarnessTeardownResult,
     HarnessVerificationError,
     HarnessVerificationResult,
-    run_quality_steps,
     run_setup_steps,
     run_teardown_steps,
     run_verification_steps,
@@ -137,19 +126,11 @@ FlowAction = Literal[
     "answer-questions",
     "frontend-checkpoint",
     "verify",
-    "quality",
     "teardown",
     "finish",
     "stop",
 ]
 StepClassification = Literal["pass", "fail", "blocked", "infra-fail", "skipped"]
-CountingStatus = Literal[
-    "counted-clean",
-    "pending-operator-analysis",
-    "not-counted",
-    "blocked",
-    "failed",
-]
 
 FLOW_STATE_FILENAME = "flow-state.json"
 FLOW_STEPS_FILENAME = "flow-steps.json"
@@ -159,14 +140,8 @@ OPERATOR_REQUEST_JSON_FILENAME = "operator-action-request.json"
 OPERATOR_REQUEST_MARKDOWN_FILENAME = "operator-action-request.md"
 ANSWER_ANALYSIS_FILENAME = "answer-analysis.md"
 RUNTIME_APPROVAL_ANALYSIS_FILENAME = "runtime-approval-analysis.md"
-OPERATOR_QUALITY_ANALYSIS_FILENAME = "operator-quality-analysis.md"
-OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME = "operator-quality-analysis-validation.json"
-ACCEPTANCE_COVERAGE_JSON_FILENAME = "acceptance-coverage.json"
-ACCEPTANCE_COVERAGE_MARKDOWN_FILENAME = "acceptance-coverage.md"
 FRONTEND_CHECKPOINTS_JSON_FILENAME = "frontend-checkpoints.json"
 FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME = "frontend-checkpoints.md"
-UI_UX_CHECKPOINTS_JSON_FILENAME = "ui-ux-checkpoints.json"
-UI_UX_CHECKPOINTS_MARKDOWN_FILENAME = "ui-ux-checkpoints.md"
 NEXT_FLOW_CHECKPOINT_JSON_FILENAME = "next-flow-checkpoint.json"
 NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
 NEXT_FLOW_LINEAGE_FILENAME = "next-flow-lineage.json"
@@ -175,14 +150,6 @@ SUMMARY_REPORT_FILENAME = "summary.md"
 STAGE_AUDITS_DIRNAME = "stage-audits"
 FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
 STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
-OPERATOR_QUALITY_DECISIONS = {
-    "counted-clean",
-    "not-counted",
-    "blocked/infra",
-    "blocked/provider",
-    "blocked/model-quality",
-    "blocked/product-defect",
-}
 NEXT_FLOW_OPERATOR_DECISIONS = (
     "no-follow-up",
     "follow-up-draft",
@@ -200,7 +167,6 @@ PRESERVED_STATE_EXTRA_KEYS = (
     "interruption",
     "operator_action_request_json",
     "operator_action_request_markdown",
-    "quality_error",
     "stage_exit_code",
 )
 
@@ -237,10 +203,6 @@ class BlackBoxLiveE2EResult:
     flow_report_path: Path
     verdict_path: Path
     summary_path: Path
-    quality_gate: str
-    quality_verdict: str
-    counting_status: CountingStatus
-    quality_report_path: Path
     first_failure_note: str | None
     operator_action_request_path: Path | None
 
@@ -925,7 +887,7 @@ def _find_resume_state(
     if status not in {*RESUMABLE_STATUSES, *TERMINAL_STATUSES}:
         raise ValueError(
             "Explicit --run-id can only resume a blocked or interrupted-resumable "
-            "run, or refresh terminal operator-quality analysis. "
+            "run, or refresh terminal execution reporting. "
             f"Run '{normalized_run_id}' has status `{status}`."
         )
     return candidate
@@ -1877,138 +1839,6 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
     return path
 
 
-def _ui_ux_flags_for_checkpoint(checkpoint: dict[str, object]) -> dict[str, bool]:
-    probes_raw = checkpoint.get("probes")
-    probes = (
-        [probe for probe in probes_raw if isinstance(probe, dict)]
-        if isinstance(probes_raw, list)
-        else []
-    )
-    by_name = {str(probe.get("name")): probe for probe in probes}
-    page_body = str(by_name.get("page", {}).get("body_preview") or "")
-
-    def _probe_ok(name: str) -> bool:
-        probe = by_name.get(name)
-        return (
-            isinstance(probe, dict)
-            and probe.get("ok") is True
-            and probe.get("semantic_ok") is True
-        )
-
-    return {
-        "current_run_visible": _probe_ok("run-api") or "run" in page_body.lower(),
-        "current_work_item_visible": _probe_ok("run-api"),
-        "stage_status_visible": _probe_ok("stage-api"),
-        "log_presence_visible": _probe_ok("logs-api"),
-        "artifacts_visible": _probe_ok("artifacts-api"),
-        "question_state_visible": _probe_ok("questions-api"),
-        "next_action_or_blocked_state_visible": _probe_ok("stage-api")
-        or "blocked" in page_body.lower()
-        or "next" in page_body.lower(),
-    }
-
-
-def _ui_ux_gate_from_checkpoints(checkpoints: list[dict[str, object]]) -> str:
-    if not checkpoints:
-        return "skipped"
-    if any(checkpoint.get("classification") == "fail" for checkpoint in checkpoints):
-        return "fail"
-    flags = [
-        _ui_ux_flags_for_checkpoint(checkpoint)
-        for checkpoint in checkpoints
-        if checkpoint.get("classification") != "skipped"
-    ]
-    if not flags:
-        return "skipped"
-    if all(all(value for value in item.values()) for item in flags):
-        return "pass"
-    return "warn"
-
-
-def _write_ui_ux_checkpoint_artifacts(ctx: FlowContext) -> tuple[Path, Path, dict[str, object]]:
-    frontend_payload = _read_frontend_checkpoint_payload(ctx)
-    checkpoints_raw = frontend_payload.get("checkpoints")
-    checkpoints = [
-        checkpoint for checkpoint in checkpoints_raw if isinstance(checkpoint, dict)
-    ] if isinstance(checkpoints_raw, list) else []
-    ui_checkpoints: list[dict[str, object]] = []
-    for checkpoint in checkpoints:
-        probes_raw = checkpoint.get("probes")
-        probes = [
-            {
-                "name": str(probe.get("name", "")),
-                "path": str(probe.get("path", "")),
-                "status": probe.get("status"),
-                "ok": probe.get("ok") is True,
-                "semantic_ok": probe.get("semantic_ok") is True,
-                "body_preview": str(probe.get("body_preview") or "")[:1000],
-                "json_snapshot": probe.get("json_payload") if isinstance(probe, dict) else None,
-            }
-            for probe in probes_raw
-            if isinstance(probe, dict)
-        ] if isinstance(probes_raw, list) else []
-        flags = _ui_ux_flags_for_checkpoint(checkpoint)
-        ui_checkpoints.append(
-            {
-                "stage": checkpoint.get("stage"),
-                "classification": checkpoint.get("classification"),
-                "base_url": checkpoint.get("base_url"),
-                "failure_reason": checkpoint.get("failure_reason"),
-                "semantic_ux_flags": flags,
-                "screenshot": {
-                    "status": "skipped",
-                    "reason": (
-                        "browser screenshot capture is optional and unavailable "
-                        "in this evaluator path"
-                    ),
-                },
-                "probes": probes,
-            }
-        )
-    gate = _ui_ux_gate_from_checkpoints(checkpoints)
-    payload: dict[str, object] = {
-        "schema_version": 1,
-        "created_at_utc": _utc_now(),
-        "run_id": ctx.run_id,
-        "runtime_id": ctx.runtime_id,
-        "scenario_id": ctx.scenario.scenario_id,
-        "ui_ux_gate": gate,
-        "screenshot_capture": "skipped",
-        "checkpoints": ui_checkpoints,
-    }
-    json_path = _write_json(ctx.bundle_root / UI_UX_CHECKPOINTS_JSON_FILENAME, payload)
-    lines = [
-        "# UI/UX Checkpoints",
-        "",
-        f"- UI/UX gate: `{gate}`",
-        "- Screenshot capture: `skipped`",
-        "",
-    ]
-    if not ui_checkpoints:
-        lines.append("- No UI/UX checkpoints were recorded.")
-    for checkpoint in ui_checkpoints:
-        lines.extend(
-            (
-                f"## {checkpoint.get('stage', 'unknown')}",
-                "",
-                f"- Classification: `{checkpoint.get('classification', 'unknown')}`",
-                f"- Failure reason: `{checkpoint.get('failure_reason') or 'none'}`",
-                "",
-                "### Semantic UX Flags",
-                "",
-            )
-        )
-        markdown_flags = checkpoint.get("semantic_ux_flags")
-        if isinstance(markdown_flags, dict):
-            lines.extend(
-                f"- {key}: `{value}`" for key, value in sorted(markdown_flags.items())
-            )
-        lines.append("")
-    markdown_path = ctx.bundle_root / UI_UX_CHECKPOINTS_MARKDOWN_FILENAME
-    markdown_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    return json_path, markdown_path, payload
-
-
 def _artifact_payload(
     *,
     stage: str,
@@ -2201,7 +2031,6 @@ def _next_flow_final_artifacts(
     for key, filename in (
         ("flow_report", FLOW_REPORT_FILENAME),
         ("verdict", VERDICT_FILENAME),
-        ("quality_report", QUALITY_REPORT_FILENAME),
         ("grader", GRADER_FILENAME),
     ):
         path = ctx.bundle_root / filename
@@ -2460,9 +2289,6 @@ def _next_flow_blockers(
     ctx: FlowContext,
     status: VerdictStatus,
     first_failure_note: str | None,
-    quality_gate: str,
-    acceptance_coverage_status: str,
-    ui_ux_gate: str,
 ) -> list[dict[str, object]]:
     blockers: list[dict[str, object]] = []
     if first_failure_note:
@@ -2516,44 +2342,16 @@ def _next_flow_blockers(
                     ).as_posix(),
                 }
             )
-    if quality_gate == "fail":
-        blockers.append(
-            {
-                "kind": "quality-gate",
-                "severity": "error",
-                "stage": None,
-                "detail": "machine quality gate failed",
-            }
-        )
-    if acceptance_coverage_status in {"missing", "partial", "claimed-only"}:
-        blockers.append(
-            {
-                "kind": "acceptance-coverage",
-                "severity": "warn",
-                "stage": None,
-                "detail": f"acceptance coverage is {acceptance_coverage_status}",
-            }
-        )
-    if ui_ux_gate == "fail":
-        blockers.append(
-            {
-                "kind": "ui-ux-gate",
-                "severity": "error",
-                "stage": None,
-                "detail": "UI/UX checkpoint gate failed",
-            }
-        )
     return blockers
 
 
 def _default_next_flow_decision(
     *,
     status: VerdictStatus,
-    quality_gate: str,
     blockers: list[dict[str, object]],
 ) -> tuple[str, str]:
     has_error_blocker = any(blocker.get("severity") == "error" for blocker in blockers)
-    if status == "pass" and quality_gate != "fail" and not has_error_blocker:
+    if status == "pass" and not has_error_blocker:
         return (
             "no-follow-up",
             "Default manual live E2E policy stops after the terminal checkpoint; "
@@ -2561,7 +2359,7 @@ def _default_next_flow_decision(
         )
     return (
         "blocked",
-        "Terminal evidence contains failure, blocker, or failed quality-gate signals; "
+        "Terminal execution evidence contains failure or blocker signals; "
         "do not launch a child public-repository flow by default.",
     )
 
@@ -2577,11 +2375,6 @@ def _write_next_flow_checkpoint_artifacts(
     *,
     ctx: FlowContext,
     status: VerdictStatus,
-    quality_gate: str,
-    quality_verdict: str,
-    counting_status: CountingStatus,
-    acceptance_coverage_status: str,
-    ui_ux_gate: str,
     first_failure_note: str | None,
     next_flow_lineage: dict[str, object] | None = None,
 ) -> tuple[Path, Path, dict[str, object]]:
@@ -2616,13 +2409,9 @@ def _write_next_flow_checkpoint_artifacts(
         ctx=ctx,
         status=status,
         first_failure_note=first_failure_note,
-        quality_gate=quality_gate,
-        acceptance_coverage_status=acceptance_coverage_status,
-        ui_ux_gate=ui_ux_gate,
     )
     default_decision, decision_rationale = _default_next_flow_decision(
         status=status,
-        quality_gate=quality_gate,
         blockers=blockers,
     )
     questions = _next_flow_question_counts(ctx)
@@ -2689,11 +2478,6 @@ def _write_next_flow_checkpoint_artifacts(
         "scenario_id": ctx.scenario.scenario_id,
         "work_item": ctx.work_item,
         "terminal_status": status,
-        "quality_gate": quality_gate,
-        "quality_verdict": quality_verdict,
-        "counting_status": counting_status,
-        "acceptance_coverage_status": acceptance_coverage_status,
-        "ui_ux_gate": ui_ux_gate,
         "flow_complete_visible": _next_flow_complete_visible(
             status=status,
             qa_stage_state=qa_stage_state,
@@ -2746,8 +2530,6 @@ def _write_next_flow_checkpoint_artifacts(
         f"- Source run: `{ctx.run_id}`",
         f"- Work item: `{ctx.work_item}`",
         f"- Terminal status: `{status}`",
-        f"- Counting status: `{counting_status}`",
-        f"- Quality gate: `{quality_gate}`",
         f"- Flow Complete visible: `{payload['flow_complete_visible']}`",
         "",
         "## Source Run Summary",
@@ -3369,7 +3151,7 @@ def _write_stage_audit(
         "repair_attempts": max(_stage_attempt_count(ctx, stage) - 1, 0),
         "unresolved_questions": _stage_unresolved_questions(ctx, stage),
         "runtime_log_visible": _inspection_runtime_log_visible(inspection_results),
-        "artifact_quality_notes": [
+        "artifact_presence_notes": [
             (
                 "primary artifact present"
                 if primary_path is not None and primary_path.exists()
@@ -3417,10 +3199,10 @@ def _write_stage_audit(
         f"- Public inspection: `{inspect_classification}`",
         f"- Frontend checkpoint: `{frontend_classification}`",
         "",
-        "## Artifact Quality Notes",
+        "## Artifact Presence Notes",
         "",
     ]
-    md_lines.extend(f"- {note}" for note in cast(list[str], payload["artifact_quality_notes"]))
+    md_lines.extend(f"- {note}" for note in cast(list[str], payload["artifact_presence_notes"]))
     if implementation_details is not None:
         md_lines.extend(
             (
@@ -3996,7 +3778,7 @@ def _run_verify(ctx: FlowContext) -> HarnessVerificationResult:
             ctx=ctx,
             action="verify",
             classification="fail",
-            decision="Stop before quality because scenario verification failed.",
+            decision="Stop before teardown because scenario verification failed.",
             plan="Run manifest verification commands after every stage passed.",
             evidence_paths=(ctx.bundle_root / VERIFY_TRANSCRIPT_FILENAME,),
             details={"error": str(exc)},
@@ -4019,70 +3801,9 @@ def _run_verify(ctx: FlowContext) -> HarnessVerificationResult:
         ctx=ctx,
         action="verify",
         classification="pass",
-        decision="Continue to quality checks.",
+        decision="Continue to teardown and final reporting.",
         plan="Run manifest verification commands after every stage passed.",
         evidence_paths=(ctx.bundle_root / VERIFY_TRANSCRIPT_FILENAME,),
-    )
-    _persist_state(
-        ctx=ctx,
-        status="running",
-        next_action="quality",
-        current_stage=None,
-        completed_stages=_state_completed_stages(ctx.bundle_root),
-    )
-    return result
-
-
-def _run_quality(ctx: FlowContext) -> tuple[HarnessQualityResult | None, BaseException | None]:
-    working_copy = _require_working_copy(ctx)
-    try:
-        result = run_quality_steps(
-            scenario=ctx.scenario,
-            working_copy_path=working_copy,
-            environment=_harness_environment_for_context(ctx),
-        )
-    except HarnessQualityError as exc:
-        transcripts = _transcripts_from_error(exc)
-        partial_result = HarnessQualityResult(
-            executed_commands=tuple(transcript.command for transcript in transcripts),
-            command_transcripts=transcripts,
-            duration_seconds=_transcript_duration(transcripts),
-        )
-        _write_step_transcript(
-            path=ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,
-            step="quality",
-            transcripts=partial_result.command_transcripts,
-        )
-        _record_step(
-            ctx=ctx,
-            action="quality",
-            classification="fail",
-            decision="Preserve quality failure but continue to teardown and final reporting.",
-            plan="Run live quality commands as additive quality evidence.",
-            evidence_paths=(ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,),
-            details={"error": str(exc)},
-        )
-        _persist_state(
-            ctx=ctx,
-            status="running",
-            next_action="teardown",
-            current_stage=None,
-            completed_stages=_state_completed_stages(ctx.bundle_root),
-            extra={"quality_error": str(exc)},
-        )
-        return partial_result, exc
-    _write_step_transcript(
-        path=ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,
-        step="quality",
-        transcripts=result.command_transcripts,
-    )
-    _record_step(
-        ctx=ctx,
-        action="quality",
-        classification="pass",
-        decision="Continue to teardown and final reporting.",
-        plan="Run live quality commands as additive quality evidence.",
-        evidence_paths=(ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,),
     )
     _persist_state(
         ctx=ctx,
@@ -4091,46 +3812,7 @@ def _run_quality(ctx: FlowContext) -> tuple[HarnessQualityResult | None, BaseExc
         current_stage=None,
         completed_stages=_state_completed_stages(ctx.bundle_root),
     )
-    return result, None
-
-
-def _quality_result_from_existing_transcript(ctx: FlowContext) -> HarnessQualityResult | None:
-    path = ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME
-    if not path.exists():
-        return None
-    try:
-        payload = _read_json_object(path)
-    except (OSError, ValueError, json.JSONDecodeError):
-        return None
-    commands_raw = payload.get("commands")
-    if not isinstance(commands_raw, list) or not commands_raw:
-        return None
-    transcripts: list[HarnessCommandTranscript] = []
-    for item in commands_raw:
-        if not isinstance(item, dict):
-            continue
-        transcripts.append(
-            HarnessCommandTranscript(
-                command=str(item.get("command") or ""),
-                exit_code=int(item.get("exit_code") or 0),
-                stdout_text=str(item.get("stdout_text") or ""),
-                stderr_text=str(item.get("stderr_text") or ""),
-                duration_seconds=float(item.get("duration_seconds") or 0.0),
-                timed_out=item.get("timed_out") is True,
-                timeout_seconds=(
-                    float(item["timeout_seconds"])
-                    if isinstance(item.get("timeout_seconds"), int | float)
-                    else None
-                ),
-            )
-        )
-    if not transcripts or any(transcript.exit_code != 0 for transcript in transcripts):
-        return None
-    return HarnessQualityResult(
-        executed_commands=tuple(transcript.command for transcript in transcripts),
-        command_transcripts=tuple(transcripts),
-        duration_seconds=_transcript_duration(tuple(transcripts)),
-    )
+    return result
 
 
 def _run_teardown(ctx: FlowContext) -> tuple[HarnessTeardownResult | None, BaseException | None]:
@@ -4145,7 +3827,7 @@ def _run_teardown(ctx: FlowContext) -> tuple[HarnessTeardownResult | None, BaseE
             action="teardown",
             classification="skipped",
             decision="Finish reporting; no teardown commands are declared.",
-            plan="Run declared teardown commands after quality checks.",
+            plan="Run declared teardown commands after verification.",
             evidence_paths=(ctx.bundle_root / TEARDOWN_TRANSCRIPT_FILENAME,),
         )
         return None, None
@@ -4173,7 +3855,7 @@ def _run_teardown(ctx: FlowContext) -> tuple[HarnessTeardownResult | None, BaseE
             action="teardown",
             classification="infra-fail",
             decision="Finish reporting with teardown infrastructure failure.",
-            plan="Run declared teardown commands after quality checks.",
+            plan="Run declared teardown commands after verification.",
             evidence_paths=(ctx.bundle_root / TEARDOWN_TRANSCRIPT_FILENAME,),
             details={"error": str(exc)},
         )
@@ -4188,7 +3870,7 @@ def _run_teardown(ctx: FlowContext) -> tuple[HarnessTeardownResult | None, BaseE
         action="teardown",
         classification="pass",
         decision="Finish reporting.",
-        plan="Run declared teardown commands after quality checks.",
+        plan="Run declared teardown commands after verification.",
         evidence_paths=(ctx.bundle_root / TEARDOWN_TRANSCRIPT_FILENAME,),
     )
     return result, None
@@ -4409,7 +4091,6 @@ def _write_log_analysis(
 def _stage_timing_payload_from_flow(
     *,
     ctx: FlowContext,
-    quality_result: HarnessQualityResult | None,
     teardown_result: HarnessTeardownResult | None,
 ) -> dict[str, object]:
     workspace_root = (
@@ -4425,7 +4106,6 @@ def _stage_timing_payload_from_flow(
         workspace_root=workspace_root,
         total_duration_seconds=max(time.monotonic() - ctx.started, 0.0),
         install_result=ctx.install_result,
-        quality_result=quality_result,
         teardown_result=teardown_result,
     )
     flow_steps: list[dict[str, object]] = []
@@ -4520,7 +4200,6 @@ def _ensure_transcript_files(ctx: FlowContext) -> None:
         (INSTALL_TRANSCRIPT_FILENAME, "install"),
         (SETUP_TRANSCRIPT_FILENAME, "setup"),
         (VERIFY_TRANSCRIPT_FILENAME, "verify"),
-        (QUALITY_TRANSCRIPT_FILENAME, "quality"),
         (TEARDOWN_TRANSCRIPT_FILENAME, "teardown"),
     ):
         path = ctx.bundle_root / filename
@@ -4542,278 +4221,10 @@ def _stage_audit_payloads(ctx: FlowContext) -> list[dict[str, object]]:
     return payloads
 
 
-def _criterion_tokens(text: str) -> set[str]:
-    return {
-        token
-        for token in re.findall(r"[a-z0-9][a-z0-9_-]{2,}", text.lower())
-        if token
-        not in {
-            "the",
-            "and",
-            "or",
-            "with",
-            "without",
-            "that",
-            "this",
-            "must",
-            "should",
-            "remains",
-            "remain",
-        }
-    }
-
-
-def _line_matches_criterion(line: str, criterion: str) -> bool:
-    criterion_tokens = _criterion_tokens(criterion)
-    if not criterion_tokens:
-        return False
-    line_tokens = _criterion_tokens(line)
-    if not line_tokens:
-        return False
-    overlap = criterion_tokens & line_tokens
-    required = 1 if len(criterion_tokens) <= 2 else min(3, len(criterion_tokens))
-    return len(overlap) >= required
-
-
-def _line_mentions_criterion_id(line: str, criterion_id: str) -> bool:
-    match = re.fullmatch(r"AC-(\d+)", criterion_id.strip(), flags=re.IGNORECASE)
-    if match is None:
-        return False
-    target = int(match.group(1))
-    normalized = line.lower().replace("criterion", "ac").replace("criteria", "ac")
-    if re.search(rf"\bac[-\s]*0*{target}\b", normalized):
-        return True
-    return False
-
-
-def _evidence_refs_for_source(
-    *,
-    source: str,
-    path: Path,
-    text: str,
-    criterion: str,
-    criterion_id: str | None = None,
-) -> list[dict[str, object]]:
-    refs: list[dict[str, object]] = []
-    for line_number, raw_line in enumerate(text.splitlines(), start=1):
-        line = raw_line.strip()
-        if not line:
-            continue
-        matches_criterion = _line_matches_criterion(line, criterion)
-        matches_criterion_id = (
-            criterion_id is not None and _line_mentions_criterion_id(line, criterion_id)
-        )
-        if not matches_criterion and not matches_criterion_id:
-            continue
-        refs.append(
-            {
-                "source": source,
-                "path": path.as_posix(),
-                "line": line_number,
-                "snippet": line[:240],
-            }
-        )
-        if len(refs) >= 3:
-            break
-    return refs
-
-
-def _acceptance_evidence_sources(ctx: FlowContext) -> tuple[tuple[str, Path, str], ...]:
-    quality_workspace_root = (
-        ctx.bundle_root
-        if ctx.prepared_working_copy is None
-        else ctx.prepared_working_copy.working_copy_path / ".aidd"
-    )
-    sources: list[tuple[str, Path, str]] = []
-    for source, stage, filename in (
-        ("implementation-report", "implement", "implementation-report.md"),
-        ("review-report", "review", "review-report.md"),
-        ("qa-report", "qa", "qa-report.md"),
-    ):
-        path = workspace_stage_output_root(
-            root=quality_workspace_root,
-            work_item=ctx.work_item,
-            stage=stage,
-        ) / filename
-        sources.append((source, path, _read_text_if_exists(path)))
-    verify_path = ctx.bundle_root / VERIFY_TRANSCRIPT_FILENAME
-    sources.append(("verify-transcript", verify_path, _read_text_if_exists(verify_path)))
-    audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
-    audit_text = "\n".join(
-        path.read_text(encoding="utf-8", errors="replace")
-        for path in sorted(audit_root.glob("*.json"))
-        if path.is_file()
-    ) if audit_root.exists() else ""
-    sources.append(("stage-audit", audit_root, audit_text))
-    return tuple(sources)
-
-
-def _acceptance_ref_confirms(ref: dict[str, object], source_text: str) -> bool:
-    source = ref.get("source")
-    if source in {"verify-transcript", "review-report", "qa-report"}:
-        return True
-    if source != "implementation-report":
-        return False
-    snippet = str(ref.get("snippet") or "").lower()
-    combined = f"{snippet}\n{source_text.lower()}"
-    return (
-        "result:" in combined
-        and ("command:" in combined or "evidence:" in combined or "not run" in combined)
-    )
-
-
-def _build_acceptance_coverage(ctx: FlowContext) -> dict[str, object]:
-    selected_task = _selected_task_for_context(ctx)
-    criteria = tuple() if selected_task is None else selected_task.acceptance_criteria
-    source_entries = _acceptance_evidence_sources(ctx)
-    criterion_payloads: list[dict[str, object]] = []
-    for index, criterion in enumerate(criteria, start=1):
-        criterion_id = f"AC-{index}"
-        refs: list[dict[str, object]] = []
-        source_text_by_name: dict[str, str] = {}
-        for source, path, text in source_entries:
-            source_text_by_name[source] = text
-            refs.extend(
-                _evidence_refs_for_source(
-                    source=source,
-                    path=path,
-                    text=text,
-                    criterion=criterion,
-                    criterion_id=criterion_id,
-                )
-            )
-        evidence_sources = sorted({str(ref["source"]) for ref in refs})
-        confirmed = any(
-            _acceptance_ref_confirms(ref, source_text_by_name.get(str(ref["source"]), ""))
-            for ref in refs
-        )
-        status = "confirmed" if confirmed else "claimed-only" if refs else "missing"
-        criterion_payloads.append(
-            {
-                "criterion_id": criterion_id,
-                "text": criterion,
-                "status": status,
-                "evidence_sources": evidence_sources,
-                "evidence_refs": refs,
-            }
-        )
-    if not criterion_payloads:
-        coverage_status = "missing"
-    elif all(item["status"] == "confirmed" for item in criterion_payloads):
-        coverage_status = "complete"
-    elif any(item["status"] == "confirmed" for item in criterion_payloads):
-        coverage_status = "partial"
-    elif any(item["status"] == "claimed-only" for item in criterion_payloads):
-        coverage_status = "claimed-only"
-    else:
-        coverage_status = "missing"
-    return {
-        "schema_version": 1,
-        "created_at_utc": _utc_now(),
-        "run_id": ctx.run_id,
-        "runtime_id": ctx.runtime_id,
-        "scenario_id": ctx.scenario.scenario_id,
-        "work_item": ctx.work_item,
-        "acceptance_coverage_status": coverage_status,
-        "criteria": criterion_payloads,
-    }
-
-
-def _write_acceptance_coverage_artifacts(ctx: FlowContext) -> tuple[Path, Path, dict[str, object]]:
-    payload = _build_acceptance_coverage(ctx)
-    json_path = _write_json(ctx.bundle_root / ACCEPTANCE_COVERAGE_JSON_FILENAME, payload)
-    lines = [
-        "# Acceptance Coverage",
-        "",
-        f"- Status: `{payload['acceptance_coverage_status']}`",
-        "",
-    ]
-    criteria = cast(list[dict[str, object]], payload["criteria"])
-    if not criteria:
-        lines.append("- No acceptance criteria were recorded.")
-    for item in criteria:
-        lines.extend(
-            (
-                f"## {item['criterion_id']}",
-                "",
-                f"- Status: `{item['status']}`",
-                f"- Text: {item['text']}",
-                "- Evidence sources: "
-                + (
-                    "`none`"
-                    if not item["evidence_sources"]
-                    else ", ".join(
-                        f"`{source}`"
-                        for source in cast(list[str], item["evidence_sources"])
-                    )
-                ),
-                "",
-            )
-        )
-        refs = cast(list[dict[str, object]], item["evidence_refs"])
-        if not refs:
-            lines.append("- No evidence references matched.")
-        for ref in refs:
-            lines.append(
-                f"- `{ref['source']}` {ref['path']}:{ref['line']} - {ref['snippet']}"
-            )
-        lines.append("")
-    markdown_path = ctx.bundle_root / ACCEPTANCE_COVERAGE_MARKDOWN_FILENAME
-    markdown_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    return json_path, markdown_path, payload
-
-
-def _attach_acceptance_coverage_to_stage_audits(
-    *,
-    ctx: FlowContext,
-    acceptance_payload: dict[str, object],
-) -> None:
-    audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
-    if not audit_root.exists():
-        return
-    summary = {
-        "acceptance_coverage_status": acceptance_payload.get("acceptance_coverage_status"),
-        "criteria": acceptance_payload.get("criteria", []),
-    }
-    for path in sorted(audit_root.glob("*.json")):
-        try:
-            payload = _read_json_object(path)
-        except (OSError, ValueError, json.JSONDecodeError):
-            continue
-        payload["acceptance_coverage"] = summary
-        _write_json(path, payload)
-
-
-def _append_stage_audit_section_to_quality_report(ctx: FlowContext) -> None:
-    path = ctx.bundle_root / QUALITY_REPORT_FILENAME
-    if not path.exists():
-        return
-    payloads = _stage_audit_payloads(ctx)
-    lines = ["", "## Stage Audit Evidence", ""]
-    if not payloads:
-        lines.append("- No per-stage audit artifacts were recorded.")
-    for payload in payloads:
-        stage = str(payload.get("stage", "unknown"))
-        json_path, markdown_path = _stage_audit_paths(ctx, stage)
-        lines.append(
-            f"- `{stage}` state=`{payload.get('stage_state', 'unknown')}` "
-            f"validator=`{payload.get('validator_verdict', 'unknown')}` "
-            f"unresolved_questions=`{payload.get('unresolved_questions', 'unknown')}` "
-            f"evidence=`{markdown_path.as_posix()}` json=`{json_path.as_posix()}`"
-        )
-    with path.open("a", encoding="utf-8") as stream:
-        stream.write("\n".join(lines).rstrip() + "\n")
-
-
 def _write_harness_metadata(
     *,
     ctx: FlowContext,
     status: VerdictStatus,
-    quality_gate: str,
-    quality_verdict: str,
-    counting_status: CountingStatus,
-    acceptance_coverage_status: str,
-    ui_ux_gate: str,
 ) -> Path:
     state = _read_json_object(_state_path(ctx.bundle_root))
     payload: dict[str, object] = {
@@ -4822,11 +4233,6 @@ def _write_harness_metadata(
         "created_at_utc": _utc_now(),
         "feature_size": ctx.scenario.feature_size,
         "is_live": ctx.scenario.is_live,
-        "quality_gate": quality_gate,
-        "quality_verdict": quality_verdict,
-        "counting_status": counting_status,
-        "acceptance_coverage_status": acceptance_coverage_status,
-        "ui_ux_gate": ui_ux_gate,
         "run_id": ctx.run_id,
         "runtime_id": ctx.runtime_id,
         "scenario_class": ctx.scenario.scenario_class,
@@ -4849,26 +4255,20 @@ def _write_harness_metadata(
             ).as_posix(),
             "scenario_path": ctx.scenario_path.as_posix(),
             "stage_audits": (ctx.bundle_root / STAGE_AUDITS_DIRNAME).as_posix(),
-            "acceptance_coverage": (
-                ctx.bundle_root / ACCEPTANCE_COVERAGE_JSON_FILENAME
+            "frontend_checkpoints": (
+                ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME
             ).as_posix(),
-            "ui_ux_checkpoints": (ctx.bundle_root / UI_UX_CHECKPOINTS_JSON_FILENAME).as_posix(),
             "next_flow_checkpoint": (
                 ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME
             ).as_posix(),
             "next_flow_lineage": (ctx.bundle_root / NEXT_FLOW_LINEAGE_FILENAME).as_posix(),
-            "operator_quality_analysis_validation": (
-                ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME
-            ).as_posix(),
         },
         "black_box": {
             "operator_surface": "installed-aidd-cli",
             "stage_execution": "aidd stage run",
-            "ui_ux_evidence": {
-                "gate": ui_ux_gate,
-                "artifact": (ctx.bundle_root / UI_UX_CHECKPOINTS_JSON_FILENAME).as_posix(),
-                "screenshot_capture": "optional-skipped-when-unavailable",
-            },
+            "frontend_checkpoint_evidence": (
+                ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME
+            ).as_posix(),
             "inspection": [
                 "aidd stage summary",
                 "aidd stage questions",
@@ -4915,12 +4315,6 @@ def _grader_payload(
     ctx: FlowContext,
     status: VerdictStatus,
     summary: str,
-    quality_assessment: LiveQualityAssessment,
-    quality_gate: str,
-    counting_status: CountingStatus,
-    acceptance_coverage: dict[str, object],
-    ui_ux_payload: dict[str, object],
-    operator_validation: dict[str, object],
     next_flow_checkpoint: dict[str, object],
     first_failure_note: str | None,
 ) -> dict[str, object]:
@@ -4930,28 +4324,6 @@ def _grader_payload(
             "summary": summary,
             "first_failure_note": first_failure_note,
             "step_evidence_source": (ctx.bundle_root / FLOW_STEPS_FILENAME).as_posix(),
-        },
-        "quality": {
-            "blocking_findings": list(quality_assessment.blocking_findings),
-            "dimension_scores": {
-                dimension.name: {
-                    "rationale": dimension.rationale,
-                    "score": dimension.score,
-                }
-                for dimension in quality_assessment.dimensions
-            },
-            "machine_quality_gate": quality_assessment.gate,
-            "quality_gate": quality_gate,
-            "quality_verdict": quality_assessment.verdict,
-            "counting_status": counting_status,
-            "acceptance_coverage_status": acceptance_coverage.get(
-                "acceptance_coverage_status"
-            ),
-            "ui_ux_gate": ui_ux_payload.get("ui_ux_gate"),
-            "operator_quality_analysis_validation": operator_validation,
-            "review_status": quality_assessment.review_status,
-            "suggested_follow_ups": list(quality_assessment.suggested_follow_ups),
-            "qa_verdict": quality_assessment.qa_verdict,
         },
         "run_id": ctx.run_id,
         "runtime_id": ctx.runtime_id,
@@ -4993,16 +4365,10 @@ def _record_terminal_decision_step(
             ctx.bundle_root / VERDICT_FILENAME,
             ctx.bundle_root / GRADER_FILENAME,
             ctx.bundle_root / LOG_ANALYSIS_FILENAME,
-            ctx.bundle_root / QUALITY_REPORT_FILENAME,
             ctx.bundle_root / STAGE_TIMING_JSON_FILENAME,
             ctx.bundle_root / STAGE_TIMING_MARKDOWN_FILENAME,
             ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME,
             ctx.bundle_root / FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME,
-            ctx.bundle_root / UI_UX_CHECKPOINTS_JSON_FILENAME,
-            ctx.bundle_root / UI_UX_CHECKPOINTS_MARKDOWN_FILENAME,
-            ctx.bundle_root / ACCEPTANCE_COVERAGE_JSON_FILENAME,
-            ctx.bundle_root / ACCEPTANCE_COVERAGE_MARKDOWN_FILENAME,
-            ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME,
             ctx.bundle_root / RUNTIME_APPROVAL_ANALYSIS_FILENAME,
             ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME,
             ctx.bundle_root / NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME,
@@ -5011,132 +4377,6 @@ def _record_terminal_decision_step(
             *evidence_paths,
         ),
     )
-
-
-def _operator_quality_analysis_fields(text: str) -> dict[str, str]:
-    fields: dict[str, str] = {}
-    current_section = ""
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if line.startswith("## "):
-            current_section = line[3:].strip().lower()
-            continue
-        if line.lower().startswith("decision:"):
-            fields["decision"] = line.split(":", 1)[1].strip().strip("`").lower()
-            continue
-        if current_section == "blockers" and line.startswith("- ") and ":" not in line:
-            existing = fields.get("blockers", "")
-            value = line[2:].strip().strip("`").lower()
-            fields["blockers"] = f"{existing}; {value}".strip("; ") if existing else value
-            continue
-        if not line.startswith("- ") or ":" not in line:
-            continue
-        key, value = line[2:].split(":", 1)
-        normalized_key = key.strip().lower().replace(" ", "_")
-        fields[normalized_key] = value.strip().strip("`").lower()
-    return fields
-
-
-def _operator_quality_analysis_validation(
-    *,
-    ctx: FlowContext,
-    machine_status: VerdictStatus,
-    quality_assessment: LiveQualityAssessment,
-    acceptance_coverage_status: str,
-    ui_ux_gate: str,
-) -> dict[str, object]:
-    path = ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_FILENAME
-    if not path.exists():
-        payload: dict[str, object] = {
-            "schema_version": 1,
-            "created_at_utc": _utc_now(),
-            "present": False,
-            "valid": False,
-            "decision": None,
-            "fields": {},
-            "findings": ["operator-quality-analysis.md is missing"],
-        }
-        _write_json(ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME, payload)
-        return payload
-    text = path.read_text(encoding="utf-8", errors="replace")
-    fields = _operator_quality_analysis_fields(text)
-    decision = fields.get("decision")
-    findings: list[str] = []
-    required_fields = (
-        "execution_verdict",
-        "quality_gate",
-        "qa_verdict",
-        "review_status",
-        "decision",
-        "blockers",
-    )
-    for field in required_fields:
-        if not fields.get(field):
-            findings.append(f"Missing required field: {field}.")
-    if decision is not None and decision not in OPERATOR_QUALITY_DECISIONS:
-        findings.append(f"Unsupported operator quality decision: {decision}.")
-    if decision == "counted-clean":
-        if machine_status != "pass":
-            findings.append("Operator analysis cannot count a non-pass machine status clean.")
-        if quality_assessment.gate != "pass":
-            findings.append("Operator analysis cannot count a non-pass machine quality gate clean.")
-        if acceptance_coverage_status != "complete":
-            findings.append("Operator analysis cannot count incomplete acceptance coverage clean.")
-        if ui_ux_gate == "fail":
-            findings.append("Operator analysis cannot count a failed UI/UX gate clean.")
-        if quality_assessment.review_status != "approved":
-            findings.append("Operator analysis requires approved review status for counted-clean.")
-        if quality_assessment.qa_verdict not in {"ready", "ready-with-risks"}:
-            findings.append("Operator analysis requires ready or ready-with-risks QA verdict.")
-    payload = {
-        "schema_version": 1,
-        "created_at_utc": _utc_now(),
-        "present": True,
-        "valid": not findings,
-        "decision": decision,
-        "fields": fields,
-        "findings": findings,
-        "analysis_path": path.as_posix(),
-    }
-    _write_json(ctx.bundle_root / OPERATOR_QUALITY_ANALYSIS_VALIDATION_FILENAME, payload)
-    return payload
-
-
-def _counting_status(
-    *,
-    machine_status: VerdictStatus,
-    machine_quality_gate: str,
-    operator_validation: dict[str, object],
-    acceptance_coverage_status: str,
-    ui_ux_gate: str,
-) -> CountingStatus:
-    if machine_status == "blocked":
-        return "blocked"
-    if machine_status != "pass" or machine_quality_gate != "pass":
-        return "failed"
-    operator_decision = operator_validation.get("decision")
-    operator_present = operator_validation.get("present") is True
-    operator_valid = operator_validation.get("valid") is True
-    if (
-        operator_present
-        and operator_decision in OPERATOR_QUALITY_DECISIONS
-        and operator_decision != "counted-clean"
-        and operator_valid
-    ):
-        return "not-counted"
-    if acceptance_coverage_status != "complete":
-        return "pending-operator-analysis"
-    if ui_ux_gate == "fail":
-        return "not-counted"
-    if operator_decision == "counted-clean" and operator_valid:
-        return "counted-clean"
-    if not operator_present:
-        return "pending-operator-analysis"
-    if operator_decision not in OPERATOR_QUALITY_DECISIONS:
-        return "pending-operator-analysis"
-    if not operator_valid:
-        return "not-counted"
-    return "not-counted"
 
 
 @contextlib.contextmanager
@@ -5203,26 +4443,12 @@ def _record_interruption(
     )
 
 
-def _effective_quality_gate(
-    *,
-    machine_gate: str,
-    counting_status: CountingStatus,
-) -> str:
-    if machine_gate != "pass":
-        return machine_gate
-    if counting_status in {"counted-clean", "failed"}:
-        return machine_gate
-    return "warn"
-
-
 def _finalize_reports(
     *,
     ctx: FlowContext,
     status: VerdictStatus,
     summary: str,
     verification_failed: bool,
-    quality_result: HarnessQualityResult | None,
-    quality_error: BaseException | None,
     teardown_result: HarnessTeardownResult | None,
     teardown_error: BaseException | None,
 ) -> BlackBoxLiveE2EResult:
@@ -5230,66 +4456,14 @@ def _finalize_reports(
     if teardown_error is not None:
         status = "infra-fail"
         summary = f"Teardown failed after black-box execution: {teardown_error}"
-    quality_workspace_root = (
-        ctx.bundle_root
-        if ctx.prepared_working_copy is None
-        else ctx.prepared_working_copy.working_copy_path / ".aidd"
-    )
-    selected_task = _selected_task_for_context(ctx)
-    quality_assessment = build_live_quality_assessment(
-        scenario=ctx.scenario,
-        workspace_root=quality_workspace_root,
-        work_item=ctx.work_item,
-        execution_status=status,
-        selected_task=selected_task,
-        quality_result=quality_result,
-        quality_error=quality_error,
-    )
     _write_frontend_checkpoint_placeholders(ctx)
-    _, _, ui_ux_payload = _write_ui_ux_checkpoint_artifacts(ctx)
-    _, _, acceptance_coverage = _write_acceptance_coverage_artifacts(ctx)
-    _attach_acceptance_coverage_to_stage_audits(
-        ctx=ctx,
-        acceptance_payload=acceptance_coverage,
-    )
-    acceptance_coverage_status = str(
-        acceptance_coverage.get("acceptance_coverage_status") or "missing"
-    )
-    ui_ux_gate = str(ui_ux_payload.get("ui_ux_gate") or "skipped")
-    operator_validation = _operator_quality_analysis_validation(
-        ctx=ctx,
-        machine_status=status,
-        quality_assessment=quality_assessment,
-        acceptance_coverage_status=acceptance_coverage_status,
-        ui_ux_gate=ui_ux_gate,
-    )
-    counting_status = _counting_status(
-        machine_status=status,
-        machine_quality_gate=quality_assessment.gate,
-        operator_validation=operator_validation,
-        acceptance_coverage_status=acceptance_coverage_status,
-        ui_ux_gate=ui_ux_gate,
-    )
-    effective_quality_gate = _effective_quality_gate(
-        machine_gate=quality_assessment.gate,
-        counting_status=counting_status,
-    )
     _persist_state(
         ctx=ctx,
         status=status,
         next_action="finish" if status == "pass" else "stop",
         current_stage=None,
         completed_stages=_state_completed_stages(ctx.bundle_root),
-        extra={
-            **_preserved_state_extras(ctx),
-            "machine_quality_gate": quality_assessment.gate,
-            "quality_gate": effective_quality_gate,
-            "quality_verdict": quality_assessment.verdict,
-            "operator_quality_decision": operator_validation.get("decision"),
-            "acceptance_coverage_status": acceptance_coverage_status,
-            "ui_ux_gate": ui_ux_gate,
-            "counting_status": counting_status,
-        },
+        extra=_preserved_state_extras(ctx),
     )
     first_failure_note = (
         None if status == "pass" else _first_failure_from_steps(ctx, status=status)[1]
@@ -5320,7 +4494,6 @@ def _finalize_reports(
     _write_log_analysis(ctx=ctx, status=status, first_failure_note=first_failure_note)
     stage_timing_payload = _stage_timing_payload_from_flow(
         ctx=ctx,
-        quality_result=quality_result,
         teardown_result=teardown_result,
     )
     layout = build_result_bundle_layout_at_run_root(run_root=ctx.bundle_root)
@@ -5329,35 +4502,6 @@ def _finalize_reports(
         render_repair_history_markdown(stage_timing_payload),
         encoding="utf-8",
     )
-    review_report_path = workspace_stage_output_root(
-        root=quality_workspace_root,
-        work_item=ctx.work_item,
-        stage="review",
-    ) / "review-report.md"
-    qa_report_path = workspace_stage_output_root(
-        root=quality_workspace_root,
-        work_item=ctx.work_item,
-        stage="qa",
-    ) / "qa-report.md"
-    write_live_quality_report_markdown(
-        path=ctx.bundle_root / QUALITY_REPORT_FILENAME,
-        scenario=ctx.scenario,
-        assessment=quality_assessment,
-        feature_selection_path=ctx.bundle_root / FEATURE_SELECTION_FILENAME,
-        quality_transcript_path=ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,
-        review_report_path=review_report_path,
-        qa_report_path=qa_report_path,
-        effective_quality_gate=effective_quality_gate,
-        counting_status=counting_status,
-        acceptance_coverage_status=acceptance_coverage_status,
-        ui_ux_gate=ui_ux_gate,
-        operator_quality_decision=(
-            str(operator_validation.get("decision"))
-            if operator_validation.get("decision") is not None
-            else None
-        ),
-    )
-    _append_stage_audit_section_to_quality_report(ctx)
     outcome = HarnessOutcome(
         aidd_exit_code=0 if status == "pass" else 1,
         verification_failed=verification_failed,
@@ -5387,11 +4531,6 @@ def _finalize_reports(
     _, _, next_flow_checkpoint = _write_next_flow_checkpoint_artifacts(
         ctx=ctx,
         status=status,
-        quality_gate=effective_quality_gate,
-        quality_verdict=quality_assessment.verdict,
-        counting_status=counting_status,
-        acceptance_coverage_status=acceptance_coverage_status,
-        ui_ux_gate=ui_ux_gate,
         first_failure_note=first_failure_note,
         next_flow_lineage=next_flow_lineage,
     )
@@ -5401,12 +4540,6 @@ def _finalize_reports(
             ctx=ctx,
             status=verdict.status,
             summary=summary,
-            quality_assessment=quality_assessment,
-            quality_gate=effective_quality_gate,
-            counting_status=counting_status,
-            acceptance_coverage=acceptance_coverage,
-            ui_ux_payload=ui_ux_payload,
-            operator_validation=operator_validation,
             next_flow_checkpoint=next_flow_checkpoint,
             first_failure_note=first_failure_note,
         ),
@@ -5424,11 +4557,6 @@ def _finalize_reports(
     _write_harness_metadata(
         ctx=ctx,
         status=verdict.status,
-        quality_gate=effective_quality_gate,
-        quality_verdict=quality_assessment.verdict,
-        counting_status=counting_status,
-        acceptance_coverage_status=acceptance_coverage_status,
-        ui_ux_gate=ui_ux_gate,
     )
     _write_runtime_approval_analysis_placeholder(ctx)
     _write_run_transcript_from_flow(ctx=ctx, exit_code=0 if verdict.status == "pass" else 1)
@@ -5441,10 +4569,6 @@ def _finalize_reports(
         flow_report_path=ctx.bundle_root / FLOW_REPORT_FILENAME,
         verdict_path=ctx.bundle_root / VERDICT_FILENAME,
         summary_path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
-        quality_gate=effective_quality_gate,
-        quality_verdict=quality_assessment.verdict,
-        counting_status=counting_status,
-        quality_report_path=ctx.bundle_root / QUALITY_REPORT_FILENAME,
         first_failure_note=first_failure_note,
         operator_action_request_path=(
             ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME
@@ -5473,12 +4597,14 @@ def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path
 def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     summary = "Black-box live E2E is blocked waiting for operator-agent input."
     _ensure_transcript_files(ctx)
+    _write_frontend_checkpoint_placeholders(ctx)
     _write_runtime_log_from_steps(ctx)
     _write_validator_report_from_steps(ctx=ctx, status="blocked", summary=summary)
+    first_failure_note = _first_failure_from_steps(ctx, status="blocked")[1]
     _write_log_analysis(
         ctx=ctx,
         status="blocked",
-        first_failure_note=_first_failure_from_steps(ctx, status="blocked")[1],
+        first_failure_note=first_failure_note,
     )
     outcome = HarnessOutcome(
         aidd_exit_code=1,
@@ -5497,13 +4623,12 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
             (ctx.bundle_root / VALIDATOR_REPORT_FILENAME).as_posix(),
             (ctx.bundle_root / FLOW_STEPS_FILENAME).as_posix(),
         ),
-        first_failure_note=_first_failure_from_steps(ctx, status="blocked")[1],
+        first_failure_note=first_failure_note,
         verification_summary="blocked waiting for answers",
     )
     write_scenario_verdict_markdown(path=ctx.bundle_root / VERDICT_FILENAME, verdict=verdict)
     stage_timing_payload = _stage_timing_payload_from_flow(
         ctx=ctx,
-        quality_result=None,
         teardown_result=None,
     )
     layout = build_result_bundle_layout_at_run_root(run_root=ctx.bundle_root)
@@ -5512,49 +4637,6 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         render_repair_history_markdown(stage_timing_payload),
         encoding="utf-8",
     )
-    quality_workspace_root = (
-        ctx.bundle_root
-        if ctx.prepared_working_copy is None
-        else ctx.prepared_working_copy.working_copy_path / ".aidd"
-    )
-    quality_assessment = build_live_quality_assessment(
-        scenario=ctx.scenario,
-        workspace_root=quality_workspace_root,
-        work_item=ctx.work_item,
-        execution_status="blocked",
-        selected_task=_selected_task_for_context(ctx),
-        quality_result=None,
-        quality_error=None,
-    )
-    counting_status: CountingStatus = "blocked"
-    write_live_quality_report_markdown(
-        path=ctx.bundle_root / QUALITY_REPORT_FILENAME,
-        scenario=ctx.scenario,
-        assessment=quality_assessment,
-        feature_selection_path=ctx.bundle_root / FEATURE_SELECTION_FILENAME,
-        quality_transcript_path=ctx.bundle_root / QUALITY_TRANSCRIPT_FILENAME,
-        effective_quality_gate=quality_assessment.gate,
-        counting_status=counting_status,
-    )
-    _append_stage_audit_section_to_quality_report(ctx)
-    _write_frontend_checkpoint_placeholders(ctx)
-    _, _, ui_ux_payload = _write_ui_ux_checkpoint_artifacts(ctx)
-    _, _, acceptance_coverage = _write_acceptance_coverage_artifacts(ctx)
-    _attach_acceptance_coverage_to_stage_audits(
-        ctx=ctx,
-        acceptance_payload=acceptance_coverage,
-    )
-    acceptance_coverage_status = str(
-        acceptance_coverage.get("acceptance_coverage_status") or "missing"
-    )
-    ui_ux_gate = str(ui_ux_payload.get("ui_ux_gate") or "skipped")
-    operator_validation = _operator_quality_analysis_validation(
-        ctx=ctx,
-        machine_status="blocked",
-        quality_assessment=quality_assessment,
-        acceptance_coverage_status=acceptance_coverage_status,
-        ui_ux_gate=ui_ux_gate,
-    )
     _write_runtime_approval_analysis_placeholder(ctx)
     _persist_state(
         ctx=ctx,
@@ -5562,25 +4644,12 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         next_action="answer-questions",
         current_stage=_state_current_stage(ctx.bundle_root),
         completed_stages=_state_completed_stages(ctx.bundle_root),
-        extra={
-            **_preserved_state_extras(ctx),
-            "quality_gate": quality_assessment.gate,
-            "quality_verdict": quality_assessment.verdict,
-            "acceptance_coverage_status": acceptance_coverage_status,
-            "ui_ux_gate": ui_ux_gate,
-            "counting_status": counting_status,
-        },
+        extra=_preserved_state_extras(ctx),
     )
-    first_failure_note = _first_failure_from_steps(ctx, status="blocked")[1]
     next_flow_lineage = _write_next_flow_lineage_artifact(ctx=ctx, status="blocked")
     _, _, next_flow_checkpoint = _write_next_flow_checkpoint_artifacts(
         ctx=ctx,
         status="blocked",
-        quality_gate=quality_assessment.gate,
-        quality_verdict=quality_assessment.verdict,
-        counting_status=counting_status,
-        acceptance_coverage_status=acceptance_coverage_status,
-        ui_ux_gate=ui_ux_gate,
         first_failure_note=first_failure_note,
         next_flow_lineage=next_flow_lineage,
     )
@@ -5588,42 +4657,16 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     _write_harness_metadata(
         ctx=ctx,
         status="blocked",
-        quality_gate=quality_assessment.gate,
-        quality_verdict=quality_assessment.verdict,
-        counting_status=counting_status,
-        acceptance_coverage_status=acceptance_coverage_status,
-        ui_ux_gate=ui_ux_gate,
     )
     _write_json(
         ctx.bundle_root / GRADER_FILENAME,
-        {
-            "execution": {
-                "status": "blocked",
-                "summary": summary,
-                "first_failure_note": _first_failure_from_steps(ctx, status="blocked")[1],
-                "step_evidence_source": (ctx.bundle_root / FLOW_STEPS_FILENAME).as_posix(),
-            },
-            "quality": {
-                "blocking_findings": list(quality_assessment.blocking_findings),
-                "quality_gate": quality_assessment.gate,
-                "quality_verdict": quality_assessment.verdict,
-                "counting_status": counting_status,
-                "acceptance_coverage_status": acceptance_coverage_status,
-                "ui_ux_gate": ui_ux_gate,
-                "operator_quality_analysis_validation": operator_validation,
-            },
-            "run_id": ctx.run_id,
-            "runtime_id": ctx.runtime_id,
-            "scenario_id": ctx.scenario.scenario_id,
-            "next_flow_checkpoint": {
-                "artifact": (ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME).as_posix(),
-                "operator_decision": next_flow_checkpoint.get("next_flow_actions", {}),
-                "flow_complete_visible": next_flow_checkpoint.get("flow_complete_visible"),
-            },
-            "selected_task": ctx.selected_task_payload.get("selected_task"),
-            "stage_audits": _stage_audit_payloads(ctx),
-            "steps": _load_steps(ctx.bundle_root),
-        },
+        _grader_payload(
+            ctx=ctx,
+            status="blocked",
+            summary=summary,
+            next_flow_checkpoint=next_flow_checkpoint,
+            first_failure_note=first_failure_note,
+        ),
     )
     write_eval_summary_markdown(
         path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
@@ -5645,11 +4688,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         flow_report_path=ctx.bundle_root / FLOW_REPORT_FILENAME,
         verdict_path=ctx.bundle_root / VERDICT_FILENAME,
         summary_path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
-        quality_gate=quality_assessment.gate,
-        quality_verdict=quality_assessment.verdict,
-        counting_status=counting_status,
-        quality_report_path=ctx.bundle_root / QUALITY_REPORT_FILENAME,
-        first_failure_note=_first_failure_from_steps(ctx, status="blocked")[1],
+        first_failure_note=first_failure_note,
         operator_action_request_path=ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME,
     )
 
@@ -5690,15 +4729,9 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             status=terminal_status,
             summary=(
                 "Refreshed terminal black-box live E2E reports from existing "
-                "operator-quality and artifact evidence."
+                "execution artifact evidence."
             ),
             verification_failed=terminal_status != "pass",
-            quality_result=(
-                _quality_result_from_existing_transcript(ctx)
-                if terminal_status == "pass"
-                else None
-            ),
-            quality_error=None,
             teardown_result=None,
             teardown_error=None,
         )
@@ -5710,8 +4743,6 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             status="infra-fail",
             summary=f"Target repository setup failed before black-box stage execution: {exc}",
             verification_failed=True,
-            quality_result=None,
-            quality_error=None,
             teardown_result=None,
             teardown_error=None,
         )
@@ -5726,8 +4757,6 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             status=install_status,
             summary=f"AIDD installation failed before black-box stage execution: {exc}",
             verification_failed=True,
-            quality_result=None,
-            quality_error=None,
             teardown_result=None,
             teardown_error=None,
         )
@@ -5739,8 +4768,6 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             status="infra-fail",
             summary=f"Public AIDD bootstrap failed before black-box stage execution: {exc}",
             verification_failed=True,
-            quality_result=None,
-            quality_error=None,
             teardown_result=None,
             teardown_error=None,
         )
@@ -5752,8 +4779,6 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             status="infra-fail",
             summary=f"Scenario setup failed before black-box stage execution: {exc}",
             verification_failed=True,
-            quality_result=None,
-            quality_error=None,
             teardown_result=None,
             teardown_error=None,
         )
@@ -5767,8 +4792,6 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             status="fail",
             summary="A public stage run failed during black-box live E2E execution.",
             verification_failed=True,
-            quality_result=None,
-            quality_error=None,
             teardown_result=teardown_result,
             teardown_error=teardown_error,
         )
@@ -5788,8 +4811,6 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             status="fail",
             summary="Required interview flow was not observed during black-box live E2E.",
             verification_failed=True,
-            quality_result=None,
-            quality_error=None,
             teardown_result=teardown_result,
             teardown_error=teardown_error,
         )
@@ -5805,21 +4826,16 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             status="fail",
             summary="Scenario verification failed after public stage execution.",
             verification_failed=True,
-            quality_result=None,
-            quality_error=None,
             teardown_result=teardown_result,
             teardown_error=teardown_error,
         )
 
-    quality_result, quality_error = _run_quality(ctx)
     teardown_result, teardown_error = _run_teardown(ctx)
     return _finalize_reports(
         ctx=ctx,
         status="pass",
         summary="Black-box live E2E completed through public stage and inspection surfaces.",
         verification_failed=verification_failed,
-        quality_result=quality_result,
-        quality_error=quality_error,
         teardown_result=teardown_result,
         teardown_error=teardown_error,
     )
@@ -5886,8 +4902,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"scenario={result.scenario_id} runtime={result.runtime_id}"
     )
     print(f"Status: {result.status}")
-    print(f"Quality gate: {result.quality_gate}")
-    print(f"Counting status: {result.counting_status}")
     print(f"Run id: {result.run_id}")
     print(f"Bundle root: {result.bundle_root.as_posix()}")
     print(f"Flow report: {result.flow_report_path.as_posix()}")

@@ -317,9 +317,10 @@ isolated `uv tool` home/cache, clone the pinned target repository under
 `<work-root>/<run_id>/target/<repo-slug>`, run from the target repository root,
 execute each stage through public `aidd stage run` and inspection commands plus
 loopback `aidd ui` UI/API checkpoints, write `stage-audits/<stage>.json` and
-`.md` per-stage audits, record acceptance coverage, UI/UX checkpoint summaries,
-and operator-quality-analysis validation, and preserve durable audit bundles
-under `.aidd/reports/evals/`.
+`.md` per-stage audits, and preserve durable execution bundles under
+`.aidd/reports/evals/`. The runner does not score deliverable quality or create a
+quality report; the launching SWE agent may write
+`.aidd/reports/evals/<run_id>/quality-report.md` manually after the terminal run.
 The evaluator always builds a local wheel from the clean tracked source checkout
 containing the scenario manifest. Published-package install proof is a separate
 release/install evidence lane, not part of public-repository live E2E.

@@ -12,7 +12,6 @@ from aidd.core.run_store import (
     RUN_RUNTIME_JSONL_FILENAME,
     work_item_runs_root,
 )
-from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.evals.log_analysis import (
     CoarseRuntimeEvent,
     FailureBoundarySelection,
@@ -22,11 +21,6 @@ from aidd.evals.log_analysis import (
     parse_validator_report_failures_text,
     select_first_failure_boundary,
     summarize_runtime_provider_diagnostics,
-)
-from aidd.evals.quality import (
-    LiveQualityAssessment,
-    build_live_quality_assessment,
-    write_live_quality_report_markdown,
 )
 from aidd.evals.reporting import (
     SUMMARY_REPORT_FILENAME,
@@ -51,7 +45,6 @@ from aidd.harness.eval_models import (
     EvalScenarioRunResult,
 )
 from aidd.harness.eval_report_writers import write_eval_source_artifacts
-from aidd.harness.repo_prep import PreparedWorkingCopy
 from aidd.harness.result_bundle import (
     ResultBundleLayout,
     copy_or_link_run_artifacts,
@@ -239,8 +232,6 @@ def render_runtime_log_source(context: EvalRuntimeLogSourceContext) -> str:
         lines.append(
             f"verification_commands={len(state.verification_result.command_transcripts)}"
         )
-    if state.quality_result is not None:
-        lines.append(f"quality_commands={len(state.quality_result.command_transcripts)}")
     if state.teardown_result is not None:
         lines.append(f"teardown_commands={len(state.teardown_result.command_transcripts)}")
 
@@ -250,7 +241,6 @@ def render_runtime_log_source(context: EvalRuntimeLogSourceContext) -> str:
         state.setup_error,
         state.run_error,
         state.verification_error,
-        state.quality_error,
         state.teardown_error,
     ):
         if error is not None:
@@ -527,15 +517,6 @@ def write_source_artifacts(
     )
 
 
-def workspace_root_for_quality(
-    prepared_working_copy: PreparedWorkingCopy | None,
-    workspace_root: Path,
-) -> Path:
-    if prepared_working_copy is not None:
-        return prepared_working_copy.working_copy_path / ".aidd"
-    return workspace_root
-
-
 def grader_payload(
     *,
     scenario: Scenario,
@@ -545,7 +526,6 @@ def grader_payload(
     summary: str,
     first_failure_boundary: FailureBoundarySelection,
     feature_selection_payload: dict[str, object],
-    quality_assessment: LiveQualityAssessment,
 ) -> dict[str, object]:
     return {
         "execution": {
@@ -557,21 +537,6 @@ def grader_payload(
             },
             "status": status,
             "summary": summary,
-        },
-        "quality": {
-            "blocking_findings": list(quality_assessment.blocking_findings),
-            "dimension_scores": {
-                dimension.name: {
-                    "rationale": dimension.rationale,
-                    "score": dimension.score,
-                }
-                for dimension in quality_assessment.dimensions
-            },
-            "quality_gate": quality_assessment.gate,
-            "quality_verdict": quality_assessment.verdict,
-            "review_status": quality_assessment.review_status,
-            "suggested_follow_ups": list(quality_assessment.suggested_follow_ups),
-            "qa_verdict": quality_assessment.qa_verdict,
         },
         "run_id": run_id,
         "runtime_id": runtime_id,
@@ -623,7 +588,6 @@ def persist_eval_reports(
         setup_result=state.setup_result,
         aidd_run_result=state.aidd_run_result,
         verification_result=state.verification_result,
-        quality_result=state.quality_result,
         teardown_result=state.teardown_result,
     )
     aidd_workspace_root = (
@@ -769,7 +733,6 @@ def persist_eval_reports(
                 )
             ),
             "feature_selection_path": layout.feature_selection_path.as_posix(),
-            "quality_report_path": layout.quality_report_path.as_posix(),
             "working_copy_path": (
                 state.prepared_working_copy.working_copy_path.as_posix()
                 if state.prepared_working_copy is not None
@@ -788,7 +751,6 @@ def persist_eval_reports(
         setup_result=state.setup_result,
         aidd_run_result=state.aidd_run_result,
         verification_result=state.verification_result,
-        quality_result=state.quality_result,
         teardown_result=state.teardown_result,
     )
     copy_or_link_run_artifacts(
@@ -821,44 +783,6 @@ def persist_eval_reports(
         ),
         encoding="utf-8",
     )
-    quality_workspace_root = workspace_root_for_quality(
-        prepared_working_copy=state.prepared_working_copy,
-        workspace_root=prep.workspace_root,
-    )
-    review_report_path = (
-        workspace_stage_output_root(
-            root=quality_workspace_root,
-            work_item=work_item,
-            stage="review",
-        )
-        / "review-report.md"
-    )
-    qa_report_path = (
-        workspace_stage_output_root(
-            root=quality_workspace_root,
-            work_item=work_item,
-            stage="qa",
-        )
-        / "qa-report.md"
-    )
-    quality_assessment = build_live_quality_assessment(
-        scenario=scenario,
-        workspace_root=quality_workspace_root,
-        work_item=work_item,
-        execution_status=status,
-        selected_task=prep.selected_task,
-        quality_result=state.quality_result,
-        quality_error=state.quality_error,
-    )
-    write_live_quality_report_markdown(
-        path=layout.quality_report_path,
-        scenario=scenario,
-        assessment=quality_assessment,
-        feature_selection_path=layout.feature_selection_path,
-        quality_transcript_path=layout.quality_transcript_path,
-        review_report_path=review_report_path if review_report_path.exists() else None,
-        qa_report_path=qa_report_path if qa_report_path.exists() else None,
-    )
     layout.grader_path.write_text(
         json.dumps(
             grader_payload(
@@ -869,7 +793,6 @@ def persist_eval_reports(
                 summary=summary,
                 first_failure_boundary=first_failure_boundary,
                 feature_selection_payload=prep.feature_selection_payload,
-                quality_assessment=quality_assessment,
             ),
             indent=2,
             sort_keys=True,
@@ -905,9 +828,6 @@ def persist_eval_reports(
         bundle_root=layout.run_root,
         verdict_path=layout.verdict_path,
         summary_path=summary_path,
-        quality_gate=quality_assessment.gate,
-        quality_verdict=quality_assessment.verdict,
-        quality_report_path=layout.quality_report_path,
         feature_selection_path=layout.feature_selection_path,
         first_failure_boundary=first_failure_boundary,
         first_failure_note=first_failure_note,
