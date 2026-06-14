@@ -12,6 +12,7 @@ import sys
 import tempfile
 import threading
 import time
+import tomllib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -518,10 +519,50 @@ def _timeout_output_to_text(value: str | bytes | None) -> str:
     return value
 
 
-def _flow_timeout_seconds(scenario: Scenario) -> float | None:
+def _stage_command_timeout_seconds(scenario: Scenario) -> float | None:
     if scenario.run.timeout_minutes is None:
         return None
     return float(scenario.run.timeout_minutes * 60)
+
+
+def _timeout_policy_payload(ctx: FlowContext) -> dict[str, object]:
+    return {
+        "scope": "per-stage-command",
+        "stage_command_timeout_seconds": _stage_command_timeout_seconds(ctx.scenario),
+        "global_flow_timeout_seconds": None,
+        "runtime_config_source": None if ctx.config_path is None else ctx.config_path.name,
+    }
+
+
+def _format_timeout_budget(value: object) -> str:
+    if not isinstance(value, int | float):
+        return "none"
+    return f"{float(value):.3f}s"
+
+
+def _runtime_config_timeout_profile(ctx: FlowContext) -> str:
+    if ctx.config_path is None or not ctx.config_path.exists():
+        return "n/a"
+    try:
+        payload = tomllib.loads(ctx.config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return "unreadable"
+    runtime_payload = payload.get("runtime")
+    if not isinstance(runtime_payload, dict):
+        return "missing runtime table"
+    runtime_key = ctx.runtime_id.replace("-", "_")
+    selected_runtime = runtime_payload.get(runtime_key)
+    if not isinstance(selected_runtime, dict):
+        return f"missing runtime.{runtime_key}"
+    default_timeout = _format_timeout_budget(selected_runtime.get("timeout_seconds"))
+    raw_stage_timeouts = selected_runtime.get("stage_timeouts")
+    stage_timeouts = raw_stage_timeouts if isinstance(raw_stage_timeouts, dict) else {}
+    stage_summary = ", ".join(
+        f"{stage}={_format_timeout_budget(stage_timeouts.get(stage))}"
+        for stage in STAGES
+        if stage in stage_timeouts
+    )
+    return f"default={default_timeout}; stages={stage_summary or 'none'}"
 
 
 def _harness_environment(
@@ -2975,6 +3016,49 @@ def _validator_verdict_from_text(validator_text: str) -> str:
     return "unknown"
 
 
+_STAGE_RESULT_VALIDATOR_VERDICT_PATTERN = re.compile(
+    r"validator\s+verdict\s*:\s*`?(?P<verdict>pass|fail|unknown|missing)`?",
+    flags=re.IGNORECASE,
+)
+
+
+def _stage_result_validator_verdict_from_text(stage_result_text: str) -> str:
+    for line in stage_result_text.splitlines():
+        match = _STAGE_RESULT_VALIDATOR_VERDICT_PATTERN.search(line)
+        if match is not None:
+            return match.group("verdict").lower()
+    return "unknown"
+
+
+def _stage_audit_consistency_findings(
+    *,
+    stage_result_text: str,
+    validator_verdict: str,
+) -> list[dict[str, object]]:
+    stage_result_validator_verdict = _stage_result_validator_verdict_from_text(
+        stage_result_text
+    )
+    if (
+        stage_result_validator_verdict not in {"pass", "fail"}
+        or validator_verdict not in {"pass", "fail"}
+        or stage_result_validator_verdict == validator_verdict
+    ):
+        return []
+    return [
+        {
+            "kind": "stage-result-validator-verdict-mismatch",
+            "severity": "warning",
+            "non_gating": True,
+            "stage_result_validator_verdict": stage_result_validator_verdict,
+            "audit_validator_verdict": validator_verdict,
+            "message": (
+                "stage-result.md declares a validator verdict that differs from "
+                "the canonical stage-audit validator verdict."
+            ),
+        }
+    ]
+
+
 def _stage_attempt_count(ctx: FlowContext, stage: str) -> int:
     working_copy = _require_working_copy(ctx)
     runs_root = working_copy / ".aidd" / "reports" / "runs" / ctx.work_item
@@ -3074,6 +3158,11 @@ def _write_stage_audit(
     stage_result_text = _read_text_if_exists(stage_result_path)
     validator_text = _read_text_if_exists(validator_report_path)
     stage_metadata_status = _stage_metadata_status(ctx, stage)
+    validator_verdict = _validator_verdict_from_text(validator_text)
+    consistency_findings = _stage_audit_consistency_findings(
+        stage_result_text=stage_result_text,
+        validator_verdict=validator_verdict,
+    )
     implementation_details: dict[str, object] | None = None
     implementation_policy: dict[str, object] | None = None
     if stage == "implement":
@@ -3140,7 +3229,8 @@ def _write_stage_audit(
             "public_inspection": inspect_classification,
             "frontend_checkpoint": frontend_classification,
         },
-        "validator_verdict": _validator_verdict_from_text(validator_text),
+        "validator_verdict": validator_verdict,
+        "consistency_findings": consistency_findings,
         "primary_artifact": {
             "filename": primary_filename,
             "path": None if primary_path is None else primary_path.as_posix(),
@@ -3203,6 +3293,17 @@ def _write_stage_audit(
         "",
     ]
     md_lines.extend(f"- {note}" for note in cast(list[str], payload["artifact_presence_notes"]))
+    if consistency_findings:
+        md_lines.extend(("", "## Consistency Findings", ""))
+        for finding in consistency_findings:
+            md_lines.append(
+                "- "
+                f"`{finding['severity']}` "
+                f"`{finding['kind']}`: {finding['message']} "
+                f"(stage-result={finding['stage_result_validator_verdict']}, "
+                f"audit={finding['audit_validator_verdict']}, "
+                f"non-gating={finding['non_gating']})"
+            )
     if implementation_details is not None:
         md_lines.extend(
             (
@@ -3490,7 +3591,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         )
 
     stage_command = _stage_run_command(ctx, stage)
-    stage_timeout_seconds = _flow_timeout_seconds(ctx.scenario)
+    stage_timeout_seconds = _stage_command_timeout_seconds(ctx.scenario)
     _persist_state(
         ctx=ctx,
         status="running",
@@ -3720,12 +3821,15 @@ def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddR
     steps = _load_steps(ctx.bundle_root)
     stdout_lines: list[str] = []
     stderr_lines: list[str] = []
+    timed_out = False
     for step in steps:
         raw_commands = step.get("commands")
         commands = raw_commands if isinstance(raw_commands, list) else []
         for command in commands:
             if not isinstance(command, dict):
                 continue
+            if command.get("timed_out") is True:
+                timed_out = True
             stdout = command.get("stdout_text")
             stderr = command.get("stderr_text")
             if isinstance(stdout, str) and stdout.strip():
@@ -3738,6 +3842,8 @@ def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddR
         stdout_text="\n".join(stdout_lines),
         stderr_text="\n".join(stderr_lines),
         duration_seconds=max(time.monotonic() - ctx.started, 0.0),
+        timed_out=timed_out,
+        timeout_seconds=None,
     )
     return HarnessAiddRunResult(
         command=("black-box-stage-loop",),
@@ -3748,6 +3854,8 @@ def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddR
         stderr_text=transcript.stderr_text,
         duration_seconds=transcript.duration_seconds,
         command_transcript=transcript,
+        timed_out=timed_out,
+        timeout_seconds=None,
     )
 
 
@@ -4069,6 +4177,7 @@ def _write_log_analysis(
         else _first_failure_from_steps(ctx, status=status)
     )
     reason = first_failure_note or note or "No unresolved failure signals were recorded."
+    timeout_policy = _timeout_policy_payload(ctx)
     path = ctx.bundle_root / LOG_ANALYSIS_FILENAME
     path.write_text(
         "\n".join(
@@ -4080,6 +4189,17 @@ def _write_log_analysis(
                 "- Signal Source: `flow-steps.json`",
                 "- Signal Line: `n/a`",
                 f"- Reason: {reason}",
+                "",
+                "## Timeout Policy",
+                "",
+                f"- Scope: `{timeout_policy['scope']}`",
+                "- Stage Command Timeout: "
+                f"`{_format_timeout_budget(timeout_policy['stage_command_timeout_seconds'])}`",
+                "- Global Flow Timeout: "
+                f"`{_format_timeout_budget(timeout_policy['global_flow_timeout_seconds'])}`",
+                "- Runtime Config Source: "
+                f"`{timeout_policy['runtime_config_source'] or 'n/a'}`",
+                f"- Runtime Adapter Timeout Profile: `{_runtime_config_timeout_profile(ctx)}`",
                 "",
             )
         ),
@@ -4113,6 +4233,7 @@ def _stage_timing_payload_from_flow(
         commands_raw = step.get("commands")
         commands = commands_raw if isinstance(commands_raw, list) else []
         first_exit_code: int | None = None
+        timeout_values: list[float] = []
         for command in commands:
             if not isinstance(command, dict):
                 continue
@@ -4120,6 +4241,17 @@ def _stage_timing_payload_from_flow(
             if isinstance(exit_code, int):
                 first_exit_code = exit_code
                 break
+        for command in commands:
+            if not isinstance(command, dict):
+                continue
+            timeout_seconds = command.get("timeout_seconds")
+            if isinstance(timeout_seconds, int | float):
+                timeout_values.append(float(timeout_seconds))
+        step_timeout_seconds = (
+            timeout_values[0]
+            if timeout_values and all(value == timeout_values[0] for value in timeout_values)
+            else None
+        )
         flow_steps.append(
             {
                 "command_count": len(commands),
@@ -4132,7 +4264,7 @@ def _stage_timing_payload_from_flow(
                     isinstance(command, dict) and command.get("timed_out") is True
                     for command in commands
                 ),
-                "timeout_seconds": None,
+                "timeout_seconds": step_timeout_seconds,
             }
         )
     payload["steps"] = flow_steps
@@ -4589,6 +4721,7 @@ def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path
             "runtime_id": result.runtime_id,
             "timed_out": result.timed_out,
             "timeout_seconds": result.timeout_seconds,
+            "timeout_policy": _timeout_policy_payload(ctx),
             "work_item": result.work_item,
         },
     )

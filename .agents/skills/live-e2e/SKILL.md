@@ -193,12 +193,14 @@ The runner does not create, parse, validate, or score this file. Use this templa
 - Evidence completeness:
 - Runtime/provider/log issues:
 - Repair/interview behavior:
+- Timeout policy/evidence:
 - Run blockers:
 
 ## Artifact Quality
 - Stage artifact completeness:
 - Idea/research/plan/review-spec/tasklist quality:
 - Cross-stage consistency:
+- Stage-result/validator consistency:
 - Validator report quality:
 - Repair burden analysis:
 - Artifact evidence links:
@@ -314,6 +316,7 @@ Expected live artifacts include:
 - `validator-report.md`
 - `repair-history.md`
 - `log-analysis.md`
+- `run-transcript.json` with `timeout_policy.scope: per-stage-command`
 - `grader.json`
 - `verdict.md`
 - `answer-analysis.md` when the run answered blocking questions
@@ -323,6 +326,12 @@ Expected live artifacts include:
 A live execution run is `pass` when execution evidence exists, all required
 stages reached terminal success, and `verify.commands` passed. A clean deliverable
 quality decision must be written manually in `quality-report.md`.
+
+For stepwise black-box live runs, manifest `limits.timeout_minutes` is the budget
+for each public `aidd stage run` command. It is not a global flow timeout. Inspect
+`run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` for
+timeout evidence, and inspect `stage-audits/<stage>.*` for non-gating
+stage-result/validator consistency findings.
 
 ## Iteration loop contract
 

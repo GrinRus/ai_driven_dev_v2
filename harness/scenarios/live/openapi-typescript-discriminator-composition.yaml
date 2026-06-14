@@ -84,7 +84,7 @@ verify:
     evidence: focused codegen tests, TypeScript checks, and QA output artifact checks succeed.
 limits:
   patch_budget_files: 10
-  timeout_minutes: 60
+  timeout_minutes: 240
 interview:
   required: true
   must_ask_at_least_one: true

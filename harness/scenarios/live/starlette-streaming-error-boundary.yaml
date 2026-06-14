@@ -67,7 +67,7 @@ verify:
   - QA stage output artifacts exist for the selected work item.
 limits:
   patch_budget_files: 10
-  timeout_minutes: 45
+  timeout_minutes: 240
 interview:
   required: false
 runtime_targets:

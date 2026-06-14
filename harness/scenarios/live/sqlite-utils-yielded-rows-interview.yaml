@@ -80,7 +80,7 @@ verify:
     evidence: verification command and QA output artifact checks succeed after rerun.
 limits:
   patch_budget_files: 12
-  timeout_minutes: 45
+  timeout_minutes: 240
 interview:
   required: true
   must_ask_at_least_one: true

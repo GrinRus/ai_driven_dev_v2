@@ -117,31 +117,34 @@ mode = "native"
 # interaction_mode = "batch"        # batch | evented | live
 # auto_approval_preset = "broad"    # off | conservative | broad
 # Optional per-attempt runtime subprocess budget.
-# timeout_seconds = 1200
+# timeout_seconds = 3600
 
 # Optional stage-specific overrides. Stage values take precedence over
 # runtime.<provider>.timeout_seconds.
 # [runtime.claude_code.stage_timeouts]
-# research = 1500
-# tasklist = 1800
-# implement = 1800
-# review = 1800
-# qa = 1800
+# idea = 3600
+# research = 3600
+# plan = 3600
+# review-spec = 3600
+# tasklist = 3600
+# implement = 3600
+# review = 3600
+# qa = 3600
 
 [runtime.codex]
 command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
-# timeout_seconds = 900
+# timeout_seconds = 3600
 
 [runtime.opencode]
 command = "opencode run --format json --dangerously-skip-permissions"
 mode = "native"
-# timeout_seconds = 900
+# timeout_seconds = 3600
 
 [runtime.qwen]
 command = "qwen --approval-mode yolo --output-format stream-json"
 mode = "native"
-# timeout_seconds = 900
+# timeout_seconds = 3600
 
 [logging]
 mode = "both"
@@ -309,6 +312,10 @@ Expected behavior in the current local implementation:
 - live eval bundles include `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`,
   and `self-repair-matrix.md` for per-step duration, deterministic repair-probe coverage,
   and terminal document consistency audit.
+- live black-box `limits.timeout_minutes` is a per-stage `aidd stage run` command
+  budget. The aggregate `run-transcript.json` keeps `timeout_seconds` as `null`
+  unless there is a real global flow timeout, and records the per-stage policy
+  under `timeout_policy`.
 - live eval bundles are execution-only; write `quality-report.md` manually after
   the terminal run when artifact, code, test, or UI/UX quality must be judged.
 - repair retries persist `repair-context.md` in the run attempt directory, which lets

@@ -89,6 +89,9 @@ Its contract is:
 - AIDD runs from the target repository root;
 - `.aidd/` is rooted inside that repository;
 - the harness seeds a target-repository `aidd.example.toml` for the installed run;
+- live manifest `limits.timeout_minutes` is a per-stage public `aidd stage run`
+  command budget in the stepwise black-box loop, while provider adapter timeout
+  profiles come from the generated target-repository `aidd.example.toml`;
 - install, setup, run, verify, and teardown evidence is preserved;
 - automation for this lane is manual-only and must not be treated as a CI or release gate.
 
@@ -214,6 +217,11 @@ Installed live runs should additionally preserve install provenance in harness m
 The machine-readable grader payload is execution-only. Manual deliverable quality
 belongs in the optional post-run `quality-report.md` and must not downgrade or
 mutate the execution verdict.
+
+`run-transcript.json` records the aggregate black-box loop and includes a
+`timeout_policy` object. Its aggregate `timeout_seconds` remains `null` unless the
+runner uses a real global flow timeout; per-stage command budgets are visible in
+`stage-timing.json`, `stage-timing.md`, and `log-analysis.md`.
 
 ## 8. Log analysis requirements
 

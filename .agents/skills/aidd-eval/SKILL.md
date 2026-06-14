@@ -78,7 +78,8 @@ and manual-live lanes.
 8. Write the final execution audit artifacts.
 9. Report the final execution verdict explicitly.
 10. For terminal live runs, write manual `quality-report.md` only after inspecting
-    the execution bundle and any additional manual checks.
+    the execution bundle and any additional manual checks, including timeout policy
+    evidence and stage-result/validator consistency findings.
 
 ## Canonical output locations
 
@@ -94,6 +95,7 @@ and manual-live lanes.
 - `.aidd/reports/evals/<run_id>/verdict.md`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
+- `.aidd/reports/evals/<run_id>/run-transcript.json` with live timeout policy evidence
 - `.aidd/reports/evals/<run_id>/answer-analysis.md` when the launching
   operator-agent answered blocking questions
 - `.aidd/reports/evals/<run_id>/quality-report.md` only when the launching SWE
@@ -105,6 +107,11 @@ Manual live mutable execution is outside the source checkout by default:
 `${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/install-home`,
 `${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/uv-cache`, and
 `${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/target/<repo-slug>`.
+
+In black-box live E2E, `limits.timeout_minutes` applies to each public
+`aidd stage run` command. It is not a global flow timeout. Use
+`run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` to
+separate stage command timeouts from provider adapter timeout profiles.
 
 ## Execution verdict taxonomy
 

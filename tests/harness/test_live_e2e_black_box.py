@@ -103,6 +103,7 @@ def _write_fake_aidd(
     inspect_block_stage: str | None = None,
     inspect_fail_command: str | None = None,
     log_blocking_text: bool = False,
+    stage_result_validator_verdict: str | None = None,
 ) -> None:
     path.write_text(
         f"""#!/usr/bin/env python3
@@ -124,6 +125,7 @@ INTERNAL_OPERATOR_DECISION_STAGE = {internal_operator_decision_stage!r}
 INSPECT_BLOCK_STAGE = {inspect_block_stage!r}
 INSPECT_FAIL_COMMAND = {inspect_fail_command!r}
 LOG_BLOCKING_TEXT = {log_blocking_text!r}
+STAGE_RESULT_VALIDATOR_VERDICT = {stage_result_validator_verdict!r}
 
 
 def option(args: list[str], name: str, default: str = "") -> str:
@@ -145,11 +147,18 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
         )
     if not (root / "answers.md").exists():
         (root / "answers.md").write_text("# Answers\\n\\nNo questions were raised.\\n")
+    validation_summary = ""
+    if STAGE_RESULT_VALIDATOR_VERDICT is not None:
+        validation_summary = (
+            "## Validation summary\\n\\n"
+            f"- Validator verdict: `{{STAGE_RESULT_VALIDATOR_VERDICT}}`\\n\\n"
+        )
     (output_root / "stage-result.md").write_text(
         "# Stage\\n\\n"
         f"{{stage}}\\n\\n"
         "## Attempt history\\n\\n"
         "- Attempt `1` (`initial`) -> succeeded.\\n\\n"
+        + validation_summary +
         "## Status\\n\\n"
         "- `succeeded`\\n"
     )
@@ -627,6 +636,7 @@ def _write_scenario_manifest(
         "aidd_invocation": {"work_item": "WI-LIVE-BLACKBOX"},
         "verify": {"commands": list(verify_commands)},
         "stage_scope": {"start": "idea", "end": "qa"},
+        "limits": {"timeout_minutes": 240},
         "interview": {"required": interview_required},
         "runtime_targets": list(runtime_targets),
         "live_flow": {
@@ -741,6 +751,7 @@ def _prepare_live_test(
     inspect_block_stage: str | None = None,
     inspect_fail_command: str | None = None,
     log_blocking_text: bool = False,
+    stage_result_validator_verdict: str | None = None,
 ) -> tuple[Path, Path, Path]:
     _clear_live_runtime_command_env(monkeypatch)
     _put_fake_provider_on_path(
@@ -762,6 +773,7 @@ def _prepare_live_test(
         inspect_block_stage=inspect_block_stage,
         inspect_fail_command=inspect_fail_command,
         log_blocking_text=log_blocking_text,
+        stage_result_validator_verdict=stage_result_validator_verdict,
     )
     scenario_dir = tmp_path / "harness" / "scenarios" / "live"
     scenario_dir.mkdir(parents=True)
@@ -864,6 +876,31 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         )
         assert stage_audit["stage_state"] == "passed"
         assert stage_audit["unresolved_questions"] is False
+        assert stage_audit["consistency_findings"] == []
+    run_transcript = json.loads(
+        (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
+    )
+    assert run_transcript["timed_out"] is False
+    assert run_transcript["timeout_seconds"] is None
+    assert run_transcript["timeout_policy"] == {
+        "scope": "per-stage-command",
+        "stage_command_timeout_seconds": 14400.0,
+        "global_flow_timeout_seconds": None,
+        "runtime_config_source": "aidd.example.toml",
+    }
+    stage_timing = json.loads(
+        (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
+    )
+    run_stage_timing_steps = [
+        step for step in stage_timing["steps"] if step["step"] == "run-stage"
+    ]
+    assert run_stage_timing_steps
+    assert all(step["timeout_seconds"] == 14400.0 for step in run_stage_timing_steps)
+    log_analysis = (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
+    assert "- Scope: `per-stage-command`" in log_analysis
+    assert "- Stage Command Timeout: `14400.000s`" in log_analysis
+    assert "- Global Flow Timeout: `none`" in log_analysis
+    assert "Runtime Adapter Timeout Profile" in log_analysis
     grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
     assert "quality" not in grader_payload
@@ -923,6 +960,48 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     )
     assert "Default decision: `no-follow-up`" in next_flow_markdown
     assert "Requires second public-repository flow: `false`" in next_flow_markdown
+
+
+def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        stage_result_validator_verdict="fail",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    audit_payload = json.loads(
+        (result.bundle_root / "stage-audits" / "idea.json").read_text(encoding="utf-8")
+    )
+    assert audit_payload["validator_verdict"] == "pass"
+    assert audit_payload["consistency_findings"] == [
+        {
+            "kind": "stage-result-validator-verdict-mismatch",
+            "severity": "warning",
+            "non_gating": True,
+            "stage_result_validator_verdict": "fail",
+            "audit_validator_verdict": "pass",
+            "message": (
+                "stage-result.md declares a validator verdict that differs from "
+                "the canonical stage-audit validator verdict."
+            ),
+        }
+    ]
+    audit_markdown = (result.bundle_root / "stage-audits" / "idea.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## Consistency Findings" in audit_markdown
+    assert "non-gating=True" in audit_markdown
 
 
 def test_black_box_live_e2e_preserves_manual_quality_report_without_parsing(
@@ -1235,7 +1314,7 @@ def test_black_box_live_e2e_records_active_step_while_stage_runs(
         timeout_stage="idea",
     )
     monkeypatch.setattr(
-        "aidd.harness.live_e2e_black_box_orchestration._flow_timeout_seconds",
+        "aidd.harness.live_e2e_black_box_orchestration._stage_command_timeout_seconds",
         lambda scenario: 2.0,
     )
     result_box: list[object] = []
@@ -1490,7 +1569,7 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
         timeout_stage="idea",
     )
     monkeypatch.setattr(
-        "aidd.harness.live_e2e_black_box_orchestration._flow_timeout_seconds",
+        "aidd.harness.live_e2e_black_box_orchestration._stage_command_timeout_seconds",
         lambda scenario: 2.0,
     )
 
@@ -1529,6 +1608,7 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
         if step["action"] == "run-stage" and step["stage"] == "idea"
     )
     assert timeout_step["commands"][0]["timed_out"] is True
+    assert timeout_step["commands"][0]["timeout_seconds"] == 2.0
     assert timeout_step["details"]["timeout_reconciliation"]["previous_status"] == "executing"
     assert timeout_step["details"]["timeout_reconciliation"]["reconciled_status"] == "failed"
     assert timeout_step["evidence_paths"]
@@ -1542,6 +1622,22 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     assert audit_payload["stage_state"] == "failed"
     assert audit_payload["stage_metadata_status"] == "failed"
     assert audit_payload["classifications"]["frontend_checkpoint"] == "skipped"
+    run_transcript = json.loads(
+        (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
+    )
+    assert run_transcript["timed_out"] is True
+    assert run_transcript["timeout_seconds"] is None
+    assert run_transcript["timeout_policy"]["stage_command_timeout_seconds"] == 2.0
+    stage_timing = json.loads(
+        (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
+    )
+    run_stage_step = next(
+        step
+        for step in stage_timing["steps"]
+        if step["step"] == "run-stage" and step["stage"] == "idea"
+    )
+    assert run_stage_step["timed_out"] is True
+    assert run_stage_step["timeout_seconds"] == 2.0
 
 
 def test_implementation_verification_evidence_shape_uses_validator_patterns() -> None:

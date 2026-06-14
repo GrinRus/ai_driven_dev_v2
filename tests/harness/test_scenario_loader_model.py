@@ -14,6 +14,8 @@ def _assert_live_contract(scenario) -> None:
     assert scenario.canonical_runtime in scenario.runtime_targets
     assert scenario.run.stage_start == STAGES[0]
     assert scenario.run.stage_end == STAGES[-1]
+    assert scenario.run.timeout_minutes is not None
+    assert scenario.run.timeout_minutes >= 240
     assert scenario.feature_source is not None
     assert scenario.feature_source.mode == "authored-task-pool"
     assert scenario.feature_source.selection_policy == "first-listed"
@@ -67,7 +69,7 @@ def test_typer_boolean_live_scenario_uses_extended_budget_and_focused_help_check
     assert scenario.scenario_id == "AIDD-LIVE-002"
     assert scenario.feature_size == "medium"
     assert scenario.canonical_runtime == "codex"
-    assert scenario.run.timeout_minutes == 90
+    assert scenario.run.timeout_minutes == 240
     task = scenario.feature_source.tasks[0]
     assert "false-only boolean options" in task.target_change
     assert any(
@@ -258,6 +260,7 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
         assert scenario.repo.revision
         assert scenario.run.patch_budget_files is not None
         assert scenario.run.timeout_minutes is not None
+        assert scenario.run.timeout_minutes >= 240
         assert "generic-cli" not in scenario.runtime_targets
 
     assert openapi.scenario_id == "AIDD-LIVE-010"

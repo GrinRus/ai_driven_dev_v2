@@ -77,12 +77,14 @@ Use this exact structure:
 - Evidence completeness:
 - Runtime/provider/log issues:
 - Repair/interview behavior:
+- Timeout policy/evidence:
 - Run blockers:
 
 ## Artifact Quality
 - Stage artifact completeness:
 - Idea/research/plan/review-spec/tasklist quality:
 - Cross-stage consistency:
+- Stage-result/validator consistency:
 - Validator report quality:
 - Repair burden analysis:
 - Artifact evidence links:
@@ -122,7 +124,9 @@ Use this exact structure:
 
 `Run Integrity` evaluates only the live run and evidence bundle: execution verdict,
 stage reachability, log completeness, provider behavior, repair/interview flow, and
-harness defects.
+harness defects. Review `run-transcript.json`, `stage-timing.json`, and
+`log-analysis.md` to confirm that timeout evidence distinguishes the per-stage
+command timeout from the absence of a global flow timeout.
 
 `Artifact Quality`, `Code Quality`, and `UI/UX Quality` evaluate the deliverable
 produced by the full flow. These sections are manual review, not runner state.
@@ -135,7 +139,9 @@ decision inside `quality-report.md`. AIDD does not parse it.
 Artifact review should cover the content depth of all stage outputs, cross-stage
 traceability, validator report usefulness, and repair burden cause. Classify repair
 burden as format issue, prompt/context issue, validator/contract issue, model
-quality issue, or product ambiguity.
+quality issue, or product ambiguity. Also inspect `stage-audits/<stage>.*` for
+non-gating consistency findings where a runtime-authored `stage-result.md` validator
+claim differs from the canonical validator/audit verdict.
 
 Code review should cover the full target repository diff, including untracked files.
 It should address acceptance criteria evidence, architectural fit, maintainability,

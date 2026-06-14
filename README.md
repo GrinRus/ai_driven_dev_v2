@@ -318,7 +318,9 @@ isolated `uv tool` home/cache, clone the pinned target repository under
 execute each stage through public `aidd stage run` and inspection commands plus
 loopback `aidd ui` UI/API checkpoints, write `stage-audits/<stage>.json` and
 `.md` per-stage audits, and preserve durable execution bundles under
-`.aidd/reports/evals/`. The runner does not score deliverable quality or create a
+`.aidd/reports/evals/`. Live manifest `limits.timeout_minutes` is a per-stage
+command budget; aggregate `run-transcript.json` does not report a global timeout
+unless the runner actually uses one. The runner does not score deliverable quality or create a
 quality report; the launching SWE agent may write
 `.aidd/reports/evals/<run_id>/quality-report.md` manually after the terminal run.
 The evaluator always builds a local wheel from the clean tracked source checkout

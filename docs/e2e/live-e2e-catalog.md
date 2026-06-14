@@ -37,12 +37,16 @@ Every live E2E run must follow the installed full-flow operator model:
 7. Change into the target repository root for setup, stage, verify, and teardown.
 8. Select the first authored task from the scenario's `authored-task-pool`.
 9. Run installed `aidd` from that repository root with explicit workflow bounds `idea -> qa`.
+   The manifest `limits.timeout_minutes` value is the budget for each public
+   `aidd stage run` command in the stepwise black-box loop, not a global flow
+   timeout and not a deliverable quality signal.
 10. Keep target `.aidd/` rooted inside the target repository.
 11. Preserve install, setup, run, verify, and teardown evidence in the eval bundle.
 12. Write `stage-audits/<stage>.json` and `.md` after each stage.
 13. Preserve `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`, and
     `self-repair-matrix.md` so operators can audit step duration, per-attempt runtime windows,
-    deterministic repair-probe coverage, terminal document consistency, and repair behavior.
+    deterministic repair-probe coverage, terminal document consistency, per-stage command
+    timeout budgets, and repair behavior.
 14. For manual local runs, the launching agent is the operator-agent: it answers
     blocking questions, records answer reasoning, and writes
     `.aidd/reports/evals/<run_id>/quality-report.md` only after terminal
@@ -261,6 +265,8 @@ Every maintained live scenario must:
 - select the first listed authored task deterministically;
 - define authored task `id`, `title`, `summary`, `intent`, `target_change`, `expected_scope`,
   `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
+  `quality_bar` is authored task metadata only and must not be treated as an automatic
+  live quality gate;
 - declare `live_flow.answer_policy: agent-decides` so any stage can block on questions
   and resume after the launching operator-agent writes resolved answers;
 - define authored task `interview` guidance when the scenario is
@@ -305,6 +311,12 @@ Every live eval bundle must aim to contain:
 The runner does not create `quality-report.md`, `quality-transcript.json`,
 `acceptance-coverage.*`, `ui-ux-checkpoints.*`, `operator-quality-analysis.md`, or
 `operator-quality-analysis-validation.json`.
+
+`run-transcript.json` records the aggregate black-box stage loop. Its aggregate
+`timeout_seconds` stays `null` unless the runner gains a true global flow timeout.
+The same file carries a `timeout_policy` object that identifies the per-stage command
+budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
+`stage-timing.md` show the actual timeout recorded for each `run-stage` command.
 
 After a terminal run, the launching SWE agent may add manual post-run evidence:
 
