@@ -54,12 +54,21 @@ def test_stage_run_and_system_prompts_forbid_model_authored_repair_brief(
 def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     run_prompt = Path("prompt-packs/stages/idea/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/idea/repair.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/idea/system.md").read_text(
+        encoding="utf-8"
+    )
+    interview_prompt = Path("prompt-packs/stages/idea/interview.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/idea.md").read_text(encoding="utf-8")
 
     assert "avoid unsupported absolute claims" in run_prompt
     assert "Do not assert source-code root causes" in run_prompt
     assert "leave source" in run_prompt
     assert "diagnosis to `research`" in run_prompt
     assert "tie them to the selected request, constraints, and acceptance context" in run_prompt
+    assert "`context/selected-task.md`" in run_prompt
+    assert "`context/acceptance-criteria.md`" in run_prompt
     assert "`Open questions` as Markdown bullet items, or exactly `- none`" in run_prompt
     assert "prose-only text is invalid" in run_prompt
     assert "do not put indented or nested bullets under a question" in run_prompt
@@ -67,6 +76,11 @@ def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     assert (
         "`SEM-INCOMPLETE-SECTION` for `Constraints` or `Open questions`" in repair_prompt
     )
+    for text in (run_prompt, repair_prompt, system_prompt, interview_prompt, contract):
+        assert "blocking answers" in text
+        assert "interview answers" in text
+        assert "operator policy decisions" in text
+        assert "before downstream planning or implementation" in text
 
 
 def test_review_prompts_make_finding_evidence_reference_explicit() -> None:
