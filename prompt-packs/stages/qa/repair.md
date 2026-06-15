@@ -49,6 +49,9 @@ For each finding:
 2. patch only the smallest section needed in `qa-report.md`;
 3. re-check verdict, recommendation, and risk summary for consistency;
 4. re-check `stage-result.md` and `validator-report.md` so blockers and terminal status match.
+5. re-check repository evidence, preferably `git status --short --untracked-files=all`; top-level
+   `workitems/...`, unexplained untracked non-`.aidd` files, or stray `.aidd/` scratch files must
+   keep QA `not-ready` / `hold` unless they were cleaned up before the repaired output.
 
 Use concrete repair actions:
 
@@ -106,6 +109,8 @@ Use concrete repair actions:
 11. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
 12. Do not claim success unless required headings, validator verdict, stage-result status, QA verdict, and verification evidence are mutually consistent.
 13. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+14. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
+    from the repository root.
 
 ## Repair exit checks
 
@@ -127,6 +132,7 @@ Use concrete repair actions:
 - no evidence-free material claim remains,
 - every `AC-N` from acceptance context has its own same-bullet evidence reference when acceptance
   criteria are provided,
+- top-level `workitems/...` duplicates and stray scratch artifacts are absent or keep QA `not-ready`,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no conflict remains between `qa-report.md`, `validator-report.md`, and `stage-result.md`.

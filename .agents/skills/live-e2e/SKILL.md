@@ -322,6 +322,8 @@ Expected live artifacts include:
 - `next-flow-lineage.json` only when `--enable-next-flow-follow-up-proof` is explicitly enabled
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
+- `target-workspace-evidence.json`
+- `target-workspace-evidence.md`
 - `feature-selection.json`
 - `install-transcript.json`
 - `runtime.log`
@@ -344,6 +346,11 @@ for each public `aidd stage run` command. It is not a global flow timeout. Inspe
 `run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` for
 timeout evidence, and inspect `stage-audits/<stage>.*` for non-gating
 stage-result/validator consistency findings.
+Also inspect `target-workspace-evidence.*` for non-gating target workspace findings:
+tracked product diff, setup-baseline untracked files, `aidd.example.toml` harness
+config, top-level `workitems/...` pollution, and stray `.aidd/` scratch files.
+In manual review, top-level `workitems/...` duplicates normally make manual deliverable quality `not-counted`;
+`aidd.example.toml` is not product diff.
 
 ## Iteration loop contract
 
@@ -352,7 +359,7 @@ operator loop instead of relying on a self-mutating product command:
 
 1. Run one `>= medium` live scenario through the black-box evaluator.
 2. Read the full evidence bundle, including every `stage-audits/<stage>.json`,
-   `verdict.md`, `grader.json`, transcripts, and logs.
+   `target-workspace-evidence.json`, `verdict.md`, `grader.json`, transcripts, and logs.
 3. Write manual `quality-report.md` when deliverable quality must be judged, and
    classify the first unresolved decisive
    signal as infra/provider/auth/wrapper, adapter integration, orchestration,

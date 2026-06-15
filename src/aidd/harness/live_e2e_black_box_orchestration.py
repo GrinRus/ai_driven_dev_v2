@@ -41,7 +41,13 @@ from aidd.core.runtime_operator import (
 )
 from aidd.core.stages import STAGES
 from aidd.evals.reporting import build_scenario_summary_row, write_eval_summary_markdown
-from aidd.evals.repository_changes import collect_repository_changes
+from aidd.evals.repository_changes import (
+    LiveWorkspaceSnapshot,
+    classify_live_workspace_changes,
+    collect_live_workspace_snapshot,
+    collect_repository_changes,
+    live_workspace_snapshot_from_payload,
+)
 from aidd.evals.stage_timing import (
     build_stage_timing_payload,
     render_repair_history_markdown,
@@ -146,6 +152,8 @@ FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME = "frontend-checkpoints.md"
 NEXT_FLOW_CHECKPOINT_JSON_FILENAME = "next-flow-checkpoint.json"
 NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
 NEXT_FLOW_LINEAGE_FILENAME = "next-flow-lineage.json"
+TARGET_WORKSPACE_EVIDENCE_JSON_FILENAME = "target-workspace-evidence.json"
+TARGET_WORKSPACE_EVIDENCE_MARKDOWN_FILENAME = "target-workspace-evidence.md"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 SUMMARY_REPORT_FILENAME = "summary.md"
 STAGE_AUDITS_DIRNAME = "stage-audits"
@@ -228,6 +236,7 @@ class FlowContext:
     preserved_install_payload: dict[str, object] | None
     config_path: Path | None
     installed_command: tuple[str, ...]
+    target_workspace_baseline_snapshot: dict[str, object] | None
     started: float
     enable_next_flow_follow_up_proof: bool = False
 
@@ -565,6 +574,156 @@ def _runtime_config_timeout_profile(ctx: FlowContext) -> str:
     return f"default={default_timeout}; stages={stage_summary or 'none'}"
 
 
+def _live_workspace_snapshot_payload(
+    snapshot: LiveWorkspaceSnapshot,
+) -> dict[str, object]:
+    payload = snapshot.to_payload()
+    payload["captured_at_utc"] = _utc_now()
+    return payload
+
+
+def _capture_target_workspace_baseline(ctx: FlowContext) -> None:
+    if ctx.target_workspace_baseline_snapshot is not None:
+        return
+    if ctx.prepared_working_copy is None:
+        return
+    snapshot = collect_live_workspace_snapshot(
+        ctx.prepared_working_copy.working_copy_path
+    )
+    ctx.target_workspace_baseline_snapshot = _live_workspace_snapshot_payload(snapshot)
+
+
+def _baseline_live_workspace_snapshot(ctx: FlowContext) -> LiveWorkspaceSnapshot:
+    if ctx.target_workspace_baseline_snapshot is None:
+        return LiveWorkspaceSnapshot(
+            tracked_files=tuple(),
+            untracked_files=tuple(),
+            status_short="",
+            command_errors=(
+                "Target workspace baseline snapshot was not captured before stage execution.",
+            ),
+        )
+    return live_workspace_snapshot_from_payload(ctx.target_workspace_baseline_snapshot)
+
+
+def _target_workspace_evidence_paths(ctx: FlowContext) -> tuple[Path, Path]:
+    return (
+        ctx.bundle_root / TARGET_WORKSPACE_EVIDENCE_JSON_FILENAME,
+        ctx.bundle_root / TARGET_WORKSPACE_EVIDENCE_MARKDOWN_FILENAME,
+    )
+
+
+def _markdown_path_list(paths: Sequence[str]) -> list[str]:
+    if not paths:
+        return ["- none"]
+    return [f"- `{path}`" for path in paths]
+
+
+def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
+    json_path, markdown_path = _target_workspace_evidence_paths(ctx)
+    if ctx.prepared_working_copy is None:
+        return tuple()
+
+    final_snapshot = collect_live_workspace_snapshot(
+        ctx.prepared_working_copy.working_copy_path
+    )
+    baseline_snapshot = _baseline_live_workspace_snapshot(ctx)
+    classification = classify_live_workspace_changes(
+        baseline_snapshot=baseline_snapshot,
+        final_snapshot=final_snapshot,
+    )
+    baseline_payload = (
+        dict(ctx.target_workspace_baseline_snapshot)
+        if ctx.target_workspace_baseline_snapshot is not None
+        else _live_workspace_snapshot_payload(baseline_snapshot)
+    )
+    final_payload = _live_workspace_snapshot_payload(final_snapshot)
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "run_id": ctx.run_id,
+        "scenario_id": ctx.scenario.scenario_id,
+        "runtime_id": ctx.runtime_id,
+        "target_repo_root": ctx.prepared_working_copy.working_copy_path.as_posix(),
+        "baseline_after_setup": baseline_payload,
+        "final_after_flow": final_payload,
+        "classification": classification.to_payload(),
+        "non_gating_findings": [
+            finding.to_payload() for finding in classification.non_gating_findings
+        ],
+    }
+    _write_json(json_path, payload)
+
+    md_lines = [
+        "# Target Workspace Evidence",
+        "",
+        f"- Scenario: `{ctx.scenario.scenario_id}`",
+        f"- Runtime: `{ctx.runtime_id}`",
+        f"- Run ID: `{ctx.run_id}`",
+        f"- Target repo root: `{ctx.prepared_working_copy.working_copy_path.as_posix()}`",
+        (
+            "- Scope: `non-gating execution evidence for manual quality-report.md "
+            "review`"
+        ),
+        (
+            "- Execution verdict impact: `none`; this report does not change "
+            "`verdict.md` or `grader.json`."
+        ),
+        "",
+        "## Baseline After Setup",
+        "",
+        "- Captured at: "
+        f"`{baseline_payload.get('captured_at_utc', 'unknown')}`",
+        "- Untracked files:",
+        *_markdown_path_list(classification.baseline_untracked_files),
+        "",
+        "## Final After Flow",
+        "",
+        "- Captured at: "
+        f"`{final_payload.get('captured_at_utc', 'unknown')}`",
+        "- Tracked files:",
+        *_markdown_path_list(classification.tracked_files),
+        "- Known harness files:",
+        *_markdown_path_list(classification.known_harness_files),
+        "- New untracked files:",
+        *_markdown_path_list(classification.new_untracked_files),
+        "",
+        "## Non-Gating Findings",
+        "",
+    ]
+    if classification.non_gating_findings:
+        for finding in classification.non_gating_findings:
+            md_lines.append(
+                "- "
+                f"`{finding.severity}` `{finding.kind}` "
+                f"`{finding.path or 'n/a'}`: {finding.message} "
+                f"Manual implication: {finding.manual_quality_implication}"
+            )
+    else:
+        md_lines.append("- none")
+    md_lines.extend(
+        (
+            "",
+            "## Raw Git Status",
+            "",
+            "### Baseline",
+            "",
+            "```text",
+            str(baseline_payload.get("status_short") or ""),
+            "```",
+            "",
+            "### Final",
+            "",
+            "```text",
+            final_snapshot.status_short,
+            "```",
+            "",
+        )
+    )
+    markdown_path.write_text("\n".join(md_lines).rstrip() + "\n", encoding="utf-8")
+    return json_path, markdown_path
+
+
 def _harness_environment(
     *,
     scenario: Scenario,
@@ -668,6 +827,7 @@ def _flow_state_payload(
         "config_path": None if ctx.config_path is None else ctx.config_path.as_posix(),
         "install_home": install_home,
         "installed_command": list(ctx.installed_command),
+        "target_workspace_baseline_snapshot": ctx.target_workspace_baseline_snapshot,
         "next_flow_follow_up_proof_enabled": ctx.enable_next_flow_follow_up_proof,
     }
     if ctx.install_result is not None:
@@ -1081,6 +1241,7 @@ def _initial_context(
         preserved_install_payload=None,
         config_path=None,
         installed_command=tuple(),
+        target_workspace_baseline_snapshot=None,
         started=time.monotonic(),
         enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
     )
@@ -1150,6 +1311,7 @@ def _context_from_state(
         dict(install_payload) if isinstance(install_payload, dict) else None
     )
     state_follow_up_proof = state.get("next_flow_follow_up_proof_enabled") is True
+    baseline_snapshot = state.get("target_workspace_baseline_snapshot")
     return FlowContext(
         scenario_path=scenario_path,
         scenario=scenario,
@@ -1168,6 +1330,9 @@ def _context_from_state(
         preserved_install_payload=preserved_install_payload,
         config_path=Path(config_path) if isinstance(config_path, str) and config_path else None,
         installed_command=installed_command,
+        target_workspace_baseline_snapshot=(
+            dict(baseline_snapshot) if isinstance(baseline_snapshot, dict) else None
+        ),
         started=time.monotonic(),
         enable_next_flow_follow_up_proof=(
             enable_next_flow_follow_up_proof or state_follow_up_proof
@@ -1479,6 +1644,7 @@ def _run_setup(ctx: FlowContext) -> None:
         except (OSError, ValueError, json.JSONDecodeError):
             payload = {}
         if int(payload.get("command_count", 0) or 0) > 0:
+            _capture_target_workspace_baseline(ctx)
             return
     working_copy = _require_working_copy(ctx)
     try:
@@ -1530,6 +1696,7 @@ def _run_setup(ctx: FlowContext) -> None:
         plan="Run scenario setup commands in the pinned target repository.",
         evidence_paths=(ctx.bundle_root / SETUP_TRANSCRIPT_FILENAME,),
     )
+    _capture_target_workspace_baseline(ctx)
     _persist_state(
         ctx=ctx,
         status="running",
@@ -4387,6 +4554,12 @@ def _write_harness_metadata(
             ).as_posix(),
             "scenario_path": ctx.scenario_path.as_posix(),
             "stage_audits": (ctx.bundle_root / STAGE_AUDITS_DIRNAME).as_posix(),
+            "target_workspace_evidence": (
+                ctx.bundle_root / TARGET_WORKSPACE_EVIDENCE_JSON_FILENAME
+            ).as_posix(),
+            "target_workspace_evidence_markdown": (
+                ctx.bundle_root / TARGET_WORKSPACE_EVIDENCE_MARKDOWN_FILENAME
+            ).as_posix(),
             "frontend_checkpoints": (
                 ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME
             ).as_posix(),
@@ -4427,6 +4600,10 @@ def _write_harness_metadata(
         },
         "stage_audits": _stage_audit_payloads(ctx),
     }
+    if ctx.prepared_working_copy is None:
+        artifact_refs = cast(dict[str, object], payload["aidd_artifact_references"])
+        artifact_refs.pop("target_workspace_evidence", None)
+        artifact_refs.pop("target_workspace_evidence_markdown", None)
     if state.get("install") is not None:
         payload["aidd_install"] = state["install"]
     if ctx.prepared_working_copy is not None:
@@ -4600,7 +4777,12 @@ def _finalize_reports(
     first_failure_note = (
         None if status == "pass" else _first_failure_from_steps(ctx, status=status)[1]
     )
-    _record_terminal_decision_step(ctx=ctx, status=status)
+    target_workspace_evidence_paths = _write_target_workspace_evidence(ctx)
+    _record_terminal_decision_step(
+        ctx=ctx,
+        status=status,
+        evidence_paths=target_workspace_evidence_paths,
+    )
     runtime_log_path = _write_runtime_log_from_steps(ctx)
     _copy_attempt_jsonl_artifacts(
         ctx=ctx,
@@ -4779,6 +4961,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         completed_stages=_state_completed_stages(ctx.bundle_root),
         extra=_preserved_state_extras(ctx),
     )
+    target_workspace_evidence_paths = _write_target_workspace_evidence(ctx)
     next_flow_lineage = _write_next_flow_lineage_artifact(ctx=ctx, status="blocked")
     _, _, next_flow_checkpoint = _write_next_flow_checkpoint_artifacts(
         ctx=ctx,
@@ -4786,7 +4969,11 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         first_failure_note=first_failure_note,
         next_flow_lineage=next_flow_lineage,
     )
-    _record_terminal_decision_step(ctx=ctx, status="blocked")
+    _record_terminal_decision_step(
+        ctx=ctx,
+        status="blocked",
+        evidence_paths=target_workspace_evidence_paths,
+    )
     _write_harness_metadata(
         ctx=ctx,
         status="blocked",

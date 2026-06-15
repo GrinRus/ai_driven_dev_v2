@@ -39,6 +39,8 @@ For each finding:
 2. patch the smallest section that resolves the issue;
 3. re-check citation consistency across `Sources`, `Findings`, and `Evidence trace`;
 4. re-check blocker status in `stage-result.md` against unresolved `[blocking]` questions.
+5. remove or account for any temporary research scripts or probes left directly under `.aidd/`;
+   cite evidence in canonical Markdown instead of preserving scratch files.
 
 Use concrete repair actions:
 
@@ -66,12 +68,15 @@ Use concrete repair actions:
 9. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
 10. Do not claim success unless required headings, validator verdict, stage-result status, and evidence-backed findings are mutually consistent.
 11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+12. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
+    from the repository root.
 
 ## Repair exit checks
 
 - every blocking finding is resolved or explicitly retained as active blocker,
 - material findings are citation-backed or explicitly marked as assumptions,
 - stale-sensitive findings include freshness context and follow-up action,
+- no stray research scratch files remain directly under `.aidd/`,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - unresolved `[blocking]` questions still prevent `succeeded`.

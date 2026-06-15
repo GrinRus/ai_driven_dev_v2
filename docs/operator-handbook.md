@@ -312,6 +312,10 @@ Expected behavior in the current local implementation:
 - live eval bundles include `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`,
   and `self-repair-matrix.md` for per-step duration, deterministic repair-probe coverage,
   and terminal document consistency audit.
+- live eval bundles include `target-workspace-evidence.json` and `.md` as non-gating
+  target repository evidence. Inspect it during manual quality review to separate tracked
+  product diff, setup-baseline untracked files, `aidd.example.toml` harness config, top-level
+  `workitems/...` pollution, and stray `.aidd/` scratch files.
 - live black-box `limits.timeout_minutes` is a per-stage `aidd stage run` command
   budget. The aggregate `run-transcript.json` keeps `timeout_seconds` as `null`
   unless there is a real global flow timeout, and records the per-stage policy
@@ -322,6 +326,10 @@ Expected behavior in the current local implementation:
   gate: inspect completed-flow visibility, stage/artifact/log/question navigation,
   repair and next-flow handoff states, readability, keyboard/focus behavior, and
   responsive behavior or explicitly record `not inspected`.
+  For code/artifact quality, cite `target-workspace-evidence.*` or
+  `git status --short --untracked-files=all`; top-level `workitems/...` duplicates
+  normally make deliverable quality `not-counted`, while `aidd.example.toml` is
+  harness config rather than product diff.
 - repair retries persist `repair-context.md` in the run attempt directory, which lets
   operators trace the exact validator findings that caused each retry.
 - live E2E is manual local operator audit evidence, not CI/CD, not a release workflow,

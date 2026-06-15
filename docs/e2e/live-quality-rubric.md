@@ -27,6 +27,8 @@ Runner-owned artifacts include:
 - `frontend-checkpoints.md`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
+- `target-workspace-evidence.json`
+- `target-workspace-evidence.md`
 - `runtime.log`
 - `runtime.jsonl` when attempts emitted structured JSONL
 - `events.jsonl` when attempts emitted normalized JSONL
@@ -55,6 +57,13 @@ The runner no longer emits `quality-transcript.json`, `acceptance-coverage.*`,
 `frontend-checkpoints.*` are raw run-integrity evidence for the public operator
 surfaces. They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
+
+`target-workspace-evidence.*` records the target repository snapshot after setup and
+after the terminal/stop state. It classifies tracked diff, setup-baseline untracked
+files, known harness config such as `aidd.example.toml`, new untracked files, top-level
+`workitems/...` pollution, and unexpected `.aidd/` scratch files. These findings are
+non-gating execution evidence for manual review; they do not alter `verdict.md` or
+`grader.json`.
 
 ## Manual Report
 
@@ -116,6 +125,7 @@ Use this exact structure:
 - Stage audits:
 - Logs/transcripts:
 - Target repo diff:
+- Target workspace evidence:
 - Review/QA artifacts:
 - Operator UI/API checkpoints, next-flow checkpoint, or manual screenshot/browser evidence:
 - Extra manual checks run by SWE agent:
@@ -155,6 +165,12 @@ Code review should cover the full target repository diff, including untracked fi
 It should address acceptance criteria evidence, architectural fit, maintainability,
 API compatibility, edge cases, security, performance, test relevance, and any
 baseline or before/after proof.
+Inspect `target-workspace-evidence.*` and, when needed, run or cite
+`git status --short --untracked-files=all`. Treat top-level `workitems/...` duplicate
+stage artifacts as severe deliverable pollution and normally `not-counted`.
+Treat `aidd.example.toml` as harness/operator config, not product diff. Treat
+direct `.aidd/*.py`-style scratch files as artifact hygiene findings that must be
+explained or cleaned before a clean deliverable decision.
 
 Operator UI/UX review should inspect real AIDD operator workflows: terminal flow
 visibility, stage list navigation, artifact inspection, log inspection,

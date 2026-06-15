@@ -51,6 +51,15 @@ normalize if canonical validation proves the terminal status inconsistent.
 4. Uncertain or weakly supported points must be explicit in `Trade-offs` or `Open questions`.
 5. Time-sensitive evidence must include freshness context (access date or stale-risk note).
 
+## Scratch artifact discipline
+
+- If you run temporary reproduction scripts or probes, keep them outside the repository or remove
+  them before completing the stage.
+- Do not leave scratch files directly under `.aidd/`, such as `.aidd/research_repro.py`.
+  Preserve useful evidence by citing commands, outputs, logs, or canonical Markdown artifacts instead.
+- Canonical stage documents live under `.aidd/workitems/...` from the repository root. Do not create
+  top-level `workitems/...`.
+
 ## Execution instructions
 
 1. Read required inputs and `contracts/stages/research.md` before drafting outputs.
@@ -75,5 +84,6 @@ normalize if canonical validation proves the terminal status inconsistent.
 - required outputs exist and are Markdown,
 - material findings reference citation ids that exist in `Sources`,
 - `Evidence trace` covers major findings/recommendations,
+- temporary research probes are removed or cited as evidence without stray scratch files,
 - unresolved uncertainty is explicit and not masked as fact,
 - unresolved `[blocking]` questions prevent `succeeded`.

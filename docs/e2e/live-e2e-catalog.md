@@ -303,6 +303,8 @@ Every live eval bundle must aim to contain:
 - `teardown-transcript.json`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
+- `target-workspace-evidence.json`
+- `target-workspace-evidence.md`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
 - `next-flow-checkpoint.json`
@@ -317,6 +319,13 @@ The runner does not create `quality-report.md`, `quality-transcript.json`,
 The same file carries a `timeout_policy` object that identifies the per-stage command
 budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
 `stage-timing.md` show the actual timeout recorded for each `run-stage` command.
+
+`target-workspace-evidence.*` compares the target repository snapshot after setup with
+the final workspace state. It is non-gating evidence for manual quality review:
+`aidd.example.toml` is harness config, setup-created untracked files remain visible,
+top-level `workitems/...` duplicates are severe deliverable pollution, and direct
+`.aidd/*.py` scratch files are artifact hygiene findings. The runner does not turn
+these findings into a quality gate.
 
 After a terminal run, the launching SWE agent may add manual post-run evidence:
 

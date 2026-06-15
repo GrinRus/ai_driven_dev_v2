@@ -317,7 +317,8 @@ isolated `uv tool` home/cache, clone the pinned target repository under
 `<work-root>/<run_id>/target/<repo-slug>`, run from the target repository root,
 execute each stage through public `aidd stage run` and inspection commands plus
 loopback `aidd ui` UI/API checkpoints, write `stage-audits/<stage>.json` and
-`.md` per-stage audits, and preserve durable execution bundles under
+`.md` per-stage audits, write `target-workspace-evidence.json` / `.md` with
+non-gating target diff and workspace-pollution evidence, and preserve durable execution bundles under
 `.aidd/reports/evals/`. Live manifest `limits.timeout_minutes` is a per-stage
 command budget; aggregate `run-transcript.json` does not report a global timeout
 unless the runner actually uses one. The runner does not score deliverable quality or create a
@@ -325,6 +326,10 @@ quality report; the launching SWE agent may write
 `.aidd/reports/evals/<run_id>/quality-report.md` manually after the terminal run,
 including a human-authored AIDD operator UI/UX decision when that quality dimension
 must be judged.
+Manual review should inspect `target-workspace-evidence.*` and, when needed, cite
+`git status --short --untracked-files=all`; top-level `workitems/...` duplicates
+are severe deliverable pollution, while `aidd.example.toml` is harness config rather
+than product diff.
 The evaluator always builds a local wheel from the clean tracked source checkout
 containing the scenario manifest. Published-package install proof is a separate
 release/install evidence lane, not part of public-repository live E2E.

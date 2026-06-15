@@ -79,8 +79,8 @@ and manual-live lanes.
 9. Report the final execution verdict explicitly.
 10. For terminal live runs, write manual `quality-report.md` only after inspecting
     the execution bundle and any additional manual checks, including timeout policy
-    evidence, stage-result/validator consistency findings, and AIDD operator UI/UX evidence
-    when a UI/UX decision is needed.
+    evidence, stage-result/validator consistency findings, target workspace evidence,
+    and AIDD operator UI/UX evidence when a UI/UX decision is needed.
 
 ## Canonical output locations
 
@@ -96,6 +96,8 @@ and manual-live lanes.
 - `.aidd/reports/evals/<run_id>/verdict.md`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
+- `.aidd/reports/evals/<run_id>/target-workspace-evidence.json`
+- `.aidd/reports/evals/<run_id>/target-workspace-evidence.md`
 - `.aidd/reports/evals/<run_id>/run-transcript.json` with live timeout policy evidence
 - `.aidd/reports/evals/<run_id>/answer-analysis.md` when the launching
   operator-agent answered blocking questions
@@ -113,6 +115,11 @@ In black-box live E2E, `limits.timeout_minutes` applies to each public
 `aidd stage run` command. It is not a global flow timeout. Use
 `run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` to
 separate stage command timeouts from provider adapter timeout profiles.
+Use `target-workspace-evidence.*` to review target diff hygiene without changing
+the execution verdict: `aidd.example.toml` is harness config, setup-baseline
+untracked files are visible, top-level `workitems/...` duplicates are severe
+deliverable pollution, and direct `.aidd/*.py` scratch files are artifact hygiene
+findings for manual quality review.
 
 ## Execution verdict taxonomy
 

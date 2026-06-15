@@ -82,6 +82,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    API/library call, or a required regression assertion that has no code or test evidence, set
    `QA verdict: not-ready` and release recommendation `hold` unless upstream artifacts explicitly
    supersede that requirement.
+10. If repository evidence shows top-level `workitems/...` duplicates, unexplained non-`.aidd`
+    untracked files, or direct `.aidd/*.py`-style scratch files, set `QA verdict: not-ready` and
+    release recommendation `hold` unless upstream implementation cleaned them up before QA output.
 
 ## Execution instructions
 
@@ -92,6 +95,8 @@ normalize if canonical validation proves the terminal status inconsistent.
    context to separate required scenario evidence from optional exploratory checks.
    When repository change evidence is provided, inspect every changed tracked or untracked
    deliverable file, excluding AIDD workspace/config artifacts, before deciding readiness.
+   If no repository change evidence is provided, run or cite `git status --short --untracked-files=all`
+   or equivalent project-native evidence before deciding readiness.
 3. Build `qa-report.md` with these exact H2 sections:
    `Quality verdict`, `Verification summary`, `Release recommendation`, `Evidence`,
    `Known issues`, and `Readiness`.
@@ -155,3 +160,5 @@ normalize if canonical validation proves the terminal status inconsistent.
 - named plan/tasklist mechanisms were either found in code/tests or explicitly superseded before
   declaring `ready` or `proceed`,
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.
+- top-level `workitems/...` duplicates, unexplained untracked files, and stray `.aidd/` scratch files
+  are absent or explicitly make QA `not-ready`.

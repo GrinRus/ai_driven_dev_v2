@@ -918,6 +918,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "`--report-root .aidd/reports/evals`",
         "`--run-id <id>`",
         "`stage-audits/<stage>.json`",
+        "`target-workspace-evidence.json`",
+        "`target-workspace-evidence.md`",
         "snapshot tracked AIDD `HEAD`",
         "Rerun the same manifest/runtime until it is clean.",
         "plan step, execute through public operator surfaces, inspect artifacts",
@@ -953,6 +955,11 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "Generated product UI applicability:",
         "API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit.",
         (
+            "top-level `workitems/...` duplicates normally make manual "
+            "deliverable quality `not-counted`"
+        ),
+        "`aidd.example.toml` is not product diff",
+        (
             "Screenshots and browser notes are optional manual evidence, "
             "not runner-generated artifacts."
         ),
@@ -966,6 +973,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     assert "${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd" in aidd_eval_skill
     assert "quality-report.md" in aidd_eval_skill
     assert "AIDD operator UI/UX evidence" in aidd_eval_skill
+    assert "target-workspace-evidence.json" in aidd_eval_skill
+    assert "top-level `workitems/...` duplicates are severe" in aidd_eval_skill
     assert (
         "`frontend-checkpoints.*` as raw operator-surface availability evidence"
         in aidd_eval_skill
@@ -996,6 +1005,11 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "Operator UI/UX evidence links:",
         "`frontend-checkpoints.*` are raw run-integrity evidence",
         "They are not a UI/UX audit, not screenshot evidence, and not a quality gate.",
+        "`target-workspace-evidence.*` records the target repository snapshot",
+        "`git status --short --untracked-files=all`",
+        "top-level `workitems/...` duplicate",
+        "`aidd.example.toml` as harness/operator config",
+        "direct `.aidd/*.py`-style scratch files",
         (
             "Screenshots and browser notes are optional manual evidence, "
             "not runner-generated artifacts."
@@ -1019,6 +1033,8 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "next-flow handoff",
         "responsive behavior or `not inspected`",
         "Generated product UI is outside this live E2E operator-UI review",
+        "`target-workspace-evidence.*` compares the target repository snapshot",
+        "top-level `workitems/...` duplicates are severe deliverable pollution",
     ):
         assert expected in live_catalog
 

@@ -58,6 +58,9 @@ For each finding:
 5. keep repair bounded: if verification still fails after one focused fix attempt, record the exact
    failing command/output and terminal status instead of continuing ad hoc debugging until timeout.
 6. re-check `stage-result.md` and `validator-report.md` for status/blocker consistency.
+7. re-check `git status --short --untracked-files=all`; top-level `workitems/...`, stray
+   stage/control documents, or unrelated scratch files must be cleaned up or reported as a
+   not-clean implementation state.
 
 Use concrete repair actions:
 
@@ -98,6 +101,8 @@ Use concrete repair actions:
 10. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
 11. Do not claim success unless required headings, validator verdict, stage-result status, touched files, and verification evidence are mutually consistent.
 12. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+13. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
+    from the repository root.
 
 ## Repair exit checks
 
@@ -108,6 +113,7 @@ Use concrete repair actions:
 - selected task id, change summary, touched-files list, and verification notes are mutually consistent,
 - touched-files entries stay within allowed write scope, match observed edits, and include same-line
   path + intent for every top-level file entry,
+- no top-level `workitems/...` artifacts or unrelated scratch files remain in the deliverable workspace,
 - no-op outcomes (if any) include evidence-backed rationale and actionable next step,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

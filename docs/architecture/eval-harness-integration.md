@@ -171,6 +171,8 @@ Every black-box live E2E run should aim to write:
 - `.aidd/reports/evals/<run_id>/frontend-checkpoints.md`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
+- `.aidd/reports/evals/<run_id>/target-workspace-evidence.json`
+- `.aidd/reports/evals/<run_id>/target-workspace-evidence.md`
 - `.aidd/reports/evals/<run_id>/runtime.log`
 - `.aidd/reports/evals/<run_id>/runtime.jsonl` when attempts emitted structured JSONL
 - `.aidd/reports/evals/<run_id>/events.jsonl` when attempts emitted normalized JSONL
@@ -195,6 +197,13 @@ artifact. It is not part of execution bundle completeness and must not affect
 `verdict.md` or `grader.json`. When a UI/UX decision is needed, the report records
 a human-authored AIDD operator UI/UX decision; the runner does not derive that
 decision from `frontend-checkpoints.*`.
+
+`target-workspace-evidence.*` is runner-owned, non-gating evidence. It records the
+target repository snapshot after setup and after terminal/stop state, including tracked
+diff, baseline untracked files, `aidd.example.toml` as harness config, new untracked
+files, top-level `workitems/...` pollution, and unexpected `.aidd/` scratch files.
+These findings support manual `quality-report.md` review and must not mutate the
+execution verdict.
 
 `self-repair-matrix.json` and `.md` include the deterministic repair-probe catalog for
 all stages from `idea` to `qa`. Each probe row records the observed initial verdict,
