@@ -56,6 +56,10 @@ For each finding:
 Use concrete repair actions:
 
 - unsupported claim: remove claim or rewrite with explicit verification evidence reference;
+- overstated execution surface: remove names such as `TestClient`, direct ASGI invocation,
+  browser UI, CLI, fixture, or generated output unless the cited evidence explicitly shows
+  that exact surface; if acceptance criteria give alternatives such as `ASGI/TestClient`,
+  preserve only the alternative that the evidence actually exercised;
 - missing evidence: add direct references to available verification output, verification artifacts,
   or upstream evidence for each material QA claim, using `EV-1`, `EV-2`, ... evidence ids and/or
   backticked artifact paths;

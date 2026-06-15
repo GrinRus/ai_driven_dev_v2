@@ -59,6 +59,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    explicitly `rejected`.
 2. Do not pass QA when verification output/artifacts are missing for material claims.
 3. Every material verdict/recommendation claim must point to concrete verification evidence.
+   Do not name a specific execution surface, test harness, or API path such as `TestClient`,
+   direct ASGI invocation, browser UI, CLI, fixture, or generated output unless the cited
+   evidence explicitly shows that surface. If acceptance criteria name alternatives such as
+   `ASGI/TestClient`, state the exact surface that was actually exercised.
 4. Residual risks must include severity and explicit mitigation/ownership notes.
 5. Blocking uncertainty must become a `[blocking]` question with release recommendation `hold`.
 6. When present, the selected task and `context/verification-output.md` define the authored
@@ -148,6 +152,8 @@ normalize if canonical validation proves the terminal status inconsistent.
   `ready-with-risks` and `proceed-with-conditions`,
 - release recommendation is actionable and consistent with verdict,
 - material claims reference concrete verification evidence,
+- named execution surfaces match the cited evidence exactly rather than broadening an
+  `A/B` acceptance alternative into an unsupported concrete claim,
 - each `AC-N` from acceptance context has its own evidence-backed checklist bullet when acceptance
   criteria are provided,
 - unresolved critical uncertainty is surfaced as blocking question with `hold`,

@@ -147,8 +147,11 @@ def test_review_and_qa_prompts_cross_check_tasklist_and_plan_obligations() -> No
     assert "cross-check nontrivial task details" in qa_prompt
     assert "error-cause or\n   diagnostic-context preservation promise" in qa_prompt
     assert "required named synchronization primitive" in qa_prompt
+    assert "Do not name a specific execution surface" in qa_prompt
+    assert "`ASGI/TestClient`, state the exact surface" in qa_prompt
     assert "missed tasklist/plan requirement" in qa_repair_prompt
     assert "Named mechanisms include concrete APIs/library calls" in qa_repair_prompt
+    assert "overstated execution surface" in qa_repair_prompt
     assert "synchronization primitives such as named" not in qa_repair_prompt
 
 
