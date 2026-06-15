@@ -142,7 +142,7 @@ mode = "native"
 # timeout_seconds = 3600
 
 [runtime.qwen]
-command = "qwen --approval-mode yolo --output-format stream-json"
+command = "qwen --bare --approval-mode yolo --output-format stream-json"
 mode = "native"
 # timeout_seconds = 3600
 
@@ -157,8 +157,8 @@ Claude Code, Codex, and OpenCode native mode adapt AIDD stage briefs and prompt
 packs to the raw provider CLI. Use `mode = "adapter-flags"` only for wrapper
 commands that accept AIDD adapter flags directly.
 
-OpenCode native mode can report `document_complete` when it has written the declared
-Markdown outputs and then keeps the provider process open instead of returning a final
+OpenCode and Qwen native modes can report `document_complete` when they have written the
+declared Markdown outputs and then keep the provider process open instead of returning a final
 message. AIDD still preserves the raw log and runtime exit metadata and still runs canonical
 stage validation before any workflow progression. For initial interview stops, a settled
 `questions.md` plus terminal stage documents may complete the adapter call while `answers.md`

@@ -806,6 +806,7 @@ def _execute_qwen(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
+        document_completion_paths=request.expected_output_documents,
         cancel_requested=request.cancel_requested,
     )
     persist_qwen_runtime_log(attempt_path=attempt_path, run_result=run_result)
@@ -823,7 +824,11 @@ def _execute_qwen(
         adapter_question_events=question_detection.question_events,
     )
     return RuntimeAdapterExecutionResult(
-        succeeded=_success_result(run_result.exit_classification, QwenExitClassification.SUCCESS),
+        succeeded=run_result.exit_classification
+        in (
+            QwenExitClassification.SUCCESS,
+            QwenExitClassification.DOCUMENT_COMPLETE,
+        ),
         details=run_result.exit_classification.value,
         runtime_jsonl_path=event_artifacts.runtime_jsonl_path,
         events_jsonl_path=event_artifacts.events_jsonl_path,

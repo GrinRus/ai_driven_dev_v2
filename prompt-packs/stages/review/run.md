@@ -76,6 +76,12 @@ normalize if canonical validation proves the terminal status inconsistent.
    Do not reject solely because such a file is absent from `git diff --stat`; inspect it and treat
    it as a changed file unless it is missing, outside scope, undocumented by implementation
    evidence, or an explicit release policy requires a tracked-only patch artifact.
+   Inspect or cite `git status --short --untracked-files=all`, not only `git diff --name-only`,
+   before declaring the workspace clean. Project-local provider state such as `.qwen/...`,
+   `.claude/...`, `.codex/...`, `.opencode/...`, and unexpected lockfiles such as `uv.lock` are
+   not AIDD workspace artifacts. If they appear as new target-repository files and are not known
+   setup-baseline files required by the task, record a `must-fix` finding instead of treating them
+   as harmless runtime noise.
    If `context/diff-summary.md`, `context/repository-state.md`, or implementation evidence shows
    lockfile, dependency manifest, generated resolver output, or project config changes that are not
    required by the selected task, record a `must-fix` finding and do not approve the change cleanly.

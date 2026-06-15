@@ -89,6 +89,10 @@ normalize if canonical validation proves the terminal status inconsistent.
 10. If repository evidence shows top-level `workitems/...` duplicates, unexplained non-`.aidd`
     untracked files, or direct `.aidd/*.py`-style scratch files, set `QA verdict: not-ready` and
     release recommendation `hold` unless upstream implementation cleaned them up before QA output.
+    Project-local provider state such as `.qwen/...`, `.claude/...`, `.codex/...`, `.opencode/...`,
+    and unexpected lockfiles such as `uv.lock` are non-`.aidd` target-repository files, not AIDD
+    workspace artifacts. Do not call them harmless runtime artifacts unless repository baseline
+    evidence proves they existed after setup and before stage execution.
 
 ## Execution instructions
 
@@ -101,6 +105,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    deliverable file, excluding AIDD workspace/config artifacts, before deciding readiness.
    If no repository change evidence is provided, run or cite `git status --short --untracked-files=all`
    or equivalent project-native evidence before deciding readiness.
+   Exclude only `.aidd/...` workspace state and known harness config such as `aidd.example.toml`;
+   do not exclude provider-local directories such as `.qwen/skills/...` from repository-state
+   readiness accounting.
 3. Build `qa-report.md` with these exact H2 sections:
    `Quality verdict`, `Verification summary`, `Release recommendation`, `Evidence`,
    `Known issues`, and `Readiness`.

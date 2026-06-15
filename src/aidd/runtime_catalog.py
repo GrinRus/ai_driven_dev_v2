@@ -88,7 +88,7 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
         runtime_id="qwen",
         config_section="qwen",
         support_tier="experimental",
-        default_command="qwen --approval-mode yolo --output-format stream-json",
+        default_command="qwen --bare --approval-mode yolo --output-format stream-json",
         probe_command="qwen",
         default_execution_mode=RuntimeExecutionMode.NATIVE,
         supported_execution_modes=(
@@ -97,7 +97,7 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
         ),
         live_command_env_var="AIDD_EVAL_QWEN_COMMAND",
         brokered_default_command=(
-            "qwen --approval-mode default --output-format stream-json"
+            "qwen --bare --approval-mode default --output-format stream-json"
         ),
     ),
 }

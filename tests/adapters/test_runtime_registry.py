@@ -47,7 +47,7 @@ def test_native_provider_defaults() -> None:
     assert opencode.default_execution_mode is RuntimeExecutionMode.NATIVE
     assert opencode.default_command == "opencode run --format json --dangerously-skip-permissions"
     assert qwen.default_execution_mode is RuntimeExecutionMode.NATIVE
-    assert qwen.default_command == "qwen --approval-mode yolo --output-format stream-json"
+    assert qwen.default_command == "qwen --bare --approval-mode yolo --output-format stream-json"
     assert qwen.brokered_default_command == (
-        "qwen --approval-mode default --output-format stream-json"
+        "qwen --bare --approval-mode default --output-format stream-json"
     )
