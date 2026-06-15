@@ -1413,6 +1413,29 @@ def test_black_box_live_e2e_records_active_step_while_stage_runs(
         "aidd.harness.live_e2e_black_box_orchestration._stage_command_timeout_seconds",
         lambda scenario: 2.0,
     )
+    original_run_black_box_command = _run_black_box_command
+    stage_command_started = threading.Event()
+    release_stage_command = threading.Event()
+
+    def _run_black_box_command_with_stage_barrier(*args: object, **kwargs: object):
+        command = kwargs.get("command")
+        if command is None and args:
+            command = args[0]
+        if isinstance(command, tuple | list):
+            command_parts = list(command)
+            if (
+                len(command_parts) >= 3
+                and command_parts[1:3] == ["stage", "run"]
+                and "idea" in command_parts
+            ):
+                stage_command_started.set()
+                release_stage_command.wait(timeout=5.0)
+        return original_run_black_box_command(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._run_black_box_command",
+        _run_black_box_command_with_stage_barrier,
+    )
     result_box: list[object] = []
     errors: list[BaseException] = []
 
@@ -1433,7 +1456,8 @@ def test_black_box_live_e2e_records_active_step_while_stage_runs(
     thread.start()
 
     active_step: dict[str, object] | None = None
-    for _ in range(100):
+    assert stage_command_started.wait(timeout=15.0)
+    for _ in range(20):
         state_paths = sorted(report_root.glob("*/flow-state.json"))
         if state_paths:
             state_path = state_paths[0]
@@ -1443,6 +1467,7 @@ def test_black_box_live_e2e_records_active_step_while_stage_runs(
                 active_step = raw_active_step
                 break
         time.sleep(0.05)
+    release_stage_command.set()
 
     thread.join(timeout=10.0)
 
