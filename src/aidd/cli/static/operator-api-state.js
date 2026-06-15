@@ -276,7 +276,10 @@ async function fetchDashboard() {
   state.dashboard = payload.dashboard;
   const version = String(payload.app_version || "").trim();
   document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
-  state.activeStage = state.dashboard.active_stage || state.activeStage;
+  const viewedStage = state.dashboard.active_stage_view?.stage || state.dashboard.active_stage;
+  if (viewedStage && STAGES.includes(viewedStage)) {
+    state.activeStage = viewedStage;
+  }
   state.activeRunId = state.dashboard.run?.run_id || "";
   if (!state.selectedRuntime && state.dashboard.run?.runtime_id) {
     state.selectedRuntime = state.dashboard.run.runtime_id;

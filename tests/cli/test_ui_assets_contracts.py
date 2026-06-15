@@ -327,6 +327,12 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "async function fetchProjectHome(workItem = \"\")",
             "dashboardUrl()",
             "/api/dashboard",
+            (
+                "const viewedStage = state.dashboard.active_stage_view?.stage "
+                "|| state.dashboard.active_stage;"
+            ),
+            "if (viewedStage && STAGES.includes(viewedStage)) {",
+            "state.activeStage = viewedStage;",
             'state.activeRunId = state.dashboard.run?.run_id || "";',
             "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`",
             'api("/api/runtime-readiness")',
