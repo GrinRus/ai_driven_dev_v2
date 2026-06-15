@@ -76,6 +76,10 @@ Optional context documents may improve QA depth, but they must not replace imple
 - Optional exploratory checks outside the selected task's authored verification boundary
   must not force `ready-with-risks` or `proceed-with-conditions` unless they reveal a
   concrete defect, contradict acceptance criteria, or are required by review findings.
+  If an optional broader check was run and failed only in unrelated files or
+  environment-sensitive surfaces outside the selected scope, and selected-task verification,
+  acceptance criteria, and review evidence are clean, QA must record it as a non-blocking
+  optional-check note rather than a residual risk or release condition.
 - Out-of-scope lockfile, dependency manifest, generated resolver output, or project config changes
   must force quality verdict `not-ready` and release recommendation `hold` unless the selected task
   explicitly requires that dependency/config change.
@@ -115,6 +119,10 @@ Validators for `qa` should check:
 - missing evidence references:
   - material QA claims must reference concrete verification artifacts or execution outputs,
   - evidence-free pass/ready claims are rejected,
+- optional-check overreach:
+  - isolated optional broad-suite failures outside selected scope do not force
+    `ready-with-risks` or `proceed-with-conditions` when selected-task evidence is clean,
+    especially when they are unrelated environment-sensitive tests,
 - shared public-surface blast radius:
   - ready/proceed decisions cite evidence for affected sibling public surfaces after shared helper changes,
 - cross-document consistency between QA verdict, residual risk summary, validator findings, and terminal status in `stage-result.md`.

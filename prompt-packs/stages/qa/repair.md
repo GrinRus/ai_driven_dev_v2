@@ -83,7 +83,9 @@ Use concrete repair actions:
   tradeoff notes out of `Known issues`;
 - optional-check overreach: if authored verification, acceptance criteria, and review are clean,
   do not turn a non-required broader check into `ready-with-risks` or
-  `proceed-with-conditions` unless it reveals a concrete defect;
+  `proceed-with-conditions` unless it reveals a concrete defect. If the broader check failed only
+  in unrelated files or environment-sensitive surfaces outside the selected scope, keep it as a
+  non-blocking optional-check note rather than a residual risk;
 - status drift: align validator verdict, stage status, blockers, and next actions.
 
 ## Targeted repair discipline
@@ -100,7 +102,8 @@ Use concrete repair actions:
    Put the selected value in a dedicated `## Release recommendation` section.
 4. Keep blocking uncertainty explicit via `[blocking]` questions and `hold` recommendation.
 5. Keep optional broader-check limitations as non-blocking notes when authored verification,
-   review, and acceptance criteria are clean.
+   review, and acceptance criteria are clean. Do not preserve `ready-with-risks` solely for isolated
+   optional broad-suite failures in unrelated environment-sensitive tests.
 6. Do not preserve `ready-with-risks` only because the task intentionally selected a hazardous or
    limited behavior, such as trusted local code execution, when the implementation matches the
    resolved boundary and includes required confirmation, documentation, tests, and evidence.
@@ -127,6 +130,8 @@ Use concrete repair actions:
   the report also declares residual risk,
 - optional checks outside the authored verification boundary are not treated as release
   conditions unless they expose a concrete defect,
+- isolated optional broad-suite failures in unrelated environment-sensitive tests remain
+  non-blocking notes when selected-task evidence is clean,
 - intentional selected design constraints are not treated as residual risks when required
   mitigations and evidence are complete,
 - available tasklist/plan task details and risk mitigations were cross-checked before declaring

@@ -101,6 +101,27 @@ def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
     assert "Do not use range claims such as `AC-1 through AC-4`" in run_prompt
     assert "Do not pair `QA verdict: ready` with residual risk bullets" in run_prompt
     assert "use `ready-with-risks` and `proceed-with-conditions`" in run_prompt
+    assert "isolated optional broad-suite failures in unrelated environment-sensitive tests" in (
+        run_prompt
+    )
+    assert "non-blocking optional-check note instead of a residual risk" in run_prompt
+
+
+def test_qa_prompts_do_not_downgrade_for_isolated_optional_broad_suite_failures() -> None:
+    run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/qa/system.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (run_prompt, repair_prompt, system_prompt, contract):
+        assert "isolated optional broad-suite failures" in text
+        assert "unrelated environment-sensitive tests" in text
+
+    assert "record it as a non-blocking optional-check note" in run_prompt
+    assert "rather than a residual risk" in repair_prompt
+    assert "must record it as a non-blocking" in contract
 
 
 def test_review_prompt_respects_authored_verification_boundary() -> None:

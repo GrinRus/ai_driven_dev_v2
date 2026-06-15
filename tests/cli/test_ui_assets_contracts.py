@@ -216,6 +216,22 @@ def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> No
     assert "overflow-x: auto;" in responsive
 
 
+def test_operator_responsive_css_prevents_activity_table_mobile_overflow() -> None:
+    responsive = _asset_text("/operator-responsive.css")
+
+    assert ".activity-panel .table-wrap {" in responsive
+    assert "overflow-x: hidden;" in responsive
+    assert ".activity-panel .activity-table {" in responsive
+    assert "table-layout: fixed;" in responsive
+    assert ".activity-panel .activity-table th," in responsive
+    assert ".activity-panel .activity-table td {" in responsive
+    assert "overflow-wrap: anywhere;" in responsive
+    assert "word-break: break-word;" in responsive
+    assert ".activity-panel .activity-table th:nth-child(1)," in responsive
+    assert ".activity-panel .activity-table th:nth-child(2)," in responsive
+    assert ".activity-panel .activity-table th:nth-child(3)," in responsive
+
+
 def test_operator_script_modules_own_static_ui_surfaces() -> None:
     loader = _asset_text("/operator.js")
     api_state = _asset_text("/operator-api-state.js")

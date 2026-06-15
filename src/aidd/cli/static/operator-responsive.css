@@ -150,6 +150,30 @@
   .evidence-table-wrap {
     overflow-x: auto;
   }
+  .activity-panel .table-wrap {
+    overflow-x: hidden;
+  }
+  .activity-panel .activity-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .activity-panel .activity-table th,
+  .activity-panel .activity-table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .activity-panel .activity-table th:nth-child(1),
+  .activity-panel .activity-table td:nth-child(1) {
+    width: 74px;
+  }
+  .activity-panel .activity-table th:nth-child(2),
+  .activity-panel .activity-table td:nth-child(2) {
+    width: 52px;
+  }
+  .activity-panel .activity-table th:nth-child(3),
+  .activity-panel .activity-table td:nth-child(3) {
+    width: 72px;
+  }
   .diff-preview-row {
     grid-template-columns: 1fr;
   }

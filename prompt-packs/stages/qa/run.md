@@ -69,6 +69,12 @@ normalize if canonical validation proves the terminal status inconsistent.
    verification boundary. Do not downgrade to `ready-with-risks` or `proceed-with-conditions` only because
    optional broader checks outside that boundary were not run or were blocked by local sandbox
    policy, unless they reveal a concrete defect or contradict acceptance criteria/review evidence.
+   If an optional broader check was run and failed only in unrelated files or environment-sensitive
+   surfaces outside the selected scope, while authored verification, acceptance criteria, and review
+   evidence are clean, record it as a non-blocking optional-check note instead of a residual risk,
+   `ready-with-risks`, or `proceed-with-conditions`. Downgrade only when the failure touches changed
+   files, selected public surfaces, acceptance criteria, plan/tasklist promises, review findings, or
+   cannot be isolated from the deliverable.
 7. Intentional design constraints selected by the authored task or resolved interview answers are
    not residual release risks by themselves. For example, trusted local code execution is `ready`
    when explicit confirmation, documentation, tests, and scope boundaries required by the selected
@@ -144,7 +150,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 11. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
    instead of inventing assumptions.
 12. Keep optional broader-check limitations as non-blocking notes when authored verification,
-   review, and acceptance criteria are clean.
+   review, and acceptance criteria are clean. Isolated optional broad-suite failures in unrelated
+   environment-sensitive tests are not residual risks for the selected task.
 13. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
 
 ## Common output skeleton discipline
@@ -172,6 +179,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - unresolved critical uncertainty is surfaced as blocking question with `hold`,
 - optional checks outside the authored verification boundary are not treated as release
   conditions unless they expose a concrete defect,
+- isolated optional broad-suite failures in unrelated environment-sensitive tests remain
+  non-blocking notes when selected-task evidence is clean,
 - intentional selected design constraints are not treated as residual risks when their required
   mitigations and evidence are complete,
 - available tasklist/plan task details and risk mitigations were cross-checked before declaring
