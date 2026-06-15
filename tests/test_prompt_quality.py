@@ -155,6 +155,48 @@ def test_review_and_qa_prompts_cross_check_tasklist_and_plan_obligations() -> No
     assert "synchronization primitives such as named" not in qa_repair_prompt
 
 
+def test_implement_review_and_qa_require_shared_surface_blast_radius_evidence() -> None:
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    implement_contract = Path("contracts/stages/implement.md").read_text(
+        encoding="utf-8"
+    )
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (
+        implement_prompt,
+        review_prompt,
+        qa_prompt,
+        implement_contract,
+        review_contract,
+        qa_contract,
+    ):
+        assert "shared public-surface mechanism" in text
+        assert "CLI decorator" in text
+        assert "parser/helper" in text
+        assert "router/error boundary" in text
+        assert "schema transform helper" in text
+        assert "sibling commands, routes, generated outputs" in text
+        assert "help/usage" in text
+        assert "API compatibility" in text
+        assert "docs consistency" in text
+
+    assert "explicitly mark the unchecked sibling surface as a residual risk" in (
+        implement_prompt
+    )
+    assert "Record a finding when implementation evidence does not cover" in (
+        review_prompt
+    )
+    assert "Missing help/usage, docs consistency, API compatibility" in qa_prompt
+    assert "must force `QA verdict: not-ready`" in qa_contract
+
+
 def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
     contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
     run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")

@@ -79,6 +79,11 @@ normalize if canonical validation proves the terminal status inconsistent.
     `.aidd/workitems/...` from the repository root. If `git status --short --untracked-files=all`
     shows top-level `workitems/...`, stray stage documents, or scratch files unrelated to the
     selected task, clean them up or report the implementation as not clean.
+13. When the implementation changes a shared public-surface mechanism such as a CLI decorator,
+    parser/helper, router/error boundary, schema transform helper, or public API adapter, inspect
+    the sibling commands, routes, generated outputs, or documented public surfaces that reuse that
+    mechanism. Record focused blast-radius evidence for help/usage text, API compatibility, and
+    docs consistency, or explicitly mark the unchecked sibling surface as a residual risk.
 
 ## Execution instructions
 
@@ -144,6 +149,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - every verification bullet with a pass/fail/success claim has the command/check and observed
   outcome on the same bullet,
 - failed verification is reported promptly instead of hidden behind open-ended debugging,
+- shared public-surface helper changes include focused blast-radius evidence for sibling
+  commands/routes/generated outputs or explicit residual risk,
 - no-op handling (if any) includes justification, evidence, and next action,
 - no top-level `workitems/...` artifacts, stray stage/control documents, or scratch files are left
   in the deliverable workspace,

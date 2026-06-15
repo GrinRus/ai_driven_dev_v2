@@ -93,6 +93,12 @@ normalize if canonical validation proves the terminal status inconsistent.
     and unexpected lockfiles such as `uv.lock` are non-`.aidd` target-repository files, not AIDD
     workspace artifacts. Do not call them harmless runtime artifacts unless repository baseline
     evidence proves they existed after setup and before stage execution.
+11. If the diff changes a shared public-surface mechanism such as a CLI decorator,
+    parser/helper, router/error boundary, schema transform helper, or public API adapter, require
+    evidence for affected sibling commands, routes, generated outputs, or documented public surfaces.
+    Missing help/usage, docs consistency, API compatibility, or generated-output blast-radius
+    evidence is a QA blocker unless upstream review explicitly accepted it as out of scope with
+    a concrete mitigation.
 
 ## Execution instructions
 
@@ -175,3 +181,5 @@ normalize if canonical validation proves the terminal status inconsistent.
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.
 - top-level `workitems/...` duplicates, unexplained untracked files, and stray `.aidd/` scratch files
   are absent or explicitly make QA `not-ready`.
+- shared public-surface helper changes have blast-radius evidence for affected sibling
+  commands/routes/generated outputs and help/docs/API compatibility.

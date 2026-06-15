@@ -100,7 +100,12 @@ normalize if canonical validation proves the terminal status inconsistent.
    or a required regression assertion. If the implementation omits it, such as missing a promised
    error-cause or diagnostic-context preservation check, record a `must-fix` finding unless the
    upstream artifact explicitly supersedes that requirement.
-10. In `review-report.md`, write the approval decision as a machine-readable line:
+10. If the diff changes a shared public-surface mechanism such as a CLI decorator,
+   parser/helper, router/error boundary, schema transform helper, or public API adapter, review
+   sibling commands, routes, generated outputs, or documented public surfaces that reuse it.
+   Record a finding when implementation evidence does not cover help/usage text, API compatibility,
+   docs consistency, or other affected public behavior needed to keep the selected task bounded.
+11. In `review-report.md`, write the approval decision as a machine-readable line:
    `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
    `Approval status` or `Verdict`, then add rationale separately.
 
@@ -153,5 +158,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - available tasklist/plan task details and risk mitigations were cross-checked against the diff,
   tests, and implementation evidence,
 - named plan/tasklist mechanisms were either found in code/tests or explicitly superseded,
+- shared public-surface helper changes were checked against affected sibling
+  commands/routes/generated outputs and help/docs/API compatibility evidence,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.

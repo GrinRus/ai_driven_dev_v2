@@ -95,6 +95,12 @@ Optional context documents may improve QA depth, but they must not replace imple
   calls when the upstream artifacts made them part of the plan. A clean review report alone is not
   enough to proceed when QA can observe a missed planned requirement or mechanism in the diff,
   tests, or implementation evidence.
+- When the diff changes a shared public-surface mechanism such as a CLI decorator, parser/helper,
+  router/error boundary, schema transform helper, or public API adapter, `QA verdict: ready`
+  requires blast-radius evidence for affected sibling commands, routes, generated outputs, or
+  documented public surfaces. Missing help/usage, docs consistency, API compatibility, or
+  generated-output evidence must force `QA verdict: not-ready` unless upstream review explicitly
+  accepted it as out of scope with mitigation.
 
 ## Validation focus
 
@@ -109,6 +115,8 @@ Validators for `qa` should check:
 - missing evidence references:
   - material QA claims must reference concrete verification artifacts or execution outputs,
   - evidence-free pass/ready claims are rejected,
+- shared public-surface blast radius:
+  - ready/proceed decisions cite evidence for affected sibling public surfaces after shared helper changes,
 - cross-document consistency between QA verdict, residual risk summary, validator findings, and terminal status in `stage-result.md`.
 - consistency with available tasklist/plan obligations and their verification evidence.
 

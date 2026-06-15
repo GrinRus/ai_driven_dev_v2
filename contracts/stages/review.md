@@ -85,6 +85,11 @@ Optional context documents may improve review depth, but they must not replace i
   calls when the upstream artifacts made them part of the plan. If a planned behavior, mitigation,
   mechanism, or verification detail is missing from code, tests, or implementation evidence, record
   a finding unless upstream artifacts explicitly supersede that requirement.
+- When the diff changes a shared public-surface mechanism such as a CLI decorator, parser/helper,
+  router/error boundary, schema transform helper, or public API adapter, review must check affected
+  sibling commands, routes, generated outputs, or documented public surfaces. Missing help/usage,
+  docs consistency, API compatibility, or generated-output blast-radius evidence must become a
+  finding unless the upstream task explicitly excludes that surface.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation
@@ -104,6 +109,8 @@ Validators for `review` should check:
 - missing severity labels:
   - each finding must include an explicit severity label,
   - summary and approval status must remain coherent with finding severities,
+- shared public-surface blast radius:
+  - shared helper/decorator/parser/API changes are checked against affected sibling public surfaces,
 - absent disposition:
   - each finding must include disposition (`must-fix`, `follow-up`, `accepted-risk`, or `invalid`),
   - an explicit no-findings declaration is valid only when no active finding entries are present,
