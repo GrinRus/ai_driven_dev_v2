@@ -79,7 +79,8 @@ and manual-live lanes.
 9. Report the final execution verdict explicitly.
 10. For terminal live runs, write manual `quality-report.md` only after inspecting
     the execution bundle and any additional manual checks, including timeout policy
-    evidence and stage-result/validator consistency findings.
+    evidence, stage-result/validator consistency findings, and AIDD operator UI/UX evidence
+    when a UI/UX decision is needed.
 
 ## Canonical output locations
 
@@ -125,6 +126,9 @@ For eval harness runs, preserve the stable execution verdict taxonomy:
 Live deliverable quality is not an eval runner verdict. For terminal live runs,
 record it only in the manual post-run `quality-report.md`; the runner must not
 parse that report or use it to change the execution verdict.
+Manual operator UI/UX decisions in that report are human-authored only. Treat
+`frontend-checkpoints.*` as raw operator-surface availability evidence, not as a
+UI/UX audit or screenshot requirement.
 
 ## Example command shape
 

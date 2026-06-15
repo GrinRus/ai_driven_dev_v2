@@ -318,6 +318,10 @@ Expected behavior in the current local implementation:
   under `timeout_policy`.
 - live eval bundles are execution-only; write `quality-report.md` manually after
   the terminal run when artifact, code, test, or UI/UX quality must be judged.
+  The UI/UX section is a human-authored AIDD operator UI decision, not a runner
+  gate: inspect completed-flow visibility, stage/artifact/log/question navigation,
+  repair and next-flow handoff states, readability, keyboard/focus behavior, and
+  responsive behavior or explicitly record `not inspected`.
 - repair retries persist `repair-context.md` in the run attempt directory, which lets
   operators trace the exact validator findings that caused each retry.
 - live E2E is manual local operator audit evidence, not CI/CD, not a release workflow,

@@ -185,6 +185,7 @@ The runner does not create, parse, validate, or score this file. Use this templa
 ## Decision
 - Run integrity decision: clean | defective | blocked-infra | blocked-provider | blocked-harness
 - Deliverable quality decision: counted-clean | not-counted | blocked-model-quality | blocked-product-defect
+- Operator UI/UX decision: acceptable | acceptable-with-risks | not-acceptable | not-applicable
 - Overall decision: counted-clean | not-counted | blocked
 
 ## Run Integrity
@@ -215,12 +216,15 @@ The runner does not create, parse, validate, or score this file. Use this templa
 - Code evidence links:
 
 ## UI/UX Quality
-- User workflows inspected:
-- Visual/readability/layout evidence:
+- Operator UI workflows inspected:
+- Terminal flow visibility:
+- Navigation and discoverability:
+- State clarity:
+- Readability/layout:
 - Accessibility/keyboard/focus notes:
 - Responsive behavior notes:
-- Empty/loading/error/blocking states:
-- UX evidence links:
+- Generated product UI applicability:
+- Operator UI/UX evidence links:
 
 ## Evidence Reviewed
 - Flow evidence:
@@ -228,7 +232,7 @@ The runner does not create, parse, validate, or score this file. Use this templa
 - Logs/transcripts:
 - Target repo diff:
 - Review/QA artifacts:
-- UI/API or screenshot evidence:
+- Operator UI/API checkpoints, next-flow checkpoint, or manual screenshot/browser evidence:
 - Extra manual checks run by SWE agent:
 
 ## Notes
@@ -238,6 +242,14 @@ The runner does not create, parse, validate, or score this file. Use this templa
 
 Keep `Run Integrity` separate from artifact, code, test, and UI/UX quality.
 API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit.
+Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
+The `Operator UI/UX decision` is a manual AIDD operator-UI sub-decision only; it
+does not change `verdict.md`, `grader.json`, or any execution status. Inspect
+terminal flow visibility, stage list navigation, artifact/log views, questions and
+answers, repair evidence, next-flow handoff, state clarity, readability, keyboard
+path, focus visibility, responsive behavior, and any manually captured screenshots
+or browser notes. Mark generated product UI as `not-applicable` unless you
+explicitly performed a separate product-UI review.
 
 ## Next-flow terminal checkpoint
 

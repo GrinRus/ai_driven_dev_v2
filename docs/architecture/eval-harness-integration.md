@@ -192,7 +192,9 @@ Every black-box live E2E run should aim to write:
 
 `.aidd/reports/evals/<run_id>/quality-report.md` is a manual post-run SWE-agent
 artifact. It is not part of execution bundle completeness and must not affect
-`verdict.md` or `grader.json`.
+`verdict.md` or `grader.json`. When a UI/UX decision is needed, the report records
+a human-authored AIDD operator UI/UX decision; the runner does not derive that
+decision from `frontend-checkpoints.*`.
 
 `self-repair-matrix.json` and `.md` include the deterministic repair-probe catalog for
 all stages from `idea` to `qa`. Each probe row records the observed initial verdict,
@@ -243,7 +245,10 @@ The analysis should detect at least:
 Manual post-run quality review is still expected when the launching SWE agent needs a
 deliverable-quality decision: a technically completed run can still produce weak
 artifacts, weak code, weak tests, or poor operator UI/UX. That review belongs in
-`quality-report.md` and is not a runner score.
+`quality-report.md` and is not a runner score. Operator UI/UX review should inspect
+completed-flow visibility, stage/artifact/log/question navigation, repair and
+next-flow handoff states, readability, keyboard/focus behavior, responsive behavior
+or `not inspected`, and any manual screenshots or browser notes.
 
 ## 9. Converting failures into regression cases
 

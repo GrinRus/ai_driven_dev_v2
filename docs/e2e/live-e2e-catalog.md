@@ -320,12 +320,19 @@ budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
 
 After a terminal run, the launching SWE agent may add manual post-run evidence:
 
-- `quality-report.md` with separate run-integrity and deliverable-quality decisions
+- `quality-report.md` with separate run-integrity, deliverable-quality, and manual AIDD operator UI/UX decisions
 - `answer-analysis.md` when the launching operator-agent answered blocking questions
 - `operator-intervention-analysis.md` when the launching operator-agent submitted an
   operator intervention request
 - `next-flow-lineage.json` only when the manual operator explicitly enabled
   `--enable-next-flow-follow-up-proof`
+
+The manual operator UI/UX decision must inspect AIDD operator workflows rather than
+reinterpret `frontend-checkpoints.*` as UX proof. At minimum, review terminal flow
+visibility, stage list navigation, artifact/log views, questions and answers,
+repair evidence, next-flow handoff, state clarity, readability, keyboard/focus
+behavior where manually inspectable, responsive behavior or `not inspected`, and
+any manually captured screenshots or browser notes. Generated product UI is outside this live E2E operator-UI review unless the report marks it `not-applicable`.
 
 ## Interview Scenarios
 

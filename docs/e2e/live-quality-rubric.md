@@ -54,6 +54,7 @@ The runner no longer emits `quality-transcript.json`, `acceptance-coverage.*`,
 
 `frontend-checkpoints.*` are raw run-integrity evidence for the public operator
 surfaces. They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
+Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
 
 ## Manual Report
 
@@ -69,6 +70,7 @@ Use this exact structure:
 ## Decision
 - Run integrity decision: clean | defective | blocked-infra | blocked-provider | blocked-harness
 - Deliverable quality decision: counted-clean | not-counted | blocked-model-quality | blocked-product-defect
+- Operator UI/UX decision: acceptable | acceptable-with-risks | not-acceptable | not-applicable
 - Overall decision: counted-clean | not-counted | blocked
 
 ## Run Integrity
@@ -99,12 +101,15 @@ Use this exact structure:
 - Code evidence links:
 
 ## UI/UX Quality
-- User workflows inspected:
-- Visual/readability/layout evidence:
+- Operator UI workflows inspected:
+- Terminal flow visibility:
+- Navigation and discoverability:
+- State clarity:
+- Readability/layout:
 - Accessibility/keyboard/focus notes:
 - Responsive behavior notes:
-- Empty/loading/error/blocking states:
-- UX evidence links:
+- Generated product UI applicability:
+- Operator UI/UX evidence links:
 
 ## Evidence Reviewed
 - Flow evidence:
@@ -112,7 +117,7 @@ Use this exact structure:
 - Logs/transcripts:
 - Target repo diff:
 - Review/QA artifacts:
-- UI/API or screenshot evidence:
+- Operator UI/API checkpoints, next-flow checkpoint, or manual screenshot/browser evidence:
 - Extra manual checks run by SWE agent:
 
 ## Notes
@@ -130,6 +135,9 @@ command timeout from the absence of a global flow timeout.
 
 `Artifact Quality`, `Code Quality`, and `UI/UX Quality` evaluate the deliverable
 produced by the full flow. These sections are manual review, not runner state.
+`Operator UI/UX decision` is a human-authored sub-decision about the AIDD operator
+UI only. It does not alter `verdict.md`, `grader.json`, or any runner execution
+status.
 
 The manual `counted-clean` phrase is only a human-authored deliverable-quality
 decision inside `quality-report.md`. AIDD does not parse it.
@@ -148,7 +156,13 @@ It should address acceptance criteria evidence, architectural fit, maintainabili
 API compatibility, edge cases, security, performance, test relevance, and any
 baseline or before/after proof.
 
-UI/UX review should inspect real operator/user workflows. API probes alone are not
+Operator UI/UX review should inspect real AIDD operator workflows: terminal flow
+visibility, stage list navigation, artifact inspection, log inspection,
+questions/answers, repair evidence, and next-flow handoff. API probes alone are not
 UX evidence. Cite screenshots or browser evidence manually when available, and
-record visual layout/readability, accessibility, keyboard/focus, responsive behavior,
-and empty/loading/error/blocking states.
+record visual hierarchy, density, labels, truncation for long paths/logs, keyboard
+path, focus visibility, labels or landmarks where manually inspectable,
+desktop/tablet/mobile responsive behavior or explicitly `not inspected`, and
+empty/loading/error/blocking, interview, and repair states. Generated product UI is
+outside this operator-UI review unless the manual report explicitly marks it
+`not-applicable`.

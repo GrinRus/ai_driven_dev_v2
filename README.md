@@ -322,7 +322,9 @@ loopback `aidd ui` UI/API checkpoints, write `stage-audits/<stage>.json` and
 command budget; aggregate `run-transcript.json` does not report a global timeout
 unless the runner actually uses one. The runner does not score deliverable quality or create a
 quality report; the launching SWE agent may write
-`.aidd/reports/evals/<run_id>/quality-report.md` manually after the terminal run.
+`.aidd/reports/evals/<run_id>/quality-report.md` manually after the terminal run,
+including a human-authored AIDD operator UI/UX decision when that quality dimension
+must be judged.
 The evaluator always builds a local wheel from the clean tracked source checkout
 containing the scenario manifest. Published-package install proof is a separate
 release/install evidence lane, not part of public-repository live E2E.
