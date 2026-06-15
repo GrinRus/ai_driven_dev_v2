@@ -196,7 +196,7 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     assert "newly created untracked source files" in implement_prompt
     assert "the deliverable is the" in implement_prompt
     assert "local workspace state, not a tracked-only patch" in implement_prompt
-    assert "`git status --short` and" in implement_prompt
+    assert "`git status --short --untracked-files=all` and" in implement_prompt
     assert "`git diff --name-only`" in implement_prompt
     assert "Do not leave lockfiles, dependency manifests" in implement_prompt
     assert "`git stash`, `git reset`, `git checkout --`, or `git restore`" in (
