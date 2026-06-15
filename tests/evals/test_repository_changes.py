@@ -116,6 +116,7 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
             "aidd.example.toml",
             "workitems/WI-1/stages/qa/stage-result.md",
             ".aidd/research_repro.py",
+            ".aidd/harness-cache/runtime-prompts/run-1/plan/opencode-prompt.md",
             ".aidd/workitems/WI-1/stages/qa/output/qa-report.md",
             "new_product.py",
         ),
@@ -134,6 +135,7 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
     assert classification.new_untracked_files == (
         "workitems/WI-1/stages/qa/stage-result.md",
         ".aidd/research_repro.py",
+        ".aidd/harness-cache/runtime-prompts/run-1/plan/opencode-prompt.md",
         ".aidd/workitems/WI-1/stages/qa/output/qa-report.md",
         "new_product.py",
     )
