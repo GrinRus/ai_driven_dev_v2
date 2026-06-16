@@ -84,6 +84,15 @@ Optional context documents may improve review depth, but they must not replace i
   visible in `git status`; record a finding only when implementation changes them, depends on them
   as product evidence, contradicts selected scope, or introduces new untracked files outside that
   baseline.
+- Live harness workspace recovery is not product work. If implementation evidence shows the
+  prepared checkout disappeared, was recloned, or a harness run directory such as `install-home/`,
+  `source/`, `build/`, or `target/` was deleted, moved, or recreated, review must record a
+  `must-fix` finding.
+- Ignored local artifacts are still workspace hygiene evidence. New `.venv/`, `.pytest_cache/`,
+  `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories from
+  `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+  equivalent evidence must be reviewed as workspace pollution unless they are selected deliverable
+  outputs or were removed before review.
 - When upstream `tasklist` or `plan` artifacts are available, review must check the implementation
   against their nontrivial task details, required mitigations, and explicit risk-verification
   promises, not only the high-level acceptance criteria. This includes named implementation

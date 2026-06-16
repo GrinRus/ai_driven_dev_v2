@@ -91,6 +91,15 @@ normalize if canonical validation proves the terminal status inconsistent.
    If `context/diff-summary.md`, `context/repository-state.md`, or implementation evidence shows
    lockfile, dependency manifest, generated resolver output, or project config changes that are not
    required by the selected task, record a `must-fix` finding and do not approve the change cleanly.
+   If implementation evidence says the prepared checkout disappeared, was recloned, or any live
+   harness run directory such as `install-home/`, `source/`, `build/`, or `target/` was deleted,
+   moved, or recreated, record a `must-fix` finding. Live harness workspace recovery is an
+   execution blocker, not part of the product deliverable.
+   If `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+   equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
+   `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories, inspect them as
+   workspace pollution and record a finding unless they are selected deliverable outputs or were
+   removed before review.
 8. Intentional design constraints selected by the authored task or resolved interview answers are
    acceptance context, not findings by themselves. For example, do not write an `accepted-risk`
    finding solely because the task intentionally executes trusted local Python when the

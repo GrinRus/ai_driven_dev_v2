@@ -88,6 +88,15 @@ Optional context documents may improve QA depth, but they must not replace imple
   setup-baseline untracked non-AIDD files are not QA blockers solely because they remain visible in
   `git status`; block QA only when implementation changes them, depends on them as deliverable
   evidence, contradicts selected scope, or introduces new untracked files outside that baseline.
+- Live harness workspace recovery is not product evidence. If implementation evidence shows the
+  prepared checkout disappeared, was recloned, or a harness run directory such as `install-home/`,
+  `source/`, `build/`, or `target/` was deleted, moved, or recreated, QA must set
+  `QA verdict: not-ready` and release recommendation `hold`.
+- Ignored local artifacts are still workspace hygiene evidence. New `.venv/`, `.pytest_cache/`,
+  `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories from
+  `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+  equivalent evidence must be treated as workspace pollution unless they are selected deliverable
+  outputs or were removed before QA.
 - Intentional design constraints selected by the authored task or resolved interview answers
   must not force `ready-with-risks` or `proceed-with-conditions` by themselves when the
   implementation exactly follows that selected boundary and required mitigations, tests, and

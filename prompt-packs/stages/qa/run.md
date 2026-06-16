@@ -105,6 +105,14 @@ normalize if canonical validation proves the terminal status inconsistent.
     `not-ready` solely because they are still visible in `git status`. They become blockers only if
     implementation changed them, cites them as deliverable evidence, contradicts the selected task,
     or new untracked files appear outside that baseline.
+    If implementation evidence says the prepared checkout disappeared, was recloned, or any live
+    harness run directory such as `install-home/`, `source/`, `build/`, or `target/` was deleted,
+    moved, or recreated, set `QA verdict: not-ready` and release recommendation `hold`. Live
+    harness workspace recovery is an execution blocker, not product evidence.
+    If `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+    equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
+    `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories, treat them as
+    workspace pollution unless they are selected deliverable outputs or were removed before QA.
 11. If the diff changes a shared public-surface mechanism such as a CLI decorator,
     parser/helper, router/error boundary, schema transform helper, or public API adapter, require
     evidence for affected sibling commands, routes, generated outputs, or documented public surfaces.

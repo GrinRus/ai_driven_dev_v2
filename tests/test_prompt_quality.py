@@ -293,6 +293,50 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     )
 
 
+def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    implement_repair = Path("prompt-packs/stages/implement/repair.md").read_text(
+        encoding="utf-8"
+    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    implement_contract = Path("contracts/stages/implement.md").read_text(
+        encoding="utf-8"
+    )
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (implement_prompt, implement_repair, implement_contract):
+        normalized_text = " ".join(text.split())
+        assert (
+            "Do not delete, move, reclone, or recreate the prepared repository checkout"
+            in normalized_text
+        )
+        assert "`install-home/`" in text
+        assert "packaged contracts disappear" in text
+        assert (
+            "do not try to recover by" in text
+            or "instead of attempting workspace recovery" in text
+            or "instead of running `git clone`" in text
+        )
+        assert "`git status --ignored --short --untracked-files=all`" in text
+        assert "`.venv/`" in text
+        assert "`.pdm-build/`" in text
+        assert "`coverage/`" in text
+
+    for text in (review_prompt, qa_prompt, review_contract, qa_contract):
+        assert "prepared checkout disappeared" in text
+        assert "was recloned" in text
+        assert "`target-workspace-evidence.*`" in text
+        assert "`git status --ignored --short --untracked-files=all`" in text
+        assert "`.pytest_cache/`" in text
+        assert "workspace pollution" in text
+
+
 def test_review_and_qa_use_live_setup_workspace_baseline() -> None:
     review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
         encoding="utf-8"

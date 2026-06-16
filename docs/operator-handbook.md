@@ -315,7 +315,9 @@ Expected behavior in the current local implementation:
 - live eval bundles include `target-workspace-evidence.json` and `.md` as non-gating
   target repository evidence. Inspect it during manual quality review to separate tracked
   product diff, setup-baseline untracked files, `aidd.example.toml` harness config, top-level
-  `workitems/...` pollution, and stray `.aidd/` scratch files.
+  `workitems/...` pollution, stray `.aidd/` scratch files, and ignored local artifacts such
+  as `.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`, build, dist, or dependency
+  caches.
 - live black-box `limits.timeout_minutes` is a per-stage `aidd stage run` command
   budget. The aggregate `run-transcript.json` keeps `timeout_seconds` as `null`
   unless there is a real global flow timeout, and records the per-stage policy
@@ -327,9 +329,12 @@ Expected behavior in the current local implementation:
   repair and next-flow handoff states, readability, keyboard/focus behavior, and
   responsive behavior or explicitly record `not inspected`.
   For code/artifact quality, cite `target-workspace-evidence.*` or
-  `git status --short --untracked-files=all`; top-level `workitems/...` duplicates
+  `git status --short --untracked-files=all` plus
+  `git status --ignored --short --untracked-files=all`; top-level `workitems/...` duplicates
   normally make deliverable quality `not-counted`, while `aidd.example.toml` is
-  harness config rather than product diff.
+  harness config rather than product diff. If implementation evidence shows the prepared
+  checkout or live harness directories such as `install-home/`, `source/`, `build/`, or
+  `target/` were deleted/recreated, treat the deliverable as `not-counted`.
 - repair retries persist `repair-context.md` in the run attempt directory, which lets
   operators trace the exact validator findings that caused each retry.
 - live E2E is manual local operator audit evidence, not CI/CD, not a release workflow,

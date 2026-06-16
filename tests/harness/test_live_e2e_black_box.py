@@ -106,6 +106,7 @@ def _write_fake_aidd(
     log_blocking_text: bool = False,
     stage_result_validator_verdict: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
+    ignored_pollution_stage: str | None = None,
 ) -> None:
     path.write_text(
         f"""#!/usr/bin/env python3
@@ -130,6 +131,7 @@ INSPECT_FAIL_COMMAND = {inspect_fail_command!r}
 LOG_BLOCKING_TEXT = {log_blocking_text!r}
 STAGE_RESULT_VALIDATOR_VERDICT = {stage_result_validator_verdict!r}
 STRAY_TOP_LEVEL_WORKITEMS_STAGE = {stray_top_level_workitems_stage!r}
+IGNORED_POLLUTION_STAGE = {ignored_pollution_stage!r}
 
 
 def option(args: list[str], name: str, default: str = "") -> str:
@@ -190,6 +192,16 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
         (stray_root / "stage-result.md").write_text(
             "# Stray Stage Result\\n\\n- This duplicate is outside `.aidd`.\\n"
         )
+    if stage == IGNORED_POLLUTION_STAGE:
+        ignored_files = (
+            (Path(".venv") / "pyvenv.cfg", "home = test\\n"),
+            (Path("coverage") / "index.html", "coverage\\n"),
+            (Path(".pdm-build") / "wheel", "wheel\\n"),
+            (Path(".pytest_cache") / "CACHEDIR.TAG", "cache\\n"),
+        )
+        for ignored_path, ignored_text in ignored_files:
+            ignored_path.parent.mkdir(parents=True, exist_ok=True)
+            ignored_path.write_text(ignored_text)
 
     stage_root = (
         Path(".aidd") / "reports" / "runs" / work_item / run_id / "stages" / stage
@@ -835,6 +847,7 @@ def _prepare_live_test(
     log_blocking_text: bool = False,
     stage_result_validator_verdict: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
+    ignored_pollution_stage: str | None = None,
 ) -> tuple[Path, Path, Path]:
     _clear_live_runtime_command_env(monkeypatch)
     _put_fake_provider_on_path(
@@ -859,6 +872,7 @@ def _prepare_live_test(
         log_blocking_text=log_blocking_text,
         stage_result_validator_verdict=stage_result_validator_verdict,
         stray_top_level_workitems_stage=stray_top_level_workitems_stage,
+        ignored_pollution_stage=ignored_pollution_stage,
     )
     scenario_dir = tmp_path / "harness" / "scenarios" / "live"
     scenario_dir.mkdir(parents=True)
@@ -1186,6 +1200,59 @@ def test_black_box_live_e2e_records_non_gating_target_workspace_pollution(
     serialized_grader = json.dumps(grader_payload)
     assert "quality_gate" not in serialized_grader
     assert "counting_status" not in serialized_grader
+
+
+def test_black_box_live_e2e_records_non_gating_ignored_workspace_pollution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        setup_commands=(
+            "printf '.venv/\\ncoverage/\\n.pdm-build/\\n.pytest_cache/\\n' > .gitignore",
+        ),
+        ignored_pollution_stage="qa",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    evidence_payload = json.loads(
+        (result.bundle_root / "target-workspace-evidence.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert set(
+        evidence_payload["classification"]["unexpected_ignored_workspace_files"]
+    ) == {
+        ".venv/pyvenv.cfg",
+        "coverage/index.html",
+        ".pdm-build/wheel",
+        ".pytest_cache/CACHEDIR.TAG",
+    }
+    assert [
+        finding["kind"] for finding in evidence_payload["non_gating_findings"]
+    ] == [
+        "unexpected-ignored-workspace-artifact",
+        "unexpected-ignored-workspace-artifact",
+        "unexpected-ignored-workspace-artifact",
+        "unexpected-ignored-workspace-artifact",
+    ]
+    evidence_markdown = (
+        result.bundle_root / "target-workspace-evidence.md"
+    ).read_text(encoding="utf-8")
+    assert "- New ignored files:" in evidence_markdown
+    assert ".venv/pyvenv.cfg" in evidence_markdown
+    grader_payload = json.loads(
+        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
+    )
+    assert grader_payload["execution"]["status"] == "pass"
 
 
 def test_black_box_live_e2e_preserves_manual_quality_report_without_parsing(

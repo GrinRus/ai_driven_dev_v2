@@ -201,9 +201,12 @@ decision from `frontend-checkpoints.*`.
 `target-workspace-evidence.*` is runner-owned, non-gating evidence. It records the
 target repository snapshot after setup and after terminal/stop state, including tracked
 diff, baseline untracked files, `aidd.example.toml` as harness config, new untracked
-files, top-level `workitems/...` pollution, and unexpected `.aidd/` scratch files.
-These findings support manual `quality-report.md` review and must not mutate the
-execution verdict.
+files, top-level `workitems/...` pollution, unexpected `.aidd/` scratch files, and
+new ignored local artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`,
+`coverage/`, build, dist, or dependency-cache files. Manual review must also treat
+runtime attempts to delete/recreate the prepared checkout or live harness run
+directories as run integrity evidence, not product implementation. These findings
+support manual `quality-report.md` review and must not mutate the execution verdict.
 
 `self-repair-matrix.json` and `.md` include the deterministic repair-probe catalog for
 all stages from `idea` to `qa`. Each probe row records the observed initial verdict,

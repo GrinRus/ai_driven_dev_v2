@@ -77,6 +77,15 @@ Optional context documents may improve implementation quality, but they must not
 - The implementation deliverable is the local workspace state, not a tracked-only patch. Newly
   created untracked files under the allowed write scope count as touched files and must be listed
   with the tracked diffs.
+- Live harness workspaces are not implementation material. Do not delete, move, reclone, or
+  recreate the prepared repository checkout or harness run directories such as `source/`, `build/`,
+  `install-home/`, `uv-cache/`, or `target/`. If the prepared checkout, installed `aidd` command,
+  or packaged contracts disappear, report the stage as `blocked` or `failed` with the exact missing
+  path instead of attempting workspace recovery.
+- Ignored local artifacts are still part of workspace hygiene. Newly created `.venv/`,
+  `.pytest_cache/`, `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories must
+  be checked with `git status --ignored --short --untracked-files=all`, then removed or explicitly
+  reported as not-clean workspace pollution unless they are selected deliverable outputs.
 - When a change touches a shared public-surface mechanism such as a CLI decorator, parser/helper,
   router/error boundary, schema transform helper, or public API adapter, implementation evidence
   must account for affected sibling commands, routes, generated outputs, or documented public

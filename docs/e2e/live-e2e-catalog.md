@@ -324,8 +324,12 @@ budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
 the final workspace state. It is non-gating evidence for manual quality review:
 `aidd.example.toml` is harness config, setup-created untracked files remain visible,
 top-level `workitems/...` duplicates are severe deliverable pollution, and direct
-`.aidd/*.py` scratch files are artifact hygiene findings. The runner does not turn
-these findings into a quality gate.
+`.aidd/*.py` scratch files are artifact hygiene findings. It also surfaces new
+ignored local artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`,
+`coverage/`, build, dist, or dependency-cache files. Evidence that a runtime
+deleted/recreated the prepared checkout or live harness run directories is a run
+integrity and deliverable-quality blocker for manual review. The runner does not
+turn these findings into a quality gate.
 
 After a terminal run, the launching SWE agent may add manual post-run evidence:
 

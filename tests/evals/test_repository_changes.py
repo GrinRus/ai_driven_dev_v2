@@ -99,6 +99,35 @@ def test_collect_live_workspace_snapshot_includes_aidd_untracked_files(
     assert ".aidd/research_repro.py" in snapshot.untracked_files
     assert "aidd.example.toml" in snapshot.untracked_files
     assert ".aidd/research_repro.py" in snapshot.status_short
+    assert snapshot.ignored_files == tuple()
+    assert snapshot.command_errors == tuple()
+
+
+def test_collect_live_workspace_snapshot_records_ignored_workspace_files(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".gitignore").write_text(
+        ".venv/\ncoverage/\n.pdm-build/\n.pytest_cache/\n",
+        encoding="utf-8",
+    )
+    _run(("git", "add", ".gitignore"), cwd=tmp_path)
+    _run(("git", "commit", "-m", "ignore local artifacts"), cwd=tmp_path)
+    (tmp_path / ".venv").mkdir()
+    (tmp_path / ".venv" / "pyvenv.cfg").write_text("home = test\n", encoding="utf-8")
+    (tmp_path / "coverage").mkdir()
+    (tmp_path / "coverage" / "index.html").write_text("coverage\n", encoding="utf-8")
+    (tmp_path / ".pdm-build").mkdir()
+    (tmp_path / ".pdm-build" / "wheel").write_text("wheel\n", encoding="utf-8")
+    (tmp_path / ".pytest_cache").mkdir()
+    (tmp_path / ".pytest_cache" / "CACHEDIR.TAG").write_text("cache\n", encoding="utf-8")
+
+    snapshot = collect_live_workspace_snapshot(tmp_path)
+
+    assert ".venv/pyvenv.cfg" in snapshot.ignored_files
+    assert "coverage/index.html" in snapshot.ignored_files
+    assert ".pdm-build/wheel" in snapshot.ignored_files
+    assert ".pytest_cache/CACHEDIR.TAG" in snapshot.ignored_files
     assert snapshot.command_errors == tuple()
 
 
@@ -108,6 +137,7 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
         untracked_files=("setup.log", "aidd.example.toml"),
         status_short="?? setup.log\n?? aidd.example.toml",
         command_errors=tuple(),
+        ignored_files=("coverage/baseline.xml",),
     )
     final = LiveWorkspaceSnapshot(
         tracked_files=("src/app.py",),
@@ -122,6 +152,11 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
         ),
         status_short="",
         command_errors=tuple(),
+        ignored_files=(
+            "coverage/baseline.xml",
+            ".venv/pyvenv.cfg",
+            "coverage/index.html",
+        ),
     )
 
     classification = classify_live_workspace_changes(
@@ -139,6 +174,15 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
         ".aidd/workitems/WI-1/stages/qa/output/qa-report.md",
         "new_product.py",
     )
+    assert classification.baseline_ignored_files == ("coverage/baseline.xml",)
+    assert classification.new_ignored_files == (
+        ".venv/pyvenv.cfg",
+        "coverage/index.html",
+    )
+    assert classification.unexpected_ignored_workspace_files == (
+        ".venv/pyvenv.cfg",
+        "coverage/index.html",
+    )
     assert classification.unexpected_top_level_workitems_files == (
         "workitems/WI-1/stages/qa/stage-result.md",
     )
@@ -151,6 +195,8 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
         "unexpected-top-level-workitems-artifact",
         "unexpected-non-aidd-untracked-file",
         "unexpected-aidd-internal-scratch-file",
+        "unexpected-ignored-workspace-artifact",
+        "unexpected-ignored-workspace-artifact",
     ]
 
 
@@ -169,5 +215,5 @@ def test_collect_live_workspace_snapshot_records_git_execution_errors(
 
     assert snapshot.tracked_files == tuple()
     assert snapshot.untracked_files == tuple()
-    assert len(snapshot.command_errors) == 3
+    assert len(snapshot.command_errors) == 4
     assert all("failed to execute" in error for error in snapshot.command_errors)

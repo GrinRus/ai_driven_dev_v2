@@ -61,9 +61,10 @@ Screenshots and browser notes are optional manual evidence, not runner-generated
 `target-workspace-evidence.*` records the target repository snapshot after setup and
 after the terminal/stop state. It classifies tracked diff, setup-baseline untracked
 files, known harness config such as `aidd.example.toml`, new untracked files, top-level
-`workitems/...` pollution, and unexpected `.aidd/` scratch files. These findings are
-non-gating execution evidence for manual review; they do not alter `verdict.md` or
-`grader.json`.
+`workitems/...` pollution, unexpected `.aidd/` scratch files, and new ignored local
+artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`, build,
+dist, or dependency-cache files. These findings are non-gating execution evidence
+for manual review; they do not alter `verdict.md` or `grader.json`.
 
 ## Manual Report
 
@@ -166,11 +167,18 @@ It should address acceptance criteria evidence, architectural fit, maintainabili
 API compatibility, edge cases, security, performance, test relevance, and any
 baseline or before/after proof.
 Inspect `target-workspace-evidence.*` and, when needed, run or cite
-`git status --short --untracked-files=all`. Treat top-level `workitems/...` duplicate
-stage artifacts as severe deliverable pollution and normally `not-counted`.
+`git status --short --untracked-files=all` plus
+`git status --ignored --short --untracked-files=all`. Treat top-level
+`workitems/...` duplicate stage artifacts as severe deliverable pollution and
+normally `not-counted`; this is the top-level `workitems/...` duplicate case.
 Treat `aidd.example.toml` as harness/operator config, not product diff. Treat
 direct `.aidd/*.py`-style scratch files as artifact hygiene findings that must be
 explained or cleaned before a clean deliverable decision.
+If artifacts or implementation notes show that the prepared checkout disappeared,
+was recloned, or that live harness directories such as `install-home/`, `source/`,
+`build/`, or `target/` were deleted/recreated, classify the deliverable as
+`not-counted`: harness workspace recovery is run integrity evidence, not product
+implementation work.
 
 Operator UI/UX review should inspect real AIDD operator workflows: terminal flow
 visibility, stage list navigation, artifact inspection, log inspection,

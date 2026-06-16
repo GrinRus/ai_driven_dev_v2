@@ -64,6 +64,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 9. Do not use `git stash`, `git reset`, `git checkout --`, or `git restore` in the deliverable
    workspace to run negative checks or revert files. Use a disposable copy for destructive
    experiments, or mark the check `not-run: <reason>`.
+   Do not delete, move, reclone, or recreate the prepared repository checkout or any live harness
+   run directory such as `source/`, `build/`, `install-home/`, `uv-cache/`, or `target/`.
+   If the prepared checkout, installed `aidd` command, or packaged contracts disappear, stop and
+   report the stage as `blocked` or `failed` with the exact missing path; do not try to recover by
+   running `git clone` or rebuilding the harness workspace inside the stage.
 10. Do not leave lockfiles, dependency manifests, generated resolver output, or project config
    changed unless the selected task explicitly requires dependency/config updates. If such files
    change incidentally, stop and report the out-of-scope change instead of silently treating it as
@@ -79,6 +84,11 @@ normalize if canonical validation proves the terminal status inconsistent.
     `.aidd/workitems/...` from the repository root. If `git status --short --untracked-files=all`
     shows top-level `workitems/...`, stray stage documents, or scratch files unrelated to the
     selected task, clean them up or report the implementation as not clean.
+    Also inspect ignored local artifacts when feasible, for example with
+    `git status --ignored --short --untracked-files=all`; newly created `.venv/`, `.pytest_cache/`,
+    `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories are workspace
+    pollution unless they are part of the selected deliverable or are removed before terminal
+    output.
 13. When the implementation changes a shared public-surface mechanism such as a CLI decorator,
     parser/helper, router/error boundary, schema transform helper, or public API adapter, inspect
     the sibling commands, routes, generated outputs, or documented public surfaces that reuse that
@@ -154,4 +164,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - no-op handling (if any) includes justification, evidence, and next action,
 - no top-level `workitems/...` artifacts, stray stage/control documents, or scratch files are left
   in the deliverable workspace,
+- no live harness checkout/install directories were deleted or recreated, and no ignored local
+  environment, cache, coverage, build, or dist artifacts are left as unexplained workspace
+  pollution,
 - `implementation-report.md`, `validator-report.md`, and `stage-result.md` are consistent.

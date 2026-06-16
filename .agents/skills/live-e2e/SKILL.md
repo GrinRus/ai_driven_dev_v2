@@ -348,9 +348,13 @@ timeout evidence, and inspect `stage-audits/<stage>.*` for non-gating
 stage-result/validator consistency findings.
 Also inspect `target-workspace-evidence.*` for non-gating target workspace findings:
 tracked product diff, setup-baseline untracked files, `aidd.example.toml` harness
-config, top-level `workitems/...` pollution, and stray `.aidd/` scratch files.
+config, top-level `workitems/...` pollution, stray `.aidd/` scratch files, and ignored
+local artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`,
+build, dist, or dependency-cache files.
 In manual review, top-level `workitems/...` duplicates normally make manual deliverable quality `not-counted`;
-`aidd.example.toml` is not product diff.
+`aidd.example.toml` is not product diff. Evidence that a runtime deleted/recreated the
+prepared checkout or live harness run directories such as `install-home/`, `source/`,
+`build/`, or `target/` normally makes deliverable quality `not-counted`.
 
 ## Iteration loop contract
 

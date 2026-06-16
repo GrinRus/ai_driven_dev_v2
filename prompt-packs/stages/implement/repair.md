@@ -61,6 +61,15 @@ For each finding:
 7. re-check `git status --short --untracked-files=all`; top-level `workitems/...`, stray
    stage/control documents, or unrelated scratch files must be cleaned up or reported as a
    not-clean implementation state.
+8. Do not delete, move, reclone, or recreate the prepared repository checkout or any live harness
+   run directory such as `source/`, `build/`, `install-home/`, `uv-cache/`, or `target/`. If the
+   prepared checkout, installed `aidd` command, or packaged contracts disappear, report the repair
+   attempt as `blocked` or `failed` with the exact missing path instead of running `git clone` or
+   rebuilding the harness workspace.
+9. When feasible, re-check ignored local artifacts with
+   `git status --ignored --short --untracked-files=all`; newly created `.venv/`, `.pytest_cache/`,
+   `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories are workspace pollution
+   unless they are required by the selected deliverable or removed before terminal output.
 
 Use concrete repair actions:
 
@@ -103,6 +112,8 @@ Use concrete repair actions:
 12. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
 13. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
     from the repository root.
+14. Do not delete, move, reclone, or recreate the prepared repository checkout or live harness run
+    directories; missing checkout/install/contract paths are blockers, not repair work.
 
 ## Repair exit checks
 
@@ -114,6 +125,9 @@ Use concrete repair actions:
 - touched-files entries stay within allowed write scope, match observed edits, and include same-line
   path + intent for every top-level file entry,
 - no top-level `workitems/...` artifacts or unrelated scratch files remain in the deliverable workspace,
+- no live harness checkout/install directories were deleted or recreated, and no ignored local
+  environment, cache, coverage, build, or dist artifacts are left as unexplained workspace
+  pollution,
 - no-op outcomes (if any) include evidence-backed rationale and actionable next step,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
