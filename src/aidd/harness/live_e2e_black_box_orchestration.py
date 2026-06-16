@@ -4061,11 +4061,25 @@ def _run_stage_loop(ctx: FlowContext) -> StepClassification:
             return classification
 
 
+def _has_timed_out_stage_attempt(ctx: FlowContext) -> bool:
+    if ctx.prepared_working_copy is None:
+        return False
+    working_copy = ctx.prepared_working_copy.working_copy_path
+    run_root = working_copy / ".aidd" / "reports" / "runs" / ctx.work_item / ctx.run_id
+    if not run_root.exists():
+        return False
+    for runtime_exit_path in run_root.glob("stages/*/attempts/attempt-*/runtime-exit.json"):
+        payload = _read_json_object(runtime_exit_path)
+        if payload.get("exit_classification") == "timeout":
+            return True
+    return False
+
+
 def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddRunResult:
     steps = _load_steps(ctx.bundle_root)
     stdout_lines: list[str] = []
     stderr_lines: list[str] = []
-    timed_out = False
+    timed_out = _has_timed_out_stage_attempt(ctx)
     for step in steps:
         raw_commands = step.get("commands")
         commands = raw_commands if isinstance(raw_commands, list) else []

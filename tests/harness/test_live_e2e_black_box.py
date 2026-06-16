@@ -96,6 +96,7 @@ def _write_fake_aidd(
     *,
     fail_stage: str | None = None,
     timeout_stage: str | None = None,
+    adapter_timeout_stage: str | None = None,
     block_stage: str | None = None,
     ui_operator_request_stage: str | None = None,
     ui_operator_request_command: str = "pwd",
@@ -119,6 +120,7 @@ from pathlib import Path
 PRIMARY_OUTPUTS = {json.dumps(_PRIMARY_OUTPUTS)}
 FAIL_STAGE = {fail_stage!r}
 TIMEOUT_STAGE = {timeout_stage!r}
+ADAPTER_TIMEOUT_STAGE = {adapter_timeout_stage!r}
 BLOCK_STAGE = {block_stage!r}
 UI_OPERATOR_REQUEST_STAGE = {ui_operator_request_stage!r}
 UI_OPERATOR_REQUEST_COMMAND = {ui_operator_request_command!r}
@@ -276,6 +278,71 @@ def write_executing_stage_metadata(stage: str, work_item: str, run_id: str) -> N
     )
 
 
+def write_adapter_timeout_stage_artifacts(stage: str, work_item: str, run_id: str) -> None:
+    stage_workspace_root = Path(".aidd") / "workitems" / work_item / "stages" / stage
+    stage_workspace_root.mkdir(parents=True, exist_ok=True)
+    (stage_workspace_root / "questions.md").write_text("# Questions\\n\\n- none\\n")
+    (stage_workspace_root / "answers.md").write_text("# Answers\\n\\n- none\\n")
+    (stage_workspace_root / "stage-result.md").write_text(
+        "# Stage Result\\n\\n"
+        "## Status\\n\\n"
+        "- Status: `failed`\\n"
+    )
+    (stage_workspace_root / "validator-report.md").write_text(
+        "# Validator Report\\n\\n"
+        "## Result\\n\\n"
+        "- Validator verdict: `not-run`\\n"
+    )
+
+    stage_root = (
+        Path(".aidd") / "reports" / "runs" / work_item / run_id / "stages" / stage
+    )
+    attempt_root = stage_root / "attempts" / "attempt-0001"
+    attempt_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "stage-metadata.json").write_text(
+        json.dumps(
+            {{
+                "schema_version": 1,
+                "run_id": run_id,
+                "work_item_id": work_item,
+                "stage": stage,
+                "status": "failed",
+                "created_at_utc": "2026-05-25T00:00:00Z",
+                "updated_at_utc": "2026-05-25T01:00:00Z",
+                "status_history": [
+                    {{
+                        "status": "executing",
+                        "changed_at_utc": "2026-05-25T00:00:00Z",
+                    }},
+                    {{
+                        "status": "failed",
+                        "changed_at_utc": "2026-05-25T01:00:00Z",
+                    }},
+                ],
+            }}
+        )
+    )
+    (attempt_root / "runtime-exit.json").write_text(
+        json.dumps(
+            {{
+                "schema_version": 1,
+                "exit_classification": "timeout",
+                "exit_code": 0,
+                "stdout_char_count": 0,
+                "stderr_char_count": 0,
+                "runtime_log_char_count": 0,
+            }}
+        )
+    )
+    (attempt_root / "runtime.log").write_text("adapter timed out\\n")
+    (attempt_root / "runtime.jsonl").write_text(
+        json.dumps({{"event": "runtime_timeout", "stage": stage}}) + "\\n"
+    )
+    (attempt_root / "events.jsonl").write_text(
+        json.dumps({{"event": "runtime_timeout", "stage": stage}}) + "\\n"
+    )
+
+
 def stage_run(args: list[str]) -> int:
     stage = args[2]
     work_item = option(args, "--work-item")
@@ -289,6 +356,12 @@ def stage_run(args: list[str]) -> int:
         print(f"Stage run started: state=executing stage={{stage}}", flush=True)
         time.sleep(5)
         return 0
+    if stage == ADAPTER_TIMEOUT_STAGE:
+        write_adapter_timeout_stage_artifacts(stage, work_item, run_id)
+        print(f"AIDD stage run: stage={{stage}} work_item={{work_item}} runtime=opencode")
+        print("Stage run result: action=stop state=failed")
+        print("Adapter outcome: timeout")
+        return 1
     if stage == BLOCK_STAGE:
         stage_root = Path(".aidd") / "workitems" / work_item / "stages" / stage
         answers_path = stage_root / "answers.md"
@@ -748,6 +821,7 @@ def _prepare_live_test(
     runtime_targets: tuple[str, ...] = ("opencode",),
     fail_stage: str | None = None,
     timeout_stage: str | None = None,
+    adapter_timeout_stage: str | None = None,
     block_stage: str | None = None,
     ui_operator_request_stage: str | None = None,
     ui_operator_request_command: str = "pwd",
@@ -775,6 +849,7 @@ def _prepare_live_test(
         fake_aidd,
         fail_stage=fail_stage,
         timeout_stage=timeout_stage,
+        adapter_timeout_stage=adapter_timeout_stage,
         block_stage=block_stage,
         ui_operator_request_stage=ui_operator_request_stage,
         ui_operator_request_command=ui_operator_request_command,
@@ -1772,6 +1847,58 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     )
     assert run_stage_step["timed_out"] is True
     assert run_stage_step["timeout_seconds"] == 2.0
+
+
+def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        adapter_timeout_stage="review",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "fail"
+    steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    timeout_step = next(
+        step
+        for step in steps
+        if step["action"] == "run-stage" and step["stage"] == "review"
+    )
+    assert timeout_step["classification"] == "fail"
+    assert timeout_step["commands"][0]["timed_out"] is False
+    assert timeout_step["commands"][0]["timeout_seconds"] == 14400.0
+    assert "Adapter outcome: timeout" in timeout_step["commands"][0]["stdout_text"]
+
+    run_transcript = json.loads(
+        (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
+    )
+    assert run_transcript["timed_out"] is True
+    assert run_transcript["timeout_seconds"] is None
+    assert run_transcript["timeout_policy"] == {
+        "global_flow_timeout_seconds": None,
+        "runtime_config_source": "aidd.example.toml",
+        "scope": "per-stage-command",
+        "stage_command_timeout_seconds": 14400.0,
+    }
+    assert run_transcript["commands"][0]["timed_out"] is True
+
+    stage_timing = json.loads(
+        (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
+    )
+    review_stage = next(
+        stage for stage in stage_timing["stages"] if stage["stage"] == "review"
+    )
+    assert review_stage["attempts"][0]["timed_out"] is True
+    assert review_stage["attempts"][0]["runtime_exit_classification"] == "timeout"
 
 
 def test_implementation_verification_evidence_shape_uses_validator_patterns() -> None:
