@@ -1099,6 +1099,64 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert "Requires second public-repository flow: `false`" in next_flow_markdown
 
 
+def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    setup_command = (
+        "printf '.venv/\\n' > .gitignore; "
+        "mkdir -p .venv; "
+        "i=0; "
+        "while [ $i -lt 80 ]; do "
+        "printf x > .venv/file-$i.txt; "
+        "i=$((i+1)); "
+        "done"
+    )
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        setup_commands=(setup_command,),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    target_repo_root = Path(state_payload["target_repo_root"])
+    repository_state_context = (
+        target_repo_root
+        / ".aidd"
+        / "workitems"
+        / "WI-LIVE-BLACKBOX"
+        / "context"
+        / "repository-state.md"
+    ).read_text(encoding="utf-8")
+    assert "### Setup-baseline ignored files" in repository_state_context
+    assert "- Count: `80`" in repository_state_context
+    assert "- Full list:" in repository_state_context
+    assert "`target-workspace-evidence.json`" in repository_state_context
+    assert "- Omitted path count: `55`" in repository_state_context
+    assert ".venv/file-0.txt" in repository_state_context
+    assert ".venv/file-79.txt" not in repository_state_context
+    assert len(repository_state_context) < 20_000
+
+    evidence_payload = json.loads(
+        (result.bundle_root / "target-workspace-evidence.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert ".venv/file-79.txt" in evidence_payload["classification"][
+        "baseline_ignored_files"
+    ]
+
+
 def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -155,6 +155,8 @@ NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
 NEXT_FLOW_LINEAGE_FILENAME = "next-flow-lineage.json"
 TARGET_WORKSPACE_EVIDENCE_JSON_FILENAME = "target-workspace-evidence.json"
 TARGET_WORKSPACE_EVIDENCE_MARKDOWN_FILENAME = "target-workspace-evidence.md"
+BASELINE_CONTEXT_PATH_SAMPLE_LIMIT = 25
+WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT = 100
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 SUMMARY_REPORT_FILENAME = "summary.md"
 STAGE_AUDITS_DIRNAME = "stage-audits"
@@ -622,6 +624,40 @@ def _markdown_path_list(paths: Sequence[str]) -> list[str]:
     return [f"- `{path}`" for path in paths]
 
 
+def _path_prefix_counts(paths: Sequence[str]) -> list[tuple[str, int]]:
+    counts: dict[str, int] = {}
+    for path in paths:
+        prefix = path.split("/", 1)[0]
+        if "/" in path:
+            prefix += "/"
+        counts[prefix] = counts.get(prefix, 0) + 1
+    return sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+
+
+def _markdown_compact_path_summary(
+    paths: Sequence[str],
+    *,
+    sample_limit: int,
+    full_list_reference: str,
+) -> list[str]:
+    if not paths:
+        return ["- none"]
+    sample = list(paths[:sample_limit])
+    omitted_count = max(len(paths) - len(sample), 0)
+    lines = [
+        f"- Count: `{len(paths)}`",
+        f"- Full list: `{full_list_reference}`",
+        "- Prefix counts:",
+    ]
+    for prefix, count in _path_prefix_counts(paths):
+        lines.append(f"  - `{prefix}`: `{count}`")
+    lines.append("- Sample paths:")
+    lines.extend(f"  - `{path}`" for path in sample)
+    if omitted_count:
+        lines.append(f"- Omitted path count: `{omitted_count}`")
+    return lines
+
+
 def _write_target_workspace_baseline_context(ctx: FlowContext) -> None:
     if ctx.target_workspace_baseline_snapshot is None or ctx.prepared_working_copy is None:
         return
@@ -674,7 +710,15 @@ def _write_target_workspace_baseline_context(ctx: FlowContext) -> None:
         "",
         "### Setup-baseline ignored files",
         "",
-        *_markdown_path_list(snapshot.ignored_files),
+        *_markdown_compact_path_summary(
+            snapshot.ignored_files,
+            sample_limit=BASELINE_CONTEXT_PATH_SAMPLE_LIMIT,
+            full_list_reference=(
+                "`flow-state.json` field "
+                "`target_workspace_baseline_snapshot.ignored_files`; final "
+                "`target-workspace-evidence.json` after the run"
+            ),
+        ),
         "",
         "### Setup-baseline AIDD workspace files",
         "",
@@ -758,7 +802,14 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
         "- Untracked files:",
         *_markdown_path_list(classification.baseline_untracked_files),
         "- Ignored files:",
-        *_markdown_path_list(classification.baseline_ignored_files),
+        *_markdown_compact_path_summary(
+            classification.baseline_ignored_files,
+            sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
+            full_list_reference=(
+                "`target-workspace-evidence.json` field "
+                "`classification.baseline_ignored_files`"
+            ),
+        ),
         "",
         "## Final After Flow",
         "",
@@ -771,7 +822,14 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
         "- New untracked files:",
         *_markdown_path_list(classification.new_untracked_files),
         "- New ignored files:",
-        *_markdown_path_list(classification.new_ignored_files),
+        *_markdown_compact_path_summary(
+            classification.new_ignored_files,
+            sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
+            full_list_reference=(
+                "`target-workspace-evidence.json` field "
+                "`classification.new_ignored_files`"
+            ),
+        ),
         "",
         "## Non-Gating Findings",
         "",
