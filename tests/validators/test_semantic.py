@@ -2503,6 +2503,41 @@ def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_backticked_python_heredoc_verification(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-HEREDOC",
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "- Implemented selected task `TASK-LIVE-TYPER-BOOLEAN-HELP` with focused "
+        "code, docs, and test coverage.\n\n"
+        "## Touched files\n\n"
+        "- `typer/core.py` - adjust plain boolean option help formatting.\n"
+        "- `typer/rich_utils.py` - adjust Rich boolean option help layout.\n"
+        "- `tests/test_rich_utils.py` - cover paired and false-only boolean rows.\n\n"
+        "## Verification\n\n"
+        "- `python - <<'PY' ... current CliRunner boolean help probe ... PY` -> "
+        "pass (exit code 0; observed Rich paired and false-only rows plus plain "
+        "false-only `-d, --demo`).\n"
+        "- `python -m pytest tests/test_rich_utils.py -q` -> pass (10 passed).\n\n"
+        "## Risks\n\n"
+        "- Rich help layout is column-width dependent.\n\n"
+        "## Follow-up\n\n"
+        "- none\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-HEREDOC",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_valid_review_fixture_bundle() -> None:
     workspace_root = _SEMANTIC_FIXTURES_ROOT / "review-valid" / "workspace"
 
