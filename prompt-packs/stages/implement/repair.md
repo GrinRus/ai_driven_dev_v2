@@ -68,8 +68,11 @@ For each finding:
    rebuilding the harness workspace.
 9. When feasible, re-check ignored local artifacts with
    `git status --ignored --short --untracked-files=all`; newly created `.venv/`, `.pytest_cache/`,
-   `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories are workspace pollution
-   unless they are required by the selected deliverable or removed before terminal output.
+   `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories are
+   workspace pollution unless they are required by the selected deliverable or removed before
+   terminal output. Do not claim cleanup passed or mark cleanup resolved unless the cited evidence
+   explicitly checks `.pytest_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, and
+   dependency-cache residue.
 
 Use concrete repair actions:
 
@@ -127,7 +130,8 @@ Use concrete repair actions:
 - no top-level `workitems/...` artifacts or unrelated scratch files remain in the deliverable workspace,
 - no live harness checkout/install directories were deleted or recreated, and no ignored local
   environment, cache, coverage, build, or dist artifacts are left as unexplained workspace
-  pollution,
+  pollution; cleanup evidence explicitly covers `.pytest_cache/`, `coverage/`, `.coverage*`,
+  `__pycache__/`, build, dist, and dependency-cache residue,
 - no-op outcomes (if any) include evidence-backed rationale and actionable next step,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

@@ -327,6 +327,9 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
         assert "`.venv/`" in text
         assert "`.pdm-build/`" in text
         assert "`coverage/`" in text
+        assert "`.coverage*`" in text
+        assert "`__pycache__/`" in text
+        assert "Do not" in text and "claim cleanup" in text
 
     for text in (review_prompt, qa_prompt, review_contract, qa_contract):
         assert "prepared checkout disappeared" in text
@@ -334,7 +337,10 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
         assert "`target-workspace-evidence.*`" in text
         assert "`git status --ignored --short --untracked-files=all`" in text
         assert "`.pytest_cache/`" in text
+        assert "`.coverage*`" in text
+        assert "`__pycache__/`" in text
         assert "workspace pollution" in text
+        assert "cleanup claim" in text or "claim cleanup" in text
 
 
 def test_review_and_qa_use_live_setup_workspace_baseline() -> None:

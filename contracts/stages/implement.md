@@ -83,9 +83,11 @@ Optional context documents may improve implementation quality, but they must not
   or packaged contracts disappear, report the stage as `blocked` or `failed` with the exact missing
   path instead of attempting workspace recovery.
 - Ignored local artifacts are still part of workspace hygiene. Newly created `.venv/`,
-  `.pytest_cache/`, `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories must
-  be checked with `git status --ignored --short --untracked-files=all`, then removed or explicitly
-  reported as not-clean workspace pollution unless they are selected deliverable outputs.
+  `.pytest_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or
+  dependency-cache directories must be checked with
+  `git status --ignored --short --untracked-files=all`, then removed or explicitly reported as
+  not-clean workspace pollution unless they are selected deliverable outputs. Do not claim cleanup
+  passed unless the cited evidence covers these ignored residue classes.
 - When a change touches a shared public-surface mechanism such as a CLI decorator, parser/helper,
   router/error boundary, schema transform helper, or public API adapter, implementation evidence
   must account for affected sibling commands, routes, generated outputs, or documented public

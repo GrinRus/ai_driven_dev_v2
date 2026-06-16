@@ -93,10 +93,12 @@ Optional context documents may improve QA depth, but they must not replace imple
   `source/`, `build/`, or `target/` was deleted, moved, or recreated, QA must set
   `QA verdict: not-ready` and release recommendation `hold`.
 - Ignored local artifacts are still workspace hygiene evidence. New `.venv/`, `.pytest_cache/`,
-  `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories from
+  `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
+  directories from
   `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
   equivalent evidence must be treated as workspace pollution unless they are selected deliverable
-  outputs or were removed before QA.
+  outputs or were removed before QA. Do not claim cleanup passed unless the cited evidence
+  explicitly covers these ignored residue classes.
 - Intentional design constraints selected by the authored task or resolved interview answers
   must not force `ready-with-risks` or `proceed-with-conditions` by themselves when the
   implementation exactly follows that selected boundary and required mitigations, tests, and

@@ -52,6 +52,10 @@ For each finding:
 5. re-check repository evidence, preferably `git status --short --untracked-files=all`; top-level
    `workitems/...`, unexplained untracked non-`.aidd` files, or stray `.aidd/` scratch files must
    keep QA `not-ready` / `hold` unless they were cleaned up before the repaired output.
+6. re-check ignored verification residue with `git status --ignored --short --untracked-files=all`
+   or equivalent evidence; `.pytest_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build,
+   dist, or dependency-cache artifacts must be absent, cleaned, or explicitly keep QA
+   `not-ready` / `hold`. Do not claim cleanup passed from a narrower check.
 
 Use concrete repair actions:
 

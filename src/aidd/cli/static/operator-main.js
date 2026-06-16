@@ -32,6 +32,55 @@ async function stopServer() {
   toast(result.message || "Stopping local UI server.");
 }
 
+function orderedTabButtons() {
+  return [...document.querySelectorAll("[data-tab]")].filter((button) =>
+    VALID_TABS.includes(button.dataset.tab || "")
+  );
+}
+
+async function moveTabFocus(currentButton, offset) {
+  const buttons = orderedTabButtons();
+  const currentIndex = buttons.indexOf(currentButton);
+  if (currentIndex < 0 || buttons.length === 0) return;
+  const nextButton = buttons[(currentIndex + offset + buttons.length) % buttons.length];
+  activateTab(nextButton.dataset.tab);
+  await renderCockpit();
+  nextButton.focus();
+}
+
+async function focusTabAtIndex(index) {
+  const buttons = orderedTabButtons();
+  const nextButton = buttons[index];
+  if (!nextButton) return;
+  activateTab(nextButton.dataset.tab);
+  await renderCockpit();
+  nextButton.focus();
+}
+
+document.addEventListener("keydown", async (event) => {
+  const currentTab = event.target.closest?.("[data-tab]");
+  if (!currentTab) return;
+  if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+    event.preventDefault();
+    await moveTabFocus(currentTab, 1);
+    return;
+  }
+  if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+    event.preventDefault();
+    await moveTabFocus(currentTab, -1);
+    return;
+  }
+  if (event.key === "Home") {
+    event.preventDefault();
+    await focusTabAtIndex(0);
+    return;
+  }
+  if (event.key === "End") {
+    event.preventDefault();
+    await focusTabAtIndex(orderedTabButtons().length - 1);
+  }
+});
+
 document.addEventListener("click", async (event) => {
   try {
     const onboardingRecentProject = event.target.closest("[data-onboarding-recent-project]")?.dataset.onboardingRecentProject;

@@ -3211,12 +3211,12 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert 'class="tabs" role="tablist" aria-label="Stage cockpit views"' in html
     assert (
         'id="tab-overview" data-tab="overview" role="tab" aria-selected="true" '
-        'aria-controls="cockpitContent"'
+        'aria-controls="cockpitContent" tabindex="0"'
         in html
     )
     assert (
         'id="tab-history" data-tab="history" role="tab" aria-selected="false" '
-        'aria-controls="cockpitContent"'
+        'aria-controls="cockpitContent" tabindex="-1"'
         in html
     )
     assert (

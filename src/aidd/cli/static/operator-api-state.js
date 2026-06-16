@@ -215,6 +215,7 @@ function activateTab(tab) {
     const isActive = button.dataset.tab === tab;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-selected", isActive ? "true" : "false");
+    button.setAttribute("tabindex", isActive ? "0" : "-1");
   });
   const content = document.getElementById("cockpitContent");
   if (content) content.setAttribute("aria-labelledby", `tab-${tab}`);

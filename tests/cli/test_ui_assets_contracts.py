@@ -1199,10 +1199,13 @@ def test_index_html_exposes_tab_and_panel_semantics() -> None:
 
     assert overview_tab["aria-selected"] == "true"
     assert overview_tab["aria-controls"] == "cockpitContent"
+    assert overview_tab["tabindex"] == "0"
     assert questions_tab["aria-selected"] == "false"
     assert questions_tab["aria-controls"] == "cockpitContent"
+    assert questions_tab["tabindex"] == "-1"
     assert history_tab["aria-selected"] == "false"
     assert history_tab["aria-controls"] == "cockpitContent"
+    assert history_tab["tabindex"] == "-1"
     assert panel["aria-labelledby"] == "tab-overview"
     assert panel["tabindex"] == "0"
     assert 'data-tab-shortcut="history"' in _asset_text("/")
@@ -1228,6 +1231,15 @@ def test_operator_script_keeps_dynamic_accessibility_contracts() -> None:
     assert 'button.setAttribute("aria-selected", isActive ? "true" : "false");' in _asset_text(
         "/operator-api-state.js"
     )
+    assert 'button.setAttribute("tabindex", isActive ? "0" : "-1");' in _asset_text(
+        "/operator-api-state.js"
+    )
+    operator_main = _asset_text("/operator-main.js")
+    assert 'document.addEventListener("keydown"' in operator_main
+    assert 'event.key === "ArrowRight"' in operator_main
+    assert 'event.key === "ArrowLeft"' in operator_main
+    assert 'event.key === "Home"' in operator_main
+    assert 'event.key === "End"' in operator_main
     assert "renderTruncationNotice(" in _asset_text("/operator-artifacts-documents.js")
     assert "function scrollActiveStageIntoView()" in _asset_text("/operator-shell-rendering.js")
 

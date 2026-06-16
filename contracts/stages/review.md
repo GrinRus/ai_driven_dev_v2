@@ -89,10 +89,12 @@ Optional context documents may improve review depth, but they must not replace i
   `source/`, `build/`, or `target/` was deleted, moved, or recreated, review must record a
   `must-fix` finding.
 - Ignored local artifacts are still workspace hygiene evidence. New `.venv/`, `.pytest_cache/`,
-  `.pdm-build/`, `coverage/`, build, dist, or dependency-cache directories from
+  `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
+  directories from
   `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
   equivalent evidence must be reviewed as workspace pollution unless they are selected deliverable
-  outputs or were removed before review.
+  outputs or were removed before review. A cleanup claim is not review evidence unless it
+  explicitly covers these ignored residue classes.
 - When upstream `tasklist` or `plan` artifacts are available, review must check the implementation
   against their nontrivial task details, required mitigations, and explicit risk-verification
   promises, not only the high-level acceptance criteria. This includes named implementation
