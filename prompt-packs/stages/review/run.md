@@ -82,6 +82,12 @@ normalize if canonical validation proves the terminal status inconsistent.
    not AIDD workspace artifacts. If they appear as new target-repository files and are not known
    setup-baseline files required by the task, record a `must-fix` finding instead of treating them
    as harmless runtime noise.
+   In live E2E contexts, first read `context/repository-state.md` section
+   `Live setup workspace baseline`: files listed under `Known harness config present` or
+   `Setup-baseline untracked non-AIDD files` are not review blockers solely because they appear in
+   `git status`. Treat them as findings only when implementation changed them, relies on them as
+   product evidence, contradicts the selected task, or new untracked files appear outside that
+   baseline.
    If `context/diff-summary.md`, `context/repository-state.md`, or implementation evidence shows
    lockfile, dependency manifest, generated resolver output, or project config changes that are not
    required by the selected task, record a `must-fix` finding and do not approve the change cleanly.

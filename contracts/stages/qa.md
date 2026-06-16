@@ -83,6 +83,11 @@ Optional context documents may improve QA depth, but they must not replace imple
 - Out-of-scope lockfile, dependency manifest, generated resolver output, or project config changes
   must force quality verdict `not-ready` and release recommendation `hold` unless the selected task
   explicitly requires that dependency/config change.
+- In live E2E contexts, `context/repository-state.md` may include a
+  `Live setup workspace baseline` section. Files listed there under known harness config or
+  setup-baseline untracked non-AIDD files are not QA blockers solely because they remain visible in
+  `git status`; block QA only when implementation changes them, depends on them as deliverable
+  evidence, contradicts selected scope, or introduces new untracked files outside that baseline.
 - Intentional design constraints selected by the authored task or resolved interview answers
   must not force `ready-with-risks` or `proceed-with-conditions` by themselves when the
   implementation exactly follows that selected boundary and required mitigations, tests, and

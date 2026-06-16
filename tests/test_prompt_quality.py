@@ -293,6 +293,23 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     )
 
 
+def test_review_and_qa_use_live_setup_workspace_baseline() -> None:
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (review_prompt, qa_prompt, review_contract, qa_contract):
+        assert "Live setup workspace baseline" in text
+        lower_text = text.lower()
+        assert "known harness config" in lower_text
+        assert "setup-baseline untracked non-aidd files" in lower_text
+        assert "not" in text and "solely because" in text
+        assert "new untracked files" in text and "baseline" in text
+
+
 def test_review_spec_prompts_require_exact_decision_heading() -> None:
     run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
         encoding="utf-8"

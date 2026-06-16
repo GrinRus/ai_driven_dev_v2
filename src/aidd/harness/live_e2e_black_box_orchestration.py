@@ -42,6 +42,7 @@ from aidd.core.runtime_operator import (
 from aidd.core.stages import STAGES
 from aidd.evals.reporting import build_scenario_summary_row, write_eval_summary_markdown
 from aidd.evals.repository_changes import (
+    LIVE_KNOWN_HARNESS_UNTRACKED_FILES,
     LiveWorkspaceSnapshot,
     classify_live_workspace_changes,
     collect_live_workspace_snapshot,
@@ -584,6 +585,7 @@ def _live_workspace_snapshot_payload(
 
 def _capture_target_workspace_baseline(ctx: FlowContext) -> None:
     if ctx.target_workspace_baseline_snapshot is not None:
+        _write_target_workspace_baseline_context(ctx)
         return
     if ctx.prepared_working_copy is None:
         return
@@ -591,6 +593,7 @@ def _capture_target_workspace_baseline(ctx: FlowContext) -> None:
         ctx.prepared_working_copy.working_copy_path
     )
     ctx.target_workspace_baseline_snapshot = _live_workspace_snapshot_payload(snapshot)
+    _write_target_workspace_baseline_context(ctx)
 
 
 def _baseline_live_workspace_snapshot(ctx: FlowContext) -> LiveWorkspaceSnapshot:
@@ -617,6 +620,80 @@ def _markdown_path_list(paths: Sequence[str]) -> list[str]:
     if not paths:
         return ["- none"]
     return [f"- `{path}`" for path in paths]
+
+
+def _write_target_workspace_baseline_context(ctx: FlowContext) -> None:
+    if ctx.target_workspace_baseline_snapshot is None or ctx.prepared_working_copy is None:
+        return
+    context_path = (
+        ctx.prepared_working_copy.working_copy_path
+        / ".aidd"
+        / "workitems"
+        / ctx.work_item
+        / "context"
+        / "repository-state.md"
+    )
+    snapshot = live_workspace_snapshot_from_payload(ctx.target_workspace_baseline_snapshot)
+    known_harness_files = tuple(
+        path
+        for path in LIVE_KNOWN_HARNESS_UNTRACKED_FILES
+        if path in snapshot.untracked_files
+    )
+    known_harness_file_set = set(LIVE_KNOWN_HARNESS_UNTRACKED_FILES)
+    setup_baseline_non_aidd = tuple(
+        path
+        for path in snapshot.untracked_files
+        if not path.startswith(".aidd/") and path not in known_harness_file_set
+    )
+    setup_baseline_aidd_count = sum(
+        1 for path in snapshot.untracked_files if path.startswith(".aidd/")
+    )
+    section_lines = [
+        "## Live setup workspace baseline",
+        "",
+        (
+            "- Captured after live bootstrap, runtime config generation, and scenario setup "
+            "commands, before the first public `aidd stage run`."
+        ),
+        (
+            "- Files listed here are setup-baseline or harness context, not stage-created "
+            "deliverable pollution by themselves."
+        ),
+        (
+            "- Review and QA must still inspect tracked product diff plus any new untracked "
+            "files that are not listed in this baseline and are not known harness config."
+        ),
+        "",
+        "### Known harness config present",
+        "",
+        *_markdown_path_list(known_harness_files),
+        "",
+        "### Setup-baseline untracked non-AIDD files",
+        "",
+        *_markdown_path_list(setup_baseline_non_aidd),
+        "",
+        "### Setup-baseline AIDD workspace files",
+        "",
+        f"- Count: `{setup_baseline_aidd_count}`",
+        "- Prefix: `.aidd/`",
+        "",
+        "### Baseline capture errors",
+        "",
+        *_markdown_path_list(snapshot.command_errors),
+        "",
+    ]
+    existing = (
+        context_path.read_text(encoding="utf-8")
+        if context_path.exists()
+        else "# Repository State\n"
+    )
+    marker = "\n## Live setup workspace baseline\n"
+    base = existing.split(marker, 1)[0].rstrip()
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        base + "\n\n" + "\n".join(section_lines).rstrip() + "\n",
+        encoding="utf-8",
+    )
 
 
 def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:

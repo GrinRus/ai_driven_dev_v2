@@ -78,6 +78,12 @@ Optional context documents may improve review depth, but they must not replace i
   evidence shows it exists and it is inspectable. Reject only when the file is missing, outside
   scope, undocumented by implementation evidence, not inspectable, or an explicit release policy
   requires a tracked-only patch artifact.
+- In live E2E contexts, `context/repository-state.md` may include a
+  `Live setup workspace baseline` section. Files listed there under known harness config or
+  setup-baseline untracked non-AIDD files are not review findings solely because they remain
+  visible in `git status`; record a finding only when implementation changes them, depends on them
+  as product evidence, contradicts selected scope, or introduces new untracked files outside that
+  baseline.
 - When upstream `tasklist` or `plan` artifacts are available, review must check the implementation
   against their nontrivial task details, required mitigations, and explicit risk-verification
   promises, not only the high-level acceptance criteria. This includes named implementation

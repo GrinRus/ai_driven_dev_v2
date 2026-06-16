@@ -878,6 +878,19 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         (work_root / result.run_id / "target").as_posix()
     )
     assert ".aidd/harness-cache" not in str(state_payload["target_repo_root"])
+    repository_state_context = (
+        Path(state_payload["target_repo_root"])
+        / ".aidd"
+        / "workitems"
+        / "WI-LIVE-BLACKBOX"
+        / "context"
+        / "repository-state.md"
+    ).read_text(encoding="utf-8")
+    assert "## Live setup workspace baseline" in repository_state_context
+    assert "### Known harness config present" in repository_state_context
+    assert "`aidd.example.toml`" in repository_state_context
+    assert "### Setup-baseline untracked non-AIDD files" in repository_state_context
+    assert "`setup.log`" in repository_state_context
     for stage in STAGES:
         assert (result.bundle_root / "stage-audits" / f"{stage}.json").exists()
         assert (result.bundle_root / "stage-audits" / f"{stage}.md").exists()

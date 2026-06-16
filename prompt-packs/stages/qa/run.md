@@ -99,6 +99,12 @@ normalize if canonical validation proves the terminal status inconsistent.
     and unexpected lockfiles such as `uv.lock` are non-`.aidd` target-repository files, not AIDD
     workspace artifacts. Do not call them harmless runtime artifacts unless repository baseline
     evidence proves they existed after setup and before stage execution.
+    In live E2E contexts, use `context/repository-state.md` section
+    `Live setup workspace baseline` as that baseline evidence: files listed under
+    `Known harness config present` or `Setup-baseline untracked non-AIDD files` do not make QA
+    `not-ready` solely because they are still visible in `git status`. They become blockers only if
+    implementation changed them, cites them as deliverable evidence, contradicts the selected task,
+    or new untracked files appear outside that baseline.
 11. If the diff changes a shared public-surface mechanism such as a CLI decorator,
     parser/helper, router/error boundary, schema transform helper, or public API adapter, require
     evidence for affected sibling commands, routes, generated outputs, or documented public surfaces.
@@ -120,6 +126,8 @@ normalize if canonical validation proves the terminal status inconsistent.
    Exclude only `.aidd/...` workspace state and known harness config such as `aidd.example.toml`;
    do not exclude provider-local directories such as `.qwen/skills/...` from repository-state
    readiness accounting.
+   For live setup-baseline files listed in `context/repository-state.md`, cite the baseline section
+   and keep them out of deliverable blockers unless the current stage changed or depended on them.
 3. Build `qa-report.md` with these exact H2 sections:
    `Quality verdict`, `Verification summary`, `Release recommendation`, `Evidence`,
    `Known issues`, and `Readiness`.
