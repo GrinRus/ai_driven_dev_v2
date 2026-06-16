@@ -830,6 +830,15 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
                 "`classification.new_ignored_files`"
             ),
         ),
+        "- Setup-baseline ignored churn files:",
+        *_markdown_compact_path_summary(
+            classification.setup_baseline_ignored_churn_files,
+            sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
+            full_list_reference=(
+                "`target-workspace-evidence.json` field "
+                "`classification.setup_baseline_ignored_churn_files`"
+            ),
+        ),
         "",
         "## Non-Gating Findings",
         "",

@@ -351,6 +351,9 @@ tracked product diff, setup-baseline untracked files, `aidd.example.toml` harnes
 config, top-level `workitems/...` pollution, stray `.aidd/` scratch files, and ignored
 local artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`,
 build, dist, or dependency-cache files.
+New ignored files inside an ignored root that already existed at setup, such as
+`.venv/.../__pycache__`, are setup-baseline ignored churn rather than pollution
+findings.
 In manual review, top-level `workitems/...` duplicates normally make manual deliverable quality `not-counted`;
 `aidd.example.toml` is not product diff. Evidence that a runtime deleted/recreated the
 prepared checkout or live harness run directories such as `install-home/`, `source/`,

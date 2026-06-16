@@ -2079,6 +2079,46 @@ def test_validate_semantic_outputs_accepts_rg_verification_evidence(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_find_cleanup_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-FIND-CLEANUP",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-LIVE-TYPER-BOOLEAN-HELP`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected task and recorded cleanup checks for "
+            "workspace hygiene.\n\n"
+            "## Touched files\n\n"
+            "- `typer/core.py` - update boolean option help rendering.\n"
+            "- `tests/test_tutorial/test_parameter_types/test_bool/test_help_rendering.py` "
+            "- add focused help output coverage.\n\n"
+            "## Verification\n\n"
+            "- `find typer tests docs_src -type d -name __pycache__ -print` "
+            "-> pass (zero output after cleanup).\n"
+            "- `find . -maxdepth 1 -type d -name workitems -print` "
+            "-> pass (no top-level `workitems/` directory was created).\n"
+            "- `test ! -e .pytest_cache` -> pass (pytest cache removed after verification).\n\n"
+            "## Risks\n\n"
+            "- No residual risk remains for the selected task.\n\n"
+            "## Follow-up\n\n"
+            "- None.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-FIND-CLEANUP",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_python_c_output_evidence(
     tmp_path: Path,
 ) -> None:

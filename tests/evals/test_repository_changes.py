@@ -137,7 +137,7 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
         untracked_files=("setup.log", "aidd.example.toml"),
         status_short="?? setup.log\n?? aidd.example.toml",
         command_errors=tuple(),
-        ignored_files=("coverage/baseline.xml",),
+        ignored_files=tuple(),
     )
     final = LiveWorkspaceSnapshot(
         tracked_files=("src/app.py",),
@@ -153,7 +153,6 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
         status_short="",
         command_errors=tuple(),
         ignored_files=(
-            "coverage/baseline.xml",
             ".venv/pyvenv.cfg",
             "coverage/index.html",
         ),
@@ -174,7 +173,8 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
         ".aidd/workitems/WI-1/stages/qa/output/qa-report.md",
         "new_product.py",
     )
-    assert classification.baseline_ignored_files == ("coverage/baseline.xml",)
+    assert classification.baseline_ignored_files == tuple()
+    assert classification.setup_baseline_ignored_churn_files == tuple()
     assert classification.new_ignored_files == (
         ".venv/pyvenv.cfg",
         "coverage/index.html",
@@ -196,6 +196,53 @@ def test_classify_live_workspace_changes_separates_baseline_harness_and_pollutio
         "unexpected-non-aidd-untracked-file",
         "unexpected-aidd-internal-scratch-file",
         "unexpected-ignored-workspace-artifact",
+        "unexpected-ignored-workspace-artifact",
+    ]
+
+
+def test_classify_live_workspace_changes_separates_baseline_ignored_churn() -> None:
+    baseline = LiveWorkspaceSnapshot(
+        tracked_files=tuple(),
+        untracked_files=tuple(),
+        status_short="",
+        command_errors=tuple(),
+        ignored_files=(
+            ".venv/pyvenv.cfg",
+            ".pdm-build/wheel",
+        ),
+    )
+    final = LiveWorkspaceSnapshot(
+        tracked_files=tuple(),
+        untracked_files=tuple(),
+        status_short="",
+        command_errors=tuple(),
+        ignored_files=(
+            ".venv/pyvenv.cfg",
+            ".pdm-build/wheel",
+            ".venv/lib/python3.10/site-packages/pkg/__pycache__/mod.cpython-310.pyc",
+            ".pdm-build/pkg.dist-info/RECORD",
+            ".pytest_cache/CACHEDIR.TAG",
+        ),
+    )
+
+    classification = classify_live_workspace_changes(
+        baseline_snapshot=baseline,
+        final_snapshot=final,
+    )
+
+    assert classification.new_ignored_files == (
+        ".venv/lib/python3.10/site-packages/pkg/__pycache__/mod.cpython-310.pyc",
+        ".pdm-build/pkg.dist-info/RECORD",
+        ".pytest_cache/CACHEDIR.TAG",
+    )
+    assert classification.setup_baseline_ignored_churn_files == (
+        ".venv/lib/python3.10/site-packages/pkg/__pycache__/mod.cpython-310.pyc",
+        ".pdm-build/pkg.dist-info/RECORD",
+    )
+    assert classification.unexpected_ignored_workspace_files == (
+        ".pytest_cache/CACHEDIR.TAG",
+    )
+    assert [finding.kind for finding in classification.non_gating_findings] == [
         "unexpected-ignored-workspace-artifact",
     ]
 

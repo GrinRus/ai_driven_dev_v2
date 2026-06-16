@@ -81,6 +81,7 @@ class LiveWorkspaceClassification:
     new_untracked_files: tuple[str, ...]
     baseline_ignored_files: tuple[str, ...]
     new_ignored_files: tuple[str, ...]
+    setup_baseline_ignored_churn_files: tuple[str, ...]
     known_harness_files: tuple[str, ...]
     unexpected_non_aidd_untracked_files: tuple[str, ...]
     unexpected_top_level_workitems_files: tuple[str, ...]
@@ -95,6 +96,9 @@ class LiveWorkspaceClassification:
             "new_untracked_files": list(self.new_untracked_files),
             "baseline_ignored_files": list(self.baseline_ignored_files),
             "new_ignored_files": list(self.new_ignored_files),
+            "setup_baseline_ignored_churn_files": list(
+                self.setup_baseline_ignored_churn_files
+            ),
             "known_harness_files": list(self.known_harness_files),
             "unexpected_non_aidd_untracked_files": list(
                 self.unexpected_non_aidd_untracked_files
@@ -275,6 +279,23 @@ def _is_ignored_workspace_pollution_path(path: str) -> bool:
     )
 
 
+def _ignored_workspace_root(path: str) -> str:
+    if "/" not in path:
+        return path
+    return path.split("/", 1)[0] + "/"
+
+
+def _is_under_ignored_workspace_root(path: str, roots: set[str]) -> bool:
+    for root in roots:
+        if root.endswith("/"):
+            if path.startswith(root):
+                return True
+            continue
+        if path == root:
+            return True
+    return False
+
+
 def classify_live_workspace_changes(
     *,
     baseline_snapshot: LiveWorkspaceSnapshot,
@@ -307,8 +328,23 @@ def classify_live_workspace_changes(
     new_ignored_files = tuple(
         path for path in final_snapshot.ignored_files if path not in baseline_ignored
     )
+    baseline_ignored_workspace_roots = {
+        _ignored_workspace_root(path)
+        for path in baseline_snapshot.ignored_files
+        if _is_ignored_workspace_pollution_path(path)
+    }
+    setup_baseline_ignored_churn_files = tuple(
+        path
+        for path in new_ignored_files
+        if _is_ignored_workspace_pollution_path(path)
+        and _is_under_ignored_workspace_root(path, baseline_ignored_workspace_roots)
+    )
+    setup_baseline_ignored_churn_set = set(setup_baseline_ignored_churn_files)
     unexpected_ignored_workspace_files = tuple(
-        path for path in new_ignored_files if _is_ignored_workspace_pollution_path(path)
+        path
+        for path in new_ignored_files
+        if _is_ignored_workspace_pollution_path(path)
+        and path not in setup_baseline_ignored_churn_set
     )
 
     findings: list[LiveWorkspaceFinding] = []
@@ -399,6 +435,7 @@ def classify_live_workspace_changes(
         new_untracked_files=new_untracked_files,
         baseline_ignored_files=baseline_snapshot.ignored_files,
         new_ignored_files=new_ignored_files,
+        setup_baseline_ignored_churn_files=setup_baseline_ignored_churn_files,
         known_harness_files=known_harness_files,
         unexpected_non_aidd_untracked_files=unexpected_non_aidd_untracked_files,
         unexpected_top_level_workitems_files=unexpected_top_level_workitems_files,

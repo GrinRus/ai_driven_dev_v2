@@ -329,7 +329,9 @@ must be judged.
 Manual review should inspect `target-workspace-evidence.*` and, when needed, cite
 `git status --short --untracked-files=all`; top-level `workitems/...` duplicates
 are severe deliverable pollution, while `aidd.example.toml` is harness config rather
-than product diff.
+than product diff. New ignored files inside a setup-baseline ignored root, such as
+`.venv/.../__pycache__`, are recorded as setup-baseline ignored churn rather than
+pollution findings.
 The evaluator always builds a local wheel from the clean tracked source checkout
 containing the scenario manifest. Published-package install proof is a separate
 release/install evidence lane, not part of public-repository live E2E.

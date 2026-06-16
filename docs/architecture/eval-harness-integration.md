@@ -203,7 +203,9 @@ target repository snapshot after setup and after terminal/stop state, including 
 diff, baseline untracked files, `aidd.example.toml` as harness config, new untracked
 files, top-level `workitems/...` pollution, unexpected `.aidd/` scratch files, and
 new ignored local artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`,
-`coverage/`, build, dist, or dependency-cache files. Manual review must also treat
+`coverage/`, build, dist, or dependency-cache files. New ignored files under an
+ignored root that already existed at setup are recorded as setup-baseline ignored
+churn rather than pollution findings. Manual review must also treat
 runtime attempts to delete/recreate the prepared checkout or live harness run
 directories as run integrity evidence, not product implementation. These findings
 support manual `quality-report.md` review and must not mutate the execution verdict.

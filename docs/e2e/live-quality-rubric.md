@@ -63,8 +63,10 @@ after the terminal/stop state. It classifies tracked diff, setup-baseline untrac
 files, known harness config such as `aidd.example.toml`, new untracked files, top-level
 `workitems/...` pollution, unexpected `.aidd/` scratch files, and new ignored local
 artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`, build,
-dist, or dependency-cache files. These findings are non-gating execution evidence
-for manual review; they do not alter `verdict.md` or `grader.json`.
+dist, or dependency-cache files. New ignored files under an ignored root that already
+existed at setup, for example `.venv/.../__pycache__`, are recorded as `setup-baseline ignored churn`
+rather than pollution findings. These findings are non-gating execution
+evidence for manual review; they do not alter `verdict.md` or `grader.json`.
 
 ## Manual Report
 

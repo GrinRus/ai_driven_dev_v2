@@ -317,7 +317,9 @@ Expected behavior in the current local implementation:
   product diff, setup-baseline untracked files, `aidd.example.toml` harness config, top-level
   `workitems/...` pollution, stray `.aidd/` scratch files, and ignored local artifacts such
   as `.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`, build, dist, or dependency
-  caches.
+  caches. New ignored files inside an ignored root that already existed at setup,
+  such as `.venv/.../__pycache__`, are setup-baseline ignored churn rather than
+  pollution findings.
 - live black-box `limits.timeout_minutes` is a per-stage `aidd stage run` command
   budget. The aggregate `run-transcript.json` keeps `timeout_seconds` as `null`
   unless there is a real global flow timeout, and records the per-stage policy

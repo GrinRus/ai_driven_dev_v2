@@ -1006,6 +1006,7 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "`frontend-checkpoints.*` are raw run-integrity evidence",
         "They are not a UI/UX audit, not screenshot evidence, and not a quality gate.",
         "`target-workspace-evidence.*` records the target repository snapshot",
+        "setup-baseline ignored churn",
         "`git status --short --untracked-files=all`",
         "top-level `workitems/...` duplicate",
         "`aidd.example.toml` as harness/operator config",
@@ -1034,6 +1035,7 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "responsive behavior or `not inspected`",
         "Generated product UI is outside this live E2E operator-UI review",
         "`target-workspace-evidence.*` compares the target repository snapshot",
+        "setup-baseline ignored churn",
         "top-level `workitems/...` duplicates are severe deliverable pollution",
     ):
         assert expected in live_catalog
