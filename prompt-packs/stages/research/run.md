@@ -57,6 +57,14 @@ normalize if canonical validation proves the terminal status inconsistent.
   them before completing the stage.
 - Do not leave scratch files directly under `.aidd/`, such as `.aidd/research_repro.py`.
   Preserve useful evidence by citing commands, outputs, logs, or canonical Markdown artifacts instead.
+- If research commands run tests, import modules, or execute repro snippets inside the target
+  checkout, inspect ignored verification residue before completing the stage, for example with
+  `git status --ignored --short --untracked-files=all`. Newly created `.pytest_cache/`,
+  `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts are
+  workspace pollution unless they are selected research evidence and explicitly justified. Prefer
+  citing command output in `research-notes.md`, then remove generated residue before terminal
+  output; do not claim the workspace is clean unless the cited evidence checks these residue
+  classes.
 - Canonical stage documents live under `.aidd/workitems/...` from the repository root. Do not create
   top-level `workitems/...`.
 
@@ -85,5 +93,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - material findings reference citation ids that exist in `Sources`,
 - `Evidence trace` covers major findings/recommendations,
 - temporary research probes are removed or cited as evidence without stray scratch files,
+- ignored verification residue from research commands is absent, removed, or explicitly reported as
+  workspace pollution instead of hidden behind a clean stage status,
 - unresolved uncertainty is explicit and not masked as fact,
 - unresolved `[blocking]` questions prevent `succeeded`.

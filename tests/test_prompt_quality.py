@@ -343,6 +343,25 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
         assert "cleanup claim" in text or "claim cleanup" in text
 
 
+def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> None:
+    run_prompt = Path("prompt-packs/stages/research/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/research.md").read_text(encoding="utf-8")
+
+    for text in (run_prompt, repair_prompt, contract):
+        assert "`git status --ignored --short --untracked-files=all`" in text
+        assert "`.pytest_cache/`" in text
+        assert "`coverage/`" in text
+        assert "`.coverage*`" in text
+        assert "`__pycache__/`" in text
+        assert "workspace pollution" in text
+        assert "ignored verification residue" in text
+
+
 def test_review_and_qa_use_live_setup_workspace_baseline() -> None:
     review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
         encoding="utf-8"

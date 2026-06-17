@@ -41,6 +41,11 @@ For each finding:
 4. re-check blocker status in `stage-result.md` against unresolved `[blocking]` questions.
 5. remove or account for any temporary research scripts or probes left directly under `.aidd/`;
    cite evidence in canonical Markdown instead of preserving scratch files.
+6. re-check ignored verification residue from research commands with
+   `git status --ignored --short --untracked-files=all` or equivalent evidence; `.pytest_cache/`,
+   `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts must be
+   absent, cleaned, or explicitly kept as active workspace pollution findings. Do not claim cleanup
+   passed from a narrower check.
 
 Use concrete repair actions:
 
@@ -77,6 +82,8 @@ Use concrete repair actions:
 - material findings are citation-backed or explicitly marked as assumptions,
 - stale-sensitive findings include freshness context and follow-up action,
 - no stray research scratch files remain directly under `.aidd/`,
+- no ignored verification residue from research commands remains unexplained or hidden behind a
+  succeeded status,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - unresolved `[blocking]` questions still prevent `succeeded`.
