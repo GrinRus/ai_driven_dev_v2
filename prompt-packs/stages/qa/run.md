@@ -137,6 +137,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    Exclude only `.aidd/...` workspace state and known harness config such as `aidd.example.toml`;
    do not exclude provider-local directories such as `.qwen/skills/...` from repository-state
    readiness accounting.
+   Do not cite `git diff -- <untracked-file>` as complete evidence for a newly created untracked
+   file: plain `git diff` does not show untracked file contents. Cite `git status --short
+   --untracked-files=all` plus direct file inspection, or an explicit untracked-file diff method
+   such as `git diff --no-index /dev/null <untracked-file>`.
    For live setup-baseline files listed in `context/repository-state.md`, cite the baseline section
    and keep them out of deliverable blockers unless the current stage changed or depended on them.
 3. Build `qa-report.md` with these exact H2 sections:

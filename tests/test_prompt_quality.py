@@ -272,6 +272,9 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     review_system_prompt = Path("prompt-packs/stages/review/system.md").read_text(
         encoding="utf-8"
     )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
 
     assert "newly created untracked source files" in implement_prompt
     assert "the deliverable is the" in implement_prompt
@@ -291,6 +294,14 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     assert "do not reject a change solely because a newly created file is untracked" in (
         review_system_prompt
     )
+
+    for text in (review_prompt, qa_prompt, review_contract, qa_contract):
+        normalized = " ".join(text.split())
+        assert "`git diff -- <untracked-file>`" in text
+        assert "`git status --short --untracked-files=all` plus direct file inspection" in (
+            normalized
+        )
+        assert "`git diff --no-index /dev/null <untracked-file>`" in text
 
 
 def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:

@@ -113,6 +113,20 @@ def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
         for criterion in task.acceptance_criteria
     )
     assert "preserves the existing public error type contracts" in task.quality_bar
+    focused_command = (
+        "./node_modules/.bin/vitest --run --coverage.enabled=false "
+        "src/hono.test.ts src/compose.test.ts"
+    )
+    assert task.verification == (
+        focused_command,
+        "./node_modules/.bin/tsc --noEmit",
+    )
+    assert scenario.verify.commands == (
+        focused_command,
+        "./node_modules/.bin/tsc --noEmit",
+        "test -f .aidd/workitems/WI-LIVE-HONO-SMOKE/stages/qa/output/stage-result.md",
+        "test -f .aidd/workitems/WI-LIVE-HONO-SMOKE/stages/qa/output/validator-report.md",
+    )
 
 
 def test_all_live_scenarios_load_as_valid_full_flow_manifests() -> None:

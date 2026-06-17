@@ -82,6 +82,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    not AIDD workspace artifacts. If they appear as new target-repository files and are not known
    setup-baseline files required by the task, record a `must-fix` finding instead of treating them
    as harmless runtime noise.
+   Do not cite `git diff -- <untracked-file>` as complete evidence for a newly created untracked
+   file: plain `git diff` does not show untracked file contents. Cite `git status --short
+   --untracked-files=all` plus direct file inspection, or an explicit untracked-file diff method
+   such as `git diff --no-index /dev/null <untracked-file>`.
    In live E2E contexts, first read `context/repository-state.md` section
    `Live setup workspace baseline`: files listed under `Known harness config present` or
    `Setup-baseline untracked non-AIDD files` are not review blockers solely because they appear in

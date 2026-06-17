@@ -145,7 +145,10 @@ def test_hono_medium_live_scenario_uses_focused_verification_gate() -> None:
     )
     scenario = entries[scenario_path]
 
-    focused_command = "./node_modules/.bin/vitest --run src/hono.test.ts src/compose.test.ts"
+    focused_command = (
+        "./node_modules/.bin/vitest --run --coverage.enabled=false "
+        "src/hono.test.ts src/compose.test.ts"
+    )
     assert focused_command in scenario.verify.commands
     assert "./node_modules/.bin/tsc --noEmit" in scenario.verify.commands
     assert "bun test" not in scenario.verify.commands

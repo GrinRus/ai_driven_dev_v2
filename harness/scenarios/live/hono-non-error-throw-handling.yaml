@@ -56,7 +56,7 @@ feature_source:
       narrowing by consumers.
     - Regression tests cover at least one primitive thrown value and one object thrown value.
     verification:
-    - ./node_modules/.bin/vitest --run src/hono.test.ts src/compose.test.ts
+    - ./node_modules/.bin/vitest --run --coverage.enabled=false src/hono.test.ts src/compose.test.ts
     - ./node_modules/.bin/tsc --noEmit
     quality_bar: The patch is localized, typed, regression-covered, preserves the
       existing public error type contracts, and does not weaken existing Error
@@ -65,7 +65,7 @@ feature_source:
       type-checked tests, but should remain within one subsystem.
 verify:
   commands:
-  - ./node_modules/.bin/vitest --run src/hono.test.ts src/compose.test.ts
+  - ./node_modules/.bin/vitest --run --coverage.enabled=false src/hono.test.ts src/compose.test.ts
   - ./node_modules/.bin/tsc --noEmit
   - test -f .aidd/workitems/WI-LIVE-HONO-SMOKE/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-HONO-SMOKE/stages/qa/output/validator-report.md

@@ -78,6 +78,10 @@ Optional context documents may improve review depth, but they must not replace i
   evidence shows it exists and it is inspectable. Reject only when the file is missing, outside
   scope, undocumented by implementation evidence, not inspectable, or an explicit release policy
   requires a tracked-only patch artifact.
+  Plain `git diff -- <untracked-file>` does not show newly created untracked file contents; review
+  evidence for such files must cite `git status --short --untracked-files=all` plus direct file
+  inspection, or an explicit untracked-file diff method such as
+  `git diff --no-index /dev/null <untracked-file>`.
 - In live E2E contexts, `context/repository-state.md` may include a
   `Live setup workspace baseline` section. Files listed there under known harness config or
   setup-baseline untracked non-AIDD files are not review findings solely because they remain

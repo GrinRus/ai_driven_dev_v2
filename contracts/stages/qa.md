@@ -51,6 +51,10 @@ Optional context documents may improve QA depth, but they must not replace imple
 - When diff summary or repository-state context exists, `qa` must treat the complete local
   deliverable change set as release evidence, including tracked and untracked files outside the
   AIDD workspace.
+  Plain `git diff -- <untracked-file>` does not show newly created untracked file contents; QA
+  evidence for such files must cite `git status --short --untracked-files=all` plus direct file
+  inspection, or an explicit untracked-file diff method such as
+  `git diff --no-index /dev/null <untracked-file>`.
 
 ## QA output expectations
 

@@ -44,11 +44,14 @@ manifest with explicit acceptance criteria and verification intent.
   verification in Rich/default and `TYPER_USE_RICH=0` modes. The authored task explicitly
   covers false-only boolean declarations so quality review does not leave leading separator
   behavior as a residual follow-up.
-- `AIDD-LIVE-007` uses focused Hono runtime and compose tests plus `tsc --noEmit`
-  through the repository-local `node_modules/.bin` tools installed by scenario setup.
+- `AIDD-LIVE-007` uses focused Hono runtime and compose tests with Vitest coverage
+  disabled plus `tsc --noEmit` through the repository-local `node_modules/.bin`
+  tools installed by scenario setup.
   The pinned Hono repository's broad `bun test` command currently exercises unrelated
   runner/runtime surfaces and fails outside the selected non-Error throw task, so it is not
-  a maintained clean-run gate for this medium scenario.
+  a maintained clean-run gate for this medium scenario. The focused Vitest command keeps
+  coverage reports out of the target workspace because `coverage/` is manual quality
+  evidence, not a required deliverable artifact.
 - `AIDD-LIVE-008` is intentionally `xlarge`; router wildcard semantics are API-sensitive and
   should not be treated as an ordinary large feature.
 - `AIDD-LIVE-010`, `AIDD-LIVE-011`, and `AIDD-LIVE-012` expand the maintained
