@@ -53,6 +53,12 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Scratch artifact discipline
 
+- Keep every local probe bounded by construction. Do not run open-ended servers,
+  infinite streaming generators, watchers, or repro scripts that can only stop via the
+  live harness per-stage timeout. Use a finite iteration count, an in-script timeout
+  such as `anyio.fail_after(...)`, or `subprocess.run(..., timeout=...)`; if the
+  behavior cannot be bounded safely, record the probe as `not-run: <reason>` and cite
+  static evidence instead.
 - If you run temporary reproduction scripts or probes, keep them outside the repository or remove
   them before completing the stage.
 - Do not leave scratch files directly under `.aidd/`, such as `.aidd/research_repro.py`.

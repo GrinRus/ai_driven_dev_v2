@@ -41,7 +41,12 @@ For each finding:
 4. re-check blocker status in `stage-result.md` against unresolved `[blocking]` questions.
 5. remove or account for any temporary research scripts or probes left directly under `.aidd/`;
    cite evidence in canonical Markdown instead of preserving scratch files.
-6. re-check ignored verification residue from research commands with
+6. re-check that any local repro/probe cited by research is bounded by construction. Do not
+   preserve evidence from an open-ended server, infinite stream, watcher, or command that
+   only stopped because the live harness per-stage timeout fired or the run was interrupted. Add
+   a finite iteration count, an in-script timeout such as `anyio.fail_after(...)`, or
+   `subprocess.run(..., timeout=...)`; otherwise downgrade the probe to `not-run: <reason>`.
+7. re-check ignored verification residue from research commands with
    `git status --ignored --short --untracked-files=all` or equivalent evidence; `.pytest_cache/`,
    `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts must be
    absent, cleaned, or explicitly kept as active workspace pollution findings. Do not claim cleanup

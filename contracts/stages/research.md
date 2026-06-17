@@ -51,6 +51,11 @@ Optional context documents may enrich research quality, but their absence must n
   them before terminal output or explicitly report them as workspace pollution. A clean research
   status must not rely on a cleanup claim unless the cited evidence checks those residue classes,
   for example with `git status --ignored --short --untracked-files=all`.
+- Research commands must be bounded by construction. Repro scripts must not depend on the live
+  harness per-stage timeout to terminate; streaming loops, background tasks, servers, watchers, and
+  polling probes need a finite iteration limit, an in-script timeout such as `anyio.fail_after(...)`,
+  or `subprocess.run(..., timeout=...)`. If a behavior cannot be reproduced with a bounded probe,
+  record it as `not-run: <reason>` and cite static source evidence instead.
 
 ## Validation focus
 
@@ -70,6 +75,9 @@ Validators for `research` should check:
 - cross-document consistency between citation coverage in `research-notes.md`, findings in `validator-report.md`, and terminal status in `stage-result.md`.
 - workspace hygiene when research commands execute local tests or repro snippets:
   ignored verification residue must be absent, cleaned, or explicitly reported as an active finding.
+- local probe discipline:
+  tests, repro snippets, and infinite streaming/background probes must have a finite termination
+  condition independent of the live harness per-stage timeout.
 
 ## Interview policy
 

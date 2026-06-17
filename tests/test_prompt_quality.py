@@ -362,6 +362,25 @@ def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> 
         assert "ignored verification residue" in text
 
 
+def test_research_prompts_and_contracts_require_bounded_local_probes() -> None:
+    run_prompt = Path("prompt-packs/stages/research/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/research.md").read_text(encoding="utf-8")
+
+    for text in (run_prompt, repair_prompt, contract):
+        assert "bounded by construction" in text
+        assert "live harness per-stage timeout" in text
+        assert "infinite" in text
+        assert "stream" in text
+        assert "`anyio.fail_after(...)`" in text
+        assert "`subprocess.run(..., timeout=...)`" in text
+        assert "`not-run: <reason>`" in text
+
+
 def test_review_and_qa_use_live_setup_workspace_baseline() -> None:
     review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
         encoding="utf-8"
