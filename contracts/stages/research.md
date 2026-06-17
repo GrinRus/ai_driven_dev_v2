@@ -46,8 +46,8 @@ Optional context documents may enrich research quality, but their absence must n
 - `Evidence trace` must map major findings or decisions to supporting citation ids.
 - `stage-result.md` and `validator-report.md` must stay consistent with the documented citation coverage.
 - Research commands may inspect local behavior, but ignored verification residue is still workspace
-  hygiene evidence. If tests, imports, or repro snippets create `.pytest_cache/`, `coverage/`,
-  `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts, research must remove
+  hygiene evidence. If tests, imports, or repro snippets create `.pytest_cache/`, `.ruff_cache/`,
+  `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts, research must remove
   them before terminal output or explicitly report them as workspace pollution. A clean research
   status must not rely on a cleanup claim unless the cited evidence checks those residue classes,
   for example with `git status --ignored --short --untracked-files=all`.

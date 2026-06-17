@@ -62,15 +62,15 @@ Screenshots and browser notes are optional manual evidence, not runner-generated
 after the terminal/stop state. It classifies tracked diff, setup-baseline untracked
 files, known harness config such as `aidd.example.toml`, new untracked files, top-level
 `workitems/...` pollution, unexpected `.aidd/` scratch files, and new ignored local
-artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`, build,
-dist, or dependency-cache files. New ignored files under an ignored root that already
+artifacts such as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`, `coverage/`,
+build, dist, or dependency-cache files. New ignored files under an ignored root that already
 existed at setup, for example `.venv/.../__pycache__`, are recorded as `setup-baseline ignored churn`
 rather than pollution findings. These findings are non-gating execution
 evidence for manual review; they do not alter `verdict.md` or `grader.json`.
 
 When manifest `verify.commands` pass but create local ignored byproducts after QA
 has finished, the runner may remove only newly-created known verification residue
-such as `.pytest_cache/`, `coverage/`, `__pycache__/`, `.coverage*`, build, or dist
+such as `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `__pycache__/`, `.coverage*`, build, or dist
 before final `target-workspace-evidence.*` is captured. That cleanup is recorded in
 `verify-transcript.json.workspace_cleanup` and the `verify` step details. It is
 runner-owned execution hygiene, not a deliverable quality gate.

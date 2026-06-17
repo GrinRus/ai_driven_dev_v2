@@ -349,8 +349,8 @@ stage-result/validator consistency findings.
 Also inspect `target-workspace-evidence.*` for non-gating target workspace findings:
 tracked product diff, setup-baseline untracked files, `aidd.example.toml` harness
 config, top-level `workitems/...` pollution, stray `.aidd/` scratch files, and ignored
-local artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`,
-build, dist, or dependency-cache files.
+local artifacts such as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`,
+`coverage/`, build, dist, or dependency-cache files.
 If manifest verification creates only new known ignored residue after QA, inspect
 `verify-transcript.json.workspace_cleanup`; runner cleanup of that residue is
 execution hygiene and does not replace manual deliverable-quality review.

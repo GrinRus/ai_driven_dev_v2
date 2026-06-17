@@ -325,6 +325,7 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
         )
         assert "`git status --ignored --short --untracked-files=all`" in text
         assert "`.venv/`" in text
+        assert "`.ruff_cache/`" in text
         assert "`.pdm-build/`" in text
         assert "`coverage/`" in text
         assert "`.coverage*`" in text
@@ -337,6 +338,7 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
         assert "`target-workspace-evidence.*`" in text
         assert "`git status --ignored --short --untracked-files=all`" in text
         assert "`.pytest_cache/`" in text
+        assert "`.ruff_cache/`" in text
         assert "`.coverage*`" in text
         assert "`__pycache__/`" in text
         assert "workspace pollution" in text
@@ -355,6 +357,7 @@ def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> 
     for text in (run_prompt, repair_prompt, contract):
         assert "`git status --ignored --short --untracked-files=all`" in text
         assert "`.pytest_cache/`" in text
+        assert "`.ruff_cache/`" in text
         assert "`coverage/`" in text
         assert "`.coverage*`" in text
         assert "`__pycache__/`" in text

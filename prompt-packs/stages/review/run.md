@@ -97,7 +97,7 @@ normalize if canonical validation proves the terminal status inconsistent.
    execution blocker, not part of the product deliverable.
    If `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
    equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
-   `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
+   `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
    directories, inspect them as workspace pollution and record a finding unless they are selected
    deliverable outputs or were removed before review. Do not accept a cleanup claim unless its cited
    evidence explicitly checks these ignored residue classes.

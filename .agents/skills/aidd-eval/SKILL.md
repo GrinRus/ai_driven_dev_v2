@@ -120,7 +120,7 @@ the execution verdict: `aidd.example.toml` is harness config, setup-baseline
 untracked files are visible, top-level `workitems/...` duplicates are severe
 deliverable pollution, and direct `.aidd/*.py` scratch files are artifact hygiene
 findings for manual quality review. It also surfaces ignored local artifacts such as
-`.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`, build, dist, or dependency-cache
+`.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`, `coverage/`, build, dist, or dependency-cache
 files. Treat runtime deletion/recreation of the prepared checkout or live harness run
 directories as run integrity evidence and normally `not-counted` deliverable quality.
 If manifest verification creates only new known ignored residue after QA, inspect

@@ -86,12 +86,12 @@ normalize if canonical validation proves the terminal status inconsistent.
     selected task, clean them up or report the implementation as not clean.
     Also inspect ignored local artifacts when feasible, for example with
     `git status --ignored --short --untracked-files=all`; newly created `.venv/`, `.pytest_cache/`,
-    `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories are
+    `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories are
     workspace pollution unless they are part of the selected deliverable or are removed before
     terminal output. After running verification that can create cache or coverage residue, either
     remove those files or report the implementation as not clean; do not claim cleanup passed unless
-    the cited command actually checks `.pytest_cache/`, `coverage/`, `.coverage*`, `__pycache__/`,
-    build, dist, and dependency-cache residue.
+    the cited command actually checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`,
+    `__pycache__/`, build, dist, and dependency-cache residue.
 13. When the implementation changes a shared public-surface mechanism such as a CLI decorator,
     parser/helper, router/error boundary, schema transform helper, or public API adapter, inspect
     the sibling commands, routes, generated outputs, or documented public surfaces that reuse that
@@ -170,5 +170,5 @@ normalize if canonical validation proves the terminal status inconsistent.
 - no live harness checkout/install directories were deleted or recreated, and no ignored local
   environment, cache, coverage, build, or dist artifacts are left as unexplained workspace
   pollution; a cleanup claim is valid only when its evidence explicitly covers `.pytest_cache/`,
-  `coverage/`, `.coverage*`, `__pycache__/`, build, dist, and dependency-cache residue,
+  `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, and dependency-cache residue,
 - `implementation-report.md`, `validator-report.md`, and `stage-result.md` are consistent.

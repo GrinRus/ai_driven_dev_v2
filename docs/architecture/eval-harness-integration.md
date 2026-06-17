@@ -202,7 +202,7 @@ decision from `frontend-checkpoints.*`.
 target repository snapshot after setup and after terminal/stop state, including tracked
 diff, baseline untracked files, `aidd.example.toml` as harness config, new untracked
 files, top-level `workitems/...` pollution, unexpected `.aidd/` scratch files, and
-new ignored local artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`,
+new ignored local artifacts such as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`,
 `coverage/`, build, dist, or dependency-cache files. New ignored files under an
 ignored root that already existed at setup are recorded as setup-baseline ignored
 churn rather than pollution findings. Manual review must also treat

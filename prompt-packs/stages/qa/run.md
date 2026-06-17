@@ -111,11 +111,11 @@ normalize if canonical validation proves the terminal status inconsistent.
     harness workspace recovery is an execution blocker, not product evidence.
     If `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
     equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
-    `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories, treat
+    `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories, treat
     them as workspace pollution unless they are selected deliverable outputs or were removed before
     QA. Do not write "cleanup passed" or equivalent wording unless the cited command explicitly
-    checks `.pytest_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, and
-    dependency-cache residue.
+    checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build,
+    dist, and dependency-cache residue.
 11. If the diff changes a shared public-surface mechanism such as a CLI decorator,
     parser/helper, router/error boundary, schema transform helper, or public API adapter, require
     evidence for affected sibling commands, routes, generated outputs, or documented public surfaces.
@@ -209,8 +209,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.
 - top-level `workitems/...` duplicates, unexplained untracked files, and stray `.aidd/` scratch files
   are absent or explicitly make QA `not-ready`.
-- ignored verification residue such as `.pytest_cache/`, `coverage/`, `.coverage*`, `__pycache__/`,
-  build, dist, and dependency-cache artifacts is absent, cleaned before QA, or explicitly keeps QA
+- ignored verification residue such as `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`,
+  `__pycache__/`, build, dist, and dependency-cache artifacts is absent, cleaned before QA, or explicitly keeps QA
   `not-ready`; do not claim cleanup passed from a narrower check.
 - shared public-surface helper changes have blast-radius evidence for affected sibling
   commands/routes/generated outputs and help/docs/API compatibility.

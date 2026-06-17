@@ -48,7 +48,7 @@ For each finding:
    `subprocess.run(..., timeout=...)`; otherwise downgrade the probe to `not-run: <reason>`.
 7. re-check ignored verification residue from research commands with
    `git status --ignored --short --untracked-files=all` or equivalent evidence; `.pytest_cache/`,
-   `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts must be
+   `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts must be
    absent, cleaned, or explicitly kept as active workspace pollution findings. Do not claim cleanup
    passed from a narrower check.
 

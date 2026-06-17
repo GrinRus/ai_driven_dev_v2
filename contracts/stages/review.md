@@ -89,7 +89,7 @@ Optional context documents may improve review depth, but they must not replace i
   `source/`, `build/`, or `target/` was deleted, moved, or recreated, review must record a
   `must-fix` finding.
 - Ignored local artifacts are still workspace hygiene evidence. New `.venv/`, `.pytest_cache/`,
-  `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
+  `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
   directories from
   `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
   equivalent evidence must be reviewed as workspace pollution unless they are selected deliverable

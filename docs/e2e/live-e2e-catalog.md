@@ -328,7 +328,7 @@ the final workspace state. It is non-gating evidence for manual quality review:
 `aidd.example.toml` is harness config, setup-created untracked files remain visible,
 top-level `workitems/...` duplicates are severe deliverable pollution, and direct
 `.aidd/*.py` scratch files are artifact hygiene findings. It also surfaces new
-ignored local artifacts such as `.venv/`, `.pytest_cache/`, `.pdm-build/`,
+ignored local artifacts such as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`,
 `coverage/`, build, dist, or dependency-cache files. New files inside a setup-baseline
 ignored root, such as `.venv/.../__pycache__`, are recorded as `setup-baseline ignored churn`
 rather than pollution findings. Evidence that a runtime

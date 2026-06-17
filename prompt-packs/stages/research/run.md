@@ -66,7 +66,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - If research commands run tests, import modules, or execute repro snippets inside the target
   checkout, inspect ignored verification residue before completing the stage, for example with
   `git status --ignored --short --untracked-files=all`. Newly created `.pytest_cache/`,
-  `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts are
+  `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts are
   workspace pollution unless they are selected research evidence and explicitly justified. Prefer
   citing command output in `research-notes.md`, then remove generated residue before terminal
   output; do not claim the workspace is clean unless the cited evidence checks these residue

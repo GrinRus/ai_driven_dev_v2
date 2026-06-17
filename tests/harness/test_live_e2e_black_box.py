@@ -1325,11 +1325,13 @@ def test_black_box_live_e2e_cleans_successful_verify_ignored_residue(
         tmp_path,
         monkeypatch,
         setup_commands=(
-            "printf '.pytest_cache/\\ncoverage/\\n__pycache__/\\n*.pyc\\n' > .gitignore",
+            "printf '.pytest_cache/\\n.ruff_cache/\\ncoverage/\\n"
+            "__pycache__/\\n*.pyc\\n' > .gitignore",
         ),
         verify_commands=(
-            "mkdir -p .pytest_cache coverage package/__pycache__",
+            "mkdir -p .pytest_cache .ruff_cache coverage package/__pycache__",
             "printf cache > .pytest_cache/CACHEDIR.TAG",
+            "printf ruff > .ruff_cache/CACHEDIR.TAG",
             "printf cov > coverage/.coverage.verify",
             "printf pyc > package/__pycache__/module.pyc",
             "test -f .aidd/workitems/WI-LIVE-BLACKBOX/stages/qa/output/stage-result.md",
@@ -1353,6 +1355,7 @@ def test_black_box_live_e2e_cleans_successful_verify_ignored_residue(
     assert cleanup["errors"] == []
     assert set(cleanup["removed_paths"]) == {
         ".pytest_cache",
+        ".ruff_cache",
         "coverage",
         "package/__pycache__",
     }
@@ -1366,6 +1369,7 @@ def test_black_box_live_e2e_cleans_successful_verify_ignored_residue(
     assert evidence_payload["non_gating_findings"] == []
     target_root = Path(evidence_payload["target_repo_root"])
     assert not (target_root / ".pytest_cache").exists()
+    assert not (target_root / ".ruff_cache").exists()
     assert not (target_root / "coverage").exists()
     assert not (target_root / "package" / "__pycache__").exists()
 
