@@ -970,6 +970,35 @@ def _verification_workspace_cleanup(
     }
 
 
+def _without_inherited_python_virtualenv(environment: dict[str, str]) -> dict[str, str]:
+    cleaned = dict(environment)
+    inherited_virtual_env = cleaned.pop("VIRTUAL_ENV", None)
+
+    blocked_path_entries: set[str] = set()
+    candidate_roots = [inherited_virtual_env]
+    if sys.prefix != sys.base_prefix:
+        candidate_roots.append(sys.prefix)
+
+    for root in candidate_roots:
+        if not root:
+            continue
+        blocked_path_entries.add(
+            (Path(root) / ("Scripts" if os.name == "nt" else "bin")).resolve(
+                strict=False
+            ).as_posix()
+        )
+
+    path_value = cleaned.get("PATH")
+    if path_value and blocked_path_entries:
+        cleaned["PATH"] = os.pathsep.join(
+            entry
+            for entry in path_value.split(os.pathsep)
+            if Path(entry).resolve(strict=False).as_posix() not in blocked_path_entries
+        )
+
+    return cleaned
+
+
 def _harness_environment(
     *,
     scenario: Scenario,
@@ -977,7 +1006,7 @@ def _harness_environment(
     work_item: str,
     install_result: HarnessInstallResult | None,
 ) -> dict[str, str]:
-    environment = dict(os.environ)
+    environment = _without_inherited_python_virtualenv(dict(os.environ))
     environment.update(
         {
             "AIDD_HARNESS_SCENARIO_ID": scenario.scenario_id,

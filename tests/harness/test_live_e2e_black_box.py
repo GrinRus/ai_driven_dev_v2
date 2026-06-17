@@ -827,6 +827,49 @@ def test_harness_environment_preserves_operator_home_after_install(
     assert environment["PATH"].split(os.pathsep)[0] == install_result.tool_bin_dir.as_posix()
 
 
+def test_harness_environment_removes_source_virtualenv_from_target_commands(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator_home = tmp_path / "operator-home"
+    operator_home.mkdir()
+    source_venv = tmp_path / "source-checkout" / ".venv"
+    source_venv_bin = source_venv / ("Scripts" if os.name == "nt" else "bin")
+    source_venv_bin.mkdir(parents=True)
+    system_bin = tmp_path / "system-bin"
+    system_bin.mkdir()
+    monkeypatch.setenv("HOME", operator_home.as_posix())
+    monkeypatch.setenv("VIRTUAL_ENV", source_venv.as_posix())
+    monkeypatch.setenv(
+        "PATH",
+        os.pathsep.join([source_venv_bin.as_posix(), system_bin.as_posix()]),
+    )
+    fake_aidd = tmp_path / "fake-aidd"
+    install_result = _install_result_for_fake_aidd(fake_aidd)
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "scenario-live.yaml"
+    scenario_path.parent.mkdir(parents=True)
+    _write_scenario_manifest(path=scenario_path, repo_url="https://example.invalid/repo.git")
+    scenario = load_scenario(
+        scenario_path,
+        runtime_id="opencode",
+        workspace_root=tmp_path / ".aidd",
+    )
+
+    environment = _harness_environment(
+        scenario=scenario,
+        runtime_id="opencode",
+        work_item="WI-TEST",
+        install_result=install_result,
+    )
+
+    assert "VIRTUAL_ENV" not in environment
+    path_entries = environment["PATH"].split(os.pathsep)
+    assert path_entries[0] == install_result.tool_bin_dir.as_posix()
+    assert source_venv_bin.as_posix() not in path_entries
+    assert system_bin.as_posix() in path_entries
+    assert environment["HOME"] == operator_home.as_posix()
+
+
 def _prepare_live_test(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

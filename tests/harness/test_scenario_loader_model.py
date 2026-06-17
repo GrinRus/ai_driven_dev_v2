@@ -158,6 +158,27 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
     )
 
 
+def test_httpx_invalid_header_live_scenario_uses_targeted_requirements_verify() -> None:
+    scenario = load_scenario(Path("harness/scenarios/live/httpx-invalid-header-message.yaml"))
+
+    _assert_live_contract(scenario)
+    assert scenario.scenario_id == "AIDD-LIVE-003"
+    assert scenario.feature_size == "small"
+    assert scenario.canonical_runtime == "codex"
+    focused_pytest = (
+        "uv run --with-requirements requirements.txt --frozen python -m pytest "
+        "tests/models/test_headers.py "
+        "tests/client/test_headers.py::test_header_with_incorrect_value -q"
+    )
+    assert scenario.verify.commands == (
+        focused_pytest,
+        "test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/stage-result.md",
+        "test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/validator-report.md",
+    )
+    assert scenario.feature_source.tasks[0].verification == scenario.verify.commands
+    assert "uv run pytest -q" not in "\n".join(scenario.verify.commands)
+
+
 def test_sqlite_utils_canonical_live_scenario_declares_black_box_operator_contract() -> None:
     scenario = load_scenario(
         Path("harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml")
