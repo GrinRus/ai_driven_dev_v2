@@ -198,6 +198,7 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
             (Path("coverage") / "index.html", "coverage\\n"),
             (Path(".pdm-build") / "wheel", "wheel\\n"),
             (Path(".pytest_cache") / "CACHEDIR.TAG", "cache\\n"),
+            (Path("package") / "__pycache__" / "module.pyc", "pyc\\n"),
         )
         for ignored_path, ignored_text in ignored_files:
             ignored_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1272,7 +1273,8 @@ def test_black_box_live_e2e_records_non_gating_ignored_workspace_pollution(
         tmp_path,
         monkeypatch,
         setup_commands=(
-            "printf '.venv/\\ncoverage/\\n.pdm-build/\\n.pytest_cache/\\n' > .gitignore",
+            "printf '.venv/\\ncoverage/\\n.pdm-build/\\n.pytest_cache/\\n"
+            "__pycache__/\\n*.pyc\\n' > .gitignore",
         ),
         ignored_pollution_stage="qa",
     )
@@ -1297,10 +1299,12 @@ def test_black_box_live_e2e_records_non_gating_ignored_workspace_pollution(
         "coverage/index.html",
         ".pdm-build/wheel",
         ".pytest_cache/CACHEDIR.TAG",
+        "package/__pycache__/module.pyc",
     }
     assert [
         finding["kind"] for finding in evidence_payload["non_gating_findings"]
     ] == [
+        "unexpected-ignored-workspace-artifact",
         "unexpected-ignored-workspace-artifact",
         "unexpected-ignored-workspace-artifact",
         "unexpected-ignored-workspace-artifact",

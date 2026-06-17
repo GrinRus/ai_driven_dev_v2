@@ -17,6 +17,7 @@
   display: flex;
   gap: 10px;
   min-width: 0;
+  overflow: hidden;
 }
 .brand-mark {
   align-items: center;
@@ -34,10 +35,13 @@
 .brand-title {
   align-items: center;
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   font-size: 14px;
   font-weight: 780;
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 .brand-meta,
 .muted {
@@ -49,15 +53,18 @@
   align-items: baseline;
   color: var(--topbar-muted);
   display: flex;
+  flex: 1 1 100%;
   gap: 4px;
+  max-width: 100%;
   min-width: 0;
+  overflow: hidden;
   white-space: nowrap;
 }
 .brand-meta code {
   background: transparent;
   color: var(--topbar-text);
   display: inline-block;
-  max-width: min(36vw, 420px);
+  max-width: clamp(140px, 15vw, 220px);
   overflow: hidden;
   padding: 0;
   text-overflow: ellipsis;
@@ -121,6 +128,7 @@
   flex-wrap: wrap;
   gap: 7px;
   justify-content: center;
+  min-width: 0;
 }
 .top-actions {
   align-items: center;
@@ -128,11 +136,13 @@
   flex-wrap: wrap;
   gap: 7px;
   justify-content: flex-end;
+  min-width: 0;
 }
 .runtime-picker {
   align-items: center;
   display: flex;
   gap: 7px;
+  min-width: 0;
 }
 .runtime-picker span {
   color: var(--topbar-muted);
@@ -145,6 +155,18 @@
   background: rgba(255, 255, 255, 0.07);
   border-color: rgba(255, 255, 255, 0.18);
   color: var(--topbar-text);
+  max-width: min(28vw, 320px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar #runChip {
+  max-width: min(26vw, 300px);
+}
+.topbar #workItemChip {
+  max-width: min(24vw, 280px);
+}
+.topbar #localStatus {
+  max-width: min(20vw, 220px);
 }
 .topbar .status-chip.good {
   background: rgba(22, 130, 74, 0.18);

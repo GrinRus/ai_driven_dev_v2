@@ -222,6 +222,7 @@ def test_classify_live_workspace_changes_separates_baseline_ignored_churn() -> N
             ".venv/lib/python3.10/site-packages/pkg/__pycache__/mod.cpython-310.pyc",
             ".pdm-build/pkg.dist-info/RECORD",
             ".pytest_cache/CACHEDIR.TAG",
+            "starlette/__pycache__/responses.cpython-313.pyc",
         ),
     )
 
@@ -234,6 +235,7 @@ def test_classify_live_workspace_changes_separates_baseline_ignored_churn() -> N
         ".venv/lib/python3.10/site-packages/pkg/__pycache__/mod.cpython-310.pyc",
         ".pdm-build/pkg.dist-info/RECORD",
         ".pytest_cache/CACHEDIR.TAG",
+        "starlette/__pycache__/responses.cpython-313.pyc",
     )
     assert classification.setup_baseline_ignored_churn_files == (
         ".venv/lib/python3.10/site-packages/pkg/__pycache__/mod.cpython-310.pyc",
@@ -241,8 +243,10 @@ def test_classify_live_workspace_changes_separates_baseline_ignored_churn() -> N
     )
     assert classification.unexpected_ignored_workspace_files == (
         ".pytest_cache/CACHEDIR.TAG",
+        "starlette/__pycache__/responses.cpython-313.pyc",
     )
     assert [finding.kind for finding in classification.non_gating_findings] == [
+        "unexpected-ignored-workspace-artifact",
         "unexpected-ignored-workspace-artifact",
     ]
 

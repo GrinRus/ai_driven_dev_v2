@@ -2,6 +2,9 @@
   .topbar {
     grid-template-columns: 1fr;
   }
+  .brand-meta code {
+    max-width: min(72vw, 640px);
+  }
   .top-status,
   .top-actions {
     justify-content: flex-start;

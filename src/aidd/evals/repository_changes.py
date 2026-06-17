@@ -27,6 +27,8 @@ LIVE_IGNORED_WORKSPACE_POLLUTION_PREFIXES = (
     "node_modules/",
     "venv/",
 )
+LIVE_IGNORED_WORKSPACE_POLLUTION_DIR_NAMES = frozenset({"__pycache__"})
+LIVE_IGNORED_WORKSPACE_POLLUTION_FILE_SUFFIXES = (".pyc", ".pyo")
 
 
 @dataclass(frozen=True, slots=True)
@@ -273,10 +275,15 @@ def _is_allowed_aidd_untracked_path(path: str) -> bool:
 
 
 def _is_ignored_workspace_pollution_path(path: str) -> bool:
-    return any(
+    if any(
         path == prefix.rstrip("/") or path.startswith(prefix)
         for prefix in LIVE_IGNORED_WORKSPACE_POLLUTION_PREFIXES
-    )
+    ):
+        return True
+    parts = Path(path).parts
+    if any(part in LIVE_IGNORED_WORKSPACE_POLLUTION_DIR_NAMES for part in parts):
+        return True
+    return path.endswith(LIVE_IGNORED_WORKSPACE_POLLUTION_FILE_SUFFIXES)
 
 
 def _ignored_workspace_root(path: str) -> str:

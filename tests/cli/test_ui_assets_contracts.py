@@ -148,6 +148,11 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".operator-shell" in layout
     assert ".stage-rail" in layout
     assert ".cockpit" in layout
+    assert ".brand-title" in layout
+    assert "min-width: 0;" in layout
+    assert ".topbar #runChip" in layout
+    assert ".topbar #workItemChip" in layout
+    assert "text-overflow: ellipsis;" in layout
     assert ".truncation-notice" in components
     assert ".saved-answer" in components
     assert ".artifact-row" in components
@@ -250,6 +255,9 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
     assert "function renderStageRail()" in shell
+    assert "projectPath.title = projectRoot;" in shell
+    assert "workItemChip.title = workItemLabel;" in shell
+    assert "runChip.title = runLabel;" in shell
     assert "async function renderArtifacts()" in artifacts
     assert "async function inspectArtifactReference({stage, key, path, kind})" in artifacts
     assert "function questionControlId(prefix, questionId, index)" in questions
