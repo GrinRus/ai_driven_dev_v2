@@ -77,6 +77,12 @@ def _validate_working_copy_path(working_copy_path: Path) -> None:
         )
 
 
+def _command_environment(environment: Mapping[str, str] | None) -> dict[str, str]:
+    if environment is None:
+        return dict(os.environ)
+    return dict(environment)
+
+
 def _run_shell_commands(
     *,
     commands: tuple[str, ...],
@@ -130,9 +136,7 @@ def run_setup_steps(
 ) -> HarnessSetupResult:
     _validate_working_copy_path(working_copy_path)
 
-    command_env = dict(os.environ)
-    if environment is not None:
-        command_env.update(environment)
+    command_env = _command_environment(environment)
 
     command_transcripts = _run_shell_commands(
         commands=scenario.setup.commands,
@@ -195,7 +199,7 @@ def invoke_aidd_run(
     if config_path is not None:
         command_parts.extend(("--config", config_path.resolve(strict=False).as_posix()))
     command = tuple(command_parts)
-    command_env = dict(os.environ)
+    command_env = _command_environment(environment)
     command_env.update(
         {
             "AIDD_HARNESS_SCENARIO_ID": scenario.scenario_id,
@@ -203,8 +207,6 @@ def invoke_aidd_run(
             "AIDD_HARNESS_WORK_ITEM": work_item,
         }
     )
-    if environment is not None:
-        command_env.update(environment)
 
     timeout_seconds = (
         float(scenario.run.timeout_minutes * 60)
@@ -270,10 +272,8 @@ def run_verification_steps(
 ) -> HarnessVerificationResult:
     _validate_working_copy_path(working_copy_path)
 
-    command_env = dict(os.environ)
+    command_env = _command_environment(environment)
     command_env["AIDD_HARNESS_AIDD_EXIT_CODE"] = str(aidd_run_result.exit_code)
-    if environment is not None:
-        command_env.update(environment)
 
     command_transcripts = _run_shell_commands(
         commands=scenario.verify.commands,
@@ -298,9 +298,7 @@ def run_teardown_steps(
 ) -> HarnessTeardownResult:
     _validate_working_copy_path(working_copy_path)
 
-    command_env = dict(os.environ)
-    if environment is not None:
-        command_env.update(environment)
+    command_env = _command_environment(environment)
 
     command_transcripts = _run_shell_commands(
         commands=teardown_commands,
