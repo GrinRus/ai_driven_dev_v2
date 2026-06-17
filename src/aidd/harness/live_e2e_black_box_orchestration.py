@@ -5,6 +5,7 @@ import contextlib
 import json
 import os
 import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -155,6 +156,19 @@ NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
 NEXT_FLOW_LINEAGE_FILENAME = "next-flow-lineage.json"
 TARGET_WORKSPACE_EVIDENCE_JSON_FILENAME = "target-workspace-evidence.json"
 TARGET_WORKSPACE_EVIDENCE_MARKDOWN_FILENAME = "target-workspace-evidence.md"
+VERIFY_WORKSPACE_CLEANUP_SCOPE = "post-verify-known-ignored-residue"
+VERIFY_RESIDUE_TOP_LEVEL_DIRS = frozenset(
+    {
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "build",
+        "coverage",
+        "dist",
+    }
+)
+VERIFY_RESIDUE_ANY_LEVEL_DIRS = frozenset({"__pycache__"})
+VERIFY_RESIDUE_TOP_LEVEL_FILE_PREFIXES = (".coverage",)
 BASELINE_CONTEXT_PATH_SAMPLE_LIMIT = 25
 WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT = 100
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
@@ -874,6 +888,86 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
     )
     markdown_path.write_text("\n".join(md_lines).rstrip() + "\n", encoding="utf-8")
     return json_path, markdown_path
+
+
+def _relative_verify_residue_cleanup_root(path: str) -> str | None:
+    normalized = Path(path)
+    if normalized.is_absolute() or ".." in normalized.parts:
+        return None
+    parts = normalized.parts
+    if not parts:
+        return None
+    if parts[0] in VERIFY_RESIDUE_TOP_LEVEL_DIRS:
+        return parts[0]
+    if len(parts) == 1 and parts[0].startswith(VERIFY_RESIDUE_TOP_LEVEL_FILE_PREFIXES):
+        return parts[0]
+    for index, part in enumerate(parts):
+        if part in VERIFY_RESIDUE_ANY_LEVEL_DIRS:
+            return Path(*parts[: index + 1]).as_posix()
+    return None
+
+
+def _path_is_under_any_root(path: str, roots: set[str]) -> bool:
+    for root in roots:
+        if path == root or path.startswith(f"{root}/"):
+            return True
+    return False
+
+
+def _verification_workspace_cleanup(
+    *,
+    repo_root: Path,
+    before_verify: LiveWorkspaceSnapshot,
+    after_verify: LiveWorkspaceSnapshot,
+) -> dict[str, object]:
+    before_ignored = set(before_verify.ignored_files)
+    baseline_roots = {
+        root
+        for path in before_verify.ignored_files
+        if (root := _relative_verify_residue_cleanup_root(path)) is not None
+    }
+    cleanup_roots: set[str] = set()
+    skipped_paths: list[str] = []
+    for path in after_verify.ignored_files:
+        if path in before_ignored:
+            continue
+        root = _relative_verify_residue_cleanup_root(path)
+        if root is None:
+            continue
+        if root in baseline_roots or _path_is_under_any_root(path, baseline_roots):
+            skipped_paths.append(path)
+            continue
+        cleanup_roots.add(root)
+
+    removed_paths: list[str] = []
+    errors: list[str] = []
+    resolved_repo_root = repo_root.resolve(strict=False)
+    for root in sorted(cleanup_roots):
+        target = (repo_root / root).resolve(strict=False)
+        if not target.is_relative_to(resolved_repo_root):
+            errors.append(f"Skipped unsafe verification cleanup path: {root}")
+            continue
+        try:
+            if target.is_dir():
+                shutil.rmtree(target)
+                removed_paths.append(root)
+            elif target.exists():
+                target.unlink()
+                removed_paths.append(root)
+        except OSError as exc:
+            errors.append(f"Failed to remove verification residue `{root}`: {exc}")
+
+    after_cleanup = collect_live_workspace_snapshot(repo_root)
+    return {
+        "scope": VERIFY_WORKSPACE_CLEANUP_SCOPE,
+        "execution_verdict_impact": "none",
+        "pre_verify_ignored_count": len(before_verify.ignored_files),
+        "post_verify_ignored_count": len(after_verify.ignored_files),
+        "post_cleanup_ignored_count": len(after_cleanup.ignored_files),
+        "removed_paths": removed_paths,
+        "skipped_paths": skipped_paths,
+        "errors": errors,
+    }
 
 
 def _harness_environment(
@@ -4195,6 +4289,7 @@ def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddR
 def _run_verify(ctx: FlowContext) -> HarnessVerificationResult:
     working_copy = _require_working_copy(ctx)
     aidd_result = _synthetic_aidd_run_result(ctx, exit_code=0)
+    before_verify_snapshot = collect_live_workspace_snapshot(working_copy)
     try:
         result = run_verification_steps(
             scenario=ctx.scenario,
@@ -4233,10 +4328,17 @@ def _run_verify(ctx: FlowContext) -> HarnessVerificationResult:
             extra={"error": str(exc)},
         )
         raise
+    after_verify_snapshot = collect_live_workspace_snapshot(working_copy)
+    workspace_cleanup = _verification_workspace_cleanup(
+        repo_root=working_copy,
+        before_verify=before_verify_snapshot,
+        after_verify=after_verify_snapshot,
+    )
     _write_step_transcript(
         path=ctx.bundle_root / VERIFY_TRANSCRIPT_FILENAME,
         step="verify",
         transcripts=result.command_transcripts,
+        extra={"workspace_cleanup": workspace_cleanup},
     )
     _record_step(
         ctx=ctx,
@@ -4245,6 +4347,7 @@ def _run_verify(ctx: FlowContext) -> HarnessVerificationResult:
         decision="Continue to teardown and final reporting.",
         plan="Run manifest verification commands after every stage passed.",
         evidence_paths=(ctx.bundle_root / VERIFY_TRANSCRIPT_FILENAME,),
+        details={"workspace_cleanup": workspace_cleanup},
     )
     _persist_state(
         ctx=ctx,

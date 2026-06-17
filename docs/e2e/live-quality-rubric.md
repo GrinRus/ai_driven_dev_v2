@@ -68,6 +68,13 @@ existed at setup, for example `.venv/.../__pycache__`, are recorded as `setup-ba
 rather than pollution findings. These findings are non-gating execution
 evidence for manual review; they do not alter `verdict.md` or `grader.json`.
 
+When manifest `verify.commands` pass but create local ignored byproducts after QA
+has finished, the runner may remove only newly-created known verification residue
+such as `.pytest_cache/`, `coverage/`, `__pycache__/`, `.coverage*`, build, or dist
+before final `target-workspace-evidence.*` is captured. That cleanup is recorded in
+`verify-transcript.json.workspace_cleanup` and the `verify` step details. It is
+runner-owned execution hygiene, not a deliverable quality gate.
+
 ## Manual Report
 
 After the terminal run, the launching SWE agent may write:

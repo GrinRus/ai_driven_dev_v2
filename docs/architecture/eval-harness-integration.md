@@ -209,6 +209,10 @@ churn rather than pollution findings. Manual review must also treat
 runtime attempts to delete/recreate the prepared checkout or live harness run
 directories as run integrity evidence, not product implementation. These findings
 support manual `quality-report.md` review and must not mutate the execution verdict.
+If successful manifest verification creates ignored local byproducts after QA has
+completed, `verify-transcript.json.workspace_cleanup` records runner cleanup of
+newly-created known verification residue before final `target-workspace-evidence.*`
+is captured. This cleanup is execution hygiene only.
 
 `self-repair-matrix.json` and `.md` include the deterministic repair-probe catalog for
 all stages from `idea` to `qa`. Each probe row records the observed initial verdict,

@@ -319,6 +319,9 @@ The runner does not create `quality-report.md`, `quality-transcript.json`,
 The same file carries a `timeout_policy` object that identifies the per-stage command
 budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
 `stage-timing.md` show the actual timeout recorded for each `run-stage` command.
+`verify-transcript.json` may include `workspace_cleanup` when successful manifest
+verification created known ignored byproducts after QA. That cleanup is limited to
+new verification residue and is execution hygiene before final workspace evidence.
 
 `target-workspace-evidence.*` compares the target repository snapshot after setup with
 the final workspace state. It is non-gating evidence for manual quality review:

@@ -326,6 +326,10 @@ quality report; the launching SWE agent may write
 `.aidd/reports/evals/<run_id>/quality-report.md` manually after the terminal run,
 including a human-authored AIDD operator UI/UX decision when that quality dimension
 must be judged.
+When successful manifest verification creates only new known ignored byproducts
+after QA, the runner records `verify-transcript.json.workspace_cleanup` and removes
+that verification residue before final target workspace evidence. This is execution
+hygiene, not a quality gate.
 Manual review should inspect `target-workspace-evidence.*` and, when needed, cite
 `git status --short --untracked-files=all`; top-level `workitems/...` duplicates
 are severe deliverable pollution, while `aidd.example.toml` is harness config rather

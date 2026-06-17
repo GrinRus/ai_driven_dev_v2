@@ -839,6 +839,9 @@ def _prepare_live_test(
     ui_operator_request_command: str = "pwd",
     internal_operator_decision_stage: str | None = None,
     setup_commands: tuple[str, ...] = ("printf 'setup\\n' > setup.log",),
+    verify_commands: tuple[str, ...] = (
+        "test -f .aidd/workitems/WI-LIVE-BLACKBOX/stages/qa/output/stage-result.md",
+    ),
     interview_required: bool = False,
     frontend_checkpoints: bool = True,
     acceptance_criteria: tuple[str, ...] = ("The fake AIDD stages complete.",),
@@ -881,6 +884,7 @@ def _prepare_live_test(
         path=scenario_path,
         repo_url=source_repo.as_uri(),
         setup_commands=setup_commands,
+        verify_commands=verify_commands,
         interview_required=interview_required,
         frontend_checkpoints=frontend_checkpoints,
         runtime_targets=runtime_targets,
@@ -1311,6 +1315,64 @@ def test_black_box_live_e2e_records_non_gating_ignored_workspace_pollution(
         (result.bundle_root / "grader.json").read_text(encoding="utf-8")
     )
     assert grader_payload["execution"]["status"] == "pass"
+
+
+def test_black_box_live_e2e_cleans_successful_verify_ignored_residue(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        setup_commands=(
+            "printf '.pytest_cache/\\ncoverage/\\n__pycache__/\\n*.pyc\\n' > .gitignore",
+        ),
+        verify_commands=(
+            "mkdir -p .pytest_cache coverage package/__pycache__",
+            "printf cache > .pytest_cache/CACHEDIR.TAG",
+            "printf cov > coverage/.coverage.verify",
+            "printf pyc > package/__pycache__/module.pyc",
+            "test -f .aidd/workitems/WI-LIVE-BLACKBOX/stages/qa/output/stage-result.md",
+        ),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    verify_payload = json.loads(
+        (result.bundle_root / "verify-transcript.json").read_text(encoding="utf-8")
+    )
+    cleanup = verify_payload["workspace_cleanup"]
+    assert cleanup["scope"] == "post-verify-known-ignored-residue"
+    assert cleanup["execution_verdict_impact"] == "none"
+    assert cleanup["errors"] == []
+    assert set(cleanup["removed_paths"]) == {
+        ".pytest_cache",
+        "coverage",
+        "package/__pycache__",
+    }
+
+    evidence_payload = json.loads(
+        (result.bundle_root / "target-workspace-evidence.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert evidence_payload["classification"]["unexpected_ignored_workspace_files"] == []
+    assert evidence_payload["non_gating_findings"] == []
+    target_root = Path(evidence_payload["target_repo_root"])
+    assert not (target_root / ".pytest_cache").exists()
+    assert not (target_root / "coverage").exists()
+    assert not (target_root / "package" / "__pycache__").exists()
+
+    steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    verify_step = next(step for step in steps if step["action"] == "verify")
+    assert verify_step["classification"] == "pass"
+    assert verify_step["details"]["workspace_cleanup"]["removed_paths"]
 
 
 def test_black_box_live_e2e_preserves_manual_quality_report_without_parsing(

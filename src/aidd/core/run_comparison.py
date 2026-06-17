@@ -7,7 +7,7 @@ from pathlib import Path
 
 from aidd.core.run_inspection import RunMetadataSummary, resolve_run_metadata_summary
 from aidd.core.run_lookup import latest_attempt_number
-from aidd.core.run_store import load_attempt_artifact_index
+from aidd.core.run_store import load_attempt_artifact_index, load_stage_metadata
 from aidd.core.stages import STAGES
 
 _MAX_COMPARISON_ARTIFACT_BYTES = 512 * 1024
@@ -273,6 +273,30 @@ def _hash_workspace_artifact(
     return digest, byte_size, truncated, verdict
 
 
+def _missing_repair_brief_is_expected_without_repair_history(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    relative_path: str,
+) -> bool:
+    normalized = Path(relative_path)
+    if normalized.is_absolute() or ".." in normalized.parts:
+        return False
+    resolved_workspace = workspace_root.resolve(strict=False)
+    resolved = (workspace_root / normalized).resolve(strict=False)
+    if not resolved.is_relative_to(resolved_workspace) or resolved.is_file():
+        return False
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    return metadata is not None and not metadata.repair_history
+
+
 def _artifact_snapshots(
     *,
     workspace_root: Path,
@@ -309,6 +333,17 @@ def _artifact_snapshots(
             ("log", artifact_index.logs),
         ):
             for key, relative_path in sorted(entries.items()):
+                if (
+                    key == "repair_brief"
+                    and _missing_repair_brief_is_expected_without_repair_history(
+                        workspace_root=workspace_root,
+                        work_item=work_item,
+                        run_id=run_id,
+                        stage=stage,
+                        relative_path=relative_path,
+                    )
+                ):
+                    continue
                 digest, byte_size, truncated, verdict = _hash_workspace_artifact(
                     workspace_root=workspace_root,
                     run_id=run_id,

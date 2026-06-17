@@ -337,6 +337,9 @@ Expected behavior in the current local implementation:
   harness config rather than product diff. If implementation evidence shows the prepared
   checkout or live harness directories such as `install-home/`, `source/`, `build/`, or
   `target/` were deleted/recreated, treat the deliverable as `not-counted`.
+  When manifest verification creates only new known ignored residue after QA, inspect
+  `verify-transcript.json.workspace_cleanup`; that runner cleanup is execution hygiene,
+  not an automatic deliverable-quality decision.
 - repair retries persist `repair-context.md` in the run attempt directory, which lets
   operators trace the exact validator findings that caused each retry.
 - live E2E is manual local operator audit evidence, not CI/CD, not a release workflow,

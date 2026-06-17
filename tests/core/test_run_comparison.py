@@ -7,6 +7,7 @@ from aidd.core.run_comparison import resolve_run_comparison
 from aidd.core.run_store import (
     create_next_attempt_directory,
     create_run_manifest,
+    persist_repair_history_entry,
     persist_stage_status,
     run_attempt_artifact_index_path,
     run_attempt_root,
@@ -232,3 +233,69 @@ def test_run_comparison_warns_for_missing_legacy_provenance_and_unsafe_artifact(
 
     assert any("no prompt-pack provenance" in warning for warning in view.warnings)
     assert any("unsafe path" in warning for warning in view.warnings)
+
+
+def test_run_comparison_does_not_warn_for_optional_missing_repair_brief_without_repairs(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_comparison_run(
+        workspace_root,
+        run_id="run-a",
+        status="succeeded",
+        prompt_hash="a" * 64,
+        input_bundle="baseline input\n",
+        validator_verdict="pass",
+    )
+
+    view = resolve_run_comparison(
+        workspace_root=workspace_root,
+        work_item="WI-CMP",
+        baseline_run_id="run-a",
+        target_run_id="run-a",
+    )
+
+    assert any("identical" in warning for warning in view.warnings)
+    assert not any("repair_brief" in warning for warning in view.warnings)
+    assert all(delta.key != "repair_brief" for delta in view.artifact_hash_deltas)
+
+
+def test_run_comparison_warns_for_missing_repair_brief_when_repairs_exist(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_comparison_run(
+        workspace_root,
+        run_id="run-a",
+        status="failed",
+        prompt_hash="a" * 64,
+        input_bundle="baseline input\n",
+        validator_verdict="fail",
+    )
+    repair_brief_path = (
+        workspace_root
+        / "workitems"
+        / "WI-CMP"
+        / "stages"
+        / "plan"
+        / "repair-brief.md"
+    )
+    persist_repair_history_entry(
+        workspace_root=workspace_root,
+        work_item="WI-CMP",
+        run_id="run-a",
+        stage="plan",
+        attempt_number=2,
+        trigger="repair",
+        outcome="failed",
+        repair_brief_path=repair_brief_path,
+    )
+
+    view = resolve_run_comparison(
+        workspace_root=workspace_root,
+        work_item="WI-CMP",
+        baseline_run_id="run-a",
+        target_run_id="run-a",
+    )
+
+    assert any("repair_brief" in warning for warning in view.warnings)

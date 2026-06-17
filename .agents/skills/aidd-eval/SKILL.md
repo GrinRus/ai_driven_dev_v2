@@ -123,6 +123,9 @@ findings for manual quality review. It also surfaces ignored local artifacts suc
 `.venv/`, `.pytest_cache/`, `.pdm-build/`, `coverage/`, build, dist, or dependency-cache
 files. Treat runtime deletion/recreation of the prepared checkout or live harness run
 directories as run integrity evidence and normally `not-counted` deliverable quality.
+If manifest verification creates only new known ignored residue after QA, inspect
+`verify-transcript.json.workspace_cleanup`; runner cleanup of that residue is
+execution hygiene and must not be treated as an automatic deliverable-quality decision.
 New ignored files inside an ignored root that already existed at setup, such as
 `.venv/.../__pycache__`, are setup-baseline ignored churn rather than pollution
 findings.
