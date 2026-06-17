@@ -197,6 +197,26 @@ QA_RELEASE_RECOMMENDATION_PATTERN = re.compile(
     r"\b(proceed-with-conditions|hold|proceed)\b",
     flags=re.IGNORECASE,
 )
+LIVE_SETUP_WORKSPACE_BASELINE_PATTERN = re.compile(
+    r"\bLive setup workspace baseline\b",
+    flags=re.IGNORECASE,
+)
+IGNORED_WORKSPACE_STATUS_EVIDENCE_PATTERN = re.compile(
+    r"`?git\s+status\s+--ignored\s+--short\s+--untracked-files=all`?|"
+    r"`?git\s+status\s+--ignored\s+-s\s+-uall`?",
+    flags=re.IGNORECASE,
+)
+IGNORED_RESIDUE_PRODUCING_CHECK_PATTERN = re.compile(
+    r"\b("
+    r"pytest|ruff|mypy|vitest|tsc|sphinx-build|coverage|"
+    r"go\s+test|cargo\s+test|bun\s+test|"
+    r"npm\s+(?:test|run)|pnpm\s+(?:test|run)|yarn\s+(?:test|run)"
+    r")\b|"
+    r"(?:\.\/)?node_modules/\.bin/(?:vitest|tsc)\b|"
+    r"\b(?:coverage/|\.coverage|\.pytest_cache|\.ruff_cache|\.pdm-build|"
+    r"__pycache__|dist/|build/)\b",
+    flags=re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -362,6 +382,62 @@ def normalized_heading(title: str) -> str:
 
 def workspace_relative(path: Path, workspace_root: Path) -> str:
     return path.resolve(strict=False).relative_to(workspace_root.resolve(strict=False)).as_posix()
+
+
+def work_item_root_from_output_path(output_path: Path) -> Path | None:
+    parts = output_path.parts
+    for index, part in enumerate(parts):
+        if part == "workitems" and index + 1 < len(parts):
+            return Path(*parts[: index + 2])
+    return None
+
+
+def is_live_setup_workspace_context(context: SemanticDocumentContext) -> bool:
+    work_item_root = work_item_root_from_output_path(context.output_path)
+    if work_item_root is None:
+        return False
+
+    repository_state_path = work_item_root / "context" / "repository-state.md"
+    if not repository_state_path.exists():
+        return False
+
+    repository_state = repository_state_path.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+    return LIVE_SETUP_WORKSPACE_BASELINE_PATTERN.search(repository_state) is not None
+
+
+def has_ignored_workspace_status_evidence(text: str) -> bool:
+    return IGNORED_WORKSPACE_STATUS_EVIDENCE_PATTERN.search(text) is not None
+
+
+def has_residue_producing_verification(text: str) -> bool:
+    return IGNORED_RESIDUE_PRODUCING_CHECK_PATTERN.search(text) is not None
+
+
+def validate_live_ignored_workspace_status_evidence(
+    *,
+    context: SemanticDocumentContext,
+    evidence_text: str,
+    location: ValidationIssueLocation,
+    code: str,
+    message: str,
+) -> tuple[ValidationFinding, ...]:
+    if not is_live_setup_workspace_context(context):
+        return tuple()
+    if not has_residue_producing_verification(evidence_text):
+        return tuple()
+    if has_ignored_workspace_status_evidence(evidence_text):
+        return tuple()
+    return (
+        context.finding(
+            code=code,
+            message=message,
+            severity="high",
+            location=location,
+        ),
+    )
 
 
 def section_content_for_heading(

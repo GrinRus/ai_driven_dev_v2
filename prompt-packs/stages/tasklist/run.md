@@ -18,6 +18,9 @@ notes, and a concrete verification signal.
   - `../review-spec/output/validator-report.md`
 - optional context when available:
   - `context/repository-state.md`
+  - `context/acceptance-criteria.md`
+  - `context/verification-output.md`
+  - `context/verification-artifacts.md`
   - `context/constraints.md`
   - `context/previous-decisions.md`
 - contract of record:
@@ -48,6 +51,14 @@ normalize if canonical validation proves the terminal status inconsistent.
 5. Add at least one concrete verification note per task (test/check/scenario).
 6. Do not mark stage `succeeded` when upstream `review-spec` readiness/sign-off has unresolved
    blocking conditions.
+7. When `context/verification-output.md` names authored verification commands, copy those commands
+   exactly and preserve those commands exactly when citing them in task verification notes.
+   Preserve flags, path lists, environment variables, and coverage/cache-disabling options such as
+   `--coverage.enabled=false`; do not rewrite them as `npx`, package-manager aliases, or broader
+   suite commands.
+8. Optional broad checks outside the authored verification boundary may be listed only as
+   optional/non-blocking exploratory checks. Do not turn them into required task completion or final
+   pass criteria unless the authored task or review-spec explicitly requires them.
 
 ## Execution instructions
 
@@ -56,9 +67,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    `Dependencies`, `Verification notes`).
 3. Ensure dependency references are resolvable and avoid hidden prerequisites.
 4. Keep task scope bounded; split bundled work into separate ordered tasks.
-5. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
+5. Use `context/verification-output.md` as the verification boundary when present; if you need to
+   mention an authored command, quote it exactly rather than paraphrasing executable details.
+6. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
    consistent with tasklist content.
-6. If required inputs are missing or sequencing/ownership assumptions are unresolved, raise
+7. If required inputs are missing or sequencing/ownership assumptions are unresolved, raise
    questions with stable ids and `[blocking]` / `[non-blocking]` markers instead of inventing
    decisions.
 
@@ -74,5 +87,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - tasklist decomposition is ordered and dependency-executable,
 - each task has one dominant deliverable and explicit dependency note,
 - verification notes are concrete and task-specific,
+- authored verification commands from `context/verification-output.md` are preserved exactly, or
+  referenced generically without changing command flags or broadening scope,
+- optional broader checks are not promoted to required pass criteria outside the authored boundary,
 - unresolved blocking ambiguity is represented as explicit questions,
 - `stage-result.md` and `validator-report.md` match tasklist readiness and blockers.

@@ -247,6 +247,34 @@ def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
     assert "reference those ids" in repair_prompt
 
 
+def test_plan_and_tasklist_preserve_authored_verification_commands() -> None:
+    plan_contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
+    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(
+        encoding="utf-8"
+    )
+    plan_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (plan_contract, tasklist_contract, plan_prompt, tasklist_prompt):
+        normalized = " ".join(text.split())
+        assert "`context/verification-output.md`" in text
+        assert "preserve those commands exactly" in text
+        assert "flags, path lists, environment variables" in normalized
+        assert "coverage/cache-disabling options" in text
+        assert "`--coverage.enabled=false`" in text
+        assert "do not replace them with" in normalized or "do not rewrite them as" in (
+            normalized
+        )
+        assert "Optional broad checks outside the authored verification boundary" in text
+        assert (
+            "not become required pass criteria" in normalized
+            or "Do not turn them into required pass criteria" in normalized
+            or "not promoted to required pass criteria" in normalized
+        )
+
+
 def test_qa_prompt_respects_selected_design_constraints() -> None:
     run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")

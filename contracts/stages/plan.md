@@ -30,6 +30,9 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 ## Optional context inputs
 
 - `context/repository-state.md`
+- `context/acceptance-criteria.md`
+- `context/verification-output.md`
+- `context/verification-artifacts.md`
 - `context/constraints.md`
 - `context/previous-decisions.md`
 
@@ -46,6 +49,13 @@ Optional context documents may improve planning quality, but they must not repla
 - milestones should be ordered, use stable ids such as `M1`, `M2`, and map to clear execution increments.
 - risk entries should include impact and mitigation intent.
 - verification notes should tie checks to milestone ids such as `M1` and risk-heavy areas.
+- when `context/verification-output.md` names authored verification commands, verification notes must
+  preserve those commands exactly when citing them, including flags, path lists, environment
+  variables, and coverage/cache-disabling options such as `--coverage.enabled=false`; do not
+  replace them with `npx`/package-manager aliases or broader suites.
+- Optional broad checks outside the authored verification boundary may be listed only as
+  optional/non-blocking exploratory checks; they must not become required pass criteria when the
+  authored verification boundary is narrower.
 - `stage-result.md` and `validator-report.md` must stay consistent with the declared plan readiness.
 
 ## Validation focus

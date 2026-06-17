@@ -21,6 +21,7 @@ from aidd.validators.semantic_rules.common import (
     extract_top_level_bullet_blocks,
     has_implementation_command_evidence,
     is_deferred_implementation_verification,
+    validate_live_ignored_workspace_status_evidence,
     validate_placeholder_sections,
 )
 
@@ -292,6 +293,19 @@ def _validate_verification_notes(
         findings.extend(item_findings)
         if item_findings and item_findings[0].severity == "high":
             continue
+    findings.extend(
+        validate_live_ignored_workspace_status_evidence(
+            context=context,
+            evidence_text=verification.content,
+            location=verification.location,
+            code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+            message=(
+                "Live implementation verification ran test/type/lint/build checks "
+                "that can create ignored workspace residue, but `Verification notes` "
+                "do not cite `git status --ignored --short --untracked-files=all`."
+            ),
+        )
+    )
     return tuple(findings)
 
 

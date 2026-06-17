@@ -137,6 +137,13 @@ def _write_acceptance_criteria(workspace_root: Path, work_item: str, body: str) 
     return path
 
 
+def _write_repository_state(workspace_root: Path, work_item: str, body: str) -> Path:
+    path = workspace_root / "workitems" / work_item / "context" / "repository-state.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
 def _write_review_spec_report(workspace_root: Path, work_item: str, body: str) -> Path:
     path = (
         workspace_root
@@ -1928,6 +1935,101 @@ def test_validate_semantic_outputs_accepts_live_style_implementation_report(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_requires_live_ignored_residue_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-LIVE-RESIDUE"
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Task id: `TASK-LIVE-HONO-NON-ERROR-THROW`.\n\n"
+            "## Change summary\n\n"
+            "Implemented the selected live task and added focused regression coverage.\n\n"
+            "## Touched files\n\n"
+            "- `src/hono-base.ts` - normalize thrown non-Error values.\n"
+            "- `src/hono.test.ts` - add non-Error throw regression coverage.\n\n"
+            "## Verification notes\n\n"
+            "- `./node_modules/.bin/vitest --run --coverage.enabled=false "
+            "src/hono.test.ts` -> pass (new regression passed).\n"
+            "- `./node_modules/.bin/tsc --noEmit` -> pass.\n\n"
+            "## Follow-up notes\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "git status --ignored --short --untracked-files=all" in finding.message
+        for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_accepts_live_ignored_residue_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-LIVE-RESIDUE-CLEAN"
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Task id: `TASK-LIVE-HONO-NON-ERROR-THROW`.\n\n"
+            "## Change summary\n\n"
+            "Implemented the selected live task and added focused regression coverage.\n\n"
+            "## Touched files\n\n"
+            "- `src/hono-base.ts` - normalize thrown non-Error values.\n"
+            "- `src/hono.test.ts` - add non-Error throw regression coverage.\n\n"
+            "## Verification notes\n\n"
+            "- `./node_modules/.bin/vitest --run --coverage.enabled=false "
+            "src/hono.test.ts` -> pass (new regression passed).\n"
+            "- `./node_modules/.bin/tsc --noEmit` -> pass.\n"
+            "- `git status --ignored --short --untracked-files=all` -> pass "
+            "(no new `coverage/`, `.coverage*`, `__pycache__/`, build, dist, "
+            "or dependency-cache residue beyond setup baseline).\n\n"
+            "## Follow-up notes\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_contract_summary_task_id_and_cli_subcommands(
     tmp_path: Path,
 ) -> None:
@@ -3113,6 +3215,121 @@ def test_validate_semantic_outputs_accepts_qa_acceptance_coverage_checklist(
 - AC-2: confirmed. Evidence: EV-1, `context/verification-output.md`.
   Diff review stayed within the selected files.
 - Ready because each acceptance criterion has evidence and no known issue remains.
+""",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item=work_item,
+        workspace_root=tmp_path,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_requires_live_ignored_residue_evidence_for_ready_qa(
+    tmp_path: Path,
+) -> None:
+    work_item = "WI-SEM-QA-LIVE-RESIDUE"
+    _write_repository_state(
+        tmp_path,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_qa_report(
+        tmp_path,
+        work_item,
+        """# QA Report
+
+## Quality verdict
+
+- QA verdict: ready
+
+## Verification summary
+
+- Authored verification passed with evidence tracked by `EV-1` and `EV-2`.
+
+## Release recommendation
+
+- proceed
+
+## Evidence
+
+- EV-1: `./node_modules/.bin/vitest --run --coverage.enabled=false src/hono.test.ts` -> pass.
+- EV-2: `./node_modules/.bin/tsc --noEmit` -> pass.
+
+## Known issues
+
+- Known issues: none.
+
+## Readiness
+
+- Ready because authored verification passed and no known issue remains.
+""",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item=work_item,
+        workspace_root=tmp_path,
+    )
+
+    assert any(
+        finding.code == MISSING_EVIDENCE_REF_CODE
+        and "git status --ignored --short --untracked-files=all" in finding.message
+        for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_accepts_live_ignored_residue_evidence_for_ready_qa(
+    tmp_path: Path,
+) -> None:
+    work_item = "WI-SEM-QA-LIVE-RESIDUE-CLEAN"
+    _write_repository_state(
+        tmp_path,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_qa_report(
+        tmp_path,
+        work_item,
+        """# QA Report
+
+## Quality verdict
+
+- QA verdict: ready
+
+## Verification summary
+
+- Authored verification passed with evidence tracked by `EV-1`, `EV-2`, and `EV-3`.
+
+## Release recommendation
+
+- proceed
+
+## Evidence
+
+- EV-1: `./node_modules/.bin/vitest --run --coverage.enabled=false src/hono.test.ts` -> pass.
+- EV-2: `./node_modules/.bin/tsc --noEmit` -> pass.
+- EV-3: `git status --ignored --short --untracked-files=all` -> pass; no new
+  `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
+  residue beyond setup baseline.
+
+## Known issues
+
+- Known issues: none.
+
+## Readiness
+
+- Ready because authored verification and ignored workspace residue evidence are clean.
 """,
     )
 

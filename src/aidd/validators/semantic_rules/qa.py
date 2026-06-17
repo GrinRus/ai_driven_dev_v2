@@ -24,6 +24,7 @@ from aidd.validators.semantic_rules.common import (
     extract_top_level_bullet_blocks,
     is_empty_risk_entry,
     is_risk_metadata_entry,
+    validate_live_ignored_workspace_status_evidence,
     validate_placeholder_sections,
 )
 
@@ -282,6 +283,31 @@ def _validate_verdict_recommendation_alignment(
     return tuple(findings)
 
 
+def _validate_live_ready_workspace_hygiene_evidence(
+    *,
+    context: SemanticDocumentContext,
+    evidence: SemanticSection,
+    qa_verdict: str | None,
+    qa_recommendation: str | None,
+) -> tuple[ValidationFinding, ...]:
+    if qa_verdict not in {"ready", "ready-with-risks"}:
+        return tuple()
+    if qa_recommendation == "hold":
+        return tuple()
+
+    return validate_live_ignored_workspace_status_evidence(
+        context=context,
+        evidence_text="\n".join(context.markdown_lines),
+        location=evidence.location,
+        code=MISSING_EVIDENCE_REF_CODE,
+        message=(
+            "Live QA ready/proceed decisions that cite test/type/lint/build checks "
+            "must also cite ignored workspace residue evidence with "
+            "`git status --ignored --short --untracked-files=all`."
+        ),
+    )
+
+
 def _work_item_root_from_output_path(output_path: Path) -> Path | None:
     parts = output_path.parts
     for index, part in enumerate(parts):
@@ -426,6 +452,14 @@ def validate_qa_report(context: SemanticDocumentContext) -> tuple[ValidationFind
         )
     )
     findings.extend(_validate_acceptance_coverage(context=context))
+    findings.extend(
+        _validate_live_ready_workspace_hygiene_evidence(
+            context=context,
+            evidence=evidence,
+            qa_verdict=qa_verdict,
+            qa_recommendation=qa_recommendation,
+        )
+    )
     findings.extend(validate_placeholder_sections(context))
     return tuple(findings)
 
