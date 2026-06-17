@@ -143,7 +143,9 @@ Deterministic scenarios additionally imply:
    - fixture-owned seed metadata for deterministic scenarios;
    - the first authored task for live scenarios.
 5. Prepare the AIDD artifact under test when the scenario uses the installed-live lane.
-6. Run setup commands in the target repository root.
+6. Run setup commands in the target repository root with a non-interactive harness
+   environment (`CI=1`, Corepack download prompts disabled, and package-manager
+   audit/fund prompts disabled) so setup cannot wait on hidden terminal input.
 7. For live E2E, plan the next step, execute through public installed-AIDD surfaces
    (`aidd stage run` plus inspection commands), inspect evidence, classify the step,
    and decide whether to continue, request answers, stop, or finish.

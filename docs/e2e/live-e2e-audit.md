@@ -65,14 +65,17 @@ manifest with explicit acceptance criteria and verification intent.
 - Interview scenarios must keep top-level `interview.required: true` plus authored task
   `interview` guidance so the manifest, bootstrap context, and quality review agree.
 - `feature-selection.json` is the durable selection artifact.
+- Scenario setup commands run under a non-interactive harness environment. Package managers
+  and Corepack must not wait for hidden terminal prompts during live evidence collection.
 
 ## Flow Improvements Tracked By This Audit
 
 - Bootstrap context now writes `selected-task.md`, `acceptance-criteria.md`,
   `allowed-write-scope.md`, and command-specific `verification-output.md` from authored task
   fields.
-- Quality scoring now flags heavy repair burden, suspiciously small patches for larger tasks,
-  and placeholder documentation examples.
+- Manual `quality-report.md` review records repair burden, suspiciously small patches for
+  larger tasks, placeholder documentation examples, and target workspace hygiene; the live
+  runner does not turn these signals into an automatic quality gate.
 - Stage briefs now include exact skeleton hints for primary stage documents plus
   richer `stage-result.md` and `validator-report.md` skeletons to reduce first-pass
   contract churn.

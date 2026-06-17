@@ -83,6 +83,21 @@ def _command_environment(environment: Mapping[str, str] | None) -> dict[str, str
     return dict(environment)
 
 
+def _setup_command_environment(environment: Mapping[str, str] | None) -> dict[str, str]:
+    command_env = _command_environment(environment)
+    command_env.update(
+        {
+            "CI": "1",
+            "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
+            "GIT_TERMINAL_PROMPT": "0",
+            "npm_config_audit": "false",
+            "npm_config_fund": "false",
+            "npm_config_yes": "true",
+        }
+    )
+    return command_env
+
+
 def _run_shell_commands(
     *,
     commands: tuple[str, ...],
@@ -136,7 +151,7 @@ def run_setup_steps(
 ) -> HarnessSetupResult:
     _validate_working_copy_path(working_copy_path)
 
-    command_env = _command_environment(environment)
+    command_env = _setup_command_environment(environment)
 
     command_transcripts = _run_shell_commands(
         commands=scenario.setup.commands,
