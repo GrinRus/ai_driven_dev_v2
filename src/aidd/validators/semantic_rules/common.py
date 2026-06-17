@@ -160,6 +160,10 @@ REVIEW_SPEC_NO_ISSUE_SEVERITY_PATTERN = re.compile(
     r"\bseverity\s*:\s*`?none`?\b",
     flags=re.IGNORECASE,
 )
+REVIEW_SPEC_INLINE_SEVERITY_LABEL_PATTERN = re.compile(
+    r"\bseverity\s*:\s*`?(critical|high|medium|low|info|none)`?\b",
+    flags=re.IGNORECASE,
+)
 REVIEW_SPEC_NO_ISSUES_PATTERN = re.compile(
     r"\b(no material (?:issues?|defects?) identified|no issues? identified|none)\b",
     flags=re.IGNORECASE,
@@ -446,6 +450,12 @@ def extract_review_disposition(finding_block: str) -> str | None:
 
 def review_spec_issue_has_explicit_severity(issue_block: str) -> bool:
     if has_explicit_severity(issue_block):
+        return True
+    inline_severity_match = REVIEW_SPEC_INLINE_SEVERITY_LABEL_PATTERN.search(issue_block)
+    if (
+        inline_severity_match is not None
+        and inline_severity_match.group(1).lower() != "none"
+    ):
         return True
     if REVIEW_SPEC_NO_ISSUE_SEVERITY_PATTERN.search(issue_block) is None:
         return False

@@ -1437,6 +1437,41 @@ def test_validate_semantic_outputs_accepts_review_spec_no_issue_markers(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_review_spec_inline_severity_label(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_spec_report(
+        workspace_root,
+        "WI-REVIEW-SPEC-INLINE-SEVERITY",
+        (
+            "# Review Spec Report\n\n"
+            "## Readiness state\n\n"
+            "- `ready-with-conditions`\n\n"
+            "## Issue list\n\n"
+            "- I1: Severity: low. Rationale: because the plan should add one "
+            "delegated constructor smoke check during downstream tasking.\n\n"
+            "## Strengths\n\n"
+            "- The plan is bounded and test-first.\n\n"
+            "## Recommendation summary\n\n"
+            "1. Add the delegated constructor smoke check before implementation sign-off.\n"
+            "2. Proceed with task decomposition after carrying I1 into the tasklist.\n\n"
+            "## Required changes\n\n"
+            "- Add or assign the I1 smoke check during task decomposition.\n\n"
+            "## Decision\n\n"
+            "- `approved-with-conditions`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-REVIEW-SPEC-INLINE-SEVERITY",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_flags_review_spec_no_issue_prose_without_metadata(
     tmp_path: Path,
 ) -> None:
