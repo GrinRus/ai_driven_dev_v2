@@ -134,8 +134,14 @@ normalize if canonical validation proves the terminal status inconsistent.
    artifact path, or a captured assertion/tool summary.
    Manual or `CliRunner` checks must cite the executed command/snippet, artifact path, or captured
    assertion result; do not write `manual inspection -> pass` without evidence.
+   Do not list mutation-only cleanup commands such as `rm -rf ...` as verification bullets with
+   `-> pass`; if cleanup is needed, describe the cleanup briefly and add a separate check command
+   such as `find ...`, `git status --ignored ...`, or `test ! -e ...` proving residue is absent.
    When `context/verification-output.md` lists authored or scenario verification commands, run those
    commands after the implementation or explicitly mark each skipped command as not-run with a reason.
+   If an authored verification command depends on downstream review or QA artifacts that cannot exist
+   until a later stage, record it as `not-run: future-stage artifact` during `implement` rather than
+   executing it as an expected failure.
    For skipped checks, write `not-run: <reason>` in the verification note.
 7. Write or update `implementation-report.md`, `stage-result.md`, and `validator-report.md` before
    optional broad-suite verification or exploratory debugging. A truthful failed verification report

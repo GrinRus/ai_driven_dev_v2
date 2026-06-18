@@ -505,9 +505,17 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "executable/check evidence" in run_prompt
     assert "Manual or `CliRunner` checks must cite" in run_prompt
     assert "do not write `manual inspection -> pass` without evidence" in run_prompt
+    assert "Do not list mutation-only cleanup commands such as `rm -rf ...`" in run_prompt
+    assert "proving residue is absent" in run_prompt
+    assert "`not-run: future-stage artifact`" in run_prompt
     assert "write `not-run: <reason>`" in run_prompt
     assert "outcome claim without executable/check evidence" in repair_prompt
     assert "captured assertion result" in repair_prompt
+    assert (
+        "Do not preserve mutation-only cleanup bullets such as `rm -rf ... -> pass`"
+        in repair_prompt
+    )
+    assert "`not-run: future-stage artifact`" in repair_prompt
     assert "`not-run: <reason>` explicitly" in repair_prompt
     assert "Use one bullet per command/check" in run_prompt
     assert "``- `command goes here` -> pass (observed summary)``" in run_prompt
