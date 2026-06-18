@@ -78,6 +78,27 @@ Optional context documents may improve review depth, but they must not replace i
   evidence shows it exists and it is inspectable. Reject only when the file is missing, outside
   scope, undocumented by implementation evidence, not inspectable, or an explicit release policy
   requires a tracked-only patch artifact.
+  Plain `git diff -- <untracked-file>` does not show newly created untracked file contents; review
+  evidence for such files must cite `git status --short --untracked-files=all` plus direct file
+  inspection, or an explicit untracked-file diff method such as
+  `git diff --no-index /dev/null <untracked-file>`.
+- In live E2E contexts, `context/repository-state.md` may include a
+  `Live setup workspace baseline` section. Files listed there under known harness config or
+  setup-baseline untracked non-AIDD files are not review findings solely because they remain
+  visible in `git status`; record a finding only when implementation changes them, depends on them
+  as product evidence, contradicts selected scope, or introduces new untracked files outside that
+  baseline.
+- Live harness workspace recovery is not product work. If implementation evidence shows the
+  prepared checkout disappeared, was recloned, or a harness run directory such as `install-home/`,
+  `source/`, `build/`, or `target/` was deleted, moved, or recreated, review must record a
+  `must-fix` finding.
+- Ignored local artifacts are still workspace hygiene evidence. New `.venv/`, `.pytest_cache/`,
+  `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
+  directories from
+  `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+  equivalent evidence must be reviewed as workspace pollution unless they are selected deliverable
+  outputs or were removed before review. A cleanup claim is not review evidence unless it
+  explicitly covers these ignored residue classes.
 - When upstream `tasklist` or `plan` artifacts are available, review must check the implementation
   against their nontrivial task details, required mitigations, and explicit risk-verification
   promises, not only the high-level acceptance criteria. This includes named implementation
@@ -85,6 +106,11 @@ Optional context documents may improve review depth, but they must not replace i
   calls when the upstream artifacts made them part of the plan. If a planned behavior, mitigation,
   mechanism, or verification detail is missing from code, tests, or implementation evidence, record
   a finding unless upstream artifacts explicitly supersede that requirement.
+- When the diff changes a shared public-surface mechanism such as a CLI decorator, parser/helper,
+  router/error boundary, schema transform helper, or public API adapter, review must check affected
+  sibling commands, routes, generated outputs, or documented public surfaces. Missing help/usage,
+  docs consistency, API compatibility, or generated-output blast-radius evidence must become a
+  finding unless the upstream task explicitly excludes that surface.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation
@@ -104,6 +130,8 @@ Validators for `review` should check:
 - missing severity labels:
   - each finding must include an explicit severity label,
   - summary and approval status must remain coherent with finding severities,
+- shared public-surface blast radius:
+  - shared helper/decorator/parser/API changes are checked against affected sibling public surfaces,
 - absent disposition:
   - each finding must include disposition (`must-fix`, `follow-up`, `accepted-risk`, or `invalid`),
   - an explicit no-findings declaration is valid only when no active finding entries are present,

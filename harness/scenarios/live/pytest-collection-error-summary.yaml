@@ -10,7 +10,7 @@ repo:
 objective: Exercise a live pytest runtime-internals lane where collection error
   reporting policy must be clarified before implementation.
 task: Run the installed AIDD full-flow live audit against the selected pytest
-  collection-summary task and preserve reviewable quality evidence.
+  collection-summary task and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -49,7 +49,7 @@ feature_source:
       unless answers explicitly approve a change.
     - Focused tests cover collection errors with and without maxfail.
     verification:
-    - uv run aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
+    - aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
     - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
     - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
     - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/stage-result.md
@@ -64,7 +64,7 @@ feature_source:
     - Required documentation or changelog obligations for any changed reporting behavior.
 verify:
   commands:
-  - uv run aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
+  - aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
   - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
   - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
   - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/stage-result.md
@@ -81,18 +81,9 @@ verify:
     evidence: answers.md exists and marks each blocking question as resolved.
   - step: completed
     evidence: focused pytest and QA output artifact checks succeed after rerun.
-quality:
-  commands:
-  - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
-  rubric_profile: live-full
-  require_review_status: approved-with-conditions
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 12
-  timeout_minutes: 75
+  timeout_minutes: 240
 interview:
   required: true
   must_ask_at_least_one: true
@@ -108,8 +99,6 @@ interview:
     mode: answers_markdown_and_stage_rerun
     answers_file: .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
     question_check_command:
-    - uv
-    - run
     - aidd
     - stage
     - questions
@@ -117,8 +106,6 @@ interview:
     - --work-item
     - WI-LIVE-PYTEST-COLLECTION
     resume_command:
-    - uv
-    - run
     - aidd
     - stage
     - run

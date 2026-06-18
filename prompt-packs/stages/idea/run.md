@@ -14,6 +14,8 @@ question state is visible.
   - `context/intake.md`
   - `context/user-request.md`
 - optional context when present:
+  - `context/selected-task.md`
+  - `context/acceptance-criteria.md`
   - `context/business-context.md`
   - `context/constraints.md`
   - `context/repository-state.md`
@@ -67,6 +69,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    `[blocking]` / `[non-blocking]` markers. Write one top-level bullet per question id;
    do not put indented or nested bullets under a question. Put alternatives or examples
    in the question sentence or non-bullet continuation prose.
+   When `context/selected-task.md`, `context/acceptance-criteria.md`, or the incoming request
+   explicitly says blocking answers, interview answers, or operator policy decisions are required
+   before downstream planning or implementation, including before task decomposition, review, or
+   release, those questions are `[blocking]`. Do not downgrade that obligation to `[non-blocking]`
+   just because repository conventions could support a plausible default policy.
 4. Treat unresolved `[blocking]` questions as stage blockers; do not mark the stage as `succeeded`.
 5. Write `validator-report.md` so its findings and verdict match the actual artifact state.
 6. Write `stage-result.md` so status and blockers are consistent with both `validator-report.md`

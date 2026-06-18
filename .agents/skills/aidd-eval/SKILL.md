@@ -44,14 +44,15 @@ and manual-live lanes.
 6. Always keep question/answer events as durable artifacts.
 7. Always generate log-analysis output.
 8. Keep infrastructure failures separate from model or document failures.
-9. For live scenarios, preserve install evidence, feature-selection evidence, and quality artifacts.
-10. Never mutate roadmap or backlog files as part of live quality auditing.
+9. For live scenarios, preserve install evidence, feature-selection evidence, and execution artifacts.
+10. Never mutate roadmap or backlog files as part of live manual quality reporting.
 11. For manual live lanes, the launching agent is the operator-agent: answer blocking
     questions in `answers.md` with exact lines such as
     `- Q1 [resolved] answer text`, write `answer-analysis.md`, and write
-    `operator-quality-analysis.md` as operator-authored eval bundle evidence.
+    `quality-report.md` as the manual post-run report when a deliverable quality
+    decision is needed.
 12. Do not hand-edit runtime-generated stage output documents while adding
-    operator-authored answer or quality evidence.
+    operator-authored answers or the manual quality report.
 
 ## Default procedure
 
@@ -73,11 +74,13 @@ and manual-live lanes.
    - validator outcomes,
    - repair attempts.
 6. Validate all required output documents.
-7. Run live quality commands and score artifact/code quality when the scenario requires it.
-8. Run graders.
-9. Run log analysis.
-10. Write the final audit artifacts.
-11. Report the final execution verdict and quality conclusion explicitly.
+7. Run graders and log analysis.
+8. Write the final execution audit artifacts.
+9. Report the final execution verdict explicitly.
+10. For terminal live runs, write manual `quality-report.md` only after inspecting
+    the execution bundle and any additional manual checks, including timeout policy
+    evidence, stage-result/validator consistency findings, target workspace evidence,
+    and AIDD operator UI/UX evidence when a UI/UX decision is needed.
 
 ## Canonical output locations
 
@@ -91,14 +94,15 @@ and manual-live lanes.
 - `.aidd/reports/evals/<run_id>/log-analysis.md`
 - `.aidd/reports/evals/<run_id>/grader.json`
 - `.aidd/reports/evals/<run_id>/verdict.md`
-- `.aidd/reports/evals/<run_id>/quality-report.md`
-- `.aidd/reports/evals/<run_id>/quality-transcript.json`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
+- `.aidd/reports/evals/<run_id>/target-workspace-evidence.json`
+- `.aidd/reports/evals/<run_id>/target-workspace-evidence.md`
+- `.aidd/reports/evals/<run_id>/run-transcript.json` with live timeout policy evidence
 - `.aidd/reports/evals/<run_id>/answer-analysis.md` when the launching
   operator-agent answered blocking questions
-- `.aidd/reports/evals/<run_id>/operator-quality-analysis.md` for counted manual
-  live clean-pass decisions
+- `.aidd/reports/evals/<run_id>/quality-report.md` only when the launching SWE
+  agent writes the manual post-run quality report
 
 Manual live mutable execution is outside the source checkout by default:
 `${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd`,
@@ -106,6 +110,29 @@ Manual live mutable execution is outside the source checkout by default:
 `${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/install-home`,
 `${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/uv-cache`, and
 `${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/target/<repo-slug>`.
+
+In black-box live E2E, `limits.timeout_minutes` applies to each public
+`aidd stage run` command. It is not a global flow timeout. Use
+`run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` to
+separate stage command timeouts from provider adapter timeout profiles.
+For installed live manifest verification, AIDD self-check commands should use the
+installed `aidd` binary from `PATH` directly, such as `aidd stage questions ...`.
+Treat `uv run aidd ...` in a live target repo as a workspace-pollution risk because
+it can create target lockfiles after QA.
+Use `target-workspace-evidence.*` to review target diff hygiene without changing
+the execution verdict: `aidd.example.toml` is harness config, setup-baseline
+untracked files are visible, top-level `workitems/...` duplicates are severe
+deliverable pollution, and direct `.aidd/*.py` scratch files are artifact hygiene
+findings for manual quality review. It also surfaces ignored local artifacts such as
+`.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`, `coverage/`, build, dist, or dependency-cache
+files. Treat runtime deletion/recreation of the prepared checkout or live harness run
+directories as run integrity evidence and normally `not-counted` deliverable quality.
+If manifest verification creates only new known ignored residue after QA, inspect
+`verify-transcript.json.workspace_cleanup`; runner cleanup of that residue is
+execution hygiene and must not be treated as an automatic deliverable-quality decision.
+New ignored files inside an ignored root that already existed at setup, such as
+`.venv/.../__pycache__`, are setup-baseline ignored churn rather than pollution
+findings.
 
 ## Execution verdict taxonomy
 
@@ -116,12 +143,12 @@ For eval harness runs, preserve the stable execution verdict taxonomy:
 - `blocked`
 - `infra-fail`
 
-Quality remains additive and must be reported separately as:
-
-- `pass`
-- `warn`
-- `fail`
-- `none`
+Live deliverable quality is not an eval runner verdict. For terminal live runs,
+record it only in the manual post-run `quality-report.md`; the runner must not
+parse that report or use it to change the execution verdict.
+Manual operator UI/UX decisions in that report are human-authored only. Treat
+`frontend-checkpoints.*` as raw operator-surface availability evidence, not as a
+UI/UX audit or screenshot requirement.
 
 ## Example command shape
 

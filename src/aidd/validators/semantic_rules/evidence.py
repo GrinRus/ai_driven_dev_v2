@@ -6,9 +6,9 @@ IMPLEMENT_FILE_ENTRY_PATTERN = re.compile(r"`(?=[^`\n]*(?:/|\.))[^\n`]+`")
 IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"(\$ [^\n]+|"
     r"`[^`\n]*\b("
-    r"uv run|pytest|ruff|mypy|python -m|python -c|sphinx-build|npm|pnpm|yarn|go test|cargo test|"
+    r"uv run|pytest|ruff|mypy|python|sphinx-build|npm|pnpm|yarn|go test|cargo test|"
     r"make|git|grep|rg|echo|printf|flake8|black|prettier|ty check|sqlite-utils|"
-    r"bun|bunx|npx|vitest|tsc"
+    r"bun|bunx|find|npx|vitest|tsc"
     r")\b[^`\n]*`|"
     r"`(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^`\n]+`|"
     r"(?:^|\s)(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^\s`]+|"

@@ -76,9 +76,35 @@ normalize if canonical validation proves the terminal status inconsistent.
    Do not reject solely because such a file is absent from `git diff --stat`; inspect it and treat
    it as a changed file unless it is missing, outside scope, undocumented by implementation
    evidence, or an explicit release policy requires a tracked-only patch artifact.
+   Inspect or cite `git status --short --untracked-files=all`, not only `git diff --name-only`,
+   before declaring the workspace clean. Project-local provider state such as `.qwen/...`,
+   `.claude/...`, `.codex/...`, `.opencode/...`, and unexpected lockfiles such as `uv.lock` are
+   not AIDD workspace artifacts. If they appear as new target-repository files and are not known
+   setup-baseline files required by the task, record a `must-fix` finding instead of treating them
+   as harmless runtime noise.
+   Do not cite `git diff -- <untracked-file>` as complete evidence for a newly created untracked
+   file: plain `git diff` does not show untracked file contents. Cite `git status --short
+   --untracked-files=all` plus direct file inspection, or an explicit untracked-file diff method
+   such as `git diff --no-index /dev/null <untracked-file>`.
+   In live E2E contexts, first read `context/repository-state.md` section
+   `Live setup workspace baseline`: files listed under `Known harness config present` or
+   `Setup-baseline untracked non-AIDD files` are not review blockers solely because they appear in
+   `git status`. Treat them as findings only when implementation changed them, relies on them as
+   product evidence, contradicts the selected task, or new untracked files appear outside that
+   baseline.
    If `context/diff-summary.md`, `context/repository-state.md`, or implementation evidence shows
    lockfile, dependency manifest, generated resolver output, or project config changes that are not
    required by the selected task, record a `must-fix` finding and do not approve the change cleanly.
+   If implementation evidence says the prepared checkout disappeared, was recloned, or any live
+   harness run directory such as `install-home/`, `source/`, `build/`, or `target/` was deleted,
+   moved, or recreated, record a `must-fix` finding. Live harness workspace recovery is an
+   execution blocker, not part of the product deliverable.
+   If `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+   equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
+   `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
+   directories, inspect them as workspace pollution and record a finding unless they are selected
+   deliverable outputs or were removed before review. Do not accept a cleanup claim unless its cited
+   evidence explicitly checks these ignored residue classes.
 8. Intentional design constraints selected by the authored task or resolved interview answers are
    acceptance context, not findings by themselves. For example, do not write an `accepted-risk`
    finding solely because the task intentionally executes trusted local Python when the
@@ -94,7 +120,12 @@ normalize if canonical validation proves the terminal status inconsistent.
    or a required regression assertion. If the implementation omits it, such as missing a promised
    error-cause or diagnostic-context preservation check, record a `must-fix` finding unless the
    upstream artifact explicitly supersedes that requirement.
-10. In `review-report.md`, write the approval decision as a machine-readable line:
+10. If the diff changes a shared public-surface mechanism such as a CLI decorator,
+   parser/helper, router/error boundary, schema transform helper, or public API adapter, review
+   sibling commands, routes, generated outputs, or documented public surfaces that reuse it.
+   Record a finding when implementation evidence does not cover help/usage text, API compatibility,
+   docs consistency, or other affected public behavior needed to keep the selected task bounded.
+11. In `review-report.md`, write the approval decision as a machine-readable line:
    `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
    `Approval status` or `Verdict`, then add rationale separately.
 
@@ -147,5 +178,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - available tasklist/plan task details and risk mitigations were cross-checked against the diff,
   tests, and implementation evidence,
 - named plan/tasklist mechanisms were either found in code/tests or explicitly superseded,
+- shared public-surface helper changes were checked against affected sibling
+  commands/routes/generated outputs and help/docs/API compatibility evidence,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.

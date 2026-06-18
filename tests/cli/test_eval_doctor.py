@@ -50,13 +50,6 @@ def _write_live_scenario(path: Path) -> None:
                 }
             ],
         },
-        "quality": {
-            "commands": ["true"],
-            "rubric_profile": "live-full",
-            "require_review_status": "approved",
-            "allowed_qa_verdicts": ["ready"],
-            "code_review_required": True,
-        },
     }
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 

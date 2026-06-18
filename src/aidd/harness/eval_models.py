@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from aidd.harness.result_bundle import ResultBundleLayout
     from aidd.harness.runner import (
         HarnessAiddRunResult,
-        HarnessQualityResult,
         HarnessSetupResult,
         HarnessTeardownResult,
         HarnessVerificationResult,
@@ -30,9 +29,6 @@ class EvalScenarioRunResult:
     bundle_root: Path
     verdict_path: Path
     summary_path: Path
-    quality_gate: str
-    quality_verdict: str
-    quality_report_path: Path
     feature_selection_path: Path
     first_failure_boundary: FailureBoundarySelection
     first_failure_note: str | None
@@ -64,7 +60,6 @@ class EvalExecutionState:
     setup_error: BaseException | None = None
     run_error: BaseException | None = None
     verification_error: BaseException | None = None
-    quality_error: BaseException | None = None
     teardown_error: BaseException | None = None
     prepared_repository: PreparedRepository | None = None
     prepared_working_copy: PreparedWorkingCopy | None = None
@@ -72,7 +67,6 @@ class EvalExecutionState:
     setup_result: HarnessSetupResult | None = None
     aidd_run_result: HarnessAiddRunResult | None = None
     verification_result: HarnessVerificationResult | None = None
-    quality_result: HarnessQualityResult | None = None
     teardown_result: HarnessTeardownResult | None = None
     live_runtime_config_path: Path | None = None
 

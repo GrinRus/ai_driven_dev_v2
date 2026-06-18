@@ -142,15 +142,6 @@ setup:
 verify:
   commands:
     - echo verify
-quality:
-  commands:
-    - echo quality
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-    - ready
-    - ready-with-risks
-  code_review_required: true
 stage_scope:
   start: idea
   end: qa
@@ -200,15 +191,6 @@ feature_source:
         - echo verify
       quality_bar: Test quality bar.
       size_rationale: Small test fixture.
-quality:
-  commands:
-    - echo quality
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-    - ready
-    - ready-with-risks
-  code_review_required: true
 stage_scope:
   start: plan
   end: qa
@@ -222,7 +204,7 @@ runtime_targets:
         load_scenario(manifest)
 
 
-def test_load_live_scenario_rejects_invalid_quality_block(tmp_path: Path) -> None:
+def test_load_live_scenario_rejects_quality_block(tmp_path: Path) -> None:
     live_root = tmp_path / "harness" / "scenarios" / "live"
     live_root.mkdir(parents=True)
     manifest = _write_manifest(
@@ -261,11 +243,6 @@ feature_source:
 quality:
   commands:
     - echo quality
-  rubric_profile: live-full
-  require_review_status: rejected
-  allowed_qa_verdicts:
-    - ready
-  code_review_required: true
 stage_scope:
   start: idea
   end: qa
@@ -275,7 +252,7 @@ runtime_targets:
         + "\n",
     )
 
-    with pytest.raises(ScenarioManifestError, match="quality.require_review_status"):
+    with pytest.raises(ScenarioManifestError, match="must not declare `quality`"):
         load_scenario(manifest)
 
 
@@ -315,15 +292,6 @@ feature_source:
         - echo verify
       quality_bar: Test quality bar.
       size_rationale: Small test fixture.
-quality:
-  commands:
-    - echo quality
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-    - ready
-    - ready-with-risks
-  code_review_required: true
 stage_scope:
   start: idea
   end: qa
@@ -447,15 +415,6 @@ feature_source:
   fixture_path: harness/fixtures/minimal-python
   seed_id: wrong-live-seed
   summary: Wrong seed type
-quality:
-  commands:
-    - echo quality
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-    - ready
-    - ready-with-risks
-  code_review_required: true
 stage_scope:
   start: idea
   end: qa
@@ -506,15 +465,6 @@ feature_source:
       verification:
         - echo verify
       size_rationale: Tiny test fixture.
-quality:
-  commands:
-    - echo quality
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-    - ready
-    - ready-with-risks
-  code_review_required: true
 stage_scope:
   start: idea
   end: qa
@@ -566,15 +516,6 @@ feature_source:
       size_rationale: Small test fixture.
       interview:
         - Ask for scope clarification if the runtime detects ambiguity.
-quality:
-  commands:
-    - echo quality
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-    - ready
-    - ready-with-risks
-  code_review_required: true
 stage_scope:
   start: idea
   end: qa
@@ -639,14 +580,6 @@ feature_source:
         - echo verify
       quality_bar: Test quality bar.
       size_rationale: Small test fixture.
-quality:
-  commands:
-    - echo quality
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-    - ready
-  code_review_required: true
 stage_scope:
   start: idea
   end: qa
@@ -703,14 +636,6 @@ feature_source:
         - echo verify
       quality_bar: Test quality bar.
       size_rationale: Small test fixture.
-quality:
-  commands:
-    - echo quality
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-    - ready
-  code_review_required: true
 stage_scope:
   start: idea
   end: qa
@@ -767,15 +692,6 @@ feature_source:
         - echo verify
       quality_bar: Test quality bar.
       size_rationale: Large interview fixture.
-quality:
-  commands:
-    - echo quality
-  rubric_profile: live-full
-  require_review_status: approved-with-conditions
-  allowed_qa_verdicts:
-    - ready
-    - ready-with-risks
-  code_review_required: true
 stage_scope:
   start: idea
   end: qa

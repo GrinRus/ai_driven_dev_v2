@@ -6,7 +6,10 @@ This catalog defines the authored public-repository scenarios used for manual li
 
 Live E2E exists to answer one question:
 
-> Can an operator manually run installed AIDD against a pinned public repository, follow the full governed flow from `idea` through `qa`, and preserve durable execution plus quality evidence?
+> Can an operator manually run installed AIDD against a pinned public repository,
+> follow the full governed flow from `idea` through `qa`, preserve durable
+> execution evidence, and write any deliverable-quality decision manually after
+> the terminal run?
 
 That makes live E2E different from the deterministic lanes:
 
@@ -31,19 +34,30 @@ Every live E2E run must follow the installed full-flow operator model:
    `UV_CACHE_DIR=<work-root>/<run_id>/uv-cache`.
 6. Clone and pin the target repository directly under
    `<work-root>/<run_id>/target/<repo-slug>`.
-7. Change into the target repository root for setup, stage, verify, and quality execution.
+7. Change into the target repository root for setup, stage, verify, and teardown.
 8. Select the first authored task from the scenario's `authored-task-pool`.
 9. Run installed `aidd` from that repository root with explicit workflow bounds `idea -> qa`.
+   The manifest `limits.timeout_minutes` value is the budget for each public
+   `aidd stage run` command in the stepwise black-box loop, not a global flow
+   timeout and not a deliverable quality signal.
 10. Keep target `.aidd/` rooted inside the target repository.
-11. Preserve install, setup, run, verify, quality, and teardown evidence in the eval bundle.
+11. Preserve install, setup, run, verify, and teardown evidence in the eval bundle.
 12. Write `stage-audits/<stage>.json` and `.md` after each stage.
 13. Preserve `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`, and
     `self-repair-matrix.md` so operators can audit step duration, per-attempt runtime windows,
-    deterministic repair-probe coverage, terminal document consistency, and repair behavior.
-14. For manual local runs, the launching agent is the operator-agent: it answers
-    blocking questions, records answer reasoning, and writes an operator-authored
-    quality analysis before a run can be counted as clean.
-15. After at least one completed stage in a manual checkpoint run, the operator may
+    deterministic repair-probe coverage, terminal document consistency, per-stage command
+    timeout budgets, and repair behavior.
+14. In live manifests, AIDD self-check verification commands must call the installed
+    `aidd` binary from `PATH` directly, for example `aidd stage questions ...`.
+    Do not use `uv run aidd ...` for these checks inside the target repository:
+    package-manager invocation can create target-repo lockfiles after QA and pollute
+    the final workspace evidence. Target-project verification commands may still use
+    the target repository's package manager when that is the repo's normal test surface.
+15. For manual local runs, the launching agent is the operator-agent: it answers
+    blocking questions, records answer reasoning, and writes
+    `.aidd/reports/evals/<run_id>/quality-report.md` only after terminal
+    execution when deliverable quality must be judged.
+16. After at least one completed stage in a manual checkpoint run, the operator may
     submit one stage-scoped intervention request through CLI or UI. If used, preserve
     `operator-requests/request-000N.md`, the resulting attempt log, validation result,
     and a short `operator-intervention-analysis.md` explaining why the request was
@@ -124,13 +138,13 @@ on a familiar task, or one narrow class of changes.
 Repeating a scenario is still appropriate when the goal is a targeted rerun: confirming a
 fixed blocker, comparing runtimes on the same manifest, validating a repin, or preserving a
 canonical smoke proof. Otherwise, manual refresh batches should choose a different product
-or feature family from the most recent counted run whenever provider readiness and local
-environment constraints allow it.
+or feature family from the most recent manually accepted run whenever provider readiness
+and local environment constraints allow it.
 
 ## Next-Flow Terminal Checkpoint Policy
 
 After a public-repository live run reaches terminal `qa`, the launching operator must
-inspect the completed-run handoff before deciding whether the run is counted:
+inspect the completed-run handoff before writing any manual deliverable-quality decision:
 
 - open the loopback UI or UI/API checkpoint evidence and confirm **Flow Complete** is
   visible for the terminal run;
@@ -165,7 +179,7 @@ repository flow and must remain manual-only.
 ### `encode/httpx`
 
 - `AIDD-LIVE-003` - authored invalid header error message task
-- `AIDD-LIVE-004` - authored CLI docs sync task with docs-only counted verification
+- `AIDD-LIVE-004` - authored CLI docs sync task with docs-only execution verification
 
 ### `simonw/sqlite-utils`
 
@@ -215,9 +229,9 @@ For live scenarios in this wave:
   config extends long-running `research`, `plan`, `review-spec`, `tasklist`,
   `implement`, `review`, and `qa` stage attempts;
 - `generic-cli` remains a deterministic baseline provider and is not a maintained live provider in this wave.
-- Public-repository live E2E now records UI/UX evidence artifacts, but brokered
-  approval proof remains in the operator UI/local-project lane rather than this
-  public-repository lane.
+- Public-repository live E2E now records frontend/API checkpoint evidence as raw
+  run-integrity evidence, but brokered approval proof and full UI/UX audit evidence
+  remain in the operator UI/local-project lane or the manual `quality-report.md`.
 
 Representative matrix coverage for the live lane:
 
@@ -235,13 +249,14 @@ Typer pin is setup-blocked before the runtime boundary. Use `AIDD-LIVE-005` as t
 canonical installed live smoke until `AIDD-LIVE-001` is repinned or its setup baseline is
 fixed.
 
-`AIDD-LIVE-004` is the maintained tiny docs-only lane. Its counted gate is scoped to
-documentation acceptance criteria: tracked product diff limited to the selected docs
-files, consistent `https://httpbin.org/json` CLI example text, no placeholder runnable
-URLs in added docs lines, no public endpoint call during verification, and QA artifact
-publication. Full HTTPX pytest can still be run by an operator as exploratory
-target-repository evidence, but it is not the clean-pass gate for this tiny documentation
-scenario because unrelated async timeout tests can fail outside the selected docs change.
+`AIDD-LIVE-004` is the maintained tiny docs-only lane. Its execution verification is
+scoped to documentation acceptance criteria: tracked product diff limited to the
+selected docs files, consistent `https://httpbin.org/json` CLI example text, no
+placeholder runnable URLs in added docs lines, no public endpoint call during
+verification, and QA artifact publication. Full HTTPX pytest can still be run by an
+operator as exploratory target-repository evidence, but it is not required
+execution evidence for this tiny documentation scenario because unrelated async
+timeout tests can fail outside the selected docs change.
 
 ## Live-Scenario Contract
 
@@ -256,6 +271,8 @@ Every maintained live scenario must:
 - select the first listed authored task deterministically;
 - define authored task `id`, `title`, `summary`, `intent`, `target_change`, `expected_scope`,
   `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
+  `quality_bar` is authored task metadata only and must not be treated as an automatic
+  live quality gate;
 - declare `live_flow.answer_policy: agent-decides` so any stage can block on questions
   and resume after the launching operator-agent writes resolved answers;
 - define authored task `interview` guidance when the scenario is
@@ -264,8 +281,8 @@ Every maintained live scenario must:
   a stage-scoped correction after a completed or blocked stage;
 - force full-flow `idea -> qa`;
 - run repo-local verification commands;
-- run repo-local quality commands;
-- preserve feature-selection, validator, log-analysis, verdict, and quality artifacts.
+- omit `quality:` blocks; post-run quality review is a manual SWE-agent report;
+- preserve feature-selection, validator, log-analysis, verdict, and execution artifacts.
 
 ## Expected Artifacts
 
@@ -281,7 +298,7 @@ Every live eval bundle must aim to contain:
 - `self-repair-matrix.md`
 - `grader.json`
 - `verdict.md`
-- `quality-report.md`
+- `summary.md`
 - `feature-selection.json`
 - `install-transcript.json`
 - `harness-metadata.json`
@@ -289,27 +306,57 @@ Every live eval bundle must aim to contain:
 - `setup-transcript.json`
 - `run-transcript.json`
 - `verify-transcript.json`
-- `quality-transcript.json`
 - `teardown-transcript.json`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
-- `acceptance-coverage.json`
-- `acceptance-coverage.md`
-- `operator-quality-analysis-validation.json`
-- `ui-ux-checkpoints.json`
-- `ui-ux-checkpoints.md`
+- `target-workspace-evidence.json`
+- `target-workspace-evidence.md`
+- `frontend-checkpoints.json`
+- `frontend-checkpoints.md`
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
 
-For counted manual clean-pass decisions, the eval bundle must also include
-operator-authored evidence:
+The runner does not create `quality-report.md`, `quality-transcript.json`,
+`acceptance-coverage.*`, `ui-ux-checkpoints.*`, `operator-quality-analysis.md`, or
+`operator-quality-analysis-validation.json`.
 
-- `operator-quality-analysis.md`
+`run-transcript.json` records the aggregate black-box stage loop. Its aggregate
+`timeout_seconds` stays `null` unless the runner gains a true global flow timeout.
+The same file carries a `timeout_policy` object that identifies the per-stage command
+budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
+`stage-timing.md` show the actual timeout recorded for each `run-stage` command.
+`verify-transcript.json` may include `workspace_cleanup` when successful manifest
+verification created known ignored byproducts after QA. That cleanup is limited to
+new verification residue and is execution hygiene before final workspace evidence.
+
+`target-workspace-evidence.*` compares the target repository snapshot after setup with
+the final workspace state. It is non-gating evidence for manual quality review:
+`aidd.example.toml` is harness config, setup-created untracked files remain visible,
+top-level `workitems/...` duplicates are severe deliverable pollution, and direct
+`.aidd/*.py` scratch files are artifact hygiene findings. It also surfaces new
+ignored local artifacts such as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`,
+`coverage/`, build, dist, or dependency-cache files. New files inside a setup-baseline
+ignored root, such as `.venv/.../__pycache__`, are recorded as `setup-baseline ignored churn`
+rather than pollution findings. Evidence that a runtime
+deleted/recreated the prepared checkout or live harness run directories is a run
+integrity and deliverable-quality blocker for manual review. The runner does not
+turn these findings into a quality gate.
+
+After a terminal run, the launching SWE agent may add manual post-run evidence:
+
+- `quality-report.md` with separate run-integrity, deliverable-quality, and manual AIDD operator UI/UX decisions
 - `answer-analysis.md` when the launching operator-agent answered blocking questions
 - `operator-intervention-analysis.md` when the launching operator-agent submitted an
   operator intervention request
 - `next-flow-lineage.json` only when the manual operator explicitly enabled
   `--enable-next-flow-follow-up-proof`
+
+The manual operator UI/UX decision must inspect AIDD operator workflows rather than
+reinterpret `frontend-checkpoints.*` as UX proof. At minimum, review terminal flow
+visibility, stage list navigation, artifact/log views, questions and answers,
+repair evidence, next-flow handoff, state clarity, readability, keyboard/focus
+behavior where manually inspectable, responsive behavior or `not inspected`, and
+any manually captured screenshots or browser notes. Generated product UI is outside this live E2E operator-UI review unless the report marks it `not-applicable`.
 
 ## Interview Scenarios
 

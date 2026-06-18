@@ -11,7 +11,7 @@ objective: Exercise a less scripted live audit where the runtime must choose the
   narrow implementation path from a CSV import resilience boundary rather than a
   fully specified bugfix recipe.
 task: Run the installed AIDD full-flow live audit against the selected sqlite-utils
-  resilience task and preserve reviewable quality evidence.
+  resilience task and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -68,15 +68,6 @@ verify:
   - Verification command exits with status 0.
   - Pytest output reports all tests as passed.
   - QA stage output artifacts exist for the selected work item.
-quality:
-  commands:
-  - uv run pytest -q
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 5
   timeout_minutes: 240

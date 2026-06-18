@@ -37,7 +37,6 @@ def _build_scenario(*, setup_commands: tuple[str, ...]) -> Scenario:
         ),
         verify=ScenarioCommandSteps(commands=("echo verify",)),
         feature_source=None,
-        quality=None,
         live_flow=None,
         runtime_targets=("generic-cli",),
         is_live=False,
@@ -66,6 +65,42 @@ def test_run_setup_steps_executes_commands_in_order(tmp_path: Path) -> None:
     assert result.command_transcripts[0].exit_code == 0
     assert result.duration_seconds >= 0
     assert (working_copy_path / "setup.log").read_text(encoding="utf-8") == "first\nsecond\n"
+
+
+def test_run_setup_steps_forces_non_interactive_package_manager_environment(
+    tmp_path: Path,
+) -> None:
+    working_copy_path = tmp_path / "working-copy"
+    working_copy_path.mkdir(parents=True, exist_ok=True)
+    scenario = _build_scenario(
+        setup_commands=(
+            "printf '%s\\n' "
+            '"$CI" '
+            '"$COREPACK_ENABLE_DOWNLOAD_PROMPT" '
+            '"$GIT_TERMINAL_PROMPT" '
+            '"$npm_config_yes" '
+            '"$npm_config_audit" '
+            '"$npm_config_fund" '
+            "> setup-env.log",
+        )
+    )
+
+    run_setup_steps(
+        scenario=scenario,
+        working_copy_path=working_copy_path,
+        environment={
+            "CI": "0",
+            "COREPACK_ENABLE_DOWNLOAD_PROMPT": "1",
+            "GIT_TERMINAL_PROMPT": "1",
+            "npm_config_yes": "false",
+            "npm_config_audit": "true",
+            "npm_config_fund": "true",
+        },
+    )
+
+    assert (working_copy_path / "setup-env.log").read_text(encoding="utf-8") == (
+        "1\n0\n0\ntrue\nfalse\nfalse\n"
+    )
 
 
 def test_run_setup_steps_stops_after_first_failing_command(tmp_path: Path) -> None:

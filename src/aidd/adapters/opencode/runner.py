@@ -304,6 +304,7 @@ def _write_native_prompt_file(
 ) -> Path:
     prompt_dir = (
         context.workspace_root.resolve(strict=False)
+        / "harness-cache"
         / "runtime-prompts"
         / context.run_id
         / context.stage

@@ -171,11 +171,20 @@ function syncOnboardingCreateActionState() {
 function renderOnboardingTopbar() {
   document.body.classList.add("setup-active");
   const project = onboardingProject();
-  document.getElementById("projectPath").textContent = project?.project_root || "select project";
-  document.getElementById("workItemChip").textContent = "Setup mode";
-  document.getElementById("runChip").textContent = state.selectedRuntime ? `Runner: ${state.selectedRuntime}` : "Runner: required";
+  const projectRoot = project?.project_root || "select project";
+  const runLabel = state.selectedRuntime ? `Runner: ${state.selectedRuntime}` : "Runner: required";
+  const projectPath = document.getElementById("projectPath");
+  const workItemChip = document.getElementById("workItemChip");
+  const runChip = document.getElementById("runChip");
+  projectPath.textContent = projectRoot;
+  projectPath.title = projectRoot;
+  workItemChip.textContent = "Setup mode";
+  workItemChip.title = "Setup mode";
+  runChip.textContent = runLabel;
+  runChip.title = runLabel;
   const localStatus = document.getElementById("localStatus");
   localStatus.textContent = state.onboarding.error || "Onboarding";
+  localStatus.title = state.onboarding.error || "Onboarding";
   localStatus.className = state.onboarding.error ? "status-chip" : "status-chip good";
   document.getElementById("openWorkspaceButton").disabled = true;
   if (project) renderRuntimeSelector();

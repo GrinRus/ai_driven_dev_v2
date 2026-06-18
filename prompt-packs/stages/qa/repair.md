@@ -49,10 +49,21 @@ For each finding:
 2. patch only the smallest section needed in `qa-report.md`;
 3. re-check verdict, recommendation, and risk summary for consistency;
 4. re-check `stage-result.md` and `validator-report.md` so blockers and terminal status match.
+5. re-check repository evidence, preferably `git status --short --untracked-files=all`; top-level
+   `workitems/...`, unexplained untracked non-`.aidd` files, or stray `.aidd/` scratch files must
+   keep QA `not-ready` / `hold` unless they were cleaned up before the repaired output.
+6. re-check ignored verification residue with `git status --ignored --short --untracked-files=all`
+   or equivalent evidence; `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`,
+   `__pycache__/`, build, dist, or dependency-cache artifacts must be absent, cleaned, or explicitly keep QA
+   `not-ready` / `hold`. Do not claim cleanup passed from a narrower check.
 
 Use concrete repair actions:
 
 - unsupported claim: remove claim or rewrite with explicit verification evidence reference;
+- overstated execution surface: remove names such as `TestClient`, direct ASGI invocation,
+  browser UI, CLI, fixture, or generated output unless the cited evidence explicitly shows
+  that exact surface; if acceptance criteria give alternatives such as `ASGI/TestClient`,
+  preserve only the alternative that the evidence actually exercised;
 - missing evidence: add direct references to available verification output, verification artifacts,
   or upstream evidence for each material QA claim, using `EV-1`, `EV-2`, ... evidence ids and/or
   backticked artifact paths;
@@ -76,7 +87,9 @@ Use concrete repair actions:
   tradeoff notes out of `Known issues`;
 - optional-check overreach: if authored verification, acceptance criteria, and review are clean,
   do not turn a non-required broader check into `ready-with-risks` or
-  `proceed-with-conditions` unless it reveals a concrete defect;
+  `proceed-with-conditions` unless it reveals a concrete defect. If the broader check failed only
+  in unrelated files or environment-sensitive surfaces outside the selected scope, keep it as a
+  non-blocking optional-check note rather than a residual risk;
 - status drift: align validator verdict, stage status, blockers, and next actions.
 
 ## Targeted repair discipline
@@ -93,7 +106,8 @@ Use concrete repair actions:
    Put the selected value in a dedicated `## Release recommendation` section.
 4. Keep blocking uncertainty explicit via `[blocking]` questions and `hold` recommendation.
 5. Keep optional broader-check limitations as non-blocking notes when authored verification,
-   review, and acceptance criteria are clean.
+   review, and acceptance criteria are clean. Do not preserve `ready-with-risks` solely for isolated
+   optional broad-suite failures in unrelated environment-sensitive tests.
 6. Do not preserve `ready-with-risks` only because the task intentionally selected a hazardous or
    limited behavior, such as trusted local code execution, when the implementation matches the
    resolved boundary and includes required confirmation, documentation, tests, and evidence.
@@ -106,6 +120,8 @@ Use concrete repair actions:
 11. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
 12. Do not claim success unless required headings, validator verdict, stage-result status, QA verdict, and verification evidence are mutually consistent.
 13. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+14. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
+    from the repository root.
 
 ## Repair exit checks
 
@@ -118,6 +134,8 @@ Use concrete repair actions:
   the report also declares residual risk,
 - optional checks outside the authored verification boundary are not treated as release
   conditions unless they expose a concrete defect,
+- isolated optional broad-suite failures in unrelated environment-sensitive tests remain
+  non-blocking notes when selected-task evidence is clean,
 - intentional selected design constraints are not treated as residual risks when required
   mitigations and evidence are complete,
 - available tasklist/plan task details and risk mitigations were cross-checked before declaring
@@ -127,6 +145,7 @@ Use concrete repair actions:
 - no evidence-free material claim remains,
 - every `AC-N` from acceptance context has its own same-bullet evidence reference when acceptance
   criteria are provided,
+- top-level `workitems/...` duplicates and stray scratch artifacts are absent or keep QA `not-ready`,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no conflict remains between `qa-report.md`, `validator-report.md`, and `stage-result.md`.

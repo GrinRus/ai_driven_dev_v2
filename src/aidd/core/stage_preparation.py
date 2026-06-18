@@ -38,12 +38,13 @@ _STAGE_RESULT_SKELETON = """```md
 
 ## Produced outputs
 
-- `<workspace-relative-path>`
+- `<AIDD-workspace-relative-path, for example workitems/<id>/stages/<stage>/output/<document.md>>`
 
 ## Validation summary
 
 - Validator verdict: `<pass|fail|not-run>`
 - Validator report: `workitems/<id>/stages/<stage>/validator-report.md`
+  (repository-root path `.aidd/workitems/<id>/stages/<stage>/validator-report.md`)
 
 ## Blockers
 
@@ -208,6 +209,21 @@ def render_stage_brief(
         )
     lines.extend(["", "# Expected output documents", ""])
     lines.extend(f"- `{path}`" for path in expected_output_documents)
+    lines.extend(
+        [
+            "",
+            "# Workspace path discipline",
+            "",
+            (
+                "- AIDD workspace-relative paths such as `workitems/...` are "
+                "relative to `.aidd/`."
+            ),
+            (
+                "- From the repository root, write canonical stage artifacts under "
+                "`.aidd/workitems/...`; do not create top-level `workitems/...`."
+            ),
+        ]
+    )
     _append_output_skeletons(
         lines=lines,
         expected_output_documents=expected_output_documents,

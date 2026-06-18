@@ -148,6 +148,11 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".operator-shell" in layout
     assert ".stage-rail" in layout
     assert ".cockpit" in layout
+    assert ".brand-title" in layout
+    assert "min-width: 0;" in layout
+    assert ".topbar #runChip" in layout
+    assert ".topbar #workItemChip" in layout
+    assert "text-overflow: ellipsis;" in layout
     assert ".truncation-notice" in components
     assert ".saved-answer" in components
     assert ".artifact-row" in components
@@ -216,6 +221,22 @@ def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> No
     assert "overflow-x: auto;" in responsive
 
 
+def test_operator_responsive_css_prevents_activity_table_mobile_overflow() -> None:
+    responsive = _asset_text("/operator-responsive.css")
+
+    assert ".activity-panel .table-wrap {" in responsive
+    assert "overflow-x: hidden;" in responsive
+    assert ".activity-panel .activity-table {" in responsive
+    assert "table-layout: fixed;" in responsive
+    assert ".activity-panel .activity-table th," in responsive
+    assert ".activity-panel .activity-table td {" in responsive
+    assert "overflow-wrap: anywhere;" in responsive
+    assert "word-break: break-word;" in responsive
+    assert ".activity-panel .activity-table th:nth-child(1)," in responsive
+    assert ".activity-panel .activity-table th:nth-child(2)," in responsive
+    assert ".activity-panel .activity-table th:nth-child(3)," in responsive
+
+
 def test_operator_script_modules_own_static_ui_surfaces() -> None:
     loader = _asset_text("/operator.js")
     api_state = _asset_text("/operator-api-state.js")
@@ -234,6 +255,9 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
     assert "function renderStageRail()" in shell
+    assert "projectPath.title = projectRoot;" in shell
+    assert "workItemChip.title = workItemLabel;" in shell
+    assert "runChip.title = runLabel;" in shell
     assert "async function renderArtifacts()" in artifacts
     assert "async function inspectArtifactReference({stage, key, path, kind})" in artifacts
     assert "function questionControlId(prefix, questionId, index)" in questions
@@ -311,6 +335,12 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "async function fetchProjectHome(workItem = \"\")",
             "dashboardUrl()",
             "/api/dashboard",
+            (
+                "const viewedStage = state.dashboard.active_stage_view?.stage "
+                "|| state.dashboard.active_stage;"
+            ),
+            "if (viewedStage && STAGES.includes(viewedStage)) {",
+            "state.activeStage = viewedStage;",
             'state.activeRunId = state.dashboard.run?.run_id || "";',
             "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`",
             'api("/api/runtime-readiness")',
@@ -1177,10 +1207,13 @@ def test_index_html_exposes_tab_and_panel_semantics() -> None:
 
     assert overview_tab["aria-selected"] == "true"
     assert overview_tab["aria-controls"] == "cockpitContent"
+    assert overview_tab["tabindex"] == "0"
     assert questions_tab["aria-selected"] == "false"
     assert questions_tab["aria-controls"] == "cockpitContent"
+    assert questions_tab["tabindex"] == "-1"
     assert history_tab["aria-selected"] == "false"
     assert history_tab["aria-controls"] == "cockpitContent"
+    assert history_tab["tabindex"] == "-1"
     assert panel["aria-labelledby"] == "tab-overview"
     assert panel["tabindex"] == "0"
     assert 'data-tab-shortcut="history"' in _asset_text("/")
@@ -1206,6 +1239,15 @@ def test_operator_script_keeps_dynamic_accessibility_contracts() -> None:
     assert 'button.setAttribute("aria-selected", isActive ? "true" : "false");' in _asset_text(
         "/operator-api-state.js"
     )
+    assert 'button.setAttribute("tabindex", isActive ? "0" : "-1");' in _asset_text(
+        "/operator-api-state.js"
+    )
+    operator_main = _asset_text("/operator-main.js")
+    assert 'document.addEventListener("keydown"' in operator_main
+    assert 'event.key === "ArrowRight"' in operator_main
+    assert 'event.key === "ArrowLeft"' in operator_main
+    assert 'event.key === "Home"' in operator_main
+    assert 'event.key === "End"' in operator_main
     assert "renderTruncationNotice(" in _asset_text("/operator-artifacts-documents.js")
     assert "function scrollActiveStageIntoView()" in _asset_text("/operator-shell-rendering.js")
 

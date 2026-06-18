@@ -44,11 +44,14 @@ manifest with explicit acceptance criteria and verification intent.
   verification in Rich/default and `TYPER_USE_RICH=0` modes. The authored task explicitly
   covers false-only boolean declarations so quality review does not leave leading separator
   behavior as a residual follow-up.
-- `AIDD-LIVE-007` uses focused Hono runtime and compose tests plus `tsc --noEmit`
-  through the repository-local `node_modules/.bin` tools installed by scenario setup.
+- `AIDD-LIVE-007` uses focused Hono runtime and compose tests with Vitest coverage
+  disabled plus `tsc --noEmit` through the repository-local `node_modules/.bin`
+  tools installed by scenario setup.
   The pinned Hono repository's broad `bun test` command currently exercises unrelated
   runner/runtime surfaces and fails outside the selected non-Error throw task, so it is not
-  a maintained clean-run gate for this medium scenario.
+  a maintained clean-run gate for this medium scenario. The focused Vitest command keeps
+  coverage reports out of the target workspace because `coverage/` is manual quality
+  evidence, not a required deliverable artifact.
 - `AIDD-LIVE-008` is intentionally `xlarge`; router wildcard semantics are API-sensitive and
   should not be treated as an ordinary large feature.
 - `AIDD-LIVE-010`, `AIDD-LIVE-011`, and `AIDD-LIVE-012` expand the maintained
@@ -62,21 +65,24 @@ manifest with explicit acceptance criteria and verification intent.
 - Interview scenarios must keep top-level `interview.required: true` plus authored task
   `interview` guidance so the manifest, bootstrap context, and quality review agree.
 - `feature-selection.json` is the durable selection artifact.
+- Scenario setup commands run under a non-interactive harness environment. Package managers
+  and Corepack must not wait for hidden terminal prompts during live evidence collection.
 
 ## Flow Improvements Tracked By This Audit
 
 - Bootstrap context now writes `selected-task.md`, `acceptance-criteria.md`,
   `allowed-write-scope.md`, and command-specific `verification-output.md` from authored task
   fields.
-- Quality scoring now flags heavy repair burden, suspiciously small patches for larger tasks,
-  and placeholder documentation examples.
+- Manual `quality-report.md` review records repair burden, suspiciously small patches for
+  larger tasks, placeholder documentation examples, and target workspace hygiene; the live
+  runner does not turn these signals into an automatic quality gate.
 - Stage briefs now include exact skeleton hints for primary stage documents plus
   richer `stage-result.md` and `validator-report.md` skeletons to reduce first-pass
   contract churn.
 - Native runtime prompts now make turn completion explicit after the final required
   document write so providers that have already produced valid Markdown artifacts do not
   keep the adapter call open until a stage timeout.
-- OpenCode native runs can now finish with `document_complete` when required stage
+- OpenCode and Qwen native runs can now finish with `document_complete` when required stage
   documents settle but the provider process does not return a final message; canonical
   validation still decides whether the stage blocks, repairs, or advances.
 - The OpenCode completion rule treats a settled blocking-question bundle as terminal even

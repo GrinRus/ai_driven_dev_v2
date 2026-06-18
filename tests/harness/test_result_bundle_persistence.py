@@ -47,7 +47,6 @@ def _build_scenario() -> Scenario:
         ),
         verify=ScenarioCommandSteps(commands=("echo verify",)),
         feature_source=None,
-        quality=None,
         live_flow=None,
         runtime_targets=("generic-cli",),
         is_live=False,
@@ -139,7 +138,7 @@ def test_write_command_transcripts_persists_all_step_transcripts(tmp_path: Path)
         duration_seconds=0.25,
     )
 
-    install_path, setup_path, run_path, verify_path, quality_path, teardown_path = (
+    install_path, setup_path, run_path, verify_path, teardown_path = (
         write_command_transcripts(
             layout=layout,
             setup_result=setup_result,
@@ -163,6 +162,5 @@ def test_write_command_transcripts_persists_all_step_transcripts(tmp_path: Path)
     assert run_payload["exit_code"] == 0
     assert verify_payload["step"] == "verify"
     assert verify_payload["command_count"] == 1
-    assert json.loads(quality_path.read_text(encoding="utf-8"))["step"] == "quality"
     assert teardown_payload["step"] == "teardown"
     assert teardown_payload["command_count"] == 1

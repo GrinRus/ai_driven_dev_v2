@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from aidd.harness.result_bundle import ResultBundleLayout
     from aidd.harness.runner import (
         HarnessAiddRunResult,
-        HarnessQualityResult,
         HarnessSetupResult,
         HarnessTeardownResult,
         HarnessVerificationResult,
@@ -46,7 +45,6 @@ class StageTimingEvidence:
     setup_result: HarnessSetupResult | None = None
     aidd_run_result: HarnessAiddRunResult | None = None
     verification_result: HarnessVerificationResult | None = None
-    quality_result: HarnessQualityResult | None = None
     teardown_result: HarnessTeardownResult | None = None
 
 
@@ -125,7 +123,6 @@ def _eval_step_evidence(
     setup_result: HarnessSetupResult | None,
     aidd_run_result: HarnessAiddRunResult | None,
     verification_result: HarnessVerificationResult | None,
-    quality_result: HarnessQualityResult | None,
     teardown_result: HarnessTeardownResult | None,
 ) -> tuple[EvalStepEvidence, ...]:
     return (
@@ -157,12 +154,6 @@ def _eval_step_evidence(
             command_count=(
                 len(verification_result.command_transcripts) if verification_result else 0
             ),
-        ),
-        EvalStepEvidence(
-            name="quality",
-            duration_seconds=quality_result.duration_seconds if quality_result else 0.0,
-            status="completed" if quality_result else "skipped",
-            command_count=len(quality_result.command_transcripts) if quality_result else 0,
         ),
         EvalStepEvidence(
             name="teardown",
@@ -375,7 +366,6 @@ def build_stage_timing_payload(
     setup_result: HarnessSetupResult | None = None,
     aidd_run_result: HarnessAiddRunResult | None = None,
     verification_result: HarnessVerificationResult | None = None,
-    quality_result: HarnessQualityResult | None = None,
     teardown_result: HarnessTeardownResult | None = None,
 ) -> dict[str, object]:
     return _build_stage_timing_payload_from_evidence(
@@ -390,7 +380,6 @@ def build_stage_timing_payload(
             setup_result=setup_result,
             aidd_run_result=aidd_run_result,
             verification_result=verification_result,
-            quality_result=quality_result,
             teardown_result=teardown_result,
         )
     )
@@ -463,7 +452,6 @@ def _build_stage_timing_payload_from_evidence(
                 setup_result=evidence.setup_result,
                 aidd_run_result=evidence.aidd_run_result,
                 verification_result=evidence.verification_result,
-                quality_result=evidence.quality_result,
                 teardown_result=evidence.teardown_result,
             )
         ],

@@ -7,7 +7,8 @@ If the stage cannot proceed responsibly without user clarification:
 3. assign stable ids (`Q1`, `Q2`, ...) and mark each question as `[blocking]` or `[non-blocking]` in `questions.md`,
 4. write exactly one top-level bullet per question id; do not add indented or nested bullets under questions,
 5. use `[blocking]` when the answer is required for truthful `Problem statement`, `Desired outcome`, or `Constraints`,
-6. use `[non-blocking]` only when an explicit low-risk assumption can be recorded in `idea-brief.md`,
-7. wait for or incorporate `answers.md` and treat blocking items as resolved only with matching `[resolved]` answers.
+6. use `[blocking]` when `context/selected-task.md`, `context/acceptance-criteria.md`, or the incoming request explicitly requires blocking answers, interview answers, or operator policy decisions before downstream planning or implementation,
+7. use `[non-blocking]` only when an explicit low-risk assumption can be recorded in `idea-brief.md`,
+8. wait for or incorporate `answers.md` and treat blocking items as resolved only with matching `[resolved]` answers.
 
 Do not ask questions that can be resolved from the provided documents.

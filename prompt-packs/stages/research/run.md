@@ -51,6 +51,29 @@ normalize if canonical validation proves the terminal status inconsistent.
 4. Uncertain or weakly supported points must be explicit in `Trade-offs` or `Open questions`.
 5. Time-sensitive evidence must include freshness context (access date or stale-risk note).
 
+## Scratch artifact discipline
+
+- Keep every local probe bounded by construction. Do not run open-ended servers,
+  infinite streaming generators, watchers, or repro scripts that can only stop via the
+  live harness per-stage timeout. Use a finite iteration count, an in-script timeout
+  such as `anyio.fail_after(...)`, or `subprocess.run(..., timeout=...)`; if the
+  behavior cannot be bounded safely, record the probe as `not-run: <reason>` and cite
+  static evidence instead.
+- If you run temporary reproduction scripts or probes, keep them outside the repository or remove
+  them before completing the stage.
+- Do not leave scratch files directly under `.aidd/`, such as `.aidd/research_repro.py`.
+  Preserve useful evidence by citing commands, outputs, logs, or canonical Markdown artifacts instead.
+- If research commands run tests, import modules, or execute repro snippets inside the target
+  checkout, inspect ignored verification residue before completing the stage, for example with
+  `git status --ignored --short --untracked-files=all`. Newly created `.pytest_cache/`,
+  `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts are
+  workspace pollution unless they are selected research evidence and explicitly justified. Prefer
+  citing command output in `research-notes.md`, then remove generated residue before terminal
+  output; do not claim the workspace is clean unless the cited evidence checks these residue
+  classes.
+- Canonical stage documents live under `.aidd/workitems/...` from the repository root. Do not create
+  top-level `workitems/...`.
+
 ## Execution instructions
 
 1. Read required inputs and `contracts/stages/research.md` before drafting outputs.
@@ -75,5 +98,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - required outputs exist and are Markdown,
 - material findings reference citation ids that exist in `Sources`,
 - `Evidence trace` covers major findings/recommendations,
+- temporary research probes are removed or cited as evidence without stray scratch files,
+- ignored verification residue from research commands is absent, removed, or explicitly reported as
+  workspace pollution instead of hidden behind a clean stage status,
 - unresolved uncertainty is explicit and not masked as fact,
 - unresolved `[blocking]` questions prevent `succeeded`.

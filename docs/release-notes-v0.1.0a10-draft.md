@@ -7,8 +7,9 @@ Latest accepted published prerelease: `0.1.0a10`.
 ## Summary
 
 This prerelease rolls up the post-`v0.1.0a9` work on the integrated operator
-workbench, stage preflight correctness, and live E2E quality gates. It keeps AIDD in alpha
-and does not make a beta-readiness or unattended-production claim.
+workbench, stage preflight correctness, and live E2E execution evidence with
+manual post-run quality reports. It keeps AIDD in alpha and does not make a
+beta-readiness or unattended-production claim.
 
 ## User-visible changes
 

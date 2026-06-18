@@ -19,10 +19,6 @@ class HarnessVerificationError(RuntimeError):
     """Raised when a verification command fails."""
 
 
-class HarnessQualityError(RuntimeError):
-    """Raised when a quality command fails."""
-
-
 class HarnessTeardownError(RuntimeError):
     """Raised when a teardown command fails."""
 
@@ -68,13 +64,6 @@ class HarnessVerificationResult:
 
 
 @dataclass(frozen=True, slots=True)
-class HarnessQualityResult:
-    executed_commands: tuple[str, ...]
-    command_transcripts: tuple[HarnessCommandTranscript, ...]
-    duration_seconds: float
-
-
-@dataclass(frozen=True, slots=True)
 class HarnessTeardownResult:
     executed_commands: tuple[str, ...]
     command_transcripts: tuple[HarnessCommandTranscript, ...]
@@ -86,6 +75,27 @@ def _validate_working_copy_path(working_copy_path: Path) -> None:
         raise ValueError(
             f"Working copy path must be an existing directory: {working_copy_path.as_posix()}"
         )
+
+
+def _command_environment(environment: Mapping[str, str] | None) -> dict[str, str]:
+    if environment is None:
+        return dict(os.environ)
+    return dict(environment)
+
+
+def _setup_command_environment(environment: Mapping[str, str] | None) -> dict[str, str]:
+    command_env = _command_environment(environment)
+    command_env.update(
+        {
+            "CI": "1",
+            "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
+            "GIT_TERMINAL_PROMPT": "0",
+            "npm_config_audit": "false",
+            "npm_config_fund": "false",
+            "npm_config_yes": "true",
+        }
+    )
+    return command_env
 
 
 def _run_shell_commands(
@@ -141,9 +151,7 @@ def run_setup_steps(
 ) -> HarnessSetupResult:
     _validate_working_copy_path(working_copy_path)
 
-    command_env = dict(os.environ)
-    if environment is not None:
-        command_env.update(environment)
+    command_env = _setup_command_environment(environment)
 
     command_transcripts = _run_shell_commands(
         commands=scenario.setup.commands,
@@ -206,7 +214,7 @@ def invoke_aidd_run(
     if config_path is not None:
         command_parts.extend(("--config", config_path.resolve(strict=False).as_posix()))
     command = tuple(command_parts)
-    command_env = dict(os.environ)
+    command_env = _command_environment(environment)
     command_env.update(
         {
             "AIDD_HARNESS_SCENARIO_ID": scenario.scenario_id,
@@ -214,8 +222,6 @@ def invoke_aidd_run(
             "AIDD_HARNESS_WORK_ITEM": work_item,
         }
     )
-    if environment is not None:
-        command_env.update(environment)
 
     timeout_seconds = (
         float(scenario.run.timeout_minutes * 60)
@@ -281,10 +287,8 @@ def run_verification_steps(
 ) -> HarnessVerificationResult:
     _validate_working_copy_path(working_copy_path)
 
-    command_env = dict(os.environ)
+    command_env = _command_environment(environment)
     command_env["AIDD_HARNESS_AIDD_EXIT_CODE"] = str(aidd_run_result.exit_code)
-    if environment is not None:
-        command_env.update(environment)
 
     command_transcripts = _run_shell_commands(
         commands=scenario.verify.commands,
@@ -301,39 +305,6 @@ def run_verification_steps(
     )
 
 
-def run_quality_steps(
-    *,
-    scenario: Scenario,
-    working_copy_path: Path,
-    environment: Mapping[str, str] | None = None,
-) -> HarnessQualityResult:
-    _validate_working_copy_path(working_copy_path)
-
-    if scenario.quality is None:
-        return HarnessQualityResult(
-            executed_commands=tuple(),
-            command_transcripts=tuple(),
-            duration_seconds=0.0,
-        )
-
-    command_env = dict(os.environ)
-    if environment is not None:
-        command_env.update(environment)
-
-    command_transcripts = _run_shell_commands(
-        commands=scenario.quality.commands,
-        working_copy_path=working_copy_path,
-        command_env=command_env,
-        error_label="Quality",
-        error_type=HarnessQualityError,
-    )
-    return HarnessQualityResult(
-        executed_commands=tuple(transcript.command for transcript in command_transcripts),
-        command_transcripts=command_transcripts,
-        duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
-    )
-
-
 def run_teardown_steps(
     *,
     teardown_commands: tuple[str, ...],
@@ -342,9 +313,7 @@ def run_teardown_steps(
 ) -> HarnessTeardownResult:
     _validate_working_copy_path(working_copy_path)
 
-    command_env = dict(os.environ)
-    if environment is not None:
-        command_env.update(environment)
+    command_env = _command_environment(environment)
 
     command_transcripts = _run_shell_commands(
         commands=teardown_commands,

@@ -54,12 +54,21 @@ def test_stage_run_and_system_prompts_forbid_model_authored_repair_brief(
 def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     run_prompt = Path("prompt-packs/stages/idea/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/idea/repair.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/idea/system.md").read_text(
+        encoding="utf-8"
+    )
+    interview_prompt = Path("prompt-packs/stages/idea/interview.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/idea.md").read_text(encoding="utf-8")
 
     assert "avoid unsupported absolute claims" in run_prompt
     assert "Do not assert source-code root causes" in run_prompt
     assert "leave source" in run_prompt
     assert "diagnosis to `research`" in run_prompt
     assert "tie them to the selected request, constraints, and acceptance context" in run_prompt
+    assert "`context/selected-task.md`" in run_prompt
+    assert "`context/acceptance-criteria.md`" in run_prompt
     assert "`Open questions` as Markdown bullet items, or exactly `- none`" in run_prompt
     assert "prose-only text is invalid" in run_prompt
     assert "do not put indented or nested bullets under a question" in run_prompt
@@ -67,6 +76,11 @@ def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     assert (
         "`SEM-INCOMPLETE-SECTION` for `Constraints` or `Open questions`" in repair_prompt
     )
+    for text in (run_prompt, repair_prompt, system_prompt, interview_prompt, contract):
+        assert "blocking answers" in text
+        assert "interview answers" in text
+        assert "operator policy decisions" in text
+        assert "before downstream planning or implementation" in text
 
 
 def test_review_prompts_make_finding_evidence_reference_explicit() -> None:
@@ -101,6 +115,27 @@ def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
     assert "Do not use range claims such as `AC-1 through AC-4`" in run_prompt
     assert "Do not pair `QA verdict: ready` with residual risk bullets" in run_prompt
     assert "use `ready-with-risks` and `proceed-with-conditions`" in run_prompt
+    assert "isolated optional broad-suite failures in unrelated environment-sensitive tests" in (
+        run_prompt
+    )
+    assert "non-blocking optional-check note instead of a residual risk" in run_prompt
+
+
+def test_qa_prompts_do_not_downgrade_for_isolated_optional_broad_suite_failures() -> None:
+    run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/qa/system.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (run_prompt, repair_prompt, system_prompt, contract):
+        assert "isolated optional broad-suite failures" in text
+        assert "unrelated environment-sensitive tests" in text
+
+    assert "record it as a non-blocking optional-check note" in run_prompt
+    assert "rather than a residual risk" in repair_prompt
+    assert "must record it as a non-blocking" in contract
 
 
 def test_review_prompt_respects_authored_verification_boundary() -> None:
@@ -147,9 +182,54 @@ def test_review_and_qa_prompts_cross_check_tasklist_and_plan_obligations() -> No
     assert "cross-check nontrivial task details" in qa_prompt
     assert "error-cause or\n   diagnostic-context preservation promise" in qa_prompt
     assert "required named synchronization primitive" in qa_prompt
+    assert "Do not name a specific execution surface" in qa_prompt
+    assert "`ASGI/TestClient`, state the exact surface" in qa_prompt
     assert "missed tasklist/plan requirement" in qa_repair_prompt
     assert "Named mechanisms include concrete APIs/library calls" in qa_repair_prompt
+    assert "overstated execution surface" in qa_repair_prompt
     assert "synchronization primitives such as named" not in qa_repair_prompt
+
+
+def test_implement_review_and_qa_require_shared_surface_blast_radius_evidence() -> None:
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    implement_contract = Path("contracts/stages/implement.md").read_text(
+        encoding="utf-8"
+    )
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (
+        implement_prompt,
+        review_prompt,
+        qa_prompt,
+        implement_contract,
+        review_contract,
+        qa_contract,
+    ):
+        assert "shared public-surface mechanism" in text
+        assert "CLI decorator" in text
+        assert "parser/helper" in text
+        assert "router/error boundary" in text
+        assert "schema transform helper" in text
+        assert "sibling commands, routes, generated outputs" in text
+        assert "help/usage" in text
+        assert "API compatibility" in text
+        assert "docs consistency" in text
+
+    assert "explicitly mark the unchecked sibling surface as a residual risk" in (
+        implement_prompt
+    )
+    assert "Record a finding when implementation evidence does not cover" in (
+        review_prompt
+    )
+    assert "Missing help/usage, docs consistency, API compatibility" in qa_prompt
+    assert "must force `QA verdict: not-ready`" in qa_contract
 
 
 def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
@@ -165,6 +245,52 @@ def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
     assert "Verification notes` must reference the milestone ids" in run_prompt
     assert "missing milestone ids" in repair_prompt
     assert "reference those ids" in repair_prompt
+
+
+def test_plan_and_tasklist_preserve_authored_verification_commands() -> None:
+    plan_contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
+    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(
+        encoding="utf-8"
+    )
+    plan_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (plan_contract, tasklist_contract, plan_prompt, tasklist_prompt):
+        normalized = " ".join(text.split())
+        assert "`context/verification-output.md`" in text
+        assert "preserve those commands exactly" in text
+        assert "flags, path lists, environment variables" in normalized
+        assert "coverage/cache-disabling options" in text
+        assert "`--coverage.enabled=false`" in text
+        assert "do not replace them with" in normalized or "do not rewrite them as" in (
+            normalized
+        )
+        assert "Optional broad checks outside the authored verification boundary" in text
+        assert (
+            "not become required pass criteria" in normalized
+            or "Do not turn them into required pass criteria" in normalized
+            or "not promoted to required pass criteria" in normalized
+        )
+
+
+def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (run_prompt, repair_prompt):
+        assert "stage-brief.md" in text
+        assert "Repository-local `contracts/...` files may be absent" in text
+        assert "Do not end the turn after analysis-only reads" in text
+
+    assert "Avoid broad commands such as `rg --files .aidd`" in run_prompt
+    assert "make the first file-changing action create or replace all" in run_prompt
+    assert "the first file-changing action must" in repair_prompt
 
 
 def test_qa_prompt_respects_selected_design_constraints() -> None:
@@ -192,11 +318,14 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     review_system_prompt = Path("prompt-packs/stages/review/system.md").read_text(
         encoding="utf-8"
     )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
 
     assert "newly created untracked source files" in implement_prompt
     assert "the deliverable is the" in implement_prompt
     assert "local workspace state, not a tracked-only patch" in implement_prompt
-    assert "`git status --short` and" in implement_prompt
+    assert "`git status --short --untracked-files=all` and" in implement_prompt
     assert "`git diff --name-only`" in implement_prompt
     assert "Do not leave lockfiles, dependency manifests" in implement_prompt
     assert "`git stash`, `git reset`, `git checkout --`, or `git restore`" in (
@@ -211,6 +340,122 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     assert "do not reject a change solely because a newly created file is untracked" in (
         review_system_prompt
     )
+
+    for text in (review_prompt, qa_prompt, review_contract, qa_contract):
+        normalized = " ".join(text.split())
+        assert "`git diff -- <untracked-file>`" in text
+        assert "`git status --short --untracked-files=all` plus direct file inspection" in (
+            normalized
+        )
+        assert "`git diff --no-index /dev/null <untracked-file>`" in text
+
+
+def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    implement_repair = Path("prompt-packs/stages/implement/repair.md").read_text(
+        encoding="utf-8"
+    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    implement_contract = Path("contracts/stages/implement.md").read_text(
+        encoding="utf-8"
+    )
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (implement_prompt, implement_repair, implement_contract):
+        normalized_text = " ".join(text.split())
+        assert (
+            "Do not delete, move, reclone, or recreate the prepared repository checkout"
+            in normalized_text
+        )
+        assert "`install-home/`" in text
+        assert "packaged contracts disappear" in text
+        assert (
+            "do not try to recover by" in text
+            or "instead of attempting workspace recovery" in text
+            or "instead of running `git clone`" in text
+        )
+        assert "`git status --ignored --short --untracked-files=all`" in text
+        assert "`.venv/`" in text
+        assert "`.ruff_cache/`" in text
+        assert "`.pdm-build/`" in text
+        assert "`coverage/`" in text
+        assert "`.coverage*`" in text
+        assert "`__pycache__/`" in text
+        assert "Do not" in text and "claim cleanup" in text
+
+    for text in (review_prompt, qa_prompt, review_contract, qa_contract):
+        assert "prepared checkout disappeared" in text
+        assert "was recloned" in text
+        assert "`target-workspace-evidence.*`" in text
+        assert "`git status --ignored --short --untracked-files=all`" in text
+        assert "`.pytest_cache/`" in text
+        assert "`.ruff_cache/`" in text
+        assert "`.coverage*`" in text
+        assert "`__pycache__/`" in text
+        assert "workspace pollution" in text
+        assert "cleanup claim" in text or "claim cleanup" in text
+
+
+def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> None:
+    run_prompt = Path("prompt-packs/stages/research/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/research.md").read_text(encoding="utf-8")
+
+    for text in (run_prompt, repair_prompt, contract):
+        assert "`git status --ignored --short --untracked-files=all`" in text
+        assert "`.pytest_cache/`" in text
+        assert "`.ruff_cache/`" in text
+        assert "`coverage/`" in text
+        assert "`.coverage*`" in text
+        assert "`__pycache__/`" in text
+        assert "workspace pollution" in text
+        assert "ignored verification residue" in text
+
+
+def test_research_prompts_and_contracts_require_bounded_local_probes() -> None:
+    run_prompt = Path("prompt-packs/stages/research/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/research.md").read_text(encoding="utf-8")
+
+    for text in (run_prompt, repair_prompt, contract):
+        assert "bounded by construction" in text
+        assert "live harness per-stage timeout" in text
+        assert "infinite" in text
+        assert "stream" in text
+        assert "`anyio.fail_after(...)`" in text
+        assert "`subprocess.run(..., timeout=...)`" in text
+        assert "`not-run: <reason>`" in text
+
+
+def test_review_and_qa_use_live_setup_workspace_baseline() -> None:
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (review_prompt, qa_prompt, review_contract, qa_contract):
+        assert "Live setup workspace baseline" in text
+        lower_text = text.lower()
+        assert "known harness config" in lower_text
+        assert "setup-baseline untracked non-aidd files" in lower_text
+        assert "not" in text and "solely because" in text
+        assert "new untracked files" in text and "baseline" in text
 
 
 def test_review_spec_prompts_require_exact_decision_heading() -> None:
@@ -278,9 +523,17 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "executable/check evidence" in run_prompt
     assert "Manual or `CliRunner` checks must cite" in run_prompt
     assert "do not write `manual inspection -> pass` without evidence" in run_prompt
+    assert "Do not list mutation-only cleanup commands such as `rm -rf ...`" in run_prompt
+    assert "proving residue is absent" in run_prompt
+    assert "`not-run: future-stage artifact`" in run_prompt
     assert "write `not-run: <reason>`" in run_prompt
     assert "outcome claim without executable/check evidence" in repair_prompt
     assert "captured assertion result" in repair_prompt
+    assert (
+        "Do not preserve mutation-only cleanup bullets such as `rm -rf ... -> pass`"
+        in repair_prompt
+    )
+    assert "`not-run: future-stage artifact`" in repair_prompt
     assert "`not-run: <reason>` explicitly" in repair_prompt
     assert "Use one bullet per command/check" in run_prompt
     assert "``- `command goes here` -> pass (observed summary)``" in run_prompt

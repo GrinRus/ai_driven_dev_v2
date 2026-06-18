@@ -51,6 +51,10 @@ Optional context documents may improve QA depth, but they must not replace imple
 - When diff summary or repository-state context exists, `qa` must treat the complete local
   deliverable change set as release evidence, including tracked and untracked files outside the
   AIDD workspace.
+  Plain `git diff -- <untracked-file>` does not show newly created untracked file contents; QA
+  evidence for such files must cite `git status --short --untracked-files=all` plus direct file
+  inspection, or an explicit untracked-file diff method such as
+  `git diff --no-index /dev/null <untracked-file>`.
 
 ## QA output expectations
 
@@ -76,9 +80,29 @@ Optional context documents may improve QA depth, but they must not replace imple
 - Optional exploratory checks outside the selected task's authored verification boundary
   must not force `ready-with-risks` or `proceed-with-conditions` unless they reveal a
   concrete defect, contradict acceptance criteria, or are required by review findings.
+  If an optional broader check was run and failed only in unrelated files or
+  environment-sensitive surfaces outside the selected scope, and selected-task verification,
+  acceptance criteria, and review evidence are clean, QA must record it as a non-blocking
+  optional-check note rather than a residual risk or release condition.
 - Out-of-scope lockfile, dependency manifest, generated resolver output, or project config changes
   must force quality verdict `not-ready` and release recommendation `hold` unless the selected task
   explicitly requires that dependency/config change.
+- In live E2E contexts, `context/repository-state.md` may include a
+  `Live setup workspace baseline` section. Files listed there under known harness config or
+  setup-baseline untracked non-AIDD files are not QA blockers solely because they remain visible in
+  `git status`; block QA only when implementation changes them, depends on them as deliverable
+  evidence, contradicts selected scope, or introduces new untracked files outside that baseline.
+- Live harness workspace recovery is not product evidence. If implementation evidence shows the
+  prepared checkout disappeared, was recloned, or a harness run directory such as `install-home/`,
+  `source/`, `build/`, or `target/` was deleted, moved, or recreated, QA must set
+  `QA verdict: not-ready` and release recommendation `hold`.
+- Ignored local artifacts are still workspace hygiene evidence. New `.venv/`, `.pytest_cache/`,
+  `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
+  directories from
+  `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+  equivalent evidence must be treated as workspace pollution unless they are selected deliverable
+  outputs or were removed before QA. Do not claim cleanup passed unless the cited evidence
+  explicitly covers these ignored residue classes.
 - Intentional design constraints selected by the authored task or resolved interview answers
   must not force `ready-with-risks` or `proceed-with-conditions` by themselves when the
   implementation exactly follows that selected boundary and required mitigations, tests, and
@@ -95,6 +119,12 @@ Optional context documents may improve QA depth, but they must not replace imple
   calls when the upstream artifacts made them part of the plan. A clean review report alone is not
   enough to proceed when QA can observe a missed planned requirement or mechanism in the diff,
   tests, or implementation evidence.
+- When the diff changes a shared public-surface mechanism such as a CLI decorator, parser/helper,
+  router/error boundary, schema transform helper, or public API adapter, `QA verdict: ready`
+  requires blast-radius evidence for affected sibling commands, routes, generated outputs, or
+  documented public surfaces. Missing help/usage, docs consistency, API compatibility, or
+  generated-output evidence must force `QA verdict: not-ready` unless upstream review explicitly
+  accepted it as out of scope with mitigation.
 
 ## Validation focus
 
@@ -109,6 +139,12 @@ Validators for `qa` should check:
 - missing evidence references:
   - material QA claims must reference concrete verification artifacts or execution outputs,
   - evidence-free pass/ready claims are rejected,
+- optional-check overreach:
+  - isolated optional broad-suite failures outside selected scope do not force
+    `ready-with-risks` or `proceed-with-conditions` when selected-task evidence is clean,
+    especially when they are unrelated environment-sensitive tests,
+- shared public-surface blast radius:
+  - ready/proceed decisions cite evidence for affected sibling public surfaces after shared helper changes,
 - cross-document consistency between QA verdict, residual risk summary, validator findings, and terminal status in `stage-result.md`.
 - consistency with available tasklist/plan obligations and their verification evidence.
 

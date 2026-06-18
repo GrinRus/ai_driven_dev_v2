@@ -14,6 +14,14 @@ from aidd.harness.install_artifact import (
 from aidd.harness.runner import HarnessCommandTranscript
 
 
+def _is_uv_build_command(command: tuple[str, ...]) -> bool:
+    return command[1:3] == ("build", "--wheel")
+
+
+def _is_uv_tool_install_command(command: tuple[str, ...]) -> bool:
+    return command[1:3] == ("tool", "install")
+
+
 def _transcript(command: tuple[str, ...]) -> HarnessCommandTranscript:
     return HarnessCommandTranscript(
         command=" ".join(command),
@@ -75,14 +83,14 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
         cwd: Path,
         env: dict[str, str] | None = None,
     ) -> HarnessCommandTranscript:
-        if command[:3] == ("uv", "build", "--wheel"):
+        if _is_uv_build_command(command):
             assert cwd != repository_root
             assert (cwd / "pyproject.toml").exists()
             out_dir = Path(command[-1])
             _write_fake_aidd_wheel(
                 out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
             )
-        elif command[:3] == ("uv", "tool", "install"):
+        elif _is_uv_tool_install_command(command):
             assert "--reinstall" in command
             assert "--refresh" in command
             assert env is not None
@@ -114,6 +122,56 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
     assert result.install_home == tmp_path / "work-root" / "eval-live-test" / "install-home"
     assert result.uv_cache_dir == tmp_path / "work-root" / "eval-live-test" / "uv-cache"
     assert result.source_revision
+
+
+def test_prepare_local_wheel_install_honors_uv_environment_override(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repository_root = tmp_path / "repo"
+    repository_root.mkdir()
+    (repository_root / "pyproject.toml").write_text("[project]\nname='aidd-test'\n")
+    (repository_root / "contracts").mkdir()
+    _commit_source_checkout(repository_root)
+    uv_override = tmp_path / "bin" / "uv"
+    uv_override.parent.mkdir(parents=True, exist_ok=True)
+    uv_override.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    uv_override.chmod(0o755)
+    observed_commands: list[tuple[str, ...]] = []
+    monkeypatch.setenv("UV", uv_override.as_posix())
+
+    def _fake_run_command(
+        *,
+        command: tuple[str, ...],
+        cwd: Path,
+        env: dict[str, str] | None = None,
+    ) -> HarnessCommandTranscript:
+        observed_commands.append(command)
+        assert command[0] == uv_override.as_posix()
+        if _is_uv_build_command(command):
+            out_dir = Path(command[-1])
+            _write_fake_aidd_wheel(
+                out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
+            )
+        elif _is_uv_tool_install_command(command):
+            assert env is not None
+            home = Path(env["HOME"])
+            tool_bin_dir = install_artifact._tool_bin_dir(install_home=home)
+            tool_bin_dir.mkdir(parents=True, exist_ok=True)
+            installed_binary = tool_bin_dir / "aidd"
+            installed_binary.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            installed_binary.chmod(0o755)
+        return _transcript(command)
+
+    monkeypatch.setattr(install_artifact, "_run_command", _fake_run_command)
+
+    prepare_local_wheel_install(
+        work_root=tmp_path / "work-root",
+        run_id="eval-live-test",
+        repository_root=repository_root,
+    )
+
+    assert len(observed_commands) == 2
 
 
 def test_prepare_local_wheel_install_requires_source_checkout_root(
@@ -155,14 +213,14 @@ def test_prepare_local_wheel_install_can_derive_source_checkout_from_cwd(
         cwd: Path,
         env: dict[str, str] | None = None,
     ) -> HarnessCommandTranscript:
-        if command[:3] == ("uv", "build", "--wheel"):
+        if _is_uv_build_command(command):
             assert cwd != source_root
             assert (cwd / "pyproject.toml").exists()
             out_dir = Path(command[-1])
             _write_fake_aidd_wheel(
                 out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
             )
-        elif command[:3] == ("uv", "tool", "install"):
+        elif _is_uv_tool_install_command(command):
             assert "--reinstall" in command
             assert "--refresh" in command
             assert env is not None

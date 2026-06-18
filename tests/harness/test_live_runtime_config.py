@@ -16,7 +16,6 @@ from aidd.harness.scenarios import (
     ScenarioCommandSteps,
     ScenarioFeatureSource,
     ScenarioLiveFlowConfig,
-    ScenarioQualityConfig,
     ScenarioRepoSource,
     ScenarioRunConfig,
 )
@@ -94,13 +93,6 @@ def _scenario(
             fixture_path=None,
             seed_id=None,
             summary=None,
-        ),
-        quality=ScenarioQualityConfig(
-            commands=tuple(),
-            rubric_profile="live-full",
-            require_review_status="approved",
-            allowed_qa_verdicts=("ready",),
-            code_review_required=True,
         ),
         live_flow=ScenarioLiveFlowConfig(
             driver="stepwise-black-box",
@@ -213,35 +205,38 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert "[runtime.qwen]" in config_text
     assert 'command = "qwen --approval-mode yolo --output-format stream-json"' in config_text
     assert "[runtime.generic_cli]" not in config_text
-    assert config_text.count("timeout_seconds = 1200") == 2
+    assert config_text.count("timeout_seconds = 3600") == 4
     assert "[runtime.claude_code.stage_timeouts]" in config_text
     config = tomllib.loads(config_text)
     claude_stage_timeouts = config["runtime"]["claude_code"]["stage_timeouts"]
-    assert claude_stage_timeouts["idea"] == 1500
-    assert claude_stage_timeouts["research"] == 1500
-    assert claude_stage_timeouts["plan"] == 1500
-    assert claude_stage_timeouts["review-spec"] == 1500
-    assert claude_stage_timeouts["tasklist"] == 1800
-    assert claude_stage_timeouts["implement"] == 1800
-    assert claude_stage_timeouts["review"] == 1800
-    assert claude_stage_timeouts["qa"] == 1800
-    assert config["runtime"]["codex"]["timeout_seconds"] == 1800
+    assert set(claude_stage_timeouts) == {
+        "idea",
+        "research",
+        "plan",
+        "review-spec",
+        "tasklist",
+        "implement",
+        "review",
+        "qa",
+    }
+    assert set(claude_stage_timeouts.values()) == {3600}
+    assert config["runtime"]["codex"]["timeout_seconds"] == 3600
     codex_stage_timeouts = config["runtime"]["codex"]["stage_timeouts"]
     assert codex_stage_timeouts == {
-        "idea": 1800,
-        "research": 2400,
-        "plan": 1800,
-        "review-spec": 1800,
-        "tasklist": 2400,
-        "implement": 2400,
-        "review": 1800,
-        "qa": 1800,
+        "idea": 3600,
+        "research": 3600,
+        "plan": 3600,
+        "review-spec": 3600,
+        "tasklist": 3600,
+        "implement": 3600,
+        "review": 3600,
+        "qa": 3600,
     }
     assert "[runtime.opencode.stage_timeouts]" in config_text
-    assert "idea = 1500" in config_text
-    assert "plan = 1500" in config_text
-    assert "review-spec = 1500" in config_text
-    assert config["runtime"]["qwen"]["timeout_seconds"] == 1800
+    assert "idea = 3600" in config_text
+    assert "plan = 3600" in config_text
+    assert "review-spec = 3600" in config_text
+    assert config["runtime"]["qwen"]["timeout_seconds"] == 3600
     assert config["runtime"]["qwen"]["stage_timeouts"] == codex_stage_timeouts
 
 

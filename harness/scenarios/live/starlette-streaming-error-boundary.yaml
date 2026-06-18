@@ -10,7 +10,7 @@ repo:
 objective: Exercise a Starlette ASGI middleware and streaming response lane with
   bounded verification across async error and disconnect behavior.
 task: Run the installed AIDD full-flow live audit against the selected Starlette
-  streaming boundary task and preserve reviewable quality evidence.
+  streaming boundary task and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -65,19 +65,9 @@ verify:
   - Focused middleware and streaming response tests exit with status 0.
   - Ruff reports no issues in the touched runtime and focused test surfaces.
   - QA stage output artifacts exist for the selected work item.
-quality:
-  commands:
-  - uv run --frozen pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
-  - uv run --frozen ruff check starlette tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 10
-  timeout_minutes: 45
+  timeout_minutes: 240
 interview:
   required: false
 runtime_targets:

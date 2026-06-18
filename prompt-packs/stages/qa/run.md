@@ -59,12 +59,22 @@ normalize if canonical validation proves the terminal status inconsistent.
    explicitly `rejected`.
 2. Do not pass QA when verification output/artifacts are missing for material claims.
 3. Every material verdict/recommendation claim must point to concrete verification evidence.
+   Do not name a specific execution surface, test harness, or API path such as `TestClient`,
+   direct ASGI invocation, browser UI, CLI, fixture, or generated output unless the cited
+   evidence explicitly shows that surface. If acceptance criteria name alternatives such as
+   `ASGI/TestClient`, state the exact surface that was actually exercised.
 4. Residual risks must include severity and explicit mitigation/ownership notes.
 5. Blocking uncertainty must become a `[blocking]` question with release recommendation `hold`.
 6. When present, the selected task and `context/verification-output.md` define the authored
    verification boundary. Do not downgrade to `ready-with-risks` or `proceed-with-conditions` only because
    optional broader checks outside that boundary were not run or were blocked by local sandbox
    policy, unless they reveal a concrete defect or contradict acceptance criteria/review evidence.
+   If an optional broader check was run and failed only in unrelated files or environment-sensitive
+   surfaces outside the selected scope, while authored verification, acceptance criteria, and review
+   evidence are clean, record it as a non-blocking optional-check note instead of a residual risk,
+   `ready-with-risks`, or `proceed-with-conditions`. Downgrade only when the failure touches changed
+   files, selected public surfaces, acceptance criteria, plan/tasklist promises, review findings, or
+   cannot be isolated from the deliverable.
 7. Intentional design constraints selected by the authored task or resolved interview answers are
    not residual release risks by themselves. For example, trusted local code execution is `ready`
    when explicit confirmation, documentation, tests, and scope boundaries required by the selected
@@ -82,6 +92,36 @@ normalize if canonical validation proves the terminal status inconsistent.
    API/library call, or a required regression assertion that has no code or test evidence, set
    `QA verdict: not-ready` and release recommendation `hold` unless upstream artifacts explicitly
    supersede that requirement.
+10. If repository evidence shows top-level `workitems/...` duplicates, unexplained non-`.aidd`
+    untracked files, or direct `.aidd/*.py`-style scratch files, set `QA verdict: not-ready` and
+    release recommendation `hold` unless upstream implementation cleaned them up before QA output.
+    Project-local provider state such as `.qwen/...`, `.claude/...`, `.codex/...`, `.opencode/...`,
+    and unexpected lockfiles such as `uv.lock` are non-`.aidd` target-repository files, not AIDD
+    workspace artifacts. Do not call them harmless runtime artifacts unless repository baseline
+    evidence proves they existed after setup and before stage execution.
+    In live E2E contexts, use `context/repository-state.md` section
+    `Live setup workspace baseline` as that baseline evidence: files listed under
+    `Known harness config present` or `Setup-baseline untracked non-AIDD files` do not make QA
+    `not-ready` solely because they are still visible in `git status`. They become blockers only if
+    implementation changed them, cites them as deliverable evidence, contradicts the selected task,
+    or new untracked files appear outside that baseline.
+    If implementation evidence says the prepared checkout disappeared, was recloned, or any live
+    harness run directory such as `install-home/`, `source/`, `build/`, or `target/` was deleted,
+    moved, or recreated, set `QA verdict: not-ready` and release recommendation `hold`. Live
+    harness workspace recovery is an execution blocker, not product evidence.
+    If `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+    equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
+    `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories, treat
+    them as workspace pollution unless they are selected deliverable outputs or were removed before
+    QA. Do not write "cleanup passed" or equivalent wording unless the cited command explicitly
+    checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build,
+    dist, and dependency-cache residue.
+11. If the diff changes a shared public-surface mechanism such as a CLI decorator,
+    parser/helper, router/error boundary, schema transform helper, or public API adapter, require
+    evidence for affected sibling commands, routes, generated outputs, or documented public surfaces.
+    Missing help/usage, docs consistency, API compatibility, or generated-output blast-radius
+    evidence is a QA blocker unless upstream review explicitly accepted it as out of scope with
+    a concrete mitigation.
 
 ## Execution instructions
 
@@ -92,6 +132,17 @@ normalize if canonical validation proves the terminal status inconsistent.
    context to separate required scenario evidence from optional exploratory checks.
    When repository change evidence is provided, inspect every changed tracked or untracked
    deliverable file, excluding AIDD workspace/config artifacts, before deciding readiness.
+   If no repository change evidence is provided, run or cite `git status --short --untracked-files=all`
+   or equivalent project-native evidence before deciding readiness.
+   Exclude only `.aidd/...` workspace state and known harness config such as `aidd.example.toml`;
+   do not exclude provider-local directories such as `.qwen/skills/...` from repository-state
+   readiness accounting.
+   Do not cite `git diff -- <untracked-file>` as complete evidence for a newly created untracked
+   file: plain `git diff` does not show untracked file contents. Cite `git status --short
+   --untracked-files=all` plus direct file inspection, or an explicit untracked-file diff method
+   such as `git diff --no-index /dev/null <untracked-file>`.
+   For live setup-baseline files listed in `context/repository-state.md`, cite the baseline section
+   and keep them out of deliverable blockers unless the current stage changed or depended on them.
 3. Build `qa-report.md` with these exact H2 sections:
    `Quality verdict`, `Verification summary`, `Release recommendation`, `Evidence`,
    `Known issues`, and `Readiness`.
@@ -122,7 +173,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 11. If critical checks are missing, contradictory, or inconclusive, ask a `[blocking]` question
    instead of inventing assumptions.
 12. Keep optional broader-check limitations as non-blocking notes when authored verification,
-   review, and acceptance criteria are clean.
+   review, and acceptance criteria are clean. Isolated optional broad-suite failures in unrelated
+   environment-sensitive tests are not residual risks for the selected task.
 13. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
 
 ## Common output skeleton discipline
@@ -143,11 +195,15 @@ normalize if canonical validation proves the terminal status inconsistent.
   `ready-with-risks` and `proceed-with-conditions`,
 - release recommendation is actionable and consistent with verdict,
 - material claims reference concrete verification evidence,
+- named execution surfaces match the cited evidence exactly rather than broadening an
+  `A/B` acceptance alternative into an unsupported concrete claim,
 - each `AC-N` from acceptance context has its own evidence-backed checklist bullet when acceptance
   criteria are provided,
 - unresolved critical uncertainty is surfaced as blocking question with `hold`,
 - optional checks outside the authored verification boundary are not treated as release
   conditions unless they expose a concrete defect,
+- isolated optional broad-suite failures in unrelated environment-sensitive tests remain
+  non-blocking notes when selected-task evidence is clean,
 - intentional selected design constraints are not treated as residual risks when their required
   mitigations and evidence are complete,
 - available tasklist/plan task details and risk mitigations were cross-checked before declaring
@@ -155,3 +211,10 @@ normalize if canonical validation proves the terminal status inconsistent.
 - named plan/tasklist mechanisms were either found in code/tests or explicitly superseded before
   declaring `ready` or `proceed`,
 - `qa-report.md`, `stage-result.md`, and `validator-report.md` are outcome-consistent.
+- top-level `workitems/...` duplicates, unexplained untracked files, and stray `.aidd/` scratch files
+  are absent or explicitly make QA `not-ready`.
+- ignored verification residue such as `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`,
+  `__pycache__/`, build, dist, and dependency-cache artifacts is absent, cleaned before QA, or explicitly keeps QA
+  `not-ready`; do not claim cleanup passed from a narrower check.
+- shared public-surface helper changes have blast-radius evidence for affected sibling
+  commands/routes/generated outputs and help/docs/API compatibility.

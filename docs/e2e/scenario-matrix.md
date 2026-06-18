@@ -100,10 +100,8 @@ Qwen when local auth is ready.
 - `claude-code` remains deterministic by default, keeps `AIDD-LIVE-005` as a
   small smoke lane, and uses `AIDD-LIVE-007` plus `AIDD-LIVE-012` as planned
   maintained medium and large live coverage candidates when `aidd eval doctor`
-  confirms provider/auth
-  readiness; live config extends native Claude Code budgets for long-running
-  `research`, `plan`, `review-spec`, `tasklist`, `implement`, `review`, and
-  `qa` attempts.
+  confirms provider/auth readiness; live config uses large native provider and
+  stage budgets for every maintained `idea -> qa` stage.
 - Live manifests must not be scheduled in `ci` or release automation.
 
 ## Maintained Scenario Set

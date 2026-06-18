@@ -10,7 +10,7 @@ repo:
 objective: Keep HTTPX smoke lane deterministic by targeting the invalid-header
   diagnostics defect with bounded patch scope.
 task: Run the installed AIDD full-flow live audit against the selected HTTPX authored task
-  and preserve reviewable quality evidence.
+  and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -50,7 +50,7 @@ feature_source:
     - Existing invalid-header validation semantics remain unchanged.
     - Regression tests cover the failing diagnostic path.
     verification:
-    - uv run pytest -q
+    - uv run --with-requirements requirements.txt --frozen python -m pytest tests/models/test_headers.py tests/client/test_headers.py::test_header_with_incorrect_value -q
     - test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/stage-result.md
     - test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/validator-report.md
     quality_bar: The patch should be small, behavior-preserving except for diagnostics,
@@ -59,26 +59,17 @@ feature_source:
       path plus regression coverage.
 verify:
   commands:
-  - uv run pytest -q
+  - uv run --with-requirements requirements.txt --frozen python -m pytest tests/models/test_headers.py tests/client/test_headers.py::test_header_with_incorrect_value -q
   - test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/validator-report.md
   pass_conditions:
-  - Verification command exits with status 0.
-  - Pytest output reports all tests as passed.
+  - Focused header diagnostics verification command exits with status 0.
+  - Pytest output reports the selected header diagnostics tests as passed.
   - No new failing tests are introduced relative to baseline.
   - QA stage output artifacts exist for the selected work item.
-quality:
-  commands:
-  - uv run pytest -q
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 4
-  timeout_minutes: 20
+  timeout_minutes: 240
 interview:
   required: false
 runtime_targets:

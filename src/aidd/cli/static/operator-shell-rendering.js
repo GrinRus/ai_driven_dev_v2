@@ -88,9 +88,18 @@ function ensureRunnableRuntime() {
 function renderTopbar() {
   const dashboard = state.dashboard || {};
   const run = dashboard.run || {};
-  document.getElementById("projectPath").textContent = dashboard.project_root || "...";
-  document.getElementById("workItemChip").textContent = `Work item: ${dashboard.work_item || "unknown"}`;
-  document.getElementById("runChip").textContent = run.run_id ? `Run: ${run.run_id}` : "Run: none";
+  const projectPath = document.getElementById("projectPath");
+  const workItemChip = document.getElementById("workItemChip");
+  const runChip = document.getElementById("runChip");
+  const projectRoot = dashboard.project_root || "...";
+  const workItemLabel = `Work item: ${dashboard.work_item || "unknown"}`;
+  const runLabel = run.run_id ? `Run: ${run.run_id}` : "Run: none";
+  projectPath.textContent = projectRoot;
+  projectPath.title = projectRoot;
+  workItemChip.textContent = workItemLabel;
+  workItemChip.title = workItemLabel;
+  runChip.textContent = runLabel;
+  runChip.title = runLabel;
   const runtime = selectedRuntimeView();
   const ready = runtime ? runtime.provider_available && runtime.execution_command_available : false;
   const localStatus = document.getElementById("localStatus");
@@ -100,7 +109,9 @@ function renderTopbar() {
     return;
   }
   if (runtime) {
-    localStatus.textContent = `${state.selectedRuntime}: ${ready ? "ready" : "needs check"}`;
+    const localStatusLabel = `${state.selectedRuntime}: ${ready ? "ready" : "needs check"}`;
+    localStatus.textContent = localStatusLabel;
+    localStatus.title = localStatusLabel;
     localStatus.className = ready ? "status-chip good" : "status-chip";
     return;
   }

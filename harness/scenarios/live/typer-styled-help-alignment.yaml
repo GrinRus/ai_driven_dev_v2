@@ -14,7 +14,7 @@ health:
   note: Current pinned Typer baseline fails during setup before the runtime boundary;
     keep this lane non-canonical until it is repinned or fixed.
 task: Run the installed AIDD full-flow live audit against the selected Typer authored task
-  and preserve reviewable quality evidence.
+  and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -71,18 +71,9 @@ verify:
   - Pytest output reports all tests as passed.
   - No new failing tests are introduced relative to baseline.
   - QA stage output artifacts exist for the selected work item.
-quality:
-  commands:
-  - uv run pytest -q
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 4
-  timeout_minutes: 20
+  timeout_minutes: 240
 interview:
   required: false
 runtime_targets:

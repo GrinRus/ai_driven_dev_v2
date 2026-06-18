@@ -164,6 +164,9 @@ def test_build_native_subprocess_spec_uses_prompt_file_without_adapter_flags(
     ).as_posix()
     assert "--file" in spec.command
     prompt_path = Path(spec.command[spec.command.index("--file") + 1])
+    assert prompt_path.relative_to(context.workspace_root) == Path(
+        "harness-cache/runtime-prompts/run-001/plan/opencode-prompt.md"
+    )
     assert prompt_path.exists()
     assert "# AIDD stage runtime request" in prompt_path.read_text(encoding="utf-8")
 

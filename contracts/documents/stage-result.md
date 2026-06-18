@@ -39,12 +39,13 @@ or validation wording when the canonical validator report proves the draft incon
 
 ## Produced outputs
 
-- `<workspace-relative-path>`
+- `<AIDD-workspace-relative-path, for example workitems/<id>/stages/<stage>/output/<document.md>>`
 
 ## Validation summary
 
 - Validator verdict: `<pass|fail|not-run>`
 - Validator report: `workitems/<id>/stages/<stage>/validator-report.md`
+  (repository-root path `.aidd/workitems/<id>/stages/<stage>/validator-report.md`)
 
 ## Blockers
 
@@ -73,7 +74,7 @@ or validation wording when the canonical validator report proves the draft incon
   - Must contain one terminal stage status for this run (`succeeded`, `failed`, `blocked`, or `needs-input`).
   - Must not use ambiguous states such as `done-ish` or `in progress`.
 - `Produced outputs`
-  - Must list output documents produced in the final attempt as workspace-relative paths.
+  - Must list output documents produced in the final attempt as AIDD workspace-relative paths.
   - Must explicitly note missing required outputs when status is not `succeeded`.
 - `Validation summary`
   - Must summarize whether validation passed, failed, or was not reached.
@@ -100,6 +101,9 @@ or validation wording when the canonical validator report proves the draft incon
 
 - Use required heading names exactly; do not collapse `Attempt history` into `Status`.
 - Keep document paths and artifact references workspace-relative and wrapped in backticks.
+- Treat `workitems/...` as relative to the configured `.aidd/` workspace root.
+  From the repository root, canonical stage artifacts live under `.aidd/workitems/...`;
+  do not create top-level `workitems/...`.
 - When `repair-brief.md` exists, include a backticked workspace-relative reference to it in
   `Attempt history`, `Validation summary`, or `Terminal state notes`.
 - When project-set context exists, include a `Project-set evidence` section before

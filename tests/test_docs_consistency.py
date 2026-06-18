@@ -918,6 +918,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "`--report-root .aidd/reports/evals`",
         "`--run-id <id>`",
         "`stage-audits/<stage>.json`",
+        "`target-workspace-evidence.json`",
+        "`target-workspace-evidence.md`",
         "snapshot tracked AIDD `HEAD`",
         "Rerun the same manifest/runtime until it is clean.",
         "plan step, execute through public operator surfaces, inspect artifacts",
@@ -932,7 +934,7 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "write standard `[resolved]` answers",
         "`- Q1 [resolved] answer text`",
         "answer-analysis.md",
-        "operator-quality-analysis.md",
+        "quality-report.md",
         "next-flow-checkpoint.json",
         "next-flow-checkpoint.md",
         "--enable-next-flow-follow-up-proof",
@@ -941,7 +943,26 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "Confirm **Flow Complete** is visible for the terminal run.",
         "Record the operator next-flow decision",
         "Do not launch a second public-repository flow by default.",
-        "The operator audit cannot upgrade machine `fail` or `warn`",
+        "Keep `Run Integrity` separate from artifact, code, test, and UI/UX quality.",
+        (
+            "Operator UI/UX decision: acceptable | acceptable-with-risks | "
+            "not-acceptable | not-applicable"
+        ),
+        "Operator UI workflows inspected:",
+        "Terminal flow visibility:",
+        "Navigation and discoverability:",
+        "State clarity:",
+        "Generated product UI applicability:",
+        "API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit.",
+        (
+            "top-level `workitems/...` duplicates normally make manual "
+            "deliverable quality `not-counted`"
+        ),
+        "`aidd.example.toml` is not product diff",
+        (
+            "Screenshots and browser notes are optional manual evidence, "
+            "not runner-generated artifacts."
+        ),
     ):
         assert needle in live_e2e_skill
 
@@ -950,7 +971,74 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     assert "`- Q1 [resolved] answer text`" in aidd_eval_skill
     assert "stage-audits/<stage>.json" in aidd_eval_skill
     assert "${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd" in aidd_eval_skill
-    assert "operator-quality-analysis.md" in aidd_eval_skill
+    assert "quality-report.md" in aidd_eval_skill
+    assert "AIDD operator UI/UX evidence" in aidd_eval_skill
+    assert "target-workspace-evidence.json" in aidd_eval_skill
+    assert "top-level `workitems/...` duplicates are severe" in aidd_eval_skill
+    assert (
+        "`frontend-checkpoints.*` as raw operator-surface availability evidence"
+        in aidd_eval_skill
+    )
+
+
+def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
+    live_rubric = (_repo_root() / "docs" / "e2e" / "live-quality-rubric.md").read_text(
+        encoding="utf-8"
+    )
+    live_catalog = (_repo_root() / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
+        encoding="utf-8"
+    )
+
+    for expected in (
+        (
+            "Operator UI/UX decision: acceptable | acceptable-with-risks | "
+            "not-acceptable | not-applicable"
+        ),
+        "Operator UI workflows inspected:",
+        "Terminal flow visibility:",
+        "Navigation and discoverability:",
+        "State clarity:",
+        "Readability/layout:",
+        "Accessibility/keyboard/focus notes:",
+        "Responsive behavior notes:",
+        "Generated product UI applicability:",
+        "Operator UI/UX evidence links:",
+        "`frontend-checkpoints.*` are raw run-integrity evidence",
+        "They are not a UI/UX audit, not screenshot evidence, and not a quality gate.",
+        "`target-workspace-evidence.*` records the target repository snapshot",
+        "setup-baseline ignored churn",
+        "`git status --short --untracked-files=all`",
+        "top-level `workitems/...` duplicate",
+        "`aidd.example.toml` as harness/operator config",
+        "direct `.aidd/*.py`-style scratch files",
+        (
+            "Screenshots and browser notes are optional manual evidence, "
+            "not runner-generated artifacts."
+        ),
+        "stage list navigation",
+        "artifact inspection",
+        "log inspection",
+        "questions/answers",
+        "repair evidence",
+        "next-flow handoff",
+        "desktop/tablet/mobile responsive behavior or explicitly `not inspected`",
+    ):
+        assert expected in live_rubric
+
+    for expected in (
+        "manual AIDD operator UI/UX decisions",
+        "stage list navigation",
+        "artifact/log views",
+        "questions and answers",
+        "repair evidence",
+        "next-flow handoff",
+        "responsive behavior or `not inspected`",
+        "Generated product UI is outside this live E2E operator-UI review",
+        "`target-workspace-evidence.*` compares the target repository snapshot",
+        "setup-baseline ignored churn",
+        "top-level `workitems/...` duplicates are severe deliverable pollution",
+    ):
+        assert expected in live_catalog
 
 
 def test_live_e2e_next_flow_checkpoint_policy_is_manual_only() -> None:

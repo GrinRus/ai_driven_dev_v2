@@ -69,6 +69,11 @@ Required:
 - Python 3.12+
 - `uv`
 
+When `uv` is not on `PATH`, launch source-checkout commands through an absolute
+`uv` path. The live local-wheel installer honors the `UV` environment value that
+`uv run` provides, so the black-box installer can still build and install the
+tracked `HEAD` artifact without relying on a shell PATH lookup.
+
 Optional:
 
 - runtime CLIs you want to probe in `aidd doctor` (for example `claude`, `codex`, `opencode`)
@@ -117,31 +122,34 @@ mode = "native"
 # interaction_mode = "batch"        # batch | evented | live
 # auto_approval_preset = "broad"    # off | conservative | broad
 # Optional per-attempt runtime subprocess budget.
-# timeout_seconds = 1200
+# timeout_seconds = 3600
 
 # Optional stage-specific overrides. Stage values take precedence over
 # runtime.<provider>.timeout_seconds.
 # [runtime.claude_code.stage_timeouts]
-# research = 1500
-# tasklist = 1800
-# implement = 1800
-# review = 1800
-# qa = 1800
+# idea = 3600
+# research = 3600
+# plan = 3600
+# review-spec = 3600
+# tasklist = 3600
+# implement = 3600
+# review = 3600
+# qa = 3600
 
 [runtime.codex]
 command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
-# timeout_seconds = 900
+# timeout_seconds = 3600
 
 [runtime.opencode]
 command = "opencode run --format json --dangerously-skip-permissions"
 mode = "native"
-# timeout_seconds = 900
+# timeout_seconds = 3600
 
 [runtime.qwen]
 command = "qwen --approval-mode yolo --output-format stream-json"
 mode = "native"
-# timeout_seconds = 900
+# timeout_seconds = 3600
 
 [logging]
 mode = "both"
@@ -154,8 +162,8 @@ Claude Code, Codex, and OpenCode native mode adapt AIDD stage briefs and prompt
 packs to the raw provider CLI. Use `mode = "adapter-flags"` only for wrapper
 commands that accept AIDD adapter flags directly.
 
-OpenCode native mode can report `document_complete` when it has written the declared
-Markdown outputs and then keeps the provider process open instead of returning a final
+OpenCode and Qwen native modes can report `document_complete` when they have written the
+declared Markdown outputs and then keep the provider process open instead of returning a final
 message. AIDD still preserves the raw log and runtime exit metadata and still runs canonical
 stage validation before any workflow progression. For initial interview stops, a settled
 `questions.md` plus terminal stage documents may complete the adapter call while `answers.md`
@@ -309,6 +317,34 @@ Expected behavior in the current local implementation:
 - live eval bundles include `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`,
   and `self-repair-matrix.md` for per-step duration, deterministic repair-probe coverage,
   and terminal document consistency audit.
+- live eval bundles include `target-workspace-evidence.json` and `.md` as non-gating
+  target repository evidence. Inspect it during manual quality review to separate tracked
+  product diff, setup-baseline untracked files, `aidd.example.toml` harness config, top-level
+  `workitems/...` pollution, stray `.aidd/` scratch files, and ignored local artifacts such
+  as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`, `coverage/`, build, dist,
+  or dependency caches. New ignored files inside an ignored root that already existed at setup,
+  such as `.venv/.../__pycache__`, are setup-baseline ignored churn rather than
+  pollution findings.
+- live black-box `limits.timeout_minutes` is a per-stage `aidd stage run` command
+  budget. The aggregate `run-transcript.json` keeps `timeout_seconds` as `null`
+  unless there is a real global flow timeout, and records the per-stage policy
+  under `timeout_policy`.
+- live eval bundles are execution-only; write `quality-report.md` manually after
+  the terminal run when artifact, code, test, or UI/UX quality must be judged.
+  The UI/UX section is a human-authored AIDD operator UI decision, not a runner
+  gate: inspect completed-flow visibility, stage/artifact/log/question navigation,
+  repair and next-flow handoff states, readability, keyboard/focus behavior, and
+  responsive behavior or explicitly record `not inspected`.
+  For code/artifact quality, cite `target-workspace-evidence.*` or
+  `git status --short --untracked-files=all` plus
+  `git status --ignored --short --untracked-files=all`; top-level `workitems/...` duplicates
+  normally make deliverable quality `not-counted`, while `aidd.example.toml` is
+  harness config rather than product diff. If implementation evidence shows the prepared
+  checkout or live harness directories such as `install-home/`, `source/`, `build/`, or
+  `target/` were deleted/recreated, treat the deliverable as `not-counted`.
+  When manifest verification creates only new known ignored residue after QA, inspect
+  `verify-transcript.json.workspace_cleanup`; that runner cleanup is execution hygiene,
+  not an automatic deliverable-quality decision.
 - repair retries persist `repair-context.md` in the run attempt directory, which lets
   operators trace the exact validator findings that caused each retry.
 - live E2E is manual local operator audit evidence, not CI/CD, not a release workflow,

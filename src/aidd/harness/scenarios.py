@@ -70,15 +70,6 @@ class ScenarioFeatureSource:
 
 
 @dataclass(frozen=True)
-class ScenarioQualityConfig:
-    commands: tuple[str, ...]
-    rubric_profile: str
-    require_review_status: str
-    allowed_qa_verdicts: tuple[str, ...]
-    code_review_required: bool
-
-
-@dataclass(frozen=True)
 class ScenarioRunConfig:
     stage_start: str | None
     stage_end: str | None
@@ -109,7 +100,6 @@ class Scenario:
     run: ScenarioRunConfig
     verify: ScenarioCommandSteps
     feature_source: ScenarioFeatureSource | None
-    quality: ScenarioQualityConfig | None
     live_flow: ScenarioLiveFlowConfig | None
     runtime_targets: tuple[str, ...]
     is_live: bool
@@ -345,55 +335,6 @@ def _to_feature_source(raw: Any) -> ScenarioFeatureSource:
     )
 
 
-def _to_quality_config(raw: Any) -> ScenarioQualityConfig:
-    payload = _require_mapping(value=raw, key="quality")
-    commands = _to_command_steps(raw=payload, key="quality").commands
-    rubric_profile = _require_non_empty_string(payload=payload, key="rubric_profile")
-    if rubric_profile != "live-full":
-        raise ScenarioManifestError(
-            "Scenario manifest key 'quality.rubric_profile' must be `live-full` "
-            "for live scenarios."
-        )
-    require_review_status = _require_non_empty_string(payload=payload, key="require_review_status")
-    if require_review_status not in {"approved", "approved-with-conditions"}:
-        raise ScenarioManifestError(
-            "Scenario manifest key 'quality.require_review_status' must be `approved` "
-            "or `approved-with-conditions`."
-        )
-    allowed_qa_verdicts_raw = payload.get("allowed_qa_verdicts")
-    if not isinstance(allowed_qa_verdicts_raw, list) or not allowed_qa_verdicts_raw:
-        raise ScenarioManifestError(
-            "Scenario manifest key 'quality.allowed_qa_verdicts' must be a non-empty list."
-        )
-    allowed_qa_verdicts = tuple(
-        str(verdict).strip() for verdict in allowed_qa_verdicts_raw if str(verdict).strip()
-    )
-    if not allowed_qa_verdicts:
-        raise ScenarioManifestError(
-            "Scenario manifest key 'quality.allowed_qa_verdicts' must contain non-empty values."
-        )
-    supported_qa_verdicts = {"ready", "ready-with-risks"}
-    unsupported = sorted(set(allowed_qa_verdicts) - supported_qa_verdicts)
-    if unsupported:
-        raise ScenarioManifestError(
-            "Scenario manifest key 'quality.allowed_qa_verdicts' contains unsupported values: "
-            + ", ".join(unsupported)
-            + "."
-        )
-    code_review_required = payload.get("code_review_required")
-    if code_review_required is not True:
-        raise ScenarioManifestError(
-            "Scenario manifest key 'quality.code_review_required' must be true for live scenarios."
-        )
-    return ScenarioQualityConfig(
-        commands=commands,
-        rubric_profile=rubric_profile,
-        require_review_status=require_review_status,
-        allowed_qa_verdicts=allowed_qa_verdicts,
-        code_review_required=True,
-    )
-
-
 def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
     stage_scope = raw.get("stage_scope")
     limits = raw.get("limits")
@@ -493,7 +434,6 @@ def _validate_scenario_contract(
     canonical_runtime: str,
     run: ScenarioRunConfig,
     feature_source: ScenarioFeatureSource | None,
-    quality: ScenarioQualityConfig | None,
     live_flow: ScenarioLiveFlowConfig | None,
     raw: dict[str, Any],
 ) -> None:
@@ -567,9 +507,11 @@ def _validate_scenario_contract(
             raise ScenarioManifestError(
                 "Live scenario manifests must use `feature_source.mode: authored-task-pool`."
             )
-        if quality is None:
+        if "quality" in raw:
             raise ScenarioManifestError(
-                f"Live scenario manifest missing required key: quality ({path.as_posix()})."
+                "Live scenario manifests must not declare `quality`; live E2E "
+                "execution bundles are separate from the manual post-run "
+                "`quality-report.md`."
             )
         if live_flow is None:
             raise ScenarioManifestError(
@@ -612,9 +554,10 @@ def _validate_scenario_contract(
         raise ScenarioManifestError(
             "Deterministic scenario manifests must use `feature_source.mode: fixture-seed`."
         )
-    if quality is not None:
+    if "quality" in raw:
         raise ScenarioManifestError(
-            "Deterministic scenario manifests must not declare a live `quality` block."
+            "Scenario manifests must not declare a `quality` block; quality review is "
+            "manual post-run analysis."
         )
     if live_flow is not None:
         raise ScenarioManifestError(
@@ -680,11 +623,6 @@ def load_scenario(
         if substituted.get("feature_source") is not None
         else None
     )
-    quality = (
-        _to_quality_config(substituted.get("quality"))
-        if substituted.get("quality") is not None
-        else None
-    )
     live_flow = (
         _to_live_flow_config(substituted.get("live_flow"))
         if substituted.get("live_flow") is not None
@@ -701,7 +639,6 @@ def load_scenario(
         canonical_runtime=canonical_runtime,
         run=run,
         feature_source=feature_source,
-        quality=quality,
         live_flow=live_flow,
         raw=substituted,
     )
@@ -717,7 +654,6 @@ def load_scenario(
         run=run,
         verify=verify,
         feature_source=feature_source,
-        quality=quality,
         live_flow=live_flow,
         runtime_targets=run.runtime_targets,
         is_live=is_live,

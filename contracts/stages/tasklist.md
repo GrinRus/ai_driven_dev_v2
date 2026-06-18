@@ -30,6 +30,9 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 ## Optional context inputs
 
 - `context/repository-state.md`
+- `context/acceptance-criteria.md`
+- `context/verification-output.md`
+- `context/verification-artifacts.md`
 - `context/constraints.md`
 - `context/previous-decisions.md`
 
@@ -49,6 +52,13 @@ Optional context documents may improve task decomposition quality, but they must
   - explicit dependency notes per task (upstream task ids or `none`),
   - verification notes per task naming the primary check, test, or scenario proving completion.
 - task ordering should be executable in dependency order rather than by prose grouping alone.
+- when `context/verification-output.md` names authored verification commands, task verification
+  notes must preserve those commands exactly when citing them, including flags, path lists,
+  environment variables, and coverage/cache-disabling options such as `--coverage.enabled=false`;
+  do not replace them with `npx`/package-manager aliases or broader suites.
+- Optional broad checks outside the authored verification boundary may be listed only as
+  optional/non-blocking exploratory checks; they must not become required pass criteria when the
+  authored verification boundary is narrower.
 - `stage-result.md` and `validator-report.md` must stay consistent with the declared tasklist readiness.
 
 ## Validation focus

@@ -17,4 +17,7 @@ Non-negotiable rules:
 - do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - keep required sections complete and non-placeholder (`TBD`, `TODO`, `N/A`, `...` are invalid in required fields),
 - do not invent constraints or outcomes that are not supportable from inputs,
+- if authored task or acceptance context explicitly requires blocking answers, interview answers,
+  or operator policy decisions before downstream planning or implementation, record blocking
+  questions instead of choosing a policy yourself,
 - when clarification is required, write durable questions with `[blocking]` / `[non-blocking]` markers instead of guessing.

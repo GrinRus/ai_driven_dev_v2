@@ -45,6 +45,17 @@ Optional context documents may enrich research quality, but their absence must n
 - `Findings` must reference supporting citation ids for claims that affect scope, feasibility, or risk.
 - `Evidence trace` must map major findings or decisions to supporting citation ids.
 - `stage-result.md` and `validator-report.md` must stay consistent with the documented citation coverage.
+- Research commands may inspect local behavior, but ignored verification residue is still workspace
+  hygiene evidence. If tests, imports, or repro snippets create `.pytest_cache/`, `.ruff_cache/`,
+  `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts, research must remove
+  them before terminal output or explicitly report them as workspace pollution. A clean research
+  status must not rely on a cleanup claim unless the cited evidence checks those residue classes,
+  for example with `git status --ignored --short --untracked-files=all`.
+- Research commands must be bounded by construction. Repro scripts must not depend on the live
+  harness per-stage timeout to terminate; streaming loops, background tasks, servers, watchers, and
+  polling probes need a finite iteration limit, an in-script timeout such as `anyio.fail_after(...)`,
+  or `subprocess.run(..., timeout=...)`. If a behavior cannot be reproduced with a bounded probe,
+  record it as `not-run: <reason>` and cite static source evidence instead.
 
 ## Validation focus
 
@@ -62,6 +73,11 @@ Validators for `research` should check:
   - time-sensitive sources must include an access date or freshness note,
   - findings that depend on possibly stale evidence must include a stale-risk note and follow-up action,
 - cross-document consistency between citation coverage in `research-notes.md`, findings in `validator-report.md`, and terminal status in `stage-result.md`.
+- workspace hygiene when research commands execute local tests or repro snippets:
+  ignored verification residue must be absent, cleaned, or explicitly reported as an active finding.
+- local probe discipline:
+  tests, repro snippets, and infinite streaming/background probes must have a finite termination
+  condition independent of the live harness per-stage timeout.
 
 ## Interview policy
 

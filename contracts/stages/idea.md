@@ -31,6 +31,8 @@ Conditional outputs:
 
 ## Optional context inputs
 
+- `context/selected-task.md`
+- `context/acceptance-criteria.md`
 - `context/business-context.md`
 - `context/constraints.md`
 - `context/repository-state.md`
@@ -68,17 +70,24 @@ Mandatory question triggers:
 - the core user or business problem is missing or ambiguous,
 - success criteria are missing, contradictory, or non-testable,
 - constraints are missing or contradictory where they can change scope, feasibility, or priority,
+- authored task or acceptance context explicitly requires blocking answers, interview answers,
+  or operator policy decisions before downstream planning or implementation,
 - a high-impact assumption (for example compliance, security, budget, or deadline) cannot be grounded in the provided inputs.
 
 Blocking-question rules:
 
 - mark a question as `[blocking]` when the answer is required to produce truthful `Problem statement`, `Desired outcome`, or `Constraints` content,
 - mark a question as `[blocking]` when unresolved uncertainty can invalidate progression safety for downstream stages,
+- mark a question as `[blocking]` when `context/selected-task.md`, `context/acceptance-criteria.md`,
+  or the incoming request says the answer is required before downstream planning or implementation,
+  including before task decomposition, review, or release,
 - unresolved `[blocking]` questions must force the stage to exit as `blocked` (never `succeeded`).
 
 Non-blocking-question rules:
 
 - mark a question as `[non-blocking]` when the stage can proceed with an explicit, low-risk assumption,
+- do not downgrade an explicit blocking-answer or interview-answer obligation to `[non-blocking]`
+  only because the model can choose a plausible policy from repository conventions,
 - when using `[non-blocking]`, record the assumption in `idea-brief.md` so downstream stages can revisit it.
 
 Question/answer document rules:

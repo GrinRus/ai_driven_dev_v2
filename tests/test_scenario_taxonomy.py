@@ -65,7 +65,6 @@ def test_live_scenarios_do_not_mask_setup_or_pytest_failures_with_shell_fallback
         commands = (
             *_commands("setup", scenario),
             *_commands("verify", scenario),
-            *_commands("quality", scenario),
         )
         assert all("||" not in command for command in commands), path.as_posix()
 
@@ -146,13 +145,13 @@ def test_hono_medium_live_scenario_uses_focused_verification_gate() -> None:
     )
     scenario = entries[scenario_path]
 
-    focused_command = "./node_modules/.bin/vitest --run src/hono.test.ts src/compose.test.ts"
+    focused_command = (
+        "./node_modules/.bin/vitest --run --coverage.enabled=false "
+        "src/hono.test.ts src/compose.test.ts"
+    )
     assert focused_command in scenario.verify.commands
-    assert focused_command in scenario.quality.commands
     assert "./node_modules/.bin/tsc --noEmit" in scenario.verify.commands
-    assert "./node_modules/.bin/tsc --noEmit" in scenario.quality.commands
     assert "bun test" not in scenario.verify.commands
-    assert "bun test" not in scenario.quality.commands
     assert "bunx vitest run src/hono.test.ts src/compose.test.ts" not in scenario.verify.commands
     task = scenario.feature_source.tasks[0]
     assert "without widening the public error handler" in task.target_change

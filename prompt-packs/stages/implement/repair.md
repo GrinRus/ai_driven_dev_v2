@@ -55,9 +55,27 @@ For each finding:
    evidence or `not-run: <reason>`. Use one bullet per command/check with this exact shape:
    ``- `command goes here` -> pass (observed summary)`` or
    ``- `command goes here` -> fail (exit code N; observed summary)``.
+   Do not preserve mutation-only cleanup bullets such as `rm -rf ... -> pass` as verification
+   evidence; keep cleanup prose brief and cite a separate check command such as `find ...`,
+   `git status --ignored ...`, or `test ! -e ...` that proves residue is absent.
 5. keep repair bounded: if verification still fails after one focused fix attempt, record the exact
    failing command/output and terminal status instead of continuing ad hoc debugging until timeout.
 6. re-check `stage-result.md` and `validator-report.md` for status/blocker consistency.
+7. re-check `git status --short --untracked-files=all`; top-level `workitems/...`, stray
+   stage/control documents, or unrelated scratch files must be cleaned up or reported as a
+   not-clean implementation state.
+8. Do not delete, move, reclone, or recreate the prepared repository checkout or any live harness
+   run directory such as `source/`, `build/`, `install-home/`, `uv-cache/`, or `target/`. If the
+   prepared checkout, installed `aidd` command, or packaged contracts disappear, report the repair
+   attempt as `blocked` or `failed` with the exact missing path instead of running `git clone` or
+   rebuilding the harness workspace.
+9. When feasible, re-check ignored local artifacts with
+   `git status --ignored --short --untracked-files=all`; newly created `.venv/`, `.pytest_cache/`,
+   `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories are
+   workspace pollution unless they are required by the selected deliverable or removed before
+   terminal output. Do not claim cleanup passed or mark cleanup resolved unless the cited evidence
+   explicitly checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`,
+   build, dist, and dependency-cache residue.
 
 Use concrete repair actions:
 
@@ -90,6 +108,8 @@ Use concrete repair actions:
 4. Do not claim commands/checks that were not executed in this attempt; if
    `context/verification-output.md` lists authored or scenario verification commands, record each
    command as executed with outcome or explicitly not-run with a reason.
+   If a listed command depends on downstream review or QA artifacts that cannot exist until a later
+   stage, record it as `not-run: future-stage artifact` instead of running it as an expected failure.
 5. If no-op is retained, include justification, evidence, and next action; otherwise no-op is invalid.
 6. Keep `stage-result.md` attempt status truthful for the current repair attempt.
 7. Use exact required headings from document contracts; do not rename or qualify headings.
@@ -98,6 +118,10 @@ Use concrete repair actions:
 10. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
 11. Do not claim success unless required headings, validator verdict, stage-result status, touched files, and verification evidence are mutually consistent.
 12. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+13. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
+    from the repository root.
+14. Do not delete, move, reclone, or recreate the prepared repository checkout or live harness run
+    directories; missing checkout/install/contract paths are blockers, not repair work.
 
 ## Repair exit checks
 
@@ -108,6 +132,11 @@ Use concrete repair actions:
 - selected task id, change summary, touched-files list, and verification notes are mutually consistent,
 - touched-files entries stay within allowed write scope, match observed edits, and include same-line
   path + intent for every top-level file entry,
+- no top-level `workitems/...` artifacts or unrelated scratch files remain in the deliverable workspace,
+- no live harness checkout/install directories were deleted or recreated, and no ignored local
+  environment, cache, coverage, build, or dist artifacts are left as unexplained workspace
+  pollution; cleanup evidence explicitly covers `.pytest_cache/`, `.ruff_cache/`, `coverage/`,
+  `.coverage*`, `__pycache__/`, build, dist, and dependency-cache residue,
 - no-op outcomes (if any) include evidence-backed rationale and actionable next step,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

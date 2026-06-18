@@ -18,6 +18,9 @@ signals are mapped to planned increments.
   - `../research/output/validator-report.md`
 - optional context when available:
   - `context/repository-state.md`
+  - `context/acceptance-criteria.md`
+  - `context/verification-output.md`
+  - `context/verification-artifacts.md`
   - `context/constraints.md`
   - `context/previous-decisions.md`
 - contract of record:
@@ -58,6 +61,14 @@ normalize if canonical validation proves the terminal status inconsistent.
    map checks to risks where relevant, and cover the highest-risk
    milestone explicitly.
 7. `Out of scope` and trade-offs must be explicit enough for operator approval review.
+8. When `context/verification-output.md` names authored verification commands, copy those commands
+   exactly and preserve those commands exactly when citing them in the plan. Preserve flags, path
+   lists, environment variables, and coverage/cache-disabling options such as
+   `--coverage.enabled=false`; do not rewrite them as `npx`, package-manager aliases, or broader
+   suite commands.
+9. Optional broad checks outside the authored verification boundary may be documented only as
+   optional/non-blocking exploratory checks. Do not turn them into required pass criteria or a
+   milestone exit condition unless the authored task or review-spec explicitly requires them.
 
 ## Execution instructions
 
@@ -69,9 +80,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    coverage.
 5. If scope boundaries, ordering, or acceptance signals are ambiguous, raise a question instead of
    inventing assumptions.
-6. Update `validator-report.md` so findings and verdict match plan completeness and sequencing
+6. Use `context/verification-output.md` as the verification boundary when present; if you need to
+   mention an authored command, quote it exactly rather than paraphrasing executable details.
+7. Update `validator-report.md` so findings and verdict match plan completeness and sequencing
    clarity.
-7. Update `stage-result.md` so status, blockers, and next actions remain consistent with validator
+8. Update `stage-result.md` so status, blockers, and next actions remain consistent with validator
    and question artifacts.
 
 ## Common output skeleton discipline
@@ -88,4 +101,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - every milestone has a stable `M<N>` id and verification notes reference those ids,
 - risks include mitigation intent with linked verification expectations,
 - verification notes map to milestones/risks and cover highest-risk work,
+- authored verification commands from `context/verification-output.md` are preserved exactly, or
+  referenced generically without changing command flags or broadening scope,
+- optional broader checks are not promoted to required pass criteria outside the authored boundary,
 - stage status and validator verdict are consistent with blocker/question state.

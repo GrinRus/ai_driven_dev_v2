@@ -1,6 +1,6 @@
 ---
 name: live-e2e
-description: Run or prepare a manual full-flow live end-to-end scenario against a public GitHub repository with repository pinning, authored task selection, quality checks, and full log capture.
+description: Run or prepare a manual full-flow live end-to-end scenario against a public GitHub repository with repository pinning, authored task selection, execution evidence capture, and manual post-run quality reporting.
 ---
 
 # live-e2e
@@ -148,15 +148,14 @@ During a successful local live run, the evaluator will:
 8. write feature-selection evidence to the eval bundle and target-repo context;
 9. seed `.aidd/` inside the target repository;
 10. write a live `aidd.example.toml` with the runtime command and execution mode for the chosen provider;
-11. run setup, stage, verify, and quality commands from the target repository root
+11. run setup, stage, verify, and teardown commands from the target repository root
     with the installed `aidd` binary on `PATH`;
 12. inherit the launching operator's `HOME` and provider environment during stage
     execution so native provider auth works without copying credentials;
 13. plan step, execute through public operator surfaces, inspect artifacts/UI/API/logs,
    classify, and decide the next step for every stage from `idea -> qa`;
 14. write `stage-audits/<stage>.json` and `.md` after every stage;
-15. run setup, verify, quality, and teardown commands and write final audit artifacts
-    from the recorded step evidence.
+15. write final execution-only audit artifacts from the recorded step evidence.
 
 ## Operator-agent responsibilities
 
@@ -176,52 +175,81 @@ When the evaluator returns `blocked`:
 5. Re-run the same black-box command for the same manifest/runtime so the
    evaluator resumes the existing blocked run.
 
-After any terminal live run, the launching operator-agent must write
-`operator-quality-analysis.md` in the eval bundle before counting the run. Use
-this template:
+After any terminal live run, the launching SWE agent may write
+`quality-report.md` in the eval bundle before making a manual deliverable-quality decision.
+The runner does not create, parse, validate, or score this file. Use this template:
 
 ```markdown
-# Operator Quality Analysis
-
-## Run
-- Runtime: `<runtime>`
-- Manifest: `<manifest>`
-- Run ID: `<run_id>`
-- Bundle: `<bundle path>`
-
-## Machine Result
-- Execution verdict: `<pass|fail|blocked|infra-fail>`
-- Quality gate: `<pass|warn|fail|none>`
-- QA verdict: `<ready|ready-with-risks|not-ready|missing>`
-- Review status: `<approved|approved-with-conditions|rejected|missing>`
-
-## Flow Fidelity
-- Stages reached:
-- Repair/interview behavior:
-- Evidence completeness:
-
-## Artifact Quality
-- Stage outputs:
-- Validator reports:
-- Review/QA evidence:
-- Unresolved findings:
-
-## Code Quality
-- Diff scope:
-- Tests:
-- Docs/examples:
-- Acceptance criteria:
+# Live E2E Quality Report
 
 ## Decision
-- Decision: `<counted-clean|not-counted|blocked/infra|blocked/provider|blocked/model-quality|blocked/product-defect>`
+- Run integrity decision: clean | defective | blocked-infra | blocked-provider | blocked-harness
+- Deliverable quality decision: counted-clean | not-counted | blocked-model-quality | blocked-product-defect
+- Operator UI/UX decision: acceptable | acceptable-with-risks | not-acceptable | not-applicable
+- Overall decision: counted-clean | not-counted | blocked
 
-## Blockers
-- `<explicit blockers, or none>`
+## Run Integrity
+- Execution verdict:
+- Stages reached:
+- Evidence completeness:
+- Runtime/provider/log issues:
+- Repair/interview behavior:
+- Timeout policy/evidence:
+- Run blockers:
+
+## Artifact Quality
+- Stage artifact completeness:
+- Idea/research/plan/review-spec/tasklist quality:
+- Cross-stage consistency:
+- Stage-result/validator consistency:
+- Validator report quality:
+- Repair burden analysis:
+- Artifact evidence links:
+
+## Code Quality
+- Diff scope, including tracked and untracked files:
+- Acceptance criteria evidence:
+- Architecture/maintainability/API compatibility:
+- Edge cases/security/performance risks:
+- Test quality and regression relevance:
+- Baseline/before-after evidence:
+- Code evidence links:
+
+## UI/UX Quality
+- Operator UI workflows inspected:
+- Terminal flow visibility:
+- Navigation and discoverability:
+- State clarity:
+- Readability/layout:
+- Accessibility/keyboard/focus notes:
+- Responsive behavior notes:
+- Generated product UI applicability:
+- Operator UI/UX evidence links:
+
+## Evidence Reviewed
+- Flow evidence:
+- Stage audits:
+- Logs/transcripts:
+- Target repo diff:
+- Review/QA artifacts:
+- Operator UI/API checkpoints, next-flow checkpoint, or manual screenshot/browser evidence:
+- Extra manual checks run by SWE agent:
+
+## Notes
+- Follow-ups:
+- Residual risks:
 ```
 
-The operator audit cannot upgrade machine `fail` or `warn` to a counted clean
-pass. It can only reject or downgrade a machine-clean run after inspecting the
-artifacts.
+Keep `Run Integrity` separate from artifact, code, test, and UI/UX quality.
+API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit.
+Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
+The `Operator UI/UX decision` is a manual AIDD operator-UI sub-decision only; it
+does not change `verdict.md`, `grader.json`, or any execution status. Inspect
+terminal flow visibility, stage list navigation, artifact/log views, questions and
+answers, repair evidence, next-flow handoff, state clarity, readability, keyboard
+path, focus visibility, responsive behavior, and any manually captured screenshots
+or browser notes. Mark generated product UI as `not-applicable` unless you
+explicitly performed a separate product-UI review.
 
 ## Next-flow terminal checkpoint
 
@@ -250,9 +278,11 @@ flow.
 
 ## Validations and blockers
 
-The live run can be rejected or downgraded at several layers:
+The live execution run can fail or block at several layers:
 
-- manifest validation rejects non-live scenarios, non-manual live scenarios, missing `quality`, invalid `runtime_targets`, or any live scenario that is not bounded to `idea -> qa`;
+- manifest validation rejects non-live scenarios, non-manual live scenarios,
+  manifests that still declare `quality:`, invalid `runtime_targets`, or any
+  live scenario that is not bounded to `idea -> qa`;
 - runtime admission rejects a requested runtime that is not declared in `runtime_targets`;
 - stage execution stays bounded to `idea -> qa`;
 - stage outputs must validate against Markdown document contracts;
@@ -261,7 +291,6 @@ The live run can be rejected or downgraded at several layers:
 - `live-full-flow-interview` scenarios are coverage cases where a blocking
   interview path is expected by the manifest;
 - repo-local `verify.commands` must pass;
-- repo-local `quality.commands` must pass for a clean quality result;
 - execution `pass` is impossible if any stage in scope is missing required validated artifacts.
 
 Live execution verdicts remain:
@@ -271,12 +300,8 @@ Live execution verdicts remain:
 - `blocked`
 - `infra-fail`
 
-Quality is additive:
-
-- `pass`
-- `warn`
-- `fail`
-- `none`
+Deliverable quality is manual post-run analysis in `quality-report.md`; it is not
+a runner verdict and does not change the execution verdict.
 
 ## Output locations and success criteria
 
@@ -292,44 +317,66 @@ Expected live artifacts include:
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
-- `ui-ux-checkpoints.json`
-- `ui-ux-checkpoints.md`
-- `acceptance-coverage.json`
-- `acceptance-coverage.md`
-- `operator-quality-analysis-validation.json`
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
 - `next-flow-lineage.json` only when `--enable-next-flow-follow-up-proof` is explicitly enabled
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
+- `target-workspace-evidence.json`
+- `target-workspace-evidence.md`
 - `feature-selection.json`
 - `install-transcript.json`
 - `runtime.log`
 - `validator-report.md`
 - `repair-history.md`
 - `log-analysis.md`
+- `run-transcript.json` with `timeout_policy.scope: per-stage-command`
 - `grader.json`
 - `verdict.md`
-- `quality-report.md`
-- `quality-transcript.json`
-- `operator-quality-analysis.md` for counted manual clean-pass decisions
 - `answer-analysis.md` when the run answered blocking questions
+- `quality-report.md` only when the launching SWE agent manually writes the
+  post-run quality report
 
-A live run is only "clean" when execution evidence exists, verification output is
-present, the machine `quality_gate` is `pass`, acceptance coverage is complete,
-the UI/UX gate is not failed, and the bundle includes `quality-report.md`,
-`quality-transcript.json`, and a valid operator-authored
-`operator-quality-analysis.md` with decision `counted-clean`.
+A live execution run is `pass` when execution evidence exists, all required
+stages reached terminal success, and `verify.commands` passed. A clean deliverable
+quality decision must be written manually in `quality-report.md`.
+
+For stepwise black-box live runs, manifest `limits.timeout_minutes` is the budget
+for each public `aidd stage run` command. It is not a global flow timeout. Inspect
+`run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` for
+timeout evidence, and inspect `stage-audits/<stage>.*` for non-gating
+stage-result/validator consistency findings.
+For live manifest authoring and audits, AIDD self-check verification commands must
+call the installed `aidd` binary directly, for example `aidd stage questions ...`.
+Do not use `uv run aidd ...` from the target repo: it can create package-manager
+lockfiles after QA and pollute the final target workspace evidence. Keep target-project
+tests on the package manager expected by the target repository.
+Also inspect `target-workspace-evidence.*` for non-gating target workspace findings:
+tracked product diff, setup-baseline untracked files, `aidd.example.toml` harness
+config, top-level `workitems/...` pollution, stray `.aidd/` scratch files, and ignored
+local artifacts such as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`,
+`coverage/`, build, dist, or dependency-cache files.
+If manifest verification creates only new known ignored residue after QA, inspect
+`verify-transcript.json.workspace_cleanup`; runner cleanup of that residue is
+execution hygiene and does not replace manual deliverable-quality review.
+New ignored files inside an ignored root that already existed at setup, such as
+`.venv/.../__pycache__`, are setup-baseline ignored churn rather than pollution
+findings.
+In manual review, top-level `workitems/...` duplicates normally make manual deliverable quality `not-counted`;
+`aidd.example.toml` is not product diff. Evidence that a runtime deleted/recreated the
+prepared checkout or live harness run directories such as `install-home/`, `source/`,
+`build/`, or `target/` normally makes deliverable quality `not-counted`.
 
 ## Iteration loop contract
 
-For live quality stabilization, the launching agent should repeat this external
+For live stabilization, the launching agent should repeat this external
 operator loop instead of relying on a self-mutating product command:
 
 1. Run one `>= medium` live scenario through the black-box evaluator.
 2. Read the full evidence bundle, including every `stage-audits/<stage>.json`,
-   `verdict.md`, `grader.json`, `quality-report.md`, transcripts, and logs.
-3. Write `operator-quality-analysis.md` and classify the first unresolved decisive
+   `target-workspace-evidence.json`, `verdict.md`, `grader.json`, transcripts, and logs.
+3. Write manual `quality-report.md` when deliverable quality must be judged, and
+   classify the first unresolved decisive
    signal as infra/provider/auth/wrapper, adapter integration, orchestration,
    contract/validator, prompt/stagepack, harness/grader/rubric, target repo setup,
    or model artifact quality.
@@ -337,8 +384,8 @@ operator loop instead of relying on a self-mutating product command:
    touched orchestration/adapters/contracts/prompts/validators/harness/evals, run
    repo-local checks, and commit.
 5. Rerun the same manifest/runtime until it is clean.
-6. After one clean pass, switch to another maintained scenario/provider until the
-   matrix has at least five counted clean `>= medium` passes with provider coverage.
+6. After one execution pass with acceptable manual quality, switch to another
+   maintained scenario/provider until the matrix has sufficient provider coverage.
 
 ## First triage for common failures
 
@@ -352,7 +399,7 @@ operator loop instead of relying on a self-mutating product command:
   `answers.md`; as the launching operator-agent, write `[resolved]` answers,
   using exact lines such as `- Q1 [resolved] answer text`, write
   `answer-analysis.md`, then rerun the same black-box command to resume.
-- `fail` after run success: inspect `verify-transcript.json`, `quality-transcript.json`, and the stage-local validator reports.
+- `fail` after run success: inspect `verify-transcript.json` and the stage-local validator reports.
 - Missing clean execution despite zero exit codes: inspect `verdict.md` and `grader.json` for pass-guard failures caused by missing `stage-result.md` or `validator-report.md`.
 
 ## Procedure
@@ -361,14 +408,14 @@ operator loop instead of relying on a self-mutating product command:
 2. Run the local preflight checks from this skill, including `aidd eval doctor`.
 3. Export a wrapper env var only when you intentionally want `adapter-flags` mode.
 4. Launch `uv run python -m aidd.harness.live_e2e_black_box <manifest> --runtime <runtime>`.
-5. Preserve the resulting bundle and inspect `verdict.md`, `grader.json`, `quality-report.md`, and transcripts before judging the run.
+5. Preserve the resulting bundle and inspect `verdict.md`, `grader.json`, transcripts, and logs before judging execution.
 6. For `blocked` runs, answer questions yourself as the launching operator-agent,
    write `answer-analysis.md`, and rerun the same command to resume.
 7. For terminal `qa`, inspect Flow Complete and record the next-flow terminal
    checkpoint decision before judging the run.
-8. For terminal runs, write `operator-quality-analysis.md` before deciding
-   counted/not-counted.
-9. If the setup, provider coverage, size classification, quality recipe, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
+8. For terminal runs, write manual `quality-report.md` before deciding
+   counted/not-counted deliverable quality.
+9. If the setup, provider coverage, size classification, or verification recipe had to change, update the scenario manifest, matrix doc, and catalog after the run as separate follow-up work.
 
 ## Hard rules
 
@@ -380,9 +427,8 @@ operator loop instead of relying on a self-mutating product command:
 - Never run a live scenario without storing the selected authored task snapshot.
 - Never treat a live scenario as canonical unless it executes `idea -> qa`.
 - Never treat a live scenario as passed without install evidence and verification output.
-- Never treat a live scenario as clean without `quality-report.md`,
-  `quality-transcript.json`, and `operator-quality-analysis.md`.
-- Never let operator analysis upgrade a machine `fail` or `warn` quality gate to a
-  counted clean pass.
+- Never treat a live execution pass as a deliverable-quality pass without manual
+  `quality-report.md`.
+- Never let the manual quality report upgrade a failed execution verdict.
 - Preserve all runtime logs.
 - Keep `.aidd` rooted inside the target repository for installed live runs.

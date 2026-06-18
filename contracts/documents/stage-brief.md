@@ -25,10 +25,10 @@ The authored document must include these top-level headings exactly:
   - Must describe the stage outcome in 1-3 sentences.
   - Must stay scoped to the current stage and avoid downstream commitments.
 - `Inputs`
-  - Must list the expected input documents as workspace-relative paths.
+  - Must list the expected input documents as AIDD workspace-relative paths.
   - Each item must be one document path per bullet.
 - `Outputs`
-  - Must list the required output documents as workspace-relative paths.
+  - Must list the required output documents as AIDD workspace-relative paths.
   - Must include `stage-result.md` when the stage contract requires it.
 - `Constraints`
   - Must list hard requirements the runtime must respect for this run.
@@ -41,6 +41,9 @@ The authored document must include these top-level headings exactly:
 
 - Use the required heading names exactly; do not rename or merge headings.
 - Keep all document paths in backticks and workspace-relative form.
+- Treat `workitems/...` as relative to the configured `.aidd/` workspace root.
+  From the repository root, canonical stage artifacts live under `.aidd/workitems/...`;
+  do not create top-level `workitems/...`.
 - Do not invent user answers or hidden assumptions; unresolved items belong in `Open questions`.
 - Keep wording specific and actionable; avoid placeholder text such as `TBD`, `N/A`, or `...`.
 - Do not embed JSON schemas or machine-only payloads in place of narrative Markdown content.
@@ -49,7 +52,7 @@ The authored document must include these top-level headings exactly:
 
 - the required heading set is present exactly once,
 - the stage name is canonical and stage-specific,
-- input and output paths are explicit and workspace-relative,
+- input and output paths are explicit and AIDD workspace-relative,
 - unresolved clarifications are surfaced in `Open questions`,
 - the brief does not invent missing user answers.
 

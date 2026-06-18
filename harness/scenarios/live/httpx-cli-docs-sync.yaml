@@ -9,7 +9,7 @@ repo:
 objective: Keep HTTPX documentation-focused live coverage deterministic with an
   authored docs-sync task instead of dynamic external task discovery.
 task: Run the installed AIDD full-flow live audit against the selected HTTPX documentation
-  task and preserve reviewable quality evidence.
+  task and preserve reviewable execution evidence.
 stage_scope:
   start: idea
   end: qa
@@ -30,7 +30,7 @@ feature_source:
     summary: Update docs and examples after a small CLI behavior change and prove
       docs, examples, and verification still align.
     intent: Improve the HTTPX CLI documentation with the exact concrete command
-      `httpx https://httpbin.org/json` so the authored task and counted gate stay
+      `httpx https://httpbin.org/json` so the authored task and verification checks stay
       aligned with current command behavior.
     target_change: Update the CLI-facing documentation surfaces only; the expected
       docs example is exactly `httpx https://httpbin.org/json`, and no runtime HTTPX
@@ -81,7 +81,7 @@ feature_source:
     quality_bar: The documentation should be minimal, truthful, runnable or clearly
       labeled, should not require source changes, and should pass docs-only
       acceptance checks. Full upstream pytest remains useful exploratory evidence
-      for operators but is not the counted gate for this tiny docs-only lane.
+      for operators but is not required execution evidence for this tiny docs-only lane.
     size_rationale: Tiny because this is docs-only, expected to touch one or two files
       without runtime behavior changes.
 verify:
@@ -127,46 +127,6 @@ verify:
   - Added documentation lines do not introduce placeholder URLs as runnable examples.
   - Verification does not call the public endpoint.
   - QA stage output artifacts exist for the selected work item.
-quality:
-  commands:
-  - |
-    .venv/bin/python - <<'PY'
-    import subprocess
-    allowed = {"README.md", "docs/index.md"}
-    changed = set(subprocess.check_output(["git", "diff", "--name-only"], text=True).splitlines())
-    unexpected = sorted(changed - allowed)
-    if unexpected:
-        raise SystemExit(f"unexpected tracked docs-sync changes: {unexpected}")
-    if not changed:
-        raise SystemExit("expected docs-sync tracked changes")
-    PY
-  - |
-    .venv/bin/python - <<'PY'
-    import subprocess
-    from pathlib import Path
-
-    needle = "httpx " + "https:" + "//httpbin.org/json"
-    docs = ("README.md", "docs/index.md")
-    missing = [path for path in docs if needle not in Path(path).read_text(encoding="utf-8")]
-    if missing:
-        raise SystemExit(f"missing concrete CLI example in: {missing}")
-
-    diff = subprocess.check_output(["git", "diff", "--", *docs], text=True)
-    added = "\n".join(
-        line[1:] for line in diff.splitlines()
-        if line.startswith("+") and not line.startswith("+++")
-    ).lower()
-    placeholders = ("example.com", "example.org", "example.net", "placeholder")
-    offenders = [item for item in placeholders if item in added]
-    if offenders:
-        raise SystemExit(f"placeholder runnable example introduced: {offenders}")
-    PY
-  rubric_profile: live-full
-  require_review_status: approved
-  allowed_qa_verdicts:
-  - ready
-  - ready-with-risks
-  code_review_required: true
 limits:
   patch_budget_files: 3
   timeout_minutes: 240

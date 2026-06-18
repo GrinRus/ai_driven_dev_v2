@@ -39,6 +39,18 @@ For each finding:
 2. patch the smallest section that resolves the issue;
 3. re-check citation consistency across `Sources`, `Findings`, and `Evidence trace`;
 4. re-check blocker status in `stage-result.md` against unresolved `[blocking]` questions.
+5. remove or account for any temporary research scripts or probes left directly under `.aidd/`;
+   cite evidence in canonical Markdown instead of preserving scratch files.
+6. re-check that any local repro/probe cited by research is bounded by construction. Do not
+   preserve evidence from an open-ended server, infinite stream, watcher, or command that
+   only stopped because the live harness per-stage timeout fired or the run was interrupted. Add
+   a finite iteration count, an in-script timeout such as `anyio.fail_after(...)`, or
+   `subprocess.run(..., timeout=...)`; otherwise downgrade the probe to `not-run: <reason>`.
+7. re-check ignored verification residue from research commands with
+   `git status --ignored --short --untracked-files=all` or equivalent evidence; `.pytest_cache/`,
+   `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts must be
+   absent, cleaned, or explicitly kept as active workspace pollution findings. Do not claim cleanup
+   passed from a narrower check.
 
 Use concrete repair actions:
 
@@ -66,12 +78,17 @@ Use concrete repair actions:
 9. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
 10. Do not claim success unless required headings, validator verdict, stage-result status, and evidence-backed findings are mutually consistent.
 11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+12. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
+    from the repository root.
 
 ## Repair exit checks
 
 - every blocking finding is resolved or explicitly retained as active blocker,
 - material findings are citation-backed or explicitly marked as assumptions,
 - stale-sensitive findings include freshness context and follow-up action,
+- no stray research scratch files remain directly under `.aidd/`,
+- no ignored verification residue from research commands remains unexplained or hidden behind a
+  succeeded status,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - unresolved `[blocking]` questions still prevent `succeeded`.
