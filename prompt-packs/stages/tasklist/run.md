@@ -24,7 +24,8 @@ notes, and a concrete verification signal.
   - `context/constraints.md`
   - `context/previous-decisions.md`
 - contract of record:
-  - `contracts/stages/tasklist.md`
+  - `stage-brief.md` required output skeletons
+  - `contracts/stages/tasklist.md` only when it is present in the current checkout
 
 ## Required outputs (always write)
 
@@ -40,6 +41,18 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 - Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
   read-only to repair attempts.
+
+## Installed live workspace discipline
+
+- Repository-local `contracts/...` files may be absent in installed live runs. Do not spend the turn
+  searching broadly for missing contracts or scanning all of `.aidd`; use `stage-brief.md` as the
+  embedded contract skeleton and proceed.
+- Limit pre-write inspection to the required inputs, the optional context files needed for task
+  decomposition, and `stage-brief.md`. Avoid broad commands such as `rg --files .aidd` before the
+  required outputs exist.
+- After reading the required inputs, make the first file-changing action create or replace all
+  required stage documents: `tasklist.md`, `stage-result.md`, `validator-report.md`, `questions.md`,
+  and `answers.md`. Do not end the turn after analysis-only reads.
 
 ## Decomposition discipline
 
@@ -62,7 +75,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Execution instructions
 
-1. Read all required inputs and `contracts/stages/tasklist.md` before drafting outputs.
+1. Read all required inputs and `stage-brief.md` before drafting outputs. Read
+   `contracts/stages/tasklist.md` only if it is already present; absence of repository-local
+   contracts is not a blocker because `stage-brief.md` carries the required skeletons.
 2. Build `tasklist.md` with sections required by contract (`Task summary`, `Ordered tasks`,
    `Dependencies`, `Verification notes`).
 3. Ensure dependency references are resolvable and avoid hidden prerequisites.

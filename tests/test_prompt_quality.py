@@ -275,6 +275,24 @@ def test_plan_and_tasklist_preserve_authored_verification_commands() -> None:
         )
 
 
+def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (run_prompt, repair_prompt):
+        assert "stage-brief.md" in text
+        assert "Repository-local `contracts/...` files may be absent" in text
+        assert "Do not end the turn after analysis-only reads" in text
+
+    assert "Avoid broad commands such as `rg --files .aidd`" in run_prompt
+    assert "make the first file-changing action create or replace all" in run_prompt
+    assert "the first file-changing action must" in repair_prompt
+
+
 def test_qa_prompt_respects_selected_design_constraints() -> None:
     run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
