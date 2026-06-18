@@ -74,6 +74,16 @@ def _run_uv_cache_dir(*, run_root: Path) -> Path:
     return run_root / "uv-cache"
 
 
+def _uv_executable() -> str:
+    configured = os.environ.get("UV", "").strip()
+    if configured:
+        return configured
+    discovered = shutil.which("uv")
+    if discovered:
+        return discovered
+    return "uv"
+
+
 def _run_command(
     *,
     command: tuple[str, ...],
@@ -228,8 +238,9 @@ def prepare_local_wheel_install(
         repository_root=repository_root,
         source_snapshot_path=source_snapshot_path,
     )
+    uv_executable = _uv_executable()
     build_transcript = _run_command(
-        command=("uv", "build", "--wheel", "--out-dir", dist_root.as_posix()),
+        command=(uv_executable, "build", "--wheel", "--out-dir", dist_root.as_posix()),
         cwd=source_snapshot_path,
         env=dict(os.environ),
     )
@@ -260,7 +271,7 @@ def prepare_local_wheel_install(
     )
     install_transcript = _run_command(
         command=(
-            "uv",
+            uv_executable,
             "tool",
             "install",
             "--force",

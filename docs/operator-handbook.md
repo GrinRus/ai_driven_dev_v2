@@ -69,6 +69,11 @@ Required:
 - Python 3.12+
 - `uv`
 
+When `uv` is not on `PATH`, launch source-checkout commands through an absolute
+`uv` path. The live local-wheel installer honors the `UV` environment value that
+`uv run` provides, so the black-box installer can still build and install the
+tracked `HEAD` artifact without relying on a shell PATH lookup.
+
 Optional:
 
 - runtime CLIs you want to probe in `aidd doctor` (for example `claude`, `codex`, `opencode`)
