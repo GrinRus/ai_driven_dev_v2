@@ -346,6 +346,11 @@ for each public `aidd stage run` command. It is not a global flow timeout. Inspe
 `run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` for
 timeout evidence, and inspect `stage-audits/<stage>.*` for non-gating
 stage-result/validator consistency findings.
+For live manifest authoring and audits, AIDD self-check verification commands must
+call the installed `aidd` binary directly, for example `aidd stage questions ...`.
+Do not use `uv run aidd ...` from the target repo: it can create package-manager
+lockfiles after QA and pollute the final target workspace evidence. Keep target-project
+tests on the package manager expected by the target repository.
 Also inspect `target-workspace-evidence.*` for non-gating target workspace findings:
 tracked product diff, setup-baseline untracked files, `aidd.example.toml` harness
 config, top-level `workitems/...` pollution, stray `.aidd/` scratch files, and ignored

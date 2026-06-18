@@ -41,7 +41,7 @@ feature_source:
     - Existing wildcard and catch-all route behavior remains compatible unless answers
       explicitly approve a breaking change.
     verification:
-    - uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW
+    - aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW
     - test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md
     - bunx vitest run src/router/ src/utils/url.test.ts
     - bunx tsc --noEmit
@@ -55,7 +55,7 @@ feature_source:
     - Required compatibility notes and release-facing documentation updates for the chosen behavior.
 verify:
   commands:
-  - uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW
+  - aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW
   - test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md
   - bunx vitest run src/router/ src/utils/url.test.ts
   - bunx tsc --noEmit
@@ -91,8 +91,6 @@ interview:
     mode: answers_markdown_and_stage_rerun
     answers_file: .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md
     question_check_command:
-    - uv
-    - run
     - aidd
     - stage
     - questions
@@ -100,8 +98,6 @@ interview:
     - --work-item
     - WI-LIVE-HONO-INTERVIEW
     resume_command:
-    - uv
-    - run
     - aidd
     - stage
     - run

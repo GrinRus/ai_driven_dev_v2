@@ -49,7 +49,7 @@ feature_source:
       unless answers explicitly approve a change.
     - Focused tests cover collection errors with and without maxfail.
     verification:
-    - uv run aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
+    - aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
     - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
     - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
     - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/stage-result.md
@@ -64,7 +64,7 @@ feature_source:
     - Required documentation or changelog obligations for any changed reporting behavior.
 verify:
   commands:
-  - uv run aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
+  - aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
   - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
   - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
   - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/stage-result.md
@@ -99,8 +99,6 @@ interview:
     mode: answers_markdown_and_stage_rerun
     answers_file: .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
     question_check_command:
-    - uv
-    - run
     - aidd
     - stage
     - questions
@@ -108,8 +106,6 @@ interview:
     - --work-item
     - WI-LIVE-PYTEST-COLLECTION
     resume_command:
-    - uv
-    - run
     - aidd
     - stage
     - run

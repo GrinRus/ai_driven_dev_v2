@@ -243,7 +243,7 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
         == ".aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md"
     )
     assert scenario.verify.commands == (
-        "uv run aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW",
+        "aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW",
         "test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md",
         "uv run pytest -q",
         "test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/stage-result.md",
@@ -270,7 +270,7 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
         == ".aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md"
     )
     assert scenario.verify.commands == (
-        "uv run aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW",
+        "aidd stage questions idea --work-item WI-LIVE-HONO-INTERVIEW",
         "test -f .aidd/workitems/WI-LIVE-HONO-INTERVIEW/stages/idea/answers.md",
         "bunx vitest run src/router/ src/utils/url.test.ts",
         "bunx tsc --noEmit",
@@ -310,6 +310,10 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
         "test/node-api.test.ts"
         in openapi.verify.commands
     )
+    assert (
+        "aidd stage questions idea --work-item WI-LIVE-OPENAPI-DISCRIMINATOR"
+        in openapi.verify.commands
+    )
     assert "pnpm --filter openapi-typescript lint:ts" in openapi.verify.commands
 
     assert pytest_scenario.scenario_id == "AIDD-LIVE-011"
@@ -326,6 +330,10 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
     assert (
         ".venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py "
         "testing/test_main.py"
+        in pytest_scenario.verify.commands
+    )
+    assert (
+        "aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION"
         in pytest_scenario.verify.commands
     )
 
@@ -346,6 +354,27 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
         "tests/middleware/test_errors.py tests/test_responses.py"
         in starlette.verify.commands
     )
+
+
+def test_live_interview_manifests_use_installed_aidd_for_aidd_self_checks() -> None:
+    manifest_paths = sorted(Path("harness/scenarios/live").glob("*.yaml"))
+    offenders: list[str] = []
+
+    for manifest_path in manifest_paths:
+        scenario = load_scenario(manifest_path)
+        commands = list(scenario.verify.commands)
+        for task in (scenario.feature_source.tasks if scenario.feature_source else ()):
+            commands.extend(task.verification)
+        answer_flow = scenario.raw.get("interview", {}).get("answer_flow", {})
+        commands.extend(
+            " ".join(answer_flow.get(key, ()))
+            for key in ("question_check_command", "resume_command")
+        )
+        for command in commands:
+            if command.startswith("uv run aidd "):
+                offenders.append(f"{manifest_path}: {command}")
+
+    assert offenders == []
 
 
 def test_smoke_plan_stagepack_scenario_declares_cross_runtime_output_checks() -> None:

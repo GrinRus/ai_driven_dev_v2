@@ -215,6 +215,11 @@ If successful manifest verification creates ignored local byproducts after QA ha
 completed, `verify-transcript.json.workspace_cleanup` records runner cleanup of
 newly-created known verification residue before final `target-workspace-evidence.*`
 is captured. This cleanup is execution hygiene only.
+Manifest authors must keep installed-live AIDD self-checks on the installed CLI
+surface, for example `aidd stage questions ...`, instead of `uv run aidd ...`.
+The latter can create target-repository lockfiles during post-QA verification and
+turn an otherwise clean execution pass into a manual workspace-pollution finding.
+Repository-native test commands may still use that repository's normal package manager.
 
 `self-repair-matrix.json` and `.md` include the deterministic repair-probe catalog for
 all stages from `idea` to `qa`. Each probe row records the observed initial verdict,

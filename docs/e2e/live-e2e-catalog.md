@@ -47,11 +47,17 @@ Every live E2E run must follow the installed full-flow operator model:
     `self-repair-matrix.md` so operators can audit step duration, per-attempt runtime windows,
     deterministic repair-probe coverage, terminal document consistency, per-stage command
     timeout budgets, and repair behavior.
-14. For manual local runs, the launching agent is the operator-agent: it answers
+14. In live manifests, AIDD self-check verification commands must call the installed
+    `aidd` binary from `PATH` directly, for example `aidd stage questions ...`.
+    Do not use `uv run aidd ...` for these checks inside the target repository:
+    package-manager invocation can create target-repo lockfiles after QA and pollute
+    the final workspace evidence. Target-project verification commands may still use
+    the target repository's package manager when that is the repo's normal test surface.
+15. For manual local runs, the launching agent is the operator-agent: it answers
     blocking questions, records answer reasoning, and writes
     `.aidd/reports/evals/<run_id>/quality-report.md` only after terminal
     execution when deliverable quality must be judged.
-15. After at least one completed stage in a manual checkpoint run, the operator may
+16. After at least one completed stage in a manual checkpoint run, the operator may
     submit one stage-scoped intervention request through CLI or UI. If used, preserve
     `operator-requests/request-000N.md`, the resulting attempt log, validation result,
     and a short `operator-intervention-analysis.md` explaining why the request was

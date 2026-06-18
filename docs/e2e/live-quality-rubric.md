@@ -75,6 +75,13 @@ before final `target-workspace-evidence.*` is captured. That cleanup is recorded
 `verify-transcript.json.workspace_cleanup` and the `verify` step details. It is
 runner-owned execution hygiene, not a deliverable quality gate.
 
+Live manifests must not use `uv run aidd ...` for AIDD self-checks such as
+`stage questions` or `stage run` inside the target repository. The installed live
+runner already puts the built `aidd` artifact on `PATH`; using `uv run aidd ...`
+can create target-repository lockfiles after QA and make final workspace evidence
+not counted. Use `aidd stage questions ...` for AIDD self-checks, while keeping
+target-project test commands on the package manager that belongs to that repository.
+
 ## Manual Report
 
 After the terminal run, the launching SWE agent may write:
