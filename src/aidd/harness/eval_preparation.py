@@ -89,6 +89,7 @@ def build_feature_selection_payload(
         "canonical_runtime": scenario.canonical_runtime,
         "feature_size": scenario.feature_size,
         "fixture_seed": None,
+        "live_matrix_role": scenario.live_matrix_role,
         "scenario_id": scenario.scenario_id,
         "scenario_class": scenario.scenario_class,
         "is_live": scenario.is_live,
@@ -107,11 +108,14 @@ def build_feature_selection_payload(
             "id": selected_task.task_id,
             "intent": selected_task.intent,
             "interview": list(selected_task.interview),
+            "audit_rubric": selected_task.audit_rubric,
+            "complexity_axes": list(selected_task.complexity_axes),
             "quality_bar": selected_task.quality_bar,
             "size_rationale": selected_task.size_rationale,
             "summary": selected_task.summary,
             "target_change": selected_task.target_change,
             "title": selected_task.title,
+            "visible_request": selected_task.visible_request,
             "verification": list(selected_task.verification),
         }
     if scenario.feature_source is not None and scenario.feature_source.mode == "fixture-seed":

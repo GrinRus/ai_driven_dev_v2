@@ -222,8 +222,10 @@ Post-`v0.1.0a10` changes prepared for `v0.1.0a11`:
 
 - live E2E execution reports no longer compute deliverable quality gates or counted-clean
   decisions;
-- manual `quality-report.md` is the single post-run deliverable-quality artifact for
-  artifacts, code/tests, workspace hygiene, and operator UI/UX;
+- product-evaluation counted-clean evidence requires manual
+  `stage-quality-audits/<stage>.md`, `flow-quality-report.md`,
+  `code-quality-report.md`, and `quality-report.md`; a runner execution `pass`
+  alone is not counted-clean product-quality evidence;
 - live evidence now records per-stage timeout policy, target workspace classifications,
   stage-result/validator consistency warnings, and verification-residue cleanup;
 - maintained live prompts, contracts, and scenario manifests now emphasize workspace
@@ -296,8 +298,8 @@ Post-`v0.1.0a9` changes accepted in `v0.1.0a10`:
 - stage input preflight now reports missing prerequisites before runtime execution;
 - the integrated operator workbench adds project-home, stage cockpit, artifact, and
   next-flow surfaces while preserving CLI-equivalent artifact ownership;
-- live E2E evidence now separates execution integrity from manual post-run quality
-  reports for artifacts, code, tests, and operator UI/UX;
+- live E2E evidence now separates execution integrity from manual product-quality
+  reports for stage artifacts, code, tests, and operator UI/UX;
 - Claude large live E2E coverage was added to the maintained live catalog;
 - maintained live prompt examples were neutralized so reusable prompts do not encode
   target-specific live-run solutions.
@@ -384,9 +386,13 @@ Historical Wave 33 go/no-go input for `v0.1.0a11` candidate preparation:
 
 W24 manual live evidence refresh on 2026-05-24:
 
+This table is historical release-preparation evidence. Retired rows in this table are
+not current maintained live-matrix coverage; use `docs/e2e/scenario-matrix.md` for
+the active matrix.
+
 | Scenario / runtime | Manifest | Preflight result | Counted live evidence |
 | --- | --- | --- | --- |
-| `AIDD-LIVE-002` / `codex` | `harness/scenarios/live/typer-boolean-help-rendering.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-002-codex-20260524`; `manual quality-report.md` present |
+| `AIDD-LIVE-002` / `codex` (retired historical lane) | retired manifest, removed from maintained matrix | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-002-codex-20260524`; `manual quality-report.md` present |
 | `AIDD-LIVE-007` / `codex` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-007-codex-20260524`; `manual quality-report.md` present |
 | `AIDD-LIVE-007` / `claude-code` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `2.1.85 (Claude Code)`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-007-claude-code-20260524`; `manual quality-report.md` present |
 | `AIDD-LIVE-006` / `opencode` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Manual deliverable decision counted-clean after blocked/resumed interview path: `w24-a4-live-006-opencode-20260524-r2`; `answer-analysis.md` and `manual quality-report.md` present |

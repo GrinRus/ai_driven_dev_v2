@@ -12,6 +12,7 @@ import pytest
 import yaml
 
 from aidd.core.stages import STAGES
+from aidd.harness import live_e2e_black_box_orchestration as live_orchestration
 from aidd.harness.install_artifact import HarnessInstallResult
 from aidd.harness.live_e2e_black_box import (
     _harness_environment,
@@ -19,6 +20,7 @@ from aidd.harness.live_e2e_black_box import (
     run_black_box_live_e2e,
 )
 from aidd.harness.live_e2e_black_box_orchestration import (
+    BlackBoxLiveE2EResult,
     _find_resume_state,
     _live_interruption_handlers,
     _next_flow_complete_visible,
@@ -717,20 +719,38 @@ def _write_scenario_manifest(
     frontend_checkpoints: bool = True,
     runtime_targets: tuple[str, ...] = ("opencode",),
     acceptance_criteria: tuple[str, ...] = ("The fake AIDD stages complete.",),
+    product_evaluation: bool = False,
+    repo_revision: str = "abc123",
 ) -> None:
+    feature_size = (
+        "xlarge"
+        if product_evaluation and interview_required
+        else "medium"
+        if product_evaluation
+        else "small"
+    )
+    live_matrix_role = "product-evaluation" if product_evaluation else "flow-regression"
+    patch_budget_files = (
+        60
+        if feature_size == "xlarge"
+        else 20
+        if feature_size == "medium"
+        else 8
+    )
     payload = {
         "id": "AIDD-TEST-LIVE-BLACKBOX",
         "scenario_class": "live-full-flow-interview" if interview_required else "live-full-flow",
-        "feature_size": "small" if not interview_required else "large",
+        "feature_size": feature_size,
+        "live_matrix_role": live_matrix_role,
         "automation_lane": "manual",
         "canonical_runtime": runtime_targets[0],
         "task": "exercise black-box live evaluator",
-        "repo": {"url": repo_url},
+        "repo": {"url": repo_url, "revision": repo_revision},
         "setup": {"commands": list(setup_commands)},
         "aidd_invocation": {"work_item": "WI-LIVE-BLACKBOX"},
         "verify": {"commands": list(verify_commands)},
         "stage_scope": {"start": "idea", "end": "qa"},
-        "limits": {"timeout_minutes": 240},
+        "limits": {"timeout_minutes": 240, "patch_budget_files": patch_budget_files},
         "interview": {"required": interview_required},
         "runtime_targets": list(runtime_targets),
         "live_flow": {
@@ -754,6 +774,21 @@ def _write_scenario_manifest(
                     "verification": list(verify_commands),
                     "quality_bar": "Execution evidence is complete.",
                     "size_rationale": "Small test fixture.",
+                    **(
+                        {
+                            "visible_request": (
+                                "Implement a realistic product behavior change and "
+                                "prove it with focused verification."
+                            ),
+                            "audit_rubric": (
+                                "Review stage quality, product alignment, code quality, "
+                                "and verification evidence after every stage."
+                            ),
+                            "complexity_axes": ["cross-module", "docs"],
+                        }
+                        if product_evaluation
+                        else {}
+                    ),
                     **(
                         {
                             "interview": [
@@ -895,6 +930,7 @@ def _prepare_live_test(
     stage_result_validator_verdict: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
     ignored_pollution_stage: str | None = None,
+    product_evaluation: bool = False,
 ) -> tuple[Path, Path, Path]:
     _clear_live_runtime_command_env(monkeypatch)
     _put_fake_provider_on_path(
@@ -904,6 +940,11 @@ def _prepare_live_test(
     )
     source_repo = tmp_path / "source"
     _init_source_repo(source_repo)
+    source_revision = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"],
+        cwd=source_repo,
+        text=True,
+    ).strip()
     fake_aidd = tmp_path / "fake-aidd"
     _write_fake_aidd(
         fake_aidd,
@@ -933,6 +974,8 @@ def _prepare_live_test(
         frontend_checkpoints=frontend_checkpoints,
         runtime_targets=runtime_targets,
         acceptance_criteria=acceptance_criteria,
+        product_evaluation=product_evaluation,
+        repo_revision=source_revision,
     )
     monkeypatch.setattr(
         "aidd.harness.live_e2e_black_box.prepare_local_wheel_install",
@@ -941,6 +984,80 @@ def _prepare_live_test(
         ),
     )
     return scenario_path, tmp_path / "work-root", tmp_path / ".aidd" / "reports" / "evals"
+
+
+def _write_stage_quality_audit(
+    bundle_root: Path,
+    *,
+    stage: str,
+    flow_decision: str = "continue",
+) -> Path:
+    path = bundle_root / "stage-quality-audits" / f"{stage}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(
+            (
+                f"# Stage Quality Audit: {stage}",
+                "",
+                "## Decision",
+                "- Stage quality: acceptable",
+                f"- Flow decision: {flow_decision}",
+                "- Reason: Synthetic test audit.",
+                "",
+                "## Checks",
+                "- Product alignment: checked",
+                "- Evidence quality: checked",
+                "- Repository understanding: checked",
+                "- Missing questions or assumptions: none",
+                "- Cross-stage consistency: checked",
+                "- Risk handling: checked",
+                "- Specific defects: none",
+                "",
+                "## Evidence Reviewed",
+                f"- Stage artifacts: stage-audits/{stage}.json",
+                "- Runtime logs: runtime-log.txt",
+                "- Runner stage audit: present",
+                "- Target repo evidence: synthetic fixture",
+                "",
+                "## Notes For Final Report",
+                "- AIDD quality signal: synthetic",
+                "- Residual risks: none",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def _run_product_evaluation_to_terminal(
+    *,
+    scenario_path: Path,
+    work_root: Path,
+    report_root: Path,
+    runtime_id: str = "opencode",
+) -> BlackBoxLiveE2EResult:
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id=runtime_id,
+        work_root=work_root,
+        report_root=report_root,
+    )
+    while result.status == "awaiting-quality-review":
+        state_payload = json.loads(
+            (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+        )
+        required_stage = state_payload["quality_review_required_stage"]
+        assert isinstance(required_stage, str)
+        _write_stage_quality_audit(result.bundle_root, stage=required_stage)
+        result = run_black_box_live_e2e(
+            scenario_path=scenario_path,
+            runtime_id=runtime_id,
+            work_root=work_root,
+            report_root=report_root,
+            run_id=result.run_id,
+        )
+    return result
 
 
 def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
@@ -1067,6 +1184,11 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
     assert "quality" not in grader_payload
+    assert grader_payload["manual_quality_artifacts"] == {
+        "required_for_counted_clean": False,
+        "stage_quality_audits": [],
+        "final_reports": [],
+    }
     assert len(grader_payload["stage_audits"]) == len(STAGES)
     assert grader_payload["steps"][-1]["action"] == "finish"
     metadata_payload = json.loads(
@@ -1145,6 +1267,245 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     )
     assert "Default decision: `no-follow-up`" in next_flow_markdown
     assert "Requires second public-repository flow: `false`" in next_flow_markdown
+
+
+def test_black_box_live_product_evaluation_stops_after_stage_for_quality_review(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "awaiting-quality-review"
+    required_path = result.bundle_root / "stage-quality-audits" / "idea.md"
+    assert result.quality_review_request_path == required_path
+    assert not required_path.exists()
+    assert (result.bundle_root / "stage-audits" / "idea.json").exists()
+    assert not (result.bundle_root / "stage-audits" / "research.json").exists()
+    assert not (result.bundle_root / "verdict.md").exists()
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["status"] == "awaiting-quality-review"
+    assert state_payload["next_action"] == "quality-review"
+    assert state_payload["quality_review_required_stage"] == "idea"
+    assert state_payload["completed_stages"] == ["idea"]
+
+
+def test_black_box_live_product_evaluation_resume_requires_stage_quality_audit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    first = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    with pytest.raises(ValueError, match="awaiting quality review"):
+        run_black_box_live_e2e(
+            scenario_path=scenario_path,
+            runtime_id="opencode",
+            work_root=work_root,
+            report_root=report_root,
+            run_id=first.run_id,
+        )
+
+
+def test_black_box_live_product_evaluation_resume_requires_valid_flow_decision(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    first = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+    invalid_audit_path = first.bundle_root / "stage-quality-audits" / "idea.md"
+    invalid_audit_path.parent.mkdir(parents=True, exist_ok=True)
+    invalid_audit_path.write_text(
+        "\n".join(
+            (
+                "# Stage Quality Audit: idea",
+                "",
+                "## Decision",
+                "- Stage quality: acceptable",
+                "- Reason: Missing flow decision should not unlock the next stage.",
+                "",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    resumed = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=first.run_id,
+    )
+
+    assert resumed.status == "awaiting-quality-review"
+    assert resumed.quality_review_request_path == invalid_audit_path
+    assert not (resumed.bundle_root / "stage-audits" / "research.json").exists()
+    state_payload = json.loads(
+        (resumed.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["completed_stages"] == ["idea"]
+    assert (
+        state_payload["quality_review_reason"]
+        == "stage quality audit is missing a valid Flow decision"
+    )
+
+
+def test_black_box_live_product_evaluation_resume_continues_after_audit_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    first = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+    _write_stage_quality_audit(first.bundle_root, stage="idea")
+
+    resumed = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=first.run_id,
+    )
+
+    assert resumed.status == "awaiting-quality-review"
+    assert resumed.run_id == first.run_id
+    assert resumed.quality_review_request_path == (
+        resumed.bundle_root / "stage-quality-audits" / "research.md"
+    )
+    state_payload = json.loads(
+        (resumed.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["completed_stages"] == ["idea", "research"]
+    assert (resumed.bundle_root / "stage-audits" / "research.json").exists()
+
+
+def test_black_box_live_product_evaluation_stop_not_counted_is_manual_quality_stop(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    first = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+    _write_stage_quality_audit(
+        first.bundle_root,
+        stage="idea",
+        flow_decision="stop-not-counted",
+    )
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_setup",
+        lambda ctx: (_ for _ in ()).throw(
+            AssertionError("manual quality stop resume must not rerun setup")
+        ),
+    )
+
+    stopped = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=first.run_id,
+    )
+
+    assert stopped.status == "manual-quality-stop"
+    assert not (stopped.bundle_root / "verdict.md").exists()
+    state_payload = json.loads(
+        (stopped.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["status"] == "manual-quality-stop"
+    assert state_payload["quality_review_decision"] == "stop-not-counted"
+    steps = json.loads((stopped.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    assert steps[-1]["classification"] == "manual-quality-stop"
+
+
+def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_manual_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+
+    result = _run_product_evaluation_to_terminal(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["status"] == "pass"
+    assert state_payload["completed_stages"] == list(STAGES)
+    assert "quality_review_required_stage" not in state_payload
+    assert "quality_review_required_path" not in state_payload
+    assert "quality_review_decision" not in state_payload
+    assert "quality_review_reason" not in state_payload
+    grader_payload = json.loads(
+        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
+    )
+    manual_artifacts = grader_payload["manual_quality_artifacts"]
+    assert manual_artifacts["required_for_counted_clean"] is True
+    assert [item["stage"] for item in manual_artifacts["stage_quality_audits"]] == list(
+        STAGES
+    )
+    assert all(item["exists"] for item in manual_artifacts["stage_quality_audits"])
+    assert [item["kind"] for item in manual_artifacts["final_reports"]] == [
+        "flow-quality-report",
+        "code-quality-report",
+        "quality-report",
+    ]
+    assert all(not item["exists"] for item in manual_artifacts["final_reports"])
 
 
 def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_context(

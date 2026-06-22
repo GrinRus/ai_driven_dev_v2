@@ -148,18 +148,24 @@ Deterministic scenarios additionally imply:
    audit/fund prompts disabled) so setup cannot wait on hidden terminal input.
 7. For live E2E, plan the next step, execute through public installed-AIDD surfaces
    (`aidd stage run` plus inspection commands), inspect evidence, classify the step,
-   and decide whether to continue, request answers, stop, or finish.
+   and decide whether to continue, request answers, await manual quality review,
+   stop, or finish.
 8. Capture raw runtime logs and emitted structured logs when supported.
 9. Capture emitted normalized events and include them in first-failure boundary analysis.
 10. Capture question and answer artifacts whenever a live or deterministic run uses them.
 11. Capture validator outcomes and repair attempts.
-12. Write per-stage audits after every live stage.
-13. Run scenario verification commands.
-14. Run log analysis.
-15. Write execution-only grader data, verdict, summary, and durable bundle metadata,
+12. Write runner-owned per-stage audits after every live stage.
+13. For `product-evaluation`, stop after each successful stage with
+    `awaiting-quality-review` until the launching agent writes
+    `stage-quality-audits/<stage>.md`; `blocked` remains reserved for unresolved
+    questions or runtime approvals.
+14. Run scenario verification commands.
+15. Run log analysis.
+16. Write execution-only grader data, verdict, summary, and durable bundle metadata,
     including install provenance when applicable.
-16. After the terminal run, the launching SWE agent may write the manual
-    `quality-report.md`; the runner does not create, parse, or score it.
+17. After the terminal run, the launching SWE agent may write manual
+    `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`;
+    the runner does not create, parse, or score those quality decisions.
 
 ## 7. Mandatory output artifacts
 
@@ -173,6 +179,8 @@ Every black-box live E2E run should aim to write:
 - `.aidd/reports/evals/<run_id>/frontend-checkpoints.md`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
 - `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
+- `.aidd/reports/evals/<run_id>/stage-quality-audits/<stage>.md` for
+  product-evaluation stages, written manually before resume
 - `.aidd/reports/evals/<run_id>/target-workspace-evidence.json`
 - `.aidd/reports/evals/<run_id>/target-workspace-evidence.md`
 - `.aidd/reports/evals/<run_id>/runtime.log`
@@ -194,11 +202,14 @@ Every black-box live E2E run should aim to write:
 - `.aidd/reports/evals/<run_id>/verify-transcript.json`
 - `.aidd/reports/evals/<run_id>/teardown-transcript.json`
 
-`.aidd/reports/evals/<run_id>/quality-report.md` is a manual post-run SWE-agent
-artifact. It is not part of execution bundle completeness and must not affect
-`verdict.md` or `grader.json`. When a UI/UX decision is needed, the report records
-a human-authored AIDD operator UI/UX decision; the runner does not derive that
-decision from `frontend-checkpoints.*`.
+`.aidd/reports/evals/<run_id>/flow-quality-report.md`,
+`.aidd/reports/evals/<run_id>/code-quality-report.md`, and
+`.aidd/reports/evals/<run_id>/quality-report.md` are manual SWE-agent artifacts.
+They are not part of execution bundle completeness and must not affect `verdict.md`
+or `grader.json`. Product-evaluation counted-clean evidence requires those final
+reports plus every `stage-quality-audits/<stage>.md`. When a UI/UX decision is
+needed, the report records a human-authored AIDD operator UI/UX decision; the runner
+does not derive that decision from `frontend-checkpoints.*`.
 
 `target-workspace-evidence.*` is runner-owned, non-gating evidence. It records the
 target repository snapshot after setup and after terminal/stop state, including tracked

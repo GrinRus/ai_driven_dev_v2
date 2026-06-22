@@ -133,13 +133,30 @@ FlowAction = Literal[
     "run-stage",
     "inspect-stage",
     "answer-questions",
+    "quality-review",
     "frontend-checkpoint",
     "verify",
     "teardown",
     "finish",
     "stop",
 ]
-StepClassification = Literal["pass", "fail", "blocked", "infra-fail", "skipped"]
+LiveE2EStatus = Literal[
+    "pass",
+    "fail",
+    "blocked",
+    "infra-fail",
+    "awaiting-quality-review",
+    "manual-quality-stop",
+]
+StepClassification = Literal[
+    "pass",
+    "fail",
+    "blocked",
+    "infra-fail",
+    "skipped",
+    "awaiting-quality-review",
+    "manual-quality-stop",
+]
 
 FLOW_STATE_FILENAME = "flow-state.json"
 FLOW_STEPS_FILENAME = "flow-steps.json"
@@ -174,6 +191,10 @@ WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT = 100
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 SUMMARY_REPORT_FILENAME = "summary.md"
 STAGE_AUDITS_DIRNAME = "stage-audits"
+STAGE_QUALITY_AUDITS_DIRNAME = "stage-quality-audits"
+FLOW_QUALITY_REPORT_FILENAME = "flow-quality-report.md"
+CODE_QUALITY_REPORT_FILENAME = "code-quality-report.md"
+QUALITY_REPORT_FILENAME = "quality-report.md"
 FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
 STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
 NEXT_FLOW_OPERATOR_DECISIONS = (
@@ -186,7 +207,8 @@ NEXT_FLOW_OPERATOR_DECISIONS = (
 )
 
 TERMINAL_STATUSES = {"pass", "fail", "infra-fail"}
-RESUMABLE_STATUSES = {"blocked", "interrupted-resumable"}
+TERMINAL_MANUAL_STATUSES = {"manual-quality-stop"}
+RESUMABLE_STATUSES = {"blocked", "interrupted-resumable", "awaiting-quality-review"}
 TERMINAL_STAGE_METADATA_STATUSES = {"blocked", "failed", "succeeded"}
 PRESERVED_STATE_EXTRA_KEYS = (
     "error",
@@ -224,13 +246,14 @@ class BlackBoxLiveE2EResult:
     scenario_id: str
     run_id: str
     runtime_id: str
-    status: VerdictStatus
+    status: LiveE2EStatus
     bundle_root: Path
     flow_report_path: Path
     verdict_path: Path
     summary_path: Path
     first_failure_note: str | None
     operator_action_request_path: Path | None
+    quality_review_request_path: Path | None = None
 
 
 @dataclass(slots=True)
@@ -1360,10 +1383,24 @@ def _find_resume_state(
         )
     state = _mark_stale_running_state_interrupted(candidate)
     status = state.get("status")
-    if status not in {*RESUMABLE_STATUSES, *TERMINAL_STATUSES}:
+    if status == "awaiting-quality-review":
+        required_path = state.get("quality_review_required_path")
+        if not isinstance(required_path, str) or not Path(required_path).exists():
+            raise ValueError(
+                "Run "
+                f"'{normalized_run_id}' is awaiting quality review. Resume requires "
+                "the launching operator-agent audit file: "
+                f"{required_path if isinstance(required_path, str) else 'missing'}."
+            )
+    if status not in {
+        *RESUMABLE_STATUSES,
+        *TERMINAL_STATUSES,
+        *TERMINAL_MANUAL_STATUSES,
+    }:
         raise ValueError(
             "Explicit --run-id can only resume a blocked or interrupted-resumable "
-            "run, or refresh terminal execution reporting. "
+            "run, resume an awaiting-quality-review run with its required audit "
+            "file, or refresh terminal execution reporting. "
             f"Run '{normalized_run_id}' has status `{status}`."
         )
     return candidate
@@ -1434,6 +1471,9 @@ def _selected_task_from_payload(
             return None
         strings[key] = value.strip()
 
+    visible_request = raw.get("visible_request")
+    audit_rubric = raw.get("audit_rubric")
+
     return ScenarioAuthoredTask(
         task_id=strings["id"],
         title=strings["title"],
@@ -1446,6 +1486,17 @@ def _selected_task_from_payload(
         quality_bar=strings["quality_bar"],
         size_rationale=strings["size_rationale"],
         interview=_string_tuple_from_snapshot(raw.get("interview")),
+        visible_request=(
+            visible_request.strip()
+            if isinstance(visible_request, str) and visible_request.strip()
+            else None
+        ),
+        audit_rubric=(
+            audit_rubric.strip()
+            if isinstance(audit_rubric, str) and audit_rubric.strip()
+            else None
+        ),
+        complexity_axes=_string_tuple_from_snapshot(raw.get("complexity_axes")),
     )
 
 
@@ -1681,6 +1732,196 @@ def _first_incomplete_stage(ctx: FlowContext) -> str | None:
         if stage not in completed:
             return stage
     return None
+
+
+_QUALITY_REVIEW_DECISION_PATTERN = re.compile(
+    r"^\s*-\s*Flow decision:\s*`?(?P<decision>[a-z-]+)`?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_QUALITY_REVIEW_FLOW_DECISIONS = {
+    "continue",
+    "continue-with-risk",
+    "stop-not-counted",
+    "operator-intervention",
+}
+
+
+def _requires_stage_quality_audits(ctx: FlowContext) -> bool:
+    return ctx.scenario.live_matrix_role == "product-evaluation"
+
+
+def _stage_quality_audit_path(ctx: FlowContext, stage: str) -> Path:
+    return ctx.bundle_root / STAGE_QUALITY_AUDITS_DIRNAME / f"{stage}.md"
+
+
+def _stage_quality_audit_flow_decision(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    match = _QUALITY_REVIEW_DECISION_PATTERN.search(path.read_text(encoding="utf-8"))
+    if match is None:
+        return None
+    decision = match.group("decision").strip().lower()
+    return decision if decision in _QUALITY_REVIEW_FLOW_DECISIONS else None
+
+
+def _record_awaiting_quality_review(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    required_path: Path,
+    reason: str,
+    decision: str | None = None,
+) -> StepClassification:
+    required_path.parent.mkdir(parents=True, exist_ok=True)
+    _persist_state(
+        ctx=ctx,
+        status="awaiting-quality-review",
+        next_action="quality-review",
+        current_stage=stage,
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra={
+            "quality_review_required_stage": stage,
+            "quality_review_required_path": required_path.as_posix(),
+            "quality_review_reason": reason,
+            **({"quality_review_decision": decision} if decision is not None else {}),
+        },
+    )
+    _record_step(
+        ctx=ctx,
+        action="quality-review",
+        classification="awaiting-quality-review",
+        decision=(
+            "Stop for launching operator-agent product-quality review before "
+            "continuing execution."
+        ),
+        plan=(
+            "Write the required stage quality audit, then resume this same run id "
+            "if the audit decision allows continuation."
+        ),
+        stage=stage,
+        details={
+            "required_audit_path": required_path.as_posix(),
+            "reason": reason,
+            **({"flow_decision": decision} if decision is not None else {}),
+        },
+    )
+    return "awaiting-quality-review"
+
+
+def _record_manual_quality_stop(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    audit_path: Path,
+) -> StepClassification:
+    _persist_state(
+        ctx=ctx,
+        status="manual-quality-stop",
+        next_action="stop",
+        current_stage=stage,
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra={
+            "quality_review_required_stage": stage,
+            "quality_review_required_path": audit_path.as_posix(),
+            "quality_review_decision": "stop-not-counted",
+            "quality_review_reason": (
+                "Launching operator-agent stage audit chose stop-not-counted."
+            ),
+        },
+    )
+    _record_step(
+        ctx=ctx,
+        action="stop",
+        classification="manual-quality-stop",
+        decision=(
+            "Manual stage quality audit requested `stop-not-counted`; stop without "
+            "classifying this as provider, infrastructure, or unresolved-question failure."
+        ),
+        plan="Preserve the run bundle for manual quality reporting and do not run later stages.",
+        stage=stage,
+        evidence_paths=(audit_path,),
+        details={"flow_decision": "stop-not-counted"},
+    )
+    return "manual-quality-stop"
+
+
+def _quality_review_gate(ctx: FlowContext) -> StepClassification | None:
+    if not _requires_stage_quality_audits(ctx):
+        return None
+    for stage in _state_completed_stages(ctx.bundle_root):
+        required_path = _stage_quality_audit_path(ctx, stage)
+        if not required_path.exists():
+            return _record_awaiting_quality_review(
+                ctx=ctx,
+                stage=stage,
+                required_path=required_path,
+                reason="stage quality audit file is missing",
+            )
+        decision = _stage_quality_audit_flow_decision(required_path)
+        if decision is None:
+            return _record_awaiting_quality_review(
+                ctx=ctx,
+                stage=stage,
+                required_path=required_path,
+                reason="stage quality audit is missing a valid Flow decision",
+            )
+        if decision == "stop-not-counted":
+            return _record_manual_quality_stop(
+                ctx=ctx,
+                stage=stage,
+                audit_path=required_path,
+            )
+        if decision == "operator-intervention":
+            return _record_awaiting_quality_review(
+                ctx=ctx,
+                stage=stage,
+                required_path=required_path,
+                reason="stage quality audit requested operator intervention",
+                decision=decision,
+            )
+    return None
+
+
+def _manual_quality_artifacts_payload(ctx: FlowContext) -> dict[str, object]:
+    required_for_counted_clean = _requires_stage_quality_audits(ctx)
+    stage_audits = [
+        {
+            "stage": stage,
+            "path": _stage_quality_audit_path(ctx, stage).as_posix(),
+            "exists": _stage_quality_audit_path(ctx, stage).exists(),
+        }
+        for stage in _stage_scope(ctx.scenario)
+    ]
+    final_reports = [
+        {
+            "kind": "flow-quality-report",
+            "path": (ctx.bundle_root / FLOW_QUALITY_REPORT_FILENAME).as_posix(),
+            "exists": (ctx.bundle_root / FLOW_QUALITY_REPORT_FILENAME).exists(),
+        },
+        {
+            "kind": "code-quality-report",
+            "path": (ctx.bundle_root / CODE_QUALITY_REPORT_FILENAME).as_posix(),
+            "exists": (ctx.bundle_root / CODE_QUALITY_REPORT_FILENAME).exists(),
+        },
+        {
+            "kind": "quality-report",
+            "path": (ctx.bundle_root / QUALITY_REPORT_FILENAME).as_posix(),
+            "exists": (ctx.bundle_root / QUALITY_REPORT_FILENAME).exists(),
+        },
+    ]
+    return {
+        "required_for_counted_clean": required_for_counted_clean,
+        "stage_quality_audits": stage_audits if required_for_counted_clean else [],
+        "final_reports": final_reports if required_for_counted_clean else [],
+    }
+
+
+def _quality_review_request_path_from_state(ctx: FlowContext) -> Path | None:
+    state_path = _state_path(ctx.bundle_root)
+    if not state_path.exists():
+        return None
+    raw_path = _read_json_object(state_path).get("quality_review_required_path")
+    return Path(raw_path) if isinstance(raw_path, str) and raw_path else None
 
 
 def _require_working_copy(ctx: FlowContext) -> Path:
@@ -4186,6 +4427,9 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             current_stage=_next_stage_after(ctx.scenario, stage),
             completed_stages=completed,
         )
+        quality_gate = _quality_review_gate(ctx)
+        if quality_gate is not None:
+            return quality_gate
         return classification
     if classification == "blocked":
         existing_request_paths = (
@@ -4251,6 +4495,9 @@ def _next_stage_after(scenario: Scenario, stage: str) -> str | None:
 
 def _run_stage_loop(ctx: FlowContext) -> StepClassification:
     while True:
+        quality_gate = _quality_review_gate(ctx)
+        if quality_gate is not None:
+            return quality_gate
         stage = _first_incomplete_stage(ctx)
         if stage is None:
             return "pass"
@@ -4940,6 +5187,7 @@ def _grader_payload(
             "operator_decision": next_flow_checkpoint.get("next_flow_actions", {}),
             "flow_complete_visible": next_flow_checkpoint.get("flow_complete_visible"),
         },
+        "manual_quality_artifacts": _manual_quality_artifacts_payload(ctx),
         "selected_task": ctx.selected_task_payload.get("selected_task"),
         "stage_audits": _stage_audit_payloads(ctx),
         "steps": _load_steps(ctx.bundle_root),
@@ -5190,6 +5438,44 @@ def _finalize_reports(
     )
 
 
+def _awaiting_quality_review_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
+    _ensure_transcript_files(ctx)
+    _write_runtime_log_from_steps(ctx)
+    _write_flow_report(ctx)
+    return BlackBoxLiveE2EResult(
+        scenario_id=ctx.scenario.scenario_id,
+        run_id=ctx.run_id,
+        runtime_id=ctx.runtime_id,
+        status="awaiting-quality-review",
+        bundle_root=ctx.bundle_root,
+        flow_report_path=ctx.bundle_root / FLOW_REPORT_FILENAME,
+        verdict_path=ctx.bundle_root / VERDICT_FILENAME,
+        summary_path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
+        first_failure_note=None,
+        operator_action_request_path=None,
+        quality_review_request_path=_quality_review_request_path_from_state(ctx),
+    )
+
+
+def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
+    _ensure_transcript_files(ctx)
+    _write_runtime_log_from_steps(ctx)
+    _write_flow_report(ctx)
+    return BlackBoxLiveE2EResult(
+        scenario_id=ctx.scenario.scenario_id,
+        run_id=ctx.run_id,
+        runtime_id=ctx.runtime_id,
+        status="manual-quality-stop",
+        bundle_root=ctx.bundle_root,
+        flow_report_path=ctx.bundle_root / FLOW_REPORT_FILENAME,
+        verdict_path=ctx.bundle_root / VERDICT_FILENAME,
+        summary_path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
+        first_failure_note="Manual stage quality audit chose `stop-not-counted`.",
+        operator_action_request_path=None,
+        quality_review_request_path=_quality_review_request_path_from_state(ctx),
+    )
+
+
 def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path:
     result = _synthetic_aidd_run_result(ctx, exit_code=exit_code)
     return _write_step_transcript(
@@ -5340,6 +5626,8 @@ def run_black_box_live_e2e(
 
 def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     status = _state_status(ctx.bundle_root)
+    if status == "manual-quality-stop":
+        return _manual_quality_stop_result(ctx)
     if status in TERMINAL_STATUSES:
         terminal_status = cast(VerdictStatus, status)
         return _finalize_reports(
@@ -5353,6 +5641,11 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             teardown_result=None,
             teardown_error=None,
         )
+    quality_gate = _quality_review_gate(ctx)
+    if quality_gate == "awaiting-quality-review":
+        return _awaiting_quality_review_result(ctx)
+    if quality_gate == "manual-quality-stop":
+        return _manual_quality_stop_result(ctx)
     try:
         _prepare_target_repository(ctx)
     except Exception as exc:
@@ -5401,6 +5694,10 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             teardown_error=None,
         )
     stage_classification = _run_stage_loop(ctx)
+    if stage_classification == "awaiting-quality-review":
+        return _awaiting_quality_review_result(ctx)
+    if stage_classification == "manual-quality-stop":
+        return _manual_quality_stop_result(ctx)
     if stage_classification == "blocked":
         return _blocked_result(ctx)
     if stage_classification == "fail":
@@ -5526,6 +5823,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Verdict path: {result.verdict_path.as_posix()}")
     if result.operator_action_request_path is not None and result.status == "blocked":
         print(f"Operator action request: {result.operator_action_request_path.as_posix()}")
+    if (
+        result.quality_review_request_path is not None
+        and result.status == "awaiting-quality-review"
+    ):
+        print(f"Required quality audit: {result.quality_review_request_path.as_posix()}")
     return 0 if result.status == "pass" else 1
 
 

@@ -11,6 +11,12 @@ The runner does not create, parse, validate, or score `quality-report.md`. It al
 does not compute counted-clean status. A missing manual quality report must not
 change a passing execution verdict.
 
+For `product-evaluation` scenarios, the launching SWE agent must also review every
+completed stage before the runner may continue. The runner stops with
+`awaiting-quality-review` after a successful stage and names the required
+`stage-quality-audits/<stage>.md` file. Resume with the same `--run-id` is allowed
+only after that file exists.
+
 ## Execution Bundle
 
 The live runner owns execution evidence only. It records whether the installed
@@ -27,6 +33,7 @@ Runner-owned artifacts include:
 - `frontend-checkpoints.md`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
+- `stage-quality-audits/<stage>.md` manual files for product-evaluation stages
 - `target-workspace-evidence.json`
 - `target-workspace-evidence.md`
 - `runtime.log`
@@ -84,9 +91,45 @@ target-project test commands on the package manager that belongs to that reposit
 
 ## Manual Report
 
+For each product-evaluation stage, write this manual audit before resume:
+
+```markdown
+# Stage Quality Audit: <stage>
+
+## Decision
+- Stage quality: strong | acceptable | weak | failed
+- Flow decision: continue | continue-with-risk | stop-not-counted | operator-intervention
+- Reason:
+
+## Checks
+- Product alignment:
+- Evidence quality:
+- Repository understanding:
+- Missing questions or assumptions:
+- Cross-stage consistency:
+- Risk handling:
+- Specific defects:
+
+## Evidence Reviewed
+- Stage artifacts:
+- Runtime logs:
+- Runner stage audit:
+- Target repo evidence:
+
+## Notes For Final Report
+- AIDD quality signal:
+- Residual risks:
+```
+
+If `Flow decision` is `stop-not-counted`, the next resume ends the run as
+`manual-quality-stop`. This is not an execution failure, provider failure, infra failure,
+or unresolved-question `blocked` state.
+
 After the terminal run, the launching SWE agent may write:
 
-`.aidd/reports/evals/<run_id>/quality-report.md`
+- `.aidd/reports/evals/<run_id>/flow-quality-report.md`
+- `.aidd/reports/evals/<run_id>/code-quality-report.md`
+- `.aidd/reports/evals/<run_id>/quality-report.md`
 
 Use this exact structure:
 
@@ -95,9 +138,39 @@ Use this exact structure:
 
 ## Decision
 - Run integrity decision: clean | defective | blocked-infra | blocked-provider | blocked-harness
-- Deliverable quality decision: counted-clean | not-counted | blocked-model-quality | blocked-product-defect
 - Operator UI/UX decision: acceptable | acceptable-with-risks | not-acceptable | not-applicable
-- Overall decision: counted-clean | not-counted | blocked
+- Final decision: counted-clean | not-counted | blocked-model-quality | blocked-product-defect
+
+## Stage-by-stage Quality Summary
+- idea:
+- research:
+- plan:
+- review-spec:
+- tasklist:
+- implement:
+- review:
+- qa:
+
+## Product Delivery Assessment
+- Product request fit:
+- Acceptance criteria coverage:
+- Requirement/interview handling:
+- Cross-stage consistency:
+- Residual product risks:
+
+## Code Quality Assessment
+- Diff scope, including tracked and untracked files:
+- Architecture/maintainability/API compatibility:
+- Edge cases/security/performance risks:
+- Code review defects:
+- Code evidence links:
+
+## Test And Verification Assessment
+- Commands run:
+- Baseline/before-after evidence:
+- Regression relevance:
+- Not-run or deferred checks:
+- Verification gaps:
 
 ## Run Integrity
 - Execution verdict:
@@ -106,25 +179,8 @@ Use this exact structure:
 - Runtime/provider/log issues:
 - Repair/interview behavior:
 - Timeout policy/evidence:
-- Run blockers:
-
-## Artifact Quality
-- Stage artifact completeness:
-- Idea/research/plan/review-spec/tasklist quality:
-- Cross-stage consistency:
-- Stage-result/validator consistency:
-- Validator report quality:
-- Repair burden analysis:
-- Artifact evidence links:
-
-## Code Quality
-- Diff scope, including tracked and untracked files:
-- Acceptance criteria evidence:
-- Architecture/maintainability/API compatibility:
-- Edge cases/security/performance risks:
-- Test quality and regression relevance:
-- Baseline/before-after evidence:
-- Code evidence links:
+- Awaiting-quality-review checkpoints:
+- Manual quality stop:
 
 ## UI/UX Quality
 - Operator UI workflows inspected:
@@ -139,7 +195,8 @@ Use this exact structure:
 
 ## Evidence Reviewed
 - Flow evidence:
-- Stage audits:
+- Runner stage audits:
+- Stage quality audits:
 - Logs/transcripts:
 - Target repo diff:
 - Target workspace evidence:
@@ -167,7 +224,9 @@ UI only. It does not alter `verdict.md`, `grader.json`, or any runner execution
 status.
 
 The manual `counted-clean` phrase is only a human-authored deliverable-quality
-decision inside `quality-report.md`. AIDD does not parse it.
+decision inside `quality-report.md`. AIDD does not parse it. For product-evaluation,
+`counted-clean` also requires all stage quality audits, `code-quality-report.md`, and
+`quality-report.md`; a runner execution `pass` alone is not counted-clean.
 
 ## Required Manual Review Coverage
 

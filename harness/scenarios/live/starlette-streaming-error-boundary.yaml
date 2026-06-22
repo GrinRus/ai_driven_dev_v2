@@ -1,6 +1,7 @@
 id: AIDD-LIVE-012
 scenario_class: live-full-flow
 feature_size: large
+live_matrix_role: product-evaluation
 automation_lane: manual
 canonical_runtime: codex
 repo:
@@ -53,8 +54,26 @@ feature_source:
     - test -f .aidd/workitems/WI-LIVE-STARLETTE-STREAMING/stages/qa/output/validator-report.md
     quality_bar: The patch must be localized, async-safe, and regression-covered across
       the selected streaming or middleware boundary without broad ASGI behavior churn.
-    size_rationale: Large because the behavior crosses ASGI response streaming,
-      background tasks, middleware, and client-disconnect semantics.
+    size_rationale: Large product-evaluation lane because the behavior crosses ASGI
+      response streaming, background tasks, middleware, and client-disconnect semantics.
+    visible_request: |
+      Improve one concrete Starlette streaming response or middleware boundary where
+      background tasks, client disconnects, and exception propagation interact
+      unexpectedly. Identify the specific edge case from repository evidence,
+      implement the smallest compatible async-safe fix, and add public ASGI/TestClient
+      regression coverage while preserving existing streaming and middleware
+      behavior outside that boundary.
+    audit_rubric: |
+      Evaluate whether AIDD finds a real boundary in the pinned repo, understands
+      async exception/disconnect behavior, and avoids broad ASGI churn. Count defects
+      when the selected edge case is vague, tests bypass public behavior, background
+      task semantics regress, or the implementation relies on timing-sensitive hacks.
+    complexity_axes:
+    - async-runtime
+    - cross-module
+    - api-policy
+    - tests
+    - runtime-behavior
 verify:
   commands:
   - uv run --frozen pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py tests/test_responses.py
@@ -66,7 +85,7 @@ verify:
   - Ruff reports no issues in the touched runtime and focused test surfaces.
   - QA stage output artifacts exist for the selected work item.
 limits:
-  patch_budget_files: 10
+  patch_budget_files: 40
   timeout_minutes: 240
 interview:
   required: false

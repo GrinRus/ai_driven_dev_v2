@@ -4,18 +4,21 @@ This catalog defines the authored public-repository scenarios used for manual li
 
 ## Purpose
 
-Live E2E exists to answer one question:
+Live E2E now has two roles:
 
-> Can an operator manually run installed AIDD against a pinned public repository,
-> follow the full governed flow from `idea` through `qa`, preserve durable
-> execution evidence, and write any deliverable-quality decision manually after
-> the terminal run?
+- `small` `flow-regression` lanes answer whether the installed black-box flow still
+  reaches `qa` and preserves execution evidence.
+- `medium`, `large`, and `xlarge` `product-evaluation` lanes answer whether AIDD can
+  carry a real product request through `idea -> qa` with stage-by-stage quality review
+  by the launching agent.
 
 That makes live E2E different from the deterministic lanes:
 
 - adapter conformance proves adapter contract behavior;
 - deterministic stage and workflow scenarios prove repo-local invariants quickly;
-- manual live E2E proves installed-CLI full-flow behavior on a pinned public repository.
+- manual live E2E proves installed-CLI full-flow behavior on a pinned public repository;
+- product-evaluation live E2E adds manual per-stage and final code/product quality
+  audits without turning those quality decisions into runner-owned verdicts.
 
 Live E2E is manual local operator audit evidence only. It is not CI/CD, not a release
 workflow, not GitHub Actions, and not a release gate.
@@ -53,11 +56,16 @@ Every live E2E run must follow the installed full-flow operator model:
     package-manager invocation can create target-repo lockfiles after QA and pollute
     the final workspace evidence. Target-project verification commands may still use
     the target repository's package manager when that is the repo's normal test surface.
-15. For manual local runs, the launching agent is the operator-agent: it answers
-    blocking questions, records answer reasoning, and writes
-    `.aidd/reports/evals/<run_id>/quality-report.md` only after terminal
-    execution when deliverable quality must be judged.
-16. After at least one completed stage in a manual checkpoint run, the operator may
+15. For `product-evaluation` runs, after every successful stage the runner writes
+    `stage-audits/<stage>.*`, stops with `awaiting-quality-review`, and requires the
+    launching agent to write
+    `stage-quality-audits/<stage>.md` before resuming the same `--run-id`.
+16. For manual local runs, the launching agent is the operator-agent and quality
+    auditor: it answers blocking questions, records answer reasoning, reviews each
+    `product-evaluation` stage before resume, and writes final
+    `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`
+    when a product-quality decision is needed.
+17. After at least one completed stage in a manual checkpoint run, the operator may
     submit one stage-scoped intervention request through CLI or UI. If used, preserve
     `operator-requests/request-000N.md`, the resulting attempt log, validation result,
     and a short `operator-intervention-analysis.md` explaining why the request was
@@ -88,6 +96,9 @@ operators initialize work items from the target project root with
 ## Manual-Only Local Audit Policy
 
 - `automation_lane` for every live scenario is `manual`.
+- `live_matrix_role: flow-regression` is valid only for `feature_size: small`.
+- `live_matrix_role: product-evaluation` is required for `feature_size: medium`,
+  `large`, and `xlarge`.
 - The only supported execution entrypoint is a local operator command that invokes the
   black-box evaluator module from a prepared source checkout, for example:
 
@@ -104,6 +115,14 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   only by passing that exact `--run-id`. If the generated run id already exists,
   the evaluator appends `-r2`, `-r3`, and so on instead of appending to the old
   bundle.
+- Resume from `awaiting-quality-review` requires the exact audit file named in
+  `flow-state.json`, for example `stage-quality-audits/<stage>.md`. If that file is
+  missing, the runner refuses the resume instead of advancing the stage loop.
+- `blocked` is reserved for unresolved model questions or runtime approvals. It is
+  distinct from `awaiting-quality-review`.
+- If a stage quality audit records `Flow decision: stop-not-counted`, the next resume
+  ends the run as `manual-quality-stop`; it is not an infra/provider failure and not a
+  `blocked` run.
 - If the evaluator is interrupted, it records `interrupted-resumable` state,
   attempts to terminate live runtime subprocesses, and requires explicit
   `--run-id` before continuing.
@@ -171,38 +190,31 @@ repository flow and must remain manual-only.
 
 ## Maintained Repository Set
 
-### `fastapi/typer`
-
-- `AIDD-LIVE-001` - authored styled help alignment bugfix (`setup-blocked`; not a canonical README smoke until repinned or fixed)
-- `AIDD-LIVE-002` - authored boolean option help rendering task
-
 ### `encode/httpx`
 
-- `AIDD-LIVE-003` - authored invalid header error message task
-- `AIDD-LIVE-004` - authored CLI docs sync task with docs-only execution verification
+- `AIDD-LIVE-004` - small `flow-regression` docs/config lane with docs-only execution verification
 
 ### `simonw/sqlite-utils`
 
-- `AIDD-LIVE-005` - authored header-only CSV bugfix task
-- `AIDD-LIVE-006` - authored yielded rows feature with interview
-- `AIDD-LIVE-009` - less scripted CSV import resilience boundary task
+- `AIDD-LIVE-005` - small `flow-regression` header-only CSV bugfix lane
+- `AIDD-LIVE-006` - xlarge `product-evaluation` yielded rows feature with security/trust interview
 
 ### `honojs/hono`
 
-- `AIDD-LIVE-007` - authored non-Error throw handling task
-- `AIDD-LIVE-008` - authored router parity with `/**` syntax interview
+- `AIDD-LIVE-007` - medium `product-evaluation` non-Error throw handling task
+- `AIDD-LIVE-008` - xlarge `product-evaluation` router parity with `/**` syntax interview
 
 ### `openapi-ts/openapi-typescript`
 
-- `AIDD-LIVE-010` - authored discriminator composition codegen task with interview
+- `AIDD-LIVE-010` - large `product-evaluation` discriminator composition codegen task with interview
 
 ### `pytest-dev/pytest`
 
-- `AIDD-LIVE-011` - authored collection error summary task with interview
+- `AIDD-LIVE-011` - xlarge `product-evaluation` collection error summary task with interview
 
 ### `Kludex/starlette`
 
-- `AIDD-LIVE-012` - authored streaming error and disconnect boundary task
+- `AIDD-LIVE-012` - large `product-evaluation` streaming error and disconnect boundary task
 
 ## Matrix Source Of Truth
 
@@ -216,13 +228,13 @@ Use [`Scenario Matrix`](./scenario-matrix.md) as the source of truth for:
 
 For live scenarios in this wave:
 
-- `codex` is the primary canonical runtime for maintained tiny, small, medium, and
-  selected large non-interview live lanes;
-- `qwen` is experimental and may be used for the tiny docs-only live lane and
+- `codex` is the primary canonical runtime for maintained small regression, medium
+  product-evaluation, and selected large non-interview live lanes;
+- `qwen` is experimental and may be used for the small docs-only live lane and
   the Hono medium lane when `aidd eval doctor` confirms local provider readiness;
 - `opencode` covers at least one live lane and remains the canonical runtime for the
   maintained live interview expansion lanes;
-- `claude-code` keeps `AIDD-LIVE-005` as a small smoke lane and uses
+- `claude-code` keeps `AIDD-LIVE-005` as a small regression lane and uses
   `AIDD-LIVE-007` plus `AIDD-LIVE-012` as maintained medium and large
   coverage candidates when
   `aidd eval doctor` confirms provider/auth readiness; generated live runtime
@@ -235,27 +247,26 @@ For live scenarios in this wave:
 
 Representative matrix coverage for the live lane:
 
-| Scenario class | Feature size | Maintained provider | Representative scenarios |
-| --- | --- | --- | --- |
-| `live-full-flow` | `tiny` | `codex`, `qwen` experimental | `AIDD-LIVE-004` |
-| `live-full-flow` | `small` | `codex`, `claude-code` smoke | `AIDD-LIVE-003`, `AIDD-LIVE-005`, `AIDD-LIVE-009` |
-| `live-full-flow` | `medium` | `codex`, `claude-code` planned, `qwen` experimental | `AIDD-LIVE-002`, `AIDD-LIVE-007` |
-| `live-full-flow` | `large` | `codex`, `claude-code` planned | `AIDD-LIVE-012` |
-| `live-full-flow-interview` | `large` | `opencode` | `AIDD-LIVE-006`, `AIDD-LIVE-010` |
-| `live-full-flow-interview` | `xlarge` | `opencode` | `AIDD-LIVE-008`, `AIDD-LIVE-011` |
+| Scenario class | Feature size | Live role | Maintained provider | Representative scenarios |
+| --- | --- | --- | --- | --- |
+| `live-full-flow` | `small` | `flow-regression` | `codex`, `qwen` experimental | `AIDD-LIVE-004` |
+| `live-full-flow` | `small` | `flow-regression` | `codex`, `opencode`, `claude-code` | `AIDD-LIVE-005` |
+| `live-full-flow` | `medium` | `product-evaluation` | `codex`, `claude-code` planned, `qwen` experimental | `AIDD-LIVE-007` |
+| `live-full-flow` | `large` | `product-evaluation` | `codex`, `claude-code` planned | `AIDD-LIVE-012` |
+| `live-full-flow-interview` | `large` | `product-evaluation` | `opencode` | `AIDD-LIVE-010` |
+| `live-full-flow-interview` | `xlarge` | `product-evaluation` | `opencode` | `AIDD-LIVE-006`, `AIDD-LIVE-008`, `AIDD-LIVE-011` |
 
-`AIDD-LIVE-001` remains in the maintained set for historical evidence, but its current
-Typer pin is setup-blocked before the runtime boundary. Use `AIDD-LIVE-005` as the
-canonical installed live smoke until `AIDD-LIVE-001` is repinned or its setup baseline is
-fixed.
+`AIDD-LIVE-001` is retired from maintained coverage because it is setup-blocked before
+the runtime boundary. The maintained small lanes are regression-smoke only and must not
+be used as counted-clean product-quality evidence.
 
-`AIDD-LIVE-004` is the maintained tiny docs-only lane. Its execution verification is
+`AIDD-LIVE-004` is the maintained small docs-only regression lane. Its execution verification is
 scoped to documentation acceptance criteria: tracked product diff limited to the
 selected docs files, consistent `https://httpbin.org/json` CLI example text, no
 placeholder runnable URLs in added docs lines, no public endpoint call during
 verification, and QA artifact publication. Full HTTPX pytest can still be run by an
 operator as exploratory target-repository evidence, but it is not required
-execution evidence for this tiny documentation scenario because unrelated async
+execution evidence for this documentation scenario because unrelated async
 timeout tests can fail outside the selected docs change.
 
 ## Live-Scenario Contract
@@ -265,14 +276,21 @@ Every maintained live scenario must:
 - live under `harness/scenarios/live/`;
 - declare `scenario_class` as `live-full-flow` or `live-full-flow-interview`;
 - declare `feature_size`;
+- declare `live_matrix_role`;
+- use `live_matrix_role: flow-regression` only with `feature_size: small`;
+- use `live_matrix_role: product-evaluation` for `medium`, `large`, and `xlarge`;
 - declare `automation_lane: manual`;
 - declare `canonical_runtime` that also appears in `runtime_targets`;
+- declare `repo.revision`;
 - use `feature_source.mode: authored-task-pool`;
 - select the first listed authored task deterministically;
 - define authored task `id`, `title`, `summary`, `intent`, `target_change`, `expected_scope`,
   `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
   `quality_bar` is authored task metadata only and must not be treated as an automatic
   live quality gate;
+- for `product-evaluation`, define task `visible_request`, `audit_rubric`, and
+  `complexity_axes`; only `visible_request` is runtime-facing product request context,
+  while `audit_rubric` is for the launching agent's manual review;
 - declare `live_flow.answer_policy: agent-decides` so any stage can block on questions
   and resume after the launching operator-agent writes resolved answers;
 - define authored task `interview` guidance when the scenario is
@@ -309,6 +327,8 @@ Every live eval bundle must aim to contain:
 - `teardown-transcript.json`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
+- `stage-quality-audits/<stage>.md` for each completed `product-evaluation` stage,
+  written manually by the launching agent before resume
 - `target-workspace-evidence.json`
 - `target-workspace-evidence.md`
 - `frontend-checkpoints.json`
@@ -316,8 +336,9 @@ Every live eval bundle must aim to contain:
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
 
-The runner does not create `quality-report.md`, `quality-transcript.json`,
-`acceptance-coverage.*`, `ui-ux-checkpoints.*`, `operator-quality-analysis.md`, or
+The runner does not create `flow-quality-report.md`, `code-quality-report.md`,
+`quality-report.md`, `quality-transcript.json`, `acceptance-coverage.*`,
+`ui-ux-checkpoints.*`, `operator-quality-analysis.md`, or
 `operator-quality-analysis-validation.json`.
 
 `run-transcript.json` records the aggregate black-box stage loop. Its aggregate
@@ -344,7 +365,11 @@ turn these findings into a quality gate.
 
 After a terminal run, the launching SWE agent may add manual post-run evidence:
 
-- `quality-report.md` with separate run-integrity, deliverable-quality, and manual AIDD operator UI/UX decisions
+- `flow-quality-report.md` with stage-by-stage flow quality and operator experience notes
+- `code-quality-report.md` with final target-repository code review, diff, and verification assessment
+- `quality-report.md` with run-integrity, stage summary, product delivery, code quality,
+  test/verification, manual AIDD operator UI/UX decisions, and final
+  counted/not-counted decision
 - `answer-analysis.md` when the launching operator-agent answered blocking questions
 - `operator-intervention-analysis.md` when the launching operator-agent submitted an
   operator intervention request
@@ -357,6 +382,12 @@ visibility, stage list navigation, artifact/log views, questions and answers,
 repair evidence, next-flow handoff, state clarity, readability, keyboard/focus
 behavior where manually inspectable, responsive behavior or `not inspected`, and
 any manually captured screenshots or browser notes. Generated product UI is outside this live E2E operator-UI review unless the report marks it `not-applicable`.
+
+For `product-evaluation`, counted-clean is possible only when every completed stage has
+a corresponding `stage-quality-audits/<stage>.md`, the final code review exists in
+`code-quality-report.md`, and the final `quality-report.md` records
+`counted-clean`. A runner execution `pass` without those manual artifacts is only an
+execution pass, not counted-clean product-quality evidence.
 
 ## Interview Scenarios
 
