@@ -1,15 +1,14 @@
 # Release Notes: v0.1.0a11
 
-Status: draft, not tagged or published.
+Status: published on 2026-06-22.
 
-Current release-candidate package version: `0.1.0a11`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a10`.
+Published package version: `0.1.0a11`.
+Latest accepted published prerelease evidence: `0.1.0a11`.
 
 ## Summary
 
-This prerelease prepares the post-`v0.1.0a10` live E2E hardening work for package
-publication. It keeps AIDD in alpha and does not make a beta-readiness or unattended
-production claim.
+This prerelease publishes the post-`v0.1.0a10` live E2E hardening work. It keeps AIDD in
+alpha and does not make a beta-readiness or unattended production claim.
 
 ## User-visible changes
 
@@ -31,8 +30,8 @@ production claim.
   `aidd init`, `aidd run`, `aidd stage ...`, and `aidd ui --work-item ...`.
 - Runtime launches still require an explicit runtime id; no hidden fallback is added.
 - Runtime binaries and authentication remain external operator prerequisites.
-- The `0.1.0a11` package must not be described as the latest accepted published prerelease
-  until GitHub Release, PyPI, `pipx`, and `uv tool` verification succeeds.
+- `0.1.0a11` is the latest accepted published prerelease after GitHub Release, PyPI,
+  `pipx`, and `uv tool` verification succeeded.
 
 ## Installation channels
 
@@ -52,13 +51,15 @@ Docker/GHCR remains outside the supported alpha release contract.
 - Provider smoke reproducibility depends on the operator shell environment; provider
   binaries outside the Codex app's default non-interactive PATH should be run through a
   login shell or explicit PATH prefix.
-- Package verification is not accepted until the GitHub Release workflow and independent
-  local `pipx` plus `uv tool` checks pass for `0.1.0a11`.
+- Package verification is accepted for `0.1.0a11`; the GitHub Release workflow and
+  independent local `pipx` plus `uv tool` checks passed.
 
 ## Release checklist
 
 - GitHub Release target: `release/v0.1.0a11`.
 - Release branch: `release/v0.1.0a11`.
-- Release workflow: pending.
-- PyPI: pending.
-- `pipx` and `uv tool` verification: pending.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed.
+- Release workflow:
+  `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/27942016411`.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a11/`.
+- `pipx` and `uv tool` verification: passed.

@@ -7,7 +7,7 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes after `0.1.0a11` release-candidate preparation.
+- Open the next development cycle after accepted `0.1.0a11` release evidence.
 
 ## 0.1.0a11 - 2026-06-22
 
