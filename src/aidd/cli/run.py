@@ -392,7 +392,7 @@ def run_logs(
     if not log_text:
         console.print("(empty runtime log)")
         return
-    console.print(log_text, end="")
+    console.print(log_text, end="", markup=False, highlight=False)
 
 
 def run_artifacts(
