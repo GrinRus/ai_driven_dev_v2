@@ -7,7 +7,7 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes after `0.1.0a12` hotfix release-candidate preparation.
+- No unreleased changes after the `0.1.0a12` hotfix release.
 
 ## 0.1.0a12 - 2026-06-22
 

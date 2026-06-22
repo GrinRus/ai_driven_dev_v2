@@ -20,9 +20,9 @@ Reviewed sources:
 
 ### README
 
-- The release-candidate package version matches the package state: `0.1.0a12`.
-- The last accepted published prerelease evidence before this candidate is `0.1.0a10`.
-- The release-candidate source checkout is not package-channel evidence until GitHub
+- The source development package version matches the package state: `0.1.0a13.dev0`.
+- The latest accepted published prerelease evidence is `0.1.0a12`.
+- The source development checkout is not package-channel evidence until a future GitHub
   Release, PyPI, `pipx`, and `uv tool` verification succeeds; README installation
   guidance stays pinned to the latest accepted package release.
 - The documented public CLI commands match the registered command surface:
@@ -92,7 +92,7 @@ command so future smoke refactors do not break source-installed local runs.
 - The `AIDD-LIVE-006/opencode` refresh first exposed an AIDD-owned repair-prompt clarity
   defect around malformed interview answer bullets. That defect was fixed in the
   candidate source before the counted rerun.
-- Accepted `0.1.0a10` release/install evidence exists from the published GitHub Release,
+- Accepted `0.1.0a12` release/install evidence exists from the published GitHub Release,
   PyPI publish, `pipx` verification, and `uv tool` verification on 2026-06-11.
 - Preflight readiness alone is not counted clean live evidence; the counted W24 refresh
   uses terminal black-box bundles and operator overlays.

@@ -174,21 +174,16 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a12`.
-Latest published prerelease before this candidate: `0.1.0a11`, superseded by
-the current hotfix candidate for raw-log CLI rendering.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a10`.
+Maintainer source development package version: `0.1.0a13.dev0`.
+Latest accepted published prerelease evidence: `0.1.0a12`.
 
-The release-candidate version is not package-channel evidence until the GitHub Release
-workflow publishes to PyPI and verifies `pipx` plus `uv tool` installability. README
-install guidance must remain pinned to the latest accepted published prerelease until that
-evidence is accepted.
-No current release evidence is accepted for `0.1.0a12`.
-There is no accepted `v0.1.0a12` evidence log entry yet; add the accepted
-`v0.1.0a12` evidence log entry only after GitHub Release, PyPI, `pipx`, and
-`uv tool` verification succeed.
+The source development version is not package-channel evidence until a future GitHub
+Release workflow publishes to PyPI and verifies `pipx` plus `uv tool` installability.
+README install guidance must remain pinned to the latest accepted published prerelease
+until that evidence is accepted.
+No current release candidate is accepted from this development version.
 
-### Candidate preparation note for `v0.1.0a12`
+### Historical candidate preparation note for `v0.1.0a12`
 
 `v0.1.0a12` prepares a hotfix prerelease for the `aidd run logs` raw runtime log
 rendering defect found by exact-PyPI `AIDD-LIVE-011` run
@@ -337,8 +332,8 @@ release note must cite fresh evidence for the exact candidate across install, cl
 onboarding, Codex-first real-provider UI execution, Browser-verified operator states,
 remediation, project-set boundaries, prompt/workflow accountability and run comparison,
 approval audit visibility, docs, security posture, and GitHub Release/PyPI install
-evidence. A release-candidate version such as `0.1.0a12` must never be described as an
-accepted release until publish and installability verification succeeds.
+evidence. A future release-candidate version must never be described as an accepted release
+until publish and installability verification succeeds.
 
 Beta-oriented release note criteria:
 
@@ -418,6 +413,33 @@ does not replace GitHub Release, PyPI, `pipx`, or `uv tool` verification.
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a12` accepted evidence on 2026-06-22
+
+- Tag: `v0.1.0a12`
+- Release branch: `release/v0.1.0a12`
+- Commit: `5f9aa2aa5c739b8d6cec3990c459d1d1a5dc245a`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a12`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/27969260515`
+- Result: accepted release/install evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: release tag `v0.1.0a12` matched `project.version` `0.1.0a12`, and the
+  release tag commit matched the remote `release/v0.1.0a12` branch HEAD during the release
+  workflow validation.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a12/`.
+- PyPI JSON for `https://pypi.org/pypi/ai-driven-dev-v2/0.1.0a12/json` returned
+  version `0.1.0a12` with two distribution files:
+  `ai_driven_dev_v2-0.1.0a12-py3-none-any.whl` and
+  `ai_driven_dev_v2-0.1.0a12.tar.gz`.
+- `pipx` verification installed `ai-driven-dev-v2==0.1.0a12`; `aidd --version` returned
+  `aidd 0.1.0a12`, and `aidd doctor` reported `Version 0.1.0a12`. The independent local
+  smoke used an isolated `uv tool run --from pipx` runner with an explicit Python 3.12+
+  interpreter because local `python3 -m pipx` was unavailable and the default `python3`
+  was Python 3.10.
+- `uv tool` verification installed `ai-driven-dev-v2==0.1.0a12`; `aidd --version`
+  returned `aidd 0.1.0a12`, and `aidd doctor` reported `Version 0.1.0a12`.
+- No Docker/GHCR artifact is part of the supported `v0.1.0a12` release contract.
 
 ### `v0.1.0a10` accepted evidence on 2026-06-11
 
