@@ -174,26 +174,21 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a11`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a10`.
+Maintainer source development package version: `0.1.0a12.dev0`.
+Latest accepted published prerelease evidence: `0.1.0a11`.
 
-The release-candidate version is not package-channel evidence until the GitHub Release
-workflow publishes to PyPI and verifies `pipx` plus `uv tool` installability. README
-install guidance must remain pinned to the latest accepted published prerelease until that
-evidence is accepted.
-No current release evidence is accepted for `0.1.0a11`.
-There is no accepted `v0.1.0a11` evidence log entry yet; add the accepted
-`v0.1.0a11` evidence log entry only after GitHub Release, PyPI, `pipx`, and `uv tool`
-verification succeed.
+The `main` branch is back on a development source version after accepted `v0.1.0a11`
+package-channel evidence. README install guidance must remain pinned to the latest
+accepted published prerelease.
+No current release candidate is accepted from this development version.
 
-### Candidate preparation note for `v0.1.0a11`
+### Post-release note for `v0.1.0a11`
 
-`v0.1.0a11` prepares the execution-only live E2E release slice after accepted
-`v0.1.0a10` package-channel evidence. The candidate keeps live E2E outside CI/CD and
-release workflows, preserves GitHub Release-driven publishing only, and treats manual live
-matrix evidence as operator audit context rather than package-channel evidence.
+`v0.1.0a11` was published on 2026-06-22 from `release/v0.1.0a11`. The GitHub Release
+workflow published PyPI distributions and verified installability through `pipx` and
+`uv tool`; independent local checks also resolved `ai-driven-dev-v2==0.1.0a11`.
 
-Post-`v0.1.0a10` changes prepared for `v0.1.0a11`:
+Post-`v0.1.0a10` changes accepted in `v0.1.0a11`:
 
 - live E2E execution reports no longer compute deliverable quality gates or counted-clean
   decisions;
@@ -312,8 +307,8 @@ release note must cite fresh evidence for the exact candidate across install, cl
 onboarding, Codex-first real-provider UI execution, Browser-verified operator states,
 remediation, project-set boundaries, prompt/workflow accountability and run comparison,
 approval audit visibility, docs, security posture, and GitHub Release/PyPI install
-evidence. A release-candidate version such as `0.1.0a11` must never be described as an
-accepted release until publish and installability verification succeeds.
+evidence. An unpublished release-candidate version must never be described as an accepted
+release until publish and installability verification succeeds.
 
 Beta-oriented release note criteria:
 
@@ -393,6 +388,31 @@ does not replace GitHub Release, PyPI, `pipx`, or `uv tool` verification.
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a11` accepted evidence on 2026-06-22
+
+- Tag: `v0.1.0a11`
+- Release branch: `release/v0.1.0a11`
+- Commit: `2d4521d05f706c5aed766e57e763c090d5023ae3`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a11`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/27942016411`
+- Result: accepted release/install evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: release tag `v0.1.0a11` matched `project.version` `0.1.0a11`, and the
+  release tag commit matched the remote `release/v0.1.0a11` branch HEAD during the release
+  workflow validation.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a11/`.
+- PyPI JSON for `https://pypi.org/pypi/ai-driven-dev-v2/0.1.0a11/json` returned
+  version `0.1.0a11` with two distribution files.
+- `pipx` verification installed `ai-driven-dev-v2==0.1.0a11`; `aidd --version` returned
+  `aidd 0.1.0a11`, and `aidd doctor` reported `Version 0.1.0a11`. The independent local
+  smoke used an isolated `uv tool run --from pipx` runner with `PIPX_*` paths under
+  `/tmp` because local `pipx` was unavailable in `PATH` and sandboxed default pipx log
+  paths were not writable.
+- `uv tool` verification installed `ai-driven-dev-v2==0.1.0a11`; `aidd --version`
+  returned `aidd 0.1.0a11`, and `aidd doctor` reported `Version 0.1.0a11`.
+- No Docker/GHCR artifact is part of the supported `v0.1.0a11` release contract.
 
 ### `v0.1.0a10` accepted evidence on 2026-06-11
 
