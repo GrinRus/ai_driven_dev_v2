@@ -174,13 +174,39 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a11.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a10`.
+Current release-candidate package version: `0.1.0a11`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a10`.
 
-The source development version is not package-channel evidence. README install guidance
-must remain pinned to the latest accepted published prerelease, not to the `.dev0` source
-version.
-No current release candidate is accepted from this development version.
+The release-candidate version is not package-channel evidence until the GitHub Release
+workflow publishes to PyPI and verifies `pipx` plus `uv tool` installability. README
+install guidance must remain pinned to the latest accepted published prerelease until that
+evidence is accepted.
+No current release evidence is accepted for `0.1.0a11`.
+There is no accepted `v0.1.0a11` evidence log entry yet; add the accepted
+`v0.1.0a11` evidence log entry only after GitHub Release, PyPI, `pipx`, and `uv tool`
+verification succeed.
+
+### Candidate preparation note for `v0.1.0a11`
+
+`v0.1.0a11` prepares the execution-only live E2E release slice after accepted
+`v0.1.0a10` package-channel evidence. The candidate keeps live E2E outside CI/CD and
+release workflows, preserves GitHub Release-driven publishing only, and treats manual live
+matrix evidence as operator audit context rather than package-channel evidence.
+
+Post-`v0.1.0a10` changes prepared for `v0.1.0a11`:
+
+- live E2E execution reports no longer compute deliverable quality gates or counted-clean
+  decisions;
+- manual `quality-report.md` is the single post-run deliverable-quality artifact for
+  artifacts, code/tests, workspace hygiene, and operator UI/UX;
+- live evidence now records per-stage timeout policy, target workspace classifications,
+  stage-result/validator consistency warnings, and verification-residue cleanup;
+- maintained live prompts, contracts, and scenario manifests now emphasize workspace
+  hygiene, shared public-surface checks, installed `aidd` self-checks, and complete
+  tracked/untracked diff accounting;
+- operator UI navigation, header layout, manual UI/UX review guidance, and maintained
+  runtime support evidence were hardened through the supported Codex and Claude Code live
+  matrix.
 
 ### Post-release note for `v0.1.0a10`
 
@@ -286,8 +312,8 @@ release note must cite fresh evidence for the exact candidate across install, cl
 onboarding, Codex-first real-provider UI execution, Browser-verified operator states,
 remediation, project-set boundaries, prompt/workflow accountability and run comparison,
 approval audit visibility, docs, security posture, and GitHub Release/PyPI install
-evidence. A development version such as `0.1.0a11.dev0` must never be described as an
-accepted release.
+evidence. A release-candidate version such as `0.1.0a11` must never be described as an
+accepted release until publish and installability verification succeeds.
 
 Beta-oriented release note criteria:
 
@@ -320,16 +346,16 @@ Required gates for the next prerelease remain unchanged:
 - verify PyPI, `pipx`, and `uv tool` installability before accepting the release
   evidence.
 
-Wave 31/32 go/no-go input for `v0.1.0a10` candidate preparation:
+Wave 33 go/no-go input for `v0.1.0a11` candidate preparation:
 
-- Security posture: go after accepted `v0.1.0a9` package evidence, deterministic local
-  checks, release-branch dry-runs, and the successful `v0.1.0a10` release workflow.
-- Operator UI scope: go for integrated workbench changes as alpha operator experience, not
-  as a beta-readiness claim.
-- Live E2E scope: go for local evidence and quality-gate coverage; live E2E remains outside
-  GitHub Actions, CI/CD, and release workflows.
-- Release action: completed after explicit publish approval through the GitHub Release
-  `published` event.
+- Security posture: go after accepted `v0.1.0a10` package evidence, merged release-slice
+  hardening, and deterministic local plus release-branch dry-runs for this candidate.
+- Operator UI scope: go for manual operator UI/UX review guidance and navigation fixes as
+  alpha operator experience, not as a beta-readiness claim.
+- Live E2E scope: go for recent local supported-matrix evidence as manual operator audit
+  context; live E2E remains outside GitHub Actions, CI/CD, and release workflows.
+- Release action: prepare branch, dry-runs, and draft GitHub prerelease; publish only after
+  explicit approval through the GitHub Release `published` event.
 
 W24 manual live evidence refresh on 2026-05-24:
 

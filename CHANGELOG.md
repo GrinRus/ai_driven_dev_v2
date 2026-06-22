@@ -7,7 +7,22 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Begin the next development cycle after accepted `v0.1.0a10` package-channel evidence.
+- No unreleased changes after `0.1.0a11` release-candidate preparation.
+
+## 0.1.0a11 - 2026-06-22
+
+- Prepare the `0.1.0a11` prerelease after accepted `v0.1.0a10` package-channel evidence.
+- Convert live E2E to an execution-only runner and move deliverable quality decisions into
+  a human-authored `quality-report.md`.
+- Add live timeout policy evidence, target workspace evidence, and non-gating
+  stage-artifact consistency findings for manual post-run review.
+- Strengthen manual operator UI/UX review guidance while keeping frontend checkpoints as
+  raw run-integrity evidence rather than automatic UX gates.
+- Harden live prompts, contracts, scenario manifests, and runtime setup around workspace
+  hygiene, shared public-surface verification, installed `aidd` self-checks, and
+  verification-residue cleanup.
+- Improve operator UI stage navigation and live runtime support evidence for the maintained
+  Codex, Claude Code, OpenCode, and Qwen lanes.
 
 ## 0.1.0a10 - 2026-06-11
 
