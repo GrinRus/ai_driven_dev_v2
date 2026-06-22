@@ -5608,7 +5608,7 @@ Primary outputs:
 - CI/CD guardrails that exclude live E2E
 - source-installed local-project smoke verification
 - release-readiness notes for latest accepted `0.1.0a10` package-channel evidence and
-  `0.1.0a11` source development state
+  `0.1.0a12` source development state
 
 Touched areas:
 
@@ -5633,7 +5633,7 @@ Local tasks:
 - `W24-E1-S1-T3` (done) Verify the source-installed local-project smoke fixture runtime
   path and cover the workspace-relative command with scenario-loader regression checks.
 - `W24-E1-S1-T4` (done) Prepare release-readiness notes for the accepted `0.1.0a10`
-  package-channel evidence and `0.1.0a11` source development state
+  package-channel evidence and `0.1.0a12` source development state
   without creating a tag or
   publishing artifacts.
 
@@ -5653,9 +5653,9 @@ Evidence:
 - A source-installed local-project smoke passed on 2026-05-21 against a disposable
   `harness/fixtures/minimal-python` copy, covering `doctor`, `init`, bounded
   `run idea->plan`, `run show`, `run logs`, `run artifacts`, and `stage questions`.
-- `docs/release-notes-v0.1.0a11-draft.md` and `docs/analysis/beta-readiness-source-audit.md`
+- `docs/release-notes-v0.1.0a12-draft.md` and `docs/analysis/beta-readiness-source-audit.md`
   record the latest accepted `0.1.0a10` package-channel evidence and current
-  `0.1.0a11` source development state; accepted package-channel evidence is recorded
+  `0.1.0a12` source development state; accepted package-channel evidence is recorded
   in `docs/release-checklist.md`.
 
 Exit evidence:
@@ -8595,3 +8595,60 @@ Sync notes:
   selected document uses preferred artifact priority instead of alphabetic order. Fresh
   evidence was recorded outside the repository at
   `/tmp/aidd-w31-audit-X1WAMg/w31-ui-audit-evidence.txt`.
+
+---
+
+## Wave 32 — installed CLI log visibility (`done`)
+
+Goal: close the public CLI raw-log rendering defect found by the exact-PyPI
+`AIDD-LIVE-011` run without changing runtime adapter behavior.
+
+### Epic W32-E1 — raw runtime log CLI safety (`done`)
+Linked stories: `US-06`, `US-07`, `US-09`
+
+#### Slice W32-E1-S1 — persisted run log rendering (`done`)
+Goal: make saved runtime logs printable through `aidd run logs` even when raw log text
+contains Rich-markup-like bracket sequences.
+
+Primary outputs:
+
+- safe literal output for `aidd run logs`
+- regression coverage for bracketed path-like runtime log text
+- post-fix live rerun evidence for `AIDD-LIVE-011`
+
+Touched areas:
+
+- `src/aidd/cli/run.py`
+- `tests/cli/test_run_logs.py`
+- `docs/backlog/`
+
+Dependencies:
+
+- exact-PyPI `AIDD-LIVE-011` failure evidence:
+  `eval-live-011-opencode-20260622T130824Z`
+- existing `opencode` live provider readiness
+
+Local tasks:
+
+- `W32-E1-S1-T1` (done) Fix `aidd run logs` so persisted raw runtime logs are printed
+  literally when they contain Rich-markup-like bracket text.
+  - Scope: CLI log rendering only.
+  - Verification: focused CLI regression passes and `AIDD-LIVE-011` source-checkout
+    live rerun gets past the `research` public log-inspection boundary.
+
+Exit evidence:
+
+- `aidd run logs` no longer crashes on raw log content like
+  `[/, /a, /a/b, /a/b/c.py]`;
+- live evidence distinguishes fixed source-checkout proof from the immutable
+  failed `0.1.0a11` exact-PyPI package proof.
+
+Sync notes:
+
+- `2026-06-22` Completed `W32-E1-S1-T1`: `src/aidd/cli/run.py` now renders raw
+  persisted runtime logs with Rich markup/highlighting disabled, focused CLI/harness
+  checks passed, and source/local-wheel live rerun
+  `eval-live-011-opencode-20260622T133433Z` passed all stages including the prior
+  `research` public log-inspection boundary. Exact PyPI proof is deferred until a
+  fixed prerelease can be published because `ai-driven-dev-v2==0.1.0a11` is
+  immutable.

@@ -7,7 +7,21 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes after `0.1.0a11` release-candidate preparation.
+- No unreleased changes after `0.1.0a12` hotfix release-candidate preparation.
+
+## 0.1.0a12 - 2026-06-22
+
+- Prepare the `0.1.0a12` hotfix prerelease to supersede the published
+  `0.1.0a11` package, where exact-PyPI live audit found a raw runtime log
+  rendering crash in `aidd run logs`.
+- Print persisted raw runtime logs literally in `aidd run logs` with Rich
+  markup and highlighting disabled, preserving command shape, path/header
+  output, latest-run resolution, tail mode, and missing/ambiguous-run behavior.
+- Add CLI regression coverage for Rich-markup-like bracket text such as
+  `[/, /a, /a/b, /a/b/c.py]` in saved runtime logs.
+- Record the source/local-wheel `AIDD-LIVE-011` pass
+  `eval-live-011-opencode-20260622T133433Z` as hotfix live evidence; exact-PyPI
+  proof starts only after a fixed package version is published.
 
 ## 0.1.0a11 - 2026-06-22
 

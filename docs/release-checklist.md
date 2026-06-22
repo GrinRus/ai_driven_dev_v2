@@ -174,24 +174,49 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a11`.
+Current release-candidate package version: `0.1.0a12`.
+Latest published prerelease before this candidate: `0.1.0a11`, superseded by
+the current hotfix candidate for raw-log CLI rendering.
 Latest accepted published prerelease evidence before this candidate: `0.1.0a10`.
 
 The release-candidate version is not package-channel evidence until the GitHub Release
 workflow publishes to PyPI and verifies `pipx` plus `uv tool` installability. README
 install guidance must remain pinned to the latest accepted published prerelease until that
 evidence is accepted.
-No current release evidence is accepted for `0.1.0a11`.
-There is no accepted `v0.1.0a11` evidence log entry yet; add the accepted
-`v0.1.0a11` evidence log entry only after GitHub Release, PyPI, `pipx`, and `uv tool`
-verification succeed.
+No current release evidence is accepted for `0.1.0a12`.
+There is no accepted `v0.1.0a12` evidence log entry yet; add the accepted
+`v0.1.0a12` evidence log entry only after GitHub Release, PyPI, `pipx`, and
+`uv tool` verification succeed.
 
-### Candidate preparation note for `v0.1.0a11`
+### Candidate preparation note for `v0.1.0a12`
 
-`v0.1.0a11` prepares the execution-only live E2E release slice after accepted
-`v0.1.0a10` package-channel evidence. The candidate keeps live E2E outside CI/CD and
-release workflows, preserves GitHub Release-driven publishing only, and treats manual live
-matrix evidence as operator audit context rather than package-channel evidence.
+`v0.1.0a12` prepares a hotfix prerelease for the `aidd run logs` raw runtime log
+rendering defect found by exact-PyPI `AIDD-LIVE-011` run
+`eval-live-011-opencode-20260622T130824Z` against the immutable published
+`ai-driven-dev-v2==0.1.0a11` package. The candidate keeps live E2E outside
+CI/CD and release workflows, preserves GitHub Release-driven publishing only,
+and uses the completed source/local-wheel `AIDD-LIVE-011` pass
+`eval-live-011-opencode-20260622T133433Z` as the hotfix live evidence. Exact
+PyPI live proof for the fixed package can be collected after publication, but is
+not a release blocker for this hotfix.
+
+Post-`v0.1.0a11` changes prepared for `v0.1.0a12`:
+
+- `aidd run logs` prints persisted raw runtime logs literally with Rich markup
+  and highlighting disabled, preserving the existing command shape and output
+  intent;
+- focused CLI regression coverage proves bracketed path-like log text such as
+  `[/, /a, /a/b, /a/b/c.py]` is displayed literally in full and tail modes;
+- Wave 32 records the release-blocking CLI visibility defect, the focused
+  regression checks, and the source/local-wheel live rerun evidence.
+
+### Published/superseded note for `v0.1.0a11`
+
+`v0.1.0a11` was published on 2026-06-22 from `release/v0.1.0a11`, but the
+subsequent exact-PyPI live audit found a CLI raw-log rendering crash in
+`aidd run logs` when saved runtime logs contain Rich-markup-like bracket text.
+Treat `v0.1.0a11` as a superseded published prerelease for release-doc purposes;
+do not overwrite or reclassify the failed exact-PyPI live run.
 
 Post-`v0.1.0a10` changes prepared for `v0.1.0a11`:
 
@@ -312,7 +337,7 @@ release note must cite fresh evidence for the exact candidate across install, cl
 onboarding, Codex-first real-provider UI execution, Browser-verified operator states,
 remediation, project-set boundaries, prompt/workflow accountability and run comparison,
 approval audit visibility, docs, security posture, and GitHub Release/PyPI install
-evidence. A release-candidate version such as `0.1.0a11` must never be described as an
+evidence. A release-candidate version such as `0.1.0a12` must never be described as an
 accepted release until publish and installability verification succeeds.
 
 Beta-oriented release note criteria:
@@ -346,7 +371,7 @@ Required gates for the next prerelease remain unchanged:
 - verify PyPI, `pipx`, and `uv tool` installability before accepting the release
   evidence.
 
-Wave 33 go/no-go input for `v0.1.0a11` candidate preparation:
+Historical Wave 33 go/no-go input for `v0.1.0a11` candidate preparation:
 
 - Security posture: go after accepted `v0.1.0a10` package evidence, merged release-slice
   hardening, and deterministic local plus release-branch dry-runs for this candidate.

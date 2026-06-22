@@ -1,8 +1,10 @@
 # Release Notes: v0.1.0a11
 
-Status: draft, not tagged or published.
+Status: published on 2026-06-22, then superseded by the `v0.1.0a12` hotfix
+candidate for raw-log CLI rendering.
 
-Current release-candidate package version: `0.1.0a11`.
+Published package version: `0.1.0a11`.
+Superseding hotfix candidate: `0.1.0a12`.
 Latest accepted published prerelease evidence before this candidate: `0.1.0a10`.
 
 ## Summary
@@ -31,8 +33,9 @@ production claim.
   `aidd init`, `aidd run`, `aidd stage ...`, and `aidd ui --work-item ...`.
 - Runtime launches still require an explicit runtime id; no hidden fallback is added.
 - Runtime binaries and authentication remain external operator prerequisites.
-- The `0.1.0a11` package must not be described as the latest accepted published prerelease
-  until GitHub Release, PyPI, `pipx`, and `uv tool` verification succeeds.
+- The published `0.1.0a11` package is superseded by `0.1.0a12` because
+  exact-PyPI live audit found a raw runtime log rendering crash in
+  `aidd run logs`.
 
 ## Installation channels
 
@@ -52,13 +55,13 @@ Docker/GHCR remains outside the supported alpha release contract.
 - Provider smoke reproducibility depends on the operator shell environment; provider
   binaries outside the Codex app's default non-interactive PATH should be run through a
   login shell or explicit PATH prefix.
-- Package verification is not accepted until the GitHub Release workflow and independent
-  local `pipx` plus `uv tool` checks pass for `0.1.0a11`.
+- Exact-PyPI `AIDD-LIVE-011` is not counted for `0.1.0a11` because it found the
+  raw-log CLI rendering defect fixed in the `0.1.0a12` hotfix candidate.
 
 ## Release checklist
 
-- GitHub Release target: `release/v0.1.0a11`.
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a11`,
+  target `release/v0.1.0a11`.
 - Release branch: `release/v0.1.0a11`.
-- Release workflow: pending.
-- PyPI: pending.
-- `pipx` and `uv tool` verification: pending.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a11/`.
+- Superseded by: `v0.1.0a12` hotfix candidate.

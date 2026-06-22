@@ -16,7 +16,11 @@ from aidd.core.run_store import (
 runner = CliRunner()
 
 
-def _prepare_run_with_log(*, workspace_root: Path) -> None:
+def _prepare_run_with_log(
+    *,
+    workspace_root: Path,
+    log_text: str = "line-1\nline-2\nline-3\n",
+) -> None:
     create_run_manifest(
         workspace_root=workspace_root,
         work_item="WI-321",
@@ -38,7 +42,7 @@ def _prepare_run_with_log(*, workspace_root: Path) -> None:
         stage="plan",
         attempt_number=1,
     )
-    runtime_log_path.write_text("line-1\nline-2\nline-3\n", encoding="utf-8")
+    runtime_log_path.write_text(log_text, encoding="utf-8")
 
 
 def test_run_logs_prints_full_runtime_log(tmp_path: Path) -> None:
@@ -98,6 +102,42 @@ def test_run_logs_supports_tail_mode(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "line-1" not in result.stdout
     assert "line-2" in result.stdout
+    assert "line-3" in result.stdout
+
+
+def test_run_logs_prints_rich_markup_like_runtime_log_text_literally(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    markup_like_line = "paths: [/, /a, /a/b, /a/b/c.py]"
+    _prepare_run_with_log(
+        workspace_root=workspace_root,
+        log_text=f"line-1\n{markup_like_line}\nline-3\n",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "logs",
+            "--work-item",
+            "WI-321",
+            "--stage",
+            "plan",
+            "--root",
+            str(workspace_root),
+            "--run-id",
+            "run-321",
+            "--attempt",
+            "1",
+            "--tail",
+            "--lines",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert markup_like_line in result.stdout
     assert "line-3" in result.stdout
 
 

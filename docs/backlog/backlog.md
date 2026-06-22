@@ -28,6 +28,14 @@ No near-term local task is queued right now.
 
 ## Queue sync notes
 
+- `2026-06-22` Wave 32 was opened for the `AIDD-LIVE-011` exact-PyPI raw-log
+  rendering defect. `W32-E1-S1-T1` is promoted to `Next`; the task is scoped to
+  CLI log rendering plus focused regression coverage and a source-checkout live rerun.
+- `2026-06-22` Completed `W32-E1-S1-T1`; `aidd run logs` now prints persisted raw
+  runtime logs literally, focused CLI checks passed, and source/local-wheel
+  `AIDD-LIVE-011` rerun `eval-live-011-opencode-20260622T133433Z` passed through
+  terminal QA. Exact PyPI proof remains a release follow-up because `0.1.0a11` is
+  immutable.
 - `2026-04-23` Backlog queue was restored after readiness cleanup and synchronized with Wave 7/Wave 8 roadmap tasks.
 - `2026-04-23` Queue-restoration policy was documented under `W8-E3-S1` to govern future wave opening when backlog is empty.
 - `2026-04-23` Wave 9 queue bootstrap promoted `W9-E1-S1-T1` to `Next`, `W9-E1-S1-T2` and `W9-E1-S1-T3` to `Soon`, and `W9-E1-S1-T4` to `Parking lot`.

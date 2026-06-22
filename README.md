@@ -14,8 +14,9 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 
 ## Alpha status and safety
 
-Latest published prerelease: `0.1.0a10`.
-Current release-candidate package version on this branch: `0.1.0a11`.
+Latest published prerelease: `0.1.0a11`, superseded by the current
+`0.1.0a12` hotfix candidate for raw-log CLI rendering.
+Current release-candidate package version on this branch: `0.1.0a12`.
 Latest accepted published prerelease evidence before this candidate: `0.1.0a10`.
 The `main` branch is development source and may contain unreleased changes.
 Release-candidate source checkouts are not accepted package-channel evidence until the
@@ -55,7 +56,7 @@ Claude Code, Codex, OpenCode, or other runtime CLIs separately.
 
 ## Install with pipx
 
-Install the latest published prerelease:
+Install the latest accepted published prerelease:
 
 ```bash
 pipx install "ai-driven-dev-v2==0.1.0a10"
@@ -65,7 +66,7 @@ aidd doctor
 
 ## Install with uv tool
 
-Install the latest published prerelease:
+Install the latest accepted published prerelease:
 
 ```bash
 uv tool install "ai-driven-dev-v2==0.1.0a10"
@@ -96,9 +97,11 @@ uv run aidd --version
 uv run aidd doctor
 ```
 
-The latest published prerelease with accepted install evidence is `v0.1.0a10`.
-This branch is preparing `v0.1.0a11`, but use the pinned `pipx` or `uv tool`
-install commands above when you need accepted package-channel behavior.
+The latest published prerelease is `v0.1.0a11`, but it is superseded by the
+current `v0.1.0a12` hotfix candidate for `aidd run logs` raw-log rendering.
+Use the pinned `pipx` or `uv tool` install commands above when you need the
+latest accepted package-channel behavior before `v0.1.0a12` release evidence
+is accepted.
 
 ## Run your first local workflow
 

@@ -20,7 +20,7 @@ Reviewed sources:
 
 ### README
 
-- The release-candidate package version matches the package state: `0.1.0a11`.
+- The release-candidate package version matches the package state: `0.1.0a12`.
 - The last accepted published prerelease evidence before this candidate is `0.1.0a10`.
 - The release-candidate source checkout is not package-channel evidence until GitHub
   Release, PyPI, `pipx`, and `uv tool` verification succeeds; README installation
