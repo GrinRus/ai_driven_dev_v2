@@ -109,6 +109,7 @@ def _write_fake_aidd(
     stage_result_validator_verdict: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
     ignored_pollution_stage: str | None = None,
+    implement_untracked_product_file: str | None = None,
 ) -> None:
     path.write_text(
         f"""#!/usr/bin/env python3
@@ -134,6 +135,7 @@ LOG_BLOCKING_TEXT = {log_blocking_text!r}
 STAGE_RESULT_VALIDATOR_VERDICT = {stage_result_validator_verdict!r}
 STRAY_TOP_LEVEL_WORKITEMS_STAGE = {stray_top_level_workitems_stage!r}
 IGNORED_POLLUTION_STAGE = {ignored_pollution_stage!r}
+IMPLEMENT_UNTRACKED_PRODUCT_FILE = {implement_untracked_product_file!r}
 
 
 def option(args: list[str], name: str, default: str = "") -> str:
@@ -180,6 +182,10 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
         text = "# QA Report\\n\\n- QA verdict: `ready`\\n- EV-001: runtime.log\\n"
     elif stage == "implement":
         Path("feature.txt").write_text(f"after {{run_id}}\\n")
+        if IMPLEMENT_UNTRACKED_PRODUCT_FILE:
+            untracked_path = Path(IMPLEMENT_UNTRACKED_PRODUCT_FILE)
+            untracked_path.parent.mkdir(parents=True, exist_ok=True)
+            untracked_path.write_text("// untracked product helper\\n")
         text = (
             "# Implementation Report\\n\\n"
             "## Verification\\n\\n"
@@ -930,6 +936,7 @@ def _prepare_live_test(
     stage_result_validator_verdict: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
     ignored_pollution_stage: str | None = None,
+    implement_untracked_product_file: str | None = None,
     product_evaluation: bool = False,
 ) -> tuple[Path, Path, Path]:
     _clear_live_runtime_command_env(monkeypatch)
@@ -961,6 +968,7 @@ def _prepare_live_test(
         stage_result_validator_verdict=stage_result_validator_verdict,
         stray_top_level_workitems_stage=stray_top_level_workitems_stage,
         ignored_pollution_stage=ignored_pollution_stage,
+        implement_untracked_product_file=implement_untracked_product_file,
     )
     scenario_dir = tmp_path / "harness" / "scenarios" / "live"
     scenario_dir.mkdir(parents=True)
@@ -1456,6 +1464,30 @@ def test_black_box_live_product_evaluation_stop_not_counted_is_manual_quality_st
 
     assert stopped.status == "manual-quality-stop"
     assert not (stopped.bundle_root / "verdict.md").exists()
+    assert stopped.manual_quality_stop_path == (
+        stopped.bundle_root / "manual-quality-stop.md"
+    )
+    assert stopped.manual_quality_stop_path.exists()
+    assert (stopped.bundle_root / "target-workspace-evidence.json").exists()
+    assert (stopped.bundle_root / "target-workspace-evidence.md").exists()
+    manual_stop_payload = json.loads(
+        (stopped.bundle_root / "manual-quality-stop.json").read_text(encoding="utf-8")
+    )
+    assert manual_stop_payload["status"] == "manual-quality-stop"
+    assert manual_stop_payload["manual_decision"] == "stop-not-counted"
+    assert manual_stop_payload["stage"] == "idea"
+    assert manual_stop_payload["runner_execution_verdict"] == {
+        "emitted": False,
+        "reason": (
+            "manual-quality-stop is a manual product-quality terminal state, "
+            "not an execution verdict"
+        ),
+    }
+    assert manual_stop_payload["evidence_paths"]["target_workspace_evidence_json"].endswith(
+        "target-workspace-evidence.json"
+    )
+    manual_stop_markdown = stopped.manual_quality_stop_path.read_text(encoding="utf-8")
+    assert "Runner execution verdict: `not emitted`" in manual_stop_markdown
     state_payload = json.loads(
         (stopped.bundle_root / "flow-state.json").read_text(encoding="utf-8")
     )
@@ -1463,6 +1495,96 @@ def test_black_box_live_product_evaluation_stop_not_counted_is_manual_quality_st
     assert state_payload["quality_review_decision"] == "stop-not-counted"
     steps = json.loads((stopped.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     assert steps[-1]["classification"] == "manual-quality-stop"
+
+
+def test_black_box_live_e2e_implement_audit_surfaces_untracked_product_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        implement_untracked_product_file="src/utils/error.ts",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    audit_payload = json.loads(
+        (result.bundle_root / "stage-audits" / "implement.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    implementation = audit_payload["implementation"]
+    assert implementation["tracked_changed_files"] == ["feature.txt"]
+    assert implementation["product_untracked_files"] == ["src/utils/error.ts"]
+    assert implementation["harness_untracked_files"] == ["aidd.example.toml"]
+    assert implementation["setup_baseline_untracked_files"] == ["setup.log"]
+    assert audit_payload["implementation_policy"]["status"] == "pass"
+    assert audit_payload["implementation_policy"]["findings"] == []
+    assert audit_payload["implementation_policy"]["warnings"] == [
+        "New untracked product files require manual code-quality review: "
+        "src/utils/error.ts"
+    ]
+    audit_markdown = (
+        result.bundle_root / "stage-audits" / "implement.md"
+    ).read_text(encoding="utf-8")
+    assert "### New Untracked Product Files" in audit_markdown
+    assert "`src/utils/error.ts`" in audit_markdown
+    assert "### Harness Or Config Untracked Files" in audit_markdown
+    assert "`aidd.example.toml`" in audit_markdown
+    assert "### Setup-Baseline Untracked Files" in audit_markdown
+    assert "`setup.log`" in audit_markdown
+
+
+def test_black_box_live_e2e_cli_prints_manual_quality_stop_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    manual_stop_path = tmp_path / "bundle" / "manual-quality-stop.md"
+    manual_stop_path.parent.mkdir(parents=True)
+    manual_stop_path.write_text("# Manual Quality Stop\n", encoding="utf-8")
+    result = BlackBoxLiveE2EResult(
+        scenario_id="AIDD-TEST-LIVE-BLACKBOX",
+        run_id="eval-live-test",
+        runtime_id="opencode",
+        status="manual-quality-stop",
+        bundle_root=manual_stop_path.parent,
+        flow_report_path=manual_stop_path.parent / "flow-report.md",
+        verdict_path=manual_stop_path.parent / "verdict.md",
+        summary_path=manual_stop_path.parent / "summary.md",
+        first_failure_note="Manual stage quality audit chose `stop-not-counted`.",
+        operator_action_request_path=None,
+        quality_review_request_path=manual_stop_path.parent
+        / "stage-quality-audits"
+        / "idea.md",
+        manual_quality_stop_path=manual_stop_path,
+    )
+    monkeypatch.setattr(
+        live_orchestration,
+        "run_black_box_live_e2e",
+        lambda **_kwargs: result,
+    )
+
+    exit_code = live_orchestration.main(
+        [
+            "harness/scenarios/live/fake.yaml",
+            "--runtime",
+            "opencode",
+        ]
+    )
+
+    assert exit_code == 1
+    output = capsys.readouterr().out
+    assert "Manual quality stop:" in output
+    assert manual_stop_path.as_posix() in output
+    assert "Verdict path:" not in output
 
 
 def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_manual_artifacts(

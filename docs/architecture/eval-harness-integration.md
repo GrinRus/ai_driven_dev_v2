@@ -122,9 +122,14 @@ Live scenarios additionally imply:
 - `.aidd` workspace rooted inside that target repository.
 - a live runtime config written into the prepared working copy, with optional command overrides from `AIDD_EVAL_<RUNTIME>_COMMAND`.
 - `agent-decides` answer handling for any live scenario that blocks on questions.
-- an execution-only bundle lifecycle that stops after verification and teardown;
-  any deliverable quality review is a manual post-run `quality-report.md` written
-  by the launching SWE agent, not by the runner.
+- an execution-only bundle lifecycle: `small` flow-regression runs continue through
+  verification and teardown automatically, while `product-evaluation` runs stop after
+  each successful stage with `awaiting-quality-review` until the launching SWE agent
+  writes `stage-quality-audits/<stage>.md`.
+- manual quality decisions are never runner-scored. A `stop-not-counted` stage audit
+  ends as `manual-quality-stop` with `manual-quality-stop.*` artifacts instead of
+  `verdict.md`/`grader.json`; terminal product-quality decisions remain manual
+  `quality-report.md` evidence.
 
 Deterministic scenarios additionally imply:
 

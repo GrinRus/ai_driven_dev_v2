@@ -97,6 +97,12 @@ normalize if canonical validation proves the terminal status inconsistent.
     the sibling commands, routes, generated outputs, or documented public surfaces that reuse that
     mechanism. Record focused blast-radius evidence for help/usage text, API compatibility, and
     docs consistency, or explicitly mark the unchecked sibling surface as a residual risk.
+14. In JavaScript or TypeScript packages, do not claim a new helper/module is internal solely
+    because it is under `src/` or has no direct documentation. Inspect `package.json` `exports`,
+    wildcard subpath exports such as `./utils/*`, generated declaration outputs, and existing
+    public import conventions. If the new path can be imported through the package boundary,
+    treat it as public API surface and record compatibility/test evidence or choose a private
+    location that is not exported.
 
 ## Execution instructions
 
@@ -170,6 +176,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - failed verification is reported promptly instead of hidden behind open-ended debugging,
 - shared public-surface helper changes include focused blast-radius evidence for sibling
   commands/routes/generated outputs or explicit residual risk,
+- JavaScript/TypeScript helper additions that may sit under package `exports` include export-map
+  evidence before they are described as internal,
 - no-op handling (if any) includes justification, evidence, and next action,
 - no top-level `workitems/...` artifacts, stray stage/control documents, or scratch files are left
   in the deliverable workspace,

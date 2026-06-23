@@ -122,6 +122,11 @@ normalize if canonical validation proves the terminal status inconsistent.
     Missing help/usage, docs consistency, API compatibility, or generated-output blast-radius
     evidence is a QA blocker unless upstream review explicitly accepted it as out of scope with
     a concrete mitigation.
+    For JavaScript or TypeScript packages, treat `package.json` `exports`, wildcard subpath
+    exports such as `./utils/*`, generated declarations, and existing public import conventions
+    as readiness evidence. If a new helper/module is package-importable but implementation/review
+    calls it internal-only, set `QA verdict: not-ready` unless that public API impact is tested or
+    explicitly accepted with mitigation.
 
 ## Execution instructions
 

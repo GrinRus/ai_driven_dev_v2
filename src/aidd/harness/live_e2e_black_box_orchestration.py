@@ -195,6 +195,8 @@ STAGE_QUALITY_AUDITS_DIRNAME = "stage-quality-audits"
 FLOW_QUALITY_REPORT_FILENAME = "flow-quality-report.md"
 CODE_QUALITY_REPORT_FILENAME = "code-quality-report.md"
 QUALITY_REPORT_FILENAME = "quality-report.md"
+MANUAL_QUALITY_STOP_JSON_FILENAME = "manual-quality-stop.json"
+MANUAL_QUALITY_STOP_MARKDOWN_FILENAME = "manual-quality-stop.md"
 FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
 STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
 NEXT_FLOW_OPERATOR_DECISIONS = (
@@ -254,6 +256,7 @@ class BlackBoxLiveE2EResult:
     first_failure_note: str | None
     operator_action_request_path: Path | None
     quality_review_request_path: Path | None = None
+    manual_quality_stop_path: Path | None = None
 
 
 @dataclass(slots=True)
@@ -659,6 +662,29 @@ def _markdown_path_list(paths: Sequence[str]) -> list[str]:
     if not paths:
         return ["- none"]
     return [f"- `{path}`" for path in paths]
+
+
+def _classify_live_untracked_files_for_stage_audit(
+    ctx: FlowContext,
+    paths: Sequence[str],
+) -> dict[str, list[str]]:
+    baseline_untracked = set(_baseline_live_workspace_snapshot(ctx).untracked_files)
+    known_harness_files = set(LIVE_KNOWN_HARNESS_UNTRACKED_FILES)
+    harness_files: list[str] = []
+    setup_baseline_files: list[str] = []
+    product_files: list[str] = []
+    for path in paths:
+        if path.startswith(".aidd/") or path in known_harness_files:
+            harness_files.append(path)
+        elif path in baseline_untracked:
+            setup_baseline_files.append(path)
+        else:
+            product_files.append(path)
+    return {
+        "harness_untracked_files": harness_files,
+        "setup_baseline_untracked_files": setup_baseline_files,
+        "product_untracked_files": product_files,
+    }
 
 
 def _path_prefix_counts(paths: Sequence[str]) -> list[tuple[str, int]]:
@@ -1922,6 +1948,113 @@ def _quality_review_request_path_from_state(ctx: FlowContext) -> Path | None:
         return None
     raw_path = _read_json_object(state_path).get("quality_review_required_path")
     return Path(raw_path) if isinstance(raw_path, str) and raw_path else None
+
+
+def _manual_quality_stop_paths(ctx: FlowContext) -> tuple[Path, Path]:
+    return (
+        ctx.bundle_root / MANUAL_QUALITY_STOP_JSON_FILENAME,
+        ctx.bundle_root / MANUAL_QUALITY_STOP_MARKDOWN_FILENAME,
+    )
+
+
+def _manual_quality_stop_payload(ctx: FlowContext) -> dict[str, object]:
+    state = _read_json_object(_state_path(ctx.bundle_root))
+    stage = state.get("quality_review_required_stage")
+    audit_path_value = state.get("quality_review_required_path")
+    audit_path = (
+        Path(audit_path_value)
+        if isinstance(audit_path_value, str) and audit_path_value
+        else None
+    )
+    stage_name = stage if isinstance(stage, str) and stage else None
+    return {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "run_id": ctx.run_id,
+        "runtime_id": ctx.runtime_id,
+        "scenario_id": ctx.scenario.scenario_id,
+        "status": "manual-quality-stop",
+        "manual_decision": state.get("quality_review_decision", "stop-not-counted"),
+        "manual_reason": state.get(
+            "quality_review_reason",
+            "Launching operator-agent stage audit chose stop-not-counted.",
+        ),
+        "stage": stage_name,
+        "stage_quality_audit_path": None if audit_path is None else audit_path.as_posix(),
+        "stage_quality_audit_exists": False if audit_path is None else audit_path.exists(),
+        "runner_execution_verdict": {
+            "emitted": False,
+            "reason": (
+                "manual-quality-stop is a manual product-quality terminal state, "
+                "not an execution verdict"
+            ),
+        },
+        "evidence_paths": {
+            "flow_state": (ctx.bundle_root / FLOW_STATE_FILENAME).as_posix(),
+            "flow_steps": (ctx.bundle_root / FLOW_STEPS_FILENAME).as_posix(),
+            "flow_report": (ctx.bundle_root / FLOW_REPORT_FILENAME).as_posix(),
+            "runtime_log": (ctx.bundle_root / RUNTIME_LOG_FILENAME).as_posix(),
+            "target_workspace_evidence_json": (
+                ctx.bundle_root / TARGET_WORKSPACE_EVIDENCE_JSON_FILENAME
+            ).as_posix(),
+            "target_workspace_evidence_markdown": (
+                ctx.bundle_root / TARGET_WORKSPACE_EVIDENCE_MARKDOWN_FILENAME
+            ).as_posix(),
+            "stage_audit_json": (
+                None
+                if stage_name is None
+                else (ctx.bundle_root / STAGE_AUDITS_DIRNAME / f"{stage_name}.json").as_posix()
+            ),
+            "stage_audit_markdown": (
+                None
+                if stage_name is None
+                else (ctx.bundle_root / STAGE_AUDITS_DIRNAME / f"{stage_name}.md").as_posix()
+            ),
+        },
+    }
+
+
+def _write_manual_quality_stop_artifacts(ctx: FlowContext) -> tuple[Path, Path]:
+    json_path, markdown_path = _manual_quality_stop_paths(ctx)
+    payload = _manual_quality_stop_payload(ctx)
+    _write_json(json_path, payload)
+    evidence = cast(dict[str, object], payload["evidence_paths"])
+    md_lines = [
+        "# Manual Quality Stop",
+        "",
+        f"- Scenario: `{payload['scenario_id']}`",
+        f"- Runtime: `{payload['runtime_id']}`",
+        f"- Run ID: `{payload['run_id']}`",
+        f"- Status: `{payload['status']}`",
+        f"- Stage: `{payload['stage'] or 'unknown'}`",
+        f"- Manual decision: `{payload['manual_decision']}`",
+        f"- Manual reason: {payload['manual_reason']}",
+        (
+            "- Runner execution verdict: `not emitted`; manual-quality-stop is not "
+            "`pass`, `fail`, `blocked`, or `infra-fail`."
+        ),
+        "",
+        "## Required Audit",
+        "",
+        f"- Path: `{payload['stage_quality_audit_path'] or 'missing'}`",
+        f"- Exists: `{payload['stage_quality_audit_exists']}`",
+        "",
+        "## Evidence",
+        "",
+        f"- Flow state: `{evidence['flow_state']}`",
+        f"- Flow steps: `{evidence['flow_steps']}`",
+        f"- Flow report: `{evidence['flow_report']}`",
+        f"- Runtime log: `{evidence['runtime_log']}`",
+        "- Target workspace evidence JSON: "
+        f"`{evidence['target_workspace_evidence_json']}`",
+        "- Target workspace evidence Markdown: "
+        f"`{evidence['target_workspace_evidence_markdown']}`",
+        f"- Runner stage audit JSON: `{evidence['stage_audit_json'] or 'n/a'}`",
+        f"- Runner stage audit Markdown: `{evidence['stage_audit_markdown'] or 'n/a'}`",
+    ]
+    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_path.write_text("\n".join(md_lines).rstrip() + "\n", encoding="utf-8")
+    return json_path, markdown_path
 
 
 def _require_working_copy(ctx: FlowContext) -> Path:
@@ -3859,7 +3992,14 @@ def _write_stage_audit(
             implementation_report_text
         )
         tracked_changed_files = list(repository_changes.tracked_files)
+        untracked_changed_files = list(repository_changes.untracked_files)
+        untracked_classification = _classify_live_untracked_files_for_stage_audit(
+            ctx,
+            untracked_changed_files,
+        )
+        product_untracked_files = untracked_classification["product_untracked_files"]
         findings: list[str] = []
+        warnings: list[str] = []
         policy_status: StepClassification = "pass"
         if not tracked_changed_files:
             findings.append("No tracked target repository diff was produced.")
@@ -3880,15 +4020,22 @@ def _write_stage_audit(
                 "explicit not-run evidence."
             )
             policy_status = "fail"
+        if product_untracked_files:
+            warnings.append(
+                "New untracked product files require manual code-quality review: "
+                + ", ".join(product_untracked_files)
+            )
         implementation_policy = {
             "status": policy_status,
             "patch_budget_files": patch_budget_files,
             "findings": findings,
+            "warnings": warnings,
         }
         implementation_details = {
             "changed_files": list(repository_changes.changed_files),
             "tracked_changed_files": tracked_changed_files,
-            "untracked_changed_files": list(repository_changes.untracked_files),
+            "untracked_changed_files": untracked_changed_files,
+            **untracked_classification,
             "diff_summary": repository_changes.diff_summary,
             "git_change_collection_errors": list(repository_changes.command_errors),
             "implementation_report_verification_evidence": verification_evidence_shape,
@@ -3988,20 +4135,50 @@ def _write_stage_audit(
                 f"non-gating={finding['non_gating']})"
             )
     if implementation_details is not None:
+        tracked_detail_files = cast(
+            list[str],
+            implementation_details["tracked_changed_files"],
+        )
+        untracked_detail_files = cast(
+            list[str],
+            implementation_details["untracked_changed_files"],
+        )
+        product_untracked_detail_files = cast(
+            list[str],
+            implementation_details["product_untracked_files"],
+        )
+        harness_untracked_detail_files = cast(
+            list[str],
+            implementation_details["harness_untracked_files"],
+        )
+        setup_baseline_untracked_detail_files = cast(
+            list[str],
+            implementation_details["setup_baseline_untracked_files"],
+        )
         md_lines.extend(
             (
                 "",
                 "## Implementation Evidence",
                 "",
                 f"- Changed files: `{len(changed_files)}`",
-                "- Tracked changed files: "
-                f"`{len(cast(list[str], implementation_details['tracked_changed_files']))}`",
-                "- Untracked changed files: "
-                f"`{len(cast(list[str], implementation_details['untracked_changed_files']))}`",
+                f"- Tracked changed files: `{len(tracked_detail_files)}`",
+                f"- Untracked changed files: `{len(untracked_detail_files)}`",
+                f"- New untracked product files: `{len(product_untracked_detail_files)}`",
+                f"- Harness/config untracked files: `{len(harness_untracked_detail_files)}`",
+                "- Setup-baseline untracked files: "
+                f"`{len(setup_baseline_untracked_detail_files)}`",
                 "- Verification evidence shape: "
                 f"`{implementation_details['implementation_report_verification_evidence']}`",
             )
         )
+        md_lines.extend(("", "### Tracked Changed Files", ""))
+        md_lines.extend(_markdown_path_list(tracked_detail_files))
+        md_lines.extend(("", "### New Untracked Product Files", ""))
+        md_lines.extend(_markdown_path_list(product_untracked_detail_files))
+        md_lines.extend(("", "### Harness Or Config Untracked Files", ""))
+        md_lines.extend(_markdown_path_list(harness_untracked_detail_files))
+        md_lines.extend(("", "### Setup-Baseline Untracked Files", ""))
+        md_lines.extend(_markdown_path_list(setup_baseline_untracked_detail_files))
         if implementation_policy is not None:
             md_lines.extend(
                 (
@@ -4011,6 +4188,12 @@ def _write_stage_audit(
                         "`none`"
                         if not implementation_policy["findings"]
                         else "; ".join(cast(list[str], implementation_policy["findings"]))
+                    ),
+                    "- Implementation policy warnings: "
+                    + (
+                        "`none`"
+                        if not implementation_policy["warnings"]
+                        else "; ".join(cast(list[str], implementation_policy["warnings"]))
                     ),
                 )
             )
@@ -5461,6 +5644,8 @@ def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     _ensure_transcript_files(ctx)
     _write_runtime_log_from_steps(ctx)
     _write_flow_report(ctx)
+    _write_target_workspace_evidence(ctx)
+    _, manual_stop_markdown_path = _write_manual_quality_stop_artifacts(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,
@@ -5473,6 +5658,7 @@ def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         first_failure_note="Manual stage quality audit chose `stop-not-counted`.",
         operator_action_request_path=None,
         quality_review_request_path=_quality_review_request_path_from_state(ctx),
+        manual_quality_stop_path=manual_stop_markdown_path,
     )
 
 
@@ -5820,7 +6006,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Run id: {result.run_id}")
     print(f"Bundle root: {result.bundle_root.as_posix()}")
     print(f"Flow report: {result.flow_report_path.as_posix()}")
-    print(f"Verdict path: {result.verdict_path.as_posix()}")
+    if result.status in TERMINAL_STATUSES:
+        print(f"Verdict path: {result.verdict_path.as_posix()}")
+    elif result.status == "manual-quality-stop" and result.manual_quality_stop_path is not None:
+        print(f"Manual quality stop: {result.manual_quality_stop_path.as_posix()}")
     if result.operator_action_request_path is not None and result.status == "blocked":
         print(f"Operator action request: {result.operator_action_request_path.as_posix()}")
     if (

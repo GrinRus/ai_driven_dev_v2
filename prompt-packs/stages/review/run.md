@@ -125,6 +125,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    sibling commands, routes, generated outputs, or documented public surfaces that reuse it.
    Record a finding when implementation evidence does not cover help/usage text, API compatibility,
    docs consistency, or other affected public behavior needed to keep the selected task bounded.
+   For JavaScript or TypeScript packages, inspect `package.json` `exports`, wildcard subpath
+   exports such as `./utils/*`, generated declaration outputs, and existing public import
+   conventions before accepting implementation claims that a new helper/module is internal-only.
+   If the path is package-importable and implementation evidence does not treat it as public API,
+   record a `must-fix` finding.
 11. In `review-report.md`, write the approval decision as a machine-readable line:
    `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
    `Approval status` or `Verdict`, then add rationale separately.
@@ -180,5 +185,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - named plan/tasklist mechanisms were either found in code/tests or explicitly superseded,
 - shared public-surface helper changes were checked against affected sibling
   commands/routes/generated outputs and help/docs/API compatibility evidence,
+- JavaScript/TypeScript helper additions were checked against package export maps before accepting
+  internal-only claims,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.

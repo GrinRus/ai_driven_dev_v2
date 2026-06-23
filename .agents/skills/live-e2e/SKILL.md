@@ -362,6 +362,9 @@ Live execution verdicts remain:
 Deliverable quality is manual post-run analysis in `stage-quality-audits/<stage>.md`,
 `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`; it is
 not a runner verdict and does not change the execution verdict.
+When a stage audit chooses `Flow decision: stop-not-counted`, the next resume ends
+as `manual-quality-stop`; inspect `manual-quality-stop.md` and
+`manual-quality-stop.json` instead of expecting `verdict.md`/`grader.json`.
 
 ## Output locations and success criteria
 
@@ -392,8 +395,10 @@ Expected live artifacts include:
 - `repair-history.md`
 - `log-analysis.md`
 - `run-transcript.json` with `timeout_policy.scope: per-stage-command`
-- `grader.json`
-- `verdict.md`
+- `grader.json` for terminal execution verdicts only
+- `verdict.md` for terminal execution verdicts only
+- `manual-quality-stop.json` and `manual-quality-stop.md` only when a stage audit
+  chooses `stop-not-counted`
 - `answer-analysis.md` when the run answered blocking questions
 - `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md` only
   when the launching SWE agent manually writes the final product-quality reports
@@ -418,6 +423,12 @@ tracked product diff, setup-baseline untracked files, `aidd.example.toml` harnes
 config, top-level `workitems/...` pollution, stray `.aidd/` scratch files, and ignored
 local artifacts such as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`,
 `coverage/`, build, dist, or dependency-cache files.
+For `implement`, inspect `stage-audits/implement.*` buckets for tracked changed
+files, new untracked product files, known harness/config untracked files, and
+setup-baseline untracked files. New untracked product files must be reviewed as
+deliverable code, and JavaScript/TypeScript helper additions must be checked against
+`package.json` `exports`, wildcard subpath exports, generated declarations, and
+existing public import conventions before accepting internal-only claims.
 If manifest verification creates only new known ignored residue after QA, inspect
 `verify-transcript.json.workspace_cleanup`; runner cleanup of that residue is
 execution hygiene and does not replace manual deliverable-quality review.
@@ -437,7 +448,8 @@ operator loop instead of relying on a self-mutating product command:
 1. Run one `>= medium` product-evaluation live scenario through the black-box evaluator.
 2. Read the full evidence bundle, including every `stage-audits/<stage>.json`,
    every `stage-quality-audits/<stage>.md`, `target-workspace-evidence.json`,
-   `verdict.md`, `grader.json`, transcripts, and logs.
+   `verdict.md`/`grader.json` for terminal execution verdicts or
+   `manual-quality-stop.*` for manual quality stops, transcripts, and logs.
 3. Write manual `flow-quality-report.md`, `code-quality-report.md`, and
    `quality-report.md` when deliverable quality must be judged, and
    classify the first unresolved decisive
@@ -464,6 +476,9 @@ operator loop instead of relying on a self-mutating product command:
   using exact lines such as `- Q1 [resolved] answer text`, write
   `answer-analysis.md`, then rerun the same black-box command to resume.
 - `fail` after run success: inspect `verify-transcript.json` and the stage-local validator reports.
+- `manual-quality-stop`: inspect `manual-quality-stop.md`, the referenced
+  `stage-quality-audits/<stage>.md`, `stage-audits/<stage>.*`, and
+  `target-workspace-evidence.*`; do not classify it as infra/provider failure.
 - Missing clean execution despite zero exit codes: inspect `verdict.md` and `grader.json` for pass-guard failures caused by missing `stage-result.md` or `validator-report.md`.
 
 ## Procedure
@@ -472,7 +487,7 @@ operator loop instead of relying on a self-mutating product command:
 2. Run the local preflight checks from this skill, including `aidd eval doctor`.
 3. Export a wrapper env var only when you intentionally want `adapter-flags` mode.
 4. Launch `uv run python -m aidd.harness.live_e2e_black_box <manifest> --runtime <runtime>`.
-5. Preserve the resulting bundle and inspect `verdict.md`, `grader.json`, transcripts, and logs before judging execution.
+5. Preserve the resulting bundle and inspect `verdict.md`, `grader.json`, transcripts, and logs before judging execution. For `manual-quality-stop`, inspect `manual-quality-stop.*` instead of execution verdict artifacts.
 6. For `blocked` runs, answer questions yourself as the launching operator-agent,
    write `answer-analysis.md`, and rerun the same command to resume.
 7. For `awaiting-quality-review`, write the required stage audit before resume.

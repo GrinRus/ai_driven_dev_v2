@@ -111,6 +111,10 @@ Optional context documents may improve review depth, but they must not replace i
   sibling commands, routes, generated outputs, or documented public surfaces. Missing help/usage,
   docs consistency, API compatibility, or generated-output blast-radius evidence must become a
   finding unless the upstream task explicitly excludes that surface.
+- In JavaScript or TypeScript packages, review must inspect `package.json` `exports`, wildcard
+  subpath exports, generated declarations, and existing public import conventions before accepting
+  a claim that a new helper/module is internal-only. If the path is package-importable and
+  implementation evidence does not treat it as public API, this is a review finding.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation
@@ -132,6 +136,8 @@ Validators for `review` should check:
   - summary and approval status must remain coherent with finding severities,
 - shared public-surface blast radius:
   - shared helper/decorator/parser/API changes are checked against affected sibling public surfaces,
+  - JavaScript/TypeScript helper additions are checked against export maps before internal-only
+    claims are accepted,
 - absent disposition:
   - each finding must include disposition (`must-fix`, `follow-up`, `accepted-risk`, or `invalid`),
   - an explicit no-findings declaration is valid only when no active finding entries are present,

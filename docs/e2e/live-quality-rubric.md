@@ -3,7 +3,8 @@
 Live E2E has two separate decisions:
 
 - the runner's execution verdict in `verdict.md`, `grader.json`, `summary.md`, and
-  `harness-metadata.json`;
+  `harness-metadata.json` for terminal execution states `pass`, `fail`, `blocked`, and
+  `infra-fail`;
 - the launching SWE agent's manual quality decision in
   `.aidd/reports/evals/<run_id>/quality-report.md`.
 
@@ -33,7 +34,6 @@ Runner-owned artifacts include:
 - `frontend-checkpoints.md`
 - `stage-audits/<stage>.json`
 - `stage-audits/<stage>.md`
-- `stage-quality-audits/<stage>.md` manual files for product-evaluation stages
 - `target-workspace-evidence.json`
 - `target-workspace-evidence.md`
 - `runtime.log`
@@ -56,6 +56,8 @@ Runner-owned artifacts include:
 - `harness-metadata.json`
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
+- `manual-quality-stop.json` and `manual-quality-stop.md` only when a manual stage
+  audit chooses `stop-not-counted`
 
 The runner no longer emits `quality-transcript.json`, `acceptance-coverage.*`,
 `ui-ux-checkpoints.*`, `operator-quality-analysis.md`, or
@@ -64,6 +66,13 @@ The runner no longer emits `quality-transcript.json`, `acceptance-coverage.*`,
 `frontend-checkpoints.*` are raw run-integrity evidence for the public operator
 surfaces. They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
+
+`stage-audits/implement.*` separates tracked changed files, new untracked product
+files, known harness/config untracked files, and setup-baseline untracked files. New
+untracked product files are non-gating execution evidence, but the manual code review
+must inspect them before any counted-clean decision. This is especially important for
+JavaScript/TypeScript packages where a new source helper may be public when
+`package.json` `exports` uses wildcard subpaths such as `./utils/*`.
 
 `target-workspace-evidence.*` records the target repository snapshot after setup and
 after the terminal/stop state. It classifies tracked diff, setup-baseline untracked
@@ -123,7 +132,10 @@ For each product-evaluation stage, write this manual audit before resume:
 
 If `Flow decision` is `stop-not-counted`, the next resume ends the run as
 `manual-quality-stop`. This is not an execution failure, provider failure, infra failure,
-or unresolved-question `blocked` state.
+or unresolved-question `blocked` state. The runner writes `manual-quality-stop.json`,
+`manual-quality-stop.md`, `runtime.log`, `flow-report.md`, and
+`target-workspace-evidence.*` for the stop point, but does not emit `verdict.md` or
+`grader.json` because no execution verdict was assigned.
 
 After the terminal run, the launching SWE agent may write:
 

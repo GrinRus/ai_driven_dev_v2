@@ -60,6 +60,9 @@ Every live E2E run must follow the installed full-flow operator model:
     `stage-audits/<stage>.*`, stops with `awaiting-quality-review`, and requires the
     launching agent to write
     `stage-quality-audits/<stage>.md` before resuming the same `--run-id`.
+    The `implement` runner audit separates tracked files, new untracked product files,
+    known harness/config untracked files, and setup-baseline untracked files so manual
+    code review can inspect the complete deliverable workspace.
 16. For manual local runs, the launching agent is the operator-agent and quality
     auditor: it answers blocking questions, records answer reasoning, reviews each
     `product-evaluation` stage before resume, and writes final
@@ -122,7 +125,9 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   distinct from `awaiting-quality-review`.
 - If a stage quality audit records `Flow decision: stop-not-counted`, the next resume
   ends the run as `manual-quality-stop`; it is not an infra/provider failure and not a
-  `blocked` run.
+  `blocked` run. The runner writes `manual-quality-stop.json`,
+  `manual-quality-stop.md`, and stop-point `target-workspace-evidence.*`; it does not
+  write `verdict.md` or `grader.json` for that manual terminal state.
 - If the evaluator is interrupted, it records `interrupted-resumable` state,
   attempts to terminate live runtime subprocesses, and requires explicit
   `--run-id` before continuing.
