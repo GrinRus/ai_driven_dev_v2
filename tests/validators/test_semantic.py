@@ -2030,6 +2030,61 @@ def test_validate_semantic_outputs_accepts_live_ignored_residue_evidence_for_imp
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_sed_command_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-LIVE-SED"
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Summary\n\n"
+            "- Selected task id: `TASK-LIVE-HONO-NON-ERROR-THROW`.\n"
+            "- Implemented bounded non-Error throw normalization with focused "
+            "regression coverage and public type compatibility checks.\n\n"
+            "## Touched files\n\n"
+            "- `src/compose.ts` - normalize composed middleware thrown values.\n"
+            "- `src/hono-base.ts` - normalize direct route thrown values.\n"
+            "- `src/hono.test.ts` - add primitive and object throw regressions.\n"
+            "- `src/compose.test.ts` - add composed middleware regression coverage.\n\n"
+            "## Verification\n\n"
+            "- `./node_modules/.bin/vitest --run --coverage.enabled=false "
+            "src/hono.test.ts src/compose.test.ts` -> pass (235 passed).\n"
+            "- `./node_modules/.bin/tsc --noEmit` -> pass (exit code 0).\n"
+            "- `sed -n '113,119p' src/types.ts` -> pass (observed `ErrorHandler` "
+            "still accepts `err: Error | HTTPResponseError`).\n"
+            "- `sed -n '319,334p' src/context.ts` -> pass (observed `Context.error` "
+            "remains `Error | undefined`).\n"
+            "- `git status --ignored --short --untracked-files=all` -> pass "
+            "(no new `coverage/`, `.coverage*`, `__pycache__/`, build, dist, "
+            "or dependency-cache residue beyond setup baseline).\n\n"
+            "## Risks\n\n"
+            "- Public type compatibility remains source-compatible.\n\n"
+            "## Follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_contract_summary_task_id_and_cli_subcommands(
     tmp_path: Path,
 ) -> None:
