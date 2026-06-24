@@ -125,10 +125,10 @@ Optional context documents may improve QA depth, but they must not replace imple
   documented public surfaces. Missing help/usage, docs consistency, API compatibility, or
   generated-output evidence must force `QA verdict: not-ready` unless upstream review explicitly
   accepted it as out of scope with mitigation.
-- For JavaScript or TypeScript packages, package export maps, wildcard subpath exports, generated
-  declarations, and existing public import conventions are part of readiness evidence. A new
-  helper/module that is package-importable cannot be accepted as internal-only unless that public
-  API impact is tested or explicitly accepted with mitigation.
+- For JavaScript or TypeScript packages, `package.json` `exports`, wildcard subpath exports such
+  as `./utils/*`, generated declarations, and existing public import conventions are part of
+  readiness evidence. A new helper/module that is package-importable cannot be accepted as
+  internal-only unless that public API impact is tested or explicitly accepted with mitigation.
 
 ## Validation focus
 

@@ -73,6 +73,9 @@ untracked product files are non-gating execution evidence, but the manual code r
 must inspect them before any counted-clean decision. This is especially important for
 JavaScript/TypeScript packages where a new source helper may be public when
 `package.json` `exports` uses wildcard subpaths such as `./utils/*`.
+When `stage-audits/implement.*` records `product_untracked_files`, the manual
+`code-quality-report.md` and `quality-report.md` must name those files and state how
+they were reviewed before recording `counted-clean`.
 
 `target-workspace-evidence.*` records the target repository snapshot after setup and
 after the terminal/stop state. It classifies tracked diff, setup-baseline untracked
@@ -238,7 +241,9 @@ status.
 The manual `counted-clean` phrase is only a human-authored deliverable-quality
 decision inside `quality-report.md`. AIDD does not parse it. For product-evaluation,
 `counted-clean` also requires all stage quality audits, `code-quality-report.md`, and
-`quality-report.md`; a runner execution `pass` alone is not counted-clean.
+`quality-report.md`; when implement-stage evidence contains `product_untracked_files`,
+the final reports must explicitly cover those files. A runner execution `pass` alone is
+not counted-clean.
 
 ## Required Manual Review Coverage
 
@@ -253,6 +258,9 @@ Code review should cover the full target repository diff, including untracked fi
 It should address acceptance criteria evidence, architectural fit, maintainability,
 API compatibility, edge cases, security, performance, test relevance, and any
 baseline or before/after proof.
+If the implement-stage audit reports `product_untracked_files`, list each such file in
+the final code review and explain whether it is deliverable code, harness/config residue,
+or a blocker for counted-clean quality.
 Inspect `target-workspace-evidence.*` and, when needed, run or cite
 `git status --short --untracked-files=all` plus
 `git status --ignored --short --untracked-files=all`. Treat top-level

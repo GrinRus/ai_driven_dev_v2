@@ -62,7 +62,9 @@ Every live E2E run must follow the installed full-flow operator model:
     `stage-quality-audits/<stage>.md` before resuming the same `--run-id`.
     The `implement` runner audit separates tracked files, new untracked product files,
     known harness/config untracked files, and setup-baseline untracked files so manual
-    code review can inspect the complete deliverable workspace.
+    code review can inspect the complete deliverable workspace. If it records
+    `product_untracked_files`, final `code-quality-report.md` and `quality-report.md`
+    must name those files and explain how they were reviewed before counted-clean.
 16. For manual local runs, the launching agent is the operator-agent and quality
     auditor: it answers blocking questions, records answer reasoning, reviews each
     `product-evaluation` stage before resume, and writes final
@@ -391,8 +393,10 @@ any manually captured screenshots or browser notes. Generated product UI is outs
 For `product-evaluation`, counted-clean is possible only when every completed stage has
 a corresponding `stage-quality-audits/<stage>.md`, the final code review exists in
 `code-quality-report.md`, and the final `quality-report.md` records
-`counted-clean`. A runner execution `pass` without those manual artifacts is only an
-execution pass, not counted-clean product-quality evidence.
+`counted-clean`. If implement-stage evidence contains `product_untracked_files`, those
+files must be explicitly covered in the final code and quality reports. A runner
+execution `pass` without those manual artifacts is only an execution pass, not
+counted-clean product-quality evidence.
 
 ## Interview Scenarios
 

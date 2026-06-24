@@ -94,9 +94,10 @@ Optional context documents may improve implementation quality, but they must not
   surfaces, including help/usage text, API compatibility, and docs consistency where relevant.
 - For JavaScript or TypeScript packages, package export maps are part of public-surface evidence.
   A new helper under `src/` is not internal by default when `package.json` `exports` includes
-  wildcard subpaths such as `./utils/*` or generated declarations expose that path. If the helper
-  can be imported through the package boundary, implementation evidence must treat it as public API
-  or choose a truly private location.
+  wildcard subpath exports such as `./utils/*`, generated declarations expose that path, or
+  existing public import conventions make that path package-importable. If the helper can be
+  imported through the package boundary, implementation evidence must treat it as public API or
+  choose a truly private location.
 - `stage-result.md` and `validator-report.md` must remain consistent with declared verification outcomes.
 
 ## Validation focus

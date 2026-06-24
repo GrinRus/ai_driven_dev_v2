@@ -232,6 +232,52 @@ def test_implement_review_and_qa_require_shared_surface_blast_radius_evidence() 
     assert "must force `QA verdict: not-ready`" in qa_contract
 
 
+def test_js_ts_helper_internal_claims_require_export_map_evidence() -> None:
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(
+        encoding="utf-8"
+    )
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    implement_contract = Path("contracts/stages/implement.md").read_text(
+        encoding="utf-8"
+    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (
+        tasklist_prompt,
+        tasklist_contract,
+        implement_prompt,
+        implement_contract,
+        review_prompt,
+        review_contract,
+        qa_prompt,
+        qa_contract,
+    ):
+        normalized = " ".join(text.split())
+        assert "JavaScript or TypeScript packages" in text
+        assert "`package.json`" in text
+        assert "`exports`" in text
+        assert "wildcard subpath exports" in normalized
+        assert "`./utils/*`" in text
+        assert "generated declaration" in normalized
+        assert "public import conventions" in normalized
+        assert "internal-only" in text or "internal solely" in text
+
+    assert "do not plan a concrete helper/module path as private" in tasklist_prompt
+    assert "before describing that helper as private or internal-only" in (
+        tasklist_contract
+    )
+
+
 def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
     contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
     run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")

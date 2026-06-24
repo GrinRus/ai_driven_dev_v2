@@ -958,6 +958,9 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
             "top-level `workitems/...` duplicates normally make manual "
             "deliverable quality `not-counted`"
         ),
+        "`product_untracked_files` is present",
+        "final `code-quality-report.md` and",
+        "`quality-report.md` must name those files",
         "`aidd.example.toml` is not product diff",
         (
             "Screenshots and browser notes are optional manual evidence, "
@@ -1006,6 +1009,9 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "`frontend-checkpoints.*` are raw run-integrity evidence",
         "They are not a UI/UX audit, not screenshot evidence, and not a quality gate.",
         "`target-workspace-evidence.*` records the target repository snapshot",
+        "`product_untracked_files`",
+        "must name those files and state how",
+        "the final reports must explicitly cover those files",
         "setup-baseline ignored churn",
         "`git status --short --untracked-files=all`",
         "top-level `workitems/...` duplicate",

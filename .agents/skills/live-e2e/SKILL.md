@@ -428,7 +428,10 @@ files, new untracked product files, known harness/config untracked files, and
 setup-baseline untracked files. New untracked product files must be reviewed as
 deliverable code, and JavaScript/TypeScript helper additions must be checked against
 `package.json` `exports`, wildcard subpath exports, generated declarations, and
-existing public import conventions before accepting internal-only claims.
+existing public import conventions before accepting internal-only claims. If
+`product_untracked_files` is present, final `code-quality-report.md` and
+`quality-report.md` must name those files and state how each was reviewed before a
+`counted-clean` decision.
 If manifest verification creates only new known ignored residue after QA, inspect
 `verify-transcript.json.workspace_cleanup`; runner cleanup of that residue is
 execution hygiene and does not replace manual deliverable-quality review.
