@@ -124,8 +124,12 @@ Live scenarios additionally imply:
 - `agent-decides` answer handling for any live scenario that blocks on questions.
 - an execution-only bundle lifecycle: `small` flow-regression runs continue through
   verification and teardown automatically, while `product-evaluation` runs stop after
-  each successful stage with `awaiting-quality-review` until the launching SWE agent
-  writes `stage-quality-audits/<stage>.md`.
+  each successful stage run with `awaiting-quality-review` until the launching SWE agent
+  writes the exact `stage-quality-audits/<stage-run-id>.md` path named in
+  `flow-state.json`.
+- a stage-run ledger for live product-evaluation runs: repeated development loops such
+  as `implement -> review -> implement -> review -> qa` write distinct
+  `stage_run_id` entries and do not overwrite previous audit evidence.
 - manual quality decisions are never runner-scored. A `stop-not-counted` stage audit
   ends as `manual-quality-stop` with `manual-quality-stop.*` artifacts instead of
   `verdict.md`/`grader.json`; terminal product-quality decisions remain manual
@@ -159,11 +163,14 @@ Deterministic scenarios additionally imply:
 9. Capture emitted normalized events and include them in first-failure boundary analysis.
 10. Capture question and answer artifacts whenever a live or deterministic run uses them.
 11. Capture validator outcomes and repair attempts.
-12. Write runner-owned per-stage audits after every live stage.
+12. Write runner-owned per-stage-run audits after every live stage attempt.
 13. For `product-evaluation`, stop after each successful stage with
     `awaiting-quality-review` until the launching agent writes
-    `stage-quality-audits/<stage>.md`; `blocked` remains reserved for unresolved
-    questions or runtime approvals.
+    `stage-quality-audits/<stage-run-id>.md`; `blocked` remains reserved for unresolved
+    questions or runtime approvals. A manual `request-remediation` decision on `review`
+    or `qa` uses the existing operator remediation flow to launch a new `implement`,
+    mark downstream stages stale, and rerun stale `review` and `qa` one stage at a
+    time with quality checkpoints after every stage run.
 14. Run scenario verification commands.
 15. Run log analysis.
 16. Write execution-only grader data, verdict, summary, and durable bundle metadata,
@@ -182,10 +189,10 @@ Every black-box live E2E run should aim to write:
 - `.aidd/reports/evals/<run_id>/operator-actions.jsonl`
 - `.aidd/reports/evals/<run_id>/frontend-checkpoints.json`
 - `.aidd/reports/evals/<run_id>/frontend-checkpoints.md`
-- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
-- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
-- `.aidd/reports/evals/<run_id>/stage-quality-audits/<stage>.md` for
-  product-evaluation stages, written manually before resume
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage-run-id>.json`
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage-run-id>.md`
+- `.aidd/reports/evals/<run_id>/stage-quality-audits/<stage-run-id>.md` for
+  product-evaluation stage runs, written manually before resume
 - `.aidd/reports/evals/<run_id>/target-workspace-evidence.json`
 - `.aidd/reports/evals/<run_id>/target-workspace-evidence.md`
 - `.aidd/reports/evals/<run_id>/runtime.log`
@@ -212,7 +219,8 @@ Every black-box live E2E run should aim to write:
 `.aidd/reports/evals/<run_id>/quality-report.md` are manual SWE-agent artifacts.
 They are not part of execution bundle completeness and must not affect `verdict.md`
 or `grader.json`. Product-evaluation counted-clean evidence requires those final
-reports plus every `stage-quality-audits/<stage>.md`. When a UI/UX decision is
+reports plus every `stage-quality-audits/<stage-run-id>.md` named by the stage-run
+ledger. When a UI/UX decision is
 needed, the report records a human-authored AIDD operator UI/UX decision; the runner
 does not derive that decision from `frontend-checkpoints.*`.
 

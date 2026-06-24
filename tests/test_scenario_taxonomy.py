@@ -246,7 +246,7 @@ def test_live_catalog_mentions_manual_matrix_coverage() -> None:
         "AIDD_EVAL_CODEX_COMMAND",
         "AIDD_EVAL_OPENCODE_COMMAND",
         "Published-package install proof belongs to a separate release/install lane",
-        "stage-quality-audits/<stage>.md",
+        "stage-quality-audits/<stage-run-id>.md",
     ):
         assert needle in catalog_doc
 

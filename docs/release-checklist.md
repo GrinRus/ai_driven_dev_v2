@@ -223,9 +223,9 @@ Post-`v0.1.0a10` changes prepared for `v0.1.0a11`:
 - live E2E execution reports no longer compute deliverable quality gates or counted-clean
   decisions;
 - product-evaluation counted-clean evidence requires manual
-  `stage-quality-audits/<stage>.md`, `flow-quality-report.md`,
-  `code-quality-report.md`, and `quality-report.md`; a runner execution `pass`
-  alone is not counted-clean product-quality evidence;
+  `stage-quality-audits/<stage-run-id>.md`, `flow-quality-report.md`,
+  `code-quality-report.md`, and `quality-report.md` with iteration history; a runner
+  execution `pass` alone is not counted-clean product-quality evidence;
 - live evidence now records per-stage timeout policy, target workspace classifications,
   stage-result/validator consistency warnings, and verification-residue cleanup;
 - maintained live prompts, contracts, and scenario manifests now emphasize workspace

@@ -1922,6 +1922,69 @@ class OperatorUiService:
         job["rerun_stages"] = stale_stages
         return job
 
+    def _rerun_remediation_stage(self, payload: dict[str, Any]) -> object:
+        runtime = _runtime_from_payload(payload)
+        _validate_runtime(runtime)
+        run_id = _source_run_id_from_payload(payload)
+        stage = _text_from_payload(payload, "stage")
+        stale_stages = self._stale_downstream_stages(run_id)
+        if stage not in stale_stages:
+            raise ValueError(f"Stage '{stage}' is not stale for run '{run_id}'.")
+        log_follow = bool(payload.get("log_follow", True))
+
+        def _target(job_id: str) -> object:
+            exit_code = 0
+            completed = True
+            result: object
+            try:
+                result = self._run_stage(
+                    stage=stage,
+                    runtime=runtime,
+                    run_id=run_id,
+                    log_follow=log_follow,
+                    job_id=job_id,
+                )
+                exit_code = (
+                    int(result.get("exit_code", 1)) if isinstance(result, Mapping) else 1
+                )
+                completed = exit_code == 0
+            except typer.Exit as exc:
+                exit_code = int(exc.exit_code or 1)
+                completed = False
+                result = {"exit_code": exit_code, "completed": False}
+            status = (
+                clear_stale_stages(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=run_id,
+                    stages=(stage,),
+                )
+                if completed
+                else load_remediation_status(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=run_id,
+                )
+            )
+            return {
+                "run_id": run_id,
+                "runtime": runtime,
+                "rerun_stage": stage,
+                "stage_result": result,
+                "status": status,
+                "exit_code": exit_code,
+                "completed": completed,
+            }
+
+        job = cast(
+            dict[str, object],
+            self._start_job(kind="remediation-rerun-stage", stage=stage, target=_target),
+        )
+        job["run_id"] = run_id
+        job["runtime"] = runtime
+        job["rerun_stage"] = stage
+        return job
+
     def handle_get(self, path: str, params: dict[str, list[str]]) -> UiResponse:
         try:
             if static_asset := operator_static_asset_for_route(path):
@@ -2182,6 +2245,11 @@ class OperatorUiService:
             if path == "/api/remediation/rerun-downstream":
                 return _json_response(
                     self._rerun_stale_downstream(payload),
+                    status=HTTPStatus.ACCEPTED,
+                )
+            if path == "/api/remediation/rerun-stage":
+                return _json_response(
+                    self._rerun_remediation_stage(payload),
                     status=HTTPStatus.ACCEPTED,
                 )
             if path == "/api/next-flow/preflight":

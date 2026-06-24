@@ -45,7 +45,7 @@ Every live E2E run must follow the installed full-flow operator model:
    timeout and not a deliverable quality signal.
 10. Keep target `.aidd/` rooted inside the target repository.
 11. Preserve install, setup, run, verify, and teardown evidence in the eval bundle.
-12. Write `stage-audits/<stage>.json` and `.md` after each stage.
+12. Write `stage-audits/<stage-run-id>.json` and `.md` after each stage run.
 13. Preserve `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`, and
     `self-repair-matrix.md` so operators can audit step duration, per-attempt runtime windows,
     deterministic repair-probe coverage, terminal document consistency, per-stage command
@@ -56,21 +56,30 @@ Every live E2E run must follow the installed full-flow operator model:
     package-manager invocation can create target-repo lockfiles after QA and pollute
     the final workspace evidence. Target-project verification commands may still use
     the target repository's package manager when that is the repo's normal test surface.
-15. For `product-evaluation` runs, after every successful stage the runner writes
-    `stage-audits/<stage>.*`, stops with `awaiting-quality-review`, and requires the
-    launching agent to write
-    `stage-quality-audits/<stage>.md` before resuming the same `--run-id`.
+15. For `product-evaluation` runs, after every successful stage run the runner writes
+    `stage-audits/<stage-run-id>.*`, stops with `awaiting-quality-review`, and requires the
+    launching agent to write the exact
+    `stage-quality-audits/<stage-run-id>.md` path named in `flow-state.json` before
+    resuming the same `--run-id`.
     The `implement` runner audit separates tracked files, new untracked product files,
     known harness/config untracked files, and setup-baseline untracked files so manual
     code review can inspect the complete deliverable workspace. If it records
     `product_untracked_files`, final `code-quality-report.md` and `quality-report.md`
     must name those files and explain how they were reviewed before counted-clean.
-16. For manual local runs, the launching agent is the operator-agent and quality
+16. For `product-evaluation`, normal review/QA defects may use `request-remediation`
+    in the manual audit for a `review` or `qa` stage run. The evaluator then uses the
+    existing operator remediation flow to create the durable request, run a new
+    `implement`, mark downstream `review` and `qa` stale, and rerun stale downstream
+    stages one at a time with another quality checkpoint after each stage run.
+17. Terminal product-evaluation execution pass requires a fresh terminal `qa`, no stale
+    downstream stages, and passing manifest verification. The runner still does not score
+    subjective product quality.
+18. For manual local runs, the launching agent is the operator-agent and quality
     auditor: it answers blocking questions, records answer reasoning, reviews each
     `product-evaluation` stage before resume, and writes final
     `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`
     when a product-quality decision is needed.
-17. After at least one completed stage in a manual checkpoint run, the operator may
+19. After at least one completed stage in a manual checkpoint run, the operator may
     submit one stage-scoped intervention request through CLI or UI. If used, preserve
     `operator-requests/request-000N.md`, the resulting attempt log, validation result,
     and a short `operator-intervention-analysis.md` explaining why the request was
@@ -121,10 +130,14 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   the evaluator appends `-r2`, `-r3`, and so on instead of appending to the old
   bundle.
 - Resume from `awaiting-quality-review` requires the exact audit file named in
-  `flow-state.json`, for example `stage-quality-audits/<stage>.md`. If that file is
+  `flow-state.json`, for example `stage-quality-audits/stage-0007-review.md`. If that file is
   missing, the runner refuses the resume instead of advancing the stage loop.
 - `blocked` is reserved for unresolved model questions or runtime approvals. It is
   distinct from `awaiting-quality-review`.
+- `Flow decision: request-remediation` is valid only for `review` and `qa` stage-run
+  audits and must include source stage, source ids, and operator note. It starts the
+  existing AIDD remediation flow; it is not a new core stage and does not replace
+  `operator-intervention`.
 - If a stage quality audit records `Flow decision: stop-not-counted`, the next resume
   ends the run as `manual-quality-stop`; it is not an infra/provider failure and not a
   `blocked` run. The runner writes `manual-quality-stop.json`,
@@ -332,9 +345,9 @@ Every live eval bundle must aim to contain:
 - `run-transcript.json`
 - `verify-transcript.json`
 - `teardown-transcript.json`
-- `stage-audits/<stage>.json`
-- `stage-audits/<stage>.md`
-- `stage-quality-audits/<stage>.md` for each completed `product-evaluation` stage,
+- `stage-audits/<stage-run-id>.json`
+- `stage-audits/<stage-run-id>.md`
+- `stage-quality-audits/<stage-run-id>.md` for each completed `product-evaluation` stage run,
   written manually by the launching agent before resume
 - `target-workspace-evidence.json`
 - `target-workspace-evidence.md`
@@ -390,10 +403,11 @@ repair evidence, next-flow handoff, state clarity, readability, keyboard/focus
 behavior where manually inspectable, responsive behavior or `not inspected`, and
 any manually captured screenshots or browser notes. Generated product UI is outside this live E2E operator-UI review unless the report marks it `not-applicable`.
 
-For `product-evaluation`, counted-clean is possible only when every completed stage has
-a corresponding `stage-quality-audits/<stage>.md`, the final code review exists in
+For `product-evaluation`, counted-clean is possible only when every completed stage run has
+a corresponding `stage-quality-audits/<stage-run-id>.md`, the final code review exists in
 `code-quality-report.md`, and the final `quality-report.md` records
-`counted-clean`. If implement-stage evidence contains `product_untracked_files`, those
+`counted-clean` with `Iteration History`, every remediation request, source id,
+operator note, stale downstream rerun, and fresh terminal QA state. If implement-stage evidence contains `product_untracked_files`, those
 files must be explicitly covered in the final code and quality reports. A runner
 execution `pass` without those manual artifacts is only an execution pass, not
 counted-clean product-quality evidence.

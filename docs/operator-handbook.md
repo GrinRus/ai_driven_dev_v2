@@ -447,7 +447,10 @@ as input to a new `implement` attempt, and requires a selected runtime. After th
 remediation `implement` attempt succeeds, downstream `review` and `qa` are marked stale
 as overlay metadata. Their canonical stage status is not rewritten, but stale `qa` is not
 treated as a fresh terminal handoff. Use the next action **Rerun stale downstream** to
-explicitly run `review -> qa` with a selected runtime.
+explicitly run stale downstream stages with a selected runtime. Manual live E2E uses the
+per-stage UI API path so it can rerun exactly one stale stage, audit it, and then rerun
+the next stale stage; this preserves checkpoints for loops such as
+`implement -> review -> implement -> review -> qa`.
 
 ### 6.7 Completed-run handoff and next-flow actions
 

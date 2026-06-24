@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+import yaml
+
 from aidd.core.stages import STAGES
-from aidd.harness.scenarios import load_scenario
+from aidd.harness.scenarios import ScenarioManifestError, load_scenario
 
 
 def _assert_live_contract(scenario) -> None:
@@ -86,6 +89,34 @@ def test_all_live_scenarios_load_as_valid_full_flow_manifests() -> None:
         assert scenario.scenario_id
         assert scenario.task
         _assert_live_contract(scenario)
+        assert scenario.run.max_remediation_cycles == 3
+
+
+def test_live_scenario_accepts_max_remediation_cycles_override(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["max_remediation_cycles"] = 5
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "hono-remediation-limit.yaml"
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    scenario = load_scenario(scenario_path)
+
+    assert scenario.run.max_remediation_cycles == 5
+
+
+def test_live_scenario_rejects_invalid_max_remediation_cycles(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["max_remediation_cycles"] = 0
+    scenario_path = (
+        tmp_path / "harness" / "scenarios" / "live" / "hono-invalid-remediation-limit.yaml"
+    )
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(ScenarioManifestError, match="max_remediation_cycles"):
+        load_scenario(scenario_path)
 
 
 def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> None:

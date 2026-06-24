@@ -999,8 +999,36 @@ def _write_stage_quality_audit(
     *,
     stage: str,
     flow_decision: str = "continue",
+    remediation_request: dict[str, object] | None = None,
 ) -> Path:
-    path = bundle_root / "stage-quality-audits" / f"{stage}.md"
+    state_path = bundle_root / "flow-state.json"
+    stage_run_id = stage
+    if state_path.exists():
+        state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+        required_path = state_payload.get("quality_review_required_path")
+        required_stage_run_id = state_payload.get("quality_review_required_stage_run_id")
+        if isinstance(required_stage_run_id, str) and required_stage_run_id:
+            stage_run_id = required_stage_run_id
+        path = Path(required_path) if isinstance(required_path, str) else (
+            bundle_root / "stage-quality-audits" / f"{stage}.md"
+        )
+    else:
+        path = bundle_root / "stage-quality-audits" / f"{stage}.md"
+    remediation_lines: list[str] = []
+    if remediation_request is not None:
+        raw_source_ids = remediation_request.get("source_ids", ())
+        source_ids = (
+            raw_source_ids
+            if isinstance(raw_source_ids, list | tuple)
+            else (raw_source_ids,)
+        )
+        remediation_lines = [
+            "",
+            "## Remediation Request",
+            f"- Source stage: {remediation_request['source_stage']}",
+            "- Source ids: " + ", ".join(str(item) for item in source_ids),
+            f"- Operator note: {remediation_request['operator_note']}",
+        ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         "\n".join(
@@ -1022,7 +1050,7 @@ def _write_stage_quality_audit(
                 "- Specific defects: none",
                 "",
                 "## Evidence Reviewed",
-                f"- Stage artifacts: stage-audits/{stage}.json",
+                f"- Stage artifacts: stage-audits/{stage_run_id}.json",
                 "- Runtime logs: runtime-log.txt",
                 "- Runner stage audit: present",
                 "- Target repo evidence: synthetic fixture",
@@ -1030,6 +1058,7 @@ def _write_stage_quality_audit(
                 "## Notes For Final Report",
                 "- AIDD quality signal: synthetic",
                 "- Residual risks: none",
+                *remediation_lines,
             )
         )
         + "\n",
@@ -1066,6 +1095,83 @@ def _run_product_evaluation_to_terminal(
             run_id=result.run_id,
         )
     return result
+
+
+def _continue_product_evaluation_until_stage(
+    *,
+    scenario_path: Path,
+    work_root: Path,
+    report_root: Path,
+    stage: str,
+    runtime_id: str = "opencode",
+) -> BlackBoxLiveE2EResult:
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id=runtime_id,
+        work_root=work_root,
+        report_root=report_root,
+    )
+    while result.status == "awaiting-quality-review":
+        state_payload = json.loads(
+            (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+        )
+        required_stage = state_payload["quality_review_required_stage"]
+        assert isinstance(required_stage, str)
+        if required_stage == stage:
+            return result
+        _write_stage_quality_audit(result.bundle_root, stage=required_stage)
+        result = run_black_box_live_e2e(
+            scenario_path=scenario_path,
+            runtime_id=runtime_id,
+            work_root=work_root,
+            report_root=report_root,
+            run_id=result.run_id,
+        )
+    raise AssertionError(f"run reached {result.status}, not quality review for {stage}")
+
+
+def _fake_remediation_ui_job(
+    *,
+    ctx: object,
+    endpoint: str,
+    payload: dict[str, object],
+    stage: str,
+    stage_run_id: str,
+    action: str,
+) -> tuple[str, Path, dict[str, object]]:
+    bundle_root = ctx.bundle_root
+    assert isinstance(bundle_root, Path)
+    stale_stages = (
+        ["review", "qa"]
+        if endpoint == "/api/remediation/launch"
+        else (["qa"] if str(payload.get("stage", "")) == "review" else [])
+    )
+    evidence_payload: dict[str, object] = {
+        "endpoint": endpoint,
+        "payload": payload,
+        "stage": stage,
+        "stage_run_id": stage_run_id,
+        "action": action,
+        "job_payload": {
+            "status": "completed",
+            "result": {
+                "completed": True,
+                "status": {
+                    "stale_stages": [
+                        {"stage": stale_stage} for stale_stage in stale_stages
+                    ],
+                },
+            },
+        },
+    }
+    evidence_path = (
+        bundle_root
+        / "remediation-actions"
+        / f"fake-{stage_run_id}-{action}.json"
+    )
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(json.dumps(evidence_payload, indent=2) + "\n", encoding="utf-8")
+    return "pass", evidence_path, evidence_payload
 
 
 def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
@@ -1153,15 +1259,18 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert "`aidd.example.toml`" in repository_state_context
     assert "### Setup-baseline untracked non-AIDD files" in repository_state_context
     assert "`setup.log`" in repository_state_context
-    for stage in STAGES:
-        assert (result.bundle_root / "stage-audits" / f"{stage}.json").exists()
-        assert (result.bundle_root / "stage-audits" / f"{stage}.md").exists()
-    for stage in STAGES:
+    completed_stage_runs = state_payload["completed_stage_runs"]
+    assert [item["stage"] for item in completed_stage_runs] == list(STAGES)
+    for index, stage in enumerate(STAGES, start=1):
+        stage_run_id = f"stage-{index:04d}-{stage}"
+        assert (result.bundle_root / "stage-audits" / f"{stage_run_id}.json").exists()
+        assert (result.bundle_root / "stage-audits" / f"{stage_run_id}.md").exists()
         stage_audit = json.loads(
-            (result.bundle_root / "stage-audits" / f"{stage}.json").read_text(
+            (result.bundle_root / "stage-audits" / f"{stage_run_id}.json").read_text(
                 encoding="utf-8"
             )
         )
+        assert stage_audit["stage_run_id"] == stage_run_id
         assert stage_audit["stage_state"] == "passed"
         assert stage_audit["unresolved_questions"] is False
         assert stage_audit["consistency_findings"] == []
@@ -1295,11 +1404,12 @@ def test_black_box_live_product_evaluation_stops_after_stage_for_quality_review(
     )
 
     assert result.status == "awaiting-quality-review"
-    required_path = result.bundle_root / "stage-quality-audits" / "idea.md"
+    required_path = result.bundle_root / "stage-quality-audits" / "stage-0001-idea.md"
     assert result.quality_review_request_path == required_path
     assert not required_path.exists()
-    assert (result.bundle_root / "stage-audits" / "idea.json").exists()
-    assert not (result.bundle_root / "stage-audits" / "research.json").exists()
+    assert (result.bundle_root / "stage-audits" / "stage-0001-idea.json").exists()
+    assert not (result.bundle_root / "stage-audits" / "idea.json").exists()
+    assert not (result.bundle_root / "stage-audits" / "stage-0002-research.json").exists()
     assert not (result.bundle_root / "verdict.md").exists()
     state_payload = json.loads(
         (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
@@ -1307,7 +1417,11 @@ def test_black_box_live_product_evaluation_stops_after_stage_for_quality_review(
     assert state_payload["status"] == "awaiting-quality-review"
     assert state_payload["next_action"] == "quality-review"
     assert state_payload["quality_review_required_stage"] == "idea"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0001-idea"
     assert state_payload["completed_stages"] == ["idea"]
+    assert [item["stage_run_id"] for item in state_payload["completed_stage_runs"]] == [
+        "stage-0001-idea"
+    ]
 
 
 def test_black_box_live_product_evaluation_resume_requires_stage_quality_audit(
@@ -1351,7 +1465,8 @@ def test_black_box_live_product_evaluation_resume_requires_valid_flow_decision(
         work_root=work_root,
         report_root=report_root,
     )
-    invalid_audit_path = first.bundle_root / "stage-quality-audits" / "idea.md"
+    invalid_audit_path = first.quality_review_request_path
+    assert invalid_audit_path is not None
     invalid_audit_path.parent.mkdir(parents=True, exist_ok=True)
     invalid_audit_path.write_text(
         "\n".join(
@@ -1378,7 +1493,7 @@ def test_black_box_live_product_evaluation_resume_requires_valid_flow_decision(
 
     assert resumed.status == "awaiting-quality-review"
     assert resumed.quality_review_request_path == invalid_audit_path
-    assert not (resumed.bundle_root / "stage-audits" / "research.json").exists()
+    assert not (resumed.bundle_root / "stage-audits" / "stage-0002-research.json").exists()
     state_payload = json.loads(
         (resumed.bundle_root / "flow-state.json").read_text(encoding="utf-8")
     )
@@ -1417,13 +1532,18 @@ def test_black_box_live_product_evaluation_resume_continues_after_audit_file(
     assert resumed.status == "awaiting-quality-review"
     assert resumed.run_id == first.run_id
     assert resumed.quality_review_request_path == (
-        resumed.bundle_root / "stage-quality-audits" / "research.md"
+        resumed.bundle_root / "stage-quality-audits" / "stage-0002-research.md"
     )
     state_payload = json.loads(
         (resumed.bundle_root / "flow-state.json").read_text(encoding="utf-8")
     )
     assert state_payload["completed_stages"] == ["idea", "research"]
-    assert (resumed.bundle_root / "stage-audits" / "research.json").exists()
+    assert [item["stage_run_id"] for item in state_payload["completed_stage_runs"]] == [
+        "stage-0001-idea",
+        "stage-0002-research",
+    ]
+    assert (resumed.bundle_root / "stage-audits" / "stage-0002-research.json").exists()
+    assert not (resumed.bundle_root / "stage-audits" / "research.json").exists()
 
 
 def test_black_box_live_product_evaluation_stop_not_counted_is_manual_quality_stop(
@@ -1497,6 +1617,234 @@ def test_black_box_live_product_evaluation_stop_not_counted_is_manual_quality_st
     assert steps[-1]["classification"] == "manual-quality-stop"
 
 
+def test_black_box_live_product_evaluation_request_remediation_from_review_runs_new_implement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        _fake_remediation_ui_job,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "review",
+            "source_ids": ["RV-1"],
+            "operator_note": "Fix rejected review finding.",
+        },
+    )
+
+    remediated = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert remediated.status == "awaiting-quality-review"
+    state_payload = json.loads(
+        (remediated.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["quality_review_required_stage"] == "implement"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0008-implement"
+    assert state_payload["stale_downstream_stages"] == ["review", "qa"]
+    assert state_payload["handled_quality_stage_run_ids"] == ["stage-0007-review"]
+    assert state_payload["remediation_cycles"] == 1
+    assert [item["stage_run_id"] for item in state_payload["completed_stage_runs"]] == [
+        "stage-0001-idea",
+        "stage-0002-research",
+        "stage-0003-plan",
+        "stage-0004-review-spec",
+        "stage-0005-tasklist",
+        "stage-0006-implement",
+        "stage-0007-review",
+        "stage-0008-implement",
+    ]
+    assert (remediated.bundle_root / "stage-audits" / "stage-0006-implement.json").exists()
+    assert (remediated.bundle_root / "stage-audits" / "stage-0008-implement.json").exists()
+    assert not (remediated.bundle_root / "stage-audits" / "implement.json").exists()
+
+
+def test_black_box_live_product_evaluation_reruns_stale_review_then_qa(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        _fake_remediation_ui_job,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "review",
+            "source_ids": ["RV-1"],
+            "operator_note": "Fix rejected review finding.",
+        },
+    )
+    implement_checkpoint = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+    _write_stage_quality_audit(implement_checkpoint.bundle_root, stage="implement")
+
+    review_rerun = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert review_rerun.status == "awaiting-quality-review"
+    state_payload = json.loads(
+        (review_rerun.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["quality_review_required_stage"] == "review"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0009-review"
+    assert state_payload["stale_downstream_stages"] == ["qa"]
+    _write_stage_quality_audit(review_rerun.bundle_root, stage="review")
+
+    qa_rerun = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert qa_rerun.status == "awaiting-quality-review"
+    state_payload = json.loads(
+        (qa_rerun.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["quality_review_required_stage"] == "qa"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0010-qa"
+    assert state_payload["stale_downstream_stages"] == []
+    assert [item["stage_run_id"] for item in state_payload["completed_stage_runs"]][-3:] == [
+        "stage-0008-implement",
+        "stage-0009-review",
+        "stage-0010-qa",
+    ]
+
+
+def test_black_box_live_product_evaluation_request_remediation_from_qa_starts_new_loop(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        _fake_remediation_ui_job,
+    )
+    qa_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="qa",
+    )
+    _write_stage_quality_audit(
+        qa_checkpoint.bundle_root,
+        stage="qa",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "qa",
+            "source_ids": ["risk-1"],
+            "operator_note": "Fix QA risk.",
+        },
+    )
+
+    remediated = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=qa_checkpoint.run_id,
+    )
+
+    state_payload = json.loads(
+        (remediated.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert remediated.status == "awaiting-quality-review"
+    assert state_payload["quality_review_required_stage"] == "implement"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0009-implement"
+    assert state_payload["handled_quality_stage_run_ids"] == ["stage-0008-qa"]
+    assert state_payload["stale_downstream_stages"] == ["review", "qa"]
+
+
+def test_black_box_live_product_evaluation_invalid_remediation_audit_keeps_quality_gate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert result.status == "awaiting-quality-review"
+    assert state_payload["quality_review_required_stage"] == "review"
+    assert "missing Source stage" in state_payload["quality_review_reason"]
+    assert not (result.bundle_root / "stage-audits" / "stage-0008-implement.json").exists()
+
+
 def test_black_box_live_e2e_implement_audit_surfaces_untracked_product_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1516,7 +1864,7 @@ def test_black_box_live_e2e_implement_audit_surfaces_untracked_product_files(
 
     assert result.status == "pass"
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "implement.json").read_text(
+        (result.bundle_root / "stage-audits" / "stage-0006-implement.json").read_text(
             encoding="utf-8"
         )
     )
@@ -1532,7 +1880,7 @@ def test_black_box_live_e2e_implement_audit_surfaces_untracked_product_files(
         "src/utils/error.ts"
     ]
     audit_markdown = (
-        result.bundle_root / "stage-audits" / "implement.md"
+        result.bundle_root / "stage-audits" / "stage-0006-implement.md"
     ).read_text(encoding="utf-8")
     assert "### New Untracked Product Files" in audit_markdown
     assert "`src/utils/error.ts`" in audit_markdown
@@ -1621,6 +1969,10 @@ def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_man
     assert [item["stage"] for item in manual_artifacts["stage_quality_audits"]] == list(
         STAGES
     )
+    assert [item["stage_run_id"] for item in manual_artifacts["stage_quality_audits"]] == [
+        f"stage-{index:04d}-{stage}"
+        for index, stage in enumerate(STAGES, start=1)
+    ]
     assert all(item["exists"] for item in manual_artifacts["stage_quality_audits"])
     assert [item["kind"] for item in manual_artifacts["final_reports"]] == [
         "flow-quality-report",
@@ -1707,7 +2059,9 @@ def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
 
     assert result.status == "pass"
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "idea.json").read_text(encoding="utf-8")
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert audit_payload["validator_verdict"] == "pass"
     assert audit_payload["consistency_findings"] == [
@@ -1723,9 +2077,9 @@ def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
             ),
         }
     ]
-    audit_markdown = (result.bundle_root / "stage-audits" / "idea.md").read_text(
-        encoding="utf-8"
-    )
+    audit_markdown = (
+        result.bundle_root / "stage-audits" / "stage-0001-idea.md"
+    ).read_text(encoding="utf-8")
     assert "## Consistency Findings" in audit_markdown
     assert "non-gating=True" in audit_markdown
 
@@ -2481,7 +2835,9 @@ def test_black_box_live_e2e_reports_stage_failure_from_step_evidence(
     assert "plan" in result.first_failure_note
     assert "run-stage" in (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "plan.json").read_text(encoding="utf-8")
+        (result.bundle_root / "stage-audits" / "stage-0003-plan.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert audit_payload["stage_state"] == "failed"
     assert audit_payload["validator_verdict"] == "fail"
@@ -2547,7 +2903,9 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     reconciliation = json.loads(reconciliation_path.read_text(encoding="utf-8"))
     assert reconciliation["reconciled"] is True
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "idea.json").read_text(encoding="utf-8")
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert audit_payload["stage_state"] == "failed"
     assert audit_payload["stage_metadata_status"] == "failed"

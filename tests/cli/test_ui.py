@@ -2453,6 +2453,103 @@ def test_ui_remediation_rerun_downstream_clears_successful_stages_before_failure
     assert [item["stage"] for item in status["stale_stages"]] == ["qa"]  # type: ignore[index]
 
 
+def test_ui_remediation_rerun_stage_runs_one_stale_stage_and_clears_it(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    request = create_remediation_request(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        source_stage="review",
+        source_ids=("RV-1",),
+        operator_note="Fix review finding.",
+    )
+    mark_downstream_stale(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        invalidated_by=request.request_id,
+    )
+    captured: list[StageRunOptions] = []
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        captured.append(options)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/remediation/rerun-stage",
+        {"runtime": "generic-cli", "run_id": "run-ui", "stage": "review"},
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
+    completed = _wait_job(service, str(payload["job_id"]))
+    status = _payload(service.handle_get("/api/remediation/status", {"run_id": ["run-ui"]}))
+
+    assert [options.stage for options in captured] == ["review"]
+    assert captured[0].runtime == "generic-cli"
+    assert completed["status"] == "completed"
+    assert completed["result"]["rerun_stage"] == "review"  # type: ignore[index]
+    assert [item["stage"] for item in status["stale_stages"]] == ["qa"]  # type: ignore[index]
+
+
+def test_ui_remediation_rerun_stage_does_not_clear_failed_stage(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    request = create_remediation_request(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        source_stage="qa",
+        source_ids=("risk-1",),
+        operator_note="Fix QA risk.",
+    )
+    mark_downstream_stale(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        invalidated_by=request.request_id,
+    )
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        if options.stage == "review":
+            raise typer.Exit(1)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/remediation/rerun-stage",
+        {"runtime": "generic-cli", "run_id": "run-ui", "stage": "review"},
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
+    failed = _wait_job_status(service, str(payload["job_id"]), "failed")
+    status = _payload(service.handle_get("/api/remediation/status", {"run_id": ["run-ui"]}))
+
+    assert failed["result"]["completed"] is False  # type: ignore[index]
+    assert [item["stage"] for item in status["stale_stages"]] == ["review", "qa"]  # type: ignore[index]
+
+
+def test_ui_remediation_rerun_stage_rejects_non_stale_stage(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/remediation/rerun-stage",
+        {"runtime": "generic-cli", "run_id": "run-ui", "stage": "review"},
+    )
+
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert "is not stale" in _error_payload(response)["error"]
+
+
 def test_ui_job_cancel_endpoint_marks_running_job_cancelling_then_cancelled(
     tmp_path: Path,
 ) -> None:

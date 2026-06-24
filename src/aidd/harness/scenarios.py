@@ -81,6 +81,7 @@ class ScenarioRunConfig:
     patch_budget_files: int | None
     timeout_minutes: int | None
     interview_required: bool
+    max_remediation_cycles: int = 3
 
 
 @dataclass(frozen=True)
@@ -367,9 +368,20 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
     if isinstance(limits, dict):
         patch_budget_files = _to_optional_int(payload=limits, key="patch_budget_files")
         timeout_minutes = _to_optional_int(payload=limits, key="timeout_minutes")
+        max_remediation_cycles = _to_optional_int(
+            payload=limits,
+            key="max_remediation_cycles",
+        )
+        if max_remediation_cycles is None:
+            max_remediation_cycles = 3
     else:
         patch_budget_files = None
         timeout_minutes = None
+        max_remediation_cycles = 3
+    if max_remediation_cycles < 1:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'limits.max_remediation_cycles' must be a positive integer."
+        )
 
     interview_required = bool(interview.get("required")) if isinstance(interview, dict) else False
     if not isinstance(runtime_targets_raw, list) or not runtime_targets_raw:
@@ -388,6 +400,7 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
         runtime_targets=runtime_targets,
         patch_budget_files=patch_budget_files,
         timeout_minutes=timeout_minutes,
+        max_remediation_cycles=max_remediation_cycles,
         interview_required=interview_required,
     )
 
