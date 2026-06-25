@@ -146,6 +146,14 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
 - If the evaluator is interrupted, it records `interrupted-resumable` state,
   attempts to terminate live runtime subprocesses, and requires explicit
   `--run-id` before continuing.
+- `limits.timeout_minutes` is the per-stage hard command timeout. Separately,
+  `limits.no_progress_timeout_minutes` is an idle-progress budget for public
+  `aidd stage run` commands; its default for live manifests is `30` minutes.
+  If the provider process stays alive but stdout/stderr and watched stage artifacts
+  stop changing past that budget, the evaluator stops the process group and records
+  terminal `infra-fail` with reason `provider-no-progress before completed stage
+  artifact`. This is not `blocked`, not `manual-quality-stop`, not product-quality
+  failure, and not a product-quality defect.
 - Local runs may use optional environment variable overrides for custom wrapper commands:
   - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
   - `AIDD_EVAL_CODEX_COMMAND` for `codex`

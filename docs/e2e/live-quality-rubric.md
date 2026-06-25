@@ -250,7 +250,16 @@ Use this exact structure:
 stage reachability, log completeness, provider behavior, repair/interview flow, and
 harness defects. Review `run-transcript.json`, `stage-timing.json`, and
 `log-analysis.md` to confirm that timeout evidence distinguishes the per-stage
-command timeout from the absence of a global flow timeout.
+command timeout, the live no-progress timeout, and the absence of a global flow
+timeout.
+
+Provider no-progress is an execution integrity blocker, not product quality. When
+`log-analysis.md` reports `provider-no-progress before completed stage artifact`,
+the public stage command was alive but stdout/stderr and watched stage artifacts
+stopped changing until `limits.no_progress_timeout_minutes` elapsed. Treat that as
+`blocked-provider`/`blocked-infra` evidence in the final matrix table; do not call
+it counted-clean, manual-quality-stop, unresolved-question `blocked`, or an AIDD
+code-quality defect.
 
 `Artifact Quality`, `Code Quality`, and `UI/UX Quality` evaluate the deliverable
 produced by the full flow. These sections are manual review, not runner state.

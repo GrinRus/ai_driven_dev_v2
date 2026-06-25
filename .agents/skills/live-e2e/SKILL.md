@@ -501,6 +501,14 @@ operator loop instead of relying on a self-mutating product command:
   from the operator environment that live stage execution inherits.
 - Runtime launches but immediately fails in native mode: inspect provider auth, model selection, and sandbox permissions.
 - Runtime launches but immediately fails in `adapter-flags` mode: the configured command is probably not an AIDD-compatible wrapper command.
+- `provider-no-progress`: `provider-no-progress before completed stage artifact`
+  means the public `aidd stage run` process stayed alive but stdout/stderr and
+  watched stage artifacts stopped changing until
+  `limits.no_progress_timeout_minutes` elapsed. Inspect `log-analysis.md`,
+  `flow-steps.json`, `stage-timing.json`, and the no-progress reconciliation file;
+  classify it as infra/provider blocker, not counted-clean, not
+  `manual-quality-stop`, not unresolved-question `blocked`, and not product-quality
+  failure.
 - `unsupported-runtime`: the runtime is not declared in the scenario's `runtime_targets`.
 - `blocked`: inspect `operator-action-request.md`, `questions.md`, and
   `answers.md`; as the launching operator-agent, write `[resolved]` answers,

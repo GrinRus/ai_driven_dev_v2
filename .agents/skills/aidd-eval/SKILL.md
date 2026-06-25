@@ -122,7 +122,11 @@ Manual live mutable execution is outside the source checkout by default:
 In black-box live E2E, `limits.timeout_minutes` applies to each public
 `aidd stage run` command. It is not a global flow timeout. Use
 `run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` to
-separate stage command timeouts from provider adapter timeout profiles.
+separate stage command timeouts, live no-progress timeouts, and provider adapter
+timeout profiles. `limits.no_progress_timeout_minutes` defaults to `30` for live
+manifests; when it triggers, classify `provider-no-progress before completed stage
+artifact` as infra/provider evidence, not manual-quality-stop, unresolved-question
+`blocked`, counted-clean, or product-quality failure.
 For installed live manifest verification, AIDD self-check commands should use the
 installed `aidd` binary from `PATH` directly, such as `aidd stage questions ...`.
 Treat `uv run aidd ...` in a live target repo as a workspace-pollution risk because

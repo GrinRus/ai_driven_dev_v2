@@ -31,6 +31,7 @@ _LIVE_MATRIX_ROLES = {"flow-regression", "product-evaluation"}
 _LIVE_FLOW_DRIVERS = {"stepwise-black-box"}
 _LIVE_FLOW_CHECKPOINT_POLICIES = {"after-each-step"}
 _LIVE_FLOW_ANSWER_POLICIES = {"agent-decides"}
+DEFAULT_LIVE_NO_PROGRESS_TIMEOUT_MINUTES = 30
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,7 @@ class ScenarioRunConfig:
     timeout_minutes: int | None
     interview_required: bool
     max_remediation_cycles: int = 3
+    no_progress_timeout_minutes: int | None = None
 
 
 @dataclass(frozen=True)
@@ -368,6 +370,10 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
     if isinstance(limits, dict):
         patch_budget_files = _to_optional_int(payload=limits, key="patch_budget_files")
         timeout_minutes = _to_optional_int(payload=limits, key="timeout_minutes")
+        no_progress_timeout_minutes = _to_optional_int(
+            payload=limits,
+            key="no_progress_timeout_minutes",
+        )
         max_remediation_cycles = _to_optional_int(
             payload=limits,
             key="max_remediation_cycles",
@@ -377,7 +383,18 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
     else:
         patch_budget_files = None
         timeout_minutes = None
+        no_progress_timeout_minutes = None
         max_remediation_cycles = 3
+    if (
+        no_progress_timeout_minutes is None
+        and raw.get("scenario_class") in _LIVE_SCENARIO_CLASSES
+    ):
+        no_progress_timeout_minutes = DEFAULT_LIVE_NO_PROGRESS_TIMEOUT_MINUTES
+    if no_progress_timeout_minutes is not None and no_progress_timeout_minutes < 1:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'limits.no_progress_timeout_minutes' must be a "
+            "positive integer."
+        )
     if max_remediation_cycles < 1:
         raise ScenarioManifestError(
             "Scenario manifest key 'limits.max_remediation_cycles' must be a positive integer."
@@ -401,6 +418,7 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
         patch_budget_files=patch_budget_files,
         timeout_minutes=timeout_minutes,
         max_remediation_cycles=max_remediation_cycles,
+        no_progress_timeout_minutes=no_progress_timeout_minutes,
         interview_required=interview_required,
     )
 

@@ -14,11 +14,12 @@ import tempfile
 import threading
 import time
 import tomllib
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal, cast
+from queue import Empty, Queue
+from typing import Any, Literal, TextIO, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -200,7 +201,9 @@ QUALITY_REPORT_FILENAME = "quality-report.md"
 MANUAL_QUALITY_STOP_JSON_FILENAME = "manual-quality-stop.json"
 MANUAL_QUALITY_STOP_MARKDOWN_FILENAME = "manual-quality-stop.md"
 FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
+PROVIDER_NO_PROGRESS_EXIT_CODE = 125
 STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
+STAGE_NO_PROGRESS_RECONCILIATION_SUFFIX = "-no-progress-reconciliation.json"
 NEXT_FLOW_OPERATOR_DECISIONS = (
     "no-follow-up",
     "follow-up-draft",
@@ -217,6 +220,9 @@ TERMINAL_STAGE_METADATA_STATUSES = {"blocked", "failed", "succeeded"}
 PRESERVED_STATE_EXTRA_KEYS = (
     "error",
     "interruption",
+    "no_progress",
+    "no_progress_details",
+    "no_progress_reconciliation",
     "operator_action_request_json",
     "operator_action_request_markdown",
     "stage_exit_code",
@@ -227,6 +233,8 @@ PRESERVED_STATE_EXTRA_KEYS = (
 class BlackBoxCommandResult:
     command: tuple[str, ...]
     transcript: HarnessCommandTranscript
+    no_progress: bool = False
+    no_progress_details: dict[str, object] | None = None
 
     @property
     def exit_code(self) -> int:
@@ -430,10 +438,36 @@ def _run_black_box_command(
     cwd: Path,
     environment: dict[str, str],
     timeout_seconds: float | None,
+    no_progress_timeout_seconds: float | None = None,
+    progress_probe: Callable[[], dict[str, object]] | None = None,
 ) -> BlackBoxCommandResult:
     started = time.monotonic()
     timed_out = False
+    no_progress = False
+    no_progress_details: dict[str, object] | None = None
     process: subprocess.Popen[str] | None = None
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+    output_queue: Queue[tuple[str, str | None]] = Queue()
+    reader_threads: list[threading.Thread] = []
+    stream_done = {"stdout": False, "stderr": False}
+    hard_deadline = (
+        None if timeout_seconds is None else started + max(float(timeout_seconds), 0.0)
+    )
+    last_progress_monotonic = started
+    last_progress_utc = _utc_now()
+    last_progress_reason = "process-started"
+    last_progress_snapshot: dict[str, object] | None = None
+    last_progress_signature: str | None = None
+
+    if progress_probe is not None:
+        try:
+            last_progress_snapshot = progress_probe()
+            last_progress_signature = _progress_snapshot_signature(last_progress_snapshot)
+        except OSError as exc:
+            last_progress_snapshot = {"probe_error": str(exc)}
+            last_progress_signature = _progress_snapshot_signature(last_progress_snapshot)
+
     try:
         process = subprocess.Popen(
             command,
@@ -444,29 +478,128 @@ def _run_black_box_command(
             text=True,
             start_new_session=True,
         )
-        stdout_text, stderr_text = process.communicate(timeout=timeout_seconds)
-        exit_code = process.returncode
-    except subprocess.TimeoutExpired as exc:
-        timed_out = True
-        exit_code = 124
-        stdout_text = _timeout_output_to_text(exc.stdout)
-        stderr_text = _timeout_output_to_text(exc.stderr)
-        cleanup = _terminate_process_group(process)
-        if cleanup["stdout_text"]:
-            stdout_text = str(cleanup["stdout_text"])
-        if cleanup["stderr_text"]:
-            stderr_text = str(cleanup["stderr_text"])
-        timeout_label = (
-            f"{timeout_seconds:.3f}s" if timeout_seconds is not None else "configured timeout"
-        )
-        stderr_text = (
-            f"{stderr_text.rstrip()}\nCommand timed out after {timeout_label}.\n"
-        ).lstrip()
+
+        reader_threads = [
+            threading.Thread(
+                target=_read_command_stream,
+                args=("stdout", process.stdout, output_queue),
+                daemon=True,
+            ),
+            threading.Thread(
+                target=_read_command_stream,
+                args=("stderr", process.stderr, output_queue),
+                daemon=True,
+            ),
+        ]
+        for thread in reader_threads:
+            thread.start()
+
+        exit_code: int | None = None
+        while True:
+            try:
+                stream_name, chunk = output_queue.get(timeout=0.05)
+            except Empty:
+                stream_name = ""
+                chunk = None
+            if stream_name in stream_done and chunk is None:
+                stream_done[stream_name] = True
+            elif stream_name == "stdout" and chunk is not None:
+                stdout_chunks.append(chunk)
+                last_progress_monotonic = time.monotonic()
+                last_progress_utc = _utc_now()
+                last_progress_reason = "stdout"
+            elif stream_name == "stderr" and chunk is not None:
+                stderr_chunks.append(chunk)
+                last_progress_monotonic = time.monotonic()
+                last_progress_utc = _utc_now()
+                last_progress_reason = "stderr"
+
+            if progress_probe is not None:
+                try:
+                    snapshot = progress_probe()
+                    signature = _progress_snapshot_signature(snapshot)
+                except OSError as exc:
+                    snapshot = {"probe_error": str(exc)}
+                    signature = _progress_snapshot_signature(snapshot)
+                if signature != last_progress_signature:
+                    last_progress_signature = signature
+                    last_progress_snapshot = snapshot
+                    last_progress_monotonic = time.monotonic()
+                    last_progress_utc = _utc_now()
+                    last_progress_reason = "watched-files"
+
+            now = time.monotonic()
+            if hard_deadline is not None and now >= hard_deadline:
+                timed_out = True
+                exit_code = 124
+                cleanup = _stop_process_group_for_streaming(process)
+                for thread in reader_threads:
+                    thread.join(timeout=1.0)
+                timeout_label = (
+                    f"{timeout_seconds:.3f}s"
+                    if timeout_seconds is not None
+                    else "configured timeout"
+                )
+                stderr_chunks.append(f"Command timed out after {timeout_label}.\n")
+                if cleanup.get("stderr_text"):
+                    stderr_chunks.append(str(cleanup["stderr_text"]))
+                if cleanup.get("stdout_text"):
+                    stdout_chunks.append(str(cleanup["stdout_text"]))
+                break
+
+            if (
+                no_progress_timeout_seconds is not None
+                and now - last_progress_monotonic >= no_progress_timeout_seconds
+            ):
+                no_progress = True
+                exit_code = PROVIDER_NO_PROGRESS_EXIT_CODE
+                cleanup = _stop_process_group_for_streaming(process)
+                for thread in reader_threads:
+                    thread.join(timeout=1.0)
+                stdout_tail = _text_tail("".join(stdout_chunks))
+                stderr_tail = _text_tail("".join(stderr_chunks))
+                no_progress_details = {
+                    "reason": "provider-no-progress",
+                    "message": "provider-no-progress before completed stage artifact",
+                    "duration_seconds": max(now - started, 0.0),
+                    "no_progress_timeout_seconds": no_progress_timeout_seconds,
+                    "hard_timeout_seconds": timeout_seconds,
+                    "last_progress_at_utc": last_progress_utc,
+                    "last_progress_seconds_ago": max(now - last_progress_monotonic, 0.0),
+                    "last_progress_reason": last_progress_reason,
+                    "observed_files": last_progress_snapshot or {},
+                    "stdout_tail": stdout_tail,
+                    "stderr_tail": stderr_tail,
+                    "process_exit_code": cleanup.get("return_code"),
+                    "terminated_process_group": cleanup.get("terminated_process_group"),
+                }
+                stderr_chunks.append(
+                    "Command stopped because provider made no progress for "
+                    f"{no_progress_timeout_seconds:.3f}s before completed stage artifact.\n"
+                )
+                if cleanup.get("stderr_text"):
+                    stderr_chunks.append(str(cleanup["stderr_text"]))
+                if cleanup.get("stdout_text"):
+                    stdout_chunks.append(str(cleanup["stdout_text"]))
+                break
+
+            if process.poll() is not None and all(stream_done.values()):
+                exit_code = process.returncode
+                break
+
+        for thread in reader_threads:
+            thread.join(timeout=1.0)
+        stdout_text = "".join(stdout_chunks)
+        stderr_text = "".join(stderr_chunks)
+        if exit_code is None:
+            exit_code = process.returncode if process.returncode is not None else 1
     except LiveE2EInterrupted as exc:
-        cleanup = _terminate_process_group(process)
+        cleanup = _stop_process_group_for_streaming(process)
+        for thread in reader_threads:
+            thread.join(timeout=1.0)
         duration_seconds = time.monotonic() - started
-        stdout_text = str(cleanup.get("stdout_text") or "")
-        stderr_text = str(cleanup.get("stderr_text") or "")
+        stdout_text = "".join(stdout_chunks) + str(cleanup.get("stdout_text") or "")
+        stderr_text = "".join(stderr_chunks) + str(cleanup.get("stderr_text") or "")
         transcript = HarnessCommandTranscript(
             command=_command_text(command),
             exit_code=130,
@@ -476,7 +609,10 @@ def _run_black_box_command(
             timed_out=False,
             timeout_seconds=timeout_seconds,
         )
-        exc.command_result = BlackBoxCommandResult(command=command, transcript=transcript)
+        exc.command_result = BlackBoxCommandResult(
+            command=command,
+            transcript=transcript,
+        )
         exc.cleanup = {
             "command": list(command),
             "process_exit_code": cleanup.get("return_code"),
@@ -485,13 +621,15 @@ def _run_black_box_command(
         }
         raise
     except KeyboardInterrupt as exc:
-        cleanup = _terminate_process_group(process)
+        cleanup = _stop_process_group_for_streaming(process)
+        for thread in reader_threads:
+            thread.join(timeout=1.0)
         duration_seconds = time.monotonic() - started
         transcript = HarnessCommandTranscript(
             command=_command_text(command),
             exit_code=130,
-            stdout_text=str(cleanup.get("stdout_text") or ""),
-            stderr_text=str(cleanup.get("stderr_text") or ""),
+            stdout_text="".join(stdout_chunks) + str(cleanup.get("stdout_text") or ""),
+            stderr_text="".join(stderr_chunks) + str(cleanup.get("stderr_text") or ""),
             duration_seconds=duration_seconds,
             timed_out=False,
             timeout_seconds=timeout_seconds,
@@ -520,7 +658,71 @@ def _run_black_box_command(
         timed_out=timed_out,
         timeout_seconds=timeout_seconds,
     )
-    return BlackBoxCommandResult(command=command, transcript=transcript)
+    return BlackBoxCommandResult(
+        command=command,
+        transcript=transcript,
+        no_progress=no_progress,
+        no_progress_details=no_progress_details,
+    )
+
+
+def _read_command_stream(
+    name: str,
+    stream: TextIO | None,
+    output_queue: Queue[tuple[str, str | None]],
+) -> None:
+    if stream is None:
+        output_queue.put((name, None))
+        return
+    try:
+        for line in iter(stream.readline, ""):
+            if not line:
+                break
+            output_queue.put((name, line))
+    finally:
+        output_queue.put((name, None))
+
+
+def _stop_process_group_for_streaming(
+    process: subprocess.Popen[str] | None,
+) -> dict[str, object]:
+    if process is None:
+        return {
+            "return_code": None,
+            "stdout_text": "",
+            "stderr_text": "",
+            "terminated_process_group": False,
+        }
+    terminated_process_group = False
+    if process.poll() is None:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+            terminated_process_group = True
+        except ProcessLookupError:
+            pass
+        except OSError:
+            process.terminate()
+        try:
+            process.wait(timeout=2.0)
+        except subprocess.TimeoutExpired:
+            if process.poll() is None:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    terminated_process_group = True
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    process.kill()
+            try:
+                process.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                pass
+    return {
+        "return_code": process.returncode,
+        "stdout_text": "",
+        "stderr_text": "",
+        "terminated_process_group": terminated_process_group,
+    }
 
 
 def _terminate_process_group(
@@ -580,16 +782,92 @@ def _timeout_output_to_text(value: str | bytes | None) -> str:
     return value
 
 
+def _text_tail(value: str, *, max_chars: int = 4000) -> str:
+    return value[-max_chars:] if len(value) > max_chars else value
+
+
+def _observed_path_payload(path: Path) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "path": path.resolve(strict=False).as_posix(),
+        "exists": path.exists(),
+    }
+    if not path.exists():
+        return payload
+    try:
+        stat = path.stat()
+    except OSError as exc:
+        payload["error"] = str(exc)
+        return payload
+    payload["mtime_ns"] = stat.st_mtime_ns
+    if path.is_file():
+        payload.update(
+            {
+                "kind": "file",
+                "size": stat.st_size,
+            }
+        )
+        return payload
+    if not path.is_dir():
+        payload["kind"] = "other"
+        return payload
+
+    latest_mtime_ns = stat.st_mtime_ns
+    total_size = 0
+    file_count = 0
+    sample_files: list[str] = []
+    for child in sorted(path.rglob("*")):
+        try:
+            child_stat = child.stat()
+        except OSError:
+            continue
+        latest_mtime_ns = max(latest_mtime_ns, child_stat.st_mtime_ns)
+        if child.is_file():
+            file_count += 1
+            total_size += child_stat.st_size
+            if len(sample_files) < 25:
+                sample_files.append(child.relative_to(path).as_posix())
+    payload.update(
+        {
+            "kind": "dir",
+            "latest_mtime_ns": latest_mtime_ns,
+            "file_count": file_count,
+            "total_size": total_size,
+            "sample_files": sample_files,
+        }
+    )
+    return payload
+
+
+def _progress_snapshot(paths: Sequence[Path]) -> dict[str, object]:
+    return {
+        "captured_at_utc": _utc_now(),
+        "observed_paths": [_observed_path_payload(path) for path in paths],
+    }
+
+
+def _progress_snapshot_signature(snapshot: dict[str, object]) -> str:
+    comparable = dict(snapshot)
+    comparable.pop("captured_at_utc", None)
+    return json.dumps(comparable, sort_keys=True, separators=(",", ":"))
+
+
 def _stage_command_timeout_seconds(scenario: Scenario) -> float | None:
     if scenario.run.timeout_minutes is None:
         return None
     return float(scenario.run.timeout_minutes * 60)
 
 
+def _stage_no_progress_timeout_seconds(scenario: Scenario) -> float | None:
+    if scenario.run.no_progress_timeout_minutes is None:
+        return None
+    return float(scenario.run.no_progress_timeout_minutes * 60)
+
+
 def _timeout_policy_payload(ctx: FlowContext) -> dict[str, object]:
     return {
         "scope": "per-stage-command",
         "stage_command_timeout_seconds": _stage_command_timeout_seconds(ctx.scenario),
+        "no_progress_timeout_seconds": _stage_no_progress_timeout_seconds(ctx.scenario),
         "global_flow_timeout_seconds": None,
         "runtime_config_source": None if ctx.config_path is None else ctx.config_path.name,
     }
@@ -1390,6 +1668,8 @@ def _record_step(
                 "stdout_text": result.stdout_text,
                 "timed_out": result.transcript.timed_out,
                 "timeout_seconds": result.transcript.timeout_seconds,
+                "no_progress": result.no_progress,
+                "no_progress_details": result.no_progress_details,
             }
             for result in command_results
         ],
@@ -2896,6 +3176,8 @@ def _inspection_commands(ctx: FlowContext, stage: str) -> tuple[tuple[str, ...],
 
 
 def _classify_stage_run(result: BlackBoxCommandResult) -> StepClassification:
+    if result.no_progress:
+        return "infra-fail"
     output = f"{result.stdout_text}\n{result.stderr_text}".lower()
     if (
         "blocking questions are unresolved" in output
@@ -4265,6 +4547,54 @@ def _stage_root(ctx: FlowContext, stage: str) -> Path:
     return working_copy / ".aidd" / "workitems" / ctx.work_item / "stages" / stage
 
 
+def _stage_run_observed_paths(ctx: FlowContext, stage: str) -> tuple[Path, ...]:
+    working_copy = _require_working_copy(ctx)
+    workspace_root = working_copy / ".aidd"
+    run_stage_root = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / ctx.work_item
+        / ctx.run_id
+        / "stages"
+        / stage
+    )
+    attempt_root = run_stage_root / "attempts" / "attempt-0001"
+    output_root = _stage_output_root(ctx, stage)
+    primary_output = _PRIMARY_STAGE_OUTPUTS.get(stage)
+    expected_docs = [
+        _stage_root(ctx, stage) / "stage-result.md",
+        _stage_root(ctx, stage) / "validator-report.md",
+        _stage_root(ctx, stage) / "questions.md",
+        _stage_root(ctx, stage) / "answers.md",
+        output_root / "stage-result.md",
+        output_root / "validator-report.md",
+    ]
+    if primary_output is not None:
+        expected_docs.extend(
+            [
+                _stage_root(ctx, stage) / primary_output,
+                output_root / primary_output,
+            ]
+        )
+    return (
+        _stage_root(ctx, stage),
+        output_root,
+        run_stage_root,
+        run_stage_root / "stage-metadata.json",
+        attempt_root,
+        attempt_root / "runtime.log",
+        attempt_root / "runtime.jsonl",
+        attempt_root / "events.jsonl",
+        *expected_docs,
+    )
+
+
+def _stage_progress_probe(ctx: FlowContext, stage: str) -> Callable[[], dict[str, object]]:
+    observed_paths = _stage_run_observed_paths(ctx, stage)
+    return lambda: _progress_snapshot(observed_paths)
+
+
 def _stage_document_path(ctx: FlowContext, stage: str, filename: str) -> Path:
     output_path = _stage_output_root(ctx, stage) / filename
     if output_path.exists():
@@ -4293,6 +4623,16 @@ def _stage_timeout_reconciliation_path(
     audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
     audit_id = stage_run_id or stage
     return audit_root / f"{audit_id}{STAGE_TIMEOUT_RECONCILIATION_SUFFIX}"
+
+
+def _stage_no_progress_reconciliation_path(
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str | None = None,
+) -> Path:
+    audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
+    audit_id = stage_run_id or stage
+    return audit_root / f"{audit_id}{STAGE_NO_PROGRESS_RECONCILIATION_SUFFIX}"
 
 
 def _read_text_if_exists(path: Path) -> str:
@@ -4387,7 +4727,61 @@ def _reconcile_timed_out_stage_run(
 ) -> tuple[tuple[Path, ...], dict[str, object] | None]:
     if not stage_result.transcript.timed_out:
         return tuple(), None
+    return _reconcile_failed_incomplete_stage_run(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        stage_result=stage_result,
+        reason="stage-command-timeout",
+        reconciliation_path=_stage_timeout_reconciliation_path(
+            ctx,
+            stage,
+            stage_run_id=stage_run_id,
+        ),
+        extra={
+            "timed_out": True,
+            "timeout_seconds": stage_result.transcript.timeout_seconds,
+        },
+    )
 
+
+def _reconcile_no_progress_stage_run(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str | None = None,
+    stage_result: BlackBoxCommandResult,
+) -> tuple[tuple[Path, ...], dict[str, object] | None]:
+    if not stage_result.no_progress:
+        return tuple(), None
+    return _reconcile_failed_incomplete_stage_run(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        stage_result=stage_result,
+        reason="provider-no-progress",
+        reconciliation_path=_stage_no_progress_reconciliation_path(
+            ctx,
+            stage,
+            stage_run_id=stage_run_id,
+        ),
+        extra={
+            "no_progress": True,
+            "no_progress_details": stage_result.no_progress_details or {},
+        },
+    )
+
+
+def _reconcile_failed_incomplete_stage_run(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str | None,
+    stage_result: BlackBoxCommandResult,
+    reason: str,
+    reconciliation_path: Path,
+    extra: dict[str, object],
+) -> tuple[tuple[Path, ...], dict[str, object]]:
     working_copy = _require_working_copy(ctx)
     workspace_root = working_copy / ".aidd"
     metadata_path = run_stage_metadata_path(
@@ -4429,19 +4823,15 @@ def _reconcile_timed_out_stage_run(
         "scenario_id": ctx.scenario.scenario_id,
         "work_item": ctx.work_item,
         "stage": stage,
-        "timed_out": True,
-        "timeout_seconds": stage_result.transcript.timeout_seconds,
+        "stage_run_id": stage_run_id,
+        "reason": reason,
         "stage_run_exit_code": stage_result.exit_code,
         "metadata_path": metadata_path.as_posix(),
         "previous_status": previous_status,
         "reconciled_status": reconciled_status,
         "reconciled": reconciled,
+        **extra,
     }
-    reconciliation_path = _stage_timeout_reconciliation_path(
-        ctx,
-        stage,
-        stage_run_id=stage_run_id,
-    )
     _write_json(reconciliation_path, payload)
     return (reconciliation_path,), payload
 
@@ -5205,6 +5595,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
 
     stage_command = _stage_run_command(ctx, stage)
     stage_timeout_seconds = _stage_command_timeout_seconds(ctx.scenario)
+    no_progress_timeout_seconds = _stage_no_progress_timeout_seconds(ctx.scenario)
     _persist_state(
         ctx=ctx,
         status="running",
@@ -5218,6 +5609,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
                 "stage_run_id": stage_run_id,
                 "started_at_utc": _utc_now(),
                 "timeout_seconds": stage_timeout_seconds,
+                "no_progress_timeout_seconds": no_progress_timeout_seconds,
                 "command": list(stage_command),
             }
         },
@@ -5227,6 +5619,8 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         cwd=working_copy,
         environment=environment,
         timeout_seconds=stage_timeout_seconds,
+        no_progress_timeout_seconds=no_progress_timeout_seconds,
+        progress_probe=_stage_progress_probe(ctx, stage),
     )
     classification = _classify_stage_run(stage_result)
     timeout_evidence_paths, timeout_reconciliation = _reconcile_timed_out_stage_run(
@@ -5235,6 +5629,21 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         stage_run_id=stage_run_id,
         stage_result=stage_result,
     )
+    no_progress_evidence_paths, no_progress_reconciliation = (
+        _reconcile_no_progress_stage_run(
+            ctx=ctx,
+            stage=stage,
+            stage_run_id=stage_run_id,
+            stage_result=stage_result,
+        )
+    )
+    step_details: dict[str, object] = {}
+    if timeout_reconciliation is not None:
+        step_details["timeout_reconciliation"] = timeout_reconciliation
+    if no_progress_reconciliation is not None:
+        step_details["no_progress_reconciliation"] = no_progress_reconciliation
+    if stage_result.no_progress and stage_result.no_progress_details is not None:
+        step_details["no_progress_details"] = stage_result.no_progress_details
     _record_step(
         ctx=ctx,
         action="run-stage",
@@ -5242,17 +5651,18 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         decision=(
             "Inspect public artifacts before deciding next stage."
             if classification == "pass"
+            else (
+                "Stop as infrastructure failure: provider-no-progress before "
+                "completed stage artifact."
+            )
+            if classification == "infra-fail"
             else "Inspect public artifacts before stopping or requesting operator input."
         ),
         plan=f"Run `{stage}` through the installed public `aidd stage run` surface.",
         stage=stage,
         command_results=(stage_result,),
-        evidence_paths=timeout_evidence_paths,
-        details=(
-            {"timeout_reconciliation": timeout_reconciliation}
-            if timeout_reconciliation is not None
-            else None
-        ),
+        evidence_paths=(*timeout_evidence_paths, *no_progress_evidence_paths),
+        details=step_details or None,
     )
 
     inspection_results = tuple(
@@ -5305,11 +5715,11 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         stage=stage,
         command_results=inspection_results,
     )
-    if inspection_reports_blocked:
+    if inspection_reports_blocked and classification != "infra-fail":
         classification = "blocked"
     frontend_classification = (
         "skipped"
-        if stage_result.transcript.timed_out
+        if stage_result.transcript.timed_out or stage_result.no_progress
         else _run_frontend_checkpoint(ctx, stage)
     )
     _, _, audit_classification = _write_stage_audit(
@@ -5399,6 +5809,30 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             extra={
                 "operator_action_request_json": request_paths[0].as_posix(),
                 "operator_action_request_markdown": request_paths[1].as_posix(),
+            },
+        )
+        return classification
+    if classification == "infra-fail":
+        _persist_state(
+            ctx=ctx,
+            status="infra-fail",
+            next_action="stop",
+            current_stage=stage,
+            completed_stages=_state_completed_stages(ctx.bundle_root),
+            extra={
+                "error": "provider-no-progress before completed stage artifact",
+                "stage_exit_code": stage_result.exit_code,
+                "no_progress": stage_result.no_progress,
+                **(
+                    {"no_progress_details": stage_result.no_progress_details}
+                    if stage_result.no_progress_details is not None
+                    else {}
+                ),
+                **(
+                    {"no_progress_reconciliation": no_progress_reconciliation}
+                    if no_progress_reconciliation is not None
+                    else {}
+                ),
             },
         )
         return classification
@@ -5892,6 +6326,8 @@ def _write_log_analysis(
                 f"- Scope: `{timeout_policy['scope']}`",
                 "- Stage Command Timeout: "
                 f"`{_format_timeout_budget(timeout_policy['stage_command_timeout_seconds'])}`",
+                "- No-Progress Timeout: "
+                f"`{_format_timeout_budget(timeout_policy['no_progress_timeout_seconds'])}`",
                 "- Global Flow Timeout: "
                 f"`{_format_timeout_budget(timeout_policy['global_flow_timeout_seconds'])}`",
                 "- Runtime Config Source: "
@@ -5931,6 +6367,8 @@ def _stage_timing_payload_from_flow(
         commands = commands_raw if isinstance(commands_raw, list) else []
         first_exit_code: int | None = None
         timeout_values: list[float] = []
+        no_progress_timeout_values: list[float] = []
+        no_progress_details: dict[str, object] | None = None
         for command in commands:
             if not isinstance(command, dict):
                 continue
@@ -5944,9 +6382,23 @@ def _stage_timing_payload_from_flow(
             timeout_seconds = command.get("timeout_seconds")
             if isinstance(timeout_seconds, int | float):
                 timeout_values.append(float(timeout_seconds))
+            command_no_progress_details = command.get("no_progress_details")
+            if isinstance(command_no_progress_details, dict):
+                no_progress_details = dict(command_no_progress_details)
+                raw_no_progress_timeout = command_no_progress_details.get(
+                    "no_progress_timeout_seconds"
+                )
+                if isinstance(raw_no_progress_timeout, int | float):
+                    no_progress_timeout_values.append(float(raw_no_progress_timeout))
         step_timeout_seconds = (
             timeout_values[0]
             if timeout_values and all(value == timeout_values[0] for value in timeout_values)
+            else None
+        )
+        step_no_progress_timeout_seconds = (
+            no_progress_timeout_values[0]
+            if no_progress_timeout_values
+            and all(value == no_progress_timeout_values[0] for value in no_progress_timeout_values)
             else None
         )
         flow_steps.append(
@@ -5962,6 +6414,12 @@ def _stage_timing_payload_from_flow(
                     for command in commands
                 ),
                 "timeout_seconds": step_timeout_seconds,
+                "no_progress": any(
+                    isinstance(command, dict) and command.get("no_progress") is True
+                    for command in commands
+                ),
+                "no_progress_timeout_seconds": step_no_progress_timeout_seconds,
+                "no_progress_details": no_progress_details,
             }
         )
     payload["steps"] = flow_steps
@@ -6281,6 +6739,7 @@ def _record_interruption(
         completed_stages=_state_completed_stages(ctx.bundle_root),
         extra=details,
     )
+    _write_flow_report(ctx)
 
 
 def _finalize_reports(
@@ -6694,6 +7153,19 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             ctx=ctx,
             status="fail",
             summary="A public stage run failed during black-box live E2E execution.",
+            verification_failed=True,
+            teardown_result=teardown_result,
+            teardown_error=teardown_error,
+        )
+    if stage_classification == "infra-fail":
+        teardown_result, teardown_error = _run_teardown(ctx)
+        return _finalize_reports(
+            ctx=ctx,
+            status="infra-fail",
+            summary=(
+                "Provider made no progress during public stage execution before a "
+                "completed stage artifact was available."
+            ),
             verification_failed=True,
             teardown_result=teardown_result,
             teardown_error=teardown_error,

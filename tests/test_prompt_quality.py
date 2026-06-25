@@ -487,6 +487,30 @@ def test_research_prompts_and_contracts_require_bounded_local_probes() -> None:
         assert "`not-run: <reason>`" in text
 
 
+def test_live_docs_distinguish_provider_no_progress_from_quality_failure() -> None:
+    catalog = Path("docs/e2e/live-e2e-catalog.md").read_text(encoding="utf-8")
+    rubric = Path("docs/e2e/live-quality-rubric.md").read_text(encoding="utf-8")
+    skill = Path(".agents/skills/live-e2e/SKILL.md").read_text(encoding="utf-8")
+
+    for text in (catalog, rubric, skill):
+        lower_text = text.lower()
+        normalized_text = " ".join(text.split())
+        assert "provider-no-progress before completed stage artifact" in normalized_text
+        assert "no_progress_timeout_minutes" in text
+        assert (
+            "infra/provider" in lower_text
+            or "blocked-provider" in lower_text
+            or "blocked-infra" in lower_text
+            or "terminal `infra-fail`" in lower_text
+        )
+        assert (
+            "not product-quality" in lower_text
+            or "not a product-quality" in lower_text
+            or "not product quality" in lower_text
+        )
+        assert "manual-quality-stop" in lower_text
+
+
 def test_review_and_qa_use_live_setup_workspace_baseline() -> None:
     review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
         encoding="utf-8"
