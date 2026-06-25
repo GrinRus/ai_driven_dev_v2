@@ -2735,6 +2735,46 @@ def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_live_cleanup_residue_note(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-LIVE-CLEANUP",
+        "# Implementation Report\n\n"
+        "## Selected task\n\n"
+        "- Task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n\n"
+        "## Change summary\n\n"
+        "Implemented the selected yielded-rows feature with code, tests, and docs.\n\n"
+        "## Touched files\n\n"
+        "- `sqlite_utils/cli.py` - add yielded-row ingestion handling.\n"
+        "- `tests/test_cli_insert.py` - cover yielded rows and invalid input.\n"
+        "- `docs/cli.rst` - document trusted local Python caveats.\n\n"
+        "## Verification\n\n"
+        "- `uv run pytest -q` -> pass (1055 passed, 16 skipped).\n"
+        "- `uv run sphinx-build -W -b html docs docs/_build` -> pass.\n"
+        "- Verification residue cleanup: removed `.pytest_cache/`, "
+        "`.hypothesis/`, `docs/_build/`, and `__pycache__/` directories "
+        "created by the pytest/sphinx checks.\n"
+        "- `git status --ignored --short --untracked-files=all` -> pass "
+        "(no `.pytest_cache/`, `.hypothesis/`, `docs/_build/`, "
+        "`__pycache__/`, `.ruff_cache/`, or `.mypy_cache/` residue remains).\n\n"
+        "## Risks\n\n"
+        "- None observed.\n\n"
+        "## Follow-up\n\n"
+        "- None.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-LIVE-CLEANUP",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_backticked_python_heredoc_verification(
     tmp_path: Path,
 ) -> None:

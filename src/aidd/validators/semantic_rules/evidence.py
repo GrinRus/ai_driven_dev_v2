@@ -53,6 +53,15 @@ IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN = re.compile(
     r"\bsame\b.{0,80}\b(?:procedure|command|check|run)\b.{0,80}\bas\s+`?(?:T\d+|TL-\d+)`?",
     flags=re.IGNORECASE | re.DOTALL,
 )
+IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN = re.compile(
+    r"`?\.?(?:pytest|ruff|mypy)_cache/?`?|"
+    r"`?\.hypothesis/?`?|"
+    r"`?__pycache__/?`?|"
+    r"\bpytest/sphinx checks\b|"
+    r"\btest/build cache residue\b|"
+    r"\bverification residue cleanup\b",
+    flags=re.IGNORECASE,
+)
 IMPLEMENT_DEFERRED_VERIFICATION_PATTERN = re.compile(
     r"\b(?:not[-\s]+(?:run|executed)|skipped|deferred|hand[- ]off)\b",
     flags=re.IGNORECASE,
@@ -72,9 +81,14 @@ def is_deferred_implementation_verification(verification_item: str) -> bool:
 
 
 def has_implementation_command_evidence(verification_item: str) -> bool:
+    command_candidate = IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN.sub(
+        "",
+        verification_item,
+    )
     return (
-        IMPLEMENT_COMMAND_PATTERN.search(verification_item) is not None
-        or IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(verification_item) is not None
+        IMPLEMENT_COMMAND_PATTERN.search(command_candidate) is not None
+        or IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(command_candidate)
+        is not None
     )
 
 
@@ -85,6 +99,7 @@ __all__ = [
     "IMPLEMENT_DEFERRED_VERIFICATION_PATTERN",
     "IMPLEMENT_FILE_ENTRY_PATTERN",
     "IMPLEMENT_NOOP_JUSTIFICATION_PATTERN",
+    "IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN",
     "IMPLEMENT_RESULT_PATTERN",
     "IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN",
     "has_implementation_command_evidence",
