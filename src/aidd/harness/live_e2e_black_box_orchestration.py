@@ -2483,6 +2483,15 @@ def _handle_quality_remediation_request(
         "run_id": ctx.run_id,
         "log_follow": True,
     }
+    source_ids = request_payload.get("source_ids", [])
+    if (
+        isinstance(source_ids, list)
+        and any(
+            isinstance(source_id, str) and source_id.startswith("OP-")
+            for source_id in source_ids
+        )
+    ):
+        api_payload["allow_operator_audit_source_ids"] = True
     classification, evidence_path, evidence_payload = _run_ui_remediation_job(
         ctx=ctx,
         endpoint="/api/remediation/launch",

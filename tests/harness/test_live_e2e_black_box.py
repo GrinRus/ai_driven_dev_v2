@@ -1701,6 +1701,87 @@ def test_black_box_live_product_evaluation_request_remediation_from_review_runs_
     assert not (remediated.bundle_root / "stage-audits" / "implement.json").exists()
 
 
+def test_black_box_live_product_evaluation_request_remediation_allows_operator_audit_ids(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_remediation_ui_job(
+        *,
+        ctx: object,
+        endpoint: str,
+        payload: dict[str, object],
+        stage: str,
+        stage_run_id: str,
+        action: str,
+    ) -> tuple[str, Path, dict[str, object]]:
+        calls.append(
+            {
+                "endpoint": endpoint,
+                "payload": payload,
+                "stage": stage,
+                "stage_run_id": stage_run_id,
+                "action": action,
+            }
+        )
+        return _fake_remediation_ui_job(
+            ctx=ctx,
+            endpoint=endpoint,
+            payload=payload,
+            stage=stage,
+            stage_run_id=stage_run_id,
+            action=action,
+        )
+
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        fake_remediation_ui_job,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "review",
+            "source_ids": ["OP-RV-1"],
+            "operator_note": "Fix operator audit finding.",
+        },
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert result.status == "awaiting-quality-review"
+    assert calls[0]["payload"] == {
+        "source_stage": "review",
+        "source_ids": ["OP-RV-1"],
+        "operator_note": "Fix operator audit finding.",
+        "target_stage": "implement",
+        "runtime": "opencode",
+        "run_id": review_checkpoint.run_id,
+        "log_follow": True,
+        "allow_operator_audit_source_ids": True,
+    }
+
+
 def test_black_box_live_product_evaluation_failed_remediation_launch_stops_once(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

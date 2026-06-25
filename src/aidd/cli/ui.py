@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 import threading
@@ -1744,6 +1745,7 @@ class OperatorUiService:
         *,
         source_stage: str,
         source_ids: tuple[str, ...],
+        allow_operator_audit_source_ids: bool = False,
     ) -> tuple[str, ...]:
         if source_stage == "review":
             valid_ids = tuple(
@@ -1764,18 +1766,30 @@ class OperatorUiService:
         else:
             return source_ids
         valid_lookup = {item.lower(): item for item in valid_ids}
-        missing = tuple(item for item in source_ids if item.lower() not in valid_lookup)
+        missing = tuple(
+            item
+            for item in source_ids
+            if item.lower() not in valid_lookup
+            and not (
+                allow_operator_audit_source_ids
+                and item.startswith("OP-")
+                and re.fullmatch(r"OP-[A-Za-z0-9_.-]+", item) is not None
+            )
+        )
         if missing:
             raise ValueError(
                 f"source_ids do not match {source_stage} report: {', '.join(missing)}."
             )
-        return tuple(valid_lookup[item.lower()] for item in source_ids)
+        return tuple(valid_lookup.get(item.lower(), item) for item in source_ids)
 
     def _create_remediation_request(self, payload: dict[str, Any]) -> object:
         source_stage = _text_from_payload(payload, "source_stage")
         source_ids = self._validated_remediation_source_ids(
             source_stage=source_stage,
             source_ids=_remediation_source_ids_from_payload(payload),
+            allow_operator_audit_source_ids=bool(
+                payload.get("allow_operator_audit_source_ids")
+            ),
         )
         return create_remediation_request(
             workspace_root=self.workspace_root,
@@ -1794,6 +1808,9 @@ class OperatorUiService:
         source_ids = self._validated_remediation_source_ids(
             source_stage=source_stage,
             source_ids=_remediation_source_ids_from_payload(payload),
+            allow_operator_audit_source_ids=bool(
+                payload.get("allow_operator_audit_source_ids")
+            ),
         )
         request = create_remediation_request(
             workspace_root=self.workspace_root,

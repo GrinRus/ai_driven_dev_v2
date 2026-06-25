@@ -2345,6 +2345,41 @@ def test_ui_remediation_request_rejects_ids_missing_from_source_report(
     assert requests["requests"] == []
 
 
+def test_ui_remediation_launch_accepts_operator_audit_source_id_with_explicit_flag(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    _write_operator_control_reports(workspace_root)
+    captured: list[StageRunOptions] = []
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        captured.append(options)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/remediation/launch",
+        {
+            "source_stage": "review",
+            "source_ids": ["OP-RV-1"],
+            "target_stage": "implement",
+            "operator_note": "Fix operator audit finding.",
+            "runtime": "generic-cli",
+            "run_id": "run-ui",
+            "allow_operator_audit_source_ids": True,
+        },
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
+    _wait_job(service, str(payload["job_id"]))
+    requests = _payload(
+        service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]})
+    )
+    assert captured
+    assert requests["requests"][0]["source_ids"] == ["OP-RV-1"]  # type: ignore[index]
+
+
 def test_ui_remediation_request_accepts_structured_qa_risk_id(
     tmp_path: Path,
 ) -> None:
