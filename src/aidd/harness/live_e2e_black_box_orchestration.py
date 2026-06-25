@@ -7093,6 +7093,31 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
         return _awaiting_quality_review_result(ctx)
     if quality_gate == "manual-quality-stop":
         return _manual_quality_stop_result(ctx)
+    if quality_gate == "blocked":
+        return _blocked_result(ctx)
+    if quality_gate == "fail":
+        teardown_result, teardown_error = _run_teardown(ctx)
+        return _finalize_reports(
+            ctx=ctx,
+            status="fail",
+            summary="A public stage run failed during black-box live E2E execution.",
+            verification_failed=True,
+            teardown_result=teardown_result,
+            teardown_error=teardown_error,
+        )
+    if quality_gate == "infra-fail":
+        teardown_result, teardown_error = _run_teardown(ctx)
+        return _finalize_reports(
+            ctx=ctx,
+            status="infra-fail",
+            summary=(
+                "Infrastructure failure occurred during black-box live E2E "
+                "quality-gate handling."
+            ),
+            verification_failed=True,
+            teardown_result=teardown_result,
+            teardown_error=teardown_error,
+        )
     try:
         _prepare_target_repository(ctx)
     except Exception as exc:

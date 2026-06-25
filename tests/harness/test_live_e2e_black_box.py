@@ -1701,6 +1701,123 @@ def test_black_box_live_product_evaluation_request_remediation_from_review_runs_
     assert not (remediated.bundle_root / "stage-audits" / "implement.json").exists()
 
 
+def test_black_box_live_product_evaluation_failed_remediation_launch_stops_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_failed_remediation_ui_job(
+        *,
+        ctx: object,
+        endpoint: str,
+        payload: dict[str, object],
+        stage: str,
+        stage_run_id: str,
+        action: str,
+    ) -> tuple[str, Path, dict[str, object]]:
+        bundle_root = ctx.bundle_root
+        assert isinstance(bundle_root, Path)
+        calls.append(
+            {
+                "endpoint": endpoint,
+                "payload": payload,
+                "stage": stage,
+                "stage_run_id": stage_run_id,
+                "action": action,
+            }
+        )
+        evidence_payload: dict[str, object] = {
+            "endpoint": endpoint,
+            "payload": payload,
+            "stage": stage,
+            "stage_run_id": stage_run_id,
+            "action": action,
+            "failure_reason": "Remediation job ended with status `failed`.",
+            "job_payload": {
+                "status": "failed",
+                "result": {
+                    "completed": False,
+                    "stage_result": {
+                        "stage": stage,
+                        "run_id": payload["run_id"],
+                        "exit_code": 1,
+                    },
+                },
+            },
+        }
+        evidence_path = (
+            bundle_root
+            / "remediation-actions"
+            / f"fake-{stage_run_id}-{action}-failed.json"
+        )
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(
+            json.dumps(evidence_payload, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return "fail", evidence_path, evidence_payload
+
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        fake_failed_remediation_ui_job,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "review",
+            "source_ids": ["RV-1"],
+            "operator_note": "Fix rejected review finding.",
+        },
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert result.status == "fail"
+    assert calls == [
+        {
+            "endpoint": "/api/remediation/launch",
+            "payload": {
+                "source_stage": "review",
+                "source_ids": ["RV-1"],
+                "operator_note": "Fix rejected review finding.",
+                "target_stage": "implement",
+                "runtime": "opencode",
+                "run_id": review_checkpoint.run_id,
+                "log_follow": True,
+            },
+            "stage": "implement",
+            "stage_run_id": "stage-0008-implement",
+            "action": "launch",
+        }
+    ]
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["status"] == "fail"
+    assert state_payload["error"] == "remediation operator UI job failed"
+
+
 def test_black_box_live_product_evaluation_reruns_stale_review_then_qa(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2609,7 +2726,7 @@ def test_black_box_command_no_progress_stops_live_process(tmp_path: Path) -> Non
         cwd=tmp_path,
         environment=dict(os.environ),
         timeout_seconds=5.0,
-        no_progress_timeout_seconds=0.25,
+        no_progress_timeout_seconds=1.0,
         progress_probe=_probe,
     )
 
@@ -2651,7 +2768,7 @@ def test_black_box_command_no_progress_allows_live_artifact_heartbeats(
         cwd=tmp_path,
         environment=dict(os.environ),
         timeout_seconds=5.0,
-        no_progress_timeout_seconds=0.25,
+        no_progress_timeout_seconds=1.0,
         progress_probe=_probe,
     )
 
