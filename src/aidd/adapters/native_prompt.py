@@ -196,8 +196,11 @@ def build_native_prompt_text(
             "`- Q1 [blocking|non-blocking] ...`; `answers.md` bullets must reuse "
             "the same question id with `[resolved|partial|deferred]`, for example "
             "`- Q1 [resolved] ...`. Do not put a colon after the marker; "
-            "`- Q1 [resolved]: ...` is invalid. Do not invent `A1`/`A2` answer "
-            "ids. Render assumptions or metadata as non-bullet continuation prose.",
+            "`- Q1 [resolved]: ...` is invalid. Do not use "
+            "`- Q1: [resolved] ...`; it is invalid. Do not invent `A1`/`A2` "
+            "answer ids. If no operator answer is present, write "
+            "`# Answers\\n\\n- none\\n`; do not create `[resolved]` answers "
+            "yourself. Render assumptions or metadata as non-bullet continuation prose.",
             "When there are no questions, write `# Questions\\n\\n- none\\n`. "
             "When there are no answers, write `# Answers\\n\\n- none\\n`. "
             "Do not write prose such as `No questions required.` as a bullet.",

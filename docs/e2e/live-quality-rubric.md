@@ -261,6 +261,13 @@ stopped changing until `limits.no_progress_timeout_minutes` elapsed. Treat that 
 it counted-clean, manual-quality-stop, unresolved-question `blocked`, or an AIDD
 code-quality defect.
 
+Malformed interview documents are a separate AIDD stage-output/document-contract
+failure. If `validator-report.md`, `repair-history.md`, or `log-analysis.md` names
+`INTERVIEW-MALFORMED-DOCUMENT` for `questions.md` or `answers.md`, classify the run
+as model/stage-output or prompt/repair quality evidence. Do not classify it as
+provider no-progress, `manual-quality-stop`, unresolved-question `blocked`, or a
+manual product-quality verdict.
+
 `Artifact Quality`, `Code Quality`, and `UI/UX Quality` evaluate the deliverable
 produced by the full flow. These sections are manual review, not runner state.
 `Operator UI/UX decision` is a human-authored sub-decision about the AIDD operator

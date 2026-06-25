@@ -134,6 +134,10 @@ Live scenarios additionally imply:
   ends as `manual-quality-stop` with `manual-quality-stop.*` artifacts instead of
   `verdict.md`/`grader.json`; terminal product-quality decisions remain manual
   `quality-report.md` evidence.
+- malformed interview documents such as `questions.md` or `answers.md` entries with
+  `- Q1 [resolved]: ...` are AIDD stage-output/document-contract failures. They are
+  not provider no-progress, manual quality stops, unresolved-question `blocked` states,
+  or runner-owned product-quality decisions.
 
 Deterministic scenarios additionally imply:
 

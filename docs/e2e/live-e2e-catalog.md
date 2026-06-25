@@ -134,6 +134,10 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   missing, the runner refuses the resume instead of advancing the stage loop.
 - `blocked` is reserved for unresolved model questions or runtime approvals. It is
   distinct from `awaiting-quality-review`.
+- Malformed interview documents in `questions.md` or `answers.md`, including bullets such as
+  `- Q1 [resolved]: ...`, are AIDD stage-output/document-contract failures. They are
+  not `provider-no-progress`, not `manual-quality-stop`, not a product-quality verdict,
+  and not a runner-scored counted-clean decision.
 - `Flow decision: request-remediation` is valid only for `review` and `qa` stage-run
   audits and must include source stage, source ids, and operator note. It starts the
   existing AIDD remediation flow; it is not a new core stage and does not replace

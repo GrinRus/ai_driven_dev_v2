@@ -6,6 +6,7 @@ from pathlib import Path
 
 from aidd.core.interview import (
     load_questions_document,
+    parse_answers_markdown,
     render_answers_markdown,
 )
 from aidd.core.project_set import ResolvedProjectSet
@@ -237,6 +238,16 @@ def _read_stage_answers_text(
     return answers_path.read_text(encoding="utf-8")
 
 
+def _answers_text_is_no_answer_placeholder(answers_text: str) -> bool:
+    normalized = answers_text.lower()
+    if "no answer" not in normalized and "no answers" not in normalized:
+        return False
+    return not any(
+        marker in normalized
+        for marker in ("[resolved]", "[partial]", "[deferred]", " a1 ", "`a1`")
+    )
+
+
 def _restore_operator_owned_answers_after_runtime_attempt(
     *,
     workspace_root: Path,
@@ -268,6 +279,12 @@ def _restore_operator_owned_answers_after_runtime_attempt(
 
     if answers_text_before_attempt is None:
         if question_ids and answers_text_after_attempt != empty_answers_text:
+            if answers_text_after_attempt is not None:
+                try:
+                    parse_answers_markdown(answers_text_after_attempt)
+                except ValueError:
+                    if not _answers_text_is_no_answer_placeholder(answers_text_after_attempt):
+                        return
             answers_path.parent.mkdir(parents=True, exist_ok=True)
             answers_path.write_text(empty_answers_text, encoding="utf-8")
         return

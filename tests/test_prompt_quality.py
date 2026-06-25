@@ -32,6 +32,63 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     assert "`- Q1 [resolved] ...`" in prompt_text
     assert "Do not put a colon after the marker" in prompt_text
     assert "`- Q1 [resolved]: ...` is invalid" in prompt_text
+    assert "`- Q1: [resolved] ...`" in prompt_text
+    assert "do not create `[resolved]`" in prompt_text
+
+
+@pytest.mark.parametrize("stage", STAGES)
+def test_stage_run_prompts_make_interview_syntax_strict(stage: str) -> None:
+    run_prompt = (Path("prompt-packs") / "stages" / stage / "run.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "## Interview document syntax" in run_prompt
+    assert "`- Q1 [blocking] text`" in run_prompt
+    assert "`- Q1 [non-blocking] text`" in run_prompt
+    assert "`- Q1 [resolved] text`" in run_prompt
+    assert "`- Q1 [partial] text`" in run_prompt
+    assert "`- Q1 [deferred] text`" in run_prompt
+    assert "`- Q1 [resolved]: text`" in run_prompt
+    assert "`- Q1: [resolved] text`" in run_prompt
+    assert "Do not invent `A1`/`A2` answer ids" in run_prompt
+    assert "do not create\n  `[resolved]` answers yourself" in run_prompt or (
+        "must not invent\n  `[resolved]` answers" in run_prompt
+    )
+
+
+def test_interview_document_contracts_and_native_prompt_forbid_marker_colon() -> None:
+    questions_contract = Path("contracts/documents/questions.md").read_text(
+        encoding="utf-8"
+    )
+    answers_contract = Path("contracts/documents/answers.md").read_text(
+        encoding="utf-8"
+    )
+    native_prompt = Path("src/aidd/adapters/native_prompt.py").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (questions_contract, answers_contract):
+        assert "Canonical" in text
+        assert "must be followed by a space" in text
+        assert "`- Q1: [blocking] question text`" in text or (
+            "`- Q1: [resolved] answer text`" in text
+        )
+        assert "invalid" in text
+        assert "A1" in text
+
+    assert "`- Q1 [resolved]: ...` is invalid" in native_prompt
+    assert "`- Q1: [resolved] ...`" in native_prompt
+    assert "do not create `[resolved]` answers" in native_prompt
+
+
+def test_plan_run_prompt_forbids_self_answered_downstream_policy() -> None:
+    run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+
+    assert "Planning may ask downstream clarification questions" in run_prompt
+    assert "must not invent\n  `[resolved]` answers for missing operator decisions" in (
+        run_prompt
+    )
+    assert "If no operator answer is present" in run_prompt
 
 
 @pytest.mark.parametrize("stage", STAGES)

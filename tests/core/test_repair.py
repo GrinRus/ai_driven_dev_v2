@@ -251,6 +251,71 @@ def test_render_repair_brief_adds_actionable_list_format_hint() -> None:
     assert "write exactly `- none`" in repair_brief
 
 
+def test_render_repair_brief_adds_interview_document_answer_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="INTERVIEW-MALFORMED-DOCUMENT",
+                message=(
+                    "Malformed interview document `answers.md`: Invalid answer entry "
+                    "at line 3: expected `- <QID> [resolved|partial|deferred] <text>`."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path="workitems/WI-001/stages/plan/answers.md",
+                    line_number=3,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        prior_stage_artifacts=("workitems/WI-001/stages/plan/answers.md",),
+        stage_attempt_count=2,
+        max_repair_attempts=2,
+    )
+
+    assert "`- Q1 [resolved]: text`" in repair_brief
+    assert "`- Q1 [resolved] text`" in repair_brief
+    assert "`- Q1: [resolved] text`" in repair_brief
+    assert "`A1` answer ids" in repair_brief
+    assert "write exactly `- none`" in repair_brief
+
+
+def test_render_repair_brief_adds_interview_document_question_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="INTERVIEW-MALFORMED-DOCUMENT",
+                message=(
+                    "Malformed interview document `questions.md`: Invalid question entry "
+                    "at line 4: expected `- <QID> [blocking|non-blocking] <text>`."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path="workitems/WI-001/stages/plan/questions.md",
+                    line_number=4,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        prior_stage_artifacts=("workitems/WI-001/stages/plan/questions.md",),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    )
+
+    assert "`- Q1 [blocking] text`" in repair_brief
+    assert "`- Q1 [non-blocking] text`" in repair_brief
+    assert "non-bullet continuation prose" in repair_brief
+    assert "nested bullets" in repair_brief
+
+
 def test_render_repair_brief_adds_review_evidence_reference_hint() -> None:
     report_markdown = render_validator_report(
         findings=(

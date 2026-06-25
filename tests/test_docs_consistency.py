@@ -179,6 +179,26 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
         assert "Treat `stage-result.md` as a truthful summary draft" in run_prompt
 
 
+def test_live_docs_classify_malformed_interview_documents_as_stage_output_failure() -> None:
+    repo_root = _repo_root()
+    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
+        encoding="utf-8"
+    )
+    live_rubric = (repo_root / "docs" / "e2e" / "live-quality-rubric.md").read_text(
+        encoding="utf-8"
+    )
+    eval_architecture = (
+        repo_root / "docs" / "architecture" / "eval-harness-integration.md"
+    ).read_text(encoding="utf-8")
+
+    for text in (live_catalog, live_rubric, eval_architecture):
+        assert "malformed interview" in text.lower()
+        assert "AIDD stage-output" in text
+        assert "provider" in text
+        assert "manual-quality-stop" in text
+        assert "product-quality" in text
+
+
 def test_roadmap_references_only_existing_user_story_ids() -> None:
     repo_root = _repo_root()
     user_stories_path = repo_root / "docs" / "product" / "user-stories.md"

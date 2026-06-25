@@ -32,7 +32,9 @@ scope. After updating the required documents and checking consistency, stop.
 Interview document format is strict. `questions.md` bullets use `- Q1 [blocking|non-blocking] ...`;
 `answers.md` bullets must reuse the same question id with `[resolved|partial|deferred]`, for example
 `- Q1 [resolved] ...`. Do not put a colon after the marker; `- Q1 [resolved]: ...` is invalid.
-Do not invent `A1`/`A2` answer ids. Render assumptions or metadata as non-bullet continuation prose.
+Do not use `- Q1: [resolved] ...`; it is invalid. Do not invent `A1`/`A2` answer ids.
+If no operator answer is present, write `# Answers\n\n- none\n`; do not create `[resolved]`
+answers yourself. Render assumptions or metadata as non-bullet continuation prose.
 
 ## Finding-to-fix mapping
 

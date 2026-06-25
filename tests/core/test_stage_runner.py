@@ -1889,6 +1889,76 @@ def test_run_single_stage_orchestration_repairs_malformed_questions_document(
     assert "`- <QID> [resolved|partial|deferred] <text>` for answers" in validator_report_text
 
 
+def test_run_single_stage_orchestration_repairs_malformed_answers_document(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["questions.md"] = (
+        "# Questions\n\n"
+        "## Questions\n\n"
+        "- Q1 [non-blocking] Confirm compatibility-note placement.\n"
+    )
+    runtime_documents["answers.md"] = (
+        "# Answers\n\n"
+        "## Answers\n\n"
+        "- Q1 [resolved]: Put compatibility notes in router documentation.\n"
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        stage_root = (
+            workspace_root
+            / "workitems"
+            / invocation.work_item
+            / "stages"
+            / invocation.stage
+        )
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.REPAIR
+    assert orchestration.validation_result is not None
+    assert any(
+        finding.code == "INTERVIEW-MALFORMED-DOCUMENT"
+        for finding in orchestration.validation_result.findings
+    )
+    validator_report_text = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "validator-report.md"
+    ).read_text(encoding="utf-8")
+    assert "`INTERVIEW-MALFORMED-DOCUMENT`" in validator_report_text
+    assert "Invalid answer entry at line 5" in validator_report_text
+    assert "`- <QID> [resolved|partial|deferred] <text>`" in validator_report_text
+
+
 def test_run_single_stage_orchestration_repairs_malformed_questions_with_blockers(
     tmp_path: Path,
 ) -> None:
