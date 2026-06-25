@@ -1693,6 +1693,130 @@ def test_run_single_stage_orchestration_removes_model_authored_initial_repair_br
     assert "repair-brief.md" not in validator_report_path.read_text(encoding="utf-8")
 
 
+def test_run_single_stage_orchestration_preserves_historical_repair_brief_trace_on_rerun(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    validator_report_path = stage_root / "validator-report.md"
+    validator_report_path.write_text("# Validator Report\n", encoding="utf-8")
+    repair_brief_path = stage_root / "repair-brief.md"
+    repair_brief_path.write_text(
+        "# Failed checks\n\n- `SEM-PLACEHOLDER-CONTENT` `high`: fix plan evidence.\n",
+        encoding="utf-8",
+    )
+
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+        trigger="initial",
+        outcome="failed validation",
+        stage_status=StageState.REPAIR_NEEDED.value,
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.SUCCEEDED.value,
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=2,
+        trigger="repair",
+        outcome="succeeded",
+        stage_status=StageState.SUCCEEDED.value,
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        assert invocation.repair_mode is False
+        assert invocation.repair_brief_path is None
+        assert execution_state.attempt_number == 3
+        runtime_documents = _valid_plan_output_documents()
+        assert "repair-brief.md" not in runtime_documents["stage-result.md"]
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    validator_report_text = validator_report_path.read_text(encoding="utf-8")
+    stage_result_text = (stage_root / "stage-result.md").read_text(encoding="utf-8")
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.PASS
+    assert repair_brief_path.exists()
+    assert "CROSS-REPAIR-MENTION-WITHOUT-BRIEF" not in validator_report_text
+    assert "CROSS-REPAIR-BRIEF-NOT-REFERENCED" not in validator_report_text
+    assert "`workitems/WI-001/stages/plan/repair-brief.md`" in stage_result_text
+    assert metadata is not None
+    assert [(entry.attempt_number, entry.trigger) for entry in metadata.repair_history] == [
+        (1, "initial"),
+        (2, "repair"),
+        (3, "initial"),
+    ]
+
+
 def test_run_single_stage_orchestration_repairs_malformed_questions_document(
     tmp_path: Path,
 ) -> None:

@@ -24,6 +24,7 @@ from aidd.core.stage_interview_routing import (
 from aidd.core.stage_invocation import (
     ATTEMPT_INPUT_BUNDLE_FILENAME,
     ATTEMPT_REPAIR_CONTEXT_FILENAME,
+    historical_repair_brief_trace_path,
     prepare_adapter_invocation,
     restore_core_owned_repair_brief,
 )
@@ -488,11 +489,19 @@ def run_single_stage_orchestration(
             work_item=work_item,
             stage=stage,
         )
+    repair_brief_trace_path = adapter_invocation.repair_brief_path
+    if repair_brief_trace_path is None:
+        repair_brief_trace_path = historical_repair_brief_trace_path(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
     ensure_stage_result_references_repair_brief(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
-        repair_brief_path=adapter_invocation.repair_brief_path,
+        repair_brief_path=repair_brief_trace_path,
     )
     validation_result = run_structural_validation_after_output_discovery(
         workspace_root=workspace_root,

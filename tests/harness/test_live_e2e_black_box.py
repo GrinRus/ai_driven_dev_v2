@@ -2755,10 +2755,10 @@ def test_black_box_command_timeout_kills_child_process_group(tmp_path: Path) -> 
         sys.executable,
         "-c",
         (
-            "import subprocess, time; "
-            f"path={str(child_pid_path)!r}; "
+            "import pathlib, subprocess, time; "
+            f"path=pathlib.Path({str(child_pid_path)!r}); "
             "child=subprocess.Popen(['sleep', '30']); "
-            "open(path, 'w', encoding='utf-8').write(str(child.pid)); "
+            "path.write_text(str(child.pid), encoding='utf-8'); "
             "time.sleep(30)"
         ),
     )
@@ -2767,7 +2767,7 @@ def test_black_box_command_timeout_kills_child_process_group(tmp_path: Path) -> 
         command=command,
         cwd=tmp_path,
         environment=dict(os.environ),
-        timeout_seconds=0.5,
+        timeout_seconds=2.0,
     )
 
     assert result.exit_code == 124
