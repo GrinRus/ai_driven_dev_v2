@@ -84,14 +84,17 @@ normalize if canonical validation proves the terminal status inconsistent.
     `.aidd/workitems/...` from the repository root. If `git status --short --untracked-files=all`
     shows top-level `workitems/...`, stray stage documents, or scratch files unrelated to the
     selected task, clean them up or report the implementation as not clean.
-    Also inspect ignored local artifacts when feasible, for example with
-    `git status --ignored --short --untracked-files=all`; newly created `.venv/`, `.pytest_cache/`,
-    `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories are
-    workspace pollution unless they are part of the selected deliverable or are removed before
-    terminal output. After running verification that can create cache or coverage residue, either
-    remove those files or report the implementation as not clean; do not claim cleanup passed unless
-    the cited command actually checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`,
-    `__pycache__/`, build, dist, and dependency-cache residue.
+    If this live setup workspace runs any test, type, lint, docs, or build command, verification
+    notes must include the exact command
+    `git status --ignored --short --untracked-files=all` with an observed outcome.
+    `git status --short --untracked-files=all` is insufficient because it hides ignored residue.
+    Newly created `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`, `coverage/`,
+    `.coverage*`, build, dist, or dependency-cache directories are workspace pollution unless
+    they are part of the selected deliverable or are removed before terminal output. After running
+    verification that can create cache or coverage residue, either remove those files or report
+    the implementation as not clean; do not claim cleanup passed unless the cited command actually
+    checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist,
+    and dependency-cache residue.
 13. When the implementation changes a shared public-surface mechanism such as a CLI decorator,
     parser/helper, router/error boundary, schema transform helper, or public API adapter, inspect
     the sibling commands, routes, generated outputs, or documented public surfaces that reuse that

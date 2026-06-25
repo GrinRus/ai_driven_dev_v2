@@ -2030,6 +2030,40 @@ def test_validate_semantic_outputs_accepts_live_ignored_residue_evidence_for_imp
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_aidd_command_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-AIDD-COMMAND"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`.\n\n"
+            "## Change summary\n\n"
+            "Implemented the selected live task and preserved operator answer alignment.\n\n"
+            "## Touched files\n\n"
+            "- `sqlite_utils/cli.py` - add yielded rows option handling.\n"
+            "- `tests/test_cli_insert.py` - cover yielded rows behavior.\n\n"
+            "## Verification notes\n\n"
+            "- `aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW` "
+            "-> pass (exit code 0; no unresolved blocking questions).\n\n"
+            "## Follow-up notes\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_sed_command_evidence_for_implement(
     tmp_path: Path,
 ) -> None:

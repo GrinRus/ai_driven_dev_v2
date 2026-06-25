@@ -69,13 +69,15 @@ For each finding:
    prepared checkout, installed `aidd` command, or packaged contracts disappear, report the repair
    attempt as `blocked` or `failed` with the exact missing path instead of running `git clone` or
    rebuilding the harness workspace.
-9. When feasible, re-check ignored local artifacts with
-   `git status --ignored --short --untracked-files=all`; newly created `.venv/`, `.pytest_cache/`,
-   `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories are
-   workspace pollution unless they are required by the selected deliverable or removed before
-   terminal output. Do not claim cleanup passed or mark cleanup resolved unless the cited evidence
-   explicitly checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`,
-   build, dist, and dependency-cache residue.
+9. If the live setup workspace ran any test, type, lint, docs, or build command, re-check ignored
+   local artifacts with the exact command `git status --ignored --short --untracked-files=all`
+   and include that command as its own verification bullet. `git status --short --untracked-files=all`
+   is insufficient because it hides ignored residue. Newly created `.venv/`, `.pytest_cache/`,
+   `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache
+   directories are workspace pollution unless they are required by the selected deliverable or
+   removed before terminal output. Do not claim cleanup passed or mark cleanup resolved unless the
+   cited evidence explicitly checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`,
+   `__pycache__/`, build, dist, and dependency-cache residue.
 
 Use concrete repair actions:
 

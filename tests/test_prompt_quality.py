@@ -435,6 +435,17 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
         assert "`__pycache__/`" in text
         assert "Do not" in text and "claim cleanup" in text
 
+    for text in (implement_prompt, implement_repair):
+        normalized_text = " ".join(text.split())
+        assert (
+            "If this live setup workspace runs any test, type, lint, docs, or build command"
+            in normalized_text
+            or "If the live setup workspace ran any test, type, lint, docs, or build command"
+            in normalized_text
+        )
+        assert "exact command" in normalized_text
+        assert "`git status --short --untracked-files=all` is insufficient" in normalized_text
+
     for text in (review_prompt, qa_prompt, review_contract, qa_contract):
         assert "prepared checkout disappeared" in text
         assert "was recloned" in text
