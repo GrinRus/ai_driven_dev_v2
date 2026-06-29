@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
@@ -19,6 +20,15 @@ from aidd.validators.semantic import (
 )
 
 _SEMANTIC_FIXTURES_ROOT = Path(__file__).parent / "fixtures" / "semantic"
+
+
+def _git(project_root: Path, *args: str) -> None:
+    subprocess.run(
+        ("git", "-C", project_root.as_posix(), *args),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def _write_stage_contract(
@@ -3155,6 +3165,53 @@ def test_validate_semantic_outputs_flags_review_clean_approval_with_live_residue
         and "after all review commands" in finding.message
         for finding in findings
     )
+
+
+def test_validate_semantic_outputs_ignores_review_tracked_build_source_directory(
+    tmp_path: Path,
+) -> None:
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "aidd@example.test")
+    _git(tmp_path, "config", "user.name", "AIDD Test")
+    (tmp_path / "build").mkdir()
+    (tmp_path / "build" / "build.ts").write_text("export {}\n", encoding="utf-8")
+    _git(tmp_path, "add", "build/build.ts")
+    _git(tmp_path, "commit", "-m", "track build source")
+
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-LIVE-TRACKED-BUILD"
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved\n\n"
+            "## Findings\n\n"
+            "- none\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
 
 
 def test_validate_semantic_outputs_accepts_review_condition_with_live_residue_finding(

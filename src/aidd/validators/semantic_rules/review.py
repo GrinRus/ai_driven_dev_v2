@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 from aidd.validators.models import ValidationFinding
@@ -241,6 +242,20 @@ def _is_baseline_path(path: str, baseline_paths: tuple[str, ...]) -> bool:
     return False
 
 
+def _is_git_tracked_path(path: str, project_root: Path) -> bool:
+    try:
+        result = subprocess.run(
+            ("git", "-C", project_root.as_posix(), "ls-files", "--", path),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0 and bool(result.stdout.strip())
+
+
 def _repo_relative(path: Path, project_root: Path) -> str:
     return path.resolve(strict=False).relative_to(
         project_root.resolve(strict=False)
@@ -301,6 +316,8 @@ def _active_live_residue_paths(context: SemanticDocumentContext) -> tuple[str, .
     for candidate_path in candidate_paths:
         normalized = candidate_path.rstrip("/")
         if _is_baseline_path(normalized, baseline_paths):
+            continue
+        if _is_git_tracked_path(normalized, project_root):
             continue
         if normalized in seen:
             continue
