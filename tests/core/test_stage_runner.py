@@ -1693,6 +1693,130 @@ def test_run_single_stage_orchestration_removes_model_authored_initial_repair_br
     assert "repair-brief.md" not in validator_report_path.read_text(encoding="utf-8")
 
 
+def test_run_single_stage_orchestration_preserves_historical_repair_brief_trace_on_rerun(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    validator_report_path = stage_root / "validator-report.md"
+    validator_report_path.write_text("# Validator Report\n", encoding="utf-8")
+    repair_brief_path = stage_root / "repair-brief.md"
+    repair_brief_path.write_text(
+        "# Failed checks\n\n- `SEM-PLACEHOLDER-CONTENT` `high`: fix plan evidence.\n",
+        encoding="utf-8",
+    )
+
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=1,
+        trigger="initial",
+        outcome="failed validation",
+        stage_status=StageState.REPAIR_NEEDED.value,
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.SUCCEEDED.value,
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=2,
+        trigger="repair",
+        outcome="succeeded",
+        stage_status=StageState.SUCCEEDED.value,
+        validator_report_path=validator_report_path,
+        repair_brief_path=repair_brief_path,
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        assert invocation.repair_mode is False
+        assert invocation.repair_brief_path is None
+        assert execution_state.attempt_number == 3
+        runtime_documents = _valid_plan_output_documents()
+        assert "repair-brief.md" not in runtime_documents["stage-result.md"]
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    validator_report_text = validator_report_path.read_text(encoding="utf-8")
+    stage_result_text = (stage_root / "stage-result.md").read_text(encoding="utf-8")
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.PASS
+    assert repair_brief_path.exists()
+    assert "CROSS-REPAIR-MENTION-WITHOUT-BRIEF" not in validator_report_text
+    assert "CROSS-REPAIR-BRIEF-NOT-REFERENCED" not in validator_report_text
+    assert "`workitems/WI-001/stages/plan/repair-brief.md`" in stage_result_text
+    assert metadata is not None
+    assert [(entry.attempt_number, entry.trigger) for entry in metadata.repair_history] == [
+        (1, "initial"),
+        (2, "repair"),
+        (3, "initial"),
+    ]
+
+
 def test_run_single_stage_orchestration_repairs_malformed_questions_document(
     tmp_path: Path,
 ) -> None:
@@ -1763,6 +1887,76 @@ def test_run_single_stage_orchestration_repairs_malformed_questions_document(
     assert "`INTERVIEW-MALFORMED-DOCUMENT`" in validator_report_text
     assert "Invalid question entry at line 9" in validator_report_text
     assert "`- <QID> [resolved|partial|deferred] <text>` for answers" in validator_report_text
+
+
+def test_run_single_stage_orchestration_repairs_malformed_answers_document(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["questions.md"] = (
+        "# Questions\n\n"
+        "## Questions\n\n"
+        "- Q1 [non-blocking] Confirm compatibility-note placement.\n"
+    )
+    runtime_documents["answers.md"] = (
+        "# Answers\n\n"
+        "## Answers\n\n"
+        "- Q1 [resolved]: Put compatibility notes in router documentation.\n"
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        stage_root = (
+            workspace_root
+            / "workitems"
+            / invocation.work_item
+            / "stages"
+            / invocation.stage
+        )
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.validation_transition is not None
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.REPAIR
+    assert orchestration.validation_result is not None
+    assert any(
+        finding.code == "INTERVIEW-MALFORMED-DOCUMENT"
+        for finding in orchestration.validation_result.findings
+    )
+    validator_report_text = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "validator-report.md"
+    ).read_text(encoding="utf-8")
+    assert "`INTERVIEW-MALFORMED-DOCUMENT`" in validator_report_text
+    assert "Invalid answer entry at line 5" in validator_report_text
+    assert "`- <QID> [resolved|partial|deferred] <text>`" in validator_report_text
 
 
 def test_run_single_stage_orchestration_repairs_malformed_questions_with_blockers(
@@ -3057,6 +3251,129 @@ def test_decide_post_validation_transition_allows_success_when_questions_resolve
     assert (published_root / "plan.md").read_text(encoding="utf-8") == (
         stage_root / "plan.md"
     ).read_text(encoding="utf-8")
+
+
+def test_decide_post_validation_transition_reconciles_stale_stage_result_on_pass(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_outputs(preparation_bundle.expected_output_documents)
+    stage_result_path = (
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "plan"
+        / "stage-result.md"
+    )
+    stage_result_path.write_text(
+        "# Stage result\n\n"
+        "## Status\n\n"
+        "- Status: `failed`\n\n"
+        "## Validation summary\n\n"
+        "- Validator verdict: `fail`\n\n"
+        "## Terminal state notes\n\n"
+        "- Runtime draft still had stale failure text.\n",
+        encoding="utf-8",
+    )
+
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=ValidationVerdict.PASS,
+    )
+
+    transition = decide_post_validation_transition(
+        validation_state,
+        workspace_root=workspace_root,
+    )
+
+    assert transition.action == PostValidationAction.ADVANCE
+    stage_result_text = stage_result_path.read_text(encoding="utf-8")
+    assert "- Status: `succeeded`" in stage_result_text
+    assert "- Validator verdict: `pass`" in stage_result_text
+    assert "stale runtime draft status/verdict was normalized" in stage_result_text
+    published_stage_result = stage_result_path.parent / "output" / "stage-result.md"
+    assert "- Status: `succeeded`" in published_stage_result.read_text(encoding="utf-8")
+
+
+def test_decide_post_validation_transition_does_not_reconcile_when_questions_block(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
+        encoding="utf-8",
+    )
+    stage_result_path = stage_root / "stage-result.md"
+    stage_result_path.write_text(
+        "# Stage result\n\n"
+        "## Status\n\n"
+        "- Status: `blocked`\n\n"
+        "## Validation summary\n\n"
+        "- Validator verdict: `fail`\n\n"
+        "## Terminal state notes\n\n"
+        "- Blocking question remains unresolved.\n",
+        encoding="utf-8",
+    )
+
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=ValidationVerdict.PASS,
+    )
+
+    transition = decide_post_validation_transition(
+        validation_state,
+        workspace_root=workspace_root,
+    )
+
+    assert transition.action == PostValidationAction.WAIT
+    stage_result_text = stage_result_path.read_text(encoding="utf-8")
+    assert "- Status: `blocked`" in stage_result_text
+    assert "- Validator verdict: `fail`" in stage_result_text
+    assert "stale runtime draft status/verdict was normalized" not in stage_result_text
 
 
 def test_update_stage_unblock_state_keeps_stage_blocked_when_answers_missing(

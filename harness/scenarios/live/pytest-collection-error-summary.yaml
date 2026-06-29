@@ -1,6 +1,7 @@
 id: AIDD-LIVE-011
 scenario_class: live-full-flow-interview
 feature_size: xlarge
+live_matrix_role: product-evaluation
 automation_lane: manual
 canonical_runtime: opencode
 repo:
@@ -58,6 +59,25 @@ feature_source:
       policy explicit, and avoid broad terminal-output churn outside the selected edge case.
     size_rationale: Xlarge because pytest collection and terminal reporting semantics are
       runtime-internal, compatibility-sensitive, and interview-gated.
+    visible_request: |
+      Improve pytest's terminal reporting for collection errors that interact with
+      `--maxfail` and `--continue-on-collection-errors`. First clarify the expected
+      exit-code, interruption, and summary-shape policy. Then implement the answered
+      behavior in the collection or terminal reporting path, keeping existing
+      compatibility unless explicitly approved, and add focused tests for collection
+      errors with and without maxfail.
+    audit_rubric: |
+      Evaluate whether AIDD distinguishes reporting clarity from exit-code behavior,
+      asks before changing compatibility-sensitive semantics, and keeps terminal
+      output churn narrowly scoped. Count defects when tests only check snapshots
+      without behavior, traceback duplication increases, maxfail semantics regress,
+      or documentation/changelog obligations are ignored.
+    complexity_axes:
+    - interview
+    - runtime-internals
+    - api-policy
+    - docs
+    - cross-module
     interview:
     - Expected exit code and interruption semantics for collection errors with `--maxfail`.
     - Whether summary output should prefer first-error detail, aggregate counts, or both.
@@ -82,7 +102,7 @@ verify:
   - step: completed
     evidence: focused pytest and QA output artifact checks succeed after rerun.
 limits:
-  patch_budget_files: 12
+  patch_budget_files: 60
   timeout_minutes: 240
 interview:
   required: true

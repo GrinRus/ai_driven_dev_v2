@@ -48,9 +48,11 @@ and manual-live lanes.
 10. Never mutate roadmap or backlog files as part of live manual quality reporting.
 11. For manual live lanes, the launching agent is the operator-agent: answer blocking
     questions in `answers.md` with exact lines such as
-    `- Q1 [resolved] answer text`, write `answer-analysis.md`, and write
-    `quality-report.md` as the manual post-run report when a deliverable quality
-    decision is needed.
+    `- Q1 [resolved] answer text`, write `answer-analysis.md`, write
+    the exact `stage-quality-audits/<stage-run-id>.md` path named in
+    `flow-state.json` for product-evaluation checkpoints, and write
+    `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md` with
+    iteration history when a deliverable quality decision is needed.
 12. Do not hand-edit runtime-generated stage output documents while adding
     operator-authored answers or the manual quality report.
 
@@ -77,10 +79,12 @@ and manual-live lanes.
 7. Run graders and log analysis.
 8. Write the final execution audit artifacts.
 9. Report the final execution verdict explicitly.
-10. For terminal live runs, write manual `quality-report.md` only after inspecting
-    the execution bundle and any additional manual checks, including timeout policy
-    evidence, stage-result/validator consistency findings, target workspace evidence,
-    and AIDD operator UI/UX evidence when a UI/UX decision is needed.
+10. For terminal product-evaluation live runs, write manual
+    `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md` only
+    after inspecting the execution bundle and any additional manual checks, including
+    timeout policy evidence, stage-result/validator consistency findings, target
+    workspace evidence, stage quality audits, and AIDD operator UI/UX evidence when
+    a UI/UX decision is needed.
 
 ## Canonical output locations
 
@@ -94,15 +98,19 @@ and manual-live lanes.
 - `.aidd/reports/evals/<run_id>/log-analysis.md`
 - `.aidd/reports/evals/<run_id>/grader.json`
 - `.aidd/reports/evals/<run_id>/verdict.md`
-- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
-- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage-run-id>.json`
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage-run-id>.md`
+- `.aidd/reports/evals/<run_id>/stage-quality-audits/<stage-run-id>.md` for completed
+  product-evaluation stage runs
 - `.aidd/reports/evals/<run_id>/target-workspace-evidence.json`
 - `.aidd/reports/evals/<run_id>/target-workspace-evidence.md`
 - `.aidd/reports/evals/<run_id>/run-transcript.json` with live timeout policy evidence
 - `.aidd/reports/evals/<run_id>/answer-analysis.md` when the launching
   operator-agent answered blocking questions
-- `.aidd/reports/evals/<run_id>/quality-report.md` only when the launching SWE
-  agent writes the manual post-run quality report
+- `.aidd/reports/evals/<run_id>/flow-quality-report.md`,
+  `.aidd/reports/evals/<run_id>/code-quality-report.md`, and
+  `.aidd/reports/evals/<run_id>/quality-report.md` only when the launching SWE
+  agent writes the manual final quality reports
 
 Manual live mutable execution is outside the source checkout by default:
 `${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd`,
@@ -114,7 +122,11 @@ Manual live mutable execution is outside the source checkout by default:
 In black-box live E2E, `limits.timeout_minutes` applies to each public
 `aidd stage run` command. It is not a global flow timeout. Use
 `run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` to
-separate stage command timeouts from provider adapter timeout profiles.
+separate stage command timeouts, live no-progress timeouts, and provider adapter
+timeout profiles. `limits.no_progress_timeout_minutes` defaults to `30` for live
+manifests; when it triggers, classify `provider-no-progress before completed stage
+artifact` as infra/provider evidence, not manual-quality-stop, unresolved-question
+`blocked`, counted-clean, or product-quality failure.
 For installed live manifest verification, AIDD self-check commands should use the
 installed `aidd` binary from `PATH` directly, such as `aidd stage questions ...`.
 Treat `uv run aidd ...` in a live target repo as a workspace-pollution risk because
@@ -143,9 +155,14 @@ For eval harness runs, preserve the stable execution verdict taxonomy:
 - `blocked`
 - `infra-fail`
 
-Live deliverable quality is not an eval runner verdict. For terminal live runs,
-record it only in the manual post-run `quality-report.md`; the runner must not
-parse that report or use it to change the execution verdict.
+Live deliverable quality is not an eval runner verdict. For product-evaluation live
+runs, record it only in manual stage quality audits and final quality reports; the
+runner must not parse those reports or use them to change the execution verdict.
+For product-evaluation runs with review/QA defects, `request-remediation` is a manual
+stage-quality decision on a `review` or `qa` stage run; the runner uses the existing
+operator remediation flow, preserves distinct stage-run audits for repeated
+`implement/review/qa` cycles, and still leaves subjective quality scoring to the
+launching agent.
 Manual operator UI/UX decisions in that report are human-authored only. Treat
 `frontend-checkpoints.*` as raw operator-surface availability evidence, not as a
 UI/UX audit or screenshot requirement.

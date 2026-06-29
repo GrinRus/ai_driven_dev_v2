@@ -6,8 +6,8 @@
 
 ## Issue list
 
-- I1 (`medium`): Milestone M3 lacks rollback trigger criteria because incident rollback ownership is undefined.
-- I2 (`low`): Dependency ownership metadata is incomplete because escalation contact details are missing.
+- I1: Severity: medium. Evidence: `plan.md` M3. Rationale: because incident rollback ownership is undefined.
+- I2: Severity: low. Evidence: `plan.md` Dependencies. Rationale: because escalation contact details are missing.
 
 ## Strengths
 

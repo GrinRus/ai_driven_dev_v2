@@ -179,6 +179,48 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
         assert "Treat `stage-result.md` as a truthful summary draft" in run_prompt
 
 
+def test_live_docs_classify_malformed_interview_documents_as_stage_output_failure() -> None:
+    repo_root = _repo_root()
+    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
+        encoding="utf-8"
+    )
+    live_rubric = (repo_root / "docs" / "e2e" / "live-quality-rubric.md").read_text(
+        encoding="utf-8"
+    )
+    eval_architecture = (
+        repo_root / "docs" / "architecture" / "eval-harness-integration.md"
+    ).read_text(encoding="utf-8")
+
+    for text in (live_catalog, live_rubric, eval_architecture):
+        assert "malformed interview" in text.lower()
+        assert "AIDD stage-output" in text
+        assert "provider" in text
+        assert "manual-quality-stop" in text
+        assert "product-quality" in text
+
+
+def test_live_docs_classify_unsupported_review_spec_claims_as_stage_output_failure() -> None:
+    repo_root = _repo_root()
+    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
+        encoding="utf-8"
+    )
+    live_rubric = (repo_root / "docs" / "e2e" / "live-quality-rubric.md").read_text(
+        encoding="utf-8"
+    )
+    live_skill = (repo_root / ".agents" / "skills" / "live-e2e" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (live_catalog, live_rubric, live_skill):
+        normalized_text = " ".join(text.split())
+        assert "Unsupported `review-spec` claims" in normalized_text
+        assert "direct evidence" in normalized_text
+        assert "Reconciliation" in normalized_text
+        assert "stage-output" in normalized_text
+        assert "provider" in normalized_text
+        assert "manual-quality-stop" in normalized_text
+
+
 def test_roadmap_references_only_existing_user_story_ids() -> None:
     repo_root = _repo_root()
     user_stories_path = repo_root / "docs" / "product" / "user-stories.md"
@@ -917,7 +959,13 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "`--work-root ${TMPDIR:-/tmp}/aidd-live-e2e`",
         "`--report-root .aidd/reports/evals`",
         "`--run-id <id>`",
-        "`stage-audits/<stage>.json`",
+        "`stage-audits/<stage-run-id>.json`",
+        "`stage-quality-audits/<stage-run-id>.md`",
+        "`quality_review_required_stage_run_id`",
+        "`completed_stage_runs`",
+        "`request-remediation` only for `review` or `qa`",
+        "existing operator remediation surface",
+        "Fresh terminal QA state:",
         "`target-workspace-evidence.json`",
         "`target-workspace-evidence.md`",
         "snapshot tracked AIDD `HEAD`",
@@ -958,6 +1006,9 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
             "top-level `workitems/...` duplicates normally make manual "
             "deliverable quality `not-counted`"
         ),
+        "`product_untracked_files` is present",
+        "final `code-quality-report.md` and",
+        "`quality-report.md` must name those files",
         "`aidd.example.toml` is not product diff",
         (
             "Screenshots and browser notes are optional manual evidence, "
@@ -969,7 +1020,10 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     assert "For **local live-run operator guidance**, prefer `live-e2e`." in aidd_eval_skill
     assert "the launching agent is the operator-agent" in aidd_eval_skill
     assert "`- Q1 [resolved] answer text`" in aidd_eval_skill
-    assert "stage-audits/<stage>.json" in aidd_eval_skill
+    assert "stage-audits/<stage-run-id>.json" in aidd_eval_skill
+    assert "stage-quality-audits/<stage-run-id>.md" in aidd_eval_skill
+    assert "request-remediation" in aidd_eval_skill
+    assert "preserves distinct stage-run audits" in aidd_eval_skill
     assert "${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd" in aidd_eval_skill
     assert "quality-report.md" in aidd_eval_skill
     assert "AIDD operator UI/UX evidence" in aidd_eval_skill
@@ -1005,7 +1059,22 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "Operator UI/UX evidence links:",
         "`frontend-checkpoints.*` are raw run-integrity evidence",
         "They are not a UI/UX audit, not screenshot evidence, and not a quality gate.",
+        "# Stage Quality Audit: <stage-run-id>",
+        "Stage run id: <stage-run-id>",
+        (
+            "Flow decision: continue | continue-with-risk | request-remediation | "
+            "stop-not-counted | operator-intervention"
+        ),
+        "## Remediation Request",
+        "Source ids: RV-1, EV-1",
+        "Previous stage-run evidence:",
+        "Stale downstream state:",
+        "## Iteration History",
+        "Fresh terminal QA state:",
         "`target-workspace-evidence.*` records the target repository snapshot",
+        "`product_untracked_files`",
+        "must name those files and state how",
+        "the final reports must explicitly cover those files",
         "setup-baseline ignored churn",
         "`git status --short --untracked-files=all`",
         "top-level `workitems/...` duplicate",
@@ -1099,7 +1168,8 @@ def test_live_docs_describe_temp_install_layout_and_stage_audits() -> None:
 
     for relative_path, text in documents.items():
         for needle in (
-            "stage-audits/<stage>.json",
+            "stage-audits/<stage-run-id>.json",
+            "stage-quality-audits/<stage-run-id>.md",
             ".aidd/reports/evals",
         ):
             assert needle in text, relative_path
@@ -1111,6 +1181,8 @@ def test_live_docs_describe_temp_install_layout_and_stage_audits() -> None:
     assert "<work-root>/<run_id>/source/aidd" in catalog
     assert "<work-root>/<run_id>/target/<repo-slug>" in catalog
     assert "dirty tracked" in catalog
+    assert "Flow decision: request-remediation" in catalog
+    assert "fresh terminal `qa`" in catalog
 
 
 def test_live_manual_docs_do_not_delegate_answers_to_external_operator_agent() -> None:

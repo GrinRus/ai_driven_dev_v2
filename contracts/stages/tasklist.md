@@ -59,6 +59,12 @@ Optional context documents may improve task decomposition quality, but they must
 - Optional broad checks outside the authored verification boundary may be listed only as
   optional/non-blocking exploratory checks; they must not become required pass criteria when the
   authored verification boundary is narrower.
+- For JavaScript or TypeScript packages, proposed helper or module paths are not private by
+  default. If the tasklist names a concrete helper/module path, it must account for `package.json`
+  `exports`, wildcard subpath exports such as `./utils/*`, generated declarations, and existing
+  public import conventions before describing that helper as private or internal-only. If that
+  evidence is not available, choose a non-exported location or record the public API risk for
+  downstream implementation and review.
 - `stage-result.md` and `validator-report.md` must stay consistent with the declared tasklist readiness.
 
 ## Validation focus
@@ -76,6 +82,10 @@ Validators for `tasklist` should check:
 - reviewability:
   - each task has a bounded completion surface and at least one concrete verification note,
   - task scope remains small enough for single-pass implementation and review,
+- public-surface planning:
+  - JavaScript/TypeScript helper/module tasks include export-map evidence before claiming
+    internal-only scope,
+  - package-importable helper paths are treated as public API risk unless intentionally accepted,
 - cross-document consistency between tasklist readiness claims, validator findings, and terminal status in `stage-result.md`.
 
 ## Interview policy

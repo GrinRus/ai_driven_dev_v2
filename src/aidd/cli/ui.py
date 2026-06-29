@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 import threading
@@ -1744,6 +1745,7 @@ class OperatorUiService:
         *,
         source_stage: str,
         source_ids: tuple[str, ...],
+        allow_operator_audit_source_ids: bool = False,
     ) -> tuple[str, ...]:
         if source_stage == "review":
             valid_ids = tuple(
@@ -1764,18 +1766,30 @@ class OperatorUiService:
         else:
             return source_ids
         valid_lookup = {item.lower(): item for item in valid_ids}
-        missing = tuple(item for item in source_ids if item.lower() not in valid_lookup)
+        missing = tuple(
+            item
+            for item in source_ids
+            if item.lower() not in valid_lookup
+            and not (
+                allow_operator_audit_source_ids
+                and item.startswith("OP-")
+                and re.fullmatch(r"OP-[A-Za-z0-9_.-]+", item) is not None
+            )
+        )
         if missing:
             raise ValueError(
                 f"source_ids do not match {source_stage} report: {', '.join(missing)}."
             )
-        return tuple(valid_lookup[item.lower()] for item in source_ids)
+        return tuple(valid_lookup.get(item.lower(), item) for item in source_ids)
 
     def _create_remediation_request(self, payload: dict[str, Any]) -> object:
         source_stage = _text_from_payload(payload, "source_stage")
         source_ids = self._validated_remediation_source_ids(
             source_stage=source_stage,
             source_ids=_remediation_source_ids_from_payload(payload),
+            allow_operator_audit_source_ids=bool(
+                payload.get("allow_operator_audit_source_ids")
+            ),
         )
         return create_remediation_request(
             workspace_root=self.workspace_root,
@@ -1794,6 +1808,9 @@ class OperatorUiService:
         source_ids = self._validated_remediation_source_ids(
             source_stage=source_stage,
             source_ids=_remediation_source_ids_from_payload(payload),
+            allow_operator_audit_source_ids=bool(
+                payload.get("allow_operator_audit_source_ids")
+            ),
         )
         request = create_remediation_request(
             workspace_root=self.workspace_root,
@@ -1920,6 +1937,69 @@ class OperatorUiService:
         job["run_id"] = run_id
         job["runtime"] = runtime
         job["rerun_stages"] = stale_stages
+        return job
+
+    def _rerun_remediation_stage(self, payload: dict[str, Any]) -> object:
+        runtime = _runtime_from_payload(payload)
+        _validate_runtime(runtime)
+        run_id = _source_run_id_from_payload(payload)
+        stage = _text_from_payload(payload, "stage")
+        stale_stages = self._stale_downstream_stages(run_id)
+        if stage not in stale_stages:
+            raise ValueError(f"Stage '{stage}' is not stale for run '{run_id}'.")
+        log_follow = bool(payload.get("log_follow", True))
+
+        def _target(job_id: str) -> object:
+            exit_code = 0
+            completed = True
+            result: object
+            try:
+                result = self._run_stage(
+                    stage=stage,
+                    runtime=runtime,
+                    run_id=run_id,
+                    log_follow=log_follow,
+                    job_id=job_id,
+                )
+                exit_code = (
+                    int(result.get("exit_code", 1)) if isinstance(result, Mapping) else 1
+                )
+                completed = exit_code == 0
+            except typer.Exit as exc:
+                exit_code = int(exc.exit_code or 1)
+                completed = False
+                result = {"exit_code": exit_code, "completed": False}
+            status = (
+                clear_stale_stages(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=run_id,
+                    stages=(stage,),
+                )
+                if completed
+                else load_remediation_status(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=run_id,
+                )
+            )
+            return {
+                "run_id": run_id,
+                "runtime": runtime,
+                "rerun_stage": stage,
+                "stage_result": result,
+                "status": status,
+                "exit_code": exit_code,
+                "completed": completed,
+            }
+
+        job = cast(
+            dict[str, object],
+            self._start_job(kind="remediation-rerun-stage", stage=stage, target=_target),
+        )
+        job["run_id"] = run_id
+        job["runtime"] = runtime
+        job["rerun_stage"] = stage
         return job
 
     def handle_get(self, path: str, params: dict[str, list[str]]) -> UiResponse:
@@ -2182,6 +2262,11 @@ class OperatorUiService:
             if path == "/api/remediation/rerun-downstream":
                 return _json_response(
                     self._rerun_stale_downstream(payload),
+                    status=HTTPStatus.ACCEPTED,
+                )
+            if path == "/api/remediation/rerun-stage":
+                return _json_response(
+                    self._rerun_remediation_stage(payload),
                     status=HTTPStatus.ACCEPTED,
                 )
             if path == "/api/next-flow/preflight":

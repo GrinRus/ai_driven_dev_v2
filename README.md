@@ -321,16 +321,17 @@ Manual live E2E scenarios snapshot tracked AIDD `HEAD` into
 isolated `uv tool` home/cache, clone the pinned target repository under
 `<work-root>/<run_id>/target/<repo-slug>`, run from the target repository root,
 execute each stage through public `aidd stage run` and inspection commands plus
-loopback `aidd ui` UI/API checkpoints, write `stage-audits/<stage>.json` and
-`.md` per-stage audits, write `target-workspace-evidence.json` / `.md` with
+loopback `aidd ui` UI/API checkpoints, write `stage-audits/<stage-run-id>.json`
+and `.md` per-stage-run audits, write `target-workspace-evidence.json` / `.md` with
 non-gating target diff and workspace-pollution evidence, and preserve durable execution bundles under
 `.aidd/reports/evals/`. Live manifest `limits.timeout_minutes` is a per-stage
 command budget; aggregate `run-transcript.json` does not report a global timeout
 unless the runner actually uses one. The runner does not score deliverable quality or create a
-quality report; the launching SWE agent may write
+quality report; for product-evaluation runs the launching SWE agent writes
+`stage-quality-audits/<stage-run-id>.md` before each resume and may write
 `.aidd/reports/evals/<run_id>/quality-report.md` manually after the terminal run,
-including a human-authored AIDD operator UI/UX decision when that quality dimension
-must be judged.
+including iteration history and a human-authored AIDD operator UI/UX decision when
+that quality dimension must be judged.
 When successful manifest verification creates only new known ignored byproducts
 after QA, the runner records `verify-transcript.json.workspace_cleanup` and removes
 that verification residue before final target workspace evidence. This is execution

@@ -16,6 +16,8 @@ Store user-facing clarification questions raised during a stage.
     question entry are invalid because they are parsed as additional question entries.
   - Each question must include a marker: `[blocking]` or `[non-blocking]`.
   - Each question must include a stable question id token (for example, `Q1`, `Q2`).
+  - Canonical question syntax is `- Q1 [blocking] question text` or
+    `- Q1 [non-blocking] question text`.
   - Blocking questions must describe why progression cannot continue without an answer.
   - Use `- none` only when the stage has no clarification needs.
 
@@ -24,6 +26,8 @@ Store user-facing clarification questions raised during a stage.
 - `[blocking]` means the stage cannot progress to terminal success without an answer.
 - `[non-blocking]` means the stage may continue with explicit assumptions.
 - Marker text is case-sensitive and must appear immediately after the question id token.
+- The marker must be followed by a space and question text, not punctuation. Forms such as
+  `- Q1 [blocking]: question text` or `- Q1: [blocking] question text` are invalid.
 
 ## Authoring rules
 
@@ -36,6 +40,8 @@ Store user-facing clarification questions raised during a stage.
   continuation prose that does not start with `-`.
 - Only bullets inside the `Questions` section are interpreted as question entries;
   use noncanonical sections only for non-authoritative prose metadata.
+- Do not use answer ids such as `A1` or `A2` in `questions.md`; durable interview
+  cross-references always use `Q`-prefixed question ids.
 
 ## Validation cues
 

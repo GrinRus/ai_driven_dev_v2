@@ -43,7 +43,7 @@ Optional context documents may refine review quality, but they must not replace 
 ## Review output expectations
 
 - `review-spec-report.md` must contain:
-  - an explicit issue list with severity and rationale,
+  - an explicit issue list with severity, evidence, and rationale,
   - a recommendation summary that prioritizes remediation steps,
   - a readiness state suitable for go/no-go decision on task decomposition.
 - `review-spec` must evaluate readiness against the original operator request, repository
@@ -60,11 +60,15 @@ Validators for `review-spec` should check:
   - issues are concrete, scoped, and linked to observable plan risks or gaps,
   - issue severity and rationale are explicit and non-generic,
   - issue list may use top-level bullets or `###` issue subsections, but each item/subsection
-    must carry severity and rationale,
-  - `### I<N>` issue subsections should put `Severity:` and `Rationale:` as immediate metadata
+    must carry severity, evidence, and rationale,
+  - `### I<N>` issue subsections should put `Severity:`, `Evidence:`, and `Rationale:` as immediate metadata
     bullets under the heading so repair attempts cannot hide them in surrounding prose,
+  - `critical` and `high` issues must cite direct durable evidence, not generic claims such as
+    `source inspection shows`,
+  - issues that contradict upstream research or plan evidence must include `Reconciliation`
+    explaining the stronger direct evidence,
   - an approved review with no material issues must use a no-defect issue item/subsection with
-    `Severity: none` and explicit rationale instead of bare prose such as
+    `Severity: none`, explicit evidence, and explicit rationale instead of bare prose such as
     `No material issues identified.`,
 - actionable recommendations:
   - recommendation summary uses prioritized Markdown list items; ordered and unordered lists are

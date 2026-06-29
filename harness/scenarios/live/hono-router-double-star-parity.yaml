@@ -1,11 +1,13 @@
 id: AIDD-LIVE-008
 scenario_class: live-full-flow-interview
 feature_size: xlarge
+live_matrix_role: product-evaluation
 automation_lane: manual
 canonical_runtime: opencode
 repo:
   url: https://github.com/honojs/hono
   default_branch: main
+  revision: cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba
 objective: Keep Hono interview live coverage deterministic with an authored router
   parity task that requires explicit compatibility clarification.
 task: Run the installed AIDD full-flow live audit against the selected Hono interview
@@ -49,6 +51,25 @@ feature_source:
       and free of silent routing semantic drift.
     size_rationale: Xlarge because the task is API-sensitive, interview-gated, and may
       affect router compatibility plus documentation across multiple surfaces.
+    visible_request: |
+      Resolve Hono's `/**` route matching behavior as a product/API decision, not a
+      local parser tweak. First ask for the compatibility policy if parity versus
+      intentional divergence is ambiguous. Then implement the answered behavior in
+      the maintained router surface, protect existing wildcard and catch-all
+      behavior, and update tests and documentation or compatibility notes so users
+      can understand the selected policy.
+    audit_rubric: |
+      Check whether AIDD treats routing behavior as API-sensitive, asks before
+      choosing parity or divergence, and validates across router variants instead of
+      a single narrow case. Count defects when the implementation silently changes
+      wildcard semantics, skips docs/compatibility evidence, or ignores existing
+      router test structure.
+    complexity_axes:
+    - interview
+    - api-policy
+    - cross-module
+    - docs
+    - compatibility
     interview:
     - Expected `/**` behavior relative to existing wildcard routing semantics.
     - Whether router parity should be implemented or explicitly documented as an intentional divergence.
@@ -74,7 +95,7 @@ verify:
   - step: completed
     evidence: verification commands and QA output artifact checks succeed after rerun.
 limits:
-  patch_budget_files: 12
+  patch_budget_files: 60
   timeout_minutes: 240
 interview:
   required: true

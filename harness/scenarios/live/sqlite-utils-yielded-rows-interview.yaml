@@ -1,11 +1,13 @@
 id: AIDD-LIVE-006
 scenario_class: live-full-flow-interview
-feature_size: large
+feature_size: xlarge
+live_matrix_role: product-evaluation
 automation_lane: manual
 canonical_runtime: opencode
 repo:
   url: https://github.com/simonw/sqlite-utils
   default_branch: main
+  revision: 8d74ffc93292c604d5827e2b44fffedca0c28c19
 objective: Keep sqlite-utils interview live coverage deterministic with an authored
   yielded-rows task that requires explicit requirement clarification.
 task: Run the installed AIDD full-flow live audit against the selected sqlite-utils
@@ -53,8 +55,28 @@ feature_source:
       implementation stays inside that boundary with confirmation, tests, and documentation,
       the inherent trust requirement is satisfied acceptance context rather than a residual
       release risk by itself.
-    size_rationale: Large because it is a new CLI feature gated by interview decisions
-      and requires behavior, tests, and documentation.
+    size_rationale: Xlarge product-evaluation lane because it is a new CLI feature
+      gated by interview decisions and spans user-provided code execution policy,
+      insertion behavior, tests, and documentation.
+    visible_request: |
+      Add a sqlite-utils CLI workflow for inserting rows yielded by user-provided
+      Python. The product behavior must not be guessed: first clarify the accepted
+      input form and execution trust boundary, then implement only the answered
+      policy. The result should insert yielded rows successfully for the chosen
+      form, reject at least one invalid or unsafe input, and document the trust
+      caveats without implying a broader security guarantee.
+    audit_rubric: |
+      Evaluate whether AIDD stops for the security/trust interview before planning,
+      keeps implementation inside the answered policy, and treats documentation as
+      part of the product deliverable. Count defects when AIDD silently invents a
+      code-execution policy, supports extra input forms, lacks negative tests, or
+      overstates security guarantees.
+    complexity_axes:
+    - interview
+    - security
+    - cli
+    - docs
+    - cross-module
     interview:
     - Execution trust boundary for user-provided Python code.
     - Accepted input form (inline expression, file, or both).
@@ -79,7 +101,7 @@ verify:
   - step: completed
     evidence: verification command and QA output artifact checks succeed after rerun.
 limits:
-  patch_budget_files: 12
+  patch_budget_files: 60
   timeout_minutes: 240
 interview:
   required: true

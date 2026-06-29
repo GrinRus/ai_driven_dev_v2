@@ -95,8 +95,10 @@ def route_stage_questions_to_interview_with_validation(
                 f"Malformed interview document `{document_name}`: {exc}. "
                 "Use `- <QID> [blocking|non-blocking] <text>` for questions, "
                 "`- <QID> [resolved|partial|deferred] <text>` for answers, "
-                "or `- none` when there are no entries. Use non-bullet continuation "
-                "prose for explanatory metadata."
+                "or `- none` when there are no entries. Do not put punctuation "
+                "immediately after the marker; `- Q1 [resolved]: ...` is invalid. "
+                "Do not invent `A1`/`A2` answer ids. Use non-bullet continuation prose "
+                "for explanatory metadata."
             ),
             severity="high",
             location=ValidationIssueLocation(

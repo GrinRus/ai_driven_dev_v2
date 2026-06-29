@@ -355,7 +355,7 @@ Actions:
    - `validator-report.md`
    - `verdict.md`
    - `log-analysis.md`
-   - `stage-audits/<stage>.json`
+   - `stage-audits/<stage-run-id>.json`
    - `stage-timing.md`
    - `self-repair-matrix.json`
    - `self-repair-matrix.md`

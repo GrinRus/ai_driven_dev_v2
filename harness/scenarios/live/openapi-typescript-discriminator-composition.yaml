@@ -1,6 +1,7 @@
 id: AIDD-LIVE-010
 scenario_class: live-full-flow-interview
 feature_size: large
+live_matrix_role: product-evaluation
 automation_lane: manual
 canonical_runtime: opencode
 repo:
@@ -55,8 +56,28 @@ feature_source:
     - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/qa/output/validator-report.md
     quality_bar: The result must be policy-explicit, covered by focused codegen tests,
       and free of unrelated generator output churn.
-    size_rationale: Large because the task touches code generation semantics and
-      requires interview answers about API-sensitive type output.
+    size_rationale: Large product-evaluation lane because the task touches code
+      generation semantics and requires interview answers about API-sensitive type
+      output.
+    visible_request: |
+      Make openapi-typescript produce predictable TypeScript for a discriminator
+      schema that combines `oneOf`, `allOf`, nullable values, and mapped references.
+      First clarify the generated-shape policy for mapped and unmapped discriminator
+      values and nullable/const handling. Then implement the answered policy in the
+      schema transform path, update focused fixtures or tests, and document any
+      intentionally unsupported composition behavior without broad generator churn.
+    audit_rubric: |
+      Evaluate whether AIDD models the generator policy before editing, asks for
+      ambiguous discriminator semantics, and proves output stability with focused
+      codegen tests. Count defects when unrelated fixtures churn, existing
+      discriminator behavior regresses, nullable/const policy is implicit, or docs
+      omit intentional unsupported behavior.
+    complexity_axes:
+    - interview
+    - codegen
+    - api-policy
+    - cross-module
+    - docs
     interview:
     - Expected generated shape for mapped versus implicit discriminator values.
     - Whether nullable or const discriminator values should be preserved, narrowed, or
@@ -83,7 +104,7 @@ verify:
   - step: completed
     evidence: focused codegen tests, TypeScript checks, and QA output artifact checks succeed.
 limits:
-  patch_budget_files: 10
+  patch_budget_files: 40
   timeout_minutes: 240
 interview:
   required: true

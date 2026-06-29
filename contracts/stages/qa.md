@@ -101,8 +101,10 @@ Optional context documents may improve QA depth, but they must not replace imple
   directories from
   `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
   equivalent evidence must be treated as workspace pollution unless they are selected deliverable
-  outputs or were removed before QA. Do not claim cleanup passed unless the cited evidence
-  explicitly covers these ignored residue classes.
+  outputs or were removed before the final QA report. QA must not rely only on a clean review
+  report when current repository evidence shows ignored residue. Do not claim cleanup passed or set
+  `QA verdict: ready` unless the cited evidence explicitly covers these ignored residue classes
+  after all QA commands have run, or else set `QA verdict: not-ready`.
 - Intentional design constraints selected by the authored task or resolved interview answers
   must not force `ready-with-risks` or `proceed-with-conditions` by themselves when the
   implementation exactly follows that selected boundary and required mitigations, tests, and
@@ -125,6 +127,10 @@ Optional context documents may improve QA depth, but they must not replace imple
   documented public surfaces. Missing help/usage, docs consistency, API compatibility, or
   generated-output evidence must force `QA verdict: not-ready` unless upstream review explicitly
   accepted it as out of scope with mitigation.
+- For JavaScript or TypeScript packages, `package.json` `exports`, wildcard subpath exports such
+  as `./utils/*`, generated declarations, and existing public import conventions are part of
+  readiness evidence. A new helper/module that is package-importable cannot be accepted as
+  internal-only unless that public API impact is tested or explicitly accepted with mitigation.
 
 ## Validation focus
 

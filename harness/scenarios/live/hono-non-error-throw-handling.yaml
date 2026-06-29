@@ -1,6 +1,7 @@
 id: AIDD-LIVE-007
 scenario_class: live-full-flow
 feature_size: medium
+live_matrix_role: product-evaluation
 automation_lane: manual
 canonical_runtime: codex
 repo:
@@ -61,8 +62,27 @@ feature_source:
     quality_bar: The patch is localized, typed, regression-covered, preserves the
       existing public error type contracts, and does not weaken existing Error
       handling behavior.
-    size_rationale: Medium because the behavioral fix touches runtime error handling and
-      type-checked tests, but should remain within one subsystem.
+    size_rationale: Medium product-evaluation lane because the behavioral fix touches
+      runtime error handling, public typing expectations, and focused tests across
+      two or three Hono surfaces.
+    visible_request: |
+      Hono should route thrown non-Error values through the same application error
+      handling path that handles Error objects. Please improve the middleware/request
+      execution path so thrown strings and plain objects reach configured `onError`
+      handling instead of escaping as unhandled promise rejections. Preserve existing
+      Error object behavior and public handler/context type compatibility, and add
+      focused regression coverage for at least one primitive value and one object value.
+    audit_rubric: |
+      Assess whether AIDD understands the error boundary, public type compatibility,
+      and regression surface before implementation. Count defects when the plan or
+      code broadens public error types unnecessarily, only handles one thrown value
+      shape, misses existing Error behavior, or proves behavior with weak/non-focused
+      verification.
+    complexity_axes:
+    - cross-module
+    - api-policy
+    - async-runtime
+    - type-compatibility
 verify:
   commands:
   - ./node_modules/.bin/vitest --run --coverage.enabled=false src/hono.test.ts src/compose.test.ts
@@ -75,7 +95,7 @@ verify:
   - TypeScript compile check reports no type errors.
   - QA stage output artifacts exist for the selected work item.
 limits:
-  patch_budget_files: 8
+  patch_budget_files: 20
   timeout_minutes: 240
 interview:
   required: false

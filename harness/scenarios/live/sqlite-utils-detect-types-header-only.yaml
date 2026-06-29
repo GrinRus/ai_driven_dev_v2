@@ -1,6 +1,7 @@
 id: AIDD-LIVE-005
 scenario_class: live-full-flow
 feature_size: small
+live_matrix_role: flow-regression
 automation_lane: manual
 canonical_runtime: codex
 repo:
@@ -66,7 +67,7 @@ verify:
   - No new failing tests are introduced relative to baseline.
   - QA stage output artifacts exist for the selected work item.
 limits:
-  patch_budget_files: 4
+  patch_budget_files: 8
   timeout_minutes: 240
 interview:
   required: false

@@ -14,6 +14,56 @@ def _markdown(*lines: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _user_request_markdown(selected_task: ScenarioAuthoredTask) -> str:
+    if selected_task.visible_request is not None:
+        return _markdown(
+            "# User Request",
+            "",
+            selected_task.visible_request.rstrip(),
+        )
+    return _markdown(
+        "# User Request",
+        "",
+        f"Implement authored live task `{selected_task.task_id}`: {selected_task.title}",
+        "",
+        selected_task.summary.strip(),
+        "",
+        "## Intent",
+        "",
+        selected_task.intent,
+        "",
+        "## Target Change",
+        "",
+        selected_task.target_change,
+    )
+
+
+def _selected_task_markdown(selected_task: ScenarioAuthoredTask) -> str:
+    if selected_task.visible_request is not None:
+        return _markdown(
+            "# Selected Task",
+            "",
+            f"- Task id: `{selected_task.task_id}`",
+            f"- Title: {selected_task.title}",
+            "",
+            "## Visible Product Request",
+            "",
+            selected_task.visible_request.rstrip(),
+        )
+    return _markdown(
+        "# Selected Task",
+        "",
+        f"- Task id: `{selected_task.task_id}`",
+        f"- Title: {selected_task.title}",
+        f"- Summary: {selected_task.summary.strip()}",
+        f"- Intent: {selected_task.intent}",
+        f"- Target change: {selected_task.target_change}",
+        f"- Expected scope: {selected_task.expected_scope}",
+        f"- Quality bar: {selected_task.quality_bar}",
+        f"- Size rationale: {selected_task.size_rationale}",
+    )
+
+
 def bootstrap_live_work_item(
     *,
     working_copy_path: Path,
@@ -37,7 +87,6 @@ def bootstrap_live_work_item(
         or "unresolved-at-bootstrap"
     )
     target_task = scenario.task.strip()
-    selected_task_summary = selected_task.summary.strip()
     verify_command_lines = tuple(
         f"- `{command}`" for command in selected_task.verification
     )
@@ -64,33 +113,8 @@ def bootstrap_live_work_item(
             f"- Operator objective: {target_task}",
             f"- Selected authored task: `{selected_task.task_id}` {selected_task.title}",
         ),
-        "user-request.md": _markdown(
-            "# User Request",
-            "",
-            f"Implement authored live task `{selected_task.task_id}`: {selected_task.title}",
-            "",
-            selected_task_summary,
-            "",
-            "## Intent",
-            "",
-            selected_task.intent,
-            "",
-            "## Target Change",
-            "",
-            selected_task.target_change,
-        ),
-        "selected-task.md": _markdown(
-            "# Selected Task",
-            "",
-            f"- Task id: `{selected_task.task_id}`",
-            f"- Title: {selected_task.title}",
-            f"- Summary: {selected_task_summary}",
-            f"- Intent: {selected_task.intent}",
-            f"- Target change: {selected_task.target_change}",
-            f"- Expected scope: {selected_task.expected_scope}",
-            f"- Quality bar: {selected_task.quality_bar}",
-            f"- Size rationale: {selected_task.size_rationale}",
-        ),
+        "user-request.md": _user_request_markdown(selected_task),
+        "selected-task.md": _selected_task_markdown(selected_task),
         "repository-state.md": _markdown(
             "# Repository State",
             "",

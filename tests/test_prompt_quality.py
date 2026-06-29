@@ -32,6 +32,63 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     assert "`- Q1 [resolved] ...`" in prompt_text
     assert "Do not put a colon after the marker" in prompt_text
     assert "`- Q1 [resolved]: ...` is invalid" in prompt_text
+    assert "`- Q1: [resolved] ...`" in prompt_text
+    assert "do not create `[resolved]`" in prompt_text
+
+
+@pytest.mark.parametrize("stage", STAGES)
+def test_stage_run_prompts_make_interview_syntax_strict(stage: str) -> None:
+    run_prompt = (Path("prompt-packs") / "stages" / stage / "run.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "## Interview document syntax" in run_prompt
+    assert "`- Q1 [blocking] text`" in run_prompt
+    assert "`- Q1 [non-blocking] text`" in run_prompt
+    assert "`- Q1 [resolved] text`" in run_prompt
+    assert "`- Q1 [partial] text`" in run_prompt
+    assert "`- Q1 [deferred] text`" in run_prompt
+    assert "`- Q1 [resolved]: text`" in run_prompt
+    assert "`- Q1: [resolved] text`" in run_prompt
+    assert "Do not invent `A1`/`A2` answer ids" in run_prompt
+    assert "do not create\n  `[resolved]` answers yourself" in run_prompt or (
+        "must not invent\n  `[resolved]` answers" in run_prompt
+    )
+
+
+def test_interview_document_contracts_and_native_prompt_forbid_marker_colon() -> None:
+    questions_contract = Path("contracts/documents/questions.md").read_text(
+        encoding="utf-8"
+    )
+    answers_contract = Path("contracts/documents/answers.md").read_text(
+        encoding="utf-8"
+    )
+    native_prompt = Path("src/aidd/adapters/native_prompt.py").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (questions_contract, answers_contract):
+        assert "Canonical" in text
+        assert "must be followed by a space" in text
+        assert "`- Q1: [blocking] question text`" in text or (
+            "`- Q1: [resolved] answer text`" in text
+        )
+        assert "invalid" in text
+        assert "A1" in text
+
+    assert "`- Q1 [resolved]: ...` is invalid" in native_prompt
+    assert "`- Q1: [resolved] ...`" in native_prompt
+    assert "do not create `[resolved]` answers" in native_prompt
+
+
+def test_plan_run_prompt_forbids_self_answered_downstream_policy() -> None:
+    run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+
+    assert "Planning may ask downstream clarification questions" in run_prompt
+    assert "must not invent\n  `[resolved]` answers for missing operator decisions" in (
+        run_prompt
+    )
+    assert "If no operator answer is present" in run_prompt
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -232,6 +289,52 @@ def test_implement_review_and_qa_require_shared_surface_blast_radius_evidence() 
     assert "must force `QA verdict: not-ready`" in qa_contract
 
 
+def test_js_ts_helper_internal_claims_require_export_map_evidence() -> None:
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(
+        encoding="utf-8"
+    )
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    implement_contract = Path("contracts/stages/implement.md").read_text(
+        encoding="utf-8"
+    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    for text in (
+        tasklist_prompt,
+        tasklist_contract,
+        implement_prompt,
+        implement_contract,
+        review_prompt,
+        review_contract,
+        qa_prompt,
+        qa_contract,
+    ):
+        normalized = " ".join(text.split())
+        assert "JavaScript or TypeScript packages" in text
+        assert "`package.json`" in text
+        assert "`exports`" in text
+        assert "wildcard subpath exports" in normalized
+        assert "`./utils/*`" in text
+        assert "generated declaration" in normalized
+        assert "public import conventions" in normalized
+        assert "internal-only" in text or "internal solely" in text
+
+    assert "do not plan a concrete helper/module path as private" in tasklist_prompt
+    assert "before describing that helper as private or internal-only" in (
+        tasklist_contract
+    )
+
+
 def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
     contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
     run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
@@ -389,6 +492,17 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
         assert "`__pycache__/`" in text
         assert "Do not" in text and "claim cleanup" in text
 
+    for text in (implement_prompt, implement_repair):
+        normalized_text = " ".join(text.split())
+        assert (
+            "If this live setup workspace runs any test, type, lint, docs, or build command"
+            in normalized_text
+            or "If the live setup workspace ran any test, type, lint, docs, or build command"
+            in normalized_text
+        )
+        assert "exact command" in normalized_text
+        assert "`git status --short --untracked-files=all` is insufficient" in normalized_text
+
     for text in (review_prompt, qa_prompt, review_contract, qa_contract):
         assert "prepared checkout disappeared" in text
         assert "was recloned" in text
@@ -400,6 +514,37 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
         assert "`__pycache__/`" in text
         assert "workspace pollution" in text
         assert "cleanup claim" in text or "claim cleanup" in text
+
+
+def test_review_and_qa_prompts_require_post_command_residue_truthfulness() -> None:
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_repair = Path("prompt-packs/stages/review/repair.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    qa_repair = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    review_texts = (review_prompt, review_repair, review_contract)
+    for text in review_texts:
+        normalized = " ".join(text.split())
+        assert "after all review commands" in normalized
+        assert "`Findings: none`" in text
+        assert "residue" in text
+        assert "`coverage/`" in text
+        assert "post-cleanup evidence" in normalized
+
+    qa_texts = (qa_prompt, qa_repair, qa_contract)
+    for text in qa_texts:
+        normalized = " ".join(text.split())
+        assert "after all QA commands" in normalized
+        assert "clean review report" in normalized
+        assert "`QA verdict: ready`" in text or "`not-ready`" in text
+        assert "`coverage/`" in text
+        assert "residue" in text
 
 
 def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> None:
@@ -439,6 +584,30 @@ def test_research_prompts_and_contracts_require_bounded_local_probes() -> None:
         assert "`anyio.fail_after(...)`" in text
         assert "`subprocess.run(..., timeout=...)`" in text
         assert "`not-run: <reason>`" in text
+
+
+def test_live_docs_distinguish_provider_no_progress_from_quality_failure() -> None:
+    catalog = Path("docs/e2e/live-e2e-catalog.md").read_text(encoding="utf-8")
+    rubric = Path("docs/e2e/live-quality-rubric.md").read_text(encoding="utf-8")
+    skill = Path(".agents/skills/live-e2e/SKILL.md").read_text(encoding="utf-8")
+
+    for text in (catalog, rubric, skill):
+        lower_text = text.lower()
+        normalized_text = " ".join(text.split())
+        assert "provider-no-progress before completed stage artifact" in normalized_text
+        assert "no_progress_timeout_minutes" in text
+        assert (
+            "infra/provider" in lower_text
+            or "blocked-provider" in lower_text
+            or "blocked-infra" in lower_text
+            or "terminal `infra-fail`" in lower_text
+        )
+        assert (
+            "not product-quality" in lower_text
+            or "not a product-quality" in lower_text
+            or "not product quality" in lower_text
+        )
+        assert "manual-quality-stop" in lower_text
 
 
 def test_review_and_qa_use_live_setup_workspace_baseline() -> None:
@@ -502,13 +671,43 @@ def test_review_spec_prompt_requires_issue_severity_and_rationale_shape() -> Non
         encoding="utf-8"
     )
 
-    assert "`- I1: Severity: medium. Rationale: because ...`" in run_prompt
+    assert "explicit `Severity`, `Evidence`, and `Rationale` text" in run_prompt
+    assert "Severity: medium" in run_prompt
+    assert "Evidence:" in run_prompt
+    assert "Rationale: because ..." in run_prompt
     assert "`- Severity: medium`" in run_prompt
+    assert "`- Evidence: plan.md M2`" in run_prompt
     assert "metadata bullets immediately under each heading" in run_prompt
-    assert "every subsection issue has immediate `Severity:`" in repair_prompt
+    normalized_repair_prompt = " ".join(repair_prompt.split())
+    assert (
+        "every subsection issue has immediate `Severity:`, `Evidence:`, and "
+        "`Rationale:`" in normalized_repair_prompt
+    )
     assert "`Severity: none`" in run_prompt
-    assert "`Rationale: because ...`" in run_prompt
+    assert "`Evidence: plan.md / research-notes.md`" in run_prompt
     assert "do not write bare prose such as `No material issues identified.`" in run_prompt
+
+
+def test_review_spec_prompts_require_direct_evidence_and_reconciliation() -> None:
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/documents/review-spec-report.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "`critical` and `high` issues must cite direct evidence" in run_prompt
+    assert "Do not write unsupported claims such as `source inspection shows`" in run_prompt
+    assert "Do not expand implementation scope" in run_prompt
+    assert "convert speculative risk into a high-severity defect" in run_prompt
+    assert "include `Reconciliation:`" in run_prompt
+    assert "missing evidence reference" in repair_prompt
+    assert "unsupported high-severity claim" in repair_prompt
+    assert "contradiction with upstream research or plan" in repair_prompt
+    assert "Unsupported phrases such as `source inspection shows`" in contract
 
 
 def test_implement_prompts_require_executable_verification_evidence() -> None:

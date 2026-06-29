@@ -126,7 +126,8 @@ The first frontend contract covers these flows:
    - after a successful remediation `implement` attempt, mark downstream `review` and
      `qa` stale through overlay metadata instead of adding a new `StageState`;
    - block stale `qa` from being treated as a fresh terminal handoff in the UI;
-   - let the operator explicitly rerun stale downstream stages, currently `review -> qa`.
+   - let the operator explicitly rerun stale downstream stages, either as the existing
+     downstream batch or one stale stage at a time through `POST /api/remediation/rerun-stage`.
 
 12. **Prompt/workflow accountability**
    - expose `/api/run/accountability?run_id=...` as a private read-only UI endpoint;
@@ -311,6 +312,8 @@ Current W20 implementation status:
   only after the remediation `implement` attempt succeeds;
 - stale downstream stages keep their existing canonical status but show a stale badge and
   reason in the UI. The run-global next action becomes explicit stale downstream rerun;
+  the per-stage remediation rerun API executes exactly one stale stage and clears stale
+  metadata only after that stage succeeds;
 - workflow and stage launches are primarily routed through the right-side Next
   Action button so the top bar stays status/control-plane focused;
 - `POST /api/open-folder` is a loopback-only convenience action for allowlisted

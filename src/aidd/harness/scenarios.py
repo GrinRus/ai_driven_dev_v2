@@ -27,9 +27,11 @@ _FEATURE_SIZES = {"tiny", "small", "medium", "large", "xlarge"}
 _AUTOMATION_LANES = {"ci", "manual"}
 _SUPPORTED_RUNTIME_IDS = set(runtime_ids())
 _LIVE_RUNTIME_IDS = {"codex", "opencode", "claude-code", "qwen"}
+_LIVE_MATRIX_ROLES = {"flow-regression", "product-evaluation"}
 _LIVE_FLOW_DRIVERS = {"stepwise-black-box"}
 _LIVE_FLOW_CHECKPOINT_POLICIES = {"after-each-step"}
 _LIVE_FLOW_ANSWER_POLICIES = {"agent-decides"}
+DEFAULT_LIVE_NO_PROGRESS_TIMEOUT_MINUTES = 30
 
 
 @dataclass(frozen=True)
@@ -57,6 +59,9 @@ class ScenarioAuthoredTask:
     quality_bar: str
     size_rationale: str
     interview: tuple[str, ...]
+    visible_request: str | None = None
+    audit_rubric: str | None = None
+    complexity_axes: tuple[str, ...] = tuple()
 
 
 @dataclass(frozen=True)
@@ -77,6 +82,8 @@ class ScenarioRunConfig:
     patch_budget_files: int | None
     timeout_minutes: int | None
     interview_required: bool
+    max_remediation_cycles: int = 3
+    no_progress_timeout_minutes: int | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +111,7 @@ class Scenario:
     runtime_targets: tuple[str, ...]
     is_live: bool
     raw: dict[str, Any]
+    live_matrix_role: str | None = None
 
 
 def _normalize_scenario_parameters(raw: Any) -> dict[str, str]:
@@ -271,6 +279,14 @@ def _to_authored_task(*, raw: Any, key: str) -> ScenarioAuthoredTask:
         parent_key=key,
         required=False,
     )
+    visible_request = str(payload.get("visible_request", "")).strip() or None
+    audit_rubric = str(payload.get("audit_rubric", "")).strip() or None
+    complexity_axes = _to_non_empty_string_tuple(
+        payload=payload,
+        key="complexity_axes",
+        parent_key=key,
+        required=False,
+    )
     return ScenarioAuthoredTask(
         task_id=task_id,
         title=title,
@@ -283,6 +299,9 @@ def _to_authored_task(*, raw: Any, key: str) -> ScenarioAuthoredTask:
         quality_bar=quality_bar,
         size_rationale=size_rationale,
         interview=interview,
+        visible_request=visible_request,
+        audit_rubric=audit_rubric,
+        complexity_axes=complexity_axes,
     )
 
 
@@ -351,9 +370,35 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
     if isinstance(limits, dict):
         patch_budget_files = _to_optional_int(payload=limits, key="patch_budget_files")
         timeout_minutes = _to_optional_int(payload=limits, key="timeout_minutes")
+        no_progress_timeout_minutes = _to_optional_int(
+            payload=limits,
+            key="no_progress_timeout_minutes",
+        )
+        max_remediation_cycles = _to_optional_int(
+            payload=limits,
+            key="max_remediation_cycles",
+        )
+        if max_remediation_cycles is None:
+            max_remediation_cycles = 3
     else:
         patch_budget_files = None
         timeout_minutes = None
+        no_progress_timeout_minutes = None
+        max_remediation_cycles = 3
+    if (
+        no_progress_timeout_minutes is None
+        and raw.get("scenario_class") in _LIVE_SCENARIO_CLASSES
+    ):
+        no_progress_timeout_minutes = DEFAULT_LIVE_NO_PROGRESS_TIMEOUT_MINUTES
+    if no_progress_timeout_minutes is not None and no_progress_timeout_minutes < 1:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'limits.no_progress_timeout_minutes' must be a "
+            "positive integer."
+        )
+    if max_remediation_cycles < 1:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'limits.max_remediation_cycles' must be a positive integer."
+        )
 
     interview_required = bool(interview.get("required")) if isinstance(interview, dict) else False
     if not isinstance(runtime_targets_raw, list) or not runtime_targets_raw:
@@ -372,6 +417,8 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
         runtime_targets=runtime_targets,
         patch_budget_files=patch_budget_files,
         timeout_minutes=timeout_minutes,
+        max_remediation_cycles=max_remediation_cycles,
+        no_progress_timeout_minutes=no_progress_timeout_minutes,
         interview_required=interview_required,
     )
 
@@ -432,9 +479,11 @@ def _validate_scenario_contract(
     feature_size: str,
     automation_lane: str,
     canonical_runtime: str,
+    repo: ScenarioRepoSource,
     run: ScenarioRunConfig,
     feature_source: ScenarioFeatureSource | None,
     live_flow: ScenarioLiveFlowConfig | None,
+    live_matrix_role: str | None,
     raw: dict[str, Any],
 ) -> None:
     if run.stage_start is None or run.stage_end is None:
@@ -470,6 +519,30 @@ def _validate_scenario_contract(
         )
 
     if is_live:
+        if repo.revision is None:
+            raise ScenarioManifestError(
+                "Live scenario manifests must pin `repo.revision` for maintained "
+                "black-box evidence."
+            )
+        if live_matrix_role is None:
+            raise ScenarioManifestError(
+                "Live scenario manifests must declare `live_matrix_role`."
+            )
+        if live_matrix_role == "flow-regression" and feature_size != "small":
+            raise ScenarioManifestError(
+                "Live scenario manifests with `live_matrix_role: flow-regression` "
+                "must declare `feature_size: small`."
+            )
+        if live_matrix_role == "product-evaluation" and feature_size not in {
+            "medium",
+            "large",
+            "xlarge",
+        }:
+            raise ScenarioManifestError(
+                "Live scenario manifests with `live_matrix_role: product-evaluation` "
+                "must declare `feature_size: medium`, `feature_size: large`, or "
+                "`feature_size: xlarge`."
+            )
         if "workflow_bundle" in raw:
             raise ScenarioManifestError(
                 "Live scenario manifests must not declare "
@@ -544,11 +617,32 @@ def _validate_scenario_contract(
                     "Live interview scenario authored tasks must include "
                     f"`feature_source.tasks[{index}].interview` guidance."
                 )
+            if live_matrix_role == "product-evaluation":
+                task_key = f"feature_source.tasks[{index}]"
+                if task.visible_request is None:
+                    raise ScenarioManifestError(
+                        "Product-evaluation live authored tasks must include "
+                        f"`{task_key}.visible_request`."
+                    )
+                if task.audit_rubric is None:
+                    raise ScenarioManifestError(
+                        "Product-evaluation live authored tasks must include "
+                        f"`{task_key}.audit_rubric`."
+                    )
+                if not task.complexity_axes:
+                    raise ScenarioManifestError(
+                        "Product-evaluation live authored tasks must include "
+                        f"`{task_key}.complexity_axes`."
+                    )
         return
 
     if feature_source is None:
         raise ScenarioManifestError(
             "Deterministic scenario manifests must declare a `feature_source` block."
+        )
+    if live_matrix_role is not None:
+        raise ScenarioManifestError(
+            "Deterministic scenario manifests must not declare `live_matrix_role`."
         )
     if feature_source.mode != "fixture-seed":
         raise ScenarioManifestError(
@@ -618,6 +712,15 @@ def load_scenario(
     task = _require_non_empty_string(payload=substituted, key="task")
     run = _to_run_config(substituted)
     is_live = scenario_class in _LIVE_SCENARIO_CLASSES
+    live_matrix_role = (
+        _require_choice(
+            payload=substituted,
+            key="live_matrix_role",
+            supported=_LIVE_MATRIX_ROLES,
+        )
+        if "live_matrix_role" in substituted
+        else None
+    )
     feature_source = (
         _to_feature_source(substituted.get("feature_source"))
         if substituted.get("feature_source") is not None
@@ -637,9 +740,11 @@ def load_scenario(
         feature_size=feature_size,
         automation_lane=automation_lane,
         canonical_runtime=canonical_runtime,
+        repo=repo,
         run=run,
         feature_source=feature_source,
         live_flow=live_flow,
+        live_matrix_role=live_matrix_role,
         raw=substituted,
     )
     return Scenario(
@@ -658,4 +763,5 @@ def load_scenario(
         runtime_targets=run.runtime_targets,
         is_live=is_live,
         raw=substituted,
+        live_matrix_role=live_matrix_role,
     )

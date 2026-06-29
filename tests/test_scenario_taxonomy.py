@@ -47,6 +47,22 @@ def test_live_scenarios_are_manual_only() -> None:
             assert scenario.live_flow.checkpoint_policy == "after-each-step", path.as_posix()
             assert scenario.live_flow.frontend_checkpoints is True, path.as_posix()
             assert scenario.live_flow.answer_policy == "agent-decides", path.as_posix()
+            assert scenario.repo.revision, path.as_posix()
+            assert scenario.live_matrix_role in {
+                "flow-regression",
+                "product-evaluation",
+            }, path.as_posix()
+            if scenario.live_matrix_role == "flow-regression":
+                assert scenario.feature_size == "small", path.as_posix()
+            else:
+                assert scenario.feature_size in {"medium", "large", "xlarge"}, (
+                    path.as_posix()
+                )
+                assert scenario.feature_source is not None, path.as_posix()
+                for task in scenario.feature_source.tasks:
+                    assert task.visible_request, path.as_posix()
+                    assert task.audit_rubric, path.as_posix()
+                    assert task.complexity_axes, path.as_posix()
 
 
 def test_live_scenarios_do_not_mask_setup_or_pytest_failures_with_shell_fallbacks() -> None:
@@ -88,13 +104,45 @@ def test_representative_matrix_buckets_exist_in_manifest_set() -> None:
         ("deterministic-stage", "small", "ci"),
         ("deterministic-workflow", "medium", "ci"),
         ("deterministic-workflow", "large", "manual"),
-        ("live-full-flow", "tiny", "manual"),
         ("live-full-flow", "small", "manual"),
         ("live-full-flow", "medium", "manual"),
+        ("live-full-flow", "large", "manual"),
         ("live-full-flow-interview", "large", "manual"),
         ("live-full-flow-interview", "xlarge", "manual"),
     }
     assert required.issubset(observed)
+
+
+def test_live_matrix_roles_match_black_box_product_evaluation_policy() -> None:
+    live = [scenario for _path, scenario in _scenario_entries() if scenario.is_live]
+    scenario_ids = {scenario.scenario_id for scenario in live}
+
+    flow_regression_ids = {
+        scenario.scenario_id
+        for scenario in live
+        if scenario.live_matrix_role == "flow-regression"
+    }
+    assert flow_regression_ids == {
+        "AIDD-LIVE-004",
+        "AIDD-LIVE-005",
+    }
+    assert {
+        "AIDD-LIVE-001",
+        "AIDD-LIVE-002",
+        "AIDD-LIVE-003",
+        "AIDD-LIVE-009",
+    }.isdisjoint(scenario_ids)
+    assert all(
+        scenario.live_matrix_role == "product-evaluation"
+        for scenario in live
+        if scenario.feature_size in {"medium", "large", "xlarge"}
+    )
+    product_repos = {
+        scenario.repo.url
+        for scenario in live
+        if scenario.live_matrix_role == "product-evaluation"
+    }
+    assert len(product_repos) >= 5
 
 
 def test_provider_rollout_policy_matches_manifest_set() -> None:
@@ -118,7 +166,9 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
         for scenario in live
     ), "Expected a small live lane with codex as canonical runtime."
     assert any(
-        scenario.canonical_runtime == "codex" and scenario.feature_size == "medium"
+        scenario.live_matrix_role == "product-evaluation"
+        and scenario.canonical_runtime == "codex"
+        and scenario.feature_size == "medium"
         for scenario in live
     ), "Expected a medium live lane with codex as canonical runtime."
     assert any(
@@ -133,9 +183,8 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
     assert sorted(claude_live_targets) == [
         "AIDD-LIVE-005",
         "AIDD-LIVE-007",
-        "AIDD-LIVE-009",
         "AIDD-LIVE-012",
-    ], "Claude Code live rollout must include smoke plus planned medium and large coverage."
+    ], "Claude Code live rollout must include regression plus planned medium and large coverage."
 
 
 def test_hono_medium_live_scenario_uses_focused_verification_gate() -> None:
@@ -168,14 +217,14 @@ def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:
         "AIDD-INSTALLED-LOCAL-001",
         "AIDD-DETERMINISTIC-001",
         "AIDD-DETERMINISTIC-002",
-        "AIDD-LIVE-001",
         "AIDD-LIVE-004",
         "AIDD-LIVE-006",
+        "flow-regression",
+        "product-evaluation",
         "rotate across products",
         "live-full-flow-interview",
         "fixture-seed",
         "authored-task-pool",
-        "`tiny`",
         "`xlarge`",
     ):
         assert needle in matrix_doc
@@ -197,7 +246,7 @@ def test_live_catalog_mentions_manual_matrix_coverage() -> None:
         "AIDD_EVAL_CODEX_COMMAND",
         "AIDD_EVAL_OPENCODE_COMMAND",
         "Published-package install proof belongs to a separate release/install lane",
-        "setup-blocked",
+        "stage-quality-audits/<stage-run-id>.md",
     ):
         assert needle in catalog_doc
 

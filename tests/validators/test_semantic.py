@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
@@ -19,6 +20,15 @@ from aidd.validators.semantic import (
 )
 
 _SEMANTIC_FIXTURES_ROOT = Path(__file__).parent / "fixtures" / "semantic"
+
+
+def _git(project_root: Path, *args: str) -> None:
+    subprocess.run(
+        ("git", "-C", project_root.as_posix(), *args),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def _write_stage_contract(
@@ -1332,6 +1342,7 @@ def test_validate_semantic_outputs_accepts_review_spec_nested_issue_metadata(
             "- **OBS-1** - `info` - Plan line numbers are one-off from "
             "`transform` call in prose, but the actual edit target is correct.\n"
             "  - **Severity:** `info`\n"
+            "  - **Evidence:** `plan.md` M1 and `cli.py:1179`.\n"
             "  - **Rationale:** The prose says \"edit `cli.py:1179` ... so the "
             "transform call is skipped\" because the edit is scoped to the guard "
             "line and not to unrelated behavior.\n\n"
@@ -1370,12 +1381,14 @@ def test_validate_semantic_outputs_accepts_review_spec_issue_subsections(
             "Each issue is severity-tagged and rationale-backed.\n\n"
             "### I1 - Conditional implementation shape\n\n"
             "- **Severity:** low\n"
+            "- **Evidence:** `plan.md` M3.\n"
             "- **Section:** `Milestones > M3`.\n"
             "- **Observation:** The plan keeps two implementation shapes open.\n"
             "- **Rationale:** because the downstream implement stage must record "
             "which shape it chose and why; this is advisory, not blocking.\n\n"
             "### I2 - Test file location remains flexible\n\n"
             "- **Severity:** info\n"
+            "- **Evidence:** `plan.md` M1.\n"
             "- **Section:** `Milestones > M1`.\n"
             "- **Observation:** The exact test file is left to implementation.\n"
             "- **Rationale:** because the repo layout is observable at task time "
@@ -1417,10 +1430,12 @@ def test_validate_semantic_outputs_accepts_review_spec_no_issue_markers(
             "## Issue list\n\n"
             "- **I1 - Upstream issue-id discrepancy is advisory.**\n"
             "  - Severity: `low`\n"
+            "  - Evidence: `plan.md` M2.\n"
             "  - Rationale: because the plan records the discrepancy and maps "
             "it to a commit-message recommendation.\n"
             "- **I2 - No material defect found that blocks decomposition.**\n"
             "  - Severity: `none`\n"
+            "  - Evidence: `plan.md` and `research-notes.md`.\n"
             "  - Rationale: Plan goals, scope, milestones, dependencies, risks, "
             "and verification approach are mutually consistent.\n\n"
             "## Strengths\n\n"
@@ -1456,8 +1471,9 @@ def test_validate_semantic_outputs_accepts_review_spec_inline_severity_label(
             "## Readiness state\n\n"
             "- `ready-with-conditions`\n\n"
             "## Issue list\n\n"
-            "- I1: Severity: low. Rationale: because the plan should add one "
-            "delegated constructor smoke check during downstream tasking.\n\n"
+            "- I1: Severity: low. Evidence: `plan.md` M2. Rationale: because the "
+            "plan should add one delegated constructor smoke check during "
+            "downstream tasking.\n\n"
             "## Strengths\n\n"
             "- The plan is bounded and test-first.\n\n"
             "## Recommendation summary\n\n"
@@ -1542,6 +1558,7 @@ def test_validate_semantic_outputs_accepts_review_spec_ordered_recommendations(
             "## Issue list\n\n"
             "- **I1 - Memory command assertion can be stronger.**\n"
             "  - Severity: `low`\n"
+            "  - Evidence: `plan.md` Verification notes.\n"
             "  - Rationale: because adding an output assertion would tighten "
             "the regression without changing scope.\n\n"
             "## Strengths\n\n"
@@ -1560,6 +1577,152 @@ def test_validate_semantic_outputs_accepts_review_spec_ordered_recommendations(
     findings = validate_semantic_outputs(
         stage="review-spec",
         work_item="WI-REVIEW-SPEC-ORDERED-RECS",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_review_spec_issue_without_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_spec_report(
+        workspace_root,
+        "WI-REVIEW-SPEC-MISSING-EVIDENCE",
+        (
+            "# Review Spec Report\n\n"
+            "## Readiness state\n\n"
+            "- `ready-with-conditions`\n\n"
+            "## Issue list\n\n"
+            "- I1: Severity: low. Rationale: because task decomposition should "
+            "preserve the verification note.\n\n"
+            "## Strengths\n\n"
+            "- The plan is bounded.\n\n"
+            "## Recommendation summary\n\n"
+            "- Carry I1 into task decomposition.\n\n"
+            "## Required changes\n\n"
+            "- Preserve the verification note.\n\n"
+            "## Decision\n\n"
+            "- `approved-with-conditions`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-REVIEW-SPEC-MISSING-EVIDENCE",
+        workspace_root=workspace_root,
+    )
+
+    assert any(finding.code == MISSING_EVIDENCE_REF_CODE for finding in findings)
+
+
+def test_validate_semantic_outputs_flags_review_spec_high_claim_without_direct_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_spec_report(
+        workspace_root,
+        "WI-REVIEW-SPEC-UNSUPPORTED-HIGH",
+        (
+            "# Review Spec Report\n\n"
+            "## Readiness state\n\n"
+            "- `not-ready`\n\n"
+            "## Issue list\n\n"
+            "- I1: Severity: high. Evidence: source inspection. Rationale: because "
+            "source inspection shows the router behavior is missing.\n\n"
+            "## Strengths\n\n"
+            "- The plan names the target router area.\n\n"
+            "## Recommendation summary\n\n"
+            "- Provide direct source evidence before blocking decomposition.\n\n"
+            "## Required changes\n\n"
+            "- Add direct source evidence or downgrade I1.\n\n"
+            "## Decision\n\n"
+            "- `rejected`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-REVIEW-SPEC-UNSUPPORTED-HIGH",
+        workspace_root=workspace_root,
+    )
+
+    assert any(finding.code == UNSUPPORTED_CLAIM_CODE for finding in findings)
+
+
+def test_validate_semantic_outputs_flags_review_spec_router_parity_without_reconciliation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_spec_report(
+        workspace_root,
+        "WI-REVIEW-SPEC-ROUTER-PARITY",
+        (
+            "# Review Spec Report\n\n"
+            "## Readiness state\n\n"
+            "- `not-ready`\n\n"
+            "## Issue list\n\n"
+            "### I1 - Router parity blocker\n\n"
+            "- Severity: high\n"
+            "- Evidence: `src/router/linear-router/router.ts` and "
+            "`src/router/pattern-router/router.ts`.\n"
+            "- Rationale: because LinearRouter and PatternRouter currently make "
+            "`/**` match only `/`, so implementation scope must expand.\n\n"
+            "## Strengths\n\n"
+            "- The plan identifies router parity as important.\n\n"
+            "## Recommendation summary\n\n"
+            "- Reconcile the router claim with upstream research before proceeding.\n\n"
+            "## Required changes\n\n"
+            "- Add reconciliation or remove I1.\n\n"
+            "## Decision\n\n"
+            "- `rejected`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-REVIEW-SPEC-ROUTER-PARITY",
+        workspace_root=workspace_root,
+    )
+
+    assert any(finding.code == UNSUPPORTED_CLAIM_CODE for finding in findings)
+
+
+def test_validate_semantic_outputs_accepts_review_spec_router_parity_with_reconciliation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_spec_report(
+        workspace_root,
+        "WI-REVIEW-SPEC-ROUTER-PARITY-RECONCILED",
+        (
+            "# Review Spec Report\n\n"
+            "## Readiness state\n\n"
+            "- `not-ready`\n\n"
+            "## Issue list\n\n"
+            "### I1 - Router parity blocker\n\n"
+            "- Severity: high\n"
+            "- Evidence: `src/router/linear-router/router.ts`, "
+            "`src/router/pattern-router/router.ts`, and F7.\n"
+            "- Reconciliation: F7 is superseded by the direct failing probe "
+            "`bun test router-double-star.test.ts`.\n"
+            "- Rationale: because LinearRouter and PatternRouter currently make "
+            "`/**` match only `/`, so implementation scope must expand.\n\n"
+            "## Strengths\n\n"
+            "- The plan identifies router parity as important.\n\n"
+            "## Recommendation summary\n\n"
+            "- Update the plan with the reconciled router evidence.\n\n"
+            "## Required changes\n\n"
+            "- Add the failing router probe before task decomposition.\n\n"
+            "## Decision\n\n"
+            "- `rejected`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-REVIEW-SPEC-ROUTER-PARITY-RECONCILED",
         workspace_root=workspace_root,
     )
 
@@ -1595,6 +1758,20 @@ def test_validate_semantic_outputs_flags_invalid_review_spec_fixture_bundle() ->
             message=(
                 "Each `Issue list` item must include rationale "
                 "(for example `because ...`)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-SPEC-INVALID/stages/review-spec/review-spec-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=MISSING_EVIDENCE_REF_CODE,
+            message=(
+                "Each `Issue list` item must include `Evidence:` naming a concrete "
+                "artifact, source id, target file path, or check result."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -2017,6 +2194,95 @@ def test_validate_semantic_outputs_accepts_live_ignored_residue_evidence_for_imp
             "(no new `coverage/`, `.coverage*`, `__pycache__/`, build, dist, "
             "or dependency-cache residue beyond setup baseline).\n\n"
             "## Follow-up notes\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_aidd_command_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-AIDD-COMMAND"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`.\n\n"
+            "## Change summary\n\n"
+            "Implemented the selected live task and preserved operator answer alignment.\n\n"
+            "## Touched files\n\n"
+            "- `sqlite_utils/cli.py` - add yielded rows option handling.\n"
+            "- `tests/test_cli_insert.py` - cover yielded rows behavior.\n\n"
+            "## Verification notes\n\n"
+            "- `aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW` "
+            "-> pass (exit code 0; no unresolved blocking questions).\n\n"
+            "## Follow-up notes\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_sed_command_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-LIVE-SED"
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Summary\n\n"
+            "- Selected task id: `TASK-LIVE-HONO-NON-ERROR-THROW`.\n"
+            "- Implemented bounded non-Error throw normalization with focused "
+            "regression coverage and public type compatibility checks.\n\n"
+            "## Touched files\n\n"
+            "- `src/compose.ts` - normalize composed middleware thrown values.\n"
+            "- `src/hono-base.ts` - normalize direct route thrown values.\n"
+            "- `src/hono.test.ts` - add primitive and object throw regressions.\n"
+            "- `src/compose.test.ts` - add composed middleware regression coverage.\n\n"
+            "## Verification\n\n"
+            "- `./node_modules/.bin/vitest --run --coverage.enabled=false "
+            "src/hono.test.ts src/compose.test.ts` -> pass (235 passed).\n"
+            "- `./node_modules/.bin/tsc --noEmit` -> pass (exit code 0).\n"
+            "- `sed -n '113,119p' src/types.ts` -> pass (observed `ErrorHandler` "
+            "still accepts `err: Error | HTTPResponseError`).\n"
+            "- `sed -n '319,334p' src/context.ts` -> pass (observed `Context.error` "
+            "remains `Error | undefined`).\n"
+            "- `git status --ignored --short --untracked-files=all` -> pass "
+            "(no new `coverage/`, `.coverage*`, `__pycache__/`, build, dist, "
+            "or dependency-cache residue beyond setup baseline).\n\n"
+            "## Risks\n\n"
+            "- Public type compatibility remains source-compatible.\n\n"
+            "## Follow-up\n\n"
             "- none\n"
         ),
     )
@@ -2680,6 +2946,46 @@ def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_live_cleanup_residue_note(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-LIVE-CLEANUP",
+        "# Implementation Report\n\n"
+        "## Selected task\n\n"
+        "- Task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n\n"
+        "## Change summary\n\n"
+        "Implemented the selected yielded-rows feature with code, tests, and docs.\n\n"
+        "## Touched files\n\n"
+        "- `sqlite_utils/cli.py` - add yielded-row ingestion handling.\n"
+        "- `tests/test_cli_insert.py` - cover yielded rows and invalid input.\n"
+        "- `docs/cli.rst` - document trusted local Python caveats.\n\n"
+        "## Verification\n\n"
+        "- `uv run pytest -q` -> pass (1055 passed, 16 skipped).\n"
+        "- `uv run sphinx-build -W -b html docs docs/_build` -> pass.\n"
+        "- Verification residue cleanup: removed `.pytest_cache/`, "
+        "`.hypothesis/`, `docs/_build/`, and `__pycache__/` directories "
+        "created by the pytest/sphinx checks.\n"
+        "- `git status --ignored --short --untracked-files=all` -> pass "
+        "(no `.pytest_cache/`, `.hypothesis/`, `docs/_build/`, "
+        "`__pycache__/`, `.ruff_cache/`, or `.mypy_cache/` residue remains).\n\n"
+        "## Risks\n\n"
+        "- None observed.\n\n"
+        "## Follow-up\n\n"
+        "- None.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-LIVE-CLEANUP",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_backticked_python_heredoc_verification(
     tmp_path: Path,
 ) -> None:
@@ -2810,6 +3116,223 @@ def test_validate_semantic_outputs_accepts_none_review_findings_with_evidence_no
     findings = validate_semantic_outputs(
         stage="review",
         work_item="WI-SEM-REVIEW-NONE-FINDINGS-EVIDENCE",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_review_clean_approval_with_live_residue(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-LIVE-RESIDUE"
+    (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved\n\n"
+            "## Findings\n\n"
+            "- none\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "coverage/raw/default" in finding.message
+        and "after all review commands" in finding.message
+        for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_ignores_review_tracked_build_source_directory(
+    tmp_path: Path,
+) -> None:
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "aidd@example.test")
+    _git(tmp_path, "config", "user.name", "AIDD Test")
+    (tmp_path / "build").mkdir()
+    (tmp_path / "build" / "build.ts").write_text("export {}\n", encoding="utf-8")
+    _git(tmp_path, "add", "build/build.ts")
+    _git(tmp_path, "commit", "-m", "track build source")
+
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-LIVE-TRACKED-BUILD"
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved\n\n"
+            "## Findings\n\n"
+            "- none\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_review_condition_with_live_residue_finding(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-LIVE-RESIDUE-FINDING"
+    (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved-with-conditions\n\n"
+            "## Findings\n\n"
+            "### RV-1 - ignored residue remains after review\n\n"
+            "- Severity: `high`\n"
+            "- Disposition: `must-fix`\n"
+            "- Evidence: `coverage/raw/default` remains visible after "
+            "`git status --ignored --short --untracked-files=all`.\n"
+            "- Rationale: because ignored coverage residue is workspace pollution "
+            "unless it is removed or selected as deliverable output.\n\n"
+            "## Risks\n\n"
+            "- Review is conditional on cleanup.\n\n"
+            "## Required follow-up\n\n"
+            "- RV-1: remove `coverage/raw/default` or document it as selected deliverable.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_review_cleanup_claim_with_live_residue(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-LIVE-CLEANUP-CLAIM"
+    (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved\n\n"
+            "## Findings\n\n"
+            "### RV-1 - scoped implementation evidence reviewed\n\n"
+            "- Severity: `low`\n"
+            "- Disposition: `accepted-risk`\n"
+            "- Evidence: `implementation-report.md` records focused verification.\n"
+            "- Rationale: because the selected behavior is covered by targeted tests.\n\n"
+            "## Risks\n\n"
+            "- Cleanup passed after verification; workspace hygiene is clean.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "cleanup passed" in finding.message
+        for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_ignores_review_residue_without_live_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-NON-LIVE-RESIDUE"
+    (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved\n\n"
+            "## Findings\n\n"
+            "- none\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
         workspace_root=workspace_root,
     )
 

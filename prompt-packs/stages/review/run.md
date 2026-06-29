@@ -48,6 +48,18 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
   read-only to repair attempts.
 
+## Interview document syntax
+
+- `questions.md` bullets must be exactly `- Q1 [blocking] text` or
+  `- Q1 [non-blocking] text`.
+- `answers.md` bullets must be exactly `- Q1 [resolved] text`,
+  `- Q1 [partial] text`, or `- Q1 [deferred] text`.
+- Do not put punctuation immediately after the marker: `- Q1 [resolved]: text` and
+  `- Q1: [resolved] text` are invalid.
+- Do not invent `A1`/`A2` answer ids; answer bullets always reuse question ids.
+- If no operator answer is present, write `# Answers\n\n- none\n`; do not create
+  `[resolved]` answers yourself.
+
 ## Review discipline
 
 1. Findings must have stable ids, explicit severity, explicit disposition, and rationale tied to
@@ -103,8 +115,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
    `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
    directories, inspect them as workspace pollution and record a finding unless they are selected
-   deliverable outputs or were removed before review. Do not accept a cleanup claim unless its cited
-   evidence explicitly checks these ignored residue classes.
+   deliverable outputs or were removed before the final review report. Do not accept a cleanup claim
+   unless its cited evidence explicitly checks these ignored residue classes after all review
+   commands have run. If review creates ignored residue, remove it and cite post-cleanup evidence,
+   or record an active finding. Do not write `Findings: none` or `Review status: approved` while
+   non-baseline ignored residue remains visible.
 8. Intentional design constraints selected by the authored task or resolved interview answers are
    acceptance context, not findings by themselves. For example, do not write an `accepted-risk`
    finding solely because the task intentionally executes trusted local Python when the
@@ -125,6 +140,11 @@ normalize if canonical validation proves the terminal status inconsistent.
    sibling commands, routes, generated outputs, or documented public surfaces that reuse it.
    Record a finding when implementation evidence does not cover help/usage text, API compatibility,
    docs consistency, or other affected public behavior needed to keep the selected task bounded.
+   For JavaScript or TypeScript packages, inspect `package.json` `exports`, wildcard subpath
+   exports such as `./utils/*`, generated declaration outputs, and existing public import
+   conventions before accepting implementation claims that a new helper/module is internal-only.
+   If the path is package-importable and implementation evidence does not treat it as public API,
+   record a `must-fix` finding.
 11. In `review-report.md`, write the approval decision as a machine-readable line:
    `- Review status: approved` (or `approved-with-conditions` / `rejected`) under
    `Approval status` or `Verdict`, then add rationale separately.
@@ -180,5 +200,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 - named plan/tasklist mechanisms were either found in code/tests or explicitly superseded,
 - shared public-surface helper changes were checked against affected sibling
   commands/routes/generated outputs and help/docs/API compatibility evidence,
+- JavaScript/TypeScript helper additions were checked against package export maps before accepting
+  internal-only claims,
+- ignored residue checks were performed after all review commands, and no `Findings: none` /
+  `Review status: approved` claim remains while non-baseline residue is present,
 - blocking ambiguity is surfaced via explicit questions,
 - `review-report.md`, `validator-report.md`, and `stage-result.md` are outcome-consistent.

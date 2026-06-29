@@ -53,6 +53,18 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
   read-only to repair attempts.
 
+## Interview document syntax
+
+- `questions.md` bullets must be exactly `- Q1 [blocking] text` or
+  `- Q1 [non-blocking] text`.
+- `answers.md` bullets must be exactly `- Q1 [resolved] text`,
+  `- Q1 [partial] text`, or `- Q1 [deferred] text`.
+- Do not put punctuation immediately after the marker: `- Q1 [resolved]: text` and
+  `- Q1: [resolved] text` are invalid.
+- Do not invent `A1`/`A2` answer ids; answer bullets always reuse question ids.
+- If no operator answer is present, write `# Answers\n\n- none\n`; do not create
+  `[resolved]` answers yourself.
+
 ## QA discipline
 
 1. Do not declare `succeeded`, `ready`, or `proceed` when upstream `review` is unresolved or
@@ -113,15 +125,22 @@ normalize if canonical validation proves the terminal status inconsistent.
     equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
     `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories, treat
     them as workspace pollution unless they are selected deliverable outputs or were removed before
-    QA. Do not write "cleanup passed" or equivalent wording unless the cited command explicitly
-    checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build,
-    dist, and dependency-cache residue.
+    the final QA report. Do not rely only on a clean review report when current repository evidence
+    shows ignored residue. Do not write "cleanup passed" or equivalent wording, and do not set
+    `QA verdict: ready`, unless the cited command explicitly checks `.pytest_cache/`,
+    `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, and dependency-cache
+    residue after all QA commands have run.
 11. If the diff changes a shared public-surface mechanism such as a CLI decorator,
     parser/helper, router/error boundary, schema transform helper, or public API adapter, require
     evidence for affected sibling commands, routes, generated outputs, or documented public surfaces.
     Missing help/usage, docs consistency, API compatibility, or generated-output blast-radius
     evidence is a QA blocker unless upstream review explicitly accepted it as out of scope with
     a concrete mitigation.
+    For JavaScript or TypeScript packages, treat `package.json` `exports`, wildcard subpath
+    exports such as `./utils/*`, generated declarations, and existing public import conventions
+    as readiness evidence. If a new helper/module is package-importable but implementation/review
+    calls it internal-only, set `QA verdict: not-ready` unless that public API impact is tested or
+    explicitly accepted with mitigation.
 
 ## Execution instructions
 
@@ -215,6 +234,6 @@ normalize if canonical validation proves the terminal status inconsistent.
   are absent or explicitly make QA `not-ready`.
 - ignored verification residue such as `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`,
   `__pycache__/`, build, dist, and dependency-cache artifacts is absent, cleaned before QA, or explicitly keeps QA
-  `not-ready`; do not claim cleanup passed from a narrower check.
+  `not-ready`; do not claim cleanup passed from a narrower check or from review alone.
 - shared public-surface helper changes have blast-radius evidence for affected sibling
   commands/routes/generated outputs and help/docs/API compatibility.

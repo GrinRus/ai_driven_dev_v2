@@ -251,6 +251,71 @@ def test_render_repair_brief_adds_actionable_list_format_hint() -> None:
     assert "write exactly `- none`" in repair_brief
 
 
+def test_render_repair_brief_adds_interview_document_answer_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="INTERVIEW-MALFORMED-DOCUMENT",
+                message=(
+                    "Malformed interview document `answers.md`: Invalid answer entry "
+                    "at line 3: expected `- <QID> [resolved|partial|deferred] <text>`."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path="workitems/WI-001/stages/plan/answers.md",
+                    line_number=3,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        prior_stage_artifacts=("workitems/WI-001/stages/plan/answers.md",),
+        stage_attempt_count=2,
+        max_repair_attempts=2,
+    )
+
+    assert "`- Q1 [resolved]: text`" in repair_brief
+    assert "`- Q1 [resolved] text`" in repair_brief
+    assert "`- Q1: [resolved] text`" in repair_brief
+    assert "`A1` answer ids" in repair_brief
+    assert "write exactly `- none`" in repair_brief
+
+
+def test_render_repair_brief_adds_interview_document_question_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="INTERVIEW-MALFORMED-DOCUMENT",
+                message=(
+                    "Malformed interview document `questions.md`: Invalid question entry "
+                    "at line 4: expected `- <QID> [blocking|non-blocking] <text>`."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path="workitems/WI-001/stages/plan/questions.md",
+                    line_number=4,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        prior_stage_artifacts=("workitems/WI-001/stages/plan/questions.md",),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    )
+
+    assert "`- Q1 [blocking] text`" in repair_brief
+    assert "`- Q1 [non-blocking] text`" in repair_brief
+    assert "non-bullet continuation prose" in repair_brief
+    assert "nested bullets" in repair_brief
+
+
 def test_render_repair_brief_adds_review_evidence_reference_hint() -> None:
     report_markdown = render_validator_report(
         findings=(
@@ -287,6 +352,93 @@ def test_render_repair_brief_adds_review_evidence_reference_hint() -> None:
     assert "`implementation-report.md`" in repair_brief
     assert "acceptance-criteria id such as `AC-1`" in repair_brief
     assert "remove or mark the finding `invalid`" in repair_brief
+
+
+def test_render_repair_brief_adds_review_spec_evidence_and_reconciliation_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="SEM-MISSING-EVIDENCE-REF",
+                message=(
+                    "Each `Issue list` item must include `Evidence:` naming a concrete "
+                    "artifact, source id, target file path, or check result."
+                ),
+                severity="medium",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/review-spec/review-spec-report.md"
+                    ),
+                    line_number=7,
+                ),
+            ),
+            ValidationFinding(
+                code="SEM-UNSUPPORTED-CLAIM",
+                message=(
+                    "Router-parity claims about `LinearRouter`, `PatternRouter`, and "
+                    "`/**` must include `Reconciliation:`."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/review-spec/review-spec-report.md"
+                    ),
+                    line_number=9,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/review-spec/validator-report.md",
+        prior_stage_artifacts=(
+            "workitems/WI-001/stages/research/output/research-notes.md",
+            "workitems/WI-001/stages/plan/output/plan.md",
+        ),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    )
+
+    assert "For each review-spec issue/no-defect item, add `Evidence:`" in repair_brief
+    assert "research/source id" in repair_brief
+    assert "Either cite direct durable evidence" in repair_brief
+    assert "add `Reconciliation:`" in repair_brief
+    assert "downgrade the claim" in repair_brief
+
+
+def test_render_repair_brief_adds_review_workspace_hygiene_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="SEM-UNVERIFIABLE-CHECK-CLAIM",
+                message=(
+                    "Live review cannot declare approved/no findings or cleanup passed "
+                    "while non-baseline ignored workspace residue exists after review: "
+                    "coverage/raw/default."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/review/review-report.md"
+                    ),
+                    line_number=7,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+        prior_stage_artifacts=("workitems/WI-001/stages/review/review-report.md",),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    )
+
+    assert "Check ignored residue after all review commands" in repair_brief
+    assert "post-cleanup evidence" in repair_brief
+    assert "active `RV-*` finding" in repair_brief
+    assert "Do not write `Findings: none` while residue exists" in repair_brief
 
 
 def test_render_repair_brief_marks_final_repair_attempt() -> None:

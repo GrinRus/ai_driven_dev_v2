@@ -56,18 +56,36 @@ containing only `ready-with-conditions`.
 - Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
   read-only to repair attempts.
 
+## Interview document syntax
+
+- `questions.md` bullets must be exactly `- Q1 [blocking] text` or
+  `- Q1 [non-blocking] text`.
+- `answers.md` bullets must be exactly `- Q1 [resolved] text`,
+  `- Q1 [partial] text`, or `- Q1 [deferred] text`.
+- Do not put punctuation immediately after the marker: `- Q1 [resolved]: text` and
+  `- Q1: [resolved] text` are invalid.
+- Do not invent `A1`/`A2` answer ids; answer bullets always reuse question ids.
+- If no operator answer is present, write `# Answers\n\n- none\n`; do not create
+  `[resolved]` answers yourself.
+
 ## Review discipline
 
-1. Every issue must be concrete, scoped, severity-tagged, and rationale-backed.
+1. Every issue must be concrete, scoped, severity-tagged, evidence-backed, and rationale-backed.
 2. Use either top-level bullets or `### I<N> - ...` subsections for the `Issue list`; each issue
-   item/subsection must include explicit `Severity` and `Rationale` text.
+   item/subsection must include explicit `Severity`, `Evidence`, and `Rationale` text.
    For bullet issues, use this shape on the same top-level bullet:
-   `- I1: Severity: medium. Rationale: because ...`.
+   `- I1: Severity: medium. Evidence: plan.md M2. Rationale: because ...`.
    For subsection issues, put these exact metadata bullets immediately under each heading:
-   `- Severity: medium` and `- Rationale: because ...`.
+   `- Severity: medium`, `- Evidence: plan.md M2`, and `- Rationale: because ...`.
    If no material issue exists, write a no-defect item with `Severity: none` and
-   `Rationale: because ...`; do not write bare prose such as `No material issues identified.`,
+   `Evidence: plan.md / research-notes.md` and `Rationale: because ...`; do not write bare prose such as `No material issues identified.`,
    and do not invent advisory issues just to satisfy format.
+   `critical` and `high` issues must cite direct evidence: an upstream artifact path, research
+   source id, research finding id, target file path, milestone id, acceptance id, or command/check
+   result. Do not write unsupported claims such as `source inspection shows` unless the same issue
+   names the concrete inspected artifact or check result.
+   If an issue contradicts upstream `research-notes.md` or `plan.md`, include `Reconciliation:`
+   naming the stronger direct evidence and explaining why the contradiction is valid.
 3. Recommendation summary must use prioritized Markdown list items (ordered or unordered) and map
    remediation steps to identified issues where applicable.
 4. Recommendations must be prioritized and explicit enough for downstream execution.
@@ -87,6 +105,9 @@ containing only `ready-with-conditions`.
 3. Draft `review-spec-report.md` with the exact required headings: `Readiness state`,
    `Issue list`, `Strengths`, `Recommendation summary`, `Required changes`, and `Decision`.
 4. Keep issue wording tied to observable plan gaps or risks, not generic quality statements.
+   Do not expand implementation scope or convert speculative risk into a high-severity defect
+   without direct durable evidence. If evidence is unclear, ask a question or record a low/info
+   observation instead of inventing a blocker.
 5. Map recommended actions to issue ids/severity where possible so remediation order is clear.
 6. If contradictory constraints, missing decision authority, or missing acceptance policy block
    sign-off, raise a `[blocking]` question instead of forcing approval status.
@@ -102,8 +123,8 @@ containing only `ready-with-conditions`.
 
 ## Completion checklist
 
-- issue list is concrete, severity-tagged, and rationale-backed in either bullet or `### I<N>`
-  subsection form; every subsection issue has immediate `Severity:` and `Rationale:` bullets,
+- issue list is concrete, severity-tagged, evidence-backed, and rationale-backed in either bullet or `### I<N>`
+  subsection form; every subsection issue has immediate `Severity:`, `Evidence:`, and `Rationale:` bullets,
 - recommendations are prioritized Markdown list items and mapped to identified issues,
 - readiness state, required changes, and sign-off decision are coherent,
 - unresolved blocking ambiguity is captured as explicit questions,

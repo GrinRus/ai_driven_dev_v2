@@ -45,6 +45,18 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
   read-only to repair attempts.
 
+## Interview document syntax
+
+- `questions.md` bullets must be exactly `- Q1 [blocking] text` or
+  `- Q1 [non-blocking] text`.
+- `answers.md` bullets must be exactly `- Q1 [resolved] text`,
+  `- Q1 [partial] text`, or `- Q1 [deferred] text`.
+- Do not put punctuation immediately after the marker: `- Q1 [resolved]: text` and
+  `- Q1: [resolved] text` are invalid.
+- Do not invent `A1`/`A2` answer ids; answer bullets always reuse question ids.
+- If no operator answer is present, write `# Answers\n\n- none\n`; do not create
+  `[resolved]` answers yourself.
+
 ## Implementation discipline
 
 1. When `context/task-selection.md` is provided, the selected task id must be explicit in the implementation
@@ -84,19 +96,28 @@ normalize if canonical validation proves the terminal status inconsistent.
     `.aidd/workitems/...` from the repository root. If `git status --short --untracked-files=all`
     shows top-level `workitems/...`, stray stage documents, or scratch files unrelated to the
     selected task, clean them up or report the implementation as not clean.
-    Also inspect ignored local artifacts when feasible, for example with
-    `git status --ignored --short --untracked-files=all`; newly created `.venv/`, `.pytest_cache/`,
-    `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories are
-    workspace pollution unless they are part of the selected deliverable or are removed before
-    terminal output. After running verification that can create cache or coverage residue, either
-    remove those files or report the implementation as not clean; do not claim cleanup passed unless
-    the cited command actually checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`,
-    `__pycache__/`, build, dist, and dependency-cache residue.
+    If this live setup workspace runs any test, type, lint, docs, or build command, verification
+    notes must include the exact command
+    `git status --ignored --short --untracked-files=all` with an observed outcome.
+    `git status --short --untracked-files=all` is insufficient because it hides ignored residue.
+    Newly created `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`, `coverage/`,
+    `.coverage*`, build, dist, or dependency-cache directories are workspace pollution unless
+    they are part of the selected deliverable or are removed before terminal output. After running
+    verification that can create cache or coverage residue, either remove those files or report
+    the implementation as not clean; do not claim cleanup passed unless the cited command actually
+    checks `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist,
+    and dependency-cache residue.
 13. When the implementation changes a shared public-surface mechanism such as a CLI decorator,
     parser/helper, router/error boundary, schema transform helper, or public API adapter, inspect
     the sibling commands, routes, generated outputs, or documented public surfaces that reuse that
     mechanism. Record focused blast-radius evidence for help/usage text, API compatibility, and
     docs consistency, or explicitly mark the unchecked sibling surface as a residual risk.
+14. In JavaScript or TypeScript packages, do not claim a new helper/module is internal solely
+    because it is under `src/` or has no direct documentation. Inspect `package.json` `exports`,
+    wildcard subpath exports such as `./utils/*`, generated declaration outputs, and existing
+    public import conventions. If the new path can be imported through the package boundary,
+    treat it as public API surface and record compatibility/test evidence or choose a private
+    location that is not exported.
 
 ## Execution instructions
 
@@ -170,6 +191,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - failed verification is reported promptly instead of hidden behind open-ended debugging,
 - shared public-surface helper changes include focused blast-radius evidence for sibling
   commands/routes/generated outputs or explicit residual risk,
+- JavaScript/TypeScript helper additions that may sit under package `exports` include export-map
+  evidence before they are described as internal,
 - no-op handling (if any) includes justification, evidence, and next action,
 - no top-level `workitems/...` artifacts, stray stage/control documents, or scratch files are left
   in the deliverable workspace,

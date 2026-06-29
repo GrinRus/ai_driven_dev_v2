@@ -14,14 +14,15 @@ import tempfile
 import threading
 import time
 import tomllib
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal, cast
+from queue import Empty, Queue
+from typing import Any, Literal, TextIO, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from aidd.core.markdown import MarkdownSectionIndex
 from aidd.core.next_flow import (
@@ -133,13 +134,31 @@ FlowAction = Literal[
     "run-stage",
     "inspect-stage",
     "answer-questions",
+    "quality-review",
+    "remediation",
     "frontend-checkpoint",
     "verify",
     "teardown",
     "finish",
     "stop",
 ]
-StepClassification = Literal["pass", "fail", "blocked", "infra-fail", "skipped"]
+LiveE2EStatus = Literal[
+    "pass",
+    "fail",
+    "blocked",
+    "infra-fail",
+    "awaiting-quality-review",
+    "manual-quality-stop",
+]
+StepClassification = Literal[
+    "pass",
+    "fail",
+    "blocked",
+    "infra-fail",
+    "skipped",
+    "awaiting-quality-review",
+    "manual-quality-stop",
+]
 
 FLOW_STATE_FILENAME = "flow-state.json"
 FLOW_STEPS_FILENAME = "flow-steps.json"
@@ -174,8 +193,17 @@ WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT = 100
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 SUMMARY_REPORT_FILENAME = "summary.md"
 STAGE_AUDITS_DIRNAME = "stage-audits"
+STAGE_QUALITY_AUDITS_DIRNAME = "stage-quality-audits"
+REMEDIATION_ACTIONS_DIRNAME = "remediation-actions"
+FLOW_QUALITY_REPORT_FILENAME = "flow-quality-report.md"
+CODE_QUALITY_REPORT_FILENAME = "code-quality-report.md"
+QUALITY_REPORT_FILENAME = "quality-report.md"
+MANUAL_QUALITY_STOP_JSON_FILENAME = "manual-quality-stop.json"
+MANUAL_QUALITY_STOP_MARKDOWN_FILENAME = "manual-quality-stop.md"
 FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
+PROVIDER_NO_PROGRESS_EXIT_CODE = 125
 STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
+STAGE_NO_PROGRESS_RECONCILIATION_SUFFIX = "-no-progress-reconciliation.json"
 NEXT_FLOW_OPERATOR_DECISIONS = (
     "no-follow-up",
     "follow-up-draft",
@@ -186,11 +214,15 @@ NEXT_FLOW_OPERATOR_DECISIONS = (
 )
 
 TERMINAL_STATUSES = {"pass", "fail", "infra-fail"}
-RESUMABLE_STATUSES = {"blocked", "interrupted-resumable"}
+TERMINAL_MANUAL_STATUSES = {"manual-quality-stop"}
+RESUMABLE_STATUSES = {"blocked", "interrupted-resumable", "awaiting-quality-review"}
 TERMINAL_STAGE_METADATA_STATUSES = {"blocked", "failed", "succeeded"}
 PRESERVED_STATE_EXTRA_KEYS = (
     "error",
     "interruption",
+    "no_progress",
+    "no_progress_details",
+    "no_progress_reconciliation",
     "operator_action_request_json",
     "operator_action_request_markdown",
     "stage_exit_code",
@@ -201,6 +233,8 @@ PRESERVED_STATE_EXTRA_KEYS = (
 class BlackBoxCommandResult:
     command: tuple[str, ...]
     transcript: HarnessCommandTranscript
+    no_progress: bool = False
+    no_progress_details: dict[str, object] | None = None
 
     @property
     def exit_code(self) -> int:
@@ -224,13 +258,15 @@ class BlackBoxLiveE2EResult:
     scenario_id: str
     run_id: str
     runtime_id: str
-    status: VerdictStatus
+    status: LiveE2EStatus
     bundle_root: Path
     flow_report_path: Path
     verdict_path: Path
     summary_path: Path
     first_failure_note: str | None
     operator_action_request_path: Path | None
+    quality_review_request_path: Path | None = None
+    manual_quality_stop_path: Path | None = None
 
 
 @dataclass(slots=True)
@@ -369,6 +405,13 @@ def _load_steps(bundle_root: Path) -> list[dict[str, Any]]:
     return [item for item in payload if isinstance(item, dict)]
 
 
+def _load_flow_state(bundle_root: Path) -> dict[str, Any]:
+    path = _state_path(bundle_root)
+    if not path.exists():
+        return {}
+    return _read_json_object(path)
+
+
 def _write_steps(bundle_root: Path, steps: list[dict[str, Any]]) -> None:
     _write_json(_steps_path(bundle_root), steps)
 
@@ -395,10 +438,36 @@ def _run_black_box_command(
     cwd: Path,
     environment: dict[str, str],
     timeout_seconds: float | None,
+    no_progress_timeout_seconds: float | None = None,
+    progress_probe: Callable[[], dict[str, object]] | None = None,
 ) -> BlackBoxCommandResult:
     started = time.monotonic()
     timed_out = False
+    no_progress = False
+    no_progress_details: dict[str, object] | None = None
     process: subprocess.Popen[str] | None = None
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+    output_queue: Queue[tuple[str, str | None]] = Queue()
+    reader_threads: list[threading.Thread] = []
+    stream_done = {"stdout": False, "stderr": False}
+    hard_deadline = (
+        None if timeout_seconds is None else started + max(float(timeout_seconds), 0.0)
+    )
+    last_progress_monotonic = started
+    last_progress_utc = _utc_now()
+    last_progress_reason = "process-started"
+    last_progress_snapshot: dict[str, object] | None = None
+    last_progress_signature: str | None = None
+
+    if progress_probe is not None:
+        try:
+            last_progress_snapshot = progress_probe()
+            last_progress_signature = _progress_snapshot_signature(last_progress_snapshot)
+        except OSError as exc:
+            last_progress_snapshot = {"probe_error": str(exc)}
+            last_progress_signature = _progress_snapshot_signature(last_progress_snapshot)
+
     try:
         process = subprocess.Popen(
             command,
@@ -409,29 +478,128 @@ def _run_black_box_command(
             text=True,
             start_new_session=True,
         )
-        stdout_text, stderr_text = process.communicate(timeout=timeout_seconds)
-        exit_code = process.returncode
-    except subprocess.TimeoutExpired as exc:
-        timed_out = True
-        exit_code = 124
-        stdout_text = _timeout_output_to_text(exc.stdout)
-        stderr_text = _timeout_output_to_text(exc.stderr)
-        cleanup = _terminate_process_group(process)
-        if cleanup["stdout_text"]:
-            stdout_text = str(cleanup["stdout_text"])
-        if cleanup["stderr_text"]:
-            stderr_text = str(cleanup["stderr_text"])
-        timeout_label = (
-            f"{timeout_seconds:.3f}s" if timeout_seconds is not None else "configured timeout"
-        )
-        stderr_text = (
-            f"{stderr_text.rstrip()}\nCommand timed out after {timeout_label}.\n"
-        ).lstrip()
+
+        reader_threads = [
+            threading.Thread(
+                target=_read_command_stream,
+                args=("stdout", process.stdout, output_queue),
+                daemon=True,
+            ),
+            threading.Thread(
+                target=_read_command_stream,
+                args=("stderr", process.stderr, output_queue),
+                daemon=True,
+            ),
+        ]
+        for thread in reader_threads:
+            thread.start()
+
+        exit_code: int | None = None
+        while True:
+            try:
+                stream_name, chunk = output_queue.get(timeout=0.05)
+            except Empty:
+                stream_name = ""
+                chunk = None
+            if stream_name in stream_done and chunk is None:
+                stream_done[stream_name] = True
+            elif stream_name == "stdout" and chunk is not None:
+                stdout_chunks.append(chunk)
+                last_progress_monotonic = time.monotonic()
+                last_progress_utc = _utc_now()
+                last_progress_reason = "stdout"
+            elif stream_name == "stderr" and chunk is not None:
+                stderr_chunks.append(chunk)
+                last_progress_monotonic = time.monotonic()
+                last_progress_utc = _utc_now()
+                last_progress_reason = "stderr"
+
+            if progress_probe is not None:
+                try:
+                    snapshot = progress_probe()
+                    signature = _progress_snapshot_signature(snapshot)
+                except OSError as exc:
+                    snapshot = {"probe_error": str(exc)}
+                    signature = _progress_snapshot_signature(snapshot)
+                if signature != last_progress_signature:
+                    last_progress_signature = signature
+                    last_progress_snapshot = snapshot
+                    last_progress_monotonic = time.monotonic()
+                    last_progress_utc = _utc_now()
+                    last_progress_reason = "watched-files"
+
+            now = time.monotonic()
+            if hard_deadline is not None and now >= hard_deadline:
+                timed_out = True
+                exit_code = 124
+                cleanup = _stop_process_group_for_streaming(process)
+                for thread in reader_threads:
+                    thread.join(timeout=1.0)
+                timeout_label = (
+                    f"{timeout_seconds:.3f}s"
+                    if timeout_seconds is not None
+                    else "configured timeout"
+                )
+                stderr_chunks.append(f"Command timed out after {timeout_label}.\n")
+                if cleanup.get("stderr_text"):
+                    stderr_chunks.append(str(cleanup["stderr_text"]))
+                if cleanup.get("stdout_text"):
+                    stdout_chunks.append(str(cleanup["stdout_text"]))
+                break
+
+            if (
+                no_progress_timeout_seconds is not None
+                and now - last_progress_monotonic >= no_progress_timeout_seconds
+            ):
+                no_progress = True
+                exit_code = PROVIDER_NO_PROGRESS_EXIT_CODE
+                cleanup = _stop_process_group_for_streaming(process)
+                for thread in reader_threads:
+                    thread.join(timeout=1.0)
+                stdout_tail = _text_tail("".join(stdout_chunks))
+                stderr_tail = _text_tail("".join(stderr_chunks))
+                no_progress_details = {
+                    "reason": "provider-no-progress",
+                    "message": "provider-no-progress before completed stage artifact",
+                    "duration_seconds": max(now - started, 0.0),
+                    "no_progress_timeout_seconds": no_progress_timeout_seconds,
+                    "hard_timeout_seconds": timeout_seconds,
+                    "last_progress_at_utc": last_progress_utc,
+                    "last_progress_seconds_ago": max(now - last_progress_monotonic, 0.0),
+                    "last_progress_reason": last_progress_reason,
+                    "observed_files": last_progress_snapshot or {},
+                    "stdout_tail": stdout_tail,
+                    "stderr_tail": stderr_tail,
+                    "process_exit_code": cleanup.get("return_code"),
+                    "terminated_process_group": cleanup.get("terminated_process_group"),
+                }
+                stderr_chunks.append(
+                    "Command stopped because provider made no progress for "
+                    f"{no_progress_timeout_seconds:.3f}s before completed stage artifact.\n"
+                )
+                if cleanup.get("stderr_text"):
+                    stderr_chunks.append(str(cleanup["stderr_text"]))
+                if cleanup.get("stdout_text"):
+                    stdout_chunks.append(str(cleanup["stdout_text"]))
+                break
+
+            if process.poll() is not None and all(stream_done.values()):
+                exit_code = process.returncode
+                break
+
+        for thread in reader_threads:
+            thread.join(timeout=1.0)
+        stdout_text = "".join(stdout_chunks)
+        stderr_text = "".join(stderr_chunks)
+        if exit_code is None:
+            exit_code = process.returncode if process.returncode is not None else 1
     except LiveE2EInterrupted as exc:
-        cleanup = _terminate_process_group(process)
+        cleanup = _stop_process_group_for_streaming(process)
+        for thread in reader_threads:
+            thread.join(timeout=1.0)
         duration_seconds = time.monotonic() - started
-        stdout_text = str(cleanup.get("stdout_text") or "")
-        stderr_text = str(cleanup.get("stderr_text") or "")
+        stdout_text = "".join(stdout_chunks) + str(cleanup.get("stdout_text") or "")
+        stderr_text = "".join(stderr_chunks) + str(cleanup.get("stderr_text") or "")
         transcript = HarnessCommandTranscript(
             command=_command_text(command),
             exit_code=130,
@@ -441,7 +609,10 @@ def _run_black_box_command(
             timed_out=False,
             timeout_seconds=timeout_seconds,
         )
-        exc.command_result = BlackBoxCommandResult(command=command, transcript=transcript)
+        exc.command_result = BlackBoxCommandResult(
+            command=command,
+            transcript=transcript,
+        )
         exc.cleanup = {
             "command": list(command),
             "process_exit_code": cleanup.get("return_code"),
@@ -450,13 +621,15 @@ def _run_black_box_command(
         }
         raise
     except KeyboardInterrupt as exc:
-        cleanup = _terminate_process_group(process)
+        cleanup = _stop_process_group_for_streaming(process)
+        for thread in reader_threads:
+            thread.join(timeout=1.0)
         duration_seconds = time.monotonic() - started
         transcript = HarnessCommandTranscript(
             command=_command_text(command),
             exit_code=130,
-            stdout_text=str(cleanup.get("stdout_text") or ""),
-            stderr_text=str(cleanup.get("stderr_text") or ""),
+            stdout_text="".join(stdout_chunks) + str(cleanup.get("stdout_text") or ""),
+            stderr_text="".join(stderr_chunks) + str(cleanup.get("stderr_text") or ""),
             duration_seconds=duration_seconds,
             timed_out=False,
             timeout_seconds=timeout_seconds,
@@ -485,7 +658,71 @@ def _run_black_box_command(
         timed_out=timed_out,
         timeout_seconds=timeout_seconds,
     )
-    return BlackBoxCommandResult(command=command, transcript=transcript)
+    return BlackBoxCommandResult(
+        command=command,
+        transcript=transcript,
+        no_progress=no_progress,
+        no_progress_details=no_progress_details,
+    )
+
+
+def _read_command_stream(
+    name: str,
+    stream: TextIO | None,
+    output_queue: Queue[tuple[str, str | None]],
+) -> None:
+    if stream is None:
+        output_queue.put((name, None))
+        return
+    try:
+        for line in iter(stream.readline, ""):
+            if not line:
+                break
+            output_queue.put((name, line))
+    finally:
+        output_queue.put((name, None))
+
+
+def _stop_process_group_for_streaming(
+    process: subprocess.Popen[str] | None,
+) -> dict[str, object]:
+    if process is None:
+        return {
+            "return_code": None,
+            "stdout_text": "",
+            "stderr_text": "",
+            "terminated_process_group": False,
+        }
+    terminated_process_group = False
+    if process.poll() is None:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+            terminated_process_group = True
+        except ProcessLookupError:
+            pass
+        except OSError:
+            process.terminate()
+        try:
+            process.wait(timeout=2.0)
+        except subprocess.TimeoutExpired:
+            if process.poll() is None:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    terminated_process_group = True
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    process.kill()
+            try:
+                process.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                pass
+    return {
+        "return_code": process.returncode,
+        "stdout_text": "",
+        "stderr_text": "",
+        "terminated_process_group": terminated_process_group,
+    }
 
 
 def _terminate_process_group(
@@ -545,16 +782,92 @@ def _timeout_output_to_text(value: str | bytes | None) -> str:
     return value
 
 
+def _text_tail(value: str, *, max_chars: int = 4000) -> str:
+    return value[-max_chars:] if len(value) > max_chars else value
+
+
+def _observed_path_payload(path: Path) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "path": path.resolve(strict=False).as_posix(),
+        "exists": path.exists(),
+    }
+    if not path.exists():
+        return payload
+    try:
+        stat = path.stat()
+    except OSError as exc:
+        payload["error"] = str(exc)
+        return payload
+    payload["mtime_ns"] = stat.st_mtime_ns
+    if path.is_file():
+        payload.update(
+            {
+                "kind": "file",
+                "size": stat.st_size,
+            }
+        )
+        return payload
+    if not path.is_dir():
+        payload["kind"] = "other"
+        return payload
+
+    latest_mtime_ns = stat.st_mtime_ns
+    total_size = 0
+    file_count = 0
+    sample_files: list[str] = []
+    for child in sorted(path.rglob("*")):
+        try:
+            child_stat = child.stat()
+        except OSError:
+            continue
+        latest_mtime_ns = max(latest_mtime_ns, child_stat.st_mtime_ns)
+        if child.is_file():
+            file_count += 1
+            total_size += child_stat.st_size
+            if len(sample_files) < 25:
+                sample_files.append(child.relative_to(path).as_posix())
+    payload.update(
+        {
+            "kind": "dir",
+            "latest_mtime_ns": latest_mtime_ns,
+            "file_count": file_count,
+            "total_size": total_size,
+            "sample_files": sample_files,
+        }
+    )
+    return payload
+
+
+def _progress_snapshot(paths: Sequence[Path]) -> dict[str, object]:
+    return {
+        "captured_at_utc": _utc_now(),
+        "observed_paths": [_observed_path_payload(path) for path in paths],
+    }
+
+
+def _progress_snapshot_signature(snapshot: dict[str, object]) -> str:
+    comparable = dict(snapshot)
+    comparable.pop("captured_at_utc", None)
+    return json.dumps(comparable, sort_keys=True, separators=(",", ":"))
+
+
 def _stage_command_timeout_seconds(scenario: Scenario) -> float | None:
     if scenario.run.timeout_minutes is None:
         return None
     return float(scenario.run.timeout_minutes * 60)
 
 
+def _stage_no_progress_timeout_seconds(scenario: Scenario) -> float | None:
+    if scenario.run.no_progress_timeout_minutes is None:
+        return None
+    return float(scenario.run.no_progress_timeout_minutes * 60)
+
+
 def _timeout_policy_payload(ctx: FlowContext) -> dict[str, object]:
     return {
         "scope": "per-stage-command",
         "stage_command_timeout_seconds": _stage_command_timeout_seconds(ctx.scenario),
+        "no_progress_timeout_seconds": _stage_no_progress_timeout_seconds(ctx.scenario),
         "global_flow_timeout_seconds": None,
         "runtime_config_source": None if ctx.config_path is None else ctx.config_path.name,
     }
@@ -636,6 +949,29 @@ def _markdown_path_list(paths: Sequence[str]) -> list[str]:
     if not paths:
         return ["- none"]
     return [f"- `{path}`" for path in paths]
+
+
+def _classify_live_untracked_files_for_stage_audit(
+    ctx: FlowContext,
+    paths: Sequence[str],
+) -> dict[str, list[str]]:
+    baseline_untracked = set(_baseline_live_workspace_snapshot(ctx).untracked_files)
+    known_harness_files = set(LIVE_KNOWN_HARNESS_UNTRACKED_FILES)
+    harness_files: list[str] = []
+    setup_baseline_files: list[str] = []
+    product_files: list[str] = []
+    for path in paths:
+        if path.startswith(".aidd/") or path in known_harness_files:
+            harness_files.append(path)
+        elif path in baseline_untracked:
+            setup_baseline_files.append(path)
+        else:
+            product_files.append(path)
+    return {
+        "harness_untracked_files": harness_files,
+        "setup_baseline_untracked_files": setup_baseline_files,
+        "product_untracked_files": product_files,
+    }
 
 
 def _path_prefix_counts(paths: Sequence[str]) -> list[tuple[str, int]]:
@@ -1049,6 +1385,7 @@ def _flow_state_payload(
     completed_stages: tuple[str, ...],
     extra: dict[str, object] | None = None,
 ) -> dict[str, object]:
+    previous_state = _load_flow_state(ctx.bundle_root)
     install_home = None
     if ctx.install_result is not None:
         install_home = ctx.install_result.install_home.as_posix()
@@ -1058,7 +1395,7 @@ def _flow_state_payload(
             install_home = preserved_install_home
 
     payload: dict[str, object] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "updated_at_utc": _utc_now(),
         "scenario_path": ctx.scenario_path.resolve(strict=False).as_posix(),
         "scenario_id": ctx.scenario.scenario_id,
@@ -1069,6 +1406,14 @@ def _flow_state_payload(
         "next_action": next_action,
         "current_stage": current_stage,
         "completed_stages": list(completed_stages),
+        "completed_stage_runs": previous_state.get("completed_stage_runs", []),
+        "current_iteration": previous_state.get("current_iteration", 1),
+        "handled_quality_stage_run_ids": previous_state.get(
+            "handled_quality_stage_run_ids",
+            [],
+        ),
+        "remediation_cycles": previous_state.get("remediation_cycles", 0),
+        "stale_downstream_stages": previous_state.get("stale_downstream_stages", []),
         "evaluator_pid": os.getpid(),
         "bundle_root": ctx.bundle_root.as_posix(),
         "work_root": ctx.workspace_root.as_posix(),
@@ -1143,7 +1488,17 @@ def _flow_state_payload(
             "resolved_revision": ctx.prepared_working_copy.resolved_revision,
             "working_copy_path": ctx.prepared_working_copy.working_copy_path.as_posix(),
         }
+    if "pending_remediation" in previous_state:
+        payload["pending_remediation"] = previous_state["pending_remediation"]
     if extra:
+        if "completed_stage_runs" in extra and "completed_stages" not in extra:
+            raw_stage_runs = extra.get("completed_stage_runs")
+            if isinstance(raw_stage_runs, list):
+                payload["completed_stages"] = [
+                    item.get("stage")
+                    for item in raw_stage_runs
+                    if isinstance(item, dict) and isinstance(item.get("stage"), str)
+                ]
         payload.update(extra)
     return payload
 
@@ -1169,14 +1524,90 @@ def _persist_state(
 
 
 def _state_completed_stages(bundle_root: Path) -> tuple[str, ...]:
-    path = _state_path(bundle_root)
-    if not path.exists():
-        return tuple()
-    payload = _read_json_object(path)
+    payload = _load_flow_state(bundle_root)
+    raw_stage_runs = payload.get("completed_stage_runs")
+    if isinstance(raw_stage_runs, list) and raw_stage_runs:
+        stages = [
+            item.get("stage")
+            for item in raw_stage_runs
+            if isinstance(item, dict) and isinstance(item.get("stage"), str)
+        ]
+        return tuple(str(stage) for stage in stages)
     raw = payload.get("completed_stages")
     if not isinstance(raw, list):
         return tuple()
     return tuple(str(item) for item in raw if isinstance(item, str))
+
+
+def _state_completed_stage_runs(bundle_root: Path) -> tuple[dict[str, Any], ...]:
+    payload = _load_flow_state(bundle_root)
+    raw_stage_runs = payload.get("completed_stage_runs")
+    if isinstance(raw_stage_runs, list) and raw_stage_runs:
+        normalized: list[dict[str, Any]] = []
+        for index, item in enumerate(raw_stage_runs, start=1):
+            if not isinstance(item, dict):
+                continue
+            stage = item.get("stage")
+            if not isinstance(stage, str) or not stage:
+                continue
+            stage_run_id = item.get("stage_run_id")
+            if not isinstance(stage_run_id, str) or not stage_run_id:
+                stage_run_id = f"stage-{index:04d}-{stage}"
+            normalized.append({**item, "stage": stage, "stage_run_id": stage_run_id})
+        return tuple(normalized)
+    raw_stages = payload.get("completed_stages")
+    if not isinstance(raw_stages, list):
+        return tuple()
+    return tuple(
+        {
+            "stage_run_id": str(stage),
+            "stage": str(stage),
+            "stage_run_index": index,
+            "iteration": 1,
+            "legacy_stage_run": True,
+        }
+        for index, stage in enumerate(raw_stages, start=1)
+        if isinstance(stage, str) and stage
+    )
+
+
+def _state_handled_quality_stage_run_ids(bundle_root: Path) -> set[str]:
+    payload = _load_flow_state(bundle_root)
+    raw = payload.get("handled_quality_stage_run_ids")
+    if not isinstance(raw, list):
+        return set()
+    return {str(item) for item in raw if isinstance(item, str) and item}
+
+
+def _state_stale_downstream_stages(bundle_root: Path) -> tuple[str, ...]:
+    payload = _load_flow_state(bundle_root)
+    raw = payload.get("stale_downstream_stages")
+    if not isinstance(raw, list):
+        return tuple()
+    return tuple(str(item) for item in raw if isinstance(item, str) and item in STAGES)
+
+
+def _state_remediation_cycles(bundle_root: Path) -> int:
+    raw = _load_flow_state(bundle_root).get("remediation_cycles")
+    return raw if isinstance(raw, int) and raw >= 0 else 0
+
+
+def _stage_run_id_for(*, index: int, stage: str) -> str:
+    return f"stage-{index:04d}-{stage}"
+
+
+def _next_stage_run_index(ctx: FlowContext) -> int:
+    return len(_state_completed_stage_runs(ctx.bundle_root)) + 1
+
+
+def _next_stage_run_id(ctx: FlowContext, stage: str) -> str:
+    return _stage_run_id_for(index=_next_stage_run_index(ctx), stage=stage)
+
+
+def _next_stage_iteration(ctx: FlowContext, stage: str) -> int:
+    return sum(
+        1 for item in _state_completed_stage_runs(ctx.bundle_root) if item["stage"] == stage
+    ) + 1
 
 
 def _state_current_stage(bundle_root: Path) -> str | None:
@@ -1237,6 +1668,8 @@ def _record_step(
                 "stdout_text": result.stdout_text,
                 "timed_out": result.transcript.timed_out,
                 "timeout_seconds": result.transcript.timeout_seconds,
+                "no_progress": result.no_progress,
+                "no_progress_details": result.no_progress_details,
             }
             for result in command_results
         ],
@@ -1360,10 +1793,24 @@ def _find_resume_state(
         )
     state = _mark_stale_running_state_interrupted(candidate)
     status = state.get("status")
-    if status not in {*RESUMABLE_STATUSES, *TERMINAL_STATUSES}:
+    if status == "awaiting-quality-review":
+        required_path = state.get("quality_review_required_path")
+        if not isinstance(required_path, str) or not Path(required_path).exists():
+            raise ValueError(
+                "Run "
+                f"'{normalized_run_id}' is awaiting quality review. Resume requires "
+                "the launching operator-agent audit file: "
+                f"{required_path if isinstance(required_path, str) else 'missing'}."
+            )
+    if status not in {
+        *RESUMABLE_STATUSES,
+        *TERMINAL_STATUSES,
+        *TERMINAL_MANUAL_STATUSES,
+    }:
         raise ValueError(
             "Explicit --run-id can only resume a blocked or interrupted-resumable "
-            "run, or refresh terminal execution reporting. "
+            "run, resume an awaiting-quality-review run with its required audit "
+            "file, or refresh terminal execution reporting. "
             f"Run '{normalized_run_id}' has status `{status}`."
         )
     return candidate
@@ -1434,6 +1881,9 @@ def _selected_task_from_payload(
             return None
         strings[key] = value.strip()
 
+    visible_request = raw.get("visible_request")
+    audit_rubric = raw.get("audit_rubric")
+
     return ScenarioAuthoredTask(
         task_id=strings["id"],
         title=strings["title"],
@@ -1446,6 +1896,17 @@ def _selected_task_from_payload(
         quality_bar=strings["quality_bar"],
         size_rationale=strings["size_rationale"],
         interview=_string_tuple_from_snapshot(raw.get("interview")),
+        visible_request=(
+            visible_request.strip()
+            if isinstance(visible_request, str) and visible_request.strip()
+            else None
+        ),
+        audit_rubric=(
+            audit_rubric.strip()
+            if isinstance(audit_rubric, str) and audit_rubric.strip()
+            else None
+        ),
+        complexity_axes=_string_tuple_from_snapshot(raw.get("complexity_axes")),
     )
 
 
@@ -1673,6 +2134,9 @@ def _stage_scope(scenario: Scenario) -> tuple[str, ...]:
 
 
 def _first_incomplete_stage(ctx: FlowContext) -> str | None:
+    stale_stages = _state_stale_downstream_stages(ctx.bundle_root)
+    if stale_stages:
+        return stale_stages[0]
     completed = set(_state_completed_stages(ctx.bundle_root))
     current_stage = _state_current_stage(ctx.bundle_root)
     if current_stage is not None and current_stage not in completed:
@@ -1681,6 +2145,632 @@ def _first_incomplete_stage(ctx: FlowContext) -> str | None:
         if stage not in completed:
             return stage
     return None
+
+
+def _append_completed_stage_run(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str,
+    iteration: int,
+    audit_json_path: Path,
+    audit_markdown_path: Path,
+    current_stage: str | None,
+    stale_downstream_stages: tuple[str, ...] | None = None,
+    extra: dict[str, object] | None = None,
+) -> None:
+    stage_runs = [
+        dict(item) for item in _state_completed_stage_runs(ctx.bundle_root)
+    ]
+    stage_runs.append(
+        {
+            "stage_run_id": stage_run_id,
+            "stage_run_index": len(stage_runs) + 1,
+            "stage": stage,
+            "iteration": iteration,
+            "audit_json_path": audit_json_path.as_posix(),
+            "audit_markdown_path": audit_markdown_path.as_posix(),
+            "completed_at_utc": _utc_now(),
+        }
+    )
+    iteration_values: list[int] = []
+    for item in stage_runs:
+        raw_iteration = item.get("iteration", 1)
+        try:
+            iteration_values.append(int(raw_iteration))
+        except (TypeError, ValueError):
+            iteration_values.append(1)
+    loop_extra: dict[str, object] = {
+        "completed_stage_runs": stage_runs,
+        "current_iteration": max(iteration_values or [1]),
+    }
+    if stale_downstream_stages is not None:
+        loop_extra["stale_downstream_stages"] = list(stale_downstream_stages)
+    if extra:
+        loop_extra.update(extra)
+    _persist_state(
+        ctx=ctx,
+        status="running",
+        next_action="run-stage",
+        current_stage=current_stage,
+        completed_stages=tuple(
+            str(item["stage"])
+            for item in stage_runs
+            if isinstance(item.get("stage"), str)
+        ),
+        extra=loop_extra,
+    )
+
+
+_QUALITY_REVIEW_DECISION_PATTERN = re.compile(
+    r"^\s*-\s*Flow decision:\s*`?(?P<decision>[a-z-]+)`?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_QUALITY_REVIEW_FLOW_DECISIONS = {
+    "continue",
+    "continue-with-risk",
+    "stop-not-counted",
+    "operator-intervention",
+    "request-remediation",
+}
+
+
+def _requires_stage_quality_audits(ctx: FlowContext) -> bool:
+    return ctx.scenario.live_matrix_role == "product-evaluation"
+
+
+def _stage_quality_audit_path(
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str | None = None,
+) -> Path:
+    return ctx.bundle_root / STAGE_QUALITY_AUDITS_DIRNAME / f"{stage_run_id or stage}.md"
+
+
+def _stage_quality_audit_flow_decision(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    match = _QUALITY_REVIEW_DECISION_PATTERN.search(path.read_text(encoding="utf-8"))
+    if match is None:
+        return None
+    decision = match.group("decision").strip().lower()
+    return decision if decision in _QUALITY_REVIEW_FLOW_DECISIONS else None
+
+
+_REMEDIATION_SOURCE_STAGE_PATTERN = re.compile(
+    r"^\s*-\s*Source stage:\s*`?(?P<stage>[a-z-]+)`?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_REMEDIATION_SOURCE_IDS_PATTERN = re.compile(
+    r"^\s*-\s*Source ids:\s*(?P<ids>.+?)\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_REMEDIATION_OPERATOR_NOTE_PATTERN = re.compile(
+    r"^\s*-\s*Operator note:\s*(?P<note>.+?)\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _parse_remediation_request_from_quality_audit(path: Path) -> dict[str, object] | None:
+    if not path.exists():
+        return None
+    text = path.read_text(encoding="utf-8", errors="replace")
+    source_stage_match = _REMEDIATION_SOURCE_STAGE_PATTERN.search(text)
+    source_ids_match = _REMEDIATION_SOURCE_IDS_PATTERN.search(text)
+    operator_note_match = _REMEDIATION_OPERATOR_NOTE_PATTERN.search(text)
+    if (
+        source_stage_match is None
+        or source_ids_match is None
+        or operator_note_match is None
+    ):
+        return None
+    raw_ids = source_ids_match.group("ids").strip()
+    source_ids = tuple(
+        item.strip().strip("`")
+        for item in re.split(r",|\s+", raw_ids)
+        if item.strip().strip("`")
+    )
+    operator_note = operator_note_match.group("note").strip()
+    if not source_ids or not operator_note:
+        return None
+    return {
+        "source_stage": source_stage_match.group("stage").strip().lower(),
+        "source_ids": list(source_ids),
+        "operator_note": operator_note,
+        "target_stage": "implement",
+    }
+
+
+def _record_awaiting_quality_review(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str,
+    required_path: Path,
+    reason: str,
+    decision: str | None = None,
+) -> StepClassification:
+    required_path.parent.mkdir(parents=True, exist_ok=True)
+    _persist_state(
+        ctx=ctx,
+        status="awaiting-quality-review",
+        next_action="quality-review",
+        current_stage=stage,
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra={
+            "quality_review_required_stage": stage,
+            "quality_review_required_stage_run_id": stage_run_id,
+            "quality_review_required_path": required_path.as_posix(),
+            "quality_review_reason": reason,
+            **({"quality_review_decision": decision} if decision is not None else {}),
+        },
+    )
+    _record_step(
+        ctx=ctx,
+        action="quality-review",
+        classification="awaiting-quality-review",
+        decision=(
+            "Stop for launching operator-agent product-quality review before "
+            "continuing execution."
+        ),
+        plan=(
+            "Write the required stage quality audit, then resume this same run id "
+            "if the audit decision allows continuation."
+        ),
+        stage=stage,
+        details={
+            "stage_run_id": stage_run_id,
+            "required_audit_path": required_path.as_posix(),
+            "reason": reason,
+            **({"flow_decision": decision} if decision is not None else {}),
+        },
+    )
+    return "awaiting-quality-review"
+
+
+def _record_manual_quality_stop(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str,
+    audit_path: Path,
+) -> StepClassification:
+    _persist_state(
+        ctx=ctx,
+        status="manual-quality-stop",
+        next_action="stop",
+        current_stage=stage,
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra={
+            "quality_review_required_stage": stage,
+            "quality_review_required_stage_run_id": stage_run_id,
+            "quality_review_required_path": audit_path.as_posix(),
+            "quality_review_decision": "stop-not-counted",
+            "quality_review_reason": (
+                "Launching operator-agent stage audit chose stop-not-counted."
+            ),
+        },
+    )
+    _record_step(
+        ctx=ctx,
+        action="stop",
+        classification="manual-quality-stop",
+        decision=(
+            "Manual stage quality audit requested `stop-not-counted`; stop without "
+            "classifying this as provider, infrastructure, or unresolved-question failure."
+        ),
+        plan="Preserve the run bundle for manual quality reporting and do not run later stages.",
+        stage=stage,
+        evidence_paths=(audit_path,),
+        details={"flow_decision": "stop-not-counted", "stage_run_id": stage_run_id},
+    )
+    return "manual-quality-stop"
+
+
+def _remediation_stale_stages_from_payload(payload: dict[str, object]) -> tuple[str, ...]:
+    job_payload = payload.get("job_payload")
+    if not isinstance(job_payload, dict):
+        return tuple()
+    result = job_payload.get("result")
+    if not isinstance(result, dict):
+        return tuple()
+    status = result.get("status")
+    if not isinstance(status, dict):
+        return tuple()
+    raw_stale = status.get("stale_stages")
+    if not isinstance(raw_stale, list):
+        return tuple()
+    stages: list[str] = []
+    for item in raw_stale:
+        if not isinstance(item, dict):
+            continue
+        stage = item.get("stage")
+        if isinstance(stage, str) and stage in STAGES:
+            stages.append(stage)
+    return tuple(stages)
+
+
+def _handled_quality_stage_run_ids_after(ctx: FlowContext, stage_run_id: str) -> list[str]:
+    handled = list(_state_handled_quality_stage_run_ids(ctx.bundle_root))
+    if stage_run_id not in handled:
+        handled.append(stage_run_id)
+    return sorted(handled)
+
+
+def _record_remediation_job_stop(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    classification: StepClassification,
+    evidence_path: Path,
+) -> StepClassification:
+    if classification == "blocked":
+        _persist_state(
+            ctx=ctx,
+            status="blocked",
+            next_action="answer-questions",
+            current_stage=stage,
+            completed_stages=_state_completed_stages(ctx.bundle_root),
+            extra={"remediation_evidence": evidence_path.as_posix()},
+        )
+        return "blocked"
+    _persist_state(
+        ctx=ctx,
+        status="fail",
+        next_action="stop",
+        current_stage=stage,
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra={"error": "remediation operator UI job failed"},
+    )
+    return "fail"
+
+
+def _handle_quality_remediation_request(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str,
+    audit_path: Path,
+) -> StepClassification:
+    if stage not in {"review", "qa"}:
+        return _record_awaiting_quality_review(
+            ctx=ctx,
+            stage=stage,
+            stage_run_id=stage_run_id,
+            required_path=audit_path,
+            reason="request-remediation is only valid for review or qa stage runs",
+            decision="request-remediation",
+        )
+    cycles = _state_remediation_cycles(ctx.bundle_root)
+    if cycles >= ctx.scenario.run.max_remediation_cycles:
+        return _record_awaiting_quality_review(
+            ctx=ctx,
+            stage=stage,
+            stage_run_id=stage_run_id,
+            required_path=audit_path,
+            reason="remediation cycle limit reached",
+            decision="request-remediation",
+        )
+    request_payload = _parse_remediation_request_from_quality_audit(audit_path)
+    if request_payload is None:
+        return _record_awaiting_quality_review(
+            ctx=ctx,
+            stage=stage,
+            stage_run_id=stage_run_id,
+            required_path=audit_path,
+            reason=(
+                "request-remediation audit is missing Source stage, Source ids, "
+                "or Operator note"
+            ),
+            decision="request-remediation",
+        )
+    if request_payload.get("source_stage") != stage:
+        return _record_awaiting_quality_review(
+            ctx=ctx,
+            stage=stage,
+            stage_run_id=stage_run_id,
+            required_path=audit_path,
+            reason="request-remediation Source stage must match the audited stage run",
+            decision="request-remediation",
+        )
+
+    implement_stage = "implement"
+    remediation_stage_run_id = _next_stage_run_id(ctx, implement_stage)
+    remediation_iteration = _next_stage_iteration(ctx, implement_stage)
+    api_payload = {
+        **request_payload,
+        "runtime": ctx.runtime_id,
+        "run_id": ctx.run_id,
+        "log_follow": True,
+    }
+    source_ids = request_payload.get("source_ids", [])
+    if (
+        isinstance(source_ids, list)
+        and any(
+            isinstance(source_id, str) and source_id.startswith("OP-")
+            for source_id in source_ids
+        )
+    ):
+        api_payload["allow_operator_audit_source_ids"] = True
+    classification, evidence_path, evidence_payload = _run_ui_remediation_job(
+        ctx=ctx,
+        endpoint="/api/remediation/launch",
+        payload=api_payload,
+        stage=implement_stage,
+        stage_run_id=remediation_stage_run_id,
+        action="launch",
+    )
+    if classification != "pass":
+        return _record_remediation_job_stop(
+            ctx=ctx,
+            stage=implement_stage,
+            classification=classification,
+            evidence_path=evidence_path,
+        )
+    stale_stages = _remediation_stale_stages_from_payload(evidence_payload) or (
+        "review",
+        "qa",
+    )
+    state_extra = {
+        "handled_quality_stage_run_ids": _handled_quality_stage_run_ids_after(
+            ctx,
+            stage_run_id,
+        ),
+        "pending_remediation": {
+            "requested_by_stage_run_id": stage_run_id,
+            "source_stage": stage,
+            "source_ids": request_payload.get("source_ids", []),
+            "operator_note": request_payload.get("operator_note", ""),
+            "implementation_stage_run_id": remediation_stage_run_id,
+            "evidence_path": evidence_path.as_posix(),
+        },
+        "remediation_cycles": cycles + 1,
+        "stale_downstream_stages": list(stale_stages),
+    }
+    return _inspect_successful_external_stage_run(
+        ctx=ctx,
+        stage=implement_stage,
+        stage_run_id=remediation_stage_run_id,
+        iteration=remediation_iteration,
+        current_stage=stale_stages[0] if stale_stages else None,
+        stale_downstream_stages=stale_stages,
+        state_extra=state_extra,
+    )
+
+
+def _quality_review_gate(ctx: FlowContext) -> StepClassification | None:
+    if not _requires_stage_quality_audits(ctx):
+        return None
+    handled_remediation_requests = _state_handled_quality_stage_run_ids(ctx.bundle_root)
+    for stage_run in _state_completed_stage_runs(ctx.bundle_root):
+        stage = str(stage_run["stage"])
+        stage_run_id = str(stage_run["stage_run_id"])
+        required_path = _stage_quality_audit_path(
+            ctx,
+            stage,
+            stage_run_id=stage_run_id,
+        )
+        if not required_path.exists():
+            return _record_awaiting_quality_review(
+                ctx=ctx,
+                stage=stage,
+                stage_run_id=stage_run_id,
+                required_path=required_path,
+                reason="stage quality audit file is missing",
+            )
+        decision = _stage_quality_audit_flow_decision(required_path)
+        if decision is None:
+            return _record_awaiting_quality_review(
+                ctx=ctx,
+                stage=stage,
+                stage_run_id=stage_run_id,
+                required_path=required_path,
+                reason="stage quality audit is missing a valid Flow decision",
+            )
+        if decision == "stop-not-counted":
+            return _record_manual_quality_stop(
+                ctx=ctx,
+                stage=stage,
+                stage_run_id=stage_run_id,
+                audit_path=required_path,
+            )
+        if decision == "operator-intervention":
+            return _record_awaiting_quality_review(
+                ctx=ctx,
+                stage=stage,
+                stage_run_id=stage_run_id,
+                required_path=required_path,
+                reason="stage quality audit requested operator intervention",
+                decision=decision,
+            )
+        if decision == "request-remediation":
+            if stage_run_id in handled_remediation_requests:
+                continue
+            return _handle_quality_remediation_request(
+                ctx=ctx,
+                stage=stage,
+                stage_run_id=stage_run_id,
+                audit_path=required_path,
+            )
+    return None
+
+
+def _manual_quality_artifacts_payload(ctx: FlowContext) -> dict[str, object]:
+    required_for_counted_clean = _requires_stage_quality_audits(ctx)
+    stage_runs = _state_completed_stage_runs(ctx.bundle_root)
+    if not stage_runs:
+        stage_runs = tuple(
+            {
+                "stage": stage,
+                "stage_run_id": stage,
+                "iteration": 1,
+                "legacy_stage_run": True,
+            }
+            for stage in _stage_scope(ctx.scenario)
+        )
+    stage_audits = [
+        {
+            "stage": str(stage_run["stage"]),
+            "stage_run_id": str(stage_run["stage_run_id"]),
+            "iteration": int(stage_run.get("iteration", 1)),
+            "path": _stage_quality_audit_path(
+                ctx,
+                str(stage_run["stage"]),
+                stage_run_id=str(stage_run["stage_run_id"]),
+            ).as_posix(),
+            "exists": _stage_quality_audit_path(
+                ctx,
+                str(stage_run["stage"]),
+                stage_run_id=str(stage_run["stage_run_id"]),
+            ).exists(),
+        }
+        for stage_run in stage_runs
+    ]
+    final_reports = [
+        {
+            "kind": "flow-quality-report",
+            "path": (ctx.bundle_root / FLOW_QUALITY_REPORT_FILENAME).as_posix(),
+            "exists": (ctx.bundle_root / FLOW_QUALITY_REPORT_FILENAME).exists(),
+        },
+        {
+            "kind": "code-quality-report",
+            "path": (ctx.bundle_root / CODE_QUALITY_REPORT_FILENAME).as_posix(),
+            "exists": (ctx.bundle_root / CODE_QUALITY_REPORT_FILENAME).exists(),
+        },
+        {
+            "kind": "quality-report",
+            "path": (ctx.bundle_root / QUALITY_REPORT_FILENAME).as_posix(),
+            "exists": (ctx.bundle_root / QUALITY_REPORT_FILENAME).exists(),
+        },
+    ]
+    return {
+        "required_for_counted_clean": required_for_counted_clean,
+        "stage_quality_audits": stage_audits if required_for_counted_clean else [],
+        "final_reports": final_reports if required_for_counted_clean else [],
+    }
+
+
+def _quality_review_request_path_from_state(ctx: FlowContext) -> Path | None:
+    state_path = _state_path(ctx.bundle_root)
+    if not state_path.exists():
+        return None
+    raw_path = _read_json_object(state_path).get("quality_review_required_path")
+    return Path(raw_path) if isinstance(raw_path, str) and raw_path else None
+
+
+def _manual_quality_stop_paths(ctx: FlowContext) -> tuple[Path, Path]:
+    return (
+        ctx.bundle_root / MANUAL_QUALITY_STOP_JSON_FILENAME,
+        ctx.bundle_root / MANUAL_QUALITY_STOP_MARKDOWN_FILENAME,
+    )
+
+
+def _manual_quality_stop_payload(ctx: FlowContext) -> dict[str, object]:
+    state = _read_json_object(_state_path(ctx.bundle_root))
+    stage = state.get("quality_review_required_stage")
+    stage_run_id_value = state.get("quality_review_required_stage_run_id")
+    audit_path_value = state.get("quality_review_required_path")
+    audit_path = (
+        Path(audit_path_value)
+        if isinstance(audit_path_value, str) and audit_path_value
+        else None
+    )
+    stage_name = stage if isinstance(stage, str) and stage else None
+    stage_run_id = (
+        stage_run_id_value
+        if isinstance(stage_run_id_value, str) and stage_run_id_value
+        else stage_name
+    )
+    return {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "run_id": ctx.run_id,
+        "runtime_id": ctx.runtime_id,
+        "scenario_id": ctx.scenario.scenario_id,
+        "status": "manual-quality-stop",
+        "manual_decision": state.get("quality_review_decision", "stop-not-counted"),
+        "manual_reason": state.get(
+            "quality_review_reason",
+            "Launching operator-agent stage audit chose stop-not-counted.",
+        ),
+        "stage": stage_name,
+        "stage_run_id": stage_run_id,
+        "stage_quality_audit_path": None if audit_path is None else audit_path.as_posix(),
+        "stage_quality_audit_exists": False if audit_path is None else audit_path.exists(),
+        "runner_execution_verdict": {
+            "emitted": False,
+            "reason": (
+                "manual-quality-stop is a manual product-quality terminal state, "
+                "not an execution verdict"
+            ),
+        },
+        "evidence_paths": {
+            "flow_state": (ctx.bundle_root / FLOW_STATE_FILENAME).as_posix(),
+            "flow_steps": (ctx.bundle_root / FLOW_STEPS_FILENAME).as_posix(),
+            "flow_report": (ctx.bundle_root / FLOW_REPORT_FILENAME).as_posix(),
+            "runtime_log": (ctx.bundle_root / RUNTIME_LOG_FILENAME).as_posix(),
+            "target_workspace_evidence_json": (
+                ctx.bundle_root / TARGET_WORKSPACE_EVIDENCE_JSON_FILENAME
+            ).as_posix(),
+            "target_workspace_evidence_markdown": (
+                ctx.bundle_root / TARGET_WORKSPACE_EVIDENCE_MARKDOWN_FILENAME
+            ).as_posix(),
+            "stage_audit_json": (
+                None
+                if stage_run_id is None
+                else (ctx.bundle_root / STAGE_AUDITS_DIRNAME / f"{stage_run_id}.json").as_posix()
+            ),
+            "stage_audit_markdown": (
+                None
+                if stage_run_id is None
+                else (ctx.bundle_root / STAGE_AUDITS_DIRNAME / f"{stage_run_id}.md").as_posix()
+            ),
+        },
+    }
+
+
+def _write_manual_quality_stop_artifacts(ctx: FlowContext) -> tuple[Path, Path]:
+    json_path, markdown_path = _manual_quality_stop_paths(ctx)
+    payload = _manual_quality_stop_payload(ctx)
+    _write_json(json_path, payload)
+    evidence = cast(dict[str, object], payload["evidence_paths"])
+    md_lines = [
+        "# Manual Quality Stop",
+        "",
+        f"- Scenario: `{payload['scenario_id']}`",
+        f"- Runtime: `{payload['runtime_id']}`",
+        f"- Run ID: `{payload['run_id']}`",
+        f"- Status: `{payload['status']}`",
+        f"- Stage: `{payload['stage'] or 'unknown'}`",
+        f"- Stage run id: `{payload['stage_run_id'] or 'unknown'}`",
+        f"- Manual decision: `{payload['manual_decision']}`",
+        f"- Manual reason: {payload['manual_reason']}",
+        (
+            "- Runner execution verdict: `not emitted`; manual-quality-stop is not "
+            "`pass`, `fail`, `blocked`, or `infra-fail`."
+        ),
+        "",
+        "## Required Audit",
+        "",
+        f"- Path: `{payload['stage_quality_audit_path'] or 'missing'}`",
+        f"- Exists: `{payload['stage_quality_audit_exists']}`",
+        "",
+        "## Evidence",
+        "",
+        f"- Flow state: `{evidence['flow_state']}`",
+        f"- Flow steps: `{evidence['flow_steps']}`",
+        f"- Flow report: `{evidence['flow_report']}`",
+        f"- Runtime log: `{evidence['runtime_log']}`",
+        "- Target workspace evidence JSON: "
+        f"`{evidence['target_workspace_evidence_json']}`",
+        "- Target workspace evidence Markdown: "
+        f"`{evidence['target_workspace_evidence_markdown']}`",
+        f"- Runner stage audit JSON: `{evidence['stage_audit_json'] or 'n/a'}`",
+        f"- Runner stage audit Markdown: `{evidence['stage_audit_markdown'] or 'n/a'}`",
+    ]
+    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_path.write_text("\n".join(md_lines).rstrip() + "\n", encoding="utf-8")
+    return json_path, markdown_path
 
 
 def _require_working_copy(ctx: FlowContext) -> Path:
@@ -2095,6 +3185,8 @@ def _inspection_commands(ctx: FlowContext, stage: str) -> tuple[tuple[str, ...],
 
 
 def _classify_stage_run(result: BlackBoxCommandResult) -> StepClassification:
+    if result.no_progress:
+        return "infra-fail"
     output = f"{result.stdout_text}\n{result.stderr_text}".lower()
     if (
         "blocking questions are unresolved" in output
@@ -2172,6 +3264,41 @@ def _http_probe(url: str) -> dict[str, object]:
             if isinstance(parsed, dict):
                 payload["json_payload"] = parsed
             return payload
+    except HTTPError as exc:
+        body = exc.read(1048576).decode("utf-8", errors="replace")
+        return {
+            "ok": False,
+            "status": exc.code,
+            "body_preview": body[:1000],
+            "error": str(exc),
+        }
+    except (OSError, URLError) as exc:
+        return {"ok": False, "status": None, "body_preview": "", "error": str(exc)}
+
+
+def _http_post_json(url: str, payload: dict[str, object]) -> dict[str, object]:
+    data = json.dumps(payload).encode("utf-8")
+    request = Request(
+        url,
+        data=data,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urlopen(request, timeout=2.0) as response:
+            body = response.read(1048576).decode("utf-8", errors="replace")
+            result: dict[str, object] = {
+                "ok": 200 <= response.status < 300,
+                "status": response.status,
+                "body_preview": body[:1000],
+            }
+            try:
+                parsed = json.loads(body)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, dict):
+                result["json_payload"] = parsed
+            return result
     except HTTPError as exc:
         body = exc.read(1048576).decode("utf-8", errors="replace")
         return {
@@ -2439,10 +3566,11 @@ def _next_flow_dashboard_snapshot(ctx: FlowContext) -> dict[str, object]:
 
 
 def _qa_stage_audit(ctx: FlowContext) -> dict[str, object] | None:
+    qa_payload: dict[str, object] | None = None
     for payload in _stage_audit_payloads(ctx):
         if payload.get("stage") == "qa":
-            return payload
-    return None
+            qa_payload = payload
+    return qa_payload
 
 
 _QA_VERDICT_PATTERN = re.compile(
@@ -3247,6 +4375,157 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
     return classification
 
 
+def _remediation_action_path(ctx: FlowContext, action_id: str) -> Path:
+    return ctx.bundle_root / REMEDIATION_ACTIONS_DIRNAME / f"{action_id}.json"
+
+
+def _remediation_action_id(ctx: FlowContext, *, stage_run_id: str, action: str) -> str:
+    return f"{len(_load_steps(ctx.bundle_root)) + 1:04d}-{stage_run_id}-{action}"
+
+
+def _run_ui_remediation_job(
+    *,
+    ctx: FlowContext,
+    endpoint: str,
+    payload: dict[str, object],
+    stage: str,
+    stage_run_id: str,
+    action: str,
+) -> tuple[StepClassification, Path, dict[str, object]]:
+    working_copy = _require_working_copy(ctx)
+    port = _allocate_loopback_port()
+    base_url = f"http://127.0.0.1:{port}"
+    command = _frontend_checkpoint_command(ctx, port)
+    started = time.monotonic()
+    action_id = _remediation_action_id(ctx, stage_run_id=stage_run_id, action=action)
+    process: subprocess.Popen[str] | None = None
+    probes: list[dict[str, object]] = []
+    post_probe: dict[str, object] | None = None
+    job_payload: dict[str, object] | None = None
+    classification: StepClassification = "fail"
+    failure_reason: str | None = None
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=working_copy,
+            env=_harness_environment_for_context(ctx),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+        deadline = started + max(_stage_command_timeout_seconds(ctx.scenario) or 300.0, 60.0)
+        ready_deadline = min(started + FRONTEND_CHECKPOINT_TIMEOUT_SECONDS, deadline)
+        while time.monotonic() < ready_deadline:
+            if process.poll() is not None:
+                failure_reason = "UI process exited before remediation request."
+                break
+            ready_probe = _http_probe(f"{base_url}/")
+            probes.append({"name": "ready", **ready_probe})
+            if ready_probe.get("ok") is True:
+                failure_reason = None
+                break
+            failure_reason = str(ready_probe.get("error") or "UI page is not ready yet.")
+            time.sleep(0.1)
+        else:
+            failure_reason = "Timed out waiting for UI remediation surface."
+
+        if failure_reason is None:
+            post_probe = _http_post_json(f"{base_url}{endpoint}", payload)
+            probes.append({"name": "post", "endpoint": endpoint, **post_probe})
+            if post_probe.get("ok") is not True:
+                failure_reason = str(post_probe.get("error") or "remediation POST failed")
+            else:
+                posted_payload = post_probe.get("json_payload")
+                job_id = (
+                    posted_payload.get("job_id")
+                    if isinstance(posted_payload, dict)
+                    else None
+                )
+                if not isinstance(job_id, str) or not job_id:
+                    failure_reason = "Remediation API response did not include job_id."
+                else:
+                    while time.monotonic() < deadline:
+                        job_probe = _http_probe(f"{base_url}/api/jobs/{job_id}")
+                        probes.append({"name": "job", "job_id": job_id, **job_probe})
+                        raw_job_payload = job_probe.get("json_payload")
+                        if isinstance(raw_job_payload, dict):
+                            job_payload = raw_job_payload
+                            status = str(raw_job_payload.get("status") or "")
+                            if status == "completed":
+                                classification = "pass"
+                                failure_reason = None
+                                break
+                            if status in {"failed", "cancelled"}:
+                                classification = "fail"
+                                failure_reason = f"Remediation job ended with status `{status}`."
+                                break
+                            if status == "waiting-for-operator":
+                                classification = "blocked"
+                                failure_reason = "Remediation job is waiting for operator input."
+                                break
+                        time.sleep(0.25)
+                    else:
+                        failure_reason = "Timed out waiting for remediation job."
+    except OSError as exc:
+        failure_reason = f"Failed to start UI remediation process: {exc}"
+    finally:
+        stdout_text, stderr_text, process_return_code = (
+            _terminate_process(process) if process is not None else ("", "", None)
+        )
+
+    duration_seconds = time.monotonic() - started
+    if failure_reason is not None and classification == "pass":
+        classification = "fail"
+    transcript = HarnessCommandTranscript(
+        command=_command_text(command),
+        exit_code=0 if classification == "pass" else 1,
+        stdout_text=stdout_text,
+        stderr_text=stderr_text,
+        duration_seconds=duration_seconds,
+        timed_out=failure_reason is not None and "Timed out" in failure_reason,
+        timeout_seconds=_stage_command_timeout_seconds(ctx.scenario),
+    )
+    evidence_payload: dict[str, object] = {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "action": action,
+        "classification": classification,
+        "endpoint": endpoint,
+        "payload": payload,
+        "base_url": base_url,
+        "stage": stage,
+        "stage_run_id": stage_run_id,
+        "duration_seconds": duration_seconds,
+        "failure_reason": failure_reason,
+        "process_exit_code": process_return_code,
+        "post_probe": post_probe,
+        "job_payload": job_payload,
+        "probes": probes,
+    }
+    evidence_path = _write_json(_remediation_action_path(ctx, action_id), evidence_payload)
+    _record_step(
+        ctx=ctx,
+        action="remediation",
+        classification=classification,
+        decision=(
+            "Continue after remediation operator UI job completed."
+            if classification == "pass"
+            else "Stop or wait because remediation operator UI job did not complete."
+        ),
+        plan="Use the public operator UI remediation API as the black-box rework surface.",
+        stage=stage,
+        command_results=(BlackBoxCommandResult(command=command, transcript=transcript),),
+        evidence_paths=(evidence_path,),
+        details={
+            "stage_run_id": stage_run_id,
+            "endpoint": endpoint,
+            "failure_reason": failure_reason,
+        },
+    )
+    return classification, evidence_path, evidence_payload
+
+
 _PRIMARY_STAGE_OUTPUTS: dict[str, str] = {
     "idea": "idea-brief.md",
     "research": "research-notes.md",
@@ -3277,6 +4556,54 @@ def _stage_root(ctx: FlowContext, stage: str) -> Path:
     return working_copy / ".aidd" / "workitems" / ctx.work_item / "stages" / stage
 
 
+def _stage_run_observed_paths(ctx: FlowContext, stage: str) -> tuple[Path, ...]:
+    working_copy = _require_working_copy(ctx)
+    workspace_root = working_copy / ".aidd"
+    run_stage_root = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / ctx.work_item
+        / ctx.run_id
+        / "stages"
+        / stage
+    )
+    attempt_root = run_stage_root / "attempts" / "attempt-0001"
+    output_root = _stage_output_root(ctx, stage)
+    primary_output = _PRIMARY_STAGE_OUTPUTS.get(stage)
+    expected_docs = [
+        _stage_root(ctx, stage) / "stage-result.md",
+        _stage_root(ctx, stage) / "validator-report.md",
+        _stage_root(ctx, stage) / "questions.md",
+        _stage_root(ctx, stage) / "answers.md",
+        output_root / "stage-result.md",
+        output_root / "validator-report.md",
+    ]
+    if primary_output is not None:
+        expected_docs.extend(
+            [
+                _stage_root(ctx, stage) / primary_output,
+                output_root / primary_output,
+            ]
+        )
+    return (
+        _stage_root(ctx, stage),
+        output_root,
+        run_stage_root,
+        run_stage_root / "stage-metadata.json",
+        attempt_root,
+        attempt_root / "runtime.log",
+        attempt_root / "runtime.jsonl",
+        attempt_root / "events.jsonl",
+        *expected_docs,
+    )
+
+
+def _stage_progress_probe(ctx: FlowContext, stage: str) -> Callable[[], dict[str, object]]:
+    observed_paths = _stage_run_observed_paths(ctx, stage)
+    return lambda: _progress_snapshot(observed_paths)
+
+
 def _stage_document_path(ctx: FlowContext, stage: str, filename: str) -> Path:
     output_path = _stage_output_root(ctx, stage) / filename
     if output_path.exists():
@@ -3287,14 +4614,34 @@ def _stage_document_path(ctx: FlowContext, stage: str, filename: str) -> Path:
     return output_path
 
 
-def _stage_audit_paths(ctx: FlowContext, stage: str) -> tuple[Path, Path]:
+def _stage_audit_paths(
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str | None = None,
+) -> tuple[Path, Path]:
     audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
-    return audit_root / f"{stage}.json", audit_root / f"{stage}.md"
+    audit_id = stage_run_id or stage
+    return audit_root / f"{audit_id}.json", audit_root / f"{audit_id}.md"
 
 
-def _stage_timeout_reconciliation_path(ctx: FlowContext, stage: str) -> Path:
+def _stage_timeout_reconciliation_path(
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str | None = None,
+) -> Path:
     audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
-    return audit_root / f"{stage}{STAGE_TIMEOUT_RECONCILIATION_SUFFIX}"
+    audit_id = stage_run_id or stage
+    return audit_root / f"{audit_id}{STAGE_TIMEOUT_RECONCILIATION_SUFFIX}"
+
+
+def _stage_no_progress_reconciliation_path(
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str | None = None,
+) -> Path:
+    audit_root = ctx.bundle_root / STAGE_AUDITS_DIRNAME
+    audit_id = stage_run_id or stage
+    return audit_root / f"{audit_id}{STAGE_NO_PROGRESS_RECONCILIATION_SUFFIX}"
 
 
 def _read_text_if_exists(path: Path) -> str:
@@ -3384,11 +4731,66 @@ def _reconcile_timed_out_stage_run(
     *,
     ctx: FlowContext,
     stage: str,
+    stage_run_id: str | None = None,
     stage_result: BlackBoxCommandResult,
 ) -> tuple[tuple[Path, ...], dict[str, object] | None]:
     if not stage_result.transcript.timed_out:
         return tuple(), None
+    return _reconcile_failed_incomplete_stage_run(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        stage_result=stage_result,
+        reason="stage-command-timeout",
+        reconciliation_path=_stage_timeout_reconciliation_path(
+            ctx,
+            stage,
+            stage_run_id=stage_run_id,
+        ),
+        extra={
+            "timed_out": True,
+            "timeout_seconds": stage_result.transcript.timeout_seconds,
+        },
+    )
 
+
+def _reconcile_no_progress_stage_run(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str | None = None,
+    stage_result: BlackBoxCommandResult,
+) -> tuple[tuple[Path, ...], dict[str, object] | None]:
+    if not stage_result.no_progress:
+        return tuple(), None
+    return _reconcile_failed_incomplete_stage_run(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        stage_result=stage_result,
+        reason="provider-no-progress",
+        reconciliation_path=_stage_no_progress_reconciliation_path(
+            ctx,
+            stage,
+            stage_run_id=stage_run_id,
+        ),
+        extra={
+            "no_progress": True,
+            "no_progress_details": stage_result.no_progress_details or {},
+        },
+    )
+
+
+def _reconcile_failed_incomplete_stage_run(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str | None,
+    stage_result: BlackBoxCommandResult,
+    reason: str,
+    reconciliation_path: Path,
+    extra: dict[str, object],
+) -> tuple[tuple[Path, ...], dict[str, object]]:
     working_copy = _require_working_copy(ctx)
     workspace_root = working_copy / ".aidd"
     metadata_path = run_stage_metadata_path(
@@ -3430,15 +4832,15 @@ def _reconcile_timed_out_stage_run(
         "scenario_id": ctx.scenario.scenario_id,
         "work_item": ctx.work_item,
         "stage": stage,
-        "timed_out": True,
-        "timeout_seconds": stage_result.transcript.timeout_seconds,
+        "stage_run_id": stage_run_id,
+        "reason": reason,
         "stage_run_exit_code": stage_result.exit_code,
         "metadata_path": metadata_path.as_posix(),
         "previous_status": previous_status,
         "reconciled_status": reconciled_status,
         "reconciled": reconciled,
+        **extra,
     }
-    reconciliation_path = _stage_timeout_reconciliation_path(ctx, stage)
     _write_json(reconciliation_path, payload)
     return (reconciliation_path,), payload
 
@@ -3583,6 +4985,8 @@ def _write_stage_audit(
     *,
     ctx: FlowContext,
     stage: str,
+    stage_run_id: str,
+    iteration: int,
     stage_classification: StepClassification,
     inspect_classification: StepClassification,
     frontend_classification: StepClassification,
@@ -3618,7 +5022,14 @@ def _write_stage_audit(
             implementation_report_text
         )
         tracked_changed_files = list(repository_changes.tracked_files)
+        untracked_changed_files = list(repository_changes.untracked_files)
+        untracked_classification = _classify_live_untracked_files_for_stage_audit(
+            ctx,
+            untracked_changed_files,
+        )
+        product_untracked_files = untracked_classification["product_untracked_files"]
         findings: list[str] = []
+        warnings: list[str] = []
         policy_status: StepClassification = "pass"
         if not tracked_changed_files:
             findings.append("No tracked target repository diff was produced.")
@@ -3639,15 +5050,22 @@ def _write_stage_audit(
                 "explicit not-run evidence."
             )
             policy_status = "fail"
+        if product_untracked_files:
+            warnings.append(
+                "New untracked product files require manual code-quality review: "
+                + ", ".join(product_untracked_files)
+            )
         implementation_policy = {
             "status": policy_status,
             "patch_budget_files": patch_budget_files,
             "findings": findings,
+            "warnings": warnings,
         }
         implementation_details = {
             "changed_files": list(repository_changes.changed_files),
             "tracked_changed_files": tracked_changed_files,
-            "untracked_changed_files": list(repository_changes.untracked_files),
+            "untracked_changed_files": untracked_changed_files,
+            **untracked_classification,
             "diff_summary": repository_changes.diff_summary,
             "git_change_collection_errors": list(repository_changes.command_errors),
             "implementation_report_verification_evidence": verification_evidence_shape,
@@ -3661,6 +5079,9 @@ def _write_stage_audit(
         "scenario_id": ctx.scenario.scenario_id,
         "work_item": ctx.work_item,
         "stage": stage,
+        "stage_run_id": stage_run_id,
+        "stage_run_index": _next_stage_run_index(ctx),
+        "iteration": iteration,
         "stage_state": _resolved_stage_audit_state(
             stage_result_text=stage_result_text,
             metadata_status=stage_metadata_status,
@@ -3706,7 +5127,7 @@ def _write_stage_audit(
     if implementation_policy is not None:
         payload["implementation_policy"] = implementation_policy
 
-    json_path, markdown_path = _stage_audit_paths(ctx, stage)
+    json_path, markdown_path = _stage_audit_paths(ctx, stage, stage_run_id=stage_run_id)
     _write_json(json_path, payload)
     primary_artifact = cast(dict[str, object], payload["primary_artifact"])
     changed_files = (
@@ -3715,9 +5136,12 @@ def _write_stage_audit(
         else cast(list[str], implementation_details["changed_files"])
     )
     md_lines = [
-        f"# Stage Audit: {stage}",
+        f"# Stage Audit: {stage_run_id}",
         "",
         f"- Run: `{ctx.runtime_id}` / `{ctx.scenario_path.as_posix()}` / `{ctx.run_id}`",
+        f"- Stage: `{stage}`",
+        f"- Stage run id: `{stage_run_id}`",
+        f"- Iteration: `{iteration}`",
         f"- Stage state: `{payload['stage_state']}`",
         f"- Validator verdict: `{payload['validator_verdict']}`",
         f"- Primary artifact present: `{primary_artifact['present']}`",
@@ -3747,20 +5171,50 @@ def _write_stage_audit(
                 f"non-gating={finding['non_gating']})"
             )
     if implementation_details is not None:
+        tracked_detail_files = cast(
+            list[str],
+            implementation_details["tracked_changed_files"],
+        )
+        untracked_detail_files = cast(
+            list[str],
+            implementation_details["untracked_changed_files"],
+        )
+        product_untracked_detail_files = cast(
+            list[str],
+            implementation_details["product_untracked_files"],
+        )
+        harness_untracked_detail_files = cast(
+            list[str],
+            implementation_details["harness_untracked_files"],
+        )
+        setup_baseline_untracked_detail_files = cast(
+            list[str],
+            implementation_details["setup_baseline_untracked_files"],
+        )
         md_lines.extend(
             (
                 "",
                 "## Implementation Evidence",
                 "",
                 f"- Changed files: `{len(changed_files)}`",
-                "- Tracked changed files: "
-                f"`{len(cast(list[str], implementation_details['tracked_changed_files']))}`",
-                "- Untracked changed files: "
-                f"`{len(cast(list[str], implementation_details['untracked_changed_files']))}`",
+                f"- Tracked changed files: `{len(tracked_detail_files)}`",
+                f"- Untracked changed files: `{len(untracked_detail_files)}`",
+                f"- New untracked product files: `{len(product_untracked_detail_files)}`",
+                f"- Harness/config untracked files: `{len(harness_untracked_detail_files)}`",
+                "- Setup-baseline untracked files: "
+                f"`{len(setup_baseline_untracked_detail_files)}`",
                 "- Verification evidence shape: "
                 f"`{implementation_details['implementation_report_verification_evidence']}`",
             )
         )
+        md_lines.extend(("", "### Tracked Changed Files", ""))
+        md_lines.extend(_markdown_path_list(tracked_detail_files))
+        md_lines.extend(("", "### New Untracked Product Files", ""))
+        md_lines.extend(_markdown_path_list(product_untracked_detail_files))
+        md_lines.extend(("", "### Harness Or Config Untracked Files", ""))
+        md_lines.extend(_markdown_path_list(harness_untracked_detail_files))
+        md_lines.extend(("", "### Setup-Baseline Untracked Files", ""))
+        md_lines.extend(_markdown_path_list(setup_baseline_untracked_detail_files))
         if implementation_policy is not None:
             md_lines.extend(
                 (
@@ -3770,6 +5224,12 @@ def _write_stage_audit(
                         "`none`"
                         if not implementation_policy["findings"]
                         else "; ".join(cast(list[str], implementation_policy["findings"]))
+                    ),
+                    "- Implementation policy warnings: "
+                    + (
+                        "`none`"
+                        if not implementation_policy["warnings"]
+                        else "; ".join(cast(list[str], implementation_policy["warnings"]))
                     ),
                 )
             )
@@ -4017,9 +5477,119 @@ def _write_runtime_approval_analysis_from_attempt_ledgers(ctx: FlowContext) -> P
     return path
 
 
+def _inspect_successful_external_stage_run(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str,
+    iteration: int,
+    current_stage: str | None,
+    stale_downstream_stages: tuple[str, ...] | None = None,
+    state_extra: dict[str, object] | None = None,
+) -> StepClassification:
+    working_copy = _require_working_copy(ctx)
+    environment = _harness_environment_for_context(ctx)
+    inspection_results = tuple(
+        _run_black_box_command(
+            command=command,
+            cwd=working_copy,
+            environment=environment,
+            timeout_seconds=60.0,
+        )
+        for command in _inspection_commands(ctx, stage)
+    )
+    inspection_reports_blocked = _inspection_reports_unresolved_questions(inspection_results)
+    inspect_classification: StepClassification = (
+        "blocked"
+        if inspection_reports_blocked
+        else (
+            "pass"
+            if all(result.exit_code == 0 for result in inspection_results)
+            else "fail"
+        )
+    )
+    _record_step(
+        ctx=ctx,
+        action="inspect-stage",
+        classification=inspect_classification,
+        decision=(
+            "Continue after inspecting externally executed remediation stage."
+            if inspect_classification == "pass"
+            else "Stop because external remediation stage inspection failed or blocked."
+        ),
+        plan=(
+            "Inspect stage summary, questions, run metadata, logs, and artifacts "
+            "through public CLI after operator UI remediation execution."
+        ),
+        stage=stage,
+        command_results=inspection_results,
+        details={"stage_run_id": stage_run_id},
+    )
+    stage_classification: StepClassification = (
+        "blocked" if inspection_reports_blocked else "pass"
+    )
+    frontend_classification = _run_frontend_checkpoint(ctx, stage)
+    audit_json_path, audit_markdown_path, audit_classification = _write_stage_audit(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        iteration=iteration,
+        stage_classification=stage_classification,
+        inspect_classification=inspect_classification,
+        frontend_classification=frontend_classification,
+        inspection_results=inspection_results,
+    )
+    if stage_classification == "blocked":
+        _persist_state(
+            ctx=ctx,
+            status="blocked",
+            next_action="answer-questions",
+            current_stage=stage,
+            completed_stages=_state_completed_stages(ctx.bundle_root),
+        )
+        return "blocked"
+    if inspect_classification == "fail" or audit_classification == "fail":
+        _persist_state(
+            ctx=ctx,
+            status="fail",
+            next_action="stop",
+            current_stage=stage,
+            completed_stages=_state_completed_stages(ctx.bundle_root),
+            extra={"error": "external remediation stage audit failed"},
+        )
+        return "fail"
+    if frontend_classification == "fail":
+        _persist_state(
+            ctx=ctx,
+            status="fail",
+            next_action="stop",
+            current_stage=stage,
+            completed_stages=_state_completed_stages(ctx.bundle_root),
+            extra={"error": "frontend checkpoint failed"},
+        )
+        return "fail"
+    _append_completed_stage_run(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        iteration=iteration,
+        audit_json_path=audit_json_path,
+        audit_markdown_path=audit_markdown_path,
+        current_stage=current_stage,
+        stale_downstream_stages=stale_downstream_stages,
+        extra=state_extra,
+    )
+    quality_gate = _quality_review_gate(ctx)
+    if quality_gate is not None:
+        return quality_gate
+    return "pass"
+
+
 def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
     working_copy = _require_working_copy(ctx)
     environment = _harness_environment_for_context(ctx)
+    stage_run_id = _next_stage_run_id(ctx, stage)
+    iteration = _next_stage_iteration(ctx, stage)
     answer_analysis_path = _write_answer_analysis_if_detected(ctx, stage)
     if answer_analysis_path is not None:
         _record_step(
@@ -4034,6 +5604,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
 
     stage_command = _stage_run_command(ctx, stage)
     stage_timeout_seconds = _stage_command_timeout_seconds(ctx.scenario)
+    no_progress_timeout_seconds = _stage_no_progress_timeout_seconds(ctx.scenario)
     _persist_state(
         ctx=ctx,
         status="running",
@@ -4044,8 +5615,10 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             "active_step": {
                 "action": "run-stage",
                 "stage": stage,
+                "stage_run_id": stage_run_id,
                 "started_at_utc": _utc_now(),
                 "timeout_seconds": stage_timeout_seconds,
+                "no_progress_timeout_seconds": no_progress_timeout_seconds,
                 "command": list(stage_command),
             }
         },
@@ -4055,13 +5628,31 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         cwd=working_copy,
         environment=environment,
         timeout_seconds=stage_timeout_seconds,
+        no_progress_timeout_seconds=no_progress_timeout_seconds,
+        progress_probe=_stage_progress_probe(ctx, stage),
     )
     classification = _classify_stage_run(stage_result)
     timeout_evidence_paths, timeout_reconciliation = _reconcile_timed_out_stage_run(
         ctx=ctx,
         stage=stage,
+        stage_run_id=stage_run_id,
         stage_result=stage_result,
     )
+    no_progress_evidence_paths, no_progress_reconciliation = (
+        _reconcile_no_progress_stage_run(
+            ctx=ctx,
+            stage=stage,
+            stage_run_id=stage_run_id,
+            stage_result=stage_result,
+        )
+    )
+    step_details: dict[str, object] = {}
+    if timeout_reconciliation is not None:
+        step_details["timeout_reconciliation"] = timeout_reconciliation
+    if no_progress_reconciliation is not None:
+        step_details["no_progress_reconciliation"] = no_progress_reconciliation
+    if stage_result.no_progress and stage_result.no_progress_details is not None:
+        step_details["no_progress_details"] = stage_result.no_progress_details
     _record_step(
         ctx=ctx,
         action="run-stage",
@@ -4069,17 +5660,18 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         decision=(
             "Inspect public artifacts before deciding next stage."
             if classification == "pass"
+            else (
+                "Stop as infrastructure failure: provider-no-progress before "
+                "completed stage artifact."
+            )
+            if classification == "infra-fail"
             else "Inspect public artifacts before stopping or requesting operator input."
         ),
         plan=f"Run `{stage}` through the installed public `aidd stage run` surface.",
         stage=stage,
         command_results=(stage_result,),
-        evidence_paths=timeout_evidence_paths,
-        details=(
-            {"timeout_reconciliation": timeout_reconciliation}
-            if timeout_reconciliation is not None
-            else None
-        ),
+        evidence_paths=(*timeout_evidence_paths, *no_progress_evidence_paths),
+        details=step_details or None,
     )
 
     inspection_results = tuple(
@@ -4132,16 +5724,18 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         stage=stage,
         command_results=inspection_results,
     )
-    if inspection_reports_blocked:
+    if inspection_reports_blocked and classification != "infra-fail":
         classification = "blocked"
     frontend_classification = (
         "skipped"
-        if stage_result.transcript.timed_out
+        if stage_result.transcript.timed_out or stage_result.no_progress
         else _run_frontend_checkpoint(ctx, stage)
     )
     _, _, audit_classification = _write_stage_audit(
         ctx=ctx,
         stage=stage,
+        stage_run_id=stage_run_id,
+        iteration=iteration,
         stage_classification=classification,
         inspect_classification=inspect_classification,
         frontend_classification=frontend_classification,
@@ -4178,14 +5772,18 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         )
         return "fail"
     if classification == "pass":
-        completed = (*_state_completed_stages(ctx.bundle_root), stage)
-        _persist_state(
+        _append_completed_stage_run(
             ctx=ctx,
-            status="running",
-            next_action="run-stage",
+            stage=stage,
+            stage_run_id=stage_run_id,
+            iteration=iteration,
+            audit_json_path=ctx.bundle_root / STAGE_AUDITS_DIRNAME / f"{stage_run_id}.json",
+            audit_markdown_path=ctx.bundle_root / STAGE_AUDITS_DIRNAME / f"{stage_run_id}.md",
             current_stage=_next_stage_after(ctx.scenario, stage),
-            completed_stages=completed,
         )
+        quality_gate = _quality_review_gate(ctx)
+        if quality_gate is not None:
+            return quality_gate
         return classification
     if classification == "blocked":
         existing_request_paths = (
@@ -4223,6 +5821,30 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             },
         )
         return classification
+    if classification == "infra-fail":
+        _persist_state(
+            ctx=ctx,
+            status="infra-fail",
+            next_action="stop",
+            current_stage=stage,
+            completed_stages=_state_completed_stages(ctx.bundle_root),
+            extra={
+                "error": "provider-no-progress before completed stage artifact",
+                "stage_exit_code": stage_result.exit_code,
+                "no_progress": stage_result.no_progress,
+                **(
+                    {"no_progress_details": stage_result.no_progress_details}
+                    if stage_result.no_progress_details is not None
+                    else {}
+                ),
+                **(
+                    {"no_progress_reconciliation": no_progress_reconciliation}
+                    if no_progress_reconciliation is not None
+                    else {}
+                ),
+            },
+        )
+        return classification
     _persist_state(
         ctx=ctx,
         status="fail",
@@ -4249,12 +5871,65 @@ def _next_stage_after(scenario: Scenario, stage: str) -> str | None:
     return stages[index + 1]
 
 
+def _run_remediation_rerun_stage(ctx: FlowContext, stage: str) -> StepClassification:
+    stage_run_id = _next_stage_run_id(ctx, stage)
+    iteration = _next_stage_iteration(ctx, stage)
+    api_payload: dict[str, object] = {
+        "runtime": ctx.runtime_id,
+        "run_id": ctx.run_id,
+        "stage": stage,
+        "log_follow": True,
+    }
+    classification, evidence_path, evidence_payload = _run_ui_remediation_job(
+        ctx=ctx,
+        endpoint="/api/remediation/rerun-stage",
+        payload=api_payload,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        action="rerun-stage",
+    )
+    if classification != "pass":
+        return _record_remediation_job_stop(
+            ctx=ctx,
+            stage=stage,
+            classification=classification,
+            evidence_path=evidence_path,
+        )
+    stale_stages = _remediation_stale_stages_from_payload(evidence_payload)
+    if not stale_stages:
+        previous_stale = list(_state_stale_downstream_stages(ctx.bundle_root))
+        stale_stages = tuple(item for item in previous_stale if item != stage)
+    state_extra: dict[str, object] = {
+        "stale_downstream_stages": list(stale_stages),
+        "pending_remediation": (
+            _load_flow_state(ctx.bundle_root).get("pending_remediation")
+            if stale_stages
+            else None
+        ),
+    }
+    return _inspect_successful_external_stage_run(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        iteration=iteration,
+        current_stage=stale_stages[0] if stale_stages else _next_stage_after(ctx.scenario, stage),
+        stale_downstream_stages=stale_stages,
+        state_extra=state_extra,
+    )
+
+
 def _run_stage_loop(ctx: FlowContext) -> StepClassification:
     while True:
+        quality_gate = _quality_review_gate(ctx)
+        if quality_gate is not None:
+            return quality_gate
         stage = _first_incomplete_stage(ctx)
         if stage is None:
             return "pass"
-        classification = _run_stage_and_inspect(ctx, stage)
+        if stage in _state_stale_downstream_stages(ctx.bundle_root):
+            classification = _run_remediation_rerun_stage(ctx, stage)
+        else:
+            classification = _run_stage_and_inspect(ctx, stage)
         if classification != "pass":
             return classification
 
@@ -4660,6 +6335,8 @@ def _write_log_analysis(
                 f"- Scope: `{timeout_policy['scope']}`",
                 "- Stage Command Timeout: "
                 f"`{_format_timeout_budget(timeout_policy['stage_command_timeout_seconds'])}`",
+                "- No-Progress Timeout: "
+                f"`{_format_timeout_budget(timeout_policy['no_progress_timeout_seconds'])}`",
                 "- Global Flow Timeout: "
                 f"`{_format_timeout_budget(timeout_policy['global_flow_timeout_seconds'])}`",
                 "- Runtime Config Source: "
@@ -4699,6 +6376,8 @@ def _stage_timing_payload_from_flow(
         commands = commands_raw if isinstance(commands_raw, list) else []
         first_exit_code: int | None = None
         timeout_values: list[float] = []
+        no_progress_timeout_values: list[float] = []
+        no_progress_details: dict[str, object] | None = None
         for command in commands:
             if not isinstance(command, dict):
                 continue
@@ -4712,9 +6391,23 @@ def _stage_timing_payload_from_flow(
             timeout_seconds = command.get("timeout_seconds")
             if isinstance(timeout_seconds, int | float):
                 timeout_values.append(float(timeout_seconds))
+            command_no_progress_details = command.get("no_progress_details")
+            if isinstance(command_no_progress_details, dict):
+                no_progress_details = dict(command_no_progress_details)
+                raw_no_progress_timeout = command_no_progress_details.get(
+                    "no_progress_timeout_seconds"
+                )
+                if isinstance(raw_no_progress_timeout, int | float):
+                    no_progress_timeout_values.append(float(raw_no_progress_timeout))
         step_timeout_seconds = (
             timeout_values[0]
             if timeout_values and all(value == timeout_values[0] for value in timeout_values)
+            else None
+        )
+        step_no_progress_timeout_seconds = (
+            no_progress_timeout_values[0]
+            if no_progress_timeout_values
+            and all(value == no_progress_timeout_values[0] for value in no_progress_timeout_values)
             else None
         )
         flow_steps.append(
@@ -4730,6 +6423,12 @@ def _stage_timing_payload_from_flow(
                     for command in commands
                 ),
                 "timeout_seconds": step_timeout_seconds,
+                "no_progress": any(
+                    isinstance(command, dict) and command.get("no_progress") is True
+                    for command in commands
+                ),
+                "no_progress_timeout_seconds": step_no_progress_timeout_seconds,
+                "no_progress_details": no_progress_details,
             }
         )
     payload["steps"] = flow_steps
@@ -4940,6 +6639,7 @@ def _grader_payload(
             "operator_decision": next_flow_checkpoint.get("next_flow_actions", {}),
             "flow_complete_visible": next_flow_checkpoint.get("flow_complete_visible"),
         },
+        "manual_quality_artifacts": _manual_quality_artifacts_payload(ctx),
         "selected_task": ctx.selected_task_payload.get("selected_task"),
         "stage_audits": _stage_audit_payloads(ctx),
         "steps": _load_steps(ctx.bundle_root),
@@ -5048,6 +6748,7 @@ def _record_interruption(
         completed_stages=_state_completed_stages(ctx.bundle_root),
         extra=details,
     )
+    _write_flow_report(ctx)
 
 
 def _finalize_reports(
@@ -5187,6 +6888,47 @@ def _finalize_reports(
             if (ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME).exists()
             else None
         ),
+    )
+
+
+def _awaiting_quality_review_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
+    _ensure_transcript_files(ctx)
+    _write_runtime_log_from_steps(ctx)
+    _write_flow_report(ctx)
+    return BlackBoxLiveE2EResult(
+        scenario_id=ctx.scenario.scenario_id,
+        run_id=ctx.run_id,
+        runtime_id=ctx.runtime_id,
+        status="awaiting-quality-review",
+        bundle_root=ctx.bundle_root,
+        flow_report_path=ctx.bundle_root / FLOW_REPORT_FILENAME,
+        verdict_path=ctx.bundle_root / VERDICT_FILENAME,
+        summary_path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
+        first_failure_note=None,
+        operator_action_request_path=None,
+        quality_review_request_path=_quality_review_request_path_from_state(ctx),
+    )
+
+
+def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
+    _ensure_transcript_files(ctx)
+    _write_runtime_log_from_steps(ctx)
+    _write_flow_report(ctx)
+    _write_target_workspace_evidence(ctx)
+    _, manual_stop_markdown_path = _write_manual_quality_stop_artifacts(ctx)
+    return BlackBoxLiveE2EResult(
+        scenario_id=ctx.scenario.scenario_id,
+        run_id=ctx.run_id,
+        runtime_id=ctx.runtime_id,
+        status="manual-quality-stop",
+        bundle_root=ctx.bundle_root,
+        flow_report_path=ctx.bundle_root / FLOW_REPORT_FILENAME,
+        verdict_path=ctx.bundle_root / VERDICT_FILENAME,
+        summary_path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
+        first_failure_note="Manual stage quality audit chose `stop-not-counted`.",
+        operator_action_request_path=None,
+        quality_review_request_path=_quality_review_request_path_from_state(ctx),
+        manual_quality_stop_path=manual_stop_markdown_path,
     )
 
 
@@ -5340,6 +7082,8 @@ def run_black_box_live_e2e(
 
 def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     status = _state_status(ctx.bundle_root)
+    if status == "manual-quality-stop":
+        return _manual_quality_stop_result(ctx)
     if status in TERMINAL_STATUSES:
         terminal_status = cast(VerdictStatus, status)
         return _finalize_reports(
@@ -5352,6 +7096,36 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             verification_failed=terminal_status != "pass",
             teardown_result=None,
             teardown_error=None,
+        )
+    quality_gate = _quality_review_gate(ctx)
+    if quality_gate == "awaiting-quality-review":
+        return _awaiting_quality_review_result(ctx)
+    if quality_gate == "manual-quality-stop":
+        return _manual_quality_stop_result(ctx)
+    if quality_gate == "blocked":
+        return _blocked_result(ctx)
+    if quality_gate == "fail":
+        teardown_result, teardown_error = _run_teardown(ctx)
+        return _finalize_reports(
+            ctx=ctx,
+            status="fail",
+            summary="A public stage run failed during black-box live E2E execution.",
+            verification_failed=True,
+            teardown_result=teardown_result,
+            teardown_error=teardown_error,
+        )
+    if quality_gate == "infra-fail":
+        teardown_result, teardown_error = _run_teardown(ctx)
+        return _finalize_reports(
+            ctx=ctx,
+            status="infra-fail",
+            summary=(
+                "Infrastructure failure occurred during black-box live E2E "
+                "quality-gate handling."
+            ),
+            verification_failed=True,
+            teardown_result=teardown_result,
+            teardown_error=teardown_error,
         )
     try:
         _prepare_target_repository(ctx)
@@ -5401,6 +7175,10 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             teardown_error=None,
         )
     stage_classification = _run_stage_loop(ctx)
+    if stage_classification == "awaiting-quality-review":
+        return _awaiting_quality_review_result(ctx)
+    if stage_classification == "manual-quality-stop":
+        return _manual_quality_stop_result(ctx)
     if stage_classification == "blocked":
         return _blocked_result(ctx)
     if stage_classification == "fail":
@@ -5409,6 +7187,19 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             ctx=ctx,
             status="fail",
             summary="A public stage run failed during black-box live E2E execution.",
+            verification_failed=True,
+            teardown_result=teardown_result,
+            teardown_error=teardown_error,
+        )
+    if stage_classification == "infra-fail":
+        teardown_result, teardown_error = _run_teardown(ctx)
+        return _finalize_reports(
+            ctx=ctx,
+            status="infra-fail",
+            summary=(
+                "Provider made no progress during public stage execution before a "
+                "completed stage artifact was available."
+            ),
             verification_failed=True,
             teardown_result=teardown_result,
             teardown_error=teardown_error,
@@ -5523,9 +7314,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Run id: {result.run_id}")
     print(f"Bundle root: {result.bundle_root.as_posix()}")
     print(f"Flow report: {result.flow_report_path.as_posix()}")
-    print(f"Verdict path: {result.verdict_path.as_posix()}")
+    if result.status in TERMINAL_STATUSES:
+        print(f"Verdict path: {result.verdict_path.as_posix()}")
+    elif result.status == "manual-quality-stop" and result.manual_quality_stop_path is not None:
+        print(f"Manual quality stop: {result.manual_quality_stop_path.as_posix()}")
     if result.operator_action_request_path is not None and result.status == "blocked":
         print(f"Operator action request: {result.operator_action_request_path.as_posix()}")
+    if (
+        result.quality_review_request_path is not None
+        and result.status == "awaiting-quality-review"
+    ):
+        print(f"Required quality audit: {result.quality_review_request_path.as_posix()}")
     return 0 if result.status == "pass" else 1
 
 

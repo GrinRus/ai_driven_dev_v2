@@ -97,8 +97,11 @@ Optional context documents may improve review depth, but they must not replace i
   directories from
   `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
   equivalent evidence must be reviewed as workspace pollution unless they are selected deliverable
-  outputs or were removed before review. A cleanup claim is not review evidence unless it
-  explicitly covers these ignored residue classes.
+  outputs or were removed before the final review report. A cleanup claim is not review evidence
+  unless it explicitly covers these ignored residue classes after all review commands have run.
+  If review itself creates ignored residue, review must either remove it and cite post-cleanup
+  evidence or record an active finding. `Review status: approved` and `Findings: none` are invalid
+  while non-baseline ignored residue remains visible in live workspace evidence.
 - When upstream `tasklist` or `plan` artifacts are available, review must check the implementation
   against their nontrivial task details, required mitigations, and explicit risk-verification
   promises, not only the high-level acceptance criteria. This includes named implementation
@@ -111,6 +114,11 @@ Optional context documents may improve review depth, but they must not replace i
   sibling commands, routes, generated outputs, or documented public surfaces. Missing help/usage,
   docs consistency, API compatibility, or generated-output blast-radius evidence must become a
   finding unless the upstream task explicitly excludes that surface.
+- In JavaScript or TypeScript packages, review must inspect `package.json` `exports`, wildcard
+  subpath exports such as `./utils/*`, generated declarations, and existing public import
+  conventions before accepting a claim that a new helper/module is internal-only. If the path is
+  package-importable and implementation evidence does not treat it as public API, this is a review
+  finding.
 - Nested finding metadata bullets may hold severity, disposition, rationale, and evidence; validators treat the whole subsection as one finding.
 - severity labels must remain explicit and consistent across findings and summary sections.
 - Prose-only rationale is not an evidence reference; findings without explicit implementation
@@ -132,6 +140,8 @@ Validators for `review` should check:
   - summary and approval status must remain coherent with finding severities,
 - shared public-surface blast radius:
   - shared helper/decorator/parser/API changes are checked against affected sibling public surfaces,
+  - JavaScript/TypeScript helper additions are checked against export maps before internal-only
+    claims are accepted,
 - absent disposition:
   - each finding must include disposition (`must-fix`, `follow-up`, `accepted-risk`, or `invalid`),
   - an explicit no-findings declaration is valid only when no active finding entries are present,

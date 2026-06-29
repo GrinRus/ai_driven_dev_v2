@@ -14,6 +14,8 @@ Store durable answers to the questions raised during a stage.
   - Must be a bullet list where each bullet maps to one question id from `questions.md`.
   - Each answer must include a marker: `[resolved]`, `[partial]`, or `[deferred]`.
   - Each answer must include the question id token (for example, `Q1`, `Q2`) for durable linking.
+  - Canonical answer syntax is `- Q1 [resolved] answer text`,
+    `- Q1 [partial] answer text`, or `- Q1 [deferred] answer text`.
   - `[resolved]` answers must contain actionable content, not placeholders.
   - `[partial]` and `[deferred]` answers must state what is still missing.
   - Use `- none` only when no answers were provided yet.
@@ -24,13 +26,18 @@ Store durable answers to the questions raised during a stage.
 - `[partial]` means some answer exists but follow-up is required before safe completion.
 - `[deferred]` means the answer is intentionally postponed to a later stage or decision point.
 - Marker text is case-sensitive and must appear immediately after the question id token.
+- The marker must be followed by a space and answer text, not punctuation. Forms such as
+  `- Q1 [resolved]: answer text` or `- Q1: [resolved] answer text` are invalid.
 
 ## Authoring rules
 
 - `answers.md` is operator-authored or AIDD UI/API-authored; runtime/model stage attempts must not
   create, modify, or remove resolved answers.
+- Runtime/model stage attempts must not self-answer missing operator decisions. If an operator
+  answer is not present, write `- none` instead of inventing `[resolved]` content.
 - Do not answer questions that are not present in `questions.md`.
 - Preserve question ids exactly as written in `questions.md`; do not renumber in `answers.md`.
+- Do not invent answer ids such as `A1` or `A2`; answer bullets reuse the matching `Q` id.
 - Keep answers specific and auditable; avoid placeholders such as `TBD` or `decide later` without context.
 - When an answer changes, append the updated answer in place and keep the latest marker truthful.
 - Keep one decision per bullet to avoid mixing unrelated outcomes.

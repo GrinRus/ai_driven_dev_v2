@@ -6,14 +6,25 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-No local task is promoted right now.
+- `W33-E1-S1-T1` — Build a maintained-matrix evidence table from the latest local and
+  PR bundle evidence.
 
 ## Soon
 
-No near-term local task is queued right now.
+- `W33-E1-S1-T2` — Run the missing or stale maintained lanes from a clean tracked checkout
+  and publish updated evidence without substituting runtimes.
 
 ## Parking lot
 
+- `W33-E2-S1-T1` — Add a read-only product-evaluation bundle summary that lists stage-run
+  audit decisions, remediation source ids, untracked product files, final report presence,
+  and terminal flow-state freshness.
+- `W33-E2-S1-T2` — Document how operators use the bundle summary while still reading stage
+  evidence before assigning counted-clean.
+- `W33-E3-S1-T1` — Run non-mutating setup audits for Pydantic, FastAPI, Rich, and Ruff
+  candidates.
+- `W33-E3-S1-T2` — Draft one next product-evaluation scenario from the best passing setup
+  audit without adding it to the maintained matrix yet.
 - `W30-E3-S1-T1` — Prepare the `v0.1.0a9` release branch and draft prerelease after
   explicit approval.
 
@@ -36,6 +47,11 @@ No near-term local task is queued right now.
   `AIDD-LIVE-011` rerun `eval-live-011-opencode-20260622T133433Z` passed through
   terminal QA. Exact PyPI proof remains a release follow-up because `0.1.0a11` is
   immutable.
+- `2026-06-29` Wave 33 opened for live E2E product-evaluation follow-up after PR #93
+  proved the stage-run/remediation protocol on fresh `AIDD-LIVE-008` and
+  `AIDD-LIVE-011` runs. `W33-E1-S1-T1` is promoted to `Next`,
+  `W33-E1-S1-T2` to `Soon`, and bundle-summary plus new-repository expansion tasks stay
+  parked until the maintained matrix evidence table exists.
 - `2026-04-23` Backlog queue was restored after readiness cleanup and synchronized with Wave 7/Wave 8 roadmap tasks.
 - `2026-04-23` Queue-restoration policy was documented under `W8-E3-S1` to govern future wave opening when backlog is empty.
 - `2026-04-23` Wave 9 queue bootstrap promoted `W9-E1-S1-T1` to `Next`, `W9-E1-S1-T2` and `W9-E1-S1-T3` to `Soon`, and `W9-E1-S1-T4` to `Parking lot`.

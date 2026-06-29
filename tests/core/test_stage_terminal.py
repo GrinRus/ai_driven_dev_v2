@@ -7,6 +7,7 @@ from aidd.core.stage_terminal import (
     ensure_stage_result_references_repair_brief,
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
+    reconcile_stage_result_after_validation_pass,
     repair_brief_exhausts_terminal_budget,
     strip_stage_result_success_claims_for_validator_findings,
 )
@@ -73,6 +74,54 @@ def test_force_stage_result_failed_for_exhausted_budget_rewrites_terminal_claims
     assert "validator report verdict: `fail`" in stage_result_text
     assert "validation `fail`" in stage_result_text
     assert "Repair budget status: `repair-budget-exhausted`" in stage_result_text
+
+
+def test_reconcile_stage_result_after_validation_pass_rewrites_stale_failure_claims(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_result_path = _stage_result_path(workspace_root)
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(
+        "# Stage result\n\n"
+        "## Status\n\n"
+        "- Status: `blocked`\n\n"
+        "## Validation summary\n\n"
+        "- Validator verdict: `fail`\n"
+        "- Validator report: `workitems/WI-001/stages/plan/validator-report.md`\n\n"
+        "## Terminal state notes\n\n"
+        "- Runtime draft stopped before canonical validation was persisted.\n",
+        encoding="utf-8",
+    )
+
+    result_path = reconcile_stage_result_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+
+    assert result_path == stage_result_path
+    stage_result_text = stage_result_path.read_text(encoding="utf-8")
+    assert "- Status: `succeeded`" in stage_result_text
+    assert "- Validator verdict: `pass`" in stage_result_text
+    assert "stale runtime draft status/verdict was normalized" in stage_result_text
+
+
+def test_reconcile_stage_result_after_validation_pass_does_not_note_clean_result(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_result_path = _write_successful_stage_result(workspace_root)
+
+    result_path = reconcile_stage_result_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+
+    assert result_path == stage_result_path
+    stage_result_text = stage_result_path.read_text(encoding="utf-8")
+    assert "stale runtime draft status/verdict was normalized" not in stage_result_text
 
 
 def test_force_stage_result_failed_for_exhausted_budget_creates_missing_result(

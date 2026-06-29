@@ -6,14 +6,14 @@ IMPLEMENT_FILE_ENTRY_PATTERN = re.compile(r"`(?=[^`\n]*(?:/|\.))[^\n`]+`")
 IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"(\$ [^\n]+|"
     r"`[^`\n]*\b("
-    r"uv run|pytest|ruff|mypy|python|sphinx-build|npm|pnpm|yarn|go test|cargo test|"
-    r"make|git|grep|rg|echo|printf|flake8|black|prettier|ty check|sqlite-utils|"
+    r"aidd|uv run|pytest|ruff|mypy|python|sphinx-build|npm|pnpm|yarn|go test|cargo test|"
+    r"make|git|grep|rg|sed|echo|printf|flake8|black|prettier|ty check|sqlite-utils|"
     r"bun|bunx|find|npx|vitest|tsc"
     r")\b[^`\n]*`|"
     r"`(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^`\n]+`|"
     r"(?:^|\s)(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^\s`]+|"
     r"\b(uv run|python -m|python -c|sphinx-build|go test|cargo test|ty check|sqlite-utils)\b|"
-    r"\b(pytest|ruff|mypy|npm|pnpm|yarn|make|git|grep|rg|echo|printf|flake8|black)\b|"
+    r"\b(aidd|pytest|ruff|mypy|npm|pnpm|yarn|make|git|grep|rg|sed|echo|printf|flake8|black)\b|"
     r"`test\s+[^`\n]+`|`(?:insert|upsert|memory)\b[^`\n]*`)",
     flags=re.IGNORECASE,
 )
@@ -53,6 +53,15 @@ IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN = re.compile(
     r"\bsame\b.{0,80}\b(?:procedure|command|check|run)\b.{0,80}\bas\s+`?(?:T\d+|TL-\d+)`?",
     flags=re.IGNORECASE | re.DOTALL,
 )
+IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN = re.compile(
+    r"`?\.?(?:pytest|ruff|mypy)_cache/?`?|"
+    r"`?\.hypothesis/?`?|"
+    r"`?__pycache__/?`?|"
+    r"\bpytest/sphinx checks\b|"
+    r"\btest/build cache residue\b|"
+    r"\bverification residue cleanup\b",
+    flags=re.IGNORECASE,
+)
 IMPLEMENT_DEFERRED_VERIFICATION_PATTERN = re.compile(
     r"\b(?:not[-\s]+(?:run|executed)|skipped|deferred|hand[- ]off)\b",
     flags=re.IGNORECASE,
@@ -72,9 +81,14 @@ def is_deferred_implementation_verification(verification_item: str) -> bool:
 
 
 def has_implementation_command_evidence(verification_item: str) -> bool:
+    command_candidate = IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN.sub(
+        "",
+        verification_item,
+    )
     return (
-        IMPLEMENT_COMMAND_PATTERN.search(verification_item) is not None
-        or IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(verification_item) is not None
+        IMPLEMENT_COMMAND_PATTERN.search(command_candidate) is not None
+        or IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(command_candidate)
+        is not None
     )
 
 
@@ -85,6 +99,7 @@ __all__ = [
     "IMPLEMENT_DEFERRED_VERIFICATION_PATTERN",
     "IMPLEMENT_FILE_ENTRY_PATTERN",
     "IMPLEMENT_NOOP_JUSTIFICATION_PATTERN",
+    "IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN",
     "IMPLEMENT_RESULT_PATTERN",
     "IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN",
     "has_implementation_command_evidence",

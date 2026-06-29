@@ -2,20 +2,30 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+import yaml
+
 from aidd.core.stages import STAGES
-from aidd.harness.scenarios import load_scenario
+from aidd.harness.scenarios import ScenarioManifestError, load_scenario
 
 
 def _assert_live_contract(scenario) -> None:
     assert scenario.is_live is True
     assert scenario.scenario_class in {"live-full-flow", "live-full-flow-interview"}
-    assert scenario.feature_size in {"tiny", "small", "medium", "large", "xlarge"}
+    assert scenario.feature_size in {"small", "medium", "large", "xlarge"}
+    assert scenario.live_matrix_role in {"flow-regression", "product-evaluation"}
+    if scenario.live_matrix_role == "flow-regression":
+        assert scenario.feature_size == "small"
+    else:
+        assert scenario.feature_size in {"medium", "large", "xlarge"}
     assert scenario.automation_lane == "manual"
     assert scenario.canonical_runtime in scenario.runtime_targets
+    assert scenario.repo.revision
     assert scenario.run.stage_start == STAGES[0]
     assert scenario.run.stage_end == STAGES[-1]
     assert scenario.run.timeout_minutes is not None
     assert scenario.run.timeout_minutes >= 240
+    assert scenario.run.no_progress_timeout_minutes == 30
     assert scenario.feature_source is not None
     assert scenario.feature_source.mode == "authored-task-pool"
     assert scenario.feature_source.selection_policy == "first-listed"
@@ -28,80 +38,13 @@ def _assert_live_contract(scenario) -> None:
     assert scenario.live_flow.frontend_checkpoints is True
 
 
-def test_live_scenario_exposes_full_flow_repo_steps_and_execution_contract() -> None:
-    scenario = load_scenario(Path("harness/scenarios/live/typer-styled-help-alignment.yaml"))
-
-    assert scenario.scenario_id == "AIDD-LIVE-001"
-    assert scenario.scenario_class == "live-full-flow"
-    assert scenario.feature_size == "small"
-    assert scenario.automation_lane == "manual"
-    assert scenario.canonical_runtime == "codex"
-    assert scenario.repo.url == "https://github.com/fastapi/typer"
-    assert scenario.repo.default_branch == "master"
-    assert scenario.repo.revision == "9ce8e30383ef419c490431caab5a515eca669b1b"
-    assert (
-        scenario.raw["objective"]
-        == "Keep Typer smoke lane deterministic by targeting the styled help alignment "
-        "defect with bounded patch scope and regression coverage."
-    )
-    assert scenario.task.startswith("Run the installed AIDD full-flow live audit")
-    assert scenario.setup.commands == (
-        "uv sync --group tests",
-        "uv run pytest -q",
-    )
-    assert scenario.verify.commands == (
-        "uv run pytest -q",
-        "test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/stage-result.md",
-        "test -f .aidd/workitems/WI-LIVE-TYPER-SMOKE/stages/qa/output/validator-report.md",
-    )
-    _assert_live_contract(scenario)
-    first_task = scenario.feature_source.tasks[0]
-    assert first_task.task_id == "TASK-LIVE-TYPER-STYLED-HELP-ALIGNMENT"
-    assert first_task.title == "styled help alignment bugfix"
-    assert "regression coverage" in first_task.summary
-    assert first_task.acceptance_criteria
-
-
-def test_typer_boolean_live_scenario_uses_extended_budget_and_focused_help_checks() -> None:
-    scenario = load_scenario(Path("harness/scenarios/live/typer-boolean-help-rendering.yaml"))
-
-    _assert_live_contract(scenario)
-    assert scenario.scenario_id == "AIDD-LIVE-002"
-    assert scenario.feature_size == "medium"
-    assert scenario.canonical_runtime == "codex"
-    assert scenario.run.timeout_minutes == 240
-    task = scenario.feature_source.tasks[0]
-    assert "false-only boolean options" in task.target_change
-    assert any(
-        "False-only boolean declarations" in criterion
-        for criterion in task.acceptance_criteria
-    )
-    assert "false-only boolean CLI output" in task.quality_bar
-    focused_help_pytest = (
-        "uv run pytest -q tests/test_tutorial/test_parameter_types/test_bool "
-        "tests/test_tutorial/test_options/test_help/test_tutorial003.py "
-        "tests/test_tutorial/test_options/test_help/test_tutorial004.py"
-    )
-    focused_help_pytest_no_rich = (
-        "TYPER_USE_RICH=0 uv run pytest -q tests/test_tutorial/test_parameter_types/test_bool "
-        "tests/test_tutorial/test_options/test_help/test_tutorial003.py "
-        "tests/test_tutorial/test_options/test_help/test_tutorial004.py"
-    )
-    assert task.verification == (
-        focused_help_pytest,
-        focused_help_pytest_no_rich,
-        "test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/stage-result.md",
-        "test -f .aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/validator-report.md",
-    )
-    assert scenario.verify.commands == task.verification
-
-
 def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
     scenario = load_scenario(Path("harness/scenarios/live/hono-non-error-throw-handling.yaml"))
 
     _assert_live_contract(scenario)
     assert scenario.scenario_id == "AIDD-LIVE-007"
     assert scenario.feature_size == "medium"
+    assert scenario.live_matrix_role == "product-evaluation"
     assert scenario.canonical_runtime == "codex"
     assert scenario.runtime_targets == ("codex", "claude-code", "qwen")
     task = scenario.feature_source.tasks[0]
@@ -113,6 +56,14 @@ def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
         for criterion in task.acceptance_criteria
     )
     assert "preserves the existing public error type contracts" in task.quality_bar
+    assert task.visible_request is not None
+    assert task.audit_rubric is not None
+    assert task.complexity_axes == (
+        "cross-module",
+        "api-policy",
+        "async-runtime",
+        "type-compatibility",
+    )
     focused_command = (
         "./node_modules/.bin/vitest --run --coverage.enabled=false "
         "src/hono.test.ts src/compose.test.ts"
@@ -139,6 +90,59 @@ def test_all_live_scenarios_load_as_valid_full_flow_manifests() -> None:
         assert scenario.scenario_id
         assert scenario.task
         _assert_live_contract(scenario)
+        assert scenario.run.max_remediation_cycles == 3
+
+
+def test_live_scenario_accepts_max_remediation_cycles_override(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["max_remediation_cycles"] = 5
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "hono-remediation-limit.yaml"
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    scenario = load_scenario(scenario_path)
+
+    assert scenario.run.max_remediation_cycles == 5
+
+
+def test_live_scenario_accepts_no_progress_timeout_override(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["no_progress_timeout_minutes"] = 45
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "hono-no-progress.yaml"
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    scenario = load_scenario(scenario_path)
+
+    assert scenario.run.no_progress_timeout_minutes == 45
+
+
+def test_live_scenario_rejects_invalid_no_progress_timeout(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["no_progress_timeout_minutes"] = 0
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "hono-invalid-no-progress.yaml"
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(ScenarioManifestError, match="no_progress_timeout_minutes"):
+        load_scenario(scenario_path)
+
+
+def test_live_scenario_rejects_invalid_max_remediation_cycles(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["max_remediation_cycles"] = 0
+    scenario_path = (
+        tmp_path / "harness" / "scenarios" / "live" / "hono-invalid-remediation-limit.yaml"
+    )
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(ScenarioManifestError, match="max_remediation_cycles"):
+        load_scenario(scenario_path)
 
 
 def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> None:
@@ -146,8 +150,10 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
 
     _assert_live_contract(scenario)
     assert scenario.scenario_id == "AIDD-LIVE-004"
-    assert scenario.feature_size == "tiny"
+    assert scenario.feature_size == "small"
+    assert scenario.live_matrix_role == "flow-regression"
     assert scenario.canonical_runtime == "codex"
+    assert scenario.repo.revision == "b5addb64f0161ff6bfe94c124ef76f6a1fba5254"
     assert scenario.runtime_targets == ("codex", "qwen")
     assert scenario.run.timeout_minutes == 240
     task = scenario.feature_source.tasks[0]
@@ -171,28 +177,6 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
         ),
     )
 
-
-def test_httpx_invalid_header_live_scenario_uses_targeted_requirements_verify() -> None:
-    scenario = load_scenario(Path("harness/scenarios/live/httpx-invalid-header-message.yaml"))
-
-    _assert_live_contract(scenario)
-    assert scenario.scenario_id == "AIDD-LIVE-003"
-    assert scenario.feature_size == "small"
-    assert scenario.canonical_runtime == "codex"
-    focused_pytest = (
-        "uv run --with-requirements requirements.txt --frozen python -m pytest "
-        "tests/models/test_headers.py "
-        "tests/client/test_headers.py::test_header_with_incorrect_value -q"
-    )
-    assert scenario.verify.commands == (
-        focused_pytest,
-        "test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/stage-result.md",
-        "test -f .aidd/workitems/WI-LIVE-HTTPX-SMOKE/stages/qa/output/validator-report.md",
-    )
-    assert scenario.feature_source.tasks[0].verification == scenario.verify.commands
-    assert "uv run pytest -q" not in "\n".join(scenario.verify.commands)
-
-
 def test_sqlite_utils_canonical_live_scenario_declares_black_box_operator_contract() -> None:
     scenario = load_scenario(
         Path("harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml")
@@ -200,6 +184,7 @@ def test_sqlite_utils_canonical_live_scenario_declares_black_box_operator_contra
 
     assert scenario.scenario_id == "AIDD-LIVE-005"
     assert scenario.feature_size == "small"
+    assert scenario.live_matrix_role == "flow-regression"
     assert scenario.automation_lane == "manual"
     assert scenario.canonical_runtime == "codex"
     assert scenario.repo.url == "https://github.com/simonw/sqlite-utils"
@@ -225,14 +210,19 @@ def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -
     _assert_live_contract(scenario)
     assert scenario.scenario_id == "AIDD-LIVE-006"
     assert scenario.scenario_class == "live-full-flow-interview"
-    assert scenario.feature_size == "large"
+    assert scenario.feature_size == "xlarge"
+    assert scenario.live_matrix_role == "product-evaluation"
     assert scenario.canonical_runtime == "opencode"
+    assert scenario.repo.revision == "8d74ffc93292c604d5827e2b44fffedca0c28c19"
     assert scenario.run.interview_required is True
     assert scenario.live_flow is not None
     assert scenario.live_flow.answer_policy == "agent-decides"
     assert scenario.raw["interview"]["must_ask_at_least_one"] is True
     assert scenario.feature_source.tasks[0].task_id == "TASK-LIVE-SQLITE-YIELDED-ROWS"
     assert scenario.feature_source.tasks[0].interview
+    assert scenario.feature_source.tasks[0].visible_request is not None
+    assert scenario.feature_source.tasks[0].audit_rubric is not None
+    assert "security" in scenario.feature_source.tasks[0].complexity_axes
     assert scenario.raw["interview"]["blocking_question_topics"] == [
         "Execution trust boundary for user-provided Python code.",
         "Accepted input form (inline expression, file, or both).",
@@ -258,12 +248,16 @@ def test_hono_interview_scenario_forces_blocking_question_conditions() -> None:
     assert scenario.scenario_id == "AIDD-LIVE-008"
     assert scenario.scenario_class == "live-full-flow-interview"
     assert scenario.feature_size == "xlarge"
+    assert scenario.live_matrix_role == "product-evaluation"
     assert scenario.canonical_runtime == "opencode"
     assert scenario.run.interview_required is True
     assert scenario.live_flow is not None
     assert scenario.live_flow.answer_policy == "agent-decides"
     assert scenario.feature_source.tasks[0].task_id == "TASK-LIVE-HONO-ROUTER-DOUBLE-STAR"
     assert scenario.feature_source.tasks[0].interview
+    assert scenario.feature_source.tasks[0].visible_request is not None
+    assert scenario.feature_source.tasks[0].audit_rubric is not None
+    assert "api-policy" in scenario.feature_source.tasks[0].complexity_axes
     assert scenario.raw["interview"]["must_ask_at_least_one"] is True
     assert (
         scenario.raw["interview"]["answer_flow"]["answers_file"]
@@ -296,6 +290,11 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
         assert scenario.run.patch_budget_files is not None
         assert scenario.run.timeout_minutes is not None
         assert scenario.run.timeout_minutes >= 240
+        assert scenario.live_matrix_role == "product-evaluation"
+        assert scenario.feature_source is not None
+        assert scenario.feature_source.tasks[0].visible_request is not None
+        assert scenario.feature_source.tasks[0].audit_rubric is not None
+        assert scenario.feature_source.tasks[0].complexity_axes
         assert "generic-cli" not in scenario.runtime_targets
 
     assert openapi.scenario_id == "AIDD-LIVE-010"

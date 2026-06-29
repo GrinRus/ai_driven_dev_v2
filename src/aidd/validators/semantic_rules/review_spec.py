@@ -5,8 +5,12 @@ from dataclasses import dataclass
 
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.semantic_rules.common import (
+    IMPLEMENT_COMMAND_PATTERN,
+    IMPLEMENT_FILE_ENTRY_PATTERN,
     INCOMPLETE_SECTION_CODE,
+    MISSING_EVIDENCE_REF_CODE,
     REVIEW_SPEC_RATIONALE_PATTERN,
+    UNSUPPORTED_CLAIM_CODE,
     SemanticDocumentContext,
     SemanticRule,
     extract_markdown_list_items,
@@ -16,6 +20,43 @@ from aidd.validators.semantic_rules.common import (
     normalized_heading,
     review_spec_issue_has_explicit_severity,
     validate_placeholder_sections,
+)
+
+_SEVERITY_VALUES = ("critical", "high", "medium", "low", "info", "none")
+_REVIEW_SPEC_SEVERITY_VALUE_PATTERN = re.compile(
+    r"\bseverity\s*:?\s*`?(critical|high|medium|low|info|none)`?\b",
+    flags=re.IGNORECASE,
+)
+_REVIEW_SPEC_INLINE_SEVERITY_VALUE_PATTERN = re.compile(
+    r"(?:\(|\[|\s-\s)`?(critical|high|medium|low|info|none)`?(?:\)|\]|\s-)",
+    flags=re.IGNORECASE,
+)
+_REVIEW_SPEC_EVIDENCE_LABEL_PATTERN = re.compile(
+    r"\b(?:\*\*)?Evidence(?:\*\*)?\s*:",
+    flags=re.IGNORECASE,
+)
+_REVIEW_SPEC_RECONCILIATION_LABEL_PATTERN = re.compile(
+    r"\b(?:\*\*)?Reconciliation(?:\*\*)?\s*:",
+    flags=re.IGNORECASE,
+)
+_REVIEW_SPEC_DIRECT_EVIDENCE_PATTERN = re.compile(
+    r"("
+    r"\b(?:research-notes|plan|validator-report|stage-result|repository-state|"
+    r"user-request|intake)\.md\b|"
+    r"\b(?:context|workitems)/[^\s`]+\.md\b|"
+    r"\b(?:S|F|M|AC|EV|RV)-?\d+\b|"
+    r"\[(?:S|F|M|AC|EV|RV)-?\d+\]"
+    r")",
+    flags=re.IGNORECASE,
+)
+_REVIEW_SPEC_SOURCE_INSPECTION_PATTERN = re.compile(
+    r"\bsource\s+inspection\s+(?:shows?|found|indicates?|confirms?)\b",
+    flags=re.IGNORECASE,
+)
+_REVIEW_SPEC_ROUTER_PARITY_CONTRADICTION_PATTERN = re.compile(
+    r"(?=.*\bLinearRouter\b)(?=.*\bPatternRouter\b)(?=.*(?:`?/\*\*`?|double-star))"
+    r"(?=.*\b(?:only|fail(?:s|ed)?|missing|unsupported|does\s+not|do\s+not|needs?)\b)",
+    flags=re.IGNORECASE | re.DOTALL,
 )
 
 
@@ -34,6 +75,137 @@ def _review_spec_state(context: SemanticDocumentContext) -> ReviewSpecState:
         decision=extract_review_spec_decision(decision.content),
         decision_location=decision.location if decision.content else None,
     )
+
+
+def _review_spec_issue_severity(issue_block: str) -> str | None:
+    severity_match = _REVIEW_SPEC_SEVERITY_VALUE_PATTERN.search(issue_block)
+    if severity_match is not None:
+        return severity_match.group(1).lower()
+
+    inline_match = _REVIEW_SPEC_INLINE_SEVERITY_VALUE_PATTERN.search(issue_block)
+    if inline_match is not None:
+        return inline_match.group(1).lower()
+
+    lowered = issue_block.lower()
+    for severity in _SEVERITY_VALUES:
+        if f"`{severity}`" in lowered:
+            return severity
+    return None
+
+
+def _review_spec_issue_has_evidence_label(issue_block: str) -> bool:
+    return _REVIEW_SPEC_EVIDENCE_LABEL_PATTERN.search(issue_block) is not None
+
+
+def _review_spec_issue_evidence_texts(issue_block: str) -> tuple[str, ...]:
+    evidence_texts: list[str] = []
+    for line in issue_block.splitlines():
+        match = _REVIEW_SPEC_EVIDENCE_LABEL_PATTERN.search(line)
+        if match is None:
+            continue
+        evidence_text = line[match.end() :].strip()
+        evidence_text = re.split(
+            r"\b(?:\*\*)?(?:Rationale|Reconciliation|Severity|Observation|Section)"
+            r"(?:\*\*)?\s*:",
+            evidence_text,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0].strip()
+        if evidence_text:
+            evidence_texts.append(evidence_text)
+    return tuple(evidence_texts)
+
+
+def _review_spec_issue_has_reconciliation(issue_block: str) -> bool:
+    return _REVIEW_SPEC_RECONCILIATION_LABEL_PATTERN.search(issue_block) is not None
+
+
+def _review_spec_issue_has_direct_evidence(issue_block: str) -> bool:
+    evidence_text = "\n".join(_review_spec_issue_evidence_texts(issue_block))
+    if not evidence_text:
+        return False
+    return (
+        IMPLEMENT_FILE_ENTRY_PATTERN.search(evidence_text) is not None
+        or IMPLEMENT_COMMAND_PATTERN.search(evidence_text) is not None
+        or _REVIEW_SPEC_DIRECT_EVIDENCE_PATTERN.search(evidence_text) is not None
+    )
+
+
+def _validate_issue_evidence(
+    *,
+    context: SemanticDocumentContext,
+    issue_blocks: tuple[str, ...],
+    location: ValidationIssueLocation,
+) -> tuple[ValidationFinding, ...]:
+    findings: list[ValidationFinding] = []
+
+    if any(not _review_spec_issue_has_evidence_label(item) for item in issue_blocks):
+        findings.append(
+            context.finding(
+                code=MISSING_EVIDENCE_REF_CODE,
+                message=(
+                    "Each `Issue list` item must include `Evidence:` naming a concrete "
+                    "artifact, source id, target file path, or check result."
+                ),
+                severity="medium",
+                location=location,
+            )
+        )
+
+    if any(
+        _review_spec_issue_severity(item) in {"critical", "high"}
+        and not _review_spec_issue_has_direct_evidence(item)
+        for item in issue_blocks
+    ):
+        findings.append(
+            context.finding(
+                code=UNSUPPORTED_CLAIM_CODE,
+                message=(
+                    "`critical` and `high` review-spec issues must cite direct durable "
+                    "evidence, such as an upstream artifact path, source id, target file "
+                    "path, or command/check result."
+                ),
+                severity="high",
+                location=location,
+            )
+        )
+
+    if any(
+        _REVIEW_SPEC_SOURCE_INSPECTION_PATTERN.search(item) is not None
+        and not _review_spec_issue_has_direct_evidence(item)
+        for item in issue_blocks
+    ):
+        findings.append(
+            context.finding(
+                code=UNSUPPORTED_CLAIM_CODE,
+                message=(
+                    "Review-spec issues must not claim `source inspection shows` without "
+                    "naming the concrete inspected artifact or check result."
+                ),
+                severity="high",
+                location=location,
+            )
+        )
+
+    if any(
+        _REVIEW_SPEC_ROUTER_PARITY_CONTRADICTION_PATTERN.search(item) is not None
+        and not _review_spec_issue_has_reconciliation(item)
+        for item in issue_blocks
+    ):
+        findings.append(
+            context.finding(
+                code=UNSUPPORTED_CLAIM_CODE,
+                message=(
+                    "Router-parity claims about `LinearRouter`, `PatternRouter`, and "
+                    "`/**` must include `Reconciliation:` when they contradict upstream "
+                    "research or plan evidence."
+                ),
+                severity="high",
+                location=location,
+            )
+        )
+
+    return tuple(findings)
 
 
 def validate_review_spec_report(context: SemanticDocumentContext) -> tuple[ValidationFinding, ...]:
@@ -90,6 +262,13 @@ def validate_review_spec_report(context: SemanticDocumentContext) -> tuple[Valid
                             location=section.location,
                         )
                     )
+                findings.extend(
+                    _validate_issue_evidence(
+                        context=context,
+                        issue_blocks=issue_blocks,
+                        location=section.location,
+                    )
+                )
 
         if normalized_section == "recommendation summary":
             recommendation_items = extract_markdown_list_items(section.content)

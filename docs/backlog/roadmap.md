@@ -8652,3 +8652,136 @@ Sync notes:
   `research` public log-inspection boundary. Exact PyPI proof is deferred until a
   fixed prerelease can be published because `ai-driven-dev-v2==0.1.0a11` is
   immutable.
+
+## Wave 33 — live E2E product-evaluation follow-up (`planned`)
+
+Goal: turn the new black-box product-evaluation protocol into a repeatable maintained
+matrix practice without making live E2E a CI/CD or release gate.
+
+### Epic W33-E1 — maintained matrix evidence closure (`planned`)
+Linked stories: `US-07`, `US-10`
+
+#### Slice W33-E1-S1 — canonical maintained matrix evidence (`planned`)
+Goal: publish one current maintained-matrix evidence table that separates clean lanes,
+not-counted lanes, provider blockers, and follow-up defects.
+
+Primary outputs:
+
+- maintained live E2E matrix evidence table
+- PR or issue comment with lane outcomes and bundle ids
+- missing-lane follow-up list
+
+Touched areas:
+
+- `.aidd/reports/evals/` local evidence only
+- PR or issue comments
+- `docs/e2e/` only if the maintained matrix definition changes
+
+Dependencies:
+
+- PR #93 live protocol branch merged or rebased onto its intended base
+- canonical runtime auth for `codex` and `opencode`
+
+Local tasks:
+
+- `W33-E1-S1-T1` Build a maintained-matrix evidence table from the latest local and PR
+  bundle evidence, marking each lane `counted-clean`, `not-counted`, `blocked-provider`,
+  `blocked-product-defect`, or `missing`.
+  - Scope: evidence review and reporting only.
+  - Verification: every maintained matrix lane has a row with scenario id, runtime, run
+    id or blocker, execution verdict, manual decision, and final report paths.
+- `W33-E1-S1-T2` Run the missing or stale maintained lanes from a clean tracked checkout
+  and publish updated evidence without substituting runtimes.
+  - Scope: manual live execution only.
+  - Verification: each newly run product-evaluation lane has per-stage-run audits,
+    final `flow-quality-report.md`, `code-quality-report.md`, `quality-report.md`,
+    and a terminal execution verdict or explicit blocker.
+
+Exit evidence:
+
+- maintainers can tell whether the current maintained matrix is clean, partially clean,
+  or blocked without reading individual bundles first;
+- live evidence remains manual-only and outside CI/CD/release automation.
+
+### Epic W33-E2 — operator evidence ergonomics (`planned`)
+Linked stories: `US-07`, `US-11`
+
+#### Slice W33-E2-S1 — product-evaluation bundle summary (`planned`)
+Goal: reduce manual counted-clean review load by generating a read-only summary of
+stage-run audits, remediation cycles, untracked product files, and final report presence.
+
+Primary outputs:
+
+- read-only product-evaluation bundle summary artifact
+- deterministic fixture coverage for summary generation
+
+Touched areas:
+
+- `src/aidd/harness/`
+- `tests/harness/`
+- `docs/e2e/`
+
+Dependencies:
+
+- Wave 33 canonical matrix evidence table identifies the most useful summary fields
+
+Local tasks:
+
+- `W33-E2-S1-T1` Add a read-only product-evaluation bundle summary that lists stage-run
+  audit decisions, remediation source ids, untracked product files, final report
+  presence, and terminal flow-state freshness.
+  - Scope: harness reporting only.
+  - Verification: fixture-based harness test proves the summary preserves manual-only
+    quality semantics and does not change execution verdicts.
+- `W33-E2-S1-T2` Document how operators use the bundle summary while still reading
+  stage evidence before assigning counted-clean.
+  - Scope: live E2E docs and skill guidance only.
+  - Verification: docs consistency test proves the summary is described as evidence
+    navigation, not runner-owned quality scoring.
+
+Exit evidence:
+
+- product-evaluation bundles are faster to audit without weakening the black-box manual
+  quality model;
+- runner still does not parse or score subjective product quality.
+
+### Epic W33-E3 — product-evaluation matrix expansion (`planned`)
+Linked stories: `US-07`, `US-10`
+
+#### Slice W33-E3-S1 — new repository setup audits (`planned`)
+Goal: decide which additional public repositories are safe candidates for future
+product-evaluation lanes before adding maintained scenarios.
+
+Primary outputs:
+
+- setup-audit notes for Pydantic, FastAPI, Rich, and Ruff candidates
+- candidate decision table
+
+Touched areas:
+
+- local setup-audit notes
+- `docs/e2e/` candidate documentation
+
+Dependencies:
+
+- current maintained matrix evidence is understood well enough to avoid expanding a
+  broken protocol
+
+Local tasks:
+
+- `W33-E3-S1-T1` Run non-mutating setup audits for Pydantic, FastAPI, Rich, and Ruff
+  candidates, recording clone pin, setup command, focused baseline verification, hidden
+  prompts, and blocker status.
+  - Scope: setup audit evidence only.
+  - Verification: each candidate has a decision row of `candidate`, `blocked`, or
+    `reject`, with exact revision and baseline command outcome.
+- `W33-E3-S1-T2` Draft one next product-evaluation scenario from the best passing setup
+  audit without adding it to the maintained matrix yet.
+  - Scope: scenario draft only.
+  - Verification: scenario loader doctor passes for the draft and docs mark it as
+    candidate, not maintained coverage.
+
+Exit evidence:
+
+- matrix expansion is based on setup proof rather than speculative repo popularity;
+- maintained coverage is not expanded until the candidate protocol is proven usable.
