@@ -24,7 +24,7 @@ You can help by:
 - tightening prompt packs,
 - adding validators and tests,
 - adding runtime adapters,
-- improving live E2E manifests,
+- improving harness and eval manifests,
 - improving contributor experience and docs.
 
 ## Development setup

@@ -370,13 +370,14 @@ def test_render_repair_brief_adds_review_spec_evidence_and_reconciliation_hint()
                     ),
                     line_number=7,
                 ),
-            ),
-            ValidationFinding(
-                code="SEM-UNSUPPORTED-CLAIM",
-                message=(
-                    "Router-parity claims about `LinearRouter`, `PatternRouter`, and "
-                    "`/**` must include `Reconciliation:`."
                 ),
+                ValidationFinding(
+                    code="SEM-UNSUPPORTED-CLAIM",
+                    message=(
+                        "High-severity or source-inspection review-spec contradiction "
+                        "claims must include `Evidence:` and `Reconciliation:` explaining "
+                        "how the issue relates to upstream research or plan evidence."
+                    ),
                 severity="high",
                 location=ValidationIssueLocation(
                     workspace_relative_path=(
@@ -412,7 +413,7 @@ def test_render_repair_brief_adds_review_workspace_hygiene_hint() -> None:
             ValidationFinding(
                 code="SEM-UNVERIFIABLE-CHECK-CLAIM",
                 message=(
-                    "Live review cannot declare approved/no findings or cleanup passed "
+                    "Review cannot declare approved/no findings or cleanup passed "
                     "while non-baseline ignored workspace residue exists after review: "
                     "coverage/raw/default."
                 ),

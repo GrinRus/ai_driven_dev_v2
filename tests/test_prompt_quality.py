@@ -453,7 +453,7 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
         assert "`git diff --no-index /dev/null <untracked-file>`" in text
 
 
-def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
+def test_setup_workspace_prompts_and_contracts_protect_prepared_workspace() -> None:
     implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
         encoding="utf-8"
     )
@@ -476,14 +476,15 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
             "Do not delete, move, reclone, or recreate the prepared repository checkout"
             in normalized_text
         )
-        assert "`install-home/`" in text
+        assert "setup-owned" in text.lower()
+        assert "`context/workspace-baseline.md`" in text
         assert "packaged contracts disappear" in text
         assert (
             "do not try to recover by" in text
             or "instead of attempting workspace recovery" in text
             or "instead of running `git clone`" in text
         )
-        assert "`git status --ignored --short --untracked-files=all`" in text
+        assert "git status --ignored --short --untracked-files=all" in normalized_text
         assert "`.venv/`" in text
         assert "`.ruff_cache/`" in text
         assert "`.pdm-build/`" in text
@@ -495,19 +496,20 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
     for text in (implement_prompt, implement_repair):
         normalized_text = " ".join(text.split())
         assert (
-            "If this live setup workspace runs any test, type, lint, docs, or build command"
+            "If this setup-owned workspace runs any test, type, lint, docs, or build command"
             in normalized_text
-            or "If the live setup workspace ran any test, type, lint, docs, or build command"
+            or "If the setup-owned workspace ran any test, type, lint, docs, or build command"
             in normalized_text
         )
         assert "exact command" in normalized_text
         assert "`git status --short --untracked-files=all` is insufficient" in normalized_text
 
     for text in (review_prompt, qa_prompt, review_contract, qa_contract):
-        assert "prepared checkout disappeared" in text
-        assert "was recloned" in text
-        assert "`target-workspace-evidence.*`" in text
-        assert "`git status --ignored --short --untracked-files=all`" in text
+        normalized_text = " ".join(text.split())
+        assert "prepared checkout disappeared" in normalized_text
+        assert "was recloned" in normalized_text
+        assert "`context/workspace-baseline.md`" in text
+        assert "git status --ignored --short --untracked-files=all" in normalized_text
         assert "`.pytest_cache/`" in text
         assert "`.ruff_cache/`" in text
         assert "`.coverage*`" in text
@@ -578,7 +580,7 @@ def test_research_prompts_and_contracts_require_bounded_local_probes() -> None:
 
     for text in (run_prompt, repair_prompt, contract):
         assert "bounded by construction" in text
-        assert "live harness per-stage timeout" in text
+        assert "external per-stage timeout" in text
         assert "infinite" in text
         assert "stream" in text
         assert "`anyio.fail_after(...)`" in text
@@ -610,7 +612,7 @@ def test_live_docs_distinguish_provider_no_progress_from_quality_failure() -> No
         assert "manual-quality-stop" in lower_text
 
 
-def test_review_and_qa_use_live_setup_workspace_baseline() -> None:
+def test_review_and_qa_use_setup_workspace_baseline_context() -> None:
     review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
         encoding="utf-8"
     )
@@ -619,12 +621,147 @@ def test_review_and_qa_use_live_setup_workspace_baseline() -> None:
     qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
 
     for text in (review_prompt, qa_prompt, review_contract, qa_contract):
-        assert "Live setup workspace baseline" in text
+        assert "`context/workspace-baseline.md`" in text
         lower_text = text.lower()
-        assert "known harness config" in lower_text
-        assert "setup-baseline untracked non-aidd files" in lower_text
+        assert "setup-owned" in lower_text
+        assert "baseline" in lower_text
         assert "not" in text and "solely because" in text
         assert "new untracked files" in text and "baseline" in text
+
+
+def test_reusable_runtime_surface_has_no_live_target_or_eval_vocabulary() -> None:
+    reusable_roots = (
+        Path("src/aidd/core"),
+        Path("src/aidd/adapters"),
+        Path("src/aidd/validators"),
+        Path("contracts"),
+        Path("prompt-packs"),
+        Path("src/aidd/runtime_catalog.py"),
+    )
+    reusable_forbidden = (
+        "LinearRouter",
+        "PatternRouter",
+        "sqlite-utils",
+        "sqlite_utils",
+        "AIDD_EVAL_CLAUDE_CODE_COMMAND",
+        "AIDD_EVAL_CODEX_COMMAND",
+        "AIDD_EVAL_OPENCODE_COMMAND",
+        "AIDD_EVAL_QWEN_COMMAND",
+        "Live setup workspace baseline",
+        "Installed live",
+        "installed live",
+        "live setup-baseline",
+        "live setup baseline",
+        "live target checkouts",
+        "target-workspace-evidence.*",
+        "target-workspace-evidence",
+        "live harness",
+        "live E2E",
+        "Live E2E",
+    )
+    scanned_groups = (
+        (reusable_roots, reusable_forbidden),
+        (
+            (
+                Path("AGENTS.md"),
+                Path("CONTRIBUTING.md"),
+                Path("README.md"),
+                Path("docs/product"),
+                Path("docs/operator-handbook.md"),
+                Path("docs/operator-support-policy.md"),
+                Path("docs/operator-troubleshooting.md"),
+                Path("docs/architecture"),
+                Path("docs/release-checklist.md"),
+                Path("docs/compatibility-policy.md"),
+            ),
+            (
+                "Live E2E",
+                "live E2E",
+                "manual live",
+                "installed live",
+                "black-box live",
+                "live harness",
+                "target-workspace-evidence",
+                "aidd-live-e2e",
+                "sqlite-utils",
+                "Hono",
+                "honojs",
+                "hono-",
+                "AIDD_EVAL",
+                "install-home",
+                "uv-cache",
+                "source/aidd",
+                "live_e2e_black_box",
+                "AIDD-LIVE",
+                "live catalog",
+                "live matrix",
+                "live evidence",
+                "live eval",
+                "live scenario",
+                "live audit",
+                "local-wheel live",
+            ),
+        ),
+        (
+            (Path("src/aidd/cli/static"),),
+            (
+                "Live E2E",
+                "live E2E",
+                "manual live E2E",
+                "target-workspace-evidence",
+                "AIDD_EVAL_CODEX_COMMAND",
+                "sqlite-utils",
+            ),
+        ),
+        (
+            (Path("tests/validators/test_semantic.py"),),
+            (
+                "TASK-LIVE",
+                "WI-LIVE",
+                "Hono",
+                "hono",
+                "sqlite-utils",
+                "sqlite_utils",
+                "typer/",
+                "UV_CACHE_DIR=/tmp/uv-cache",
+                "install-home",
+                "target-workspace-evidence",
+            ),
+        ),
+        (
+            (Path("README.md"),),
+            (
+                "target-workspace-evidence",
+                "install-home",
+                "uv-cache",
+                "source/aidd",
+                "sqlite-utils",
+                "aidd-live-e2e",
+                "manual live E2E",
+                "Live E2E",
+            ),
+        ),
+    )
+
+    violations: list[str] = []
+    for scanned_paths, forbidden in scanned_groups:
+        candidate_files: list[Path] = []
+        for scanned_path in scanned_paths:
+            if scanned_path.is_file():
+                candidate_files.append(scanned_path)
+            else:
+                candidate_files.extend(path for path in scanned_path.rglob("*"))
+        for path in candidate_files:
+            if not path.is_file():
+                continue
+            if path.suffix in {".pyc", ".png", ".jpg", ".jpeg", ".gif"}:
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            for needle in forbidden:
+                if needle in text:
+                    violations.append(f"{path}: {needle}")
+
+    assert violations == []
 
 
 def test_review_spec_prompts_require_exact_decision_heading() -> None:

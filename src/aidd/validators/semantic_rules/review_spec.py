@@ -53,10 +53,16 @@ _REVIEW_SPEC_SOURCE_INSPECTION_PATTERN = re.compile(
     r"\bsource\s+inspection\s+(?:shows?|found|indicates?|confirms?)\b",
     flags=re.IGNORECASE,
 )
-_REVIEW_SPEC_ROUTER_PARITY_CONTRADICTION_PATTERN = re.compile(
-    r"(?=.*\bLinearRouter\b)(?=.*\bPatternRouter\b)(?=.*(?:`?/\*\*`?|double-star))"
-    r"(?=.*\b(?:only|fail(?:s|ed)?|missing|unsupported|does\s+not|do\s+not|needs?)\b)",
-    flags=re.IGNORECASE | re.DOTALL,
+_REVIEW_SPEC_CONTRADICTION_PATTERN = re.compile(
+    r"\b("
+    r"contradict(?:s|ed|ing|ion|ory)?|"
+    r"conflict(?:s|ed|ing)?|"
+    r"inconsistent|"
+    r"mismatch(?:es|ed)?|"
+    r"diverge(?:s|d|nt|nce)?|"
+    r"disagree(?:s|d)?"
+    r")\b",
+    flags=re.IGNORECASE,
 )
 
 
@@ -188,17 +194,24 @@ def _validate_issue_evidence(
         )
 
     if any(
-        _REVIEW_SPEC_ROUTER_PARITY_CONTRADICTION_PATTERN.search(item) is not None
-        and not _review_spec_issue_has_reconciliation(item)
+        _REVIEW_SPEC_CONTRADICTION_PATTERN.search(item) is not None
+        and (
+            _review_spec_issue_severity(item) in {"critical", "high"}
+            or _REVIEW_SPEC_SOURCE_INSPECTION_PATTERN.search(item) is not None
+        )
+        and (
+            not _review_spec_issue_has_evidence_label(item)
+            or not _review_spec_issue_has_reconciliation(item)
+        )
         for item in issue_blocks
     ):
         findings.append(
             context.finding(
                 code=UNSUPPORTED_CLAIM_CODE,
                 message=(
-                    "Router-parity claims about `LinearRouter`, `PatternRouter`, and "
-                    "`/**` must include `Reconciliation:` when they contradict upstream "
-                    "research or plan evidence."
+                    "High-severity or source-inspection review-spec contradiction "
+                    "claims must include `Evidence:` and `Reconciliation:` explaining "
+                    "how the issue relates to upstream research or plan evidence."
                 ),
                 severity="high",
                 location=location,

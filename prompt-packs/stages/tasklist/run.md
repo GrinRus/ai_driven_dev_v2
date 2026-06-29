@@ -54,9 +54,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 - If no operator answer is present, write `# Answers\n\n- none\n`; do not create
   `[resolved]` answers yourself.
 
-## Installed live workspace discipline
+## Installed package workspace discipline
 
-- Repository-local `contracts/...` files may be absent in installed live runs. Do not spend the turn
+- Repository-local `contracts/...` files may be absent in installed package runs. Do not spend the turn
   searching broadly for missing contracts or scanning all of `.aidd`; use `stage-brief.md` as the
   embedded contract skeleton and proceed.
 - Limit pre-write inspection to the required inputs, the optional context files needed for task

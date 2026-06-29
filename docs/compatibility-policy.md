@@ -58,27 +58,28 @@ Operational policy:
 
 Promotion/demotion policy:
 
-- A runtime moves up only after sustained conformance in adapter checks and live scenario coverage.
+- A runtime moves up only after sustained conformance in adapter checks and manual external
+  scenario coverage.
 - A runtime may move down when sustained regressions or ecosystem breakages exceed maintenance capacity.
 
-## 4. Live E2E baseline and pinned-revision refresh policy
+## 4. Manual external scenario baseline and pinned-revision refresh policy
 
-Live E2E scenarios must remain reproducible and comparable across refreshes.
+Manual external audit scenarios must remain reproducible and comparable across refreshes.
 
 ### 4.1 Pinned revision rules
 
-- Every live scenario manifest must pin upstream repository revision data.
+- Every manual external scenario manifest must pin upstream repository revision data.
 - A pinned revision change must be atomic with:
   - updated scenario manifest pin;
   - updated `docs/e2e/live-e2e-catalog.md` reference metadata;
   - archived replacement reference bundle identifiers.
-- Unpinned live scenarios are not allowed in maintained lanes.
+- Unpinned manual external scenarios are not allowed in maintained lanes.
 
 ### 4.2 Refresh cadence and triggers
 
 Default cadence:
 
-- review live scenario pins at least once per quarter.
+- review manual external scenario pins at least once per quarter.
 
 Immediate refresh triggers:
 
@@ -159,7 +160,8 @@ Applies to runtime adapters and adapter capability surfaces.
 
 ### 6.4 Scenario manifest deprecation rules
 
-Applies to smoke/interview/live scenario manifests and associated catalog entries.
+Applies to smoke, interview, and manual external scenario manifests plus associated
+catalog entries.
 
 - Deprecated scenarios must include:
   - replacement scenario id (or explicit no-replacement rationale);

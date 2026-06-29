@@ -21,11 +21,11 @@ from aidd.validators.semantic_rules.common import (
     extract_top_level_bullet_blocks,
     has_implementation_command_evidence,
     is_deferred_implementation_verification,
-    validate_live_ignored_workspace_status_evidence,
     validate_placeholder_sections,
+    validate_setup_ignored_workspace_status_evidence,
 )
 
-LIVE_SELECTED_TASK_ID_PATTERN = re.compile(r"\bTASK-[A-Z0-9][A-Z0-9-]*[A-Z0-9]\b")
+SELECTED_TASK_ID_PATTERN = re.compile(r"\bTASK-[A-Z0-9][A-Z0-9-]*[A-Z0-9]\b")
 
 
 def _compact_text(text: str) -> str:
@@ -58,7 +58,7 @@ def _validate_selected_task(
 ) -> tuple[ValidationFinding, ...]:
     if (
         extract_tasklist_task_ids(selected_task.content)
-        or LIVE_SELECTED_TASK_ID_PATTERN.search(selected_task.content)
+        or SELECTED_TASK_ID_PATTERN.search(selected_task.content)
     ):
         return tuple()
     return (
@@ -66,7 +66,7 @@ def _validate_selected_task(
             code=INCOMPLETE_SECTION_CODE,
             message=(
                 "Section `Selected task` must include a stable selected task "
-                "or tasklist id (for example `TASK-LIVE-EXAMPLE` or `TL-2`)."
+                "or tasklist id (for example `TASK-EXAMPLE` or `TL-2`)."
             ),
             severity="medium",
             location=selected_task.location,
@@ -294,13 +294,13 @@ def _validate_verification_notes(
         if item_findings and item_findings[0].severity == "high":
             continue
     findings.extend(
-        validate_live_ignored_workspace_status_evidence(
+        validate_setup_ignored_workspace_status_evidence(
             context=context,
             evidence_text=verification.content,
             location=verification.location,
             code=UNVERIFIABLE_CHECK_CLAIM_CODE,
             message=(
-                "Live implementation verification ran test/type/lint/build checks "
+                "Workspace implementation verification ran test/type/lint/build checks "
                 "that can create ignored workspace residue, but `Verification notes` "
                 "do not cite `git status --ignored --short --untracked-files=all`."
             ),

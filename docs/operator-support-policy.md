@@ -9,7 +9,7 @@ This document defines:
 - how maintainers triage incoming operator issues.
 
 As of May 4, 2026, AIDD support covers the implemented local CLI, maintained runtime adapters,
-validators, run-inspection commands, and manual installed live E2E audit lane described below.
+validators, run-inspection commands, and manual external eval support described below.
 
 ## 2. Support Scope
 
@@ -24,8 +24,7 @@ Maintainers currently provide best-effort support for:
 - stage execution support through `aidd stage run` on `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
 - stage-scoped operator intervention support through `aidd stage interact` and the
   local UI `Request change` path;
-- manual installed live E2E execution through
-  `python -m aidd.harness.live_e2e_black_box` on manifests under `harness/scenarios/live/`;
+- manual external eval and audit scenarios documented under `docs/e2e/`;
 - run-inspection commands (`aidd run show`, `aidd run logs`, `aidd run artifacts`);
 - stage and eval read-only summaries (`aidd stage summary`, `aidd stage questions`, `aidd eval summary`).
 
@@ -34,7 +33,7 @@ Maintainers currently provide best-effort support for:
 The following are not treated as defects unless roadmap status changes:
 
 - runtime credentials, auth state, or local policy blocks external to AIDD;
-- scenario requests outside the curated live catalog.
+- scenario requests outside the curated manual external eval catalog.
 
 Known parity or release-proof gaps are valid roadmap work, but they are no longer described as generic workflow gating.
 

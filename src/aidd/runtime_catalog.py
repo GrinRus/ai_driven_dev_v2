@@ -18,7 +18,6 @@ class RuntimeDefinition:
     probe_command: str
     default_execution_mode: RuntimeExecutionMode
     supported_execution_modes: tuple[RuntimeExecutionMode, ...]
-    live_command_env_var: str | None = None
     brokered_default_command: str | None = None
 
 
@@ -46,7 +45,6 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
             RuntimeExecutionMode.NATIVE,
             RuntimeExecutionMode.ADAPTER_FLAGS,
         ),
-        live_command_env_var="AIDD_EVAL_CLAUDE_CODE_COMMAND",
         brokered_default_command=(
             "claude -p --output-format stream-json --verbose --permission-mode default"
         ),
@@ -65,7 +63,6 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
             RuntimeExecutionMode.NATIVE,
             RuntimeExecutionMode.ADAPTER_FLAGS,
         ),
-        live_command_env_var="AIDD_EVAL_CODEX_COMMAND",
         brokered_default_command=(
             "codex exec --sandbox workspace-write --skip-git-repo-check --json -"
         ),
@@ -81,7 +78,6 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
             RuntimeExecutionMode.NATIVE,
             RuntimeExecutionMode.ADAPTER_FLAGS,
         ),
-        live_command_env_var="AIDD_EVAL_OPENCODE_COMMAND",
         brokered_default_command="opencode run --format json",
     ),
     "qwen": RuntimeDefinition(
@@ -95,7 +91,6 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
             RuntimeExecutionMode.NATIVE,
             RuntimeExecutionMode.ADAPTER_FLAGS,
         ),
-        live_command_env_var="AIDD_EVAL_QWEN_COMMAND",
         brokered_default_command=(
             "qwen --approval-mode default --output-format stream-json"
         ),

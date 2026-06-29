@@ -187,11 +187,8 @@ def test_live_docs_classify_malformed_interview_documents_as_stage_output_failur
     live_rubric = (repo_root / "docs" / "e2e" / "live-quality-rubric.md").read_text(
         encoding="utf-8"
     )
-    eval_architecture = (
-        repo_root / "docs" / "architecture" / "eval-harness-integration.md"
-    ).read_text(encoding="utf-8")
 
-    for text in (live_catalog, live_rubric, eval_architecture):
+    for text in (live_catalog, live_rubric):
         assert "malformed interview" in text.lower()
         assert "AIDD stage-output" in text
         assert "provider" in text
@@ -661,16 +658,19 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     runtime_matrix = (_repo_root() / "docs" / "architecture" / "runtime-matrix.md").read_text(
         encoding="utf-8"
     )
+    live_catalog = (_repo_root() / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
+        encoding="utf-8"
+    )
 
     assert (
         "python -m aidd.harness.live_e2e_black_box "
         "harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
         "--runtime codex"
-        in readme
+        in live_catalog
     )
     assert "typer-styled-help-alignment.yaml --runtime generic-cli" not in readme
     assert "AIDD-compatible wrapper command" in readme
-    assert "Published-package install proof is a separate" in readme
+    assert "Published-package install proof belongs to a separate" in live_catalog
     assert "mode = \"native\"" in operator_handbook
     assert "mode = \"adapter-flags\"" in operator_handbook
     assert (
@@ -710,7 +710,7 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
         assert "aidd init --github-issue <url>" in document
         assert "out of product scope" in document
 
-    assert "Public GitHub repositories are live" in readme
+    assert "Public GitHub repositories are evaluator evidence sources only" in readme
     assert "Public GitHub repositories are live E2E targets" in live_catalog
 
 
@@ -789,7 +789,7 @@ def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
         "branch or commit, resources, and baseline references",
         "**Run Eval / Scenario Batch**",
         "must not silently launch a",
-        "nested public-repository live flow",
+        "nested external scenario flow",
         "**Archive Run**",
         "Archive does not delete artifacts",
         "Follow-up and cloned flows are independent child work items or runs.",
@@ -798,8 +798,8 @@ def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
         "source-run",
         "baseline availability",
         "Local-project UI evidence proves the product operator behavior",
-        "Public-repository live E2E records a terminal next-flow checkpoint",
-        "does not require launching a second",
+        "Manual public-repository evals can record terminal next-flow checkpoint evidence",
+        "do not require launching a",
         "public-repository flow by default",
     ):
         assert expected in operator_handbook
@@ -814,9 +814,8 @@ def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
         "source-run existence",
         "baseline",
         "hidden `generic-cli` fallback",
-        "Keep local UI troubleshooting separate from public-repository live E2E evidence.",
-        "next-flow-checkpoint.json",
-        "next-flow-checkpoint.md",
+        "Keep local UI troubleshooting separate from manual public-repository eval evidence.",
+        "Scenario checkpoint policy lives in `docs/e2e/live-e2e-catalog.md`.",
     ):
         assert expected in operator_troubleshooting
 
@@ -1153,16 +1152,16 @@ def test_live_e2e_next_flow_checkpoint_policy_is_manual_only() -> None:
 
 def test_live_docs_describe_temp_install_layout_and_stage_audits() -> None:
     repo_root = _repo_root()
+    readme = (repo_root / "README.md").read_text(encoding="utf-8")
+    eval_architecture = (
+        repo_root / "docs" / "architecture" / "eval-harness-integration.md"
+    ).read_text(encoding="utf-8")
     documents = {
-        "README.md": (repo_root / "README.md").read_text(encoding="utf-8"),
         "docs/e2e/live-e2e-catalog.md": (
             repo_root / "docs" / "e2e" / "live-e2e-catalog.md"
         ).read_text(encoding="utf-8"),
         "docs/e2e/live-quality-rubric.md": (
             repo_root / "docs" / "e2e" / "live-quality-rubric.md"
-        ).read_text(encoding="utf-8"),
-        "docs/architecture/eval-harness-integration.md": (
-            repo_root / "docs" / "architecture" / "eval-harness-integration.md"
         ).read_text(encoding="utf-8"),
     }
 
@@ -1174,10 +1173,14 @@ def test_live_docs_describe_temp_install_layout_and_stage_audits() -> None:
         ):
             assert needle in text, relative_path
 
-    readme = documents["README.md"]
-    assert "--work-root /tmp/aidd-live-e2e" in readme
-    assert "--report-root .aidd/reports/evals" in readme
+    assert "docs/e2e/live-e2e-catalog.md" in readme
+    assert "target-workspace-evidence" not in readme
+    assert "docs/e2e/" in eval_architecture
+    assert "target-workspace-evidence" not in eval_architecture
+    assert "AIDD_EVAL_" not in eval_architecture
     catalog = documents["docs/e2e/live-e2e-catalog.md"]
+    assert "--work-root /tmp/aidd-live-e2e" in catalog
+    assert "--report-root .aidd/reports/evals" in catalog
     assert "<work-root>/<run_id>/source/aidd" in catalog
     assert "<work-root>/<run_id>/target/<repo-slug>" in catalog
     assert "dirty tracked" in catalog

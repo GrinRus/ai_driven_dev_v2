@@ -45,7 +45,7 @@ For each finding:
    cite evidence in canonical Markdown instead of preserving scratch files.
 6. re-check that any local repro/probe cited by research is bounded by construction. Do not
    preserve evidence from an open-ended server, infinite stream, watcher, or command that
-   only stopped because the live harness per-stage timeout fired or the run was interrupted. Add
+   only stopped because the external per-stage timeout fired or the run was interrupted. Add
    a finite iteration count, an in-script timeout such as `anyio.fail_after(...)`, or
    `subprocess.run(..., timeout=...)`; otherwise downgrade the probe to `not-run: <reason>`.
 7. re-check ignored verification residue from research commands with

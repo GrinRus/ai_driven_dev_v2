@@ -3,18 +3,25 @@ from __future__ import annotations
 import re
 
 IMPLEMENT_FILE_ENTRY_PATTERN = re.compile(r"`(?=[^`\n]*(?:/|\.))[^\n`]+`")
+GENERIC_BACKTICKED_COMMAND_FRAGMENT = (
+    r"`(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*"
+    r"(?:\.{0,2}/)?[A-Za-z0-9_.+-]+(?:/[A-Za-z0-9_.+-]+)*"
+    r"(?:\s+[^`\n]+)+`"
+)
 IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"(\$ [^\n]+|"
     r"`[^`\n]*\b("
     r"aidd|uv run|pytest|ruff|mypy|python|sphinx-build|npm|pnpm|yarn|go test|cargo test|"
-    r"make|git|grep|rg|sed|echo|printf|flake8|black|prettier|ty check|sqlite-utils|"
+    r"make|git|grep|rg|sed|echo|printf|flake8|black|prettier|ty check|"
     r"bun|bunx|find|npx|vitest|tsc"
     r")\b[^`\n]*`|"
+    + GENERIC_BACKTICKED_COMMAND_FRAGMENT
+    + r"|"
     r"`(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^`\n]+`|"
     r"(?:^|\s)(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^\s`]+|"
-    r"\b(uv run|python -m|python -c|sphinx-build|go test|cargo test|ty check|sqlite-utils)\b|"
+    r"\b(uv run|python -m|python -c|sphinx-build|go test|cargo test|ty check)\b|"
     r"\b(aidd|pytest|ruff|mypy|npm|pnpm|yarn|make|git|grep|rg|sed|echo|printf|flake8|black)\b|"
-    r"`test\s+[^`\n]+`|`(?:insert|upsert|memory)\b[^`\n]*`)",
+    r"`test\s+[^`\n]+`)",
     flags=re.IGNORECASE,
 )
 IMPLEMENT_RESULT_PATTERN = re.compile(

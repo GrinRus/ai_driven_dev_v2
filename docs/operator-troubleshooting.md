@@ -25,7 +25,7 @@ uv run aidd doctor
 - local UI onboarding (`aidd ui` before work-item selection);
 - workflow/stage runtime gate (`aidd run`, `aidd stage run`, `aidd stage interact`);
 - stage artifacts and validator state (`aidd stage summary`, `aidd stage questions`);
-- eval lane (`python -m aidd.harness.live_e2e_black_box`, `aidd eval summary`).
+- eval lane (`aidd eval doctor`, `aidd eval summary`, and `docs/e2e/` runbooks).
 
 3. Collect run and stage evidence before changing anything:
 
@@ -181,9 +181,8 @@ Actions:
 5. If the blocker is missing source-run or baseline metadata, inspect
    `aidd run show --work-item <id> --root .aidd` and the final QA artifacts before creating
    the next-flow draft again.
-6. Keep local UI troubleshooting separate from public-repository live E2E evidence. Live
-   E2E records `next-flow-checkpoint.json` and `next-flow-checkpoint.md` after terminal
-   `qa`; it does not require launching a second public-repository flow by default.
+6. Keep local UI troubleshooting separate from manual public-repository eval evidence.
+   Scenario checkpoint policy lives in `docs/e2e/live-e2e-catalog.md`.
 
 ### 4.7 UI job appears silent for a long time
 
@@ -311,67 +310,39 @@ Common failures:
 
 Symptoms:
 
-- `python -m aidd.harness.live_e2e_black_box` fails with `Scenario not found: <path>`.
+- an eval command fails with `Scenario not found: <path>`.
 
 Actions:
 
 1. Use a repository-relative scenario path under `harness/scenarios/`.
 2. Confirm the path exists before running eval.
 
-### 6.2 Local-wheel live eval cannot locate source checkout
+### 6.2 Manual external eval setup fails
 
 Symptoms:
 
-- installed black-box live E2E fails before setup with a local-wheel install error.
-- the error says local-wheel live eval requires a source checkout containing `pyproject.toml` and `contracts/`.
-- the error says the local-wheel live eval requires a clean tracked source checkout.
+- a manual external eval fails before scenario setup.
+- the error names missing source, install, runtime, or scenario prerequisites.
 
 Actions:
 
-1. Run the command from an AIDD source checkout or pass a scenario path inside that checkout.
-2. Commit or stash tracked source changes before the run. The evaluator snapshots
-   tracked `HEAD` into `<work-root>/<run_id>/source/aidd` and builds the wheel
-   from that temp snapshot.
-3. Do not copy only the installed package's `site-packages` path into the
-   scenario command; live local-wheel mode needs the source checkout to build
-   the wheel.
+1. Confirm the scenario policy and prerequisites in `docs/e2e/live-e2e-catalog.md`.
+2. Run `aidd doctor` and `aidd eval doctor` as documented by that lane.
+3. Record the exact blocker instead of treating external provider or environment setup
+   as a product workflow defect.
 
-The default mutable live work root is `${TMPDIR:-/tmp}/aidd-live-e2e`. Durable
-evidence remains under `.aidd/reports/evals/<run_id>/` unless `--report-root`
-overrides it.
-
-### 6.3 Black-box live E2E reports `fail`, `blocked`, or `infra-fail`
+### 6.3 Manual external eval reports a terminal failure
 
 Symptoms:
 
-- `python -m aidd.harness.live_e2e_black_box` exits non-zero;
-- or completes with `Status: fail`, `Status: blocked`, or `Status: infra-fail`.
+- a manual external eval exits non-zero or reports a terminal failure status.
 
 Actions:
 
-1. Capture the printed `Run id` and `Bundle root`.
-2. Open bundle artifacts first:
-   - `runtime.log`
-   - `validator-report.md`
-   - `verdict.md`
-   - `log-analysis.md`
-   - `stage-audits/<stage-run-id>.json`
-   - `stage-timing.md`
-   - `self-repair-matrix.json`
-   - `self-repair-matrix.md`
-3. Classify failure source:
-   - `infra-fail`: setup/teardown/repo-prep issue;
-   - `blocked`: the live evaluator found unresolved blocking questions and is
-     waiting for `answers.md` evidence requested in `operator-action-request.md`;
-     when you launched the manual lane, you are the operator-agent, so write
-     `[resolved]` answers with exact lines such as
-     `- Q1 [resolved] answer text`, write `answer-analysis.md`, and rerun the
-     same manifest/runtime command to resume;
-   - `fail`: verification or run command failed.
-4. Re-run the same scenario/runtime after fixing the first failure boundary.
-5. For any terminal live run, inspect the full eval bundle and, when a quality
-   decision is needed, write `.aidd/reports/evals/<run_id>/quality-report.md`.
-   Keep run-integrity findings separate from artifact, code, and UI/UX quality.
+1. Capture the run id, bundle path, and first failure boundary.
+2. Follow the artifact inventory and quality-review policy in `docs/e2e/`.
+3. Keep execution-integrity findings separate from artifact, code, and UI/UX quality
+   decisions.
 
 ### 6.4 Eval summary is missing
 
@@ -383,8 +354,8 @@ Actions:
 
 1. Confirm `.aidd/reports/evals/` exists.
 2. Confirm at least one `summary.md` was produced by an eval-capable run.
-3. Run `uv run python -m aidd.harness.live_e2e_black_box <scenario> --runtime <runtime>`
-   once, then retry summary.
+3. Produce one eval bundle with the lane-specific command documented in `docs/e2e/`,
+   then retry summary.
 
 ## 6. Evidence Checklist for Escalation
 

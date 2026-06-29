@@ -56,7 +56,7 @@ python -m scripts.release.preflight --project-root . --version <version> --gh-bi
 - [ ] Source-of-truth audit is current for the release-prep slice:
   `README.md`, `docs/product/user-stories.md`, and
   `docs/architecture/target-architecture.md` match the code and release claims.
-- [ ] Live E2E is not wired into GitHub Actions, CI/CD, or release workflows.
+- [ ] Manual external eval scenarios are not wired into GitHub Actions, CI/CD, or release workflows.
 
 ## 2. Create release branch and GitHub Release
 
@@ -124,22 +124,14 @@ Prerequisite refresh before evidence capture:
 - if any prerequisite is missing, record an explicit blocker instead of treating release
   evidence as refreshed.
 
-Manual local live-audit notes:
+Manual external-audit notes:
 
-- Live E2E is no longer a release gate.
-- Live E2E is manual local operator audit evidence, not CI/CD, not a release workflow,
+- Manual external eval is not a release gate.
+- Manual external eval is local operator audit evidence, not CI/CD, not a release workflow,
   not GitHub Actions, and not a release gate.
-- Live E2E must not be added to GitHub Actions, CI/CD, or release workflows.
-- If maintainers want a post-release operator audit, run the local black-box evaluator
-  from a prepared source checkout:
-
-```bash
-uv run python -m aidd.harness.live_e2e_black_box <manifest> --runtime <runtime> --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
-```
-
-- The local evaluator validates the selected provider command before clone/install;
-  `AIDD_EVAL_CODEX_COMMAND`, `AIDD_EVAL_OPENCODE_COMMAND`, or
-  `AIDD_EVAL_CLAUDE_CODE_COMMAND` are optional wrapper overrides for `adapter-flags` mode.
+- Manual external eval scenarios must not be added to GitHub Actions, CI/CD, or release workflows.
+- If maintainers want a post-release operator audit, use the runbooks and artifact
+  policy in `docs/e2e/`.
 - That audit is separate from publish/installability evidence and must not block package releases.
 
 Suggested package-path verification:
@@ -191,14 +183,12 @@ There is no accepted `v0.1.0a12` evidence log entry yet; add the accepted
 ### Candidate preparation note for `v0.1.0a12`
 
 `v0.1.0a12` prepares a hotfix prerelease for the `aidd run logs` raw runtime log
-rendering defect found by exact-PyPI `AIDD-LIVE-011` run
-`eval-live-011-opencode-20260622T130824Z` against the immutable published
-`ai-driven-dev-v2==0.1.0a11` package. The candidate keeps live E2E outside
-CI/CD and release workflows, preserves GitHub Release-driven publishing only,
-and uses the completed source/local-wheel `AIDD-LIVE-011` pass
-`eval-live-011-opencode-20260622T133433Z` as the hotfix live evidence. Exact
-PyPI live proof for the fixed package can be collected after publication, but is
-not a release blocker for this hotfix.
+rendering defect found by manual external package audit against the immutable published
+`ai-driven-dev-v2==0.1.0a11` package. The candidate keeps manual external eval outside
+CI/CD and release workflows, preserves GitHub Release-driven publishing only, and uses
+completed source/local-wheel manual audit evidence as hotfix context. Exact PyPI manual
+audit proof for the fixed package can be collected after publication, but is not a release
+blocker for this hotfix.
 
 Post-`v0.1.0a11` changes prepared for `v0.1.0a12`:
 
@@ -208,25 +198,25 @@ Post-`v0.1.0a11` changes prepared for `v0.1.0a12`:
 - focused CLI regression coverage proves bracketed path-like log text such as
   `[/, /a, /a/b, /a/b/c.py]` is displayed literally in full and tail modes;
 - Wave 32 records the release-blocking CLI visibility defect, the focused
-  regression checks, and the source/local-wheel live rerun evidence.
+  regression checks, and the source/local-wheel manual audit rerun evidence.
 
 ### Published/superseded note for `v0.1.0a11`
 
 `v0.1.0a11` was published on 2026-06-22 from `release/v0.1.0a11`, but the
-subsequent exact-PyPI live audit found a CLI raw-log rendering crash in
+subsequent exact-PyPI manual audit found a CLI raw-log rendering crash in
 `aidd run logs` when saved runtime logs contain Rich-markup-like bracket text.
 Treat `v0.1.0a11` as a superseded published prerelease for release-doc purposes;
-do not overwrite or reclassify the failed exact-PyPI live run.
+do not overwrite or reclassify the failed exact-PyPI manual audit run.
 
 Post-`v0.1.0a10` changes prepared for `v0.1.0a11`:
 
-- live E2E execution reports no longer compute deliverable quality gates or counted-clean
+- manual external eval execution reports no longer compute deliverable quality gates or counted-clean
   decisions;
 - product-evaluation counted-clean evidence requires manual
   `stage-quality-audits/<stage-run-id>.md`, `flow-quality-report.md`,
   `code-quality-report.md`, and `quality-report.md` with iteration history; a runner
   execution `pass` alone is not counted-clean product-quality evidence;
-- live evidence now records per-stage timeout policy, target workspace classifications,
+- manual external eval evidence now records per-stage timeout policy, target workspace classifications,
   stage-result/validator consistency warnings, and verification-residue cleanup;
 - maintained live prompts, contracts, and scenario manifests now emphasize workspace
   hygiene, shared public-surface checks, installed `aidd` self-checks, and complete
@@ -298,9 +288,9 @@ Post-`v0.1.0a9` changes accepted in `v0.1.0a10`:
 - stage input preflight now reports missing prerequisites before runtime execution;
 - the integrated operator workbench adds project-home, stage cockpit, artifact, and
   next-flow surfaces while preserving CLI-equivalent artifact ownership;
-- live E2E evidence now separates execution integrity from manual product-quality
+- manual external eval evidence now separates execution integrity from manual product-quality
   reports for stage artifacts, code, tests, and operator UI/UX;
-- Claude large live E2E coverage was added to the maintained live catalog;
+- provider coverage was added to the maintained manual external eval catalog;
 - maintained live prompt examples were neutralized so reusable prompts do not encode
   target-specific live-run solutions.
 
@@ -379,28 +369,18 @@ Historical Wave 33 go/no-go input for `v0.1.0a11` candidate preparation:
   hardening, and deterministic local plus release-branch dry-runs for this candidate.
 - Operator UI scope: go for manual operator UI/UX review guidance and navigation fixes as
   alpha operator experience, not as a beta-readiness claim.
-- Live E2E scope: go for recent local supported-matrix evidence as manual operator audit
-  context; live E2E remains outside GitHub Actions, CI/CD, and release workflows.
+- Manual external eval scope: go for recent local supported-matrix evidence as manual
+  operator audit context; it remains outside GitHub Actions, CI/CD, and release workflows.
 - Release action: prepare branch, dry-runs, and draft GitHub prerelease; publish only after
   explicit approval through the GitHub Release `published` event.
 
-W24 manual live evidence refresh on 2026-05-24:
+W24 manual external evidence refresh on 2026-05-24:
 
-This table is historical release-preparation evidence. Retired rows in this table are
-not current maintained live-matrix coverage; use `docs/e2e/scenario-matrix.md` for
-the active matrix.
-
-| Scenario / runtime | Manifest | Preflight result | Counted live evidence |
-| --- | --- | --- | --- |
-| `AIDD-LIVE-002` / `codex` (retired historical lane) | retired manifest, removed from maintained matrix | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-002-codex-20260524`; `manual quality-report.md` present |
-| `AIDD-LIVE-007` / `codex` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `codex-cli 0.131.0`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-007-codex-20260524`; `manual quality-report.md` present |
-| `AIDD-LIVE-007` / `claude-code` | `harness/scenarios/live/hono-non-error-throw-handling.yaml` | `aidd eval doctor` readiness `pass`; provider `2.1.85 (Claude Code)`; native default command | Manual deliverable decision counted-clean: `w24-a4-live-007-claude-code-20260524`; `manual quality-report.md` present |
-| `AIDD-LIVE-006` / `opencode` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Manual deliverable decision counted-clean after blocked/resumed interview path: `w24-a4-live-006-opencode-20260524-r2`; `answer-analysis.md` and `manual quality-report.md` present |
-| `AIDD-LIVE-008` / `opencode` | `harness/scenarios/live/hono-router-double-star-parity.yaml` | `aidd eval doctor` readiness `pass`; provider `1.14.30`; native default command | Manual deliverable decision counted-clean after blocked/resumed interview path: `w24-a4-live-008-opencode-20260524`; `answer-analysis.md` and `manual quality-report.md` present |
-
-This counted manual live evidence is local operator audit evidence only. It supported the
-`0.1.0a5` release-preparation slice, but it is separate from package-channel acceptance and
-does not replace GitHub Release, PyPI, `pipx`, or `uv tool` verification.
+The detailed matrix rows are historical release-preparation evidence. Use
+`docs/e2e/scenario-matrix.md` for the active manual external eval matrix. Counted manual
+external evidence is local operator audit evidence only; it is separate from
+package-channel acceptance and does not replace GitHub Release, PyPI, `pipx`, or
+`uv tool` verification.
 
 ## 6. Changelog and release notes checklist
 

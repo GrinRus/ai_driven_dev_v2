@@ -1266,19 +1266,20 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         (work_root / result.run_id / "target").as_posix()
     )
     assert ".aidd/harness-cache" not in str(state_payload["target_repo_root"])
-    repository_state_context = (
+    workspace_baseline_context = (
         Path(state_payload["target_repo_root"])
         / ".aidd"
         / "workitems"
         / "WI-LIVE-BLACKBOX"
         / "context"
-        / "repository-state.md"
+        / "workspace-baseline.md"
     ).read_text(encoding="utf-8")
-    assert "## Live setup workspace baseline" in repository_state_context
-    assert "### Known harness config present" in repository_state_context
-    assert "`aidd.example.toml`" in repository_state_context
-    assert "### Setup-baseline untracked non-AIDD files" in repository_state_context
-    assert "`setup.log`" in repository_state_context
+    assert "# Workspace Baseline" in workspace_baseline_context
+    assert "## Setup-Owned Workspace Baseline" in workspace_baseline_context
+    assert "## Setup-Owned Files Present" in workspace_baseline_context
+    assert "`aidd.example.toml`" in workspace_baseline_context
+    assert "## Baseline Untracked Files" in workspace_baseline_context
+    assert "`setup.log`" in workspace_baseline_context
     completed_stage_runs = state_payload["completed_stage_runs"]
     assert [item["stage"] for item in completed_stage_runs] == list(STAGES)
     for index, stage in enumerate(STAGES, start=1):
@@ -2232,22 +2233,22 @@ def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_conte
         (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
     )
     target_repo_root = Path(state_payload["target_repo_root"])
-    repository_state_context = (
+    workspace_baseline_context = (
         target_repo_root
         / ".aidd"
         / "workitems"
         / "WI-LIVE-BLACKBOX"
         / "context"
-        / "repository-state.md"
+        / "workspace-baseline.md"
     ).read_text(encoding="utf-8")
-    assert "### Setup-baseline ignored files" in repository_state_context
-    assert "- Count: `80`" in repository_state_context
-    assert "- Full list:" in repository_state_context
-    assert "`target-workspace-evidence.json`" in repository_state_context
-    assert "- Omitted path count: `55`" in repository_state_context
-    assert ".venv/file-0.txt" in repository_state_context
-    assert ".venv/file-79.txt" not in repository_state_context
-    assert len(repository_state_context) < 20_000
+    assert "## Baseline Ignored Files" in workspace_baseline_context
+    assert "- Count: `80`" in workspace_baseline_context
+    assert "- Full list:" in workspace_baseline_context
+    assert "final workspace evidence report after the run" in workspace_baseline_context
+    assert "- Omitted path count: `55`" in workspace_baseline_context
+    assert ".venv/file-0.txt" in workspace_baseline_context
+    assert ".venv/file-79.txt" not in workspace_baseline_context
+    assert len(workspace_baseline_context) < 20_000
 
     evidence_payload = json.loads(
         (result.bundle_root / "target-workspace-evidence.json").read_text(

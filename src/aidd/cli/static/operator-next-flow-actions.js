@@ -1517,11 +1517,11 @@ function renderEvalBatchHandoff() {
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(sourceRun)}</span></div>
         <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
         <div class="panel-item"><strong>Final artifacts</strong><span>${escapeHtml(artifacts.length)}</span></div>
-        <div class="panel-item"><strong>Live E2E</strong><span>manual checkpoint only</span></div>
+        <div class="panel-item"><strong>Scenario checkpoint</strong><span>manual checkpoint only</span></div>
       </div>
       <div class="truncation-notice" role="status">
         <strong>Eval batch handoff only</strong>
-        <span>Use the completed-run evidence for scenario planning or manual live E2E checkpoint review. This UI action does not launch a nested public-repository flow.</span>
+        <span>Use completed-run evidence for scenario planning or manual checkpoint review. This UI action does not launch a nested public-repository flow.</span>
       </div>
       <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
       <div class="wizard-actions">

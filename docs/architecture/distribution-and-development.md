@@ -15,12 +15,11 @@ AIDD alpha is supported through Python-first delivery channels:
 
 Docker/GHCR images are not part of the alpha release contract.
 
-Installed live E2E is a separate manual operator-audit path:
+Manual external eval is a separate operator-audit path:
 
 - contributors work from source checkout;
-- live scenarios are selected manually from the maintained live catalog;
-- the harness installs the artifact under test with `uv tool` and runs installed `aidd`
-  from the target repository root.
+- scenarios are selected manually from the maintained eval catalog;
+- detailed scenario runbooks live in `docs/e2e/`.
 
 ## 3. Container support
 
@@ -60,7 +59,7 @@ Required:
 
 Optional, depending on work:
 
-- runtime CLIs for adapter development and live E2E audits.
+- runtime CLIs for adapter development and manual external audits.
 
 ## 6. Development loop
 
@@ -101,13 +100,13 @@ Recommended CI structure:
 - pull request: lint, typecheck, unit tests, deterministic fixture checks, security checks,
   and package build
 - main branch: the same deterministic checks or a wider deterministic matrix
-- local manual operator audits: live external audits
+- local manual operator audits: external eval audits
 - release: deterministic lint/type/test evidence, build, PyPI publish, `pipx`
   installability verification, and `uv tool` installability verification
 
-GitHub Actions, CI/CD, and release workflows must not run live E2E scenarios, require
-provider runtime credentials, invoke `live_e2e_black_box`, or clone public live target
-repositories. Live E2E remains a local manual operator-audit lane.
+GitHub Actions, CI/CD, and release workflows must not run manual external eval
+scenarios, require provider runtime credentials, or clone public target repositories.
+Manual external eval remains a local operator-audit lane.
 
 ## 9. Release flow
 
@@ -127,9 +126,9 @@ Recommended release flow:
 The release workflow publishes only from the GitHub Release `published` event. Its manual
 `workflow_dispatch` path is a dry run for deterministic quality and package build jobs only;
 it must not publish to PyPI or run package installability verification against the registry.
-The release workflow must run deterministic quality checks before publish. Manual live
-evidence can be refreshed locally before or after a release branch, but it is not a release
-gate and must remain outside GitHub Actions and the release workflow.
+The release workflow must run deterministic quality checks before publish. Manual
+external eval evidence can be refreshed locally before or after a release branch, but
+it is not a release gate and must remain outside GitHub Actions and the release workflow.
 
 Operator-oriented step-by-step release execution lives in `docs/release-checklist.md`.
 

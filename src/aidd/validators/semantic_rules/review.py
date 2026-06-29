@@ -21,7 +21,7 @@ from aidd.validators.semantic_rules.common import (
     extract_review_finding_blocks,
     extract_review_spec_decision,
     has_explicit_severity,
-    is_live_setup_workspace_context,
+    has_setup_workspace_baseline_context,
     validate_placeholder_sections,
     work_item_root_from_output_path,
 )
@@ -54,12 +54,11 @@ RESIDUE_FINDING_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 BASELINE_PATH_PATTERN = re.compile(r"`([^`]+)`")
-LIVE_BASELINE_HEADING_PATTERN = re.compile(
-    r"^##\s+Live setup workspace baseline\s*$",
+SETUP_BASELINE_HEADING_PATTERN = re.compile(
+    r"^##\s+Setup-Owned Workspace Baseline\s*$",
     flags=re.IGNORECASE | re.MULTILINE,
 )
-NEXT_TOP_LEVEL_HEADING_PATTERN = re.compile(r"^##\s+", flags=re.MULTILINE)
-LIVE_RESIDUE_TOP_LEVEL_DIRS = (
+SETUP_RESIDUE_TOP_LEVEL_DIRS = (
     "coverage",
     ".pytest_cache",
     ".ruff_cache",
@@ -68,7 +67,7 @@ LIVE_RESIDUE_TOP_LEVEL_DIRS = (
     "build",
     "dist",
 )
-LIVE_RESIDUE_TOP_LEVEL_FILE_PREFIXES = (".coverage",)
+SETUP_RESIDUE_TOP_LEVEL_FILE_PREFIXES = (".coverage",)
 MAX_RESIDUE_PATHS = 12
 
 
@@ -192,33 +191,27 @@ def _normalize_repo_relative_path(raw_path: str) -> str | None:
     return candidate.rstrip("/")
 
 
-def _live_baseline_section(repository_state_text: str) -> str:
-    match = LIVE_BASELINE_HEADING_PATTERN.search(repository_state_text)
+def _setup_baseline_text(baseline_text: str) -> str:
+    match = SETUP_BASELINE_HEADING_PATTERN.search(baseline_text)
     if match is None:
         return ""
-    next_match = NEXT_TOP_LEVEL_HEADING_PATTERN.search(
-        repository_state_text,
-        match.end(),
-    )
-    if next_match is None:
-        return repository_state_text[match.end() :]
-    return repository_state_text[match.end() : next_match.start()]
+    return baseline_text
 
 
-def _live_setup_baseline_paths(context: SemanticDocumentContext) -> tuple[str, ...]:
+def _setup_baseline_paths(context: SemanticDocumentContext) -> tuple[str, ...]:
     work_item_root = work_item_root_from_output_path(context.output_path)
     if work_item_root is None:
         return tuple()
 
-    repository_state_path = work_item_root / "context" / "repository-state.md"
-    if not repository_state_path.exists():
+    baseline_path = work_item_root / "context" / "workspace-baseline.md"
+    if not baseline_path.exists():
         return tuple()
 
-    repository_state_text = repository_state_path.read_text(
+    baseline_text = baseline_path.read_text(
         encoding="utf-8",
         errors="replace",
     )
-    baseline_section = _live_baseline_section(repository_state_text)
+    baseline_section = _setup_baseline_text(baseline_text)
     paths: list[str] = []
     seen: set[str] = set()
     for match in BASELINE_PATH_PATTERN.finditer(baseline_section):
@@ -281,17 +274,17 @@ def _bounded_existing_path_samples(path: Path, project_root: Path) -> tuple[str,
     return tuple(paths)
 
 
-def _active_live_residue_paths(context: SemanticDocumentContext) -> tuple[str, ...]:
-    if not is_live_setup_workspace_context(context):
+def _active_setup_residue_paths(context: SemanticDocumentContext) -> tuple[str, ...]:
+    if not has_setup_workspace_baseline_context(context):
         return tuple()
     if context.workspace_root.name != ".aidd":
         return tuple()
 
     project_root = context.workspace_root.parent
-    baseline_paths = _live_setup_baseline_paths(context)
+    baseline_paths = _setup_baseline_paths(context)
     candidate_paths: list[str] = []
 
-    for directory_name in LIVE_RESIDUE_TOP_LEVEL_DIRS:
+    for directory_name in SETUP_RESIDUE_TOP_LEVEL_DIRS:
         residue_path = project_root / directory_name
         if not residue_path.exists():
             continue
@@ -306,7 +299,7 @@ def _active_live_residue_paths(context: SemanticDocumentContext) -> tuple[str, .
             continue
         if not any(
             child.name.startswith(prefix)
-            for prefix in LIVE_RESIDUE_TOP_LEVEL_FILE_PREFIXES
+            for prefix in SETUP_RESIDUE_TOP_LEVEL_FILE_PREFIXES
         ):
             continue
         candidate_paths.append(_repo_relative(child, project_root))
@@ -341,13 +334,13 @@ def _has_active_residue_finding(findings_section: SemanticSection) -> bool:
     return False
 
 
-def _validate_live_workspace_hygiene_truthfulness(
+def _validate_setup_workspace_hygiene_truthfulness(
     *,
     context: SemanticDocumentContext,
     findings_section: SemanticSection,
     approval_status: str | None,
 ) -> tuple[ValidationFinding, ...]:
-    active_residue_paths = _active_live_residue_paths(context)
+    active_residue_paths = _active_setup_residue_paths(context)
     if not active_residue_paths:
         return tuple()
     if _has_active_residue_finding(findings_section):
@@ -369,7 +362,7 @@ def _validate_live_workspace_hygiene_truthfulness(
         context.finding(
             code=UNVERIFIABLE_CHECK_CLAIM_CODE,
             message=(
-                "Live review cannot declare approved/no findings or cleanup passed while "
+                "Review cannot declare approved/no findings or cleanup passed while "
                 f"non-baseline ignored workspace residue exists after review: {residue_summary}. "
                 "Check ignored residue after all review commands, remove it with evidence, "
                 "or record an active review finding."
@@ -502,7 +495,7 @@ def validate_review_report(context: SemanticDocumentContext) -> tuple[Validation
         )
     )
     findings.extend(
-        _validate_live_workspace_hygiene_truthfulness(
+        _validate_setup_workspace_hygiene_truthfulness(
             context=context,
             findings_section=findings_section,
             approval_status=approval_status,

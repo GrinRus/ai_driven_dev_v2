@@ -10,13 +10,13 @@ Use it when you need a repeatable local setup for:
 - initializing a work item workspace;
 - running AIDD from a target local project root;
 - validating the baseline toolchain before deeper scenario work;
-- understanding the installed live E2E operator path.
+- understanding manual external eval/audit boundaries.
 
 ## 2. Scope and Current Product State
 
 AIDD has an implemented local CLI, stage orchestration core, maintained runtime adapters,
-validators, and harness/eval tooling. Live public-repository E2E remains a manual installed
-operator audit lane, not a CI or release gate.
+validators, and harness/eval tooling. Manual external evals are local operator audit
+evidence, not CI or release gates.
 
 Today:
 
@@ -29,31 +29,17 @@ Today:
 - `aidd ui` opens local setup mode or the command center with explicit runtime selection,
   long-run visibility, Implement Review diff, structured review/QA tabs, and
   review/QA remediation back to `implement`;
-- `python -m aidd.harness.live_e2e_black_box` executes the manual black-box
-  live E2E evaluator and writes a result bundle;
-- live scenarios under `harness/scenarios/live/` are a manual external-audit lane:
-  they prepare a pinned public-repository working copy, install a local AIDD wheel via
-  `uv tool`, and drive installed `aidd` from the target repository root through public
-  stage and inspection commands.
+- manual external eval policies and runbooks live under `docs/e2e/`.
 
-Smoke, conformance, and live operator proof are separate lanes. Do not treat them as interchangeable.
+Smoke, conformance, and manual external audit proof are separate lanes. Do not treat
+them as interchangeable.
 
 The supported product path is local-project operation: install or run AIDD locally,
 enter the target project root, create `.aidd/` there, and inspect artifacts from
 that same project. `aidd init --github-issue <url>` is out of product scope.
-Public GitHub repositories are used by live E2E eval manifests and support evidence,
-not by a product issue-intake command.
-
-For local manual live audits, Codex, OpenCode, and Claude Code use native provider
-commands by default. A locally available command override is optional when the operator
-wants a custom wrapper:
-
-- `AIDD_EVAL_CODEX_COMMAND`
-- `AIDD_EVAL_OPENCODE_COMMAND`
-- `AIDD_EVAL_CLAUDE_CODE_COMMAND`
-
-Those values should point to wrapper commands that accept the AIDD adapter flags;
-when they are unset, the harness validates the default native provider command.
+Public GitHub repositories are used by manual external eval manifests and support
+evidence, not by a product issue-intake command. Eval-specific runtime wrapper details
+belong in `docs/e2e/live-e2e-catalog.md`.
 
 For UI-first real-provider smokes, use the manual
 [`Real-Provider UI E2E Lane`](./e2e/real-provider-ui-e2e.md). That lane starts with
@@ -70,9 +56,7 @@ Required:
 - `uv`
 
 When `uv` is not on `PATH`, launch source-checkout commands through an absolute
-`uv` path. The live local-wheel installer honors the `UV` environment value that
-`uv run` provides, so the black-box installer can still build and install the
-tracked `HEAD` artifact without relying on a shell PATH lookup.
+`uv` path.
 
 Optional:
 
@@ -309,50 +293,14 @@ Expected behavior in the current local implementation:
   `aidd stage interact <stage>`;
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
 - `generic-cli` is an advanced wrapper/test lane, not the default product onboarding runtime;
-- `python -m aidd.harness.live_e2e_black_box` executes the black-box evaluator
-  lifecycle and prints status, run id, and bundle paths;
-- live black-box E2E is a manual external audit that installs a local wheel with
-  `uv tool`, enters the pinned target repository, and keeps `.aidd/` inside that
-  repository while invoking only public AIDD CLI surfaces.
-- live eval bundles include `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`,
-  and `self-repair-matrix.md` for per-step duration, deterministic repair-probe coverage,
-  and terminal document consistency audit.
-- live eval bundles include `target-workspace-evidence.json` and `.md` as non-gating
-  target repository evidence. Inspect it during manual quality review to separate tracked
-  product diff, setup-baseline untracked files, `aidd.example.toml` harness config, top-level
-  `workitems/...` pollution, stray `.aidd/` scratch files, and ignored local artifacts such
-  as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`, `coverage/`, build, dist,
-  or dependency caches. New ignored files inside an ignored root that already existed at setup,
-  such as `.venv/.../__pycache__`, are setup-baseline ignored churn rather than
-  pollution findings.
-- live black-box `limits.timeout_minutes` is a per-stage `aidd stage run` command
-  budget. The aggregate `run-transcript.json` keeps `timeout_seconds` as `null`
-  unless there is a real global flow timeout, and records the per-stage policy
-  under `timeout_policy`.
-- live eval bundles are execution-only; write `quality-report.md` manually after
-  the terminal run when artifact, code, test, or UI/UX quality must be judged.
-  The UI/UX section is a human-authored AIDD operator UI decision, not a runner
-  gate: inspect completed-flow visibility, stage/artifact/log/question navigation,
-  repair and next-flow handoff states, readability, keyboard/focus behavior, and
-  responsive behavior or explicitly record `not inspected`.
-  For code/artifact quality, cite `target-workspace-evidence.*` or
-  `git status --short --untracked-files=all` plus
-  `git status --ignored --short --untracked-files=all`; top-level `workitems/...` duplicates
-  normally make deliverable quality `not-counted`, while `aidd.example.toml` is
-  harness config rather than product diff. If implementation evidence shows the prepared
-  checkout or live harness directories such as `install-home/`, `source/`, `build/`, or
-  `target/` were deleted/recreated, treat the deliverable as `not-counted`.
-  When manifest verification creates only new known ignored residue after QA, inspect
-  `verify-transcript.json.workspace_cleanup`; that runner cleanup is execution hygiene,
-  not an automatic deliverable-quality decision.
+- manual external evals are separate operator-audit evidence. Their scenario policies,
+  artifact inventories, and manual quality rules live in `docs/e2e/live-e2e-catalog.md`
+  and `docs/e2e/live-quality-rubric.md`.
 - repair retries persist `repair-context.md` in the run attempt directory, which lets
   operators trace the exact validator findings that caused each retry.
-- live E2E is manual local operator audit evidence, not CI/CD, not a release workflow,
-  not GitHub Actions, and not a release gate.
-- local live E2E uses native provider commands by default and reads runtime-command
-  environment overrides only when an adapter-compatible wrapper override is needed.
-- public-repository live evals always build a local wheel from clean tracked `HEAD`;
-  published-package install proof is recorded in the separate release/install lane.
+- manual external eval evidence is not CI/CD, not a release workflow, not GitHub
+  Actions, and not a release gate.
+- published-package install proof is recorded in the separate release/install lane.
 
 ### 6.6 Inspect logs and artifacts
 
@@ -447,10 +395,8 @@ as input to a new `implement` attempt, and requires a selected runtime. After th
 remediation `implement` attempt succeeds, downstream `review` and `qa` are marked stale
 as overlay metadata. Their canonical stage status is not rewritten, but stale `qa` is not
 treated as a fresh terminal handoff. Use the next action **Rerun stale downstream** to
-explicitly run stale downstream stages with a selected runtime. Manual live E2E uses the
-per-stage UI API path so it can rerun exactly one stale stage, audit it, and then rerun
-the next stale stage; this preserves checkpoints for loops such as
-`implement -> review -> implement -> review -> qa`.
+explicitly run stale downstream stages with a selected runtime. Manual eval flows use the
+same public per-stage path when they need checkpointed stale-stage reruns.
 
 ### 6.7 Completed-run handoff and next-flow actions
 
@@ -474,7 +420,7 @@ Available next-flow actions:
   before launch. The clone gets a new run or work item identity.
 - **Run Eval / Scenario Batch**: hand the completed source run and selected artifacts to
   eval or scenario planning. This is an operator handoff; it must not silently launch a
-  nested public-repository live flow.
+  nested external scenario flow.
 - **Archive Run**: record the local operator archive decision, timestamp, and reason.
   Archive does not delete artifacts, hide final QA evidence, or block read-only run
   history inspection.
@@ -494,24 +440,22 @@ Keep the two evidence lanes distinct:
 - Local-project UI evidence proves the product operator behavior: Flow Complete,
   Start Next Flow, follow-up draft creation, clone draft review, launch preflight,
   archive behavior, and Run History / Lineage inside the target local project.
-- Public-repository live E2E records a terminal next-flow checkpoint after `qa`.
-  It is manual audit evidence, not CI/CD. It does not require launching a second
-  public-repository flow by default; the optional maintained-scenario follow-up proof
-  creates draft lineage evidence only when the operator explicitly enables it.
+- Manual public-repository evals can record terminal next-flow checkpoint evidence after
+  `qa`. They are manual audit evidence, not CI/CD, and do not require launching a
+  second public-repository flow by default.
 
 ### 6.8 Product scope boundary
 
-There is no supported `aidd init --github-issue <url>` product command. GitHub
-issue URLs may appear in historical live E2E reports or support reports, but current
-live E2E manifests use authored tasks and `feature-selection.json`; GitHub issues are
-not a local operator intake surface.
+There is no supported `aidd init --github-issue <url>` product command. GitHub issue
+URLs may appear in historical eval or support reports, but maintained external eval
+scenarios use authored tasks; GitHub issues are not a local operator intake surface.
 
 ## 7. Operational Notes
 
 - Prefer absolute paths for config and workspace roots in automation scripts.
-- Treat `doctor` output as the canonical machine-readiness snapshot before live scenario work.
+- Treat `doctor` output as the canonical machine-readiness snapshot before manual eval work.
 - Record the exact command outputs for reproducible environment triage.
-- For live E2E, distinguish the AIDD artifact root from the target repository cwd.
+- For manual external evals, follow the artifact-root and repository-cwd rules in `docs/e2e/`.
 - For local product operation, keep `.aidd/` inside the target local project root.
 - Keep runtime authentication state and secrets outside the repository.
 

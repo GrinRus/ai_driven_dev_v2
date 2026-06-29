@@ -28,6 +28,12 @@ _PROVIDER_AUTH_CHECK_TIMEOUT_SECONDS = 10
 LIVE_E2E_RUNTIME_ALLOWLIST = ("codex", "opencode", "claude-code", "qwen")
 LIVE_E2E_PROVIDER_TIMEOUT_SECONDS = 3600
 LIVE_E2E_STAGE_TIMEOUT_SECONDS = 3600
+LIVE_E2E_RUNTIME_COMMAND_ENV_VARS = {
+    "claude-code": "AIDD_EVAL_CLAUDE_CODE_COMMAND",
+    "codex": "AIDD_EVAL_CODEX_COMMAND",
+    "opencode": "AIDD_EVAL_OPENCODE_COMMAND",
+    "qwen": "AIDD_EVAL_QWEN_COMMAND",
+}
 
 
 def _toml_string(value: str) -> str:
@@ -58,7 +64,7 @@ def resolve_live_runtime_command_entries(
     entries: dict[str, LiveRuntimeCommand] = {}
     for runtime_id in LIVE_E2E_RUNTIME_ALLOWLIST:
         definition = get_runtime_definition(runtime_id)
-        command_env = definition.live_command_env_var
+        command_env = LIVE_E2E_RUNTIME_COMMAND_ENV_VARS.get(runtime_id)
         command_value = source.get(command_env, "").strip() if command_env is not None else ""
         env_var: str | None = command_env if command_value else None
         execution_mode = definition.default_execution_mode
