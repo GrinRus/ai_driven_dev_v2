@@ -509,6 +509,11 @@ operator loop instead of relying on a self-mutating product command:
   classify it as infra/provider blocker, not counted-clean, not
   `manual-quality-stop`, not unresolved-question `blocked`, and not product-quality
   failure.
+- Unsupported `review-spec` claims: high-severity issues without direct evidence,
+  contradictions with upstream `research` or `plan` without `Reconciliation`, or stale
+  `stage-result.md` failure claims after canonical validation passes are AIDD
+  stage-output/prompt/validator evidence. Do not classify them as provider no-progress,
+  `manual-quality-stop`, unresolved-question `blocked`, or product-quality verdicts.
 - `unsupported-runtime`: the runtime is not declared in the scenario's `runtime_targets`.
 - `blocked`: inspect `operator-action-request.md`, `questions.md`, and
   `answers.md`; as the launching operator-agent, write `[resolved]` answers,

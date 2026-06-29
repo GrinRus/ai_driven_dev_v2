@@ -21,9 +21,17 @@ Record whether the plan is coherent and ready for task decomposition.
 - `Issue list`
   - Must enumerate concrete issues as top-level bullet items or `###` issue subsections.
   - Each issue item/subsection must include explicit severity (`critical`, `high`, `medium`,
-    `low`, `info`, or `none`) and rationale.
+    `low`, `info`, or `none`), evidence, and rationale.
+  - `Evidence` must reference a concrete upstream artifact, research/source id, target file path,
+    probe/check result, or other durable reviewed evidence.
+  - `critical` and `high` issues must cite direct evidence, such as a backticked artifact/file
+    path, source id, research finding id, milestone id, acceptance id, or command/check result.
+  - If an issue contradicts upstream `research` or `plan` evidence, it must include
+    `Reconciliation` that names the stronger evidence and explains why the contradiction is valid.
+  - Unsupported phrases such as `source inspection shows` are invalid unless the same issue names
+    the concrete source artifact or check result being inspected.
   - If no material issue exists, must use a no-defect item/subsection with `Severity: none` and
-    rationale. Bare no-issue prose such as `No material issues identified.` is invalid.
+    evidence and rationale. Bare no-issue prose such as `No material issues identified.` is invalid.
   - Must prioritize issues that block safe task decomposition.
 - `Recommendation summary`
   - Must summarize actionable review recommendations as prioritized Markdown list items in priority

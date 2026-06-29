@@ -1332,6 +1332,7 @@ def test_validate_semantic_outputs_accepts_review_spec_nested_issue_metadata(
             "- **OBS-1** - `info` - Plan line numbers are one-off from "
             "`transform` call in prose, but the actual edit target is correct.\n"
             "  - **Severity:** `info`\n"
+            "  - **Evidence:** `plan.md` M1 and `cli.py:1179`.\n"
             "  - **Rationale:** The prose says \"edit `cli.py:1179` ... so the "
             "transform call is skipped\" because the edit is scoped to the guard "
             "line and not to unrelated behavior.\n\n"
@@ -1370,12 +1371,14 @@ def test_validate_semantic_outputs_accepts_review_spec_issue_subsections(
             "Each issue is severity-tagged and rationale-backed.\n\n"
             "### I1 - Conditional implementation shape\n\n"
             "- **Severity:** low\n"
+            "- **Evidence:** `plan.md` M3.\n"
             "- **Section:** `Milestones > M3`.\n"
             "- **Observation:** The plan keeps two implementation shapes open.\n"
             "- **Rationale:** because the downstream implement stage must record "
             "which shape it chose and why; this is advisory, not blocking.\n\n"
             "### I2 - Test file location remains flexible\n\n"
             "- **Severity:** info\n"
+            "- **Evidence:** `plan.md` M1.\n"
             "- **Section:** `Milestones > M1`.\n"
             "- **Observation:** The exact test file is left to implementation.\n"
             "- **Rationale:** because the repo layout is observable at task time "
@@ -1417,10 +1420,12 @@ def test_validate_semantic_outputs_accepts_review_spec_no_issue_markers(
             "## Issue list\n\n"
             "- **I1 - Upstream issue-id discrepancy is advisory.**\n"
             "  - Severity: `low`\n"
+            "  - Evidence: `plan.md` M2.\n"
             "  - Rationale: because the plan records the discrepancy and maps "
             "it to a commit-message recommendation.\n"
             "- **I2 - No material defect found that blocks decomposition.**\n"
             "  - Severity: `none`\n"
+            "  - Evidence: `plan.md` and `research-notes.md`.\n"
             "  - Rationale: Plan goals, scope, milestones, dependencies, risks, "
             "and verification approach are mutually consistent.\n\n"
             "## Strengths\n\n"
@@ -1456,8 +1461,9 @@ def test_validate_semantic_outputs_accepts_review_spec_inline_severity_label(
             "## Readiness state\n\n"
             "- `ready-with-conditions`\n\n"
             "## Issue list\n\n"
-            "- I1: Severity: low. Rationale: because the plan should add one "
-            "delegated constructor smoke check during downstream tasking.\n\n"
+            "- I1: Severity: low. Evidence: `plan.md` M2. Rationale: because the "
+            "plan should add one delegated constructor smoke check during "
+            "downstream tasking.\n\n"
             "## Strengths\n\n"
             "- The plan is bounded and test-first.\n\n"
             "## Recommendation summary\n\n"
@@ -1542,6 +1548,7 @@ def test_validate_semantic_outputs_accepts_review_spec_ordered_recommendations(
             "## Issue list\n\n"
             "- **I1 - Memory command assertion can be stronger.**\n"
             "  - Severity: `low`\n"
+            "  - Evidence: `plan.md` Verification notes.\n"
             "  - Rationale: because adding an output assertion would tighten "
             "the regression without changing scope.\n\n"
             "## Strengths\n\n"
@@ -1560,6 +1567,152 @@ def test_validate_semantic_outputs_accepts_review_spec_ordered_recommendations(
     findings = validate_semantic_outputs(
         stage="review-spec",
         work_item="WI-REVIEW-SPEC-ORDERED-RECS",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_review_spec_issue_without_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_spec_report(
+        workspace_root,
+        "WI-REVIEW-SPEC-MISSING-EVIDENCE",
+        (
+            "# Review Spec Report\n\n"
+            "## Readiness state\n\n"
+            "- `ready-with-conditions`\n\n"
+            "## Issue list\n\n"
+            "- I1: Severity: low. Rationale: because task decomposition should "
+            "preserve the verification note.\n\n"
+            "## Strengths\n\n"
+            "- The plan is bounded.\n\n"
+            "## Recommendation summary\n\n"
+            "- Carry I1 into task decomposition.\n\n"
+            "## Required changes\n\n"
+            "- Preserve the verification note.\n\n"
+            "## Decision\n\n"
+            "- `approved-with-conditions`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-REVIEW-SPEC-MISSING-EVIDENCE",
+        workspace_root=workspace_root,
+    )
+
+    assert any(finding.code == MISSING_EVIDENCE_REF_CODE for finding in findings)
+
+
+def test_validate_semantic_outputs_flags_review_spec_high_claim_without_direct_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_spec_report(
+        workspace_root,
+        "WI-REVIEW-SPEC-UNSUPPORTED-HIGH",
+        (
+            "# Review Spec Report\n\n"
+            "## Readiness state\n\n"
+            "- `not-ready`\n\n"
+            "## Issue list\n\n"
+            "- I1: Severity: high. Evidence: source inspection. Rationale: because "
+            "source inspection shows the router behavior is missing.\n\n"
+            "## Strengths\n\n"
+            "- The plan names the target router area.\n\n"
+            "## Recommendation summary\n\n"
+            "- Provide direct source evidence before blocking decomposition.\n\n"
+            "## Required changes\n\n"
+            "- Add direct source evidence or downgrade I1.\n\n"
+            "## Decision\n\n"
+            "- `rejected`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-REVIEW-SPEC-UNSUPPORTED-HIGH",
+        workspace_root=workspace_root,
+    )
+
+    assert any(finding.code == UNSUPPORTED_CLAIM_CODE for finding in findings)
+
+
+def test_validate_semantic_outputs_flags_review_spec_router_parity_without_reconciliation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_spec_report(
+        workspace_root,
+        "WI-REVIEW-SPEC-ROUTER-PARITY",
+        (
+            "# Review Spec Report\n\n"
+            "## Readiness state\n\n"
+            "- `not-ready`\n\n"
+            "## Issue list\n\n"
+            "### I1 - Router parity blocker\n\n"
+            "- Severity: high\n"
+            "- Evidence: `src/router/linear-router/router.ts` and "
+            "`src/router/pattern-router/router.ts`.\n"
+            "- Rationale: because LinearRouter and PatternRouter currently make "
+            "`/**` match only `/`, so implementation scope must expand.\n\n"
+            "## Strengths\n\n"
+            "- The plan identifies router parity as important.\n\n"
+            "## Recommendation summary\n\n"
+            "- Reconcile the router claim with upstream research before proceeding.\n\n"
+            "## Required changes\n\n"
+            "- Add reconciliation or remove I1.\n\n"
+            "## Decision\n\n"
+            "- `rejected`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-REVIEW-SPEC-ROUTER-PARITY",
+        workspace_root=workspace_root,
+    )
+
+    assert any(finding.code == UNSUPPORTED_CLAIM_CODE for finding in findings)
+
+
+def test_validate_semantic_outputs_accepts_review_spec_router_parity_with_reconciliation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_spec_report(
+        workspace_root,
+        "WI-REVIEW-SPEC-ROUTER-PARITY-RECONCILED",
+        (
+            "# Review Spec Report\n\n"
+            "## Readiness state\n\n"
+            "- `not-ready`\n\n"
+            "## Issue list\n\n"
+            "### I1 - Router parity blocker\n\n"
+            "- Severity: high\n"
+            "- Evidence: `src/router/linear-router/router.ts`, "
+            "`src/router/pattern-router/router.ts`, and F7.\n"
+            "- Reconciliation: F7 is superseded by the direct failing probe "
+            "`bun test router-double-star.test.ts`.\n"
+            "- Rationale: because LinearRouter and PatternRouter currently make "
+            "`/**` match only `/`, so implementation scope must expand.\n\n"
+            "## Strengths\n\n"
+            "- The plan identifies router parity as important.\n\n"
+            "## Recommendation summary\n\n"
+            "- Update the plan with the reconciled router evidence.\n\n"
+            "## Required changes\n\n"
+            "- Add the failing router probe before task decomposition.\n\n"
+            "## Decision\n\n"
+            "- `rejected`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review-spec",
+        work_item="WI-REVIEW-SPEC-ROUTER-PARITY-RECONCILED",
         workspace_root=workspace_root,
     )
 
@@ -1595,6 +1748,20 @@ def test_validate_semantic_outputs_flags_invalid_review_spec_fixture_bundle() ->
             message=(
                 "Each `Issue list` item must include rationale "
                 "(for example `because ...`)."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-REVIEW-SPEC-INVALID/stages/review-spec/review-spec-report.md"
+                ),
+                line_number=7,
+            ),
+        ),
+        ValidationFinding(
+            code=MISSING_EVIDENCE_REF_CODE,
+            message=(
+                "Each `Issue list` item must include `Evidence:` naming a concrete "
+                "artifact, source id, target file path, or check result."
             ),
             severity="medium",
             location=ValidationIssueLocation(

@@ -3253,6 +3253,129 @@ def test_decide_post_validation_transition_allows_success_when_questions_resolve
     ).read_text(encoding="utf-8")
 
 
+def test_decide_post_validation_transition_reconciles_stale_stage_result_on_pass(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_outputs(preparation_bundle.expected_output_documents)
+    stage_result_path = (
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "plan"
+        / "stage-result.md"
+    )
+    stage_result_path.write_text(
+        "# Stage result\n\n"
+        "## Status\n\n"
+        "- Status: `failed`\n\n"
+        "## Validation summary\n\n"
+        "- Validator verdict: `fail`\n\n"
+        "## Terminal state notes\n\n"
+        "- Runtime draft still had stale failure text.\n",
+        encoding="utf-8",
+    )
+
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=ValidationVerdict.PASS,
+    )
+
+    transition = decide_post_validation_transition(
+        validation_state,
+        workspace_root=workspace_root,
+    )
+
+    assert transition.action == PostValidationAction.ADVANCE
+    stage_result_text = stage_result_path.read_text(encoding="utf-8")
+    assert "- Status: `succeeded`" in stage_result_text
+    assert "- Validator verdict: `pass`" in stage_result_text
+    assert "stale runtime draft status/verdict was normalized" in stage_result_text
+    published_stage_result = stage_result_path.parent / "output" / "stage-result.md"
+    assert "- Status: `succeeded`" in published_stage_result.read_text(encoding="utf-8")
+
+
+def test_decide_post_validation_transition_does_not_reconcile_when_questions_block(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
+        encoding="utf-8",
+    )
+    stage_result_path = stage_root / "stage-result.md"
+    stage_result_path.write_text(
+        "# Stage result\n\n"
+        "## Status\n\n"
+        "- Status: `blocked`\n\n"
+        "## Validation summary\n\n"
+        "- Validator verdict: `fail`\n\n"
+        "## Terminal state notes\n\n"
+        "- Blocking question remains unresolved.\n",
+        encoding="utf-8",
+    )
+
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=ValidationVerdict.PASS,
+    )
+
+    transition = decide_post_validation_transition(
+        validation_state,
+        workspace_root=workspace_root,
+    )
+
+    assert transition.action == PostValidationAction.WAIT
+    stage_result_text = stage_result_path.read_text(encoding="utf-8")
+    assert "- Status: `blocked`" in stage_result_text
+    assert "- Validator verdict: `fail`" in stage_result_text
+    assert "stale runtime draft status/verdict was normalized" not in stage_result_text
+
+
 def test_update_stage_unblock_state_keeps_stage_blocked_when_answers_missing(
     tmp_path: Path,
 ) -> None:

@@ -671,13 +671,43 @@ def test_review_spec_prompt_requires_issue_severity_and_rationale_shape() -> Non
         encoding="utf-8"
     )
 
-    assert "`- I1: Severity: medium. Rationale: because ...`" in run_prompt
+    assert "explicit `Severity`, `Evidence`, and `Rationale` text" in run_prompt
+    assert "Severity: medium" in run_prompt
+    assert "Evidence:" in run_prompt
+    assert "Rationale: because ..." in run_prompt
     assert "`- Severity: medium`" in run_prompt
+    assert "`- Evidence: plan.md M2`" in run_prompt
     assert "metadata bullets immediately under each heading" in run_prompt
-    assert "every subsection issue has immediate `Severity:`" in repair_prompt
+    normalized_repair_prompt = " ".join(repair_prompt.split())
+    assert (
+        "every subsection issue has immediate `Severity:`, `Evidence:`, and "
+        "`Rationale:`" in normalized_repair_prompt
+    )
     assert "`Severity: none`" in run_prompt
-    assert "`Rationale: because ...`" in run_prompt
+    assert "`Evidence: plan.md / research-notes.md`" in run_prompt
     assert "do not write bare prose such as `No material issues identified.`" in run_prompt
+
+
+def test_review_spec_prompts_require_direct_evidence_and_reconciliation() -> None:
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/documents/review-spec-report.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "`critical` and `high` issues must cite direct evidence" in run_prompt
+    assert "Do not write unsupported claims such as `source inspection shows`" in run_prompt
+    assert "Do not expand implementation scope" in run_prompt
+    assert "convert speculative risk into a high-severity defect" in run_prompt
+    assert "include `Reconciliation:`" in run_prompt
+    assert "missing evidence reference" in repair_prompt
+    assert "unsupported high-severity claim" in repair_prompt
+    assert "contradiction with upstream research or plan" in repair_prompt
+    assert "Unsupported phrases such as `source inspection shows`" in contract
 
 
 def test_implement_prompts_require_executable_verification_evidence() -> None:

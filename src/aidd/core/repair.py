@@ -243,6 +243,17 @@ def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
             "acceptance-criteria id such as `AC-1`; remove or mark the finding `invalid` "
             "if no such evidence exists."
         )
+    if finding.code == "SEM-MISSING-EVIDENCE-REF" and "review-spec" in normalized_source_path:
+        return (
+            "For each review-spec issue/no-defect item, add `Evidence:` naming a concrete "
+            "upstream artifact, research/source id, target file path, or check result."
+        )
+    if finding.code == "SEM-UNSUPPORTED-CLAIM" and "review-spec" in normalized_source_path:
+        return (
+            "Either cite direct durable evidence and add `Reconciliation:` when contradicting "
+            "upstream research/plan evidence, or downgrade the claim to a bounded low/info "
+            "observation or question."
+        )
     if (
         finding.code == "SEM-UNVERIFIABLE-CHECK-CLAIM"
         and (

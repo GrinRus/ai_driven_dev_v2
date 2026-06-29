@@ -354,6 +354,58 @@ def test_render_repair_brief_adds_review_evidence_reference_hint() -> None:
     assert "remove or mark the finding `invalid`" in repair_brief
 
 
+def test_render_repair_brief_adds_review_spec_evidence_and_reconciliation_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="SEM-MISSING-EVIDENCE-REF",
+                message=(
+                    "Each `Issue list` item must include `Evidence:` naming a concrete "
+                    "artifact, source id, target file path, or check result."
+                ),
+                severity="medium",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/review-spec/review-spec-report.md"
+                    ),
+                    line_number=7,
+                ),
+            ),
+            ValidationFinding(
+                code="SEM-UNSUPPORTED-CLAIM",
+                message=(
+                    "Router-parity claims about `LinearRouter`, `PatternRouter`, and "
+                    "`/**` must include `Reconciliation:`."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/review-spec/review-spec-report.md"
+                    ),
+                    line_number=9,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/review-spec/validator-report.md",
+        prior_stage_artifacts=(
+            "workitems/WI-001/stages/research/output/research-notes.md",
+            "workitems/WI-001/stages/plan/output/plan.md",
+        ),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    )
+
+    assert "For each review-spec issue/no-defect item, add `Evidence:`" in repair_brief
+    assert "research/source id" in repair_brief
+    assert "Either cite direct durable evidence" in repair_brief
+    assert "add `Reconciliation:`" in repair_brief
+    assert "downgrade the claim" in repair_brief
+
+
 def test_render_repair_brief_adds_review_workspace_hygiene_hint() -> None:
     report_markdown = render_validator_report(
         findings=(

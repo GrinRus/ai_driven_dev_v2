@@ -268,6 +268,14 @@ as model/stage-output or prompt/repair quality evidence. Do not classify it as
 provider no-progress, `manual-quality-stop`, unresolved-question `blocked`, or a
 manual product-quality verdict.
 
+Unsupported `review-spec` claims are also AIDD stage-output/document-contract
+failures. If `review-spec-report.md` invents high-severity issues without direct
+evidence, contradicts upstream `research` or `plan` without `Reconciliation`, or leaves
+`stage-result.md` inconsistent with canonical validation, classify the run as
+model/stage-output or prompt/validator quality evidence. Do not classify it as
+provider no-progress, `manual-quality-stop`, unresolved-question `blocked`, or a
+manual product-quality verdict.
+
 `Artifact Quality`, `Code Quality`, and `UI/UX Quality` evaluate the deliverable
 produced by the full flow. These sections are manual review, not runner state.
 `Operator UI/UX decision` is a human-authored sub-decision about the AIDD operator

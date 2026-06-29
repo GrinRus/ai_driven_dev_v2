@@ -199,6 +199,28 @@ def test_live_docs_classify_malformed_interview_documents_as_stage_output_failur
         assert "product-quality" in text
 
 
+def test_live_docs_classify_unsupported_review_spec_claims_as_stage_output_failure() -> None:
+    repo_root = _repo_root()
+    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
+        encoding="utf-8"
+    )
+    live_rubric = (repo_root / "docs" / "e2e" / "live-quality-rubric.md").read_text(
+        encoding="utf-8"
+    )
+    live_skill = (repo_root / ".agents" / "skills" / "live-e2e" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (live_catalog, live_rubric, live_skill):
+        normalized_text = " ".join(text.split())
+        assert "Unsupported `review-spec` claims" in normalized_text
+        assert "direct evidence" in normalized_text
+        assert "Reconciliation" in normalized_text
+        assert "stage-output" in normalized_text
+        assert "provider" in normalized_text
+        assert "manual-quality-stop" in normalized_text
+
+
 def test_roadmap_references_only_existing_user_story_ids() -> None:
     repo_root = _repo_root()
     user_stories_path = repo_root / "docs" / "product" / "user-stories.md"
