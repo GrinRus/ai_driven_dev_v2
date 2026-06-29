@@ -2945,6 +2945,176 @@ def test_validate_semantic_outputs_accepts_none_review_findings_with_evidence_no
     assert findings == ()
 
 
+def test_validate_semantic_outputs_flags_review_clean_approval_with_live_residue(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-LIVE-RESIDUE"
+    (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved\n\n"
+            "## Findings\n\n"
+            "- none\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "coverage/raw/default" in finding.message
+        and "after all review commands" in finding.message
+        for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_accepts_review_condition_with_live_residue_finding(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-LIVE-RESIDUE-FINDING"
+    (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved-with-conditions\n\n"
+            "## Findings\n\n"
+            "### RV-1 - ignored residue remains after review\n\n"
+            "- Severity: `high`\n"
+            "- Disposition: `must-fix`\n"
+            "- Evidence: `coverage/raw/default` remains visible after "
+            "`git status --ignored --short --untracked-files=all`.\n"
+            "- Rationale: because ignored coverage residue is workspace pollution "
+            "unless it is removed or selected as deliverable output.\n\n"
+            "## Risks\n\n"
+            "- Review is conditional on cleanup.\n\n"
+            "## Required follow-up\n\n"
+            "- RV-1: remove `coverage/raw/default` or document it as selected deliverable.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_flags_review_cleanup_claim_with_live_residue(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-LIVE-CLEANUP-CLAIM"
+    (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
+    _write_repository_state(
+        workspace_root,
+        work_item,
+        (
+            "# Repository State\n\n"
+            "## Live setup workspace baseline\n\n"
+            "- Known harness config present: `aidd.example.toml`.\n"
+        ),
+    )
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved\n\n"
+            "## Findings\n\n"
+            "### RV-1 - scoped implementation evidence reviewed\n\n"
+            "- Severity: `low`\n"
+            "- Disposition: `accepted-risk`\n"
+            "- Evidence: `implementation-report.md` records focused verification.\n"
+            "- Rationale: because the selected behavior is covered by targeted tests.\n\n"
+            "## Risks\n\n"
+            "- Cleanup passed after verification; workspace hygiene is clean.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "cleanup passed" in finding.message
+        for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_ignores_review_residue_without_live_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-REVIEW-NON-LIVE-RESIDUE"
+    (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
+    _write_review_report(
+        workspace_root,
+        work_item,
+        (
+            "# Review Report\n\n"
+            "## Verdict\n\n"
+            "- Review status: approved\n\n"
+            "## Findings\n\n"
+            "- none\n\n"
+            "## Risks\n\n"
+            "- No material review risk remains.\n\n"
+            "## Required follow-up\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="review",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_review_subheading_findings(
     tmp_path: Path,
 ) -> None:

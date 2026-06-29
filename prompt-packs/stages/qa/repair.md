@@ -57,7 +57,8 @@ For each finding:
 6. re-check ignored verification residue with `git status --ignored --short --untracked-files=all`
    or equivalent evidence; `.pytest_cache/`, `.ruff_cache/`, `coverage/`, `.coverage*`,
    `__pycache__/`, build, dist, or dependency-cache artifacts must be absent, cleaned, or explicitly keep QA
-   `not-ready` / `hold`. Do not claim cleanup passed from a narrower check.
+   `not-ready` / `hold`. Do not claim cleanup passed from a narrower check, from review alone, or
+   from evidence collected before the final QA commands.
 
 Use concrete repair actions:
 
@@ -93,6 +94,9 @@ Use concrete repair actions:
   in unrelated files or environment-sensitive surfaces outside the selected scope, keep it as a
   non-blocking optional-check note rather than a residual risk;
 - status drift: align validator verdict, stage status, blockers, and next actions.
+- workspace hygiene contradiction: if ignored residue remains visible before or during QA, set
+  `QA verdict: not-ready` / `hold` unless the output cites post-QA cleanup evidence that covers
+  the residue classes. A clean review report alone is not enough.
 
 ## Targeted repair discipline
 
@@ -148,6 +152,8 @@ Use concrete repair actions:
 - every `AC-N` from acceptance context has its own same-bullet evidence reference when acceptance
   criteria are provided,
 - top-level `workitems/...` duplicates and stray scratch artifacts are absent or keep QA `not-ready`,
+- ignored residue was checked after all QA commands; current residue either has post-cleanup
+  evidence or keeps QA `not-ready` / `hold`,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no conflict remains between `qa-report.md`, `validator-report.md`, and `stage-result.md`.

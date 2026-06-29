@@ -243,6 +243,19 @@ def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
             "acceptance-criteria id such as `AC-1`; remove or mark the finding `invalid` "
             "if no such evidence exists."
         )
+    if (
+        finding.code == "SEM-UNVERIFIABLE-CHECK-CLAIM"
+        and (
+            "ignored workspace residue" in normalized_message
+            or "ignored residue" in normalized_message
+            or "workspace residue" in normalized_message
+        )
+    ):
+        return (
+            "Check ignored residue after all review commands. Remove the residue and cite "
+            "post-cleanup evidence, or record an active `RV-*` finding with direct residue "
+            "evidence. Do not write `Findings: none` while residue exists."
+        )
     return ""
 
 

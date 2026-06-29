@@ -354,6 +354,41 @@ def test_render_repair_brief_adds_review_evidence_reference_hint() -> None:
     assert "remove or mark the finding `invalid`" in repair_brief
 
 
+def test_render_repair_brief_adds_review_workspace_hygiene_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="SEM-UNVERIFIABLE-CHECK-CLAIM",
+                message=(
+                    "Live review cannot declare approved/no findings or cleanup passed "
+                    "while non-baseline ignored workspace residue exists after review: "
+                    "coverage/raw/default."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/review/review-report.md"
+                    ),
+                    line_number=7,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+        prior_stage_artifacts=("workitems/WI-001/stages/review/review-report.md",),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    )
+
+    assert "Check ignored residue after all review commands" in repair_brief
+    assert "post-cleanup evidence" in repair_brief
+    assert "active `RV-*` finding" in repair_brief
+    assert "Do not write `Findings: none` while residue exists" in repair_brief
+
+
 def test_render_repair_brief_marks_final_repair_attempt() -> None:
     report_markdown = render_validator_report(
         findings=(

@@ -97,8 +97,11 @@ Optional context documents may improve review depth, but they must not replace i
   directories from
   `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
   equivalent evidence must be reviewed as workspace pollution unless they are selected deliverable
-  outputs or were removed before review. A cleanup claim is not review evidence unless it
-  explicitly covers these ignored residue classes.
+  outputs or were removed before the final review report. A cleanup claim is not review evidence
+  unless it explicitly covers these ignored residue classes after all review commands have run.
+  If review itself creates ignored residue, review must either remove it and cite post-cleanup
+  evidence or record an active finding. `Review status: approved` and `Findings: none` are invalid
+  while non-baseline ignored residue remains visible in live workspace evidence.
 - When upstream `tasklist` or `plan` artifacts are available, review must check the implementation
   against their nontrivial task details, required mitigations, and explicit risk-verification
   promises, not only the high-level acceptance criteria. This includes named implementation

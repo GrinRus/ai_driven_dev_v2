@@ -516,6 +516,37 @@ def test_live_prompts_and_contracts_protect_prepared_workspace() -> None:
         assert "cleanup claim" in text or "claim cleanup" in text
 
 
+def test_review_and_qa_prompts_require_post_command_residue_truthfulness() -> None:
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_repair = Path("prompt-packs/stages/review/repair.md").read_text(
+        encoding="utf-8"
+    )
+    qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    qa_repair = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
+    review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
+    qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+
+    review_texts = (review_prompt, review_repair, review_contract)
+    for text in review_texts:
+        normalized = " ".join(text.split())
+        assert "after all review commands" in normalized
+        assert "`Findings: none`" in text
+        assert "residue" in text
+        assert "`coverage/`" in text
+        assert "post-cleanup evidence" in normalized
+
+    qa_texts = (qa_prompt, qa_repair, qa_contract)
+    for text in qa_texts:
+        normalized = " ".join(text.split())
+        assert "after all QA commands" in normalized
+        assert "clean review report" in normalized
+        assert "`QA verdict: ready`" in text or "`not-ready`" in text
+        assert "`coverage/`" in text
+        assert "residue" in text
+
+
 def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> None:
     run_prompt = Path("prompt-packs/stages/research/run.md").read_text(
         encoding="utf-8"

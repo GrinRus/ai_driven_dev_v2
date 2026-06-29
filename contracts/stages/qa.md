@@ -101,8 +101,10 @@ Optional context documents may improve QA depth, but they must not replace imple
   directories from
   `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
   equivalent evidence must be treated as workspace pollution unless they are selected deliverable
-  outputs or were removed before QA. Do not claim cleanup passed unless the cited evidence
-  explicitly covers these ignored residue classes.
+  outputs or were removed before the final QA report. QA must not rely only on a clean review
+  report when current repository evidence shows ignored residue. Do not claim cleanup passed or set
+  `QA verdict: ready` unless the cited evidence explicitly covers these ignored residue classes
+  after all QA commands have run, or else set `QA verdict: not-ready`.
 - Intentional design constraints selected by the authored task or resolved interview answers
   must not force `ready-with-risks` or `proceed-with-conditions` by themselves when the
   implementation exactly follows that selected boundary and required mitigations, tests, and
