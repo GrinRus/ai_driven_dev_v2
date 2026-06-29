@@ -82,26 +82,24 @@ Optional context documents may improve review depth, but they must not replace i
   evidence for such files must cite `git status --short --untracked-files=all` plus direct file
   inspection, or an explicit untracked-file diff method such as
   `git diff --no-index /dev/null <untracked-file>`.
-- In live E2E contexts, `context/repository-state.md` may include a
-  `Live setup workspace baseline` section. Files listed there under known harness config or
-  setup-baseline untracked non-AIDD files are not review findings solely because they remain
-  visible in `git status`; record a finding only when implementation changes them, depends on them
-  as product evidence, contradicts selected scope, or introduces new untracked files outside that
-  baseline.
-- Live harness workspace recovery is not product work. If implementation evidence shows the
-  prepared checkout disappeared, was recloned, or a harness run directory such as `install-home/`,
-  `source/`, `build/`, or `target/` was deleted, moved, or recreated, review must record a
+- `context/workspace-baseline.md` may list setup-owned files and baseline untracked files. Files
+  listed there are not review findings solely because they remain visible in `git status`; record a
+  finding only when implementation changes them, depends on them as product evidence, contradicts
+  selected scope, or introduces new untracked files outside that baseline.
+- Setup workspace recovery is not product work. If implementation evidence shows the prepared
+  checkout disappeared, was recloned, or setup-owned paths listed in
+  `context/workspace-baseline.md` were deleted, moved, or recreated, review must record a
   `must-fix` finding.
 - Ignored local artifacts are still workspace hygiene evidence. New `.venv/`, `.pytest_cache/`,
   `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
-  directories from
-  `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
-  equivalent evidence must be reviewed as workspace pollution unless they are selected deliverable
+  directories from `context/workspace-baseline.md`, `git status --ignored --short
+  --untracked-files=all`, or equivalent evidence must be reviewed as workspace pollution unless
+  they are selected deliverable
   outputs or were removed before the final review report. A cleanup claim is not review evidence
   unless it explicitly covers these ignored residue classes after all review commands have run.
   If review itself creates ignored residue, review must either remove it and cite post-cleanup
   evidence or record an active finding. `Review status: approved` and `Findings: none` are invalid
-  while non-baseline ignored residue remains visible in live workspace evidence.
+  while non-baseline ignored residue remains visible in workspace evidence.
 - When upstream `tasklist` or `plan` artifacts are available, review must check the implementation
   against their nontrivial task details, required mitigations, and explicit risk-verification
   promises, not only the high-level acceptance criteria. This includes named implementation

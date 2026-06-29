@@ -98,20 +98,18 @@ normalize if canonical validation proves the terminal status inconsistent.
    file: plain `git diff` does not show untracked file contents. Cite `git status --short
    --untracked-files=all` plus direct file inspection, or an explicit untracked-file diff method
    such as `git diff --no-index /dev/null <untracked-file>`.
-   In live E2E contexts, first read `context/repository-state.md` section
-   `Live setup workspace baseline`: files listed under `Known harness config present` or
-   `Setup-baseline untracked non-AIDD files` are not review blockers solely because they appear in
-   `git status`. Treat them as findings only when implementation changed them, relies on them as
-   product evidence, contradicts the selected task, or new untracked files appear outside that
-   baseline.
+   When `context/workspace-baseline.md` is provided, first read it as setup-owned workspace
+   context: files listed as setup-owned or setup-baseline files are not review blockers solely
+   because they appear in `git status`. Treat them as findings only when implementation changed
+   them, relies on them as product evidence, contradicts the selected task, or new untracked files
+   appear outside that baseline.
    If `context/diff-summary.md`, `context/repository-state.md`, or implementation evidence shows
    lockfile, dependency manifest, generated resolver output, or project config changes that are not
    required by the selected task, record a `must-fix` finding and do not approve the change cleanly.
-   If implementation evidence says the prepared checkout disappeared, was recloned, or any live
-   harness run directory such as `install-home/`, `source/`, `build/`, or `target/` was deleted,
-   moved, or recreated, record a `must-fix` finding. Live harness workspace recovery is an
-   execution blocker, not part of the product deliverable.
-   If `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+   If implementation evidence says the prepared checkout disappeared, was recloned, or setup-owned
+   workspace paths were deleted, moved, or recreated, record a `must-fix` finding. Setup workspace
+   recovery is an execution blocker, not part of the product deliverable.
+   If `context/workspace-baseline.md`, `git status --ignored --short --untracked-files=all`, or
    equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
    `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
    directories, inspect them as workspace pollution and record a finding unless they are selected

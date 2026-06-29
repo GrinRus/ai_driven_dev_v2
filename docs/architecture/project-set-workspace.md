@@ -120,7 +120,7 @@ Project-set support is not complete until harness coverage proves:
 - cross-project links survive result bundling;
 - runtime-specific discovery does not change the declared project set.
 
-Live E2E coverage can be added after deterministic project-set coverage exists.
+Manual external eval coverage can be added after deterministic project-set coverage exists.
 
 Current deterministic coverage includes
 `harness/scenarios/deterministic/project-set-plan-context.yaml`, which declares

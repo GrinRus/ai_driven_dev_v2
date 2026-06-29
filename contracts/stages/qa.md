@@ -87,20 +87,19 @@ Optional context documents may improve QA depth, but they must not replace imple
 - Out-of-scope lockfile, dependency manifest, generated resolver output, or project config changes
   must force quality verdict `not-ready` and release recommendation `hold` unless the selected task
   explicitly requires that dependency/config change.
-- In live E2E contexts, `context/repository-state.md` may include a
-  `Live setup workspace baseline` section. Files listed there under known harness config or
-  setup-baseline untracked non-AIDD files are not QA blockers solely because they remain visible in
-  `git status`; block QA only when implementation changes them, depends on them as deliverable
-  evidence, contradicts selected scope, or introduces new untracked files outside that baseline.
-- Live harness workspace recovery is not product evidence. If implementation evidence shows the
-  prepared checkout disappeared, was recloned, or a harness run directory such as `install-home/`,
-  `source/`, `build/`, or `target/` was deleted, moved, or recreated, QA must set
+- `context/workspace-baseline.md` may list setup-owned files and baseline untracked files. Files
+  listed there are not QA blockers solely because they remain visible in `git status`; block QA
+  only when implementation changes them, depends on them as deliverable evidence, contradicts
+  selected scope, or introduces new untracked files outside that baseline.
+- Setup workspace recovery is not product evidence. If implementation evidence shows the prepared
+  checkout disappeared, was recloned, or setup-owned paths listed in
+  `context/workspace-baseline.md` were deleted, moved, or recreated, QA must set
   `QA verdict: not-ready` and release recommendation `hold`.
 - Ignored local artifacts are still workspace hygiene evidence. New `.venv/`, `.pytest_cache/`,
   `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
-  directories from
-  `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
-  equivalent evidence must be treated as workspace pollution unless they are selected deliverable
+  directories from `context/workspace-baseline.md`, `git status --ignored --short
+  --untracked-files=all`, or equivalent evidence must be treated as workspace pollution unless they
+  are selected deliverable
   outputs or were removed before the final QA report. QA must not rely only on a clean review
   report when current repository evidence shows ignored residue. Do not claim cleanup passed or set
   `QA verdict: ready` unless the cited evidence explicitly covers these ignored residue classes

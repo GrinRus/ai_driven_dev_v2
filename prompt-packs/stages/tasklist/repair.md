@@ -9,7 +9,7 @@ dependency clarity, and reviewability of each task item.
 
 1. `validator-report.md` (latest finding codes, severities, and locations)
 2. `repair-brief.md` (repair scope and constraints)
-3. `stage-brief.md` (embedded required skeletons for installed live runs)
+3. `stage-brief.md` (embedded required skeletons for installed package runs)
 4. `contracts/stages/tasklist.md` when present
 5. `contracts/documents/tasklist.md`, `contracts/documents/validator-report.md`,
    `contracts/documents/stage-result.md`
@@ -22,7 +22,7 @@ dependency clarity, and reviewability of each task item.
 `repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
 any repair summary in `stage-result.md` and reference `repair-brief.md` by path for traceability.
 
-Repository-local `contracts/...` files may be absent in installed live target checkouts. Do not
+Repository-local `contracts/...` files may be absent in installed package checkouts. Do not
 search broadly for missing contracts or fail because they are absent; use `stage-brief.md` as the
 authoritative skeleton source and repair the required outputs immediately. After reading
 `validator-report.md`, `repair-brief.md`, and `stage-brief.md`, the first file-changing action must

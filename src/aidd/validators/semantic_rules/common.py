@@ -197,8 +197,8 @@ QA_RELEASE_RECOMMENDATION_PATTERN = re.compile(
     r"\b(proceed-with-conditions|hold|proceed)\b",
     flags=re.IGNORECASE,
 )
-LIVE_SETUP_WORKSPACE_BASELINE_PATTERN = re.compile(
-    r"\bLive setup workspace baseline\b",
+SETUP_WORKSPACE_BASELINE_PATTERN = re.compile(
+    r"\bSetup-Owned Workspace Baseline\b",
     flags=re.IGNORECASE,
 )
 IGNORED_WORKSPACE_STATUS_EVIDENCE_PATTERN = re.compile(
@@ -392,20 +392,20 @@ def work_item_root_from_output_path(output_path: Path) -> Path | None:
     return None
 
 
-def is_live_setup_workspace_context(context: SemanticDocumentContext) -> bool:
+def has_setup_workspace_baseline_context(context: SemanticDocumentContext) -> bool:
     work_item_root = work_item_root_from_output_path(context.output_path)
     if work_item_root is None:
         return False
 
-    repository_state_path = work_item_root / "context" / "repository-state.md"
-    if not repository_state_path.exists():
+    baseline_path = work_item_root / "context" / "workspace-baseline.md"
+    if not baseline_path.exists():
         return False
 
-    repository_state = repository_state_path.read_text(
+    baseline_text = baseline_path.read_text(
         encoding="utf-8",
         errors="replace",
     )
-    return LIVE_SETUP_WORKSPACE_BASELINE_PATTERN.search(repository_state) is not None
+    return SETUP_WORKSPACE_BASELINE_PATTERN.search(baseline_text) is not None
 
 
 def has_ignored_workspace_status_evidence(text: str) -> bool:
@@ -416,7 +416,7 @@ def has_residue_producing_verification(text: str) -> bool:
     return IGNORED_RESIDUE_PRODUCING_CHECK_PATTERN.search(text) is not None
 
 
-def validate_live_ignored_workspace_status_evidence(
+def validate_setup_ignored_workspace_status_evidence(
     *,
     context: SemanticDocumentContext,
     evidence_text: str,
@@ -424,7 +424,7 @@ def validate_live_ignored_workspace_status_evidence(
     code: str,
     message: str,
 ) -> tuple[ValidationFinding, ...]:
-    if not is_live_setup_workspace_context(context):
+    if not has_setup_workspace_baseline_context(context):
         return tuple()
     if not has_residue_producing_verification(evidence_text):
         return tuple()

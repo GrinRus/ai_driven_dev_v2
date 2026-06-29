@@ -64,7 +64,7 @@ normalize if canonical validation proves the terminal status inconsistent.
    `TL-1`, use those local ids to structure touched-file and verification evidence where practical.
 2. When `context/allowed-write-scope.md` is provided, it is a hard boundary for touched files.
 3. When provided, `context/acceptance-criteria.md` and `context/verification-output.md` define the
-   authored live acceptance and verification baseline for the implementation.
+   authored acceptance and verification baseline for the implementation.
 4. Change summary must describe what changed, why it changed, and how it maps to the selected task id.
 5. Touched-files list must include concrete path + short intent per entry and never claim unobserved edits.
    Treat newly created untracked source files under the allowed write scope as observed workspace
@@ -76,11 +76,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 9. Do not use `git stash`, `git reset`, `git checkout --`, or `git restore` in the deliverable
    workspace to run negative checks or revert files. Use a disposable copy for destructive
    experiments, or mark the check `not-run: <reason>`.
-   Do not delete, move, reclone, or recreate the prepared repository checkout or any live harness
-   run directory such as `source/`, `build/`, `install-home/`, `uv-cache/`, or `target/`.
-   If the prepared checkout, installed `aidd` command, or packaged contracts disappear, stop and
+   Do not delete, move, reclone, or recreate the prepared repository checkout or setup-owned
+   paths listed in `context/workspace-baseline.md`.
+   If the prepared checkout, configured stage runner command, or packaged contracts disappear, stop and
    report the stage as `blocked` or `failed` with the exact missing path; do not try to recover by
-   running `git clone` or rebuilding the harness workspace inside the stage.
+   running `git clone` or rebuilding the setup workspace inside the stage.
 10. Do not leave lockfiles, dependency manifests, generated resolver output, or project config
    changed unless the selected task explicitly requires dependency/config updates. If such files
    change incidentally, stop and report the out-of-scope change instead of silently treating it as
@@ -96,7 +96,7 @@ normalize if canonical validation proves the terminal status inconsistent.
     `.aidd/workitems/...` from the repository root. If `git status --short --untracked-files=all`
     shows top-level `workitems/...`, stray stage documents, or scratch files unrelated to the
     selected task, clean them up or report the implementation as not clean.
-    If this live setup workspace runs any test, type, lint, docs, or build command, verification
+    If this setup-owned workspace runs any test, type, lint, docs, or build command, verification
     notes must include the exact command
     `git status --ignored --short --untracked-files=all` with an observed outcome.
     `git status --short --untracked-files=all` is insufficient because it hides ignored residue.
@@ -196,7 +196,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - no-op handling (if any) includes justification, evidence, and next action,
 - no top-level `workitems/...` artifacts, stray stage/control documents, or scratch files are left
   in the deliverable workspace,
-- no live harness checkout/install directories were deleted or recreated, and no ignored local
+- no setup-owned workspace paths were deleted or recreated, and no ignored local
   environment, cache, coverage, build, or dist artifacts are left as unexplained workspace
   pollution; a cleanup claim is valid only when its evidence explicitly covers `.pytest_cache/`,
   `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, and dependency-cache residue,

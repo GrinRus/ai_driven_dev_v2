@@ -66,12 +66,12 @@ For each finding:
 7. re-check `git status --short --untracked-files=all`; top-level `workitems/...`, stray
    stage/control documents, or unrelated scratch files must be cleaned up or reported as a
    not-clean implementation state.
-8. Do not delete, move, reclone, or recreate the prepared repository checkout or any live harness
-   run directory such as `source/`, `build/`, `install-home/`, `uv-cache/`, or `target/`. If the
-   prepared checkout, installed `aidd` command, or packaged contracts disappear, report the repair
+8. Do not delete, move, reclone, or recreate the prepared repository checkout or setup-owned
+   paths listed in `context/workspace-baseline.md`. If the
+   prepared checkout, configured stage runner command, or packaged contracts disappear, report the repair
    attempt as `blocked` or `failed` with the exact missing path instead of running `git clone` or
-   rebuilding the harness workspace.
-9. If the live setup workspace ran any test, type, lint, docs, or build command, re-check ignored
+   rebuilding the setup workspace.
+9. If the setup-owned workspace ran any test, type, lint, docs, or build command, re-check ignored
    local artifacts with the exact command `git status --ignored --short --untracked-files=all`
    and include that command as its own verification bullet. `git status --short --untracked-files=all`
    is insufficient because it hides ignored residue. Newly created `.venv/`, `.pytest_cache/`,
@@ -124,8 +124,8 @@ Use concrete repair actions:
 12. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
 13. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
     from the repository root.
-14. Do not delete, move, reclone, or recreate the prepared repository checkout or live harness run
-    directories; missing checkout/install/contract paths are blockers, not repair work.
+14. Do not delete, move, reclone, or recreate the prepared repository checkout or setup-owned
+    workspace paths; missing checkout/runner/contract paths are blockers, not repair work.
 
 ## Repair exit checks
 
@@ -137,7 +137,7 @@ Use concrete repair actions:
 - touched-files entries stay within allowed write scope, match observed edits, and include same-line
   path + intent for every top-level file entry,
 - no top-level `workitems/...` artifacts or unrelated scratch files remain in the deliverable workspace,
-- no live harness checkout/install directories were deleted or recreated, and no ignored local
+- no setup-owned workspace paths were deleted or recreated, and no ignored local
   environment, cache, coverage, build, or dist artifacts are left as unexplained workspace
   pollution; cleanup evidence explicitly covers `.pytest_cache/`, `.ruff_cache/`, `coverage/`,
   `.coverage*`, `__pycache__/`, build, dist, and dependency-cache residue,

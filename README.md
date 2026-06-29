@@ -30,7 +30,7 @@ workspace, or sandboxed checkout for trials.
 Beta-readiness work on `main` is a preparation gate, not a production-readiness claim.
 Before any beta-oriented release note is published, maintainers must confirm that the README,
 main user stories, and target architecture still match the code, deterministic release checks
-pass, and manual live evidence is refreshed outside CI/CD.
+pass, and manual eval evidence is refreshed outside CI/CD.
 
 Do not commit `.aidd/` unless your repository policy explicitly allows it. The workspace can
 contain raw runtime logs, prompts, repository context, operator answers, and other sensitive
@@ -49,7 +49,7 @@ AIDD provides:
 - bounded self-repair after invalid outputs;
 - durable questions, answers, logs, validation reports, and run artifacts;
 - a CLI and local operator UI over the same repository-local `.aidd/` workspace;
-- deterministic harnesses and manual live E2E evaluation support.
+- deterministic harnesses and manual evaluation support.
 
 AIDD does not bundle third-party runtime binaries. Operators install and authenticate
 Claude Code, Codex, OpenCode, or other runtime CLIs separately.
@@ -139,8 +139,8 @@ uv tool run --from /path/to/ai_driven_dev_v2 aidd
 ```
 
 The product operator path starts from a local project root. `aidd init --github-issue <url>`
-is out of product scope. Public GitHub repositories are live E2E targets and
-support/reporting evidence sources only, not a product intake path.
+is out of product scope. Public GitHub repositories are evaluator evidence sources only,
+not a product intake path.
 
 ## Choose a runtime
 
@@ -151,8 +151,8 @@ tiers, and default timeout settings.
 | --- | --- | --- | --- |
 | `generic-cli` | Python | `adapter-flags` | Advanced AIDD-compatible wrapper and deterministic checks |
 | `claude-code` | Authenticated `claude` CLI | `native` | Claude Code-backed workflow runs |
-| `codex` | Authenticated `codex` CLI | `native` | Codex-backed workflow runs and live evals |
-| `opencode` | Authenticated `opencode` CLI | `native` | OpenCode-backed workflow runs and live evals |
+| `codex` | Authenticated `codex` CLI | `native` | Codex-backed workflow runs and manual evals |
+| `opencode` | Authenticated `opencode` CLI | `native` | OpenCode-backed workflow runs and manual evals |
 | `qwen` | Authenticated `qwen` CLI | `native` | Experimental Qwen Code workflow runs |
 
 Product workflow and stage execution require an explicit runtime id:
@@ -305,48 +305,14 @@ Contributor workflow:
 
 ## Eval and release evidence
 
-AIDD includes deterministic harness checks and manual live E2E scenarios. Live E2E is
-manual local operator audit evidence, not CI/CD, not a release workflow, not GitHub Actions,
-and not a release gate. CI, security, and release workflows must not run live scenarios,
-require provider credentials, or depend on public live target repositories.
+AIDD includes deterministic harness checks and manual evaluation scenarios. Public
+repository evals are local operator audit evidence, not CI/CD, not a release workflow,
+not GitHub Actions, and not a release gate. CI, security, and release workflows must
+not run public-repository scenarios, require provider credentials, or depend on public
+target repositories.
 
-Example black-box live E2E evaluator command:
-
-```bash
-uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml --runtime codex --work-root /tmp/aidd-live-e2e --report-root .aidd/reports/evals
-```
-
-Manual live E2E scenarios snapshot tracked AIDD `HEAD` into
-`${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd`, build and install through an
-isolated `uv tool` home/cache, clone the pinned target repository under
-`<work-root>/<run_id>/target/<repo-slug>`, run from the target repository root,
-execute each stage through public `aidd stage run` and inspection commands plus
-loopback `aidd ui` UI/API checkpoints, write `stage-audits/<stage-run-id>.json`
-and `.md` per-stage-run audits, write `target-workspace-evidence.json` / `.md` with
-non-gating target diff and workspace-pollution evidence, and preserve durable execution bundles under
-`.aidd/reports/evals/`. Live manifest `limits.timeout_minutes` is a per-stage
-command budget; aggregate `run-transcript.json` does not report a global timeout
-unless the runner actually uses one. The runner does not score deliverable quality or create a
-quality report; for product-evaluation runs the launching SWE agent writes
-`stage-quality-audits/<stage-run-id>.md` before each resume and may write
-`.aidd/reports/evals/<run_id>/quality-report.md` manually after the terminal run,
-including iteration history and a human-authored AIDD operator UI/UX decision when
-that quality dimension must be judged.
-When successful manifest verification creates only new known ignored byproducts
-after QA, the runner records `verify-transcript.json.workspace_cleanup` and removes
-that verification residue before final target workspace evidence. This is execution
-hygiene, not a quality gate.
-Manual review should inspect `target-workspace-evidence.*` and, when needed, cite
-`git status --short --untracked-files=all`; top-level `workitems/...` duplicates
-are severe deliverable pollution, while `aidd.example.toml` is harness config rather
-than product diff. New ignored files inside a setup-baseline ignored root, such as
-`.venv/.../__pycache__`, are recorded as setup-baseline ignored churn rather than
-pollution findings.
-The evaluator always builds a local wheel from the clean tracked source checkout
-containing the scenario manifest. Published-package install proof is a separate
-release/install evidence lane, not part of public-repository live E2E.
-
-Public GitHub repositories are live E2E targets for evaluator evidence only. See:
+Detailed scenario policies, runbooks, artifact inventories, and manual quality
+rubrics live under:
 
 - `docs/e2e/live-e2e-catalog.md`
 - `docs/e2e/scenario-matrix.md`
@@ -363,7 +329,7 @@ contract.
 - `docs/operator-support-policy.md` — support and evidence expectations
 - `docs/product/user-stories.md` — product outcomes and scope boundaries
 - `docs/architecture/` — stable architecture decisions and protocols
-- `docs/e2e/` — manual live E2E and local operator UI evidence
+- `docs/e2e/` — manual eval and local operator UI evidence
 - `docs/backlog/roadmap.md` — canonical plan
 - `docs/backlog/backlog.md` — short actionable queue
 - `docs/compatibility-policy.md` — Python and platform compatibility
@@ -373,7 +339,7 @@ contract.
 - `src/aidd/` — Python package with core orchestration, adapters, validators, CLI, harness, and evals
 - `contracts/` — stage and document contracts
 - `prompt-packs/` — file-based stage prompts
-- `harness/scenarios/` — smoke and live scenario manifests
+- `harness/scenarios/` — smoke and manual scenario manifests
 - `.agents/skills/` — reusable team skills for Codex-style development
 - `tests/` — deterministic unit, integration, docs, adapter, harness, and eval checks
 - `MANIFEST.md` — historical archive contents snapshot, not the current source-of-truth inventory

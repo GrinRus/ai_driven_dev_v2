@@ -154,6 +154,23 @@ def _write_repository_state(workspace_root: Path, work_item: str, body: str) -> 
     return path
 
 
+def _write_workspace_baseline(
+    workspace_root: Path,
+    work_item: str,
+    body: str = (
+        "# Workspace Baseline\n\n"
+        "## Setup-Owned Workspace Baseline\n\n"
+        "- Setup-owned context captured before stage execution.\n\n"
+        "## Setup-Owned Files Present\n\n"
+        "- `aidd.example.toml`\n"
+    ),
+) -> Path:
+    path = workspace_root / "workitems" / work_item / "context" / "workspace-baseline.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
 def _write_review_spec_report(workspace_root: Path, work_item: str, body: str) -> Path:
     path = (
         workspace_root
@@ -208,7 +225,7 @@ def test_has_non_placeholder_text_detects_placeholders() -> None:
         "- No\n  `N/A` values are used for required evidence."
     )
     assert has_non_placeholder_text(
-        "TSV header-only input is exercised with `sqlite-utils insert ... --tsv`."
+        "TSV header-only input is exercised with `data-tool insert ... --tsv`."
     )
     assert has_non_placeholder_text(
         "```\nAssertionError: Cannot transform a table\n```\n"
@@ -1630,9 +1647,9 @@ def test_validate_semantic_outputs_flags_review_spec_high_claim_without_direct_e
             "- `not-ready`\n\n"
             "## Issue list\n\n"
             "- I1: Severity: high. Evidence: source inspection. Rationale: because "
-            "source inspection shows the router behavior is missing.\n\n"
+            "source inspection shows the parser behavior is missing.\n\n"
             "## Strengths\n\n"
-            "- The plan names the target router area.\n\n"
+            "- The plan names the target parser area.\n\n"
             "## Recommendation summary\n\n"
             "- Provide direct source evidence before blocking decomposition.\n\n"
             "## Required changes\n\n"
@@ -1651,28 +1668,27 @@ def test_validate_semantic_outputs_flags_review_spec_high_claim_without_direct_e
     assert any(finding.code == UNSUPPORTED_CLAIM_CODE for finding in findings)
 
 
-def test_validate_semantic_outputs_flags_review_spec_router_parity_without_reconciliation(
+def test_validate_semantic_outputs_flags_review_spec_contradiction_without_reconciliation(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_review_spec_report(
         workspace_root,
-        "WI-REVIEW-SPEC-ROUTER-PARITY",
+        "WI-REVIEW-SPEC-CONTRADICTION",
         (
             "# Review Spec Report\n\n"
             "## Readiness state\n\n"
             "- `not-ready`\n\n"
             "## Issue list\n\n"
-            "### I1 - Router parity blocker\n\n"
+            "### I1 - Plan contradiction blocker\n\n"
             "- Severity: high\n"
-            "- Evidence: `src/router/linear-router/router.ts` and "
-            "`src/router/pattern-router/router.ts`.\n"
-            "- Rationale: because LinearRouter and PatternRouter currently make "
-            "`/**` match only `/`, so implementation scope must expand.\n\n"
+            "- Evidence: `src/importer/reader.py` and `plan.md`.\n"
+            "- Rationale: because source inspection contradicts the plan's claim "
+            "that the importer already rejects malformed rows.\n\n"
             "## Strengths\n\n"
-            "- The plan identifies router parity as important.\n\n"
+            "- The plan identifies importer validation as important.\n\n"
             "## Recommendation summary\n\n"
-            "- Reconcile the router claim with upstream research before proceeding.\n\n"
+            "- Reconcile the contradiction with upstream research before proceeding.\n\n"
             "## Required changes\n\n"
             "- Add reconciliation or remove I1.\n\n"
             "## Decision\n\n"
@@ -1682,39 +1698,38 @@ def test_validate_semantic_outputs_flags_review_spec_router_parity_without_recon
 
     findings = validate_semantic_outputs(
         stage="review-spec",
-        work_item="WI-REVIEW-SPEC-ROUTER-PARITY",
+        work_item="WI-REVIEW-SPEC-CONTRADICTION",
         workspace_root=workspace_root,
     )
 
     assert any(finding.code == UNSUPPORTED_CLAIM_CODE for finding in findings)
 
 
-def test_validate_semantic_outputs_accepts_review_spec_router_parity_with_reconciliation(
+def test_validate_semantic_outputs_accepts_review_spec_contradiction_with_reconciliation(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_review_spec_report(
         workspace_root,
-        "WI-REVIEW-SPEC-ROUTER-PARITY-RECONCILED",
+        "WI-REVIEW-SPEC-CONTRADICTION-RECONCILED",
         (
             "# Review Spec Report\n\n"
             "## Readiness state\n\n"
             "- `not-ready`\n\n"
             "## Issue list\n\n"
-            "### I1 - Router parity blocker\n\n"
+            "### I1 - Plan contradiction blocker\n\n"
             "- Severity: high\n"
-            "- Evidence: `src/router/linear-router/router.ts`, "
-            "`src/router/pattern-router/router.ts`, and F7.\n"
+            "- Evidence: `src/importer/reader.py`, `plan.md`, and F7.\n"
             "- Reconciliation: F7 is superseded by the direct failing probe "
-            "`bun test router-double-star.test.ts`.\n"
-            "- Rationale: because LinearRouter and PatternRouter currently make "
-            "`/**` match only `/`, so implementation scope must expand.\n\n"
+            "`repo-cli validate-import fixtures/bad.csv`.\n"
+            "- Rationale: because source inspection contradicts the plan's claim "
+            "that the importer already rejects malformed rows.\n\n"
             "## Strengths\n\n"
-            "- The plan identifies router parity as important.\n\n"
+            "- The plan identifies importer validation as important.\n\n"
             "## Recommendation summary\n\n"
-            "- Update the plan with the reconciled router evidence.\n\n"
+            "- Update the plan with the reconciled importer evidence.\n\n"
             "## Required changes\n\n"
-            "- Add the failing router probe before task decomposition.\n\n"
+            "- Add the failing importer probe before task decomposition.\n\n"
             "## Decision\n\n"
             "- `rejected`\n"
         ),
@@ -1722,7 +1737,7 @@ def test_validate_semantic_outputs_accepts_review_spec_router_parity_with_reconc
 
     findings = validate_semantic_outputs(
         stage="review-spec",
-        work_item="WI-REVIEW-SPEC-ROUTER-PARITY-RECONCILED",
+        work_item="WI-REVIEW-SPEC-CONTRADICTION-RECONCILED",
         workspace_root=workspace_root,
     )
 
@@ -1832,7 +1847,7 @@ def test_validate_semantic_outputs_accepts_compact_tasklist_ids(tmp_path: Path) 
         (
             "# Tasklist\n\n"
             "## Task summary\n\n"
-            "Decompose the live sqlite-utils fix into ordered, reviewable tasks "
+            "Decompose the importer fix into ordered, reviewable tasks "
             "with explicit verification coverage.\n\n"
             "## Ordered tasks\n\n"
             "### T1 - Confirm upstream issue shape\n\n"
@@ -1846,7 +1861,7 @@ def test_validate_semantic_outputs_accepts_compact_tasklist_ids(tmp_path: Path) 
             "this covers the default post-4.0a1 path without treating that "
             "version phrase as a task id.\n\n"
             "### T3 - Guard insert transform call\n\n"
-            "- Dominant output artifact: one guard in `sqlite_utils/cli.py`.\n"
+            "- Dominant output artifact: one guard in `data_tool/cli.py`.\n"
             "- Dependencies: `T2`.\n"
             "- Verification note: run the insert regression plus happy-path CSV tests.\n\n"
             "## Dependencies\n\n"
@@ -1881,7 +1896,7 @@ def test_validate_semantic_outputs_ignores_tradeoff_ids_when_tasklist_uses_tl_id
         (
             "# Tasklist\n\n"
             "## Task summary\n\n"
-            "Decompose the live sqlite-utils fix into ordered, reviewable tasks "
+            "Decompose the importer fix into ordered, reviewable tasks "
             "while retaining references to plan trade-offs T1 and T2 as context.\n\n"
             "## Ordered tasks\n\n"
             "### TL-1 - Add regression tests\n\n"
@@ -1889,7 +1904,7 @@ def test_validate_semantic_outputs_ignores_tradeoff_ids_when_tasklist_uses_tl_id
             "- Dependencies: none.\n"
             "- Verification note: fails before the guard.\n\n"
             "### TL-2 - Apply guard\n\n"
-            "- Dominant output artifact: one guard in `sqlite_utils/cli.py`.\n"
+            "- Dominant output artifact: one guard in `data_tool/cli.py`.\n"
             "- Dependencies: `TL-1`.\n"
             "- Verification note: covers trade-off T1 and rejected option T2.\n\n"
             "### TL-3 - Run full suite\n\n"
@@ -1927,7 +1942,7 @@ def test_validate_semantic_outputs_ignores_review_and_acceptance_ids_when_taskli
         (
             "# Tasklist\n\n"
             "## Task summary\n\n"
-            "Decompose the sqlite-utils fix into compact T-prefixed tasks while "
+            "Decompose the importer fix into compact T-prefixed tasks while "
             "preserving review condition ids RC-1 and RC-2 plus AC-3 as context.\n\n"
             "## Ordered tasks\n\n"
             "### T1 - Pre-write reproduction\n\n"
@@ -1939,7 +1954,7 @@ def test_validate_semantic_outputs_ignores_review_and_acceptance_ids_when_taskli
             "- Dependencies: `T1`.\n"
             "- Verification note: fails before the guard and includes stderr coverage.\n\n"
             "### T3 - Apply guard\n\n"
-            "- Dominant output artifact: one guard in `sqlite_utils/cli.py`.\n"
+            "- Dominant output artifact: one guard in `data_tool/cli.py`.\n"
             "- Dependencies: `T2`.\n"
             "- Verification note: passes the regression and keeps RC-1 satisfied.\n\n"
             "## Dependencies\n\n"
@@ -2040,13 +2055,13 @@ def test_validate_semantic_outputs_accepts_valid_implement_fixture_bundle() -> N
     assert findings == ()
 
 
-def test_validate_semantic_outputs_accepts_live_style_implementation_report(
+def test_validate_semantic_outputs_accepts_example_style_implementation_report(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_implementation_report(
         workspace_root,
-        "WI-SEM-IMPLEMENT-LIVE",
+        "WI-SEM-IMPLEMENT-EXAMPLE",
         (
             "# Implementation Report\n\n"
             "## Selected task id\n\n"
@@ -2056,7 +2071,7 @@ def test_validate_semantic_outputs_accepts_live_style_implementation_report(
             "edits, regression tests, and verification evidence back to the "
             "selected tasklist tasks.\n\n"
             "## Touched files\n\n"
-            "- `sqlite_utils/cli.py` -> guard the two existing transform follow-up paths.\n"
+            "- `data_tool/cli.py` -> guard the two existing transform follow-up paths.\n"
             "  - line 1179: `if tracker is not None:` -> "
             "`if tracker is not None and tracker.types:`.\n"
             "  - line 2036: `if tracker is not None:` -> "
@@ -2068,32 +2083,32 @@ def test_validate_semantic_outputs_accepts_live_style_implementation_report(
             "```\n\n"
             "## Verification\n\n"
             "### TL-4 regression and gate evidence\n\n"
-            "- `.venv/bin/python -c \"import sqlite_utils.cli\"` -> printed `OK`.\n"
+            "- `.venv/bin/python -c \"import data_tool.cli\"` -> printed `OK`.\n"
             "- `.venv/bin/pytest tests/` -> `1045 passed, 16 skipped`, exit `0`.\n"
-            "- `.venv/bin/sqlite-utils schema test.db` -> "
+            "- `.venv/bin/data-tool schema test.db` -> "
             "`CREATE TABLE \"people\" (\"name\" TEXT, \"age\" TEXT);` "
             "-> matches expected post-fix schema.\n"
-            "- `.venv/bin/mypy sqlite_utils tests` ->\n"
+            "- `.venv/bin/mypy data_tool tests` ->\n"
             "  `Success: no issues found in 55 source files`, exit `0`.\n"
-            "- `.venv/bin/ty check sqlite_utils` -> `Found 21 diagnostics`, exit `1`.\n"
+            "- `.venv/bin/ty check data_tool` -> `Found 21 diagnostics`, exit `1`.\n"
             "  The output matched the pre-patch baseline exactly.\n\n"
             "### TL-6 audit evidence\n\n"
             "- Command: `Grep` pattern "
             "`transform\\(types=tracker\\.types\\)|if tracker is not None` on "
-            "`sqlite_utils/`\n"
-            "  -> outcome: 2 production matches in `sqlite_utils/cli.py` and 2 "
-            "docstring matches in `sqlite_utils/utils.py`.\n"
+            "`data_tool/`\n"
+            "  -> outcome: 2 production matches in `data_tool/cli.py` and 2 "
+            "docstring matches in `data_tool/utils.py`.\n"
             "- Command: `git diff --stat`\n"
             "  -> outcome: 3 files changed, 57 insertions(+), 2 deletions(-); "
-            "changed files limited to `sqlite_utils/cli.py`, `tests/test_cli.py`, "
+            "changed files limited to `data_tool/cli.py`, `tests/test_cli.py`, "
             "and `tests/test_cli_memory.py`.\n\n"
             "### TL-5 evidence bundle\n\n"
             "- `validator-report.md` records the draft self-validator pass.\n"
             "- QA reproduction recipe:\n"
             "  - `printf 'a,b,c\\n' > /tmp/header_only.csv && "
-            ".venv/bin/sqlite-utils insert /tmp/test.db tbl /tmp/header_only.csv --csv`\n"
+            ".venv/bin/data-tool insert /tmp/test.db tbl /tmp/header_only.csv --csv`\n"
             "    -> exit `0`, no traceback.\n"
-            "  - `git stash -- sqlite_utils/cli.py` then "
+            "  - `git stash -- data_tool/cli.py` then "
             "`.venv/bin/pytest tests/test_cli.py -k header_only -v` "
             "-> 5 failures with the original assertion signature.\n\n"
             "## Risks\n\n"
@@ -2105,42 +2120,34 @@ def test_validate_semantic_outputs_accepts_live_style_implementation_report(
 
     findings = validate_semantic_outputs(
         stage="implement",
-        work_item="WI-SEM-IMPLEMENT-LIVE",
+        work_item="WI-SEM-IMPLEMENT-EXAMPLE",
         workspace_root=workspace_root,
     )
 
     assert findings == ()
 
 
-def test_validate_semantic_outputs_requires_live_ignored_residue_evidence_for_implement(
+def test_validate_semantic_outputs_requires_setup_ignored_residue_evidence_for_implement(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    work_item = "WI-SEM-IMPLEMENT-LIVE-RESIDUE"
-    _write_repository_state(
-        workspace_root,
-        work_item,
-        (
-            "# Repository State\n\n"
-            "## Live setup workspace baseline\n\n"
-            "- Known harness config present: `aidd.example.toml`.\n"
-        ),
-    )
+    work_item = "WI-SEM-IMPLEMENT-EXAMPLE-RESIDUE"
+    _write_workspace_baseline(workspace_root, work_item)
     _write_implementation_report(
         workspace_root,
         work_item,
         (
             "# Implementation Report\n\n"
             "## Selected task\n\n"
-            "- Task id: `TASK-LIVE-HONO-NON-ERROR-THROW`.\n\n"
+            "- Task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n\n"
             "## Change summary\n\n"
-            "Implemented the selected live task and added focused regression coverage.\n\n"
+            "Implemented the selected example task and added focused regression coverage.\n\n"
             "## Touched files\n\n"
-            "- `src/hono-base.ts` - normalize thrown non-Error values.\n"
-            "- `src/hono.test.ts` - add non-Error throw regression coverage.\n\n"
+            "- `src/runtime-error.ts` - normalize thrown non-Error values.\n"
+            "- `tests/runtime-error.test.ts` - add non-Error throw regression coverage.\n\n"
             "## Verification notes\n\n"
             "- `./node_modules/.bin/vitest --run --coverage.enabled=false "
-            "src/hono.test.ts` -> pass (new regression passed).\n"
+            "tests/runtime-error.test.ts` -> pass (new regression passed).\n"
             "- `./node_modules/.bin/tsc --noEmit` -> pass.\n\n"
             "## Follow-up notes\n\n"
             "- none\n"
@@ -2160,35 +2167,27 @@ def test_validate_semantic_outputs_requires_live_ignored_residue_evidence_for_im
     )
 
 
-def test_validate_semantic_outputs_accepts_live_ignored_residue_evidence_for_implement(
+def test_validate_semantic_outputs_accepts_setup_ignored_residue_evidence_for_implement(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    work_item = "WI-SEM-IMPLEMENT-LIVE-RESIDUE-CLEAN"
-    _write_repository_state(
-        workspace_root,
-        work_item,
-        (
-            "# Repository State\n\n"
-            "## Live setup workspace baseline\n\n"
-            "- Known harness config present: `aidd.example.toml`.\n"
-        ),
-    )
+    work_item = "WI-SEM-IMPLEMENT-EXAMPLE-RESIDUE-CLEAN"
+    _write_workspace_baseline(workspace_root, work_item)
     _write_implementation_report(
         workspace_root,
         work_item,
         (
             "# Implementation Report\n\n"
             "## Selected task\n\n"
-            "- Task id: `TASK-LIVE-HONO-NON-ERROR-THROW`.\n\n"
+            "- Task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n\n"
             "## Change summary\n\n"
-            "Implemented the selected live task and added focused regression coverage.\n\n"
+            "Implemented the selected example task and added focused regression coverage.\n\n"
             "## Touched files\n\n"
-            "- `src/hono-base.ts` - normalize thrown non-Error values.\n"
-            "- `src/hono.test.ts` - add non-Error throw regression coverage.\n\n"
+            "- `src/runtime-error.ts` - normalize thrown non-Error values.\n"
+            "- `tests/runtime-error.test.ts` - add non-Error throw regression coverage.\n\n"
             "## Verification notes\n\n"
             "- `./node_modules/.bin/vitest --run --coverage.enabled=false "
-            "src/hono.test.ts` -> pass (new regression passed).\n"
+            "tests/runtime-error.test.ts` -> pass (new regression passed).\n"
             "- `./node_modules/.bin/tsc --noEmit` -> pass.\n"
             "- `git status --ignored --short --untracked-files=all` -> pass "
             "(no new `coverage/`, `.coverage*`, `__pycache__/`, build, dist, "
@@ -2218,14 +2217,14 @@ def test_validate_semantic_outputs_accepts_aidd_command_evidence_for_implement(
         (
             "# Implementation Report\n\n"
             "## Selected task\n\n"
-            "- Task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`.\n\n"
+            "- Task id: `TASK-EXAMPLE-STREAMED-ROWS`.\n\n"
             "## Change summary\n\n"
-            "Implemented the selected live task and preserved operator answer alignment.\n\n"
+            "Implemented the selected example task and preserved operator answer alignment.\n\n"
             "## Touched files\n\n"
-            "- `sqlite_utils/cli.py` - add yielded rows option handling.\n"
+            "- `data_tool/cli.py` - add yielded rows option handling.\n"
             "- `tests/test_cli_insert.py` - cover yielded rows behavior.\n\n"
             "## Verification notes\n\n"
-            "- `aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW` "
+            "- `aidd stage questions idea --work-item WI-EXAMPLE-INTERVIEW` "
             "-> pass (exit code 0; no unresolved blocking questions).\n\n"
             "## Follow-up notes\n\n"
             "- none\n"
@@ -2245,33 +2244,25 @@ def test_validate_semantic_outputs_accepts_sed_command_evidence_for_implement(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    work_item = "WI-SEM-IMPLEMENT-LIVE-SED"
-    _write_repository_state(
-        workspace_root,
-        work_item,
-        (
-            "# Repository State\n\n"
-            "## Live setup workspace baseline\n\n"
-            "- Known harness config present: `aidd.example.toml`.\n"
-        ),
-    )
+    work_item = "WI-SEM-IMPLEMENT-EXAMPLE-SED"
+    _write_workspace_baseline(workspace_root, work_item)
     _write_implementation_report(
         workspace_root,
         work_item,
         (
             "# Implementation Report\n\n"
             "## Summary\n\n"
-            "- Selected task id: `TASK-LIVE-HONO-NON-ERROR-THROW`.\n"
+            "- Selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n"
             "- Implemented bounded non-Error throw normalization with focused "
             "regression coverage and public type compatibility checks.\n\n"
             "## Touched files\n\n"
-            "- `src/compose.ts` - normalize composed middleware thrown values.\n"
-            "- `src/hono-base.ts` - normalize direct route thrown values.\n"
-            "- `src/hono.test.ts` - add primitive and object throw regressions.\n"
-            "- `src/compose.test.ts` - add composed middleware regression coverage.\n\n"
+            "- `src/pipeline.ts` - normalize composed middleware thrown values.\n"
+            "- `src/runtime-error.ts` - normalize direct route thrown values.\n"
+            "- `tests/runtime-error.test.ts` - add primitive and object throw regressions.\n"
+            "- `tests/pipeline.test.ts` - add composed middleware regression coverage.\n\n"
             "## Verification\n\n"
             "- `./node_modules/.bin/vitest --run --coverage.enabled=false "
-            "src/hono.test.ts src/compose.test.ts` -> pass (235 passed).\n"
+            "tests/runtime-error.test.ts tests/pipeline.test.ts` -> pass (235 passed).\n"
             "- `./node_modules/.bin/tsc --noEmit` -> pass (exit code 0).\n"
             "- `sed -n '113,119p' src/types.ts` -> pass (observed `ErrorHandler` "
             "still accepts `err: Error | HTTPResponseError`).\n"
@@ -2312,7 +2303,7 @@ def test_validate_semantic_outputs_accepts_contract_summary_task_id_and_cli_subc
             "`transform(types=tracker.types)` follow-up path and adding a "
             "focused regression test.\n\n"
             "## Touched files\n\n"
-            "- `sqlite_utils/cli.py` - add table-existence guard before transform.\n"
+            "- `data_tool/cli.py` - add table-existence guard before transform.\n"
             "- `tests/test_cli.py` - add header-only CSV regression coverage.\n\n"
             "## Verification\n\n"
             "### TL-1 verification\n\n"
@@ -2356,15 +2347,15 @@ def test_validate_semantic_outputs_accepts_block_scoped_verification_evidence(
             "Implemented the bounded header-only CSV fix and recorded command "
             "evidence by verification subsection.\n\n"
             "## Touched files\n\n"
-            "- `sqlite_utils/cli.py` - add table-existence guard before transform.\n"
+            "- `data_tool/cli.py` - add table-existence guard before transform.\n"
             "- `tests/test_cli.py` - add header-only CSV regression coverage.\n\n"
             "## Verification\n\n"
             "### T1 - reproduction evidence\n\n"
-            "- Command: `python -m sqlite_utils insert /tmp/t.db t "
+            "- Command: `python -m data_tool insert /tmp/t.db t "
             "/tmp/header.csv --csv --detect-types` -> exit code `1`.\n"
             "- Observed stderr from the T1 reproduction command -> "
             "`AssertionError: Cannot transform a table that doesn't exist yet` -> pass.\n"
-            "- Baseline shape command: `python -m sqlite_utils insert /tmp/base.db t "
+            "- Baseline shape command: `python -m data_tool insert /tmp/base.db t "
             "/tmp/header.csv --csv --no-detect-types` -> exit code `0`.\n\n"
             "### T4 - scenario verification\n\n"
             "- Command: `.venv/bin/python -m pytest -q` from the repository root.\n"
@@ -2388,13 +2379,13 @@ def test_validate_semantic_outputs_accepts_block_scoped_verification_evidence(
     assert findings == ()
 
 
-def test_validate_semantic_outputs_accepts_flat_live_verification_evidence(
+def test_validate_semantic_outputs_accepts_flat_example_verification_evidence(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_implementation_report(
         workspace_root,
-        "WI-SEM-IMPLEMENT-FLAT-LIVE",
+        "WI-SEM-IMPLEMENT-FLAT-EXAMPLE",
         (
             "# Implementation Report\n\n"
             "## Selected task id\n\n"
@@ -2404,16 +2395,16 @@ def test_validate_semantic_outputs_accepts_flat_live_verification_evidence(
             "edits, regression tests, and verification evidence back to the "
             "selected tasklist tasks.\n\n"
             "## Touched files\n\n"
-            "- `sqlite_utils/cli.py` - add table-existence guard before transform.\n"
+            "- `data_tool/cli.py` - add table-existence guard before transform.\n"
             "- `tests/test_cli.py` - add header-only CSV regression coverage.\n\n"
             "## Verification\n\n"
-            "- `T1` -- diff inspection: `git diff sqlite_utils/cli.py` shows "
+            "- `T1` -- diff inspection: `git diff data_tool/cli.py` shows "
             "two hunks only, each adding the issue-naming comment plus the "
             "`if db.table(...).exists():` gate.\n"
-            "- `T1` -- live reproduction: `uv run python -c \"...\"` invoking "
+            "- `T1` -- regression reproduction: `uv run python -c \"...\"` invoking "
             "`CliRunner().invoke(...)` -> `exit_code == 0`, `output == \"\"`, "
             "`exception is None`. Observed.\n"
-            "- `T2` -- revert sanity check: `git stash push -- sqlite_utils/cli.py "
+            "- `T2` -- revert sanity check: `git stash push -- data_tool/cli.py "
             "&& uv run pytest tests/test_cli.py::test_insert_detect_types_header_only_csv` "
             "-> `3 failed` with `AssertionError`; `git stash pop` restored the "
             "fix; subsequent re-run -> `3 passed`.\n"
@@ -2424,8 +2415,8 @@ def test_validate_semantic_outputs_accepts_flat_live_verification_evidence(
             "parametrization fails with the pre-fix assertion; restored the "
             "fix; re-run -> `3 passed`.\n"
             "- `T5` -- boundary check: `git diff --name-only` -> "
-            "`sqlite_utils/cli.py`, `tests/test_cli.py` only. "
-            "`git diff sqlite_utils/db.py sqlite_utils/utils.py` -> empty.\n"
+            "`data_tool/cli.py`, `tests/test_cli.py` only. "
+            "`git diff data_tool/db.py data_tool/utils.py` -> empty.\n"
             "- `T7` -- not run in this stage; deferred to the `qa` stage.\n\n"
             "## Risks\n\n"
             "- No residual risk remains for the selected task.\n\n"
@@ -2436,7 +2427,7 @@ def test_validate_semantic_outputs_accepts_flat_live_verification_evidence(
 
     findings = validate_semantic_outputs(
         stage="implement",
-        work_item="WI-SEM-IMPLEMENT-FLAT-LIVE",
+        work_item="WI-SEM-IMPLEMENT-FLAT-EXAMPLE",
         workspace_root=workspace_root,
     )
 
@@ -2492,16 +2483,16 @@ def test_validate_semantic_outputs_accepts_find_cleanup_evidence(
         (
             "# Implementation Report\n\n"
             "## Selected task\n\n"
-            "- Stable selected task id: `TASK-LIVE-TYPER-BOOLEAN-HELP`\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-BOOLEAN-HELP`\n\n"
             "## Summary\n\n"
             "Implemented the selected task and recorded cleanup checks for "
             "workspace hygiene.\n\n"
             "## Touched files\n\n"
-            "- `typer/core.py` - update boolean option help rendering.\n"
+            "- `cli_tool/core.py` - update boolean option help rendering.\n"
             "- `tests/test_tutorial/test_parameter_types/test_bool/test_help_rendering.py` "
             "- add focused help output coverage.\n\n"
             "## Verification\n\n"
-            "- `find typer tests docs_src -type d -name __pycache__ -print` "
+            "- `find cli_tool tests docs_src -type d -name __pycache__ -print` "
             "-> pass (zero output after cleanup).\n"
             "- `find . -maxdepth 1 -type d -name workitems -print` "
             "-> pass (no top-level `workitems/` directory was created).\n"
@@ -2532,29 +2523,29 @@ def test_validate_semantic_outputs_accepts_python_c_output_evidence(
         (
             "# Implementation Report\n\n"
             "## Selected task\n\n"
-            "- Stable selected task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-STREAMED-ROWS`\n\n"
             "## Summary\n\n"
             "Implemented the selected yielded-rows CLI behavior and recorded "
             "target-local command evidence for focused tests, help output, "
             "runtime success paths, and invalid-input behavior.\n\n"
             "## Touched files\n\n"
-            "- `sqlite_utils/cli.py` - add trusted Python file input handling.\n"
+            "- `data_tool/cli.py` - add trusted Python file input handling.\n"
             "- `tests/test_cli_insert.py` - cover rows, yields, and invalid input.\n"
             "- `docs/cli.rst` - document the trusted-code boundary.\n\n"
             "## Verification\n\n"
             "- `python -m pytest tests/test_cli_insert.py -q` "
             "-> output: `52 passed in 1.01s`.\n"
             "- `python -c \"from click.testing import CliRunner; "
-            "from sqlite_utils import cli; result = CliRunner().invoke("
+            "from data_tool import cli; result = CliRunner().invoke("
             "cli.cli, ['insert', '--help']); print(result.output)\"` "
             "-> output contains: `--python-file FILE`.\n"
             "- `python -c \"from click.testing import CliRunner; "
-            "from sqlite_utils import cli; result = CliRunner().invoke("
+            "from data_tool import cli; result = CliRunner().invoke("
             "cli.cli, ['insert', '/tmp/test.db', 'people', '--python-file', "
             "'/tmp/rows_test.py']); print(result.exit_code)\"` "
             "-> output: `0`.\n"
             "- `python -c \"from click.testing import CliRunner; "
-            "from sqlite_utils import cli; result = CliRunner().invoke("
+            "from data_tool import cli; result = CliRunner().invoke("
             "cli.cli, ['insert', '/tmp/test.db', 'items', '--python-file', "
             "'/tmp/rows_test.py', '--csv']); print(result.output); "
             "print(result.exit_code)\"` "
@@ -2585,7 +2576,7 @@ def test_validate_semantic_outputs_accepts_sphinx_build_evidence(
         (
             "# Implementation Report\n\n"
             "## Selected task\n\n"
-            "- Stable selected task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-STREAMED-ROWS`\n\n"
             "## Summary\n\n"
             "Implemented the selected documentation-bearing CLI behavior and "
             "recorded a concrete documentation build command with observed output.\n\n"
@@ -2610,25 +2601,25 @@ def test_validate_semantic_outputs_accepts_sphinx_build_evidence(
     assert findings == ()
 
 
-def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks(
+def test_validate_semantic_outputs_accepts_example_selected_task_and_not_run_checks(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_implementation_report(
         workspace_root,
-        "WI-SEM-IMPLEMENT-LIVE-TASK-ID",
+        "WI-SEM-IMPLEMENT-EXAMPLE-TASK-ID",
         (
             "# Implementation Report\n\n"
             "## Selected task\n\n"
-            "- Work item: `WI-LIVE-TYPER-BOOLEAN`\n"
-            "- Stable selected task id: `TASK-LIVE-TYPER-BOOLEAN-HELP`\n"
+            "- Work item: `WI-EXAMPLE-BOOLEAN`\n"
+            "- Stable selected task id: `TASK-EXAMPLE-BOOLEAN-HELP`\n"
             "- Selected task title: boolean option help rendering\n\n"
             "## Summary\n\n"
-            "Implemented the selected live task by changing the Rich help label "
+            "Implemented the selected example task by changing the Rich help label "
             "rendering and adding focused regression coverage for grouped "
             "boolean option labels while preserving default details.\n\n"
             "## Touched files\n\n"
-            "- `typer/rich_utils.py` - group boolean option labels when secondary flags exist.\n"
+            "- `cli_tool/rich_utils.py` - group boolean option labels when secondary flags exist.\n"
             "- `tests/test_tutorial/test_parameter_types/test_bool/test_tutorial003.py` - add "
             "Rich label and default preservation assertions.\n\n"
             "## Verification\n\n"
@@ -2636,10 +2627,10 @@ def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks
             "tests/test_tutorial/test_parameter_types/test_bool` -> blocked before pytest: "
             "`error: failed to open file /Users/example/.cache/uv/sdists-v9/.git: "
             "Operation not permitted (os error 1)`.\n"
-            "- Sandbox-compatible Rich command `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q "
+            "- Sandbox-compatible Rich command `CACHE_DIR=/tmp/tool-cache uv run pytest -q "
             "tests/test_tutorial/test_parameter_types/test_bool` -> pass, `43 passed in 1.95s`.\n"
             "- QA output existence check `test -f "
-            ".aidd/workitems/WI-LIVE-TYPER-BOOLEAN/stages/qa/output/stage-result.md` "
+            ".aidd/workitems/WI-EXAMPLE-BOOLEAN/stages/qa/output/stage-result.md` "
             "-> not-run, targets a downstream QA-stage artifact that is not produced by "
             "the implement stage.\n\n"
             "## Risks\n\n"
@@ -2651,7 +2642,7 @@ def test_validate_semantic_outputs_accepts_live_selected_task_and_not_run_checks
 
     findings = validate_semantic_outputs(
         stage="implement",
-        work_item="WI-SEM-IMPLEMENT-LIVE-TASK-ID",
+        work_item="WI-SEM-IMPLEMENT-EXAMPLE-TASK-ID",
         workspace_root=workspace_root,
     )
 
@@ -2668,21 +2659,23 @@ def test_validate_semantic_outputs_accepts_bun_verification_evidence(
         (
             "# Implementation Report\n\n"
             "## Selected task\n\n"
-            "- Stable selected task id: `TASK-LIVE-HONO-NON-ERROR-THROW`\n"
+            "- Stable selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`\n"
             "- Selected task title: non-Error throw handling\n\n"
             "## Summary\n\n"
-            "Implemented the selected Hono runtime error-handling task and "
+            "Implemented the selected example runtime error-handling task and "
             "recorded focused regression coverage plus broad-suite evidence.\n\n"
             "## Touched files\n\n"
-            "- `src/compose.ts` - normalize non-Error thrown values before onError.\n"
-            "- `src/hono-base.ts` - normalize dispatch errors before the Hono error handler.\n"
-            "- `src/hono.test.ts` - cover primitive and object non-Error throws.\n\n"
+            "- `src/pipeline.ts` - normalize non-Error thrown values before onError.\n"
+            "- `src/runtime-error.ts` - normalize dispatch errors before the "
+            "example runtime error handler.\n"
+            "- `tests/runtime-error.test.ts` - cover primitive and object non-Error throws.\n\n"
             "## Verification\n\n"
-            "- `bunx vitest --run src/compose.test.ts src/hono.test.ts` "
+            "- `bunx vitest --run tests/pipeline.test.ts tests/runtime-error.test.ts` "
             "-> exit code 0; captured summary `Test Files 2 passed (2)` and "
             "`Tests 241 passed (241)`.\n"
             "- `bunx tsc --noEmit` -> exit code 0; captured output contained no diagnostics.\n"
-            "- `./node_modules/.bin/prettier --check src/utils/error.ts src/hono-base.ts` "
+            "- `./node_modules/.bin/prettier --check src/runtime-error-utils.ts "
+            "src/runtime-error.ts` "
             "-> pass, exit code 0; all matched files use Prettier style.\n"
             "- `bun run test` -> exit code 1; captured summary "
             "`Test Files 3 failed | 141 passed (144)`, `Tests 11 failed | "
@@ -2716,12 +2709,13 @@ def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
         (
             "# Implementation Report\n\n"
             "## Selected task\n\n"
-            "- Stable selected task id: `TASK-LIVE-HONO-NON-ERROR-THROW`\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`\n\n"
             "## Summary\n\n"
-            "Implemented the selected Hono task with a scoped source update and "
+            "Implemented the selected example runtime task with a scoped source update and "
             "recorded verification notes.\n\n"
             "## Touched files\n\n"
-            "- `src/hono-base.ts` - normalize dispatch errors before the Hono error handler.\n\n"
+            "- `src/runtime-error.ts` - normalize dispatch errors before the "
+            "example runtime error handler.\n\n"
             "## Verification\n\n"
             "- Bun runner passed.\n"
             "- Prettier passed.\n"
@@ -2747,7 +2741,7 @@ def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
     assert all(finding.severity == "high" for finding in findings)
 
 
-def test_validate_semantic_outputs_accepts_live_noop_blocker_evidence(
+def test_validate_semantic_outputs_accepts_example_noop_blocker_evidence(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -2763,7 +2757,7 @@ def test_validate_semantic_outputs_accepts_live_noop_blocker_evidence(
             "observed the documented fail path, so later source-edit tasks were "
             "not started and a blocking plan question was raised.\n\n"
             "## Touched files\n\n"
-            "- `sqlite_utils/cli.py` (`scratch-and-revert`, no net change): applied "
+            "- `data_tool/cli.py` (`scratch-and-revert`, no net change): applied "
             "the guard for the T1 observation, then reverted it. Net diff is empty.\n\n"
             "## Verification\n\n"
             "- VN-1 (scratch guard observation):\n"
@@ -2779,7 +2773,7 @@ def test_validate_semantic_outputs_accepts_live_noop_blocker_evidence(
             "`db.table_names() == []`.\n"
             "  - Outcome: the planned guard cannot satisfy the table-creation clause.\n\n"
             "- VN-4 (post-attempt source diff):\n"
-            "  - Command: `git diff sqlite_utils/cli.py tests/test_cli_insert.py`.\n"
+            "  - Command: `git diff data_tool/cli.py tests/test_cli_insert.py`.\n"
             "  - Observed: empty output.\n"
             "  - Outcome: no production-code change leaked from this attempt.\n\n"
             "- T5 full-suite run (`uv run pytest -q || pytest -q`) was not\n"
@@ -2919,17 +2913,17 @@ def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
         "WI-SEM-IMPLEMENT-DIFF",
         "# Implementation Report\n\n"
         "## Selected task\n\n"
-        "- Task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n"
+        "- Task id: `TASK-EXAMPLE-STREAMED-ROWS`\n"
         "- Local task ids: T1, T2\n\n"
         "## Change summary\n\n"
         "Implemented the selected yielded-rows feature with scoped code, tests, and docs.\n\n"
         "## Touched files\n\n"
-        "- `sqlite_utils/cli.py` - add yielded-row ingestion handling.\n"
+        "- `data_tool/cli.py` - add yielded-row ingestion handling.\n"
         "- `tests/test_cli_insert.py` - cover yielded rows and invalid input.\n"
         "- `docs/cli.rst` - document trusted local Python caveats.\n\n"
         "## Verification\n\n"
         "- `uv run pytest -q` -> 1044 passed, 16 skipped.\n"
-        "- `git diff --name-only` -> changes bounded to `sqlite_utils/cli.py`, "
+        "- `git diff --name-only` -> changes bounded to `data_tool/cli.py`, "
         "`tests/test_cli_insert.py`, `docs/cli.rst`.\n\n"
         "## Risks\n\n"
         "- None observed.\n\n"
@@ -2946,20 +2940,20 @@ def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
     assert findings == ()
 
 
-def test_validate_semantic_outputs_accepts_live_cleanup_residue_note(
+def test_validate_semantic_outputs_accepts_setup_cleanup_residue_note(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / "workspace"
     _write_implementation_report(
         workspace_root,
-        "WI-SEM-IMPLEMENT-LIVE-CLEANUP",
+        "WI-SEM-IMPLEMENT-EXAMPLE-CLEANUP",
         "# Implementation Report\n\n"
         "## Selected task\n\n"
-        "- Task id: `TASK-LIVE-SQLITE-YIELDED-ROWS`\n\n"
+        "- Task id: `TASK-EXAMPLE-STREAMED-ROWS`\n\n"
         "## Change summary\n\n"
         "Implemented the selected yielded-rows feature with code, tests, and docs.\n\n"
         "## Touched files\n\n"
-        "- `sqlite_utils/cli.py` - add yielded-row ingestion handling.\n"
+        "- `data_tool/cli.py` - add yielded-row ingestion handling.\n"
         "- `tests/test_cli_insert.py` - cover yielded rows and invalid input.\n"
         "- `docs/cli.rst` - document trusted local Python caveats.\n\n"
         "## Verification\n\n"
@@ -2979,7 +2973,7 @@ def test_validate_semantic_outputs_accepts_live_cleanup_residue_note(
 
     findings = validate_semantic_outputs(
         stage="implement",
-        work_item="WI-SEM-IMPLEMENT-LIVE-CLEANUP",
+        work_item="WI-SEM-IMPLEMENT-EXAMPLE-CLEANUP",
         workspace_root=workspace_root,
     )
 
@@ -2995,11 +2989,11 @@ def test_validate_semantic_outputs_accepts_backticked_python_heredoc_verificatio
         "WI-SEM-IMPLEMENT-HEREDOC",
         "# Implementation Report\n\n"
         "## Summary\n\n"
-        "- Implemented selected task `TASK-LIVE-TYPER-BOOLEAN-HELP` with focused "
+        "- Implemented selected task `TASK-EXAMPLE-BOOLEAN-HELP` with focused "
         "code, docs, and test coverage.\n\n"
         "## Touched files\n\n"
-        "- `typer/core.py` - adjust plain boolean option help formatting.\n"
-        "- `typer/rich_utils.py` - adjust Rich boolean option help layout.\n"
+        "- `cli_tool/core.py` - adjust plain boolean option help formatting.\n"
+        "- `cli_tool/rich_utils.py` - adjust Rich boolean option help layout.\n"
         "- `tests/test_rich_utils.py` - cover paired and false-only boolean rows.\n\n"
         "## Verification\n\n"
         "- `python - <<'PY' ... current CliRunner boolean help probe ... PY` -> "
@@ -3122,21 +3116,13 @@ def test_validate_semantic_outputs_accepts_none_review_findings_with_evidence_no
     assert findings == ()
 
 
-def test_validate_semantic_outputs_flags_review_clean_approval_with_live_residue(
+def test_validate_semantic_outputs_flags_review_clean_approval_with_setup_residue(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    work_item = "WI-SEM-REVIEW-LIVE-RESIDUE"
+    work_item = "WI-SEM-REVIEW-SETUP-RESIDUE"
     (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
-    _write_repository_state(
-        workspace_root,
-        work_item,
-        (
-            "# Repository State\n\n"
-            "## Live setup workspace baseline\n\n"
-            "- Known harness config present: `aidd.example.toml`.\n"
-        ),
-    )
+    _write_workspace_baseline(workspace_root, work_item)
     _write_review_report(
         workspace_root,
         work_item,
@@ -3179,16 +3165,8 @@ def test_validate_semantic_outputs_ignores_review_tracked_build_source_directory
     _git(tmp_path, "commit", "-m", "track build source")
 
     workspace_root = tmp_path / ".aidd"
-    work_item = "WI-SEM-REVIEW-LIVE-TRACKED-BUILD"
-    _write_repository_state(
-        workspace_root,
-        work_item,
-        (
-            "# Repository State\n\n"
-            "## Live setup workspace baseline\n\n"
-            "- Known harness config present: `aidd.example.toml`.\n"
-        ),
-    )
+    work_item = "WI-SEM-REVIEW-SETUP-TRACKED-BUILD"
+    _write_workspace_baseline(workspace_root, work_item)
     _write_review_report(
         workspace_root,
         work_item,
@@ -3214,21 +3192,13 @@ def test_validate_semantic_outputs_ignores_review_tracked_build_source_directory
     assert findings == ()
 
 
-def test_validate_semantic_outputs_accepts_review_condition_with_live_residue_finding(
+def test_validate_semantic_outputs_accepts_review_condition_with_setup_residue_finding(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    work_item = "WI-SEM-REVIEW-LIVE-RESIDUE-FINDING"
+    work_item = "WI-SEM-REVIEW-SETUP-RESIDUE-FINDING"
     (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
-    _write_repository_state(
-        workspace_root,
-        work_item,
-        (
-            "# Repository State\n\n"
-            "## Live setup workspace baseline\n\n"
-            "- Known harness config present: `aidd.example.toml`.\n"
-        ),
-    )
+    _write_workspace_baseline(workspace_root, work_item)
     _write_review_report(
         workspace_root,
         work_item,
@@ -3260,21 +3230,13 @@ def test_validate_semantic_outputs_accepts_review_condition_with_live_residue_fi
     assert findings == ()
 
 
-def test_validate_semantic_outputs_flags_review_cleanup_claim_with_live_residue(
+def test_validate_semantic_outputs_flags_review_cleanup_claim_with_setup_residue(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    work_item = "WI-SEM-REVIEW-LIVE-CLEANUP-CLAIM"
+    work_item = "WI-SEM-REVIEW-SETUP-CLEANUP-CLAIM"
     (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
-    _write_repository_state(
-        workspace_root,
-        work_item,
-        (
-            "# Repository State\n\n"
-            "## Live setup workspace baseline\n\n"
-            "- Known harness config present: `aidd.example.toml`.\n"
-        ),
-    )
+    _write_workspace_baseline(workspace_root, work_item)
     _write_review_report(
         workspace_root,
         work_item,
@@ -3308,11 +3270,11 @@ def test_validate_semantic_outputs_flags_review_cleanup_claim_with_live_residue(
     )
 
 
-def test_validate_semantic_outputs_ignores_review_residue_without_live_context(
+def test_validate_semantic_outputs_ignores_review_residue_without_setup_context(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    work_item = "WI-SEM-REVIEW-NON-LIVE-RESIDUE"
+    work_item = "WI-SEM-REVIEW-NO-BASELINE-RESIDUE"
     (tmp_path / "coverage" / "raw" / "default").mkdir(parents=True)
     _write_review_report(
         workspace_root,
@@ -3362,7 +3324,7 @@ def test_validate_semantic_outputs_accepts_review_subheading_findings(
             "- **Disposition:** follow-up\n"
             "- **Rationale:** forwarding table creation kwargs remains reviewable because the "
             "current change preserves insert option behavior.\n"
-            "- **Evidence:** `sqlite_utils/cli.py:1189-1196` and AC-2.\n\n"
+            "- **Evidence:** `data_tool/cli.py:1189-1196` and AC-2.\n\n"
             "## Risks\n\n"
             "- Low residual risk is bounded by targeted regression tests.\n\n"
             "## Required follow-up\n\n"
@@ -3394,7 +3356,7 @@ def test_validate_semantic_outputs_accepts_review_none_severity_findings(
             "### RV-1 - Patch shape matches requested scope\n\n"
             "- Severity: `none`\n"
             "- Disposition: `accepted-risk`\n"
-            "- Evidence: `sqlite_utils/cli.py:1179` and AC-2.\n"
+            "- Evidence: `data_tool/cli.py:1179` and AC-2.\n"
             "- Rationale: because the finding records a verified non-defect "
             "with bounded residual risk.\n\n"
             "## Risks\n\n"
@@ -3427,7 +3389,7 @@ def test_validate_semantic_outputs_does_not_infer_review_severity_from_prose(
             "## Findings\n\n"
             "### RV-1 - Patch shape is bounded\n\n"
             "- Disposition: `accepted-risk`\n"
-            "- Evidence: `sqlite_utils/cli.py:1179` and AC-2.\n"
+            "- Evidence: `data_tool/cli.py:1179` and AC-2.\n"
             "- Rationale: because none of the observed checks indicate scope creep.\n\n"
             "## Risks\n\n"
             "- No material review risk remains.\n\n"
@@ -3518,7 +3480,7 @@ def test_validate_semantic_outputs_accepts_compact_review_finding_severity(
             "## Risks\n\n"
             "- Medium residual release-proof risk is explicitly accepted.\n\n"
             "## Required follow-up\n\n"
-            "- Re-run the maintained runtime live scenario separately.\n"
+            "- Re-run the maintained runtime scenario separately.\n"
         ),
     )
 
@@ -3546,13 +3508,13 @@ def test_validate_semantic_outputs_ignores_non_disposition_must_fix_mentions(
             "### RV-1 [low] [accepted-risk] Bounded flag asymmetry\n\n"
             "- Severity: `low`\n"
             "- Disposition: `accepted-risk`\n"
-            "- Evidence: `sqlite_utils/cli.py:1179-1183` and AC-2.\n"
+            "- Evidence: `data_tool/cli.py:1179-1183` and AC-2.\n"
             "- Rationale: because the behaviour is bounded to the agreed "
             "scope and should remain accepted-risk rather than `must-fix`.\n\n"
             "### RV-2 [low] [follow-up] Deferred sibling site\n\n"
             "- Severity: `low`\n"
             "- Disposition: `follow-up`\n"
-            "- Evidence: `sqlite_utils/cli.py:2029-2040` and AC-3.\n"
+            "- Evidence: `data_tool/cli.py:2029-2040` and AC-3.\n"
             "- Rationale: because the sibling path is documented out of scope.\n\n"
             "## Risks\n\n"
             "- No unresolved `must-fix` findings remain.\n\n"
@@ -3750,19 +3712,11 @@ def test_validate_semantic_outputs_accepts_qa_acceptance_coverage_checklist(
     assert findings == ()
 
 
-def test_validate_semantic_outputs_requires_live_ignored_residue_evidence_for_ready_qa(
+def test_validate_semantic_outputs_requires_setup_ignored_residue_evidence_for_ready_qa(
     tmp_path: Path,
 ) -> None:
-    work_item = "WI-SEM-QA-LIVE-RESIDUE"
-    _write_repository_state(
-        tmp_path,
-        work_item,
-        (
-            "# Repository State\n\n"
-            "## Live setup workspace baseline\n\n"
-            "- Known harness config present: `aidd.example.toml`.\n"
-        ),
-    )
+    work_item = "WI-SEM-QA-SETUP-RESIDUE"
+    _write_workspace_baseline(tmp_path, work_item)
     _write_qa_report(
         tmp_path,
         work_item,
@@ -3782,7 +3736,8 @@ def test_validate_semantic_outputs_requires_live_ignored_residue_evidence_for_re
 
 ## Evidence
 
-- EV-1: `./node_modules/.bin/vitest --run --coverage.enabled=false src/hono.test.ts` -> pass.
+- EV-1: `./node_modules/.bin/vitest --run --coverage.enabled=false
+  tests/runtime-error.test.ts` -> pass.
 - EV-2: `./node_modules/.bin/tsc --noEmit` -> pass.
 
 ## Known issues
@@ -3808,19 +3763,11 @@ def test_validate_semantic_outputs_requires_live_ignored_residue_evidence_for_re
     )
 
 
-def test_validate_semantic_outputs_accepts_live_ignored_residue_evidence_for_ready_qa(
+def test_validate_semantic_outputs_accepts_setup_ignored_residue_evidence_for_ready_qa(
     tmp_path: Path,
 ) -> None:
-    work_item = "WI-SEM-QA-LIVE-RESIDUE-CLEAN"
-    _write_repository_state(
-        tmp_path,
-        work_item,
-        (
-            "# Repository State\n\n"
-            "## Live setup workspace baseline\n\n"
-            "- Known harness config present: `aidd.example.toml`.\n"
-        ),
-    )
+    work_item = "WI-SEM-QA-SETUP-RESIDUE-CLEAN"
+    _write_workspace_baseline(tmp_path, work_item)
     _write_qa_report(
         tmp_path,
         work_item,
@@ -3840,7 +3787,8 @@ def test_validate_semantic_outputs_accepts_live_ignored_residue_evidence_for_rea
 
 ## Evidence
 
-- EV-1: `./node_modules/.bin/vitest --run --coverage.enabled=false src/hono.test.ts` -> pass.
+- EV-1: `./node_modules/.bin/vitest --run --coverage.enabled=false
+  tests/runtime-error.test.ts` -> pass.
 - EV-2: `./node_modules/.bin/tsc --noEmit` -> pass.
 - EV-3: `git status --ignored --short --untracked-files=all` -> pass; no new
   `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache
@@ -4045,7 +3993,7 @@ def test_validate_semantic_outputs_accepts_flat_known_issue_metadata(
 ## Known issues
 
 - QR-1 (`medium`): release-proof lane validates operator semantics only.
-- Mitigation: keep maintained-runtime live bugfix runs in nightly checks.
+- Mitigation: keep maintained-runtime bugfix runs in nightly checks.
 - Owner: platform maintainer.
 
 ## Readiness

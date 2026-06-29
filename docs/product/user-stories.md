@@ -77,8 +77,8 @@ As an **evaluator**, I want harness scenarios, graders, and log analysis built i
 
 Success signals:
 
-- smoke, regression, and live E2E scenarios exist,
-- live E2E evidence can be refreshed as auditable bundles or explicit environment blockers,
+- smoke, regression, and manual external audit scenarios exist,
+- manual external audit evidence can be refreshed as auditable bundles or explicit environment blockers,
 - every run produces durable audit artifacts,
 - failure classification separates model, document, adapter, and environment failures.
 

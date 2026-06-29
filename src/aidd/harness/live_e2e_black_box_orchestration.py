@@ -1017,7 +1017,7 @@ def _write_target_workspace_baseline_context(ctx: FlowContext) -> None:
         / "workitems"
         / ctx.work_item
         / "context"
-        / "repository-state.md"
+        / "workspace-baseline.md"
     )
     snapshot = live_workspace_snapshot_from_payload(ctx.target_workspace_baseline_snapshot)
     known_harness_files = tuple(
@@ -1035,61 +1035,52 @@ def _write_target_workspace_baseline_context(ctx: FlowContext) -> None:
         1 for path in snapshot.untracked_files if path.startswith(".aidd/")
     )
     section_lines = [
-        "## Live setup workspace baseline",
+        "# Workspace Baseline",
+        "",
+        "## Setup-Owned Workspace Baseline",
         "",
         (
-            "- Captured after live bootstrap, runtime config generation, and scenario setup "
+            "- Captured after evaluator bootstrap, runtime config generation, and scenario setup "
             "commands, before the first public `aidd stage run`."
         ),
         (
-            "- Files listed here are setup-baseline or harness context, not stage-created "
+            "- Files listed here are setup-baseline or evaluator context, not stage-created "
             "deliverable pollution by themselves."
         ),
         (
             "- Review and QA must still inspect tracked product diff plus any new untracked "
-            "files that are not listed in this baseline and are not known harness config."
+            "files that are not listed in this baseline."
         ),
         "",
-        "### Known harness config present",
+        "## Setup-Owned Files Present",
         "",
         *_markdown_path_list(known_harness_files),
         "",
-        "### Setup-baseline untracked non-AIDD files",
+        "## Baseline Untracked Files",
         "",
         *_markdown_path_list(setup_baseline_non_aidd),
         "",
-        "### Setup-baseline ignored files",
+        "## Baseline Ignored Files",
         "",
         *_markdown_compact_path_summary(
             snapshot.ignored_files,
             sample_limit=BASELINE_CONTEXT_PATH_SAMPLE_LIMIT,
-            full_list_reference=(
-                "`flow-state.json` field "
-                "`target_workspace_baseline_snapshot.ignored_files`; final "
-                "`target-workspace-evidence.json` after the run"
-            ),
+            full_list_reference="final workspace evidence report after the run",
         ),
         "",
-        "### Setup-baseline AIDD workspace files",
+        "## Setup-Baseline Workspace Files",
         "",
         f"- Count: `{setup_baseline_aidd_count}`",
         "- Prefix: `.aidd/`",
         "",
-        "### Baseline capture errors",
+        "## Baseline Capture Errors",
         "",
         *_markdown_path_list(snapshot.command_errors),
         "",
     ]
-    existing = (
-        context_path.read_text(encoding="utf-8")
-        if context_path.exists()
-        else "# Repository State\n"
-    )
-    marker = "\n## Live setup workspace baseline\n"
-    base = existing.split(marker, 1)[0].rstrip()
     context_path.parent.mkdir(parents=True, exist_ok=True)
     context_path.write_text(
-        base + "\n\n" + "\n".join(section_lines).rstrip() + "\n",
+        "\n".join(section_lines).rstrip() + "\n",
         encoding="utf-8",
     )
 

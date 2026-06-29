@@ -111,17 +111,15 @@ normalize if canonical validation proves the terminal status inconsistent.
     and unexpected lockfiles such as `uv.lock` are non-`.aidd` target-repository files, not AIDD
     workspace artifacts. Do not call them harmless runtime artifacts unless repository baseline
     evidence proves they existed after setup and before stage execution.
-    In live E2E contexts, use `context/repository-state.md` section
-    `Live setup workspace baseline` as that baseline evidence: files listed under
-    `Known harness config present` or `Setup-baseline untracked non-AIDD files` do not make QA
-    `not-ready` solely because they are still visible in `git status`. They become blockers only if
+    When `context/workspace-baseline.md` is provided, use it as setup-owned workspace baseline
+    evidence: files listed as setup-owned or setup-baseline files do not make QA `not-ready`
+    solely because they are still visible in `git status`. They become blockers only if
     implementation changed them, cites them as deliverable evidence, contradicts the selected task,
     or new untracked files appear outside that baseline.
-    If implementation evidence says the prepared checkout disappeared, was recloned, or any live
-    harness run directory such as `install-home/`, `source/`, `build/`, or `target/` was deleted,
-    moved, or recreated, set `QA verdict: not-ready` and release recommendation `hold`. Live
-    harness workspace recovery is an execution blocker, not product evidence.
-    If `target-workspace-evidence.*`, `git status --ignored --short --untracked-files=all`, or
+    If implementation evidence says the prepared checkout disappeared, was recloned, or setup-owned
+    workspace paths were deleted, moved, or recreated, set `QA verdict: not-ready` and release
+    recommendation `hold`. Setup workspace recovery is an execution blocker, not product evidence.
+    If `context/workspace-baseline.md`, `git status --ignored --short --untracked-files=all`, or
     equivalent evidence shows new ignored local artifacts such as `.venv/`, `.pytest_cache/`,
     `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, build, dist, or dependency-cache directories, treat
     them as workspace pollution unless they are selected deliverable outputs or were removed before
@@ -160,8 +158,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    file: plain `git diff` does not show untracked file contents. Cite `git status --short
    --untracked-files=all` plus direct file inspection, or an explicit untracked-file diff method
    such as `git diff --no-index /dev/null <untracked-file>`.
-   For live setup-baseline files listed in `context/repository-state.md`, cite the baseline section
-   and keep them out of deliverable blockers unless the current stage changed or depended on them.
+   For setup-owned or setup-baseline files listed in `context/workspace-baseline.md`, cite that
+   context and keep them out of deliverable blockers unless the current stage changed or depended
+   on them.
 3. Build `qa-report.md` with these exact H2 sections:
    `Quality verdict`, `Verification summary`, `Release recommendation`, `Evidence`,
    `Known issues`, and `Readiness`.

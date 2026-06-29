@@ -65,7 +65,7 @@ Never add a task to `docs/backlog/backlog.md` unless it already exists in `docs/
 - `src/aidd/evals/` — graders, verdicts, and reports
 - `contracts/` — durable stage and document contracts
 - `prompt-packs/` — file-based stage prompts
-- `harness/scenarios/live/` — live E2E manifests
+- `harness/scenarios/live/` — manual external eval manifests
 - `docs/` — product, architecture, backlog, and E2E docs
 - `.agents/skills/` — Codex-discoverable team skills
 

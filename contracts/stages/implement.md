@@ -77,10 +77,10 @@ Optional context documents may improve implementation quality, but they must not
 - The implementation deliverable is the local workspace state, not a tracked-only patch. Newly
   created untracked files under the allowed write scope count as touched files and must be listed
   with the tracked diffs.
-- Live harness workspaces are not implementation material. Do not delete, move, reclone, or
-  recreate the prepared repository checkout or harness run directories such as `source/`, `build/`,
-  `install-home/`, `uv-cache/`, or `target/`. If the prepared checkout, installed `aidd` command,
-  or packaged contracts disappear, report the stage as `blocked` or `failed` with the exact missing
+- Setup-owned workspace files are not implementation material. Do not delete, move, reclone, or
+  recreate the prepared repository checkout or setup-owned paths listed in
+  `context/workspace-baseline.md`. If the prepared checkout, configured stage runner command, or
+  packaged contracts disappear, report the stage as `blocked` or `failed` with the exact missing
   path instead of attempting workspace recovery.
 - Ignored local artifacts are still part of workspace hygiene. Newly created `.venv/`,
   `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or
