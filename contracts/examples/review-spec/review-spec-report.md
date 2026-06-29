@@ -6,8 +6,8 @@
 
 ## Issue list
 
-- I1 (`medium`): Milestone M3 does not define rollback trigger criteria, which can delay incident response during rollout.
-- I2 (`low`): Dependency note for notification adapter ownership is implicit and should be made explicit for handoff clarity.
+- I1: Severity: medium. Evidence: `plan.md` M3. Rationale: because missing rollback trigger criteria can delay incident response during rollout.
+- I2: Severity: low. Evidence: `plan.md` Dependencies. Rationale: because notification adapter ownership is implicit and should be made explicit for handoff clarity.
 
 ## Strengths
 

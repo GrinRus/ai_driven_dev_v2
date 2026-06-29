@@ -43,6 +43,18 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
   read-only to repair attempts.
 
+## Interview document syntax
+
+- `questions.md` bullets must be exactly `- Q1 [blocking] text` or
+  `- Q1 [non-blocking] text`.
+- `answers.md` bullets must be exactly `- Q1 [resolved] text`,
+  `- Q1 [partial] text`, or `- Q1 [deferred] text`.
+- Do not put punctuation immediately after the marker: `- Q1 [resolved]: text` and
+  `- Q1: [resolved] text` are invalid.
+- Do not invent `A1`/`A2` answer ids; answer bullets always reuse question ids.
+- If no operator answer is present, write `# Answers\n\n- none\n`; do not create
+  `[resolved]` answers yourself.
+
 ## Citation and uncertainty discipline
 
 1. Every material claim in `Findings` must reference citation ids declared in `Sources`.

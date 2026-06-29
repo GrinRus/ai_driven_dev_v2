@@ -33,7 +33,9 @@ scope. After updating the required documents and checking consistency, stop.
 Interview document format is strict. `questions.md` bullets use `- Q1 [blocking|non-blocking] ...`;
 `answers.md` bullets must reuse the same question id with `[resolved|partial|deferred]`, for example
 `- Q1 [resolved] ...`. Do not put a colon after the marker; `- Q1 [resolved]: ...` is invalid.
-Do not invent `A1`/`A2` answer ids. Render assumptions or metadata as non-bullet continuation prose.
+Do not use `- Q1: [resolved] ...`; it is invalid. Do not invent `A1`/`A2` answer ids.
+If no operator answer is present, write `# Answers\n\n- none\n`; do not create `[resolved]`
+answers yourself. Render assumptions or metadata as non-bullet continuation prose.
 
 ## Finding-to-fix mapping
 
@@ -48,13 +50,20 @@ For each finding:
 
 Use concrete repair actions:
 
-- weak issue quality: rewrite issues with explicit scope, severity, and rationale linked to plan
+- weak issue quality: rewrite issues with explicit scope, severity, evidence, and rationale linked to plan
   risks/gaps; `Issue list` may use top-level bullets or `### I<N> - ...` subsections, but each
-  issue item/subsection must include explicit `Severity` and `Rationale` text; if no material issue
-  exists, use a `Severity: none` no-defect item with explicit rationale instead of inventing
+  issue item/subsection must include explicit `Severity`, `Evidence`, and `Rationale` text; if no material issue
+  exists, use a `Severity: none` no-defect item with explicit evidence and rationale instead of inventing
   artificial advisory issues; do not use bare prose such as `No material issues identified.`;
-  for every `### I<N>` subsection, put `- Severity: ...` and `- Rationale: because ...` as
-  immediate metadata bullets under that heading before any description or recommendation text;
+  for every `### I<N>` subsection, put `- Severity: ...`, `- Evidence: ...`, and
+  `- Rationale: because ...` as immediate metadata bullets under that heading before any
+  description or recommendation text;
+- missing evidence reference: add an `Evidence:` field that names a concrete upstream artifact,
+  research/source id, target file path, milestone id, acceptance id, or command/check result;
+- unsupported high-severity claim: either cite direct durable evidence or downgrade the item to a
+  bounded low/info observation; do not expand implementation scope from speculation;
+- contradiction with upstream research or plan: add `Reconciliation:` with the stronger evidence,
+  or replace the contradiction with a question or non-blocking observation;
 - weak recommendation actionability: rewrite recommendation summary with prioritized, concrete
   Markdown list items tied to issues;
 - sign-off inconsistency: align readiness state, decision, and required changes so go/no-go status
@@ -66,6 +75,9 @@ Use concrete repair actions:
 - contradiction in plan, operator request, repository state, or optional context: keep/add a
   blocking question instead of forcing approval;
 - cross-document drift: align `stage-result.md` blockers/next actions with validator/report outcome.
+  If canonical validation passed but draft `stage-result.md` still says `failed`, `blocked`, or
+  `Validator verdict: fail`, remove stale failure wording and make status/verdict match the
+  repaired output.
 
 ## Targeted repair discipline
 
@@ -93,8 +105,8 @@ Use concrete repair actions:
 
 - every blocking finding is resolved or explicitly retained as active blocker,
 - issue list accepts either bullet or `### I<N>` subsection issue blocks and every issue/no-defect
-  block includes severity and rationale; every subsection issue has immediate `Severity:` and
-  `Rationale:` bullets; bare no-issue prose is not allowed,
+  block includes severity, evidence, and rationale; every subsection issue has immediate
+  `Severity:`, `Evidence:`, and `Rationale:` bullets; bare no-issue prose is not allowed,
 - recommendation summary uses prioritized Markdown list items that are concrete and traceable,
 - readiness state, required changes, and sign-off decision are coherent,
 - `approved-with-conditions` is paired with `ready-with-conditions`,

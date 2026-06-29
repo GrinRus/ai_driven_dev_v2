@@ -32,7 +32,9 @@ scope. After updating the required documents and checking consistency, stop.
 Interview document format is strict. `questions.md` bullets use `- Q1 [blocking|non-blocking] ...`;
 `answers.md` bullets must reuse the same question id with `[resolved|partial|deferred]`, for example
 `- Q1 [resolved] ...`. Do not put a colon after the marker; `- Q1 [resolved]: ...` is invalid.
-Do not invent `A1`/`A2` answer ids. Render assumptions or metadata as non-bullet continuation prose.
+Do not use `- Q1: [resolved] ...`; it is invalid. Do not invent `A1`/`A2` answer ids.
+If no operator answer is present, write `# Answers\n\n- none\n`; do not create `[resolved]`
+answers yourself. Render assumptions or metadata as non-bullet continuation prose.
 
 ## Finding-to-fix mapping
 
@@ -65,6 +67,11 @@ Use concrete repair actions:
   `invalid`);
 - approval mismatch: align approval status with unresolved `must-fix` findings and required-change
   summary;
+- workspace hygiene contradiction: re-check ignored residue after all review commands, including
+  `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`, `coverage/`, `.coverage*`, `__pycache__/`,
+  build, dist, and dependency-cache artifacts. If residue still exists, remove it and cite
+  post-cleanup evidence, or add an active `RV-*` finding with direct residue evidence. Do not write
+  `Findings: none` while residue exists.
 - missed tasklist/plan requirement: if available tasklist or plan artifacts name a nontrivial
   implementation detail, risk mitigation, named mechanism, or verification promise that is absent
   from the diff, tests, or implementation evidence, add or keep a `must-fix` finding unless the
@@ -105,6 +112,8 @@ Use concrete repair actions:
 - available tasklist/plan task details and risk mitigations were cross-checked against the diff,
   tests, and implementation evidence,
 - named plan/tasklist mechanisms were either found in code/tests or explicitly superseded,
+- ignored residue was checked after all review commands; residue was removed with evidence or
+  recorded as an active finding,
 - required changes are explicit for non-approved outcomes,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

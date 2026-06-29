@@ -203,6 +203,27 @@ def _render_correction_items(findings: Iterable[ValidatorReportFinding]) -> list
 
 def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
     normalized_message = finding.message.lower()
+    normalized_source_path = (finding.source_path or "").lower()
+    if finding.code == "INTERVIEW-MALFORMED-DOCUMENT":
+        if "answers.md" in normalized_source_path or "answer" in normalized_message:
+            return (
+                "Rewrite answer bullets with exact interview syntax: replace forms like "
+                "`- Q1 [resolved]: text` with `- Q1 [resolved] text`; do not use "
+                "`- Q1: [resolved] text` or `A1` answer ids. If no operator answer is "
+                "present, write exactly `- none`."
+            )
+        if "questions.md" in normalized_source_path or "question" in normalized_message:
+            return (
+                "Rewrite question bullets with exact interview syntax: use "
+                "`- Q1 [blocking] text` or `- Q1 [non-blocking] text`; put alternatives, "
+                "examples, or rationale in non-bullet continuation prose instead of nested "
+                "bullets."
+            )
+        return (
+            "Rewrite interview bullets with exact `questions.md` / `answers.md` syntax; "
+            "do not put punctuation immediately after the marker and do not invent `A1` "
+            "answer ids."
+        )
     if (
         finding.code == "SEM-INCOMPLETE-SECTION"
         and "must use bullet items" in normalized_message
@@ -221,6 +242,30 @@ def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
             "`implementation-report.md`, a changed implementation file path, or an "
             "acceptance-criteria id such as `AC-1`; remove or mark the finding `invalid` "
             "if no such evidence exists."
+        )
+    if finding.code == "SEM-MISSING-EVIDENCE-REF" and "review-spec" in normalized_source_path:
+        return (
+            "For each review-spec issue/no-defect item, add `Evidence:` naming a concrete "
+            "upstream artifact, research/source id, target file path, or check result."
+        )
+    if finding.code == "SEM-UNSUPPORTED-CLAIM" and "review-spec" in normalized_source_path:
+        return (
+            "Either cite direct durable evidence and add `Reconciliation:` when contradicting "
+            "upstream research/plan evidence, or downgrade the claim to a bounded low/info "
+            "observation or question."
+        )
+    if (
+        finding.code == "SEM-UNVERIFIABLE-CHECK-CLAIM"
+        and (
+            "ignored workspace residue" in normalized_message
+            or "ignored residue" in normalized_message
+            or "workspace residue" in normalized_message
+        )
+    ):
+        return (
+            "Check ignored residue after all review commands. Remove the residue and cite "
+            "post-cleanup evidence, or record an active `RV-*` finding with direct residue "
+            "evidence. Do not write `Findings: none` while residue exists."
         )
     return ""
 

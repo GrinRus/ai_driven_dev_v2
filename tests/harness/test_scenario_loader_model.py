@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+import yaml
+
 from aidd.core.stages import STAGES
-from aidd.harness.scenarios import load_scenario
+from aidd.harness.scenarios import ScenarioManifestError, load_scenario
 
 
 def _assert_live_contract(scenario) -> None:
@@ -22,6 +25,7 @@ def _assert_live_contract(scenario) -> None:
     assert scenario.run.stage_end == STAGES[-1]
     assert scenario.run.timeout_minutes is not None
     assert scenario.run.timeout_minutes >= 240
+    assert scenario.run.no_progress_timeout_minutes == 30
     assert scenario.feature_source is not None
     assert scenario.feature_source.mode == "authored-task-pool"
     assert scenario.feature_source.selection_policy == "first-listed"
@@ -86,6 +90,59 @@ def test_all_live_scenarios_load_as_valid_full_flow_manifests() -> None:
         assert scenario.scenario_id
         assert scenario.task
         _assert_live_contract(scenario)
+        assert scenario.run.max_remediation_cycles == 3
+
+
+def test_live_scenario_accepts_max_remediation_cycles_override(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["max_remediation_cycles"] = 5
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "hono-remediation-limit.yaml"
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    scenario = load_scenario(scenario_path)
+
+    assert scenario.run.max_remediation_cycles == 5
+
+
+def test_live_scenario_accepts_no_progress_timeout_override(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["no_progress_timeout_minutes"] = 45
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "hono-no-progress.yaml"
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    scenario = load_scenario(scenario_path)
+
+    assert scenario.run.no_progress_timeout_minutes == 45
+
+
+def test_live_scenario_rejects_invalid_no_progress_timeout(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["no_progress_timeout_minutes"] = 0
+    scenario_path = tmp_path / "harness" / "scenarios" / "live" / "hono-invalid-no-progress.yaml"
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(ScenarioManifestError, match="no_progress_timeout_minutes"):
+        load_scenario(scenario_path)
+
+
+def test_live_scenario_rejects_invalid_max_remediation_cycles(tmp_path: Path) -> None:
+    source_path = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["limits"]["max_remediation_cycles"] = 0
+    scenario_path = (
+        tmp_path / "harness" / "scenarios" / "live" / "hono-invalid-remediation-limit.yaml"
+    )
+    scenario_path.parent.mkdir(parents=True)
+    scenario_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(ScenarioManifestError, match="max_remediation_cycles"):
+        load_scenario(scenario_path)
 
 
 def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> None:

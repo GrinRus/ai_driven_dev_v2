@@ -49,9 +49,10 @@ and manual-live lanes.
 11. For manual live lanes, the launching agent is the operator-agent: answer blocking
     questions in `answers.md` with exact lines such as
     `- Q1 [resolved] answer text`, write `answer-analysis.md`, write
-    `stage-quality-audits/<stage>.md` for product-evaluation checkpoints, and write
-    `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md` when a
-    deliverable quality decision is needed.
+    the exact `stage-quality-audits/<stage-run-id>.md` path named in
+    `flow-state.json` for product-evaluation checkpoints, and write
+    `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md` with
+    iteration history when a deliverable quality decision is needed.
 12. Do not hand-edit runtime-generated stage output documents while adding
     operator-authored answers or the manual quality report.
 
@@ -97,10 +98,10 @@ and manual-live lanes.
 - `.aidd/reports/evals/<run_id>/log-analysis.md`
 - `.aidd/reports/evals/<run_id>/grader.json`
 - `.aidd/reports/evals/<run_id>/verdict.md`
-- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.json`
-- `.aidd/reports/evals/<run_id>/stage-audits/<stage>.md`
-- `.aidd/reports/evals/<run_id>/stage-quality-audits/<stage>.md` for completed
-  product-evaluation stages
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage-run-id>.json`
+- `.aidd/reports/evals/<run_id>/stage-audits/<stage-run-id>.md`
+- `.aidd/reports/evals/<run_id>/stage-quality-audits/<stage-run-id>.md` for completed
+  product-evaluation stage runs
 - `.aidd/reports/evals/<run_id>/target-workspace-evidence.json`
 - `.aidd/reports/evals/<run_id>/target-workspace-evidence.md`
 - `.aidd/reports/evals/<run_id>/run-transcript.json` with live timeout policy evidence
@@ -121,7 +122,11 @@ Manual live mutable execution is outside the source checkout by default:
 In black-box live E2E, `limits.timeout_minutes` applies to each public
 `aidd stage run` command. It is not a global flow timeout. Use
 `run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` to
-separate stage command timeouts from provider adapter timeout profiles.
+separate stage command timeouts, live no-progress timeouts, and provider adapter
+timeout profiles. `limits.no_progress_timeout_minutes` defaults to `30` for live
+manifests; when it triggers, classify `provider-no-progress before completed stage
+artifact` as infra/provider evidence, not manual-quality-stop, unresolved-question
+`blocked`, counted-clean, or product-quality failure.
 For installed live manifest verification, AIDD self-check commands should use the
 installed `aidd` binary from `PATH` directly, such as `aidd stage questions ...`.
 Treat `uv run aidd ...` in a live target repo as a workspace-pollution risk because
@@ -153,6 +158,11 @@ For eval harness runs, preserve the stable execution verdict taxonomy:
 Live deliverable quality is not an eval runner verdict. For product-evaluation live
 runs, record it only in manual stage quality audits and final quality reports; the
 runner must not parse those reports or use them to change the execution verdict.
+For product-evaluation runs with review/QA defects, `request-remediation` is a manual
+stage-quality decision on a `review` or `qa` stage run; the runner uses the existing
+operator remediation flow, preserves distinct stage-run audits for repeated
+`implement/review/qa` cycles, and still leaves subjective quality scoring to the
+launching agent.
 Manual operator UI/UX decisions in that report are human-authored only. Treat
 `frontend-checkpoints.*` as raw operator-surface availability evidence, not as a
 UI/UX audit or screenshot requirement.

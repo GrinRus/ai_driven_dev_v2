@@ -42,6 +42,18 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Do not create or edit `repair-brief.md`; AIDD generates it after validation fails and provides it
   read-only to repair attempts.
 
+## Interview document syntax
+
+- `questions.md` bullets must be exactly `- Q1 [blocking] text` or
+  `- Q1 [non-blocking] text`.
+- `answers.md` bullets must be exactly `- Q1 [resolved] text`,
+  `- Q1 [partial] text`, or `- Q1 [deferred] text`.
+- Do not put punctuation immediately after the marker: `- Q1 [resolved]: text` and
+  `- Q1: [resolved] text` are invalid.
+- Do not invent `A1`/`A2` answer ids; answer bullets always reuse question ids.
+- If no operator answer is present, write `# Answers\n\n- none\n`; do not create
+  `[resolved]` answers yourself.
+
 ## Installed live workspace discipline
 
 - Repository-local `contracts/...` files may be absent in installed live runs. Do not spend the turn
@@ -72,6 +84,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 8. Optional broad checks outside the authored verification boundary may be listed only as
    optional/non-blocking exploratory checks. Do not turn them into required task completion or final
    pass criteria unless the authored task or review-spec explicitly requires them.
+9. In JavaScript or TypeScript packages, do not plan a concrete helper/module path as private or
+   internal-only until you inspect `package.json` `exports`, wildcard subpath exports such as
+   `./utils/*`, generated declaration outputs, and existing public import conventions. If the
+   proposed path can be imported through the package boundary, either choose a non-exported
+   location or record the public API risk and required compatibility evidence in the tasklist.
 
 ## Execution instructions
 
@@ -84,9 +101,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 4. Keep task scope bounded; split bundled work into separate ordered tasks.
 5. Use `context/verification-output.md` as the verification boundary when present; if you need to
    mention an authored command, quote it exactly rather than paraphrasing executable details.
-6. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
+6. When naming JS/TS helper or module paths, include export-map/public-surface evidence in the
+   task notes before calling the path private or internal-only.
+7. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
    consistent with tasklist content.
-7. If required inputs are missing or sequencing/ownership assumptions are unresolved, raise
+8. If required inputs are missing or sequencing/ownership assumptions are unresolved, raise
    questions with stable ids and `[blocking]` / `[non-blocking]` markers instead of inventing
    decisions.
 
@@ -105,5 +124,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - authored verification commands from `context/verification-output.md` are preserved exactly, or
   referenced generically without changing command flags or broadening scope,
 - optional broader checks are not promoted to required pass criteria outside the authored boundary,
+- JavaScript/TypeScript helper or module paths include export-map evidence before any
+  private/internal-only claim,
 - unresolved blocking ambiguity is represented as explicit questions,
 - `stage-result.md` and `validator-report.md` match tasklist readiness and blockers.

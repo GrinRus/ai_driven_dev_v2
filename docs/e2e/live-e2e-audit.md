@@ -8,7 +8,8 @@ classification for the maintained manual live matrix.
 The live matrix now uses authored task specs with explicit `live_matrix_role`.
 Small scenarios are flow-regression lanes only. Medium, large, and xlarge scenarios
 are product-evaluation lanes with `visible_request`, operator-only `audit_rubric`,
-`complexity_axes`, stage quality audits, and final manual quality reports.
+`complexity_axes`, per-stage-run quality audits, normal review/QA remediation loops,
+and final manual quality reports.
 
 ## Size Classification
 
@@ -66,11 +67,16 @@ are product-evaluation lanes with `visible_request`, operator-only `audit_rubric
 - Bootstrap context now writes `selected-task.md`, `acceptance-criteria.md`,
   `allowed-write-scope.md`, and command-specific `verification-output.md` from authored task
   fields.
-- Manual `stage-quality-audits/<stage>.md`, `flow-quality-report.md`,
+- Manual `stage-quality-audits/<stage-run-id>.md`, `flow-quality-report.md`,
   `code-quality-report.md`, and `quality-report.md` record repair burden, suspiciously
   small patches for larger tasks, placeholder documentation examples, and target
   workspace hygiene; the live runner does not turn these signals into an automatic
   quality gate.
+- Product-evaluation bundles now preserve stage-run ids so normal development loops
+  such as `implement -> review -> implement -> review -> qa` can be audited without
+  overwriting the first `implement`, `review`, or `qa` evidence. `request-remediation`
+  remains a manual flow-control decision for `review` and `qa` only; it uses the
+  existing AIDD remediation flow rather than changing the core stage graph.
 - Stage briefs now include exact skeleton hints for primary stage documents plus
   richer `stage-result.md` and `validator-report.md` skeletons to reduce first-pass
   contract churn.

@@ -160,6 +160,37 @@ def _is_repair_context_attempt(
     )
 
 
+def historical_repair_brief_trace_path(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+) -> Path | None:
+    stage_documents_root = workspace_stage_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    candidate = stage_documents_root / "repair-brief.md"
+    if not candidate.exists():
+        return None
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if metadata is None:
+        return None
+
+    relative_candidate = workspace_relative_path(workspace_root, candidate)
+    if any(entry.repair_brief_path == relative_candidate for entry in metadata.repair_history):
+        return candidate
+    return None
+
+
 def prepare_adapter_invocation(
     *,
     workspace_root: Path,
@@ -245,7 +276,16 @@ def prepare_adapter_invocation(
             repair_context_markdown=repair_context_markdown,
             contracts_root=contracts_root,
         )
-    elif candidate_repair_brief_path.exists():
+    elif (
+        candidate_repair_brief_path.exists()
+        and historical_repair_brief_trace_path(
+            workspace_root=workspace_root,
+            work_item=execution_state.work_item,
+            run_id=execution_state.run_id,
+            stage=execution_state.stage,
+        )
+        is None
+    ):
         candidate_repair_brief_path.unlink()
 
     input_bundle_path, input_bundle_markdown = _prepare_attempt_input_bundle(
@@ -311,6 +351,13 @@ def restore_core_owned_repair_brief(
             )
             / "repair-brief.md"
         )
+        if historical_repair_brief_trace_path(
+            workspace_root=workspace_root,
+            work_item=invocation_bundle.work_item,
+            run_id=invocation_bundle.run_id,
+            stage=invocation_bundle.stage,
+        ) is not None:
+            return model_authored_repair_brief_path
         if model_authored_repair_brief_path.exists():
             model_authored_repair_brief_path.unlink()
             return model_authored_repair_brief_path
@@ -333,6 +380,7 @@ def restore_core_owned_repair_brief(
 __all__ = [
     "ATTEMPT_INPUT_BUNDLE_FILENAME",
     "ATTEMPT_REPAIR_CONTEXT_FILENAME",
+    "historical_repair_brief_trace_path",
     "prepare_adapter_invocation",
     "restore_core_owned_repair_brief",
 ]

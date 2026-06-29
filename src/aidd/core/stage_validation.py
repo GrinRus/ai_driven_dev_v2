@@ -31,6 +31,7 @@ from aidd.core.stage_preparation import (
     validate_required_stage_inputs,
 )
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
+from aidd.core.stage_terminal import reconcile_stage_result_after_validation_pass
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 from aidd.validators.cross_document import BLOCKING_UNANSWERED_CODE
 from aidd.validators.models import ValidationFinding
@@ -361,6 +362,11 @@ def decide_post_validation_transition(
             status=StageState.BLOCKED.value,
         )
     elif workspace_root is not None and next_state == StageState.SUCCEEDED:
+        reconcile_stage_result_after_validation_pass(
+            workspace_root=workspace_root,
+            work_item=validation_state.work_item,
+            stage=validation_state.stage,
+        )
         publish_stage_outputs_after_validation_pass(
             workspace_root=workspace_root,
             work_item=validation_state.work_item,

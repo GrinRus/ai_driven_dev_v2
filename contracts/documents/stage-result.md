@@ -113,6 +113,10 @@ or validation wording when the canonical validator report proves the draft incon
 - Do not claim success when required outputs or validation evidence are missing.
 - Do not claim `Validator verdict: pass` when the canonical AIDD validator report lists
   findings.
+- If canonical AIDD validation passes, runtime exit succeeded, and no unresolved blocking
+  questions remain, AIDD may normalize a stale draft `Status: failed|blocked` or
+  `Validator verdict: fail` to `succeeded` / `pass` before publication and record that
+  normalization in `Terminal state notes`.
 - Use explicit `- none` markers instead of leaving required sections empty.
 
 ## Validation cues

@@ -20,7 +20,9 @@ from aidd.harness.live_e2e_black_box import (
     run_black_box_live_e2e,
 )
 from aidd.harness.live_e2e_black_box_orchestration import (
+    BlackBoxCommandResult,
     BlackBoxLiveE2EResult,
+    LiveE2EInterrupted,
     _find_resume_state,
     _live_interruption_handlers,
     _next_flow_complete_visible,
@@ -98,6 +100,7 @@ def _write_fake_aidd(
     *,
     fail_stage: str | None = None,
     timeout_stage: str | None = None,
+    no_progress_stage: str | None = None,
     adapter_timeout_stage: str | None = None,
     block_stage: str | None = None,
     ui_operator_request_stage: str | None = None,
@@ -124,6 +127,7 @@ from pathlib import Path
 PRIMARY_OUTPUTS = {json.dumps(_PRIMARY_OUTPUTS)}
 FAIL_STAGE = {fail_stage!r}
 TIMEOUT_STAGE = {timeout_stage!r}
+NO_PROGRESS_STAGE = {no_progress_stage!r}
 ADAPTER_TIMEOUT_STAGE = {adapter_timeout_stage!r}
 BLOCK_STAGE = {block_stage!r}
 UI_OPERATOR_REQUEST_STAGE = {ui_operator_request_stage!r}
@@ -373,6 +377,11 @@ def stage_run(args: list[str]) -> int:
         print(f"Stage run result: action=stop state=failed stage={{stage}}")
         return 7
     if stage == TIMEOUT_STAGE:
+        write_executing_stage_metadata(stage, work_item, run_id)
+        print(f"Stage run started: state=executing stage={{stage}}", flush=True)
+        time.sleep(5)
+        return 0
+    if stage == NO_PROGRESS_STAGE:
         write_executing_stage_metadata(stage, work_item, run_id)
         print(f"Stage run started: state=executing stage={{stage}}", flush=True)
         time.sleep(5)
@@ -727,6 +736,7 @@ def _write_scenario_manifest(
     acceptance_criteria: tuple[str, ...] = ("The fake AIDD stages complete.",),
     product_evaluation: bool = False,
     repo_revision: str = "abc123",
+    no_progress_timeout_minutes: int | None = None,
 ) -> None:
     feature_size = (
         "xlarge"
@@ -743,6 +753,12 @@ def _write_scenario_manifest(
         if feature_size == "medium"
         else 8
     )
+    limits: dict[str, int] = {
+        "timeout_minutes": 240,
+        "patch_budget_files": patch_budget_files,
+    }
+    if no_progress_timeout_minutes is not None:
+        limits["no_progress_timeout_minutes"] = no_progress_timeout_minutes
     payload = {
         "id": "AIDD-TEST-LIVE-BLACKBOX",
         "scenario_class": "live-full-flow-interview" if interview_required else "live-full-flow",
@@ -756,7 +772,7 @@ def _write_scenario_manifest(
         "aidd_invocation": {"work_item": "WI-LIVE-BLACKBOX"},
         "verify": {"commands": list(verify_commands)},
         "stage_scope": {"start": "idea", "end": "qa"},
-        "limits": {"timeout_minutes": 240, "patch_budget_files": patch_budget_files},
+        "limits": limits,
         "interview": {"required": interview_required},
         "runtime_targets": list(runtime_targets),
         "live_flow": {
@@ -918,6 +934,7 @@ def _prepare_live_test(
     runtime_targets: tuple[str, ...] = ("opencode",),
     fail_stage: str | None = None,
     timeout_stage: str | None = None,
+    no_progress_stage: str | None = None,
     adapter_timeout_stage: str | None = None,
     block_stage: str | None = None,
     ui_operator_request_stage: str | None = None,
@@ -938,6 +955,7 @@ def _prepare_live_test(
     ignored_pollution_stage: str | None = None,
     implement_untracked_product_file: str | None = None,
     product_evaluation: bool = False,
+    no_progress_timeout_minutes: int | None = None,
 ) -> tuple[Path, Path, Path]:
     _clear_live_runtime_command_env(monkeypatch)
     _put_fake_provider_on_path(
@@ -957,6 +975,7 @@ def _prepare_live_test(
         fake_aidd,
         fail_stage=fail_stage,
         timeout_stage=timeout_stage,
+        no_progress_stage=no_progress_stage,
         adapter_timeout_stage=adapter_timeout_stage,
         block_stage=block_stage,
         ui_operator_request_stage=ui_operator_request_stage,
@@ -984,6 +1003,7 @@ def _prepare_live_test(
         acceptance_criteria=acceptance_criteria,
         product_evaluation=product_evaluation,
         repo_revision=source_revision,
+        no_progress_timeout_minutes=no_progress_timeout_minutes,
     )
     monkeypatch.setattr(
         "aidd.harness.live_e2e_black_box.prepare_local_wheel_install",
@@ -999,8 +1019,36 @@ def _write_stage_quality_audit(
     *,
     stage: str,
     flow_decision: str = "continue",
+    remediation_request: dict[str, object] | None = None,
 ) -> Path:
-    path = bundle_root / "stage-quality-audits" / f"{stage}.md"
+    state_path = bundle_root / "flow-state.json"
+    stage_run_id = stage
+    if state_path.exists():
+        state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+        required_path = state_payload.get("quality_review_required_path")
+        required_stage_run_id = state_payload.get("quality_review_required_stage_run_id")
+        if isinstance(required_stage_run_id, str) and required_stage_run_id:
+            stage_run_id = required_stage_run_id
+        path = Path(required_path) if isinstance(required_path, str) else (
+            bundle_root / "stage-quality-audits" / f"{stage}.md"
+        )
+    else:
+        path = bundle_root / "stage-quality-audits" / f"{stage}.md"
+    remediation_lines: list[str] = []
+    if remediation_request is not None:
+        raw_source_ids = remediation_request.get("source_ids", ())
+        source_ids = (
+            raw_source_ids
+            if isinstance(raw_source_ids, list | tuple)
+            else (raw_source_ids,)
+        )
+        remediation_lines = [
+            "",
+            "## Remediation Request",
+            f"- Source stage: {remediation_request['source_stage']}",
+            "- Source ids: " + ", ".join(str(item) for item in source_ids),
+            f"- Operator note: {remediation_request['operator_note']}",
+        ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         "\n".join(
@@ -1022,7 +1070,7 @@ def _write_stage_quality_audit(
                 "- Specific defects: none",
                 "",
                 "## Evidence Reviewed",
-                f"- Stage artifacts: stage-audits/{stage}.json",
+                f"- Stage artifacts: stage-audits/{stage_run_id}.json",
                 "- Runtime logs: runtime-log.txt",
                 "- Runner stage audit: present",
                 "- Target repo evidence: synthetic fixture",
@@ -1030,6 +1078,7 @@ def _write_stage_quality_audit(
                 "## Notes For Final Report",
                 "- AIDD quality signal: synthetic",
                 "- Residual risks: none",
+                *remediation_lines,
             )
         )
         + "\n",
@@ -1066,6 +1115,83 @@ def _run_product_evaluation_to_terminal(
             run_id=result.run_id,
         )
     return result
+
+
+def _continue_product_evaluation_until_stage(
+    *,
+    scenario_path: Path,
+    work_root: Path,
+    report_root: Path,
+    stage: str,
+    runtime_id: str = "opencode",
+) -> BlackBoxLiveE2EResult:
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id=runtime_id,
+        work_root=work_root,
+        report_root=report_root,
+    )
+    while result.status == "awaiting-quality-review":
+        state_payload = json.loads(
+            (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+        )
+        required_stage = state_payload["quality_review_required_stage"]
+        assert isinstance(required_stage, str)
+        if required_stage == stage:
+            return result
+        _write_stage_quality_audit(result.bundle_root, stage=required_stage)
+        result = run_black_box_live_e2e(
+            scenario_path=scenario_path,
+            runtime_id=runtime_id,
+            work_root=work_root,
+            report_root=report_root,
+            run_id=result.run_id,
+        )
+    raise AssertionError(f"run reached {result.status}, not quality review for {stage}")
+
+
+def _fake_remediation_ui_job(
+    *,
+    ctx: object,
+    endpoint: str,
+    payload: dict[str, object],
+    stage: str,
+    stage_run_id: str,
+    action: str,
+) -> tuple[str, Path, dict[str, object]]:
+    bundle_root = ctx.bundle_root
+    assert isinstance(bundle_root, Path)
+    stale_stages = (
+        ["review", "qa"]
+        if endpoint == "/api/remediation/launch"
+        else (["qa"] if str(payload.get("stage", "")) == "review" else [])
+    )
+    evidence_payload: dict[str, object] = {
+        "endpoint": endpoint,
+        "payload": payload,
+        "stage": stage,
+        "stage_run_id": stage_run_id,
+        "action": action,
+        "job_payload": {
+            "status": "completed",
+            "result": {
+                "completed": True,
+                "status": {
+                    "stale_stages": [
+                        {"stage": stale_stage} for stale_stage in stale_stages
+                    ],
+                },
+            },
+        },
+    }
+    evidence_path = (
+        bundle_root
+        / "remediation-actions"
+        / f"fake-{stage_run_id}-{action}.json"
+    )
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(json.dumps(evidence_payload, indent=2) + "\n", encoding="utf-8")
+    return "pass", evidence_path, evidence_payload
 
 
 def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
@@ -1153,15 +1279,18 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert "`aidd.example.toml`" in repository_state_context
     assert "### Setup-baseline untracked non-AIDD files" in repository_state_context
     assert "`setup.log`" in repository_state_context
-    for stage in STAGES:
-        assert (result.bundle_root / "stage-audits" / f"{stage}.json").exists()
-        assert (result.bundle_root / "stage-audits" / f"{stage}.md").exists()
-    for stage in STAGES:
+    completed_stage_runs = state_payload["completed_stage_runs"]
+    assert [item["stage"] for item in completed_stage_runs] == list(STAGES)
+    for index, stage in enumerate(STAGES, start=1):
+        stage_run_id = f"stage-{index:04d}-{stage}"
+        assert (result.bundle_root / "stage-audits" / f"{stage_run_id}.json").exists()
+        assert (result.bundle_root / "stage-audits" / f"{stage_run_id}.md").exists()
         stage_audit = json.loads(
-            (result.bundle_root / "stage-audits" / f"{stage}.json").read_text(
+            (result.bundle_root / "stage-audits" / f"{stage_run_id}.json").read_text(
                 encoding="utf-8"
             )
         )
+        assert stage_audit["stage_run_id"] == stage_run_id
         assert stage_audit["stage_state"] == "passed"
         assert stage_audit["unresolved_questions"] is False
         assert stage_audit["consistency_findings"] == []
@@ -1173,6 +1302,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert run_transcript["timeout_policy"] == {
         "scope": "per-stage-command",
         "stage_command_timeout_seconds": 14400.0,
+        "no_progress_timeout_seconds": 1800.0,
         "global_flow_timeout_seconds": None,
         "runtime_config_source": "aidd.example.toml",
     }
@@ -1295,11 +1425,12 @@ def test_black_box_live_product_evaluation_stops_after_stage_for_quality_review(
     )
 
     assert result.status == "awaiting-quality-review"
-    required_path = result.bundle_root / "stage-quality-audits" / "idea.md"
+    required_path = result.bundle_root / "stage-quality-audits" / "stage-0001-idea.md"
     assert result.quality_review_request_path == required_path
     assert not required_path.exists()
-    assert (result.bundle_root / "stage-audits" / "idea.json").exists()
-    assert not (result.bundle_root / "stage-audits" / "research.json").exists()
+    assert (result.bundle_root / "stage-audits" / "stage-0001-idea.json").exists()
+    assert not (result.bundle_root / "stage-audits" / "idea.json").exists()
+    assert not (result.bundle_root / "stage-audits" / "stage-0002-research.json").exists()
     assert not (result.bundle_root / "verdict.md").exists()
     state_payload = json.loads(
         (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
@@ -1307,7 +1438,11 @@ def test_black_box_live_product_evaluation_stops_after_stage_for_quality_review(
     assert state_payload["status"] == "awaiting-quality-review"
     assert state_payload["next_action"] == "quality-review"
     assert state_payload["quality_review_required_stage"] == "idea"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0001-idea"
     assert state_payload["completed_stages"] == ["idea"]
+    assert [item["stage_run_id"] for item in state_payload["completed_stage_runs"]] == [
+        "stage-0001-idea"
+    ]
 
 
 def test_black_box_live_product_evaluation_resume_requires_stage_quality_audit(
@@ -1351,7 +1486,8 @@ def test_black_box_live_product_evaluation_resume_requires_valid_flow_decision(
         work_root=work_root,
         report_root=report_root,
     )
-    invalid_audit_path = first.bundle_root / "stage-quality-audits" / "idea.md"
+    invalid_audit_path = first.quality_review_request_path
+    assert invalid_audit_path is not None
     invalid_audit_path.parent.mkdir(parents=True, exist_ok=True)
     invalid_audit_path.write_text(
         "\n".join(
@@ -1378,7 +1514,7 @@ def test_black_box_live_product_evaluation_resume_requires_valid_flow_decision(
 
     assert resumed.status == "awaiting-quality-review"
     assert resumed.quality_review_request_path == invalid_audit_path
-    assert not (resumed.bundle_root / "stage-audits" / "research.json").exists()
+    assert not (resumed.bundle_root / "stage-audits" / "stage-0002-research.json").exists()
     state_payload = json.loads(
         (resumed.bundle_root / "flow-state.json").read_text(encoding="utf-8")
     )
@@ -1417,13 +1553,18 @@ def test_black_box_live_product_evaluation_resume_continues_after_audit_file(
     assert resumed.status == "awaiting-quality-review"
     assert resumed.run_id == first.run_id
     assert resumed.quality_review_request_path == (
-        resumed.bundle_root / "stage-quality-audits" / "research.md"
+        resumed.bundle_root / "stage-quality-audits" / "stage-0002-research.md"
     )
     state_payload = json.loads(
         (resumed.bundle_root / "flow-state.json").read_text(encoding="utf-8")
     )
     assert state_payload["completed_stages"] == ["idea", "research"]
-    assert (resumed.bundle_root / "stage-audits" / "research.json").exists()
+    assert [item["stage_run_id"] for item in state_payload["completed_stage_runs"]] == [
+        "stage-0001-idea",
+        "stage-0002-research",
+    ]
+    assert (resumed.bundle_root / "stage-audits" / "stage-0002-research.json").exists()
+    assert not (resumed.bundle_root / "stage-audits" / "research.json").exists()
 
 
 def test_black_box_live_product_evaluation_stop_not_counted_is_manual_quality_stop(
@@ -1497,6 +1638,432 @@ def test_black_box_live_product_evaluation_stop_not_counted_is_manual_quality_st
     assert steps[-1]["classification"] == "manual-quality-stop"
 
 
+def test_black_box_live_product_evaluation_request_remediation_from_review_runs_new_implement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        _fake_remediation_ui_job,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "review",
+            "source_ids": ["RV-1"],
+            "operator_note": "Fix rejected review finding.",
+        },
+    )
+
+    remediated = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert remediated.status == "awaiting-quality-review"
+    state_payload = json.loads(
+        (remediated.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["quality_review_required_stage"] == "implement"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0008-implement"
+    assert state_payload["stale_downstream_stages"] == ["review", "qa"]
+    assert state_payload["handled_quality_stage_run_ids"] == ["stage-0007-review"]
+    assert state_payload["remediation_cycles"] == 1
+    assert [item["stage_run_id"] for item in state_payload["completed_stage_runs"]] == [
+        "stage-0001-idea",
+        "stage-0002-research",
+        "stage-0003-plan",
+        "stage-0004-review-spec",
+        "stage-0005-tasklist",
+        "stage-0006-implement",
+        "stage-0007-review",
+        "stage-0008-implement",
+    ]
+    assert (remediated.bundle_root / "stage-audits" / "stage-0006-implement.json").exists()
+    assert (remediated.bundle_root / "stage-audits" / "stage-0008-implement.json").exists()
+    assert not (remediated.bundle_root / "stage-audits" / "implement.json").exists()
+
+
+def test_black_box_live_product_evaluation_request_remediation_allows_operator_audit_ids(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_remediation_ui_job(
+        *,
+        ctx: object,
+        endpoint: str,
+        payload: dict[str, object],
+        stage: str,
+        stage_run_id: str,
+        action: str,
+    ) -> tuple[str, Path, dict[str, object]]:
+        calls.append(
+            {
+                "endpoint": endpoint,
+                "payload": payload,
+                "stage": stage,
+                "stage_run_id": stage_run_id,
+                "action": action,
+            }
+        )
+        return _fake_remediation_ui_job(
+            ctx=ctx,
+            endpoint=endpoint,
+            payload=payload,
+            stage=stage,
+            stage_run_id=stage_run_id,
+            action=action,
+        )
+
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        fake_remediation_ui_job,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "review",
+            "source_ids": ["OP-RV-1"],
+            "operator_note": "Fix operator audit finding.",
+        },
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert result.status == "awaiting-quality-review"
+    assert calls[0]["payload"] == {
+        "source_stage": "review",
+        "source_ids": ["OP-RV-1"],
+        "operator_note": "Fix operator audit finding.",
+        "target_stage": "implement",
+        "runtime": "opencode",
+        "run_id": review_checkpoint.run_id,
+        "log_follow": True,
+        "allow_operator_audit_source_ids": True,
+    }
+
+
+def test_black_box_live_product_evaluation_failed_remediation_launch_stops_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_failed_remediation_ui_job(
+        *,
+        ctx: object,
+        endpoint: str,
+        payload: dict[str, object],
+        stage: str,
+        stage_run_id: str,
+        action: str,
+    ) -> tuple[str, Path, dict[str, object]]:
+        bundle_root = ctx.bundle_root
+        assert isinstance(bundle_root, Path)
+        calls.append(
+            {
+                "endpoint": endpoint,
+                "payload": payload,
+                "stage": stage,
+                "stage_run_id": stage_run_id,
+                "action": action,
+            }
+        )
+        evidence_payload: dict[str, object] = {
+            "endpoint": endpoint,
+            "payload": payload,
+            "stage": stage,
+            "stage_run_id": stage_run_id,
+            "action": action,
+            "failure_reason": "Remediation job ended with status `failed`.",
+            "job_payload": {
+                "status": "failed",
+                "result": {
+                    "completed": False,
+                    "stage_result": {
+                        "stage": stage,
+                        "run_id": payload["run_id"],
+                        "exit_code": 1,
+                    },
+                },
+            },
+        }
+        evidence_path = (
+            bundle_root
+            / "remediation-actions"
+            / f"fake-{stage_run_id}-{action}-failed.json"
+        )
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(
+            json.dumps(evidence_payload, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return "fail", evidence_path, evidence_payload
+
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        fake_failed_remediation_ui_job,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "review",
+            "source_ids": ["RV-1"],
+            "operator_note": "Fix rejected review finding.",
+        },
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert result.status == "fail"
+    assert calls == [
+        {
+            "endpoint": "/api/remediation/launch",
+            "payload": {
+                "source_stage": "review",
+                "source_ids": ["RV-1"],
+                "operator_note": "Fix rejected review finding.",
+                "target_stage": "implement",
+                "runtime": "opencode",
+                "run_id": review_checkpoint.run_id,
+                "log_follow": True,
+            },
+            "stage": "implement",
+            "stage_run_id": "stage-0008-implement",
+            "action": "launch",
+        }
+    ]
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["status"] == "fail"
+    assert state_payload["error"] == "remediation operator UI job failed"
+
+
+def test_black_box_live_product_evaluation_reruns_stale_review_then_qa(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        _fake_remediation_ui_job,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "review",
+            "source_ids": ["RV-1"],
+            "operator_note": "Fix rejected review finding.",
+        },
+    )
+    implement_checkpoint = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+    _write_stage_quality_audit(implement_checkpoint.bundle_root, stage="implement")
+
+    review_rerun = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert review_rerun.status == "awaiting-quality-review"
+    state_payload = json.loads(
+        (review_rerun.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["quality_review_required_stage"] == "review"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0009-review"
+    assert state_payload["stale_downstream_stages"] == ["qa"]
+    _write_stage_quality_audit(review_rerun.bundle_root, stage="review")
+
+    qa_rerun = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    assert qa_rerun.status == "awaiting-quality-review"
+    state_payload = json.loads(
+        (qa_rerun.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["quality_review_required_stage"] == "qa"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0010-qa"
+    assert state_payload["stale_downstream_stages"] == []
+    assert [item["stage_run_id"] for item in state_payload["completed_stage_runs"]][-3:] == [
+        "stage-0008-implement",
+        "stage-0009-review",
+        "stage-0010-qa",
+    ]
+
+
+def test_black_box_live_product_evaluation_request_remediation_from_qa_starts_new_loop(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    monkeypatch.setattr(
+        live_orchestration,
+        "_run_ui_remediation_job",
+        _fake_remediation_ui_job,
+    )
+    qa_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="qa",
+    )
+    _write_stage_quality_audit(
+        qa_checkpoint.bundle_root,
+        stage="qa",
+        flow_decision="request-remediation",
+        remediation_request={
+            "source_stage": "qa",
+            "source_ids": ["risk-1"],
+            "operator_note": "Fix QA risk.",
+        },
+    )
+
+    remediated = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=qa_checkpoint.run_id,
+    )
+
+    state_payload = json.loads(
+        (remediated.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert remediated.status == "awaiting-quality-review"
+    assert state_payload["quality_review_required_stage"] == "implement"
+    assert state_payload["quality_review_required_stage_run_id"] == "stage-0009-implement"
+    assert state_payload["handled_quality_stage_run_ids"] == ["stage-0008-qa"]
+    assert state_payload["stale_downstream_stages"] == ["review", "qa"]
+
+
+def test_black_box_live_product_evaluation_invalid_remediation_audit_keeps_quality_gate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+    )
+    review_checkpoint = _continue_product_evaluation_until_stage(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+        stage="review",
+    )
+    _write_stage_quality_audit(
+        review_checkpoint.bundle_root,
+        stage="review",
+        flow_decision="request-remediation",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=review_checkpoint.run_id,
+    )
+
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert result.status == "awaiting-quality-review"
+    assert state_payload["quality_review_required_stage"] == "review"
+    assert "missing Source stage" in state_payload["quality_review_reason"]
+    assert not (result.bundle_root / "stage-audits" / "stage-0008-implement.json").exists()
+
+
 def test_black_box_live_e2e_implement_audit_surfaces_untracked_product_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1516,7 +2083,7 @@ def test_black_box_live_e2e_implement_audit_surfaces_untracked_product_files(
 
     assert result.status == "pass"
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "implement.json").read_text(
+        (result.bundle_root / "stage-audits" / "stage-0006-implement.json").read_text(
             encoding="utf-8"
         )
     )
@@ -1532,7 +2099,7 @@ def test_black_box_live_e2e_implement_audit_surfaces_untracked_product_files(
         "src/utils/error.ts"
     ]
     audit_markdown = (
-        result.bundle_root / "stage-audits" / "implement.md"
+        result.bundle_root / "stage-audits" / "stage-0006-implement.md"
     ).read_text(encoding="utf-8")
     assert "### New Untracked Product Files" in audit_markdown
     assert "`src/utils/error.ts`" in audit_markdown
@@ -1621,6 +2188,10 @@ def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_man
     assert [item["stage"] for item in manual_artifacts["stage_quality_audits"]] == list(
         STAGES
     )
+    assert [item["stage_run_id"] for item in manual_artifacts["stage_quality_audits"]] == [
+        f"stage-{index:04d}-{stage}"
+        for index, stage in enumerate(STAGES, start=1)
+    ]
     assert all(item["exists"] for item in manual_artifacts["stage_quality_audits"])
     assert [item["kind"] for item in manual_artifacts["final_reports"]] == [
         "flow-quality-report",
@@ -1707,7 +2278,9 @@ def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
 
     assert result.status == "pass"
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "idea.json").read_text(encoding="utf-8")
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert audit_payload["validator_verdict"] == "pass"
     assert audit_payload["consistency_findings"] == [
@@ -1723,9 +2296,9 @@ def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
             ),
         }
     ]
-    audit_markdown = (result.bundle_root / "stage-audits" / "idea.md").read_text(
-        encoding="utf-8"
-    )
+    audit_markdown = (
+        result.bundle_root / "stage-audits" / "stage-0001-idea.md"
+    ).read_text(encoding="utf-8")
     assert "## Consistency Findings" in audit_markdown
     assert "non-gating=True" in audit_markdown
 
@@ -2182,10 +2755,10 @@ def test_black_box_command_timeout_kills_child_process_group(tmp_path: Path) -> 
         sys.executable,
         "-c",
         (
-            "import subprocess, time; "
-            f"path={str(child_pid_path)!r}; "
+            "import pathlib, subprocess, time; "
+            f"path=pathlib.Path({str(child_pid_path)!r}); "
             "child=subprocess.Popen(['sleep', '30']); "
-            "open(path, 'w', encoding='utf-8').write(str(child.pid)); "
+            "path.write_text(str(child.pid), encoding='utf-8'); "
             "time.sleep(30)"
         ),
     )
@@ -2194,7 +2767,7 @@ def test_black_box_command_timeout_kills_child_process_group(tmp_path: Path) -> 
         command=command,
         cwd=tmp_path,
         environment=dict(os.environ),
-        timeout_seconds=0.5,
+        timeout_seconds=2.0,
     )
 
     assert result.exit_code == 124
@@ -2207,6 +2780,82 @@ def test_black_box_command_timeout_kills_child_process_group(tmp_path: Path) -> 
         time.sleep(0.05)
     else:
         pytest.fail(f"child process {child_pid} survived command group timeout cleanup")
+
+
+def test_black_box_command_no_progress_stops_live_process(tmp_path: Path) -> None:
+    progress_file = tmp_path / "placeholder.txt"
+    command = (
+        sys.executable,
+        "-c",
+        (
+            "import pathlib, time; "
+            f"path=pathlib.Path({str(progress_file)!r}); "
+            "path.write_text('started\\n', encoding='utf-8'); "
+            "print('provider started', flush=True); "
+            "time.sleep(5)"
+        ),
+    )
+
+    def _probe() -> dict[str, object]:
+        if not progress_file.exists():
+            return {"exists": False}
+        stat = progress_file.stat()
+        return {"exists": True, "mtime_ns": stat.st_mtime_ns, "size": stat.st_size}
+
+    result = _run_black_box_command(
+        command=command,
+        cwd=tmp_path,
+        environment=dict(os.environ),
+        timeout_seconds=5.0,
+        no_progress_timeout_seconds=1.0,
+        progress_probe=_probe,
+    )
+
+    assert result.exit_code == 125
+    assert result.transcript.timed_out is False
+    assert result.no_progress is True
+    assert result.no_progress_details is not None
+    assert result.no_progress_details["reason"] == "provider-no-progress"
+    assert "provider-no-progress before completed stage artifact" in str(
+        result.no_progress_details["message"]
+    )
+    assert "provider started" in result.no_progress_details["stdout_tail"]
+
+
+def test_black_box_command_no_progress_allows_live_artifact_heartbeats(
+    tmp_path: Path,
+) -> None:
+    progress_file = tmp_path / "progress.txt"
+    command = (
+        sys.executable,
+        "-c",
+        (
+            "import pathlib, time; "
+            f"path=pathlib.Path({str(progress_file)!r}); "
+            "\nfor index in range(5):\n"
+            "    path.write_text(str(index), encoding='utf-8')\n"
+            "    time.sleep(0.1)\n"
+        ),
+    )
+
+    def _probe() -> dict[str, object]:
+        if not progress_file.exists():
+            return {"exists": False}
+        stat = progress_file.stat()
+        return {"exists": True, "mtime_ns": stat.st_mtime_ns, "size": stat.st_size}
+
+    result = _run_black_box_command(
+        command=command,
+        cwd=tmp_path,
+        environment=dict(os.environ),
+        timeout_seconds=5.0,
+        no_progress_timeout_seconds=1.0,
+        progress_probe=_probe,
+    )
+
+    assert result.exit_code == 0
+    assert result.no_progress is False
+    assert result.transcript.timed_out is False
 
 
 def test_black_box_live_e2e_records_active_step_while_stage_runs(
@@ -2287,6 +2936,7 @@ def test_black_box_live_e2e_records_active_step_while_stage_runs(
     assert active_step["action"] == "run-stage"
     assert active_step["stage"] == "idea"
     assert active_step["timeout_seconds"] == 2.0
+    assert active_step["no_progress_timeout_seconds"] == 1800.0
     command = active_step["command"]
     assert isinstance(command, list)
     assert command[1:3] == ["stage", "run"]
@@ -2308,6 +2958,62 @@ def test_live_interruption_handlers_are_noop_outside_main_thread() -> None:
 
     assert not thread.is_alive()
     assert errors == []
+
+
+def test_black_box_live_e2e_interruption_rewrites_flow_report_status(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    original_run_black_box_command = live_orchestration._run_black_box_command
+
+    def _interrupt_idea_stage(*args: object, **kwargs: object) -> BlackBoxCommandResult:
+        command = kwargs.get("command")
+        if isinstance(command, tuple) and command[1:4] == ("stage", "run", "idea"):
+            raw_timeout_seconds = kwargs.get("timeout_seconds")
+            transcript = HarnessCommandTranscript(
+                command=" ".join(command),
+                exit_code=130,
+                stdout_text="stage started\n",
+                stderr_text="",
+                duration_seconds=0.1,
+                timed_out=False,
+                timeout_seconds=(
+                    float(raw_timeout_seconds)
+                    if isinstance(raw_timeout_seconds, int | float)
+                    else None
+                ),
+            )
+            raise LiveE2EInterrupted(
+                "Synthetic test interruption.",
+                signum=2,
+                command_result=BlackBoxCommandResult(
+                    command=command,
+                    transcript=transcript,
+                ),
+                cleanup={"signal": 2},
+            )
+        return original_run_black_box_command(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._run_black_box_command",
+        _interrupt_idea_stage,
+    )
+
+    with pytest.raises(LiveE2EInterrupted):
+        run_black_box_live_e2e(
+            scenario_path=scenario_path,
+            runtime_id="opencode",
+            work_root=work_root,
+            report_root=report_root,
+        )
+
+    state_paths = list(report_root.glob("*/flow-state.json"))
+    assert len(state_paths) == 1
+    state_payload = json.loads(state_paths[0].read_text(encoding="utf-8"))
+    assert state_payload["status"] == "interrupted-resumable"
+    flow_report = (state_paths[0].parent / "flow-report.md").read_text(encoding="utf-8")
+    assert "- Status: `interrupted-resumable`" in flow_report
 
 
 def test_black_box_live_e2e_fails_required_interview_without_blocked_resume(
@@ -2481,7 +3187,9 @@ def test_black_box_live_e2e_reports_stage_failure_from_step_evidence(
     assert "plan" in result.first_failure_note
     assert "run-stage" in (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "plan.json").read_text(encoding="utf-8")
+        (result.bundle_root / "stage-audits" / "stage-0003-plan.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert audit_payload["stage_state"] == "failed"
     assert audit_payload["validator_verdict"] == "fail"
@@ -2547,7 +3255,9 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     reconciliation = json.loads(reconciliation_path.read_text(encoding="utf-8"))
     assert reconciliation["reconciled"] is True
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "idea.json").read_text(encoding="utf-8")
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert audit_payload["stage_state"] == "failed"
     assert audit_payload["stage_metadata_status"] == "failed"
@@ -2558,6 +3268,7 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     assert run_transcript["timed_out"] is True
     assert run_transcript["timeout_seconds"] is None
     assert run_transcript["timeout_policy"]["stage_command_timeout_seconds"] == 2.0
+    assert run_transcript["timeout_policy"]["no_progress_timeout_seconds"] == 1800.0
     stage_timing = json.loads(
         (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
     )
@@ -2568,6 +3279,116 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     )
     assert run_stage_step["timed_out"] is True
     assert run_stage_step["timeout_seconds"] == 2.0
+
+
+def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        no_progress_stage="idea",
+        product_evaluation=True,
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._stage_command_timeout_seconds",
+        lambda scenario: 5.0,
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._stage_no_progress_timeout_seconds",
+        lambda scenario: 0.25,
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "infra-fail"
+    assert not (result.bundle_root / "stage-quality-audits").exists()
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["status"] == "infra-fail"
+    assert state_payload["error"] == "provider-no-progress before completed stage artifact"
+    target_workspace_root = Path(state_payload["target_workspace_root"])
+    metadata_path = (
+        target_workspace_root
+        / "reports"
+        / "runs"
+        / "WI-LIVE-BLACKBOX"
+        / result.run_id
+        / "stages"
+        / "idea"
+        / "stage-metadata.json"
+    )
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata["status"] == "failed"
+    assert [entry["status"] for entry in metadata["status_history"]] == [
+        "executing",
+        "failed",
+    ]
+
+    steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    no_progress_step = next(
+        step
+        for step in steps
+        if step["action"] == "run-stage" and step["stage"] == "idea"
+    )
+    assert no_progress_step["classification"] == "infra-fail"
+    assert no_progress_step["commands"][0]["timed_out"] is False
+    assert no_progress_step["commands"][0]["no_progress"] is True
+    assert no_progress_step["commands"][0]["timeout_seconds"] == 5.0
+    no_progress_details = no_progress_step["commands"][0]["no_progress_details"]
+    assert no_progress_details["reason"] == "provider-no-progress"
+    assert no_progress_details["no_progress_timeout_seconds"] == 0.25
+    assert "observed_paths" in no_progress_details["observed_files"]
+    assert no_progress_step["details"]["no_progress_reconciliation"]["previous_status"] == (
+        "executing"
+    )
+    assert no_progress_step["details"]["no_progress_reconciliation"][
+        "reconciled_status"
+    ] == "failed"
+    assert no_progress_step["evidence_paths"]
+    reconciliation_path = Path(no_progress_step["evidence_paths"][0])
+    assert reconciliation_path.exists()
+    reconciliation = json.loads(reconciliation_path.read_text(encoding="utf-8"))
+    assert reconciliation["reason"] == "provider-no-progress"
+    assert reconciliation["reconciled"] is True
+
+    audit_payload = json.loads(
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert audit_payload["classifications"]["stage_run"] == "infra-fail"
+    assert audit_payload["classifications"]["frontend_checkpoint"] == "skipped"
+
+    run_transcript = json.loads(
+        (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
+    )
+    assert run_transcript["timed_out"] is False
+    assert run_transcript["timeout_policy"]["stage_command_timeout_seconds"] == 5.0
+    assert run_transcript["timeout_policy"]["no_progress_timeout_seconds"] == 0.25
+
+    stage_timing = json.loads(
+        (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
+    )
+    run_stage_step = next(
+        step
+        for step in stage_timing["steps"]
+        if step["step"] == "run-stage" and step["stage"] == "idea"
+    )
+    assert run_stage_step["timed_out"] is False
+    assert run_stage_step["no_progress"] is True
+    assert run_stage_step["no_progress_timeout_seconds"] == 0.25
+
+    log_analysis = (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
+    assert "provider-no-progress before completed stage artifact" in log_analysis
+    assert "- No-Progress Timeout: `0.250s`" in log_analysis
 
 
 def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
@@ -2606,6 +3427,7 @@ def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
     assert run_transcript["timeout_seconds"] is None
     assert run_transcript["timeout_policy"] == {
         "global_flow_timeout_seconds": None,
+        "no_progress_timeout_seconds": 1800.0,
         "runtime_config_source": "aidd.example.toml",
         "scope": "per-stage-command",
         "stage_command_timeout_seconds": 14400.0,

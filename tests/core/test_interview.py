@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -109,6 +110,31 @@ def test_parse_and_render_questions_markdown_round_trip() -> None:
     parsed = parse_questions_markdown(rendered)
 
     assert parsed == questions
+
+
+@pytest.mark.parametrize(
+    ("markdown_text", "expected_message"),
+    (
+        (
+            "# Questions\n\n## Questions\n\n- Q1 [blocking]: Confirm release policy.\n",
+            "expected `- <QID> [blocking|non-blocking] <text>`",
+        ),
+        (
+            "# Questions\n\n## Questions\n\n- Q1: [blocking] Confirm release policy.\n",
+            "expected `- <QID> [blocking|non-blocking] <text>`",
+        ),
+        (
+            "# Questions\n\n## Questions\n\n- A1 [blocking] Confirm release policy.\n",
+            "expected `- <QID> [blocking|non-blocking] <text>`",
+        ),
+    ),
+)
+def test_parse_questions_rejects_malformed_interview_bullets(
+    markdown_text: str,
+    expected_message: str,
+) -> None:
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        parse_questions_markdown(markdown_text)
 
 
 def test_parse_questions_ignores_summary_bullets_outside_questions_section() -> None:
@@ -231,6 +257,31 @@ def test_parse_and_render_answers_markdown_round_trip() -> None:
     parsed = parse_answers_markdown(rendered)
 
     assert parsed == answers
+
+
+@pytest.mark.parametrize(
+    ("markdown_text", "expected_message"),
+    (
+        (
+            "# Answers\n\n## Answers\n\n- Q1 [resolved]: Use router parity.\n",
+            "expected `- <QID> [resolved|partial|deferred] <text>`",
+        ),
+        (
+            "# Answers\n\n## Answers\n\n- Q1: [resolved] Use router parity.\n",
+            "expected `- <QID> [resolved|partial|deferred] <text>`",
+        ),
+        (
+            "# Answers\n\n## Answers\n\n- A1 [resolved] Use router parity.\n",
+            "expected `- <QID> [resolved|partial|deferred] <text>`",
+        ),
+    ),
+)
+def test_parse_answers_rejects_malformed_interview_bullets(
+    markdown_text: str,
+    expected_message: str,
+) -> None:
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        parse_answers_markdown(markdown_text)
 
 
 def test_parse_answers_ignores_summary_bullets_outside_answers_section() -> None:

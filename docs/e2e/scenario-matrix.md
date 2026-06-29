@@ -41,6 +41,9 @@ Live scenarios add `live_matrix_role`:
   health and do not count as product-delivery evaluation.
 - `product-evaluation` is required for `medium`, `large`, and `xlarge`. These lanes
   black-box evaluate whether AIDD can carry a real product change through `idea -> qa`.
+  They use a stage-run ledger, so repeated remediation loops such as
+  `implement -> review -> implement -> review -> qa` preserve distinct runner and manual
+  audits for every stage run.
 
 The supported automation lanes are:
 

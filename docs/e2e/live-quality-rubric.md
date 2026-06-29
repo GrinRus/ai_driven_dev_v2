@@ -13,10 +13,12 @@ does not compute counted-clean status. A missing manual quality report must not
 change a passing execution verdict.
 
 For `product-evaluation` scenarios, the launching SWE agent must also review every
-completed stage before the runner may continue. The runner stops with
-`awaiting-quality-review` after a successful stage and names the required
-`stage-quality-audits/<stage>.md` file. Resume with the same `--run-id` is allowed
-only after that file exists.
+completed stage run before the runner may continue. The runner stops with
+`awaiting-quality-review` after a successful stage run and names the exact required
+`stage-quality-audits/<stage-run-id>.md` file. Resume with the same `--run-id` is
+allowed only after that file exists. Repeated development loops such as
+`implement -> review -> implement -> review -> qa` therefore create multiple stage-run
+audits without overwriting earlier evidence.
 
 ## Execution Bundle
 
@@ -32,8 +34,8 @@ Runner-owned artifacts include:
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
-- `stage-audits/<stage>.json`
-- `stage-audits/<stage>.md`
+- `stage-audits/<stage-run-id>.json`
+- `stage-audits/<stage-run-id>.md`
 - `target-workspace-evidence.json`
 - `target-workspace-evidence.md`
 - `runtime.log`
@@ -67,12 +69,15 @@ The runner no longer emits `quality-transcript.json`, `acceptance-coverage.*`,
 surfaces. They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
 
-`stage-audits/implement.*` separates tracked changed files, new untracked product
+The `stage-audits/<implement-stage-run-id>.*` implement audit separates tracked changed files, new untracked product
 files, known harness/config untracked files, and setup-baseline untracked files. New
 untracked product files are non-gating execution evidence, but the manual code review
 must inspect them before any counted-clean decision. This is especially important for
 JavaScript/TypeScript packages where a new source helper may be public when
 `package.json` `exports` uses wildcard subpaths such as `./utils/*`.
+When `stage-audits/<implement-stage-run-id>.*` records `product_untracked_files`, the manual
+`code-quality-report.md` and `quality-report.md` must name those files and state how
+they were reviewed before recording `counted-clean`.
 
 `target-workspace-evidence.*` records the target repository snapshot after setup and
 after the terminal/stop state. It classifies tracked diff, setup-baseline untracked
@@ -103,12 +108,20 @@ target-project test commands on the package manager that belongs to that reposit
 For each product-evaluation stage, write this manual audit before resume:
 
 ```markdown
-# Stage Quality Audit: <stage>
+# Stage Quality Audit: <stage-run-id>
 
 ## Decision
+- Stage run id: <stage-run-id>
+- Stage: idea | research | plan | review-spec | tasklist | implement | review | qa
+- Iteration: 1
 - Stage quality: strong | acceptable | weak | failed
-- Flow decision: continue | continue-with-risk | stop-not-counted | operator-intervention
+- Flow decision: continue | continue-with-risk | request-remediation | stop-not-counted | operator-intervention
 - Reason:
+
+## Remediation Request
+- Source stage: review | qa
+- Source ids: RV-1, EV-1
+- Operator note:
 
 ## Checks
 - Product alignment:
@@ -123,12 +136,23 @@ For each product-evaluation stage, write this manual audit before resume:
 - Stage artifacts:
 - Runtime logs:
 - Runner stage audit:
+- Previous stage-run evidence:
 - Target repo evidence:
+- Stale downstream state:
 
 ## Notes For Final Report
 - AIDD quality signal:
 - Residual risks:
 ```
+
+Use `request-remediation` only for `review` and `qa` stage runs. The remediation
+request section is required for that decision and must name the source stage, source
+finding ids, and operator note. On resume, the runner uses the existing operator
+remediation surface to create a durable remediation request, run a new `implement`,
+mark downstream `review` and `qa` stale, and then rerun each stale downstream stage
+one at a time with another quality checkpoint after each stage run. Use
+`operator-intervention` only when a human must intervene manually; it does not start
+the remediation loop.
 
 If `Flow decision` is `stop-not-counted`, the next resume ends the run as
 `manual-quality-stop`. This is not an execution failure, provider failure, infra failure,
@@ -154,14 +178,13 @@ Use this exact structure:
 - Final decision: counted-clean | not-counted | blocked-model-quality | blocked-product-defect
 
 ## Stage-by-stage Quality Summary
-- idea:
-- research:
-- plan:
-- review-spec:
-- tasklist:
-- implement:
-- review:
-- qa:
+- <stage-run-id> / <stage> / iteration <n>:
+
+## Iteration History
+- Initial pass:
+- Remediation requests:
+- Stale downstream reruns:
+- Fresh terminal QA state:
 
 ## Product Delivery Assessment
 - Product request fit:
@@ -227,7 +250,31 @@ Use this exact structure:
 stage reachability, log completeness, provider behavior, repair/interview flow, and
 harness defects. Review `run-transcript.json`, `stage-timing.json`, and
 `log-analysis.md` to confirm that timeout evidence distinguishes the per-stage
-command timeout from the absence of a global flow timeout.
+command timeout, the live no-progress timeout, and the absence of a global flow
+timeout.
+
+Provider no-progress is an execution integrity blocker, not product quality. When
+`log-analysis.md` reports `provider-no-progress before completed stage artifact`,
+the public stage command was alive but stdout/stderr and watched stage artifacts
+stopped changing until `limits.no_progress_timeout_minutes` elapsed. Treat that as
+`blocked-provider`/`blocked-infra` evidence in the final matrix table; do not call
+it counted-clean, manual-quality-stop, unresolved-question `blocked`, or an AIDD
+code-quality defect.
+
+Malformed interview documents are a separate AIDD stage-output/document-contract
+failure. If `validator-report.md`, `repair-history.md`, or `log-analysis.md` names
+`INTERVIEW-MALFORMED-DOCUMENT` for `questions.md` or `answers.md`, classify the run
+as model/stage-output or prompt/repair quality evidence. Do not classify it as
+provider no-progress, `manual-quality-stop`, unresolved-question `blocked`, or a
+manual product-quality verdict.
+
+Unsupported `review-spec` claims are also AIDD stage-output/document-contract
+failures. If `review-spec-report.md` invents high-severity issues without direct
+evidence, contradicts upstream `research` or `plan` without `Reconciliation`, or leaves
+`stage-result.md` inconsistent with canonical validation, classify the run as
+model/stage-output or prompt/validator quality evidence. Do not classify it as
+provider no-progress, `manual-quality-stop`, unresolved-question `blocked`, or a
+manual product-quality verdict.
 
 `Artifact Quality`, `Code Quality`, and `UI/UX Quality` evaluate the deliverable
 produced by the full flow. These sections are manual review, not runner state.
@@ -237,15 +284,19 @@ status.
 
 The manual `counted-clean` phrase is only a human-authored deliverable-quality
 decision inside `quality-report.md`. AIDD does not parse it. For product-evaluation,
-`counted-clean` also requires all stage quality audits, `code-quality-report.md`, and
-`quality-report.md`; a runner execution `pass` alone is not counted-clean.
+`counted-clean` also requires all stage-run quality audits, `code-quality-report.md`, and
+`quality-report.md`; the final report must include `Iteration History` and name every
+remediation request, source id, operator note, stale downstream rerun, and the final
+fresh QA state. When implement-stage evidence contains `product_untracked_files`,
+the final reports must explicitly cover those files. A runner execution `pass` alone is
+not counted-clean.
 
 ## Required Manual Review Coverage
 
 Artifact review should cover the content depth of all stage outputs, cross-stage
 traceability, validator report usefulness, and repair burden cause. Classify repair
 burden as format issue, prompt/context issue, validator/contract issue, model
-quality issue, or product ambiguity. Also inspect `stage-audits/<stage>.*` for
+quality issue, or product ambiguity. Also inspect `stage-audits/<stage-run-id>.*` for
 non-gating consistency findings where a runtime-authored `stage-result.md` validator
 claim differs from the canonical validator/audit verdict.
 
@@ -253,6 +304,9 @@ Code review should cover the full target repository diff, including untracked fi
 It should address acceptance criteria evidence, architectural fit, maintainability,
 API compatibility, edge cases, security, performance, test relevance, and any
 baseline or before/after proof.
+If the implement-stage audit reports `product_untracked_files`, list each such file in
+the final code review and explain whether it is deliverable code, harness/config residue,
+or a blocker for counted-clean quality.
 Inspect `target-workspace-evidence.*` and, when needed, run or cite
 `git status --short --untracked-files=all` plus
 `git status --ignored --short --untracked-files=all`. Treat top-level

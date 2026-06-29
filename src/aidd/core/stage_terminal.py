@@ -15,10 +15,24 @@ _TERMINAL_NOTES_PATTERN = re.compile(
     r"(?P<prefix>#{1,6}\s+Terminal state notes\s*\n+)(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
     re.IGNORECASE | re.DOTALL,
 )
+_VALIDATION_SUMMARY_PATTERN = re.compile(
+    r"(?P<prefix>#{1,6}\s+Validation summary\s*\n+)(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
+    re.IGNORECASE | re.DOTALL,
+)
 _TERMINAL_STATUS_PATTERN = re.compile(r"\b(succeeded|failed|blocked|needs-input)\b")
+_STALE_NON_SUCCESS_STATUS_PATTERN = re.compile(r"\b(failed|blocked|needs-input)\b")
 _VALIDATOR_PASS_CLAIM_PATTERN = re.compile(
     r"(validator(?: report)? verdict\s*[:(][^`\n]*`?)pass\b(`?)",
     re.IGNORECASE,
+)
+_VALIDATOR_VERDICT_LINE_PATTERN = re.compile(
+    r"(?P<prefix>^\s*[-*]\s*Validator verdict\s*:\s*)"
+    r"`?(?:pass|fail|not-run|unknown|missing)`?(?P<suffix>.*)$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_STALE_VALIDATOR_VERDICT_LINE_PATTERN = re.compile(
+    r"^\s*[-*]\s*Validator verdict\s*:\s*`?(?:fail|not-run|unknown|missing)`?",
+    re.IGNORECASE | re.MULTILINE,
 )
 _VALIDATION_PASS_LINE_PATTERN = re.compile(r"(validation\s+`)pass(`)", re.IGNORECASE)
 
@@ -110,6 +124,22 @@ def _replace_or_add_status_section(markdown: str) -> str:
     )
 
 
+def _replace_or_add_success_status_section(markdown: str) -> str:
+    match = _STATUS_SECTION_PATTERN.search(markdown)
+    if match is None:
+        return markdown.rstrip() + "\n\n## Status\n\nsucceeded\n"
+
+    body = match.group("body")
+    replacement_body = _TERMINAL_STATUS_PATTERN.sub("succeeded", body, count=1)
+    if replacement_body == body:
+        replacement_body = "- `succeeded`\n"
+    return (
+        markdown[: match.start("body")]
+        + replacement_body
+        + markdown[match.end("body") :]
+    )
+
+
 def _append_exhausted_budget_terminal_note(markdown: str) -> str:
     note = (
         "\n\n- Repair budget status: `repair-budget-exhausted`; terminal status is "
@@ -145,6 +175,59 @@ def _append_validator_failure_terminal_note(markdown: str) -> str:
     return markdown[: match.end("body")] + note + markdown[match.end("body") :]
 
 
+def _replace_or_add_validator_pass_claim(markdown: str) -> str:
+    match = _VALIDATION_SUMMARY_PATTERN.search(markdown)
+    if match is None:
+        return markdown.rstrip() + "\n\n## Validation summary\n\n- Validator verdict: `pass`\n"
+
+    body = match.group("body")
+    replacement_body = _VALIDATOR_VERDICT_LINE_PATTERN.sub(
+        r"\g<prefix>`pass`\g<suffix>",
+        body,
+        count=1,
+    )
+    if replacement_body == body:
+        prefix = "" if not body or body.endswith("\n") else "\n"
+        replacement_body = body + prefix + "- Validator verdict: `pass`\n"
+    return (
+        markdown[: match.start("body")]
+        + replacement_body
+        + markdown[match.end("body") :]
+    )
+
+
+def _append_validator_pass_terminal_note(markdown: str) -> str:
+    note = (
+        "\n\n- Canonical AIDD validation passed; stale runtime draft status/verdict "
+        "was normalized to `succeeded` / `pass` before publication.\n"
+    )
+    if "stale runtime draft status/verdict was normalized" in markdown.lower():
+        return markdown
+
+    match = _TERMINAL_NOTES_PATTERN.search(markdown)
+    if match is None:
+        return markdown.rstrip() + "\n\n## Terminal state notes" + note
+
+    return markdown[: match.end("body")] + note + markdown[match.end("body") :]
+
+
+def _has_stale_failure_claim_for_validation_pass(markdown: str) -> bool:
+    status_match = _STATUS_SECTION_PATTERN.search(markdown)
+    has_stale_status = (
+        status_match is not None
+        and _STALE_NON_SUCCESS_STATUS_PATTERN.search(status_match.group("body")) is not None
+    )
+    validation_summary_match = _VALIDATION_SUMMARY_PATTERN.search(markdown)
+    has_stale_validator_verdict = (
+        validation_summary_match is not None
+        and _STALE_VALIDATOR_VERDICT_LINE_PATTERN.search(
+            validation_summary_match.group("body")
+        )
+        is not None
+    )
+    return has_stale_status or has_stale_validator_verdict
+
+
 def strip_stage_result_success_claims_for_validator_findings(
     *,
     workspace_root: Path,
@@ -162,6 +245,33 @@ def strip_stage_result_success_claims_for_validator_findings(
     updated = _replace_success_claims_for_exhausted_budget(
         _append_validator_failure_terminal_note(_replace_or_add_status_section(text))
     )
+    if updated == text:
+        return stage_result_path
+
+    stage_result_path.write_text(updated, encoding="utf-8")
+    return stage_result_path
+
+
+def reconcile_stage_result_after_validation_pass(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> Path | None:
+    stage_result_path = (
+        workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
+        / "stage-result.md"
+    )
+    if not stage_result_path.exists():
+        return None
+
+    text = stage_result_path.read_text(encoding="utf-8", errors="replace")
+    has_stale_failure_claim = _has_stale_failure_claim_for_validation_pass(text)
+    updated = _replace_or_add_validator_pass_claim(
+        _replace_or_add_success_status_section(text)
+    )
+    if has_stale_failure_claim:
+        updated = _append_validator_pass_terminal_note(updated)
     if updated == text:
         return stage_result_path
 
@@ -224,6 +334,7 @@ __all__ = [
     "ensure_stage_result_references_repair_brief",
     "exhausted_budget_validation_finding",
     "force_stage_result_failed_for_exhausted_budget",
+    "reconcile_stage_result_after_validation_pass",
     "repair_brief_exhausts_terminal_budget",
     "strip_stage_result_success_claims_for_validator_findings",
 ]

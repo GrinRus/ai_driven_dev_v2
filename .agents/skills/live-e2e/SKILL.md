@@ -154,11 +154,15 @@ During a successful local live run, the evaluator will:
     execution so native provider auth works without copying credentials;
 13. plan step, execute through public operator surfaces, inspect artifacts/UI/API/logs,
    classify, and decide the next step for every stage from `idea -> qa`;
-14. write `stage-audits/<stage>.json` and `.md` after every stage;
+14. write `stage-audits/<stage-run-id>.json` and `.md` after every stage run;
 15. for `product-evaluation`, stop after each successful stage with
     `awaiting-quality-review` and require the launching agent to write
-    `stage-quality-audits/<stage>.md` before resuming the same `--run-id`;
-16. write final execution-only audit artifacts from the recorded step evidence.
+    the exact `stage-quality-audits/<stage-run-id>.md` path named in
+    `flow-state.json` before resuming the same `--run-id`;
+16. for `product-evaluation`, preserve repeated development loops through stage-run
+    ids, so a real remediation cycle such as `implement -> review -> implement ->
+    review -> qa` does not overwrite earlier runner or manual audit evidence;
+17. write final execution-only audit artifacts from the recorded step evidence.
 
 ## Operator-agent responsibilities
 
@@ -180,25 +184,45 @@ When the evaluator returns `blocked`:
 
 When the evaluator returns `awaiting-quality-review`:
 
-1. Open `flow-state.json` and read `quality_review_required_path`.
-2. Read the stage output, `stage-audits/<stage>.json`, `stage-audits/<stage>.md`,
+1. Open `flow-state.json` and read `quality_review_required_stage_run_id`,
+   `quality_review_required_path`, `completed_stage_runs`, `current_iteration`,
+   `pending_remediation`, and `stale_downstream_stages`.
+2. Read the stage output, `stage-audits/<stage-run-id>.json`,
+   `stage-audits/<stage-run-id>.md`,
    runtime logs, target workspace evidence, and relevant target repo diff.
-3. Write `stage-quality-audits/<stage>.md` at the required path.
+3. Write `stage-quality-audits/<stage-run-id>.md` at the required path.
 4. Use `Flow decision: continue` or `continue-with-risk` to allow resume,
-   `operator-intervention` to keep the run waiting, or `stop-not-counted` to end the
-   run as manual quality stop on the next resume.
+   `request-remediation` only for `review` or `qa`, `operator-intervention` to keep
+   the run waiting, or `stop-not-counted` to end the run as manual quality stop on the
+   next resume.
 5. Re-run the same black-box command with the same `--run-id` only after writing the
    stage quality audit file.
+
+When a `review` or `qa` audit chooses `request-remediation`, include the remediation
+request section. On resume, the runner uses the existing operator remediation surface
+to create the durable request, run one new `implement`, mark downstream `review` and
+`qa` stale, and then rerun each stale downstream stage one at a time with another
+quality checkpoint after each stage run. Do not use `operator-intervention` for this
+normal remediation loop; reserve it for human intervention that must happen outside
+the automatic remediation path.
 
 Use this stage audit template:
 
 ```markdown
-# Stage Quality Audit: <stage>
+# Stage Quality Audit: <stage-run-id>
 
 ## Decision
+- Stage run id: <stage-run-id>
+- Stage: idea | research | plan | review-spec | tasklist | implement | review | qa
+- Iteration: 1
 - Stage quality: strong | acceptable | weak | failed
-- Flow decision: continue | continue-with-risk | stop-not-counted | operator-intervention
+- Flow decision: continue | continue-with-risk | request-remediation | stop-not-counted | operator-intervention
 - Reason:
+
+## Remediation Request
+- Source stage: review | qa
+- Source ids: RV-1, EV-1
+- Operator note:
 
 ## Checks
 - Product alignment:
@@ -213,7 +237,9 @@ Use this stage audit template:
 - Stage artifacts:
 - Runtime logs:
 - Runner stage audit:
+- Previous stage-run evidence:
 - Target repo evidence:
+- Stale downstream state:
 
 ## Notes For Final Report
 - AIDD quality signal:
@@ -234,14 +260,13 @@ parse, validate, or score these files. Use this final report outline:
 - Final decision: counted-clean | not-counted | blocked-model-quality | blocked-product-defect
 
 ## Stage-by-stage Quality Summary
-- idea:
-- research:
-- plan:
-- review-spec:
-- tasklist:
-- implement:
-- review:
-- qa:
+- <stage-run-id> / <stage> / iteration <n>:
+
+## Iteration History
+- Initial pass:
+- Remediation requests:
+- Stale downstream reruns:
+- Fresh terminal QA state:
 
 ## Product Delivery Assessment
 - Product request fit:
@@ -359,7 +384,8 @@ Live execution verdicts remain:
 - `blocked`
 - `infra-fail`
 
-Deliverable quality is manual post-run analysis in `stage-quality-audits/<stage>.md`,
+Deliverable quality is manual post-run analysis in
+`stage-quality-audits/<stage-run-id>.md`,
 `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`; it is
 not a runner verdict and does not change the execution verdict.
 When a stage audit chooses `Flow decision: stop-not-counted`, the next resume ends
@@ -383,9 +409,10 @@ Expected live artifacts include:
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
 - `next-flow-lineage.json` only when `--enable-next-flow-follow-up-proof` is explicitly enabled
-- `stage-audits/<stage>.json`
-- `stage-audits/<stage>.md`
-- `stage-quality-audits/<stage>.md` for every completed product-evaluation stage
+- `stage-audits/<stage-run-id>.json`
+- `stage-audits/<stage-run-id>.md`
+- `stage-quality-audits/<stage-run-id>.md` for every completed product-evaluation
+  stage run
 - `target-workspace-evidence.json`
 - `target-workspace-evidence.md`
 - `feature-selection.json`
@@ -411,7 +438,7 @@ quality decision for product-evaluation requires every stage quality audit plus
 For stepwise black-box live runs, manifest `limits.timeout_minutes` is the budget
 for each public `aidd stage run` command. It is not a global flow timeout. Inspect
 `run-transcript.json.timeout_policy`, `stage-timing.*`, and `log-analysis.md` for
-timeout evidence, and inspect `stage-audits/<stage>.*` for non-gating
+timeout evidence, and inspect `stage-audits/<stage-run-id>.*` for non-gating
 stage-result/validator consistency findings.
 For live manifest authoring and audits, AIDD self-check verification commands must
 call the installed `aidd` binary directly, for example `aidd stage questions ...`.
@@ -423,12 +450,16 @@ tracked product diff, setup-baseline untracked files, `aidd.example.toml` harnes
 config, top-level `workitems/...` pollution, stray `.aidd/` scratch files, and ignored
 local artifacts such as `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.pdm-build/`,
 `coverage/`, build, dist, or dependency-cache files.
-For `implement`, inspect `stage-audits/implement.*` buckets for tracked changed
+For `implement`, inspect the matching `stage-audits/<implement-stage-run-id>.*`
+buckets for tracked changed
 files, new untracked product files, known harness/config untracked files, and
 setup-baseline untracked files. New untracked product files must be reviewed as
 deliverable code, and JavaScript/TypeScript helper additions must be checked against
 `package.json` `exports`, wildcard subpath exports, generated declarations, and
-existing public import conventions before accepting internal-only claims.
+existing public import conventions before accepting internal-only claims. If
+`product_untracked_files` is present, final `code-quality-report.md` and
+`quality-report.md` must name those files and state how each was reviewed before a
+`counted-clean` decision.
 If manifest verification creates only new known ignored residue after QA, inspect
 `verify-transcript.json.workspace_cleanup`; runner cleanup of that residue is
 execution hygiene and does not replace manual deliverable-quality review.
@@ -446,8 +477,8 @@ For live stabilization, the launching agent should repeat this external
 operator loop instead of relying on a self-mutating product command:
 
 1. Run one `>= medium` product-evaluation live scenario through the black-box evaluator.
-2. Read the full evidence bundle, including every `stage-audits/<stage>.json`,
-   every `stage-quality-audits/<stage>.md`, `target-workspace-evidence.json`,
+2. Read the full evidence bundle, including every `stage-audits/<stage-run-id>.json`,
+   every `stage-quality-audits/<stage-run-id>.md`, `target-workspace-evidence.json`,
    `verdict.md`/`grader.json` for terminal execution verdicts or
    `manual-quality-stop.*` for manual quality stops, transcripts, and logs.
 3. Write manual `flow-quality-report.md`, `code-quality-report.md`, and
@@ -470,6 +501,19 @@ operator loop instead of relying on a self-mutating product command:
   from the operator environment that live stage execution inherits.
 - Runtime launches but immediately fails in native mode: inspect provider auth, model selection, and sandbox permissions.
 - Runtime launches but immediately fails in `adapter-flags` mode: the configured command is probably not an AIDD-compatible wrapper command.
+- `provider-no-progress`: `provider-no-progress before completed stage artifact`
+  means the public `aidd stage run` process stayed alive but stdout/stderr and
+  watched stage artifacts stopped changing until
+  `limits.no_progress_timeout_minutes` elapsed. Inspect `log-analysis.md`,
+  `flow-steps.json`, `stage-timing.json`, and the no-progress reconciliation file;
+  classify it as infra/provider blocker, not counted-clean, not
+  `manual-quality-stop`, not unresolved-question `blocked`, and not product-quality
+  failure.
+- Unsupported `review-spec` claims: high-severity issues without direct evidence,
+  contradictions with upstream `research` or `plan` without `Reconciliation`, or stale
+  `stage-result.md` failure claims after canonical validation passes are AIDD
+  stage-output/prompt/validator evidence. Do not classify them as provider no-progress,
+  `manual-quality-stop`, unresolved-question `blocked`, or product-quality verdicts.
 - `unsupported-runtime`: the runtime is not declared in the scenario's `runtime_targets`.
 - `blocked`: inspect `operator-action-request.md`, `questions.md`, and
   `answers.md`; as the launching operator-agent, write `[resolved]` answers,
@@ -477,7 +521,7 @@ operator loop instead of relying on a self-mutating product command:
   `answer-analysis.md`, then rerun the same black-box command to resume.
 - `fail` after run success: inspect `verify-transcript.json` and the stage-local validator reports.
 - `manual-quality-stop`: inspect `manual-quality-stop.md`, the referenced
-  `stage-quality-audits/<stage>.md`, `stage-audits/<stage>.*`, and
+  `stage-quality-audits/<stage-run-id>.md`, `stage-audits/<stage-run-id>.*`, and
   `target-workspace-evidence.*`; do not classify it as infra/provider failure.
 - Missing clean execution despite zero exit codes: inspect `verdict.md` and `grader.json` for pass-guard failures caused by missing `stage-result.md` or `validator-report.md`.
 
