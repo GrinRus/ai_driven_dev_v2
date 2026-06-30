@@ -14,12 +14,11 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 
 ## Alpha status and safety
 
-Latest published prerelease: `0.1.0a12`.
-Current release-candidate package version on this branch: `0.1.0a13`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a12`.
+Latest published prerelease: `0.1.0a13`.
+Latest accepted published prerelease evidence: `0.1.0a13`.
 The `main` branch is development source and may contain unreleased changes.
-Release-candidate source checkouts are not accepted package-channel evidence until the
-GitHub Release, PyPI publish, `pipx`, and `uv tool` verification jobs succeed.
+Source checkouts are not accepted package-channel evidence until the GitHub Release,
+PyPI publish, `pipx`, and `uv tool` verification jobs succeed for a tagged release.
 
 AIDD is alpha software for local evaluation and controlled operator trials. It is not
 ready for unattended production automation. AIDD launches external runtime CLIs against a
@@ -55,20 +54,20 @@ Claude Code, Codex, OpenCode, or other runtime CLIs separately.
 
 ## Install with pipx
 
-Install the latest accepted published prerelease:
+Install the latest published prerelease:
 
 ```bash
-pipx install "ai-driven-dev-v2==0.1.0a12"
+pipx install "ai-driven-dev-v2==0.1.0a13"
 aidd --version
 aidd doctor
 ```
 
 ## Install with uv tool
 
-Install the latest accepted published prerelease:
+Install the latest published prerelease:
 
 ```bash
-uv tool install "ai-driven-dev-v2==0.1.0a12"
+uv tool install "ai-driven-dev-v2==0.1.0a13"
 aidd --version
 aidd doctor
 ```
@@ -96,11 +95,9 @@ uv run aidd --version
 uv run aidd doctor
 ```
 
-The latest published prerelease is `v0.1.0a12`. The current `v0.1.0a13`
-candidate prepares the Wave 33 product-evaluation bundle summary and maintained
-manual-audit documentation. Use the pinned `pipx` or `uv tool` install commands
-above when you need the latest accepted package-channel behavior before
-`v0.1.0a13` release evidence is accepted.
+The latest published prerelease is `v0.1.0a13`. Use the pinned `pipx` or
+`uv tool` install commands above when you need accepted package-channel behavior;
+source checkouts may contain unreleased changes after the latest package.
 
 ## Run your first local workflow
 
