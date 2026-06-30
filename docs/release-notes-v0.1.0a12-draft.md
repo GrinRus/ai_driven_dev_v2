@@ -1,13 +1,12 @@
 # Release Notes: v0.1.0a12
 
-Status: draft, not tagged or published.
+Status: published on 2026-06-22 and accepted after package-channel verification.
 
-These are prerelease notes for the `v0.1.0a12` hotfix candidate.
+Published package version: `0.1.0a12`.
+Latest accepted published prerelease: `0.1.0a12`.
 
-Current release-candidate package version: `0.1.0a12`.
-Latest published prerelease before this candidate: `0.1.0a11`, superseded by this
-hotfix candidate.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a10`.
+Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed
+for `v0.1.0a12`.
 
 ## Summary
 
@@ -40,7 +39,8 @@ operator trials.
 - Runtime launches still require an explicit runtime id; no hidden fallback is
   added.
 - Runtime binaries and authentication remain external operator prerequisites.
-- The `0.1.0a12` package must not be described as the latest accepted published prerelease until GitHub Release, PyPI, `pipx`, and `uv tool` verification succeeds.
+- The `0.1.0a12` package is accepted package-channel evidence after GitHub Release,
+  PyPI, `pipx`, and `uv tool` verification succeeded.
 
 ## Installation channels
 
@@ -58,20 +58,19 @@ Docker/GHCR remains outside the supported alpha release contract.
   trials.
 - Live E2E evidence remains local manual audit evidence and is not CI/CD, not a
   release workflow, not GitHub Actions, and not a release gate.
-- The hotfix release uses the completed source/local-wheel `AIDD-LIVE-011` pass
+- The hotfix release used the completed source/local-wheel `AIDD-LIVE-011` pass
   as live evidence. Exact-PyPI live proof for `0.1.0a12` can be collected after
   publication, but is not a release blocker.
 - Provider smoke reproducibility depends on the operator shell environment;
   provider binaries outside the Codex app's default non-interactive PATH should
   be run through a login shell or explicit PATH prefix.
-- Package verification is not accepted until the GitHub Release workflow and
-  independent local `pipx` plus `uv tool` checks pass for `0.1.0a12`.
+- Package verification is accepted: the GitHub Release workflow and independent local
+  `pipx` plus `uv tool` checks passed for `0.1.0a12`.
 
 ## Release checklist
 
 - GitHub Release target: `release/v0.1.0a12`.
 - Release branch: `release/v0.1.0a12`.
 - Release workflow: run by GitHub Release `published` event only.
-- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a12/` after publish.
-- `pipx` and `uv tool` verification: required before accepting package-channel
-  evidence.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a12/`.
+- `pipx` and `uv tool` verification: accepted package-channel evidence.
