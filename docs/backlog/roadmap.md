@@ -8658,10 +8658,10 @@ Sync notes:
 Goal: turn the new black-box product-evaluation protocol into a repeatable maintained
 matrix practice without making live E2E a CI/CD or release gate.
 
-### Epic W33-E1 — maintained matrix evidence closure (`planned`)
+### Epic W33-E1 — maintained matrix evidence closure (`done`)
 Linked stories: `US-07`, `US-10`
 
-#### Slice W33-E1-S1 — canonical maintained matrix evidence (`planned`)
+#### Slice W33-E1-S1 — canonical maintained matrix evidence (`done`)
 Goal: publish one current maintained-matrix evidence table that separates clean lanes,
 not-counted lanes, provider blockers, and follow-up defects.
 
@@ -8684,13 +8684,13 @@ Dependencies:
 
 Local tasks:
 
-- `W33-E1-S1-T1` Build a maintained-matrix evidence table from the latest local and PR
+- `W33-E1-S1-T1` (done) Build a maintained-matrix evidence table from the latest local and PR
   bundle evidence, marking each lane `counted-clean`, `not-counted`, `blocked-provider`,
   `blocked-product-defect`, or `missing`.
   - Scope: evidence review and reporting only.
   - Verification: every maintained matrix lane has a row with scenario id, runtime, run
     id or blocker, execution verdict, manual decision, and final report paths.
-- `W33-E1-S1-T2` Run the missing or stale maintained lanes from a clean tracked checkout
+- `W33-E1-S1-T2` (done) Run the missing or stale maintained lanes from a clean tracked checkout
   and publish updated evidence without substituting runtimes.
   - Scope: manual live execution only.
   - Verification: each newly run product-evaluation lane has per-stage-run audits,
@@ -8703,10 +8703,10 @@ Exit evidence:
   or blocked without reading individual bundles first;
 - live evidence remains manual-only and outside CI/CD/release automation.
 
-### Epic W33-E2 — operator evidence ergonomics (`planned`)
+### Epic W33-E2 — operator evidence ergonomics (`done`)
 Linked stories: `US-07`, `US-11`
 
-#### Slice W33-E2-S1 — product-evaluation bundle summary (`planned`)
+#### Slice W33-E2-S1 — product-evaluation bundle summary (`done`)
 Goal: reduce manual counted-clean review load by generating a read-only summary of
 stage-run audits, remediation cycles, untracked product files, and final report presence.
 
@@ -8727,13 +8727,13 @@ Dependencies:
 
 Local tasks:
 
-- `W33-E2-S1-T1` Add a read-only product-evaluation bundle summary that lists stage-run
+- `W33-E2-S1-T1` (done) Add a read-only product-evaluation bundle summary that lists stage-run
   audit decisions, remediation source ids, untracked product files, final report
   presence, and terminal flow-state freshness.
   - Scope: harness reporting only.
   - Verification: fixture-based harness test proves the summary preserves manual-only
     quality semantics and does not change execution verdicts.
-- `W33-E2-S1-T2` Document how operators use the bundle summary while still reading
+- `W33-E2-S1-T2` (done) Document how operators use the bundle summary while still reading
   stage evidence before assigning counted-clean.
   - Scope: live E2E docs and skill guidance only.
   - Verification: docs consistency test proves the summary is described as evidence
@@ -8744,6 +8744,19 @@ Exit evidence:
 - product-evaluation bundles are faster to audit without weakening the black-box manual
   quality model;
 - runner still does not parse or score subjective product quality.
+
+Sync notes:
+
+- `2026-06-30` Completed `W33-E1-S1-T1` with local evidence report
+  `.aidd/reports/evals/maintained-matrix-20260630.md`: all six canonical maintained
+  lanes have terminal `pass`, final manual reports, complete stage-quality audit
+  coverage, and no unresolved unexpected product residue.
+- `2026-06-30` Closed `W33-E1-S1-T2` without launching new live runs because the
+  maintained matrix has no missing or stale canonical lane.
+- `2026-06-30` Completed `W33-E2-S1-T1` and `W33-E2-S1-T2`: terminal
+  product-evaluation bundles now get read-only `product-evaluation-bundle-summary.*`
+  navigation artifacts, and live E2E docs/skill guidance state that the summary is
+  not runner-owned quality scoring and does not replace manual `quality-report.md`.
 
 ### Epic W33-E3 — product-evaluation matrix expansion (`planned`)
 Linked stories: `US-07`, `US-10`

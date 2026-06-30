@@ -1009,6 +1009,10 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "final `code-quality-report.md` and",
         "`quality-report.md` must name those files",
         "`aidd.example.toml` is not product diff",
+        "product-evaluation-bundle-summary.json",
+        "The summary is navigation evidence, not",
+        "runner-owned quality scoring",
+        "Manual `quality-report.md` remains the only final counted-clean decision.",
         (
             "Screenshots and browser notes are optional manual evidence, "
             "not runner-generated artifacts."
@@ -1071,6 +1075,10 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "## Iteration History",
         "Fresh terminal QA state:",
         "`target-workspace-evidence.*` records the target repository snapshot",
+        "product-evaluation-bundle-summary.json",
+        "The summary is navigation evidence, not",
+        "runner-owned quality scoring",
+        "Manual `quality-report.md` remains the only final counted-clean decision.",
         "`product_untracked_files`",
         "must name those files and state how",
         "the final reports must explicitly cover those files",
@@ -1103,6 +1111,10 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "responsive behavior or `not inspected`",
         "Generated product UI is outside this live E2E operator-UI review",
         "`target-workspace-evidence.*` compares the target repository snapshot",
+        "product-evaluation-bundle-summary.json",
+        "The summary is navigation evidence, not",
+        "runner-owned quality scoring",
+        "Manual `quality-report.md` remains the only final counted-clean decision.",
         "setup-baseline ignored churn",
         "top-level `workitems/...` duplicates are severe deliverable pollution",
     ):

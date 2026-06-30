@@ -2202,6 +2202,71 @@ def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_man
     assert all(not item["exists"] for item in manual_artifacts["final_reports"])
 
 
+def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        product_evaluation=True,
+        implement_untracked_product_file="src/untracked-helper.ts",
+    )
+
+    result = _run_product_evaluation_to_terminal(
+        scenario_path=scenario_path,
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    summary_json = result.bundle_root / "product-evaluation-bundle-summary.json"
+    summary_markdown = result.bundle_root / "product-evaluation-bundle-summary.md"
+    payload = json.loads(summary_json.read_text(encoding="utf-8"))
+    assert payload["scope"] == "navigation-evidence"
+    assert payload["quality_scoring"] == {
+        "runner_owned_quality_scoring": False,
+        "summary_computes_counted_clean": False,
+        "counted_clean_source": "manual quality-report.md only",
+    }
+    assert [
+        item["flow_decision"] for item in payload["stage_quality_audits"]
+    ] == ["continue"] * len(STAGES)
+    assert all(item["exists"] for item in payload["stage_quality_audits"])
+    assert payload["repair_counts"]["runner_stage_repair_attempts"] == 0
+    assert payload["remediation"]["request_count"] == 0
+    assert [item["kind"] for item in payload["final_reports"]] == [
+        "flow-quality-report",
+        "code-quality-report",
+        "quality-report",
+    ]
+    assert all(not item["exists"] for item in payload["final_reports"])
+    assert payload["target_workspace"]["tracked_product_files"] == ["feature.txt"]
+    assert payload["target_workspace"]["untracked_product_files"] == [
+        "src/untracked-helper.ts"
+    ]
+    assert payload["target_workspace"]["known_harness_files"] == ["aidd.example.toml"]
+    assert payload["terminal_flow_state_verdict_consistency"]["consistent"] is True
+    assert payload["terminal_flow_state_verdict_consistency"]["flow_state_status"] == "pass"
+    assert payload["terminal_flow_state_verdict_consistency"]["verdict_status"] == "pass"
+
+    verdict_text = (result.bundle_root / "verdict.md").read_text(encoding="utf-8")
+    assert "- Status: `pass`" in verdict_text
+    assert "counted-clean" not in verdict_text
+    grader_payload = json.loads(
+        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
+    )
+    assert grader_payload["execution"]["status"] == "pass"
+    serialized_grader = json.dumps(grader_payload)
+    assert "counted-clean" not in serialized_grader
+    assert "summary_computes_counted_clean" not in serialized_grader
+
+    markdown = summary_markdown.read_text(encoding="utf-8")
+    assert "not-runner-owned" in markdown
+    assert "manual `quality-report.md` only" in markdown
+    assert "`src/untracked-helper.ts`" in markdown
+
+
 def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_context(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
