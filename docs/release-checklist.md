@@ -166,39 +166,50 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a12`.
-Latest published prerelease before this candidate: `0.1.0a11`, superseded by
-the current hotfix candidate for raw-log CLI rendering.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a10`.
+Current release-candidate package version: `0.1.0a13`.
+Latest published prerelease before this candidate: `0.1.0a12`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a12`.
 
 The release-candidate version is not package-channel evidence until the GitHub Release
 workflow publishes to PyPI and verifies `pipx` plus `uv tool` installability. README
 install guidance must remain pinned to the latest accepted published prerelease until that
 evidence is accepted.
-No current release evidence is accepted for `0.1.0a12`.
-There is no accepted `v0.1.0a12` evidence log entry yet; add the accepted
-`v0.1.0a12` evidence log entry only after GitHub Release, PyPI, `pipx`, and
+No current release evidence is accepted for `0.1.0a13`.
+There is no accepted `v0.1.0a13` evidence log entry yet; add the accepted
+`v0.1.0a13` evidence log entry only after GitHub Release, PyPI, `pipx`, and
 `uv tool` verification succeed.
 
-### Candidate preparation note for `v0.1.0a12`
+### Candidate preparation note for `v0.1.0a13`
 
-`v0.1.0a12` prepares a hotfix prerelease for the `aidd run logs` raw runtime log
-rendering defect found by manual external package audit against the immutable published
-`ai-driven-dev-v2==0.1.0a11` package. The candidate keeps manual external eval outside
-CI/CD and release workflows, preserves GitHub Release-driven publishing only, and uses
-completed source/local-wheel manual audit evidence as hotfix context. Exact PyPI manual
-audit proof for the fixed package can be collected after publication, but is not a release
-blocker for this hotfix.
+`v0.1.0a13` prepares the Wave 33 product-evaluation evidence loop after PR #95. The
+candidate keeps manual external eval outside CI/CD and release workflows, preserves
+GitHub Release-driven publishing only, and treats generated bundle summaries as
+navigation evidence rather than runner-owned quality scoring.
 
-Post-`v0.1.0a11` changes prepared for `v0.1.0a12`:
+Post-`v0.1.0a12` changes prepared for `v0.1.0a13`:
 
-- `aidd run logs` prints persisted raw runtime logs literally with Rich markup
-  and highlighting disabled, preserving the existing command shape and output
-  intent;
-- focused CLI regression coverage proves bracketed path-like log text such as
-  `[/, /a, /a/b, /a/b/c.py]` is displayed literally in full and tail modes;
-- Wave 32 records the release-blocking CLI visibility defect, the focused
-  regression checks, and the source/local-wheel manual audit rerun evidence.
+- generated read-only product-evaluation bundle summaries are written at bundle root as
+  `product-evaluation-bundle-summary.json` and `product-evaluation-bundle-summary.md`;
+- summaries list stage-quality audit presence and decisions, remediation source ids,
+  repair counts, tracked/untracked product files, known harness files, final report
+  presence, and terminal flow-state/verdict consistency;
+- summaries do not mutate `verdict.md`, `grader.json`, or `quality-report.md`, and do
+  not compute counted-clean;
+- `.aidd/reports/evals/maintained-matrix-20260630.md` records maintained canonical live
+  coverage and the no-rerun-needed decision for clean canonical lanes;
+- `docs/e2e/live-e2e-catalog.md`, `docs/e2e/live-quality-rubric.md`, and
+  `.agents/skills/live-e2e/SKILL.md` state that generated summaries are navigation
+  evidence, while manual `quality-report.md` remains the only final counted-clean source;
+- local release context includes counted-clean large/xlarge evidence from
+  `eval-live-012-codex-20260630T054311Z` and
+  `eval-live-011-codex-20260630T063559Z`; these `.aidd/` artifacts are not committed and
+  are not package-channel release gates.
+
+### Post-release note for `v0.1.0a12`
+
+`v0.1.0a12` was published on 2026-06-22 from `release/v0.1.0a12`. The GitHub Release
+workflow published PyPI distributions and verified installability through `pipx` and
+`uv tool`; independent local checks also resolved `ai-driven-dev-v2==0.1.0a12`.
 
 ### Published/superseded note for `v0.1.0a11`
 
@@ -404,6 +415,30 @@ package-channel acceptance and does not replace GitHub Release, PyPI, `pipx`, or
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a12` accepted evidence on 2026-06-22
+
+- Tag: `v0.1.0a12`
+- Release branch: `release/v0.1.0a12`
+- Commit: `5f9aa2aa5c739b8d6cec3990c459d1d1a5dc245a`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a12`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/27969260515`
+- Result: accepted release/install evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: release tag `v0.1.0a12` matched `project.version` `0.1.0a12`, and the
+  release tag commit matched the remote `release/v0.1.0a12` branch HEAD during the
+  release workflow validation.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a12/`.
+- PyPI JSON for `https://pypi.org/pypi/ai-driven-dev-v2/0.1.0a12/json` returned
+  version `0.1.0a12` with two distribution files and `yanked` set to false.
+- `pipx` verification installed `ai-driven-dev-v2==0.1.0a12`; `aidd --version`
+  returned `aidd 0.1.0a12`, and `aidd doctor` reported `Version 0.1.0a12`. The
+  independent local smoke used an isolated `uv tool run --from pipx` runner because
+  local `python3 -m pipx` was unavailable in the maintainer shell.
+- `uv tool` verification installed `ai-driven-dev-v2==0.1.0a12`; `aidd --version`
+  returned `aidd 0.1.0a12`, and `aidd doctor` reported `Version 0.1.0a12`.
+- No Docker/GHCR artifact is part of the supported `v0.1.0a12` release contract.
 
 ### `v0.1.0a10` accepted evidence on 2026-06-11
 

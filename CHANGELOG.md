@@ -7,7 +7,21 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes after `0.1.0a12` hotfix release-candidate preparation.
+- No unreleased changes after `0.1.0a13` release-candidate preparation.
+
+## 0.1.0a13 - 2026-06-30
+
+- Prepare the `0.1.0a13` prerelease after accepted `v0.1.0a12` package-channel
+  evidence.
+- Add generated read-only product-evaluation bundle summaries at live bundle
+  roots, covering stage-quality audit presence, remediation source ids, repair
+  counts, product file residue, final report presence, and terminal
+  flow-state/verdict consistency without computing counted-clean.
+- Record Wave 33 maintained-matrix evidence and the no-rerun decision for clean
+  canonical lanes, keeping manual `quality-report.md` as the only counted-clean
+  source.
+- Refresh live E2E catalog, rubric, and skill guidance so bundle summaries are
+  navigation evidence, not runner-owned quality scoring.
 
 ## 0.1.0a12 - 2026-06-22
 
