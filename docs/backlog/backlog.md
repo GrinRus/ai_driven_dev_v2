@@ -6,25 +6,16 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W33-E1-S1-T1` — Build a maintained-matrix evidence table from the latest local and
-  PR bundle evidence.
+- `W33-E3-S1-T1` — Run non-mutating setup audits for Pydantic, FastAPI, Rich, and Ruff
+  candidates.
 
 ## Soon
 
-- `W33-E1-S1-T2` — Run the missing or stale maintained lanes from a clean tracked checkout
-  and publish updated evidence without substituting runtimes.
+- `W33-E3-S1-T2` — Draft one next product-evaluation scenario from the best passing setup
+  audit without adding it to the maintained matrix yet.
 
 ## Parking lot
 
-- `W33-E2-S1-T1` — Add a read-only product-evaluation bundle summary that lists stage-run
-  audit decisions, remediation source ids, untracked product files, final report presence,
-  and terminal flow-state freshness.
-- `W33-E2-S1-T2` — Document how operators use the bundle summary while still reading stage
-  evidence before assigning counted-clean.
-- `W33-E3-S1-T1` — Run non-mutating setup audits for Pydantic, FastAPI, Rich, and Ruff
-  candidates.
-- `W33-E3-S1-T2` — Draft one next product-evaluation scenario from the best passing setup
-  audit without adding it to the maintained matrix yet.
 - `W30-E3-S1-T1` — Prepare the `v0.1.0a9` release branch and draft prerelease after
   explicit approval.
 
@@ -52,6 +43,17 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   `AIDD-LIVE-011` runs. `W33-E1-S1-T1` is promoted to `Next`,
   `W33-E1-S1-T2` to `Soon`, and bundle-summary plus new-repository expansion tasks stay
   parked until the maintained matrix evidence table exists.
+- `2026-06-30` Completed `W33-E1-S1-T1`: local report
+  `.aidd/reports/evals/maintained-matrix-20260630.md` shows all six canonical
+  maintained lanes are counted-clean with terminal `pass`, final reports, complete
+  stage-quality audits, and no unresolved unexpected product residue.
+- `2026-06-30` Completed `W33-E1-S1-T2` as `no rerun needed`; no canonical maintained
+  lane is missing or stale, so no new live run was launched.
+- `2026-06-30` Completed `W33-E2-S1-T1` and `W33-E2-S1-T2`; terminal
+  product-evaluation bundles now include read-only `product-evaluation-bundle-summary.*`
+  navigation artifacts, and docs/skill guidance keep final counted-clean decisions in
+  manual `quality-report.md`. `W33-E3-S1-T1` is promoted to `Next` and
+  `W33-E3-S1-T2` to `Soon`.
 - `2026-04-23` Backlog queue was restored after readiness cleanup and synchronized with Wave 7/Wave 8 roadmap tasks.
 - `2026-04-23` Queue-restoration policy was documented under `W8-E3-S1` to govern future wave opening when backlog is empty.
 - `2026-04-23` Wave 9 queue bootstrap promoted `W9-E1-S1-T1` to `Next`, `W9-E1-S1-T2` and `W9-E1-S1-T3` to `Soon`, and `W9-E1-S1-T4` to `Parking lot`.

@@ -251,6 +251,16 @@ After any terminal product-evaluation run, the launching SWE agent must write
 eval bundle before deciding counted-clean product quality. The runner does not create,
 parse, validate, or score these files. Use this final report outline:
 
+Terminal product-evaluation bundles may include
+`product-evaluation-bundle-summary.json` and
+`product-evaluation-bundle-summary.md`. The summary is navigation evidence, not
+runner-owned quality scoring. Use it to locate stage-quality audit decisions,
+remediation source ids, repair counts, tracked/untracked product files, known
+harness files, final report presence, and terminal flow-state/verdict consistency,
+then read the primary evidence before making a decision. It does not change
+`verdict.md`, `grader.json`, final manual reports, or any execution status, and it
+does not compute `counted-clean`. Manual `quality-report.md` remains the only final counted-clean decision.
+
 ```markdown
 # Live E2E Quality Report
 
@@ -415,6 +425,8 @@ Expected live artifacts include:
   stage run
 - `target-workspace-evidence.json`
 - `target-workspace-evidence.md`
+- `product-evaluation-bundle-summary.json` and
+  `product-evaluation-bundle-summary.md` for terminal product-evaluation bundles
 - `feature-selection.json`
 - `install-transcript.json`
 - `runtime.log`
@@ -434,6 +446,8 @@ A live execution run is `pass` when execution evidence exists, all required
 stages reached terminal success, and `verify.commands` passed. A clean deliverable
 quality decision for product-evaluation requires every stage quality audit plus
 `flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+The generated bundle summary can point you to missing/stale evidence, but it is not
+a runner-owned quality score and never replaces the manual final report.
 
 For stepwise black-box live runs, manifest `limits.timeout_minutes` is the budget
 for each public `aidd stage run` command. It is not a global flow timeout. Inspect
@@ -479,6 +493,7 @@ operator loop instead of relying on a self-mutating product command:
 1. Run one `>= medium` product-evaluation live scenario through the black-box evaluator.
 2. Read the full evidence bundle, including every `stage-audits/<stage-run-id>.json`,
    every `stage-quality-audits/<stage-run-id>.md`, `target-workspace-evidence.json`,
+   `product-evaluation-bundle-summary.*` when present as navigation evidence,
    `verdict.md`/`grader.json` for terminal execution verdicts or
    `manual-quality-stop.*` for manual quality stops, transcripts, and logs.
 3. Write manual `flow-quality-report.md`, `code-quality-report.md`, and

@@ -368,6 +368,8 @@ Every live eval bundle must aim to contain:
   written manually by the launching agent before resume
 - `target-workspace-evidence.json`
 - `target-workspace-evidence.md`
+- `product-evaluation-bundle-summary.json` for terminal `product-evaluation` bundles
+- `product-evaluation-bundle-summary.md` for terminal `product-evaluation` bundles
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
 - `next-flow-checkpoint.json`
@@ -399,6 +401,15 @@ rather than pollution findings. Evidence that a runtime
 deleted/recreated the prepared checkout or live harness run directories is a run
 integrity and deliverable-quality blocker for manual review. The runner does not
 turn these findings into a quality gate.
+
+For terminal `product-evaluation` bundles, `product-evaluation-bundle-summary.*`
+is generated as a read-only index over existing evidence: stage-quality audit
+presence and decisions, remediation source ids, repair counts, tracked and
+untracked product files, known harness files, final report presence, and terminal
+flow-state/verdict consistency. The summary is navigation evidence, not
+runner-owned quality scoring. It does not update `verdict.md`, `grader.json`,
+`flow-quality-report.md`, `code-quality-report.md`, or `quality-report.md`, and it
+does not compute `counted-clean`. Manual `quality-report.md` remains the only final counted-clean decision.
 
 After a terminal run, the launching SWE agent may add manual post-run evidence:
 

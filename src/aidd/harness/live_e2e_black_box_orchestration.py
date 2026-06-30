@@ -198,6 +198,12 @@ REMEDIATION_ACTIONS_DIRNAME = "remediation-actions"
 FLOW_QUALITY_REPORT_FILENAME = "flow-quality-report.md"
 CODE_QUALITY_REPORT_FILENAME = "code-quality-report.md"
 QUALITY_REPORT_FILENAME = "quality-report.md"
+PRODUCT_EVALUATION_BUNDLE_SUMMARY_JSON_FILENAME = (
+    "product-evaluation-bundle-summary.json"
+)
+PRODUCT_EVALUATION_BUNDLE_SUMMARY_MARKDOWN_FILENAME = (
+    "product-evaluation-bundle-summary.md"
+)
 MANUAL_QUALITY_STOP_JSON_FILENAME = "manual-quality-stop.json"
 MANUAL_QUALITY_STOP_MARKDOWN_FILENAME = "manual-quality-stop.md"
 FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
@@ -2639,6 +2645,422 @@ def _manual_quality_artifacts_payload(ctx: FlowContext) -> dict[str, object]:
         "stage_quality_audits": stage_audits if required_for_counted_clean else [],
         "final_reports": final_reports if required_for_counted_clean else [],
     }
+
+
+def _product_evaluation_bundle_summary_paths(ctx: FlowContext) -> tuple[Path, Path]:
+    return (
+        ctx.bundle_root / PRODUCT_EVALUATION_BUNDLE_SUMMARY_JSON_FILENAME,
+        ctx.bundle_root / PRODUCT_EVALUATION_BUNDLE_SUMMARY_MARKDOWN_FILENAME,
+    )
+
+
+def _markdown_bullet_value(text: str, label: str) -> str | None:
+    pattern = re.compile(
+        rf"^\s*-\s*{re.escape(label)}:\s*(?P<value>.*?)\s*$",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    match = pattern.search(text)
+    if match is None:
+        return None
+    value = match.group("value").strip().strip("`").strip()
+    return value or None
+
+
+def _split_remediation_source_ids(raw: str | None) -> list[str]:
+    if raw is None or raw.lower() in {"n/a", "none"}:
+        return []
+    return [
+        item.strip().strip("`")
+        for item in raw.split(",")
+        if item.strip().strip("`")
+    ]
+
+
+def _stage_audit_payloads_by_stage_run_id(ctx: FlowContext) -> dict[str, dict[str, object]]:
+    payloads: dict[str, dict[str, object]] = {}
+    for payload in _stage_audit_payloads(ctx):
+        stage_run_id = payload.get("stage_run_id")
+        if isinstance(stage_run_id, str) and stage_run_id:
+            payloads[stage_run_id] = payload
+    return payloads
+
+
+def _int_payload_value(payload: dict[str, object], key: str) -> int:
+    value = payload.get(key)
+    return value if isinstance(value, int) and value >= 0 else 0
+
+
+def _stage_quality_audit_summary(
+    *,
+    ctx: FlowContext,
+    stage_run: dict[str, Any],
+    stage_audits_by_id: dict[str, dict[str, object]],
+) -> dict[str, object]:
+    stage = str(stage_run["stage"])
+    stage_run_id = str(stage_run["stage_run_id"])
+    path = _stage_quality_audit_path(ctx, stage, stage_run_id=stage_run_id)
+    text = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+    source_ids = _split_remediation_source_ids(
+        _markdown_bullet_value(text, "Source ids")
+    )
+    stage_audit_payload = stage_audits_by_id.get(stage_run_id, {})
+    return {
+        "stage": stage,
+        "stage_run_id": stage_run_id,
+        "iteration": int(stage_run.get("iteration", 1)),
+        "path": path.as_posix(),
+        "exists": path.exists(),
+        "stage_quality": _markdown_bullet_value(text, "Stage quality"),
+        "flow_decision": _stage_quality_audit_flow_decision(path),
+        "remediation_source_stage": _markdown_bullet_value(text, "Source stage"),
+        "remediation_source_ids": source_ids,
+        "operator_note": _markdown_bullet_value(text, "Operator note"),
+        "runner_repair_attempts": _int_payload_value(
+            stage_audit_payload,
+            "repair_attempts",
+        ),
+    }
+
+
+def _final_report_presence(ctx: FlowContext) -> list[dict[str, object]]:
+    return [
+        {
+            "kind": "flow-quality-report",
+            "path": (ctx.bundle_root / FLOW_QUALITY_REPORT_FILENAME).as_posix(),
+            "exists": (ctx.bundle_root / FLOW_QUALITY_REPORT_FILENAME).exists(),
+        },
+        {
+            "kind": "code-quality-report",
+            "path": (ctx.bundle_root / CODE_QUALITY_REPORT_FILENAME).as_posix(),
+            "exists": (ctx.bundle_root / CODE_QUALITY_REPORT_FILENAME).exists(),
+        },
+        {
+            "kind": "quality-report",
+            "path": (ctx.bundle_root / QUALITY_REPORT_FILENAME).as_posix(),
+            "exists": (ctx.bundle_root / QUALITY_REPORT_FILENAME).exists(),
+        },
+    ]
+
+
+def _list_payload_value(payload: dict[str, object], key: str) -> list[str]:
+    raw = payload.get(key)
+    if not isinstance(raw, list):
+        return []
+    return [str(item) for item in raw if isinstance(item, str)]
+
+
+def _target_workspace_bundle_summary(ctx: FlowContext) -> dict[str, object]:
+    json_path, markdown_path = _target_workspace_evidence_paths(ctx)
+    if not json_path.exists():
+        return {
+            "json_path": json_path.as_posix(),
+            "markdown_path": markdown_path.as_posix(),
+            "exists": False,
+            "tracked_product_files": [],
+            "untracked_product_files": [],
+            "known_harness_files": [],
+            "unexpected_top_level_workitems_files": [],
+            "stray_aidd_root_files": [],
+            "new_ignored_files_count": 0,
+            "setup_baseline_ignored_churn_files_count": 0,
+            "non_gating_findings": [],
+        }
+    payload = _read_json_object(json_path)
+    raw_classification = payload.get("classification")
+    classification = raw_classification if isinstance(raw_classification, dict) else {}
+    raw_findings = payload.get("non_gating_findings")
+    findings = [
+        {
+            "kind": item.get("kind"),
+            "severity": item.get("severity"),
+            "path": item.get("path"),
+        }
+        for item in raw_findings
+        if isinstance(item, dict)
+    ] if isinstance(raw_findings, list) else []
+    return {
+        "json_path": json_path.as_posix(),
+        "markdown_path": markdown_path.as_posix(),
+        "exists": True,
+        "tracked_product_files": _list_payload_value(classification, "tracked_files"),
+        "untracked_product_files": _list_payload_value(
+            classification,
+            "unexpected_non_aidd_untracked_files",
+        ),
+        "known_harness_files": _list_payload_value(
+            classification,
+            "known_harness_files",
+        ),
+        "unexpected_top_level_workitems_files": _list_payload_value(
+            classification,
+            "unexpected_top_level_workitems_files",
+        ),
+        "stray_aidd_root_files": _list_payload_value(
+            classification,
+            "stray_aidd_root_files",
+        ),
+        "new_ignored_files_count": len(
+            _list_payload_value(classification, "new_ignored_files")
+        ),
+        "setup_baseline_ignored_churn_files_count": len(
+            _list_payload_value(classification, "setup_baseline_ignored_churn_files")
+        ),
+        "non_gating_findings": findings,
+    }
+
+
+def _verdict_status_from_markdown(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    match = re.search(
+        r"^\s*-\s*Status:\s*`?(?P<status>[^`\n]+)`?\s*$",
+        path.read_text(encoding="utf-8", errors="replace"),
+        re.IGNORECASE | re.MULTILINE,
+    )
+    return None if match is None else match.group("status").strip()
+
+
+def _grader_execution_status(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    try:
+        payload = _read_json_object(path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    execution = payload.get("execution")
+    if not isinstance(execution, dict):
+        return None
+    status = execution.get("status")
+    return status if isinstance(status, str) and status else None
+
+
+def _terminal_flow_state_bundle_consistency(ctx: FlowContext) -> dict[str, object]:
+    state = _load_flow_state(ctx.bundle_root)
+    flow_status = state.get("status")
+    flow_status_value = flow_status if isinstance(flow_status, str) else None
+    verdict_path = ctx.bundle_root / VERDICT_FILENAME
+    grader_path = ctx.bundle_root / GRADER_FILENAME
+    verdict_status = _verdict_status_from_markdown(verdict_path)
+    grader_status = _grader_execution_status(grader_path)
+    reasons: list[str] = []
+    terminal_execution_statuses = {"pass", "fail", "infra-fail", "blocked"}
+    if flow_status_value in terminal_execution_statuses:
+        if verdict_status != flow_status_value:
+            reasons.append("verdict.md status does not match terminal flow-state status")
+        if grader_status != flow_status_value:
+            reasons.append("grader.json execution status does not match flow-state status")
+    elif flow_status_value == "manual-quality-stop":
+        if verdict_path.exists():
+            reasons.append("manual-quality-stop should not emit verdict.md")
+        if grader_path.exists():
+            reasons.append("manual-quality-stop should not emit grader.json")
+    else:
+        reasons.append("flow-state status is not terminal")
+    return {
+        "flow_state_path": (ctx.bundle_root / FLOW_STATE_FILENAME).as_posix(),
+        "flow_state_status": flow_status_value,
+        "flow_state_next_action": state.get("next_action"),
+        "verdict_path": verdict_path.as_posix(),
+        "verdict_exists": verdict_path.exists(),
+        "verdict_status": verdict_status,
+        "grader_path": grader_path.as_posix(),
+        "grader_exists": grader_path.exists(),
+        "grader_execution_status": grader_status,
+        "consistent": not reasons,
+        "reasons": reasons,
+    }
+
+
+def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, object]:
+    state = _load_flow_state(ctx.bundle_root)
+    stage_runs = _state_completed_stage_runs(ctx.bundle_root)
+    stage_audits_by_id = _stage_audit_payloads_by_stage_run_id(ctx)
+    stage_quality_audits = [
+        _stage_quality_audit_summary(
+            ctx=ctx,
+            stage_run=stage_run,
+            stage_audits_by_id=stage_audits_by_id,
+        )
+        for stage_run in stage_runs
+    ]
+    remediation_source_ids = sorted(
+        {
+            source_id
+            for audit in stage_quality_audits
+            for source_id in cast(list[str], audit["remediation_source_ids"])
+        }
+    )
+    total_runner_repair_attempts = sum(
+        cast(int, audit["runner_repair_attempts"]) for audit in stage_quality_audits
+    )
+    return {
+        "schema_version": 1,
+        "created_at_utc": _utc_now(),
+        "scenario_id": ctx.scenario.scenario_id,
+        "runtime_id": ctx.runtime_id,
+        "run_id": ctx.run_id,
+        "live_matrix_role": ctx.scenario.live_matrix_role,
+        "scope": "navigation-evidence",
+        "quality_scoring": {
+            "runner_owned_quality_scoring": False,
+            "summary_computes_counted_clean": False,
+            "counted_clean_source": "manual quality-report.md only",
+        },
+        "stage_quality_audits": stage_quality_audits,
+        "remediation": {
+            "cycles": _state_remediation_cycles(ctx.bundle_root),
+            "handled_quality_stage_run_ids": sorted(
+                _state_handled_quality_stage_run_ids(ctx.bundle_root)
+            ),
+            "source_ids": remediation_source_ids,
+            "request_count": sum(
+                1
+                for audit in stage_quality_audits
+                if audit.get("flow_decision") == "request-remediation"
+            ),
+            "pending_request": state.get("pending_remediation"),
+        },
+        "repair_counts": {
+            "runner_stage_repair_attempts": total_runner_repair_attempts,
+            "quality_remediation_cycles": _state_remediation_cycles(ctx.bundle_root),
+            "by_stage_run": [
+                {
+                    "stage_run_id": audit["stage_run_id"],
+                    "stage": audit["stage"],
+                    "iteration": audit["iteration"],
+                    "runner_repair_attempts": audit["runner_repair_attempts"],
+                }
+                for audit in stage_quality_audits
+            ],
+        },
+        "target_workspace": _target_workspace_bundle_summary(ctx),
+        "final_reports": _final_report_presence(ctx),
+        "terminal_flow_state_verdict_consistency": (
+            _terminal_flow_state_bundle_consistency(ctx)
+        ),
+    }
+
+
+def _render_product_evaluation_bundle_summary_markdown(
+    payload: dict[str, object],
+) -> str:
+    stage_quality_audits = cast(list[dict[str, object]], payload["stage_quality_audits"])
+    target_workspace = cast(dict[str, object], payload["target_workspace"])
+    final_reports = cast(list[dict[str, object]], payload["final_reports"])
+    remediation = cast(dict[str, object], payload["remediation"])
+    repair_counts = cast(dict[str, object], payload["repair_counts"])
+    consistency = cast(
+        dict[str, object],
+        payload["terminal_flow_state_verdict_consistency"],
+    )
+    lines = [
+        "# Product Evaluation Bundle Summary",
+        "",
+        f"- Scenario: `{payload['scenario_id']}`",
+        f"- Runtime: `{payload['runtime_id']}`",
+        f"- Run ID: `{payload['run_id']}`",
+        "- Scope: `navigation-evidence`",
+        (
+            "- Quality scoring: `not-runner-owned`; this summary does not compute "
+            "`counted-clean`."
+        ),
+        "- Counted-clean source: manual `quality-report.md` only.",
+        "",
+        "## Stage Quality Audits",
+        "",
+        "| Stage run | Stage | Iteration | Exists | Flow decision | Source ids |",
+        "| --- | --- | ---: | --- | --- | --- |",
+    ]
+    for audit in stage_quality_audits:
+        source_ids = cast(list[str], audit["remediation_source_ids"])
+        lines.append(
+            "| "
+            f"`{audit['stage_run_id']}` | "
+            f"`{audit['stage']}` | "
+            f"{audit['iteration']} | "
+            f"`{audit['exists']}` | "
+            f"`{audit['flow_decision'] or 'missing'}` | "
+            f"{', '.join(source_ids) if source_ids else 'n/a'} |"
+        )
+    lines.extend(
+        (
+            "",
+            "## Remediation And Repairs",
+            "",
+            f"- Quality remediation cycles: `{remediation['cycles']}`",
+            f"- Quality remediation request count: `{remediation['request_count']}`",
+            "- Remediation source ids: "
+            f"`{', '.join(cast(list[str], remediation['source_ids'])) or 'n/a'}`",
+            "- Runner stage repair attempts: "
+            f"`{repair_counts['runner_stage_repair_attempts']}`",
+            "",
+            "## Target Workspace",
+            "",
+            f"- Evidence JSON: `{target_workspace['json_path']}`",
+            f"- Evidence exists: `{target_workspace['exists']}`",
+            "- Tracked product files:",
+            *_markdown_path_list(
+                cast(list[str], target_workspace["tracked_product_files"])
+            ),
+            "- Untracked product files:",
+            *_markdown_path_list(
+                cast(list[str], target_workspace["untracked_product_files"])
+            ),
+            "- Known harness files:",
+            *_markdown_path_list(cast(list[str], target_workspace["known_harness_files"])),
+            "- Top-level workitems pollution:",
+            *_markdown_path_list(
+                cast(list[str], target_workspace["unexpected_top_level_workitems_files"])
+            ),
+            "- Stray `.aidd/` root files:",
+            *_markdown_path_list(cast(list[str], target_workspace["stray_aidd_root_files"])),
+            "- New ignored files count: "
+            f"`{target_workspace['new_ignored_files_count']}`",
+            "- Setup-baseline ignored churn count: "
+            f"`{target_workspace['setup_baseline_ignored_churn_files_count']}`",
+            "",
+            "## Final Reports",
+            "",
+            "| Report | Exists | Path |",
+            "| --- | --- | --- |",
+        )
+    )
+    for report in final_reports:
+        lines.append(
+            f"| `{report['kind']}` | `{report['exists']}` | `{report['path']}` |"
+        )
+    lines.extend(
+        (
+            "",
+            "## Terminal Consistency",
+            "",
+            f"- Flow-state status: `{consistency['flow_state_status'] or 'missing'}`",
+            f"- Verdict status: `{consistency['verdict_status'] or 'missing'}`",
+            "- Grader execution status: "
+            f"`{consistency['grader_execution_status'] or 'missing'}`",
+            f"- Consistent: `{consistency['consistent']}`",
+            "- Reasons:",
+        )
+    )
+    reasons = cast(list[str], consistency["reasons"])
+    if reasons:
+        lines.extend(f"- {reason}" for reason in reasons)
+    else:
+        lines.append("- none")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _write_product_evaluation_bundle_summary(ctx: FlowContext) -> tuple[Path, Path] | None:
+    if not _requires_stage_quality_audits(ctx):
+        return None
+    json_path, markdown_path = _product_evaluation_bundle_summary_paths(ctx)
+    payload = _product_evaluation_bundle_summary_payload(ctx)
+    _write_json(json_path, payload)
+    markdown_path.write_text(
+        _render_product_evaluation_bundle_summary_markdown(payload),
+        encoding="utf-8",
+    )
+    return json_path, markdown_path
 
 
 def _quality_review_request_path_from_state(ctx: FlowContext) -> Path | None:
@@ -6864,6 +7286,7 @@ def _finalize_reports(
     )
     _write_runtime_approval_analysis_placeholder(ctx)
     _write_run_transcript_from_flow(ctx=ctx, exit_code=0 if verdict.status == "pass" else 1)
+    _write_product_evaluation_bundle_summary(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,
@@ -6907,6 +7330,7 @@ def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     _write_flow_report(ctx)
     _write_target_workspace_evidence(ctx)
     _, manual_stop_markdown_path = _write_manual_quality_stop_artifacts(ctx)
+    _write_product_evaluation_bundle_summary(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,
@@ -7030,6 +7454,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         ),
     )
     _write_run_transcript_from_flow(ctx=ctx, exit_code=1)
+    _write_product_evaluation_bundle_summary(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,

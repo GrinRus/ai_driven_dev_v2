@@ -167,6 +167,16 @@ After the terminal run, the launching SWE agent may write:
 - `.aidd/reports/evals/<run_id>/code-quality-report.md`
 - `.aidd/reports/evals/<run_id>/quality-report.md`
 
+Terminal `product-evaluation` bundles may also include generated
+`product-evaluation-bundle-summary.json` and
+`product-evaluation-bundle-summary.md`. The summary is navigation evidence, not
+runner-owned quality scoring: use it to find stage-quality audit decisions,
+remediation source ids, repair counts, tracked/untracked product files, known
+harness files, final report presence, and terminal flow-state/verdict consistency.
+It does not change `verdict.md`, `grader.json`, `flow-quality-report.md`,
+`code-quality-report.md`, or `quality-report.md`, and it does not compute
+`counted-clean`. Manual `quality-report.md` remains the only final counted-clean decision.
+
 Use this exact structure:
 
 ```markdown
