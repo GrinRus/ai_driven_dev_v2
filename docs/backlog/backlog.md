@@ -6,18 +6,15 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-- `W33-E3-S1-T1` — Run non-mutating setup audits for Pydantic, FastAPI, Rich, and Ruff
-  candidates.
+No unblocked local task is currently promoted.
 
 ## Soon
 
-- `W33-E3-S1-T2` — Draft one next product-evaluation scenario from the best passing setup
-  audit without adding it to the maintained matrix yet.
+No dependent local task is currently queued.
 
 ## Parking lot
 
-- `W30-E3-S1-T1` — Prepare the `v0.1.0a9` release branch and draft prerelease after
-  explicit approval.
+No parked local task is currently queued.
 
 ## Update rules
 
@@ -54,6 +51,15 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   navigation artifacts, and docs/skill guidance keep final counted-clean decisions in
   manual `quality-report.md`. `W33-E3-S1-T1` is promoted to `Next` and
   `W33-E3-S1-T2` to `Soon`.
+- `2026-07-02` Completed `W33-E3-S1-T1` and `W33-E3-S1-T2`; setup audits for
+  Pydantic, FastAPI, Rich, and Ruff are recorded in
+  `docs/e2e/live-e2e-candidate-setup-audits.md`, and `AIDD-LIVE-013` is drafted
+  as a Rich candidate-only product-evaluation manifest. No unblocked Wave 33
+  local tasks remain queued.
+- `2026-07-02` Closed `W30-E3-S1-T1` by reconciliation: accepted `v0.1.0a9`
+  release/install evidence already exists, origin has tag `v0.1.0a9`, and latest accepted
+  package evidence is `0.1.0a13`, so no `v0.1.0a9` release-prep action remains valid. The
+  active backlog queue is empty.
 - `2026-04-23` Backlog queue was restored after readiness cleanup and synchronized with Wave 7/Wave 8 roadmap tasks.
 - `2026-04-23` Queue-restoration policy was documented under `W8-E3-S1` to govern future wave opening when backlog is empty.
 - `2026-04-23` Wave 9 queue bootstrap promoted `W9-E1-S1-T1` to `Next`, `W9-E1-S1-T2` and `W9-E1-S1-T3` to `Soon`, and `W9-E1-S1-T4` to `Parking lot`.
@@ -416,17 +422,18 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   non-interactive PATH.
 - `2026-06-04` Wave 30 opened for security posture and `v0.1.0a9` release readiness:
   `W30-E1-S1-T1` is promoted to `Next`, `W30-E2-S1-T1` and `W30-E2-S1-T2` are in
-  `Soon`, and `W30-E3-S1-T1` remains parked until a separate explicit release-prep
+  `Soon`, and `W30-E3-S1-T1` was parked until a separate explicit release-prep
   approval exists.
 - `2026-06-04` Completed `W30-E1-S1-T1`, `W30-E2-S1-T1`, and `W30-E2-S1-T2`: Dependabot
   alerts were triaged and patched through `uv.lock`, fresh source clean-UI smoke evidence
   passed in `/tmp/aidd-w30-release-readiness-smoke-20260604T121108Z`, and release
-  readiness notes now keep `0.1.0a9.dev0` as development source. `W30-E3-S1-T1` remains
-  parked until explicit release-prep approval.
+  readiness notes now keep `0.1.0a9.dev0` as development source. `W30-E3-S1-T1` stayed
+  parked until the later accepted release evidence made the original prep action obsolete.
 - `2026-06-09` Wave 31 opened for the integrated operator workbench redesign:
   `W31-E1-S1-T1` is promoted to `Next`; `W31-E1-S1-T2`, `W31-E2-S1-T1`, and
   `W31-E3-S1-T1` are in `Soon`; the broader project/work-item, document workbench,
   diagnostics, recovery, contextual navigation, and browser evidence rollout remains
   parked until the UX contract lands.
-- `2026-06-09` Wave 31 completed and was removed from the active queue. The only parked
-  item remains `W30-E3-S1-T1`, which still requires explicit release-prep approval.
+- `2026-06-09` Wave 31 completed and was removed from the active queue. At that point the
+  only parked item was `W30-E3-S1-T1`; it was later closed by accepted release evidence
+  reconciliation.

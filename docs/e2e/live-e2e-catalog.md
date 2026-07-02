@@ -253,6 +253,18 @@ repository flow and must remain manual-only.
 
 - `AIDD-LIVE-012` - large `product-evaluation` streaming error and disconnect boundary task
 
+## Candidate Repository Drafts
+
+Candidate drafts are not maintained coverage. They are setup-proofed lanes that
+may be promoted only after a separate proof run and planning update. See
+[`Live E2E Candidate Setup Audits`](./live-e2e-candidate-setup-audits.md) for
+the Pydantic, FastAPI, Rich, and Ruff audit table.
+
+### `Textualize/rich`
+
+- `AIDD-LIVE-013` - medium candidate-only `product-evaluation` lane for literal
+  bracketed markup rendering across console and table output
+
 ## Matrix Source Of Truth
 
 Use [`Scenario Matrix`](./scenario-matrix.md) as the source of truth for:
