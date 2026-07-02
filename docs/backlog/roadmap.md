@@ -8037,7 +8037,7 @@ Sync notes:
 
 ---
 
-## Wave 30 — security posture and `v0.1.0a9` release readiness (`in progress`)
+## Wave 30 — security posture and `v0.1.0a9` release readiness (`done`)
 
 Goal: close current default-branch dependency security alerts, then prepare an honest
 go/no-go input for the next alpha prerelease without changing CLI/UI behavior or starting
@@ -8121,45 +8121,45 @@ Exit evidence:
 - maintainers have a current release-candidate decision input;
 - README and release docs do not imply that `0.1.0a9` is already published.
 
-### Epic W30-E3 — approved release preparation (`blocked`)
+### Epic W30-E3 — approved release preparation (`done`)
 Linked stories: `US-09`, `US-10`
 
-#### Slice W30-E3-S1 — `v0.1.0a9` release branch and dry-runs (`blocked`)
-Goal: only after explicit maintainer approval, create the release candidate branch,
-prepare the draft prerelease, and run remote dry-runs without bypassing the established
-GitHub Release published-event model.
+#### Slice W30-E3-S1 — `v0.1.0a9` release branch and dry-runs (`done`)
+Goal: reconcile the old approved-release-preparation blocker after accepted release
+evidence made a new `v0.1.0a9` preparation invalid.
 
 Primary outputs:
 
-- `release/v0.1.0a9` branch with candidate version `0.1.0a9`
-- remote `ci.yml` and `release.yml` dry-run evidence
-- draft GitHub prerelease targeting the release branch
+- accepted `v0.1.0a9` release/install evidence reference
+- stale release-prep blocker closure decision
+- synchronized roadmap/backlog status
 
 Touched areas:
 
-- `pyproject.toml`
-- `uv.lock`
-- release notes/checklist docs
-- GitHub release workflows
+- `docs/backlog/`
 
 Dependencies:
 
 - completed `W30-E1-S1`
 - completed `W30-E2-S1`
-- separate explicit approval to start release preparation
+- accepted `v0.1.0a9` release/install evidence in `docs/release-checklist.md`
+- later accepted `0.1.0a13` package evidence
 
 Local tasks:
 
-- `W30-E3-S1-T1` (blocked) Prepare the `v0.1.0a9` release branch and draft prerelease
-  after explicit approval.
-  - Scope: release preparation only.
-  - Verification: local deterministic checks, `uv build`, remote CI/release dry-runs,
-    absence of a preexisting `v0.1.0a9` tag/PyPI version, and draft release metadata.
+- `W30-E3-S1-T1` (done; superseded by accepted release evidence) Close the stale
+  `v0.1.0a9` release-prep blocker without creating a new release branch, tag, draft
+  release, or PyPI publish.
+  - Scope: planning documentation only.
+  - Verification: `docs/release-checklist.md` records accepted `v0.1.0a9` evidence,
+    origin has tag `v0.1.0a9`, latest accepted evidence is `0.1.0a13`, and the active
+    backlog no longer parks the stale W30 task.
 
 Exit evidence:
 
-- release candidate prep is ready for a separate publish approval;
-- no tag is pushed manually and no package is published from this planning/dependency pass.
+- the old release-prep blocker is closed because the immutable package version already
+  exists and has accepted release/install evidence;
+- no tag is pushed manually and no package is published from this reconciliation pass.
 
 Sync notes:
 
@@ -8184,7 +8184,15 @@ Sync notes:
   completed `idea` and `research` jobs `job-add2c133fdee4cff90c4232a20911b8c` and
   `job-52f8e71e3a564672becae1084bf27d71` with job status `completed`, stage rail status
   `succeeded`, fixture runtime logs, seven timeline events per stage, and expected
-  Markdown artifacts. Release prep remains blocked on separate explicit approval.
+  Markdown artifacts. At that time, release prep stayed blocked on separate explicit
+  approval.
+- `2026-07-02` `W30-E3-S1-T1` closed by reconciliation rather than a new release action:
+  `docs/release-checklist.md` records accepted `v0.1.0a9` release/install evidence, origin
+  has tag `v0.1.0a9`, the release branch `release/v0.1.0a9` was already used for the
+  accepted release, current source is `0.1.0a14.dev0`, and latest accepted package evidence
+  is `0.1.0a13`. Re-preparing `v0.1.0a9` would conflict with immutable package-version
+  rules, so no release branch, tag, draft GitHub Release, PyPI publish, or workflow publish
+  trigger was created.
 
 ---
 
@@ -8653,7 +8661,7 @@ Sync notes:
   fixed prerelease can be published because `ai-driven-dev-v2==0.1.0a11` is
   immutable.
 
-## Wave 33 — live E2E product-evaluation follow-up (`planned`)
+## Wave 33 — live E2E product-evaluation follow-up (`done`)
 
 Goal: turn the new black-box product-evaluation protocol into a repeatable maintained
 matrix practice without making live E2E a CI/CD or release gate.
@@ -8758,10 +8766,10 @@ Sync notes:
   navigation artifacts, and live E2E docs/skill guidance state that the summary is
   not runner-owned quality scoring and does not replace manual `quality-report.md`.
 
-### Epic W33-E3 — product-evaluation matrix expansion (`planned`)
+### Epic W33-E3 — product-evaluation matrix expansion (`done`)
 Linked stories: `US-07`, `US-10`
 
-#### Slice W33-E3-S1 — new repository setup audits (`planned`)
+#### Slice W33-E3-S1 — new repository setup audits (`done`)
 Goal: decide which additional public repositories are safe candidates for future
 product-evaluation lanes before adding maintained scenarios.
 
@@ -8769,11 +8777,13 @@ Primary outputs:
 
 - setup-audit notes for Pydantic, FastAPI, Rich, and Ruff candidates
 - candidate decision table
+- candidate-only Rich product-evaluation draft manifest
 
 Touched areas:
 
 - local setup-audit notes
 - `docs/e2e/` candidate documentation
+- `harness/scenarios/live/`
 
 Dependencies:
 
@@ -8782,13 +8792,13 @@ Dependencies:
 
 Local tasks:
 
-- `W33-E3-S1-T1` Run non-mutating setup audits for Pydantic, FastAPI, Rich, and Ruff
+- `W33-E3-S1-T1` (done) Run non-mutating setup audits for Pydantic, FastAPI, Rich, and Ruff
   candidates, recording clone pin, setup command, focused baseline verification, hidden
   prompts, and blocker status.
   - Scope: setup audit evidence only.
   - Verification: each candidate has a decision row of `candidate`, `blocked`, or
     `reject`, with exact revision and baseline command outcome.
-- `W33-E3-S1-T2` Draft one next product-evaluation scenario from the best passing setup
+- `W33-E3-S1-T2` (done) Draft one next product-evaluation scenario from the best passing setup
   audit without adding it to the maintained matrix yet.
   - Scope: scenario draft only.
   - Verification: scenario loader doctor passes for the draft and docs mark it as
@@ -8798,3 +8808,14 @@ Exit evidence:
 
 - matrix expansion is based on setup proof rather than speculative repo popularity;
 - maintained coverage is not expanded until the candidate protocol is proven usable.
+
+Sync notes:
+
+- `2026-07-02` Completed `W33-E3-S1-T1`: disposable setup audits for Pydantic,
+  FastAPI, Rich, and Ruff were recorded in
+  `docs/e2e/live-e2e-candidate-setup-audits.md` with exact pins, setup commands,
+  focused baseline outcomes, candidate task ideas, and decision rows.
+- `2026-07-02` Completed `W33-E3-S1-T2`: `AIDD-LIVE-013` was drafted as a
+  candidate-only Rich product-evaluation manifest for literal bracketed markup
+  rendering. The catalog marks it as a candidate draft, not maintained coverage;
+  `docs/e2e/scenario-matrix.md` was intentionally not expanded.

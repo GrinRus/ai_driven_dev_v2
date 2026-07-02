@@ -1,0 +1,100 @@
+id: AIDD-LIVE-013
+scenario_class: live-full-flow
+feature_size: medium
+live_matrix_role: product-evaluation
+automation_lane: manual
+canonical_runtime: codex
+repo:
+  url: https://github.com/Textualize/rich
+  default_branch: master
+  revision: 9d8f9a372cc5916fd4781fec207ced7ddac2f08f
+objective: Exercise a Rich terminal rendering lane with bounded verification across
+  console output, table cells, and markup parsing.
+task: Run the installed AIDD full-flow live audit against the selected Rich authored
+  task and preserve reviewable execution evidence.
+stage_scope:
+  start: idea
+  end: qa
+setup:
+  commands:
+  - uv venv
+  - uv pip install -e . pytest pytest-cov attrs typing-extensions
+  rationale:
+  - Install Rich and the focused pytest dependencies without requiring Poetry on the
+    live operator machine.
+  - Keep verification focused on terminal rendering, table output, and markup parsing.
+aidd_invocation:
+  work_item: WI-LIVE-RICH-LITERAL-MARKUP
+  expected_stage_scope:
+    start: idea
+    end: qa
+feature_source:
+  mode: authored-task-pool
+  selection_policy: first-listed
+  tasks:
+  - id: TASK-LIVE-RICH-LITERAL-MARKUP-TABLE
+    title: literal markup table rendering
+    summary: Make literal bracketed text in console and table output predictable
+      without regressing existing Rich markup parsing.
+    intent: Preserve Rich's markup-enabled rendering while making data values that
+      contain bracket-like text safe to display literally in table and console output.
+    target_change: Identify and implement the smallest compatible fix around markup
+      escaping, renderable normalization, or table-cell rendering, with focused
+      regression tests in console, table, and markup coverage.
+    expected_scope: Rich console/table/markup rendering code plus focused tests in
+      `tests/test_console.py`, `tests/test_table.py`, and `tests/test_markup.py`.
+    acceptance_criteria:
+    - Literal data values containing bracketed tokens such as `[error]` or `[/]` can
+      be rendered in table cells without being interpreted, dropped, or corrupting
+      neighboring output when literal rendering is requested.
+    - Existing markup-enabled rendering continues to parse supported tags and escapes
+      as before.
+    - Regression coverage exercises both direct `Console` output and `Table` output.
+    - The tracked diff stays within Rich rendering/markup code and focused tests.
+    verification:
+    - .venv/bin/python -m pytest -q tests/test_console.py tests/test_table.py tests/test_markup.py
+    - test -f .aidd/workitems/WI-LIVE-RICH-LITERAL-MARKUP/stages/qa/output/stage-result.md
+    - test -f .aidd/workitems/WI-LIVE-RICH-LITERAL-MARKUP/stages/qa/output/validator-report.md
+    quality_bar: The patch must be localized, backwards-compatible for markup-enabled
+      output, and regression-covered through public console/table rendering behavior.
+    size_rationale: Medium product-evaluation lane because the behavior crosses
+      terminal rendering, markup parsing, table cell rendering, and user data display
+      expectations.
+    visible_request: |
+      Improve Rich so literal bracketed text in user data remains predictable when
+      rendered through console and table output. Find a concrete edge case where
+      strings such as `[error]` or `[/]` can be misinterpreted, lost, or rendered
+      confusingly when the caller expects literal text, then implement the smallest
+      backwards-compatible fix. Preserve existing markup-enabled behavior and add
+      focused regression tests for direct `Console` output and `Table` output.
+    audit_rubric: |
+      Evaluate whether AIDD distinguishes literal user data from markup syntax,
+      keeps the fix localized to Rich rendering behavior, and proves compatibility
+      through public console/table tests. Count defects when the change disables
+      markup globally, changes unrelated rendering behavior, lacks table coverage,
+      or relies on broad rewrites instead of a focused compatibility fix.
+    complexity_axes:
+    - terminal-rendering
+    - parser-compatibility
+    - api-policy
+    - tests
+verify:
+  commands:
+  - .venv/bin/python -m pytest -q tests/test_console.py tests/test_table.py tests/test_markup.py
+  - test -f .aidd/workitems/WI-LIVE-RICH-LITERAL-MARKUP/stages/qa/output/stage-result.md
+  - test -f .aidd/workitems/WI-LIVE-RICH-LITERAL-MARKUP/stages/qa/output/validator-report.md
+  pass_conditions:
+  - Focused console, table, and markup tests exit with status 0.
+  - QA stage output artifacts exist for the selected work item.
+limits:
+  patch_budget_files: 16
+  timeout_minutes: 240
+interview:
+  required: false
+runtime_targets:
+- codex
+live_flow:
+  driver: stepwise-black-box
+  checkpoint_policy: after-each-step
+  answer_policy: agent-decides
+  frontend_checkpoints: true
