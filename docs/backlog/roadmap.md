@@ -5608,7 +5608,7 @@ Primary outputs:
 - CI/CD guardrails that exclude live E2E
 - source-installed local-project smoke verification
 - release-readiness notes for latest accepted `0.1.0a13` package-channel evidence and
-  `0.1.0a14.dev0` source development state
+  `0.1.0a14` source development state
 
 Touched areas:
 
@@ -5633,7 +5633,7 @@ Local tasks:
 - `W24-E1-S1-T3` (done) Verify the source-installed local-project smoke fixture runtime
   path and cover the workspace-relative command with scenario-loader regression checks.
 - `W24-E1-S1-T4` (done) Prepare release-readiness notes for the accepted `0.1.0a13`
-  package-channel evidence and `0.1.0a14.dev0` source development state
+  package-channel evidence and `0.1.0a14` source development state
   without creating a tag or
   publishing artifacts.
 
@@ -5655,7 +5655,7 @@ Evidence:
   `run idea->plan`, `run show`, `run logs`, `run artifacts`, and `stage questions`.
 - `docs/release-notes-v0.1.0a13-draft.md` and `docs/analysis/beta-readiness-source-audit.md`
   record the latest accepted `0.1.0a13` package-channel evidence and current
-  `0.1.0a14.dev0` source development state; accepted package-channel evidence is recorded
+  `0.1.0a14` source development state; accepted package-channel evidence is recorded
   in `docs/release-checklist.md`.
 
 Exit evidence:

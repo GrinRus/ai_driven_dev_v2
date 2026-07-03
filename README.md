@@ -16,6 +16,8 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 
 Latest published prerelease: `0.1.0a13`.
 Latest accepted published prerelease evidence: `0.1.0a13`.
+Current release-candidate package version on this branch: `0.1.0a14`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a13`.
 The `main` branch is development source and may contain unreleased changes.
 Source checkouts are not accepted package-channel evidence until the GitHub Release,
 PyPI publish, `pipx`, and `uv tool` verification jobs succeed for a tagged release.
