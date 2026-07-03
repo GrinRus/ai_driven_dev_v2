@@ -1,13 +1,11 @@
 # Release Notes: v0.1.0a14
 
-Status: draft, not tagged or published.
+Status: published on 2026-07-03; accepted release/install evidence.
 
-Current release-candidate package version: `0.1.0a14`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a13`.
+Latest accepted published prerelease evidence: `0.1.0a14`.
 
-The `0.1.0a14` package must not be described as the latest accepted published prerelease
-until the GitHub Release workflow publishes to PyPI and verifies `pipx` plus `uv tool`
-installability.
+The `0.1.0a14` package is accepted package-channel evidence after the GitHub Release
+workflow published to PyPI and verified `pipx` plus `uv tool` installability.
 
 ## Summary
 
@@ -48,13 +46,14 @@ Docker/GHCR remains outside the supported alpha release contract.
 - AIDD remains alpha software for local evaluation and controlled operator trials.
 - Manual external eval evidence remains local operator audit evidence and is not CI/CD,
   not a release workflow, not GitHub Actions, and not a release gate.
-- Package verification is pending until the `v0.1.0a14` GitHub Release workflow and
-  independent install checks complete.
+- Package verification passed through the `v0.1.0a14` GitHub Release workflow and
+  independent install checks.
 
 ## Release checklist
 
 - GitHub Release target: `release/v0.1.0a14`.
 - Release branch: `release/v0.1.0a14`.
 - Release workflow: run by GitHub Release `published` event only.
-- PyPI: pending `https://pypi.org/project/ai-driven-dev-v2/0.1.0a14/`.
-- `pipx` and `uv tool` verification: pending package-channel evidence.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a14/`.
+- `pipx` and `uv tool` verification: accepted package-channel evidence.
