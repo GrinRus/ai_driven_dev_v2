@@ -1,6 +1,6 @@
 # Beta Readiness Source Audit
 
-Date: 2026-06-30
+Date: 2026-07-03
 
 ## Purpose
 
@@ -20,8 +20,8 @@ Reviewed sources:
 
 ### README
 
-- The source development package version matches the package state: `0.1.0a14.dev0`.
-- The latest accepted published prerelease evidence is `0.1.0a13`.
+- The release-candidate package version matches the package state: `0.1.0a14`.
+- The last accepted published prerelease evidence before this candidate is `0.1.0a13`.
 - The source checkout is not package-channel evidence until GitHub
   Release, PyPI, `pipx`, and `uv tool` verification succeeds; README installation
   guidance stays pinned to the latest accepted package release.

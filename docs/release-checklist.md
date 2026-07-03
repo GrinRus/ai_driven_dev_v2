@@ -166,13 +166,22 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a14.dev0`.
+Current release-candidate package version: `0.1.0a14`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a13`.
 Latest accepted published prerelease evidence: `0.1.0a13`.
+Maintainer source development package version before this release branch: `0.1.0a14.dev0`.
 
-The source development version is not package-channel evidence. README install guidance
-must remain pinned to the latest accepted published prerelease until a future GitHub
-Release workflow publishes to PyPI and verifies `pipx` plus `uv tool` installability.
-No current release candidate is accepted from this development version.
+This release-candidate package version is not package-channel evidence yet. README install
+guidance must remain pinned to the latest accepted published prerelease until the
+`v0.1.0a14` GitHub Release workflow publishes to PyPI and verifies `pipx` plus `uv tool`
+installability. No accepted `v0.1.0a14` evidence log entry exists yet.
+
+Release candidate preparation for `v0.1.0a14` includes:
+
+- Wave 30 release-readiness backlog reconciliation against accepted package evidence;
+- candidate-only Rich live product-evaluation scenario draft and setup audit evidence;
+- manual external eval catalog and backlog roadmap updates keeping candidate work outside
+  the maintained scenario matrix.
 
 ### Post-release note for `v0.1.0a13`
 

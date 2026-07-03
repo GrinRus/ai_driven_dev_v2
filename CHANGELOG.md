@@ -7,7 +7,19 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes after accepted `0.1.0a13` release evidence.
+- No unreleased changes after `0.1.0a14` release-candidate preparation.
+
+## 0.1.0a14 - 2026-07-03
+
+- Prepare the `0.1.0a14` prerelease after accepted `v0.1.0a13` package-channel
+  evidence.
+- Reconcile Wave 30 release-readiness backlog state against accepted release evidence,
+  closing obsolete `v0.1.0a9` release-prep work without republishing immutable package
+  versions.
+- Add the first candidate-only live product-evaluation scenario draft for Rich and record
+  setup audit evidence for Pydantic, FastAPI, Rich, and Ruff candidates.
+- Refresh the live E2E catalog and backlog roadmap so candidate product-evaluation work is
+  explicit and remains outside the maintained scenario matrix.
 
 ## 0.1.0a13 - 2026-06-30
 
