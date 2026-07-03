@@ -7,7 +7,7 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes after `0.1.0a14` release-candidate preparation.
+- No unreleased changes after accepted `0.1.0a14` release evidence.
 
 ## 0.1.0a14 - 2026-07-03
 
