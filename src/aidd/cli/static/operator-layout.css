@@ -194,6 +194,23 @@
   grid-template-rows: minmax(500px, calc(100vh - 252px)) minmax(200px, auto);
   min-height: calc(100vh - 52px);
 }
+body.recovery-mode .operator-shell {
+  grid-template-columns: 228px minmax(0, 1fr);
+  grid-template-rows: auto;
+}
+body.recovery-mode .right-sidebar,
+body.recovery-mode .bottom-dock,
+body.recovery-mode .global-next-action-strip {
+  display: none;
+}
+body.recovery-mode .stage-rail {
+  grid-row: 1;
+}
+body.recovery-mode .cockpit {
+  grid-column: 2;
+  grid-row: 1;
+  overflow: visible;
+}
 body.setup-active .operator-shell {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto;

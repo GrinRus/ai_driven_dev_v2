@@ -442,6 +442,41 @@ def test_render_repair_brief_adds_review_workspace_hygiene_hint() -> None:
     assert "Do not write `Findings: none` while residue exists" in repair_brief
 
 
+def test_render_repair_brief_adds_implement_verification_command_hint() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="SEM-UNVERIFIABLE-CHECK-CLAIM",
+                message=(
+                    "Verification note includes outcome claim without executable "
+                    "command evidence."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/implement/implementation-report.md"
+                    ),
+                    line_number=38,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/implement/validator-report.md",
+        prior_stage_artifacts=(
+            "workitems/WI-001/stages/implement/implementation-report.md",
+        ),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    )
+
+    assert "exact command/check evidence and observed result" in repair_brief
+    assert "`uv run pytest -q` -> pass" in repair_brief
+    assert "`not-run: <reason>`" in repair_brief
+
+
 def test_render_repair_brief_marks_final_repair_attempt() -> None:
     report_markdown = render_validator_report(
         findings=(

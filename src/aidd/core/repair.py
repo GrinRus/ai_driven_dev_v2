@@ -267,6 +267,24 @@ def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
             "post-cleanup evidence, or record an active `RV-*` finding with direct residue "
             "evidence. Do not write `Findings: none` while residue exists."
         )
+    if (
+        finding.code == "SEM-UNVERIFIABLE-CHECK-CLAIM"
+        and "outcome claim without executable command evidence" in normalized_message
+    ):
+        return (
+            "Rewrite each affected verification note so the same bullet contains the "
+            "exact command/check evidence and observed result, such as "
+            "`uv run pytest -q` -> pass. If the check was not run, write "
+            "`not-run: <reason>` instead of a pass/success claim."
+        )
+    if (
+        finding.code == "SEM-UNVERIFIABLE-CHECK-CLAIM"
+        and "must include observed command outcome" in normalized_message
+    ):
+        return (
+            "Keep the command/check evidence and add the observed result on the same "
+            "verification bullet, such as `-> pass`, `-> fail`, or `exit code N`."
+        )
     return ""
 
 

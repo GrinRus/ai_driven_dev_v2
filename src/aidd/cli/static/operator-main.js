@@ -34,7 +34,7 @@ async function stopServer() {
 
 function orderedTabButtons() {
   return [...document.querySelectorAll("[data-tab]")].filter((button) =>
-    VALID_TABS.includes(button.dataset.tab || "")
+    VALID_TABS.includes(button.dataset.tab || "") && !button.hidden
   );
 }
 
@@ -117,7 +117,7 @@ document.addEventListener("click", async (event) => {
     if (stageButton) {
       state.activeStage = stageButton.dataset.stage;
       state.activeArtifactKey = "";
-      if (state.activeTab === "project-home") state.activeTab = "overview";
+      if (state.activeTab === "work") state.workDetail = "overview";
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
       await renderAll();
@@ -355,7 +355,7 @@ document.addEventListener("click", async (event) => {
       state.activeStage = blockerReference.dataset.blockerStage;
       state.activeArtifactKey = "";
       const kind = blockerReference.dataset.blockerKind;
-      state.activeTab = kind === "questions" ? "questions" : kind === "validation" ? "validation" : "overview";
+      setOperatorMode(kind === "questions" ? "questions" : kind === "validation" ? "validation" : "work");
       await fetchDashboard();
       await renderAll();
       return;
@@ -365,12 +365,12 @@ document.addEventListener("click", async (event) => {
       state.activeStage = recoveryAction.dataset.recoveryStage || state.activeStage;
       const action = recoveryAction.dataset.recoveryAction;
       state.activeArtifactKey = "";
-      if (action === "answer-questions") state.activeTab = "questions";
-      else if (action === "inspect-validation" || action === "inspect-blocker") state.activeTab = "validation";
-      else if (action === "request-change") state.activeTab = "request";
-      else if (action === "inspect-runtime-log") state.activeTab = "logs";
-      else if (action === "review-findings") state.activeTab = "review-findings";
-      else if (action === "qa-verdict") state.activeTab = "qa-verdict";
+      if (action === "answer-questions") setOperatorMode("questions");
+      else if (action === "inspect-validation" || action === "inspect-blocker") setOperatorMode("validation");
+      else if (action === "request-change") setOperatorMode("request");
+      else if (action === "inspect-runtime-log") setOperatorMode("logs");
+      else if (action === "review-findings") setOperatorMode("review-findings");
+      else if (action === "qa-verdict") setOperatorMode("qa-verdict");
       else if (action === "resume-stage") {
         await startStage(state.activeStage);
         return;
@@ -477,7 +477,7 @@ document.addEventListener("change", async (event) => {
     updateSubmitInterventionState();
     renderTopbar();
     renderSidebar();
-    if (state.activeTab === "overview") await renderCockpit();
+    if (state.activeTab === "work") await renderCockpit();
   }
   if (event.target.closest("[data-intervention-target]")) {
     updateInterventionPreview();

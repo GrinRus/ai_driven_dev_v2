@@ -133,6 +133,24 @@ def test_operator_css_loader_imports_manifested_layers() -> None:
         assert f'@import url("{route}")' in loader
 
 
+def test_operator_html_exposes_four_mode_navigation_without_quick_links() -> None:
+    assert _INDEX_HTML.count('role="tab"') == 4
+    for mode in ("work", "recovery", "evidence", "history"):
+        assert f'data-tab="{mode}"' in _INDEX_HTML
+        assert f'id="tab-{mode}"' in _INDEX_HTML
+    for legacy_tab in (
+        "overview",
+        "questions",
+        "validation",
+        "timeline",
+        "artifacts",
+        "logs",
+        "request",
+    ):
+        assert f'data-tab="{legacy_tab}"' not in _INDEX_HTML
+    assert 'class="quick-link"' not in _INDEX_HTML
+
+
 def test_operator_css_layers_own_static_ui_surfaces() -> None:
     tokens = _asset_text("/operator-tokens.css")
     base = _asset_text("/operator-base.css")
@@ -163,6 +181,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".project-set-row" in components
     assert ".global-next-action-strip" in components
     assert ".recovery-card" in components
+    assert ".recovery-workbench" in components
+    assert ".recovery-hero" in components
     assert ".evidence-drilldown" in components
     assert ".interview-loop-screen" in components
     assert ".validation-repair-center" in components
@@ -205,6 +225,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".launch-confirmation-grid" in responsive
     assert ".interview-loop-screen" in responsive
     assert ".validation-repair-center" in responsive
+    assert "body.recovery-mode .cockpit" in responsive
+    assert ".recovery-hero," in responsive
     assert ".workbench-toc-list" in responsive
     assert "scroll-padding-inline: 10px" in responsive
 
@@ -312,12 +334,25 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "followUpDraft: null",
             "selectedSourceIds: []",
             "projectHome: null",
+            "const OPERATOR_MODES",
+            "const LEGACY_TAB_TO_MODE",
+            "const RECOVERY_NEXT_ACTIONS",
+            'activeTab: "work"',
+            'workDetail: "overview"',
+            'recoveryDetail: "summary"',
+            'evidenceDetail: "artifacts"',
             'logViewMode: "summary"',
             "const VALID_TABS",
+            "function normalizeOperatorMode(tab)",
+            "function setOperatorMode(tab)",
+            "function isRecoveryNextAction(action)",
+            "function activeModeIsEvidenceLog()",
+            "function applyOperatorModeBodyClass()",
             "function initializeStateFromLocation()",
             "new URLSearchParams(window.location.search)",
             "STAGES.includes(requestedStage)",
             "VALID_TABS.includes(requestedTab)",
+            "setOperatorMode(requestedTab);",
             "function syncLocationState()",
             "window.history.replaceState(null, \"\", next);",
             "function sourceFindingsUrl()",
@@ -329,6 +364,11 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "function escapeHtml(value)",
             "function compactPath(value, maxLength = 56)",
             "function pathLine(value, maxLength = 56)",
+            "function renderValidationFindingSummary(finding, {compact = false} = {})",
+            "function primaryValidationFinding()",
+            "const occurrenceCount = Number(finding.occurrence_count || 1);",
+            "validation-finding-hint",
+            "What to do",
             'title="${escapeHtml(text)}"',
             "${escapeHtml(compactPath(text, maxLength))}",
             "async function fetchDashboard()",
@@ -342,11 +382,15 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "if (viewedStage && STAGES.includes(viewedStage)) {",
             "state.activeStage = viewedStage;",
             'state.activeRunId = state.dashboard.run?.run_id || "";',
+            'isRecoveryNextAction(nextAction) && state.activeTab === "work"',
+            'state.activeTab = "recovery";',
+            'state.recoveryDetail = "questions";',
+            'state.recoveryDetail = "validation";',
             "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`",
             'api("/api/runtime-readiness")',
             'if (element.textContent === message) element.textContent = "";',
             'button.setAttribute("aria-selected", isActive ? "true" : "false");',
-            'content.setAttribute("aria-labelledby", `tab-${tab}`);',
+            'content.setAttribute("aria-labelledby", `tab-${state.activeTab}`);',
         ),
     )
 
@@ -406,9 +450,18 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "function renderProjectHomeRail()",
             "function currentWorkItemSummary()",
             "function updateContextualTabs()",
-            'visible.add("implement-review")',
-            'visible.add("review-findings")',
-            'visible.add("qa-verdict")',
+            "function tabHasQuestions()",
+            "function tabHasValidation()",
+            "function tabHasRunEvidence()",
+            "function tabHasArtifacts()",
+            "function tabHasApprovals()",
+            "function tabHasRecovery()",
+            "function updateTabShortcutVisibility(visible)",
+            "const mode = normalizeOperatorMode(shortcut).mode;",
+            "const visible = new Set(OPERATOR_MODES);",
+            "button.hidden = !visible.has(mode);",
+            'state.activeTab = tabHasRecovery() ? "recovery" : "work";',
+            "applyOperatorModeBodyClass();",
             "function timeoutSummary(runtime)",
             "function readinessDetail(label, value, maxLength = 72)",
             "function ensureRunnableRuntime()",
@@ -447,7 +500,11 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "Provider command",
             "function liveJobActivityEvents()",
             "function activityEvents()",
+            "function renderActivityTableMarkup(events)",
             "function renderActivityTable()",
+            "function renderRecoveryWorkbench()",
+            "id=\"recoveryPrimaryActionButton\"",
+            "function renderHistoryMode()",
             "renderRuntimeSelector();",
             "await renderCockpit();",
         ),
@@ -570,9 +627,16 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "Required answers",
             "Blocked stage",
             'const savedAnswer = question.answer_resolution',
+            "const answerText = question.answer_text || \"\";",
+            "const resolutionValue = question.answer_resolution || \"resolved\";",
             'class="saved-answer"',
             "Saved ${escapeHtml(question.answer_resolution)} answer",
             "Answer recorded in answers.md",
+            "${escapeHtml(answerText)}</textarea>",
+            'option value="resolved" ${resolutionValue === "resolved" ? "selected" : ""}',
+            "Update answer",
+            "Update & resume",
+            '<details class="question-history"',
             "data-answer-resume-all",
             'resolution: resolution?.value || "resolved"',
             'option value="partial"',
@@ -593,6 +657,15 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "repair-exhausted",
             "explicit-stop",
             "function renderRecoveryActionBand(diagnostics)",
+            "renderValidationFindingSummary(finding)",
+            (
+                "const requestPrimary = status === \"repair-exhausted\" "
+                "|| status === \"explicit-stop\";"
+            ),
+            "Repair exhausted",
+            "Validation still fails after repair attempts.",
+            "function renderValidationFindingList(validation)",
+            "validation?.validation_findings || []",
             "function renderRepairTimeline(validation)",
             "function renderBlockedStageRecovery(diagnostics)",
             "Validation / Repair Center",
@@ -601,6 +674,7 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "Stop Run",
             "Request Change",
             "Validation attempt timeline",
+            "Top validation findings",
             "Blocked questions",
             "Answers path",
             "data-run-repair",
@@ -897,6 +971,8 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Run selected stage",
             "function renderNextActionPanel()",
             "function renderGlobalNextActionStrip()",
+            "primaryValidationFinding()",
+            "renderValidationFindingSummary(finding)",
             "Resume workflow",
             "Runtime selected and ready to start the governed workflow.",
             "Runtime selected. Resolve readiness before starting the governed workflow.",
@@ -944,7 +1020,7 @@ def test_operator_static_screen_landmarks_cover_accepted_mission_control_surface
             'aria-label="Run details"',
             'aria-label="Activity and recent artifacts"',
             'role="tablist" aria-label="Stage cockpit views"',
-            'role="tabpanel" aria-labelledby="tab-overview" tabindex="0"',
+            'role="tabpanel" aria-labelledby="tab-work" tabindex="0"',
         ),
     )
     _assert_contains_all(
@@ -1120,6 +1196,8 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             "void fetchReadiness().then(renderAll)",
             "/api/open-folder",
             "/api/server/stop",
+            "function orderedTabButtons()",
+            "VALID_TABS.includes(button.dataset.tab || \"\") && !button.hidden",
             'event.target.closest("[data-first-launch-run]")',
             'event.target.closest("[data-first-launch-stage]")',
             "await startStage(state.activeStage);",
@@ -1157,7 +1235,7 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'event.target.id === "operatorRequestText"',
             'closest("[data-intervention-target]")',
             "updateInterventionPreview();",
-            'if (state.activeTab === "overview") await renderCockpit();',
+            'if (state.activeTab === "work") await renderCockpit();',
             'closest("[data-artifact-stage]")',
             'closest("[data-artifact-key]")',
             'closest("[data-evidence-node]")',
@@ -1200,23 +1278,26 @@ def test_index_html_exposes_named_operator_landmarks() -> None:
 
 def test_index_html_exposes_tab_and_panel_semantics() -> None:
     assert _attrs_for("div", role="tablist", **{"aria-label": "Stage cockpit views"})
-    overview_tab = _attrs_for("button", id="tab-overview", role="tab")
-    questions_tab = _attrs_for("button", id="tab-questions", role="tab")
+    work_tab = _attrs_for("button", id="tab-work", role="tab")
+    recovery_tab = _attrs_for("button", id="tab-recovery", role="tab")
+    evidence_tab = _attrs_for("button", id="tab-evidence", role="tab")
     history_tab = _attrs_for("button", id="tab-history", role="tab")
     panel = _attrs_for("div", id="cockpitContent", role="tabpanel")
 
-    assert overview_tab["aria-selected"] == "true"
-    assert overview_tab["aria-controls"] == "cockpitContent"
-    assert overview_tab["tabindex"] == "0"
-    assert questions_tab["aria-selected"] == "false"
-    assert questions_tab["aria-controls"] == "cockpitContent"
-    assert questions_tab["tabindex"] == "-1"
+    assert work_tab["aria-selected"] == "true"
+    assert work_tab["aria-controls"] == "cockpitContent"
+    assert work_tab["tabindex"] == "0"
+    assert recovery_tab["aria-selected"] == "false"
+    assert recovery_tab["aria-controls"] == "cockpitContent"
+    assert recovery_tab["tabindex"] == "-1"
+    assert evidence_tab["aria-selected"] == "false"
+    assert evidence_tab["aria-controls"] == "cockpitContent"
+    assert evidence_tab["tabindex"] == "-1"
     assert history_tab["aria-selected"] == "false"
     assert history_tab["aria-controls"] == "cockpitContent"
     assert history_tab["tabindex"] == "-1"
-    assert panel["aria-labelledby"] == "tab-overview"
+    assert panel["aria-labelledby"] == "tab-work"
     assert panel["tabindex"] == "0"
-    assert 'data-tab-shortcut="history"' in _asset_text("/")
 
 
 def test_index_html_exposes_runtime_and_loading_contracts() -> None:

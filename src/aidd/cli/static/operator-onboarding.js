@@ -411,7 +411,7 @@ async function resumeProjectHomeWorkItem(workItem, options = {}) {
   state.activeArtifactKey = "";
   state.selectedEvidenceNodeId = "";
   state.selectedEvidenceEdgeId = "";
-  state.activeTab = options.openLatestRun || item ? "overview" : "project-home";
+  setOperatorMode(options.openLatestRun || item ? "work" : "project-home");
   document.body.classList.remove("setup-active");
   document.getElementById("openWorkspaceButton").disabled = false;
   await fetchDashboard();

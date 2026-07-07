@@ -35,6 +35,25 @@
   .operator-shell {
     display: block;
   }
+  body.recovery-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  body.recovery-mode .cockpit {
+    order: 1;
+  }
+  body.recovery-mode .stage-rail {
+    order: 2;
+  }
+  body.recovery-mode .right-sidebar {
+    order: 3;
+  }
+  body.recovery-mode .bottom-dock {
+    order: 4;
+  }
+  body.recovery-mode .project-home-rail {
+    display: none;
+  }
   .global-next-action-strip {
     grid-template-columns: 1fr;
   }
@@ -101,6 +120,8 @@
   .evidence-edge-list,
   .interview-summary,
   .repair-timeline,
+  .recovery-hero,
+  .recovery-facts,
   .bottom-dock {
     grid-template-columns: 1fr;
   }

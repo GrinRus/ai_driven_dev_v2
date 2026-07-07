@@ -36,6 +36,13 @@ Store user-facing clarification questions raised during a stage.
 - Do not fabricate answers inside this document; answers belong in `answers.md`.
 - When assumptions are acceptable, still record the question with `[non-blocking]`.
 - Preserve question ids across revisions to keep durable cross-references stable.
+- Treat `questions.md` as a merged stage interview ledger. When a later runtime attempt
+  asks a question with an existing id, update that question in place; when it asks a new
+  id, append it; do not silently remove unresolved questions that were omitted from the
+  later attempt output.
+- To stop blocking on a question, either provide a matching `[resolved]` answer in
+  `answers.md` or re-emit the same question id as `[non-blocking]` while recording the
+  bounded assumption in the stage output artifact.
 - Put alternatives, examples, or rationale in the question sentence itself, or in plain
   continuation prose that does not start with `-`.
 - Only bullets inside the `Questions` section are interpreted as question entries;

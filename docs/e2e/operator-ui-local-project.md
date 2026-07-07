@@ -47,7 +47,10 @@ The local-project UI lane follows the product operator path:
 The maintained operator UI lane covers:
 
 - page load for the local operator-console shell with top status bar, stage rail,
-  stage cockpit, right sidebar, and bottom activity/artifact dock;
+  stage cockpit, and the four top-level modes: Work, Recovery, Evidence, and History;
+- recovery-first layout for blocked-question, failed-validation, intervention-review,
+  and runtime-log states, with one visible primary recovery action and raw
+  logs/evidence/activity demoted behind Evidence or History;
 - dashboard read-model payload shape through `/api/dashboard`, including selected
   stage, next action, blockers, evidence refs, recent activity, and recent artifacts;
 - global next-action classification that routes operators to blocked questions or
@@ -68,6 +71,8 @@ The maintained operator UI lane covers:
 - explicit runtime selection before workflow-run or stage-run request dispatch;
 - blocking answer persistence to `answers.md` with `resolved`, `partial`, and
   `deferred` resolution states;
+- editable latest-answer behavior for previously saved answers, including resolved
+  answers that are corrected or downgraded back to partial/deferred before resume;
 - answer-and-resume behavior that persists the selected answer and resumes the
   selected stage with the current run id only after blocking questions are resolved;
 - structured live runtime chunk rendering through UI job polling, with stdout,
@@ -80,7 +85,10 @@ The maintained operator UI lane covers:
   preview/source rendering, with Recent Artifacts and Evidence Refs navigating into
   inspection views instead of only opening local folders, and compact path rendering
   for dense evidence lanes;
-- validation visibility through validator pass/fail counts and validator report paths;
+- validation visibility through validator pass/fail counts, validator report paths, and
+  the primary failing validator finding directly in the recovery / next-action surface;
+- repair status correctness where `repair-available` and `repair-exhausted` come from
+  backend diagnostics and are not inferred from the existence of repair history alone;
 - repair-history visibility through `repair-brief.md` paths;
 - operator request visibility through Evidence Refs and Recent Artifacts;
 - declared project-set roots through `project-set.md` artifact visibility;
@@ -160,13 +168,14 @@ A manual installed UI smoke should use a disposable local fixture project:
 8. Run `research` through **Run selected stage** or the next-action continue path, wait
    until the UI job reports `completed`, and verify the stage rail reports `research`
    as `succeeded`.
-9. Verify the page loads, the dashboard shell renders stage rail/sidebar/bottom dock,
+9. Verify the page loads, the dashboard shell renders the four-mode operator navigation,
    runtime selection is required before `/api/workflow/run` and `/api/stage/run`
    dispatch, blocking answers persist, answer-and-resume keeps the same run id,
    `Request change -> Submit & run` creates a durable operator request and switches
    to live logs, persisted logs remain readable after completion, Markdown artifacts
    render as preview/source, validation state is visible, repair and operator-request
-   evidence is linked, and recent activity/artifact rows remain visible after refresh.
+   evidence is linked, and recent activity/artifact rows remain reachable through
+   Evidence or History after refresh.
 10. For a blocked or failed `plan` stage, submit a request such as
    `Add migration rollback risks`, verify `/api/stage/interact` returns a job id,
    the Logs tab stays visible while polling `/api/jobs/<id>/logs`, and the latest
@@ -273,14 +282,20 @@ assets.
 - The right rail shows Recovery Assistant counts for questions, failures, and suggestions.
 - First failure summarizes runtime exit/provider/timeout, validation, blocking questions,
   repair exhaustion, or stopped-stage evidence before raw log inspection.
+- Validation recovery shows the primary validator finding with duplicate occurrence count
+  when applicable and an operator hint such as the command/check evidence required for
+  `SEM-UNVERIFIABLE-CHECK-CLAIM`.
+- When repair is available, **Run Repair** is the primary recovery action; when repair is
+  exhausted, **Request Change** is the primary recovery action and raw logs/evidence stay
+  reachable as secondary drill-downs.
 - Recovery cards route to Questions, Validation, Request change, Logs, Review Findings,
   or QA Verdict while preserving runtime and stage eligibility gates.
 
 ### Questions
 
 - Blocking questions appear in Overview and Questions.
-- Saving a resolved answer writes `answers.md`, disables the answer controls, and shows
-  the saved answer text in the resolved question card.
+- Saving a resolved answer writes `answers.md`, keeps the latest answer editable, and
+  shows the saved answer text in the resolved question card.
 - Partial or deferred answers remain non-resolved and keep blocking policy visible.
 - Answer & resume uses the selected runtime and current run id.
 

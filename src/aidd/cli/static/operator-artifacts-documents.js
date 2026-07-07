@@ -705,11 +705,13 @@ async function inspectArtifactReference({stage, key, path, kind}) {
   const targetStage = stage || state.activeStage;
   state.activeStage = targetStage;
   state.activeArtifactKey = key || artifactKeyForPath(path, targetStage);
-  state.selectedEvidenceNodeId = state.activeArtifactKey ? `document:${state.activeArtifactKey}` : "";
+  state.selectedEvidenceNodeId = state.activeArtifactKey
+    ? `${kind === "log" ? "log" : "document"}:${state.activeArtifactKey}`
+    : "";
   state.selectedEvidenceEdgeId = "";
-  state.activeTab = kind === "log" ? "logs" : "artifacts";
+  setOperatorMode(kind === "log" ? "logs" : "artifacts");
   await fetchDashboard();
-  activateTab(state.activeTab);
+  activateTab(kind === "log" ? "logs" : "artifacts");
   await renderAll();
 }
 

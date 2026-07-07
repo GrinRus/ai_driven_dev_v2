@@ -20,6 +20,7 @@ from aidd.core.operator_frontend import (
     resolve_operator_stage_document_workbench,
     resolve_operator_stage_view,
 )
+from aidd.core.operator_frontend_validation import parse_validator_report_findings
 from aidd.core.operator_intervention import persist_operator_intervention_request
 from aidd.core.repair import persist_repair_history_snapshot
 from aidd.core.run_store import (
@@ -122,6 +123,66 @@ def _write_questions(workspace_root: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def test_parse_validator_report_findings_extracts_location_and_message() -> None:
+    findings = parse_validator_report_findings(
+        "\n".join(
+            (
+                "# Validator Report",
+                "",
+                "## Structural checks",
+                "",
+                "- `STRUCT-MISSING-DOCUMENT` (`critical`) in "
+                "`workitems/WI-UI/stages/plan/plan.md`: Missing required document.",
+                "- not a finding bullet",
+                "## Cross-document checks",
+                "",
+                "- `CROSS-BLOCKING-UNANSWERED` (`high`) in "
+                "`workitems/WI-UI/stages/plan/questions.md`:12: Q1 is unresolved.",
+                "",
+            )
+        )
+    )
+
+    assert findings[0].category == "structural"
+    assert findings[0].path == "workitems/WI-UI/stages/plan/plan.md"
+    assert findings[0].line_number is None
+    assert findings[0].message == "Missing required document."
+    assert findings[1].category == "cross-document"
+    assert findings[1].path == "workitems/WI-UI/stages/plan/questions.md"
+    assert findings[1].line_number == 12
+    assert findings[1].message == "Q1 is unresolved."
+
+
+def test_parse_validator_report_findings_collapses_duplicate_command_claims() -> None:
+    finding_line = (
+        "- `SEM-UNVERIFIABLE-CHECK-CLAIM` (`high`) in "
+        "`workitems/IUIT-1232/stages/implement/implementation-report.md`:38: "
+        "Verification note includes outcome claim without executable command evidence."
+    )
+
+    findings = parse_validator_report_findings(
+        "\n".join(
+            (
+                "# Validator Report",
+                "",
+                "## Semantic checks",
+                "",
+                finding_line,
+                finding_line,
+                finding_line,
+                finding_line,
+            )
+        )
+    )
+
+    assert len(findings) == 1
+    assert findings[0].code == "SEM-UNVERIFIABLE-CHECK-CLAIM"
+    assert findings[0].occurrence_count == 4
+    assert findings[0].line_number == 38
+    assert findings[0].operator_hint is not None
+    assert "exact command/check" in findings[0].operator_hint
 
 
 def test_operator_project_home_view_summarizes_work_items_runs_and_project_set(
@@ -478,7 +539,21 @@ def test_operator_dashboard_next_action_inspects_failed_validation(
     stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     stage_root.joinpath("validator-report.md").write_text(
-        "# Validator Report\n\n- Verdict: `fail`\n",
+        "\n".join(
+            (
+                "# Validator Report",
+                "",
+                "## Semantic checks",
+                "",
+                "- `SEM-MISSING-ROLLBACK` (`high`) in "
+                "`workitems/WI-UI/stages/plan/plan.md`: Missing rollback plan.",
+                "",
+                "## Result",
+                "",
+                "- Verdict: `fail`",
+                "",
+            )
+        ),
         encoding="utf-8",
     )
 
@@ -492,6 +567,17 @@ def test_operator_dashboard_next_action_inspects_failed_validation(
     assert dashboard.next_action.action == "inspect-validation"
     assert dashboard.first_failure is not None
     assert dashboard.first_failure.kind == "validation-failed"
+    assert dashboard.primary_validation_finding is not None
+    assert dashboard.primary_validation_finding.code == "SEM-MISSING-ROLLBACK"
+    assert dashboard.primary_validation_finding.path == (
+        "workitems/WI-UI/stages/plan/plan.md"
+    )
+    assert dashboard.active_stage_view is not None
+    assert (
+        dashboard.active_stage_view.diagnostics.validation.primary_validation_finding
+        == dashboard.primary_validation_finding
+    )
+    assert any("SEM-MISSING-ROLLBACK" in blocker.detail for blocker in dashboard.blockers)
     assert dashboard.recovery_actions
     assert any(blocker.kind == "validation" for blocker in dashboard.blockers)
 
@@ -1409,6 +1495,65 @@ def test_operator_stage_view_diagnostics_report_repair_available(
     assert validation.repair_attempts[0].outcome == "failed validation"
 
 
+def test_operator_stage_view_diagnostics_report_repair_exhausted(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    validator_report = stage_root / "validator-report.md"
+    repair_brief = stage_root / "repair-brief.md"
+    validator_report.write_text("# Validator Report\n\n- Verdict: `fail`\n", encoding="utf-8")
+    repair_brief.write_text("# Repair Brief\n\n- Add missing risk evidence.\n", encoding="utf-8")
+    stage_root.joinpath("stage-result.md").write_text(
+        "\n".join(
+            (
+                "# Stage Result",
+                "",
+                "## Status",
+                "",
+                "- `failed`",
+                "",
+                "## Terminal state notes",
+                "",
+                "- Repair budget status: `repair-budget-exhausted`.",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=2,
+        trigger="repair",
+        outcome="failed validation",
+        stage_status="failed",
+        validator_report_path=validator_report,
+        repair_brief_path=repair_brief,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    assert stage_view.diagnostics.status == "repair-exhausted"
+    assert stage_view.diagnostics.validation.status == "repair-exhausted"
+
+
 def test_operator_stage_view_diagnostics_report_stopped_event(
     tmp_path: Path,
 ) -> None:
@@ -2018,7 +2163,38 @@ def test_persist_operator_answer_preserves_partial_semantics(tmp_path: Path) -> 
 
     assert questions_view.has_unresolved_blocking_questions is True
     assert questions_view.questions[0].status == "pending-blocking"
-    assert questions_view.questions[0].answer_text is None
+    assert questions_view.questions[0].answer_text == "Release is not final yet."
+    assert questions_view.questions[0].answer_resolution is AnswerResolution.PARTIAL
+
+
+def test_persist_operator_answer_updates_resolved_answer_in_place(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_questions(workspace_root)
+    persist_operator_answer(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        question_id="Q1",
+        text="The target release is 0.2.0.",
+    )
+
+    questions_view = persist_operator_answer(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        question_id="Q1",
+        text="Release is not final yet.",
+        resolution=AnswerResolution.PARTIAL,
+    )
+
+    answers_text = questions_view.answers_path.read_text(encoding="utf-8")
+    assert answers_text.count("`Q1`") == 1
+    assert "The target release is 0.2.0." not in answers_text
+    assert "- `Q1` `[partial]` Release is not final yet." in answers_text
+    assert questions_view.has_unresolved_blocking_questions is True
+    assert questions_view.questions[0].answer_text == "Release is not final yet."
     assert questions_view.questions[0].answer_resolution is AnswerResolution.PARTIAL
 
 

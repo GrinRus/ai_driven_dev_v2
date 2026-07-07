@@ -62,6 +62,18 @@ class OperatorBlockingQuestionDiagnostics:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorValidationFindingView:
+    category: str
+    code: str
+    severity: str
+    path: str | None
+    line_number: int | None
+    message: str
+    occurrence_count: int = 1
+    operator_hint: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorRepairAttemptDiagnostics:
     attempt_number: int
     trigger: str
@@ -79,6 +91,8 @@ class OperatorValidationRepairDiagnostics:
     validator_fail_count: int
     validator_report_path: str
     repair_attempts: tuple[OperatorRepairAttemptDiagnostics, ...]
+    validation_findings: tuple[OperatorValidationFindingView, ...]
+    primary_validation_finding: OperatorValidationFindingView | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -491,6 +505,8 @@ class OperatorDashboardView:
     next_action: OperatorNextAction
     blockers: tuple[OperatorBlocker, ...]
     first_failure: OperatorFirstFailure | None
+    validation_findings: tuple[OperatorValidationFindingView, ...]
+    primary_validation_finding: OperatorValidationFindingView | None
     recovery_actions: tuple[OperatorRecoveryAction, ...]
     evidence_refs: tuple[OperatorEvidenceRef, ...]
     activity: tuple[OperatorActivityEvent, ...]
@@ -543,5 +559,6 @@ __all__ = [
     "OperatorStageView",
     "OperatorStoppedDiagnostics",
     "OperatorTerminalRunHandoff",
+    "OperatorValidationFindingView",
     "OperatorValidationRepairDiagnostics",
 ]

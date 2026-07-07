@@ -233,6 +233,90 @@ def test_persist_questions_document_appends_adapter_events(tmp_path: Path) -> No
     )
 
 
+def test_persist_questions_document_merges_stage_output_without_dropping_omitted_questions(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_questions_markdown=(
+            "# Questions\n\n"
+            "## Questions\n\n"
+            "- Q1 [blocking] Confirm the release owner.\n"
+            "- Q2 [blocking] Confirm migration rollback policy.\n"
+        ),
+    )
+
+    questions_path = persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_questions_markdown=(
+            "# Questions\n\n"
+            "## Questions\n\n"
+            "- Q1 [non-blocking] Confirm the release owner if policy changes.\n"
+            "- Q3 [blocking] Confirm deployment window.\n"
+        ),
+    )
+
+    assert parse_questions_markdown(questions_path.read_text(encoding="utf-8")) == (
+        InterviewQuestion(
+            question_id="Q1",
+            text="Confirm the release owner if policy changes.",
+            policy=QuestionPolicy.NON_BLOCKING,
+        ),
+        InterviewQuestion(
+            question_id="Q2",
+            text="Confirm migration rollback policy.",
+            policy=QuestionPolicy.BLOCKING,
+        ),
+        InterviewQuestion(
+            question_id="Q3",
+            text="Confirm deployment window.",
+            policy=QuestionPolicy.BLOCKING,
+        ),
+    )
+
+
+def test_persist_questions_document_updates_explicit_adapter_event_ids(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        stage_output_questions_markdown=(
+            "# Questions\n\n"
+            "## Questions\n\n"
+            "- Q1 [blocking] Confirm the release owner.\n"
+        ),
+    )
+
+    questions_path = persist_questions_document(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        adapter_question_events=(
+            AdapterQuestionEvent(
+                question_id="Q1",
+                text="Confirm the accountable release owner.",
+                policy=QuestionPolicy.NON_BLOCKING,
+            ),
+        ),
+    )
+
+    assert parse_questions_markdown(questions_path.read_text(encoding="utf-8")) == (
+        InterviewQuestion(
+            question_id="Q1",
+            text="Confirm the accountable release owner.",
+            policy=QuestionPolicy.NON_BLOCKING,
+        ),
+    )
+
+
 def test_answer_resolution_from_marker_accepts_contract_markers() -> None:
     assert answer_resolution_from_marker("[resolved]") == AnswerResolution.RESOLVED
     assert answer_resolution_from_marker("partial") == AnswerResolution.PARTIAL
