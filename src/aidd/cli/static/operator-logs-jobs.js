@@ -319,7 +319,7 @@ async function cancelActiveJob() {
     toast("Cancel requested.");
   }
   renderActivityTable();
-  if (state.activeTab === "logs") await renderLogs();
+  if (activeModeIsEvidenceLog()) await renderLogs();
   const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
   if (!state.activeJobTimer && activeStatuses.has(result.status)) {
     state.activeJobTimer = setInterval(pollActiveJob, 1000);
@@ -335,7 +335,7 @@ async function pollActiveJob() {
     state.activeJobLogChunks.push(...(logs.chunks || []));
     state.activeJobStatus = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}`);
     renderActivityTable();
-    if (state.activeTab === "logs") await renderLogs();
+    if (activeModeIsEvidenceLog()) await renderLogs();
     if (state.activeJobStatus.status === "waiting-for-operator") {
       activateTab("approvals");
       await renderApprovals();
@@ -352,7 +352,7 @@ async function pollActiveJob() {
     if (state.activeJobTimer) clearInterval(state.activeJobTimer);
     state.activeJobTimer = null;
     renderActivityTable();
-    if (state.activeTab === "logs") await renderLogs();
+    if (activeModeIsEvidenceLog()) await renderLogs();
   }
 }
 

@@ -39,7 +39,8 @@ Store durable answers to the questions raised during a stage.
 - Preserve question ids exactly as written in `questions.md`; do not renumber in `answers.md`.
 - Do not invent answer ids such as `A1` or `A2`; answer bullets reuse the matching `Q` id.
 - Keep answers specific and auditable; avoid placeholders such as `TBD` or `decide later` without context.
-- When an answer changes, append the updated answer in place and keep the latest marker truthful.
+- `answers.md` stores the latest answer for each question id. When an answer changes,
+  replace the existing bullet for that question id in place and keep the latest marker truthful.
 - Keep one decision per bullet to avoid mixing unrelated outcomes.
 - Only bullets inside the `Answers` section are interpreted as answer entries;
   use noncanonical sections only for non-authoritative prose metadata.

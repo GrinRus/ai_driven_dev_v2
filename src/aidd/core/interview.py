@@ -378,8 +378,6 @@ def _questions_from_events(
         question_id = event.question_id
         if question_id is None:
             question_id = _next_question_id(taken_ids)
-        if question_id in taken_ids:
-            continue
         parsed_question = InterviewQuestion(
             question_id=question_id,
             text=event.text,
@@ -388,6 +386,27 @@ def _questions_from_events(
         taken_ids.add(parsed_question.question_id)
         parsed.append(parsed_question)
     return tuple(parsed)
+
+
+def _merge_questions(
+    *,
+    existing: Iterable[InterviewQuestion],
+    incoming: Iterable[InterviewQuestion],
+) -> tuple[InterviewQuestion, ...]:
+    merged = list(existing)
+    index_by_question_id = {
+        question.question_id: index for index, question in enumerate(merged)
+    }
+
+    for question in incoming:
+        existing_index = index_by_question_id.get(question.question_id)
+        if existing_index is None:
+            index_by_question_id[question.question_id] = len(merged)
+            merged.append(question)
+            continue
+        merged[existing_index] = question
+
+    return tuple(merged)
 
 
 def _merge_answers(
@@ -420,16 +439,24 @@ def persist_questions_document(
     questions_path = workspace_root / "workitems" / work_item / "stages" / stage / "questions.md"
     questions_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if stage_output_questions_markdown is not None:
-        base_questions = parse_questions_markdown(stage_output_questions_markdown)
-    elif questions_path.exists():
-        base_questions = parse_questions_markdown(questions_path.read_text(encoding="utf-8"))
+    if questions_path.exists():
+        existing_questions = parse_questions_markdown(questions_path.read_text(encoding="utf-8"))
     else:
-        base_questions = ()
+        existing_questions = ()
 
-    taken_ids = {question.question_id for question in base_questions}
+    staged_questions = (
+        parse_questions_markdown(stage_output_questions_markdown)
+        if stage_output_questions_markdown is not None
+        else ()
+    )
+    taken_ids = {
+        question.question_id for question in (*existing_questions, *staged_questions)
+    }
     event_questions = _questions_from_events(events=adapter_question_events, taken_ids=taken_ids)
-    merged = (*base_questions, *event_questions)
+    merged = _merge_questions(
+        existing=existing_questions,
+        incoming=(*staged_questions, *event_questions),
+    )
 
     questions_path.write_text(render_questions_markdown(merged), encoding="utf-8")
     return questions_path

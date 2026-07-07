@@ -1,20 +1,36 @@
 const STAGES = ["idea", "research", "plan", "review-spec", "tasklist", "implement", "review", "qa"];
-const VALID_TABS = [
-  "project-home",
-  "overview",
-  "questions",
-  "validation",
-  "timeline",
-  "artifacts",
+const OPERATOR_MODES = [
+  "work",
   "recovery",
-  "implement-review",
-  "review-findings",
-  "qa-verdict",
-  "logs",
-  "approvals",
-  "request",
+  "evidence",
   "history"
 ];
+const LEGACY_TAB_TO_MODE = {
+  "project-home": ["work", "project-home"],
+  "overview": ["work", "overview"],
+  "implement-review": ["work", "implement-review"],
+  "review-findings": ["work", "review-findings"],
+  "qa-verdict": ["work", "qa-verdict"],
+  "questions": ["recovery", "questions"],
+  "validation": ["recovery", "validation"],
+  "approvals": ["recovery", "approvals"],
+  "request": ["recovery", "request"],
+  "recovery": ["recovery", "summary"],
+  "artifacts": ["evidence", "artifacts"],
+  "logs": ["evidence", "logs"],
+  "timeline": ["history", "timeline"],
+  "history": ["history", "history"]
+};
+const VALID_TABS = [
+  ...OPERATOR_MODES,
+  ...Object.keys(LEGACY_TAB_TO_MODE)
+];
+const RECOVERY_NEXT_ACTIONS = new Set([
+  "answer-questions",
+  "inspect-validation",
+  "review-intervention",
+  "inspect-runtime-log"
+]);
 const SETUP_MODES = [
   {
     id: "new-work-item",
@@ -59,7 +75,11 @@ const state = {
   readinessLoading: true,
   readinessError: "",
   activeStage: "idea",
-  activeTab: "overview",
+  activeTab: "work",
+  workDetail: "overview",
+  recoveryDetail: "summary",
+  evidenceDetail: "artifacts",
+  historyDetail: "history",
   selectedRuntime: "",
   activeRunId: "",
   activeJobId: "",
@@ -154,6 +174,40 @@ function pathLine(value, maxLength = 56) {
   return `<span class="path-line" title="${escapeHtml(text)}">${escapeHtml(compactPath(text, maxLength))}</span>`;
 }
 
+function validationFindingLocation(finding) {
+  if (!finding) return "unknown location";
+  const path = finding.path || "unknown location";
+  return finding.line_number ? `${path}:${finding.line_number}` : path;
+}
+
+function renderValidationFindingSummary(finding, {compact = false} = {}) {
+  if (!finding) return "";
+  const location = validationFindingLocation(finding);
+  const occurrenceCount = Number(finding.occurrence_count || 1);
+  const repeatBadge = occurrenceCount > 1
+    ? `<span class="small-badge warn">x${escapeHtml(occurrenceCount)}</span>`
+    : "";
+  const hint = finding.operator_hint
+    ? `<span class="validation-finding-hint"><strong>What to do</strong>${escapeHtml(finding.operator_hint)}</span>`
+    : "";
+  return `
+    <div class="validation-finding-summary ${compact ? "compact" : ""}">
+      <span class="small-badge bad">${escapeHtml(finding.code || "validation")}</span>
+      <span class="small-badge">${escapeHtml(finding.severity || "issue")}</span>
+      ${repeatBadge}
+      <strong>${escapeHtml(compactPath(location, compact ? 54 : 86))}</strong>
+      <span>${escapeHtml(finding.message || "Validation failed.")}</span>
+      ${hint}
+    </div>
+  `;
+}
+
+function primaryValidationFinding() {
+  return state.dashboard?.primary_validation_finding
+    || activeStageView()?.diagnostics?.validation?.primary_validation_finding
+    || null;
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, options);
   const payload = await response.json();
@@ -204,21 +258,67 @@ function needsRuntime(action) {
   return ["run-workflow", "run-stage", "resume-stage", "rerun-stale-downstream"].includes(action);
 }
 
+function normalizeOperatorMode(tab) {
+  const requested = String(tab || "work");
+  if (OPERATOR_MODES.includes(requested)) {
+    return {
+      mode: requested,
+      detail: requested === "work"
+        ? "overview"
+        : requested === "recovery"
+          ? "summary"
+          : requested === "evidence"
+            ? "artifacts"
+            : "history"
+    };
+  }
+  const legacy = LEGACY_TAB_TO_MODE[requested];
+  if (legacy) return {mode: legacy[0], detail: legacy[1]};
+  return {mode: "work", detail: "overview"};
+}
+
+function setOperatorMode(tab) {
+  const normalized = normalizeOperatorMode(tab);
+  state.activeTab = normalized.mode;
+  if (normalized.mode === "work") state.workDetail = normalized.detail;
+  if (normalized.mode === "recovery") state.recoveryDetail = normalized.detail;
+  if (normalized.mode === "evidence") state.evidenceDetail = normalized.detail;
+  if (normalized.mode === "history") state.historyDetail = normalized.detail;
+}
+
+function isRecoveryNextAction(action) {
+  return RECOVERY_NEXT_ACTIONS.has(String(action || ""));
+}
+
+function activeModeIsEvidenceLog() {
+  return state.activeTab === "evidence" && state.evidenceDetail === "logs";
+}
+
+function applyOperatorModeBodyClass() {
+  document.body.dataset.operatorMode = state.activeTab;
+  const recoveryActive = state.activeTab === "recovery";
+  document.body.classList.toggle("recovery-mode", recoveryActive);
+}
+
 function setRunButtonState() {
   if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
   renderNextActionPanel();
 }
 
-function activateTab(tab) {
-  state.activeTab = tab;
+function activateTab(tab, {preserveDetail = false} = {}) {
+  const requested = String(tab || "work");
+  if (!(preserveDetail && OPERATOR_MODES.includes(requested) && state.activeTab === requested)) {
+    setOperatorMode(requested);
+  }
   document.querySelectorAll("[data-tab]").forEach((button) => {
-    const isActive = button.dataset.tab === tab;
+    const isActive = button.dataset.tab === state.activeTab;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-selected", isActive ? "true" : "false");
     button.setAttribute("tabindex", isActive ? "0" : "-1");
   });
   const content = document.getElementById("cockpitContent");
-  if (content) content.setAttribute("aria-labelledby", `tab-${tab}`);
+  if (content) content.setAttribute("aria-labelledby", `tab-${state.activeTab}`);
+  applyOperatorModeBodyClass();
   syncLocationState();
 }
 
@@ -234,7 +334,7 @@ function initializeStateFromLocation() {
   }
   const requestedTab = params.get("tab");
   if (requestedTab && VALID_TABS.includes(requestedTab)) {
-    state.activeTab = requestedTab;
+    setOperatorMode(requestedTab);
   }
 }
 
@@ -243,7 +343,7 @@ function syncLocationState() {
   params.set("stage", state.activeStage);
   if (state.activeRunId) params.set("run_id", state.activeRunId);
   else params.delete("run_id");
-  if (state.activeTab && state.activeTab !== "overview") params.set("tab", state.activeTab);
+  if (state.activeTab && state.activeTab !== "work") params.set("tab", state.activeTab);
   else params.delete("tab");
   const query = params.toString();
   const next = `${window.location.pathname}${query ? `?${query}` : ""}`;
@@ -284,6 +384,13 @@ async function fetchDashboard() {
   state.activeRunId = state.dashboard.run?.run_id || "";
   if (!state.selectedRuntime && state.dashboard.run?.runtime_id) {
     state.selectedRuntime = state.dashboard.run.runtime_id;
+  }
+  const nextAction = state.dashboard.next_action?.action || "";
+  if (isRecoveryNextAction(nextAction) && state.activeTab === "work") {
+    state.activeTab = "recovery";
+    if (nextAction === "answer-questions") state.recoveryDetail = "questions";
+    else if (nextAction === "inspect-validation" || nextAction === "review-intervention") state.recoveryDetail = "validation";
+    else if (nextAction === "inspect-runtime-log") state.recoveryDetail = "logs";
   }
 }
 

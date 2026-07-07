@@ -50,6 +50,9 @@ as draft evidence and may be replaced by the canonical AIDD validator report.
 - `Summary`
   - Must state total issue count and whether blocking issues exist.
   - Must summarize affected documents and dominant failure categories.
+  - `Total issues` counts unique displayed findings after exact duplicate findings are
+    collapsed. When duplicates were collapsed, include `Finding occurrences` with the raw
+    finding count.
 - `Structural checks`
   - Must list findings tied to file presence, headings, and basic shape checks.
   - Each finding must include issue code, severity, and source document path.
@@ -92,6 +95,8 @@ Use stable, uppercase codes with subsystem prefixes:
 
 - Keep each finding as one atomic issue with one issue code and one severity.
 - Include workspace-relative document paths in backticks for every finding.
+- Collapse exact duplicate findings with the same issue code, severity, location, and
+  message into one bullet with an occurrence count instead of repeating identical bullets.
 - Do not omit severity for any listed issue.
 - Do not report `pass` when any `critical` issue remains unresolved.
 - Do not report `pass` when any canonical AIDD validator finding remains unresolved.

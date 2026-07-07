@@ -187,8 +187,8 @@ function renderProjectHomeRail() {
   const items = projectHomeWorkItems();
   host.innerHTML = `
     <div class="project-home-tabs" role="group" aria-label="Project and work item navigation">
-      <button data-tab-shortcut="project-home" class="${state.activeTab === "project-home" ? "active" : ""}" type="button">Projects</button>
-      <button data-tab-shortcut="project-home" class="${state.activeTab === "project-home" ? "active" : ""}" type="button">Work items</button>
+      <button data-tab-shortcut="work" class="${state.activeTab === "work" ? "active" : ""}" type="button">Projects</button>
+      <button data-tab-shortcut="work" class="${state.activeTab === "work" ? "active" : ""}" type="button">Work items</button>
     </div>
     <div class="rail-header small">
       <span>Active work items</span>
@@ -224,32 +224,89 @@ function stageHasEvidence(stage) {
   return (state.dashboard?.stages || []).some((item) => item.stage === stage && Number(item.attempt_count || 0) > 0);
 }
 
+function tabHasQuestions() {
+  const view = activeStageView()?.questions;
+  const activeQuestions = view?.questions || [];
+  const stageHasBlockers = (state.dashboard?.stages || []).some((item) =>
+    Number(item.unresolved_blocking_count || 0) > 0
+  );
+  return activeQuestions.length > 0
+    || stageHasBlockers
+    || state.dashboard?.next_action?.action === "answer-questions";
+}
+
+function tabHasValidation() {
+  const item = activeStageItem();
+  const validation = activeStageView()?.diagnostics?.validation;
+  const nextAction = state.dashboard?.next_action?.action || "";
+  return Boolean(
+    state.dashboard?.primary_validation_finding
+    || validation?.primary_validation_finding
+    || Number(item?.validator_fail_count || 0) > 0
+    || Number(item?.validator_pass_count || 0) > 0
+    || nextAction === "inspect-validation"
+    || nextAction === "review-intervention"
+  );
+}
+
+function tabHasRunEvidence() {
+  return Boolean(
+    state.dashboard?.run?.run_id
+    || state.activeJobId
+    || stageHasEvidence(state.activeStage)
+  );
+}
+
+function tabHasArtifacts() {
+  return Boolean(
+    state.dashboard?.primary_artifact
+    || (state.dashboard?.evidence_refs || []).length
+    || (state.dashboard?.recent_artifacts || []).length
+    || stageHasEvidence(state.activeStage)
+  );
+}
+
+function tabHasApprovals() {
+  const approvals = activeStageView()?.diagnostics?.approvals;
+  return Boolean(
+    Number(approvals?.pending_count || 0) > 0
+    || Number(approvals?.requested_count || 0) > 0
+    || Number(approvals?.approved_count || 0) > 0
+    || Number(approvals?.denied_count || 0) > 0
+  );
+}
+
+function tabHasRecovery() {
+  const nextAction = state.dashboard?.next_action?.action || "";
+  return Boolean(
+    state.dashboard?.first_failure
+    || (state.dashboard?.blockers || []).length
+    || (state.dashboard?.recovery_actions || []).length
+    || ["answer-questions", "inspect-validation", "review-intervention", "inspect-runtime-log"].includes(nextAction)
+  );
+}
+
+function updateTabShortcutVisibility(visible) {
+  document.querySelectorAll("[data-tab-shortcut]").forEach((button) => {
+    const shortcut = button.dataset.tabShortcut || "";
+    if (!VALID_TABS.includes(shortcut)) return;
+    const mode = normalizeOperatorMode(shortcut).mode;
+    button.hidden = !visible.has(mode);
+  });
+}
+
 function updateContextualTabs() {
-  const alwaysVisible = new Set([
-    "project-home",
-    "overview",
-    "questions",
-    "validation",
-    "timeline",
-    "artifacts",
-    "recovery",
-    "logs",
-    "approvals",
-    "request",
-    "history"
-  ]);
-  const visible = new Set(alwaysVisible);
-  if (state.activeStage === "implement" || stageHasEvidence("implement")) visible.add("implement-review");
-  if (state.activeStage === "review" || stageHasEvidence("review")) visible.add("review-findings");
-  if (state.activeStage === "qa" || stageHasEvidence("qa") || state.dashboard?.terminal_handoff) visible.add("qa-verdict");
+  const visible = new Set(OPERATOR_MODES);
   document.querySelectorAll("[data-tab]").forEach((button) => {
     const tab = button.dataset.tab;
     const isVisible = visible.has(tab);
     button.hidden = !isVisible;
   });
+  updateTabShortcutVisibility(visible);
   if (!visible.has(state.activeTab)) {
-    state.activeTab = "overview";
+    state.activeTab = tabHasRecovery() ? "recovery" : "work";
   }
+  applyOperatorModeBodyClass();
 }
 
 

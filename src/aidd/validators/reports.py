@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.validators.models import ValidationFinding
+
+
+@dataclass(frozen=True, slots=True)
+class _RenderedFinding:
+    finding: ValidationFinding
+    occurrence_count: int
 
 
 def _classify_bucket(code: str) -> str:
@@ -28,15 +35,36 @@ def _format_location(finding: ValidationFinding) -> str:
     return f"{path}:{finding.location.line_number}"
 
 
+def _collapse_duplicate_findings(
+    findings: Iterable[ValidationFinding],
+) -> tuple[_RenderedFinding, ...]:
+    rendered: list[_RenderedFinding] = []
+    index_by_finding: dict[ValidationFinding, int] = {}
+    for finding in findings:
+        existing_index = index_by_finding.get(finding)
+        if existing_index is None:
+            index_by_finding[finding] = len(rendered)
+            rendered.append(_RenderedFinding(finding=finding, occurrence_count=1))
+            continue
+        existing = rendered[existing_index]
+        rendered[existing_index] = _RenderedFinding(
+            finding=existing.finding,
+            occurrence_count=existing.occurrence_count + 1,
+        )
+    return tuple(rendered)
+
+
 def render_validator_report(findings: Iterable[ValidationFinding]) -> str:
-    findings_list = list(findings)
-    buckets: dict[str, list[ValidationFinding]] = {
+    rendered_findings = _collapse_duplicate_findings(findings)
+    findings_list = [rendered.finding for rendered in rendered_findings]
+    occurrence_count = sum(rendered.occurrence_count for rendered in rendered_findings)
+    buckets: dict[str, list[_RenderedFinding]] = {
         "Structural checks": [],
         "Semantic checks": [],
         "Cross-document checks": [],
     }
-    for finding in findings_list:
-        buckets[_classify_bucket(finding.code)].append(finding)
+    for rendered in rendered_findings:
+        buckets[_classify_bucket(rendered.finding.code)].append(rendered)
 
     affected_documents = sorted(
         {
@@ -70,8 +98,10 @@ def render_validator_report(findings: Iterable[ValidationFinding]) -> str:
             else "- Affected documents: none"
         ),
         f"- Dominant failure categories: {dominant_labels}",
-        "",
     ]
+    if occurrence_count != len(findings_list):
+        lines.append(f"- Finding occurrences: {occurrence_count}")
+    lines.append("")
 
     for heading in ("Structural checks", "Semantic checks", "Cross-document checks"):
         lines.extend([f"## {heading}", ""])
@@ -79,10 +109,16 @@ def render_validator_report(findings: Iterable[ValidationFinding]) -> str:
         if not bucket_findings:
             lines.extend(["- none", ""])
             continue
-        for finding in bucket_findings:
+        for rendered in bucket_findings:
+            finding = rendered.finding
+            repeat_note = (
+                f" (repeated {rendered.occurrence_count} times)"
+                if rendered.occurrence_count > 1
+                else ""
+            )
             lines.append(
                 f"- `{finding.code}` (`{finding.severity}`) in {_format_location(finding)}: "
-                f"{finding.message}"
+                f"{finding.message}{repeat_note}"
             )
         lines.append("")
 

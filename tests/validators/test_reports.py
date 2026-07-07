@@ -66,6 +66,28 @@ def test_render_validator_report_groups_findings_and_renders_location() -> None:
     assert "- Repair required for progression: yes" in report
 
 
+def test_render_validator_report_collapses_exact_duplicate_findings() -> None:
+    repeated = ValidationFinding(
+        code="SEM-UNVERIFIABLE-CHECK-CLAIM",
+        message="Verification note includes outcome claim without executable command evidence.",
+        severity="high",
+        location=ValidationIssueLocation(
+            workspace_relative_path=(
+                "workitems/WI-001/stages/implement/implementation-report.md"
+            ),
+            line_number=38,
+        ),
+    )
+
+    report = render_validator_report(findings=(repeated, repeated, repeated, repeated))
+
+    assert "- Total issues: 1" in report
+    assert "- Finding occurrences: 4" in report
+    assert report.count("SEM-UNVERIFIABLE-CHECK-CLAIM") == 1
+    assert "Verification note includes outcome claim" in report
+    assert "(repeated 4 times)" in report
+
+
 def test_write_validator_report_writes_rendered_markdown(tmp_path: Path) -> None:
     report_path = tmp_path / "validator-report.md"
     findings = (

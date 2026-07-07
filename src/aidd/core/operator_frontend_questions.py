@@ -28,6 +28,7 @@ from aidd.core.operator_frontend_models import (
     OperatorStoppedDiagnostics,
     OperatorValidationRepairDiagnostics,
 )
+from aidd.core.operator_frontend_validation import load_validator_report_findings
 from aidd.core.operator_intervention import latest_operator_intervention_request
 from aidd.core.run_inspection import StageResultSummary, resolve_stage_result_summary
 from aidd.core.run_lookup import latest_attempt_number
@@ -98,7 +99,7 @@ def resolve_operator_questions_view(
                 text=question.text,
                 policy=question.policy,
                 status=status,
-                answer_text=answer.text if status == "resolved" and answer else None,
+                answer_text=answer.text if answer else None,
                 answer_resolution=answer.resolution if answer else None,
             )
         )
@@ -262,11 +263,22 @@ def _validation_repair_diagnostics(
         else ()
     )
     if result.validator_fail_count:
-        status = "repair-available"
+        status = (
+            "repair-exhausted"
+            if _stage_result_records_repair_exhaustion(
+                workspace_root=workspace_root,
+                result=result,
+            )
+            else "repair-available"
+        )
     elif repair_attempts:
         status = "repair-history"
     else:
         status = "clear"
+    validation_findings = load_validator_report_findings(
+        workspace_root=workspace_root,
+        validator_report_path=result.validator_report_path,
+    )
     return OperatorValidationRepairDiagnostics(
         status=status,
         final_state=result.final_state,
@@ -274,7 +286,26 @@ def _validation_repair_diagnostics(
         validator_fail_count=result.validator_fail_count,
         validator_report_path=result.validator_report_path,
         repair_attempts=repair_attempts,
+        validation_findings=validation_findings,
+        primary_validation_finding=validation_findings[0] if validation_findings else None,
     )
+
+
+def _stage_result_records_repair_exhaustion(
+    *,
+    workspace_root: Path,
+    result: StageResultSummary,
+) -> bool:
+    for relative_path in result.document_artifact_paths:
+        if not relative_path.endswith("/stage-result.md"):
+            continue
+        stage_result_path = workspace_root / relative_path
+        try:
+            text = stage_result_path.read_text(encoding="utf-8").lower()
+        except OSError:
+            return False
+        return "repair-budget-exhausted" in text or "repair budget exhausted" in text
+    return False
 
 
 def _raw_log_diagnostics(
@@ -546,8 +577,8 @@ def _stage_diagnostics_status(
         return "approval-waiting"
     if blocking.unresolved_count:
         return "blocked"
-    if validation.status == "repair-available":
-        return "repair-available"
+    if validation.status in {"repair-available", "repair-exhausted"}:
+        return validation.status
     if stopped.stopped:
         return "stopped"
     if raw_log.truncated:

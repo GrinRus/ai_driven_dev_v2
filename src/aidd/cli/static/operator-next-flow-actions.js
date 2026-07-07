@@ -1727,9 +1727,13 @@ function renderNextActionPanel() {
   const detail = runtimeBlocked && state.selectedRuntime && !noRunWithRuntime
     ? `${baseDetail} ${state.readinessLoading ? "Checking runtime readiness." : "Selected runtime is not ready."}`
     : baseDetail;
+  const finding = action.action === "inspect-validation" || action.action === "review-intervention"
+    ? primaryValidationFinding()
+    : null;
   document.getElementById("nextActionPanel").innerHTML = `
     <div class="panel-title">Next action</div>
     <p>${escapeHtml(detail)}</p>
+    ${renderValidationFindingSummary(finding, {compact: true})}
     <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
   `;
 }
@@ -1737,6 +1741,12 @@ function renderNextActionPanel() {
 function renderGlobalNextActionStrip() {
   const host = document.getElementById("globalNextActionStrip");
   if (!host) return;
+  if (state.activeTab === "recovery") {
+    host.hidden = true;
+    host.innerHTML = "";
+    return;
+  }
+  host.hidden = false;
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
   const runtimeNeeded = needsRuntime(action.action) || noRunWithRuntime;
@@ -1753,6 +1763,9 @@ function renderGlobalNextActionStrip() {
       : "Runtime selected. Start the workflow from the current work item."
     : action.detail;
   const stage = action.stage ? stageTitle(action.stage) : state.dashboard?.active_stage || "run";
+  const finding = action.action === "inspect-validation" || action.action === "review-intervention"
+    ? primaryValidationFinding()
+    : null;
   host.innerHTML = `
     <div class="next-action-copy">
       <span class="next-action-icon" aria-hidden="true">&gt;</span>
@@ -1760,6 +1773,7 @@ function renderGlobalNextActionStrip() {
         <p class="eyebrow">Next Action</p>
         <h2>${escapeHtml(label)}</h2>
         <p>${escapeHtml(detail)}</p>
+        ${renderValidationFindingSummary(finding)}
       </div>
     </div>
     <div class="next-action-meta">

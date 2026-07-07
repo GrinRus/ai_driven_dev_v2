@@ -32,11 +32,13 @@ from aidd.core.operator_frontend_models import (
     OperatorStageRailItem,
     OperatorStageView,
     OperatorTerminalRunHandoff,
+    OperatorValidationFindingView,
 )
 from aidd.core.operator_frontend_questions import (
     resolve_operator_questions_view,
     resolve_operator_stage_view,
 )
+from aidd.core.operator_frontend_validation import load_validator_report_findings
 from aidd.core.operator_intervention import (
     latest_operator_intervention_request,
     list_operator_intervention_requests,
@@ -273,6 +275,50 @@ def _stage_result_or_none(
         return None
 
 
+def _validation_findings_for_stage(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    run_id: str | None,
+) -> tuple[OperatorValidationFindingView, ...]:
+    result = _stage_result_or_none(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        run_id=run_id,
+    )
+    if result is None:
+        return ()
+    return load_validator_report_findings(
+        workspace_root=workspace_root,
+        validator_report_path=result.validator_report_path,
+    )
+
+
+def _primary_validation_finding_for_stage(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    run_id: str | None,
+) -> OperatorValidationFindingView | None:
+    findings = _validation_findings_for_stage(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        run_id=run_id,
+    )
+    return findings[0] if findings else None
+
+
+def _validation_finding_detail(finding: OperatorValidationFindingView) -> str:
+    location = finding.path or "unknown location"
+    if finding.line_number is not None:
+        location = f"{location}:{finding.line_number}"
+    return f"{finding.code} in {location}: {finding.message}"
+
+
 def _advancement_by_stage(
     *,
     workspace_root: Path,
@@ -468,6 +514,9 @@ def _evidence_refs(
 
 def _blockers(
     *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str | None,
     active_stage: str,
     active_stage_view: OperatorStageView | None,
     rail_by_stage: dict[str, OperatorStageRailItem],
@@ -493,12 +542,22 @@ def _blockers(
                 ),
             )
         )
-    if result is not None and result.validator_fail_count:
+    if (
+        active_stage_view is not None
+        and result is not None
+        and result.validator_fail_count
+    ):
+        finding = active_stage_view.diagnostics.validation.primary_validation_finding
+        detail = (
+            _validation_finding_detail(finding)
+            if finding is not None
+            else f"{result.validator_fail_count} failing validator result(s)"
+        )
         blockers.append(
             OperatorBlocker(
                 kind="validation",
                 title="Validation has failures",
-                detail=f"{result.validator_fail_count} failing validator result(s)",
+                detail=detail,
                 severity="error",
                 stage=result.stage,
                 path=result.validator_report_path,
@@ -521,11 +580,22 @@ def _blockers(
             rail_item.validator_fail_count
             and rail_item.status != StageState.SUCCEEDED.value
         ):
+            finding = _primary_validation_finding_for_stage(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                stage=rail_item.stage,
+                run_id=run_id,
+            )
+            detail = (
+                _validation_finding_detail(finding)
+                if finding is not None
+                else f"{rail_item.validator_fail_count} failing validator result(s)"
+            )
             blockers.append(
                 OperatorBlocker(
                     kind="validation",
                     title=f"Validation failures in {rail_item.title}",
-                    detail=f"{rail_item.validator_fail_count} failing validator result(s)",
+                    detail=detail,
                     severity="error",
                     stage=rail_item.stage,
                 )
@@ -733,10 +803,20 @@ def _first_failure(
         if runtime_signal is not None:
             return runtime_signal
         if rail_item is not None and rail_item.validator_fail_count:
+            finding = _primary_validation_finding_for_stage(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                stage=stage,
+                run_id=metadata.run_id,
+            )
             return OperatorFirstFailure(
                 kind="validation-failed",
                 title="Validation failed",
-                detail=f"{rail_item.validator_fail_count} validator result(s) failed.",
+                detail=(
+                    _validation_finding_detail(finding)
+                    if finding is not None
+                    else f"{rail_item.validator_fail_count} validator result(s) failed."
+                ),
                 stage=stage,
                 path=f"workitems/{work_item}/stages/{stage}/validator-report.md",
                 time_utc=stage_metadata.updated_at_utc if stage_metadata else None,
@@ -927,14 +1007,20 @@ def _next_action(
             return OperatorNextAction(
                 action="review-intervention",
                 label="Review requested change result",
-                detail="Latest operator intervention ended with validation failures or blockers.",
+                detail=(
+                    "Open validation recovery for the requested change result. "
+                    "Request another change if repair is exhausted."
+                ),
                 stage=failed_validation_stage.stage,
                 enabled=True,
             )
         return OperatorNextAction(
             action="inspect-validation",
             label=f"Inspect {failed_validation_stage.title} validation",
-            detail="Review validator output and repair evidence before continuing.",
+            detail=(
+                "Open validation recovery. Run Repair if available, or Request Change "
+                "if the repair budget is exhausted."
+            ),
             stage=failed_validation_stage.stage,
             enabled=True,
         )
@@ -1721,6 +1807,9 @@ def resolve_operator_dashboard_view(
         run_id=metadata.run_id if metadata is not None else None,
     )
     blockers = _blockers(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=metadata.run_id if metadata is not None else None,
         active_stage=active_stage,
         active_stage_view=active_stage_view,
         rail_by_stage=rail_by_stage,
@@ -1764,6 +1853,24 @@ def resolve_operator_dashboard_view(
         report_blockers=report_blockers,
         stages_with_operator_requests=stages_with_operator_requests,
     )
+    validation_stage = active_stage
+    if (
+        next_action.action in {"inspect-validation", "review-intervention"}
+        and next_action.stage
+    ):
+        validation_stage = next_action.stage
+    elif (
+        first_failure is not None
+        and first_failure.kind == "validation-failed"
+        and first_failure.stage
+    ):
+        validation_stage = first_failure.stage
+    validation_findings = _validation_findings_for_stage(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=validation_stage,
+        run_id=metadata.run_id if metadata is not None else None,
+    )
     return OperatorDashboardView(
         work_item=work_item,
         workspace_root=workspace_root,
@@ -1780,6 +1887,10 @@ def resolve_operator_dashboard_view(
         next_action=next_action,
         blockers=blockers,
         first_failure=first_failure,
+        validation_findings=validation_findings,
+        primary_validation_finding=(
+            validation_findings[0] if validation_findings else None
+        ),
         recovery_actions=_recovery_actions(
             next_action=next_action,
             first_failure=first_failure,

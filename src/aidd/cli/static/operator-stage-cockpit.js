@@ -111,10 +111,7 @@ async function loadRunAccountabilityCard() {
 
 function repairCenterStatus(validation, stopped) {
   if (stopped?.stopped) return "explicit-stop";
-  if (validation?.validator_fail_count && validation?.final_state === "failed" && (validation.repair_attempts || []).length) {
-    return "repair-exhausted";
-  }
-  return validation?.status || "clear";
+  return validation?.status || (validation?.validator_fail_count ? "repair-needed" : "clear");
 }
 
 function renderRecoveryActionBand(diagnostics) {
@@ -122,7 +119,15 @@ function renderRecoveryActionBand(diagnostics) {
   const stopped = diagnostics?.stopped;
   const status = repairCenterStatus(validation, stopped);
   const repairAvailable = status === "repair-available";
+  const requestPrimary = status === "repair-exhausted" || status === "explicit-stop";
   const stoppedMessage = stopped?.stopped ? stopped.detail || "Stage stopped." : "";
+  const finding = validation?.primary_validation_finding || null;
+  const guidance = stoppedMessage
+    || (repairAvailable
+      ? "Validation failed. Run Repair starts the selected stage through the normal stage runner."
+      : status === "repair-exhausted"
+        ? "Validation still fails after repair attempts. Request Change creates an operator intervention for this stage."
+        : "Review validation evidence, repair history, and recovery actions before continuing.");
   return `
     <section class="repair-action-band ${repairAvailable ? "repair-available" : ""}">
       <div>
@@ -130,12 +135,13 @@ function renderRecoveryActionBand(diagnostics) {
           <span>${repairAvailable ? "Repair Available" : status === "repair-exhausted" ? "Repair Exhausted" : status === "explicit-stop" ? "Explicit Stop" : "Repair Center"}</span>
           <span class="small-badge ${status === "clear" ? "good" : status === "explicit-stop" || status === "repair-exhausted" ? "bad" : "warn"}">${escapeHtml(status)}</span>
         </div>
-        <p>${escapeHtml(stoppedMessage || (repairAvailable ? "Validation failed. Run Repair starts the selected stage through the normal stage runner." : "Review validation evidence, repair history, and recovery actions before continuing."))}</p>
+        <p>${escapeHtml(guidance)}</p>
+        ${renderValidationFindingSummary(finding)}
       </div>
       <div class="repair-actions">
-        <button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>
+        ${requestPrimary ? `<button data-tab-shortcut="request" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>`}
+        ${requestPrimary ? `<button data-run-repair type="button" class="secondary" disabled>Repair exhausted</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
         <button data-stop-run type="button" class="danger">Stop Run</button>
-        <button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>
       </div>
     </section>
   `;
@@ -163,6 +169,128 @@ function renderRepairTimeline(validation) {
         </article>
       `).join("")}
     </div>
+  `;
+}
+
+function renderValidationFindingList(validation) {
+  const findings = validation?.validation_findings || [];
+  if (!findings.length) {
+    return `<div class="empty-state">No structured validator findings parsed.</div>`;
+  }
+  return `
+    <div class="validation-finding-list">
+      ${findings.map((finding) => renderValidationFindingSummary(finding)).join("")}
+    </div>
+  `;
+}
+
+function recoveryPrimaryActionSpec(diagnostics) {
+  const action = state.dashboard?.next_action || {};
+  const validation = diagnostics?.validation;
+  const status = repairCenterStatus(validation, diagnostics?.stopped);
+  const stage = action.stage || state.activeStage;
+  if (action.action === "answer-questions") {
+    return {
+      label: action.label || "Answer questions",
+      detail: action.detail || "Resolve blocking questions before resuming execution.",
+      attrs: `data-recovery-action="answer-questions" data-recovery-stage="${escapeHtml(stage)}"`
+    };
+  }
+  if (status === "repair-available") {
+    return {
+      label: "Run Repair",
+      detail: "Run the selected stage again with the latest repair brief and normal validation.",
+      attrs: "data-run-repair"
+    };
+  }
+  if (status === "repair-exhausted" || status === "explicit-stop") {
+    return {
+      label: "Request Change",
+      detail: "Create a durable stage-scoped intervention request before trying another attempt.",
+      attrs: `data-recovery-action="request-change" data-recovery-stage="${escapeHtml(stage)}"`
+    };
+  }
+  if (action.action === "inspect-runtime-log") {
+    return {
+      label: action.label || "Open runtime log",
+      detail: action.detail || "Inspect the saved runtime log evidence.",
+      attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(stage)}"`
+    };
+  }
+  return {
+    label: action.label || "Review recovery",
+    detail: action.detail || "Review the active blocker and supporting evidence.",
+    attrs: `data-recovery-action="${escapeHtml(action.action || "inspect-blocker")}" data-recovery-stage="${escapeHtml(stage)}" ${action.enabled === false ? "disabled" : ""}`
+  };
+}
+
+function recoveryFailureTitle(firstFailure, diagnostics) {
+  const validation = diagnostics?.validation;
+  const status = repairCenterStatus(validation, diagnostics?.stopped);
+  if (status === "repair-available") return "Validation needs repair";
+  if (status === "repair-exhausted") return "Repair budget exhausted";
+  if (diagnostics?.blocking_questions?.unresolved_count) return "Blocking questions";
+  if (firstFailure?.title) return firstFailure.title;
+  return "Recovery required";
+}
+
+function renderRecoveryWorkbench() {
+  const view = activeStageView();
+  const diagnostics = view?.diagnostics || {};
+  const validation = diagnostics.validation || {};
+  const questions = view?.questions || {};
+  const unresolvedQuestions = questions.unresolved_blocking_question_ids || [];
+  const firstFailure = state.dashboard?.first_failure || null;
+  const finding = primaryValidationFinding();
+  const primary = recoveryPrimaryActionSpec(diagnostics);
+  const status = repairCenterStatus(validation, diagnostics.stopped);
+  const affectedStage = stageTitle((state.dashboard?.next_action || {}).stage || firstFailure?.stage || state.activeStage);
+  const reason = firstFailure?.detail
+    || (unresolvedQuestions.length
+      ? `${unresolvedQuestions.length} blocking question(s) must be resolved.`
+      : validation.primary_validation_finding?.message || primary.detail);
+  const evidencePath = finding ? validationFindingLocation(finding) : firstFailure?.path || validation.validator_report_path || "";
+  const hasValidationRecovery = finding || Number(validation.validator_fail_count || 0) > 0 || (validation.validation_findings || []).length;
+  return `
+    <section class="recovery-workbench">
+      <div class="recovery-hero">
+        <div class="recovery-hero-copy">
+          <p class="eyebrow">Recovery</p>
+          <h2>${escapeHtml(recoveryFailureTitle(firstFailure, diagnostics))}</h2>
+          <p>${escapeHtml(reason)}</p>
+          <div class="recovery-facts">
+            <span><strong>Stage</strong>${escapeHtml(affectedStage)}</span>
+            <span><strong>Status</strong>${escapeHtml(status)}</span>
+            <span><strong>Evidence</strong>${escapeHtml(compactPath(evidencePath || "not available", 86))}</span>
+          </div>
+        </div>
+        <div class="recovery-primary-actions">
+          <button id="recoveryPrimaryActionButton" class="next-button" type="button" ${primary.attrs}>${escapeHtml(primary.label)}</button>
+          <button class="secondary" data-tab-shortcut="evidence" type="button">Open Evidence</button>
+        </div>
+        ${finding ? `<div class="recovery-hero-finding">${renderValidationFindingSummary(finding)}</div>` : ""}
+      </div>
+      ${unresolvedQuestions.length || (questions.questions || []).length ? `
+        <section class="surface recovery-section">
+          <div class="surface-title">
+            <span>Questions</span>
+            <span class="small-badge ${unresolvedQuestions.length ? "bad" : "good"}">${escapeHtml(unresolvedQuestions.length)} blocking</span>
+          </div>
+          ${renderQuestionCards({showResume: true})}
+        </section>
+      ` : ""}
+      ${hasValidationRecovery ? `
+        <section class="surface recovery-section">
+          <div class="surface-title">
+            <span>Validation finding</span>
+            <span class="small-badge ${Number(validation.validator_fail_count || 0) ? "bad" : "good"}">${escapeHtml(status)}</span>
+          </div>
+          ${renderValidationFindingList(validation)}
+          <div class="surface-title compact">Repair attempt timeline</div>
+          ${renderRepairTimeline(validation)}
+        </section>
+      ` : ""}
+    </section>
   `;
 }
 
@@ -224,6 +352,10 @@ function renderValidation() {
           ${pathLine(result.validator_report_path)}
         </div>
         <div class="panel-item">
+          <strong>Top validation findings</strong>
+          ${renderValidationFindingList(validation)}
+        </div>
+        <div class="panel-item">
           <strong>Repair evidence</strong>
           <div class="recent-artifacts">${repairs}</div>
         </div>
@@ -237,27 +369,53 @@ function renderValidation() {
 
 async function renderCockpit() {
   const content = document.getElementById("cockpitContent");
-  if (state.activeTab === "project-home") {
-    content.innerHTML = renderProjectHome();
-    return;
-  }
-  if (state.activeTab === "overview") {
+  if (state.activeTab === "work") {
+    if (state.workDetail === "project-home") {
+      content.innerHTML = renderProjectHome();
+      return;
+    }
+    if (state.workDetail === "implement-review") {
+      await renderImplementReview();
+      return;
+    }
+    if (state.workDetail === "review-findings") {
+      await renderReviewFindings();
+      return;
+    }
+    if (state.workDetail === "qa-verdict") {
+      await renderQaVerdict();
+      return;
+    }
     content.innerHTML = renderOverview();
     void loadRunAccountabilityCard();
+    return;
   }
-  if (state.activeTab === "questions") content.innerHTML = renderQuestions();
-  if (state.activeTab === "validation") content.innerHTML = renderValidation();
-  if (state.activeTab === "timeline") await renderTimeline();
-  if (state.activeTab === "artifacts") await renderArtifacts();
-  if (state.activeTab === "recovery") content.innerHTML = renderRecoveryScreen();
-  if (state.activeTab === "implement-review") await renderImplementReview();
-  if (state.activeTab === "review-findings") await renderReviewFindings();
-  if (state.activeTab === "qa-verdict") await renderQaVerdict();
-  if (state.activeTab === "logs") await renderLogs();
-  if (state.activeTab === "approvals") await renderApprovals();
-  if (state.activeTab === "request") await renderRequestChange();
+  if (state.activeTab === "recovery") {
+    if (state.recoveryDetail === "request") {
+      await renderRequestChange();
+      return;
+    }
+    if (state.recoveryDetail === "approvals") {
+      await renderApprovals();
+      return;
+    }
+    if (state.recoveryDetail === "logs") {
+      await renderLogs();
+      return;
+    }
+    content.innerHTML = renderRecoveryWorkbench();
+    return;
+  }
+  if (state.activeTab === "evidence") {
+    if (state.evidenceDetail === "logs") {
+      await renderLogs();
+      return;
+    }
+    await renderArtifacts();
+    return;
+  }
   if (state.activeTab === "history") {
-    content.innerHTML = renderRunHistory();
+    content.innerHTML = renderHistoryMode();
     void loadRunComparisonPanel();
   }
 }
@@ -355,6 +513,7 @@ function renderProjectHome() {
 function renderRecoveryScreen() {
   const firstFailure = state.dashboard?.first_failure || null;
   const actions = state.dashboard?.recovery_actions || [];
+  const finding = firstFailure?.kind === "validation-failed" ? primaryValidationFinding() : null;
   return `
     <section class="recovery-assistant-screen">
       <div class="surface">
@@ -369,6 +528,7 @@ function renderRecoveryScreen() {
               <span class="small-badge bad">${escapeHtml(firstFailure.kind)}</span>
             </div>
             <p>${escapeHtml(firstFailure.detail)}</p>
+            ${renderValidationFindingSummary(finding)}
             ${firstFailure.path ? pathLine(firstFailure.path, 88) : ""}
           </article>
         ` : `<div class="empty-state">No decisive failure signal detected.</div>`}
@@ -411,6 +571,7 @@ function renderBlockersPanel() {
 
 function renderEvidencePanel() {
   const refs = state.dashboard?.evidence_refs || [];
+  const open = state.activeTab === "evidence";
   const body = refs.length ? refs.slice(0, 6).map((ref) => `
     <button class="artifact-row" data-evidence-stage="${escapeHtml(ref.stage || state.activeStage)}" data-evidence-path="${escapeHtml(ref.path)}" data-evidence-kind="${escapeHtml(ref.kind)}" type="button">
       <span><strong>${escapeHtml(ref.label)}</strong>${pathLine(ref.path)}</span>
@@ -418,8 +579,10 @@ function renderEvidencePanel() {
     </button>
   `).join("") : `<p>No evidence refs yet.</p>`;
   document.getElementById("evidencePanel").innerHTML = `
-    <div class="panel-title">Evidence refs <span class="small-badge">${escapeHtml(refs.length)}</span></div>
-    <div class="panel-list">${body}</div>
+    <details class="secondary-drilldown" ${open ? "open" : ""}>
+      <summary><span>Evidence refs</span><span class="small-badge">${escapeHtml(refs.length)}</span></summary>
+      <div class="panel-list">${body}</div>
+    </details>
   `;
 }
 
@@ -428,6 +591,7 @@ function renderRecoveryAssistantPanel() {
   if (!host) return;
   const firstFailure = state.dashboard?.first_failure || null;
   const actions = state.dashboard?.recovery_actions || [];
+  const finding = firstFailure?.kind === "validation-failed" ? primaryValidationFinding() : null;
   const questionCount = (state.dashboard?.stages || []).reduce((total, item) => total + Number(item.unresolved_blocking_count || 0), 0);
   const failureCount = firstFailure ? 1 : 0;
   const actionRows = actions.length ? actions.map((action) => `
@@ -446,6 +610,7 @@ function renderRecoveryAssistantPanel() {
         <span class="small-badge bad">${escapeHtml(firstFailure.kind)}</span>
       </div>
       <p>${escapeHtml(firstFailure.detail)}</p>
+      ${renderValidationFindingSummary(finding, {compact: true})}
       ${firstFailure.path ? pathLine(firstFailure.path, 72) : ""}
     </article>
   ` : `<div class="empty-state compact">No decisive failure signal detected.</div>`;
@@ -464,10 +629,12 @@ function renderRecoveryAssistantPanel() {
 function renderRuntimeRootPanel() {
   const workspace = state.dashboard?.workspace_root || "";
   document.getElementById("runtimeRootPanel").innerHTML = `
-    <div class="panel-title">Runtime root</div>
-    <p><code>.aidd/</code></p>
-    ${pathLine(workspace)}
-    <button data-open-folder="workspace" class="next-button secondary" type="button">Open folder</button>
+    <details class="secondary-drilldown">
+      <summary><span>Runtime root</span><span class="small-badge">.aidd</span></summary>
+      <p><code>.aidd/</code></p>
+      ${pathLine(workspace)}
+      <button data-open-folder="workspace" class="next-button secondary" type="button">Open folder</button>
+    </details>
   `;
 }
 
@@ -505,11 +672,13 @@ function renderSafetyPanel() {
     ].join("");
   }
   document.getElementById("safetyPanel").innerHTML = `
-    <div class="panel-title">Safety / Readiness <span class="small-badge ${readinessClass}">${escapeHtml(badge)}</span></div>
-    <div class="panel-list">
-      <div class="panel-item"><strong>No upstream write</strong><span>UI actions stay inside local AIDD workspace and normal runner boundaries.</span></div>
-      ${details}
-    </div>
+    <details class="secondary-drilldown" ${activeModeIsEvidenceLog() ? "open" : ""}>
+      <summary><span>Safety / Readiness</span><span class="small-badge ${readinessClass}">${escapeHtml(badge)}</span></summary>
+      <div class="panel-list">
+        <div class="panel-item"><strong>No upstream write</strong><span>UI actions stay inside local AIDD workspace and normal runner boundaries.</span></div>
+        ${details}
+      </div>
+    </details>
   `;
 }
 
@@ -553,13 +722,11 @@ function activityEvents() {
   ];
 }
 
-function renderActivityTable() {
-  const events = activityEvents();
+function renderActivityTableMarkup(events) {
   if (!events.length) {
-    document.getElementById("activityTable").innerHTML = `<div class="empty-state">No activity for this run yet.</div>`;
-    return;
+    return `<div class="empty-state">No activity for this run yet.</div>`;
   }
-  document.getElementById("activityTable").innerHTML = `
+  return `
     <table class="activity-table">
       <thead><tr><th>Time</th><th>Level</th><th>Event</th><th>Details</th></tr></thead>
       <tbody>
@@ -573,6 +740,27 @@ function renderActivityTable() {
         `).join("")}
       </tbody>
     </table>
+  `;
+}
+
+function renderActivityTable() {
+  const host = document.getElementById("activityTable");
+  if (!host) return;
+  host.innerHTML = renderActivityTableMarkup(activityEvents());
+}
+
+function renderHistoryMode() {
+  return `
+    <div class="history-mode">
+      ${renderRunHistory()}
+      <section class="surface">
+        <div class="surface-title">
+          <span>Activity / Events</span>
+          <span class="small-badge">${escapeHtml(activityEvents().length)} events</span>
+        </div>
+        <div class="table-wrap">${renderActivityTableMarkup(activityEvents())}</div>
+      </section>
+    </div>
   `;
 }
 
@@ -603,6 +791,6 @@ async function renderAll() {
   updateContextualTabs();
   renderSidebar();
   renderBottomDock();
-  activateTab(state.activeTab);
+  activateTab(state.activeTab, {preserveDetail: true});
   await renderCockpit();
 }

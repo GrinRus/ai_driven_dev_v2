@@ -3342,10 +3342,12 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert 'id="stageRail" class="stage-list" aria-label="Workflow stages"' in html
     assert 'class="tabs" role="tablist" aria-label="Stage cockpit views"' in html
     assert (
-        'id="tab-overview" data-tab="overview" role="tab" aria-selected="true" '
+        'id="tab-work" data-tab="work" role="tab" aria-selected="true" '
         'aria-controls="cockpitContent" tabindex="0"'
         in html
     )
+    assert 'id="tab-recovery" data-tab="recovery" role="tab"' in html
+    assert 'id="tab-evidence" data-tab="evidence" role="tab"' in html
     assert (
         'id="tab-history" data-tab="history" role="tab" aria-selected="false" '
         'aria-controls="cockpitContent" tabindex="-1"'
@@ -3353,7 +3355,7 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     )
     assert (
         'id="cockpitContent" class="cockpit-content" role="tabpanel" '
-        'aria-labelledby="tab-overview" tabindex="0"'
+        'aria-labelledby="tab-work" tabindex="0"'
         in html
     )
     assert 'id="nextActionButton"' not in html

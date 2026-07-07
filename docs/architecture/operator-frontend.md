@@ -53,31 +53,45 @@ The first frontend contract covers these flows:
    - show unresolved questions from the standard `questions.md`;
    - write UI answers to the standard `answers.md` as `[resolved]`,
      `[partial]`, or `[deferred]` according to the operator-selected resolution;
+   - treat answers as latest-per-question operator input: the UI may edit and replace
+     the current answer for the same `QID`, including previously `[resolved]` answers;
    - preserve blocking vs non-blocking question semantics;
    - resume only through the normal core path after answers are present.
    - when blocking questions exist, make the answer form the selected-stage
      cockpit priority and use the current run id when resuming the selected stage.
 
-4. **Runner log viewing**
+4. **Recovery-first operation**
+   - present blocked runs through four top-level modes only: Work, Recovery,
+     Evidence, and History;
+   - auto-select Recovery when the next action is blocking questions, failed
+     validation, intervention review, or runtime-log inspection;
+   - show one dominant recovery summary with affected stage, exact blocker
+     reason, affected document/line when available, operator hint, one primary
+     action, and one secondary Evidence link;
+   - derive repair availability from the backend diagnostics status. The
+     frontend must not infer `repair-exhausted` from the mere existence of a
+     previous repair attempt.
+
+5. **Runner log viewing**
    - show live runtime stdout/stderr chunks for UI-started jobs when the adapter can stream;
    - show saved `runtime.log` attempt artifacts after execution;
    - show normalized events when available;
    - keep adapter/runtime labels visible so operators can distinguish native
      runtime output from AIDD summaries.
 
-5. **Artifact browsing**
+6. **Artifact browsing**
    - render stage input and output Markdown from known artifact-index document keys;
    - show `validator-report.md`, `stage-result.md`, and repair evidence;
    - show run/eval metadata, prompt paths, Git SHA, hashes, runtime id, and adapter id.
 
-6. **Runtime approval handling**
+7. **Runtime approval handling**
    - show pending runtime operator requests from attempt-level `operator-requests.jsonl`;
    - show auto-approved, denied, or cancelled decisions from `operator-decisions.jsonl`;
    - write approval decisions only through the local job approval API;
    - keep runtime approvals separate from product questions in `questions.md` and
      `answers.md`.
 
-7. **Operator intervention**
+8. **Operator intervention**
    - accept a selected-stage request through UI, CLI, or another operator integration;
    - persist the request as
      `.aidd/workitems/<id>/stages/<stage>/operator-requests/request-0001.md`;
@@ -88,7 +102,7 @@ The first frontend contract covers these flows:
    - reject the request when downstream stages have already succeeded in the same run
      unless the operator uses the separate remediation flow described below.
 
-8. **Long-run visibility**
+9. **Long-run visibility**
    - expose `/api/jobs/<job_id>` elapsed time, last output time, last output age,
      last output text, and silence warning state for UI-started jobs;
    - expose `/api/run/timeline?run_id=...&stage=...` as a rebuildable timeline over
@@ -96,7 +110,7 @@ The first frontend contract covers these flows:
      questions;
    - show real milestones only. The UI must not invent percentage progress.
 
-9. **Implement diff review**
+10. **Implement diff review**
    - expose `/api/repository/diff?stage=implement&run_id=...` as a read-only view over
      the selected project root;
    - separate source file changes from `.aidd/` artifacts;
@@ -108,14 +122,14 @@ The first frontend contract covers these flows:
      `root_id`, `root_label`, and `root_relative_root`, and flag source changes outside
      declared roots without mixing unrelated repositories into one `.aidd/` workspace.
 
-10. **Structured review and QA**
+11. **Structured review and QA**
    - parse `implementation-report.md`, `review-report.md`, and `qa-report.md` through
      tolerant UI-neutral parsers;
    - return warnings instead of throwing when Markdown is malformed or incomplete;
    - keep stage validators as the canonical progression gate. Parsed UI summaries are
      operator guidance, not replacement validators.
 
-11. **Review/QA remediation to implement**
+12. **Review/QA remediation to implement**
    - let an operator create a durable remediation request from selected review findings
      or QA risks/issues;
    - store the request under
@@ -129,7 +143,7 @@ The first frontend contract covers these flows:
    - let the operator explicitly rerun stale downstream stages, either as the existing
      downstream batch or one stale stage at a time through `POST /api/remediation/rerun-stage`.
 
-12. **Prompt/workflow accountability**
+13. **Prompt/workflow accountability**
    - expose `/api/run/accountability?run_id=...` as a private read-only UI endpoint;
    - expose `/api/run/comparison?baseline_run_id=...&target_run_id=...` as a
      private read-only UI endpoint for comparing two runs from the active work item;
@@ -145,7 +159,7 @@ The first frontend contract covers these flows:
      inputs read-only provenance. The frontend must not edit prompt packs, run manifests,
      or historical artifacts while rendering accountability/comparison views.
 
-13. **Runtime approval audit**
+14. **Runtime approval audit**
    - expose bounded approval audit rows beside the existing `requests` and `decisions`
      payloads;
    - status values are `pending`, `approved`, `denied`, `cancelled`, `policy-blocked`,
@@ -162,7 +176,8 @@ The first frontend contract covers these flows:
 Frontend writes are intentionally narrow:
 
 - answer documents may be written through the same durable question/answer path
-  used by the CLI;
+  used by the CLI; answer edits replace the latest entry for the same question id and do
+  not edit runtime-authored stage outputs;
 - operator intervention requests may be written through the durable
   `operator-requests/request-000N.md` path and then executed by the same stage
   runner used by the CLI;
@@ -275,6 +290,15 @@ Current W20 implementation status:
 - dashboard `first_failure` and `recovery_actions` summarize the first decisive runtime,
   validation, question, repair, or stopped-stage signal without replacing validators,
   repair policy, or stage progression rules;
+- validation failures expose a structured UI read model derived from
+  `validator-report.md` finding bullets, including code, severity, affected document,
+  optional line number, message, category, duplicate occurrence count, and operator hint;
+  the primary finding must be visible in the run-global Next Action / Recovery surface
+  without requiring raw report inspection;
+- validation recovery must make the next operator action explicit: when repair is
+  available, `Run Repair` is the primary action; when repair budget is exhausted or the
+  stage explicitly stopped, `Request Change` is the primary action and raw logs/evidence
+  remain secondary drill-downs;
 - Recent Activity includes run/stage metadata and `events.jsonl` entries across
   all attempted stages plus `operator.request.created` entries for durable
   intervention requests; the static UI overlays process-local live job chunks into

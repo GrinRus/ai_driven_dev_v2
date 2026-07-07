@@ -72,13 +72,13 @@ function renderBlockedStageContext(view) {
 function renderQuestionCards({showResume}) {
   const view = activeStageView()?.questions;
   const questions = view?.questions || [];
+  const unresolved = new Set(view?.unresolved_blocking_question_ids || []);
   if (!questions.length) {
     return `<div class="empty-state">No questions for this stage.</div>`;
   }
-  return `
-    <div class="question-list">
-      ${questions.map((question, index) => {
-        const resolved = question.status === "resolved";
+  const activeQuestions = questions.filter((question) => unresolved.has(question.question_id));
+  const historyQuestions = questions.filter((question) => !unresolved.has(question.question_id));
+  const renderCards = (items) => items.map((question, index) => {
         const questionLabel = question.question_id || `question ${index + 1}`;
         const questionTextId = questionControlId("question-text", question.question_id, index);
         const answerId = questionControlId("answer", question.question_id, index);
@@ -87,6 +87,8 @@ function renderQuestionCards({showResume}) {
         const savedAnswer = question.answer_resolution
           ? `<div class="saved-answer"><span class="saved-answer-label">Saved ${escapeHtml(question.answer_resolution)} answer</span><span class="saved-answer-text">${escapeHtml(question.answer_text || "Answer recorded in answers.md; blocking question still requires a resolved answer.")}</span></div>`
           : "";
+        const answerText = question.answer_text || "";
+        const resolutionValue = question.answer_resolution || "resolved";
         return `
           <article class="question-card">
             <div class="question-head">
@@ -95,25 +97,34 @@ function renderQuestionCards({showResume}) {
             </div>
             <div class="question-meta">
               <span>${escapeHtml(question.policy)}</span>
-              <span>${resolved ? "Answer accepted for resume" : "Answer required for recovery"}</span>
+              <span>${displayStatus === "resolved" ? "Answer accepted for resume; edit if it changed" : "Resolved answer required for recovery"}</span>
             </div>
             <p id="${questionTextId}">${escapeHtml(question.text)}</p>
             ${savedAnswer}
             <label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>
-            <textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}" data-question-text="${escapeHtml(question.question_id)}" ${resolved ? "disabled" : ""}></textarea>
+            <textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}" data-question-text="${escapeHtml(question.question_id)}">${escapeHtml(answerText)}</textarea>
             <div class="question-actions">
               <label class="sr-only" for="${resolutionId}">Resolution for ${escapeHtml(questionLabel)}</label>
-              <select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}" data-question-resolution="${escapeHtml(question.question_id)}" ${resolved ? "disabled" : ""}>
-                <option value="resolved">resolved</option>
-                <option value="partial">partial</option>
-                <option value="deferred">deferred</option>
+              <select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}" data-question-resolution="${escapeHtml(question.question_id)}">
+                <option value="resolved" ${resolutionValue === "resolved" ? "selected" : ""}>resolved</option>
+                <option value="partial" ${resolutionValue === "partial" ? "selected" : ""}>partial</option>
+                <option value="deferred" ${resolutionValue === "deferred" ? "selected" : ""}>deferred</option>
               </select>
-              <button data-save-answer="${escapeHtml(question.question_id)}" type="button" ${resolved ? "disabled" : ""}>Save answer</button>
-              ${showResume ? `<button data-answer-resume="${escapeHtml(question.question_id)}" type="button" ${resolved ? "disabled" : ""}>Answer & resume</button>` : ""}
+              <button data-save-answer="${escapeHtml(question.question_id)}" type="button">${displayStatus === "resolved" ? "Update answer" : "Save answer"}</button>
+              ${showResume ? `<button data-answer-resume="${escapeHtml(question.question_id)}" type="button">${displayStatus === "resolved" ? "Update & resume" : "Answer & resume"}</button>` : ""}
             </div>
           </article>
         `;
-      }).join("")}
+      }).join("");
+  return `
+    <div class="question-list">
+      ${activeQuestions.length ? renderCards(activeQuestions) : `<div class="empty-state compact">No unresolved blocking questions.</div>`}
+      <details class="question-history" ${activeQuestions.length ? "" : "open"}>
+        <summary>Answered and non-blocking questions (${escapeHtml(historyQuestions.length)})</summary>
+        <div class="question-list compact">
+          ${historyQuestions.length ? renderCards(historyQuestions) : `<div class="empty-state compact">No answered or non-blocking questions yet.</div>`}
+        </div>
+      </details>
     </div>
   `;
 }

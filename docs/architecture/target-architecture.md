@@ -271,7 +271,9 @@ For every stage run:
    the stage waits for operator answers.
 8. If the runtime or stage documents raise questions:
    - surface them through the CLI or durable stage documents,
-   - persist them as `questions.md`,
+   - persist them as a merged `questions.md` ledger keyed by stable `QID` values,
+     preserving unresolved omitted questions, updating matching ids in place, and
+     appending new ids,
    - collect or wait for `answers.md`,
    - resume stage execution after answers when the run state allows it,
    - include existing same-stage question, answer, and draft output documents in the resume
