@@ -308,3 +308,32 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Structural validation now flags stale bootstrap placeholder text such as `Stage not run yet.` in any completed `stage-result.md`.
 - Live stage audits now record a non-gating `stage-result-next-action-missing-immediate-stage` consistency finding when `Next actions` exists but omits the exact immediate stage id.
 - Verification covered prompt quality, structural validator tests, repair tests, scenario loader tests, targeted live harness next-action regressions, docs consistency, mypy, ruff, and `git diff --check`.
+
+## Refresh Run - 2026-07-08T22:13Z
+
+- `eval-live-007-codex-20260708T221353Z`: terminal execution verdict `pass`.
+- Source revision under test: `5416c6a8d184cfd9db756a3a82ce68381892c688`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Quality gates: `idea`, `research`, `plan`, `review-spec`, `implement`, and `review` chose `continue`; `tasklist` and `qa` chose `continue` after successful repair.
+- Self-repair: `tasklist` repaired ordered-task formatting/T5 verification coverage on attempt 2; `qa` repaired missing ignored-residue evidence on attempt 2.
+- Frontend checkpoints: all running-stage and post-stage checkpoints passed.
+- Stage-audit consistency: all eight stages recorded empty `consistency_findings`; the previous `research -> plan` and `tasklist -> implement` next-action defects did not recur.
+- Browser QA: desktop `scrollWidth=1280`, mobile `scrollWidth=390`, no horizontal overflow, no console messages, Flow Complete/QA-ready/repair cards/next action all visible.
+- Manual browser evidence: `manual-frontend-evidence/terminal-desktop-221353.png`, `terminal-mobile-221353.png`, `terminal-evidence-desktop-221353.png`, `terminal-history-desktop-221353.png`, `terminal-ui-browser-notes-221353.json`, and `terminal-ui-log-affordance-221353.json`.
+- Target implementation quality: review approved the four-file Hono patch; QA reported `ready` / `proceed`; focused Vitest, `tsc --noEmit`, and `git diff --check` passed.
+- Final manual reports: `.aidd/reports/evals/eval-live-007-codex-20260708T221353Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+
+## Refresh Findings - 2026-07-08T22:13Z
+
+- P1: CLI/live-harness progress remains too quiet during native-provider calls. Stage timings show long `run-stage` intervals, including `research` at 330s, `tasklist` at 306s total across attempts, `implement` at 479s, and `qa` at 472s total across attempts, while the launching terminal had little useful progress feedback.
+- P2: Exact next-stage copy is now healthy across the full stage chain. `research`, `plan`, `review-spec`, `tasklist`, `implement`, and `review` all named their immediate canonical next stage, and live stage audits recorded no next-action consistency findings.
+- P2: Stale placeholder handling improved. The successful `research` result no longer retained `Stage not run yet`, and repaired `tasklist`/`qa` summaries no longer used generic next-stage wording.
+- P2: Terminal Flow Complete UI is healthy on desktop and 390px mobile, including resolved repair cards and next-flow actions. Runtime/log evidence is reachable through Evidence, but the first viewport does not label runtime logs directly.
+- P2: `tasklist` and `qa` still required predictable self-repairs for formatting/evidence completeness. The repairs are successful and visible, but the prompts could reduce repeat friction.
+
+## Next UX Plan - 2026-07-08T22:13Z
+
+- Add CLI/live-harness heartbeat output for long native-provider intervals before runtime logs or final artifacts appear.
+- Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport.
+- Tighten `tasklist` prompt/validator examples for ordered task bullet shape and complete per-task verification notes.
+- Tighten QA prompt guidance so ready/proceed decisions cite ignored-residue evidence on the first attempt.
