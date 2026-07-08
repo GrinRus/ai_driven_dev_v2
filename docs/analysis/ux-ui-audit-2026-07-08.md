@@ -231,8 +231,29 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - This preserves the operator's essential live state while making the first active-stage `/api/dashboard` probe cheap and less sensitive to files being written concurrently by the runtime.
 - Regression coverage creates a running implementation stage with a large `events.jsonl` and asserts that the dashboard still returns `wait-for-stage` without loading heavy activity or artifact sections.
 
+## Refresh Run - 2026-07-08T20:08Z
+
+- `eval-live-007-codex-20260708T200843Z`: terminal execution verdict `pass`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Frontend checkpoints: all running-stage and post-stage checkpoints passed. The previous `idea` running-stage `/api/dashboard` timeout did not recur; `idea`, `research`, `plan`, `review-spec`, `tasklist`, `implement`, `review`, and `qa` all exposed running stage, disabled `wait-for-stage`, and runtime-log affordance.
+- Quality gates: `idea`, `research`, `tasklist`, `implement`, `review`, and `qa` chose `continue`; `plan` and `review-spec` chose `continue-with-risk` because stage-result next-action copy did not clearly name the immediate canonical next stage.
+- Self-repair: `tasklist` repaired missing T5 verification-note coverage on attempt 2.
+- Target implementation quality: review approved the four-file Hono patch; QA reported `ready` / `proceed`; focused Vitest and `tsc --noEmit` passed.
+- Final manual reports: `.aidd/reports/evals/eval-live-007-codex-20260708T200843Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+- Manual UI evidence: terminal Flow Complete desktop and mobile screenshots at `/tmp/aidd-terminal-flow-complete-desktop-200843.png` and `/tmp/aidd-terminal-flow-complete-mobile-200843.png`.
+
+## Refresh Findings - 2026-07-08T20:08Z
+
+- P1: Stage-result next-action wording still fails first-time-operator clarity in non-terminal middle stages. `plan` pointed to downstream implementation planning/implementation instead of `review-spec`; `review-spec` produced a runner warning because it did not name immediate `tasklist`.
+- P1: CLI/live-harness progress remains too quiet during native-provider calls. Multiple stages took roughly 2-6 minutes with no useful launching-terminal stdout before the provider turn completed, even though the browser UI exposed a running wait state and log affordance.
+- P2: Manual screenshot evidence now exists for the terminal screen, but the live runner did not import it into `manual-frontend-evidence/`; final `quality-report.md` has to reference `/tmp` paths outside the bundle.
+- P2: The terminal Flow Complete UI is healthy on desktop and 390px mobile: QA ready, repair cue, next action, next-flow actions, and stage rail are readable with no horizontal overflow.
+- P2: Tasklist self-repair is understandable in artifacts and visible in the terminal UI through `retry 2x` and the repair resolved cue.
+
 ## Next UX Plan
 
-- Refresh a medium live E2E from the running-dashboard fast-path commit to confirm the `idea` running-stage checkpoint no longer fails and that `implement` no longer stalls in `validating`.
+- Fix stage-result next-action wording so every successful non-terminal stage names the immediate canonical next stage in user-facing copy.
+- Add a CLI/live-harness heartbeat or progress summary for long native-provider intervals before runtime logs appear, without pretending the model has made progress it has not emitted.
+- Import manual frontend screenshots or browser notes into the live bundle for terminal UI/UX review evidence instead of leaving `/tmp` references outside the eval artifact tree.
 - Add bounded ignored-residue wording to the implementation prompt/contract so live logs cite the evidence command without dumping full dependency trees.
 - Harden live E2E interruption recording so a repeated interrupt cannot corrupt or skip the interrupted-resumable evidence step.
