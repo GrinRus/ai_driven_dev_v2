@@ -7,7 +7,13 @@
   --line: #e2e6e1;
   --line-strong: #ccd5ce;
   --text: #17201b;
+  --ink: var(--text);
   --muted: #66726a;
+  --surface-active: #eaf5f3;
+  --surface-active-strong: #e7f3f1;
+  --surface-success: #edf8f1;
+  --surface-warning: #fff8e7;
+  --surface-danger: #fff1f0;
   --topbar-bg: #071b1c;
   --topbar-line: #1a3838;
   --topbar-text: #f5fbf9;

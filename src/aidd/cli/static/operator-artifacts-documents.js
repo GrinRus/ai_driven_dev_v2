@@ -713,6 +713,15 @@ async function inspectArtifactReference({stage, key, path, kind}) {
   await fetchDashboard();
   activateTab(kind === "log" ? "logs" : "artifacts");
   await renderAll();
+  if (kind !== "log") focusArtifactWorkbench();
+}
+
+function focusArtifactWorkbench() {
+  const workbench = document.querySelector(".evidence-workbench, .stage-document-workbench, #artifactViewer");
+  if (!workbench) return;
+  if (!workbench.hasAttribute("tabindex")) workbench.setAttribute("tabindex", "-1");
+  workbench.scrollIntoView({block: "start", inline: "nearest"});
+  workbench.focus({preventScroll: true});
 }
 
 async function copyArtifactPath(path) {

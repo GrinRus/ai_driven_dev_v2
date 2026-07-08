@@ -248,9 +248,7 @@ def render_answers_markdown(answers: Iterable[InterviewAnswer]) -> str:
         lines.append("- none")
     else:
         for answer in ordered:
-            lines.append(
-                f"- `{answer.question_id}` `[{answer.resolution.value}]` {answer.text}"
-            )
+            lines.append(f"- {answer.question_id} [{answer.resolution.value}] {answer.text}")
     lines.append("")
     return "\n".join(lines)
 

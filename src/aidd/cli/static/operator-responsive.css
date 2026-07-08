@@ -13,12 +13,19 @@
     grid-template-columns: 210px minmax(0, 1fr);
   }
   .handoff-metric-grid,
-  .next-flow-actions-grid,
-  .source-selection-summary {
+  .next-flow-actions-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .next-action-controls,
+  .request-change-grid,
+  .source-selection-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .global-next-action-strip .next-button {
+    width: 100%;
+  }
   .source-selection-summary > div:first-child {
-    grid-column: 1 / span 2;
+    grid-column: auto;
   }
   .right-sidebar {
     border-left: 0;

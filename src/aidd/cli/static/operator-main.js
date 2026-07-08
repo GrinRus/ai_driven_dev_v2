@@ -136,13 +136,21 @@ document.addEventListener("click", async (event) => {
     const tab = event.target.closest("[data-tab]")?.dataset.tab;
     if (tab) {
       activateTab(tab);
+      renderProjectHomeRail();
       await renderCockpit();
       return;
     }
     const tabShortcut = event.target.closest("[data-tab-shortcut]")?.dataset.tabShortcut;
     if (tabShortcut) {
       activateTab(tabShortcut);
+      renderProjectHomeRail();
       await renderCockpit();
+      return;
+    }
+    const bottomDockToggle = event.target.closest("[data-bottom-dock-toggle]");
+    if (bottomDockToggle) {
+      state.bottomDockUserCollapsed = !bottomDockIsCollapsed();
+      renderBottomDock();
       return;
     }
     const setupModeCard = event.target.closest("[data-setup-mode]");
@@ -478,6 +486,10 @@ document.addEventListener("change", async (event) => {
     renderTopbar();
     renderSidebar();
     if (state.activeTab === "work") await renderCockpit();
+  }
+  const questionResolution = event.target.closest("[data-question-resolution]")?.dataset.questionResolution;
+  if (questionResolution) {
+    updateQuestionResumeButtonState(questionResolution);
   }
   if (event.target.closest("[data-intervention-target]")) {
     updateInterventionPreview();

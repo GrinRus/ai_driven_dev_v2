@@ -136,13 +136,17 @@ function renderSetupReadinessChecklist({ready, context}) {
 function renderFirstLaunchState() {
   const runtime = selectedRuntimeView();
   const ready = selectedRuntimeReady();
+  const hasWorkItemContext = Boolean(state.dashboard?.work_item);
   const context = setupPreviousRunContext();
   const mode = setupModeView(context);
-  const detail = !state.selectedRuntime
+  const detail = !hasWorkItemContext
+    ? "Create or resume a work item before starting the governed workflow."
+    : !state.selectedRuntime
     ? "Select a runtime to start the first governed workflow run."
     : ready
       ? `${state.selectedRuntime} is ready to start the workflow.`
       : `${state.selectedRuntime} needs a passing readiness check before the first run.`;
+  const canRun = hasWorkItemContext && ready && runtime;
   return `
     <section class="surface first-launch-state project-setup-state">
       <div class="surface-title">
@@ -154,8 +158,8 @@ function renderFirstLaunchState() {
           <p>${escapeHtml(detail)}</p>
           ${renderSetupModeSelector(context)}
           <div class="setup-actions">
-            <button data-first-launch-run type="button" ${ready && runtime ? "" : "disabled"}>Run workflow</button>
-            <button data-first-launch-stage type="button" class="secondary" ${ready && runtime ? "" : "disabled"}>Run selected stage</button>
+            <button data-first-launch-run type="button" ${canRun ? "" : "disabled"}>Run workflow</button>
+            <button data-first-launch-stage type="button" class="secondary" ${canRun ? "" : "disabled"}>Run selected stage</button>
             <span class="muted">Work item ${escapeHtml(state.dashboard?.work_item || "unknown")}</span>
           </div>
         </div>
@@ -478,7 +482,8 @@ function renderLineageCandidates(candidates) {
 }
 
 function renderLineageRows({run, lineage, candidates}) {
-  const sourceRun = lineageValue(lineage.source_run_id, run.run_id || "not recorded");
+  const hasParentRun = Boolean(lineage.source_run_id && lineage.source_run_id !== run.run_id);
+  const sourceRun = lineageValue(lineage.source_run_id, "not recorded");
   const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
   const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
   const childRows = candidates.map((candidate) => `
@@ -493,12 +498,14 @@ function renderLineageRows({run, lineage, candidates}) {
     <table class="activity-table lineage-table">
       <thead><tr><th>Relationship</th><th>Run / work item</th><th>Next action</th><th>Source</th></tr></thead>
       <tbody>
-        <tr>
-          <td><span class="small-badge">parent</span></td>
-          <td data-lineage-run-id="${escapeHtml(sourceRun)}">${escapeHtml(sourceRun)}</td>
-          <td>${escapeHtml(baseline)}</td>
-          <td>${escapeHtml(sourceWorkItem)}</td>
-        </tr>
+        ${hasParentRun ? `
+          <tr>
+            <td><span class="small-badge">parent</span></td>
+            <td data-lineage-run-id="${escapeHtml(sourceRun)}">${escapeHtml(sourceRun)}</td>
+            <td>${escapeHtml(baseline)}</td>
+            <td>${escapeHtml(sourceWorkItem)}</td>
+          </tr>
+        ` : ""}
         <tr>
           <td><span class="small-badge good">current</span></td>
           <td data-lineage-run-id="${escapeHtml(run.run_id || "")}">${escapeHtml(run.run_id || "none")}</td>
@@ -708,7 +715,8 @@ function renderRunHistory() {
   const candidates = lineage.child_work_item_candidates || [];
   const handoff = state.dashboard?.terminal_handoff || null;
   const archive = run.archive || {};
-  const sourceRun = lineageValue(lineage.source_run_id, run.run_id);
+  const hasParentRun = Boolean(lineage.source_run_id && lineage.source_run_id !== run.run_id);
+  const sourceRun = lineageValue(lineage.source_run_id, "not recorded");
   const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
   const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
   return `
@@ -718,12 +726,14 @@ function renderRunHistory() {
         <span class="small-badge">${escapeHtml(run.run_id)}</span>
       </div>
       <div class="lineage-flow">
-        <article class="lineage-node parent" data-lineage-run-id="${escapeHtml(sourceRun)}">
-          <span class="small-badge">parent run</span>
-          <strong>${escapeHtml(sourceRun)}</strong>
-          <p>${escapeHtml(sourceWorkItem)}</p>
-          <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(baseline)}</span></div>
-        </article>
+        ${hasParentRun ? `
+          <article class="lineage-node parent" data-lineage-run-id="${escapeHtml(sourceRun)}">
+            <span class="small-badge">parent run</span>
+            <strong>${escapeHtml(sourceRun)}</strong>
+            <p>${escapeHtml(sourceWorkItem)}</p>
+            <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(baseline)}</span></div>
+          </article>
+        ` : ""}
         <article class="lineage-node current" data-lineage-run-id="${escapeHtml(run.run_id)}">
           <span class="small-badge ${archive.archived ? "warn" : "good"}">${archive.archived ? "archived" : "current run"}</span>
           <strong>${escapeHtml(run.run_id)}</strong>
@@ -1707,23 +1717,48 @@ function renderFollowUpDefinition() {
   });
 }
 
+function activeJobBlocksNextAction(action) {
+  const job = state.activeJobStatus;
+  if (!state.activeJobId || !job || activeJobIsTerminal()) return false;
+  const status = job.status || "running";
+  if (!["running", "waiting-for-operator", "cancelling"].includes(status)) return false;
+  if (job.kind === "workflow" || job.kind === "next-flow-launch") return true;
+  const actionStage = action?.stage || state.activeStage;
+  return Boolean(job.stage && actionStage && job.stage === actionStage);
+}
+
+function activeJobNextActionState(action) {
+  if (!activeJobBlocksNextAction(action)) return null;
+  const job = state.activeJobStatus || {};
+  const stage = job.stage || action?.stage || state.activeStage;
+  const stageLabel = stage ? stageTitle(stage) : "Run";
+  const status = job.status || "running";
+  return {
+    label: status === "waiting-for-operator" ? `${stageLabel} waiting for approval` : `${stageLabel} running`,
+    detail: `Job ${state.activeJobId} is ${status}. Open Runtime Logs / Live Console for live output before starting another action.`,
+    stage: stage ? stageTitle(stage) : "run",
+    run: state.activeRunId || state.dashboard?.run?.run_id || "not started"
+  };
+}
+
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
   const runStageResume = action.action === "run-stage" && state.activeRunId && action.enabled;
   const runtimeNeeded = needsRuntime(action.action) || noRunWithRuntime;
   const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
-  const disabled = !(action.enabled || noRunWithRuntime) || runtimeBlocked;
-  const label = noRunWithRuntime
+  const activeJobState = activeJobNextActionState(action);
+  const disabled = Boolean(activeJobState) || !(action.enabled || noRunWithRuntime) || runtimeBlocked;
+  const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
     : runStageResume
       ? `Continue with ${stageTitle(action.stage || state.activeStage)}`
-      : action.label;
-  const baseDetail = noRunWithRuntime
+      : action.label);
+  const baseDetail = activeJobState?.detail || (noRunWithRuntime
     ? runtimeBlocked
       ? "Runtime selected. Resolve readiness before starting the governed workflow."
       : "Runtime selected and ready to start the governed workflow."
-    : action.detail;
+    : action.detail);
   const detail = runtimeBlocked && state.selectedRuntime && !noRunWithRuntime
     ? `${baseDetail} ${state.readinessLoading ? "Checking runtime readiness." : "Selected runtime is not ready."}`
     : baseDetail;
@@ -1731,7 +1766,7 @@ function renderNextActionPanel() {
     ? primaryValidationFinding()
     : null;
   document.getElementById("nextActionPanel").innerHTML = `
-    <div class="panel-title">Next action</div>
+    <div class="panel-title">Run Next Action</div>
     <p>${escapeHtml(detail)}</p>
     ${renderValidationFindingSummary(finding, {compact: true})}
     <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
@@ -1741,7 +1776,7 @@ function renderNextActionPanel() {
 function renderGlobalNextActionStrip() {
   const host = document.getElementById("globalNextActionStrip");
   if (!host) return;
-  if (state.activeTab === "recovery") {
+  if (state.activeTab === "recovery" || state.onboarding?.setupRequired) {
     host.hidden = true;
     host.innerHTML = "";
     return;
@@ -1751,18 +1786,20 @@ function renderGlobalNextActionStrip() {
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
   const runtimeNeeded = needsRuntime(action.action) || noRunWithRuntime;
   const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
-  const disabled = !(action.enabled || noRunWithRuntime) || runtimeBlocked;
-  const label = noRunWithRuntime
+  const activeJobState = activeJobNextActionState(action);
+  const disabled = Boolean(activeJobState) || !(action.enabled || noRunWithRuntime) || runtimeBlocked;
+  const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
     : action.action === "run-stage" && state.activeRunId && action.enabled
       ? `Continue with ${stageTitle(action.stage || state.activeStage)}`
-      : action.label;
-  const detail = noRunWithRuntime
+      : action.label);
+  const detail = activeJobState?.detail || (noRunWithRuntime
     ? runtimeBlocked
       ? "Runtime selected. Resolve readiness before starting the workflow."
       : "Runtime selected. Start the workflow from the current work item."
-    : action.detail;
-  const stage = action.stage ? stageTitle(action.stage) : state.dashboard?.active_stage || "run";
+    : action.detail);
+  const stage = activeJobState?.stage || (action.stage ? stageTitle(action.stage) : state.dashboard?.active_stage || "run");
+  const run = activeJobState?.run || state.activeRunId || "not started";
   const finding = action.action === "inspect-validation" || action.action === "review-intervention"
     ? primaryValidationFinding()
     : null;
@@ -1770,22 +1807,28 @@ function renderGlobalNextActionStrip() {
     <div class="next-action-copy">
       <span class="next-action-icon" aria-hidden="true">&gt;</span>
       <div>
-        <p class="eyebrow">Next Action</p>
+        <p class="eyebrow">Run Next Action</p>
         <h2>${escapeHtml(label)}</h2>
         <p>${escapeHtml(detail)}</p>
         ${renderValidationFindingSummary(finding)}
       </div>
     </div>
-    <div class="next-action-meta">
-      <span><strong>Stage</strong>${escapeHtml(stage)}</span>
-      <span><strong>Runtime</strong>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "required")}</span>
-      <span><strong>Run</strong>${escapeHtml(state.activeRunId || "not started")}</span>
+    <div class="next-action-controls">
+      <div class="next-action-meta">
+        <span><strong>Stage</strong>${escapeHtml(stage)}</span>
+        <span><strong>Runtime</strong>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "required")}</span>
+        <span><strong>Run</strong>${escapeHtml(run)}</span>
+      </div>
+      <button id="globalNextActionButton" class="next-button" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
     </div>
-    <button id="globalNextActionButton" class="next-button" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
   `;
 }
 
 async function startWorkflow() {
+  if (state.onboarding?.setupRequired || !state.dashboard?.work_item) {
+    toast("Create or resume a work item before starting the workflow.");
+    return;
+  }
   if (!ensureRunnableRuntime()) return;
   const payload = {runtime: state.selectedRuntime, log_follow: true};
   if (state.activeRunId) payload.run_id = state.activeRunId;
@@ -1817,6 +1860,12 @@ async function rerunStaleDownstream() {
 
 async function handleNextAction() {
   const action = state.dashboard?.next_action || {action: "choose-runtime"};
+  if (activeJobBlocksNextAction(action)) {
+    activateTab("logs");
+    await renderCockpit();
+    toast("Current job is still running. Inspect logs before starting another action.");
+    return;
+  }
   if (action.action === "choose-runtime") {
     if (state.selectedRuntime) {
       await startWorkflow();

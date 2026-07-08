@@ -45,6 +45,14 @@ function selectedRuntimeReady() {
   return Boolean(runtime && runtime.provider_available && runtime.execution_command_available);
 }
 
+function runtimeReadinessMessage() {
+  if (!state.selectedRuntime) return "Select a runtime before this action can run.";
+  if (state.readinessLoading) return "Checking runtime readiness before this action can run.";
+  if (state.readinessError) return `Runtime readiness unavailable: ${state.readinessError}`;
+  if (!selectedRuntimeReady()) return "Selected runtime is not ready for execution.";
+  return "";
+}
+
 function readinessText(value, fallback = "not reported") {
   const text = String(value ?? "").trim();
   return text || fallback;
@@ -185,10 +193,12 @@ function renderProjectHomeRail() {
   }
   const current = currentWorkItemSummary();
   const items = projectHomeWorkItems();
+  const projectsActive = state.activeTab === "work" && state.workDetail === "project-home";
+  const workItemsActive = state.activeTab === "work" && state.workDetail !== "project-home";
   host.innerHTML = `
     <div class="project-home-tabs" role="group" aria-label="Project and work item navigation">
-      <button data-tab-shortcut="work" class="${state.activeTab === "work" ? "active" : ""}" type="button">Projects</button>
-      <button data-tab-shortcut="work" class="${state.activeTab === "work" ? "active" : ""}" type="button">Work items</button>
+      <button data-tab-shortcut="project-home" class="${projectsActive ? "active" : ""}" aria-pressed="${projectsActive ? "true" : "false"}" type="button">Projects</button>
+      <button data-tab-shortcut="overview" class="${workItemsActive ? "active" : ""}" aria-pressed="${workItemsActive ? "true" : "false"}" type="button">Work items</button>
     </div>
     <div class="rail-header small">
       <span>Active work items</span>

@@ -1436,7 +1436,9 @@ def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> 
     assert payload["questions"][0]["answer_text"] == "Release target is 0.2.0."  # type: ignore[index]
     assert payload["questions"][0]["answer_resolution"] == "resolved"  # type: ignore[index]
     answers_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "answers.md"
-    assert "Release target is 0.2.0." in answers_path.read_text(encoding="utf-8")
+    answers_text = answers_path.read_text(encoding="utf-8")
+    assert "- Q1 [resolved] Release target is 0.2.0." in answers_text
+    assert "- `Q1` `[resolved]`" not in answers_text
 
 
 def test_ui_stage_endpoint_exposes_interview_recovery_answer_states(
@@ -2585,6 +2587,55 @@ def test_ui_remediation_rerun_stage_rejects_non_stale_stage(
     assert "is not stale" in _error_payload(response)["error"]
 
 
+def test_ui_dashboard_exposes_runtime_log_recovery_for_non_zero_exit(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    (attempt_root / RUN_RUNTIME_EXIT_METADATA_FILENAME).write_text(
+        json.dumps(
+            {
+                "exit_code": 1,
+                "exit_classification": "non_zero_exit",
+                "adapter_outcome": "failed",
+                "completed_at_utc": "2026-07-08T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    service = _service(workspace_root)
+    dashboard_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["plan"], "run_id": ["run-ui"]})
+    )["dashboard"]
+
+    assert dashboard_payload["first_failure"]["kind"] == "non_zero_exit"  # type: ignore[index]
+    assert dashboard_payload["first_failure"]["stage"] == "plan"  # type: ignore[index]
+    recovery_actions = dashboard_payload["recovery_actions"]  # type: ignore[index]
+    assert any(
+        action["action"] == "inspect-runtime-log" and action["stage"] == "plan"
+        for action in recovery_actions  # type: ignore[union-attr]
+    )
+    assert any(
+        action["action"] == "request-change" and action["stage"] == "plan"
+        for action in recovery_actions  # type: ignore[union-attr]
+    )
+
+
 def test_ui_job_cancel_endpoint_marks_running_job_cancelling_then_cancelled(
     tmp_path: Path,
 ) -> None:
@@ -2718,6 +2769,19 @@ def test_ui_cancel_terminates_generic_cli_runtime_and_records_evidence(
     )
     assert runtime_exit["exit_classification"] == "cancelled"
     assert stage_metadata["status"] == "failed"
+
+    dashboard_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["plan"], "run_id": [run_id]})
+    )["dashboard"]
+    recovery_actions = dashboard_payload["recovery_actions"]  # type: ignore[index]
+    assert any(
+        action["action"] == "inspect-runtime-log" and action["stage"] == "plan"
+        for action in recovery_actions  # type: ignore[union-attr]
+    )
+    assert any(
+        action["action"] == "request-change" and action["stage"] == "plan"
+        for action in recovery_actions  # type: ignore[union-attr]
+    )
 
 
 def test_ui_job_cancel_endpoint_reports_completed_job_as_already_finished(
@@ -3184,6 +3248,34 @@ def test_ui_workflow_run_endpoint_requires_runtime(tmp_path: Path) -> None:
     payload = _error_payload(response)
     assert response.status == HTTPStatus.BAD_REQUEST
     assert payload["error"] == "runtime is required."
+
+
+def test_ui_workflow_run_endpoint_requires_setup_context(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    def forbidden_workflow_runner(**kwargs: object) -> WorkflowRunResult:
+        raise AssertionError("setup-incomplete workflow run must not create a job")
+
+    service = _onboarding_service_with_runner(
+        tmp_path,
+        monkeypatch,
+        workflow_runner=forbidden_workflow_runner,
+    )
+
+    response = service.handle_post(
+        "/api/workflow/run",
+        {
+            "runtime": "generic-cli",
+            "from_stage": "idea",
+            "to_stage": "plan",
+        },
+    )
+
+    payload = _error_payload(response)
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert payload["error"] == "Complete project setup before using this UI action."
+    assert "job_id" not in payload
 
 
 def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(

@@ -117,6 +117,20 @@ _RUNNING_STAGE_STATES = frozenset(
         StageState.VALIDATING.value,
     }
 )
+_RUNTIME_FAILURE_KINDS = frozenset(
+    {
+        "cancelled",
+        "failed",
+        "non_zero_exit",
+        "non-zero-exit",
+        "provider_error",
+        "runtime-error",
+        "runtime-exit-metadata-invalid",
+        "runtime-failure",
+        "stage-failed",
+        "timeout",
+    }
+)
 
 
 def _empty_run_lineage() -> OperatorRunLineage:
@@ -901,23 +915,29 @@ def _recovery_actions(
                     enabled=True,
                 )
             )
-        if first_failure.kind in {
-            "runtime-exit-metadata-invalid",
-            "timeout",
-            "provider_error",
-            "runtime-failure",
-            "stage-failed",
-            "cancelled",
-        }:
+        if first_failure.kind in _RUNTIME_FAILURE_KINDS:
             actions.append(
                 OperatorRecoveryAction(
                     action="inspect-runtime-log",
-                    label="Inspect runtime log",
+                    label="Open logs",
                     detail="Open runtime log and runtime-exit metadata before retrying.",
                     stage=first_failure.stage,
                     enabled=True,
                 )
             )
+            if first_failure.stage:
+                actions.append(
+                    OperatorRecoveryAction(
+                        action="request-change",
+                        label="Request change",
+                        detail=(
+                            "Create a durable selected-stage intervention request "
+                            "after inspecting runtime evidence."
+                        ),
+                        stage=first_failure.stage,
+                        enabled=True,
+                    )
+                )
     for blocker in blockers:
         if blocker.kind == "missing-input":
             actions.append(
@@ -1826,14 +1846,7 @@ def resolve_operator_dashboard_view(
         metadata=metadata,
         rail_by_stage=rail_by_stage,
     )
-    if first_failure is not None and first_failure.kind in {
-        "runtime-exit-metadata-invalid",
-        "timeout",
-        "provider_error",
-        "runtime-failure",
-        "stage-failed",
-        "cancelled",
-    }:
+    if first_failure is not None and first_failure.kind in _RUNTIME_FAILURE_KINDS:
         blockers = (
             *blockers,
             OperatorBlocker(

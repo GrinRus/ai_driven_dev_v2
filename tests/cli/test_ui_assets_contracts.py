@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from html.parser import HTMLParser
 from importlib.resources import files
 
@@ -173,6 +174,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert "text-overflow: ellipsis;" in layout
     assert ".truncation-notice" in components
     assert ".saved-answer" in components
+    assert ".activity-detail" in components
     assert ".artifact-row" in components
     assert ".stage-document-workbench" in components
     assert ".workbench-side-row" in components
@@ -246,6 +248,8 @@ def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> No
 def test_operator_responsive_css_prevents_activity_table_mobile_overflow() -> None:
     responsive = _asset_text("/operator-responsive.css")
 
+    assert "@media (max-width: 1120px)" in responsive
+    assert ".request-change-grid," in responsive
     assert ".activity-panel .table-wrap {" in responsive
     assert "overflow-x: hidden;" in responsive
     assert ".activity-panel .activity-table {" in responsive
@@ -282,6 +286,9 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "runChip.title = runLabel;" in shell
     assert "async function renderArtifacts()" in artifacts
     assert "async function inspectArtifactReference({stage, key, path, kind})" in artifacts
+    assert "function focusArtifactWorkbench()" in artifacts
+    assert "workbench.scrollIntoView" in artifacts
+    assert "workbench.focus({preventScroll: true})" in artifacts
     assert "function questionControlId(prefix, questionId, index)" in questions
     assert "function renderInterviewSummary(view)" in questions
     assert "function renderBlockedStageContext(view)" in questions
@@ -447,6 +454,7 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "Checking runtimes...",
             "if (state.readinessLoading) return null;",
             "function selectedRuntimeReady()",
+            "function runtimeReadinessMessage()",
             "function renderProjectHomeRail()",
             "function currentWorkItemSummary()",
             "function updateContextualTabs()",
@@ -478,6 +486,18 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
     )
 
 
+def test_operator_project_rail_uses_distinct_segment_states() -> None:
+    shell = _asset_text("/operator-shell-rendering.js")
+
+    assert 'data-tab-shortcut="project-home"' in shell
+    assert 'data-tab-shortcut="overview"' in shell
+    assert shell.count('data-tab-shortcut="work"') == 0
+    assert "projectsActive" in shell
+    assert "workItemsActive" in shell
+    assert 'aria-pressed="${projectsActive ? "true" : "false"}"' in shell
+    assert 'aria-pressed="${workItemsActive ? "true" : "false"}"' in shell
+
+
 def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() -> None:
     cockpit = _asset_text("/operator-stage-cockpit.js")
 
@@ -487,6 +507,22 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "async function renderCockpit()",
             "renderFirstLaunchState();",
             "renderQuestionCards({showResume: true})",
+            'state.recoveryDetail === "questions"',
+            "content.innerHTML = renderQuestions();",
+            "updateQuestionResumeButtonStates();",
+            'state.recoveryDetail === "validation"',
+            "content.innerHTML = renderValidation();",
+            "Selected stage recovery",
+            "Run-global blocker",
+            "Selected-stage status",
+            "Selected-stage evidence",
+            'item.action === "inspect-runtime-log"',
+            "No guided recovery action is available. Inspect the failure evidence before retrying.",
+            "function bottomDockDefaultCollapsed()",
+            "function bottomDockIsCollapsed()",
+            "data-bottom-dock-toggle",
+            "Hide activity",
+            "Show activity",
             "No validation evidence for this stage yet",
             "data-blocker-stage",
             "data-evidence-path",
@@ -500,6 +536,8 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "Provider command",
             "function liveJobActivityEvents()",
             "function activityEvents()",
+            "function summarizeActivityDetails(details)",
+            "function renderActivityDetail(details)",
             "function renderActivityTableMarkup(events)",
             "function renderActivityTable()",
             "function renderRecoveryWorkbench()",
@@ -621,6 +659,9 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
                 'aria-describedby="${questionTextId}"'
             ),
             "function questionDisplayStatus(question)",
+            "function questionRequiresResolvedResume(question)",
+            "function updateQuestionResumeButtonState(questionId)",
+            "function updateQuestionResumeButtonStates()",
             "function renderInterviewSummary(view)",
             "function renderBlockedStageContext(view)",
             "Questions / Interview Loop",
@@ -636,6 +677,9 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             'option value="resolved" ${resolutionValue === "resolved" ? "selected" : ""}',
             "Update answer",
             "Update & resume",
+            "Select resolved to resume",
+            "data-requires-resolved-resume",
+            "Blocking questions must be saved as resolved before resume.",
             '<details class="question-history"',
             "data-answer-resume-all",
             'resolution: resolution?.value || "resolved"',
@@ -791,6 +835,10 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "!textPath.includes(\"/operator-requests/\")",
             "function interventionTargetLabel(key)",
             "function updateSubmitInterventionState()",
+            "function renderLatestRequestSummary(context)",
+            "Latest request",
+            "interventionReadinessNote",
+            "runtimeReadinessMessage()",
             "/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests",
             "target_documents: targetDocuments",
             "request.created_at_utc",
@@ -823,6 +871,7 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "Timeline",
             "Raw Runtime Log",
             "Correlated Events / Audit Log",
+            'typeof renderActivityDetail === "function" ? renderActivityDetail(event.details)',
             "bounded-log-notice",
             'renderTruncationNotice("log", view)',
             "No runtime log for this stage yet",
@@ -850,6 +899,10 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "/api/jobs/${encodeURIComponent(state.activeJobId)}/logs?cursor=${state.activeJobCursor}",
             "state.activeJobStatus.status === \"waiting-for-operator\"",
             "async function startJobPolling(job)",
+            "message: \"job started\"",
+            "renderActiveRunPanel();",
+            "renderNextActionPanel();",
+            "renderGlobalNextActionStrip();",
             "renderActivityTable();",
         ),
     )
@@ -966,11 +1019,19 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "data-setup-mode",
             "data-next-flow-action",
             "Select a runtime to start the first governed workflow run.",
+            "Create or resume a work item before starting the governed workflow.",
+            "const hasWorkItemContext = Boolean(state.dashboard?.work_item);",
+            "const canRun = hasWorkItemContext && ready && runtime;",
             "data-first-launch-run",
             "data-first-launch-stage",
             "Run selected stage",
+            "function activeJobBlocksNextAction(action)",
+            "function activeJobNextActionState(action)",
             "function renderNextActionPanel()",
             "function renderGlobalNextActionStrip()",
+            "state.onboarding?.setupRequired",
+            "Run Next Action",
+            "next-action-controls",
             "primaryValidationFinding()",
             "renderValidationFindingSummary(finding)",
             "Resume workflow",
@@ -981,7 +1042,10 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Continue with ${stageTitle(action.stage || state.activeStage)}",
             "Checking runtime readiness.",
             "Selected runtime is not ready.",
+            "Current job is still running. Inspect logs before starting another action.",
+            "Open Runtime Logs / Live Console for live output before starting another action.",
             "async function startWorkflow()",
+            "Create or resume a work item before starting the workflow.",
             "async function handleNextAction()",
             "const payload = {runtime: state.selectedRuntime, log_follow: true};",
             "const payload = {stage, runtime: state.selectedRuntime, log_follow: true};",
@@ -1133,6 +1197,10 @@ def test_operator_run_history_static_contract_covers_lineage_and_archive_labels(
             "function renderRunHistory()",
             "Run History / Lineage",
             "parent run",
+            (
+                "const hasParentRun = Boolean(lineage.source_run_id "
+                "&& lineage.source_run_id !== run.run_id);"
+            ),
             "current run",
             "next work item",
             "not created",
@@ -1233,6 +1301,8 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'closest("[data-inherited-context]")',
             "invalidateFollowUpDraftPreview();",
             'event.target.id === "operatorRequestText"',
+            'closest("[data-bottom-dock-toggle]")',
+            "state.bottomDockUserCollapsed = !bottomDockIsCollapsed();",
             'closest("[data-intervention-target]")',
             "updateInterventionPreview();",
             'if (state.activeTab === "work") await renderCockpit();',
@@ -1347,6 +1417,7 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".small-badge.running" in css
     assert ".small-badge.cancelling" in css
     assert ".small-badge.waiting-for-operator" in css
+    assert ".activity-detail" in css
     assert ".log-actions" in css
     assert ".truncation-notice" in css
     assert ".stage-document-workbench" in css
@@ -1357,6 +1428,8 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".repair-action-band" in css
     assert ".request-change-screen" in css
     assert ".request-change-grid" in css
+    assert ".latest-request-summary" in css
+    assert ".form-readiness-note" in css
     assert ".intervention-diff-preview" in css
     assert ".approval-console-screen" in css
     assert ".approval-summary-grid" in css
@@ -1384,6 +1457,10 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".source-selection-summary" in css
     assert ".source-finding-card" in css
     assert ".source-finding-supporting" in css
+    assert ".bottom-dock.collapsed" in css
+    assert ".bottom-dock-toggle-row" in css
+    assert "@media (prefers-reduced-motion: reduce)" in css
+    assert "overflow-wrap: normal" in css
     assert ".archive-confirmation" in css
     assert ".follow-up-definition-grid" in css
     assert ".inherited-context-toggle" in css
@@ -1391,3 +1468,12 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".preflight-check" in css
     assert ".loading-state" in css
     assert "scroll-padding-inline: 10px" in css
+
+
+def test_operator_css_custom_properties_are_resolved() -> None:
+    css = _css_bundle()
+    defined = set(re.findall(r"(--[a-zA-Z0-9_-]+)\s*:", css))
+    referenced = set(re.findall(r"var\((--[a-zA-Z0-9_-]+)", css))
+
+    assert "--ink" in defined
+    assert not referenced - defined
