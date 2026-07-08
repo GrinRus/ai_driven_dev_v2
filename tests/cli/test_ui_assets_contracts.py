@@ -182,6 +182,9 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".project-work-item-card" in components
     assert ".project-set-row" in components
     assert ".global-next-action-strip" in components
+    assert ".global-next-action-strip.live-progress-active" in components
+    assert ".live-progress-strip" in components
+    assert ".live-progress-actions" in components
     assert ".run-progress-notice" in components
     assert ".run-progress-meta" in components
     assert ".recovery-card" in components
@@ -220,6 +223,9 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert "@media (max-width: 760px)" in responsive
     assert ".workbench-main" in responsive
     assert ".global-next-action-strip" in responsive
+    assert ".live-progress-strip" in responsive
+    assert ".live-progress-actions" in responsive
+    assert ".live-progress-meta" in responsive
     assert ".run-progress-meta" in responsive
     assert ".project-home-grid" in responsive
     assert ".setup-mode-grid" in responsive
@@ -232,6 +238,9 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".interview-loop-screen" in responsive
     assert ".validation-repair-center" in responsive
     assert "body.recovery-mode .cockpit" in responsive
+    assert "body.live-job-mode .operator-shell" in responsive
+    assert "body.live-job-mode .cockpit" in responsive
+    assert "body.live-job-mode .stage-rail" in responsive
     assert ".recovery-hero," in responsive
     assert ".workbench-toc-list" in responsive
     assert "scroll-padding-inline: 10px" in responsive
@@ -334,6 +343,10 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "const state = {" in api_state
     assert "function stageRetrySummary(item)" in api_state
     assert "open Recovery for repair and retry history" in api_state
+    assert "function secondsLabel(value)" in api_state
+    assert "function runtimeOutputFreshnessLabel(job)" in api_state
+    assert "function activeJobIsLive(job = state.activeJobStatus)" in api_state
+    assert "function syncLiveJobBodyClass()" in api_state
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
     assert "function renderStageRail()" in shell
@@ -709,23 +722,77 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
 
 
 def test_operator_control_center_asset_surfaces_running_stage_progress() -> None:
+    api_state = _asset_text("/operator-api-state.js")
     control_center = _asset_text("/operator-control-center.js")
 
     _assert_contains_all(
-        control_center,
+        api_state,
         (
             "function runtimeOutputFreshnessLabel(job)",
+            "function secondsLabel(value)",
+            "No runtime output captured yet",
+        ),
+    )
+    _assert_contains_all(
+        control_center,
+        (
             "function renderRunningStageNotice(job)",
             'class="run-progress-notice" role="status" aria-live="polite"',
             "Runtime is waiting for an operator approval decision.",
             "Stage is still running; live logs are the current evidence stream.",
-            "No runtime output captured yet",
             "Live log chunks",
             "${renderRunningStageNotice(job)}",
             "${escapeHtml(runtimeOutputFreshnessLabel(job))}",
         ),
     )
     assert "not available ago" not in control_center
+
+
+def test_operator_global_next_action_surfaces_live_job_progress() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function activeJobLiveMessage(job)",
+            "function renderGlobalLiveProgress(job)",
+            'class="live-progress-strip" role="status" aria-live="polite"',
+            "Waiting for operator approval",
+            "Running now",
+            "Runtime is active; live logs are the current evidence stream.",
+            "runtimeOutputFreshnessLabel(job)",
+            "state.activeJobLogChunks?.length",
+            "Open live logs",
+            "data-cancel-job",
+            "syncLiveJobBodyClass();",
+            'host.classList.toggle("live-progress-active", Boolean(activeJobState));',
+            'host.classList.remove("live-progress-active");',
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".global-next-action-strip.live-progress-active {",
+            ".live-progress-strip {",
+            ".live-progress-copy {",
+            ".live-progress-meta {",
+            ".live-progress-actions {",
+        ),
+    )
+    _assert_contains_all(
+        responsive,
+        (
+            ".live-progress-strip {",
+            ".live-progress-actions {",
+            ".live-progress-actions button {",
+            ".live-progress-meta,",
+            "body.live-job-mode .operator-shell {",
+            "body.live-job-mode .cockpit {",
+            "body.live-job-mode .stage-rail {",
+        ),
+    )
 
 
 def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> None:

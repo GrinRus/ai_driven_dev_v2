@@ -5,24 +5,6 @@ function runScopedQuery(stage = null) {
   return params.toString();
 }
 
-function secondsLabel(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return "not available";
-  const seconds = Math.max(0, Number(value));
-  if (seconds < 60) return `${Math.floor(seconds)}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainder = Math.floor(seconds % 60);
-  if (minutes < 60) return `${minutes}m ${remainder}s`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
-}
-
-function runtimeOutputFreshnessLabel(job) {
-  if (job?.last_output_age_seconds === null || job?.last_output_age_seconds === undefined) {
-    return "No runtime output captured yet";
-  }
-  return `Last output ${secondsLabel(job.last_output_age_seconds)} ago`;
-}
-
 function renderRunningStageNotice(job) {
   const status = String(job?.status || "running");
   const stage = job?.stage || "workflow";

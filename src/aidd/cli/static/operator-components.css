@@ -1566,6 +1566,55 @@
   grid-template-columns: minmax(0, 1fr);
   padding: 12px 14px;
 }
+.global-next-action-strip.live-progress-active {
+  background: #f4faf8;
+  border-bottom-color: #8bc4bd;
+  box-shadow: inset 4px 0 0 var(--teal);
+}
+.live-progress-strip {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #b9d9d4;
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr) auto;
+  padding: 10px;
+}
+.live-progress-copy {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+.live-progress-copy > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.live-progress-copy strong {
+  font-size: 14px;
+  line-height: 1.25;
+}
+.live-progress-copy span:not(.small-badge) {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.live-progress-meta {
+  grid-template-columns: repeat(3, minmax(92px, 1fr));
+}
+.live-progress-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
+}
+.live-progress-actions button {
+  margin-top: 0;
+}
 
 .next-action-copy {
   align-items: center;

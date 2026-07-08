@@ -247,6 +247,24 @@ function statusClass(status) {
   return String(status || "pending").toLowerCase().replace(/_/g, "-");
 }
 
+function secondsLabel(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "not available";
+  const seconds = Math.max(0, Number(value));
+  if (seconds < 60) return `${Math.floor(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.floor(seconds % 60);
+  if (minutes < 60) return `${minutes}m ${remainder}s`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m`;
+}
+
+function runtimeOutputFreshnessLabel(job) {
+  if (job?.last_output_age_seconds === null || job?.last_output_age_seconds === undefined) {
+    return "No runtime output captured yet";
+  }
+  return `Last output ${secondsLabel(job.last_output_age_seconds)} ago`;
+}
+
 function activeStageItem() {
   return (state.dashboard?.stages || []).find((item) => item.stage === state.activeStage) || null;
 }
@@ -308,10 +326,20 @@ function activeModeIsEvidenceLog() {
   return state.activeTab === "evidence" && state.evidenceDetail === "logs";
 }
 
+function activeJobIsLive(job = state.activeJobStatus) {
+  if (!state.activeJobId || !job) return false;
+  return ["running", "waiting-for-operator", "cancelling"].includes(job.status || "running");
+}
+
+function syncLiveJobBodyClass() {
+  document.body.classList.toggle("live-job-mode", activeJobIsLive());
+}
+
 function applyOperatorModeBodyClass() {
   document.body.dataset.operatorMode = state.activeTab;
   const recoveryActive = state.activeTab === "recovery";
   document.body.classList.toggle("recovery-mode", recoveryActive);
+  syncLiveJobBodyClass();
 }
 
 function setRunButtonState() {

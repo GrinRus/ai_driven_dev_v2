@@ -1784,6 +1784,41 @@ function activeJobNextActionState(action) {
   };
 }
 
+function activeJobLiveMessage(job) {
+  const status = job?.status || "running";
+  if (status === "waiting-for-operator") return "Waiting for operator approval";
+  if (status === "cancelling") return "Cancelling runtime job";
+  return "Running now";
+}
+
+function renderGlobalLiveProgress(job) {
+  if (!job) return "";
+  const status = job.status || "running";
+  const stage = job.stage || state.activeStage || "workflow";
+  const stageLabel = stage ? stageTitle(stage) : "Run";
+  const logChunkCount = state.activeJobLogChunks?.length || 0;
+  return `
+    <div class="live-progress-strip" role="status" aria-live="polite">
+      <div class="live-progress-copy">
+        <span class="small-badge ${escapeHtml(statusClass(status))}">${escapeHtml(status)}</span>
+        <div>
+          <strong>${escapeHtml(stageLabel)}: ${escapeHtml(activeJobLiveMessage(job))}</strong>
+          <span>${escapeHtml(job.message || "Runtime is active; live logs are the current evidence stream.")}</span>
+        </div>
+      </div>
+      <div class="run-progress-meta live-progress-meta">
+        <span><strong>Elapsed</strong>${escapeHtml(secondsLabel(job.elapsed_seconds))}</span>
+        <span><strong>Runtime output</strong>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span>
+        <span><strong>Live log chunks</strong>${escapeHtml(logChunkCount)}</span>
+      </div>
+      <div class="live-progress-actions">
+        <button data-tab-shortcut="logs" type="button" class="secondary">Open live logs</button>
+        <button data-cancel-job="${escapeHtml(job.job_id || state.activeJobId || "")}" type="button" class="danger" ${activeJobIsTerminal() ? "disabled" : ""}>${escapeHtml(activeJobCancelLabel())}</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
@@ -1819,9 +1854,11 @@ function renderNextActionPanel() {
 function renderGlobalNextActionStrip() {
   const host = document.getElementById("globalNextActionStrip");
   if (!host) return;
+  syncLiveJobBodyClass();
   if (state.activeTab === "recovery" || state.onboarding?.setupRequired) {
     host.hidden = true;
     host.innerHTML = "";
+    host.classList.remove("live-progress-active");
     return;
   }
   host.hidden = false;
@@ -1846,7 +1883,9 @@ function renderGlobalNextActionStrip() {
   const finding = action.action === "inspect-validation" || action.action === "review-intervention"
     ? primaryValidationFinding()
     : null;
+  host.classList.toggle("live-progress-active", Boolean(activeJobState));
   host.innerHTML = `
+    ${activeJobState ? renderGlobalLiveProgress(state.activeJobStatus) : ""}
     <div class="next-action-copy">
       <span class="next-action-icon" aria-hidden="true">&gt;</span>
       <div>

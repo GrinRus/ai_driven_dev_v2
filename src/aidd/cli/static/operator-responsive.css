@@ -113,8 +113,36 @@
   body.recovery-mode .project-home-rail {
     display: none;
   }
+  body.live-job-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  body.live-job-mode .cockpit {
+    order: 1;
+  }
+  body.live-job-mode .stage-rail {
+    order: 2;
+  }
+  body.live-job-mode .right-sidebar {
+    order: 3;
+  }
+  body.live-job-mode .bottom-dock {
+    order: 4;
+  }
+  body.live-job-mode .project-home-rail {
+    display: none;
+  }
   .global-next-action-strip {
     grid-template-columns: 1fr;
+  }
+  .live-progress-strip {
+    grid-template-columns: 1fr;
+  }
+  .live-progress-actions {
+    justify-content: stretch;
+  }
+  .live-progress-actions button {
+    flex: 1 1 150px;
   }
   .next-action-meta {
     grid-template-columns: 1fr;
@@ -185,6 +213,7 @@
   .recovery-hero,
   .recovery-facts,
   .run-progress-meta,
+  .live-progress-meta,
   .bottom-dock {
     grid-template-columns: 1fr;
   }
