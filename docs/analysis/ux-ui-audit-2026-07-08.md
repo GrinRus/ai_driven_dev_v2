@@ -181,6 +181,13 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Mobile workbench rendering now stacks the sidebar at 390px and wraps long markdown/contract paths, avoiding local overflow while reviewing the same artifact evidence.
 - Browser verification used the completed `eval-live-007-codex-20260708T154059Z` target workspace on the `plan` Evidence tab. Desktop QA confirmed `output/plan.md` and related mirrors render as `handoff mirror`, page `scrollWidth=1280`, and no console errors were recorded. Mobile 390px QA confirmed `Published output mirrors`, `output/plan.md`, and `handoff mirror` remain visible, root `scrollWidth=390`, sidebar grid is single-column, and internal visible overflow is empty. Screenshot evidence: `/tmp/aidd-artifact-ownership-desktop.png` and `/tmp/aidd-artifact-ownership-mobile.png`.
 
+## External Running Stage Slice
+
+- Externally started or CLI-started stages that report dashboard `wait-for-stage` now get a central running strip even when no UI job is active.
+- The strip explicitly says the stage is running outside UI control, shows status, attempt, run id, and runtime, and offers `Open runtime logs` plus `Refresh status` without a misleading cancel action.
+- On 390px mobile, external-running-stage mode raises the cockpit and progress explanation before the stage rail so the live wait state is visible in the first viewport.
+- Browser verification used a temporary `codex` run in `/tmp/aidd-external-running-ui-qa` with `plan` marked `executing`. Desktop QA confirmed the strip is readable, uses one copy column, keeps `scrollWidth=1280`, opens `RUNTIME LOGS / LIVE CONSOLE`, and records no console errors. Mobile 390px QA confirmed the strip starts in the first viewport at `top=457`, keeps `scrollWidth=390`, keeps buttons inside the viewport, and records no console errors.
+
 ## Next UX Plan
 
-- Continue improving progress affordances for externally-started live E2E stages where runner stdout is quiet for several minutes.
+- Refresh a medium live E2E after the external-running-stage UI change and check whether any remaining quiet-runner ambiguity now belongs in CLI/harness stdout rather than the browser operator UI.

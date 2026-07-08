@@ -1859,6 +1859,11 @@
   border-bottom-color: #8bc4bd;
   box-shadow: inset 4px 0 0 var(--teal);
 }
+.global-next-action-strip.external-progress-active {
+  background: #fff9ed;
+  border-bottom-color: #e4c783;
+  box-shadow: inset 4px 0 0 var(--amber);
+}
 .live-progress-strip {
   align-items: center;
   background: #ffffff;
@@ -1868,6 +1873,16 @@
   gap: 12px;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr) auto;
   padding: 10px;
+}
+.live-progress-strip.external-running-stage {
+  border-color: #e4c783;
+  grid-template-columns: minmax(0, 1fr);
+}
+.live-progress-strip.external-running-stage .live-progress-copy {
+  align-items: flex-start;
+}
+.live-progress-strip.external-running-stage .live-progress-actions {
+  justify-content: flex-start;
 }
 .live-progress-copy {
   align-items: center;

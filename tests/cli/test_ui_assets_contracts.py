@@ -347,6 +347,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function runtimeOutputFreshnessLabel(job)" in api_state
     assert "function activeJobIsLive(job = state.activeJobStatus)" in api_state
     assert "function syncLiveJobBodyClass()" in api_state
+    assert "function syncExternalRunningBodyClass()" in api_state
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
     assert "function renderStageRail()" in shell
@@ -382,6 +383,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert 'state.activeTab === "history"' in cockpit
     assert "function renderActivityTable()" in cockpit
     assert 'document.addEventListener("click"' in main
+    assert 'event.target.closest("[data-refresh-dashboard]")' in main
     assert "refresh();" in main
 
 
@@ -427,6 +429,7 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "function isRecoveryNextAction(action)",
             "function activeModeIsEvidenceLog()",
             "function applyOperatorModeBodyClass()",
+            "external-running-stage-mode",
             "terminal-repair-mode",
             "function initializeStateFromLocation()",
             "new URLSearchParams(window.location.search)",
@@ -736,6 +739,8 @@ def test_operator_control_center_asset_surfaces_running_stage_progress() -> None
         (
             "function runtimeOutputFreshnessLabel(job)",
             "function secondsLabel(value)",
+            "function externalRunningStageItem(action = state.dashboard?.next_action)",
+            "function syncExternalRunningBodyClass()",
             "No runtime output captured yet",
         ),
     )
@@ -764,24 +769,35 @@ def test_operator_global_next_action_surfaces_live_job_progress() -> None:
         (
             "function activeJobLiveMessage(job)",
             "function renderGlobalLiveProgress(job)",
+            "function externalRunningStageMessage(action, item)",
+            "function renderExternalRunningStageProgress(action)",
             'class="live-progress-strip" role="status" aria-live="polite"',
+            'class="live-progress-strip external-running-stage" role="status" aria-live="polite"',
             "Waiting for operator approval",
             "Running now",
+            "running outside UI control",
+            "Refresh status or inspect saved runtime logs",
             "Runtime is active; live logs are the current evidence stream.",
             "runtimeOutputFreshnessLabel(job)",
             "state.activeJobLogChunks?.length",
             "Open live logs",
+            "Open runtime logs",
+            "data-refresh-dashboard",
             "data-cancel-job",
             "syncLiveJobBodyClass();",
             'host.classList.toggle("live-progress-active", Boolean(activeJobState));',
-            'host.classList.remove("live-progress-active");',
+            'host.classList.toggle("external-progress-active", Boolean(externalRunningState));',
+            'host.classList.remove("live-progress-active", "external-progress-active");',
         ),
     )
     _assert_contains_all(
         components,
         (
             ".global-next-action-strip.live-progress-active {",
+            ".global-next-action-strip.external-progress-active {",
             ".live-progress-strip {",
+            ".live-progress-strip.external-running-stage {",
+            "grid-template-columns: minmax(0, 1fr);",
             ".live-progress-copy {",
             ".live-progress-meta {",
             ".live-progress-actions {",
@@ -795,8 +811,11 @@ def test_operator_global_next_action_surfaces_live_job_progress() -> None:
             ".live-progress-actions button {",
             ".live-progress-meta,",
             "body.live-job-mode .operator-shell {",
+            "body.external-running-stage-mode .operator-shell {",
             "body.live-job-mode .cockpit {",
+            "body.external-running-stage-mode .cockpit {",
             "body.live-job-mode .stage-rail {",
+            "body.external-running-stage-mode .stage-rail {",
         ),
     )
 

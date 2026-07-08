@@ -340,6 +340,18 @@ function syncLiveJobBodyClass() {
   document.body.classList.toggle("live-job-mode", activeJobIsLive());
 }
 
+function externalRunningStageItem(action = state.dashboard?.next_action) {
+  if (activeJobIsLive() || action?.action !== "wait-for-stage") return null;
+  const stage = action.stage || state.activeStage;
+  return (state.dashboard?.stages || []).find((item) => item.stage === stage)
+    || (state.dashboard?.stages || []).find((item) => ["preparing", "executing", "validating"].includes(item.status))
+    || null;
+}
+
+function syncExternalRunningBodyClass() {
+  document.body.classList.toggle("external-running-stage-mode", Boolean(externalRunningStageItem()));
+}
+
 function applyOperatorModeBodyClass() {
   document.body.dataset.operatorMode = state.activeTab;
   const recoveryActive = state.activeTab === "recovery";
@@ -355,6 +367,7 @@ function applyOperatorModeBodyClass() {
   document.body.classList.toggle("stale-downstream-mode", staleDownstreamActive);
   document.body.classList.toggle("terminal-repair-mode", terminalRepairActive);
   syncLiveJobBodyClass();
+  syncExternalRunningBodyClass();
 }
 
 function setRunButtonState() {

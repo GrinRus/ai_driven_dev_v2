@@ -414,6 +414,10 @@ document.addEventListener("click", async (event) => {
       await refresh();
       return;
     }
+    if (event.target.closest("[data-refresh-dashboard]")) {
+      await refresh();
+      return;
+    }
     if (event.target.id === "openWorkspaceButton") {
       await openFolder({target: "workspace"});
       return;

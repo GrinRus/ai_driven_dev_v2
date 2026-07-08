@@ -1853,6 +1853,41 @@ function renderGlobalLiveProgress(job) {
   `;
 }
 
+function externalRunningStageMessage(action, item) {
+  const status = item?.status || "running";
+  const stage = item?.stage || action?.stage || state.activeStage || "stage";
+  if (status === "preparing") return `${stageTitle(stage)} is preparing runtime input.`;
+  if (status === "validating") return `${stageTitle(stage)} is validating generated documents.`;
+  return `${stageTitle(stage)} is executing outside this browser session.`;
+}
+
+function renderExternalRunningStageProgress(action) {
+  const item = externalRunningStageItem(action);
+  if (!item) return "";
+  const status = item.status || "running";
+  const stage = item.stage || action?.stage || state.activeStage;
+  return `
+    <div class="live-progress-strip external-running-stage" role="status" aria-live="polite">
+      <div class="live-progress-copy">
+        <span class="small-badge ${escapeHtml(statusClass(status))}">${escapeHtml(status)}</span>
+        <div>
+          <strong>${escapeHtml(stageTitle(stage))}: running outside UI control</strong>
+          <span>${escapeHtml(externalRunningStageMessage(action, item))} Refresh status or inspect saved runtime logs while the external command continues.</span>
+        </div>
+      </div>
+      <div class="run-progress-meta live-progress-meta">
+        <span><strong>Attempt</strong>${escapeHtml(item.attempt_count || 0)}</span>
+        <span><strong>Run</strong>${escapeHtml(state.activeRunId || state.dashboard?.run?.run_id || "current")}</span>
+        <span><strong>Runtime</strong>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "selected runtime")}</span>
+      </div>
+      <div class="live-progress-actions">
+        <button data-tab-shortcut="logs" type="button" class="secondary">Open runtime logs</button>
+        <button data-refresh-dashboard type="button">Refresh status</button>
+      </div>
+    </div>
+  `;
+}
+
 function decisionPeekCountLabel(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
@@ -2048,10 +2083,11 @@ function renderGlobalNextActionStrip() {
   const host = document.getElementById("globalNextActionStrip");
   if (!host) return;
   syncLiveJobBodyClass();
+  syncExternalRunningBodyClass();
   if (state.activeTab === "recovery" || state.onboarding?.setupRequired) {
     host.hidden = true;
     host.innerHTML = "";
-    host.classList.remove("live-progress-active");
+    host.classList.remove("live-progress-active", "external-progress-active");
     return;
   }
   host.hidden = false;
@@ -2073,12 +2109,15 @@ function renderGlobalNextActionStrip() {
     : action.detail);
   const stage = activeJobState?.stage || (action.stage ? stageTitle(action.stage) : state.dashboard?.active_stage || "run");
   const run = activeJobState?.run || state.activeRunId || "not started";
+  const externalRunningState = externalRunningStageItem(action);
   const finding = action.action === "inspect-validation" || action.action === "review-intervention"
     ? primaryValidationFinding()
     : null;
   host.classList.toggle("live-progress-active", Boolean(activeJobState));
+  host.classList.toggle("external-progress-active", Boolean(externalRunningState));
   host.innerHTML = `
     ${activeJobState ? renderGlobalLiveProgress(state.activeJobStatus) : ""}
+    ${externalRunningState ? renderExternalRunningStageProgress(action) : ""}
     <div class="next-action-copy">
       <span class="next-action-icon" aria-hidden="true">&gt;</span>
       <div>
