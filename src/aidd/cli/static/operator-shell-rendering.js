@@ -136,17 +136,19 @@ function renderStageRail() {
     const active = isActive ? " active" : "";
     const status = statusClass(item.status);
     const attemptCount = Number(item.attempt_count || 0);
+    const retry = stageRetrySummary(item);
     const attemptTitle = attemptCount > 1
-      ? `${attemptCount} attempts; open Recovery for repair and retry history`
+      ? retry.title
       : `${attemptCount || 0} attempt${attemptCount === 1 ? "" : "s"}`;
     const markers = [
       item.stale ? `<span class="small-badge warn" title="${escapeHtml(item.stale_reason || "downstream evidence is stale")}">stale</span>` : "",
       item.unresolved_blocking_count ? `<span class="small-badge warn">Q${item.unresolved_blocking_count}</span>` : "",
       item.validator_fail_count ? `<span class="small-badge bad">V${item.validator_fail_count}</span>` : "",
-      attemptCount ? `<span class="small-badge" title="${escapeHtml(attemptTitle)}">${escapeHtml(attemptCount)}x</span>` : ""
+      attemptCount ? `<span class="small-badge ${retry ? "retried" : ""}" title="${escapeHtml(attemptTitle)}">${retry ? `retry ${escapeHtml(attemptCount)}x` : `${escapeHtml(attemptCount)}x`}</span>` : ""
     ].filter(Boolean).join("");
+    const retryAria = retry ? `, ${retry.retryCount === 1 ? "1 retry" : `${retry.retryCount} retries`} recorded` : "";
     return `
-      <button class="stage-card${active}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${isActive ? "step" : "false"}">
+      <button class="stage-card${active}${retry ? " retried" : ""}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${isActive ? "step" : "false"}" aria-label="${escapeHtml(`${item.title}: ${item.status}${retryAria}`)}">
         <span class="stage-index">${index + 1}</span>
         <span class="stage-copy">
           <span class="stage-name">${escapeHtml(item.title)}</span>
@@ -224,12 +226,14 @@ function renderProjectHomeRail() {
 
 function renderStageHeader() {
   const item = activeStageItem();
+  const retry = stageRetrySummary(item);
   document.getElementById("stageTitle").textContent = item?.title || stageTitle(state.activeStage);
   document.getElementById("stageSubtitle").textContent = item?.subtitle || stageSubtitle(state.activeStage);
   document.getElementById("stageBadges").innerHTML = [
     `<span class="status-badge ${escapeHtml(statusClass(item?.status))}">${escapeHtml(item?.status || "pending")}</span>`,
     item?.stale ? `<span class="status-badge warn" title="${escapeHtml(item.stale_reason || "downstream evidence is stale")}">stale</span>` : "",
     `<span class="status-badge">Attempts ${escapeHtml(item?.attempt_count || 0)}</span>`,
+    retry ? `<button class="badge-button retried" data-stage-recovery="validation" type="button" title="${escapeHtml(retry.title)}">Retry history</button>` : "",
     `<span class="status-badge">Validation ${escapeHtml(item?.validator_pass_count || 0)}/${escapeHtml(item?.validator_fail_count || 0)}</span>`
   ].filter(Boolean).join("");
 }

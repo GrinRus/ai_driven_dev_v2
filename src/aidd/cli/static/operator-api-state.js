@@ -255,6 +255,19 @@ function activeStageView() {
   return state.dashboard?.active_stage_view || null;
 }
 
+function stageRetrySummary(item) {
+  const attemptCount = Number(item?.attempt_count || 0);
+  if (attemptCount <= 1) return null;
+  const retryCount = attemptCount - 1;
+  const retryLabel = retryCount === 1 ? "1 retry" : `${retryCount} retries`;
+  return {
+    attemptCount,
+    retryCount,
+    label: `retry ${attemptCount}x`,
+    title: `${retryLabel} after the first attempt; open Recovery for repair and retry history`
+  };
+}
+
 function needsRuntime(action) {
   return ["run-workflow", "run-stage", "resume-stage", "rerun-stale-downstream"].includes(action);
 }

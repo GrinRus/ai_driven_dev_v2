@@ -201,6 +201,25 @@ function renderRepairTimeline(validation) {
   `;
 }
 
+function renderResolvedRepairSummary(validation) {
+  const attempts = validation?.repair_attempts || [];
+  if (!attempts.length) return "";
+  const latest = attempts[attempts.length - 1] || {};
+  const attemptLabel = attempts.length === 1 ? "1 validation attempt" : `${attempts.length} validation attempts`;
+  const retryCount = Math.max(0, attempts.length - 1);
+  const retryLabel = retryCount === 1 ? "1 retry" : `${retryCount} retries`;
+  const summaryLabel = retryCount ? `${retryLabel} resolved across ${attemptLabel}` : `${attemptLabel} recorded`;
+  return `
+    <div class="repair-resolved-summary">
+      <span class="small-badge good">resolved after retry</span>
+      <strong>${escapeHtml(summaryLabel)}</strong>
+      <p>Validation is clear after a retry. Use the timeline below for validator report and repair brief evidence.</p>
+      ${latest.validator_report_path ? pathLine(latest.validator_report_path, 86) : ""}
+      ${latest.repair_brief_path ? pathLine(latest.repair_brief_path, 86) : ""}
+    </div>
+  `;
+}
+
 function renderValidationFindingList(validation) {
   const findings = validation?.validation_findings || [];
   if (!findings.length) {
@@ -313,7 +332,14 @@ function renderRecoveryWorkbench() {
     : finding ? validationFindingLocation(finding) : validation.validator_report_path || diagnostics.raw_log?.path || "";
   const globalBlockerDetail = globalAction.detail || firstFailure?.detail || "Resolve the run-global blocker before progressing the flow.";
   const globalBlockerLabel = globalAction.label || firstFailure?.title || "Run blocker";
-  const hasValidationRecovery = finding || Number(validation.validator_fail_count || 0) > 0 || (validation.validation_findings || []).length;
+  const repairAttempts = validation.repair_attempts || [];
+  const hasRepairAttempts = repairAttempts.length > 0;
+  const hasValidationFindings = Boolean(
+    finding
+    || Number(validation.validator_fail_count || 0) > 0
+    || (validation.validation_findings || []).length
+  );
+  const hasValidationRecovery = hasValidationFindings || hasRepairAttempts;
   return `
     <section class="recovery-workbench">
       <div class="recovery-hero">
@@ -356,10 +382,10 @@ function renderRecoveryWorkbench() {
       ${hasValidationRecovery ? `
         <section class="surface recovery-section">
           <div class="surface-title">
-            <span>Validation finding</span>
-            <span class="small-badge ${Number(validation.validator_fail_count || 0) ? "bad" : "good"}">${escapeHtml(status)}</span>
+            <span>${hasValidationFindings ? "Validation finding" : "Resolved retry"}</span>
+            <span class="small-badge ${hasValidationFindings && Number(validation.validator_fail_count || 0) ? "bad" : "good"}">${escapeHtml(hasValidationFindings ? status : "resolved after retry")}</span>
           </div>
-          ${renderValidationFindingList(validation)}
+          ${hasValidationFindings ? renderValidationFindingList(validation) : renderResolvedRepairSummary(validation)}
           <div class="surface-title compact">Repair attempt timeline</div>
           ${renderRepairTimeline(validation)}
         </section>
@@ -420,6 +446,7 @@ function renderValidation() {
           <div class="metric"><span>Final state</span><strong>${escapeHtml(result.final_state)}</strong></div>
           <div class="metric"><span>Attempts</span><strong>${escapeHtml(result.attempt_count)}</strong></div>
         </div>
+        ${(validation?.repair_attempts || []).length && !Number(result.validator_fail_count || 0) ? renderResolvedRepairSummary(validation) : ""}
         ${renderRecoveryActionBand(diagnostics)}
         <div class="panel-item">
           <strong>Validator report</strong>

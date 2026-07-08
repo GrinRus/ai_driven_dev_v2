@@ -123,6 +123,13 @@ document.addEventListener("click", async (event) => {
       await renderAll();
       return;
     }
+    const stageRecovery = event.target.closest("[data-stage-recovery]");
+    if (stageRecovery) {
+      activateTab(stageRecovery.dataset.stageRecovery || "recovery");
+      renderProjectHomeRail();
+      await renderCockpit();
+      return;
+    }
     const projectHomeResume = event.target.closest("[data-project-home-resume]")?.dataset.projectHomeResume;
     if (projectHomeResume) {
       await resumeProjectHomeWorkItem(projectHomeResume);

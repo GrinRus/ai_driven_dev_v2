@@ -187,6 +187,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".recovery-card" in components
     assert ".recovery-workbench" in components
     assert ".recovery-hero" in components
+    assert ".repair-resolved-summary" in components
     assert ".evidence-drilldown" in components
     assert ".interview-loop-screen" in components
     assert ".validation-repair-center" in components
@@ -331,10 +332,12 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
 
     assert '"/operator-api-state.js"' in loader
     assert "const state = {" in api_state
+    assert "function stageRetrySummary(item)" in api_state
+    assert "open Recovery for repair and retry history" in api_state
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
     assert "function renderStageRail()" in shell
-    assert "open Recovery for repair and retry history" in shell
+    assert "Retry history" in shell
     assert "projectPath.title = projectRoot;" in shell
     assert "workItemChip.title = workItemLabel;" in shell
     assert "runChip.title = runLabel;" in shell
@@ -361,6 +364,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function renderCockpit()" in cockpit
     assert "function renderRecoveryActionBand(diagnostics)" in cockpit
     assert "function renderRepairTimeline(validation)" in cockpit
+    assert "function renderResolvedRepairSummary(validation)" in cockpit
     assert "return renderFlowCompleteState();" in cockpit
     assert 'state.activeTab === "history"' in cockpit
     assert "function renderActivityTable()" in cockpit
@@ -584,6 +588,73 @@ def test_operator_project_rail_uses_distinct_segment_states() -> None:
     assert "workItemsActive" in shell
     assert 'aria-pressed="${projectsActive ? "true" : "false"}"' in shell
     assert 'aria-pressed="${workItemsActive ? "true" : "false"}"' in shell
+
+
+def test_operator_stage_retry_affordance_links_to_recovery_history() -> None:
+    api_state = _asset_text("/operator-api-state.js")
+    shell = _asset_text("/operator-shell-rendering.js")
+    layout = _asset_text("/operator-layout.css")
+    components = _asset_text("/operator-components.css")
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+    main = _asset_text("/operator-main.js")
+
+    _assert_contains_all(
+        api_state,
+        (
+            "function stageRetrySummary(item)",
+            "attemptCount <= 1",
+            "retryCount",
+            "open Recovery for repair and retry history",
+        ),
+    )
+    _assert_contains_all(
+        shell,
+        (
+            "const retry = stageRetrySummary(item);",
+            'class="small-badge ${retry ? "retried" : ""}"',
+            "retry ${escapeHtml(attemptCount)}x",
+            'class="stage-card${active}${retry ? " retried" : ""}"',
+            'data-stage-recovery="validation"',
+            "Retry history",
+        ),
+    )
+    _assert_contains_all(
+        layout,
+        (
+            ".small-badge.retried",
+            ".status-badge.retried",
+            ".badge-button.retried",
+            ".stage-card.retried",
+            ".stage-card.active.retried",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".repair-resolved-summary {",
+            "border-left: 4px solid var(--green);",
+            ".repair-resolved-summary .small-badge {",
+        ),
+    )
+    _assert_contains_all(
+        cockpit,
+        (
+            "function renderResolvedRepairSummary(validation)",
+            "resolved after retry",
+            "resolved across",
+            "Validation is clear after a retry.",
+            "hasRepairAttempts",
+            "hasValidationFindings",
+            "Resolved retry",
+        ),
+    )
+    _assert_contains_all(
+        main,
+        (
+            'closest("[data-stage-recovery]")',
+            'activateTab(stageRecovery.dataset.stageRecovery || "recovery");',
+        ),
+    )
 
 
 def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() -> None:

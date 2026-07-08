@@ -1054,6 +1054,28 @@
   gap: 8px;
   justify-content: flex-end;
 }
+.repair-resolved-summary {
+  background: #edf8f1;
+  border: 1px solid #a9d6b7;
+  border-left: 4px solid var(--green);
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px 12px;
+}
+.repair-resolved-summary .small-badge {
+  justify-self: start;
+}
+.repair-resolved-summary strong {
+  font-size: 13px;
+}
+.repair-resolved-summary p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+}
 .repair-timeline {
   display: grid;
   gap: 10px;

@@ -98,3 +98,11 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Stack mobile next-action controls and keep the primary action full-width.
 - Add a stage-attempt tooltip that points operators to Recovery for repair and retry history.
 - Rendered verification after the slice used the completed `eval-live-007-codex-20260708T131815Z` target workspace at 390px width. The updated page kept `scrollWidth=390`, stage cards stayed within `maxStageRight=380`, the stage rail rendered as `181px 181px`, and topbar controls all fit inside the viewport. Screenshot evidence: `/tmp/aidd-ui-mobile-terminal-after-fix.png`.
+
+## Retry Visibility Slice
+
+- Repaired stages now have an explicit `retry Nx` rail badge and a subtle amber stage-card marker instead of only a terse attempt count.
+- The active-stage header now exposes a `Retry history` badge button that opens Recovery / Validation for the selected stage.
+- Recovery / Validation now shows a resolved-retry summary for stages that are clean after a retry, with direct validator-report and repair-brief evidence before the full timeline.
+- This targets the refresh-run P2 finding that repair details were present in Markdown but not visually dominant enough in the main operator UI.
+- Rendered verification used the completed `eval-live-007-codex-20260708T131815Z` target workspace. Desktop DOM QA confirmed `tasklist` and `qa` rail cards show `retry 2x`, the `Retry history` button opens Recovery, and the resolved summary says `1 retry resolved across 2 validation attempts` with two timeline cards. Mobile 390px QA kept `scrollWidth=390`, stage cards inside `10..380px`, `Retry history` inside the viewport, and the recovery summary inside the viewport. Screenshot evidence: `/tmp/aidd-ui-retry-mobile-work-ready.png` and `/tmp/aidd-ui-retry-mobile-recovery.png`.
