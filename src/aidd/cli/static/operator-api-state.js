@@ -81,6 +81,7 @@ const state = {
   evidenceDetail: "artifacts",
   historyDetail: "history",
   selectedRuntime: "",
+  bottomDockUserCollapsed: null,
   activeRunId: "",
   activeJobId: "",
   activeJobCursor: 0,

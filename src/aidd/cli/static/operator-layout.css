@@ -194,12 +194,14 @@
   grid-template-rows: minmax(500px, calc(100vh - 252px)) minmax(200px, auto);
   min-height: calc(100vh - 52px);
 }
+body.bottom-dock-collapsed .operator-shell {
+  grid-template-rows: minmax(500px, calc(100vh - 98px)) auto;
+}
 body.recovery-mode .operator-shell {
   grid-template-columns: 228px minmax(0, 1fr);
-  grid-template-rows: auto;
+  grid-template-rows: minmax(500px, calc(100vh - 98px)) auto;
 }
 body.recovery-mode .right-sidebar,
-body.recovery-mode .bottom-dock,
 body.recovery-mode .global-next-action-strip {
   display: none;
 }
@@ -210,6 +212,10 @@ body.recovery-mode .cockpit {
   grid-column: 2;
   grid-row: 1;
   overflow: visible;
+}
+body.recovery-mode .bottom-dock {
+  grid-column: 2;
+  grid-row: 2;
 }
 body.setup-active .operator-shell {
   grid-template-columns: minmax(0, 1fr);

@@ -148,7 +148,7 @@ function renderLogAuditLog(entries, sourceLabel, truncation) {
                 <td>${escapeHtml(event.time_utc || "-")}</td>
                 <td><span class="small-badge ${event.level === "error" ? "bad" : event.level === "warn" ? "warn" : ""}">${escapeHtml(event.level || "info")}</span></td>
                 <td>${escapeHtml(event.source || sourceLabel)} / ${escapeHtml(event.event || "log")}</td>
-                <td>${escapeHtml(event.details || "")}</td>
+                <td>${typeof renderActivityDetail === "function" ? renderActivityDetail(event.details) : escapeHtml(event.details || "")}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -334,6 +334,9 @@ async function pollActiveJob() {
     state.activeJobCursor = Number(logs.cursor || state.activeJobCursor);
     state.activeJobLogChunks.push(...(logs.chunks || []));
     state.activeJobStatus = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}`);
+    renderActiveRunPanel();
+    if (typeof renderNextActionPanel === "function") renderNextActionPanel();
+    if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
     renderActivityTable();
     if (activeModeIsEvidenceLog()) await renderLogs();
     if (state.activeJobStatus.status === "waiting-for-operator") {
@@ -360,8 +363,17 @@ async function startJobPolling(job) {
   state.activeJobId = job.job_id;
   state.activeJobCursor = 0;
   state.activeJobLogChunks = [];
-  state.activeJobStatus = {job_id: job.job_id, kind: job.kind, stage: job.stage, status: "running"};
+  state.activeJobStatus = {
+    job_id: job.job_id,
+    kind: job.kind,
+    stage: job.stage,
+    status: "running",
+    message: "job started"
+  };
   if (state.activeJobTimer) clearInterval(state.activeJobTimer);
+  renderActiveRunPanel();
+  if (typeof renderNextActionPanel === "function") renderNextActionPanel();
+  if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
   activateTab("logs");
   await renderLogs();
   await pollActiveJob();

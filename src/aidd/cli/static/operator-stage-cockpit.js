@@ -185,17 +185,13 @@ function renderValidationFindingList(validation) {
 }
 
 function recoveryPrimaryActionSpec(diagnostics) {
-  const action = state.dashboard?.next_action || {};
+  const recoveryActions = state.dashboard?.recovery_actions || [];
+  const runtimeAction = recoveryActions.find((item) => item.action === "inspect-runtime-log");
+  const guidedAction = runtimeAction || recoveryActions.find((item) => item.enabled !== false) || null;
+  const action = guidedAction || state.dashboard?.next_action || {};
   const validation = diagnostics?.validation;
   const status = repairCenterStatus(validation, diagnostics?.stopped);
   const stage = action.stage || state.activeStage;
-  if (action.action === "answer-questions") {
-    return {
-      label: action.label || "Answer questions",
-      detail: action.detail || "Resolve blocking questions before resuming execution.",
-      attrs: `data-recovery-action="answer-questions" data-recovery-stage="${escapeHtml(stage)}"`
-    };
-  }
   if (status === "repair-available") {
     return {
       label: "Run Repair",
@@ -210,10 +206,17 @@ function recoveryPrimaryActionSpec(diagnostics) {
       attrs: `data-recovery-action="request-change" data-recovery-stage="${escapeHtml(stage)}"`
     };
   }
+  if (action.action === "answer-questions") {
+    return {
+      label: action.label || "Answer questions",
+      detail: action.detail || "Resolve blocking questions before resuming execution.",
+      attrs: `data-recovery-action="answer-questions" data-recovery-stage="${escapeHtml(stage)}"`
+    };
+  }
   if (action.action === "inspect-runtime-log") {
     return {
-      label: action.label || "Open runtime log",
-      detail: action.detail || "Inspect the saved runtime log evidence.",
+      label: action.label || "Open logs",
+      detail: action.detail || "Inspect the saved runtime log, runtime-exit metadata, and readiness/config context before retrying.",
       attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(stage)}"`
     };
   }
@@ -241,27 +244,34 @@ function renderRecoveryWorkbench() {
   const questions = view?.questions || {};
   const unresolvedQuestions = questions.unresolved_blocking_question_ids || [];
   const firstFailure = state.dashboard?.first_failure || null;
+  const globalAction = state.dashboard?.next_action || {};
+  const globalStage = globalAction.stage || firstFailure?.stage || "";
+  const hasGlobalBlocker = Boolean(globalStage && globalStage !== state.activeStage);
   const finding = primaryValidationFinding();
   const primary = recoveryPrimaryActionSpec(diagnostics);
   const status = repairCenterStatus(validation, diagnostics.stopped);
-  const affectedStage = stageTitle((state.dashboard?.next_action || {}).stage || firstFailure?.stage || state.activeStage);
-  const reason = firstFailure?.detail
+  const selectedStage = activeStageItem();
+  const selectedStageLabel = stageTitle(state.activeStage);
+  const selectedReason = diagnostics.stopped?.detail
+    || validation.primary_validation_finding?.message
     || (unresolvedQuestions.length
-      ? `${unresolvedQuestions.length} blocking question(s) must be resolved.`
-      : validation.primary_validation_finding?.message || primary.detail);
-  const evidencePath = finding ? validationFindingLocation(finding) : firstFailure?.path || validation.validator_report_path || "";
+      ? `${unresolvedQuestions.length} blocking question(s) for ${selectedStageLabel} must be resolved.`
+      : primary.detail);
+  const evidencePath = finding ? validationFindingLocation(finding) : validation.validator_report_path || diagnostics.raw_log?.path || "";
+  const globalBlockerDetail = globalAction.detail || firstFailure?.detail || "Resolve the run-global blocker before progressing the flow.";
+  const globalBlockerLabel = globalAction.label || firstFailure?.title || "Run blocker";
   const hasValidationRecovery = finding || Number(validation.validator_fail_count || 0) > 0 || (validation.validation_findings || []).length;
   return `
     <section class="recovery-workbench">
       <div class="recovery-hero">
         <div class="recovery-hero-copy">
-          <p class="eyebrow">Recovery</p>
+          <p class="eyebrow">Selected stage recovery</p>
           <h2>${escapeHtml(recoveryFailureTitle(firstFailure, diagnostics))}</h2>
-          <p>${escapeHtml(reason)}</p>
+          <p>${escapeHtml(selectedReason)}</p>
           <div class="recovery-facts">
-            <span><strong>Stage</strong>${escapeHtml(affectedStage)}</span>
-            <span><strong>Status</strong>${escapeHtml(status)}</span>
-            <span><strong>Evidence</strong>${escapeHtml(compactPath(evidencePath || "not available", 86))}</span>
+            <span><strong>Selected stage</strong>${escapeHtml(selectedStageLabel)}</span>
+            <span><strong>Selected-stage status</strong>${escapeHtml(selectedStage?.status || status)}</span>
+            <span><strong>Selected-stage evidence</strong>${escapeHtml(compactPath(evidencePath || "not available", 86))}</span>
           </div>
         </div>
         <div class="recovery-primary-actions">
@@ -269,6 +279,16 @@ function renderRecoveryWorkbench() {
           <button class="secondary" data-tab-shortcut="evidence" type="button">Open Evidence</button>
         </div>
         ${finding ? `<div class="recovery-hero-finding">${renderValidationFindingSummary(finding)}</div>` : ""}
+        ${hasGlobalBlocker ? `
+          <div class="run-global-blocker-banner">
+            <span class="small-badge warn">Run-global blocker</span>
+            <div>
+              <strong>${escapeHtml(globalBlockerLabel)}</strong>
+              <span>Stage ${escapeHtml(stageTitle(globalStage))}</span>
+              <p>${escapeHtml(globalBlockerDetail)}</p>
+            </div>
+          </div>
+        ` : ""}
       </div>
       ${unresolvedQuestions.length || (questions.questions || []).length ? `
         <section class="surface recovery-section">
@@ -391,6 +411,15 @@ async function renderCockpit() {
     return;
   }
   if (state.activeTab === "recovery") {
+    if (state.recoveryDetail === "questions") {
+      content.innerHTML = renderQuestions();
+      updateQuestionResumeButtonStates();
+      return;
+    }
+    if (state.recoveryDetail === "validation") {
+      content.innerHTML = renderValidation();
+      return;
+    }
     if (state.recoveryDetail === "request") {
       await renderRequestChange();
       return;
@@ -602,7 +631,9 @@ function renderRecoveryAssistantPanel() {
       </span>
       <span class="small-badge">${escapeHtml(action.action)}</span>
     </button>
-  `).join("") : `<div class="empty-state compact">No recovery action needed for the current state.</div>`;
+  `).join("") : firstFailure
+    ? `<div class="empty-state compact">No guided recovery action is available. Inspect the failure evidence before retrying.</div>`
+    : `<div class="empty-state compact">No recovery action needed for the current state.</div>`;
   const failure = firstFailure ? `
     <article class="recovery-card failure">
       <div class="question-head">
@@ -722,6 +753,51 @@ function activityEvents() {
   ];
 }
 
+function summarizeActivityDetails(details) {
+  const raw = String(details ?? "");
+  const normalized = raw.replace(/\s+/g, " ").trim();
+  if (!normalized) return {summary: "-", raw: "", showRaw: false};
+  let summary = normalized;
+  if (/^[\[{]/.test(normalized)) {
+    try {
+      const parsed = JSON.parse(normalized);
+      if (Array.isArray(parsed)) {
+        summary = `JSON array (${parsed.length} items)`;
+      } else if (parsed && typeof parsed === "object") {
+        const keys = Object.keys(parsed);
+        const type = parsed.type || parsed.event || parsed.kind || parsed.name || "JSON event";
+        const outcome = parsed.status || parsed.outcome || parsed.message || "";
+        summary = [type, outcome, keys.length ? `keys: ${keys.slice(0, 6).join(", ")}` : ""]
+          .filter(Boolean)
+          .join(" / ");
+      }
+    } catch (_) {
+      summary = normalized;
+    }
+  }
+  const compact = summary.length > 220 ? `${summary.slice(0, 217)}...` : summary;
+  const rawPreview = normalized.length > 2400 ? `${normalized.slice(0, 2400)}...` : normalized;
+  return {
+    summary: compact,
+    raw: rawPreview,
+    showRaw: normalized !== compact,
+    rawTruncated: normalized.length > rawPreview.length
+  };
+}
+
+function renderActivityDetail(details) {
+  const detail = summarizeActivityDetails(details);
+  if (!detail.showRaw) {
+    return escapeHtml(detail.summary);
+  }
+  return `
+    <details class="activity-detail">
+      <summary>${escapeHtml(detail.summary)}</summary>
+      <pre>${escapeHtml(detail.raw)}${detail.rawTruncated ? "\n...[raw truncated in UI]" : ""}</pre>
+    </details>
+  `;
+}
+
 function renderActivityTableMarkup(events) {
   if (!events.length) {
     return `<div class="empty-state">No activity for this run yet.</div>`;
@@ -735,7 +811,7 @@ function renderActivityTableMarkup(events) {
             <td>${escapeHtml(event.time_utc || "-")}</td>
             <td><span class="small-badge ${event.level === "error" ? "bad" : event.level === "warn" ? "warn" : ""}">${escapeHtml(event.level)}</span></td>
             <td>${escapeHtml(event.source)} / ${escapeHtml(event.event)}</td>
-            <td>${escapeHtml(event.details)}</td>
+            <td>${renderActivityDetail(event.details)}</td>
           </tr>
         `).join("")}
       </tbody>
@@ -774,9 +850,57 @@ function renderRecentArtifacts() {
   `).join("") : `<div class="empty-state">No artifacts yet.</div>`;
 }
 
+function bottomDockDefaultCollapsed() {
+  if (!state.dashboard?.run?.run_id) return false;
+  if (state.nextFlowWizard.active) return true;
+  if (state.activeTab === "evidence" || state.activeTab === "recovery") return true;
+  if (state.activeTab === "work") {
+    if (state.dashboard?.terminal_handoff) return true;
+    return state.workDetail !== "overview";
+  }
+  return false;
+}
+
+function bottomDockIsCollapsed() {
+  if (state.bottomDockUserCollapsed === true || state.bottomDockUserCollapsed === false) {
+    return state.bottomDockUserCollapsed;
+  }
+  return bottomDockDefaultCollapsed();
+}
+
 function renderBottomDock() {
-  renderActivityTable();
-  renderRecentArtifacts();
+  const dock = document.querySelector(".bottom-dock");
+  if (!dock) return;
+  const collapsed = bottomDockIsCollapsed();
+  document.body.classList.toggle("bottom-dock-collapsed", collapsed);
+  dock.classList.toggle("collapsed", collapsed);
+  dock.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  dock.innerHTML = `
+    <div class="bottom-dock-toggle-row">
+      <span>Activity / Recent artifacts</span>
+      <button data-bottom-dock-toggle class="link-button" type="button">${collapsed ? "Show activity" : "Hide activity"}</button>
+    </div>
+    ${collapsed ? "" : `
+      <div class="dock-panel activity-panel">
+        <div class="dock-header">
+          <span>Activity / Events</span>
+          <button id="viewFullLogButton" class="link-button" type="button">View full log</button>
+        </div>
+        <div id="activityTable" class="table-wrap"></div>
+      </div>
+      <div class="dock-panel artifacts-panel">
+        <div class="dock-header">
+          <span>Recent artifacts</span>
+          <button id="openStageFolderButton" class="link-button" type="button">Open stage folder</button>
+        </div>
+        <div id="recentArtifacts" class="recent-artifacts"></div>
+      </div>
+    `}
+  `;
+  if (!collapsed) {
+    renderActivityTable();
+    renderRecentArtifacts();
+  }
 }
 
 async function renderAll() {

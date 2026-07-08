@@ -48,8 +48,14 @@ function selectedInterventionTargets() {
 function updateSubmitInterventionState() {
   const textarea = document.getElementById("operatorRequestText");
   const button = document.getElementById("submitInterventionButton");
+  const note = document.getElementById("interventionReadinessNote");
+  const readinessReason = runtimeReadinessMessage();
+  if (note) {
+    note.textContent = readinessReason;
+    note.hidden = !readinessReason;
+  }
   if (!button) return;
-  button.disabled = !selectedRuntimeReady() || !String(textarea?.value || "").trim();
+  button.disabled = Boolean(readinessReason) || !String(textarea?.value || "").trim();
 }
 
 function renderInterventionDiffPreview(requestText, targetDocuments) {
@@ -129,6 +135,20 @@ function renderRequestChangeAuditLog(context) {
   `;
 }
 
+function renderLatestRequestSummary(context) {
+  if (!context?.latest_request_id) return "";
+  return `
+    <section class="latest-request-summary" aria-label="Latest request">
+      <span class="small-badge good">Latest request</span>
+      <div>
+        <strong>${escapeHtml(context.latest_request_id)}</strong>
+        ${context.latest_request_path ? pathLine(context.latest_request_path, 88) : ""}
+        <p>${escapeHtml(context.latest_request_excerpt || "Latest submitted operator request is saved for this stage.")}</p>
+      </div>
+    </section>
+  `;
+}
+
 async function renderRequestChange() {
   let documents = {};
   const context = activeStageView()?.diagnostics?.request_change || {};
@@ -157,6 +177,7 @@ async function renderRequestChange() {
           <span>Request Change / Intervention Composer</span>
           <span class="small-badge">${escapeHtml(context.status || state.activeStage)}</span>
         </div>
+        ${renderLatestRequestSummary(context)}
         <div class="request-change-grid">
           <div class="intervention-form">
             <div class="form-field">
@@ -169,6 +190,7 @@ async function renderRequestChange() {
             </div>
             <div class="question-actions">
               <button id="submitInterventionButton" type="button">Submit & run</button>
+              <p id="interventionReadinessNote" class="form-readiness-note" role="status"></p>
             </div>
           </div>
           <aside class="intervention-preview-column">
@@ -434,6 +456,12 @@ async function submitApproval(requestId, action) {
 }
 
 async function submitIntervention() {
+  const readinessReason = runtimeReadinessMessage();
+  if (readinessReason) {
+    updateSubmitInterventionState();
+    toast(readinessReason);
+    return;
+  }
   if (!ensureRunnableRuntime()) return;
   const textarea = document.getElementById("operatorRequestText");
   const request = textarea?.value?.trim() || "";

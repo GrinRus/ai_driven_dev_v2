@@ -2630,6 +2630,7 @@ class OperatorUiService:
         }
 
     def _start_workflow_job(self, payload: dict[str, Any]) -> object:
+        self._require_context()
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)

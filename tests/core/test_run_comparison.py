@@ -260,6 +260,42 @@ def test_run_comparison_does_not_warn_for_optional_missing_repair_brief_without_
     assert all(delta.key != "repair_brief" for delta in view.artifact_hash_deltas)
 
 
+def test_run_comparison_does_not_warn_for_succeeded_retry_without_repair_brief(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_comparison_run(
+        workspace_root,
+        run_id="run-a",
+        status="succeeded",
+        prompt_hash="a" * 64,
+        input_bundle="baseline input\n",
+        validator_verdict="pass",
+    )
+    persist_repair_history_entry(
+        workspace_root=workspace_root,
+        work_item="WI-CMP",
+        run_id="run-a",
+        stage="plan",
+        attempt_number=2,
+        trigger="initial",
+        outcome="succeeded",
+        validator_report_path=(
+            workspace_root / "workitems" / "WI-CMP" / "stages" / "plan" / "validator-report.md"
+        ),
+    )
+
+    view = resolve_run_comparison(
+        workspace_root=workspace_root,
+        work_item="WI-CMP",
+        baseline_run_id="run-a",
+        target_run_id="run-a",
+    )
+
+    assert not any("repair_brief" in warning for warning in view.warnings)
+    assert all(delta.key != "repair_brief" for delta in view.artifact_hash_deltas)
+
+
 def test_run_comparison_warns_for_missing_repair_brief_when_repairs_exist(
     tmp_path: Path,
 ) -> None:

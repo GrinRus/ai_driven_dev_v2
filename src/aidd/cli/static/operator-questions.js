@@ -21,6 +21,26 @@ function questionStatusClass(question) {
   return "";
 }
 
+function questionRequiresResolvedResume(question) {
+  return question?.policy === "blocking";
+}
+
+function updateQuestionResumeButtonState(questionId) {
+  const button = document.querySelector(`[data-answer-resume="${CSS.escape(questionId)}"]`);
+  if (!button || button.dataset.requiresResolvedResume !== "true") return;
+  const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
+  const resolved = (resolution?.value || "resolved") === "resolved";
+  button.disabled = !resolved;
+  button.textContent = resolved ? (button.dataset.resumeReadyLabel || "Answer & resume") : "Select resolved to resume";
+  button.title = resolved ? "" : "Blocking questions must be saved as resolved before resume.";
+}
+
+function updateQuestionResumeButtonStates() {
+  document.querySelectorAll("[data-answer-resume]").forEach((button) => {
+    updateQuestionResumeButtonState(button.dataset.answerResume);
+  });
+}
+
 function renderInterviewSummary(view) {
   const questions = view?.questions || [];
   const unresolved = view?.unresolved_blocking_question_ids || [];
@@ -89,6 +109,11 @@ function renderQuestionCards({showResume}) {
           : "";
         const answerText = question.answer_text || "";
         const resolutionValue = question.answer_resolution || "resolved";
+        const resumeNeedsResolved = questionRequiresResolvedResume(question);
+        const resumeDisabled = resumeNeedsResolved && resolutionValue !== "resolved";
+        const resumeLabel = resumeDisabled
+          ? "Select resolved to resume"
+          : displayStatus === "resolved" ? "Update & resume" : "Answer & resume";
         return `
           <article class="question-card">
             <div class="question-head">
@@ -111,7 +136,7 @@ function renderQuestionCards({showResume}) {
                 <option value="deferred" ${resolutionValue === "deferred" ? "selected" : ""}>deferred</option>
               </select>
               <button data-save-answer="${escapeHtml(question.question_id)}" type="button">${displayStatus === "resolved" ? "Update answer" : "Save answer"}</button>
-              ${showResume ? `<button data-answer-resume="${escapeHtml(question.question_id)}" type="button">${displayStatus === "resolved" ? "Update & resume" : "Answer & resume"}</button>` : ""}
+              ${showResume ? `<button data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="${displayStatus === "resolved" ? "Update & resume" : "Answer & resume"}" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel)}</button>` : ""}
             </div>
           </article>
         `;
@@ -165,6 +190,12 @@ async function saveAnswer(questionId) {
 }
 
 async function answerAndResume(questionId) {
+  const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
+  if ((resolution?.value || "resolved") !== "resolved") {
+    updateQuestionResumeButtonState(questionId);
+    toast("Select resolved before resuming a blocking stage.");
+    return;
+  }
   const saved = await saveAnswer(questionId);
   if (!saved) return;
   await fetchDashboard();
