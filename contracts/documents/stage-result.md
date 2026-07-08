@@ -94,6 +94,15 @@ or validation wording when the canonical validator report proves the draft incon
     For example, a successful `implement` result must point operators to `review`, not
     directly to `qa`; `qa` is only an appropriate downstream action after `review`
     has completed successfully.
+  - For a successful non-terminal stage, name the immediate canonical next stage in the
+    operator-facing action:
+    - `idea` -> `research`
+    - `research` -> `plan`
+    - `plan` -> `review-spec`
+    - `review-spec` -> `tasklist`
+    - `tasklist` -> `implement`
+    - `implement` -> `review`
+    - `review` -> `qa`
 - `Terminal state notes`
   - Must explain why the stage ended in the declared terminal status.
   - Must include repair-budget outcome when repair logic was used.
@@ -128,6 +137,10 @@ or validation wording when the canonical validator report proves the draft incon
 - Do not skip canonical downstream stages in `Next actions`. The next-action copy is
   operator guidance, so it must name the immediate retry, repair, question-answering,
   or next-stage step rather than a later desired terminal state.
+- When status is `succeeded`, the first downstream action must include the immediate next
+  stage id from the canonical chain. Do not describe later work such as implementation,
+  review, QA, or release as the next operator step until the intervening canonical stage
+  has completed.
 - If canonical AIDD validation passes, runtime exit succeeded, and no unresolved blocking
   questions remain, AIDD may normalize a stale draft `Status: failed|blocked` or
   `Validator verdict: fail` to `succeeded` / `pass` before publication and record that

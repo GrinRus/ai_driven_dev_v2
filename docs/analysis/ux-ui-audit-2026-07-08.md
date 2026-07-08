@@ -257,3 +257,15 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Import manual frontend screenshots or browser notes into the live bundle for terminal UI/UX review evidence instead of leaving `/tmp` references outside the eval artifact tree.
 - Add bounded ignored-residue wording to the implementation prompt/contract so live logs cite the evidence command without dumping full dependency trees.
 - Harden live E2E interruption recording so a repeated interrupt cannot corrupt or skip the interrupted-resumable evidence step.
+
+## Canonical Stage Next Action Slice
+
+- `stage-result.md` now gives a full immediate-next-stage map for the canonical chain:
+  `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- The `plan` contract and prompt now require successful next-action copy to point to
+  `review-spec`, preventing first-time operators from skipping the review-spec screen and
+  jumping mentally to task decomposition or implementation.
+- The `review-spec` contract and prompt now require successful next-action copy to point to
+  `tasklist`, preventing the reviewed-plan handoff from skipping decomposition.
+- The live AIDD-LIVE-007 audit rubric now names the observed middle-stage checks explicitly:
+  `plan -> review-spec`, `review-spec -> tasklist`, and `implement -> review`.

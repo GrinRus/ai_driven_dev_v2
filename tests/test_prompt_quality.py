@@ -320,6 +320,47 @@ def test_implement_stage_result_next_action_stays_flow_aware() -> None:
     assert "downstream-order drift" in implement_repair_prompt
 
 
+def test_middle_stage_result_next_actions_stay_flow_aware() -> None:
+    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
+        encoding="utf-8"
+    )
+    plan_contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
+    plan_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+    plan_repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
+        encoding="utf-8"
+    )
+    review_spec_contract = Path("contracts/stages/review-spec.md").read_text(
+        encoding="utf-8"
+    )
+    review_spec_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_spec_repair_prompt = Path(
+        "prompt-packs/stages/review-spec/repair.md"
+    ).read_text(encoding="utf-8")
+    live_scenario = Path(
+        "harness/scenarios/live/hono-non-error-throw-handling.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert "`plan` -> `review-spec`" in stage_result_contract
+    assert "`review-spec` -> `tasklist`" in stage_result_contract
+
+    for text in (plan_contract, plan_prompt, plan_repair_prompt, live_scenario):
+        assert "`review-spec`" in text
+        assert "immediate" in text
+        assert "implementation" in text
+
+    for text in (
+        review_spec_contract,
+        review_spec_prompt,
+        review_spec_repair_prompt,
+        live_scenario,
+    ):
+        assert "`tasklist`" in text
+        assert "immediate" in text
+        assert "implementation" in text
+
+
 def test_js_ts_helper_internal_claims_require_export_map_evidence() -> None:
     tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
         encoding="utf-8"

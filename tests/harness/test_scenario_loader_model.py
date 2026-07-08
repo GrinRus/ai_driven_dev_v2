@@ -58,8 +58,12 @@ def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
     assert "preserves the existing public error type contracts" in task.quality_bar
     assert task.visible_request is not None
     assert task.audit_rubric is not None
-    assert " ".join(task.audit_rubric.split()).endswith(
-        "an `implement` summary must point to `review`, not directly to `qa`."
+    normalized_rubric = " ".join(task.audit_rubric.split())
+    assert "immediate canonical stage order" in normalized_rubric
+    assert "`plan` must point to `review-spec`" in normalized_rubric
+    assert "`review-spec` must point to `tasklist`" in normalized_rubric
+    assert "`implement` must point to `review`, not directly to `qa`" in (
+        normalized_rubric
     )
     assert task.complexity_axes == (
         "cross-module",

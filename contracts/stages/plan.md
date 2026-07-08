@@ -57,6 +57,9 @@ Optional context documents may improve planning quality, but they must not repla
   optional/non-blocking exploratory checks; they must not become required pass criteria when the
   authored verification boundary is narrower.
 - `stage-result.md` and `validator-report.md` must stay consistent with the declared plan readiness.
+- On success, `stage-result.md` `Next actions` must name `review-spec` as the immediate
+  canonical downstream stage. Do not tell the operator to proceed to task decomposition or
+  implementation before `review-spec` has completed successfully.
 
 ## Validation focus
 
@@ -120,4 +123,4 @@ A `plan` run is considered ready to progress when:
 - the required output documents exist,
 - validators pass,
 - any required user questions have answers,
-- `stage-result.md` names the next action clearly.
+- `stage-result.md` names `review-spec` as the immediate next stage when the run succeeds.
