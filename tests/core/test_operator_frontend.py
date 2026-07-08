@@ -905,6 +905,30 @@ def test_operator_dashboard_prioritizes_running_stage_over_stale_validation(
         run_id="run-ui",
         stage="implement",
     )
+    events_path = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage="implement",
+            attempt_number=1,
+        )
+        / RUN_EVENTS_JSONL_FILENAME
+    )
+    events_path.write_text(
+        "\n".join(
+            json.dumps(
+                {
+                    "type": "runtime.event",
+                    "timestamp": f"2026-07-08T19:{index % 60:02d}:00Z",
+                    "message": "running event " + ("x" * 200),
+                }
+            )
+            for index in range(2000)
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     persist_stage_status(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -936,6 +960,10 @@ def test_operator_dashboard_prioritizes_running_stage_over_stale_validation(
     assert dashboard.next_action.enabled is False
     assert dashboard.next_action.label == "Implement running"
     assert stages["implement"].reason == "stage is running"
+    assert dashboard.active_stage_view is None
+    assert dashboard.primary_artifact is None
+    assert dashboard.activity == ()
+    assert dashboard.recent_artifacts == ()
 
 
 def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> None:

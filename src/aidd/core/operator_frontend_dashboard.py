@@ -1005,18 +1005,9 @@ def _next_action(
             stage=active_stage_view.result.stage,
             enabled=True,
         )
-    running_stage = next(
-        (item for item in rail_by_stage.values() if item.status in _RUNNING_STAGE_STATES),
-        None,
-    )
+    running_stage = _running_stage_item(rail_by_stage)
     if running_stage is not None:
-        return OperatorNextAction(
-            action="wait-for-stage",
-            label=f"{running_stage.title} running",
-            detail="Refresh after the active stage leaves preparing, executing, or validating.",
-            stage=running_stage.stage,
-            enabled=False,
-        )
+        return _running_stage_next_action(running_stage)
     failed_validation_stage = next(
         (
             item
@@ -1133,6 +1124,25 @@ def _next_action(
         detail=runnable.reason,
         stage=target_stage,
         enabled=True,
+    )
+
+
+def _running_stage_item(
+    rail_by_stage: dict[str, OperatorStageRailItem],
+) -> OperatorStageRailItem | None:
+    return next(
+        (item for item in rail_by_stage.values() if item.status in _RUNNING_STAGE_STATES),
+        None,
+    )
+
+
+def _running_stage_next_action(running_stage: OperatorStageRailItem) -> OperatorNextAction:
+    return OperatorNextAction(
+        action="wait-for-stage",
+        label=f"{running_stage.title} running",
+        detail="Refresh after the active stage leaves preparing, executing, or validating.",
+        stage=running_stage.stage,
+        enabled=False,
     )
 
 
@@ -1916,6 +1926,32 @@ def resolve_operator_dashboard_view(
         stale_by_stage=stale_by_stage,
     )
     rail_by_stage = {stage.stage: stage for stage in stages}
+    running_stage = _running_stage_item(rail_by_stage)
+    if running_stage is not None:
+        return OperatorDashboardView(
+            work_item=work_item,
+            workspace_root=workspace_root,
+            project_root=selected_project_root,
+            active_stage=active_stage,
+            run=(
+                _run_summary(metadata)
+                if metadata
+                else _empty_run_summary(workspace_root=workspace_root, work_item=work_item)
+            ),
+            stages=stages,
+            active_stage_view=None,
+            primary_artifact=None,
+            next_action=_running_stage_next_action(running_stage),
+            blockers=(),
+            first_failure=None,
+            validation_findings=(),
+            primary_validation_finding=None,
+            recovery_actions=(),
+            evidence_refs=(),
+            activity=(),
+            recent_artifacts=(),
+            terminal_handoff=None,
+        )
     primary_artifact = _primary_artifact(
         workspace_root=workspace_root,
         work_item=work_item,

@@ -211,8 +211,28 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Regression coverage validates that a cache-absence command with `.pytest_cache` and `.ruff_cache` is accepted without hanging, while the existing cleanup-prose case still does not get mistaken for executable command evidence.
 - Replay verification against the interrupted live `implement` artifact now completes with `0` findings and advances the stage to `succeeded` with published output mirrors.
 
+## Refresh Run - 2026-07-08T19:55Z
+
+- `eval-live-007-codex-20260708T195548Z`: terminal execution verdict `fail`.
+- The run stopped during the `idea` stage frontend running-stage checkpoint, before the later workflow stages could execute.
+- The public page, run API, stage API, and logs API all returned `200`, and the `idea` post-stage checkpoint passed after the stage settled.
+- The running-stage `/api/dashboard?stage=idea&run_id=eval-live-007-codex-20260708T195548Z` probe timed out, so the checkpoint could not observe the active running stage or disabled `wait-for-stage` action.
+
+## Refresh Findings - 2026-07-08T19:55Z
+
+- P1: The running-stage dashboard path is too expensive or race-prone for the first active-stage probe. A first-time operator can lose the most important state during a long stage: "this stage is running; wait, refresh, or open logs."
+- P2: The post-stage dashboard path remains healthy, which narrows the gap to active-stage rendering rather than general UI/API availability.
+- P2: The running-stage checkpoint currently needs only run context, stage rail, `wait-for-stage`, and log affordance; full artifact previews, recent activity, validation findings, and recovery summaries are lower-value until the stage settles.
+
+## Running Dashboard Fast Path Slice
+
+- Dashboard resolution now short-circuits when any stage is in `preparing`, `executing`, or `validating` state.
+- The running-state response keeps the run summary, stage rail, and disabled `wait-for-stage` next action, while deferring active-stage previews, primary artifacts, recent activity, recent artifacts, validation findings, recovery actions, and terminal handoff until the stage settles.
+- This preserves the operator's essential live state while making the first active-stage `/api/dashboard` probe cheap and less sensitive to files being written concurrently by the runtime.
+- Regression coverage creates a running implementation stage with a large `events.jsonl` and asserts that the dashboard still returns `wait-for-stage` without loading heavy activity or artifact sections.
+
 ## Next UX Plan
 
-- Refresh a medium live E2E from the validator-regex commit to confirm `implement` no longer stalls in `validating` and to continue through `review` / `qa`.
+- Refresh a medium live E2E from the running-dashboard fast-path commit to confirm the `idea` running-stage checkpoint no longer fails and that `implement` no longer stalls in `validating`.
 - Add bounded ignored-residue wording to the implementation prompt/contract so live logs cite the evidence command without dumping full dependency trees.
 - Harden live E2E interruption recording so a repeated interrupt cannot corrupt or skip the interrupted-resumable evidence step.
