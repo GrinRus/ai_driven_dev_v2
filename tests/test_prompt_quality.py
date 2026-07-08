@@ -289,6 +289,37 @@ def test_implement_review_and_qa_require_shared_surface_blast_radius_evidence() 
     assert "must force `QA verdict: not-ready`" in qa_contract
 
 
+def test_implement_stage_result_next_action_stays_flow_aware() -> None:
+    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
+        encoding="utf-8"
+    )
+    implement_contract = Path("contracts/stages/implement.md").read_text(
+        encoding="utf-8"
+    )
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    implement_repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (
+        stage_result_contract,
+        implement_contract,
+        implement_prompt,
+        implement_repair_prompt,
+    ):
+        assert "directly to `qa`" in text
+        assert "`review`" in text
+
+    assert "implement -> review -> qa" in stage_result_contract
+    assert "implement -> review -> qa" in implement_contract
+    assert "`implement` hands off to `review`, never\n  directly to `qa`" in (
+        implement_prompt
+    )
+    assert "downstream-order drift" in implement_repair_prompt
+
+
 def test_js_ts_helper_internal_claims_require_export_map_evidence() -> None:
     tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
         encoding="utf-8"

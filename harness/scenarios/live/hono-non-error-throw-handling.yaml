@@ -77,7 +77,9 @@ feature_source:
       and regression surface before implementation. Count defects when the plan or
       code broadens public error types unnecessarily, only handles one thrown value
       shape, misses existing Error behavior, or proves behavior with weak/non-focused
-      verification.
+      verification. During stage-quality review, also check that `stage-result.md`
+      next actions preserve canonical stage order; an `implement` summary must point
+      to `review`, not directly to `qa`.
     complexity_axes:
     - cross-module
     - api-policy

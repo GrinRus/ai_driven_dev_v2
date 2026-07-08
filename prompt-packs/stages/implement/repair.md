@@ -96,6 +96,9 @@ Use concrete repair actions:
 - `invalid no-op`: add evidence-backed justification and actionable next step, or convert run from
   no-op to real scoped edits;
 - status drift: align validator verdict, stage status, blockers, and next actions.
+- downstream-order drift: if `stage-result.md` tells the operator to proceed directly to `qa`
+  after `implement`, rewrite the next action to point to `review`; QA is only downstream after a
+  successful review stage.
 
 ## Targeted repair discipline
 
@@ -116,6 +119,8 @@ Use concrete repair actions:
    stage, record it as `not-run: future-stage artifact` instead of running it as an expected failure.
 5. If no-op is retained, include justification, evidence, and next action; otherwise no-op is invalid.
 6. Keep `stage-result.md` attempt status truthful for the current repair attempt.
+   When the repaired implementation succeeds, keep the next action flow-aware: hand off to
+   `review`, not directly to `qa`.
 7. Use exact required headings from document contracts; do not rename or qualify headings.
 8. Read the repair budget section in `repair-brief.md` before declaring terminal status.
 9. If `repair-brief.md` says `repair-budget-final-attempt` or `Rerun allowed after this attempt: no`, still repair the listed findings and set `stage-result.md` status from the actual repaired output state; do not fail solely because no later rerun is available.

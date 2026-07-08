@@ -63,6 +63,7 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Current follow-up: repaired `stage-result.md` rendering now preserves declared primary outputs already present in the stage directory, so repaired summaries do not hide `plan.md`, `implementation-report.md`, `review-report.md`, `qa-report.md`, or equivalent primary reports.
 - Current follow-up: validation-pass reconciliation now replaces stale terminal notes that still claim a stage ended as `failed`, `blocked`, or `needs-input`. The summary can say artifact publication succeeded while preserving product-quality decisions such as `review-report.md` rejection in the primary report.
 - Current follow-up: the active run panel now surfaces a live running-stage progress notice with elapsed time, runtime-output freshness, live log chunk count, and a direct log shortcut. Rendered QA covered desktop no-output and mobile live-output states via `/tmp/aidd-running-progress-desktop.png` and `/tmp/aidd-running-progress-mobile.png`.
+- Current follow-up: `stage-result.md` next-action guidance is now flow-aware for implementation handoff. The document contract, implement prompt/repair prompt, and AIDD-LIVE-007 audit rubric require successful `implement` summaries to point to `review`, not directly to `qa`.
 
 ## Deferred Work
 
@@ -70,4 +71,4 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Rebalance first-launch onboarding so the recommended deterministic/safe path is visually dominant while real provider runners remain available.
 - Promote the running-stage visual checks into the repeatable live E2E checkpoint instead of relying on a synthetic manual fixture.
 - Continue improving terminal stage summaries so they name the next operator decision without burying review or QA outcomes in artifact details.
-- Make generated next-action copy flow-aware so stage summaries do not point to QA before review.
+- Add repeatable validation or grader coverage for generated stage-result next-action wording after the next live E2E run refreshes evidence.

@@ -89,6 +89,11 @@ or validation wording when the canonical validator report proves the draft incon
 - `Next actions`
   - Must define actionable follow-up steps for operators or the next stage.
   - Must distinguish retry actions from downstream stage progression.
+  - Downstream stage progression must follow canonical stage order
+    (`idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`).
+    For example, a successful `implement` result must point operators to `review`, not
+    directly to `qa`; `qa` is only an appropriate downstream action after `review`
+    has completed successfully.
 - `Terminal state notes`
   - Must explain why the stage ended in the declared terminal status.
   - Must include repair-budget outcome when repair logic was used.
@@ -120,6 +125,9 @@ or validation wording when the canonical validator report proves the draft incon
 - Do not claim success when required outputs or validation evidence are missing.
 - Do not claim `Validator verdict: pass` when the canonical AIDD validator report lists
   findings.
+- Do not skip canonical downstream stages in `Next actions`. The next-action copy is
+  operator guidance, so it must name the immediate retry, repair, question-answering,
+  or next-stage step rather than a later desired terminal state.
 - If canonical AIDD validation passes, runtime exit succeeded, and no unresolved blocking
   questions remain, AIDD may normalize a stale draft `Status: failed|blocked` or
   `Validator verdict: fail` to `succeeded` / `pass` before publication and record that

@@ -99,6 +99,8 @@ Optional context documents may improve implementation quality, but they must not
   imported through the package boundary, implementation evidence must treat it as public API or
   choose a truly private location.
 - `stage-result.md` and `validator-report.md` must remain consistent with declared verification outcomes.
+- `stage-result.md` `Next actions` must name the immediate canonical downstream stage. A
+  successful `implement` handoff points to `review`, not directly to `qa`.
 
 ## Validation focus
 
@@ -155,4 +157,5 @@ A `implement` run is considered ready to progress when:
 - the required output documents exist,
 - validators pass,
 - any required user questions have answers,
-- `stage-result.md` names the next action clearly.
+- `stage-result.md` names the next action clearly and preserves the canonical
+  `implement -> review -> qa` order.
