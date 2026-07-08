@@ -39,6 +39,30 @@
   }
 }
 @media (max-width: 760px) {
+  .brand-meta {
+    align-items: flex-start;
+    white-space: normal;
+  }
+  .brand-meta code {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  .top-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .runtime-picker {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    width: 100%;
+  }
+  .runtime-picker select {
+    min-width: 0;
+    width: 100%;
+  }
   .top-status {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -101,17 +125,19 @@
     padding: 10px;
   }
   .stage-list {
-    display: flex;
+    display: grid;
     gap: 8px;
-    overflow-x: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
     padding-bottom: 4px;
     scroll-padding-inline: 10px;
-    scroll-snap-type: x proximity;
+    scroll-snap-type: none;
   }
   .stage-card {
-    flex: 0 0 178px;
     min-height: 58px;
+    min-width: 0;
     scroll-snap-align: start;
+    width: 100%;
   }
   .quick-links {
     grid-template-columns: repeat(4, minmax(82px, 1fr));
@@ -176,6 +202,15 @@
   }
   .next-flow-action-card {
     min-height: 0;
+  }
+  .next-action-copy {
+    align-items: flex-start;
+  }
+  .next-action-controls {
+    grid-template-columns: 1fr;
+  }
+  .global-next-action-strip .next-button {
+    width: 100%;
   }
   .next-flow-action-card p {
     font-size: 11px;

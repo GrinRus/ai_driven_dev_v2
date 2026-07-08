@@ -74,3 +74,27 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 ## Deferred Work
 
 - Refresh the medium live E2E run after the current evidence-hardening changes and update the final UI/UX reports with any imported `manual-frontend-evidence/` browser notes or screenshots. The latest accepted medium evidence predates this import path.
+
+## Refresh Run - 2026-07-08T13:18Z
+
+- `eval-live-007-codex-20260708T131815Z`: terminal execution verdict `pass`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Quality gates: all eight manual stage-quality audits chose `continue`.
+- Self-repair: `tasklist` repaired missing TL-6 verification-note coverage; `qa` repaired missing ignored-workspace residue evidence. Both repairs succeeded on attempt 2.
+- Final reports: `.aidd/reports/evals/eval-live-007-codex-20260708T131815Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+- Manual screenshots: `manual-frontend-evidence/operator-ui-terminal-desktop.png` and `manual-frontend-evidence/operator-ui-terminal-mobile.png`.
+
+## Refresh Findings
+
+- P1: Mobile terminal layout still is not first-time-user friendly. The page-level width is contained, but the stage rail behaved like a horizontal strip and long run/path/action labels were visually clipped in the mobile screenshot.
+- P1: Long-running stages still need stronger live progress prominence. The flow has progress and log affordances, but several stages ran for multiple minutes with little external stdout, so the operator needs an always-visible summary of active attempt, elapsed time, last runtime signal, and log shortcut.
+- P2: Repair details are evidence-rich but not visually dominant enough. The UI shows attempt counts, but the resolved validation reason and repair brief remain easier to understand from Markdown than from the main stage rail.
+- P2: Terminal handoff is strong on desktop. `FLOW COMPLETE`, final artifacts, blockers, repair attempts, approvals, questions, recovery assistant, and next-flow actions are visible and coherent.
+
+## Current Improvement Slice
+
+- Harden 390px mobile terminal layout by replacing the horizontal stage rail with a two-column responsive grid.
+- Let mobile topbar project paths wrap instead of clipping into unreadable fragments.
+- Stack mobile next-action controls and keep the primary action full-width.
+- Add a stage-attempt tooltip that points operators to Recovery for repair and retry history.
+- Rendered verification after the slice used the completed `eval-live-007-codex-20260708T131815Z` target workspace at 390px width. The updated page kept `scrollWidth=390`, stage cards stayed within `maxStageRight=380`, the stage rail rendered as `181px 181px`, and topbar controls all fit inside the viewport. Screenshot evidence: `/tmp/aidd-ui-mobile-terminal-after-fix.png`.

@@ -251,8 +251,13 @@ def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> No
 def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
     responsive = _asset_text("/operator-responsive.css")
 
+    assert ".brand-meta {" in responsive
+    assert ".brand-meta code {" in responsive
     assert ".top-status {" in responsive
     assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in responsive
+    assert ".top-actions {" in responsive
+    assert ".runtime-picker {" in responsive
+    assert ".runtime-picker select {" in responsive
     assert ".topbar .status-chip," in responsive
     assert ".topbar #runChip," in responsive
     assert ".topbar #workItemChip," in responsive
@@ -262,6 +267,20 @@ def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
     assert "overflow-wrap: anywhere;" in responsive
     assert "grid-column: 1 / -1;" in responsive
     assert ".path-line {" in responsive
+
+
+def test_operator_responsive_css_keeps_mobile_stage_rail_inside_viewport() -> None:
+    responsive = _asset_text("/operator-responsive.css")
+
+    assert ".stage-list {" in responsive
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in responsive
+    assert "overflow-x: visible;" in responsive
+    assert "scroll-snap-type: none;" in responsive
+    assert ".stage-card {" in responsive
+    assert "min-width: 0;" in responsive
+    assert "width: 100%;" in responsive
+    assert ".next-action-controls {" in responsive
+    assert ".global-next-action-strip .next-button {" in responsive
 
 
 def test_operator_workbench_css_wraps_path_lines_without_document_overflow() -> None:
@@ -315,6 +334,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
     assert "function renderStageRail()" in shell
+    assert "open Recovery for repair and retry history" in shell
     assert "projectPath.title = projectRoot;" in shell
     assert "workItemChip.title = workItemLabel;" in shell
     assert "runChip.title = runLabel;" in shell

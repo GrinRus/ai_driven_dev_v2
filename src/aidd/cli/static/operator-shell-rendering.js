@@ -135,11 +135,15 @@ function renderStageRail() {
     const isActive = item.stage === state.activeStage;
     const active = isActive ? " active" : "";
     const status = statusClass(item.status);
+    const attemptCount = Number(item.attempt_count || 0);
+    const attemptTitle = attemptCount > 1
+      ? `${attemptCount} attempts; open Recovery for repair and retry history`
+      : `${attemptCount || 0} attempt${attemptCount === 1 ? "" : "s"}`;
     const markers = [
       item.stale ? `<span class="small-badge warn" title="${escapeHtml(item.stale_reason || "downstream evidence is stale")}">stale</span>` : "",
       item.unresolved_blocking_count ? `<span class="small-badge warn">Q${item.unresolved_blocking_count}</span>` : "",
       item.validator_fail_count ? `<span class="small-badge bad">V${item.validator_fail_count}</span>` : "",
-      item.attempt_count ? `<span class="small-badge">${escapeHtml(item.attempt_count)}x</span>` : ""
+      attemptCount ? `<span class="small-badge" title="${escapeHtml(attemptTitle)}">${escapeHtml(attemptCount)}x</span>` : ""
     ].filter(Boolean).join("");
     return `
       <button class="stage-card${active}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${isActive ? "step" : "false"}">
