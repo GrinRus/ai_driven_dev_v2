@@ -419,12 +419,47 @@ def _format_attempt_history_line(entry: RepairHistoryEntry) -> str:
     return line
 
 
+def _dedupe_paths(paths: Iterable[str]) -> tuple[str, ...]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for path in paths:
+        normalized = path.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(normalized)
+    return tuple(deduped)
+
+
+def _existing_declared_stage_output_paths(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> tuple[str, ...]:
+    try:
+        from aidd.core.stage_registry import load_stage_manifest
+
+        manifest = load_stage_manifest(stage=stage)
+    except Exception:
+        return ()
+
+    stage_root = workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
+    existing_paths: list[str] = []
+    for output_path in manifest.required_output_paths:
+        candidate = stage_root / output_path
+        if candidate.exists():
+            existing_paths.append(f"workitems/{work_item}/stages/{stage}/{output_path}")
+    return tuple(existing_paths)
+
+
 def render_stage_result_with_repair_history(
     *,
     stage: str,
     work_item: str | None,
     status: str,
     repair_history: Iterable[RepairHistoryEntry],
+    produced_output_paths: Iterable[str | Path] = (),
     validator_report_path: str | Path | None = None,
     repair_brief_path: str | Path | None = None,
     workspace_root: Path | None = None,
@@ -456,6 +491,28 @@ def render_stage_result_with_repair_history(
         if repair_brief_path is not None
         else None
     )
+    normalized_produced_output_paths = tuple(
+        _normalize_workspace_relative_path(path=path, workspace_root=workspace_root)
+        for path in produced_output_paths
+    )
+
+    common_output_paths = [
+        (
+            f"workitems/{work_item}/stages/{normalized_stage}/stage-result.md"
+            if work_item is not None
+            else "stage-result.md"
+        )
+    ]
+    if normalized_validator_report_path is not None:
+        common_output_paths.append(normalized_validator_report_path)
+    if normalized_repair_brief_path is not None:
+        common_output_paths.append(normalized_repair_brief_path)
+    produced_outputs = _dedupe_paths(
+        (
+            *normalized_produced_output_paths,
+            *common_output_paths,
+        )
+    )
 
     lines = [
         "# Stage",
@@ -479,17 +536,9 @@ def render_stage_result_with_repair_history(
             "",
             "## Produced outputs",
             "",
-            (
-                f"- `workitems/{work_item}/stages/{normalized_stage}/stage-result.md`"
-                if work_item is not None
-                else "- `stage-result.md`"
-            ),
+            *(f"- `{path}`" for path in produced_outputs),
         ]
     )
-    if normalized_validator_report_path is not None:
-        lines.append(f"- `{normalized_validator_report_path}`")
-    if normalized_repair_brief_path is not None:
-        lines.append(f"- `{normalized_repair_brief_path}`")
 
     lines.extend(
         [
@@ -588,11 +637,17 @@ def persist_repair_history_snapshot(
         workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
         / "stage-result.md"
     )
+    produced_output_paths = _existing_declared_stage_output_paths(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
     stage_result_markdown = render_stage_result_with_repair_history(
         stage=stage,
         work_item=work_item,
         status=stage_status,
         repair_history=metadata.repair_history,
+        produced_output_paths=produced_output_paths,
         validator_report_path=validator_report_path,
         repair_brief_path=repair_brief_path,
         workspace_root=workspace_root,

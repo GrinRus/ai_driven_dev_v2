@@ -76,6 +76,10 @@ or validation wording when the canonical validator report proves the draft incon
 - `Produced outputs`
   - Must list output documents produced in the final attempt as AIDD workspace-relative paths.
   - Must explicitly note missing required outputs when status is not `succeeded`.
+  - When AIDD rewrites `stage-result.md` to preserve repair history after a validation pass,
+    it must preserve any existing declared primary output documents in this section before
+    listing common outputs such as `stage-result.md`, `validator-report.md`, or
+    `repair-brief.md`.
 - `Validation summary`
   - Must summarize whether validation passed, failed, or was not reached.
   - Must reference `validator-report.md` when validation produced findings.
