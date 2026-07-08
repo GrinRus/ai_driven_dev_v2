@@ -1182,6 +1182,8 @@ def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
 
 def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> None:
     approvals = _asset_text("/operator-approvals-interventions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
 
     _assert_contains_all(
         approvals,
@@ -1198,15 +1200,32 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "function renderApprovalQueueSummary({requests, decisions, pendingIds, diagnostics})",
             "function renderApprovalDiffPreview(request)",
             (
+                "function approvalAuditCounts({requests, decisions, pendingIds, "
+                "diagnostics, auditHistory})"
+            ),
+            (
+                "function renderApprovalDecisionSpotlight({requests, decisions, pendingIds, "
+                "diagnostics, auditHistory})"
+            ),
+            (
                 "function renderApprovalAuditLog(requests, decisions, pendingIds, "
                 "diagnostics = null, auditHistory = null)"
             ),
             "function renderApprovalsSurface({view, diagnostics, requests, decisions, pendingIds})",
+            "data-approval-decision-spotlight",
+            "Runtime approval required",
+            "Runtime request blocked by policy",
+            "Runtime approval stopped",
+            "No runtime approvals are waiting",
             "Request Change / Intervention Composer",
             "Approvals / Runtime Requests",
             "Diff Preview",
             "Approval Audit Log",
             "view?.audit_history",
+            (
+                "renderApprovalDecisionSpotlight({requests, decisions, pendingIds, "
+                "diagnostics, auditHistory})"
+            ),
             "policy-blocked",
             "row.runtime_id",
             "row.decision_action",
@@ -1232,6 +1251,19 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             'postJson("/api/stage/interact", payload)',
         ),
     )
+    _assert_contains_all(
+        components,
+        (
+            ".approval-decision-spotlight {",
+            "box-shadow: inset 4px 0 0 var(--green);",
+            ".approval-decision-spotlight.warn {",
+            ".approval-decision-spotlight.bad {",
+            ".approval-decision-facts {",
+            "grid-template-columns: repeat(5, minmax(0, 1fr));",
+        ),
+    )
+    assert ".approval-decision-spotlight," in responsive
+    assert ".approval-decision-facts," in responsive
 
 
 def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> None:

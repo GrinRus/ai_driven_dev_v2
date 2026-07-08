@@ -128,3 +128,10 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - The summary names the invalidated stage chain, remediation request id, runtime readiness gate, and next operator step, and explicitly states that terminal QA handoff remains blocked until downstream evidence is refreshed.
 - On 390px mobile, stale-downstream mode raises the cockpit before the stage rail so the rerun explanation is visible in the first viewport.
 - Rendered verification used a temporary copy of `eval-live-007-codex-20260708T131815Z` with `request-0001` marking `review` and `qa` stale. Desktop QA confirmed the stale summary is visible in the first viewport. Mobile QA confirmed `scrollWidth=390`, shell display switches to `flex`, stale badges remain on the rail, and the summary shows `Runtime codex not ready` plus `Next step Select ready runtime` while the rerun button is disabled. Screenshot evidence: `/tmp/aidd-stale-downstream-desktop.png` and `/tmp/aidd-stale-downstream-mobile.png`.
+
+## Approval Audit Decision Slice
+
+- Approvals / Runtime Requests now leads with an approval decision spotlight before queue metrics and ledger history.
+- The spotlight distinguishes no-waiting, pending, approved, denied/cancelled, and policy-blocked states, then states the primary operator action before showing counts.
+- This targets the remaining first-time-user gap where approval state was audit-rich but forced operators to infer whether the runtime was waiting, blocked by policy, or already resolved.
+- Rendered verification used a temporary copy of the live Hono target workspace with one pending QA shell approval. Desktop QA confirmed the pending spotlight is visible in the first viewport above the queue/audit ledger. Mobile 390px QA kept `scrollWidth=390`, showed the spotlight in the first viewport, and preserved the approval audit log below it. Screenshot evidence: `/tmp/aidd-approval-spotlight-desktop.png` and `/tmp/aidd-approval-spotlight-mobile.png`.

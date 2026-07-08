@@ -213,7 +213,9 @@ async function renderRequestChange() {
 }
 
 function renderApprovalQueueSummary({requests, decisions, pendingIds, diagnostics}) {
-  const approved = decisions.filter((decision) => decision.action === "allow_once" || decision.action === "allow_for_session").length;
+  const approved = decisions.filter(
+    (decision) => decision.action === "allow_once" || decision.action === "allow_for_session"
+  ).length;
   const denied = decisions.filter((decision) => decision.action === "deny").length;
   const cancelled = decisions.filter((decision) => decision.action === "cancel").length;
   const metrics = [
@@ -231,6 +233,88 @@ function renderApprovalQueueSummary({requests, decisions, pendingIds, diagnostic
           <strong>${escapeHtml(value)}</strong>
         </div>
       `).join("")}
+    </div>
+  `;
+}
+
+function approvalAuditCounts({requests, decisions, pendingIds, diagnostics, auditHistory}) {
+  const rows = Array.isArray(auditHistory) ? auditHistory : [];
+  const rowCount = (status) => rows.filter((row) => row.status === status).length;
+  const countValue = (diagnosticValue, rowValue, fallbackValue = 0) =>
+    diagnosticValue ?? (rowValue || fallbackValue);
+  const approved = decisions.filter((decision) => decision.action === "allow_once" || decision.action === "allow_for_session").length;
+  const denied = decisions.filter((decision) => decision.action === "deny").length;
+  const cancelled = decisions.filter((decision) => decision.action === "cancel").length;
+  return {
+    requested: countValue(diagnostics?.requested_count, rows.length, requests.length),
+    pending: countValue(diagnostics?.pending_count, rowCount("pending"), pendingIds.size),
+    approved: countValue(diagnostics?.approved_count, rowCount("approved"), approved),
+    denied: countValue(diagnostics?.denied_count, rowCount("denied"), denied),
+    cancelled: countValue(diagnostics?.cancelled_count, rowCount("cancelled"), cancelled),
+    policyBlocked: countValue(diagnostics?.policy_blocked_count, rowCount("policy-blocked"))
+  };
+}
+
+function renderApprovalDecisionSpotlight({requests, decisions, pendingIds, diagnostics, auditHistory}) {
+  const counts = approvalAuditCounts({requests, decisions, pendingIds, diagnostics, auditHistory});
+  let tone = "good";
+  let title = "No runtime approvals are waiting";
+  let body = (
+    "Runtime approval history is available for audit, but the current job is not blocked "
+    + "on an operator decision."
+  );
+  let primary = "Primary action: inspect audit log when reviewing safety evidence";
+  if (counts.pending) {
+    tone = "warn";
+    title = "Runtime approval required";
+    body = (
+      `${counts.pending} request${counts.pending === 1 ? "" : "s"} must be decided before `
+      + "the runtime can continue. Review command, cwd, paths, and diff preview before "
+      + "allowing or denying."
+    );
+    primary = "Primary action: decide pending request";
+  } else if (counts.policyBlocked) {
+    tone = "bad";
+    title = "Runtime request blocked by policy";
+    body = (
+      `${counts.policyBlocked} request${counts.policyBlocked === 1 ? "" : "s"} were `
+      + "blocked by policy. Inspect the audit log and adjust scope or runtime policy "
+      + "before rerunning."
+    );
+    primary = "Primary action: inspect policy-blocked audit row";
+  } else if (counts.denied || counts.cancelled) {
+    tone = "bad";
+    title = "Runtime approval stopped";
+    body = (
+      `${counts.denied} denied and ${counts.cancelled} cancelled decision`
+      + `${counts.denied + counts.cancelled === 1 ? "" : "s"} are recorded. `
+      + "Inspect the reason before rerunning this stage."
+    );
+    primary = "Primary action: inspect decision reason";
+  } else if (counts.approved) {
+    title = "Runtime approvals recorded";
+    body = (
+      `${counts.approved} approved decision${counts.approved === 1 ? "" : "s"} are saved `
+      + "in the audit ledger for this run."
+    );
+    primary = "Primary action: continue reviewing evidence";
+  }
+  return `
+    <div class="approval-decision-spotlight ${escapeHtml(tone)}"
+      data-approval-decision-spotlight role="status" aria-live="polite">
+      <div class="approval-decision-copy">
+        <span class="small-badge ${escapeHtml(tone)}">approval audit</span>
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(body)}</p>
+        <small>${escapeHtml(primary)}</small>
+      </div>
+      <div class="approval-decision-facts">
+        <span><strong>Pending</strong>${escapeHtml(counts.pending)}</span>
+        <span><strong>Approved</strong>${escapeHtml(counts.approved)}</span>
+        <span><strong>Denied</strong>${escapeHtml(counts.denied)}</span>
+        <span><strong>Cancelled</strong>${escapeHtml(counts.cancelled)}</span>
+        <span><strong>Policy blocked</strong>${escapeHtml(counts.policyBlocked)}</span>
+      </div>
     </div>
   `;
 }
@@ -400,6 +484,7 @@ function renderApprovalAuditLog(requests, decisions, pendingIds, diagnostics = n
 function renderApprovalsSurface({view, diagnostics, requests, decisions, pendingIds}) {
   const decisionByRequest = new Map();
   decisions.forEach((decision) => decisionByRequest.set(decision.request_id, decision));
+  const auditHistory = view?.audit_history || [];
   const cards = requests.length
     ? requests.map((request) => renderApprovalRequestCard(request, decisionByRequest.get(request.id), pendingIds)).join("")
     : `<div class="empty-state">No runtime operator requests for this job. Saved stage diagnostics are still shown in the queue summary.</div>`;
@@ -412,6 +497,7 @@ function renderApprovalsSurface({view, diagnostics, requests, decisions, pending
           <span>Approvals / Runtime Requests</span>
           <span class="small-badge ${pendingIds.size || diagnostics?.pending_count ? "warn" : "good"}">${escapeHtml(pendingIds.size || diagnostics?.pending_count || 0)} pending</span>
         </div>
+        ${renderApprovalDecisionSpotlight({requests, decisions, pendingIds, diagnostics, auditHistory})}
         ${renderApprovalQueueSummary({requests, decisions, pendingIds, diagnostics})}
         <div class="approval-ledger-paths">
           ${requestPath ? pathLine(`requests: ${requestPath}`, 94) : ""}
@@ -419,7 +505,7 @@ function renderApprovalsSurface({view, diagnostics, requests, decisions, pending
         </div>
         <div class="question-list approval-queue">${cards}</div>
       </section>
-      ${renderApprovalAuditLog(requests, decisions, pendingIds, diagnostics, view?.audit_history || [])}
+      ${renderApprovalAuditLog(requests, decisions, pendingIds, diagnostics, auditHistory)}
     </section>
   `;
 }
