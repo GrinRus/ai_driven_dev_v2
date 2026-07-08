@@ -345,6 +345,9 @@ action, active stage, desktop/mobile topbar readability, failure-appropriate rec
 primary action, reachable logs/artifacts/questions/answers, next-flow handoff visibility,
 and long-path/log/action-copy overflow.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
+When the operator passes `--manual-frontend-evidence <path>`, the runner copies that
+operator-supplied file or directory into `manual-frontend-evidence/` and references it
+from `frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
 The `Operator UI/UX decision` is a manual AIDD operator-UI sub-decision only; it
 does not change `verdict.md`, `grader.json`, or any execution status. Inspect
 terminal flow visibility, stage list navigation, artifact/log views, questions and
@@ -426,6 +429,7 @@ Expected live artifacts include:
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
+- `manual-frontend-evidence/` only when `--manual-frontend-evidence` is provided
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
 - `next-flow-lineage.json` only when `--enable-next-flow-follow-up-proof` is explicitly enabled

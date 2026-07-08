@@ -171,6 +171,7 @@ ANSWER_ANALYSIS_FILENAME = "answer-analysis.md"
 RUNTIME_APPROVAL_ANALYSIS_FILENAME = "runtime-approval-analysis.md"
 FRONTEND_CHECKPOINTS_JSON_FILENAME = "frontend-checkpoints.json"
 FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME = "frontend-checkpoints.md"
+MANUAL_FRONTEND_EVIDENCE_DIRNAME = "manual-frontend-evidence"
 NEXT_FLOW_CHECKPOINT_JSON_FILENAME = "next-flow-checkpoint.json"
 NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
 NEXT_FLOW_LINEAGE_FILENAME = "next-flow-lineage.json"
@@ -300,6 +301,7 @@ class FlowContext:
     target_workspace_baseline_snapshot: dict[str, object] | None
     started: float
     enable_next_flow_follow_up_proof: bool = False
+    manual_frontend_evidence: Path | None = None
 
 
 class LiveE2EInterrupted(Exception):
@@ -1452,6 +1454,11 @@ def _flow_state_payload(
         "installed_command": list(ctx.installed_command),
         "target_workspace_baseline_snapshot": ctx.target_workspace_baseline_snapshot,
         "next_flow_follow_up_proof_enabled": ctx.enable_next_flow_follow_up_proof,
+        "manual_frontend_evidence_source": (
+            None
+            if ctx.manual_frontend_evidence is None
+            else ctx.manual_frontend_evidence.resolve(strict=False).as_posix()
+        ),
     }
     if ctx.install_result is not None:
         payload["install"] = {
@@ -1927,6 +1934,7 @@ def _initial_context(
     report_root: Path,
     run_id: str | None,
     enable_next_flow_follow_up_proof: bool,
+    manual_frontend_evidence: Path | None,
 ) -> FlowContext:
     scenario = load_scenario(
         scenario_path,
@@ -1983,6 +1991,7 @@ def _initial_context(
         target_workspace_baseline_snapshot=None,
         started=time.monotonic(),
         enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
+        manual_frontend_evidence=manual_frontend_evidence,
     )
 
 
@@ -1994,6 +2003,7 @@ def _context_from_state(
     work_root: Path,
     report_root: Path,
     enable_next_flow_follow_up_proof: bool,
+    manual_frontend_evidence: Path | None,
 ) -> FlowContext:
     state = _read_json_object(state_path)
     state_work_root = state.get("work_root")
@@ -2051,6 +2061,14 @@ def _context_from_state(
     )
     state_follow_up_proof = state.get("next_flow_follow_up_proof_enabled") is True
     baseline_snapshot = state.get("target_workspace_baseline_snapshot")
+    state_manual_frontend_evidence = state.get("manual_frontend_evidence_source")
+    resolved_manual_frontend_evidence = manual_frontend_evidence
+    if (
+        resolved_manual_frontend_evidence is None
+        and isinstance(state_manual_frontend_evidence, str)
+        and state_manual_frontend_evidence
+    ):
+        resolved_manual_frontend_evidence = Path(state_manual_frontend_evidence)
     return FlowContext(
         scenario_path=scenario_path,
         scenario=scenario,
@@ -2076,6 +2094,7 @@ def _context_from_state(
         enable_next_flow_follow_up_proof=(
             enable_next_flow_follow_up_proof or state_follow_up_proof
         ),
+        manual_frontend_evidence=resolved_manual_frontend_evidence,
     )
 
 
@@ -2087,6 +2106,7 @@ def _load_or_create_context(
     report_root: Path,
     run_id: str | None,
     enable_next_flow_follow_up_proof: bool,
+    manual_frontend_evidence: Path | None,
 ) -> FlowContext:
     resume_state = _find_resume_state(
         report_root=report_root,
@@ -2100,6 +2120,7 @@ def _load_or_create_context(
             work_root=work_root,
             report_root=report_root,
             enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
+            manual_frontend_evidence=manual_frontend_evidence,
         )
     ctx = _initial_context(
         scenario_path=scenario_path,
@@ -2108,6 +2129,7 @@ def _load_or_create_context(
         report_root=report_root,
         run_id=None,
         enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
+        manual_frontend_evidence=manual_frontend_evidence,
     )
     _persist_state(
         ctx=ctx,
@@ -4071,14 +4093,130 @@ def _read_frontend_checkpoint_payload(ctx: FlowContext) -> dict[str, object]:
         return {
             "enabled": True,
             "reason": "frontend checkpoints were enabled for this evaluator run",
+            "manual_visual_evidence": _manual_frontend_evidence_payload(ctx),
             "checkpoints": [],
         }
     payload = _read_json_object(path)
     payload["enabled"] = True
+    payload["manual_visual_evidence"] = _manual_frontend_evidence_payload(
+        ctx,
+        existing=payload.get("manual_visual_evidence"),
+    )
     checkpoints = payload.get("checkpoints")
     if not isinstance(checkpoints, list):
         payload["checkpoints"] = []
     return payload
+
+
+def _copy_manual_frontend_evidence(
+    *,
+    source: Path,
+    destination_root: Path,
+) -> tuple[str, Path, list[str]]:
+    if source.is_dir():
+        if destination_root.exists():
+            shutil.rmtree(destination_root)
+        shutil.copytree(source, destination_root)
+        files = [
+            item.relative_to(destination_root).as_posix()
+            for item in sorted(destination_root.rglob("*"))
+            if item.is_file()
+        ]
+        return "directory", destination_root, files
+
+    destination_root.mkdir(parents=True, exist_ok=True)
+    destination = destination_root / source.name
+    shutil.copy2(source, destination)
+    return "file", destination, [destination.name]
+
+
+def _manual_frontend_evidence_payload(
+    ctx: FlowContext,
+    *,
+    existing: object | None = None,
+) -> dict[str, object]:
+    if ctx.manual_frontend_evidence is None:
+        if isinstance(existing, dict):
+            return dict(existing)
+        return {
+            "status": "not-provided",
+            "imported": False,
+            "non_gating": True,
+            "message": (
+                "No operator-supplied browser screenshots or notes were imported. "
+                "Manual quality-report.md must cite separate evidence or mark UI/UX "
+                "surfaces not inspected."
+            ),
+        }
+
+    source = ctx.manual_frontend_evidence.resolve(strict=False)
+    destination_root = ctx.bundle_root / MANUAL_FRONTEND_EVIDENCE_DIRNAME
+    payload: dict[str, object] = {
+        "source_path": source.as_posix(),
+        "non_gating": True,
+        "quality_report_scope": "manual quality-report.md only",
+    }
+    if not source.exists():
+        if (
+            isinstance(existing, dict)
+            and existing.get("imported") is True
+            and isinstance(existing.get("bundle_path"), str)
+        ):
+            return dict(existing)
+        payload.update(
+            {
+                "status": "missing",
+                "imported": False,
+                "bundle_path": destination_root.as_posix(),
+                "message": (
+                    "Operator-supplied manual frontend evidence path was not found. "
+                    "Execution verdict and frontend checkpoint classifications are unchanged."
+                ),
+            }
+        )
+        return payload
+    try:
+        kind, imported_path, files = _copy_manual_frontend_evidence(
+            source=source,
+            destination_root=destination_root,
+        )
+    except OSError as exc:
+        payload.update(
+            {
+                "status": "import-error",
+                "imported": False,
+                "bundle_path": destination_root.as_posix(),
+                "message": (
+                    "Operator-supplied manual frontend evidence could not be imported: "
+                    f"{exc}"
+                ),
+            }
+        )
+        return payload
+    payload.update(
+        {
+            "status": "imported",
+            "imported": True,
+            "kind": kind,
+            "bundle_path": imported_path.as_posix(),
+            "files": files,
+            "message": (
+                "Operator-supplied browser screenshots or notes were imported as "
+                "manual, non-gating evidence."
+            ),
+        }
+    )
+    return payload
+
+
+def _manual_frontend_evidence_paths(payload: dict[str, object]) -> tuple[Path, ...]:
+    manual_evidence = payload.get("manual_visual_evidence")
+    if not isinstance(manual_evidence, dict) or manual_evidence.get("imported") is not True:
+        return tuple()
+    bundle_path = manual_evidence.get("bundle_path")
+    if not isinstance(bundle_path, str) or not bundle_path:
+        return tuple()
+    return (Path(bundle_path),)
 
 
 def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, object]) -> Path:
@@ -4119,9 +4257,37 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
             "or mark the surface `not inspected`."
         ),
         "",
-        "## Checkpoints",
+        "## Manual Browser Evidence",
         "",
     ]
+    manual_evidence = payload.get("manual_visual_evidence")
+    if isinstance(manual_evidence, dict):
+        lines.extend(
+            (
+                f"- Status: `{manual_evidence.get('status', 'unknown')}`",
+                f"- Non-gating: `{manual_evidence.get('non_gating', True)}`",
+            )
+        )
+        if manual_evidence.get("source_path"):
+            lines.append(f"- Source path: `{manual_evidence['source_path']}`")
+        if manual_evidence.get("bundle_path"):
+            lines.append(f"- Bundle path: `{manual_evidence['bundle_path']}`")
+        lines.append(f"- Note: {manual_evidence.get('message', '')}")
+        files_raw = manual_evidence.get("files")
+        files = files_raw if isinstance(files_raw, list) else []
+        if files:
+            lines.append("- Imported files:")
+            lines.extend(f"  - `{item}`" for item in files if isinstance(item, str))
+    else:
+        lines.append("- Status: `not-provided`")
+    lines.extend(
+        (
+            "- Manual screenshots and browser notes are evidence for the human-authored "
+            "`quality-report.md`; they do not change runner classifications.",
+            "",
+        )
+    )
+    lines.extend(("## Checkpoints", ""))
     checkpoints_raw = payload.get("checkpoints")
     checkpoints = checkpoints_raw if isinstance(checkpoints_raw, list) else []
     if not checkpoints:
@@ -4932,13 +5098,13 @@ def _append_frontend_checkpoint(
     *,
     ctx: FlowContext,
     checkpoint: dict[str, object],
-) -> tuple[Path, Path]:
+) -> tuple[Path, ...]:
     payload = _read_frontend_checkpoint_payload(ctx)
     checkpoints = cast(list[object], payload["checkpoints"])
     checkpoints.append(checkpoint)
     json_path = _write_json(ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME, payload)
     markdown_path = _write_frontend_checkpoint_markdown(ctx, payload)
-    return json_path, markdown_path
+    return json_path, markdown_path, *_manual_frontend_evidence_paths(payload)
 
 
 def _run_frontend_checkpoint(
@@ -7538,6 +7704,9 @@ def _write_harness_metadata(
             "frontend_checkpoint_evidence": (
                 ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME
             ).as_posix(),
+            "manual_frontend_evidence": (
+                ctx.bundle_root / MANUAL_FRONTEND_EVIDENCE_DIRNAME
+            ).as_posix(),
             "inspection": [
                 "aidd stage summary",
                 "aidd stage questions",
@@ -8031,6 +8200,7 @@ def run_black_box_live_e2e(
     report_root: Path = Path(".aidd/reports/evals"),
     run_id: str | None = None,
     enable_next_flow_follow_up_proof: bool = False,
+    manual_frontend_evidence: Path | None = None,
 ) -> BlackBoxLiveE2EResult:
     resolved_work_root = (work_root or _default_work_root()).resolve(strict=False)
     resolved_report_root = report_root.resolve(strict=False)
@@ -8041,6 +8211,7 @@ def run_black_box_live_e2e(
         report_root=resolved_report_root,
         run_id=run_id,
         enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
+        manual_frontend_evidence=manual_frontend_evidence,
     )
     try:
         with _live_interruption_handlers():
@@ -8252,6 +8423,14 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
             "and record next-flow-lineage.json without launching a child live flow."
         ),
     )
+    parser.add_argument(
+        "--manual-frontend-evidence",
+        default=None,
+        help=(
+            "Optional file or directory of operator-captured browser screenshots/notes "
+            "to copy into the result bundle as non-gating manual UI/UX evidence."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -8265,6 +8444,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             report_root=Path(args.report_root),
             run_id=None if args.run_id is None else str(args.run_id),
             enable_next_flow_follow_up_proof=bool(args.enable_next_flow_follow_up_proof),
+            manual_frontend_evidence=(
+                None
+                if args.manual_frontend_evidence is None
+                else Path(args.manual_frontend_evidence)
+            ),
         )
     except ValueError as exc:
         print(f"black-box live e2e: {exc}", file=sys.stderr)

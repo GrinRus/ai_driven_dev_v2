@@ -174,7 +174,10 @@ next action, active stage, desktop/mobile topbar readability, failure-appropriat
 recovery primary action, reachable logs/artifacts/questions/answers, next-flow
 handoff visibility, and long-path/log/action-copy overflow. Treat that checklist
 as a prompt, not proof; record actual browser evidence or mark surfaces
-`not inspected` in manual reports.
+`not inspected` in manual reports. When the operator passes
+`--manual-frontend-evidence <path>`, the runner copies that operator-supplied
+file or directory into `manual-frontend-evidence/` and references it from
+`frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
 
 ## Example command shape
 

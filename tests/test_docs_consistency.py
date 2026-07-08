@@ -1026,6 +1026,9 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
             "Screenshots and browser notes are optional manual evidence, "
             "not runner-generated artifacts."
         ),
+        "--manual-frontend-evidence",
+        "manual-frontend-evidence/",
+        "non-gating evidence for the manual `quality-report.md`",
     ):
         assert needle in live_e2e_skill
 
@@ -1057,6 +1060,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     assert "failure-appropriate" in aidd_eval_skill
     assert "as a prompt, not proof" in aidd_eval_skill
     assert "`not inspected` in manual reports" in aidd_eval_skill
+    assert "`--manual-frontend-evidence <path>`" in aidd_eval_skill
+    assert "`manual-frontend-evidence/`" in aidd_eval_skill
 
 
 def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
@@ -1119,6 +1124,9 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
             "Screenshots and browser notes are optional manual evidence, "
             "not runner-generated artifacts."
         ),
+        "`--manual-frontend-evidence <path>`",
+        "`manual-frontend-evidence/`",
+        "non-gating evidence for the manual `quality-report.md`",
         "stage list navigation",
         "artifact inspection",
         "log inspection",
@@ -1141,6 +1149,8 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "visible next action",
         "active stage",
         "not runner-generated screenshot evidence",
+        "`--manual-frontend-evidence <path>`",
+        "`manual-frontend-evidence/`",
         "record actual browser evidence or explicitly mark surfaces `not inspected`",
         "manual AIDD operator UI/UX decisions",
         "stage list navigation",

@@ -1593,6 +1593,78 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert "Requires second public-repository flow: `false`" in next_flow_markdown
 
 
+def test_black_box_live_e2e_imports_manual_frontend_evidence_without_gating(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    manual_evidence = tmp_path / "manual-frontend-evidence-source"
+    screenshot_dir = manual_evidence / "screenshots"
+    screenshot_dir.mkdir(parents=True)
+    (manual_evidence / "browser-notes.md").write_text(
+        "# Browser Notes\n\n- Desktop next action looked clear.\n",
+        encoding="utf-8",
+    )
+    (screenshot_dir / "mobile-flow-complete.png").write_bytes(b"fake screenshot")
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        manual_frontend_evidence=manual_evidence,
+    )
+
+    assert result.status == "pass"
+    frontend_payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    assert all(
+        checkpoint["classification"] == "pass"
+        for checkpoint in frontend_payload["checkpoints"]
+    )
+    manual_payload = frontend_payload["manual_visual_evidence"]
+    assert manual_payload["status"] == "imported"
+    assert manual_payload["imported"] is True
+    assert manual_payload["non_gating"] is True
+    assert manual_payload["kind"] == "directory"
+    assert manual_payload["source_path"] == manual_evidence.resolve().as_posix()
+    assert manual_payload["files"] == [
+        "browser-notes.md",
+        "screenshots/mobile-flow-complete.png",
+    ]
+    imported_root = result.bundle_root / "manual-frontend-evidence"
+    assert manual_payload["bundle_path"] == imported_root.as_posix()
+    assert (imported_root / "browser-notes.md").read_text(encoding="utf-8").startswith(
+        "# Browser Notes"
+    )
+    assert (imported_root / "screenshots" / "mobile-flow-complete.png").read_bytes() == (
+        b"fake screenshot"
+    )
+
+    frontend_markdown = (
+        result.bundle_root / "frontend-checkpoints.md"
+    ).read_text(encoding="utf-8")
+    assert "## Manual Browser Evidence" in frontend_markdown
+    assert "- Status: `imported`" in frontend_markdown
+    assert "- Non-gating: `True`" in frontend_markdown
+    assert "`screenshots/mobile-flow-complete.png`" in frontend_markdown
+    assert "they do not change runner classifications" in frontend_markdown
+
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["manual_frontend_evidence_source"] == (
+        manual_evidence.resolve().as_posix()
+    )
+    metadata_payload = json.loads(
+        (result.bundle_root / "harness-metadata.json").read_text(encoding="utf-8")
+    )
+    assert metadata_payload["black_box"]["manual_frontend_evidence"] == (
+        imported_root.as_posix()
+    )
+
+
 def test_black_box_live_product_evaluation_stops_after_stage_for_quality_review(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -384,6 +384,8 @@ Every live eval bundle must aim to contain:
 - `product-evaluation-bundle-summary.md` for terminal `product-evaluation` bundles
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
+- `manual-frontend-evidence/` only when the operator passes
+  `--manual-frontend-evidence` with browser notes or screenshots
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
 
@@ -393,6 +395,9 @@ active stage, readable desktop/mobile topbar labels, failure-appropriate recover
 action, reachable logs/artifacts/questions/answers, next-flow handoff visibility, and no
 horizontal overflow for long paths, log labels, or action copy. The checklist is operator
 guidance only; it is not runner-generated screenshot evidence and not a UI/UX quality gate.
+When the operator passes `--manual-frontend-evidence <path>`, the runner copies that
+operator-supplied file or directory into `manual-frontend-evidence/` and references it
+from `frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
 When a public stage exposes `preparing`, `executing`, or `validating` metadata while the
 stage command is still alive, `frontend-checkpoints.*` also records a `running-stage`
 phase: disabled `wait-for-stage` next action, active running stage visibility, and runtime
@@ -456,7 +461,8 @@ At minimum, review terminal flow
 visibility, stage list navigation, artifact/log views, questions and answers,
 repair evidence, next-flow handoff, state clarity, readability, keyboard/focus
 behavior where manually inspectable, responsive behavior or `not inspected`, and
-any manually captured screenshots or browser notes. Generated product UI is outside this live E2E operator-UI review unless the report marks it `not-applicable`.
+any manually captured screenshots or browser notes, including optional
+`manual-frontend-evidence/` imports. Generated product UI is outside this live E2E operator-UI review unless the report marks it `not-applicable`.
 
 For `product-evaluation`, counted-clean is possible only when every completed stage run has
 a corresponding `stage-quality-audits/<stage-run-id>.md`, the final code review exists in
