@@ -234,6 +234,48 @@ function recommendedNextFlowAction(handoff) {
   return "start-follow-up-flow";
 }
 
+function recommendedNextFlowDecision(handoff) {
+  const actionId = recommendedNextFlowAction(handoff);
+  const actions = handoff.recommended_next_flow_actions || [];
+  const action = actions.find((candidate) => candidate.action === actionId) || actions[0] || {};
+  const blockerCount = (handoff.blockers || []).length;
+  const finalStatus = handoff.status || "unknown";
+  let reason = "Use this path before choosing a less common next-flow option.";
+  if (actionId === "create-new-work-item") {
+    reason = "QA is ready and no open blockers are recorded; start unrelated work only after reviewing final evidence.";
+  } else if (finalStatus === "failed") {
+    reason = "Terminal QA failed; carry failed evidence into a follow-up instead of treating this run as done.";
+  } else if (blockerCount) {
+    reason = `${blockerCount} blocker${blockerCount === 1 ? "" : "s"} remain; carry them into follow-up work before starting new scope.`;
+  } else {
+    reason = "The terminal handoff still needs attention; carry the current findings into follow-up work first.";
+  }
+  return {
+    action: actionId,
+    label: action.label || nextFlowButtonLabel({action: actionId, label: "Start Follow-up"}),
+    detail: action.detail || "",
+    enabled: action.enabled !== false,
+    reason
+  };
+}
+
+function renderRecommendedNextFlowDecision(handoff) {
+  const decision = recommendedNextFlowDecision(handoff);
+  return `
+    <div class="next-flow-decision-spotlight">
+      <div>
+        <span class="small-badge good">recommended next decision</span>
+        <strong>${escapeHtml(decision.label)}</strong>
+        <p>${escapeHtml(decision.reason)}</p>
+        ${decision.detail ? `<small>${escapeHtml(decision.detail)}</small>` : ""}
+      </div>
+      <button data-next-flow-action="${escapeHtml(decision.action)}" type="button" ${decision.enabled ? "" : 'disabled aria-disabled="true"'}>
+        ${escapeHtml(nextFlowButtonLabel(decision))}
+      </button>
+    </div>
+  `;
+}
+
 function renderNextFlowActions(handoff) {
   const recommended = recommendedNextFlowAction(handoff);
   const actions = handoff.recommended_next_flow_actions || [];
@@ -388,6 +430,7 @@ function renderFlowCompleteState() {
           <span class="small-badge">terminal handoff</span>
         </div>
         <p>Choose the next operator action without mutating the completed source run.</p>
+        ${renderRecommendedNextFlowDecision(handoff)}
         ${renderNextFlowActions(handoff)}
       </div>
       <div class="terminal-summary-grid">

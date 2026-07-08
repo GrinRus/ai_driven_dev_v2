@@ -458,6 +458,11 @@ The accepted completed-flow actions are:
   evidence workflows without changing the completed run.
 - **Archive Run**: marks the completed run as closed for operator navigation.
 
+The completed-run action band must lead with one recommended next decision and a short
+reason before showing the full action grid. Clean completed runs without blockers
+recommend **Create New Work Item**; failed, blocked, or warning handoffs recommend
+**Start Follow-up Flow** so source findings are carried forward before unrelated scope.
+
 Follow-up and cloned flows are independent work items and runs. They may inherit selected
 context references, but they must not continue or mutate the completed source run. The UI
 must show source run, source work item, baseline, inherited artifacts, and audit preview

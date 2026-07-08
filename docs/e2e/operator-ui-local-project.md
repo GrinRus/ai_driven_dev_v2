@@ -336,6 +336,9 @@ assets.
   mode after refresh.
 - The **Start Next Flow** action band shows Create New Work Item, Start Follow-up Flow,
   Clone This Flow, Run Eval / Scenario Batch, and Archive Run.
+- The action band leads with a dedicated recommended next-decision summary, including
+  the reason for choosing Create New Work Item or Start Follow-up Flow, before showing
+  the full action grid.
 - Recommended next action badges match final QA status: completed runs without blockers
   recommend new work, while failed or blocked handoffs recommend follow-up work.
 - Choosing Archive Run first opens a confirmation state with a reason preview; confirming

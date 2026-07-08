@@ -1226,6 +1226,8 @@ def test_operator_static_screen_landmarks_cover_accepted_mission_control_surface
 
 def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions() -> None:
     next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
 
     _assert_contains_all(
         next_flow,
@@ -1238,6 +1240,13 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "flow-complete-mark",
             "Start Next Flow",
             "terminal handoff",
+            "function recommendedNextFlowDecision(handoff)",
+            "function renderRecommendedNextFlowDecision(handoff)",
+            "recommended next decision",
+            "QA is ready and no open blockers are recorded",
+            "Terminal QA failed; carry failed evidence into a follow-up",
+            "carry the current findings into follow-up work first",
+            "renderRecommendedNextFlowDecision(handoff)",
             "renderNextFlowActions(handoff)",
             "next-flow-action-card",
             "recommended",
@@ -1252,6 +1261,19 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             'data-next-flow-action="${escapeHtml(action.action)}"',
         ),
     )
+    _assert_contains_all(
+        components,
+        (
+            ".next-flow-decision-spotlight {",
+            "grid-template-columns: minmax(0, 1fr) auto;",
+            ".next-flow-decision-spotlight .small-badge {",
+            "justify-self: start;",
+            "width: fit-content;",
+            ".next-flow-decision-spotlight button {",
+            "min-width: 156px;",
+        ),
+    )
+    assert ".next-flow-decision-spotlight," in responsive
 
 
 def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight() -> None:
