@@ -3729,6 +3729,7 @@ def _frontend_probe_targets(ctx: FlowContext, stage: str) -> tuple[tuple[str, st
     run_query = urlencode({"run_id": ctx.run_id})
     return (
         ("page", "/"),
+        ("dashboard-api", f"/api/dashboard?{stage_query}"),
         ("run-api", f"/api/run?{run_query}"),
         ("stage-api", f"/api/stage?{stage_query}"),
         ("questions-api", f"/api/questions?{urlencode({'stage': stage})}"),
@@ -3775,6 +3776,19 @@ def _frontend_probe_semantic_failure(
             return "run API response does not include current run_id"
         if not _json_contains_value(payload, ctx.work_item):
             return "run API response does not include current work_item"
+        return None
+    if name == "dashboard-api":
+        dashboard = payload.get("dashboard")
+        if not isinstance(dashboard, dict):
+            return "dashboard API response does not include dashboard object"
+        if not _json_contains_value(dashboard, ctx.run_id):
+            return "dashboard API response does not include current run_id"
+        if not _json_contains_value(dashboard, ctx.work_item):
+            return "dashboard API response does not include current work_item"
+        if not _json_contains_value(dashboard, stage):
+            return "dashboard API response does not include current stage"
+        if not any(_json_has_key(dashboard, key) for key in ("next_action", "terminal_handoff")):
+            return "dashboard API response does not expose next action or terminal handoff"
         return None
     if name == "stage-api":
         if not _json_contains_value(payload, ctx.run_id):
@@ -3851,6 +3865,9 @@ def _frontend_operator_surface_checks(
 ) -> dict[str, object]:
     page_probe = _frontend_probe_by_name(probes, "page")
     page_body = str(page_probe.get("body_preview") or "")
+    dashboard_payload = _frontend_probe_json_payload(probes, "dashboard-api")
+    dashboard_raw = dashboard_payload.get("dashboard")
+    dashboard = dashboard_raw if isinstance(dashboard_raw, dict) else {}
     run_payload = _frontend_probe_json_payload(probes, "run-api")
     stage_payload = _frontend_probe_json_payload(probes, "stage-api")
     logs_payload = _frontend_probe_json_payload(probes, "logs-api")
@@ -3889,10 +3906,10 @@ def _frontend_operator_surface_checks(
         _operator_surface_check(
             name="next-action-visible",
             ok=any(
-                _json_has_key(run_payload, key)
+                _json_has_key(dashboard, key)
                 for key in ("next_action", "terminal_handoff")
             ),
-            detail="run payload exposes the next operator action or terminal handoff",
+            detail="dashboard payload exposes the next operator action or terminal handoff",
         ),
         _operator_surface_check(
             name="runtime-log-surface-visible",

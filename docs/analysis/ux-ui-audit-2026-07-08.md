@@ -40,6 +40,7 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - `69f7c7c Improve operator recovery UX`: completed the first improvement plan. Browser QA confirmed runtime-failure recovery now leads with `Open logs` and mobile status chips stay readable.
 - Current iteration: strengthen live E2E frontend checkpoints with operator-surface semantic evidence for run context, stage context, next action, logs, artifacts, and recovery cues. This improves future UX audit evidence without treating the checkpoint as a screenshot or manual UI/UX quality gate.
+- `eval-live-007-codex-20260708T102414Z`: fresh live evidence showed the new next-action check must read `/api/dashboard`, not `/api/run`, because the UI dashboard owns operator next-action state while `/api/run` is run metadata.
 
 ## Deferred Work
 

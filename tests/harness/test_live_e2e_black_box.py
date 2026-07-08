@@ -546,18 +546,44 @@ def ui(args: list[str]) -> int:
                 )
                 stage = params.get("stage", "")
                 run_id = params.get("run_id", "")
-                if self.path.startswith("/api/run"):
+                if self.path.startswith("/api/dashboard"):
+                    payload = {{
+                        "app_version": "test",
+                        "dashboard": {{
+                            "work_item": work_item,
+                            "active_stage": stage,
+                            "run": {{
+                                "run_id": run_id,
+                                "runtime_id": "codex",
+                                "stage_target": stage,
+                            }},
+                            "next_action": {{
+                                "action": "run-stage",
+                                "label": "Run next stage",
+                                "detail": "Continue through the governed flow.",
+                                "stage": stage,
+                                "enabled": True,
+                            }},
+                            "terminal_handoff": None,
+                            "recent_artifacts": [
+                                {{"stage": stage, "path": PRIMARY_OUTPUTS.get(stage, "")}}
+                            ],
+                            "evidence_refs": [
+                                {{
+                                    "stage": stage,
+                                    "kind": "artifact",
+                                    "path": PRIMARY_OUTPUTS.get(stage, ""),
+                                }}
+                            ],
+                            "blockers": [],
+                            "recovery_actions": [],
+                        }},
+                    }}
+                elif self.path.startswith("/api/run"):
                     payload = {{
                         "run_id": run_id,
                         "work_item": work_item,
                         "status": "succeeded",
-                        "next_action": {{
-                            "action": "run-stage",
-                            "label": "Run next stage",
-                            "detail": "Continue through the governed flow.",
-                            "stage": stage,
-                            "enabled": True,
-                        }},
                         "recent_artifacts": [
                             {{"stage": stage, "path": PRIMARY_OUTPUTS.get(stage, "")}}
                         ],
