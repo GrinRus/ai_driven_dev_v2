@@ -365,3 +365,6 @@ desktop/tablet/mobile responsive behavior or explicitly `not inspected`, and
 empty/loading/error/blocking, interview, and repair states. Generated product UI is
 outside this operator-UI review unless the manual report explicitly marks it
 `not-applicable`.
+For long public `run-stage` commands, terminal flow visibility also includes the
+launching harness heartbeat: active stage, elapsed time, last observed runtime/file
+signal, timeout budgets, and whether the expected runtime log exists yet.

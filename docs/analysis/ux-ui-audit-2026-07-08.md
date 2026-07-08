@@ -337,3 +337,18 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport.
 - Tighten `tasklist` prompt/validator examples for ordered task bullet shape and complete per-task verification notes.
 - Tighten QA prompt guidance so ready/proceed decisions cite ignored-residue evidence on the first attempt.
+
+## UX Implementation Slice - 2026-07-08
+
+- Completed the CLI/live-harness heartbeat slice for long public `aidd stage run` commands. The black-box live runner now emits a launching-terminal heartbeat every 30 seconds for active `run-stage` calls.
+- Heartbeat content is intentionally factual: active stage label, elapsed time, last observed signal (`stdout`, `stderr`, watched stage files, or process start), signal age, hard timeout, no-progress timeout, and the expected first-attempt `runtime.log` path with present/not-yet-created status.
+- The heartbeat writes to the harness process stderr and does not pollute the saved child command stdout/stderr transcript, preserving durable raw-runtime evidence semantics.
+- Updated the live quality rubric so future manual UI/UX reviews treat long-stage terminal heartbeat as part of terminal flow visibility.
+- Verification: `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py::test_black_box_command_emits_operator_heartbeat_without_polluting_transcript tests/harness/test_live_e2e_black_box.py::test_black_box_command_no_progress_stops_live_process tests/harness/test_live_e2e_black_box.py::test_black_box_command_no_progress_allows_live_artifact_heartbeats tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_records_active_step_while_stage_runs -q`; `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail -q`; `uv run --extra dev pytest tests/test_docs_consistency.py -q`; `uv run --extra dev ruff check src/aidd/harness/live_e2e_black_box_orchestration.py tests/harness/test_live_e2e_black_box.py`; `uv run --extra dev python -m mypy src/aidd/harness/live_e2e_black_box_orchestration.py`.
+
+## Next UX Plan - After Heartbeat Slice
+
+- Rerun a medium live E2E flow to verify the heartbeat appears during real native-provider silence and include the observed terminal lines in the next bundle/report.
+- Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport.
+- Tighten `tasklist` prompt/validator examples for ordered task bullet shape and complete per-task verification notes.
+- Tighten QA prompt guidance so ready/proceed decisions cite ignored-residue evidence on the first attempt.

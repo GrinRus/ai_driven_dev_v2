@@ -3311,6 +3311,40 @@ def test_black_box_command_no_progress_allows_live_artifact_heartbeats(
     assert result.transcript.timed_out is False
 
 
+def test_black_box_command_emits_operator_heartbeat_without_polluting_transcript(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runtime_log_path = tmp_path / "runtime.log"
+    command = (
+        sys.executable,
+        "-c",
+        "import time; time.sleep(0.35)",
+    )
+
+    result = _run_black_box_command(
+        command=command,
+        cwd=tmp_path,
+        environment=dict(os.environ),
+        timeout_seconds=5.0,
+        no_progress_timeout_seconds=3.0,
+        heartbeat_label="run-stage `idea`",
+        heartbeat_interval_seconds=0.1,
+        heartbeat_runtime_log_path=runtime_log_path,
+    )
+
+    captured = capsys.readouterr()
+    assert result.exit_code == 0
+    assert result.stdout_text == ""
+    assert result.stderr_text == ""
+    assert captured.out == ""
+    assert "[aidd live] run-stage `idea` still running after" in captured.err
+    assert "last signal: process-started" in captured.err
+    assert "hard timeout: 5s" in captured.err
+    assert "no-progress timeout: 3s" in captured.err
+    assert f"runtime log: {runtime_log_path.as_posix()} (not yet created)" in captured.err
+
+
 def test_black_box_live_e2e_records_active_step_while_stage_runs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -3750,7 +3784,7 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     )
     monkeypatch.setattr(
         "aidd.harness.live_e2e_black_box_orchestration._stage_no_progress_timeout_seconds",
-        lambda scenario: 0.25,
+        lambda scenario: 1.0,
     )
 
     result = run_black_box_live_e2e(
@@ -3797,7 +3831,7 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     assert no_progress_step["commands"][0]["timeout_seconds"] == 5.0
     no_progress_details = no_progress_step["commands"][0]["no_progress_details"]
     assert no_progress_details["reason"] == "provider-no-progress"
-    assert no_progress_details["no_progress_timeout_seconds"] == 0.25
+    assert no_progress_details["no_progress_timeout_seconds"] == 1.0
     assert "observed_paths" in no_progress_details["observed_files"]
     assert no_progress_step["details"]["no_progress_reconciliation"]["previous_status"] == (
         "executing"
@@ -3825,7 +3859,7 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     )
     assert run_transcript["timed_out"] is False
     assert run_transcript["timeout_policy"]["stage_command_timeout_seconds"] == 5.0
-    assert run_transcript["timeout_policy"]["no_progress_timeout_seconds"] == 0.25
+    assert run_transcript["timeout_policy"]["no_progress_timeout_seconds"] == 1.0
 
     stage_timing = json.loads(
         (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
@@ -3837,11 +3871,11 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     )
     assert run_stage_step["timed_out"] is False
     assert run_stage_step["no_progress"] is True
-    assert run_stage_step["no_progress_timeout_seconds"] == 0.25
+    assert run_stage_step["no_progress_timeout_seconds"] == 1.0
 
     log_analysis = (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
     assert "provider-no-progress before completed stage artifact" in log_analysis
-    assert "- No-Progress Timeout: `0.250s`" in log_analysis
+    assert "- No-Progress Timeout: `1.000s`" in log_analysis
 
 
 def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(

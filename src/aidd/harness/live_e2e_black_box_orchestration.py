@@ -236,6 +236,7 @@ PRESERVED_STATE_EXTRA_KEYS = (
     "operator_action_request_markdown",
     "stage_exit_code",
 )
+RUN_STAGE_HEARTBEAT_INTERVAL_SECONDS = 30.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -442,6 +443,54 @@ def _command_text(command: Sequence[str]) -> str:
     return " ".join(command)
 
 
+def _format_heartbeat_duration(seconds: float) -> str:
+    total_seconds = max(int(seconds), 0)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
+
+
+def _runtime_log_heartbeat_label(path: Path | None) -> str:
+    if path is None:
+        return "n/a"
+    status = "present" if path.exists() else "not yet created"
+    return f"{path.resolve(strict=False).as_posix()} ({status})"
+
+
+def _format_heartbeat_timeout(seconds: float | None) -> str:
+    if seconds is None:
+        return "unbounded"
+    return _format_heartbeat_duration(seconds)
+
+
+def _emit_command_heartbeat(
+    *,
+    stream: TextIO,
+    label: str,
+    elapsed_seconds: float,
+    last_progress_seconds_ago: float,
+    last_progress_reason: str,
+    timeout_seconds: float | None,
+    no_progress_timeout_seconds: float | None,
+    runtime_log_path: Path | None,
+) -> None:
+    print(
+        "[aidd live] "
+        f"{label} still running after {_format_heartbeat_duration(elapsed_seconds)}; "
+        f"last signal: {last_progress_reason} "
+        f"{_format_heartbeat_duration(last_progress_seconds_ago)} ago; "
+        f"hard timeout: {_format_heartbeat_timeout(timeout_seconds)}; "
+        f"no-progress timeout: {_format_heartbeat_timeout(no_progress_timeout_seconds)}; "
+        f"runtime log: {_runtime_log_heartbeat_label(runtime_log_path)}.",
+        file=stream,
+        flush=True,
+    )
+
+
 def _run_black_box_command(
     *,
     command: tuple[str, ...],
@@ -451,6 +500,10 @@ def _run_black_box_command(
     no_progress_timeout_seconds: float | None = None,
     progress_probe: Callable[[], dict[str, object]] | None = None,
     loop_observer: Callable[[], None] | None = None,
+    heartbeat_label: str | None = None,
+    heartbeat_interval_seconds: float | None = None,
+    heartbeat_runtime_log_path: Path | None = None,
+    heartbeat_stream: TextIO | None = None,
 ) -> BlackBoxCommandResult:
     started = time.monotonic()
     timed_out = False
@@ -470,6 +523,16 @@ def _run_black_box_command(
     last_progress_reason = "process-started"
     last_progress_snapshot: dict[str, object] | None = None
     last_progress_signature: str | None = None
+    heartbeat_interval = (
+        max(float(heartbeat_interval_seconds), 0.0)
+        if heartbeat_label is not None and heartbeat_interval_seconds is not None
+        else None
+    )
+    next_heartbeat_monotonic = (
+        started + heartbeat_interval
+        if heartbeat_interval is not None and heartbeat_interval > 0
+        else None
+    )
 
     if progress_probe is not None:
         try:
@@ -543,6 +606,21 @@ def _run_black_box_command(
                 loop_observer()
 
             now = time.monotonic()
+            if next_heartbeat_monotonic is not None and now >= next_heartbeat_monotonic:
+                _emit_command_heartbeat(
+                    stream=heartbeat_stream or sys.stderr,
+                    label=heartbeat_label or "command",
+                    elapsed_seconds=max(now - started, 0.0),
+                    last_progress_seconds_ago=max(now - last_progress_monotonic, 0.0),
+                    last_progress_reason=last_progress_reason,
+                    timeout_seconds=timeout_seconds,
+                    no_progress_timeout_seconds=no_progress_timeout_seconds,
+                    runtime_log_path=heartbeat_runtime_log_path,
+                )
+                assert heartbeat_interval is not None
+                while next_heartbeat_monotonic <= now:
+                    next_heartbeat_monotonic += heartbeat_interval
+
             if hard_deadline is not None and now >= hard_deadline:
                 timed_out = True
                 exit_code = 124
@@ -5617,6 +5695,23 @@ def _stage_run_observed_paths(ctx: FlowContext, stage: str) -> tuple[Path, ...]:
     )
 
 
+def _stage_first_attempt_runtime_log_path(ctx: FlowContext, stage: str) -> Path:
+    working_copy = _require_working_copy(ctx)
+    return (
+        working_copy
+        / ".aidd"
+        / "reports"
+        / "runs"
+        / ctx.work_item
+        / ctx.run_id
+        / "stages"
+        / stage
+        / "attempts"
+        / "attempt-0001"
+        / "runtime.log"
+    )
+
+
 def _stage_progress_probe(ctx: FlowContext, stage: str) -> Callable[[], dict[str, object]]:
     observed_paths = _stage_run_observed_paths(ctx, stage)
     return lambda: _progress_snapshot(observed_paths)
@@ -6775,6 +6870,9 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         no_progress_timeout_seconds=no_progress_timeout_seconds,
         progress_probe=_stage_progress_probe(ctx, stage),
         loop_observer=observe_running_frontend_checkpoint,
+        heartbeat_label=f"run-stage `{stage}`",
+        heartbeat_interval_seconds=RUN_STAGE_HEARTBEAT_INTERVAL_SECONDS,
+        heartbeat_runtime_log_path=_stage_first_attempt_runtime_log_path(ctx, stage),
     )
     classification = _classify_stage_run(stage_result)
     timeout_evidence_paths, timeout_reconciliation = _reconcile_timed_out_stage_run(
