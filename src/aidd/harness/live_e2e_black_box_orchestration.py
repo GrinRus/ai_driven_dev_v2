@@ -3972,7 +3972,46 @@ def _read_frontend_checkpoint_payload(ctx: FlowContext) -> dict[str, object]:
 
 
 def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, object]) -> Path:
-    lines = ["# Frontend Checkpoints", ""]
+    lines = [
+        "# Frontend Checkpoints",
+        "",
+        (
+            "- Scope: raw UI/API and operator-surface run-integrity evidence; "
+            "not a UI/UX audit, not screenshot evidence, and not a quality gate."
+        ),
+        (
+            "- Manual visual review: inspect the loopback UI in a browser before "
+            "recording an Operator UI/UX decision in `quality-report.md`."
+        ),
+        "",
+        "## Manual Visual Review Checklist",
+        "",
+        "- Visible next action and active stage match the checkpoint stage.",
+        (
+            "- Desktop and mobile topbar labels for work item, run, runtime, and "
+            "readiness remain readable without clipped single-letter chips."
+        ),
+        (
+            "- Recovery states lead with the evidence path that matches the failure "
+            "type: runtime logs for runtime failures, repair or request-change actions "
+            "for validation failures."
+        ),
+        (
+            "- Runtime logs, final artifacts, stage documents, questions, answers, "
+            "repair evidence, and next-flow handoff are reachable from visible controls."
+        ),
+        (
+            "- Long paths, log labels, and action copy avoid horizontal overflow on "
+            "desktop and mobile viewports."
+        ),
+        (
+            "- Record screenshot paths or browser notes in the manual final report, "
+            "or mark the surface `not inspected`."
+        ),
+        "",
+        "## Checkpoints",
+        "",
+    ]
     checkpoints_raw = payload.get("checkpoints")
     checkpoints = checkpoints_raw if isinstance(checkpoints_raw, list) else []
     if not checkpoints:

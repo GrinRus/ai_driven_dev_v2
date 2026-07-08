@@ -387,6 +387,13 @@ Every live eval bundle must aim to contain:
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
 
+`frontend-checkpoints.md` starts with a manual visual review checklist for the launching
+agent. It names the browser checks that API probes cannot prove: visible next action and
+active stage, readable desktop/mobile topbar labels, failure-appropriate recovery primary
+action, reachable logs/artifacts/questions/answers, next-flow handoff visibility, and no
+horizontal overflow for long paths, log labels, or action copy. The checklist is operator
+guidance only; it is not runner-generated screenshot evidence and not a UI/UX quality gate.
+
 The runner does not create `flow-quality-report.md`, `code-quality-report.md`,
 `quality-report.md`, `quality-transcript.json`, `acceptance-coverage.*`,
 `ui-ux-checkpoints.*`, `operator-quality-analysis.md`, or
@@ -438,7 +445,9 @@ After a terminal run, the launching SWE agent may add manual post-run evidence:
 
 The manual operator UI/UX decision must inspect AIDD operator workflows rather than
 reinterpret `frontend-checkpoints.*` HTTP/API and operator-surface semantic checks as
-UX proof. At minimum, review terminal flow
+UX proof. Use the `frontend-checkpoints.md` manual visual checklist as a prompt, then
+record actual browser evidence or explicitly mark surfaces `not inspected`.
+At minimum, review terminal flow
 visibility, stage list navigation, artifact/log views, questions and answers,
 repair evidence, next-flow handoff, state clarity, readability, keyboard/focus
 behavior where manually inspectable, responsive behavior or `not inspected`, and

@@ -1442,6 +1442,20 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     frontend_markdown = (
         result.bundle_root / "frontend-checkpoints.md"
     ).read_text(encoding="utf-8")
+    assert "- Scope: raw UI/API and operator-surface run-integrity evidence" in (
+        frontend_markdown
+    )
+    assert "not a UI/UX audit, not screenshot evidence, and not a quality gate" in (
+        frontend_markdown
+    )
+    assert "## Manual Visual Review Checklist" in frontend_markdown
+    assert "Visible next action and active stage match the checkpoint stage." in (
+        frontend_markdown
+    )
+    assert "without clipped single-letter chips" in frontend_markdown
+    assert "Record screenshot paths or browser notes in the manual final report" in (
+        frontend_markdown
+    )
     assert "- Operator surface: ok=`True`" in frontend_markdown
     assert "`next-action-visible`: ok=`True`" in frontend_markdown
     next_flow_payload = json.loads(

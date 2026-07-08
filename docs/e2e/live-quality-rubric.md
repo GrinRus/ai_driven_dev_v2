@@ -69,6 +69,10 @@ The runner no longer emits `quality-transcript.json`, `acceptance-coverage.*`,
 surfaces, including HTTP/API probes and operator-surface semantic checks for run,
 stage, next-action, log, and artifact signals.
 They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
+`frontend-checkpoints.md` includes a manual visual review checklist for the launching
+agent: visible next action and active stage, readable desktop/mobile topbar labels,
+failure-appropriate recovery primary action, reachable logs/artifacts/questions/answers,
+and no horizontal overflow for long paths, log labels, or action copy.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
 
 The `stage-audits/<implement-stage-run-id>.*` implement audit separates tracked changed files, new untracked product
@@ -336,7 +340,8 @@ implementation work.
 Operator UI/UX review should inspect real AIDD operator workflows: terminal flow
 visibility, stage list navigation, artifact inspection, log inspection,
 questions/answers, repair evidence, and next-flow handoff. API probes alone are not
-UX evidence. Cite screenshots or browser evidence manually when available, and
+UX evidence. Use the manual visual checklist in `frontend-checkpoints.md` as a prompt,
+not as proof by itself. Cite screenshots or browser evidence manually when available, and
 record visual hierarchy, density, labels, truncation for long paths/logs, keyboard
 path, focus visibility, labels or landmarks where manually inspectable,
 desktop/tablet/mobile responsive behavior or explicitly `not inspected`, and
