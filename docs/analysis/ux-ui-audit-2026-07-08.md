@@ -61,11 +61,12 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - `a48b1bd Fix live frontend next-action checkpoint`: fixed the checkpoint contract to probe `/api/dashboard`.
 - `eval-live-007-codex-20260708T103154Z`: completed the medium live flow with review remediation and QA self-repair. Execution quality is strong; UX excellence still needs better repaired-stage summaries, flow-aware next-action text, progress affordances, and visual checks.
 - Current follow-up: repaired `stage-result.md` rendering now preserves declared primary outputs already present in the stage directory, so repaired summaries do not hide `plan.md`, `implementation-report.md`, `review-report.md`, `qa-report.md`, or equivalent primary reports.
+- Current follow-up: validation-pass reconciliation now replaces stale terminal notes that still claim a stage ended as `failed`, `blocked`, or `needs-input`. The summary can say artifact publication succeeded while preserving product-quality decisions such as `review-report.md` rejection in the primary report.
 
 ## Deferred Work
 
 - Add visual frontend checkpoints for live E2E, including desktop/mobile screenshots and assertions for visible next action, active stage, recovery primary action, and absence of clipped topbar text. The current iteration adds non-visual operator-surface semantic evidence first.
 - Rebalance first-launch onboarding so the recommended deterministic/safe path is visually dominant while real provider runners remain available.
 - Add a more explicit in-progress/pre-runtime state to the UI for long live stages before runtime log chunks exist.
-- Improve repaired-stage and terminal stage summaries so they always name the primary report artifact and clearly distinguish runner execution success from product-quality rejection.
+- Continue improving terminal stage summaries so they name the next operator decision without burying review or QA outcomes in artifact details.
 - Make generated next-action copy flow-aware so stage summaries do not point to QA before review.

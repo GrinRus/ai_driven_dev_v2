@@ -92,6 +92,9 @@ or validation wording when the canonical validator report proves the draft incon
 - `Terminal state notes`
   - Must explain why the stage ended in the declared terminal status.
   - Must include repair-budget outcome when repair logic was used.
+  - If AIDD normalizes stale runtime status/verdict text after canonical validation
+    passes, terminal notes must not retain runtime-authored claims that the stage
+    ended as `failed`, `blocked`, or `needs-input`.
   - If `repair-brief.md` declares `repair-budget-final-attempt`, status must reflect the actual validation outcome of that attempt, not fail solely because no later rerun is available.
   - If AIDD records `repair-budget-exhausted` after a failed final attempt, status must be `failed`.
 - `Project-set evidence` (conditional)
@@ -120,7 +123,10 @@ or validation wording when the canonical validator report proves the draft incon
 - If canonical AIDD validation passes, runtime exit succeeded, and no unresolved blocking
   questions remain, AIDD may normalize a stale draft `Status: failed|blocked` or
   `Validator verdict: fail` to `succeeded` / `pass` before publication and record that
-  normalization in `Terminal state notes`.
+  normalization in `Terminal state notes`. It must remove or replace stale
+  terminal-status notes that contradict the normalized status, while preserving
+  product-quality decisions in the primary stage report such as review rejection or QA
+  readiness.
 - Use explicit `- none` markers instead of leaving required sections empty.
 
 ## Validation cues

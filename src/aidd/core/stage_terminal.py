@@ -35,6 +35,16 @@ _STALE_VALIDATOR_VERDICT_LINE_PATTERN = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 _VALIDATION_PASS_LINE_PATTERN = re.compile(r"(validation\s+`)pass(`)", re.IGNORECASE)
+_STALE_TERMINAL_STATUS_NOTE_PATTERN = re.compile(
+    r"^\s*[-*]\s+.*\b(?:"
+    r"stage\s+ended|ended\s+as|ended\s+with|terminal\s+status|"
+    r"status\s+is|declared\s+status|stage\s+stopped|run\s+stopped"
+    r")\b.*`?(?:failed|blocked|needs-input)`?.*$",
+    re.IGNORECASE,
+)
+_VALIDATION_PASS_NORMALIZATION_MARKER = (
+    "stale runtime draft status/verdict was normalized"
+)
 
 
 def _workspace_relative_path(workspace_root: Path, path: Path) -> str:
@@ -201,7 +211,7 @@ def _append_validator_pass_terminal_note(markdown: str) -> str:
         "\n\n- Canonical AIDD validation passed; stale runtime draft status/verdict "
         "was normalized to `succeeded` / `pass` before publication.\n"
     )
-    if "stale runtime draft status/verdict was normalized" in markdown.lower():
+    if _VALIDATION_PASS_NORMALIZATION_MARKER in markdown.lower():
         return markdown
 
     match = _TERMINAL_NOTES_PATTERN.search(markdown)
@@ -209,6 +219,40 @@ def _append_validator_pass_terminal_note(markdown: str) -> str:
         return markdown.rstrip() + "\n\n## Terminal state notes" + note
 
     return markdown[: match.end("body")] + note + markdown[match.end("body") :]
+
+
+def _replace_stale_terminal_status_notes_for_validation_pass(markdown: str) -> str:
+    match = _TERMINAL_NOTES_PATTERN.search(markdown)
+    if match is None:
+        return markdown
+
+    replacement_note = (
+        "- Canonical AIDD validation passed; stale runtime draft status/verdict "
+        "was normalized to `succeeded` / `pass` before publication, and stale "
+        "terminal-status text was removed. Inspect the primary stage report for "
+        "product-quality decisions such as review rejection, QA readiness, or "
+        "remediation requirements.\n"
+    )
+    replacement_lines: list[str] = []
+    replaced = False
+    inserted_replacement = False
+    for line in match.group("body").splitlines(keepends=True):
+        if _STALE_TERMINAL_STATUS_NOTE_PATTERN.match(line):
+            replaced = True
+            if not inserted_replacement:
+                replacement_lines.append(replacement_note)
+                inserted_replacement = True
+            continue
+        replacement_lines.append(line)
+
+    if not replaced:
+        return markdown
+
+    return (
+        markdown[: match.start("body")]
+        + "".join(replacement_lines)
+        + markdown[match.end("body") :]
+    )
 
 
 def _has_stale_failure_claim_for_validation_pass(markdown: str) -> bool:
@@ -271,6 +315,7 @@ def reconcile_stage_result_after_validation_pass(
         _replace_or_add_success_status_section(text)
     )
     if has_stale_failure_claim:
+        updated = _replace_stale_terminal_status_notes_for_validation_pass(updated)
         updated = _append_validator_pass_terminal_note(updated)
     if updated == text:
         return stage_result_path
