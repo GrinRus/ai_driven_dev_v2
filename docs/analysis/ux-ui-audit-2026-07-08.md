@@ -269,3 +269,33 @@ The main UX gap is not missing capability; it is decision priority. A new operat
   `tasklist`, preventing the reviewed-plan handoff from skipping decomposition.
 - The live AIDD-LIVE-007 audit rubric now names the observed middle-stage checks explicitly:
   `plan -> review-spec`, `review-spec -> tasklist`, and `implement -> review`.
+- Focused verification covered prompt quality, scenario loader model tests, docs consistency, ruff, and `git diff --check`.
+
+## Refresh Run - 2026-07-08T21:02Z
+
+- `eval-live-007-codex-20260708T210223Z`: terminal execution verdict `pass`.
+- Source revision: `fd8bad3e3fac2a007bba3caeddd8c475e06f301c`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Quality gates: `idea`, `plan`, `review-spec`, `implement`, `review`, and `qa` chose `continue`; `research` and `tasklist` chose `continue-with-risk`.
+- Self-repair and remediation: none.
+- Frontend checkpoints: all running-stage and post-stage checkpoints passed.
+- Manual browser evidence: copied into `manual-frontend-evidence/terminal-desktop-210223.png`, `manual-frontend-evidence/terminal-mobile-210223.png`, and `manual-frontend-evidence/terminal-ui-browser-notes-210223.json`.
+- Browser QA: desktop `scrollWidth=1280`, mobile `scrollWidth=390`, no horizontal overflow, no console messages, Flow Complete/QA-ready/next action/runtime logs/manual evidence all present.
+- Target implementation quality: review approved the four-file Hono patch; QA reported `ready` / `proceed`; focused Vitest, `tsc --noEmit`, and `git diff --check` passed.
+- Final manual reports: `.aidd/reports/evals/eval-live-007-codex-20260708T210223Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+
+## Refresh Findings - 2026-07-08T21:02Z
+
+- P1: CLI/live-harness progress remains too quiet during native-provider calls. Browser running-state affordances are healthy, but the launching terminal still has long intervals with little useful operator feedback.
+- P1: Exact next-stage copy is improved but not universal. `plan` now correctly names `review-spec`, and `review-spec` now correctly names `tasklist`; `research` still used generic `planning` wording instead of exact `plan`, and `tasklist` used generic `implementation stage` wording instead of exact `implement`.
+- P2: One successful `research` stage result retained stale placeholder copy (`Stage not run yet`) above otherwise useful output, which weakens trust in the stage summary.
+- P2: Manual frontend evidence import is usable, but evidence generated after the runner has already copied the directory needs an explicit post-run copy step. The current bundle was corrected manually after browser QA.
+- P2: Terminal Flow Complete UI is healthy on desktop and 390px mobile: QA ready, final artifacts, evidence refs, recovery assistant, next action, and next-flow actions are readable with no horizontal overflow.
+
+## Next UX Plan - 2026-07-08T21:02Z
+
+- Add CLI/live-harness heartbeat output for long native-provider intervals, including active stage, elapsed time, last runtime signal, and log path.
+- Extend exact next-action guidance and validation to all successful non-terminal stages, starting with `research -> plan` and `tasklist -> implement`.
+- Remove stale placeholder/preamble copy when a successful `stage-result.md` is regenerated or repaired.
+- Make manual frontend evidence timing explicit in the live E2E workflow so screenshots and browser notes reliably land in the final bundle.
+- Keep interruption recording and bounded ignored-residue evidence on the backlog for the next non-happy-path audit pass.
