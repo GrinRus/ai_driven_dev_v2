@@ -87,16 +87,28 @@ def is_deferred_implementation_verification(verification_item: str) -> bool:
     return IMPLEMENT_DEFERRED_VERIFICATION_PATTERN.search(verification_item) is not None
 
 
+def _safe_command_pattern_search(text: str) -> bool:
+    command_candidate = text
+    if command_candidate.count("`") % 2:
+        command_candidate = command_candidate.replace("`", "")
+    return IMPLEMENT_COMMAND_PATTERN.search(command_candidate) is not None
+
+
+def _without_non_command_artifact_text_outside_code(text: str) -> str:
+    parts = re.split(r"(`[^`\n]*`)", text)
+    return "".join(
+        part
+        if part.startswith("`") and part.endswith("`")
+        else IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN.sub("", part)
+        for part in parts
+    )
+
+
 def has_implementation_command_evidence(verification_item: str) -> bool:
-    command_candidate = IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN.sub(
-        "",
-        verification_item,
-    )
-    return (
-        IMPLEMENT_COMMAND_PATTERN.search(command_candidate) is not None
-        or IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(command_candidate)
-        is not None
-    )
+    command_candidate = _without_non_command_artifact_text_outside_code(verification_item)
+    return _safe_command_pattern_search(
+        command_candidate
+    ) or IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(command_candidate) is not None
 
 
 __all__ = [

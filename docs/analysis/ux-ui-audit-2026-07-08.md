@@ -188,6 +188,31 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - On 390px mobile, external-running-stage mode raises the cockpit and progress explanation before the stage rail so the live wait state is visible in the first viewport.
 - Browser verification used a temporary `codex` run in `/tmp/aidd-external-running-ui-qa` with `plan` marked `executing`. Desktop QA confirmed the strip is readable, uses one copy column, keeps `scrollWidth=1280`, opens `RUNTIME LOGS / LIVE CONSOLE`, and records no console errors. Mobile 390px QA confirmed the strip starts in the first viewport at `top=457`, keeps `scrollWidth=390`, keeps buttons inside the viewport, and records no console errors.
 
+## Refresh Run - 2026-07-08T19:06Z
+
+- `eval-live-007-codex-20260708T190645Z`: interrupted during `implement` after the provider wrote implementation artifacts and before AIDD published the stage.
+- Stage path reached: `idea -> research -> plan -> review-spec -> tasklist -> implement`.
+- Frontend running-stage checkpoints passed for the observed long stages: the dashboard exposed the active running stage, disabled `wait-for-stage` action, and runtime-log affordance. Remaining quiet-runner ambiguity now belongs mostly to CLI/harness stdout and post-provider status reporting, not the browser operator UI.
+- Stage-quality audits chose `continue` for `idea`, `research`, `review-spec`, and `tasklist`; `plan` chose `continue-with-risk` because `stage-result.md` skipped the immediate canonical `review-spec` next stage in its copy.
+- `tasklist` self-repaired missing T6 verification-note coverage and then passed validation.
+- `implement` generated a valid scoped Hono change and verification evidence, but AIDD remained in `validating` while the semantic validator consumed CPU inside implementation command-evidence regex matching.
+
+## Refresh Findings - 2026-07-08T19:06Z
+
+- P1: A valid implementation report can leave the operator stuck in a perpetual `validating` state. The trigger was a cache-absence verification command such as ``test ! -e .pytest_cache && test ! -e .ruff_cache``: artifact-word filtering removed the closing backtick before `IMPLEMENT_COMMAND_PATTERN.search`, causing catastrophic regex backtracking.
+- P1: Interruption evidence is not robust enough under repeated interrupt. The harness caught the first interrupt, then a second `KeyboardInterrupt` landed while serializing `steps.json`, so resumable interruption evidence may be incomplete.
+- P2: The external running-stage UI did its job: browser affordances made the active stage and logs visible. The weak spot is now the CLI/live-harness status surface when the provider has finished but AIDD post-processing is still validating.
+- P2: Ignored-residue evidence prompts still encourage broad `git status --ignored --short --untracked-files=all` output in repositories with installed dependencies. The validation contract needs bounded evidence wording so operators and logs do not drown in setup-owned ignored files.
+
+## Validator Regex Stability Slice
+
+- Implementation command-evidence detection now removes non-command artifact prose only outside inline-code spans, preserving backticked shell commands that mention `.pytest_cache`, `.ruff_cache`, `coverage`, or similar cache paths.
+- The command regex is guarded against unbalanced backticks before search, preventing the validator from spinning when malformed or filtered verification text contains an unmatched inline-code delimiter.
+- Regression coverage validates that a cache-absence command with `.pytest_cache` and `.ruff_cache` is accepted without hanging, while the existing cleanup-prose case still does not get mistaken for executable command evidence.
+- Replay verification against the interrupted live `implement` artifact now completes with `0` findings and advances the stage to `succeeded` with published output mirrors.
+
 ## Next UX Plan
 
-- Refresh a medium live E2E after the external-running-stage UI change and check whether any remaining quiet-runner ambiguity now belongs in CLI/harness stdout rather than the browser operator UI.
+- Refresh a medium live E2E from the validator-regex commit to confirm `implement` no longer stalls in `validating` and to continue through `review` / `qa`.
+- Add bounded ignored-residue wording to the implementation prompt/contract so live logs cite the evidence command without dumping full dependency trees.
+- Harden live E2E interruption recording so a repeated interrupt cannot corrupt or skip the interrupted-resumable evidence step.
