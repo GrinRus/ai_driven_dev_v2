@@ -31,6 +31,7 @@ function renderRuntimeSelector() {
 function scrollActiveStageIntoView() {
   const rail = document.getElementById("stageRail");
   if (!rail || !window.matchMedia("(max-width: 760px)").matches) return;
+  if (document.body.classList.contains("terminal-repair-mode")) return;
   const active = rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`);
   active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});
 }

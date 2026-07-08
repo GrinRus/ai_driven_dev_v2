@@ -167,8 +167,14 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Completed work-item cards now render `flow complete / 8/8` instead of an inherited stage label such as `idea / 8/8`.
 - Browser verification used the completed `eval-live-007-codex-20260708T154059Z` target workspace. Opening `http://127.0.0.1:65211/` redirected to `?stage=qa&run_id=eval-live-007-codex-20260708T154059Z`, highlighted `QA`, showed `QA / Verify outcomes` in the stage cockpit, preserved the `Review final artifacts` terminal handoff, and showed `flow complete / 8/8` on the work-item card. Screenshot evidence: `/tmp/aidd-terminal-default-qa-after-fix.png`.
 
+## Terminal Repair Reason Slice
+
+- Terminal handoff API responses now include compact repair highlights in addition to aggregate repair counts.
+- Flow Complete now surfaces resolved repair reason, stage, retry number, outcome, and direct repair/validator evidence links before next-flow actions.
+- Mobile terminal handoffs with repair highlights add a compact repair cue to the global next-action strip and keep the page at the top instead of auto-scrolling to the stage rail.
+- Browser verification used the completed `eval-live-007-codex-20260708T154059Z` target workspace. Desktop QA confirmed the `tasklist` repair reason is visible in the first viewport, evidence buttons point to `repair-brief.md` and `validator-report.md`, and no console warnings/errors were recorded. Mobile 390px QA confirmed the compact repair cue is visible in the first viewport, `scrollWidth=390`, the repair card stays within `46..347px`, and evidence buttons stay inside `57..336px`. Screenshot evidence: `/tmp/aidd-terminal-repair-highlight-desktop.png` and `/tmp/aidd-terminal-repair-highlight-mobile.png`.
+
 ## Next UX Plan
 
-- Make resolved repair reasons more prominent in the first viewport for retried stages, not only in Recovery/Markdown evidence.
 - Add clearer operator copy for canonical stage documents versus `output/` mirror artifacts when validators promote misplaced files.
 - Continue improving progress affordances for externally-started live E2E stages where runner stdout is quiet for several minutes.

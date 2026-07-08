@@ -550,6 +550,60 @@
 .metric-bad {
   color: var(--red);
 }
+.repair-highlight-spotlight {
+  background: #f7fbf8;
+  border: 1px solid #a9d6b7;
+  border-left: 4px solid var(--green);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+.repair-highlight-spotlight > p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+}
+.repair-highlight-list {
+  display: grid;
+  gap: 8px;
+}
+.repair-highlight-card {
+  align-items: start;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 10px;
+}
+.repair-highlight-card .small-badge {
+  margin-bottom: 5px;
+}
+.repair-highlight-card strong,
+.repair-highlight-card p {
+  display: block;
+}
+.repair-highlight-card p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+.repair-highlight-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.repair-highlight-evidence button {
+  min-height: 34px;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
 .start-next-flow-band {
   border: 1px solid var(--teal);
   border-radius: 6px;

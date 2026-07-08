@@ -937,21 +937,45 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
         question_id="Q1",
         text="The target release is 0.2.0.",
     )
+    plan_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    plan_root.joinpath("repair-brief.md").write_text(
+        "\n".join(
+            (
+                "# Failed checks",
+                "",
+                (
+                    "- `SEM-INCOMPLETE-SECTION` `medium` in "
+                    "`workitems/WI-UI/stages/plan/plan.md`: Verification notes "
+                    "must cover T7 and T8."
+                ),
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
     persist_repair_history_snapshot(
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
         stage="plan",
         attempt_number=1,
+        trigger="initial",
+        outcome="failed validation",
+        stage_status="repair-needed",
+        validator_report_path=plan_root / "validator-report.md",
+        repair_brief_path=plan_root / "repair-brief.md",
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=2,
         trigger="repair",
         outcome="succeeded",
         stage_status="succeeded",
-        validator_report_path=(
-            workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "validator-report.md"
-        ),
-        repair_brief_path=(
-            workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "repair-brief.md"
-        ),
+        validator_report_path=plan_root / "validator-report.md",
+        repair_brief_path=plan_root / "repair-brief.md",
     )
     _write_operator_approval(
         run_attempt_root(
@@ -980,6 +1004,15 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
     assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
     assert dashboard.terminal_handoff.repair_counts.attempts == 1
     assert dashboard.terminal_handoff.repair_counts.succeeded == 1
+    assert len(dashboard.terminal_handoff.repair_highlights) == 1
+    repair_highlight = dashboard.terminal_handoff.repair_highlights[0]
+    assert repair_highlight.stage == "plan"
+    assert repair_highlight.attempt_number == 2
+    assert "Verification notes must cover T7 and T8" in repair_highlight.reason
+    assert "workitems/WI-UI/stages/plan/plan.md" not in repair_highlight.reason
+    assert repair_highlight.repair_brief_path == (
+        "workitems/WI-UI/stages/plan/repair-brief.md"
+    )
     assert dashboard.terminal_handoff.approval_counts.requested == 1
     assert dashboard.terminal_handoff.approval_counts.approved == 1
     assert dashboard.terminal_handoff.questions_answered_count == 1

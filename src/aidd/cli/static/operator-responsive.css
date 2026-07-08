@@ -125,6 +125,10 @@
     display: flex;
     flex-direction: column;
   }
+  body.terminal-repair-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
   body.live-job-mode .cockpit {
     order: 1;
   }
@@ -132,6 +136,9 @@
     order: 1;
   }
   body.stale-downstream-mode .cockpit {
+    order: 1;
+  }
+  body.terminal-repair-mode .cockpit {
     order: 1;
   }
   body.live-job-mode .stage-rail {
@@ -143,6 +150,9 @@
   body.stale-downstream-mode .stage-rail {
     order: 2;
   }
+  body.terminal-repair-mode .stage-rail {
+    order: 2;
+  }
   body.live-job-mode .right-sidebar {
     order: 3;
   }
@@ -150,6 +160,9 @@
     order: 3;
   }
   body.stale-downstream-mode .right-sidebar {
+    order: 3;
+  }
+  body.terminal-repair-mode .right-sidebar {
     order: 3;
   }
   body.live-job-mode .bottom-dock {
@@ -161,7 +174,11 @@
   body.stale-downstream-mode .bottom-dock {
     order: 4;
   }
-  body.live-job-mode .project-home-rail {
+  body.terminal-repair-mode .bottom-dock {
+    order: 4;
+  }
+  body.live-job-mode .project-home-rail,
+  body.terminal-repair-mode .project-home-rail {
     display: none;
   }
   .global-next-action-strip {
@@ -259,6 +276,7 @@
   .stale-downstream-summary,
   .stale-downstream-facts,
   .handoff-metric-grid,
+  .repair-highlight-card,
   .next-flow-actions-grid,
   .terminal-summary-grid,
   .lineage-flow,
@@ -296,10 +314,12 @@
   }
   .source-selection-metrics,
   .source-selection-actions,
+  .repair-highlight-evidence,
   .wizard-actions {
     justify-content: stretch;
   }
   .source-selection-actions button,
+  .repair-highlight-evidence button,
   .wizard-actions button {
     flex: 1 1 150px;
   }

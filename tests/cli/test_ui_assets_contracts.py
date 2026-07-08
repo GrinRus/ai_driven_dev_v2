@@ -427,6 +427,7 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "function isRecoveryNextAction(action)",
             "function activeModeIsEvidenceLog()",
             "function applyOperatorModeBodyClass()",
+            "terminal-repair-mode",
             "function initializeStateFromLocation()",
             "new URLSearchParams(window.location.search)",
             "STAGES.includes(requestedStage)",
@@ -1561,6 +1562,7 @@ def test_operator_static_screen_landmarks_cover_accepted_mission_control_surface
 
 
 def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions() -> None:
+    shell = _asset_text("/operator-shell-rendering.js")
     next_flow = _asset_text("/operator-next-flow-actions.js")
     components = _asset_text("/operator-components.css")
     responsive = _asset_text("/operator-responsive.css")
@@ -1578,12 +1580,21 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "terminal handoff",
             "function recommendedNextFlowDecision(handoff)",
             "function renderRecommendedNextFlowDecision(handoff)",
+            "function renderTerminalRepairHighlights(highlights)",
+            "function terminalRepairDecisionPeek()",
+            "repair resolved",
             "recommended next decision",
+            "Resolved Repairs",
+            "These validation issues were retried and resolved before QA handoff.",
+            "handoff.repair_highlights",
+            "data-open-artifact",
             "QA is ready and no open blockers are recorded",
             "Terminal QA failed; carry failed evidence into a follow-up",
             "carry the current findings into follow-up work first",
             "renderRecommendedNextFlowDecision(handoff)",
+            "renderTerminalRepairHighlights(handoff.repair_highlights || [])",
             "renderNextFlowActions(handoff)",
+            "activeModeDecisionPeek() || terminalRepairDecisionPeek()",
             "next-flow-action-card",
             "recommended",
             "Final artifacts",
@@ -1607,9 +1618,22 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "width: fit-content;",
             ".next-flow-decision-spotlight button {",
             "min-width: 156px;",
+            ".repair-highlight-spotlight {",
+            "border-left: 4px solid var(--green);",
+            ".repair-highlight-card {",
+            "grid-template-columns: minmax(0, 1fr) auto;",
+            ".repair-highlight-evidence button {",
+            "white-space: nowrap;",
         ),
     )
     assert ".next-flow-decision-spotlight," in responsive
+    assert ".repair-highlight-card," in responsive
+    assert ".repair-highlight-evidence," in responsive
+    assert "body.terminal-repair-mode .operator-shell" in responsive
+    assert "body.terminal-repair-mode .cockpit" in responsive
+    assert "body.terminal-repair-mode .stage-rail" in responsive
+    assert "body.terminal-repair-mode .project-home-rail" in responsive
+    assert 'document.body.classList.contains("terminal-repair-mode")' in shell
 
 
 def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight() -> None:

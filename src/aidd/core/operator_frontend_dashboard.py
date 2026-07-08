@@ -26,6 +26,7 @@ from aidd.core.operator_frontend_models import (
     OperatorPrimaryArtifact,
     OperatorRecoveryAction,
     OperatorRepairCounts,
+    OperatorRepairHighlight,
     OperatorRunArchive,
     OperatorRunLineage,
     OperatorRunSummary,
@@ -131,6 +132,8 @@ _RUNTIME_FAILURE_KINDS = frozenset(
         "timeout",
     }
 )
+_MAX_TERMINAL_REPAIR_HIGHLIGHTS = 3
+_MAX_REPAIR_REASON_CHARS = 220
 
 
 def _empty_run_lineage() -> OperatorRunLineage:
@@ -1593,6 +1596,96 @@ def _terminal_repair_counts(
     return OperatorRepairCounts(attempts=attempts, succeeded=succeeded, failed=failed)
 
 
+def _compact_repair_reason(text: str) -> str:
+    normalized = re.sub(r"\s+", " ", text).strip()
+    normalized = re.sub(r"\s+in `[^`]+`:\s*", ": ", normalized)
+    if not normalized:
+        return ""
+    if len(normalized) <= _MAX_REPAIR_REASON_CHARS:
+        return normalized
+    return f"{normalized[:_MAX_REPAIR_REASON_CHARS - 1].rstrip()}..."
+
+
+def _read_repair_reason(
+    *,
+    workspace_root: Path,
+    repair_brief_path: str | None,
+) -> str | None:
+    if not repair_brief_path:
+        return None
+    path = workspace_root / repair_brief_path
+    if not path.exists() or not path.is_file():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    in_failed_checks = False
+    fallback_bullet: str | None = None
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            heading = line.lstrip("#").strip().lower()
+            in_failed_checks = heading == "failed checks"
+            continue
+        if not line.startswith(("- ", "* ")):
+            continue
+        bullet = line[2:].strip()
+        if not bullet or bullet.lower() == "none":
+            continue
+        if in_failed_checks:
+            return _compact_repair_reason(bullet)
+        if fallback_bullet is None:
+            fallback_bullet = bullet
+    if fallback_bullet is None:
+        return None
+    return _compact_repair_reason(fallback_bullet)
+
+
+def _terminal_repair_highlights(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary,
+) -> tuple[OperatorRepairHighlight, ...]:
+    highlights: list[OperatorRepairHighlight] = []
+    for stage in STAGES:
+        stage_metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=metadata.run_id,
+            stage=stage,
+        )
+        if stage_metadata is None:
+            continue
+        repair_entries = [
+            entry for entry in stage_metadata.repair_history if entry.trigger == "repair"
+        ]
+        for entry in repair_entries:
+            reason = _read_repair_reason(
+                workspace_root=workspace_root,
+                repair_brief_path=entry.repair_brief_path,
+            )
+            if reason is None:
+                reason = f"Attempt {entry.attempt_number}: {entry.outcome}."
+            highlights.append(
+                OperatorRepairHighlight(
+                    stage=stage,
+                    attempt_number=entry.attempt_number,
+                    outcome=entry.outcome,
+                    reason=reason,
+                    validator_report_path=entry.validator_report_path,
+                    repair_brief_path=entry.repair_brief_path,
+                    recorded_at_utc=entry.recorded_at_utc,
+                )
+            )
+    highlights.sort(key=lambda highlight: highlight.recorded_at_utc, reverse=True)
+    return tuple(highlights[:_MAX_TERMINAL_REPAIR_HIGHLIGHTS])
+
+
 def _terminal_approval_counts(
     *,
     workspace_root: Path,
@@ -1751,6 +1844,11 @@ def _terminal_handoff(
         ),
         blockers=blockers,
         repair_counts=_terminal_repair_counts(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            metadata=metadata,
+        ),
+        repair_highlights=_terminal_repair_highlights(
             workspace_root=workspace_root,
             work_item=work_item,
             metadata=metadata,

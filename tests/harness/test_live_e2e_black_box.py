@@ -232,8 +232,20 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
     (stage_root / "stage-metadata.json").write_text(
         json.dumps(
             {{
+                "schema_version": 1,
+                "run_id": run_id,
+                "work_item_id": work_item,
+                "stage": stage,
                 "status": "succeeded",
-                "status_history": [{{"status": "succeeded"}}],
+                "created_at_utc": "2026-05-25T00:00:00Z",
+                "updated_at_utc": "2026-05-25T00:00:00Z",
+                "status_history": [
+                    {{
+                        "status": "succeeded",
+                        "changed_at_utc": "2026-05-25T00:00:00Z",
+                    }}
+                ],
+                "repair_history": [],
                 "attempt_count": 1,
             }}
         )
@@ -1485,12 +1497,25 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert frontend_payload["enabled"] is True
     assert len(frontend_payload["checkpoints"]) == len(STAGES) * 2
     assert all(
-        checkpoint["classification"] == "pass"
+        checkpoint["classification"] in {"pass", "skipped"}
         for checkpoint in frontend_payload["checkpoints"]
     )
     assert all(
         checkpoint["operator_surface"]["ok"] is True
         for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["classification"] == "pass"
+    )
+    skipped_running_checkpoints = [
+        checkpoint
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["classification"] == "skipped"
+    ]
+    assert all(
+        checkpoint["phase"] == "running-stage"
+        and checkpoint["operator_surface"]["failed_checks"] == ["checkpoint-not-run"]
+        and checkpoint["failure_reason"]
+        == "Running stage state ended before UI checkpoint probes could run."
+        for checkpoint in skipped_running_checkpoints
     )
     running_checkpoint = next(
         checkpoint

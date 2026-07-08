@@ -347,6 +347,39 @@ function renderTerminalBlockers(blockers) {
   `).join("");
 }
 
+function renderTerminalRepairHighlights(highlights) {
+  if (!highlights?.length) return "";
+  return `
+    <div class="repair-highlight-spotlight">
+      <div class="surface-title">
+        <span>Resolved Repairs</span>
+        <span class="small-badge good">visible in handoff</span>
+      </div>
+      <p>These validation issues were retried and resolved before QA handoff.</p>
+      <div class="repair-highlight-list">
+        ${highlights.map((highlight) => {
+          const stageLabel = stageTitle(highlight.stage);
+          const outcome = String(highlight.outcome || "recorded");
+          const outcomeTone = outcome.toLowerCase().includes("fail") ? "warn" : "good";
+          return `
+            <article class="repair-highlight-card">
+              <div>
+                <span class="small-badge ${outcomeTone}">${escapeHtml(outcome)}</span>
+                <strong>${escapeHtml(stageLabel)} retry ${escapeHtml(highlight.attempt_number || "")}</strong>
+                <p>${escapeHtml(highlight.reason || "Repair reason was not recorded.")}</p>
+              </div>
+              <div class="repair-highlight-evidence">
+                ${highlight.repair_brief_path ? `<button data-open-artifact="${escapeHtml(highlight.repair_brief_path)}" type="button">Repair brief</button>` : ""}
+                ${highlight.validator_report_path ? `<button data-open-artifact="${escapeHtml(highlight.validator_report_path)}" type="button">Validator report</button>` : ""}
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderFollowUpCandidates(handoff) {
   const blockerCandidates = (handoff.blockers || []).map((blocker) => ({
     label: blocker.title,
@@ -416,6 +449,7 @@ function renderFlowCompleteState() {
           <span>${escapeHtml(runtimeId)}</span>
         </div>
       </div>
+      ${renderTerminalRepairHighlights(handoff.repair_highlights || [])}
       <div class="handoff-metric-grid">
         ${renderHandoffMetric({label: "Final artifacts", value: artifactCount, detail: "QA documents and logs available.", tone: artifactCount ? "good" : "warn"})}
         ${renderHandoffMetric({label: "Open blockers", value: blockerCount, detail: blockerCount ? "Inspect before launch." : "No blockers detected.", tone: blockerCount ? "bad" : "good"})}
@@ -1892,6 +1926,17 @@ function qaDecisionPeek(view) {
   };
 }
 
+function terminalRepairDecisionPeek() {
+  const highlight = state.dashboard?.terminal_handoff?.repair_highlights?.[0];
+  if (!highlight) return null;
+  return {
+    tone: "good",
+    badge: "repair resolved",
+    title: `${stageTitle(highlight.stage)} retry ${highlight.attempt_number} resolved`,
+    detail: highlight.reason || "Validation passed after repair before terminal handoff."
+  };
+}
+
 function activeModeDecisionPeek() {
   if (state.activeTab !== "work") return null;
   if (state.workDetail === "review-findings" && state.reviewFindingsRunId === state.activeRunId && state.reviewFindingsView) {
@@ -1956,7 +2001,7 @@ function renderStaleDownstreamSummary(action) {
 }
 
 function renderModeDecisionPeek() {
-  const peek = activeModeDecisionPeek();
+  const peek = activeModeDecisionPeek() || terminalRepairDecisionPeek();
   if (!peek) return "";
   return `
     <div class="mode-decision-peek ${escapeHtml(peek.tone)}" aria-label="Current screen decision summary">
