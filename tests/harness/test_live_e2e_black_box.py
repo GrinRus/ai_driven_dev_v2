@@ -506,7 +506,11 @@ def ui(args: list[str]) -> int:
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             if self.path == "/":
-                body = f"<html><body>AIDD UI {{work_item}}</body></html>".encode()
+                body = (
+                    "<html><body>"
+                    f"<h1>AIDD Operator Console</h1><p>Work item {{work_item}}</p>"
+                    "</body></html>"
+                ).encode()
                 content_type = "text/html; charset=utf-8"
                 self.send_response(200)
                 self.send_header("Content-Type", content_type)
@@ -547,6 +551,25 @@ def ui(args: list[str]) -> int:
                         "run_id": run_id,
                         "work_item": work_item,
                         "status": "succeeded",
+                        "next_action": {{
+                            "action": "run-stage",
+                            "label": "Run next stage",
+                            "detail": "Continue through the governed flow.",
+                            "stage": stage,
+                            "enabled": True,
+                        }},
+                        "recent_artifacts": [
+                            {{"stage": stage, "path": PRIMARY_OUTPUTS.get(stage, "")}}
+                        ],
+                        "evidence_refs": [
+                            {{
+                                "stage": stage,
+                                "kind": "artifact",
+                                "path": PRIMARY_OUTPUTS.get(stage, ""),
+                            }}
+                        ],
+                        "blockers": [],
+                        "recovery_actions": [],
                     }}
                 elif self.path.startswith("/api/stage"):
                     payload = {{
@@ -554,6 +577,7 @@ def ui(args: list[str]) -> int:
                         "work_item": work_item,
                         "stage": stage,
                         "status": "succeeded",
+                        "final_state": "succeeded",
                     }}
                 elif self.path.startswith("/api/questions"):
                     payload = {{
@@ -1369,6 +1393,31 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         checkpoint["classification"] == "pass"
         for checkpoint in frontend_payload["checkpoints"]
     )
+    assert all(
+        checkpoint["operator_surface"]["ok"] is True
+        for checkpoint in frontend_payload["checkpoints"]
+    )
+    first_operator_surface = frontend_payload["checkpoints"][0]["operator_surface"]
+    assert {
+        check["name"]
+        for check in first_operator_surface["checks"]
+    }.issuperset(
+        {
+            "operator-shell-visible",
+            "work-item-context-visible",
+            "run-context-visible",
+            "active-stage-visible",
+            "stage-status-visible",
+            "next-action-visible",
+            "runtime-log-surface-visible",
+            "artifact-surface-visible",
+        }
+    )
+    frontend_markdown = (
+        result.bundle_root / "frontend-checkpoints.md"
+    ).read_text(encoding="utf-8")
+    assert "- Operator surface: ok=`True`" in frontend_markdown
+    assert "`next-action-visible`: ok=`True`" in frontend_markdown
     next_flow_payload = json.loads(
         (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
     )

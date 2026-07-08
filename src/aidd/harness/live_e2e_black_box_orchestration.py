@@ -3812,6 +3812,132 @@ def _frontend_probe_semantic_failure(
     return None
 
 
+def _frontend_probe_by_name(
+    probes: Sequence[dict[str, object]],
+    name: str,
+) -> dict[str, object]:
+    for probe in probes:
+        if probe.get("name") == name:
+            return probe
+    return {}
+
+
+def _frontend_probe_json_payload(
+    probes: Sequence[dict[str, object]],
+    name: str,
+) -> dict[str, object]:
+    payload = _frontend_probe_by_name(probes, name).get("json_payload")
+    return payload if isinstance(payload, dict) else {}
+
+
+def _operator_surface_check(
+    *,
+    name: str,
+    ok: bool,
+    detail: str,
+) -> dict[str, object]:
+    return {
+        "name": name,
+        "ok": ok,
+        "detail": detail,
+    }
+
+
+def _frontend_operator_surface_checks(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    probes: Sequence[dict[str, object]],
+) -> dict[str, object]:
+    page_probe = _frontend_probe_by_name(probes, "page")
+    page_body = str(page_probe.get("body_preview") or "")
+    run_payload = _frontend_probe_json_payload(probes, "run-api")
+    stage_payload = _frontend_probe_json_payload(probes, "stage-api")
+    logs_payload = _frontend_probe_json_payload(probes, "logs-api")
+    artifacts_payload = _frontend_probe_json_payload(probes, "artifacts-api")
+    primary = _PRIMARY_STAGE_OUTPUTS.get(stage, "")
+
+    checks = [
+        _operator_surface_check(
+            name="operator-shell-visible",
+            ok="AIDD Operator Console" in page_body or "AIDD UI" in page_body,
+            detail="page exposes the operator UI shell label",
+        ),
+        _operator_surface_check(
+            name="work-item-context-visible",
+            ok=_json_contains_value(run_payload, ctx.work_item),
+            detail="run payload exposes current work item",
+        ),
+        _operator_surface_check(
+            name="run-context-visible",
+            ok=_json_contains_value(run_payload, ctx.run_id),
+            detail="run payload exposes current run id",
+        ),
+        _operator_surface_check(
+            name="active-stage-visible",
+            ok=_json_contains_value(stage_payload, stage),
+            detail="stage payload exposes active checkpoint stage",
+        ),
+        _operator_surface_check(
+            name="stage-status-visible",
+            ok=any(
+                _json_has_key(stage_payload, key)
+                for key in ("status", "state", "stage_state", "final_state")
+            ),
+            detail="stage payload exposes operator-readable stage status",
+        ),
+        _operator_surface_check(
+            name="next-action-visible",
+            ok=any(
+                _json_has_key(run_payload, key)
+                for key in ("next_action", "terminal_handoff")
+            ),
+            detail="run payload exposes the next operator action or terminal handoff",
+        ),
+        _operator_surface_check(
+            name="runtime-log-surface-visible",
+            ok=any(
+                _json_has_key(logs_payload, key)
+                for key in ("logs", "chunks", "text", "lines", "message")
+            ),
+            detail="logs payload exposes saved or pending runtime log state",
+        ),
+        _operator_surface_check(
+            name="artifact-surface-visible",
+            ok=(
+                _json_contains_value(artifacts_payload, primary)
+                or _json_has_key(artifacts_payload, "artifacts")
+                or _json_has_key(artifacts_payload, "items")
+            ),
+            detail="artifacts payload exposes primary output or artifact list state",
+        ),
+    ]
+    first_failure = run_payload.get("first_failure")
+    blockers = run_payload.get("blockers")
+    has_blockers = isinstance(blockers, list) and bool(blockers)
+    if first_failure is not None or has_blockers:
+        checks.append(
+            _operator_surface_check(
+                name="recovery-action-visible",
+                ok=(
+                    _json_has_key(run_payload, "recovery_actions")
+                    or _json_has_key(run_payload, "next_action")
+                ),
+                detail="blocked or failed run exposes recovery guidance",
+            )
+        )
+    failed = [
+        str(check["name"])
+        for check in checks
+        if check.get("ok") is not True
+    ]
+    return {
+        "ok": not failed,
+        "checks": checks,
+        "failed_checks": failed,
+    }
+
+
 def _read_frontend_checkpoint_payload(ctx: FlowContext) -> dict[str, object]:
     path = ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME
     if not path.exists():
@@ -3856,6 +3982,20 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
                 f"- `{probe.get('name', 'probe')}` {probe.get('path', '')}: "
                 f"status=`{probe.get('status', 'n/a')}` ok=`{probe.get('ok', False)}`"
             )
+        operator_surface = checkpoint.get("operator_surface")
+        if isinstance(operator_surface, dict):
+            lines.append(
+                f"- Operator surface: ok=`{operator_surface.get('ok', False)}`"
+            )
+            checks_raw = operator_surface.get("checks")
+            checks = checks_raw if isinstance(checks_raw, list) else []
+            for check in checks:
+                if not isinstance(check, dict):
+                    continue
+                lines.append(
+                    f"  - `{check.get('name', 'check')}`: "
+                    f"ok=`{check.get('ok', False)}`"
+                )
         lines.append("")
     path = ctx.bundle_root / FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
@@ -4670,6 +4810,11 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
             "created_at_utc": _utc_now(),
             "duration_seconds": duration_seconds,
             "failure_reason": startup_failure_reason,
+            "operator_surface": {
+                "ok": False,
+                "checks": [],
+                "failed_checks": ["ui-process-startup"],
+            },
             "process_exit_code": None,
             "probes": [],
             "stage": stage,
@@ -4680,9 +4825,13 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
             action="frontend-checkpoint",
             classification="fail",
             decision=(
-                "Stop if the stage otherwise passed because UI/API checkpoint failed."
+                "Stop if the stage otherwise passed because UI/API or "
+                "operator-surface checkpoint failed."
             ),
-            plan="Start `aidd ui` on loopback and inspect public operator UI/API endpoints.",
+            plan=(
+                "Start `aidd ui` on loopback and inspect public operator UI/API "
+                "endpoints plus run/stage/next-action surface evidence."
+            ),
             stage=stage,
             command_results=(
                 BlackBoxCommandResult(command=command, transcript=transcript),
@@ -4692,6 +4841,11 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         )
         return "fail"
     probes: list[dict[str, object]] = []
+    operator_surface: dict[str, object] = {
+        "ok": False,
+        "checks": [],
+        "failed_checks": ["checkpoint-not-run"],
+    }
     classification: StepClassification = "fail"
     failure_reason: str | None = None
     try:
@@ -4729,12 +4883,22 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
                     enriched_probe["semantic_failure"] = semantic_failure
                     semantic_failures.append(f"{name}: {semantic_failure}")
                 probes.append(enriched_probe)
+            operator_surface = _frontend_operator_surface_checks(
+                ctx=ctx,
+                stage=stage,
+                probes=probes,
+            )
+            operator_surface_failures = cast(
+                list[object],
+                operator_surface.get("failed_checks", []),
+            )
             classification = (
                 "pass"
                 if all(
                     probe.get("ok") is True and probe.get("semantic_ok") is True
                     for probe in probes
                 )
+                and operator_surface.get("ok") is True
                 else "fail"
             )
             if classification != "pass":
@@ -4742,7 +4906,12 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
                     "One or more UI/API probes failed semantic black-box checks: "
                     + "; ".join(semantic_failures)
                     if semantic_failures
-                    else "One or more UI/API probes returned a non-2xx response."
+                    else (
+                        "One or more operator surface checks failed: "
+                        + ", ".join(str(item) for item in operator_surface_failures)
+                        if operator_surface_failures
+                        else "One or more UI/API probes returned a non-2xx response."
+                    )
                 )
     finally:
         stdout_text, stderr_text, process_return_code = _terminate_process(process)
@@ -4765,6 +4934,7 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         "created_at_utc": _utc_now(),
         "duration_seconds": duration_seconds,
         "failure_reason": failure_reason,
+        "operator_surface": operator_surface,
         "process_exit_code": process_return_code,
         "probes": probes,
         "stage": stage,
@@ -4775,11 +4945,17 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         action="frontend-checkpoint",
         classification=classification,
         decision=(
-            "Continue after UI/API checkpoint passed."
+            "Continue after UI/API and operator-surface checkpoint passed."
             if classification == "pass"
-            else "Stop if the stage otherwise passed because UI/API checkpoint failed."
+            else (
+                "Stop if the stage otherwise passed because UI/API or "
+                "operator-surface checkpoint failed."
+            )
         ),
-        plan="Start `aidd ui` on loopback and inspect public operator UI/API endpoints.",
+        plan=(
+            "Start `aidd ui` on loopback and inspect public operator UI/API "
+            "endpoints plus run/stage/next-action surface evidence."
+        ),
         stage=stage,
         command_results=(BlackBoxCommandResult(command=command, transcript=transcript),),
         evidence_paths=evidence_paths,

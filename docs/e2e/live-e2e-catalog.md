@@ -437,7 +437,8 @@ After a terminal run, the launching SWE agent may add manual post-run evidence:
   `--enable-next-flow-follow-up-proof`
 
 The manual operator UI/UX decision must inspect AIDD operator workflows rather than
-reinterpret `frontend-checkpoints.*` as UX proof. At minimum, review terminal flow
+reinterpret `frontend-checkpoints.*` HTTP/API and operator-surface semantic checks as
+UX proof. At minimum, review terminal flow
 visibility, stage list navigation, artifact/log views, questions and answers,
 repair evidence, next-flow handoff, state clarity, readability, keyboard/focus
 behavior where manually inspectable, responsive behavior or `not inspected`, and

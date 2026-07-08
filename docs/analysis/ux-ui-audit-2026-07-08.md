@@ -36,8 +36,13 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Let mobile `.path-line` wrap within rows when necessary, preserving traceability without page-level horizontal scroll.
 - Add static asset contract tests for these UX priorities.
 
+## Iteration Log
+
+- `69f7c7c Improve operator recovery UX`: completed the first improvement plan. Browser QA confirmed runtime-failure recovery now leads with `Open logs` and mobile status chips stay readable.
+- Current iteration: strengthen live E2E frontend checkpoints with operator-surface semantic evidence for run context, stage context, next action, logs, artifacts, and recovery cues. This improves future UX audit evidence without treating the checkpoint as a screenshot or manual UI/UX quality gate.
+
 ## Deferred Work
 
-- Add visual frontend checkpoints for live E2E, including desktop/mobile screenshots and assertions for visible next action, active stage, recovery primary action, and absence of clipped topbar text.
+- Add visual frontend checkpoints for live E2E, including desktop/mobile screenshots and assertions for visible next action, active stage, recovery primary action, and absence of clipped topbar text. The current iteration adds non-visual operator-surface semantic evidence first.
 - Rebalance first-launch onboarding so the recommended deterministic/safe path is visually dominant while real provider runners remain available.
 - Add a more explicit in-progress/pre-runtime state to the UI for long live stages before runtime log chunks exist.

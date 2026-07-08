@@ -66,7 +66,9 @@ The runner no longer emits `quality-transcript.json`, `acceptance-coverage.*`,
 `operator-quality-analysis-validation.json`.
 
 `frontend-checkpoints.*` are raw run-integrity evidence for the public operator
-surfaces. They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
+surfaces, including HTTP/API probes and operator-surface semantic checks for run,
+stage, next-action, log, and artifact signals.
+They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
 
 The `stage-audits/<implement-stage-run-id>.*` implement audit separates tracked changed files, new untracked product
