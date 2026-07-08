@@ -137,6 +137,7 @@ FlowAction = Literal[
     "quality-review",
     "remediation",
     "frontend-checkpoint",
+    "frontend-running-stage-checkpoint",
     "verify",
     "teardown",
     "finish",
@@ -223,6 +224,7 @@ TERMINAL_STATUSES = {"pass", "fail", "infra-fail"}
 TERMINAL_MANUAL_STATUSES = {"manual-quality-stop"}
 RESUMABLE_STATUSES = {"blocked", "interrupted-resumable", "awaiting-quality-review"}
 TERMINAL_STAGE_METADATA_STATUSES = {"blocked", "failed", "succeeded"}
+RUNNING_STAGE_METADATA_STATUSES = {"preparing", "executing", "validating"}
 PRESERVED_STATE_EXTRA_KEYS = (
     "error",
     "interruption",
@@ -446,6 +448,7 @@ def _run_black_box_command(
     timeout_seconds: float | None,
     no_progress_timeout_seconds: float | None = None,
     progress_probe: Callable[[], dict[str, object]] | None = None,
+    loop_observer: Callable[[], None] | None = None,
 ) -> BlackBoxCommandResult:
     started = time.monotonic()
     timed_out = False
@@ -533,6 +536,9 @@ def _run_black_box_command(
                     last_progress_monotonic = time.monotonic()
                     last_progress_utc = _utc_now()
                     last_progress_reason = "watched-files"
+
+            if loop_observer is not None:
+                loop_observer()
 
             now = time.monotonic()
             if hard_deadline is not None and now >= hard_deadline:
@@ -3738,6 +3744,21 @@ def _frontend_probe_targets(ctx: FlowContext, stage: str) -> tuple[tuple[str, st
     )
 
 
+def _frontend_running_probe_targets(
+    ctx: FlowContext,
+    stage: str,
+) -> tuple[tuple[str, str], ...]:
+    stage_query = urlencode({"stage": stage, "run_id": ctx.run_id})
+    run_query = urlencode({"run_id": ctx.run_id})
+    return (
+        ("page", "/"),
+        ("dashboard-api", f"/api/dashboard?{stage_query}"),
+        ("run-api", f"/api/run?{run_query}"),
+        ("stage-api", f"/api/stage?{stage_query}"),
+        ("logs-api", f"/api/logs?{stage_query}"),
+    )
+
+
 def _json_contains_value(value: object, expected: str) -> bool:
     if isinstance(value, str):
         return value == expected or expected in value
@@ -3762,6 +3783,8 @@ def _frontend_probe_semantic_failure(
     stage: str,
     name: str,
     probe: dict[str, object],
+    phase: str = "post-stage",
+    observed_stage_status: str | None = None,
 ) -> str | None:
     if probe.get("ok") is not True:
         return "probe returned non-2xx response"
@@ -3789,6 +3812,16 @@ def _frontend_probe_semantic_failure(
             return "dashboard API response does not include current stage"
         if not any(_json_has_key(dashboard, key) for key in ("next_action", "terminal_handoff")):
             return "dashboard API response does not expose next action or terminal handoff"
+        if phase == "running-stage":
+            next_action = dashboard.get("next_action")
+            if not isinstance(next_action, dict):
+                return "dashboard API response does not expose running next action"
+            if next_action.get("action") != "wait-for-stage":
+                return "dashboard next action is not the running-stage wait state"
+            if next_action.get("enabled") is not False:
+                return "running-stage wait action must be disabled"
+            if not _json_contains_value(next_action, stage):
+                return "running-stage wait action does not include current stage"
         return None
     if name == "stage-api":
         if not _json_contains_value(payload, ctx.run_id):
@@ -3800,6 +3833,12 @@ def _frontend_probe_semantic_failure(
             for key in ("status", "state", "stage_state", "final_state")
         ):
             return "stage API response does not include stage status/state"
+        if (
+            phase == "running-stage"
+            and observed_stage_status is not None
+            and not _json_contains_value(payload, observed_stage_status)
+        ):
+            return "stage API response does not include observed running status"
         return None
     if name == "questions-api":
         if not _json_contains_value(payload, stage):
@@ -3810,7 +3849,10 @@ def _frontend_probe_semantic_failure(
     if name == "logs-api":
         if not _json_contains_value(payload, stage):
             return "logs API response does not include current stage"
-        if not any(_json_has_key(payload, key) for key in ("logs", "chunks", "text", "lines")):
+        log_keys: tuple[str, ...] = ("logs", "chunks", "text", "lines")
+        if phase == "running-stage":
+            log_keys = (*log_keys, "available", "message")
+        if not any(_json_has_key(payload, key) for key in log_keys):
             return "logs API response does not expose log data"
         return None
     if name == "artifacts-api":
@@ -3955,6 +3997,74 @@ def _frontend_operator_surface_checks(
     }
 
 
+def _frontend_running_stage_surface_checks(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    observed_stage_status: str,
+    probes: Sequence[dict[str, object]],
+) -> dict[str, object]:
+    page_probe = _frontend_probe_by_name(probes, "page")
+    page_body = str(page_probe.get("body_preview") or "")
+    dashboard_payload = _frontend_probe_json_payload(probes, "dashboard-api")
+    dashboard_raw = dashboard_payload.get("dashboard")
+    dashboard = dashboard_raw if isinstance(dashboard_raw, dict) else {}
+    run_payload = _frontend_probe_json_payload(probes, "run-api")
+    stage_payload = _frontend_probe_json_payload(probes, "stage-api")
+    logs_payload = _frontend_probe_json_payload(probes, "logs-api")
+    next_action_raw = dashboard.get("next_action")
+    next_action = next_action_raw if isinstance(next_action_raw, dict) else {}
+
+    checks = [
+        _operator_surface_check(
+            name="operator-shell-visible",
+            ok="AIDD Operator Console" in page_body or "AIDD UI" in page_body,
+            detail="page exposes the operator UI shell label",
+        ),
+        _operator_surface_check(
+            name="work-item-context-visible",
+            ok=_json_contains_value(run_payload, ctx.work_item),
+            detail="run payload exposes current work item",
+        ),
+        _operator_surface_check(
+            name="run-context-visible",
+            ok=_json_contains_value(run_payload, ctx.run_id),
+            detail="run payload exposes current run id",
+        ),
+        _operator_surface_check(
+            name="running-stage-visible",
+            ok=_json_contains_value(dashboard, stage)
+            and _json_contains_value(stage_payload, observed_stage_status),
+            detail="dashboard and stage payloads expose the active running stage",
+        ),
+        _operator_surface_check(
+            name="running-wait-action-visible",
+            ok=next_action.get("action") == "wait-for-stage"
+            and next_action.get("enabled") is False
+            and _json_contains_value(next_action, stage),
+            detail="dashboard exposes a disabled wait action for the running stage",
+        ),
+        _operator_surface_check(
+            name="runtime-log-affordance-visible",
+            ok=any(
+                _json_has_key(logs_payload, key)
+                for key in ("logs", "chunks", "text", "lines", "available", "message")
+            ),
+            detail="logs payload exposes either live log data or a pending-log message",
+        ),
+    ]
+    failed = [
+        str(check["name"])
+        for check in checks
+        if check.get("ok") is not True
+    ]
+    return {
+        "ok": not failed,
+        "checks": checks,
+        "failed_checks": failed,
+    }
+
+
 def _read_frontend_checkpoint_payload(ctx: FlowContext) -> dict[str, object]:
     path = ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME
     if not path.exists():
@@ -4019,10 +4129,12 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
     for checkpoint in checkpoints:
         if not isinstance(checkpoint, dict):
             continue
+        phase = str(checkpoint.get("phase") or "post-stage")
         lines.extend(
             (
-                f"## {checkpoint.get('stage', 'unknown')}",
+                f"## {checkpoint.get('stage', 'unknown')} / {phase}",
                 "",
+                f"- Phase: `{phase}`",
                 f"- Classification: `{checkpoint.get('classification', 'unknown')}`",
                 f"- Base URL: `{checkpoint.get('base_url', '')}`",
                 f"- Process exit: `{checkpoint.get('process_exit_code', 'n/a')}`",
@@ -4829,7 +4941,13 @@ def _append_frontend_checkpoint(
     return json_path, markdown_path
 
 
-def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification:
+def _run_frontend_checkpoint(
+    ctx: FlowContext,
+    stage: str,
+    *,
+    phase: str = "post-stage",
+    observed_stage_status: str | None = None,
+) -> StepClassification:
     if not _frontend_checkpoints_enabled(ctx):
         return "skipped"
     working_copy = _require_working_copy(ctx)
@@ -4866,11 +4984,13 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
             "created_at_utc": _utc_now(),
             "duration_seconds": duration_seconds,
             "failure_reason": startup_failure_reason,
+            "observed_stage_status": observed_stage_status,
             "operator_surface": {
                 "ok": False,
                 "checks": [],
                 "failed_checks": ["ui-process-startup"],
             },
+            "phase": phase,
             "process_exit_code": None,
             "probes": [],
             "stage": stage,
@@ -4878,15 +4998,27 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         evidence_paths = _append_frontend_checkpoint(ctx=ctx, checkpoint=checkpoint)
         _record_step(
             ctx=ctx,
-            action="frontend-checkpoint",
+            action=(
+                "frontend-running-stage-checkpoint"
+                if phase == "running-stage"
+                else "frontend-checkpoint"
+            ),
             classification="fail",
             decision=(
                 "Stop if the stage otherwise passed because UI/API or "
                 "operator-surface checkpoint failed."
             ),
             plan=(
-                "Start `aidd ui` on loopback and inspect public operator UI/API "
-                "endpoints plus run/stage/next-action surface evidence."
+                (
+                    "Start `aidd ui` on loopback while the stage is running and inspect "
+                    "public operator UI/API endpoints for wait-state, stage, and log "
+                    "affordance evidence."
+                )
+                if phase == "running-stage"
+                else (
+                    "Start `aidd ui` on loopback and inspect public operator UI/API "
+                    "endpoints plus run/stage/next-action surface evidence."
+                )
             ),
             stage=stage,
             command_results=(
@@ -4919,15 +5051,35 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         else:
             failure_reason = "Timed out waiting for the UI checkpoint to become ready."
 
+        if failure_reason is None and phase == "running-stage":
+            try:
+                current_status = _observed_running_stage_status(ctx, stage)
+            except (OSError, json.JSONDecodeError, ValueError):
+                current_status = None
+            if current_status is None:
+                classification = "skipped"
+                failure_reason = (
+                    "Running stage state ended before UI checkpoint probes could run."
+                )
+            else:
+                observed_stage_status = current_status
+
         if failure_reason is None:
             semantic_failures: list[str] = []
-            for name, path in _frontend_probe_targets(ctx, stage):
+            targets = (
+                _frontend_running_probe_targets(ctx, stage)
+                if phase == "running-stage"
+                else _frontend_probe_targets(ctx, stage)
+            )
+            for name, path in targets:
                 probe = _http_probe(f"{base_url}{path}")
                 semantic_failure = _frontend_probe_semantic_failure(
                     ctx=ctx,
                     stage=stage,
                     name=name,
                     probe=probe,
+                    phase=phase,
+                    observed_stage_status=observed_stage_status,
                 )
                 enriched_probe = {
                     "name": name,
@@ -4939,10 +5091,19 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
                     enriched_probe["semantic_failure"] = semantic_failure
                     semantic_failures.append(f"{name}: {semantic_failure}")
                 probes.append(enriched_probe)
-            operator_surface = _frontend_operator_surface_checks(
-                ctx=ctx,
-                stage=stage,
-                probes=probes,
+            operator_surface = (
+                _frontend_running_stage_surface_checks(
+                    ctx=ctx,
+                    stage=stage,
+                    observed_stage_status=observed_stage_status or "running",
+                    probes=probes,
+                )
+                if phase == "running-stage"
+                else _frontend_operator_surface_checks(
+                    ctx=ctx,
+                    stage=stage,
+                    probes=probes,
+                )
             )
             operator_surface_failures = cast(
                 list[object],
@@ -4975,7 +5136,7 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
     duration_seconds = time.monotonic() - started
     transcript = HarnessCommandTranscript(
         command=_command_text(command),
-        exit_code=0 if classification == "pass" else 1,
+        exit_code=0 if classification in {"pass", "skipped"} else 1,
         stdout_text=stdout_text,
         stderr_text=stderr_text,
         duration_seconds=duration_seconds,
@@ -4990,7 +5151,9 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         "created_at_utc": _utc_now(),
         "duration_seconds": duration_seconds,
         "failure_reason": failure_reason,
+        "observed_stage_status": observed_stage_status,
         "operator_surface": operator_surface,
+        "phase": phase,
         "process_exit_code": process_return_code,
         "probes": probes,
         "stage": stage,
@@ -4998,19 +5161,36 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
     evidence_paths = _append_frontend_checkpoint(ctx=ctx, checkpoint=checkpoint)
     _record_step(
         ctx=ctx,
-        action="frontend-checkpoint",
+        action=(
+            "frontend-running-stage-checkpoint"
+            if phase == "running-stage"
+            else "frontend-checkpoint"
+        ),
         classification=classification,
         decision=(
             "Continue after UI/API and operator-surface checkpoint passed."
             if classification == "pass"
+            else (
+                "Continue because the running-stage state ended before checkpoint "
+                "probes could run."
+            )
+            if classification == "skipped" and phase == "running-stage"
             else (
                 "Stop if the stage otherwise passed because UI/API or "
                 "operator-surface checkpoint failed."
             )
         ),
         plan=(
-            "Start `aidd ui` on loopback and inspect public operator UI/API "
-            "endpoints plus run/stage/next-action surface evidence."
+            (
+                "Start `aidd ui` on loopback while the stage is running and inspect "
+                "public operator UI/API endpoints for wait-state, stage, and log "
+                "affordance evidence."
+            )
+            if phase == "running-stage"
+            else (
+                "Start `aidd ui` on loopback and inspect public operator UI/API "
+                "endpoints plus run/stage/next-action surface evidence."
+            )
         ),
         stage=stage,
         command_results=(BlackBoxCommandResult(command=command, transcript=transcript),),
@@ -5018,6 +5198,33 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         details={"failure_reason": failure_reason} if failure_reason else None,
     )
     return classification
+
+
+def _observed_running_stage_status(ctx: FlowContext, stage: str) -> str | None:
+    working_copy = _require_working_copy(ctx)
+    metadata = load_stage_metadata(
+        workspace_root=working_copy / ".aidd",
+        work_item=ctx.work_item,
+        run_id=ctx.run_id,
+        stage=stage,
+    )
+    if metadata is None or metadata.status not in RUNNING_STAGE_METADATA_STATUSES:
+        return None
+    return metadata.status
+
+
+def _combined_frontend_checkpoint_classification(
+    *classifications: StepClassification,
+) -> StepClassification:
+    if any(classification == "fail" for classification in classifications):
+        return "fail"
+    if any(classification == "pass" for classification in classifications):
+        return "pass"
+    if any(classification == "blocked" for classification in classifications):
+        return "blocked"
+    if any(classification == "infra-fail" for classification in classifications):
+        return "infra-fail"
+    return "skipped"
 
 
 def _remediation_action_path(ctx: FlowContext, action_id: str) -> Path:
@@ -6268,6 +6475,27 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             }
         },
     )
+    running_frontend_classification: StepClassification = "skipped"
+    running_frontend_checkpoint_observed = False
+
+    def observe_running_frontend_checkpoint() -> None:
+        nonlocal running_frontend_checkpoint_observed, running_frontend_classification
+        if running_frontend_checkpoint_observed or not _frontend_checkpoints_enabled(ctx):
+            return
+        try:
+            observed_status = _observed_running_stage_status(ctx, stage)
+        except (OSError, json.JSONDecodeError, ValueError):
+            return
+        if observed_status is None:
+            return
+        running_frontend_checkpoint_observed = True
+        running_frontend_classification = _run_frontend_checkpoint(
+            ctx,
+            stage,
+            phase="running-stage",
+            observed_stage_status=observed_status,
+        )
+
     stage_result = _run_black_box_command(
         command=stage_command,
         cwd=working_copy,
@@ -6275,6 +6503,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         timeout_seconds=stage_timeout_seconds,
         no_progress_timeout_seconds=no_progress_timeout_seconds,
         progress_probe=_stage_progress_probe(ctx, stage),
+        loop_observer=observe_running_frontend_checkpoint,
     )
     classification = _classify_stage_run(stage_result)
     timeout_evidence_paths, timeout_reconciliation = _reconcile_timed_out_stage_run(
@@ -6371,10 +6600,18 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
     )
     if inspection_reports_blocked and classification != "infra-fail":
         classification = "blocked"
-    frontend_classification = (
+    post_stage_frontend_classification: StepClassification = (
         "skipped"
         if stage_result.transcript.timed_out or stage_result.no_progress
         else _run_frontend_checkpoint(ctx, stage)
+    )
+    frontend_classification = (
+        post_stage_frontend_classification
+        if stage_result.transcript.timed_out or stage_result.no_progress
+        else _combined_frontend_checkpoint_classification(
+            running_frontend_classification,
+            post_stage_frontend_classification,
+        )
     )
     _, _, audit_classification = _write_stage_audit(
         ctx=ctx,

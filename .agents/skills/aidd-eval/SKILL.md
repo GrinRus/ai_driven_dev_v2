@@ -166,6 +166,9 @@ launching agent.
 Manual operator UI/UX decisions in that report are human-authored only. Treat
 `frontend-checkpoints.*` as raw operator-surface availability evidence, not as a
 UI/UX audit or screenshot requirement.
+Observed running stages add a `running-stage` checkpoint phase for the disabled
+`wait-for-stage` next action, active running-stage visibility, and runtime-log
+affordance, including the pending-log state before `runtime.log` exists.
 `frontend-checkpoints.md` includes a manual visual review checklist for visible
 next action, active stage, desktop/mobile topbar readability, failure-appropriate
 recovery primary action, reachable logs/artifacts/questions/answers, next-flow

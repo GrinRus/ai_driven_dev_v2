@@ -336,6 +336,10 @@ does not compute `counted-clean`. Manual `quality-report.md` remains the only fi
 
 Keep `Run Integrity` separate from artifact, code, test, and UI/UX quality.
 API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit.
+Observed running stages add a `running-stage` checkpoint phase for the disabled
+`wait-for-stage` next action, active running-stage visibility, and runtime-log affordance,
+including the honest pending-log state before `runtime.log` exists; completed stages keep
+the `post-stage` phase for stage API and artifact reachability.
 `frontend-checkpoints.md` includes a manual visual review checklist for visible next
 action, active stage, desktop/mobile topbar readability, failure-appropriate recovery
 primary action, reachable logs/artifacts/questions/answers, next-flow handoff visibility,

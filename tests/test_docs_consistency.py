@@ -1001,6 +1001,10 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "State clarity:",
         "Generated product UI applicability:",
         "API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit.",
+        "Observed running stages add a `running-stage` checkpoint phase",
+        "`wait-for-stage` next action",
+        "honest pending-log state before `runtime.log` exists",
+        "`post-stage` phase for stage API and artifact reachability",
         "`frontend-checkpoints.md` includes a manual visual review checklist",
         "desktop/mobile topbar readability",
         "failure-appropriate recovery",
@@ -1041,6 +1045,11 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "`frontend-checkpoints.*` as raw operator-surface availability evidence"
         in aidd_eval_skill
     )
+    assert "Observed running stages add a `running-stage` checkpoint phase" in (
+        aidd_eval_skill
+    )
+    assert "`wait-for-stage` next action" in aidd_eval_skill
+    assert "pending-log state before `runtime.log` exists" in aidd_eval_skill
     assert "`frontend-checkpoints.md` includes a manual visual review checklist" in (
         aidd_eval_skill
     )
@@ -1074,6 +1083,10 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "Operator UI/UX evidence links:",
         "`frontend-checkpoints.*` are raw run-integrity evidence",
         "They are not a UI/UX audit, not screenshot evidence, and not a quality gate.",
+        "Observed running stages add a `running-stage` checkpoint phase",
+        "`wait-for-stage` next action",
+        "pending-log state before `runtime.log` exists",
+        "`post-stage` phase for stage API and artifact reachability",
         "`frontend-checkpoints.md` includes a manual visual review checklist",
         "visible next action and active stage",
         "no horizontal overflow for long paths",
@@ -1119,6 +1132,12 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
 
     for expected in (
         "`frontend-checkpoints.md` starts with a manual visual review checklist",
+        "during observed running-stage wait states and after each stage",
+        "`running-stage`",
+        "phase",
+        "disabled `wait-for-stage` next action",
+        "pending-log state before `runtime.log` exists",
+        "`post-stage` phase still records completed stage API",
         "visible next action",
         "active stage",
         "not runner-generated screenshot evidence",

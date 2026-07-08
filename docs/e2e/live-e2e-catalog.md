@@ -179,7 +179,7 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
 - Live manifests must declare `live_flow.driver: stepwise-black-box`,
   `live_flow.checkpoint_policy: after-each-step`, and
   `live_flow.frontend_checkpoints: true` so every live run inspects the public
-  CLI, UI, and UI/API surfaces after each stage.
+  CLI, UI, and UI/API surfaces during observed running-stage wait states and after each stage.
 - Manual checkpoint notes should include an operator-intervention checkpoint when
   the run uses `aidd stage interact` or the UI `Request change` panel.
 
@@ -393,6 +393,11 @@ active stage, readable desktop/mobile topbar labels, failure-appropriate recover
 action, reachable logs/artifacts/questions/answers, next-flow handoff visibility, and no
 horizontal overflow for long paths, log labels, or action copy. The checklist is operator
 guidance only; it is not runner-generated screenshot evidence and not a UI/UX quality gate.
+When a public stage exposes `preparing`, `executing`, or `validating` metadata while the
+stage command is still alive, `frontend-checkpoints.*` also records a `running-stage`
+phase: disabled `wait-for-stage` next action, active running stage visibility, and runtime
+log affordance, including the pending-log state before `runtime.log` exists. The normal
+`post-stage` phase still records completed stage API and artifact reachability.
 
 The runner does not create `flow-quality-report.md`, `code-quality-report.md`,
 `quality-report.md`, `quality-transcript.json`, `acceptance-coverage.*`,

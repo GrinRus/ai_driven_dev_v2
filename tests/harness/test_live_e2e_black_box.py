@@ -152,6 +152,8 @@ def option(args: list[str], name: str, default: str = "") -> str:
 
 
 def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
+    write_executing_stage_metadata(stage, work_item, run_id)
+    time.sleep(0.75)
     output_root = Path(".aidd") / "workitems" / work_item / "stages" / stage / "output"
     output_root.mkdir(parents=True, exist_ok=True)
     root = output_root.parent
@@ -416,6 +418,40 @@ def ui(args: list[str]) -> int:
     work_item = option(args, "--work-item")
     jobs: dict[str, dict[str, object]] = {{}}
 
+    def stage_metadata_status(stage: str, run_id: str) -> str:
+        metadata_path = (
+            Path(".aidd")
+            / "reports"
+            / "runs"
+            / work_item
+            / run_id
+            / "stages"
+            / stage
+            / "stage-metadata.json"
+        )
+        if not metadata_path.exists():
+            return "pending"
+        try:
+            payload = json.loads(metadata_path.read_text())
+        except json.JSONDecodeError:
+            return "pending"
+        status = payload.get("status")
+        return status if isinstance(status, str) and status else "pending"
+
+    def stage_runtime_log_path(stage: str, run_id: str) -> Path:
+        return (
+            Path(".aidd")
+            / "reports"
+            / "runs"
+            / work_item
+            / run_id
+            / "stages"
+            / stage
+            / "attempts"
+            / "attempt-0001"
+            / "runtime.log"
+        )
+
     def job_payload(job_id: str) -> dict[str, object]:
         job = jobs[job_id]
         return {{
@@ -546,6 +582,25 @@ def ui(args: list[str]) -> int:
                 )
                 stage = params.get("stage", "")
                 run_id = params.get("run_id", "")
+                stage_status = stage_metadata_status(stage, run_id)
+                running_stage = stage_status in {{"preparing", "executing", "validating"}}
+                next_action = (
+                    {{
+                        "action": "wait-for-stage",
+                        "label": f"{{stage}} running",
+                        "detail": "Refresh after the active stage leaves running state.",
+                        "stage": stage,
+                        "enabled": False,
+                    }}
+                    if running_stage
+                    else {{
+                        "action": "run-stage",
+                        "label": "Run next stage",
+                        "detail": "Continue through the governed flow.",
+                        "stage": stage,
+                        "enabled": True,
+                    }}
+                )
                 if self.path.startswith("/api/dashboard"):
                     payload = {{
                         "app_version": "test",
@@ -557,13 +612,7 @@ def ui(args: list[str]) -> int:
                                 "runtime_id": "codex",
                                 "stage_target": stage,
                             }},
-                            "next_action": {{
-                                "action": "run-stage",
-                                "label": "Run next stage",
-                                "detail": "Continue through the governed flow.",
-                                "stage": stage,
-                                "enabled": True,
-                            }},
+                            "next_action": next_action,
                             "terminal_handoff": None,
                             "recent_artifacts": [
                                 {{"stage": stage, "path": PRIMARY_OUTPUTS.get(stage, "")}}
@@ -602,8 +651,8 @@ def ui(args: list[str]) -> int:
                         "run_id": run_id,
                         "work_item": work_item,
                         "stage": stage,
-                        "status": "succeeded",
-                        "final_state": "succeeded",
+                        "status": stage_status,
+                        "final_state": stage_status,
                     }}
                 elif self.path.startswith("/api/questions"):
                     payload = {{
@@ -613,12 +662,22 @@ def ui(args: list[str]) -> int:
                         "questions": [],
                     }}
                 elif self.path.startswith("/api/logs"):
-                    payload = {{
-                        "run_id": run_id,
-                        "work_item": work_item,
-                        "stage": stage,
-                        "chunks": [{{"text": f"stage {{stage}} completed"}}],
-                    }}
+                    runtime_log = stage_runtime_log_path(stage, run_id)
+                    if running_stage and not runtime_log.exists():
+                        payload = {{
+                            "run_id": run_id,
+                            "work_item": work_item,
+                            "stage": stage,
+                            "available": False,
+                            "message": "Runtime log is not available yet.",
+                        }}
+                    else:
+                        payload = {{
+                            "run_id": run_id,
+                            "work_item": work_item,
+                            "stage": stage,
+                            "chunks": [{{"text": f"stage {{stage}} completed"}}],
+                        }}
                 elif self.path.startswith("/api/artifacts"):
                     payload = {{
                         "run_id": run_id,
@@ -1414,7 +1473,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
     assert frontend_payload["enabled"] is True
-    assert len(frontend_payload["checkpoints"]) == len(STAGES)
+    assert len(frontend_payload["checkpoints"]) == len(STAGES) * 2
     assert all(
         checkpoint["classification"] == "pass"
         for checkpoint in frontend_payload["checkpoints"]
@@ -1423,7 +1482,30 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         checkpoint["operator_surface"]["ok"] is True
         for checkpoint in frontend_payload["checkpoints"]
     )
-    first_operator_surface = frontend_payload["checkpoints"][0]["operator_surface"]
+    running_checkpoint = next(
+        checkpoint
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["stage"] == STAGES[0] and checkpoint["phase"] == "running-stage"
+    )
+    assert running_checkpoint["observed_stage_status"] == "executing"
+    assert {
+        check["name"]
+        for check in running_checkpoint["operator_surface"]["checks"]
+    }.issuperset(
+        {
+            "operator-shell-visible",
+            "work-item-context-visible",
+            "run-context-visible",
+            "running-stage-visible",
+            "running-wait-action-visible",
+            "runtime-log-affordance-visible",
+        }
+    )
+    first_operator_surface = next(
+        checkpoint["operator_surface"]
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["stage"] == STAGES[0] and checkpoint["phase"] == "post-stage"
+    )
     assert {
         check["name"]
         for check in first_operator_surface["checks"]
@@ -1457,6 +1539,10 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         frontend_markdown
     )
     assert "- Operator surface: ok=`True`" in frontend_markdown
+    assert "- Phase: `running-stage`" in frontend_markdown
+    assert "`running-wait-action-visible`: ok=`True`" in frontend_markdown
+    assert "`runtime-log-affordance-visible`: ok=`True`" in frontend_markdown
+    assert "- Phase: `post-stage`" in frontend_markdown
     assert "`next-action-visible`: ok=`True`" in frontend_markdown
     next_flow_payload = json.loads(
         (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
