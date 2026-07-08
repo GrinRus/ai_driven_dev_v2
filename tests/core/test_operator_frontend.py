@@ -20,6 +20,10 @@ from aidd.core.operator_frontend import (
     resolve_operator_stage_document_workbench,
     resolve_operator_stage_view,
 )
+from aidd.core.operator_frontend_artifacts import (
+    operator_artifact_category,
+    operator_artifact_is_canonical,
+)
 from aidd.core.operator_frontend_validation import parse_validator_report_findings
 from aidd.core.operator_intervention import persist_operator_intervention_request
 from aidd.core.repair import persist_repair_history_snapshot
@@ -280,6 +284,14 @@ def _write_valid_plan_outputs(workspace_root: Path, *, body_suffix: str = "") ->
         encoding="utf-8",
     )
     return plan_path
+
+
+def _write_plan_output_mirror(workspace_root: Path) -> Path:
+    output_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "output"
+    output_root.mkdir(parents=True, exist_ok=True)
+    mirror_path = output_root / "plan.md"
+    mirror_path.write_text("# Plan\n\n## Goals\n\n- Published handoff copy.\n", encoding="utf-8")
+    return mirror_path
 
 
 def _prepare_terminal_qa_run(
@@ -1816,6 +1828,7 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
     _write_valid_plan_outputs(workspace_root)
+    _write_plan_output_mirror(workspace_root)
     attempt_path = run_attempt_root(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -1861,6 +1874,9 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     assert graph.incomplete_reasons == ()
     assert nodes["stage:plan"].status == "blocked"
     assert nodes["document:plan"].path == "workitems/WI-UI/stages/plan/plan.md"
+    assert nodes["mirror:output/plan.md"].path == (
+        "workitems/WI-UI/stages/plan/output/plan.md"
+    )
     assert nodes["document:validator_report"].status == "pass"
     assert nodes["document:stage_result"].status == "blocked"
     assert nodes["log:runtime_log"].path == (
@@ -1871,6 +1887,7 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     assert nodes[f"approval-decision:{request.id}"].status == "allow_once"
     assert ("stage:plan", "attempt:1", "attempt") in edges
     assert ("attempt:1", "document:plan", "artifact-index") in edges
+    assert ("attempt:1", "mirror:output/plan.md", "published-output") in edges
     assert ("document:validator_report", "document:stage_result", "validation") in edges
     assert ("log:events_jsonl", "event:1", "event-entry") in edges
     assert (
@@ -1884,6 +1901,10 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     assert refs_by_key["plan"].latest is True
     assert refs_by_key["plan"].available is True
     assert refs_by_key["plan"].safe_key == "plan"
+    assert refs_by_key["output/plan.md"].kind == "mirror"
+    assert refs_by_key["output/plan.md"].category == "published-stage-output"
+    assert refs_by_key["output/plan.md"].canonical is False
+    assert refs_by_key["output/plan.md"].available is True
     assert refs_by_key["questions"].category == "canonical-stage-document"
     assert refs_by_key["questions"].available is False
     assert refs_by_key["validator_report"].category == "validation-evidence"
@@ -1897,6 +1918,28 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
         for node in graph.nodes
     )
     assert all(not Path(ref.path).is_absolute() for ref in graph.artifact_table)
+
+
+def test_operator_artifact_category_distinguishes_published_output_mirrors() -> None:
+    output_path = "workitems/WI-UI/stages/plan/output/plan.md"
+    canonical_path = "workitems/WI-UI/stages/plan/plan.md"
+
+    assert (
+        operator_artifact_category(key="plan", kind="document", path=output_path)
+        == "published-stage-output"
+    )
+    assert (
+        operator_artifact_category(key="plan", kind="document", path=canonical_path)
+        == "canonical-stage-document"
+    )
+    assert (
+        operator_artifact_is_canonical(key="plan", kind="document", path=output_path)
+        is False
+    )
+    assert (
+        operator_artifact_is_canonical(key="plan", kind="document", path=canonical_path)
+        is True
+    )
 
 
 def test_operator_evidence_graph_view_degrades_to_flat_table_without_artifact_index(
@@ -1939,6 +1982,7 @@ def test_operator_stage_document_workbench_returns_present_markdown_contract_con
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
     _write_valid_plan_outputs(workspace_root)
+    _write_plan_output_mirror(workspace_root)
     run_attempt_root(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -1987,6 +2031,7 @@ def test_operator_stage_document_workbench_returns_present_markdown_contract_con
     )
     categories = {ref.label: ref.category for ref in workbench.references}
     assert categories["plan"] == "canonical-stage-document"
+    assert categories["output/plan.md"] == "published-stage-output"
     assert categories["input_bundle"] == "runtime-input"
     assert categories["validator_report"] == "validation-evidence"
     assert any(

@@ -605,6 +605,9 @@ def test_ui_stage_workbench_endpoint_returns_document_state_and_sidebars(
         "# Plan\n\n## Goals\n\n" + "\n".join(f"- Workbench line {index}" for index in range(80)),
         encoding="utf-8",
     )
+    output_path = plan_path.parent / "output" / "plan.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("# Plan\n\n## Goals\n\n- Published handoff copy.\n", encoding="utf-8")
     service = _service(workspace_root)
 
     payload = _payload(
@@ -652,6 +655,12 @@ def test_ui_stage_workbench_endpoint_returns_document_state_and_sidebars(
         item["label"] == "plan" and item["kind"] == "document"
         for item in references  # type: ignore[union-attr]
     )
+    assert any(
+        item["label"] == "output/plan.md"
+        and item["kind"] == "mirror"
+        and item["category"] == "published-stage-output"
+        for item in references  # type: ignore[union-attr]
+    )
     assert versions[0]["label"] == "Attempt 1"  # type: ignore[index]
 
 
@@ -692,6 +701,9 @@ def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     )
     service = _service(workspace_root)
     plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    output_path = plan_path.parent / "output" / "plan.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("# Plan\n\n## Goals\n\n- Published handoff copy.\n", encoding="utf-8")
     runtime_log_path = run_attempt_runtime_log_path(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -724,8 +736,12 @@ def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     }
     assert graph_payload["mode"] == "graph"
     assert nodes["document:plan"]["path"] == "workitems/WI-UI/stages/plan/plan.md"
+    assert nodes["mirror:output/plan.md"]["path"] == (
+        "workitems/WI-UI/stages/plan/output/plan.md"
+    )
     assert nodes["event:1"]["detail"] == "Plan started"
     assert nodes[f"approval-request:{request.id}"]["status"] == "approved"
+    assert ("attempt:1", "mirror:output/plan.md", "published-output") in edges
     assert ("document:validator_report", "document:stage_result", "validation") in edges
     assert all(
         not Path(str(node["path"])).is_absolute()
@@ -734,6 +750,12 @@ def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     )
     assert any(
         ref["key"] == "runtime_log" and ref["kind"] == "log"
+        for ref in graph_payload["artifact_table"]  # type: ignore[index]
+    )
+    assert any(
+        ref["key"] == "output/plan.md"
+        and ref["kind"] == "mirror"
+        and ref["category"] == "published-stage-output"
         for ref in graph_payload["artifact_table"]  # type: ignore[index]
     )
     assert plan_path.read_text(encoding="utf-8") == original_plan
@@ -754,6 +776,11 @@ def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     assert fallback_payload["incomplete_reasons"] == ["artifact-index-missing"]
     assert any(
         ref["key"] == "plan" and ref["path"] == "workitems/WI-UI/stages/plan/plan.md"
+        for ref in fallback_payload["artifact_table"]  # type: ignore[index]
+    )
+    assert any(
+        ref["key"] == "output/plan.md"
+        and ref["path"] == "workitems/WI-UI/stages/plan/output/plan.md"
         for ref in fallback_payload["artifact_table"]  # type: ignore[index]
     )
     assert plan_path.read_text(encoding="utf-8") == original_plan

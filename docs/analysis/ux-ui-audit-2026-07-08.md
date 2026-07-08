@@ -174,7 +174,13 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Mobile terminal handoffs with repair highlights add a compact repair cue to the global next-action strip and keep the page at the top instead of auto-scrolling to the stage rail.
 - Browser verification used the completed `eval-live-007-codex-20260708T154059Z` target workspace. Desktop QA confirmed the `tasklist` repair reason is visible in the first viewport, evidence buttons point to `repair-brief.md` and `validator-report.md`, and no console warnings/errors were recorded. Mobile 390px QA confirmed the compact repair cue is visible in the first viewport, `scrollWidth=390`, the repair card stays within `46..347px`, and evidence buttons stay inside `57..336px`. Screenshot evidence: `/tmp/aidd-terminal-repair-highlight-desktop.png` and `/tmp/aidd-terminal-repair-highlight-mobile.png`.
 
+## Artifact Ownership Slice
+
+- Stage `output/*.md` files now appear in the operator artifact workbench and evidence graph as `mirror` rows under `Published output mirrors`, not as canonical source documents.
+- Workbench and artifact-table copy now distinguishes `canonical source` from `handoff mirror`, explains that `output/` copies are downstream handoff mirrors, and keeps mirror actions to `Open` and `Copy path` instead of unsupported document downloads.
+- Mobile workbench rendering now stacks the sidebar at 390px and wraps long markdown/contract paths, avoiding local overflow while reviewing the same artifact evidence.
+- Browser verification used the completed `eval-live-007-codex-20260708T154059Z` target workspace on the `plan` Evidence tab. Desktop QA confirmed `output/plan.md` and related mirrors render as `handoff mirror`, page `scrollWidth=1280`, and no console errors were recorded. Mobile 390px QA confirmed `Published output mirrors`, `output/plan.md`, and `handoff mirror` remain visible, root `scrollWidth=390`, sidebar grid is single-column, and internal visible overflow is empty. Screenshot evidence: `/tmp/aidd-artifact-ownership-desktop.png` and `/tmp/aidd-artifact-ownership-mobile.png`.
+
 ## Next UX Plan
 
-- Add clearer operator copy for canonical stage documents versus `output/` mirror artifacts when validators promote misplaced files.
 - Continue improving progress affordances for externally-started live E2E stages where runner stdout is quiet for several minutes.

@@ -823,6 +823,13 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "function renderWorkbenchViewer(workbench)",
             "function renderWorkbenchDiff(workbench)",
             "function renderWorkbenchTableOfContents(workbench)",
+            "function artifactCategoryFor(item = {})",
+            "function artifactCategoryLabel(category)",
+            "function artifactCategoryDetail(category)",
+            "function artifactOwnershipBadge(item = {})",
+            "function artifactSupportsDownload(item = {})",
+            "function renderArtifactDownloadButton(item = {}, className = \"link-button\")",
+            "function renderArtifactOwnershipNote(item = {})",
             "function markdownHeadingSummary(text)",
             "Table of Contents",
             "function renderRequirementList(requirements)",
@@ -830,6 +837,15 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "function renderMissingEvidence(requirements)",
             "Artifact categories",
             "Canonical stage documents",
+            "Published output mirrors",
+            "Source-of-truth stage files for operator review",
+            "Downstream handoff copies under output/",
+            "canonical source",
+            "handoff mirror",
+            "\"mirror\": \"MR\"",
+            "Canonical source of truth",
+            "Published handoff mirror",
+            "Canonical stage path:",
             "Runtime inputs",
             "Validation evidence",
             "Runtime evidence",
@@ -884,6 +900,21 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
     assert artifacts.index("${renderEvidenceWorkbenchShell(selection)}") < artifacts.index(
         '<details class="surface evidence-drilldown">'
     )
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+    _assert_contains_all(
+        components,
+        (
+            ".artifact-category-note {",
+            ".artifact-ownership-note {",
+            ".artifact-ownership-note.published-stage-output {",
+            ".artifact-doc-title {",
+            ".markdown-preview code {",
+            ".workbench-side-row span {",
+        ),
+    )
+    assert ".artifact-ownership-note," in responsive
+    assert ".workbench-sidebar," in responsive
 
 
 def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contracts() -> None:

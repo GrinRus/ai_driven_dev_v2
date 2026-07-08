@@ -73,6 +73,8 @@ def operator_artifact_category(*, key: str, kind: str, path: str) -> str:
     normalized_path = path.replace("\\", "/").lower()
     if kind == "log" or normalized_key in {"runtime_log", "events_jsonl"}:
         return "runtime-evidence"
+    if "/stages/" in normalized_path and "/output/" in normalized_path:
+        return "published-stage-output"
     if (
         normalized_key
         in {"input_bundle", "stage_brief", "repair_context", "operator_request"}
@@ -366,6 +368,7 @@ def resolve_operator_evidence_graph_view(
     incomplete_reasons: list[str] = []
     artifact_table = _artifact_table_from_index(
         workspace_root=workspace_root,
+        work_item=work_item,
         stage=stage,
         updated_at_utc=artifact_index.updated_at_utc,
         documents=artifact_index.documents,
@@ -489,6 +492,43 @@ def resolve_operator_evidence_graph_view(
             ),
         )
 
+    indexed_paths = set(artifact_index.documents.values()) | set(artifact_index.logs.values())
+    for key, relative_path, _path in _stage_output_mirror_entries(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        seen_paths=indexed_paths,
+    ):
+        node = _artifact_graph_node(
+            workspace_root=workspace_root,
+            node_id=f"mirror:{key}",
+            label=key,
+            kind="mirror",
+            stage=stage,
+            relative_path=relative_path,
+            updated_at_utc=artifact_index.updated_at_utc,
+            result_status=None,
+        )
+        _add_node(nodes, node)
+        _add_edge(
+            edges,
+            OperatorEvidenceGraphEdge(
+                source_id=attempt_node_id,
+                target_id=node.node_id,
+                kind="published-output",
+                label="publishes output mirror",
+            ),
+        )
+        _add_edge(
+            edges,
+            OperatorEvidenceGraphEdge(
+                source_id=stage_node_id,
+                target_id=node.node_id,
+                kind="published-output",
+                label="published handoff mirror",
+            ),
+        )
+
     if "document:validator_report" in nodes and "document:stage_result" in nodes:
         _add_edge(
             edges,
@@ -601,6 +641,11 @@ def _artifact_graph_node(
     status = "missing"
     if exists:
         status = result_status or "present"
+    detail_prefix = (
+        "Published output mirror"
+        if kind == "mirror"
+        else f"Indexed {kind}"
+    )
     return OperatorEvidenceGraphNode(
         node_id=node_id,
         label=label,
@@ -609,9 +654,9 @@ def _artifact_graph_node(
         path=workspace_relative_path(workspace_root, path) if path is not None else relative_path,
         status=status,
         detail=(
-            f"Indexed {kind}: {relative_path}"
+            f"{detail_prefix}: {relative_path}"
             if exists
-            else f"Indexed {kind} is missing: {relative_path}"
+            else f"{detail_prefix} is missing: {relative_path}"
         ),
         byte_size=path.stat().st_size if exists and path is not None else None,
         updated_at_utc=updated_at_utc,
@@ -878,6 +923,7 @@ def _add_approval_nodes(
 def _artifact_table_from_index(
     *,
     workspace_root: Path,
+    work_item: str,
     stage: str,
     updated_at_utc: str | None,
     documents: dict[str, str],
@@ -912,6 +958,15 @@ def _artifact_table_from_index(
                     safe_key=operator_artifact_safe_key(key),
                 )
             )
+    refs.extend(
+        _published_output_mirror_artifact_refs(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            updated_at_utc=updated_at_utc,
+            seen_paths={ref.path for ref in refs},
+        )
+    )
     return tuple(refs)
 
 
@@ -956,6 +1011,75 @@ def _fallback_artifact_table(
                 path=path,
                 kind="document" if path.suffix.lower() == ".md" else "log",
             )
+    refs.extend(
+        _published_output_mirror_artifact_refs(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            updated_at_utc=None,
+            seen_paths=seen_paths,
+        )
+    )
+    return tuple(refs)
+
+
+def _stage_output_mirror_entries(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    seen_paths: set[str] | None = None,
+) -> tuple[tuple[str, str, Path], ...]:
+    output_root = workspace_root / "workitems" / work_item / "stages" / stage / "output"
+    if not output_root.is_dir():
+        return ()
+    seen = seen_paths or set()
+    entries: list[tuple[str, str, Path]] = []
+    for path in sorted(
+        candidate
+        for candidate in output_root.iterdir()
+        if candidate.is_file() and candidate.suffix.lower() in {".md", ".markdown"}
+    ):
+        relative_path = workspace_relative_path(workspace_root, path)
+        if relative_path in seen:
+            continue
+        entries.append((f"output/{path.name}", relative_path, path))
+    return tuple(entries)
+
+
+def _published_output_mirror_artifact_refs(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    updated_at_utc: str | None,
+    seen_paths: set[str],
+) -> tuple[OperatorArtifactRef, ...]:
+    refs: list[OperatorArtifactRef] = []
+    for key, relative_path, path in _stage_output_mirror_entries(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        seen_paths=seen_paths,
+    ):
+        refs.append(
+            OperatorArtifactRef(
+                stage=stage,
+                key=key,
+                kind="mirror",
+                path=relative_path,
+                byte_size=path.stat().st_size,
+                updated_at_utc=updated_at_utc,
+                category=operator_artifact_category(
+                    key=key,
+                    kind="mirror",
+                    path=relative_path,
+                ),
+                canonical=False,
+                available=True,
+                safe_key=operator_artifact_safe_key(key),
+            )
+        )
     return tuple(refs)
 
 
@@ -1310,6 +1434,21 @@ def _document_references(
         )
         for key, path in sorted(artifact_documents.items())
     ]
+    refs.extend(
+        OperatorStageDocumentReference(
+            label=key,
+            kind="mirror",
+            path=path,
+            stage=stage,
+            category=operator_artifact_category(key=key, kind="mirror", path=path),
+        )
+        for key, path, _ in _stage_output_mirror_entries(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            seen_paths=set(artifact_documents.values()) | set(artifact_logs.values()),
+        )
+    )
     refs.extend(
         OperatorStageDocumentReference(
             label=key,
