@@ -75,6 +75,7 @@ const state = {
   readinessLoading: true,
   readinessError: "",
   activeStage: "idea",
+  activeStageExplicit: false,
   activeTab: "work",
   workDetail: "overview",
   recoveryDetail: "summary",
@@ -379,6 +380,7 @@ function initializeStateFromLocation() {
   const requestedStage = params.get("stage");
   if (requestedStage && STAGES.includes(requestedStage)) {
     state.activeStage = requestedStage;
+    state.activeStageExplicit = true;
   }
   const requestedRunId = String(params.get("run_id") || "").trim();
   if (requestedRunId) {
@@ -406,7 +408,8 @@ function syncLocationState() {
 }
 
 function dashboardUrl() {
-  const params = new URLSearchParams({stage: state.activeStage});
+  const params = new URLSearchParams();
+  if (state.activeStageExplicit) params.set("stage", state.activeStage);
   if (state.activeRunId) params.set("run_id", state.activeRunId);
   return `/api/dashboard?${params.toString()}`;
 }

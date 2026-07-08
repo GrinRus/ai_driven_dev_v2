@@ -181,6 +181,13 @@ function currentWorkItemSummary() {
   return projectHomeWorkItems().find((item) => item.work_item === workItem) || null;
 }
 
+function workItemProgressText(item) {
+  if (item?.terminal_state === "completed") {
+    return `flow complete / ${item.stage_progress_label}`;
+  }
+  return `${item?.active_stage || "not started"} / ${item?.stage_progress_label || `0/${STAGES.length}`}`;
+}
+
 function renderProjectSetRootChips(item) {
   const roots = item?.project_set_roots || [];
   if (!roots.length) return `<span class="small-badge">single root</span>`;
@@ -215,7 +222,7 @@ function renderProjectHomeRail() {
         <button class="work-item-card ${item.work_item === current?.work_item ? "active" : ""}" data-project-home-resume="${escapeHtml(item.work_item)}" type="button">
           <span>
             <strong>${escapeHtml(item.work_item)}</strong>
-            <small>${escapeHtml(item.active_stage)} / ${escapeHtml(item.stage_progress_label)}</small>
+            <small>${escapeHtml(workItemProgressText(item))}</small>
           </span>
           <span class="small-badge ${workItemStatusClass(item)}">${escapeHtml(item.terminal_state)}</span>
         </button>

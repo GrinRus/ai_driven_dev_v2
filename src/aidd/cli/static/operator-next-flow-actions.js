@@ -2114,6 +2114,7 @@ async function handleNextAction() {
   if (action.action === "run-stage" || action.action === "resume-stage") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
       await renderAll();
@@ -2128,6 +2129,7 @@ async function handleNextAction() {
   if (action.action === "answer-questions") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
       await renderAll();
@@ -2139,6 +2141,7 @@ async function handleNextAction() {
   if (action.action === "inspect-validation" || action.action === "review-intervention") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
       await renderAll();
@@ -2150,6 +2153,7 @@ async function handleNextAction() {
   if (action.action === "review-findings" || action.action === "qa-verdict") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
       await renderAll();

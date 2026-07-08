@@ -2037,17 +2037,15 @@ class OperatorUiService:
                         return _json_response({"metadata": None, "message": message})
                     raise
             if path == "/api/dashboard":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                requested_stage = _first_param(params, "stage")
+                stage = requested_stage or STAGES[0]
                 return _json_response(
                     {
                         "app_version": __version__,
-                        "dashboard": resolve_operator_dashboard_view(
-                            workspace_root=self.workspace_root,
-                            work_item=self.work_item,
-                            active_stage=stage,
+                        "dashboard": self._dashboard_view(
+                            stage=stage,
                             run_id=_first_param(params, "run_id"),
-                            project_root=self.project_root,
+                            use_terminal_default=requested_stage is None,
                         ),
                     }
                 )
@@ -2081,8 +2079,7 @@ class OperatorUiService:
             if path == "/api/runtime-readiness":
                 return _json_response(self._runtime_readiness())
             if path == "/api/stage":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_stage_view(
                         workspace_root=self.workspace_root,
@@ -2092,8 +2089,7 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/questions":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_questions_view(
                         workspace_root=self.workspace_root,
@@ -2102,8 +2098,7 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/logs":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 run_id = _first_param(params, "run_id")
                 attempt_number = _optional_attempt(params)
                 try:
@@ -2149,8 +2144,7 @@ class OperatorUiService:
             if path.startswith("/api/jobs/"):
                 return self._handle_job_get(path=path, params=params)
             if path == "/api/artifacts":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_artifacts_view(
                         workspace_root=self.workspace_root,
@@ -2161,8 +2155,7 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/stage/workbench":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_stage_document_workbench(
                         workspace_root=self.workspace_root,
@@ -2180,8 +2173,7 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/artifacts/evidence-graph":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_evidence_graph_view(
                         workspace_root=self.workspace_root,
@@ -2192,9 +2184,8 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/artifacts/document":
-                stage = _first_param(params, "stage", STAGES[0])
+                stage = _first_param(params, "stage") or STAGES[0]
                 key = _first_param(params, "key")
-                assert stage is not None
                 if key is None:
                     raise ValueError("key is required.")
                 return _json_response(
@@ -2212,6 +2203,35 @@ class OperatorUiService:
         except ValueError as exc:
             return _error_response(str(exc))
         return _error_response("not found", status=HTTPStatus.NOT_FOUND)
+
+    def _dashboard_view(
+        self,
+        *,
+        stage: str,
+        run_id: str | None,
+        use_terminal_default: bool,
+    ) -> object:
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            active_stage=stage,
+            run_id=run_id,
+            project_root=self.project_root,
+        )
+        if (
+            use_terminal_default
+            and dashboard.terminal_handoff is not None
+            and stage != "qa"
+            and any(item.stage == "qa" for item in dashboard.stages)
+        ):
+            return resolve_operator_dashboard_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                active_stage="qa",
+                run_id=run_id,
+                project_root=self.project_root,
+            )
+        return dashboard
 
     def handle_post(self, path: str, payload: dict[str, Any]) -> UiResponse:
         try:

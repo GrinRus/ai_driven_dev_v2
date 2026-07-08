@@ -704,6 +704,7 @@ function artifactKeyForPath(path, stage) {
 async function inspectArtifactReference({stage, key, path, kind}) {
   const targetStage = stage || state.activeStage;
   state.activeStage = targetStage;
+  state.activeStageExplicit = true;
   state.activeArtifactKey = key || artifactKeyForPath(path, targetStage);
   state.selectedEvidenceNodeId = state.activeArtifactKey
     ? `${kind === "log" ? "log" : "document"}:${state.activeArtifactKey}`

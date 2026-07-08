@@ -97,17 +97,6 @@ def _work_item_summary(
     )
     stages = dashboard.stages
     completed = sum(1 for stage in stages if stage.status == "succeeded")
-    active = next(
-        (
-            stage.stage
-            for stage in stages
-            if stage.status in {"preparing", "executing", "validating"}
-        ),
-        dashboard.next_action.stage or next(
-            (stage.stage for stage in stages if stage.status != "succeeded"),
-            _active_stage_from_run(dashboard.run),
-        ),
-    )
     terminal_state = (
         "completed"
         if dashboard.terminal_handoff is not None
@@ -116,6 +105,21 @@ def _work_item_summary(
         else "running"
         if any(stage.status in {"preparing", "executing", "validating"} for stage in stages)
         else "ready"
+    )
+    active = (
+        "qa"
+        if terminal_state == "completed" and any(stage.stage == "qa" for stage in stages)
+        else next(
+            (
+                stage.stage
+                for stage in stages
+                if stage.status in {"preparing", "executing", "validating"}
+            ),
+            dashboard.next_action.stage or next(
+                (stage.stage for stage in stages if stage.status != "succeeded"),
+                _active_stage_from_run(dashboard.run),
+            ),
+        )
     )
     return OperatorWorkItemSummary(
         work_item=item.work_item,

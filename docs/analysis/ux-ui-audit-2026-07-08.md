@@ -142,3 +142,33 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - The spotlight distinguishes no-question, blocking-required, partial/deferred, and fully-resolved states, then states the primary operator action before showing required/resolved/partial/deferred totals.
 - This targets the US-05 non-happy path where a first-time operator must understand whether the runtime is blocked on answers, which answers are partial, and why `answers.md` must contain resolved answers before resume.
 - Rendered verification used a temporary `plan` workspace blocked by two interview questions, with one partial saved answer in `answers.md`. Desktop QA confirmed the spotlight appears in the first viewport, names `Primary action: answer required questions`, and keeps the partial-answer resume button disabled. Mobile 390px QA kept `scrollWidth=390`, kept the question cards inside the viewport, showed the spotlight in the first viewport, and preserved the disabled resume state. Chrome DevTools reported no console messages and all page/API requests returned 200/204. Screenshot evidence: `/tmp/aidd-question-spotlight-desktop.png` and `/tmp/aidd-question-spotlight-mobile.png`.
+
+## Refresh Run - 2026-07-08T15:40Z
+
+- `eval-live-007-codex-20260708T154059Z`: terminal execution verdict `pass`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Quality gates: all eight manual stage-quality audits chose `continue`.
+- Self-repair: `tasklist` repaired missing T7/T8 verification-note coverage on attempt 2.
+- Target implementation quality: `review` and `qa` both accepted the scoped Hono non-Error throw change; focused vitest and `tsc --noEmit` passed.
+- Final manual reports: `.aidd/reports/evals/eval-live-007-codex-20260708T154059Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+
+## Refresh Findings - 2026-07-08T15:40Z
+
+- P1: Completed terminal runs without an explicit stage opened the operator UI on `Idea`, while the global handoff said `Review final artifacts` and QA was ready. This created a first-time-user contradiction between selected stage and actual run state.
+- P2: The work-item rail showed `idea / 8/8` for a completed run whose final handoff was QA, reinforcing the same mismatch.
+- P2: The successful tasklist repair was visible through the retry badge and Recovery evidence, but the actual repair reason remained easier to understand from Markdown artifacts than from the first viewport.
+- P2: Long CLI-driven live stages still produced little runner stdout while work was active. The UI exposes progress/log surfaces, but the CLI-side live harness remains sparse during long provider calls.
+- P3: QA low warnings (`STRUCT-OUTPUT-PROMOTED`) show successful recovery from misplaced output files, but canonical versus mirrored output artifacts still needs clearer operator wording.
+
+## Terminal Default Stage Slice
+
+- Completed terminal dashboard requests without a `stage` parameter now default to `qa` when a terminal handoff exists, even if the run metadata `stage_target` is an earlier stage.
+- The frontend no longer sends the initial default `stage=idea` before the operator explicitly chooses a stage. URL-provided stages and operator stage clicks still pin the requested stage.
+- Completed work-item cards now render `flow complete / 8/8` instead of an inherited stage label such as `idea / 8/8`.
+- Browser verification used the completed `eval-live-007-codex-20260708T154059Z` target workspace. Opening `http://127.0.0.1:65211/` redirected to `?stage=qa&run_id=eval-live-007-codex-20260708T154059Z`, highlighted `QA`, showed `QA / Verify outcomes` in the stage cockpit, preserved the `Review final artifacts` terminal handoff, and showed `flow complete / 8/8` on the work-item card. Screenshot evidence: `/tmp/aidd-terminal-default-qa-after-fix.png`.
+
+## Next UX Plan
+
+- Make resolved repair reasons more prominent in the first viewport for retried stages, not only in Recovery/Markdown evidence.
+- Add clearer operator copy for canonical stage documents versus `output/` mirror artifacts when validators promote misplaced files.
+- Continue improving progress affordances for externally-started live E2E stages where runner stdout is quiet for several minutes.

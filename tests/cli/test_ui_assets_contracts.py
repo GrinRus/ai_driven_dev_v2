@@ -412,6 +412,7 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "followUpDraft: null",
             "selectedSourceIds: []",
             "projectHome: null",
+            "activeStageExplicit: false",
             "const OPERATOR_MODES",
             "const LEGACY_TAB_TO_MODE",
             "const RECOVERY_NEXT_ACTIONS",
@@ -429,6 +430,7 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "function initializeStateFromLocation()",
             "new URLSearchParams(window.location.search)",
             "STAGES.includes(requestedStage)",
+            "state.activeStageExplicit = true;",
             "VALID_TABS.includes(requestedTab)",
             "setOperatorMode(requestedTab);",
             "function syncLocationState()",
@@ -452,6 +454,7 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "async function fetchDashboard()",
             "async function fetchProjectHome(workItem = \"\")",
             "dashboardUrl()",
+            "if (state.activeStageExplicit) params.set(\"stage\", state.activeStage);",
             "/api/dashboard",
             (
                 "const viewedStage = state.dashboard.active_stage_view?.stage "
@@ -562,6 +565,8 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "function runtimeReadinessMessage()",
             "function renderProjectHomeRail()",
             "function currentWorkItemSummary()",
+            "function workItemProgressText(item)",
+            "flow complete / ${item.stage_progress_label}",
             "function updateContextualTabs()",
             "function tabHasQuestions()",
             "function tabHasValidation()",

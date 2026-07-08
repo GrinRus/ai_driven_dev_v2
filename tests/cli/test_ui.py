@@ -268,13 +268,15 @@ def _prepare_completed_qa_run(
     workspace_root: Path,
     *,
     lineage: dict[str, object] | None = None,
+    stage_target: str = "qa",
 ) -> None:
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
     create_run_manifest(
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
         runtime_id="codex",
-        stage_target="qa",
+        stage_target=stage_target,
         config_snapshot={"mode": "ui-terminal-test"},
         workflow_stage_start="idea",
         workflow_stage_end="qa",
@@ -931,6 +933,31 @@ def test_ui_dashboard_endpoint_exposes_flow_complete_handoff(
     }
     assert "codex" in actions["clone-flow"]["detail"]
     assert "generic-cli" not in actions["clone-flow"]["detail"]
+
+
+def test_ui_dashboard_endpoint_defaults_completed_flow_to_qa_when_stage_is_omitted(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root, stage_target="idea")
+    context_root = workspace_root / "workitems" / "WI-UI" / "context"
+    context_root.mkdir(parents=True, exist_ok=True)
+    context_root.joinpath("user-request.md").write_text("Ship the terminal UI.\n", encoding="utf-8")
+    service = _service(workspace_root)
+
+    default_payload = _payload(
+        service.handle_get("/api/dashboard", {"run_id": ["run-ui"]})
+    )
+    explicit_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["idea"], "run_id": ["run-ui"]})
+    )
+    project_home_payload = _payload(service.handle_get("/api/project-home", {}))
+
+    assert default_payload["dashboard"]["active_stage"] == "qa"  # type: ignore[index]
+    assert default_payload["dashboard"]["next_action"]["action"] == "review-complete"  # type: ignore[index]
+    assert explicit_payload["dashboard"]["active_stage"] == "idea"  # type: ignore[index]
+    work_items = project_home_payload["project_home"]["work_items"]  # type: ignore[index]
+    assert work_items[0]["active_stage"] == "qa"
 
 
 def test_ui_dashboard_endpoint_exposes_run_history_lineage_payload(
