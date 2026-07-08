@@ -182,6 +182,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".project-work-item-card" in components
     assert ".project-set-row" in components
     assert ".global-next-action-strip" in components
+    assert ".run-progress-notice" in components
+    assert ".run-progress-meta" in components
     assert ".recovery-card" in components
     assert ".recovery-workbench" in components
     assert ".recovery-hero" in components
@@ -217,6 +219,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert "@media (max-width: 760px)" in responsive
     assert ".workbench-main" in responsive
     assert ".global-next-action-strip" in responsive
+    assert ".run-progress-meta" in responsive
     assert ".project-home-grid" in responsive
     assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
@@ -578,6 +581,26 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "await renderCockpit();",
         ),
     )
+
+
+def test_operator_control_center_asset_surfaces_running_stage_progress() -> None:
+    control_center = _asset_text("/operator-control-center.js")
+
+    _assert_contains_all(
+        control_center,
+        (
+            "function runtimeOutputFreshnessLabel(job)",
+            "function renderRunningStageNotice(job)",
+            'class="run-progress-notice" role="status" aria-live="polite"',
+            "Runtime is waiting for an operator approval decision.",
+            "Stage is still running; live logs are the current evidence stream.",
+            "No runtime output captured yet",
+            "Live log chunks",
+            "${renderRunningStageNotice(job)}",
+            "${escapeHtml(runtimeOutputFreshnessLabel(job))}",
+        ),
+    )
+    assert "not available ago" not in control_center
 
 
 def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> None:
@@ -1470,6 +1493,8 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".small-badge.running" in css
     assert ".small-badge.cancelling" in css
     assert ".small-badge.waiting-for-operator" in css
+    assert ".run-progress-notice" in css
+    assert ".run-progress-meta" in css
     assert ".activity-detail" in css
     assert ".log-actions" in css
     assert ".truncation-notice" in css

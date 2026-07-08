@@ -1219,6 +1219,44 @@
   font-size: 12px;
   line-height: 1.4;
 }
+.run-progress-notice {
+  background: #edf7f5;
+  border: 1px solid #b9d9d4;
+  border-left: 3px solid var(--teal);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  margin-top: 9px;
+  padding: 9px;
+}
+.run-progress-notice strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+.run-progress-notice p {
+  margin: 3px 0 0;
+}
+.run-progress-meta {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+}
+.run-progress-meta span {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(15, 122, 123, 0.16);
+  border-radius: 6px;
+  color: var(--muted);
+  display: grid;
+  font-size: 11px;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 6px;
+}
+.run-progress-meta strong {
+  font-size: 10px;
+  text-transform: uppercase;
+}
 .next-button {
   margin-top: 10px;
   width: 100%;

@@ -16,6 +16,37 @@ function secondsLabel(value) {
   return `${hours}h ${minutes % 60}m`;
 }
 
+function runtimeOutputFreshnessLabel(job) {
+  if (job?.last_output_age_seconds === null || job?.last_output_age_seconds === undefined) {
+    return "No runtime output captured yet";
+  }
+  return `Last output ${secondsLabel(job.last_output_age_seconds)} ago`;
+}
+
+function renderRunningStageNotice(job) {
+  const status = String(job?.status || "running");
+  const stage = job?.stage || "workflow";
+  const logChunkCount = state.activeJobLogChunks?.length || 0;
+  const summary = status === "waiting-for-operator"
+    ? "Runtime is waiting for an operator approval decision."
+    : status === "cancelling"
+      ? "Cancel request is in progress; runtime shutdown evidence will appear in logs."
+      : "Stage is still running; live logs are the current evidence stream.";
+  return `
+    <div class="run-progress-notice" role="status" aria-live="polite">
+      <div>
+        <strong>${escapeHtml(stageTitle(stage))} in progress</strong>
+        <p>${escapeHtml(summary)}</p>
+      </div>
+      <div class="run-progress-meta">
+        <span><strong>Elapsed</strong>${escapeHtml(secondsLabel(job?.elapsed_seconds))}</span>
+        <span><strong>Runtime output</strong>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span>
+        <span><strong>Live log chunks</strong>${escapeHtml(logChunkCount)}</span>
+      </div>
+    </div>
+  `;
+}
+
 function renderActiveRunPanel() {
   const panel = document.getElementById("activeRunPanel");
   if (!panel) return;
@@ -41,12 +72,13 @@ function renderActiveRunPanel() {
   ` : "";
   panel.innerHTML = `
     <div class="panel-title">Active run <span class="small-badge ${escapeHtml(statusClass(job.status))}">${escapeHtml(job.status || "running")}</span></div>
+    ${renderRunningStageNotice(job)}
     <div class="panel-list">
       <div class="panel-item"><strong>Job</strong><span>${escapeHtml(job.job_id || "-")}</span></div>
       <div class="panel-item"><strong>Stage</strong><span>${escapeHtml(job.stage || "workflow")}</span></div>
       <div class="panel-item"><strong>Runner</strong><span>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "selected runtime")}</span></div>
       <div class="panel-item"><strong>Elapsed</strong><span>${escapeHtml(secondsLabel(job.elapsed_seconds))}</span></div>
-      <div class="panel-item"><strong>Last output</strong><span>${escapeHtml(secondsLabel(job.last_output_age_seconds))} ago</span></div>
+      <div class="panel-item"><strong>Last output</strong><span>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span></div>
       <div class="panel-item"><strong>Timeout</strong><span>${escapeHtml(timeoutSummary(runtime))}</span></div>
       <div class="panel-item"><strong>Command</strong><span title="${escapeHtml(runtime?.command || "")}">${escapeHtml(compactPath(runtime?.command || "not reported", 72))}</span></div>
     </div>

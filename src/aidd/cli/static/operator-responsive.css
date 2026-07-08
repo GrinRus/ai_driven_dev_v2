@@ -157,6 +157,7 @@
   .repair-timeline,
   .recovery-hero,
   .recovery-facts,
+  .run-progress-meta,
   .bottom-dock {
     grid-template-columns: 1fr;
   }
