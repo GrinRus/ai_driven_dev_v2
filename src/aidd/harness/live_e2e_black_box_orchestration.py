@@ -5726,21 +5726,93 @@ def _stage_result_validator_verdict_from_text(stage_result_text: str) -> str:
     return "unknown"
 
 
+_STAGE_RESULT_IMMEDIATE_DOWNSTREAM_STAGE: dict[str, str] = {
+    "idea": "research",
+    "research": "plan",
+    "plan": "review-spec",
+    "review-spec": "tasklist",
+    "tasklist": "implement",
+    "implement": "review",
+    "review": "qa",
+}
+_STAGE_ORDER: dict[str, int] = {stage: index for index, stage in enumerate(STAGES)}
+
+
+def _stage_result_next_actions_text(stage_result_text: str) -> str:
+    section_index = MarkdownSectionIndex.from_markdown(stage_result_text)
+    next_actions_match = section_index.first_match(("Next actions",))
+    if next_actions_match is None:
+        return ""
+    return section_index.section_content(next_actions_match[0])
+
+
+def _stage_result_mentions_stage(text: str, stage: str) -> bool:
+    escaped_stage = re.escape(stage)
+    return re.search(rf"(?<![a-z0-9-]){escaped_stage}(?![a-z0-9-])", text) is not None
+
+
+def _stage_result_next_action_findings(
+    *,
+    stage: str,
+    stage_result_text: str,
+) -> list[dict[str, object]]:
+    immediate_stage = _STAGE_RESULT_IMMEDIATE_DOWNSTREAM_STAGE.get(stage)
+    if immediate_stage is None:
+        return []
+    stage_state = _stage_state_from_text(stage_result_text)
+    if stage_state != "passed":
+        return []
+    next_actions_text = _stage_result_next_actions_text(stage_result_text).lower()
+    if not next_actions_text:
+        return []
+    immediate_stage_index = _STAGE_ORDER[immediate_stage]
+    later_stage_mentions = [
+        later_stage
+        for later_stage in STAGES[immediate_stage_index + 1 :]
+        if _stage_result_mentions_stage(next_actions_text, later_stage)
+    ]
+    if not later_stage_mentions or _stage_result_mentions_stage(
+        next_actions_text,
+        immediate_stage,
+    ):
+        return []
+    return [
+        {
+            "kind": "stage-result-next-action-skips-canonical-stage",
+            "severity": "warning",
+            "non_gating": True,
+            "stage": stage,
+            "expected_next_stage": immediate_stage,
+            "mentioned_later_stages": later_stage_mentions,
+            "message": (
+                "stage-result.md next actions mention a later downstream stage "
+                "without naming the immediate canonical next stage."
+            ),
+        }
+    ]
+
+
 def _stage_audit_consistency_findings(
     *,
+    stage: str,
     stage_result_text: str,
     validator_verdict: str,
 ) -> list[dict[str, object]]:
     stage_result_validator_verdict = _stage_result_validator_verdict_from_text(
         stage_result_text
     )
+    findings = _stage_result_next_action_findings(
+        stage=stage,
+        stage_result_text=stage_result_text,
+    )
     if (
         stage_result_validator_verdict not in {"pass", "fail"}
         or validator_verdict not in {"pass", "fail"}
         or stage_result_validator_verdict == validator_verdict
     ):
-        return []
+        return findings
     return [
+        *findings,
         {
             "kind": "stage-result-validator-verdict-mismatch",
             "severity": "warning",
@@ -5751,7 +5823,7 @@ def _stage_audit_consistency_findings(
                 "stage-result.md declares a validator verdict that differs from "
                 "the canonical stage-audit validator verdict."
             ),
-        }
+        },
     ]
 
 
@@ -5858,6 +5930,7 @@ def _write_stage_audit(
     stage_metadata_status = _stage_metadata_status(ctx, stage)
     validator_verdict = _validator_verdict_from_text(validator_text)
     consistency_findings = _stage_audit_consistency_findings(
+        stage=stage,
         stage_result_text=stage_result_text,
         validator_verdict=validator_verdict,
     )
@@ -6014,13 +6087,25 @@ def _write_stage_audit(
     if consistency_findings:
         md_lines.extend(("", "## Consistency Findings", ""))
         for finding in consistency_findings:
+            finding_details: list[str] = [f"non-gating={finding['non_gating']}"]
+            if finding["kind"] == "stage-result-validator-verdict-mismatch":
+                finding_details = [
+                    f"stage-result={finding['stage_result_validator_verdict']}",
+                    f"audit={finding['audit_validator_verdict']}",
+                    *finding_details,
+                ]
+            if finding["kind"] == "stage-result-next-action-skips-canonical-stage":
+                finding_details = [
+                    f"expected-next-stage={finding['expected_next_stage']}",
+                    "mentioned-later-stages="
+                    + ", ".join(cast(list[str], finding["mentioned_later_stages"])),
+                    *finding_details,
+                ]
             md_lines.append(
                 "- "
                 f"`{finding['severity']}` "
                 f"`{finding['kind']}`: {finding['message']} "
-                f"(stage-result={finding['stage_result_validator_verdict']}, "
-                f"audit={finding['audit_validator_verdict']}, "
-                f"non-gating={finding['non_gating']})"
+                f"({'; '.join(finding_details)})"
             )
     if implementation_details is not None:
         tracked_detail_files = cast(

@@ -89,6 +89,12 @@ When `stage-audits/<implement-stage-run-id>.*` records `product_untracked_files`
 `code-quality-report.md` and `quality-report.md` must name those files and state how
 they were reviewed before recording `counted-clean`.
 
+Stage audits also record non-gating `consistency_findings` when generated
+`stage-result.md` operator guidance drifts from canonical evidence. This includes
+validator-verdict mismatches and successful stage `Next actions` that mention a later
+downstream stage without naming the immediate canonical next stage, for example an
+`implement` result that points directly to `qa` instead of `review`.
+
 `target-workspace-evidence.*` records the target repository snapshot after setup and
 after the terminal/stop state. It classifies tracked diff, setup-baseline untracked
 files, known harness config such as `aidd.example.toml`, new untracked files, top-level

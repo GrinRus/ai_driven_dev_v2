@@ -110,6 +110,7 @@ def _write_fake_aidd(
     inspect_fail_command: str | None = None,
     log_blocking_text: bool = False,
     stage_result_validator_verdict: str | None = None,
+    stage_result_direct_qa_next_action_stage: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
     ignored_pollution_stage: str | None = None,
     implement_untracked_product_file: str | None = None,
@@ -137,6 +138,7 @@ INSPECT_BLOCK_STAGE = {inspect_block_stage!r}
 INSPECT_FAIL_COMMAND = {inspect_fail_command!r}
 LOG_BLOCKING_TEXT = {log_blocking_text!r}
 STAGE_RESULT_VALIDATOR_VERDICT = {stage_result_validator_verdict!r}
+STAGE_RESULT_DIRECT_QA_NEXT_ACTION_STAGE = {stage_result_direct_qa_next_action_stage!r}
 STRAY_TOP_LEVEL_WORKITEMS_STAGE = {stray_top_level_workitems_stage!r}
 IGNORED_POLLUTION_STAGE = {ignored_pollution_stage!r}
 IMPLEMENT_UNTRACKED_PRODUCT_FILE = {implement_untracked_product_file!r}
@@ -169,6 +171,9 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
             "## Validation summary\\n\\n"
             f"- Validator verdict: `{{STAGE_RESULT_VALIDATOR_VERDICT}}`\\n\\n"
         )
+    next_actions = ""
+    if stage == STAGE_RESULT_DIRECT_QA_NEXT_ACTION_STAGE:
+        next_actions = "## Next actions\\n\\n- Proceed directly to `qa`.\\n\\n"
     (output_root / "stage-result.md").write_text(
         "# Stage\\n\\n"
         f"{{stage}}\\n\\n"
@@ -176,7 +181,8 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
         "- Attempt `1` (`initial`) -> succeeded.\\n\\n"
         + validation_summary +
         "## Status\\n\\n"
-        "- `succeeded`\\n"
+        "- `succeeded`\\n\\n"
+        + next_actions
     )
     (output_root / "validator-report.md").write_text(
         "# Validator report\\n\\n## Result\\n\\n- Verdict: `pass`\\n"
@@ -1060,6 +1066,7 @@ def _prepare_live_test(
     inspect_fail_command: str | None = None,
     log_blocking_text: bool = False,
     stage_result_validator_verdict: str | None = None,
+    stage_result_direct_qa_next_action_stage: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
     ignored_pollution_stage: str | None = None,
     implement_untracked_product_file: str | None = None,
@@ -1094,6 +1101,9 @@ def _prepare_live_test(
         inspect_fail_command=inspect_fail_command,
         log_blocking_text=log_blocking_text,
         stage_result_validator_verdict=stage_result_validator_verdict,
+        stage_result_direct_qa_next_action_stage=(
+            stage_result_direct_qa_next_action_stage
+        ),
         stray_top_level_workitems_stage=stray_top_level_workitems_stage,
         ignored_pollution_stage=ignored_pollution_stage,
         implement_untracked_product_file=implement_untracked_product_file,
@@ -2542,6 +2552,62 @@ def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
     ).read_text(encoding="utf-8")
     assert "## Consistency Findings" in audit_markdown
     assert "non-gating=True" in audit_markdown
+
+
+def test_black_box_live_e2e_records_non_gating_stage_result_next_action_skip(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        stage_result_direct_qa_next_action_stage="implement",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    expected_finding = {
+        "kind": "stage-result-next-action-skips-canonical-stage",
+        "severity": "warning",
+        "non_gating": True,
+        "stage": "implement",
+        "expected_next_stage": "review",
+        "mentioned_later_stages": ["qa"],
+        "message": (
+            "stage-result.md next actions mention a later downstream stage "
+            "without naming the immediate canonical next stage."
+        ),
+    }
+    audit_payload = json.loads(
+        (result.bundle_root / "stage-audits" / "stage-0006-implement.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert audit_payload["stage_state"] == "passed"
+    assert audit_payload["consistency_findings"] == [expected_finding]
+    audit_markdown = (
+        result.bundle_root / "stage-audits" / "stage-0006-implement.md"
+    ).read_text(encoding="utf-8")
+    assert "## Consistency Findings" in audit_markdown
+    assert "`stage-result-next-action-skips-canonical-stage`" in audit_markdown
+    assert "expected-next-stage=review" in audit_markdown
+    assert "mentioned-later-stages=qa" in audit_markdown
+
+    grader_payload = json.loads(
+        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
+    )
+    implement_audit = next(
+        item
+        for item in grader_payload["stage_audits"]
+        if item["stage_run_id"] == "stage-0006-implement"
+    )
+    assert implement_audit["consistency_findings"] == [expected_finding]
 
 
 def test_black_box_live_e2e_records_non_gating_target_workspace_pollution(
