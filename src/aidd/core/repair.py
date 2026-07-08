@@ -15,6 +15,16 @@ from aidd.core.run_store import (
 )
 from aidd.core.workspace import stage_root as workspace_stage_root
 
+_IMMEDIATE_DOWNSTREAM_STAGE: dict[str, str] = {
+    "idea": "research",
+    "research": "plan",
+    "plan": "review-spec",
+    "review-spec": "tasklist",
+    "tasklist": "implement",
+    "implement": "review",
+    "review": "qa",
+}
+
 _VALIDATOR_FINDING_PATTERN = re.compile(
     r"^- `(?P<code>[^`]+)` "
     r"\(`(?P<severity>critical|high|medium|low)`\) "
@@ -453,6 +463,13 @@ def _existing_declared_stage_output_paths(
     return tuple(existing_paths)
 
 
+def _successful_stage_result_next_action(stage: str) -> str:
+    next_stage = _IMMEDIATE_DOWNSTREAM_STAGE.get(stage)
+    if next_stage is None:
+        return "- Inspect terminal handoff and final artifacts."
+    return f"- Advance to the immediate canonical `{next_stage}` stage."
+
+
 def render_stage_result_with_repair_history(
     *,
     stage: str,
@@ -569,7 +586,7 @@ def render_stage_result_with_repair_history(
         ]
     )
     if normalized_status == "succeeded":
-        lines.append("- Advance to the next stage.")
+        lines.append(_successful_stage_result_next_action(normalized_stage))
     elif normalized_status == "failed":
         lines.append("- Review validator report and decide whether to reopen scope or stop.")
     else:

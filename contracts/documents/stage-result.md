@@ -53,7 +53,7 @@ or validation wording when the canonical validator report proves the draft incon
 
 ## Next actions
 
-- <operator or downstream action>
+- <operator or immediate canonical downstream stage action; on success include the exact next stage id>
 
 ## Terminal state notes
 
@@ -121,6 +121,9 @@ or validation wording when the canonical validator report proves the draft incon
 ## Authoring rules
 
 - Use required heading names exactly; do not collapse `Attempt history` into `Status`.
+- Replace any placeholder stage-result content completely. A completed or halted stage result
+  must not retain the bootstrap copy `# Stage result` / `Stage not run yet.` above or inside
+  the real `# Stage Result` document.
 - Keep document paths and artifact references workspace-relative and wrapped in backticks.
 - Treat `workitems/...` as relative to the configured `.aidd/` workspace root.
   From the repository root, canonical stage artifacts live under `.aidd/workitems/...`;
@@ -154,6 +157,7 @@ or validation wording when the canonical validator report proves the draft incon
 
 - the required heading set is present exactly once,
 - terminal status is from the allowed vocabulary,
+- the document does not retain stale placeholder copy such as `Stage not run yet.`,
 - attempt history is ordered and references attempt outcomes,
 - produced outputs and validation state agree with each other,
 - terminal state notes justify why the run stopped.

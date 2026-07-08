@@ -299,3 +299,12 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Remove stale placeholder/preamble copy when a successful `stage-result.md` is regenerated or repaired.
 - Make manual frontend evidence timing explicit in the live E2E workflow so screenshots and browser notes reliably land in the final bundle.
 - Keep interruption recording and bounded ignored-residue evidence on the backlog for the next non-happy-path audit pass.
+
+## Exact Stage Result Hygiene Slice
+
+- `research` contract and prompts now require successful `stage-result.md` next-action copy to name the exact immediate stage id `plan`, not generic `planning` wording.
+- `tasklist` contract and prompts now require successful `stage-result.md` next-action copy to name the exact immediate stage id `implement`, not generic `implementation stage` wording.
+- AIDD-generated repaired `stage-result.md` summaries now use an immediate canonical next-stage map instead of `Advance to the next stage`.
+- Structural validation now flags stale bootstrap placeholder text such as `Stage not run yet.` in any completed `stage-result.md`.
+- Live stage audits now record a non-gating `stage-result-next-action-missing-immediate-stage` consistency finding when `Next actions` exists but omits the exact immediate stage id.
+- Verification covered prompt quality, structural validator tests, repair tests, scenario loader tests, targeted live harness next-action regressions, docs consistency, mypy, ruff, and `git diff --check`.

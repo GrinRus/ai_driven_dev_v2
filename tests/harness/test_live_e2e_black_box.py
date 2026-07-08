@@ -111,6 +111,7 @@ def _write_fake_aidd(
     log_blocking_text: bool = False,
     stage_result_validator_verdict: str | None = None,
     stage_result_direct_qa_next_action_stage: str | None = None,
+    stage_result_generic_next_action_stage: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
     ignored_pollution_stage: str | None = None,
     implement_untracked_product_file: str | None = None,
@@ -139,6 +140,7 @@ INSPECT_FAIL_COMMAND = {inspect_fail_command!r}
 LOG_BLOCKING_TEXT = {log_blocking_text!r}
 STAGE_RESULT_VALIDATOR_VERDICT = {stage_result_validator_verdict!r}
 STAGE_RESULT_DIRECT_QA_NEXT_ACTION_STAGE = {stage_result_direct_qa_next_action_stage!r}
+STAGE_RESULT_GENERIC_NEXT_ACTION_STAGE = {stage_result_generic_next_action_stage!r}
 STRAY_TOP_LEVEL_WORKITEMS_STAGE = {stray_top_level_workitems_stage!r}
 IGNORED_POLLUTION_STAGE = {ignored_pollution_stage!r}
 IMPLEMENT_UNTRACKED_PRODUCT_FILE = {implement_untracked_product_file!r}
@@ -174,6 +176,8 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
     next_actions = ""
     if stage == STAGE_RESULT_DIRECT_QA_NEXT_ACTION_STAGE:
         next_actions = "## Next actions\\n\\n- Proceed directly to `qa`.\\n\\n"
+    elif stage == STAGE_RESULT_GENERIC_NEXT_ACTION_STAGE:
+        next_actions = "## Next actions\\n\\n- Proceed to the downstream planning stage.\\n\\n"
     (output_root / "stage-result.md").write_text(
         "# Stage\\n\\n"
         f"{{stage}}\\n\\n"
@@ -1079,6 +1083,7 @@ def _prepare_live_test(
     log_blocking_text: bool = False,
     stage_result_validator_verdict: str | None = None,
     stage_result_direct_qa_next_action_stage: str | None = None,
+    stage_result_generic_next_action_stage: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
     ignored_pollution_stage: str | None = None,
     implement_untracked_product_file: str | None = None,
@@ -1116,6 +1121,7 @@ def _prepare_live_test(
         stage_result_direct_qa_next_action_stage=(
             stage_result_direct_qa_next_action_stage
         ),
+        stage_result_generic_next_action_stage=stage_result_generic_next_action_stage,
         stray_top_level_workitems_stage=stray_top_level_workitems_stage,
         ignored_pollution_stage=ignored_pollution_stage,
         implement_untracked_product_file=implement_untracked_product_file,
@@ -2705,6 +2711,49 @@ def test_black_box_live_e2e_records_non_gating_stage_result_next_action_skip(
         if item["stage_run_id"] == "stage-0006-implement"
     )
     assert implement_audit["consistency_findings"] == [expected_finding]
+
+
+def test_black_box_live_e2e_records_non_gating_stage_result_next_action_missing_exact_stage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        stage_result_generic_next_action_stage="research",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    expected_finding = {
+        "kind": "stage-result-next-action-missing-immediate-stage",
+        "severity": "warning",
+        "non_gating": True,
+        "stage": "research",
+        "expected_next_stage": "plan",
+        "message": (
+            "stage-result.md next actions do not name the immediate canonical "
+            "next stage."
+        ),
+    }
+    audit_payload = json.loads(
+        (result.bundle_root / "stage-audits" / "stage-0002-research.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert audit_payload["stage_state"] == "passed"
+    assert audit_payload["consistency_findings"] == [expected_finding]
+    audit_markdown = (
+        result.bundle_root / "stage-audits" / "stage-0002-research.md"
+    ).read_text(encoding="utf-8")
+    assert "`stage-result-next-action-missing-immediate-stage`" in audit_markdown
+    assert "expected-next-stage=plan" in audit_markdown
 
 
 def test_black_box_live_e2e_records_non_gating_target_workspace_pollution(

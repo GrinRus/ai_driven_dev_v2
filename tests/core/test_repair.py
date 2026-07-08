@@ -593,6 +593,7 @@ def test_render_stage_result_with_repair_history_preserves_primary_outputs() -> 
     assert "- `workitems/WI-001/stages/review/stage-result.md`" in stage_result
     assert "- `workitems/WI-001/stages/review/validator-report.md`" in stage_result
     assert stage_result.count("workitems/WI-001/stages/review/stage-result.md") == 1
+    assert "- Advance to the immediate canonical `qa` stage." in stage_result
 
 
 def test_persist_repair_history_snapshot_updates_metadata_and_stage_result(tmp_path: Path) -> None:

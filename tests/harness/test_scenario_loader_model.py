@@ -60,8 +60,10 @@ def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
     assert task.audit_rubric is not None
     normalized_rubric = " ".join(task.audit_rubric.split())
     assert "immediate canonical stage order" in normalized_rubric
+    assert "`research` must point to `plan`" in normalized_rubric
     assert "`plan` must point to `review-spec`" in normalized_rubric
     assert "`review-spec` must point to `tasklist`" in normalized_rubric
+    assert "`tasklist` must point to `implement`" in normalized_rubric
     assert "`implement` must point to `review`, not directly to `qa`" in (
         normalized_rubric
     )

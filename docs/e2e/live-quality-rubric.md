@@ -96,10 +96,10 @@ they were reviewed before recording `counted-clean`.
 
 Stage audits also record non-gating `consistency_findings` when generated
 `stage-result.md` operator guidance drifts from canonical evidence. This includes
-validator-verdict mismatches and successful stage `Next actions` that mention a later
-downstream stage without naming the immediate canonical next stage, for example a
-`plan` result that omits `review-spec`, a `review-spec` result that omits `tasklist`,
-or an `implement` result that points directly to `qa` instead of `review`.
+validator-verdict mismatches and successful stage `Next actions` that fail to name the
+immediate canonical next stage. Count both generic wording such as `planning` instead
+of `plan` or `implementation stage` instead of `implement`, and later-stage jumps such
+as an `implement` result that points directly to `qa` instead of `review`.
 
 `target-workspace-evidence.*` records the target repository snapshot after setup and
 after the terminal/stop state. It classifies tracked diff, setup-baseline untracked

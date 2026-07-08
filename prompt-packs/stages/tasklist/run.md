@@ -105,6 +105,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    task notes before calling the path private or internal-only.
 7. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
    consistent with tasklist content.
+   When tasklist and validation evidence support success, `stage-result.md` `Next actions` must
+   name the exact immediate canonical downstream stage id: `implement`. Do not write only generic
+   wording such as `implementation` or `implementation stage`.
 8. If required inputs are missing or sequencing/ownership assumptions are unresolved, raise
    questions with stable ids and `[blocking]` / `[non-blocking]` markers instead of inventing
    decisions.
@@ -112,6 +115,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 ## Common output skeleton discipline
 
 - Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
+- Replace the entire bootstrap placeholder when writing `stage-result.md`; do not leave
+  `# Stage result` / `Stage not run yet.` above the real `# Stage Result` document.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
 - Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
@@ -127,4 +132,5 @@ normalize if canonical validation proves the terminal status inconsistent.
 - JavaScript/TypeScript helper or module paths include export-map evidence before any
   private/internal-only claim,
 - unresolved blocking ambiguity is represented as explicit questions,
+- successful `stage-result.md` next-action copy names the exact immediate next stage id `implement`,
 - `stage-result.md` and `validator-report.md` match tasklist readiness and blockers.

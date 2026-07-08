@@ -5931,17 +5931,32 @@ def _stage_result_next_action_findings(
     next_actions_text = _stage_result_next_actions_text(stage_result_text).lower()
     if not next_actions_text:
         return []
+    immediate_stage_mentioned = _stage_result_mentions_stage(
+        next_actions_text,
+        immediate_stage,
+    )
     immediate_stage_index = _STAGE_ORDER[immediate_stage]
     later_stage_mentions = [
         later_stage
         for later_stage in STAGES[immediate_stage_index + 1 :]
         if _stage_result_mentions_stage(next_actions_text, later_stage)
     ]
-    if not later_stage_mentions or _stage_result_mentions_stage(
-        next_actions_text,
-        immediate_stage,
-    ):
+    if immediate_stage_mentioned:
         return []
+    if not later_stage_mentions:
+        return [
+            {
+                "kind": "stage-result-next-action-missing-immediate-stage",
+                "severity": "warning",
+                "non_gating": True,
+                "stage": stage,
+                "expected_next_stage": immediate_stage,
+                "message": (
+                    "stage-result.md next actions do not name the immediate "
+                    "canonical next stage."
+                ),
+            }
+        ]
     return [
         {
             "kind": "stage-result-next-action-skips-canonical-stage",
@@ -6265,6 +6280,11 @@ def _write_stage_audit(
                     f"expected-next-stage={finding['expected_next_stage']}",
                     "mentioned-later-stages="
                     + ", ".join(cast(list[str], finding["mentioned_later_stages"])),
+                    *finding_details,
+                ]
+            if finding["kind"] == "stage-result-next-action-missing-immediate-stage":
+                finding_details = [
+                    f"expected-next-stage={finding['expected_next_stage']}",
                     *finding_details,
                 ]
             md_lines.append(

@@ -8,6 +8,7 @@ from aidd.validators.structural import (
     EMPTY_REQUIRED_SECTION_CODE,
     MISSING_REQUIRED_DOCUMENT_CODE,
     MISSING_REQUIRED_SECTION_CODE,
+    STALE_STAGE_RESULT_PLACEHOLDER_CODE,
     MarkdownHeading,
     extract_document_headings,
     extract_markdown_headings,
@@ -565,6 +566,86 @@ def test_validate_required_sections_reports_empty_required_heading(tmp_path: Pat
             message=(
                 "Required section `Validation summary` is empty "
                 "in workitems/WI-001/stages/qa/stage-result.md"
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/qa/stage-result.md",
+                line_number=3,
+            ),
+        ),
+    )
+
+
+def test_validate_required_sections_reports_stale_stage_result_placeholder(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("stage-result.md",)
+    prompt_paths = ("prompt-packs/stages/qa/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="qa",
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _write_document_contract(
+        repo_root=tmp_path,
+        document_name="stage-result.md",
+        required_sections=(
+            "Stage",
+            "Attempt history",
+            "Status",
+            "Produced outputs",
+            "Validation summary",
+            "Blockers",
+            "Next actions",
+            "Terminal state notes",
+        ),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    _write_workspace_markdown(workspace_root, "workitems/WI-001/context/intake.md")
+    stage_result_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "stage-result.md"
+    )
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(
+        (
+            "# Stage result\n\n"
+            "Stage not run yet.\n"
+            "# Stage Result\n\n"
+            "## Stage\n\n- Stage: `qa`\n\n"
+            "## Attempt history\n\n- Attempt 1 (`initial`): succeeded.\n\n"
+            "## Status\n\n- Status: `succeeded`\n\n"
+            "## Produced outputs\n\n- `workitems/WI-001/stages/qa/stage-result.md`\n\n"
+            "## Validation summary\n\n- Validator verdict: `pass`\n\n"
+            "## Blockers\n\n- none\n\n"
+            "## Next actions\n\n- Inspect terminal handoff.\n\n"
+            "## Terminal state notes\n\n- Complete.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_required_sections(
+        stage="qa",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=STALE_STAGE_RESULT_PLACEHOLDER_CODE,
+            message=(
+                "stage-result.md retains stale placeholder text "
+                "`Stage not run yet.`"
             ),
             severity="high",
             location=ValidationIssueLocation(

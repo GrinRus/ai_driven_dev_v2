@@ -79,8 +79,9 @@ feature_source:
       shape, misses existing Error behavior, or proves behavior with weak/non-focused
       verification. During stage-quality review, also check that successful
       `stage-result.md` next actions preserve immediate canonical stage order:
-      `plan` must point to `review-spec`, `review-spec` must point to `tasklist`,
-      and `implement` must point to `review`, not directly to `qa`.
+      `research` must point to `plan`, `plan` must point to `review-spec`,
+      `review-spec` must point to `tasklist`, `tasklist` must point to
+      `implement`, and `implement` must point to `review`, not directly to `qa`.
     complexity_axes:
     - cross-module
     - api-policy

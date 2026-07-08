@@ -324,6 +324,13 @@ def test_middle_stage_result_next_actions_stay_flow_aware() -> None:
     stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
         encoding="utf-8"
     )
+    research_contract = Path("contracts/stages/research.md").read_text(encoding="utf-8")
+    research_prompt = Path("prompt-packs/stages/research/run.md").read_text(
+        encoding="utf-8"
+    )
+    research_repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(
+        encoding="utf-8"
+    )
     plan_contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
     plan_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
     plan_repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
@@ -338,12 +345,28 @@ def test_middle_stage_result_next_actions_stay_flow_aware() -> None:
     review_spec_repair_prompt = Path(
         "prompt-packs/stages/review-spec/repair.md"
     ).read_text(encoding="utf-8")
+    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(
+        encoding="utf-8"
+    )
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+    tasklist_repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
+        encoding="utf-8"
+    )
     live_scenario = Path(
         "harness/scenarios/live/hono-non-error-throw-handling.yaml"
     ).read_text(encoding="utf-8")
 
+    assert "`research` -> `plan`" in stage_result_contract
     assert "`plan` -> `review-spec`" in stage_result_contract
     assert "`review-spec` -> `tasklist`" in stage_result_contract
+    assert "`tasklist` -> `implement`" in stage_result_contract
+
+    for text in (research_contract, research_prompt, research_repair_prompt):
+        assert "`plan`" in text
+        assert "immediate" in text
+        assert "planning" in text
 
     for text in (plan_contract, plan_prompt, plan_repair_prompt, live_scenario):
         assert "`review-spec`" in text
@@ -359,6 +382,35 @@ def test_middle_stage_result_next_actions_stay_flow_aware() -> None:
         assert "`tasklist`" in text
         assert "immediate" in text
         assert "implementation" in text
+
+    for text in (tasklist_contract, tasklist_prompt, tasklist_repair_prompt):
+        assert "`implement`" in text
+        assert "immediate" in text
+        assert "implementation" in text
+
+
+def test_stage_result_prompts_forbid_stale_placeholder_append() -> None:
+    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
+        encoding="utf-8"
+    )
+    stage_preparation = Path("src/aidd/core/stage_preparation.py").read_text(
+        encoding="utf-8"
+    )
+    research_prompt = Path("prompt-packs/stages/research/run.md").read_text(
+        encoding="utf-8"
+    )
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (
+        stage_result_contract,
+        stage_preparation,
+        research_prompt,
+        tasklist_prompt,
+    ):
+        assert "Stage not run yet" in text
+        assert "placeholder" in text.lower()
 
 
 def test_js_ts_helper_internal_claims_require_export_map_evidence() -> None:

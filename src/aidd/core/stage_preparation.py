@@ -52,7 +52,8 @@ _STAGE_RESULT_SKELETON = """```md
 
 ## Next actions
 
-- <operator or downstream action>
+- <operator or immediate canonical downstream stage action; on success include the exact
+  next stage id>
 
 ## Terminal state notes
 
@@ -160,6 +161,10 @@ def _append_output_skeletons(
             "# Required output skeletons",
             "",
             "Use these exact section headings when writing these output documents.",
+            (
+                "Replace existing placeholder document content such as "
+                "`Stage not run yet.`; do not append below bootstrap text."
+            ),
         ]
     )
     for document_name, skeleton in skeletons:

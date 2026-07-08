@@ -22,6 +22,7 @@ MISSING_REQUIRED_DOCUMENT_CODE = "STRUCT-MISSING-REQUIRED-DOCUMENT"
 MISSING_REQUIRED_SECTION_CODE = "STRUCT-MISSING-REQUIRED-SECTION"
 DUPLICATE_REQUIRED_SECTION_CODE = "STRUCT-DUPLICATE-REQUIRED-SECTION"
 EMPTY_REQUIRED_SECTION_CODE = "STRUCT-EMPTY-REQUIRED-SECTION"
+STALE_STAGE_RESULT_PLACEHOLDER_CODE = "STRUCT-STALE-STAGE-RESULT-PLACEHOLDER"
 
 
 def _iter_required_documents(
@@ -97,6 +98,13 @@ def _section_has_meaningful_content(
         headings_by_title={},
     )
     return section_index.section_has_meaningful_content(heading_index)
+
+
+def _stale_stage_result_placeholder_line(markdown_lines: list[str]) -> int | None:
+    for index, line in enumerate(markdown_lines, start=1):
+        if line.strip() == "Stage not run yet.":
+            return index
+    return None
 
 
 def _effective_required_section_matches(
@@ -175,6 +183,26 @@ def validate_required_sections(
         section_index = MarkdownSectionIndex.from_markdown(loaded_document.body)
         headings = section_index.headings
         markdown_lines = list(section_index.markdown_lines)
+        if output_path.name == "stage-result.md":
+            stale_line_number = _stale_stage_result_placeholder_line(markdown_lines)
+            if stale_line_number is not None:
+                findings.append(
+                    ValidationFinding(
+                        code=STALE_STAGE_RESULT_PLACEHOLDER_CODE,
+                        message=(
+                            "stage-result.md retains stale placeholder text "
+                            "`Stage not run yet.`"
+                        ),
+                        severity="high",
+                        location=ValidationIssueLocation(
+                            workspace_relative_path=_workspace_relative(
+                                output_path,
+                                workspace_root,
+                            ),
+                            line_number=stale_line_number,
+                        ),
+                    )
+                )
 
         for section in required_sections:
             matches = section_index.matches(section)

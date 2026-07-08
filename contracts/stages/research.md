@@ -45,6 +45,8 @@ Optional context documents may enrich research quality, but their absence must n
 - `Findings` must reference supporting citation ids for claims that affect scope, feasibility, or risk.
 - `Evidence trace` must map major findings or decisions to supporting citation ids.
 - `stage-result.md` and `validator-report.md` must stay consistent with the documented citation coverage.
+- On success, `stage-result.md` `Next actions` must name `plan` as the immediate canonical
+  downstream stage. Do not write only generic wording such as `planning` or `planning stage`.
 - Research commands may inspect local behavior, but ignored verification residue is still workspace
   hygiene evidence. If tests, imports, or repro snippets create `.pytest_cache/`, `.ruff_cache/`,
   `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts, research must remove
@@ -125,4 +127,4 @@ A `research` run is considered ready to progress when:
 - the required output documents exist,
 - validators pass,
 - any required user questions have answers,
-- `stage-result.md` names the next action clearly.
+- `stage-result.md` names `plan` as the immediate next stage when the run succeeds.
