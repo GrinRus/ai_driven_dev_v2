@@ -1,3 +1,32 @@
+const RUNTIME_FAILURE_KINDS = new Set([
+  "cancelled",
+  "failed",
+  "non_zero_exit",
+  "non-zero-exit",
+  "provider_error",
+  "runtime-error",
+  "runtime-exit-metadata-invalid",
+  "runtime-failure",
+  "stage-failed",
+  "timeout"
+]);
+
+function isRuntimeFailureKind(kind) {
+  return RUNTIME_FAILURE_KINDS.has(String(kind || "").trim().toLowerCase());
+}
+
+function isRuntimeFirstFailure(firstFailure) {
+  return Boolean(firstFailure && isRuntimeFailureKind(firstFailure.kind));
+}
+
+function runtimeLogEvidencePath(diagnostics) {
+  return diagnostics?.raw_log?.path || diagnostics?.runtime_log?.path || "";
+}
+
+function runtimeFailureEvidencePath(firstFailure, diagnostics) {
+  return firstFailure?.path || runtimeLogEvidencePath(diagnostics) || "";
+}
+
 function renderOverview() {
   if (!state.dashboard?.run?.run_id) {
     return renderFirstLaunchState();
@@ -186,12 +215,29 @@ function renderValidationFindingList(validation) {
 
 function recoveryPrimaryActionSpec(diagnostics) {
   const recoveryActions = state.dashboard?.recovery_actions || [];
-  const runtimeAction = recoveryActions.find((item) => item.action === "inspect-runtime-log");
+  const firstFailure = state.dashboard?.first_failure || null;
+  const runtimeAction = recoveryActions.find((item) => item.action === "inspect-runtime-log" && item.enabled !== false)
+    || (isRuntimeFirstFailure(firstFailure)
+      ? {
+        action: "inspect-runtime-log",
+        label: "Open logs",
+        detail: firstFailure.detail || "Inspect runtime log and runtime-exit metadata before retrying.",
+        stage: firstFailure.stage,
+        enabled: true
+      }
+      : null);
   const guidedAction = runtimeAction || recoveryActions.find((item) => item.enabled !== false) || null;
   const action = guidedAction || state.dashboard?.next_action || {};
   const validation = diagnostics?.validation;
   const status = repairCenterStatus(validation, diagnostics?.stopped);
   const stage = action.stage || state.activeStage;
+  if (isRuntimeFirstFailure(firstFailure) && runtimeAction) {
+    return {
+      label: runtimeAction.label || "Open logs",
+      detail: runtimeAction.detail || "Inspect the saved runtime log, runtime-exit metadata, and readiness/config context before retrying.",
+      attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(runtimeAction.stage || stage)}"`
+    };
+  }
   if (status === "repair-available") {
     return {
       label: "Run Repair",
@@ -228,6 +274,7 @@ function recoveryPrimaryActionSpec(diagnostics) {
 }
 
 function recoveryFailureTitle(firstFailure, diagnostics) {
+  if (isRuntimeFirstFailure(firstFailure)) return firstFailure.title || "Runtime failure";
   const validation = diagnostics?.validation;
   const status = repairCenterStatus(validation, diagnostics?.stopped);
   if (status === "repair-available") return "Validation needs repair";
@@ -252,12 +299,18 @@ function renderRecoveryWorkbench() {
   const status = repairCenterStatus(validation, diagnostics.stopped);
   const selectedStage = activeStageItem();
   const selectedStageLabel = stageTitle(state.activeStage);
-  const selectedReason = diagnostics.stopped?.detail
+  const runtimeFailure = isRuntimeFirstFailure(firstFailure);
+  const runtimeLogPath = runtimeLogEvidencePath(diagnostics);
+  const selectedReason = runtimeFailure
+    ? firstFailure.detail || primary.detail
+    : diagnostics.stopped?.detail
     || validation.primary_validation_finding?.message
     || (unresolvedQuestions.length
       ? `${unresolvedQuestions.length} blocking question(s) for ${selectedStageLabel} must be resolved.`
       : primary.detail);
-  const evidencePath = finding ? validationFindingLocation(finding) : validation.validator_report_path || diagnostics.raw_log?.path || "";
+  const evidencePath = runtimeFailure
+    ? runtimeFailureEvidencePath(firstFailure, diagnostics)
+    : finding ? validationFindingLocation(finding) : validation.validator_report_path || diagnostics.raw_log?.path || "";
   const globalBlockerDetail = globalAction.detail || firstFailure?.detail || "Resolve the run-global blocker before progressing the flow.";
   const globalBlockerLabel = globalAction.label || firstFailure?.title || "Run blocker";
   const hasValidationRecovery = finding || Number(validation.validator_fail_count || 0) > 0 || (validation.validation_findings || []).length;
@@ -272,6 +325,7 @@ function renderRecoveryWorkbench() {
             <span><strong>Selected stage</strong>${escapeHtml(selectedStageLabel)}</span>
             <span><strong>Selected-stage status</strong>${escapeHtml(selectedStage?.status || status)}</span>
             <span><strong>Selected-stage evidence</strong>${escapeHtml(compactPath(evidencePath || "not available", 86))}</span>
+            ${runtimeFailure ? `<span><strong>Runtime log</strong>${escapeHtml(compactPath(runtimeLogPath || "not available", 86))}</span>` : ""}
           </div>
         </div>
         <div class="recovery-primary-actions">

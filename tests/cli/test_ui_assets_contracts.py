@@ -245,6 +245,22 @@ def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> No
     assert "overflow-x: auto;" in responsive
 
 
+def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
+    responsive = _asset_text("/operator-responsive.css")
+
+    assert ".top-status {" in responsive
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in responsive
+    assert ".topbar .status-chip," in responsive
+    assert ".topbar #runChip," in responsive
+    assert ".topbar #workItemChip," in responsive
+    assert ".topbar #localStatus {" in responsive
+    assert "white-space: normal;" in responsive
+    assert "text-overflow: clip;" in responsive
+    assert "overflow-wrap: anywhere;" in responsive
+    assert "grid-column: 1 / -1;" in responsive
+    assert ".path-line {" in responsive
+
+
 def test_operator_workbench_css_wraps_path_lines_without_document_overflow() -> None:
     components = _asset_text("/operator-components.css")
 
@@ -740,6 +756,28 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "data-stop-run",
             'data-tab-shortcut="request"',
         ),
+    )
+
+
+def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+
+    _assert_contains_all(
+        cockpit,
+        (
+            "const RUNTIME_FAILURE_KINDS = new Set([",
+            "runtime-exit-metadata-invalid",
+            "function isRuntimeFirstFailure(firstFailure)",
+            "function runtimeLogEvidencePath(diagnostics)",
+            "function runtimeFailureEvidencePath(firstFailure, diagnostics)",
+            'action: "inspect-runtime-log"',
+            "isRuntimeFirstFailure(firstFailure) && runtimeAction",
+            'label: runtimeAction.label || "Open logs"',
+            "Runtime log",
+        ),
+    )
+    assert cockpit.index("isRuntimeFirstFailure(firstFailure) && runtimeAction") < cockpit.index(
+        'if (status === "repair-available")'
     )
 
 

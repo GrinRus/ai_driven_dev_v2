@@ -39,6 +39,34 @@
   }
 }
 @media (max-width: 760px) {
+  .top-status {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    width: 100%;
+  }
+  .topbar .status-chip,
+  .topbar #runChip,
+  .topbar #workItemChip,
+  .topbar #localStatus {
+    justify-content: center;
+    max-width: 100%;
+    min-width: 0;
+    text-align: center;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  .topbar .status-chip {
+    overflow-wrap: anywhere;
+  }
+  .topbar #localStatus {
+    grid-column: 1 / -1;
+  }
+  .path-line {
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
   .operator-shell {
     display: block;
   }
