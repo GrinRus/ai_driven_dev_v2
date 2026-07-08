@@ -352,3 +352,30 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport.
 - Tighten `tasklist` prompt/validator examples for ordered task bullet shape and complete per-task verification notes.
 - Tighten QA prompt guidance so ready/proceed decisions cite ignored-residue evidence on the first attempt.
+
+## Refresh Run - 2026-07-08T23:11Z
+
+- `eval-live-007-codex-20260708T231146Z`: terminal execution verdict `pass`.
+- Source revision under test: `eb1c3d0bdf9327485880f84b3b2eb8f85d0fcf62`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Quality gates: `idea`, `research`, `plan`, `review-spec`, `implement`, and `review` chose `continue` with `strong` quality; `tasklist` and `qa` chose `continue` with `acceptable` quality after successful repair.
+- Self-repair: `tasklist` repaired missing T7/T8 verification-note coverage on attempt 2; `qa` repaired missing ignored-residue evidence citation on attempt 2.
+- Heartbeat evidence: launching-terminal heartbeat appeared across long native-provider intervals for all run-stage commands. The strongest observed transitions were `tasklist` and `qa`, where heartbeat changed from `runtime.log (... not yet created)` to `runtime.log (... present)`.
+- Stage timings: run-stage durations included `tasklist` 282s, `implement` 346s, `review` 276s, and `qa` 393s; no timeout or provider no-progress failure occurred.
+- Stage-audit consistency: all eight stages recorded empty `consistency_findings`.
+- Target implementation quality: review approved the four-file Hono patch; QA reported `ready` / `proceed`; independent focused Vitest rerun passed with 234 tests, `tsc --noEmit` passed, and `git diff --check` was clean.
+- Final manual reports: `.aidd/reports/evals/eval-live-007-codex-20260708T231146Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+
+## Refresh Findings - 2026-07-08T23:11Z
+
+- P1 resolved for CLI/live-harness progress: real medium live E2E showed heartbeat every 30 seconds during long native-provider silence, including active stage, elapsed time, last signal, timeout budgets, and runtime-log status.
+- P2 remains: `tasklist` still needed a repair for complete per-task verification notes, now specifically missing T7/T8 in the first attempt's `Verification notes`.
+- P2 remains: `qa` still needed a repair for ignored-residue evidence citation before `ready` / `proceed`.
+- P2 remains: terminal Flow Complete first viewport still needs a direct runtime-log/evidence affordance; this rerun did not recapture browser visual evidence.
+
+## Next UX Plan - After 23:11Z Refresh
+
+- Tighten `tasklist` prompt/validator examples so the first attempt includes a separate `Verification notes` entry for every task id, especially command-only tasks such as T7/T8.
+- Tighten QA prompt guidance so ready/proceed decisions cite `git status --ignored --short --untracked-files=all` on the first attempt whenever test/type/build checks are cited.
+- Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport and recapture desktop/mobile browser evidence.
+- Keep the heartbeat behavior as accepted unless a later run shows line length/readability problems in narrower terminals.
