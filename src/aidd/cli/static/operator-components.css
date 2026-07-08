@@ -1895,10 +1895,14 @@
 }
 .artifact-viewer {
   min-height: 280px;
+  min-width: 0;
+  overflow: hidden;
   padding: 12px;
 }
 .stage-document-workbench {
   align-items: start;
+  max-width: 100%;
+  min-width: 0;
 }
 .workbench-tree {
   max-height: 650px;
@@ -1911,6 +1915,7 @@
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
 }
 .workbench-document-pane {
   display: grid;
@@ -2023,7 +2028,25 @@
   gap: 8px;
   justify-content: space-between;
   margin-bottom: 12px;
+  min-width: 0;
   padding-bottom: 9px;
+}
+.viewer-header > div:first-child {
+  flex: 1 1 220px;
+  max-width: 100%;
+  min-width: 0;
+}
+.viewer-header .viewer-modes {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+}
+.viewer-header .path-line,
+.stage-document-workbench .path-line {
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: break-word;
 }
 .viewer-modes,
 .log-filter,

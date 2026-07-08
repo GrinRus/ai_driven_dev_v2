@@ -294,7 +294,15 @@ def _missing_repair_brief_is_expected_without_repair_history(
         run_id=run_id,
         stage=stage,
     )
-    return metadata is not None and not metadata.repair_history
+    if metadata is None:
+        return False
+    if not metadata.repair_history:
+        return True
+    has_repair_evidence = any(
+        entry.trigger in {"repair", "intervention"} or entry.repair_brief_path
+        for entry in metadata.repair_history
+    )
+    return metadata.status == "succeeded" and not has_repair_evidence
 
 
 def _artifact_snapshots(

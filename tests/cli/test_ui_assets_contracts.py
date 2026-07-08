@@ -245,6 +245,21 @@ def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> No
     assert "overflow-x: auto;" in responsive
 
 
+def test_operator_workbench_css_wraps_path_lines_without_document_overflow() -> None:
+    components = _asset_text("/operator-components.css")
+
+    assert ".artifact-viewer {" in components
+    assert ".stage-document-workbench {" in components
+    assert ".workbench-main {" in components
+    assert ".viewer-header > div:first-child {" in components
+    assert ".viewer-header .path-line," in components
+    assert ".stage-document-workbench .path-line {" in components
+    assert "overflow-wrap: anywhere;" in components
+    assert "text-overflow: clip;" in components
+    assert "white-space: normal;" in components
+    assert "word-break: break-word;" in components
+
+
 def test_operator_responsive_css_prevents_activity_table_mobile_overflow() -> None:
     responsive = _asset_text("/operator-responsive.css")
 
