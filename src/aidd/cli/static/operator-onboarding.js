@@ -8,6 +8,38 @@ function onboardingRuntimeLabel(runtime) {
   return `${provider}; ${command}`;
 }
 
+function onboardingRunnerProfile(runtime) {
+  const runtimeId = String(runtime.runtime_id || "");
+  if (runtimeId === "generic-cli") {
+    return {
+      kind: "deterministic baseline",
+      badge: "baseline",
+      summary: "Best first smoke when a wrapper or fixture runtime is configured.",
+      detail: "Uses adapter-flags execution instead of a native provider session.",
+      recommended: true
+    };
+  }
+  return {
+    kind: "native provider",
+    badge: "provider",
+    summary: "Use for product-like runs with an authenticated provider CLI.",
+    detail: "Review the command, auth, and permission posture before launch.",
+    recommended: false
+  };
+}
+
+function onboardingRunnerGuidance(runtimes) {
+  if (!runtimes.some((runtime) => String(runtime.runtime_id || "") === "generic-cli")) {
+    return "";
+  }
+  return `
+    <div class="runner-selection-guidance">
+      <strong>Start with the deterministic baseline when you are checking setup.</strong>
+      <span>Native provider runners remain available for real model execution; every launch still requires an explicit runner selection.</span>
+    </div>
+  `;
+}
+
 function onboardingRunnerCards() {
   if (!onboardingProject()) {
     return `<div class="empty-state">Validate a project before selecting a runner.</div>`;
@@ -20,21 +52,30 @@ function onboardingRunnerCards() {
   }
   const runtimes = state.readiness?.runtimes || [];
   if (!runtimes.length) return `<div class="empty-state">No runtimes are configured.</div>`;
-  return runtimes.map((runtime) => {
+  const cards = runtimes.map((runtime) => {
     const runtimeId = String(runtime.runtime_id || "");
     const ready = runtime.provider_available && runtime.execution_command_available;
     const selected = runtimeId === state.selectedRuntime;
+    const profile = onboardingRunnerProfile(runtime);
     return `
-      <button class="runner-card ${selected ? "selected" : ""}" data-onboarding-runtime="${escapeHtml(runtimeId)}" type="button" aria-pressed="${selected ? "true" : "false"}">
+      <button class="runner-card ${profile.recommended ? "recommended" : ""} ${selected ? "selected" : ""}" data-onboarding-runtime="${escapeHtml(runtimeId)}" type="button" aria-pressed="${selected ? "true" : "false"}" aria-label="${escapeHtml(`${runtimeId}: ${profile.kind}; ${onboardingRuntimeLabel(runtime)}`)}">
         <span class="runner-card-head">
           <strong>${escapeHtml(runtimeId)}</strong>
-          <span class="small-badge ${ready ? "good" : "warn"}">${ready ? "ready" : "check"}</span>
+          <span class="runner-card-meta">
+            <span class="small-badge ${profile.recommended ? "good" : ""}">${escapeHtml(profile.badge)}</span>
+            <span class="small-badge ${ready ? "good" : "warn"}">${ready ? "ready" : "check"}</span>
+          </span>
+        </span>
+        <span class="runner-card-guidance">
+          <strong>${escapeHtml(profile.summary)}</strong>
+          ${escapeHtml(profile.detail)}
         </span>
         <span>${escapeHtml(onboardingRuntimeLabel(runtime))}</span>
         <span class="runner-command" title="${escapeHtml(readinessText(runtime.command))}">${escapeHtml(compactPath(readinessText(runtime.command), 64))}</span>
       </button>
     `;
   }).join("");
+  return `${onboardingRunnerGuidance(runtimes)}${cards}`;
 }
 
 function onboardingRecentProjects() {

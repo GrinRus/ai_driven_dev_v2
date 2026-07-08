@@ -477,6 +477,40 @@ def test_operator_onboarding_static_contract_syncs_create_action_state() -> None
     assert main.count("syncOnboardingCreateActionState();") == 3
 
 
+def test_operator_onboarding_distinguishes_deterministic_runner_path() -> None:
+    onboarding = _asset_text("/operator-onboarding.js")
+    components = _asset_text("/operator-components.css")
+
+    _assert_contains_all(
+        onboarding,
+        (
+            "function onboardingRunnerProfile(runtime)",
+            "function onboardingRunnerGuidance(runtimes)",
+            'runtimeId === "generic-cli"',
+            "deterministic baseline",
+            "Best first smoke when a wrapper or fixture runtime is configured.",
+            "Native provider runners remain available for real model execution",
+            "every launch still requires an explicit runner selection",
+            '${profile.recommended ? "recommended" : ""}',
+            "runner-card-guidance",
+            "runner-card-meta",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".runner-selection-guidance {",
+            "border-left: 4px solid var(--amber);",
+            ".runner-card.recommended {",
+            "box-shadow: inset 3px 0 0 var(--green);",
+            ".runner-card.recommended.selected {",
+            ".runner-card-meta {",
+            ".runner-card-guidance {",
+            ".runner-card-guidance strong {",
+        ),
+    )
+
+
 def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_contracts() -> None:
     shell = _asset_text("/operator-shell-rendering.js")
 

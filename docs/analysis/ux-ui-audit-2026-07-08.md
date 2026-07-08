@@ -64,11 +64,11 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Current follow-up: validation-pass reconciliation now replaces stale terminal notes that still claim a stage ended as `failed`, `blocked`, or `needs-input`. The summary can say artifact publication succeeded while preserving product-quality decisions such as `review-report.md` rejection in the primary report.
 - Current follow-up: the active run panel now surfaces a live running-stage progress notice with elapsed time, runtime-output freshness, live log chunk count, and a direct log shortcut. Rendered QA covered desktop no-output and mobile live-output states via `/tmp/aidd-running-progress-desktop.png` and `/tmp/aidd-running-progress-mobile.png`.
 - Current follow-up: `stage-result.md` next-action guidance is now flow-aware for implementation handoff. The document contract, implement prompt/repair prompt, and AIDD-LIVE-007 audit rubric require successful `implement` summaries to point to `review`, not directly to `qa`.
+- Current follow-up: first-launch runner selection now visually distinguishes the deterministic baseline from native provider runners. The onboarding card grid adds a baseline guidance strip, a recommended-style `generic-cli` card treatment, native-provider guidance copy, and static asset coverage so real provider cards remain available without looking equally safe for first setup checks. Rendered QA covered desktop and 390px mobile onboarding states via `/tmp/aidd-onboarding-runner-desktop.png` and `/tmp/aidd-onboarding-runner-mobile.png`.
 
 ## Deferred Work
 
 - Add visual frontend checkpoints for live E2E, including desktop/mobile screenshots and assertions for visible next action, active stage, recovery primary action, and absence of clipped topbar text. The current iteration adds non-visual operator-surface semantic evidence first.
-- Rebalance first-launch onboarding so the recommended deterministic/safe path is visually dominant while real provider runners remain available.
 - Promote the running-stage visual checks into the repeatable live E2E checkpoint instead of relying on a synthetic manual fixture.
 - Continue improving terminal stage summaries so they name the next operator decision without burying review or QA outcomes in artifact details.
 - Add repeatable validation or grader coverage for generated stage-result next-action wording after the next live E2E run refreshes evidence.

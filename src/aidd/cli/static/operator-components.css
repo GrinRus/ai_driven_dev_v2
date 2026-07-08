@@ -236,7 +236,26 @@
 .runner-card-grid {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.runner-selection-guidance {
+  background: var(--surface-warning);
+  border: 1px solid #ead7a6;
+  border-left: 4px solid var(--amber);
+  border-radius: 6px;
+  color: var(--muted);
+  display: grid;
+  gap: 4px;
+  grid-column: 1 / -1;
+  line-height: 1.35;
+  padding: 10px 12px;
+}
+.runner-selection-guidance strong {
+  color: var(--text);
+  font-size: 13px;
+}
+.runner-selection-guidance span {
+  font-size: 12px;
 }
 .runner-card {
   align-content: start;
@@ -246,14 +265,25 @@
   color: var(--text);
   display: grid;
   gap: 7px;
-  min-height: 116px;
+  min-height: 148px;
   padding: 10px;
   text-align: left;
+}
+.runner-card.recommended {
+  background: var(--surface-success);
+  border-color: #b7d9c5;
+  box-shadow: inset 3px 0 0 var(--green);
 }
 .runner-card.selected {
   background: #eaf5f3;
   border-color: var(--teal);
   box-shadow: inset 0 0 0 1px rgba(15, 122, 123, 0.2);
+}
+.runner-card.recommended.selected {
+  background: var(--surface-success);
+  box-shadow:
+    inset 3px 0 0 var(--green),
+    inset 0 0 0 1px rgba(15, 122, 123, 0.2);
 }
 .runner-card-head {
   align-items: center;
@@ -268,7 +298,25 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.runner-card-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  min-width: 0;
+}
 .runner-card span {
+  font-size: 12px;
+  line-height: 1.35;
+}
+.runner-card-guidance {
+  color: var(--muted);
+  display: grid;
+  gap: 2px;
+}
+.runner-card-guidance strong {
+  color: var(--text);
   font-size: 12px;
   line-height: 1.35;
 }
