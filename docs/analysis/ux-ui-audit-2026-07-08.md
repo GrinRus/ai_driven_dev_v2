@@ -121,3 +121,10 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - On 390px mobile, review/QA decision detail mode raises the cockpit before the stage rail and adds a compact decision cue to the global next-action strip, so the decision is visible in the first viewport while the full evidence table remains below.
 - Terminal next-action copy now says `Review final artifacts` instead of the ambiguous `Review complete`, avoiding a QA-screen contradiction after the workflow has already reached terminal handoff.
 - Rendered verification used the completed `eval-live-007-codex-20260708T131815Z` target workspace. Desktop QA confirmed full decision summaries are visible in the first viewport. Mobile QA confirmed shell display switches to `flex`, the decision cue is visible in the first viewport, and the full summary remains reachable below it. Screenshot evidence: `/tmp/aidd-review-decision-desktop.png`, `/tmp/aidd-review-decision-mobile.png`, `/tmp/aidd-qa-decision-desktop.png`, and `/tmp/aidd-qa-decision-mobile.png`.
+
+## Stale Downstream Rerun Slice
+
+- Stale downstream states now get a central summary in the global next-action strip instead of relying on small rail badges and the Active Run sidebar.
+- The summary names the invalidated stage chain, remediation request id, runtime readiness gate, and next operator step, and explicitly states that terminal QA handoff remains blocked until downstream evidence is refreshed.
+- On 390px mobile, stale-downstream mode raises the cockpit before the stage rail so the rerun explanation is visible in the first viewport.
+- Rendered verification used a temporary copy of `eval-live-007-codex-20260708T131815Z` with `request-0001` marking `review` and `qa` stale. Desktop QA confirmed the stale summary is visible in the first viewport. Mobile QA confirmed `scrollWidth=390`, shell display switches to `flex`, stale badges remain on the rail, and the summary shows `Runtime codex not ready` plus `Next step Select ready runtime` while the rerun button is disabled. Screenshot evidence: `/tmp/aidd-stale-downstream-desktop.png` and `/tmp/aidd-stale-downstream-mobile.png`.

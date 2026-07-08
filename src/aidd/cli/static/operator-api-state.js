@@ -344,8 +344,11 @@ function applyOperatorModeBodyClass() {
   const recoveryActive = state.activeTab === "recovery";
   const decisionDetailActive = state.activeTab === "work"
     && ["review-findings", "qa-verdict"].includes(state.workDetail);
+  const staleDownstreamActive = state.dashboard?.next_action?.action === "rerun-stale-downstream"
+    || (state.dashboard?.stages || []).some((item) => item.stale);
   document.body.classList.toggle("recovery-mode", recoveryActive);
   document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
+  document.body.classList.toggle("stale-downstream-mode", staleDownstreamActive);
   syncLiveJobBodyClass();
 }
 

@@ -1903,6 +1903,58 @@ function activeModeDecisionPeek() {
   return null;
 }
 
+function staleDownstreamStages() {
+  return (state.dashboard?.stages || []).filter((item) => item.stale);
+}
+
+function staleDownstreamStageLabel(items) {
+  const labels = items.map((item) => stageTitle(item.stage));
+  if (!labels.length) return "downstream stages";
+  return labels.join(" -> ");
+}
+
+function staleDownstreamInvalidator(items) {
+  const invalidators = [...new Set(items.map((item) => item.stale_invalidated_by).filter(Boolean))];
+  return invalidators.join(", ") || "remediation request";
+}
+
+function staleDownstreamRuntimeGate() {
+  if (!state.selectedRuntime) {
+    return {label: "Runtime required", nextStep: "Select runtime"};
+  }
+  if (!selectedRuntimeReady()) {
+    return {label: `${state.selectedRuntime} not ready`, nextStep: "Select ready runtime"};
+  }
+  return {label: `${state.selectedRuntime} ready`, nextStep: "Rerun downstream"};
+}
+
+function renderStaleDownstreamSummary(action) {
+  const items = staleDownstreamStages();
+  if (!items.length && action?.action !== "rerun-stale-downstream") return "";
+  const stageLabel = staleDownstreamStageLabel(items);
+  const invalidatedBy = staleDownstreamInvalidator(items);
+  const runtimeGate = staleDownstreamRuntimeGate();
+  const firstReason = items.find((item) => item.stale_reason)?.stale_reason
+    || action?.detail
+    || "A remediation attempt invalidated downstream stage evidence.";
+  return `
+    <div class="stale-downstream-summary" data-stale-downstream-summary role="status" aria-live="polite">
+      <div class="stale-downstream-copy">
+        <span class="small-badge warn">stale downstream</span>
+        <strong>Rerun ${escapeHtml(stageLabel)} after remediation</strong>
+        <p>${escapeHtml(firstReason)}</p>
+        <small>Terminal QA handoff stays blocked until stale downstream evidence is refreshed.</small>
+      </div>
+      <div class="stale-downstream-facts">
+        <span><strong>Stale stages</strong>${escapeHtml(stageLabel)}</span>
+        <span><strong>Invalidated by</strong>${escapeHtml(invalidatedBy)}</span>
+        <span><strong>Runtime</strong>${escapeHtml(runtimeGate.label)}</span>
+        <span><strong>Next step</strong>${escapeHtml(runtimeGate.nextStep)}</span>
+      </div>
+    </div>
+  `;
+}
+
 function renderModeDecisionPeek() {
   const peek = activeModeDecisionPeek();
   if (!peek) return "";
@@ -1989,6 +2041,7 @@ function renderGlobalNextActionStrip() {
         <h2>${escapeHtml(label)}</h2>
         <p>${escapeHtml(detail)}</p>
         ${renderValidationFindingSummary(finding)}
+        ${renderStaleDownstreamSummary(action)}
         ${renderModeDecisionPeek()}
       </div>
     </div>

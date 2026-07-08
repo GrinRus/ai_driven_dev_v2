@@ -121,10 +121,17 @@
     display: flex;
     flex-direction: column;
   }
+  body.stale-downstream-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
   body.live-job-mode .cockpit {
     order: 1;
   }
   body.decision-detail-mode .cockpit {
+    order: 1;
+  }
+  body.stale-downstream-mode .cockpit {
     order: 1;
   }
   body.live-job-mode .stage-rail {
@@ -133,16 +140,25 @@
   body.decision-detail-mode .stage-rail {
     order: 2;
   }
+  body.stale-downstream-mode .stage-rail {
+    order: 2;
+  }
   body.live-job-mode .right-sidebar {
     order: 3;
   }
   body.decision-detail-mode .right-sidebar {
     order: 3;
   }
+  body.stale-downstream-mode .right-sidebar {
+    order: 3;
+  }
   body.live-job-mode .bottom-dock {
     order: 4;
   }
   body.decision-detail-mode .bottom-dock {
+    order: 4;
+  }
+  body.stale-downstream-mode .bottom-dock {
     order: 4;
   }
   body.live-job-mode .project-home-rail {
@@ -240,6 +256,8 @@
   .next-flow-decision-spotlight,
   .decision-summary,
   .decision-summary-metrics,
+  .stale-downstream-summary,
+  .stale-downstream-facts,
   .handoff-metric-grid,
   .next-flow-actions-grid,
   .terminal-summary-grid,

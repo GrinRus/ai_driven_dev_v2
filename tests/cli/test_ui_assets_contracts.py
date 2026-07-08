@@ -1136,6 +1136,50 @@ def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> 
     assert "body.decision-detail-mode .stage-rail" in responsive
 
 
+def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
+    api_state = _asset_text("/operator-api-state.js")
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    _assert_contains_all(
+        api_state,
+        (
+            "stale-downstream-mode",
+            'state.dashboard?.next_action?.action === "rerun-stale-downstream"',
+            "(state.dashboard?.stages || []).some((item) => item.stale)",
+        ),
+    )
+    _assert_contains_all(
+        next_flow,
+        (
+            "function staleDownstreamStages()",
+            "function staleDownstreamStageLabel(items)",
+            "function staleDownstreamRuntimeGate()",
+            "function renderStaleDownstreamSummary(action)",
+            "data-stale-downstream-summary",
+            "Terminal QA handoff stays blocked until stale downstream evidence is refreshed.",
+            "Rerun downstream",
+            "Select ready runtime",
+            "${renderStaleDownstreamSummary(action)}",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".stale-downstream-summary {",
+            "box-shadow: inset 4px 0 0 var(--amber);",
+            ".stale-downstream-copy {",
+            ".stale-downstream-facts {",
+            "grid-template-columns: repeat(4, minmax(0, 1fr));",
+        ),
+    )
+    assert "body.stale-downstream-mode .operator-shell" in responsive
+    assert "body.stale-downstream-mode .cockpit" in responsive
+    assert ".stale-downstream-summary," in responsive
+    assert ".stale-downstream-facts," in responsive
+
+
 def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> None:
     approvals = _asset_text("/operator-approvals-interventions.js")
 
