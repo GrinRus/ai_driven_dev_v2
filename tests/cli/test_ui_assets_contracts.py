@@ -882,6 +882,8 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
 
 def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contracts() -> None:
     questions = _asset_text("/operator-questions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
 
     _assert_contains_all(
         questions,
@@ -908,6 +910,15 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "function questionRequiresResolvedResume(question)",
             "function updateQuestionResumeButtonState(questionId)",
             "function updateQuestionResumeButtonStates()",
+            "function interviewDecisionCounts(view)",
+            "function renderInterviewDecisionSpotlight(view)",
+            "data-interview-decision-spotlight",
+            "No interview questions for this stage",
+            "Blocking questions need resolved answers",
+            "Interview answers need final resolution",
+            "Interview answers saved",
+            "Primary action: answer required questions",
+            "${renderInterviewDecisionSpotlight(view)}",
             "function renderInterviewSummary(view)",
             "function renderBlockedStageContext(view)",
             "Questions / Interview Loop",
@@ -935,6 +946,19 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "async function resumeAfterAnswers()",
         ),
     )
+    _assert_contains_all(
+        components,
+        (
+            ".interview-decision-spotlight {",
+            "box-shadow: inset 4px 0 0 var(--green);",
+            ".interview-decision-spotlight.warn {",
+            ".interview-decision-spotlight.bad {",
+            ".interview-decision-facts {",
+            "grid-template-columns: repeat(5, minmax(0, 1fr));",
+        ),
+    )
+    assert ".interview-decision-spotlight," in responsive
+    assert ".interview-decision-facts," in responsive
 
 
 def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
