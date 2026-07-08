@@ -1063,6 +1063,79 @@ def test_operator_implement_review_static_contract_covers_project_set_grouping()
     )
 
 
+def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> None:
+    api_state = _asset_text("/operator-api-state.js")
+    control = _asset_text("/operator-control-center.js")
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    _assert_contains_all(
+        api_state,
+        (
+            "reviewFindingsView: null",
+            "reviewFindingsRunId: \"\"",
+            "qaVerdictView: null",
+            "qaVerdictRunId: \"\"",
+            "decision-detail-mode",
+            "[\"review-findings\", \"qa-verdict\"].includes(state.workDetail)",
+        ),
+    )
+    _assert_contains_all(
+        control,
+        (
+            "function renderDecisionSummary({kind, tone, badge, title, body, primary, metrics})",
+            "function renderReviewDecisionSummary(view, findings)",
+            "Review rejected: fix blocking findings before QA",
+            "Review approved: QA can start",
+            "Primary action: Send selected to implement",
+            'data-decision-summary="${escapeHtml(kind)}"',
+            "renderReviewDecisionSummary(view, findings)",
+            "function renderQaDecisionSummary(view, risks, issues)",
+            "QA not ready: send selected items back to implement",
+            "QA ready: run can be accepted",
+            "QA ready with follow-up context",
+            "renderQaDecisionSummary(view, risks, issues)",
+            "state.reviewFindingsView = view",
+            "state.qaVerdictView = view",
+        ),
+    )
+    _assert_contains_all(
+        next_flow,
+        (
+            "function activeModeDecisionPeek()",
+            "function renderModeDecisionPeek()",
+            "Review approved",
+            "Review rejected",
+            "QA ready",
+            "QA not ready",
+            "${renderModeDecisionPeek()}",
+            "mode-decision-peek",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".decision-summary {",
+            "grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);",
+            ".decision-summary.good {",
+            ".decision-summary.warn {",
+            ".decision-summary.bad {",
+            ".decision-summary-metrics {",
+            "grid-template-columns: repeat(4, minmax(0, 1fr));",
+            ".decision-metric strong {",
+            ".mode-decision-peek {",
+            "display: none;",
+        ),
+    )
+    assert ".decision-summary," in responsive
+    assert ".decision-summary-metrics," in responsive
+    assert ".mode-decision-peek {" in responsive
+    assert "body.decision-detail-mode .operator-shell" in responsive
+    assert "body.decision-detail-mode .cockpit" in responsive
+    assert "body.decision-detail-mode .stage-rail" in responsive
+
+
 def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> None:
     approvals = _asset_text("/operator-approvals-interventions.js")
 

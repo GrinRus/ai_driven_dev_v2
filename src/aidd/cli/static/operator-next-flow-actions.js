@@ -1819,6 +1819,102 @@ function renderGlobalLiveProgress(job) {
   `;
 }
 
+function decisionPeekCountLabel(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function reviewDecisionPeek(view) {
+  const status = view?.approval_status || "not detected";
+  const findings = view?.findings || [];
+  const mustFix = findings.filter((finding) => finding.disposition === "must-fix").length;
+  if (status === "approved") {
+    return {
+      tone: "good",
+      badge: status,
+      title: "Review approved",
+      detail: `${decisionPeekCountLabel(findings.length, "finding")} recorded; QA is the next governed stage.`
+    };
+  }
+  if (status === "rejected") {
+    return {
+      tone: "bad",
+      badge: status,
+      title: "Review rejected",
+      detail: mustFix
+        ? `${decisionPeekCountLabel(mustFix, "must-fix finding")} should go back to implement before QA.`
+        : "Inspect review findings or request intervention before QA."
+    };
+  }
+  return {
+    tone: "warn",
+    badge: status,
+    title: "Review status unclear",
+    detail: "Inspect review findings or request intervention before QA."
+  };
+}
+
+function qaDecisionPeek(view) {
+  const verdict = view?.quality_verdict || "not detected";
+  const risks = view?.residual_risks || [];
+  const issues = view?.known_issues || [];
+  const total = risks.length + issues.length;
+  if (verdict === "ready" && !total) {
+    return {
+      tone: "good",
+      badge: verdict,
+      title: "QA ready",
+      detail: "No structured risks or known issues; accept complete when reviewed."
+    };
+  }
+  if (verdict === "ready") {
+    return {
+      tone: "warn",
+      badge: verdict,
+      title: "QA ready with follow-up context",
+      detail: `${decisionPeekCountLabel(total, "risk or issue", "risks or issues")} remain documented for accept or follow-up.`
+    };
+  }
+  if (verdict === "not-ready") {
+    return {
+      tone: "bad",
+      badge: verdict,
+      title: "QA not ready",
+      detail: total
+        ? `${decisionPeekCountLabel(total, "risk or issue", "risks or issues")} should go back to implement before accept.`
+        : "Inspect QA evidence before accepting or launching follow-up."
+    };
+  }
+  return {
+    tone: "warn",
+    badge: verdict,
+    title: "QA verdict unclear",
+    detail: "Inspect QA evidence before accepting or launching follow-up."
+  };
+}
+
+function activeModeDecisionPeek() {
+  if (state.activeTab !== "work") return null;
+  if (state.workDetail === "review-findings" && state.reviewFindingsRunId === state.activeRunId && state.reviewFindingsView) {
+    return reviewDecisionPeek(state.reviewFindingsView);
+  }
+  if (state.workDetail === "qa-verdict" && state.qaVerdictRunId === state.activeRunId && state.qaVerdictView) {
+    return qaDecisionPeek(state.qaVerdictView);
+  }
+  return null;
+}
+
+function renderModeDecisionPeek() {
+  const peek = activeModeDecisionPeek();
+  if (!peek) return "";
+  return `
+    <div class="mode-decision-peek ${escapeHtml(peek.tone)}" aria-label="Current screen decision summary">
+      <span class="small-badge ${escapeHtml(peek.tone)}">${escapeHtml(peek.badge)}</span>
+      <strong>${escapeHtml(peek.title)}</strong>
+      <span>${escapeHtml(peek.detail)}</span>
+    </div>
+  `;
+}
+
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
@@ -1893,6 +1989,7 @@ function renderGlobalNextActionStrip() {
         <h2>${escapeHtml(label)}</h2>
         <p>${escapeHtml(detail)}</p>
         ${renderValidationFindingSummary(finding)}
+        ${renderModeDecisionPeek()}
       </div>
     </div>
     <div class="next-action-controls">

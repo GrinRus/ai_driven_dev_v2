@@ -54,6 +54,102 @@
 .metric strong {
   font-size: 18px;
 }
+.findings-screen,
+.verdict-screen {
+  display: grid;
+  gap: 12px;
+}
+.findings-screen > .surface-title,
+.verdict-screen > .surface-title {
+  margin-bottom: 0;
+}
+.decision-summary {
+  align-items: start;
+  background: #f4f8f7;
+  border: 1px solid #b7d5d1;
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+  padding: 12px;
+}
+.decision-summary.good {
+  background: #eef8f2;
+  border-color: #aacfb9;
+  box-shadow: inset 4px 0 0 var(--green);
+}
+.decision-summary.warn {
+  background: #fff9ed;
+  border-color: #e4c783;
+  box-shadow: inset 4px 0 0 var(--amber);
+}
+.decision-summary.bad {
+  background: #fff5f4;
+  border-color: #ebb6b1;
+  box-shadow: inset 4px 0 0 var(--red);
+}
+.decision-summary-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.decision-summary-copy .small-badge {
+  justify-self: start;
+  max-width: 100%;
+  width: fit-content;
+}
+.decision-summary-copy strong {
+  font-size: 17px;
+  line-height: 1.25;
+}
+.decision-summary-copy p,
+.decision-summary-copy small {
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0;
+}
+.decision-summary-copy p {
+  font-size: 13px;
+}
+.decision-summary-copy small {
+  font-size: 12px;
+  font-weight: 800;
+}
+.decision-summary-metrics {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.decision-metric {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  min-width: 0;
+  padding: 8px;
+}
+.decision-metric.good {
+  border-color: #aacfb9;
+}
+.decision-metric.warn {
+  border-color: #e4c783;
+}
+.decision-metric.bad {
+  border-color: #ebb6b1;
+}
+.decision-metric span {
+  color: var(--muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.decision-metric strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
 .validation-finding-summary {
   align-items: start;
   background: #fff7f6;
@@ -1631,6 +1727,9 @@
 
 .next-action-copy p {
   margin: 0;
+}
+.mode-decision-peek {
+  display: none;
 }
 
 .next-action-controls {

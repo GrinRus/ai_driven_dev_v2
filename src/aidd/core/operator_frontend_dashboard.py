@@ -1105,8 +1105,11 @@ def _next_action(
     if not incomplete:
         return OperatorNextAction(
             action="review-complete",
-            label="Review complete",
-            detail="All canonical stages have succeeded.",
+            label="Review final artifacts",
+            detail=(
+                "All canonical stages have succeeded. Inspect the QA handoff and final "
+                "evidence before starting the next flow."
+            ),
             stage=None,
             enabled=True,
         )

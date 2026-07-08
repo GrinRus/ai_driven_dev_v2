@@ -971,6 +971,8 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
     )
 
     assert dashboard.next_action.action == "review-complete"
+    assert dashboard.next_action.label == "Review final artifacts"
+    assert "QA handoff" in dashboard.next_action.detail
     assert dashboard.next_action.enabled is True
     assert dashboard.terminal_handoff is not None
     assert dashboard.terminal_handoff.status == "completed"

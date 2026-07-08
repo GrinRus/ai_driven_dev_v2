@@ -117,16 +117,32 @@
     display: flex;
     flex-direction: column;
   }
+  body.decision-detail-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
   body.live-job-mode .cockpit {
+    order: 1;
+  }
+  body.decision-detail-mode .cockpit {
     order: 1;
   }
   body.live-job-mode .stage-rail {
     order: 2;
   }
+  body.decision-detail-mode .stage-rail {
+    order: 2;
+  }
   body.live-job-mode .right-sidebar {
     order: 3;
   }
+  body.decision-detail-mode .right-sidebar {
+    order: 3;
+  }
   body.live-job-mode .bottom-dock {
+    order: 4;
+  }
+  body.decision-detail-mode .bottom-dock {
     order: 4;
   }
   body.live-job-mode .project-home-rail {
@@ -134,6 +150,40 @@
   }
   .global-next-action-strip {
     grid-template-columns: 1fr;
+  }
+  .mode-decision-peek {
+    background: #ffffff;
+    border: 1px solid #cfe3e0;
+    border-radius: 6px;
+    display: grid;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 8px;
+  }
+  .mode-decision-peek.good {
+    border-color: #aacfb9;
+    box-shadow: inset 3px 0 0 var(--green);
+  }
+  .mode-decision-peek.warn {
+    border-color: #e4c783;
+    box-shadow: inset 3px 0 0 var(--amber);
+  }
+  .mode-decision-peek.bad {
+    border-color: #ebb6b1;
+    box-shadow: inset 3px 0 0 var(--red);
+  }
+  .mode-decision-peek .small-badge {
+    justify-self: start;
+    width: fit-content;
+  }
+  .mode-decision-peek strong {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+  .mode-decision-peek span:not(.small-badge) {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
   }
   .live-progress-strip {
     grid-template-columns: 1fr;
@@ -188,6 +238,8 @@
   .setup-mode-grid,
   .flow-complete-hero,
   .next-flow-decision-spotlight,
+  .decision-summary,
+  .decision-summary-metrics,
   .handoff-metric-grid,
   .next-flow-actions-grid,
   .terminal-summary-grid,

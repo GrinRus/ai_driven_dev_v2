@@ -113,3 +113,11 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - The live strip shows stage/job status, elapsed time, last runtime output age, live log chunk count, an `Open live logs` shortcut, and the cancel action.
 - On 390px mobile, active-job mode raises the cockpit/live progress area before the stage rail so monitoring is visible in the first viewport.
 - Rendered verification used a temporary `generic-cli` sleep runtime in `/tmp/aidd-live-progress-ui-qa2`, started through the actual UI. Desktop QA confirmed a real UI-started workflow job rendered `Idea: Running now`, live metrics, `Open live logs`, and `Cancel job`. Mobile QA kept `scrollWidth=390`, placed the cockpit before the stage rail, kept the strip inside `30..360px`, and showed the live strip inside the first viewport. Screenshot evidence: `/tmp/aidd-ui-live-progress-desktop-after-order.png` and `/tmp/aidd-ui-live-progress-mobile-after-order.png`.
+
+## Review / QA Decision Clarity Slice
+
+- `Review Findings` and `QA Verdict` now lead with decision summaries instead of dropping first-time operators directly into tables and remediation notes.
+- The summaries state the current approval/verdict, primary action, blocking/follow-up counts, and whether the operator should proceed, send selected items back to implement, or request intervention.
+- On 390px mobile, review/QA decision detail mode raises the cockpit before the stage rail and adds a compact decision cue to the global next-action strip, so the decision is visible in the first viewport while the full evidence table remains below.
+- Terminal next-action copy now says `Review final artifacts` instead of the ambiguous `Review complete`, avoiding a QA-screen contradiction after the workflow has already reached terminal handoff.
+- Rendered verification used the completed `eval-live-007-codex-20260708T131815Z` target workspace. Desktop QA confirmed full decision summaries are visible in the first viewport. Mobile QA confirmed shell display switches to `flex`, the decision cue is visible in the first viewport, and the full summary remains reachable below it. Screenshot evidence: `/tmp/aidd-review-decision-desktop.png`, `/tmp/aidd-review-decision-mobile.png`, `/tmp/aidd-qa-decision-desktop.png`, and `/tmp/aidd-qa-decision-mobile.png`.

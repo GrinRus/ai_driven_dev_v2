@@ -94,6 +94,10 @@ const state = {
   runComparisonError: "",
   runComparisonLoading: false,
   runComparisonBaselineInput: "",
+  reviewFindingsView: null,
+  reviewFindingsRunId: "",
+  qaVerdictView: null,
+  qaVerdictRunId: "",
   activeArtifactKey: "",
   implementDiffFilter: "all",
   implementDiffPath: "",
@@ -338,7 +342,10 @@ function syncLiveJobBodyClass() {
 function applyOperatorModeBodyClass() {
   document.body.dataset.operatorMode = state.activeTab;
   const recoveryActive = state.activeTab === "recovery";
+  const decisionDetailActive = state.activeTab === "work"
+    && ["review-findings", "qa-verdict"].includes(state.workDetail);
   document.body.classList.toggle("recovery-mode", recoveryActive);
+  document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
   syncLiveJobBodyClass();
 }
 
@@ -423,7 +430,14 @@ async function fetchDashboard() {
   if (viewedStage && STAGES.includes(viewedStage)) {
     state.activeStage = viewedStage;
   }
+  const previousRunId = state.activeRunId;
   state.activeRunId = state.dashboard.run?.run_id || "";
+  if (state.activeRunId !== previousRunId) {
+    state.reviewFindingsView = null;
+    state.reviewFindingsRunId = "";
+    state.qaVerdictView = null;
+    state.qaVerdictRunId = "";
+  }
   if (!state.selectedRuntime && state.dashboard.run?.runtime_id) {
     state.selectedRuntime = state.dashboard.run.runtime_id;
   }

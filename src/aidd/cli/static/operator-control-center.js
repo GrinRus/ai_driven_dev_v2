@@ -262,6 +262,116 @@ function checkedRemediationIds(sourceStage) {
     .filter(Boolean);
 }
 
+function countLabel(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function renderDecisionSummary({kind, tone, badge, title, body, primary, metrics}) {
+  return `
+    <div class="decision-summary ${escapeHtml(tone)}" data-decision-summary="${escapeHtml(kind)}" role="status" aria-live="polite">
+      <div class="decision-summary-copy">
+        <span class="small-badge ${escapeHtml(tone)}">${escapeHtml(badge)}</span>
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(body)}</p>
+        <small>${escapeHtml(primary)}</small>
+      </div>
+      <div class="decision-summary-metrics">
+        ${metrics.map((metric) => {
+          const metricClass = metric.tone ? ` ${escapeHtml(metric.tone)}` : "";
+          return `
+            <div class="decision-metric${metricClass}">
+              <span>${escapeHtml(metric.label)}</span>
+              <strong>${escapeHtml(metric.value)}</strong>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderReviewDecisionSummary(view, findings) {
+  const status = view.approval_status || "not detected";
+  const mustFix = findings.filter((finding) => finding.disposition === "must-fix").length;
+  const selected = mustFix;
+  const total = findings.length;
+  let tone = "warn";
+  let title = "Review status needs operator confirmation";
+  let body = "The review report did not publish a clear approved/rejected status. Inspect the report or request intervention before progressing.";
+  let primary = "Primary action: Request review intervention";
+  if (status === "rejected") {
+    tone = "bad";
+    title = "Review rejected: fix blocking findings before QA";
+    body = mustFix
+      ? `${countLabel(mustFix, "must-fix finding")} selected for implement remediation. Send them back, then rerun review before QA.`
+      : "Review rejected, but no must-fix items were parsed. Inspect the review report or request intervention before QA.";
+    primary = "Primary action: Send selected to implement";
+  } else if (status === "approved") {
+    tone = "good";
+    title = "Review approved: QA can start";
+    body = total
+      ? `${countLabel(total, "finding")} remain documented for traceability. QA can start when runtime readiness is green.`
+      : "No structured review findings were detected. QA can start when runtime readiness is green.";
+    primary = "Primary action: Proceed to QA";
+  }
+  return renderDecisionSummary({
+    kind: "review",
+    tone,
+    badge: status,
+    title,
+    body,
+    primary,
+    metrics: [
+      {label: "Approval", value: status, tone},
+      {label: "Findings", value: String(total)},
+      {label: "Must fix", value: String(mustFix), tone: mustFix ? "bad" : "good"},
+      {label: "Selected", value: String(selected)}
+    ]
+  });
+}
+
+function renderQaDecisionSummary(view, risks, issues) {
+  const verdict = view.quality_verdict || "not detected";
+  const recommendation = view.release_recommendation || "not detected";
+  const total = risks.length + issues.length;
+  let tone = "warn";
+  let title = "QA verdict needs operator confirmation";
+  let body = "The QA report did not publish a clear ready/not-ready verdict. Inspect the report before accepting or launching follow-up work.";
+  let primary = "Primary action: Start follow-up or request intervention";
+  if (verdict === "not-ready") {
+    tone = "bad";
+    title = "QA not ready: send selected items back to implement";
+    body = total
+      ? `${countLabel(total, "risk or issue", "risks or issues")} are selected for implement remediation. Rerun verification after fixes before accepting the run.`
+      : "QA is not ready, but no structured risks or issues were parsed. Inspect the QA report before accepting.";
+    primary = "Primary action: Send selected to implement";
+  } else if (verdict === "ready" && total) {
+    tone = "warn";
+    title = "QA ready with follow-up context";
+    body = `${countLabel(total, "risk or issue", "risks or issues")} remain documented. Accept only if they are acceptable for this work item, or start a follow-up from the final handoff.`;
+    primary = "Primary action: Accept complete or start follow-up";
+  } else if (verdict === "ready") {
+    tone = "good";
+    title = "QA ready: run can be accepted";
+    body = "No structured QA risks or known issues were detected. Accept complete to finish the governed run.";
+    primary = "Primary action: Accept complete";
+  }
+  return renderDecisionSummary({
+    kind: "qa",
+    tone,
+    badge: verdict,
+    title,
+    body,
+    primary,
+    metrics: [
+      {label: "Verdict", value: verdict, tone},
+      {label: "Recommendation", value: recommendation},
+      {label: "Residual risks", value: String(risks.length), tone: risks.length ? "warn" : "good"},
+      {label: "Known issues", value: String(issues.length), tone: issues.length ? "warn" : "good"}
+    ]
+  });
+}
+
 async function launchRemediation(sourceStage) {
   if (!ensureRunnableRuntime()) return;
   const ids = checkedRemediationIds(sourceStage);
@@ -290,6 +400,9 @@ async function renderReviewFindings() {
   content.innerHTML = `<div class="empty-state loading-state">Loading review findings...</div>`;
   try {
     const view = await api(`/api/review/findings?${runScopedQuery()}`);
+    state.reviewFindingsView = view;
+    state.reviewFindingsRunId = state.activeRunId;
+    if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
     const findings = view.findings || [];
     content.innerHTML = `
       <section class="surface findings-screen">
@@ -298,6 +411,7 @@ async function renderReviewFindings() {
           <span class="small-badge ${view.approval_status === "rejected" ? "bad" : view.approval_status === "approved" ? "good" : "warn"}">${escapeHtml(view.approval_status || "not detected")}</span>
         </div>
         ${renderWarnings(view.warnings)}
+        ${renderReviewDecisionSummary(view, findings)}
         <div class="table-wrap">
           <table class="activity-table">
             <thead><tr><th>Select</th><th>ID</th><th>Severity</th><th>Disposition</th><th>Evidence</th><th>Summary</th></tr></thead>
@@ -336,6 +450,9 @@ async function renderQaVerdict() {
   content.innerHTML = `<div class="empty-state loading-state">Loading QA verdict...</div>`;
   try {
     const view = await api(`/api/qa/verdict?${runScopedQuery()}`);
+    state.qaVerdictView = view;
+    state.qaVerdictRunId = state.activeRunId;
+    if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
     const risks = view.residual_risks || [];
     const issues = view.known_issues || [];
     const sourceItems = [
@@ -350,6 +467,7 @@ async function renderQaVerdict() {
           <span class="small-badge ${verdictClass}">${escapeHtml(view.quality_verdict || "not detected")}</span>
         </div>
         ${renderWarnings(view.warnings)}
+        ${renderQaDecisionSummary(view, risks, issues)}
         <div class="metric-grid">
           <div class="metric"><span>Release recommendation</span><strong>${escapeHtml(view.release_recommendation || "not detected")}</strong></div>
           <div class="metric"><span>Evidence IDs</span><strong>${escapeHtml((view.evidence_ids || []).length)}</strong></div>
