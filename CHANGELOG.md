@@ -7,7 +7,20 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes after accepted `0.1.0a14` release evidence.
+- No unreleased changes after `0.1.0a15` release-candidate preparation.
+
+## 0.1.0a15 - 2026-07-09
+
+- Prepare the `0.1.0a15` prerelease after accepted `v0.1.0a14` package-channel
+  evidence.
+- Harden the operator frontend around recovery-first decision making for rejected
+  implementation review, review findings, QA not-ready handoff, and failed terminal QA.
+- Add clearer follow-up flow source selection, definition blockers, preflight errors,
+  launch failures, and runtime readiness refresh behavior.
+- Clarify clone, eval, archive, history, and fresh-work paths so secondary navigation or
+  comparison actions cannot be mistaken for QA remediation.
+- Extend static UI contract coverage and record browser-verified desktop/mobile UX audit
+  evidence for recovery, clone, eval, and archive states.
 
 ## 0.1.0a14 - 2026-07-03
 

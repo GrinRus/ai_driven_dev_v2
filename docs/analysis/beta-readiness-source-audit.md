@@ -1,6 +1,6 @@
 # Beta Readiness Source Audit
 
-Date: 2026-07-03
+Date: 2026-07-09
 
 ## Purpose
 
@@ -20,11 +20,11 @@ Reviewed sources:
 
 ### README
 
-- The source development package version matches the package state: `0.1.0a15.dev0`.
-- The latest accepted published prerelease evidence is `0.1.0a14`.
-- The source checkout is not package-channel evidence for unreleased changes after the
-  accepted `0.1.0a14` package; README installation guidance stays pinned to the latest
-  accepted package release.
+- The release-candidate package version matches the package state: `0.1.0a15`.
+- The last accepted published prerelease evidence before this candidate is `0.1.0a14`.
+- The release branch is not package-channel evidence until the `v0.1.0a15` GitHub
+  Release workflow publishes to PyPI and verifies `pipx` plus `uv tool`; README
+  installation guidance stays pinned to the latest accepted package release.
 - The documented public CLI commands match the registered command surface:
   `doctor`, `init`, `ui`, `stage`, `eval`, and `run`.
 - The removed eval-run product command is not documented as a current product command.

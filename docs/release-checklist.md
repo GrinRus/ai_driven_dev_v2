@@ -166,13 +166,26 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a15.dev0`.
+Current release-candidate package version: `0.1.0a15`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a14`.
 Latest accepted published prerelease evidence: `0.1.0a14`.
+Maintainer source development package version before this release branch: `0.1.0a15.dev0`.
 
-The source development version is not package-channel evidence. README install guidance
-must remain pinned to the latest accepted published prerelease until a future GitHub
-Release workflow publishes to PyPI and verifies `pipx` plus `uv tool` installability.
-No current release candidate is accepted from this development version.
+This release-candidate package version is not package-channel evidence yet. README install
+guidance must remain pinned to the latest accepted published prerelease until the
+`v0.1.0a15` GitHub Release workflow publishes to PyPI and verifies `pipx` plus `uv tool`
+installability. No accepted `v0.1.0a15` evidence log entry exists yet.
+
+Release candidate preparation for `v0.1.0a15` includes:
+
+- recovery-first operator frontend decision hierarchy for implement review, review
+  findings, QA not-ready handoff, and failed terminal QA;
+- follow-up flow source selection, definition blocker, preflight, launch failure, and
+  runtime readiness refresh UX hardening;
+- clone, eval, archive, history, and fresh-work copy that keeps non-remediation paths
+  visibly separate from QA recovery;
+- static UI contract tests and browser-verified desktop/mobile audit evidence for
+  recovery, clone, eval, and archive states.
 
 Post-`v0.1.0a13` changes accepted in `v0.1.0a14`:
 
