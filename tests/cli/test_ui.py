@@ -1271,6 +1271,34 @@ def test_ui_next_flow_clone_draft_create_endpoint_writes_core_draft(
     assert not (workspace_root / "reports" / "runs" / "WI-UI-CLONE").exists()
 
 
+def test_ui_next_flow_follow_up_draft_create_conflicts_for_existing_work_item(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = {
+        "source_run_id": "run-ui",
+        "new_work_item": "WI-UI-FOLLOW-UP",
+        "title": "Duplicate follow-up work item",
+        "selected_source_ids": ["qa-finding:qa:qa_report"],
+    }
+    first_response = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        payload,
+    )
+    response = service.handle_post("/api/next-flow/follow-up-draft/create", payload)
+
+    assert first_response.status == HTTPStatus.CREATED
+    assert response.status == HTTPStatus.CONFLICT
+    payload = _error_payload(response)
+    assert (
+        "Request context documents already exist for work item 'WI-UI-FOLLOW-UP'"
+        in payload["error"]
+    )
+
+
 def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
     tmp_path: Path,
 ) -> None:

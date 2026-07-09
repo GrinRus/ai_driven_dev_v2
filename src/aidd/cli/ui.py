@@ -2354,6 +2354,8 @@ class OperatorUiService:
                 return _json_response(self._open_folder(payload))
             if path == "/api/server/stop":
                 return _json_response(self._request_server_stop())
+        except FileExistsError as exc:
+            return _error_response(str(exc), status=HTTPStatus.CONFLICT)
         except ValueError as exc:
             return _error_response(str(exc))
         return _error_response("not found", status=HTTPStatus.NOT_FOUND)

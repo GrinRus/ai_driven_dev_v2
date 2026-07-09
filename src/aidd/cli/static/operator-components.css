@@ -2985,6 +2985,11 @@
   border-color: #e8b1aa;
   color: var(--red);
 }
+.launch-failure-summary {
+  background: #fff5f4;
+  border-color: #e8b1aa;
+  color: var(--red);
+}
 .markdown-preview {
   line-height: 1.48;
   max-height: 500px;

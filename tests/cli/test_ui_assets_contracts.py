@@ -225,6 +225,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".launch-confirmation-grid" in components
     assert ".preflight-check" in components
     assert ".preflight-blocker-summary" in components
+    assert ".launch-failure-summary" in components
     assert ".wizard-action-guard" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
@@ -1599,6 +1600,7 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderPreflightChecks(preflight)",
             "function blockingPreflightChecks(preflight)",
             "function renderPreflightBlockedSummary(wizard, preflight, backLabel)",
+            "function renderLaunchFailureSummary(wizard, draft, backLabel)",
             "function renderAuditPreview(draft, preflight)",
             "async function loadLaunchConfirmation()",
             "async function launchNextFlowNow()",
@@ -1642,6 +1644,10 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Launch is disabled until blocking checks pass.",
             "data-preflight-blocker-summary",
             "Launch Flow Now is disabled because preflight returned blocking checks.",
+            "data-launch-failure-summary",
+            "Launch did not start",
+            "Retry Launch",
+            "The source run remains unchanged.",
             "Audit preview",
             "Launch Flow Now",
             "data-follow-up-field",

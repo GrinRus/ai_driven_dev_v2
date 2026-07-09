@@ -1475,6 +1475,7 @@ async function launchNextFlowNow() {
   } catch (error) {
     wizard.launchError = error.message;
     toast(error.message);
+    wizard.launchLoading = false;
     await renderNextFlowWizardStep();
   } finally {
     wizard.launchLoading = false;
@@ -1908,6 +1909,19 @@ function renderPreflightBlockedSummary(wizard, preflight, backLabel) {
   `;
 }
 
+function renderLaunchFailureSummary(wizard, draft, backLabel) {
+  if (!wizard.launchError) return "";
+  const workItem = String(draft?.new_work_item || "").trim();
+  const target = workItem ? ` for ${workItem}` : "";
+  return `
+    <div class="truncation-notice launch-failure-summary" data-launch-failure-summary role="alert">
+      <strong>Launch did not start${escapeHtml(target)}</strong>
+      <span>${escapeHtml(wizard.launchError)}</span>
+      <span>Use ${escapeHtml(backLabel)} to correct the follow-up work item or launch inputs, then retry launch. The source run remains unchanged.</span>
+    </div>
+  `;
+}
+
 function renderLaunchSourceLink(item) {
   if (!item.source_path) {
     return `
@@ -1956,7 +1970,14 @@ function renderLaunchConfirmation() {
   }
   const preflight = wizard.preflight;
   const blocked = !preflight?.can_launch;
+  const launchFailed = Boolean(wizard.launchError);
+  const backPrimary = blocked || launchFailed;
   const backLabel = wizard.action === "clone-flow" ? "Back to handoff" : "Back to definition";
+  const launchLabel = wizard.launchLoading
+    ? "Launching..."
+    : launchFailed
+      ? "Retry Launch"
+      : "Launch Flow Now";
   return renderNextFlowWizardShell({
     sectionClass: "next-flow-wizard launch-confirmation",
     title: "Confirm and Launch Next Flow",
@@ -1964,7 +1985,7 @@ function renderLaunchConfirmation() {
     badgeTone: preflightTone(preflight?.status || "blocked"),
     body: `
       ${blocked ? renderPreflightBlockedSummary(wizard, preflight, backLabel) : ""}
-      ${wizard.launchError ? `<div class="truncation-notice"><strong>Launch failed</strong><span>${escapeHtml(wizard.launchError)}</span></div>` : ""}
+      ${renderLaunchFailureSummary(wizard, draft, backLabel)}
       <div class="launch-confirmation-grid">
         <section>
           <div class="surface-title">Preflight results</div>
@@ -1978,8 +1999,8 @@ function renderLaunchConfirmation() {
         </aside>
       </div>
       <div class="wizard-actions">
-        <button data-next-flow-back-to-definition type="button" class="${blocked ? "" : "secondary"}">${escapeHtml(backLabel)}</button>
-        <button data-launch-flow-now type="button" class="${blocked ? "secondary" : ""}" ${blocked || wizard.launchLoading ? "disabled" : ""}>${wizard.launchLoading ? "Launching..." : "Launch Flow Now"}</button>
+        <button data-next-flow-back-to-definition type="button" class="${backPrimary ? "" : "secondary"}">${escapeHtml(backLabel)}</button>
+        <button data-launch-flow-now type="button" class="${backPrimary ? "secondary" : ""}" ${blocked || wizard.launchLoading ? "disabled" : ""}>${escapeHtml(launchLabel)}</button>
       </div>
       ${blocked ? `<div class="wizard-action-guard" role="status">Launch Flow Now is disabled because preflight returned blocking checks. Resolve the blockers above, then retry from ${escapeHtml(backLabel)}.</div>` : ""}
     `

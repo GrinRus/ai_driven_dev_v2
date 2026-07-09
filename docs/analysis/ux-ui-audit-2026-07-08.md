@@ -889,3 +889,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Continue follow-up launch unhappy-path coverage with launch endpoint failures after a passing preflight, especially duplicate/new work item conflicts and runtime readiness changes between preflight and launch.
 - Check whether expected `409 Conflict` preflight responses should be handled without browser console noise, or whether the current logged network error is acceptable as diagnostic evidence.
+
+## Follow-Up Launch Failure Slice - 2026-07-09
+
+- Served browser QA reused `/tmp/aidd-follow-up-preflight-ui` and forced a launch failure after passing preflight by setting the follow-up `new_work_item` to the existing source work item id.
+- Before the fix, the server raised `FileExistsError` while creating the follow-up draft, the HTTP connection returned `ERR_EMPTY_RESPONSE`, and the UI showed only `Launch failed / Failed to fetch`. The button also remained visually stuck as `Launching...`, leaving no clear recovery path.
+- The UI service now converts existing work-item context conflicts into structured `409 Conflict` JSON instead of dropping the connection.
+- The launch confirmation screen now renders `Launch did not start for <work item>`, shows the actual conflict message, promotes `Back to definition`, changes the secondary action to `Retry Launch`, and states that the source run remains unchanged.
+- Browser verification after the fix: desktop and mobile showed five passing preflight checks, the structured context-conflict message, primary `Back to definition`, secondary enabled `Retry Launch`, and no `Launching...` stuck state. Mobile `390px` kept `scrollWidth=390`; the only console error was the expected launch `409 Conflict`. Screenshots: `.aidd/reports/ui-follow-up-launch-failure/02-launch-duplicate-after-desktop.png` and `.aidd/reports/ui-follow-up-launch-failure/03-launch-duplicate-after-mobile.png`.
+- Pass-confirmation regression was rechecked with a unique work item id: `Launch Flow Now` stayed primary and enabled, `Back to definition` stayed secondary, no launch-failure summary rendered, and there were no console errors. Screenshot: `.aidd/reports/ui-follow-up-launch-failure/04-launch-pass-confirm-regression.png`.
+
+## Next UX Plan - After Launch Failure Slice
+
+- Continue targeted unhappy-path coverage with runtime readiness changes between preflight and launch, and verify that retry guidance remains correct when the selected runtime becomes unavailable.
+- Revisit expected `409 Conflict` console noise for preflight and launch blocked states; the product UI is now clear, but browser console output still records expected conflict responses.
