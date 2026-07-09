@@ -425,6 +425,54 @@ def _stage_rail_items(
     return tuple(items)
 
 
+def _metadata_stage_rail_items(
+    metadata: RunMetadataSummary | None,
+) -> tuple[OperatorStageRailItem, ...]:
+    metadata_by_stage = (
+        {stage.stage: stage for stage in metadata.stages} if metadata is not None else {}
+    )
+    items: list[OperatorStageRailItem] = []
+    for index, stage in enumerate(STAGES):
+        title, subtitle = _STAGE_UI_COPY[stage]
+        metadata_summary = metadata_by_stage.get(stage)
+        status = (
+            metadata_summary.status
+            if metadata_summary is not None
+            else StageState.PENDING.value
+        )
+        can_run = metadata is None and index == 0
+        reason = "not started"
+        if status == StageState.SUCCEEDED.value:
+            reason = "already completed"
+        elif status in _RUNNING_STAGE_STATES:
+            reason = "stage is running"
+        elif status == StageState.BLOCKED.value:
+            reason = "stage is blocked"
+        elif status == StageState.FAILED.value:
+            reason = "stage has failed"
+        elif can_run:
+            reason = "next runnable stage"
+        items.append(
+            OperatorStageRailItem(
+                stage=stage,
+                title=title,
+                subtitle=subtitle,
+                status=status,
+                attempt_count=metadata_summary.attempt_count if metadata_summary else 0,
+                can_run=can_run,
+                reason=reason,
+                question_count=0,
+                unresolved_blocking_count=0,
+                validator_pass_count=0,
+                validator_fail_count=0,
+                stale=False,
+                stale_reason=None,
+                stale_invalidated_by=None,
+            )
+        )
+    return tuple(items)
+
+
 def _primary_artifact(
     *,
     workspace_root: Path,
@@ -2062,6 +2110,34 @@ def resolve_operator_dashboard_view(
     active_stage_view: OperatorStageView | None = None
     stale_by_stage: dict[str, RemediationStaleStage] = {}
     if metadata is not None:
+        running_stages = tuple(
+            stage for stage in metadata.stages if stage.status in _RUNNING_STAGE_STATES
+        )
+        if running_stages:
+            stages = _metadata_stage_rail_items(metadata)
+            rail_by_stage = {stage.stage: stage for stage in stages}
+            running_stage = _running_stage_item(rail_by_stage)
+            if running_stage is not None:
+                return OperatorDashboardView(
+                    work_item=work_item,
+                    workspace_root=workspace_root,
+                    project_root=selected_project_root,
+                    active_stage=active_stage,
+                    run=_run_summary(metadata),
+                    stages=stages,
+                    active_stage_view=None,
+                    primary_artifact=None,
+                    next_action=_running_stage_next_action(running_stage),
+                    blockers=(),
+                    first_failure=None,
+                    validation_findings=(),
+                    primary_validation_finding=None,
+                    recovery_actions=(),
+                    evidence_refs=(),
+                    activity=(),
+                    recent_artifacts=(),
+                    terminal_handoff=None,
+                )
         remediation_status = load_remediation_status(
             workspace_root=workspace_root,
             work_item=work_item,

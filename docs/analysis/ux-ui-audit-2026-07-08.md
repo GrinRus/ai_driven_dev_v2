@@ -703,3 +703,31 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Run the focused static and CLI UI checks for the post-stage next-action slice, then commit the UI improvement.
 - Resume or rerun a provider-backed medium flow after the post-stage mobile fix if provider time budget allows.
 - Continue targeted unhappy-path coverage with missing implementation verification artifacts if the provider-backed refresh does not naturally exercise that state.
+
+## Refresh Run - 2026-07-09T10:49Z
+
+- `eval-live-007-codex-20260709T104919Z`: provider-backed `AIDD-LIVE-007` / `codex` refresh on installed `0.1.0a15.dev0` package built from `ad115ac9a1f77d4d1811f8431aebfb963ed6bd61`.
+- The run reached `idea -> research -> plan -> review-spec`; `idea`, `research`, and `plan` manual stage-quality audits chose `continue`.
+- Fresh installed-wheel browser QA confirmed the post-stage mobile next-action fix across three stages. At `390x844`, `Continue with Research`, `Continue with Plan`, and `Continue with Review Spec` were all visible in the first viewport with `scrollWidth=390`, `post-stage-next-action-mode`, cockpit before rail, and empty browser console after runtime readiness reached `codex: ready`.
+- Stage artifact quality was acceptable through `plan`: research found both Hono error gates and plan named both runtime surfaces, public Error-based compatibility, focused Vitest coverage, and `tsc --noEmit`.
+- The flow verdict ended as `fail` because the `review-spec` running-stage frontend checkpoint timed out on `/api/dashboard?stage=review-spec&run_id=...`. The separate `/api/run`, `/api/stage`, and `/api/logs` probes returned `200`, the `review-spec` stage later succeeded with validator `pass`, and the post-stage frontend checkpoint passed.
+
+## Refresh Findings - 2026-07-09T10:49Z
+
+- P1: The running-stage dashboard fast path was still too late. It skipped heavy post-stage sections after detecting a running stage, but it first resolved full active-stage and workflow rail data. Under a live provider write race, that aggregate dashboard path could exceed the checkpoint timeout even though narrower public APIs were healthy.
+- P1: A first-time operator observing a running stage needs the cheap aggregate dashboard response more than artifact previews, recent activity, validation findings, or terminal handoff. The essential state is work item, run id, running stage, disabled `wait-for-stage`, and log affordance.
+- P2: The post-stage mobile next-action pattern is now healthy through a real installed package for `idea`, `research`, and `plan`; the remaining issue is active running-state responsiveness, not mobile post-stage layout.
+
+## Running Dashboard Metadata Fast Path Refinement
+
+- Dashboard resolution now detects any `preparing`, `executing`, or `validating` stage directly from run metadata before resolving the full active-stage view, workflow advancement, questions, validation summaries, recent activity, or artifacts.
+- The running response builds a lightweight stage rail from run metadata and returns the disabled `wait-for-stage` next action immediately. Detailed stage facts remain available through `/api/stage`, and runtime-log state remains available through `/api/logs`.
+- This is a read-model/UI responsiveness fix only; it does not change stage execution, validation, repair, adapter behavior, or document contracts.
+- Regression coverage now makes `resolve_operator_stage_view` fail during an executing `review-spec` run and asserts that `resolve_operator_dashboard_view` still returns `wait-for-stage` from metadata.
+- Verification: `uv run --extra dev pytest tests/core/test_operator_frontend.py -q`; `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py -q`; `uv run --extra dev pytest tests/test_docs_consistency.py -q`; `uv run --extra dev ruff check src/aidd/core/operator_frontend_dashboard.py tests/core/test_operator_frontend.py`; `uv run --extra dev python -m mypy src/aidd/core/operator_frontend_dashboard.py`; `git diff --check`.
+
+## Next UX Plan - After Running Dashboard Refinement
+
+- Re-run or resume a provider-backed medium flow on a package/source build containing the refined running dashboard fast path, and confirm all running-stage checkpoints pass past `review-spec`.
+- Continue the same UX loop toward `tasklist`, `implement`, `review`, and `qa`, with manual mobile screenshots for post-stage next actions and non-happy-path recovery states.
+- Add targeted missing implementation verification artifact coverage if the provider-backed refresh does not naturally produce that state.
