@@ -161,6 +161,10 @@
   margin-top: 8px;
   padding: 8px;
 }
+.validation-finding-summary.notice {
+  background: #f4f8f7;
+  border-color: #b7d5d1;
+}
 .validation-finding-summary strong,
 .validation-finding-summary > span:not(.small-badge),
 .validation-finding-hint {
@@ -193,6 +197,22 @@
   display: grid;
   gap: 8px;
   margin-top: 6px;
+}
+.output-mirror-notice-list {
+  background: #f4f8f7;
+  border: 1px solid #b7d5d1;
+  border-left: 4px solid var(--teal);
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px 12px;
+}
+.output-mirror-notice-list p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
 }
 .secondary-drilldown {
   display: grid;

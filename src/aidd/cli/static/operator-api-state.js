@@ -67,6 +67,9 @@ const STAGE_COPY = {
   "review": ["Review", "Inspect quality"],
   "qa": ["QA", "Verify outcomes"]
 };
+const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set([
+  "STRUCT-OUTPUT-PROMOTED"
+]);
 
 const state = {
   dashboard: null,
@@ -186,10 +189,33 @@ function validationFindingLocation(finding) {
   return finding.line_number ? `${path}:${finding.line_number}` : path;
 }
 
+function isNonBlockingValidationNotice(finding) {
+  return NON_BLOCKING_VALIDATION_NOTICE_CODES.has(
+    String(finding?.code || "").trim().toUpperCase()
+  );
+}
+
+function actionableValidationFindings(validation) {
+  return (validation?.validation_findings || []).filter(
+    (finding) => !isNonBlockingValidationNotice(finding)
+  );
+}
+
+function nonBlockingValidationNotices(validation) {
+  return (validation?.validation_findings || []).filter(isNonBlockingValidationNotice);
+}
+
+function primaryValidationFindingForValidation(validation) {
+  const primary = validation?.primary_validation_finding || null;
+  if (primary && !isNonBlockingValidationNotice(primary)) return primary;
+  return actionableValidationFindings(validation)[0] || null;
+}
+
 function renderValidationFindingSummary(finding, {compact = false} = {}) {
   if (!finding) return "";
   const location = validationFindingLocation(finding);
   const occurrenceCount = Number(finding.occurrence_count || 1);
+  const notice = isNonBlockingValidationNotice(finding);
   const repeatBadge = occurrenceCount > 1
     ? `<span class="small-badge warn">x${escapeHtml(occurrenceCount)}</span>`
     : "";
@@ -197,8 +223,8 @@ function renderValidationFindingSummary(finding, {compact = false} = {}) {
     ? `<span class="validation-finding-hint"><strong>What to do</strong>${escapeHtml(finding.operator_hint)}</span>`
     : "";
   return `
-    <div class="validation-finding-summary ${compact ? "compact" : ""}">
-      <span class="small-badge bad">${escapeHtml(finding.code || "validation")}</span>
+    <div class="validation-finding-summary ${compact ? "compact" : ""} ${notice ? "notice" : ""}">
+      <span class="small-badge ${notice ? "good" : "bad"}">${escapeHtml(finding.code || "validation")}</span>
       <span class="small-badge">${escapeHtml(finding.severity || "issue")}</span>
       ${repeatBadge}
       <strong>${escapeHtml(compactPath(location, compact ? 54 : 86))}</strong>
@@ -209,9 +235,15 @@ function renderValidationFindingSummary(finding, {compact = false} = {}) {
 }
 
 function primaryValidationFinding() {
-  return state.dashboard?.primary_validation_finding
-    || activeStageView()?.diagnostics?.validation?.primary_validation_finding
-    || null;
+  const dashboardPrimary = state.dashboard?.primary_validation_finding || null;
+  if (dashboardPrimary && !isNonBlockingValidationNotice(dashboardPrimary)) {
+    return dashboardPrimary;
+  }
+  const dashboardFallback = (state.dashboard?.validation_findings || []).find(
+    (finding) => !isNonBlockingValidationNotice(finding)
+  );
+  if (dashboardFallback) return dashboardFallback;
+  return primaryValidationFindingForValidation(activeStageView()?.diagnostics?.validation);
 }
 
 async function api(path, options = {}) {

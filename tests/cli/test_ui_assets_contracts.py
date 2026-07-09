@@ -191,6 +191,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".recovery-workbench" in components
     assert ".recovery-hero" in components
     assert ".repair-resolved-summary" in components
+    assert ".output-mirror-notice-list" in components
+    assert ".validation-finding-summary.notice" in components
     assert ".evidence-drilldown" in components
     assert ".interview-loop-screen" in components
     assert ".validation-repair-center" in components
@@ -350,6 +352,10 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function recoverActiveJobFromDashboard(job)" in api_state
     assert "function syncLiveJobBodyClass()" in api_state
     assert "function syncExternalRunningBodyClass()" in api_state
+    assert "function isNonBlockingValidationNotice(finding)" in api_state
+    assert "function actionableValidationFindings(validation)" in api_state
+    assert "function nonBlockingValidationNotices(validation)" in api_state
+    assert "function primaryValidationFindingForValidation(validation)" in api_state
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
     assert "function renderStageRail()" in shell
@@ -406,6 +412,8 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'label: "Clone Previous Flow"',
             'id: "eval-scenario-batch"',
             'label: "Eval / Scenario Batch"',
+            "const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set(",
+            '"STRUCT-OUTPUT-PROMOTED"',
             'activeRunId: ""',
             'selectedEvidenceNodeId: ""',
             'selectedEvidenceEdgeId: ""',
@@ -1063,7 +1071,9 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "Repair exhausted",
             "Validation still fails after repair attempts.",
             "function renderValidationFindingList(validation)",
-            "validation?.validation_findings || []",
+            "actionableValidationFindings(validation)",
+            "function renderOutputMirrorNoticeList(validation)",
+            "nonBlockingValidationNotices(validation)",
             "function renderRepairTimeline(validation)",
             "function renderBlockedStageRecovery(diagnostics)",
             "Validation / Repair Center",
@@ -1072,7 +1082,10 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "Stop Run",
             "Request Change",
             "Validation attempt timeline",
-            "Top validation findings",
+            "Auto-promoted output mirrors",
+            "output/ handoff mirrors",
+            "canonical stage documents",
+            "Actionable validation findings",
             "Blocked questions",
             "Answers path",
             "data-run-repair",

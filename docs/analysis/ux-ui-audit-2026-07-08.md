@@ -570,3 +570,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Rerun or spot-check a provider-backed stage to confirm the clearer heartbeat appears in real native-provider output.
 - Make auto-promoted output warnings visually distinct from blocking validation findings and explain canonical source documents versus `output/` mirrors.
 - Rerun AIDD-LIVE-007 with imported desktop/mobile manual browser evidence after the next UI polish slice.
+
+## Auto-Promoted Output Mirror Notice Slice - 2026-07-09
+
+- The operator UI now classifies `STRUCT-OUTPUT-PROMOTED` as a non-blocking validation notice instead of an actionable validation finding.
+- Validation / Repair Center renders those notices in a separate `Auto-promoted output mirrors` informational block, while `Actionable validation findings` only lists findings that require operator repair or intervention.
+- Recovery summary cards and next-action validation snippets now ignore auto-promoted mirror notices when choosing the primary validation finding, so safe mirror reconciliation no longer looks like the decisive blocker.
+- The notice copy points operators back to canonical stage documents and treats `output/` files as downstream handoff mirrors, matching the artifact workbench ownership model.
+- Verification: `node --check src/aidd/cli/static/operator-api-state.js && node --check src/aidd/cli/static/operator-stage-cockpit.js`; `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py::test_operator_css_layers_own_static_ui_surfaces tests/cli/test_ui_assets_contracts.py::test_operator_script_modules_own_static_ui_surfaces tests/cli/test_ui_assets_contracts.py::test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts tests/cli/test_ui_assets_contracts.py::test_operator_recovery_assets_keep_repair_center_contracts -q`; `uv run --extra dev ruff check tests/cli/test_ui_assets_contracts.py`.
+
+## Next UX Plan - After Auto-Promoted Output Mirror Notice
+
+- Rerun AIDD-LIVE-007 with imported desktop/mobile manual browser evidence to confirm the refined Recovery Center hierarchy in a real provider-backed bundle.
+- Add a deliberately bounded provider no-progress browser-evidence exercise to verify the unhappy path surfaces runtime-log-first recovery, no-progress notices, and imported screenshot notes together.
+- Continue spot-checking canonical source versus `output/` mirror copy in the artifact workbench during the next live pass.

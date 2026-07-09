@@ -151,7 +151,7 @@ function renderRecoveryActionBand(diagnostics) {
   const repairAvailable = status === "repair-available";
   const requestPrimary = status === "repair-exhausted" || status === "explicit-stop";
   const stoppedMessage = stopped?.stopped ? stopped.detail || "Stage stopped." : "";
-  const finding = validation?.primary_validation_finding || null;
+  const finding = primaryValidationFindingForValidation(validation);
   const guidance = stoppedMessage
     || (repairAvailable
       ? "Validation failed. Run Repair starts the selected stage through the normal stage runner."
@@ -222,13 +222,31 @@ function renderResolvedRepairSummary(validation) {
 }
 
 function renderValidationFindingList(validation) {
-  const findings = validation?.validation_findings || [];
+  const findings = actionableValidationFindings(validation);
   if (!findings.length) {
-    return `<div class="empty-state">No structured validator findings parsed.</div>`;
+    return `<div class="empty-state">No actionable validator findings parsed.</div>`;
   }
   return `
     <div class="validation-finding-list">
       ${findings.map((finding) => renderValidationFindingSummary(finding)).join("")}
+    </div>
+  `;
+}
+
+function renderOutputMirrorNoticeList(validation) {
+  const notices = nonBlockingValidationNotices(validation);
+  if (!notices.length) return "";
+  const noticeLabel = notices.length === 1 ? "1 mirror notice" : `${notices.length} mirror notices`;
+  return `
+    <div class="output-mirror-notice-list" role="status">
+      <div class="surface-title compact">
+        <span>Auto-promoted output mirrors</span>
+        <span class="small-badge good">${escapeHtml(noticeLabel)}</span>
+      </div>
+      <p>AIDD copied misplaced output/ handoff mirrors into canonical stage documents. Continue from the canonical source document shown in each notice.</p>
+      <div class="validation-finding-list">
+        ${notices.map((notice) => renderValidationFindingSummary(notice, {compact: true})).join("")}
+      </div>
     </div>
   `;
 }
@@ -335,10 +353,11 @@ function renderRecoveryWorkbench() {
   const globalBlockerLabel = globalAction.label || firstFailure?.title || "Run blocker";
   const repairAttempts = validation.repair_attempts || [];
   const hasRepairAttempts = repairAttempts.length > 0;
+  const actionableFindings = actionableValidationFindings(validation);
   const hasValidationFindings = Boolean(
     finding
     || Number(validation.validator_fail_count || 0) > 0
-    || (validation.validation_findings || []).length
+    || actionableFindings.length
   );
   const hasValidationRecovery = hasValidationFindings || hasRepairAttempts;
   return `
@@ -453,8 +472,9 @@ function renderValidation() {
           <strong>Validator report</strong>
           ${pathLine(result.validator_report_path)}
         </div>
+        ${renderOutputMirrorNoticeList(validation)}
         <div class="panel-item">
-          <strong>Top validation findings</strong>
+          <strong>Actionable validation findings</strong>
           ${renderValidationFindingList(validation)}
         </div>
         <div class="panel-item">
