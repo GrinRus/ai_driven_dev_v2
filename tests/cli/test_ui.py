@@ -2167,6 +2167,10 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     assert running_payload["last_output_at_utc"] is not None
     assert running_payload["last_output_age_seconds"] is not None
     assert running_payload["last_output_text"] == "runtime-output-line"
+    assert running_payload["runtime_output_at_utc"] is not None
+    assert running_payload["runtime_output_age_seconds"] is not None
+    assert running_payload["runtime_output_text"] == "runtime-output-line"
+    assert running_payload["runtime_log_chunk_count"] == 1
     assert running_payload["silence_warning"] is False
     assert options.stage == "plan"
     assert options.runtime == "codex"
@@ -2184,6 +2188,55 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+
+
+def test_ui_live_job_status_distinguishes_system_logs_from_runtime_output(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        started.set()
+        assert release.wait(timeout=2)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/stage/run",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+            "run_id": "run-ui-system-only",
+            "log_follow": True,
+        },
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+
+    running_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+    logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+
+    assert running_payload["status"] == "running"
+    assert running_payload["last_output_at_utc"] is not None
+    assert running_payload["last_output_age_seconds"] is not None
+    assert running_payload["last_output_text"] == "AIDD UI stage job started."
+    assert running_payload["runtime_output_at_utc"] is None
+    assert running_payload["runtime_output_age_seconds"] is None
+    assert running_payload["runtime_output_text"] is None
+    assert running_payload["runtime_log_chunk_count"] == 0
+    assert running_payload["silence_warning"] is False
+    assert any(
+        chunk["stream"] == "system" and "AIDD UI stage job started." in str(chunk["text"])
+        for chunk in logs_payload["chunks"]  # type: ignore[index]
+    )
+
+    release.set()
+    completed_payload = _wait_job(service, job_id)
+    assert completed_payload["status"] == "completed"
 
 
 def test_ui_operator_control_center_endpoints_return_structured_views(

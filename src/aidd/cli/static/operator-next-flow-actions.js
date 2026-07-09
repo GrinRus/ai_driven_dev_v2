@@ -2000,17 +2000,15 @@ function activeJobProgressNotice(job) {
   if (job?.silence_warning) {
     return {
       tone: "warn",
-      title: `No output for ${secondsLabel(job.last_output_age_seconds)}`,
+      title: runtimeOutputMissingLabel(job),
       detail: "Inspect live logs and wait for fresh output, or cancel if the runtime is no longer making progress."
     };
   }
-  const logChunkCount = state.activeJobLogChunks?.length || 0;
-  const hasNoOutput = job?.last_output_at_utc === null || job?.last_output_at_utc === undefined;
-  if (hasNoOutput && logChunkCount === 0) {
+  if (activeJobHasNoRuntimeOutput(job)) {
     return {
       tone: "info",
       title: "Waiting for first runtime output",
-      detail: "The job has started, but no runtime evidence has arrived yet. Live logs will update first."
+      detail: runtimeOutputMissingDetail()
     };
   }
   return null;
@@ -2032,7 +2030,7 @@ function renderGlobalLiveProgress(job) {
   const status = job.status || "running";
   const stage = job.stage || state.activeStage || "workflow";
   const stageLabel = stage ? stageTitle(stage) : "Run";
-  const logChunkCount = state.activeJobLogChunks?.length || 0;
+  const logChunkSummary = activeJobLiveLogChunkSummary(job);
   return `
     <div class="live-progress-strip" role="status" aria-live="polite">
       <div class="live-progress-copy">
@@ -2045,7 +2043,7 @@ function renderGlobalLiveProgress(job) {
       <div class="run-progress-meta live-progress-meta">
         <span><strong>Elapsed</strong>${escapeHtml(secondsLabel(job.elapsed_seconds))}</span>
         <span><strong>Runtime output</strong>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span>
-        <span><strong>Live log chunks</strong>${escapeHtml(logChunkCount)}</span>
+        <span><strong>Live log chunks</strong>${escapeHtml(logChunkSummary)}</span>
       </div>
       <div class="live-progress-actions">
         <button data-tab-shortcut="logs" type="button" class="secondary">Open live logs</button>

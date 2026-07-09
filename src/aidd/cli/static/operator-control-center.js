@@ -8,7 +8,7 @@ function runScopedQuery(stage = null) {
 function renderRunningStageNotice(job) {
   const status = String(job?.status || "running");
   const stage = job?.stage || "workflow";
-  const logChunkCount = state.activeJobLogChunks?.length || 0;
+  const logChunkSummary = activeJobLiveLogChunkSummary(job);
   const summary = status === "waiting-for-operator"
     ? "Runtime is waiting for an operator approval decision."
     : status === "cancelling"
@@ -23,7 +23,7 @@ function renderRunningStageNotice(job) {
       <div class="run-progress-meta">
         <span><strong>Elapsed</strong>${escapeHtml(secondsLabel(job?.elapsed_seconds))}</span>
         <span><strong>Runtime output</strong>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span>
-        <span><strong>Live log chunks</strong>${escapeHtml(logChunkCount)}</span>
+        <span><strong>Live log chunks</strong>${escapeHtml(logChunkSummary)}</span>
       </div>
     </div>
   `;
@@ -48,8 +48,8 @@ function renderActiveRunPanel() {
   const runtime = selectedRuntimeView();
   const warning = job.silence_warning ? `
     <div class="truncation-notice" role="status">
-      <strong>No output for ${escapeHtml(secondsLabel(job.last_output_age_seconds))}</strong>
-      <span>Last line: ${escapeHtml(job.last_output_text || "no output captured")}</span>
+      <strong>${escapeHtml(runtimeOutputMissingLabel(job))}</strong>
+      <span>Last runtime line: ${escapeHtml(activeJobRuntimeOutputText(job) || "no runtime output captured")}</span>
     </div>
   ` : "";
   panel.innerHTML = `
@@ -60,7 +60,7 @@ function renderActiveRunPanel() {
       <div class="panel-item"><strong>Stage</strong><span>${escapeHtml(job.stage || "workflow")}</span></div>
       <div class="panel-item"><strong>Runner</strong><span>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "selected runtime")}</span></div>
       <div class="panel-item"><strong>Elapsed</strong><span>${escapeHtml(secondsLabel(job.elapsed_seconds))}</span></div>
-      <div class="panel-item"><strong>Last output</strong><span>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span></div>
+      <div class="panel-item"><strong>Last runtime output</strong><span>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span></div>
       <div class="panel-item"><strong>Timeout</strong><span>${escapeHtml(timeoutSummary(runtime))}</span></div>
       <div class="panel-item"><strong>Command</strong><span title="${escapeHtml(runtime?.command || "")}">${escapeHtml(compactPath(runtime?.command || "not reported", 72))}</span></div>
     </div>

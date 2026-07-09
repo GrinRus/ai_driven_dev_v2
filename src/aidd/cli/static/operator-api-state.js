@@ -264,10 +264,75 @@ function secondsLabel(value) {
 }
 
 function runtimeOutputFreshnessLabel(job) {
-  if (job?.last_output_age_seconds === null || job?.last_output_age_seconds === undefined) {
-    return "No runtime output captured yet";
+  const runtimeAge = job?.runtime_output_age_seconds;
+  if (runtimeAge !== null && runtimeAge !== undefined) {
+    return `Last runtime output ${secondsLabel(runtimeAge)} ago`;
   }
-  return `Last output ${secondsLabel(job.last_output_age_seconds)} ago`;
+  const hasRuntimeField = job && Object.prototype.hasOwnProperty.call(job, "runtime_output_age_seconds");
+  if (!hasRuntimeField && job?.last_output_age_seconds !== null && job?.last_output_age_seconds !== undefined) {
+    return `Last output ${secondsLabel(job.last_output_age_seconds)} ago`;
+  }
+  return "No runtime output captured yet";
+}
+
+function runtimeLogChunkCount() {
+  return (state.activeJobLogChunks || []).filter((chunk) => {
+    const stream = String(chunk?.stream || "stdout").toLowerCase();
+    return stream !== "system";
+  }).length;
+}
+
+function activeJobRuntimeLogChunkCount(job = state.activeJobStatus) {
+  const reportedCount = Number(job?.runtime_log_chunk_count);
+  if (Number.isFinite(reportedCount)) return reportedCount;
+  return runtimeLogChunkCount();
+}
+
+function activeJobLiveLogChunkSummary(job = state.activeJobStatus) {
+  const totalCount = state.activeJobLogChunks?.length || 0;
+  const runtimeCount = activeJobRuntimeLogChunkCount(job);
+  if (totalCount === runtimeCount) return String(totalCount);
+  return `${runtimeCount} runtime / ${totalCount} total`;
+}
+
+function activeJobRuntimeSilenceAge(job = state.activeJobStatus) {
+  if (job?.runtime_output_age_seconds !== null && job?.runtime_output_age_seconds !== undefined) {
+    return job.runtime_output_age_seconds;
+  }
+  if (job?.runtime_output_at_utc === null || job?.runtime_output_at_utc === undefined) {
+    return job?.elapsed_seconds;
+  }
+  return null;
+}
+
+function activeJobRuntimeOutputText(job = state.activeJobStatus) {
+  if (job?.runtime_output_text) return job.runtime_output_text;
+  if (job && !Object.prototype.hasOwnProperty.call(job, "runtime_output_text")) {
+    return job.last_output_text || "";
+  }
+  return "";
+}
+
+function activeJobHasRuntimeOutput(job = state.activeJobStatus) {
+  if (job?.runtime_output_at_utc !== null && job?.runtime_output_at_utc !== undefined) return true;
+  if (job && Object.prototype.hasOwnProperty.call(job, "runtime_output_at_utc")) return false;
+  return activeJobRuntimeLogChunkCount(job) > 0 || Boolean(job?.last_output_at_utc);
+}
+
+function activeJobHasNoRuntimeOutput(job = state.activeJobStatus) {
+  return !activeJobHasRuntimeOutput(job) && activeJobRuntimeLogChunkCount(job) === 0;
+}
+
+function runtimeOutputMissingLabel(job = state.activeJobStatus) {
+  const age = activeJobRuntimeSilenceAge(job);
+  if (age !== null && age !== undefined) {
+    return `No runtime output for ${secondsLabel(age)}`;
+  }
+  return "No runtime output captured yet";
+}
+
+function runtimeOutputMissingDetail() {
+  return "System control messages may exist, but stdout/stderr runtime evidence has not arrived yet.";
 }
 
 function activeStageItem() {

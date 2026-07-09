@@ -136,6 +136,10 @@ _CANCELLED_JOB_EXIT_CODE = 130
 _TERMINAL_JOB_STATUSES = frozenset({"cancelled", "completed", "failed"})
 
 
+def _is_runtime_log_stream(stream: str) -> bool:
+    return (stream.strip().lower() or "stdout") != "system"
+
+
 @dataclass(frozen=True, slots=True)
 class UiServerOptions:
     work_item: str | None
@@ -170,6 +174,9 @@ class _UiRunJob:
     cancelled_at_utc: str | None = None
     last_output_at_utc: str | None = None
     last_output_text: str | None = None
+    runtime_output_at_utc: str | None = None
+    runtime_output_text: str | None = None
+    runtime_log_chunk_count: int = 0
     chunks: list[dict[str, object]] = field(default_factory=list)
 
 
@@ -371,6 +378,10 @@ class UiRunJobStore:
         )
         job.last_output_at_utc = timestamp
         job.last_output_text = text.strip().splitlines()[-1] if text.strip() else None
+        if _is_runtime_log_stream(stream):
+            job.runtime_output_at_utc = timestamp
+            job.runtime_output_text = job.last_output_text
+            job.runtime_log_chunk_count += 1
 
     def _mark_cancelled_locked(self, job: _UiRunJob, *, message: str) -> None:
         timestamp = _utc_now()
@@ -391,11 +402,21 @@ class UiRunJobStore:
         else:
             cancel_state = "none"
         last_output_age_seconds = _seconds_since(job.last_output_at_utc)
+        runtime_output_age_seconds = _seconds_since(job.runtime_output_at_utc)
         elapsed_seconds = _seconds_since(job.created_at_utc)
         silence_warning = (
             job.status not in _TERMINAL_JOB_STATUSES
-            and last_output_age_seconds is not None
-            and last_output_age_seconds >= 120
+            and (
+                (
+                    runtime_output_age_seconds is not None
+                    and runtime_output_age_seconds >= 120
+                )
+                or (
+                    job.runtime_output_at_utc is None
+                    and elapsed_seconds is not None
+                    and elapsed_seconds >= 120
+                )
+            )
         )
         return {
             "job_id": job.job_id,
@@ -412,6 +433,10 @@ class UiRunJobStore:
             "last_output_at_utc": job.last_output_at_utc,
             "last_output_age_seconds": last_output_age_seconds,
             "last_output_text": job.last_output_text,
+            "runtime_output_at_utc": job.runtime_output_at_utc,
+            "runtime_output_age_seconds": runtime_output_age_seconds,
+            "runtime_output_text": job.runtime_output_text,
+            "runtime_log_chunk_count": job.runtime_log_chunk_count,
             "silence_warning": silence_warning,
             "cancel_requested": job.cancel_requested_at_utc is not None,
             "cancel_requested_at_utc": job.cancel_requested_at_utc,
