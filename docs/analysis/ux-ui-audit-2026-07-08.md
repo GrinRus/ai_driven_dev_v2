@@ -903,3 +903,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Continue targeted unhappy-path coverage with runtime readiness changes between preflight and launch, and verify that retry guidance remains correct when the selected runtime becomes unavailable.
 - Revisit expected `409 Conflict` console noise for preflight and launch blocked states; the product UI is now clear, but browser console output still records expected conflict responses.
+
+## Follow-Up Runtime Readiness Refresh Slice - 2026-07-09
+
+- Served browser QA reused `/tmp/aidd-follow-up-preflight-ui` and forced `codex` readiness to become unavailable after a passing follow-up preflight by temporarily changing only the fixture `codex` execution command.
+- Before the fix, the confirmation screen launched against stale readiness: the browser-side guard did not call `/api/runtime-readiness` before `/api/next-flow/launch`, so the UI reached a launch failure instead of stopping locally. Evidence: `.aidd/reports/ui-follow-up-readiness-refresh/01-readiness-stale-before-desktop.png`.
+- Follow-up launch now performs a fresh runtime readiness refresh before creating the follow-up draft or posting launch. If the selected runtime is no longer executable, launch is not started, `Back to definition` becomes primary, `Retry Launch` stays enabled as the secondary action, and the confirmation screen explains that the source run remains unchanged.
+- Browser verification after the fix: desktop showed `Runtime readiness changed before launch`, `Selected runtime is not ready for execution.`, `codex: needs check`, primary `Back to definition`, secondary enabled `Retry Launch`, no console errors, no horizontal overflow, and no downstream work item directory for the attempted follow-up. Screenshot: `.aidd/reports/ui-follow-up-readiness-refresh/02-readiness-refresh-after-desktop.png`.
+- Mobile `390x844` repeated the real click flow from confirmation before readiness changed. The readiness summary stayed inside the viewport (`y=735`), `scrollWidth=390`, `Retry Launch` remained enabled, and no downstream work item directory was created. Screenshot: `.aidd/reports/ui-follow-up-readiness-refresh/03-readiness-refresh-after-mobile.png`.
+- Pass-confirmation regression with restored readiness kept `Launch Flow Now` primary and enabled, `Back to definition` secondary, no readiness summary, no guard, `codex: ready`, no console errors, and no horizontal overflow. Screenshot: `.aidd/reports/ui-follow-up-readiness-refresh/04-readiness-pass-confirm-regression.png`.
+
+## Next UX Plan - After Runtime Readiness Refresh Slice
+
+- Continue the next unhappy-path pass with expected conflict-response console noise for blocked preflight and launch failures; decide whether local fetch handling should suppress expected `409 Conflict` errors from browser logs while preserving diagnostic evidence in the UI.
+- Broaden first-time operator coverage around clone/eval/archive flows after the follow-up launch path, checking that each non-remediation path remains visibly secondary when source evidence still needs recovery.

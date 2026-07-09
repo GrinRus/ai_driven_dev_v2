@@ -225,6 +225,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".launch-confirmation-grid" in components
     assert ".preflight-check" in components
     assert ".preflight-blocker-summary" in components
+    assert ".launch-readiness-summary" in components
     assert ".launch-failure-summary" in components
     assert ".wizard-action-guard" in components
     assert ".log-panel" in components
@@ -444,6 +445,8 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "sourceFindings: null",
             "followUpDraft: null",
             "selectedSourceIds: []",
+            "launchReadinessChecking: false",
+            'launchReadinessError: ""',
             "projectHome: null",
             "pendingCockpitReveal: false",
             "pendingNextFlowWizardReveal: false",
@@ -1601,10 +1604,13 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function blockingPreflightChecks(preflight)",
             "function renderPreflightBlockedSummary(wizard, preflight, backLabel)",
             "function renderLaunchFailureSummary(wizard, draft, backLabel)",
+            "function renderLaunchReadinessSummary(wizard)",
             "function renderAuditPreview(draft, preflight)",
             "async function loadLaunchConfirmation()",
             "async function launchNextFlowNow()",
             "async function createFollowUpDraftForLaunch(draft)",
+            "async function refreshRuntimeReadinessForLaunch()",
+            "function resetLaunchReadiness(wizard = state.nextFlowWizard)",
             "function invalidateFollowUpDraftPreview()",
             (
                 'document.querySelectorAll("[data-follow-up-definition-error], '
@@ -1644,6 +1650,12 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Launch is disabled until blocking checks pass.",
             "data-preflight-blocker-summary",
             "Launch Flow Now is disabled because preflight returned blocking checks.",
+            "data-launch-readiness-summary",
+            "Checking runtime readiness before launch",
+            "Runtime readiness changed before launch",
+            "Launch was not started. Resolve runtime readiness",
+            "Checking Runtime...",
+            "Launch will re-check runtime readiness before starting.",
             "data-launch-failure-summary",
             "Launch did not start",
             "Retry Launch",

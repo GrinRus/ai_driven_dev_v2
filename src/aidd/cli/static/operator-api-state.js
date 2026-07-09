@@ -153,6 +153,8 @@ const state = {
     createdDraft: null,
     launchLoading: false,
     launchError: "",
+    launchReadinessChecking: false,
+    launchReadinessError: "",
     archiveRunId: "",
     archiveReason: "",
     selectedSourceIds: []

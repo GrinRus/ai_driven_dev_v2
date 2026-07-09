@@ -1234,6 +1234,9 @@
 .preflight-blocker-summary {
   gap: 6px;
 }
+.launch-readiness-summary {
+  gap: 6px;
+}
 .preflight-blocker-codes {
   display: flex;
   flex-wrap: wrap;

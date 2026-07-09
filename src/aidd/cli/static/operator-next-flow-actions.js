@@ -1110,6 +1110,11 @@ async function renderNextFlowWizardStep() {
   await renderCockpit();
 }
 
+function resetLaunchReadiness(wizard = state.nextFlowWizard) {
+  wizard.launchReadinessChecking = false;
+  wizard.launchReadinessError = "";
+}
+
 async function openNextFlowWizard(action) {
   const sourceRunId = nextFlowSourceRunId();
   const canReuseSourceFindings = (
@@ -1138,6 +1143,7 @@ async function openNextFlowWizard(action) {
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchLoading = false;
   state.nextFlowWizard.launchError = "";
+  resetLaunchReadiness();
   state.nextFlowWizard.archiveRunId = "";
   state.nextFlowWizard.archiveReason = "";
   state.nextFlowWizard.selectedSourceIds = [];
@@ -1168,6 +1174,7 @@ async function openNewWorkItemHandoff() {
   state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
+  resetLaunchReadiness();
   state.nextFlowWizard.archiveRunId = "";
   state.nextFlowWizard.archiveReason = "";
   activateTab("overview");
@@ -1185,6 +1192,7 @@ async function openEvalBatchHandoff() {
   state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
+  resetLaunchReadiness();
   state.nextFlowWizard.archiveRunId = "";
   state.nextFlowWizard.archiveReason = "";
   activateTab("overview");
@@ -1238,6 +1246,7 @@ async function openCloneFlowDraft() {
   wizard.preflightError = "";
   wizard.definitionErrors = [];
   wizard.launchError = "";
+  resetLaunchReadiness(wizard);
   wizard.createdDraft = null;
   wizard.archiveRunId = "";
   wizard.archiveReason = "";
@@ -1284,6 +1293,8 @@ async function loadLaunchConfirmation() {
   wizard.preflightLoading = true;
   wizard.preflightError = "";
   wizard.definitionErrors = [];
+  wizard.launchError = "";
+  resetLaunchReadiness(wizard);
   wizard.step = "confirm";
   await renderNextFlowWizardStep();
   try {
@@ -1422,6 +1433,7 @@ function invalidateFollowUpDraftPreview() {
   state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
+  resetLaunchReadiness();
   document.querySelectorAll("[data-follow-up-definition-error], [data-follow-up-list-blocker]")
     .forEach((node) => node.remove());
 }
@@ -1443,6 +1455,38 @@ async function createFollowUpDraftForLaunch(draft) {
   return payload.created;
 }
 
+async function blockLaunchForRuntimeReadiness(message) {
+  const wizard = state.nextFlowWizard;
+  wizard.launchReadinessChecking = false;
+  wizard.launchReadinessError = message;
+  const runtimeSelect = document.getElementById("runtimeSelect");
+  if (runtimeSelect) runtimeSelect.focus();
+  if (!message.startsWith("Runtime readiness unavailable:")) toast(message);
+  await renderNextFlowWizardStep();
+  return false;
+}
+
+async function refreshRuntimeReadinessForLaunch() {
+  const wizard = state.nextFlowWizard;
+  if (!state.selectedRuntime) {
+    return blockLaunchForRuntimeReadiness(runtimeReadinessMessage());
+  }
+  wizard.launchReadinessChecking = true;
+  wizard.launchReadinessError = "";
+  await renderNextFlowWizardStep();
+  await fetchReadiness();
+  renderRuntimeSelector();
+  renderTopbar();
+  renderSidebar();
+  wizard.launchReadinessChecking = false;
+  const message = runtimeReadinessMessage();
+  if (message) {
+    return blockLaunchForRuntimeReadiness(message);
+  }
+  await renderNextFlowWizardStep();
+  return true;
+}
+
 async function launchNextFlowNow() {
   const wizard = state.nextFlowWizard;
   const draft = readFollowUpDraftForm() || wizard.followUpDraft;
@@ -1450,9 +1494,10 @@ async function launchNextFlowNow() {
     toast("No next-flow draft is ready to launch.");
     return;
   }
-  if (!ensureRunnableRuntime()) return;
-  wizard.launchLoading = true;
   wizard.launchError = "";
+  resetLaunchReadiness(wizard);
+  if (!(await refreshRuntimeReadinessForLaunch())) return;
+  wizard.launchLoading = true;
   await renderNextFlowWizardStep();
   try {
     if (wizard.action === "start-follow-up-flow") {
@@ -1518,6 +1563,7 @@ async function openArchiveConfirmation() {
   state.nextFlowWizard.preflightError = "";
   state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.launchError = "";
+  resetLaunchReadiness();
   state.nextFlowWizard.archiveRunId = runId;
   state.nextFlowWizard.archiveReason = state.dashboard?.terminal_handoff
     ? `Archived from Flow Complete handoff with status ${state.dashboard.terminal_handoff.status}.`
@@ -1922,6 +1968,28 @@ function renderLaunchFailureSummary(wizard, draft, backLabel) {
   `;
 }
 
+function renderLaunchReadinessSummary(wizard) {
+  if (wizard.launchReadinessChecking) {
+    return `
+      <div class="truncation-notice launch-readiness-summary" data-launch-readiness-summary role="status">
+        <strong>Checking runtime readiness before launch</strong>
+        <span>Refreshing the selected runtime before creating downstream work.</span>
+      </div>
+    `;
+  }
+  if (!wizard.launchReadinessError) return "";
+  const title = state.selectedRuntime
+    ? "Runtime readiness changed before launch"
+    : "Runtime readiness required before launch";
+  return `
+    <div class="truncation-notice launch-readiness-summary" data-launch-readiness-summary role="alert">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(wizard.launchReadinessError)}</span>
+      <span>Launch was not started. Resolve runtime readiness, then retry launch; the source run remains unchanged.</span>
+    </div>
+  `;
+}
+
 function renderLaunchSourceLink(item) {
   if (!item.source_path) {
     return `
@@ -1971,11 +2039,16 @@ function renderLaunchConfirmation() {
   const preflight = wizard.preflight;
   const blocked = !preflight?.can_launch;
   const launchFailed = Boolean(wizard.launchError);
-  const backPrimary = blocked || launchFailed;
+  const readinessBlocked = Boolean(wizard.launchReadinessError);
+  const readinessChecking = Boolean(wizard.launchReadinessChecking);
+  const launchBusy = wizard.launchLoading || readinessChecking;
+  const backPrimary = blocked || launchFailed || readinessBlocked;
   const backLabel = wizard.action === "clone-flow" ? "Back to handoff" : "Back to definition";
-  const launchLabel = wizard.launchLoading
+  const launchLabel = readinessChecking
+    ? "Checking Runtime..."
+    : wizard.launchLoading
     ? "Launching..."
-    : launchFailed
+    : launchFailed || readinessBlocked
       ? "Retry Launch"
       : "Launch Flow Now";
   return renderNextFlowWizardShell({
@@ -1985,6 +2058,7 @@ function renderLaunchConfirmation() {
     badgeTone: preflightTone(preflight?.status || "blocked"),
     body: `
       ${blocked ? renderPreflightBlockedSummary(wizard, preflight, backLabel) : ""}
+      ${renderLaunchReadinessSummary(wizard)}
       ${renderLaunchFailureSummary(wizard, draft, backLabel)}
       <div class="launch-confirmation-grid">
         <section>
@@ -2000,9 +2074,10 @@ function renderLaunchConfirmation() {
       </div>
       <div class="wizard-actions">
         <button data-next-flow-back-to-definition type="button" class="${backPrimary ? "" : "secondary"}">${escapeHtml(backLabel)}</button>
-        <button data-launch-flow-now type="button" class="${backPrimary ? "secondary" : ""}" ${blocked || wizard.launchLoading ? "disabled" : ""}>${escapeHtml(launchLabel)}</button>
+        <button data-launch-flow-now type="button" class="${backPrimary ? "secondary" : ""}" ${blocked || launchBusy ? "disabled" : ""}>${escapeHtml(launchLabel)}</button>
       </div>
       ${blocked ? `<div class="wizard-action-guard" role="status">Launch Flow Now is disabled because preflight returned blocking checks. Resolve the blockers above, then retry from ${escapeHtml(backLabel)}.</div>` : ""}
+      ${readinessBlocked ? `<div class="wizard-action-guard" role="status">Launch will re-check runtime readiness before starting. Resolve runtime readiness, then retry launch.</div>` : ""}
     `
   });
 }
