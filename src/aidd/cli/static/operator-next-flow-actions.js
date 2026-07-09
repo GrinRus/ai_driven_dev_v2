@@ -382,9 +382,14 @@ function renderArchiveHandoffWarning(handoff) {
   return `
     <div class="truncation-notice archive-risk-notice" role="status">
       <strong>Archive does not resolve this handoff</strong>
-      <span>${escapeHtml(blockerCopy)} Start a follow-up when QA evidence still needs remediation; archive only records a navigation decision.</span>
+      <span>${escapeHtml(blockerCopy)} Use Start Follow-up Flow when QA evidence still needs remediation; archive only records a navigation decision.</span>
     </div>
   `;
+}
+
+function renderTerminalRecoveryWizardAction(handoff) {
+  if (!terminalHandoffNeedsRecovery(handoff)) return "";
+  return `<button data-next-flow-action="start-follow-up-flow" type="button">Start Follow-up Flow</button>`;
 }
 
 function nextFlowSourceRunId() {
@@ -1613,6 +1618,8 @@ function renderArchiveConfirmation() {
   const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
   const reason = state.nextFlowWizard.archiveReason || "Archived from Flow Complete handoff.";
   const artifacts = state.dashboard?.terminal_handoff?.final_artifacts || [];
+  const handoff = state.dashboard?.terminal_handoff;
+  const needsRecovery = terminalHandoffNeedsRecovery(handoff);
   return `
     <section class="surface next-flow-wizard archive-confirmation">
       <div class="surface-title">
@@ -1630,13 +1637,15 @@ function renderArchiveConfirmation() {
           <strong>Archive keeps evidence readable</strong>
           <span>This records a local navigation decision. It does not delete final artifacts, runtime logs, or stage documents.</span>
         </div>
-        ${renderArchiveHandoffWarning(state.dashboard?.terminal_handoff)}
+        ${renderArchiveHandoffWarning(handoff)}
         <div class="panel-list">
           <div class="panel-item"><strong>Reason preview</strong><span>${escapeHtml(reason)}</span></div>
           <div class="panel-item"><strong>Source-run policy</strong><span>The terminal run stays immutable; archive only changes run navigation metadata.</span></div>
         </div>
       </div>
+      ${needsRecovery ? `<div class="wizard-action-guard">Archive is navigation metadata only; remediation starts with Start Follow-up Flow.</div>` : ""}
       <div class="wizard-actions">
+        ${renderTerminalRecoveryWizardAction(handoff)}
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
         <button data-archive-confirm type="button" class="danger">Confirm Archive Run</button>
       </div>
@@ -1909,6 +1918,8 @@ function renderEvalBatchHandoff() {
   const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
   const handoff = state.dashboard?.terminal_handoff;
   const artifacts = handoff?.final_artifacts || [];
+  const needsRecovery = terminalHandoffNeedsRecovery(handoff);
+  const historyActionClass = needsRecovery ? ' class="secondary"' : "";
   return `
     <section class="surface next-flow-wizard">
       <div class="surface-title">
@@ -1922,13 +1933,15 @@ function renderEvalBatchHandoff() {
         <div class="panel-item"><strong>Scenario checkpoint</strong><span>manual checkpoint only</span></div>
       </div>
       <div class="truncation-notice" role="status">
-        <strong>${terminalHandoffNeedsRecovery(handoff) ? "Comparison only" : "Eval batch handoff only"}</strong>
+        <strong>${needsRecovery ? "Comparison only" : "Eval batch handoff only"}</strong>
         <span>${escapeHtml(evalBatchHandoffMessage(handoff))}</span>
       </div>
       <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
+      ${needsRecovery ? `<div class="wizard-action-guard">History is review-only; remediation starts with Start Follow-up Flow.</div>` : ""}
       <div class="wizard-actions">
+        ${renderTerminalRecoveryWizardAction(handoff)}
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
-        <button data-tab-shortcut="history" type="button">Open Run History</button>
+        <button data-tab-shortcut="history" type="button"${historyActionClass}>Open Run History</button>
       </div>
     </section>
   `;

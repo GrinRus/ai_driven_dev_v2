@@ -971,3 +971,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Re-check eval/archive depth states so every non-remediation path remains visibly separate from QA recovery.
 - Revisit expected `409 Conflict` console noise only after the operator-visible clone/eval/archive paths have clear recovery hierarchy.
+
+## Eval / Archive Recovery CTA Slice - 2026-07-09
+
+- Served browser QA reused `/tmp/aidd-qa-not-ready-ui`, a failed terminal QA handoff where `Run Eval / Scenario Batch` and `Archive Run` are enabled but should remain secondary to `Start Follow-up Flow`.
+- Before the fix, the eval handoff said `Comparison only` and mentioned follow-up remediation in prose, but the only visible actions were secondary `Back to handoff` and primary-looking `Open Run History`. Archive confirmation warned that archive did not resolve the handoff, but had no local `Start Follow-up Flow` action and left `Confirm Archive Run` as the dominant decision button. Screenshots: `.aidd/reports/ui-eval-archive-depth/01-eval-batch-before-desktop.png`, `.aidd/reports/ui-eval-archive-depth/02-eval-batch-before-mobile.png`, `.aidd/reports/ui-eval-archive-depth/03-archive-confirm-before-desktop.png`, and `.aidd/reports/ui-eval-archive-depth/04-archive-confirm-before-mobile.png`.
+- Eval and archive depth screens now inject the existing `Start Follow-up Flow` action when the terminal handoff still needs recovery. Eval demotes `Open Run History` to secondary and adds a review-only guard. Archive keeps `Confirm Archive Run` as a danger action, adds a navigation-only guard, and names `Start Follow-up Flow` directly in the unresolved-handoff warning.
+- Browser verification after the fix: desktop eval showed primary `Start Follow-up Flow`, secondary `Back to handoff`, secondary `Open Run History`, `scrollWidth=1280`, and no console warnings/errors. Mobile eval kept `scrollWidth=390`; the history button wrapped to its own row under the recovery/back actions. Screenshots: `.aidd/reports/ui-eval-archive-depth/05-eval-batch-after-desktop.png` and `.aidd/reports/ui-eval-archive-depth/06-eval-batch-after-mobile.png`.
+- Desktop archive showed primary `Start Follow-up Flow`, secondary `Back to handoff`, danger `Confirm Archive Run`, direct `Use Start Follow-up Flow` copy, `scrollWidth=1280`, and no console warnings/errors. Mobile archive kept `scrollWidth=390`; the danger confirm button wrapped to its own row below recovery/back actions. Screenshots: `.aidd/reports/ui-eval-archive-depth/07-archive-confirm-after-desktop.png` and `.aidd/reports/ui-eval-archive-depth/08-archive-confirm-after-mobile.png`.
+- Clicking the new archive recovery CTA opened the follow-up source-selection wizard with `Continue to Define Work Item`, `2 / 14` selected sources, `12` linked artifacts, no horizontal overflow, and no console warnings/errors. Screenshot: `.aidd/reports/ui-eval-archive-depth/09-follow-up-cta-after-mobile.png`.
+
+## Next UX Plan - After Eval / Archive Recovery CTA Slice
+
+- Re-check run-history lineage and archived-run navigation states so archive remains clearly reversible/navigation-only from the operator perspective.
+- Continue first-time-operator coverage around expected blocked API responses and console noise only after visible run-history/archive recovery semantics are clear.

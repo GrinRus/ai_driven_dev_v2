@@ -1988,8 +1988,17 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             'blocker${blockerCount === 1 ? " remains" : "s remain"}',
             "next-flow-safety-note",
             "function renderArchiveHandoffWarning(handoff)",
+            "function renderTerminalRecoveryWizardAction(handoff)",
+            'data-next-flow-action="start-follow-up-flow"',
             "Archive does not resolve this handoff",
-            "Start a follow-up when QA evidence still needs remediation",
+            "Use Start Follow-up Flow when QA evidence still needs remediation",
+            "Archive is navigation metadata only; remediation starts with Start Follow-up Flow.",
+            "History is review-only; remediation starts with Start Follow-up Flow.",
+            'const historyActionClass = needsRecovery ? \' class="secondary"\' : "";',
+            (
+                '<button data-tab-shortcut="history" type="button"${historyActionClass}>'
+                "Open Run History</button>"
+            ),
             "renderTerminalRepairHighlights(handoff.repair_highlights || [])",
             "renderNextFlowActions(handoff)",
             "activeModeDecisionPeek() || terminalRepairDecisionPeek()",
@@ -2094,7 +2103,8 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "Flow Launch Wizard",
             "Independent flow",
             "Confirm Archive Run",
-            "renderArchiveHandoffWarning(state.dashboard?.terminal_handoff)",
+            "renderArchiveHandoffWarning(handoff)",
+            "renderTerminalRecoveryWizardAction(handoff)",
             "data-archive-confirm",
         ),
     )
