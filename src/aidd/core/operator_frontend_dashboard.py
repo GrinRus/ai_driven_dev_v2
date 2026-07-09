@@ -135,6 +135,12 @@ _RUNTIME_FAILURE_KINDS = frozenset(
 )
 _MAX_TERMINAL_REPAIR_HIGHLIGHTS = 3
 _MAX_REPAIR_REASON_CHARS = 220
+_TERMINAL_REQUIRED_EVIDENCE: tuple[tuple[str, str, str], ...] = (
+    ("runtime_log", "Runtime log", "raw runtime output"),
+    ("qa_report", "QA report", "final QA readiness"),
+    ("validator_report", "Validator report", "terminal validation result"),
+    ("stage_result", "Stage result", "terminal stage summary"),
+)
 
 
 def _empty_run_lineage() -> OperatorRunLineage:
@@ -723,6 +729,66 @@ def _structured_report_blockers(
     return tuple(blockers)
 
 
+def _missing_terminal_evidence_labels(
+    final_artifacts: tuple[OperatorArtifactRef, ...],
+) -> tuple[str, ...]:
+    available = {artifact.key for artifact in final_artifacts}
+    return tuple(
+        label for key, label, _detail in _TERMINAL_REQUIRED_EVIDENCE if key not in available
+    )
+
+
+def _terminal_missing_evidence_blockers(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary | None,
+    stale_by_stage: dict[str, RemediationStaleStage],
+) -> tuple[OperatorBlocker, ...]:
+    if metadata is None or "qa" in stale_by_stage:
+        return ()
+    terminal_stage = _optional_manifest_stage(metadata.workflow_stage_end)
+    if terminal_stage is not None and terminal_stage != "qa":
+        return ()
+    try:
+        qa_result = resolve_stage_result_summary(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage="qa",
+            run_id=metadata.run_id,
+        )
+    except ValueError:
+        return ()
+    if qa_result.final_state not in {
+        StageState.SUCCEEDED.value,
+        StageState.FAILED.value,
+        StageState.BLOCKED.value,
+    }:
+        return ()
+    missing = _missing_terminal_evidence_labels(
+        _terminal_final_artifacts(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            metadata=metadata,
+        )
+    )
+    if not missing:
+        return ()
+    missing_detail = ", ".join(missing)
+    return (
+        OperatorBlocker(
+            kind="terminal-missing-evidence",
+            title="Missing terminal evidence",
+            detail=(
+                f"Terminal QA handoff is missing {missing_detail}. Restore the "
+                "required evidence before starting any next flow."
+            ),
+            severity="error",
+            stage="qa",
+        ),
+    )
+
+
 def _runtime_exit_signal(
     *,
     workspace_root: Path,
@@ -1113,6 +1179,22 @@ def _next_action(
             action="qa-verdict",
             label="Resolve QA verdict",
             detail=qa_blocker.detail,
+            stage="qa",
+            enabled=True,
+        )
+    terminal_evidence_blocker = next(
+        (
+            blocker
+            for blocker in report_blockers
+            if blocker.kind == "terminal-missing-evidence"
+        ),
+        None,
+    )
+    if terminal_evidence_blocker is not None:
+        return OperatorNextAction(
+            action="review-complete",
+            label="Restore terminal evidence",
+            detail=terminal_evidence_blocker.detail,
             stage="qa",
             enabled=True,
         )
@@ -1785,7 +1867,41 @@ def _next_flow_recommendations(
     *,
     status: str,
     runtime_id: str,
+    missing_terminal_evidence: bool = False,
 ) -> tuple[OperatorNextFlowRecommendation, ...]:
+    if missing_terminal_evidence:
+        return (
+            OperatorNextFlowRecommendation(
+                action="create-new-work-item",
+                label="Create New Work Item",
+                detail="Restore terminal QA evidence before starting unrelated work.",
+                enabled=False,
+            ),
+            OperatorNextFlowRecommendation(
+                action="start-follow-up-flow",
+                label="Start Follow-up Flow",
+                detail="Restore terminal QA evidence before drafting follow-up work.",
+                enabled=False,
+            ),
+            OperatorNextFlowRecommendation(
+                action="clone-flow",
+                label="Clone This Flow",
+                detail="Restore terminal QA evidence before cloning this run.",
+                enabled=False,
+            ),
+            OperatorNextFlowRecommendation(
+                action="run-eval-batch",
+                label="Run Eval / Scenario Batch",
+                detail="Restore terminal QA evidence before using this run for comparison.",
+                enabled=False,
+            ),
+            OperatorNextFlowRecommendation(
+                action="archive-run",
+                label="Archive Run",
+                detail="Restore terminal QA evidence before archiving the handoff.",
+                enabled=False,
+            ),
+        )
     if status == "completed":
         follow_up_detail = "Create a scoped follow-up only when the operator selects new work."
     else:
@@ -1855,14 +1971,24 @@ def _terminal_handoff(
     }:
         return None
 
+    final_artifacts = _terminal_final_artifacts(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        metadata=metadata,
+    )
+    missing_terminal_evidence = _missing_terminal_evidence_labels(final_artifacts)
+    qa_verdict = _read_qa_verdict(workspace_root=workspace_root, work_item=work_item)
     final_qa_status = (
-        _read_qa_verdict(workspace_root=workspace_root, work_item=work_item)
-        or qa_result.final_state
+        "evidence-incomplete"
+        if missing_terminal_evidence
+        else qa_verdict or qa_result.final_state
     )
     handoff_status = _terminal_handoff_status(
         qa_stage_state=qa_result.final_state,
         final_qa_status=final_qa_status,
     )
+    if missing_terminal_evidence and handoff_status != "failed":
+        handoff_status = "blocked"
     questions_answered, questions_total = _terminal_question_counts(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -1871,11 +1997,7 @@ def _terminal_handoff(
         status=handoff_status,
         final_qa_status=final_qa_status,
         qa_stage_state=qa_result.final_state,
-        final_artifacts=_terminal_final_artifacts(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            metadata=metadata,
-        ),
+        final_artifacts=final_artifacts,
         blockers=blockers,
         repair_counts=_terminal_repair_counts(
             workspace_root=workspace_root,
@@ -1897,6 +2019,7 @@ def _terminal_handoff(
         recommended_next_flow_actions=_next_flow_recommendations(
             status=handoff_status,
             runtime_id=metadata.runtime_id,
+            missing_terminal_evidence=bool(missing_terminal_evidence),
         ),
     )
 
@@ -2000,7 +2123,13 @@ def resolve_operator_dashboard_view(
         work_item=work_item,
         rail_by_stage=rail_by_stage,
     )
-    blockers = (*blockers, *report_blockers)
+    terminal_evidence_blockers = _terminal_missing_evidence_blockers(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        metadata=metadata,
+        stale_by_stage=stale_by_stage,
+    )
+    blockers = (*blockers, *report_blockers, *terminal_evidence_blockers)
     first_failure = _first_failure(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -2024,7 +2153,7 @@ def resolve_operator_dashboard_view(
         active_stage=active_stage,
         active_stage_view=active_stage_view,
         rail_by_stage=rail_by_stage,
-        report_blockers=report_blockers,
+        report_blockers=(*report_blockers, *terminal_evidence_blockers),
         stages_with_operator_requests=stages_with_operator_requests,
     )
     validation_stage = active_stage

@@ -1720,6 +1720,7 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "function terminalEvidenceArtifacts(artifacts)",
             "function terminalEvidenceRequirement(key)",
             "function terminalMissingEvidence(artifacts)",
+            "function handoffMissingTerminalEvidence(handoff)",
             "function renderTerminalMissingEvidence(missing)",
             "function renderGlobalTerminalEvidenceActions()",
             "function terminalEvidenceActionLabel(artifact)",
@@ -1730,8 +1731,14 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "Terminal handoff blockers",
             "Evidence First",
             "Missing Evidence",
+            "Missing Terminal Evidence",
             "Missing terminal evidence",
             "Missing ${escapeHtml(item.label)}",
+            (
+                "Required terminal evidence is missing; restore artifacts before "
+                "starting any next flow."
+            ),
+            "Restore the required terminal evidence before choosing a next-flow action.",
             "before next-flow",
             "Terminal evidence shortcuts",
             "Runtime log",

@@ -1316,6 +1316,86 @@ def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
     ]
 
 
+def test_operator_dashboard_terminal_handoff_blocks_missing_required_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root)
+    qa_root = workspace_root / "workitems" / "WI-UI" / "stages" / "qa"
+    qa_root.joinpath("qa-report.md").unlink()
+    qa_root.joinpath("output", "qa-report.md").unlink(missing_ok=True)
+    run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+        attempt_number=1,
+    ).unlink()
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "review-complete"
+    assert dashboard.next_action.label == "Restore terminal evidence"
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "blocked"
+    assert dashboard.terminal_handoff.final_qa_status == "evidence-incomplete"
+    missing_blocker = next(
+        blocker
+        for blocker in dashboard.terminal_handoff.blockers
+        if blocker.kind == "terminal-missing-evidence"
+    )
+    assert "Runtime log" in missing_blocker.detail
+    assert "QA report" in missing_blocker.detail
+    assert {artifact.key for artifact in dashboard.terminal_handoff.final_artifacts} >= {
+        "stage_result",
+        "validator_report",
+    }
+    assert "runtime_log" not in {
+        artifact.key for artifact in dashboard.terminal_handoff.final_artifacts
+    }
+    assert all(
+        not action.enabled
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+    )
+
+
+def test_operator_dashboard_terminal_handoff_marks_runtime_only_gap_incomplete(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root, qa_verdict="ready")
+    run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+        attempt_number=1,
+    ).unlink()
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "blocked"
+    assert dashboard.terminal_handoff.final_qa_status == "evidence-incomplete"
+    missing_blocker = next(
+        blocker
+        for blocker in dashboard.terminal_handoff.blockers
+        if blocker.kind == "terminal-missing-evidence"
+    )
+    assert "Runtime log" in missing_blocker.detail
+    assert "QA report" not in missing_blocker.detail
+
+
 def test_operator_dashboard_terminal_handoff_accepts_stepwise_final_qa_run(
     tmp_path: Path,
 ) -> None:

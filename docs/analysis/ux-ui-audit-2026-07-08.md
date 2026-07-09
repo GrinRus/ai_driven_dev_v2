@@ -660,7 +660,15 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Browser verification after the fix: desktop Recovery/Work handoff stayed at `scrollWidth=1280`, removed the old `flow complete / 8/8` rail copy, and kept `FLOW NEEDS ATTENTION`, `QA DID NOT CLEAR`, `Runtime log`, `QA report`, and `Start Follow-up Flow` evidence/actions available. Mobile at `390x844` stayed at `scrollWidth=390`, kept `Resolve QA verdict` visible at `789px`, and preserved the evidence-first handoff without page overflow.
 - Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-qa-not-ready-desktop-after.png` and `control-qa-not-ready-mobile-after.png`.
 
-## Next UX Plan - After QA Not-Ready Terminal Handoff Evidence
+## Missing Terminal Evidence Control Slice - 2026-07-09
 
-- Continue unhappy-path coverage with missing terminal evidence artifacts, repeated interrupt resume from a partially completed stage, and follow-up/remediation launch preflight states.
-- Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows, preserving the current happy-path, no-progress, interruption, and QA-not-ready baselines.
+- A controlled browser fixture copied the completed AIDD-LIVE-007 target workspace to `/tmp/aidd-missing-terminal-evidence-ui` and removed the final QA `qa-report.md` plus terminal QA `runtime.log` evidence.
+- Browser QA found one first-time-user defect before the fix: the evidence area correctly showed missing runtime and QA artifacts, but the surrounding product state still said the run was complete and recommended starting the next flow. That made absent terminal evidence look informational instead of blocking.
+- Terminal handoff resolution now treats missing required final artifacts as a blocked handoff. The global next action becomes `Restore terminal evidence`, final QA status becomes `evidence-incomplete`, the handoff status becomes `blocked`, and every next-flow action is disabled until evidence is restored.
+- Browser verification after the fix: desktop at `1280x900` stayed at `scrollWidth=1280`, showed `handoff blocked / 8/8`, `FLOW NEEDS ATTENTION`, `Evidence-Incomplete`, `MISSING TERMINAL EVIDENCE`, missing `Runtime log` / `QA report`, and disabled next-flow actions. Mobile at `390x844` stayed at `scrollWidth=390` and showed `Restore terminal evidence` plus missing evidence in the first viewport.
+- Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-missing-terminal-evidence-desktop-after.png` and `control-missing-terminal-evidence-mobile-after.png`.
+
+## Next UX Plan - After Missing Terminal Evidence Control
+
+- Continue unhappy-path coverage with repeated interrupt resume from a partially completed stage and follow-up/remediation launch preflight states.
+- Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows, preserving the current happy-path, no-progress, interruption, QA-not-ready, and missing-evidence baselines.

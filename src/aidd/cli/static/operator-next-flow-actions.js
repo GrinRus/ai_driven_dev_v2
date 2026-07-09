@@ -259,8 +259,11 @@ function recommendedNextFlowDecision(handoff) {
   const action = actions.find((candidate) => candidate.action === actionId) || actions[0] || {};
   const blockerCount = (handoff.blockers || []).length;
   const finalStatus = handoff.status || "unknown";
+  const missingTerminalEvidence = handoffMissingTerminalEvidence(handoff);
   let reason = "Use this path before choosing a less common next-flow option.";
-  if (actionId === "create-new-work-item") {
+  if (missingTerminalEvidence) {
+    reason = "Required terminal evidence is missing; restore artifacts before starting any next flow.";
+  } else if (actionId === "create-new-work-item") {
     reason = "QA is ready and no open blockers are recorded; start unrelated work only after reviewing final evidence.";
   } else if (finalStatus === "failed") {
     reason = "Terminal QA failed; carry failed evidence into a follow-up instead of treating this run as done.";
@@ -280,10 +283,11 @@ function recommendedNextFlowDecision(handoff) {
 
 function renderRecommendedNextFlowDecision(handoff) {
   const decision = recommendedNextFlowDecision(handoff);
+  const badgeTone = decision.enabled ? "good" : "warn";
   return `
     <div class="next-flow-decision-spotlight">
       <div>
-        <span class="small-badge good">recommended next decision</span>
+        <span class="small-badge ${badgeTone}">recommended next decision</span>
         <strong>${escapeHtml(decision.label)}</strong>
         <p>${escapeHtml(decision.reason)}</p>
         ${decision.detail ? `<small>${escapeHtml(decision.detail)}</small>` : ""}
@@ -402,6 +406,10 @@ function terminalMissingEvidence(artifacts) {
   return TERMINAL_EVIDENCE_REQUIREMENTS.filter((item) => !available.has(item.key));
 }
 
+function handoffMissingTerminalEvidence(handoff) {
+  return Boolean(terminalMissingEvidence(handoff?.final_artifacts || []).length);
+}
+
 function renderTerminalMissingEvidence(missing) {
   if (!missing.length) return "";
   return `
@@ -445,11 +453,16 @@ function renderTerminalEvidenceSpotlight(handoff) {
 function renderTerminalAttentionSpotlight(handoff) {
   const blockers = handoff.blockers || [];
   if (handoff.status === "completed" && !blockers.length) return "";
+  const missingTerminalEvidence = handoffMissingTerminalEvidence(handoff);
   const tone = handoff.status === "failed" || handoff.status === "blocked" ? "bad" : "warn";
-  const title = handoff.status === "failed" || handoff.status === "blocked"
+  const title = missingTerminalEvidence
+    ? "Missing Terminal Evidence"
+    : handoff.status === "failed" || handoff.status === "blocked"
     ? "QA Did Not Clear"
     : "Recorded QA Risks";
-  const detail = blockers.length
+  const detail = missingTerminalEvidence
+    ? "Restore the required terminal evidence before choosing a next-flow action."
+    : blockers.length
     ? "Inspect these blockers before choosing a next-flow action."
     : "Review the terminal status and evidence before choosing a next-flow action.";
   return `
