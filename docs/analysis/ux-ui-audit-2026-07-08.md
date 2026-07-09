@@ -393,3 +393,28 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Rerun the medium AIDD-LIVE-007 flow and check whether `tasklist` and `qa` now pass on the first attempt without repair.
 - Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport and recapture desktop/mobile browser evidence.
 - Expand unhappy-path UX coverage beyond successful repair: provider no-progress, repeated interrupt, missing verification artifacts, and `not-ready` QA terminal handoff.
+
+## Refresh Run - 2026-07-09T00:02Z
+
+- `eval-live-007-codex-20260709T000228Z`: terminal execution verdict `pass`.
+- Source revision under test: `62f877ead92f717b79a18b43fbfacb28b1dcc4c6`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Runner repair attempts: `0` across all eight stages; quality remediation cycles: `0`.
+- The prompt repair prevention slice was validated live: `tasklist` produced dedicated `Verification notes` coverage for every task id T1 through T7 on the first attempt, and `qa` cited post-QA `git status --ignored --short --untracked-files=all` evidence on the first attempt.
+- Quality gates: `idea`, `tasklist`, `review`, and `qa` were strong; `research`, `plan`, `review-spec`, and `implement` were acceptable with risk because the selected Hono patch chose raw non-Error delivery rather than normalization.
+- Target verification: focused Vitest passed with 234 tests, `./node_modules/.bin/tsc --noEmit` passed, and `git diff --check` was clean.
+- Final manual reports: `.aidd/reports/evals/eval-live-007-codex-20260709T000228Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+
+## Refresh Findings - 2026-07-09T00:02Z
+
+- P1 resolved for the immediate repair-friction slice: both previously repeated repair causes disappeared in a fresh medium live run.
+- P2: The live flow exposed a selected-task context clarity gap. The scenario manifest has an internal `target_change` that says "Normalize non-Error thrown values at the error boundary," but the stage-visible `selected-task.md` only includes the visible product request and acceptance criteria. The model chose raw runtime value delivery, which is defensible from the visible request but not clearly aligned with the internal target-change wording.
+- P2: Browser visual evidence was not recaptured in this iteration. Runner frontend checkpoints passed, but no fresh desktop/mobile Flow Complete screenshots were imported into the bundle.
+- P2: Heartbeat remains useful, but several stages still spent multiple minutes with `runtime.log` not yet created. This is understandable now, but final UI should make runtime-log/evidence affordances more direct.
+
+## Next UX Plan - After 2026-07-09 Refresh
+
+- Decide whether authored live tasks should expose `target_change`, `intent`, and `quality_bar` in `context/selected-task.md` when those fields are expected to constrain implementation semantics.
+- Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport and recapture desktop/mobile browser evidence.
+- Add unhappy-path UX coverage for provider no-progress, repeated interrupt, missing verification artifacts, and `not-ready` QA terminal handoff.
+- Keep the tasklist and QA prompt hardening accepted unless another maintained scenario shows a first-attempt repair regression.
