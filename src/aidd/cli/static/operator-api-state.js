@@ -523,6 +523,19 @@ function syncExternalRunningBodyClass() {
   document.body.classList.toggle("external-running-stage-mode", Boolean(externalRunningStageItem()));
 }
 
+function postStageNextActionIsPrimary(action = state.dashboard?.next_action) {
+  return Boolean(
+    state.activeTab === "work"
+    && state.workDetail === "overview"
+    && state.activeRunId
+    && action?.action === "run-stage"
+    && action.enabled
+    && !state.dashboard?.terminal_handoff
+    && !activeJobIsLive()
+    && !externalRunningStageItem(action)
+  );
+}
+
 function applyOperatorModeBodyClass() {
   document.body.dataset.operatorMode = state.activeTab;
   const recoveryActive = state.activeTab === "recovery";
@@ -535,12 +548,14 @@ function applyOperatorModeBodyClass() {
     state.dashboard?.terminal_handoff?.repair_highlights?.length
   );
   const terminalHandoffActive = Boolean(state.dashboard?.terminal_handoff);
+  const postStageNextActionActive = postStageNextActionIsPrimary();
   document.body.classList.toggle("recovery-mode", recoveryActive);
   document.body.classList.toggle("evidence-log-mode", evidenceLogActive);
   document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
   document.body.classList.toggle("stale-downstream-mode", staleDownstreamActive);
   document.body.classList.toggle("terminal-handoff-mode", terminalHandoffActive);
   document.body.classList.toggle("terminal-repair-mode", terminalRepairActive);
+  document.body.classList.toggle("post-stage-next-action-mode", postStageNextActionActive);
   syncLiveJobBodyClass();
   syncExternalRunningBodyClass();
 }

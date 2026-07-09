@@ -33,6 +33,7 @@ function scrollActiveStageIntoView() {
   if (!rail || !window.matchMedia("(max-width: 760px)").matches) return;
   if (document.body.classList.contains("terminal-handoff-mode")) return;
   if (document.body.classList.contains("terminal-repair-mode")) return;
+  if (document.body.classList.contains("post-stage-next-action-mode")) return;
   const active = rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`);
   active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});
 }

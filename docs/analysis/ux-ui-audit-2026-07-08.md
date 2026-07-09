@@ -689,3 +689,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Rerun a provider-backed medium flow if provider time budget allows, preserving the current happy-path, no-progress, interruption, QA-not-ready, missing-evidence, follow-up-preflight, and repeated-interrupt baselines.
 - Continue targeted unhappy-path coverage with missing implementation verification artifacts if the provider-backed refresh does not naturally exercise that state.
+
+## Provider-Backed Post-Stage Mobile Next Action Slice - 2026-07-09
+
+- A fresh provider-backed `AIDD-LIVE-007` / `codex` refresh started as `eval-live-007-codex-20260709T103336Z` and reached the `stage-0001-idea` quality checkpoint. The stage output was acceptable: the Hono non-Error throw request, selected-task constraints, compatibility limits, regression-test expectations, and no-question state were preserved.
+- Manual browser review found one first-time-user mobile defect before the fix. On a 390px viewport, the post-stage `Continue with Research` primary action was below the first viewport at about `y=1132` because the stage rail stayed above the stage cockpit. The page had no horizontal overflow, but a first-time operator could not see the next step without scrolling.
+- Post-stage runnable next actions now set `post-stage-next-action-mode` when the selected Work overview has an enabled `run-stage` action for an active run. On mobile, that mode puts the stage cockpit and global next-action strip before the stage rail, and the active-stage auto-scroll helper skips this mode so it does not pull the operator back to the rail.
+- Browser verification after the fix used the live target workspace with the source UI assets. Desktop stayed at `scrollWidth=1280` and preserved the normal layout. Mobile at `390x844` stayed at `scrollWidth=390`, activated `post-stage-next-action-mode`, placed the cockpit above the rail (`cockpitTop≈283`, `railTop≈1937`), and showed `Continue with Research` inside the first viewport at about `y=625`. Browser console warnings/errors were empty.
+- Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/idea-post-stage-mobile-before.png`, `idea-post-stage-desktop-before.png`, `idea-post-stage-mobile-after.png`, and `idea-post-stage-desktop-after.png`.
+
+## Next UX Plan - After Post-Stage Mobile Next Action
+
+- Run the focused static and CLI UI checks for the post-stage next-action slice, then commit the UI improvement.
+- Resume or rerun a provider-backed medium flow after the post-stage mobile fix if provider time budget allows.
+- Continue targeted unhappy-path coverage with missing implementation verification artifacts if the provider-backed refresh does not naturally exercise that state.

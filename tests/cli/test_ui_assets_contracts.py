@@ -287,6 +287,8 @@ def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
 
 def test_operator_responsive_css_keeps_mobile_stage_rail_inside_viewport() -> None:
     responsive = _asset_text("/operator-responsive.css")
+    api_state = _asset_text("/operator-api-state.js")
+    shell = _asset_text("/operator-shell-rendering.js")
 
     assert ".stage-list {" in responsive
     assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in responsive
@@ -297,6 +299,12 @@ def test_operator_responsive_css_keeps_mobile_stage_rail_inside_viewport() -> No
     assert "width: 100%;" in responsive
     assert ".next-action-controls {" in responsive
     assert ".global-next-action-strip .next-button {" in responsive
+    assert "function postStageNextActionIsPrimary(" in api_state
+    assert "post-stage-next-action-mode" in api_state
+    assert "body.post-stage-next-action-mode .operator-shell" in responsive
+    assert "body.post-stage-next-action-mode .cockpit" in responsive
+    assert "body.post-stage-next-action-mode .stage-rail" in responsive
+    assert 'document.body.classList.contains("post-stage-next-action-mode")' in shell
 
 
 def test_operator_workbench_css_wraps_path_lines_without_document_overflow() -> None:

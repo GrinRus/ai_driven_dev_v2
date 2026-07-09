@@ -156,6 +156,10 @@
     display: flex;
     flex-direction: column;
   }
+  body.post-stage-next-action-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
   body.live-job-mode .cockpit {
     order: 1;
   }
@@ -172,6 +176,9 @@
     order: 1;
   }
   body.terminal-repair-mode .cockpit {
+    order: 1;
+  }
+  body.post-stage-next-action-mode .cockpit {
     order: 1;
   }
   body.live-job-mode .stage-rail {
@@ -192,6 +199,9 @@
   body.terminal-repair-mode .stage-rail {
     order: 2;
   }
+  body.post-stage-next-action-mode .stage-rail {
+    order: 2;
+  }
   body.live-job-mode .right-sidebar {
     order: 3;
   }
@@ -210,6 +220,9 @@
   body.terminal-repair-mode .right-sidebar {
     order: 3;
   }
+  body.post-stage-next-action-mode .right-sidebar {
+    order: 3;
+  }
   body.live-job-mode .bottom-dock {
     order: 4;
   }
@@ -226,6 +239,9 @@
     order: 4;
   }
   body.terminal-repair-mode .bottom-dock {
+    order: 4;
+  }
+  body.post-stage-next-action-mode .bottom-dock {
     order: 4;
   }
   body.live-job-mode .project-home-rail,
