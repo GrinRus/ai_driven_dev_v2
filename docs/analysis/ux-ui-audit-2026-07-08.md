@@ -584,3 +584,29 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Rerun AIDD-LIVE-007 with imported desktop/mobile manual browser evidence to confirm the refined Recovery Center hierarchy in a real provider-backed bundle.
 - Add a deliberately bounded provider no-progress browser-evidence exercise to verify the unhappy path surfaces runtime-log-first recovery, no-progress notices, and imported screenshot notes together.
 - Continue spot-checking canonical source versus `output/` mirror copy in the artifact workbench during the next live pass.
+
+## Refresh Run - 2026-07-09T07:54Z
+
+- `eval-live-007-codex-20260709T075448Z`: terminal execution verdict `pass`.
+- Source revision under test: `052c490b434417ea319c58aea2ce7a2383f9b55f`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Quality gates: all eight manual stage-quality audits chose `continue`.
+- Runner repair attempts: `0`; quality remediation cycles: `0`.
+- Frontend checkpoints: all 16 running-stage and post-stage checkpoints passed.
+- Manual browser evidence imported: `browser-notes.md`, desktop plan work view, desktop/mobile plan Validation / Repair Center, and desktop/mobile QA terminal handoff screenshots.
+- Target implementation quality: review approved the five-file Hono patch including new `src/error.ts`; QA reported `ready` / `proceed`; focused Vitest passed with 237 tests and `tsc --noEmit` passed.
+- Final manual reports: `.aidd/reports/evals/eval-live-007-codex-20260709T075448Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+
+## Refresh Findings - 2026-07-09T07:54Z
+
+- P2 resolved: the clearer pre-runtime-log heartbeat appeared in a real native-provider run on every stage. It consistently said `waiting for first runtime event` and included `next evidence: stage files changed before first runtime event; inspect artifacts or wait`.
+- P2 resolved: visual desktop/mobile readability is now backed by imported screenshots, not only API checkpoints. The mobile terminal handoff stayed at `scrollWidth=390` with no sampled offscreen elements.
+- P3 partially resolved: Validation / Repair Center now shows `Actionable validation findings` and `No actionable validator findings parsed.` on a clean passing stage. This proves the non-warning state no longer looks like a blocker.
+- P3 remains as a visual-evidence gap: this run did not produce a real `STRUCT-OUTPUT-PROMOTED` warning, so the `Auto-promoted output mirrors` block is covered by static contract tests but not yet by browser evidence with a live warning payload.
+- Terminal handoff UX is strong for the happy path: desktop and mobile showed `FLOW COMPLETE`, `EVIDENCE FIRST`, runtime log, QA report, validator report, and stage result without horizontal overflow.
+
+## Next UX Plan - After 2026-07-09T07:54Z Refresh
+
+- Create or force a bounded live/browser exercise that produces `STRUCT-OUTPUT-PROMOTED`, then capture desktop/mobile evidence for the `Auto-promoted output mirrors` notice block.
+- Add a deliberately bounded provider no-progress browser-evidence exercise to verify the unhappy path surfaces runtime-log-first recovery, no-progress notices, and imported screenshot notes together.
+- Keep the current happy-path terminal handoff and Validation / Repair Center behavior as the baseline for future UI regressions.
