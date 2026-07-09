@@ -418,3 +418,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport and recapture desktop/mobile browser evidence.
 - Add unhappy-path UX coverage for provider no-progress, repeated interrupt, missing verification artifacts, and `not-ready` QA terminal handoff.
 - Keep the tasklist and QA prompt hardening accepted unless another maintained scenario shows a first-attempt repair regression.
+
+## Selected Task Context Clarity Slice - 2026-07-09
+
+- Live workspace bootstrap now keeps `user-request.md` focused on the visible product request while expanding `context/selected-task.md` to include authored task constraints even when `visible_request` exists.
+- The stage-visible selected task now includes `summary`, `intent`, `target_change`, `expected_scope`, `quality_bar`, and `size_rationale`, reducing ambiguity when a maintained scenario expects implementation semantics beyond the short visible request.
+- Live E2E docs now describe this split explicitly: `visible_request` is the user-facing request, and `selected-task.md` carries authored constraints for downstream stages.
+- Focused regression coverage proves a visible-request task preserves the visible request and exposes the authored target change and quality bar in selected-task context without polluting `user-request.md`.
+- Verification: `uv run --extra dev pytest tests/harness/test_live_workspace_bootstrap.py -q`; `uv run --extra dev pytest tests/test_docs_consistency.py -q`; `uv run --extra dev ruff check src/aidd/harness/live_workspace_bootstrap.py tests/harness/test_live_workspace_bootstrap.py`; `uv run --extra dev python -m mypy src/aidd/harness/live_workspace_bootstrap.py`; `git diff --check`.
+
+## Next UX Plan - After Selected Task Context Slice
+
+- Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes the Hono normalization target before model stages run.
+- Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport and recapture desktop/mobile visual evidence.
+- Add unhappy-path UX coverage for provider no-progress, repeated interrupt, missing verification artifacts, and `not-ready` QA terminal handoff.

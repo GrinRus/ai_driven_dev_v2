@@ -7,9 +7,9 @@ classification for the maintained manual live matrix.
 
 The live matrix now uses authored task specs with explicit `live_matrix_role`.
 Small scenarios are flow-regression lanes only. Medium, large, and xlarge scenarios
-are product-evaluation lanes with `visible_request`, operator-only `audit_rubric`,
-`complexity_axes`, per-stage-run quality audits, normal review/QA remediation loops,
-and final manual quality reports.
+are product-evaluation lanes with `visible_request`, stage-visible authored task
+constraints, operator-only `audit_rubric`, `complexity_axes`, per-stage-run quality
+audits, normal review/QA remediation loops, and final manual quality reports.
 
 ## Size Classification
 
@@ -66,7 +66,9 @@ and final manual quality reports.
 
 - Bootstrap context now writes `selected-task.md`, `acceptance-criteria.md`,
   `allowed-write-scope.md`, and command-specific `verification-output.md` from authored task
-  fields.
+  fields. When a product-evaluation task has `visible_request`, `user-request.md` stays
+  focused on that product request while `selected-task.md` also exposes authored constraints
+  such as `intent`, `target_change`, `expected_scope`, `quality_bar`, and `size_rationale`.
 - Manual `stage-quality-audits/<stage-run-id>.md`, `flow-quality-report.md`,
   `code-quality-report.md`, and `quality-report.md` record repair burden, suspiciously
   small patches for larger tasks, placeholder documentation examples, and target

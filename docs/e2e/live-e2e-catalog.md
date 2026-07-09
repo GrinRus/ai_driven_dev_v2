@@ -338,8 +338,10 @@ Every maintained live scenario must:
   `quality_bar` is authored task metadata only and must not be treated as an automatic
   live quality gate;
 - for `product-evaluation`, define task `visible_request`, `audit_rubric`, and
-  `complexity_axes`; only `visible_request` is runtime-facing product request context,
-  while `audit_rubric` is for the launching agent's manual review;
+  `complexity_axes`; `user-request.md` stays focused on `visible_request`, while
+  `selected-task.md` also exposes authored task constraints such as `intent`,
+  `target_change`, `expected_scope`, `quality_bar`, and `size_rationale`;
+  `audit_rubric` is for the launching agent's manual review;
 - declare `live_flow.answer_policy: agent-decides` so any stage can block on questions
   and resume after the launching operator-agent writes resolved answers;
 - define authored task `interview` guidance when the scenario is
