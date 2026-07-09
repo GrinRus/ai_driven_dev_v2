@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -3500,6 +3501,83 @@ def test_black_box_live_e2e_interruption_rewrites_flow_report_status(
     state_payload = json.loads(state_paths[0].read_text(encoding="utf-8"))
     assert state_payload["status"] == "interrupted-resumable"
     flow_report = (state_paths[0].parent / "flow-report.md").read_text(encoding="utf-8")
+    assert "- Status: `interrupted-resumable`" in flow_report
+
+
+def test_black_box_live_e2e_defers_repeated_interrupt_while_recording_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    original_run_black_box_command = live_orchestration._run_black_box_command
+    original_write_steps = live_orchestration._write_steps
+    second_interrupt_seen = False
+
+    def _interrupt_idea_stage(*args: object, **kwargs: object) -> BlackBoxCommandResult:
+        command = kwargs.get("command")
+        if isinstance(command, tuple) and command[1:4] == ("stage", "run", "idea"):
+            transcript = HarnessCommandTranscript(
+                command=" ".join(command),
+                exit_code=130,
+                stdout_text="stage started\n",
+                stderr_text="",
+                duration_seconds=0.1,
+                timed_out=False,
+                timeout_seconds=None,
+            )
+            raise LiveE2EInterrupted(
+                "Synthetic test interruption.",
+                signum=2,
+                command_result=BlackBoxCommandResult(
+                    command=command,
+                    transcript=transcript,
+                ),
+                cleanup={"signal": 2},
+            )
+        return original_run_black_box_command(*args, **kwargs)
+
+    def _write_steps_with_repeated_interrupt(
+        bundle_root: Path,
+        steps: list[dict[str, object]],
+    ) -> None:
+        nonlocal second_interrupt_seen
+        latest = steps[-1] if steps else {}
+        if (
+            not second_interrupt_seen
+            and latest.get("action") == "stop"
+            and latest.get("classification") == "infra-fail"
+        ):
+            second_interrupt_seen = True
+            signal.raise_signal(signal.SIGINT)
+        original_write_steps(bundle_root, steps)
+
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._run_black_box_command",
+        _interrupt_idea_stage,
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._write_steps",
+        _write_steps_with_repeated_interrupt,
+    )
+
+    with pytest.raises(LiveE2EInterrupted):
+        run_black_box_live_e2e(
+            scenario_path=scenario_path,
+            runtime_id="opencode",
+            work_root=work_root,
+            report_root=report_root,
+        )
+
+    assert second_interrupt_seen
+    state_paths = list(report_root.glob("*/flow-state.json"))
+    assert len(state_paths) == 1
+    bundle_root = state_paths[0].parent
+    state_payload = json.loads(state_paths[0].read_text(encoding="utf-8"))
+    steps_payload = json.loads((bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    flow_report = (bundle_root / "flow-report.md").read_text(encoding="utf-8")
+    assert state_payload["status"] == "interrupted-resumable"
+    assert steps_payload[-1]["action"] == "stop"
+    assert steps_payload[-1]["classification"] == "infra-fail"
     assert "- Status: `interrupted-resumable`" in flow_report
 
 

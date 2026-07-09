@@ -14,7 +14,7 @@ import tempfile
 import threading
 import time
 import tomllib
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -331,6 +331,11 @@ def _default_work_root() -> Path:
 def _write_json(path: Path, payload: object) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    return _write_text_atomic(path, content)
+
+
+def _write_text_atomic(path: Path, content: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     tmp_path.write_text(content, encoding="utf-8")
     os.replace(tmp_path, path)
@@ -1828,8 +1833,7 @@ def _write_flow_report(ctx: FlowContext) -> Path:
                 f"- Command: `{command_text}` exit=`{command.get('exit_code', 'n/a')}`"
             )
     report_path = ctx.bundle_root / FLOW_REPORT_FILENAME
-    report_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    return report_path
+    return _write_text_atomic(report_path, "\n".join(lines).rstrip() + "\n")
 
 
 def _pid_is_alive(pid: object) -> bool:
@@ -7964,6 +7968,31 @@ def _live_interruption_handlers() -> Any:
             signal.signal(signum, previous_handler)
 
 
+@contextlib.contextmanager
+def _defer_interruption_signals_during_evidence() -> Iterator[None]:
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    previous_handlers: dict[int, Any] = {}
+
+    def _handler(signum: int, _frame: object) -> None:
+        print(
+            "Additional live E2E interrupt received while preserving resumable "
+            f"evidence; deferring signal {signum} until recording finishes.",
+            file=sys.stderr,
+        )
+
+    for signum in (int(signal.SIGINT), int(signal.SIGTERM)):
+        previous_handlers[signum] = signal.getsignal(signum)
+        signal.signal(signum, _handler)
+    try:
+        yield
+    finally:
+        for signum, previous_handler in previous_handlers.items():
+            signal.signal(signum, previous_handler)
+
+
 def _record_interruption(
     *,
     ctx: FlowContext,
@@ -8335,7 +8364,8 @@ def run_black_box_live_e2e(
         with _live_interruption_handlers():
             return _run_black_box_live_e2e_with_context(ctx)
     except LiveE2EInterrupted as exc:
-        _record_interruption(ctx=ctx, interruption=exc)
+        with _defer_interruption_signals_during_evidence():
+            _record_interruption(ctx=ctx, interruption=exc)
         raise
 
 

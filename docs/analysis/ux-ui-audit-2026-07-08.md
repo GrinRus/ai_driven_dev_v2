@@ -489,8 +489,15 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Browser QA used `/tmp/aidd-reload-recovery-ui` with a real UI-started quiet `generic-cli` runtime. Desktop reload verification at `1280x720` had `hasLive=true`, `hasExternal=false`, live cancel controls, `scrollWidth=1280`, and no console errors. Mobile reload verification at `390x844` had `hasLiveText=true`, `hasExternalText=false`, two `Cancel job` controls, `scrollWidth=390`, and no console errors. Screenshot evidence: `/tmp/aidd-live-job-reload-recovery-desktop.jpg` and `/tmp/aidd-live-job-reload-recovery-mobile.jpg`.
 - Verification: `node --check src/aidd/cli/static/operator-api-state.js`; `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py -q`; `uv run --extra dev pytest tests/cli/test_ui.py::test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs -q`; `uv run --extra dev ruff check src/aidd/cli/ui.py tests/cli/test_ui.py`; `git diff --check`; plus Chrome mobile reload QA against `job-9988440532d348abbbc5d412e0e16c6a`, cancelled cleanly with exit code `130`.
 
-## Next UX Plan - After Live Job Reload Recovery Slice
+## Repeated Interrupt Evidence Slice - 2026-07-09
 
-- Exercise real provider no-progress and repeated interrupt flows with browser evidence, now that system-only logs no longer mask provider silence.
+- Live E2E interruption recording now defers additional `SIGINT`/`SIGTERM` signals while it preserves resumable evidence. A second interrupt during `flow-steps.json`, `flow-state.json`, or `flow-report.md` recording no longer skips the `interrupted-resumable` evidence step.
+- `flow-report.md` now uses the same atomic write helper as JSON evidence, reducing the chance of a partially written operator report after an interrupt or process-level disruption.
+- This targets the earlier P1 repeated-interrupt finding from `eval-live-007-codex-20260708T190645Z`: the operator should be able to resume from a durable bundle after interruption instead of debugging a half-recorded eval state.
+- Verification: `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_interruption_rewrites_flow_report_status tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_defers_repeated_interrupt_while_recording_evidence -q`; `uv run --extra dev ruff check src/aidd/harness/live_e2e_black_box_orchestration.py tests/harness/test_live_e2e_black_box.py`; `uv run --extra dev python -m mypy src/aidd/harness/live_e2e_black_box_orchestration.py`; `git diff --check`.
+
+## Next UX Plan - After Repeated Interrupt Evidence Slice
+
+- Exercise real provider no-progress with browser evidence, now that system-only logs no longer mask provider silence and interruption evidence recording is robust under repeated signals.
 - Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes authored constraints before model stages run.
 - Run another medium live E2E pass after the unhappy-path UI slices if provider time budget allows, importing the newest browser evidence into the live bundle.
