@@ -782,6 +782,7 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - If the global strip is hidden, for example in evidence-log mode, the sidebar keeps the original `Run Next Action` button as a fallback.
 - Browser render-check used real static assets at `1280x900` and `390x844`. Primary mode produced one global CTA, zero sidebar CTAs, one sidebar status mirror, and no horizontal overflow. Fallback mode preserved the sidebar CTA.
 - Supplemental screenshot: `.aidd/reports/ui-next-action-hierarchy/next-action-sidebar-mirror-mobile-after-copy.png`.
+- Real served UI verification against the prior live target loaded terminal handoff mode from the current source UI. Desktop and mobile showed one global `Review final artifacts` CTA, zero sidebar CTAs, one `Next Action Status` mirror, no console or network errors, and no horizontal overflow. Screenshots: `.aidd/reports/ui-next-action-hierarchy/served-next-action-hierarchy-loaded-desktop.png` and `served-next-action-hierarchy-loaded-mobile.png`.
 
 ## Next UX Plan - After Next-Action Hierarchy Slice
 
