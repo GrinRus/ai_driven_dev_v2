@@ -166,12 +166,29 @@ function renderStageRail() {
   requestAnimationFrame(scrollActiveStageIntoView);
 }
 
+function workItemHandoffStatus(item) {
+  const handoff = state.dashboard?.terminal_handoff;
+  if (!handoff || item?.work_item !== state.dashboard?.work_item) return "";
+  return handoff.status || "";
+}
+
 function workItemStatusClass(item) {
+  const handoffStatus = workItemHandoffStatus(item);
+  if (handoffStatus === "failed") return "bad";
+  if (handoffStatus === "completed-with-warning" || handoffStatus === "blocked") return "warn";
   const stateName = String(item?.terminal_state || "ready");
   if (stateName === "completed") return "good";
   if (stateName === "blocked") return "warn";
   if (stateName === "running") return "running";
   return "";
+}
+
+function workItemTerminalLabel(item) {
+  const handoffStatus = workItemHandoffStatus(item);
+  if (handoffStatus === "failed") return "qa not-ready";
+  if (handoffStatus === "completed-with-warning") return "qa risks";
+  if (handoffStatus === "blocked") return "blocked";
+  return item?.terminal_state || "ready";
 }
 
 function projectHomeWorkItems() {
@@ -185,6 +202,10 @@ function currentWorkItemSummary() {
 
 function workItemProgressText(item) {
   if (item?.terminal_state === "completed") {
+    const handoffStatus = workItemHandoffStatus(item);
+    if (handoffStatus === "failed") return `QA not ready / ${item.stage_progress_label}`;
+    if (handoffStatus === "completed-with-warning") return `QA risks / ${item.stage_progress_label}`;
+    if (handoffStatus === "blocked") return `handoff blocked / ${item.stage_progress_label}`;
     return `flow complete / ${item.stage_progress_label}`;
   }
   return `${item?.active_stage || "not started"} / ${item?.stage_progress_label || `0/${STAGES.length}`}`;
@@ -226,7 +247,7 @@ function renderProjectHomeRail() {
             <strong>${escapeHtml(item.work_item)}</strong>
             <small>${escapeHtml(workItemProgressText(item))}</small>
           </span>
-          <span class="small-badge ${workItemStatusClass(item)}">${escapeHtml(item.terminal_state)}</span>
+          <span class="small-badge ${workItemStatusClass(item)}">${escapeHtml(workItemTerminalLabel(item))}</span>
         </button>
       `).join("") : `<div class="empty-state compact">No work items in this project.</div>`}
     </div>

@@ -651,3 +651,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Continue unhappy-path coverage with repeated interrupt resume from a partially completed stage, missing verification artifacts, and `not-ready` QA terminal handoff.
 - Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows, preserving the current happy-path and runtime-recovery baselines.
+
+## QA Not-Ready Terminal Handoff Browser Evidence Slice - 2026-07-09
+
+- A controlled browser fixture copied the completed AIDD-LIVE-007 target workspace to `/tmp/aidd-qa-not-ready-ui` and changed only the final QA verdict to `not-ready` with a `hold` release recommendation and one representative known issue.
+- Browser QA found one first-time-user defect before the fix: the central handoff correctly said `FLOW NEEDS ATTENTION` / `QA DID NOT CLEAR`, but the desktop work-item rail still said `flow complete / 8/8` with a `completed` badge. That made global navigation contradict the terminal handoff.
+- The work-item rail now uses the selected dashboard terminal handoff status before displaying completed-run copy. A failed QA handoff shows `QA not ready / 8/8` with a `qa not-ready` badge; warning handoffs show `QA risks / 8/8`; blocked handoffs show `handoff blocked / 8/8`.
+- Browser verification after the fix: desktop Recovery/Work handoff stayed at `scrollWidth=1280`, removed the old `flow complete / 8/8` rail copy, and kept `FLOW NEEDS ATTENTION`, `QA DID NOT CLEAR`, `Runtime log`, `QA report`, and `Start Follow-up Flow` evidence/actions available. Mobile at `390x844` stayed at `scrollWidth=390`, kept `Resolve QA verdict` visible at `789px`, and preserved the evidence-first handoff without page overflow.
+- Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-qa-not-ready-desktop-after.png` and `control-qa-not-ready-mobile-after.png`.
+
+## Next UX Plan - After QA Not-Ready Terminal Handoff Evidence
+
+- Continue unhappy-path coverage with missing terminal evidence artifacts, repeated interrupt resume from a partially completed stage, and follow-up/remediation launch preflight states.
+- Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows, preserving the current happy-path, no-progress, interruption, and QA-not-ready baselines.
