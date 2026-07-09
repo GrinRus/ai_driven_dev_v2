@@ -1624,8 +1624,13 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "function renderFlowCompleteState()",
             "terminalHandoffTitle(handoff)",
             "terminalHandoffTone(handoff.status)",
+            "terminalHandoffMark(handoff)",
+            "terminalHandoffMessage(handoff)",
             "handoff.final_qa_status",
             "QA terminal handoff is ready for operator review",
+            "QA did not clear this run",
+            "The terminal handoff is blocked",
+            "QA completed with recorded risks",
             "flow-complete-mark",
             "Start Next Flow",
             "terminal handoff",
@@ -1633,11 +1638,15 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "function renderRecommendedNextFlowDecision(handoff)",
             "function renderTerminalRepairHighlights(highlights)",
             "function renderTerminalEvidenceSpotlight(handoff)",
+            "function renderTerminalAttentionSpotlight(handoff)",
             "function terminalEvidenceArtifacts(artifacts)",
             "function renderGlobalTerminalEvidenceActions()",
             "function terminalEvidenceActionLabel(artifact)",
             "function terminalRepairDecisionPeek()",
             "repair resolved",
+            "QA Did Not Clear",
+            "Recorded QA Risks",
+            "Terminal handoff blockers",
             "Evidence First",
             "before next-flow",
             "Terminal evidence shortcuts",
@@ -1651,6 +1660,7 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "Resolved Repairs",
             "These validation issues were retried and resolved before QA handoff.",
             "handoff.repair_highlights",
+            "renderTerminalAttentionSpotlight(handoff)",
             "renderTerminalEvidenceSpotlight(handoff)",
             "renderGlobalTerminalEvidenceActions()",
             "data-open-artifact",
@@ -1690,11 +1700,14 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "grid-template-columns: minmax(0, 1fr) auto;",
             ".repair-highlight-evidence button {",
             "white-space: nowrap;",
+            ".terminal-attention-spotlight {",
+            "border-left: 4px solid var(--red);",
             ".next-action-evidence-actions {",
             "flex-wrap: wrap;",
         ),
     )
     assert ".next-flow-decision-spotlight," in responsive
+    assert ".terminal-attention-spotlight," in responsive
     assert ".repair-highlight-card," in responsive
     assert ".repair-highlight-evidence," in responsive
     assert ".next-action-evidence-actions," in responsive
@@ -2020,6 +2033,7 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".setup-mode-card" in css
     assert ".previous-run-context" in css
     assert ".flow-complete-state" in css
+    assert ".terminal-attention-spotlight" in css
     assert ".terminal-evidence-spotlight" in css
     assert ".next-flow-action-card" in css
     assert ".next-flow-wizard" in css

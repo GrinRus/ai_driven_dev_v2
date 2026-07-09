@@ -446,3 +446,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Add unhappy-path terminal UX coverage for `not-ready` QA handoff, missing verification artifacts, and failed terminal handoffs.
 - Exercise provider no-progress and repeated interrupt flows with browser evidence, not only API checkpoints.
 - Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes authored constraints before model stages run.
+
+## Failed Terminal Handoff Slice - 2026-07-09
+
+- Failed or blocked terminal handoffs no longer reuse the success framing. The hero mark now switches from green `OK` to a red/warning `!`, and the copy says that QA did not clear the run, the handoff is blocked, or QA completed with recorded risks.
+- Failed/not-ready terminal surfaces now insert a `QA Did Not Clear` blocker spotlight before the evidence and next-flow sections. Risky completed handoffs use `Recorded QA Risks`. The spotlight reuses the existing blocker navigation rows so validation, QA, and risk blockers remain clickable instead of becoming static warning copy.
+- Browser QA used `/tmp/aidd-ui-terminal-failed/.aidd` with `qa_stage_status=failed`, `qa_verdict=not-ready`, and `validator_verdict=fail`. Desktop verification confirmed the Work tab shows `Flow Needs Attention`, `not-ready`, `QA Did Not Clear`, the validation blocker before `Evidence First`, and no overflow at `1280px`. Mobile verification at `390px` confirmed the cockpit stays before the stage rail, the failed hero and blocker spotlight are visible in the first viewport, the blocker row fits inside `46..347px`, and `scrollWidth=390`. Screenshot evidence: `/tmp/aidd-terminal-failed-handoff-desktop.png` and `/tmp/aidd-terminal-failed-handoff-mobile.png`.
+- Verification: `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py::test_operator_flow_complete_static_contract_covers_terminal_handoff_actions tests/cli/test_ui_assets_contracts.py::test_operator_css_keeps_focus_and_screen_reader_contracts -q`; `node --check src/aidd/cli/static/operator-next-flow-actions.js`; `git diff --check`.
+
+## Next UX Plan - After Failed Terminal Handoff Slice
+
+- Add missing-verification-artifact terminal UX coverage, including how final artifacts, absent evidence, and QA readiness copy behave when expected documents are unavailable.
+- Exercise provider no-progress and repeated interrupt flows with browser evidence, not only API checkpoints.
+- Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes authored constraints before model stages run.

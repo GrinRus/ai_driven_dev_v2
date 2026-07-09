@@ -190,6 +190,25 @@ function terminalHandoffTitle(handoff) {
   return "Flow Needs Attention";
 }
 
+function terminalHandoffMark(handoff) {
+  if (handoff.status === "failed" || handoff.status === "blocked") return "!";
+  if (handoff.status === "completed-with-warning") return "!";
+  return "OK";
+}
+
+function terminalHandoffMessage(handoff) {
+  if (handoff.status === "failed") {
+    return "QA did not clear this run. Review blockers and final evidence before starting follow-up remediation.";
+  }
+  if (handoff.status === "blocked") {
+    return "The terminal handoff is blocked. Resolve blockers or carry them into follow-up work before starting new scope.";
+  }
+  if (handoff.status === "completed-with-warning") {
+    return "QA completed with recorded risks. Review risk evidence before selecting the next flow.";
+  }
+  return "The QA terminal handoff is ready for operator review and next-flow selection.";
+}
+
 function renderHandoffMetric({label, value, detail, tone = ""}) {
   return `
     <div class="metric handoff-metric">
@@ -363,6 +382,30 @@ function renderTerminalEvidenceSpotlight(handoff) {
   `;
 }
 
+function renderTerminalAttentionSpotlight(handoff) {
+  const blockers = handoff.blockers || [];
+  if (handoff.status === "completed" && !blockers.length) return "";
+  const tone = handoff.status === "failed" || handoff.status === "blocked" ? "bad" : "warn";
+  const title = handoff.status === "failed" || handoff.status === "blocked"
+    ? "QA Did Not Clear"
+    : "Recorded QA Risks";
+  const detail = blockers.length
+    ? "Inspect these blockers before choosing a next-flow action."
+    : "Review the terminal status and evidence before choosing a next-flow action.";
+  return `
+    <section class="terminal-attention-spotlight ${tone}" aria-label="Terminal handoff blockers">
+      <div>
+        <div class="surface-title">
+          <span>${escapeHtml(title)}</span>
+          <span class="small-badge ${tone}">${escapeHtml(handoff.status)}</span>
+        </div>
+        <p>${escapeHtml(detail)}</p>
+      </div>
+      <div class="terminal-attention-blockers">${renderTerminalBlockers(blockers)}</div>
+    </section>
+  `;
+}
+
 function terminalEvidenceActionLabel(artifact) {
   if (artifact.key === "runtime_log") return "Runtime log";
   if (artifact.key === "qa_report") return "QA report";
@@ -491,14 +534,14 @@ function renderFlowCompleteState() {
     <section class="surface flow-complete-state">
       <div class="flow-complete-hero">
         <div class="flow-complete-title-row">
-          <span class="flow-complete-mark" aria-hidden="true">OK</span>
+          <span class="flow-complete-mark ${terminalHandoffTone(handoff.status)}" aria-hidden="true">${escapeHtml(terminalHandoffMark(handoff))}</span>
           <div>
           <div class="surface-title">
             <span>${escapeHtml(terminalHandoffTitle(handoff))}</span>
             <span class="small-badge ${terminalHandoffTone(handoff.status)}">${escapeHtml(handoff.status)}</span>
           </div>
           <h2>${escapeHtml(handoff.final_qa_status)}</h2>
-          <p>The QA terminal handoff is ready for operator review and next-flow selection.</p>
+          <p>${escapeHtml(terminalHandoffMessage(handoff))}</p>
           </div>
         </div>
         <div class="handoff-runtime">
@@ -506,6 +549,7 @@ function renderFlowCompleteState() {
           <span>${escapeHtml(runtimeId)}</span>
         </div>
       </div>
+      ${renderTerminalAttentionSpotlight(handoff)}
       ${renderTerminalEvidenceSpotlight(handoff)}
       ${renderTerminalRepairHighlights(handoff.repair_highlights || [])}
       <div class="handoff-metric-grid">
