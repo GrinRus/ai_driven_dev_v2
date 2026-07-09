@@ -459,3 +459,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Add missing-verification-artifact terminal UX coverage, including how final artifacts, absent evidence, and QA readiness copy behave when expected documents are unavailable.
 - Exercise provider no-progress and repeated interrupt flows with browser evidence, not only API checkpoints.
 - Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes authored constraints before model stages run.
+
+## Missing Terminal Evidence Slice - 2026-07-09
+
+- Terminal handoffs now compare available final artifacts with the expected evidence set: `runtime_log`, `qa_report`, `validator_report`, and `stage_result`.
+- The `Evidence First` block now shows available artifacts and a `Missing Evidence` warning list when any expected evidence is absent. Each missing row explains the operator value of the absent artifact instead of leaving the user to infer why the list is short.
+- The global `Run Next Action` strip now keeps first-viewport missing evidence visible. When `runtime_log` or `qa_report` is absent, it shows compact `Missing Runtime log` / `Missing QA report` badges in the same place where direct evidence shortcuts appear for available artifacts.
+- Browser QA used `/tmp/aidd-ui-terminal-missing/.aidd` with a completed QA fixture where `qa-report.md` and the terminal `runtime.log` were removed after fixture creation. Desktop verification kept `scrollWidth=1280`, showed `Missing Runtime log` / `Missing QA report` in the top strip, listed `validator_report` and `stage_result` as available, and rendered two missing rows in `Evidence First`. Mobile verification at `390px` kept both missing badges inside the first viewport, kept missing rows inside `56..337px`, moved the stage rail below the cockpit, and kept `scrollWidth=390`. Screenshot evidence: `/tmp/aidd-terminal-missing-evidence-desktop.png` and `/tmp/aidd-terminal-missing-evidence-mobile.png`.
+- Verification: `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py::test_operator_flow_complete_static_contract_covers_terminal_handoff_actions tests/cli/test_ui_assets_contracts.py::test_operator_css_keeps_focus_and_screen_reader_contracts -q`; `node --check src/aidd/cli/static/operator-next-flow-actions.js`; `git diff --check`.
+
+## Next UX Plan - After Missing Terminal Evidence Slice
+
+- Exercise provider no-progress and repeated interrupt flows with browser evidence, not only API checkpoints.
+- Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes authored constraints before model stages run.
+- Run another medium live E2E pass after the unhappy-path UI slices if provider time budget allows, importing the newest browser evidence into the live bundle.

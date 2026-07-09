@@ -337,6 +337,29 @@ function nextFlowRuntimeId() {
   return state.selectedRuntime || state.dashboard?.run?.runtime_id || "";
 }
 
+const TERMINAL_EVIDENCE_REQUIREMENTS = [
+  {
+    key: "runtime_log",
+    label: "Runtime log",
+    detail: "Raw runtime output for the terminal QA attempt."
+  },
+  {
+    key: "qa_report",
+    label: "QA report",
+    detail: "Final QA readiness and release recommendation."
+  },
+  {
+    key: "validator_report",
+    label: "Validator report",
+    detail: "Document validation result for the terminal QA stage."
+  },
+  {
+    key: "stage_result",
+    label: "Stage result",
+    detail: "Terminal stage status and handoff summary."
+  }
+];
+
 function renderTerminalArtifacts(artifacts) {
   const visible = (artifacts || []).slice(0, 5);
   if (!visible.length) return `<div class="empty-state">No final artifacts recorded.</div>`;
@@ -352,7 +375,7 @@ function renderTerminalArtifacts(artifacts) {
 }
 
 function terminalEvidenceArtifacts(artifacts) {
-  const priority = ["runtime_log", "qa_report", "validator_report", "stage_result"];
+  const priority = TERMINAL_EVIDENCE_REQUIREMENTS.map((item) => item.key);
   const seen = new Set();
   const byKey = new Map((artifacts || []).map((artifact) => [artifact.key, artifact]));
   const prioritized = priority
@@ -366,8 +389,42 @@ function terminalEvidenceArtifacts(artifacts) {
   return prioritized.concat(remaining).slice(0, 4);
 }
 
+function terminalEvidenceRequirement(key) {
+  return TERMINAL_EVIDENCE_REQUIREMENTS.find((item) => item.key === key) || {
+    key,
+    label: key,
+    detail: "Expected terminal evidence was not recorded."
+  };
+}
+
+function terminalMissingEvidence(artifacts) {
+  const available = new Set((artifacts || []).map((artifact) => artifact.key));
+  return TERMINAL_EVIDENCE_REQUIREMENTS.filter((item) => !available.has(item.key));
+}
+
+function renderTerminalMissingEvidence(missing) {
+  if (!missing.length) return "";
+  return `
+    <div class="terminal-missing-evidence" aria-label="Missing terminal evidence">
+      <div class="surface-title compact">
+        <span>Missing Evidence</span>
+        <span class="small-badge warn">${escapeHtml(missing.length)} missing</span>
+      </div>
+      <div class="terminal-missing-list">
+        ${missing.map((item) => `
+          <div class="terminal-missing-row">
+            <strong>${escapeHtml(item.label)}</strong>
+            <span>${escapeHtml(item.detail)}</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderTerminalEvidenceSpotlight(handoff) {
   const artifacts = terminalEvidenceArtifacts(handoff.final_artifacts || []);
+  const missing = terminalMissingEvidence(handoff.final_artifacts || []);
   return `
     <section class="terminal-evidence-spotlight" aria-label="Terminal evidence">
       <div>
@@ -377,7 +434,10 @@ function renderTerminalEvidenceSpotlight(handoff) {
         </div>
         <p>Open the runtime log and QA evidence before choosing whether to start new work, clone, archive, or launch follow-up remediation.</p>
       </div>
-      <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
+      <div class="terminal-evidence-stack">
+        <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
+        ${renderTerminalMissingEvidence(missing)}
+      </div>
     </section>
   `;
 }
@@ -407,11 +467,7 @@ function renderTerminalAttentionSpotlight(handoff) {
 }
 
 function terminalEvidenceActionLabel(artifact) {
-  if (artifact.key === "runtime_log") return "Runtime log";
-  if (artifact.key === "qa_report") return "QA report";
-  if (artifact.key === "validator_report") return "Validator";
-  if (artifact.key === "stage_result") return "Stage result";
-  return artifact.key;
+  return terminalEvidenceRequirement(artifact.key).label;
 }
 
 function renderGlobalTerminalEvidenceActions() {
@@ -420,13 +476,18 @@ function renderGlobalTerminalEvidenceActions() {
   const artifacts = terminalEvidenceArtifacts(handoff.final_artifacts || [])
     .filter((artifact) => ["runtime_log", "qa_report"].includes(artifact.key))
     .slice(0, 2);
-  if (!artifacts.length) return "";
+  const missing = terminalMissingEvidence(handoff.final_artifacts || [])
+    .filter((item) => ["runtime_log", "qa_report"].includes(item.key));
+  if (!artifacts.length && !missing.length) return "";
   return `
     <div class="next-action-evidence-actions" aria-label="Terminal evidence shortcuts">
       ${artifacts.map((artifact) => `
         <button class="secondary" data-artifact-stage="${escapeHtml(artifact.stage)}" data-artifact-key="${escapeHtml(artifact.key)}" data-artifact-kind="${escapeHtml(artifact.kind)}" type="button">
           ${escapeHtml(terminalEvidenceActionLabel(artifact))}
         </button>
+      `).join("")}
+      ${missing.map((item) => `
+        <span class="small-badge warn" title="${escapeHtml(item.detail)}">Missing ${escapeHtml(item.label)}</span>
       `).join("")}
     </div>
   `;

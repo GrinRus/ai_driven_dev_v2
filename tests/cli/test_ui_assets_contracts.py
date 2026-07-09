@@ -1639,7 +1639,11 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "function renderTerminalRepairHighlights(highlights)",
             "function renderTerminalEvidenceSpotlight(handoff)",
             "function renderTerminalAttentionSpotlight(handoff)",
+            "const TERMINAL_EVIDENCE_REQUIREMENTS",
             "function terminalEvidenceArtifacts(artifacts)",
+            "function terminalEvidenceRequirement(key)",
+            "function terminalMissingEvidence(artifacts)",
+            "function renderTerminalMissingEvidence(missing)",
             "function renderGlobalTerminalEvidenceActions()",
             "function terminalEvidenceActionLabel(artifact)",
             "function terminalRepairDecisionPeek()",
@@ -1648,10 +1652,17 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "Recorded QA Risks",
             "Terminal handoff blockers",
             "Evidence First",
+            "Missing Evidence",
+            "Missing terminal evidence",
+            "Missing ${escapeHtml(item.label)}",
             "before next-flow",
             "Terminal evidence shortcuts",
             "Runtime log",
             "QA report",
+            "Raw runtime output for the terminal QA attempt.",
+            "Final QA readiness and release recommendation.",
+            "Document validation result for the terminal QA stage.",
+            "Terminal stage status and handoff summary.",
             "runtime_log",
             "qa_report",
             "validator_report",
@@ -1702,6 +1713,8 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "white-space: nowrap;",
             ".terminal-attention-spotlight {",
             "border-left: 4px solid var(--red);",
+            ".terminal-missing-evidence {",
+            ".terminal-missing-row {",
             ".next-action-evidence-actions {",
             "flex-wrap: wrap;",
         ),
@@ -2035,6 +2048,7 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".flow-complete-state" in css
     assert ".terminal-attention-spotlight" in css
     assert ".terminal-evidence-spotlight" in css
+    assert ".terminal-missing-evidence" in css
     assert ".next-flow-action-card" in css
     assert ".next-flow-wizard" in css
     assert ".source-selection-summary" in css

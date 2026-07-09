@@ -565,6 +565,42 @@
 .terminal-evidence-spotlight .recent-artifacts {
   max-height: 128px;
 }
+.terminal-evidence-stack {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.terminal-missing-evidence {
+  background: #fff9ed;
+  border: 1px solid #e4c783;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+}
+.terminal-missing-list {
+  display: grid;
+  gap: 6px;
+}
+.terminal-missing-row {
+  border-top: 1px solid #ead7a8;
+  display: grid;
+  gap: 3px;
+  padding-top: 6px;
+}
+.terminal-missing-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.terminal-missing-row strong {
+  font-size: 12px;
+  line-height: 1.25;
+}
+.terminal-missing-row span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
 .terminal-attention-spotlight {
   align-items: start;
   background: #fff8f6;
