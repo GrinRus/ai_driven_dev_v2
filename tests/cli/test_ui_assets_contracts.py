@@ -1242,6 +1242,31 @@ def test_operator_implement_review_static_contract_covers_project_set_grouping()
     )
 
 
+def test_operator_implement_review_surfaces_missing_verification_evidence() -> None:
+    control = _asset_text("/operator-control-center.js")
+
+    _assert_contains_all(
+        control,
+        (
+            "function renderImplementationVerificationGap(implementation)",
+            "implementation?.verification_commands || []",
+            "Implementation verification evidence is missing",
+            "No executable command evidence was parsed from implementation-report.md.",
+            "Primary action: Rerun implement or request intervention",
+            "function implementationSummaryWarnings(implementation)",
+            "No executable verification commands",
+            "renderWarnings(implementationSummaryWarnings(implementation))",
+            "function renderImplementationVerificationItems(implementation)",
+            "Skipped: ${escapeHtml(item)}",
+            "Verification evidence missing.",
+            "${renderImplementationVerificationItems(implementation)}",
+            'kind: "implementation-verification"',
+            'badge: "verification missing"',
+            "${renderImplementationVerificationGap(implementation)}",
+        ),
+    )
+
+
 def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> None:
     api_state = _asset_text("/operator-api-state.js")
     control = _asset_text("/operator-control-center.js")

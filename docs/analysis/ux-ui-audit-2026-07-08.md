@@ -788,3 +788,15 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Verify the hierarchy change in the real served UI during the next provider-backed or targeted UI pass, especially terminal handoff and post-stage mobile screens.
 - Continue targeted unhappy-path coverage with missing implementation verification artifacts; this remains the main uncovered product state after the happy-path live pass.
+
+## Implementation Verification Gap Slice - 2026-07-09
+
+- The implementation evidence parser now emits an explicit warning when `implementation-report.md` has no executable verification command evidence.
+- The implement review screen now promotes that state from a small compact-list fallback into an `Implementation verification evidence is missing` decision summary before the repository diff.
+- The summary shows command count, skipped-check count, touched-file count, residual-risk count, and a primary action of `Rerun implement or request intervention`. Generic parser warnings are filtered so the same missing-verification message is not repeated twice.
+- Browser render-check used real static assets at `390x844`. The screen showed one verification-gap summary, no duplicate generic warning, correct singular skipped-check copy, the skipped-check detail, and no horizontal overflow. Screenshot: `.aidd/reports/ui-implementation-verification-gap/implementation-verification-gap-mobile-final.png`.
+
+## Next UX Plan - After Implementation Verification Gap Slice
+
+- Verify this missing-verification cue in a served fixture or provider run where implementation output lacks executable command evidence.
+- Continue non-happy-path review with intentionally rejected review findings and QA remediation loops to make sure the operator always sees the next safe action before any proceed/accept action.

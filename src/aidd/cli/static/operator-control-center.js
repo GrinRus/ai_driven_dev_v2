@@ -164,6 +164,51 @@ function renderDiffFilters(files) {
   `;
 }
 
+function renderImplementationVerificationGap(implementation) {
+  const commands = implementation?.verification_commands || [];
+  if (commands.length) return "";
+  const skipped = implementation?.skipped_checks || [];
+  const skippedLabel = skipped.length === 1 ? "1 skipped check" : `${skipped.length} skipped checks`;
+  const skippedVerb = skipped.length === 1 ? "was" : "were";
+  const body = skipped.length
+    ? `${skippedLabel} ${skippedVerb} recorded, but no executable command evidence was parsed from implementation-report.md. Review cannot trust readiness until implementation records what ran.`
+    : "No executable command evidence was parsed from implementation-report.md. Review cannot trust readiness until implementation records what ran.";
+  return renderDecisionSummary({
+    kind: "implementation-verification",
+    tone: "bad",
+    badge: "verification missing",
+    title: "Implementation verification evidence is missing",
+    body,
+    primary: "Primary action: Rerun implement or request intervention",
+    metrics: [
+      {label: "Commands", value: "0", tone: "bad"},
+      {label: "Skipped", value: String(skipped.length), tone: skipped.length ? "warn" : ""},
+      {label: "Touched files", value: String((implementation?.touched_files || []).length)},
+      {label: "Residual risks", value: String((implementation?.residual_risks || []).length)}
+    ]
+  });
+}
+
+function implementationSummaryWarnings(implementation) {
+  const warnings = implementation?.warnings || [];
+  if ((implementation?.verification_commands || []).length) return warnings;
+  return warnings.filter((warning) =>
+    !String(warning || "").includes("No executable verification commands")
+  );
+}
+
+function renderImplementationVerificationItems(implementation) {
+  const commands = implementation?.verification_commands || [];
+  if (commands.length) {
+    return commands.slice(0, 4).map((item) => `<span>${escapeHtml(item)}</span>`).join("");
+  }
+  const skipped = implementation?.skipped_checks || [];
+  if (skipped.length) {
+    return skipped.slice(0, 4).map((item) => `<span>Skipped: ${escapeHtml(item)}</span>`).join("");
+  }
+  return "<span>Verification evidence missing.</span>";
+}
+
 function renderImplementationSummary(implementation) {
   return `
     <section class="surface">
@@ -171,7 +216,8 @@ function renderImplementationSummary(implementation) {
         <span>Implementation summary</span>
         <span class="small-badge">${escapeHtml(implementation?.selected_task_id || "task not detected")}</span>
       </div>
-      ${renderWarnings(implementation?.warnings)}
+      ${renderWarnings(implementationSummaryWarnings(implementation))}
+      ${renderImplementationVerificationGap(implementation)}
       <div class="metric-grid">
         <div class="metric"><span>Touched files</span><strong>${escapeHtml((implementation?.touched_files || []).length)}</strong></div>
         <div class="metric"><span>Verification</span><strong>${escapeHtml((implementation?.verification_commands || []).length)}</strong></div>
@@ -179,7 +225,7 @@ function renderImplementationSummary(implementation) {
         <div class="metric"><span>Residual risks</span><strong>${escapeHtml((implementation?.residual_risks || []).length)}</strong></div>
       </div>
       <div class="compact-list">
-        ${(implementation?.verification_commands || []).slice(0, 4).map((item) => `<span>${escapeHtml(item)}</span>`).join("") || "<span>No verification commands detected.</span>"}
+        ${renderImplementationVerificationItems(implementation)}
       </div>
     </section>
   `;
