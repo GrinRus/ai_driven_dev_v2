@@ -556,3 +556,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Make auto-promoted output warnings visually distinct from blocking validation findings and explain canonical source documents versus `output/` mirrors.
 - Rerun AIDD-LIVE-007 with imported desktop/mobile manual browser evidence after the next UI polish slice.
 - Add a deliberately bounded provider no-progress browser-evidence exercise to verify the unhappy path now that recovery routing and manual evidence import are protected.
+
+## Pre-Runtime-Log Heartbeat Clarity Slice - 2026-07-09
+
+- Launching-terminal heartbeat now says `waiting for first runtime event` instead of only `runtime.log not yet created`.
+- The heartbeat adds a `next evidence` hint. If watched stage files are changing before the runtime log exists, it tells the operator to inspect artifacts or wait; if only the stage command is alive, it says the command is waiting for runtime output or file activity.
+- This keeps the existing raw transcript contract intact: heartbeat stays on the harness stderr and does not pollute saved child stdout/stderr.
+- The live quality rubric now treats the first-runtime-event state and current evidence action as part of terminal flow visibility.
+- Verification: `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py::test_black_box_command_emits_operator_heartbeat_without_polluting_transcript tests/harness/test_live_e2e_black_box.py::test_black_box_command_heartbeat_explains_file_activity_before_runtime_log tests/harness/test_live_e2e_black_box.py::test_black_box_command_no_progress_allows_live_artifact_heartbeats -q`; `uv run --extra dev pytest tests/test_docs_consistency.py -q`; `uv run --extra dev ruff check src/aidd/harness/live_e2e_black_box_orchestration.py tests/harness/test_live_e2e_black_box.py`; `uv run --extra dev python -m mypy src/aidd/harness/live_e2e_black_box_orchestration.py`; `git diff --check`.
+
+## Next UX Plan - After Pre-Runtime-Log Heartbeat Clarity
+
+- Rerun or spot-check a provider-backed stage to confirm the clearer heartbeat appears in real native-provider output.
+- Make auto-promoted output warnings visually distinct from blocking validation findings and explain canonical source documents versus `output/` mirrors.
+- Rerun AIDD-LIVE-007 with imported desktop/mobile manual browser evidence after the next UI polish slice.

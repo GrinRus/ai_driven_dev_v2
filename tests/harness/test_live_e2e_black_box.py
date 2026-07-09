@@ -3343,7 +3343,61 @@ def test_black_box_command_emits_operator_heartbeat_without_polluting_transcript
     assert "last signal: process-started" in captured.err
     assert "hard timeout: 5s" in captured.err
     assert "no-progress timeout: 3s" in captured.err
-    assert f"runtime log: {runtime_log_path.as_posix()} (not yet created)" in captured.err
+    assert (
+        f"runtime log: {runtime_log_path.as_posix()} "
+        "(waiting for first runtime event)" in captured.err
+    )
+    assert (
+        "next evidence: stage command is alive; "
+        "waiting for runtime output or file activity" in captured.err
+    )
+
+
+def test_black_box_command_heartbeat_explains_file_activity_before_runtime_log(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runtime_log_path = tmp_path / "runtime.log"
+    progress_file = tmp_path / "progress.txt"
+    command = (
+        sys.executable,
+        "-c",
+        (
+            "import pathlib, time\n"
+            "path = pathlib.Path('progress.txt')\n"
+            "for index in range(4):\n"
+            "    path.write_text(str(index), encoding='utf-8')\n"
+            "    time.sleep(0.08)\n"
+        ),
+    )
+
+    def _probe() -> dict[str, object]:
+        if not progress_file.exists():
+            return {"exists": False}
+        stat = progress_file.stat()
+        return {"exists": True, "mtime_ns": stat.st_mtime_ns, "size": stat.st_size}
+
+    result = _run_black_box_command(
+        command=command,
+        cwd=tmp_path,
+        environment=dict(os.environ),
+        timeout_seconds=5.0,
+        no_progress_timeout_seconds=3.0,
+        progress_probe=_probe,
+        heartbeat_label="run-stage `qa`",
+        heartbeat_interval_seconds=0.1,
+        heartbeat_runtime_log_path=runtime_log_path,
+    )
+
+    captured = capsys.readouterr()
+    assert result.exit_code == 0
+    assert result.stdout_text == ""
+    assert result.stderr_text == ""
+    assert "last signal: watched-files" in captured.err
+    assert (
+        "next evidence: stage files changed before first runtime event; "
+        "inspect artifacts or wait" in captured.err
+    )
 
 
 def test_black_box_live_e2e_records_active_step_while_stage_runs(

@@ -462,7 +462,7 @@ def _format_heartbeat_duration(seconds: float) -> str:
 def _runtime_log_heartbeat_label(path: Path | None) -> str:
     if path is None:
         return "n/a"
-    status = "present" if path.exists() else "not yet created"
+    status = "present" if path.exists() else "waiting for first runtime event"
     return f"{path.resolve(strict=False).as_posix()} ({status})"
 
 
@@ -470,6 +470,20 @@ def _format_heartbeat_timeout(seconds: float | None) -> str:
     if seconds is None:
         return "unbounded"
     return _format_heartbeat_duration(seconds)
+
+
+def _heartbeat_next_evidence_hint(
+    *,
+    last_progress_reason: str,
+    runtime_log_path: Path | None,
+) -> str:
+    if runtime_log_path is not None and runtime_log_path.exists():
+        return "open runtime log for raw adapter output"
+    if last_progress_reason == "watched-files":
+        return "stage files changed before first runtime event; inspect artifacts or wait"
+    if last_progress_reason in {"stdout", "stderr"}:
+        return "command output was observed; wait for runtime log publication"
+    return "stage command is alive; waiting for runtime output or file activity"
 
 
 def _emit_command_heartbeat(
@@ -483,6 +497,10 @@ def _emit_command_heartbeat(
     no_progress_timeout_seconds: float | None,
     runtime_log_path: Path | None,
 ) -> None:
+    next_evidence = _heartbeat_next_evidence_hint(
+        last_progress_reason=last_progress_reason,
+        runtime_log_path=runtime_log_path,
+    )
     print(
         "[aidd live] "
         f"{label} still running after {_format_heartbeat_duration(elapsed_seconds)}; "
@@ -490,7 +508,8 @@ def _emit_command_heartbeat(
         f"{_format_heartbeat_duration(last_progress_seconds_ago)} ago; "
         f"hard timeout: {_format_heartbeat_timeout(timeout_seconds)}; "
         f"no-progress timeout: {_format_heartbeat_timeout(no_progress_timeout_seconds)}; "
-        f"runtime log: {_runtime_log_heartbeat_label(runtime_log_path)}.",
+        f"runtime log: {_runtime_log_heartbeat_label(runtime_log_path)}; "
+        f"next evidence: {next_evidence}.",
         file=stream,
         flush=True,
     )

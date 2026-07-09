@@ -367,4 +367,6 @@ outside this operator-UI review unless the manual report explicitly marks it
 `not-applicable`.
 For long public `run-stage` commands, terminal flow visibility also includes the
 launching harness heartbeat: active stage, elapsed time, last observed runtime/file
-signal, timeout budgets, and whether the expected runtime log exists yet.
+signal, timeout budgets, whether the expected runtime log has seen its first runtime
+event yet, and the best current evidence action such as inspecting stage artifacts
+when watched files are changing before runtime output exists.
