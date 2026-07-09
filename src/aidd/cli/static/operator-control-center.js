@@ -443,6 +443,18 @@ function renderRemediationRuntimeGuard(sourceStage, hasRemediationItems) {
   `;
 }
 
+function renderQaCompletionGuard(view, hasRemediationItems) {
+  if (view.quality_verdict !== "not-ready") return "";
+  const nextStep = hasRemediationItems
+    ? "Send selected QA risks or issues back to implement, then rerun verification and QA."
+    : "Inspect the QA report or start a follow-up before completing this run.";
+  return `
+    <p class="form-error" role="status">
+      Accept complete is disabled while QA is not-ready. ${escapeHtml(nextStep)}
+    </p>
+  `;
+}
+
 async function launchRemediation(sourceStage) {
   if (!ensureRunnableRuntime()) return;
   const ids = checkedRemediationIds(sourceStage);
@@ -565,6 +577,7 @@ async function renderQaVerdict() {
           <textarea data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
         </label>
         ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
+        ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
         <div class="wizard-actions">
           <button data-accept-qa type="button" ${view.quality_verdict === "not-ready" ? "disabled" : ""}>Accept complete</button>
           <button data-remediation-launch="qa" type="button" ${sourceItems.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>

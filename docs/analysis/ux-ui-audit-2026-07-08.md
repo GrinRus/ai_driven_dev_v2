@@ -826,3 +826,15 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 ## Next UX Plan - After Rejected Review Fixture
 
 - Continue the unhappy-path loop with QA `not-ready` remediation in the served UI, checking that remediation is dominant and `Accept complete` remains blocked or clearly unsafe.
+
+## Served QA Not-Ready Remediation Fixture - 2026-07-09
+
+- A controlled served fixture copied the passing Hono live target to `/tmp/aidd-qa-not-ready-remediation-ui` and changed only the canonical/output `qa-report.md` to `not-ready`, `hold`, one residual risk, and one known issue.
+- `/api/qa/verdict` returned `quality_verdict=not-ready`, `release_recommendation=hold`, one residual risk, and one known issue. The QA screen selected both remediation items, hid the competing global next-action strip, disabled `Accept complete`, and kept `Send selected to implement` enabled when the selected runtime was ready.
+- Browser QA found a clarity gap before the fix: the disabled `Accept complete` button was logically correct, but the action row did not locally explain why completion was blocked or which remediation path was safe.
+- QA not-ready now renders a local guard before the action row: `Accept complete is disabled while QA is not-ready. Send selected QA risks or issues back to implement, then rerun verification and QA.`
+- Browser verification after the fix: desktop and mobile had no console/network errors and no horizontal overflow; both showed no global next-action buttons, `Accept complete` disabled, `Send selected to implement` enabled, two selected remediation sources, and the new local completion guard. Screenshots: `.aidd/reports/ui-qa-remediation/served-qa-not-ready-guard-desktop.png` and `.aidd/reports/ui-qa-remediation/served-qa-not-ready-guard-mobile.png`.
+
+## Next UX Plan - After QA Not-Ready Fixture
+
+- Continue the unhappy-path loop with failed terminal handoff recovery from missing or rejected QA evidence, and verify that first-time operators always see the safe next action before archive/follow-up escape hatches.
