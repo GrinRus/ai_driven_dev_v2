@@ -46,11 +46,40 @@ def test_parse_reports_tolerates_malformed_markdown_with_warnings() -> None:
     qa = parse_qa_report_text("plain text without verdict")
 
     assert implementation.touched_files == ()
-    assert "No touched files" in implementation.warnings[-1]
+    assert any("No touched files" in warning for warning in implementation.warnings)
+    assert any(
+        "No executable verification commands" in warning
+        for warning in implementation.warnings
+    )
     assert review.findings == ()
     assert "No structured review findings" in review.warnings[-1]
     assert qa.quality_verdict is None
     assert "No QA verdict" in qa.warnings[-1]
+
+
+def test_parse_implementation_report_warns_when_verification_commands_are_missing() -> None:
+    view = parse_implementation_report_text(
+        "\n".join(
+            (
+                "# Implementation Report",
+                "",
+                "- Selected task id: `TASK-42`",
+                "",
+                "## Touched files",
+                "",
+                "- `src/app.py` - changed routing.",
+                "",
+                "## Verification",
+                "",
+                "- skipped browser smoke: no browser available.",
+            )
+        )
+    )
+
+    assert view.touched_files == ("src/app.py",)
+    assert view.verification_commands == ()
+    assert view.skipped_checks == ("skipped browser smoke: no browser available.",)
+    assert any("No executable verification commands" in warning for warning in view.warnings)
 
 
 def test_parse_review_findings_extracts_severity_disposition_and_evidence() -> None:

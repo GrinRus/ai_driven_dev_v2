@@ -78,6 +78,9 @@ Use concrete repair actions:
   If canonical validation passed but draft `stage-result.md` still says `failed`, `blocked`, or
   `Validator verdict: fail`, remove stale failure wording and make status/verdict match the
   repaired output.
+- downstream-order drift: if successful `stage-result.md` next actions skip `tasklist` and point
+  to implementation, review, or QA, rewrite the next action to name `tasklist` as the immediate
+  canonical downstream stage.
 
 ## Targeted repair discipline
 
@@ -100,6 +103,8 @@ Use concrete repair actions:
 11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
 12. Under `## Readiness state`, preserve exactly one top-level bullet containing exactly one allowed
     token: `ready`, `ready-with-conditions`, or `not-ready`.
+13. When `stage-result.md` status is `succeeded`, its first downstream action must name `tasklist`,
+    not a later canonical stage.
 
 ## Repair exit checks
 
@@ -110,6 +115,7 @@ Use concrete repair actions:
 - recommendation summary uses prioritized Markdown list items that are concrete and traceable,
 - readiness state, required changes, and sign-off decision are coherent,
 - `approved-with-conditions` is paired with `ready-with-conditions`,
+- successful `stage-result.md` next actions name `tasklist` as the immediate downstream stage,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no blocking inconsistency remains between report, validator result, and stage status.

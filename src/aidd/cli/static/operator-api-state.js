@@ -67,6 +67,9 @@ const STAGE_COPY = {
   "review": ["Review", "Inspect quality"],
   "qa": ["QA", "Verify outcomes"]
 };
+const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set([
+  "STRUCT-OUTPUT-PROMOTED"
+]);
 
 const state = {
   dashboard: null,
@@ -75,6 +78,7 @@ const state = {
   readinessLoading: true,
   readinessError: "",
   activeStage: "idea",
+  activeStageExplicit: false,
   activeTab: "work",
   workDetail: "overview",
   recoveryDetail: "summary",
@@ -88,12 +92,18 @@ const state = {
   activeJobLogChunks: [],
   activeJobStatus: null,
   activeJobTimer: null,
+  pendingCockpitReveal: false,
+  pendingNextFlowWizardReveal: false,
   runAccountability: null,
   runAccountabilityError: "",
   runComparison: null,
   runComparisonError: "",
   runComparisonLoading: false,
   runComparisonBaselineInput: "",
+  reviewFindingsView: null,
+  reviewFindingsRunId: "",
+  qaVerdictView: null,
+  qaVerdictRunId: "",
   activeArtifactKey: "",
   implementDiffFilter: "all",
   implementDiffPath: "",
@@ -139,9 +149,12 @@ const state = {
     preflight: null,
     preflightLoading: false,
     preflightError: "",
+    definitionErrors: [],
     createdDraft: null,
     launchLoading: false,
     launchError: "",
+    launchReadinessChecking: false,
+    launchReadinessError: "",
     archiveRunId: "",
     archiveReason: "",
     selectedSourceIds: []
@@ -181,10 +194,33 @@ function validationFindingLocation(finding) {
   return finding.line_number ? `${path}:${finding.line_number}` : path;
 }
 
+function isNonBlockingValidationNotice(finding) {
+  return NON_BLOCKING_VALIDATION_NOTICE_CODES.has(
+    String(finding?.code || "").trim().toUpperCase()
+  );
+}
+
+function actionableValidationFindings(validation) {
+  return (validation?.validation_findings || []).filter(
+    (finding) => !isNonBlockingValidationNotice(finding)
+  );
+}
+
+function nonBlockingValidationNotices(validation) {
+  return (validation?.validation_findings || []).filter(isNonBlockingValidationNotice);
+}
+
+function primaryValidationFindingForValidation(validation) {
+  const primary = validation?.primary_validation_finding || null;
+  if (primary && !isNonBlockingValidationNotice(primary)) return primary;
+  return actionableValidationFindings(validation)[0] || null;
+}
+
 function renderValidationFindingSummary(finding, {compact = false} = {}) {
   if (!finding) return "";
   const location = validationFindingLocation(finding);
   const occurrenceCount = Number(finding.occurrence_count || 1);
+  const notice = isNonBlockingValidationNotice(finding);
   const repeatBadge = occurrenceCount > 1
     ? `<span class="small-badge warn">x${escapeHtml(occurrenceCount)}</span>`
     : "";
@@ -192,8 +228,8 @@ function renderValidationFindingSummary(finding, {compact = false} = {}) {
     ? `<span class="validation-finding-hint"><strong>What to do</strong>${escapeHtml(finding.operator_hint)}</span>`
     : "";
   return `
-    <div class="validation-finding-summary ${compact ? "compact" : ""}">
-      <span class="small-badge bad">${escapeHtml(finding.code || "validation")}</span>
+    <div class="validation-finding-summary ${compact ? "compact" : ""} ${notice ? "notice" : ""}">
+      <span class="small-badge ${notice ? "good" : "bad"}">${escapeHtml(finding.code || "validation")}</span>
       <span class="small-badge">${escapeHtml(finding.severity || "issue")}</span>
       ${repeatBadge}
       <strong>${escapeHtml(compactPath(location, compact ? 54 : 86))}</strong>
@@ -204,9 +240,15 @@ function renderValidationFindingSummary(finding, {compact = false} = {}) {
 }
 
 function primaryValidationFinding() {
-  return state.dashboard?.primary_validation_finding
-    || activeStageView()?.diagnostics?.validation?.primary_validation_finding
-    || null;
+  const dashboardPrimary = state.dashboard?.primary_validation_finding || null;
+  if (dashboardPrimary && !isNonBlockingValidationNotice(dashboardPrimary)) {
+    return dashboardPrimary;
+  }
+  const dashboardFallback = (state.dashboard?.validation_findings || []).find(
+    (finding) => !isNonBlockingValidationNotice(finding)
+  );
+  if (dashboardFallback) return dashboardFallback;
+  return primaryValidationFindingForValidation(activeStageView()?.diagnostics?.validation);
 }
 
 async function api(path, options = {}) {
@@ -247,12 +289,108 @@ function statusClass(status) {
   return String(status || "pending").toLowerCase().replace(/_/g, "-");
 }
 
+function secondsLabel(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "not available";
+  const seconds = Math.max(0, Number(value));
+  if (seconds < 60) return `${Math.floor(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.floor(seconds % 60);
+  if (minutes < 60) return `${minutes}m ${remainder}s`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m`;
+}
+
+function runtimeOutputFreshnessLabel(job) {
+  const runtimeAge = job?.runtime_output_age_seconds;
+  if (runtimeAge !== null && runtimeAge !== undefined) {
+    return `Last runtime output ${secondsLabel(runtimeAge)} ago`;
+  }
+  const hasRuntimeField = job && Object.prototype.hasOwnProperty.call(job, "runtime_output_age_seconds");
+  if (!hasRuntimeField && job?.last_output_age_seconds !== null && job?.last_output_age_seconds !== undefined) {
+    return `Last output ${secondsLabel(job.last_output_age_seconds)} ago`;
+  }
+  return "No runtime output captured yet";
+}
+
+function runtimeLogChunkCount() {
+  return (state.activeJobLogChunks || []).filter((chunk) => {
+    const stream = String(chunk?.stream || "stdout").toLowerCase();
+    return stream !== "system";
+  }).length;
+}
+
+function activeJobRuntimeLogChunkCount(job = state.activeJobStatus) {
+  const reportedCount = Number(job?.runtime_log_chunk_count);
+  if (Number.isFinite(reportedCount)) return reportedCount;
+  return runtimeLogChunkCount();
+}
+
+function activeJobLiveLogChunkSummary(job = state.activeJobStatus) {
+  const totalCount = state.activeJobLogChunks?.length || 0;
+  const runtimeCount = activeJobRuntimeLogChunkCount(job);
+  if (totalCount === runtimeCount) return String(totalCount);
+  return `${runtimeCount} runtime / ${totalCount} total`;
+}
+
+function activeJobRuntimeSilenceAge(job = state.activeJobStatus) {
+  if (job?.runtime_output_age_seconds !== null && job?.runtime_output_age_seconds !== undefined) {
+    return job.runtime_output_age_seconds;
+  }
+  if (job?.runtime_output_at_utc === null || job?.runtime_output_at_utc === undefined) {
+    return job?.elapsed_seconds;
+  }
+  return null;
+}
+
+function activeJobRuntimeOutputText(job = state.activeJobStatus) {
+  if (job?.runtime_output_text) return job.runtime_output_text;
+  if (job && !Object.prototype.hasOwnProperty.call(job, "runtime_output_text")) {
+    return job.last_output_text || "";
+  }
+  return "";
+}
+
+function activeJobHasRuntimeOutput(job = state.activeJobStatus) {
+  if (job?.runtime_output_at_utc !== null && job?.runtime_output_at_utc !== undefined) return true;
+  if (job && Object.prototype.hasOwnProperty.call(job, "runtime_output_at_utc")) return false;
+  return activeJobRuntimeLogChunkCount(job) > 0 || Boolean(job?.last_output_at_utc);
+}
+
+function activeJobHasNoRuntimeOutput(job = state.activeJobStatus) {
+  return !activeJobHasRuntimeOutput(job) && activeJobRuntimeLogChunkCount(job) === 0;
+}
+
+function runtimeOutputMissingLabel(job = state.activeJobStatus) {
+  const age = activeJobRuntimeSilenceAge(job);
+  if (age !== null && age !== undefined) {
+    return `No runtime output for ${secondsLabel(age)}`;
+  }
+  return "No runtime output captured yet";
+}
+
+function runtimeOutputMissingDetail() {
+  return "System control messages may exist, but stdout/stderr runtime evidence has not arrived yet.";
+}
+
 function activeStageItem() {
   return (state.dashboard?.stages || []).find((item) => item.stage === state.activeStage) || null;
 }
 
 function activeStageView() {
   return state.dashboard?.active_stage_view || null;
+}
+
+function stageRetrySummary(item) {
+  const attemptCount = Number(item?.attempt_count || 0);
+  if (attemptCount <= 1) return null;
+  const retryCount = attemptCount - 1;
+  const retryLabel = retryCount === 1 ? "1 retry" : `${retryCount} retries`;
+  return {
+    attemptCount,
+    retryCount,
+    label: `retry ${attemptCount}x`,
+    title: `${retryLabel} after the first attempt; open Recovery for repair and retry history`
+  };
 }
 
 function needsRuntime(action) {
@@ -291,14 +429,138 @@ function isRecoveryNextAction(action) {
   return RECOVERY_NEXT_ACTIONS.has(String(action || ""));
 }
 
+function dashboardRuntimeRecoveryAction() {
+  return (state.dashboard?.recovery_actions || []).find((action) =>
+    action?.action === "inspect-runtime-log" && action.enabled !== false
+  ) || null;
+}
+
 function activeModeIsEvidenceLog() {
   return state.activeTab === "evidence" && state.evidenceDetail === "logs";
+}
+
+function requestCockpitReveal() {
+  state.pendingCockpitReveal = true;
+}
+
+function requestNextFlowWizardReveal() {
+  state.pendingNextFlowWizardReveal = true;
+}
+
+function scrollCockpitToTopOnMobile() {
+  if (!window.matchMedia("(max-width: 760px)").matches) return;
+  const cockpit = document.querySelector(".cockpit");
+  if (!cockpit) return;
+  const topbar = document.querySelector(".topbar");
+  const topbarHeight = topbar ? topbar.getBoundingClientRect().height : 0;
+  const target = cockpit.getBoundingClientRect().top + window.scrollY - topbarHeight;
+  window.scrollTo({top: Math.max(0, target), behavior: "auto"});
+}
+
+function revealCockpitOnMobile() {
+  if (!state.pendingCockpitReveal) return;
+  state.pendingCockpitReveal = false;
+  scrollCockpitToTopOnMobile();
+  window.requestAnimationFrame(scrollCockpitToTopOnMobile);
+  window.setTimeout(scrollCockpitToTopOnMobile, 80);
+}
+
+function scrollNextFlowWizardToTopOnMobile() {
+  if (!window.matchMedia("(max-width: 760px)").matches) return;
+  const wizard = document.querySelector(".next-flow-wizard");
+  if (!wizard) return;
+  const topbar = document.querySelector(".topbar");
+  const topbarHeight = topbar ? topbar.getBoundingClientRect().height : 0;
+  const target = wizard.getBoundingClientRect().top + window.scrollY - topbarHeight - 8;
+  window.scrollTo({top: Math.max(0, target), behavior: "auto"});
+}
+
+function revealNextFlowWizardOnMobile() {
+  if (!state.pendingNextFlowWizardReveal) return;
+  state.pendingNextFlowWizardReveal = false;
+  scrollNextFlowWizardToTopOnMobile();
+  window.requestAnimationFrame(scrollNextFlowWizardToTopOnMobile);
+  window.setTimeout(scrollNextFlowWizardToTopOnMobile, 80);
+}
+
+function activeJobIsLive(job = state.activeJobStatus) {
+  if (!state.activeJobId || !job) return false;
+  return ["running", "waiting-for-operator", "cancelling"].includes(job.status || "running");
+}
+
+function activeJobPayloadIsLive(job) {
+  if (!job?.job_id) return false;
+  return ["running", "waiting-for-operator", "cancelling"].includes(job.status || "running");
+}
+
+async function recoverActiveJobFromDashboard(job) {
+  if (!activeJobPayloadIsLive(job)) return;
+  if (state.activeJobId === job.job_id && state.activeJobStatus) {
+    state.activeJobStatus = {...state.activeJobStatus, ...job};
+    return;
+  }
+  state.activeJobId = job.job_id;
+  state.activeJobCursor = 0;
+  state.activeJobLogChunks = [];
+  state.activeJobStatus = job;
+  if (state.activeJobTimer) clearInterval(state.activeJobTimer);
+  await pollActiveJob();
+  if (activeJobPayloadIsLive(state.activeJobStatus)) {
+    state.activeJobTimer = setInterval(pollActiveJob, 1000);
+  }
+}
+
+function syncLiveJobBodyClass() {
+  document.body.classList.toggle("live-job-mode", activeJobIsLive());
+}
+
+function externalRunningStageItem(action = state.dashboard?.next_action) {
+  if (activeJobIsLive() || action?.action !== "wait-for-stage") return null;
+  const stage = action.stage || state.activeStage;
+  return (state.dashboard?.stages || []).find((item) => item.stage === stage)
+    || (state.dashboard?.stages || []).find((item) => ["preparing", "executing", "validating"].includes(item.status))
+    || null;
+}
+
+function syncExternalRunningBodyClass() {
+  document.body.classList.toggle("external-running-stage-mode", Boolean(externalRunningStageItem()));
+}
+
+function postStageNextActionIsPrimary(action = state.dashboard?.next_action) {
+  return Boolean(
+    state.activeTab === "work"
+    && state.workDetail === "overview"
+    && state.activeRunId
+    && action?.action === "run-stage"
+    && action.enabled
+    && !state.dashboard?.terminal_handoff
+    && !activeJobIsLive()
+    && !externalRunningStageItem(action)
+  );
 }
 
 function applyOperatorModeBodyClass() {
   document.body.dataset.operatorMode = state.activeTab;
   const recoveryActive = state.activeTab === "recovery";
+  const evidenceLogActive = activeModeIsEvidenceLog();
+  const decisionDetailActive = state.activeTab === "work"
+    && ["review-findings", "qa-verdict"].includes(state.workDetail);
+  const staleDownstreamActive = state.dashboard?.next_action?.action === "rerun-stale-downstream"
+    || (state.dashboard?.stages || []).some((item) => item.stale);
+  const terminalRepairActive = Boolean(
+    state.dashboard?.terminal_handoff?.repair_highlights?.length
+  );
+  const terminalHandoffActive = Boolean(state.dashboard?.terminal_handoff);
+  const postStageNextActionActive = postStageNextActionIsPrimary();
   document.body.classList.toggle("recovery-mode", recoveryActive);
+  document.body.classList.toggle("evidence-log-mode", evidenceLogActive);
+  document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
+  document.body.classList.toggle("stale-downstream-mode", staleDownstreamActive);
+  document.body.classList.toggle("terminal-handoff-mode", terminalHandoffActive);
+  document.body.classList.toggle("terminal-repair-mode", terminalRepairActive);
+  document.body.classList.toggle("post-stage-next-action-mode", postStageNextActionActive);
+  syncLiveJobBodyClass();
+  syncExternalRunningBodyClass();
 }
 
 function setRunButtonState() {
@@ -328,6 +590,7 @@ function initializeStateFromLocation() {
   const requestedStage = params.get("stage");
   if (requestedStage && STAGES.includes(requestedStage)) {
     state.activeStage = requestedStage;
+    state.activeStageExplicit = true;
   }
   const requestedRunId = String(params.get("run_id") || "").trim();
   if (requestedRunId) {
@@ -355,7 +618,8 @@ function syncLocationState() {
 }
 
 function dashboardUrl() {
-  const params = new URLSearchParams({stage: state.activeStage});
+  const params = new URLSearchParams();
+  if (state.activeStageExplicit) params.set("stage", state.activeStage);
   if (state.activeRunId) params.set("run_id", state.activeRunId);
   return `/api/dashboard?${params.toString()}`;
 }
@@ -376,13 +640,21 @@ function sourceFindingsUrl() {
 async function fetchDashboard() {
   const payload = await api(dashboardUrl());
   state.dashboard = payload.dashboard;
+  await recoverActiveJobFromDashboard(payload.active_job);
   const version = String(payload.app_version || "").trim();
   document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
   const viewedStage = state.dashboard.active_stage_view?.stage || state.dashboard.active_stage;
   if (viewedStage && STAGES.includes(viewedStage)) {
     state.activeStage = viewedStage;
   }
+  const previousRunId = state.activeRunId;
   state.activeRunId = state.dashboard.run?.run_id || "";
+  if (state.activeRunId !== previousRunId) {
+    state.reviewFindingsView = null;
+    state.reviewFindingsRunId = "";
+    state.qaVerdictView = null;
+    state.qaVerdictRunId = "";
+  }
   if (!state.selectedRuntime && state.dashboard.run?.runtime_id) {
     state.selectedRuntime = state.dashboard.run.runtime_id;
   }
@@ -392,6 +664,15 @@ async function fetchDashboard() {
     if (nextAction === "answer-questions") state.recoveryDetail = "questions";
     else if (nextAction === "inspect-validation" || nextAction === "review-intervention") state.recoveryDetail = "validation";
     else if (nextAction === "inspect-runtime-log") state.recoveryDetail = "logs";
+    requestCockpitReveal();
+  } else if (
+    state.activeTab === "work"
+    && state.dashboard.first_failure
+    && dashboardRuntimeRecoveryAction()
+  ) {
+    state.activeTab = "recovery";
+    state.recoveryDetail = "summary";
+    requestCockpitReveal();
   }
 }
 

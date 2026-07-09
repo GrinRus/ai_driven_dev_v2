@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import signal
 import subprocess
 from pathlib import Path
 
@@ -2976,6 +2977,48 @@ def test_validate_semantic_outputs_accepts_setup_cleanup_residue_note(
         work_item="WI-SEM-IMPLEMENT-EXAMPLE-CLEANUP",
         workspace_root=workspace_root,
     )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_cache_absence_command_without_hanging(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-CACHE-CHECK",
+        "# Implementation Report\n\n"
+        "## Selected task\n\n"
+        "- Task id: `TASK-EXAMPLE-CACHE-HYGIENE`\n\n"
+        "## Change summary\n\n"
+        "Implemented the selected cache hygiene check with bounded verification evidence.\n\n"
+        "## Touched files\n\n"
+        "- `src/cache_hygiene.py` - add cache hygiene guard.\n\n"
+        "## Verification\n\n"
+        "- `test ! -e coverage && test ! -e .coverage && test ! -e .pytest_cache && "
+        "test ! -e .ruff_cache` -> pass (exit code 0; no root-level coverage or "
+        "Python tool cache residue).\n\n"
+        "## Risks\n\n"
+        "- None observed.\n\n"
+        "## Follow-up\n\n"
+        "- None.\n",
+    )
+
+    def _timeout(_signum: int, _frame: object) -> None:
+        raise TimeoutError("semantic validation hung on cache absence command evidence")
+
+    previous_handler = signal.signal(signal.SIGALRM, _timeout)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, 2.0)
+        findings = validate_semantic_outputs(
+            stage="implement",
+            work_item="WI-SEM-IMPLEMENT-CACHE-CHECK",
+            workspace_root=workspace_root,
+        )
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
     assert findings == ()
 

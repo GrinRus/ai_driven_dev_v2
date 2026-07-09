@@ -1,3 +1,33 @@
+const RUNTIME_FAILURE_KINDS = new Set([
+  "cancelled",
+  "failed",
+  "non_zero_exit",
+  "non-zero-exit",
+  "provider_error",
+  "provider-no-progress",
+  "runtime-error",
+  "runtime-exit-metadata-invalid",
+  "runtime-failure",
+  "stage-failed",
+  "timeout"
+]);
+
+function isRuntimeFailureKind(kind) {
+  return RUNTIME_FAILURE_KINDS.has(String(kind || "").trim().toLowerCase());
+}
+
+function isRuntimeFirstFailure(firstFailure) {
+  return Boolean(firstFailure && isRuntimeFailureKind(firstFailure.kind));
+}
+
+function runtimeLogEvidencePath(diagnostics) {
+  return diagnostics?.raw_log?.path || diagnostics?.runtime_log?.path || "";
+}
+
+function runtimeFailureEvidencePath(firstFailure, diagnostics) {
+  return firstFailure?.path || runtimeLogEvidencePath(diagnostics) || "";
+}
+
 function renderOverview() {
   if (!state.dashboard?.run?.run_id) {
     return renderFirstLaunchState();
@@ -121,7 +151,7 @@ function renderRecoveryActionBand(diagnostics) {
   const repairAvailable = status === "repair-available";
   const requestPrimary = status === "repair-exhausted" || status === "explicit-stop";
   const stoppedMessage = stopped?.stopped ? stopped.detail || "Stage stopped." : "";
-  const finding = validation?.primary_validation_finding || null;
+  const finding = primaryValidationFindingForValidation(validation);
   const guidance = stoppedMessage
     || (repairAvailable
       ? "Validation failed. Run Repair starts the selected stage through the normal stage runner."
@@ -172,10 +202,29 @@ function renderRepairTimeline(validation) {
   `;
 }
 
+function renderResolvedRepairSummary(validation) {
+  const attempts = validation?.repair_attempts || [];
+  if (!attempts.length) return "";
+  const latest = attempts[attempts.length - 1] || {};
+  const attemptLabel = attempts.length === 1 ? "1 validation attempt" : `${attempts.length} validation attempts`;
+  const retryCount = Math.max(0, attempts.length - 1);
+  const retryLabel = retryCount === 1 ? "1 retry" : `${retryCount} retries`;
+  const summaryLabel = retryCount ? `${retryLabel} resolved across ${attemptLabel}` : `${attemptLabel} recorded`;
+  return `
+    <div class="repair-resolved-summary">
+      <span class="small-badge good">resolved after retry</span>
+      <strong>${escapeHtml(summaryLabel)}</strong>
+      <p>Validation is clear after a retry. Use the timeline below for validator report and repair brief evidence.</p>
+      ${latest.validator_report_path ? pathLine(latest.validator_report_path, 86) : ""}
+      ${latest.repair_brief_path ? pathLine(latest.repair_brief_path, 86) : ""}
+    </div>
+  `;
+}
+
 function renderValidationFindingList(validation) {
-  const findings = validation?.validation_findings || [];
+  const findings = actionableValidationFindings(validation);
   if (!findings.length) {
-    return `<div class="empty-state">No structured validator findings parsed.</div>`;
+    return `<div class="empty-state">No actionable validator findings parsed.</div>`;
   }
   return `
     <div class="validation-finding-list">
@@ -184,14 +233,49 @@ function renderValidationFindingList(validation) {
   `;
 }
 
+function renderOutputMirrorNoticeList(validation) {
+  const notices = nonBlockingValidationNotices(validation);
+  if (!notices.length) return "";
+  const noticeLabel = notices.length === 1 ? "1 mirror notice" : `${notices.length} mirror notices`;
+  return `
+    <div class="output-mirror-notice-list" role="status">
+      <div class="surface-title compact">
+        <span>Auto-promoted output mirrors</span>
+        <span class="small-badge good">${escapeHtml(noticeLabel)}</span>
+      </div>
+      <p>AIDD copied misplaced output/ handoff mirrors into canonical stage documents. Continue from the canonical source document shown in each notice.</p>
+      <div class="validation-finding-list">
+        ${notices.map((notice) => renderValidationFindingSummary(notice, {compact: true})).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function recoveryPrimaryActionSpec(diagnostics) {
   const recoveryActions = state.dashboard?.recovery_actions || [];
-  const runtimeAction = recoveryActions.find((item) => item.action === "inspect-runtime-log");
+  const firstFailure = state.dashboard?.first_failure || null;
+  const runtimeAction = recoveryActions.find((item) => item.action === "inspect-runtime-log" && item.enabled !== false)
+    || (isRuntimeFirstFailure(firstFailure)
+      ? {
+        action: "inspect-runtime-log",
+        label: "Open logs",
+        detail: firstFailure.detail || "Inspect runtime log and runtime-exit metadata before retrying.",
+        stage: firstFailure.stage,
+        enabled: true
+      }
+      : null);
   const guidedAction = runtimeAction || recoveryActions.find((item) => item.enabled !== false) || null;
   const action = guidedAction || state.dashboard?.next_action || {};
   const validation = diagnostics?.validation;
   const status = repairCenterStatus(validation, diagnostics?.stopped);
   const stage = action.stage || state.activeStage;
+  if (isRuntimeFirstFailure(firstFailure) && runtimeAction) {
+    return {
+      label: runtimeAction.label || "Open logs",
+      detail: runtimeAction.detail || "Inspect the saved runtime log, runtime-exit metadata, and readiness/config context before retrying.",
+      attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(runtimeAction.stage || stage)}"`
+    };
+  }
   if (status === "repair-available") {
     return {
       label: "Run Repair",
@@ -228,6 +312,7 @@ function recoveryPrimaryActionSpec(diagnostics) {
 }
 
 function recoveryFailureTitle(firstFailure, diagnostics) {
+  if (isRuntimeFirstFailure(firstFailure)) return firstFailure.title || "Runtime failure";
   const validation = diagnostics?.validation;
   const status = repairCenterStatus(validation, diagnostics?.stopped);
   if (status === "repair-available") return "Validation needs repair";
@@ -235,6 +320,46 @@ function recoveryFailureTitle(firstFailure, diagnostics) {
   if (diagnostics?.blocking_questions?.unresolved_count) return "Blocking questions";
   if (firstFailure?.title) return firstFailure.title;
   return "Recovery required";
+}
+
+function renderRuntimePartialEvidence(firstFailure) {
+  if (!isRuntimeFirstFailure(firstFailure)) return "";
+  const stage = firstFailure?.stage || state.activeStage;
+  const refs = (state.dashboard?.evidence_refs || []).filter((ref) =>
+    (ref.stage || state.activeStage) === stage
+  );
+  if (!refs.length) return "";
+  const recoveryActions = (state.dashboard?.recovery_actions || []).filter((action) =>
+    (action.stage || stage) === stage
+  );
+  const retryAction = recoveryActions.find((action) => action.action === "resume-stage");
+  const requestAction = recoveryActions.find((action) => action.action === "request-change");
+  const documentRefs = refs.filter((ref) => ref.kind === "document");
+  const logRefs = refs.filter((ref) => ref.kind === "log");
+  const selectedRefs = [...documentRefs.slice(0, 3), ...logRefs.slice(0, 3)].slice(0, 6);
+  const rows = selectedRefs.map((ref) => `
+    <button class="artifact-row" data-evidence-stage="${escapeHtml(ref.stage || stage)}" data-evidence-path="${escapeHtml(ref.path)}" data-evidence-kind="${escapeHtml(ref.kind)}" type="button">
+      <span><strong>${escapeHtml(ref.label)}</strong>${pathLine(ref.path)}</span>
+      <span class="small-badge">${escapeHtml(ref.kind)}</span>
+    </button>
+  `).join("");
+  const actions = retryAction || requestAction ? `
+    <div class="wizard-actions">
+      ${retryAction ? `<button data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(stage)}" type="button" ${retryAction.enabled ? "" : "disabled"}>${escapeHtml(retryAction.label || "Retry stage")}</button>` : ""}
+      ${requestAction ? `<button class="secondary" data-recovery-action="request-change" data-recovery-stage="${escapeHtml(stage)}" type="button" ${requestAction.enabled ? "" : "disabled"}>${escapeHtml(requestAction.label || "Request change")}</button>` : ""}
+    </div>
+  ` : "";
+  return `
+    <section class="surface recovery-section runtime-partial-evidence">
+      <div class="surface-title">
+        <span>Partial stage evidence</span>
+        <span class="small-badge warn">${escapeHtml(selectedRefs.length)} refs</span>
+      </div>
+      <p>The runtime stopped before this stage completed. Inspect partial documents, runtime log, and runtime-exit metadata before retrying or requesting a change.</p>
+      <div class="recent-artifacts">${rows}</div>
+      ${actions}
+    </section>
+  `;
 }
 
 function renderRecoveryWorkbench() {
@@ -252,15 +377,29 @@ function renderRecoveryWorkbench() {
   const status = repairCenterStatus(validation, diagnostics.stopped);
   const selectedStage = activeStageItem();
   const selectedStageLabel = stageTitle(state.activeStage);
-  const selectedReason = diagnostics.stopped?.detail
+  const runtimeFailure = isRuntimeFirstFailure(firstFailure);
+  const runtimeLogPath = runtimeLogEvidencePath(diagnostics);
+  const selectedReason = runtimeFailure
+    ? firstFailure.detail || primary.detail
+    : diagnostics.stopped?.detail
     || validation.primary_validation_finding?.message
     || (unresolvedQuestions.length
       ? `${unresolvedQuestions.length} blocking question(s) for ${selectedStageLabel} must be resolved.`
       : primary.detail);
-  const evidencePath = finding ? validationFindingLocation(finding) : validation.validator_report_path || diagnostics.raw_log?.path || "";
+  const evidencePath = runtimeFailure
+    ? runtimeFailureEvidencePath(firstFailure, diagnostics)
+    : finding ? validationFindingLocation(finding) : validation.validator_report_path || diagnostics.raw_log?.path || "";
   const globalBlockerDetail = globalAction.detail || firstFailure?.detail || "Resolve the run-global blocker before progressing the flow.";
   const globalBlockerLabel = globalAction.label || firstFailure?.title || "Run blocker";
-  const hasValidationRecovery = finding || Number(validation.validator_fail_count || 0) > 0 || (validation.validation_findings || []).length;
+  const repairAttempts = validation.repair_attempts || [];
+  const hasRepairAttempts = repairAttempts.length > 0;
+  const actionableFindings = actionableValidationFindings(validation);
+  const hasValidationFindings = Boolean(
+    finding
+    || Number(validation.validator_fail_count || 0) > 0
+    || actionableFindings.length
+  );
+  const hasValidationRecovery = hasValidationFindings || hasRepairAttempts;
   return `
     <section class="recovery-workbench">
       <div class="recovery-hero">
@@ -272,6 +411,7 @@ function renderRecoveryWorkbench() {
             <span><strong>Selected stage</strong>${escapeHtml(selectedStageLabel)}</span>
             <span><strong>Selected-stage status</strong>${escapeHtml(selectedStage?.status || status)}</span>
             <span><strong>Selected-stage evidence</strong>${escapeHtml(compactPath(evidencePath || "not available", 86))}</span>
+            ${runtimeFailure ? `<span><strong>Runtime log</strong>${escapeHtml(compactPath(runtimeLogPath || "not available", 86))}</span>` : ""}
           </div>
         </div>
         <div class="recovery-primary-actions">
@@ -290,6 +430,7 @@ function renderRecoveryWorkbench() {
           </div>
         ` : ""}
       </div>
+      ${renderRuntimePartialEvidence(firstFailure)}
       ${unresolvedQuestions.length || (questions.questions || []).length ? `
         <section class="surface recovery-section">
           <div class="surface-title">
@@ -302,10 +443,10 @@ function renderRecoveryWorkbench() {
       ${hasValidationRecovery ? `
         <section class="surface recovery-section">
           <div class="surface-title">
-            <span>Validation finding</span>
-            <span class="small-badge ${Number(validation.validator_fail_count || 0) ? "bad" : "good"}">${escapeHtml(status)}</span>
+            <span>${hasValidationFindings ? "Validation finding" : "Resolved retry"}</span>
+            <span class="small-badge ${hasValidationFindings && Number(validation.validator_fail_count || 0) ? "bad" : "good"}">${escapeHtml(hasValidationFindings ? status : "resolved after retry")}</span>
           </div>
-          ${renderValidationFindingList(validation)}
+          ${hasValidationFindings ? renderValidationFindingList(validation) : renderResolvedRepairSummary(validation)}
           <div class="surface-title compact">Repair attempt timeline</div>
           ${renderRepairTimeline(validation)}
         </section>
@@ -366,13 +507,15 @@ function renderValidation() {
           <div class="metric"><span>Final state</span><strong>${escapeHtml(result.final_state)}</strong></div>
           <div class="metric"><span>Attempts</span><strong>${escapeHtml(result.attempt_count)}</strong></div>
         </div>
+        ${(validation?.repair_attempts || []).length && !Number(result.validator_fail_count || 0) ? renderResolvedRepairSummary(validation) : ""}
         ${renderRecoveryActionBand(diagnostics)}
         <div class="panel-item">
           <strong>Validator report</strong>
           ${pathLine(result.validator_report_path)}
         </div>
+        ${renderOutputMirrorNoticeList(validation)}
         <div class="panel-item">
-          <strong>Top validation findings</strong>
+          <strong>Actionable validation findings</strong>
           ${renderValidationFindingList(validation)}
         </div>
         <div class="panel-item">
@@ -408,6 +551,7 @@ async function renderCockpit() {
     }
     content.innerHTML = renderOverview();
     void loadRunAccountabilityCard();
+    revealNextFlowWizardOnMobile();
     return;
   }
   if (state.activeTab === "recovery") {
@@ -917,4 +1061,5 @@ async function renderAll() {
   renderBottomDock();
   activateTab(state.activeTab, {preserveDetail: true});
   await renderCockpit();
+  revealCockpitOnMobile();
 }

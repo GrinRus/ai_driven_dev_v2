@@ -14,7 +14,7 @@ import tempfile
 import threading
 import time
 import tomllib
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -137,6 +137,7 @@ FlowAction = Literal[
     "quality-review",
     "remediation",
     "frontend-checkpoint",
+    "frontend-running-stage-checkpoint",
     "verify",
     "teardown",
     "finish",
@@ -170,6 +171,7 @@ ANSWER_ANALYSIS_FILENAME = "answer-analysis.md"
 RUNTIME_APPROVAL_ANALYSIS_FILENAME = "runtime-approval-analysis.md"
 FRONTEND_CHECKPOINTS_JSON_FILENAME = "frontend-checkpoints.json"
 FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME = "frontend-checkpoints.md"
+MANUAL_FRONTEND_EVIDENCE_DIRNAME = "manual-frontend-evidence"
 NEXT_FLOW_CHECKPOINT_JSON_FILENAME = "next-flow-checkpoint.json"
 NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
 NEXT_FLOW_LINEAGE_FILENAME = "next-flow-lineage.json"
@@ -223,6 +225,7 @@ TERMINAL_STATUSES = {"pass", "fail", "infra-fail"}
 TERMINAL_MANUAL_STATUSES = {"manual-quality-stop"}
 RESUMABLE_STATUSES = {"blocked", "interrupted-resumable", "awaiting-quality-review"}
 TERMINAL_STAGE_METADATA_STATUSES = {"blocked", "failed", "succeeded"}
+RUNNING_STAGE_METADATA_STATUSES = {"preparing", "executing", "validating"}
 PRESERVED_STATE_EXTRA_KEYS = (
     "error",
     "interruption",
@@ -233,6 +236,7 @@ PRESERVED_STATE_EXTRA_KEYS = (
     "operator_action_request_markdown",
     "stage_exit_code",
 )
+RUN_STAGE_HEARTBEAT_INTERVAL_SECONDS = 30.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -298,6 +302,7 @@ class FlowContext:
     target_workspace_baseline_snapshot: dict[str, object] | None
     started: float
     enable_next_flow_follow_up_proof: bool = False
+    manual_frontend_evidence: Path | None = None
 
 
 class LiveE2EInterrupted(Exception):
@@ -326,6 +331,11 @@ def _default_work_root() -> Path:
 def _write_json(path: Path, payload: object) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    return _write_text_atomic(path, content)
+
+
+def _write_text_atomic(path: Path, content: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     tmp_path.write_text(content, encoding="utf-8")
     os.replace(tmp_path, path)
@@ -438,6 +448,73 @@ def _command_text(command: Sequence[str]) -> str:
     return " ".join(command)
 
 
+def _format_heartbeat_duration(seconds: float) -> str:
+    total_seconds = max(int(seconds), 0)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
+
+
+def _runtime_log_heartbeat_label(path: Path | None) -> str:
+    if path is None:
+        return "n/a"
+    status = "present" if path.exists() else "waiting for first runtime event"
+    return f"{path.resolve(strict=False).as_posix()} ({status})"
+
+
+def _format_heartbeat_timeout(seconds: float | None) -> str:
+    if seconds is None:
+        return "unbounded"
+    return _format_heartbeat_duration(seconds)
+
+
+def _heartbeat_next_evidence_hint(
+    *,
+    last_progress_reason: str,
+    runtime_log_path: Path | None,
+) -> str:
+    if runtime_log_path is not None and runtime_log_path.exists():
+        return "open runtime log for raw adapter output"
+    if last_progress_reason == "watched-files":
+        return "stage files changed before first runtime event; inspect artifacts or wait"
+    if last_progress_reason in {"stdout", "stderr"}:
+        return "command output was observed; wait for runtime log publication"
+    return "stage command is alive; waiting for runtime output or file activity"
+
+
+def _emit_command_heartbeat(
+    *,
+    stream: TextIO,
+    label: str,
+    elapsed_seconds: float,
+    last_progress_seconds_ago: float,
+    last_progress_reason: str,
+    timeout_seconds: float | None,
+    no_progress_timeout_seconds: float | None,
+    runtime_log_path: Path | None,
+) -> None:
+    next_evidence = _heartbeat_next_evidence_hint(
+        last_progress_reason=last_progress_reason,
+        runtime_log_path=runtime_log_path,
+    )
+    print(
+        "[aidd live] "
+        f"{label} still running after {_format_heartbeat_duration(elapsed_seconds)}; "
+        f"last signal: {last_progress_reason} "
+        f"{_format_heartbeat_duration(last_progress_seconds_ago)} ago; "
+        f"hard timeout: {_format_heartbeat_timeout(timeout_seconds)}; "
+        f"no-progress timeout: {_format_heartbeat_timeout(no_progress_timeout_seconds)}; "
+        f"runtime log: {_runtime_log_heartbeat_label(runtime_log_path)}; "
+        f"next evidence: {next_evidence}.",
+        file=stream,
+        flush=True,
+    )
+
+
 def _run_black_box_command(
     *,
     command: tuple[str, ...],
@@ -446,6 +523,11 @@ def _run_black_box_command(
     timeout_seconds: float | None,
     no_progress_timeout_seconds: float | None = None,
     progress_probe: Callable[[], dict[str, object]] | None = None,
+    loop_observer: Callable[[], None] | None = None,
+    heartbeat_label: str | None = None,
+    heartbeat_interval_seconds: float | None = None,
+    heartbeat_runtime_log_path: Path | None = None,
+    heartbeat_stream: TextIO | None = None,
 ) -> BlackBoxCommandResult:
     started = time.monotonic()
     timed_out = False
@@ -465,6 +547,16 @@ def _run_black_box_command(
     last_progress_reason = "process-started"
     last_progress_snapshot: dict[str, object] | None = None
     last_progress_signature: str | None = None
+    heartbeat_interval = (
+        max(float(heartbeat_interval_seconds), 0.0)
+        if heartbeat_label is not None and heartbeat_interval_seconds is not None
+        else None
+    )
+    next_heartbeat_monotonic = (
+        started + heartbeat_interval
+        if heartbeat_interval is not None and heartbeat_interval > 0
+        else None
+    )
 
     if progress_probe is not None:
         try:
@@ -534,7 +626,25 @@ def _run_black_box_command(
                     last_progress_utc = _utc_now()
                     last_progress_reason = "watched-files"
 
+            if loop_observer is not None:
+                loop_observer()
+
             now = time.monotonic()
+            if next_heartbeat_monotonic is not None and now >= next_heartbeat_monotonic:
+                _emit_command_heartbeat(
+                    stream=heartbeat_stream or sys.stderr,
+                    label=heartbeat_label or "command",
+                    elapsed_seconds=max(now - started, 0.0),
+                    last_progress_seconds_ago=max(now - last_progress_monotonic, 0.0),
+                    last_progress_reason=last_progress_reason,
+                    timeout_seconds=timeout_seconds,
+                    no_progress_timeout_seconds=no_progress_timeout_seconds,
+                    runtime_log_path=heartbeat_runtime_log_path,
+                )
+                assert heartbeat_interval is not None
+                while next_heartbeat_monotonic <= now:
+                    next_heartbeat_monotonic += heartbeat_interval
+
             if hard_deadline is not None and now >= hard_deadline:
                 timed_out = True
                 exit_code = 124
@@ -1446,6 +1556,11 @@ def _flow_state_payload(
         "installed_command": list(ctx.installed_command),
         "target_workspace_baseline_snapshot": ctx.target_workspace_baseline_snapshot,
         "next_flow_follow_up_proof_enabled": ctx.enable_next_flow_follow_up_proof,
+        "manual_frontend_evidence_source": (
+            None
+            if ctx.manual_frontend_evidence is None
+            else ctx.manual_frontend_evidence.resolve(strict=False).as_posix()
+        ),
     }
     if ctx.install_result is not None:
         payload["install"] = {
@@ -1737,8 +1852,7 @@ def _write_flow_report(ctx: FlowContext) -> Path:
                 f"- Command: `{command_text}` exit=`{command.get('exit_code', 'n/a')}`"
             )
     report_path = ctx.bundle_root / FLOW_REPORT_FILENAME
-    report_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    return report_path
+    return _write_text_atomic(report_path, "\n".join(lines).rstrip() + "\n")
 
 
 def _pid_is_alive(pid: object) -> bool:
@@ -1921,6 +2035,7 @@ def _initial_context(
     report_root: Path,
     run_id: str | None,
     enable_next_flow_follow_up_proof: bool,
+    manual_frontend_evidence: Path | None,
 ) -> FlowContext:
     scenario = load_scenario(
         scenario_path,
@@ -1977,6 +2092,7 @@ def _initial_context(
         target_workspace_baseline_snapshot=None,
         started=time.monotonic(),
         enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
+        manual_frontend_evidence=manual_frontend_evidence,
     )
 
 
@@ -1988,6 +2104,7 @@ def _context_from_state(
     work_root: Path,
     report_root: Path,
     enable_next_flow_follow_up_proof: bool,
+    manual_frontend_evidence: Path | None,
 ) -> FlowContext:
     state = _read_json_object(state_path)
     state_work_root = state.get("work_root")
@@ -2045,6 +2162,14 @@ def _context_from_state(
     )
     state_follow_up_proof = state.get("next_flow_follow_up_proof_enabled") is True
     baseline_snapshot = state.get("target_workspace_baseline_snapshot")
+    state_manual_frontend_evidence = state.get("manual_frontend_evidence_source")
+    resolved_manual_frontend_evidence = manual_frontend_evidence
+    if (
+        resolved_manual_frontend_evidence is None
+        and isinstance(state_manual_frontend_evidence, str)
+        and state_manual_frontend_evidence
+    ):
+        resolved_manual_frontend_evidence = Path(state_manual_frontend_evidence)
     return FlowContext(
         scenario_path=scenario_path,
         scenario=scenario,
@@ -2070,6 +2195,7 @@ def _context_from_state(
         enable_next_flow_follow_up_proof=(
             enable_next_flow_follow_up_proof or state_follow_up_proof
         ),
+        manual_frontend_evidence=resolved_manual_frontend_evidence,
     )
 
 
@@ -2081,6 +2207,7 @@ def _load_or_create_context(
     report_root: Path,
     run_id: str | None,
     enable_next_flow_follow_up_proof: bool,
+    manual_frontend_evidence: Path | None,
 ) -> FlowContext:
     resume_state = _find_resume_state(
         report_root=report_root,
@@ -2094,6 +2221,7 @@ def _load_or_create_context(
             work_root=work_root,
             report_root=report_root,
             enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
+            manual_frontend_evidence=manual_frontend_evidence,
         )
     ctx = _initial_context(
         scenario_path=scenario_path,
@@ -2102,6 +2230,7 @@ def _load_or_create_context(
         report_root=report_root,
         run_id=None,
         enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
+        manual_frontend_evidence=manual_frontend_evidence,
     )
     _persist_state(
         ctx=ctx,
@@ -3729,11 +3858,27 @@ def _frontend_probe_targets(ctx: FlowContext, stage: str) -> tuple[tuple[str, st
     run_query = urlencode({"run_id": ctx.run_id})
     return (
         ("page", "/"),
+        ("dashboard-api", f"/api/dashboard?{stage_query}"),
         ("run-api", f"/api/run?{run_query}"),
         ("stage-api", f"/api/stage?{stage_query}"),
         ("questions-api", f"/api/questions?{urlencode({'stage': stage})}"),
         ("logs-api", f"/api/logs?{stage_query}"),
         ("artifacts-api", f"/api/artifacts?{stage_query}"),
+    )
+
+
+def _frontend_running_probe_targets(
+    ctx: FlowContext,
+    stage: str,
+) -> tuple[tuple[str, str], ...]:
+    stage_query = urlencode({"stage": stage, "run_id": ctx.run_id})
+    run_query = urlencode({"run_id": ctx.run_id})
+    return (
+        ("page", "/"),
+        ("dashboard-api", f"/api/dashboard?{stage_query}"),
+        ("run-api", f"/api/run?{run_query}"),
+        ("stage-api", f"/api/stage?{stage_query}"),
+        ("logs-api", f"/api/logs?{stage_query}"),
     )
 
 
@@ -3761,6 +3906,8 @@ def _frontend_probe_semantic_failure(
     stage: str,
     name: str,
     probe: dict[str, object],
+    phase: str = "post-stage",
+    observed_stage_status: str | None = None,
 ) -> str | None:
     if probe.get("ok") is not True:
         return "probe returned non-2xx response"
@@ -3776,6 +3923,29 @@ def _frontend_probe_semantic_failure(
         if not _json_contains_value(payload, ctx.work_item):
             return "run API response does not include current work_item"
         return None
+    if name == "dashboard-api":
+        dashboard = payload.get("dashboard")
+        if not isinstance(dashboard, dict):
+            return "dashboard API response does not include dashboard object"
+        if not _json_contains_value(dashboard, ctx.run_id):
+            return "dashboard API response does not include current run_id"
+        if not _json_contains_value(dashboard, ctx.work_item):
+            return "dashboard API response does not include current work_item"
+        if not _json_contains_value(dashboard, stage):
+            return "dashboard API response does not include current stage"
+        if not any(_json_has_key(dashboard, key) for key in ("next_action", "terminal_handoff")):
+            return "dashboard API response does not expose next action or terminal handoff"
+        if phase == "running-stage":
+            next_action = dashboard.get("next_action")
+            if not isinstance(next_action, dict):
+                return "dashboard API response does not expose running next action"
+            if next_action.get("action") != "wait-for-stage":
+                return "dashboard next action is not the running-stage wait state"
+            if next_action.get("enabled") is not False:
+                return "running-stage wait action must be disabled"
+            if not _json_contains_value(next_action, stage):
+                return "running-stage wait action does not include current stage"
+        return None
     if name == "stage-api":
         if not _json_contains_value(payload, ctx.run_id):
             return "stage API response does not include current run_id"
@@ -3786,6 +3956,12 @@ def _frontend_probe_semantic_failure(
             for key in ("status", "state", "stage_state", "final_state")
         ):
             return "stage API response does not include stage status/state"
+        if (
+            phase == "running-stage"
+            and observed_stage_status is not None
+            and not _json_contains_value(payload, observed_stage_status)
+        ):
+            return "stage API response does not include observed running status"
         return None
     if name == "questions-api":
         if not _json_contains_value(payload, stage):
@@ -3796,7 +3972,10 @@ def _frontend_probe_semantic_failure(
     if name == "logs-api":
         if not _json_contains_value(payload, stage):
             return "logs API response does not include current stage"
-        if not any(_json_has_key(payload, key) for key in ("logs", "chunks", "text", "lines")):
+        log_keys: tuple[str, ...] = ("logs", "chunks", "text", "lines")
+        if phase == "running-stage":
+            log_keys = (*log_keys, "available", "message")
+        if not any(_json_has_key(payload, key) for key in log_keys):
             return "logs API response does not expose log data"
         return None
     if name == "artifacts-api":
@@ -3812,24 +3991,404 @@ def _frontend_probe_semantic_failure(
     return None
 
 
+def _frontend_probe_by_name(
+    probes: Sequence[dict[str, object]],
+    name: str,
+) -> dict[str, object]:
+    for probe in probes:
+        if probe.get("name") == name:
+            return probe
+    return {}
+
+
+def _frontend_probe_json_payload(
+    probes: Sequence[dict[str, object]],
+    name: str,
+) -> dict[str, object]:
+    payload = _frontend_probe_by_name(probes, name).get("json_payload")
+    return payload if isinstance(payload, dict) else {}
+
+
+def _operator_surface_check(
+    *,
+    name: str,
+    ok: bool,
+    detail: str,
+) -> dict[str, object]:
+    return {
+        "name": name,
+        "ok": ok,
+        "detail": detail,
+    }
+
+
+def _frontend_operator_surface_checks(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    probes: Sequence[dict[str, object]],
+) -> dict[str, object]:
+    page_probe = _frontend_probe_by_name(probes, "page")
+    page_body = str(page_probe.get("body_preview") or "")
+    dashboard_payload = _frontend_probe_json_payload(probes, "dashboard-api")
+    dashboard_raw = dashboard_payload.get("dashboard")
+    dashboard = dashboard_raw if isinstance(dashboard_raw, dict) else {}
+    run_payload = _frontend_probe_json_payload(probes, "run-api")
+    stage_payload = _frontend_probe_json_payload(probes, "stage-api")
+    logs_payload = _frontend_probe_json_payload(probes, "logs-api")
+    artifacts_payload = _frontend_probe_json_payload(probes, "artifacts-api")
+    primary = _PRIMARY_STAGE_OUTPUTS.get(stage, "")
+
+    checks = [
+        _operator_surface_check(
+            name="operator-shell-visible",
+            ok="AIDD Operator Console" in page_body or "AIDD UI" in page_body,
+            detail="page exposes the operator UI shell label",
+        ),
+        _operator_surface_check(
+            name="work-item-context-visible",
+            ok=_json_contains_value(run_payload, ctx.work_item),
+            detail="run payload exposes current work item",
+        ),
+        _operator_surface_check(
+            name="run-context-visible",
+            ok=_json_contains_value(run_payload, ctx.run_id),
+            detail="run payload exposes current run id",
+        ),
+        _operator_surface_check(
+            name="active-stage-visible",
+            ok=_json_contains_value(stage_payload, stage),
+            detail="stage payload exposes active checkpoint stage",
+        ),
+        _operator_surface_check(
+            name="stage-status-visible",
+            ok=any(
+                _json_has_key(stage_payload, key)
+                for key in ("status", "state", "stage_state", "final_state")
+            ),
+            detail="stage payload exposes operator-readable stage status",
+        ),
+        _operator_surface_check(
+            name="next-action-visible",
+            ok=any(
+                _json_has_key(dashboard, key)
+                for key in ("next_action", "terminal_handoff")
+            ),
+            detail="dashboard payload exposes the next operator action or terminal handoff",
+        ),
+        _operator_surface_check(
+            name="runtime-log-surface-visible",
+            ok=any(
+                _json_has_key(logs_payload, key)
+                for key in ("logs", "chunks", "text", "lines", "message")
+            ),
+            detail="logs payload exposes saved or pending runtime log state",
+        ),
+        _operator_surface_check(
+            name="artifact-surface-visible",
+            ok=(
+                _json_contains_value(artifacts_payload, primary)
+                or _json_has_key(artifacts_payload, "artifacts")
+                or _json_has_key(artifacts_payload, "items")
+            ),
+            detail="artifacts payload exposes primary output or artifact list state",
+        ),
+    ]
+    first_failure = run_payload.get("first_failure")
+    blockers = run_payload.get("blockers")
+    has_blockers = isinstance(blockers, list) and bool(blockers)
+    if first_failure is not None or has_blockers:
+        checks.append(
+            _operator_surface_check(
+                name="recovery-action-visible",
+                ok=(
+                    _json_has_key(run_payload, "recovery_actions")
+                    or _json_has_key(run_payload, "next_action")
+                ),
+                detail="blocked or failed run exposes recovery guidance",
+            )
+        )
+    failed = [
+        str(check["name"])
+        for check in checks
+        if check.get("ok") is not True
+    ]
+    return {
+        "ok": not failed,
+        "checks": checks,
+        "failed_checks": failed,
+    }
+
+
+def _frontend_running_stage_surface_checks(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    observed_stage_status: str,
+    probes: Sequence[dict[str, object]],
+) -> dict[str, object]:
+    page_probe = _frontend_probe_by_name(probes, "page")
+    page_body = str(page_probe.get("body_preview") or "")
+    dashboard_payload = _frontend_probe_json_payload(probes, "dashboard-api")
+    dashboard_raw = dashboard_payload.get("dashboard")
+    dashboard = dashboard_raw if isinstance(dashboard_raw, dict) else {}
+    run_payload = _frontend_probe_json_payload(probes, "run-api")
+    stage_payload = _frontend_probe_json_payload(probes, "stage-api")
+    logs_payload = _frontend_probe_json_payload(probes, "logs-api")
+    next_action_raw = dashboard.get("next_action")
+    next_action = next_action_raw if isinstance(next_action_raw, dict) else {}
+
+    checks = [
+        _operator_surface_check(
+            name="operator-shell-visible",
+            ok="AIDD Operator Console" in page_body or "AIDD UI" in page_body,
+            detail="page exposes the operator UI shell label",
+        ),
+        _operator_surface_check(
+            name="work-item-context-visible",
+            ok=_json_contains_value(run_payload, ctx.work_item),
+            detail="run payload exposes current work item",
+        ),
+        _operator_surface_check(
+            name="run-context-visible",
+            ok=_json_contains_value(run_payload, ctx.run_id),
+            detail="run payload exposes current run id",
+        ),
+        _operator_surface_check(
+            name="running-stage-visible",
+            ok=_json_contains_value(dashboard, stage)
+            and _json_contains_value(stage_payload, observed_stage_status),
+            detail="dashboard and stage payloads expose the active running stage",
+        ),
+        _operator_surface_check(
+            name="running-wait-action-visible",
+            ok=next_action.get("action") == "wait-for-stage"
+            and next_action.get("enabled") is False
+            and _json_contains_value(next_action, stage),
+            detail="dashboard exposes a disabled wait action for the running stage",
+        ),
+        _operator_surface_check(
+            name="runtime-log-affordance-visible",
+            ok=any(
+                _json_has_key(logs_payload, key)
+                for key in ("logs", "chunks", "text", "lines", "available", "message")
+            ),
+            detail="logs payload exposes either live log data or a pending-log message",
+        ),
+    ]
+    failed = [
+        str(check["name"])
+        for check in checks
+        if check.get("ok") is not True
+    ]
+    return {
+        "ok": not failed,
+        "checks": checks,
+        "failed_checks": failed,
+    }
+
+
 def _read_frontend_checkpoint_payload(ctx: FlowContext) -> dict[str, object]:
     path = ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME
     if not path.exists():
         return {
             "enabled": True,
             "reason": "frontend checkpoints were enabled for this evaluator run",
+            "manual_visual_evidence": _manual_frontend_evidence_payload(ctx),
             "checkpoints": [],
         }
     payload = _read_json_object(path)
     payload["enabled"] = True
+    payload["manual_visual_evidence"] = _manual_frontend_evidence_payload(
+        ctx,
+        existing=payload.get("manual_visual_evidence"),
+    )
     checkpoints = payload.get("checkpoints")
     if not isinstance(checkpoints, list):
         payload["checkpoints"] = []
     return payload
 
 
+def _copy_manual_frontend_evidence(
+    *,
+    source: Path,
+    destination_root: Path,
+) -> tuple[str, Path, list[str]]:
+    if source.is_dir():
+        if destination_root.exists():
+            shutil.rmtree(destination_root)
+        shutil.copytree(source, destination_root)
+        files = [
+            item.relative_to(destination_root).as_posix()
+            for item in sorted(destination_root.rglob("*"))
+            if item.is_file()
+        ]
+        return "directory", destination_root, files
+
+    destination_root.mkdir(parents=True, exist_ok=True)
+    destination = destination_root / source.name
+    shutil.copy2(source, destination)
+    return "file", destination, [destination.name]
+
+
+def _manual_frontend_evidence_payload(
+    ctx: FlowContext,
+    *,
+    existing: object | None = None,
+) -> dict[str, object]:
+    if ctx.manual_frontend_evidence is None:
+        if isinstance(existing, dict):
+            return dict(existing)
+        return {
+            "status": "not-provided",
+            "imported": False,
+            "non_gating": True,
+            "message": (
+                "No operator-supplied browser screenshots or notes were imported. "
+                "Manual quality-report.md must cite separate evidence or mark UI/UX "
+                "surfaces not inspected."
+            ),
+        }
+
+    source = ctx.manual_frontend_evidence.resolve(strict=False)
+    destination_root = ctx.bundle_root / MANUAL_FRONTEND_EVIDENCE_DIRNAME
+    payload: dict[str, object] = {
+        "source_path": source.as_posix(),
+        "non_gating": True,
+        "quality_report_scope": "manual quality-report.md only",
+    }
+    if not source.exists():
+        if (
+            isinstance(existing, dict)
+            and existing.get("imported") is True
+            and isinstance(existing.get("bundle_path"), str)
+        ):
+            return dict(existing)
+        payload.update(
+            {
+                "status": "missing",
+                "imported": False,
+                "bundle_path": destination_root.as_posix(),
+                "message": (
+                    "Operator-supplied manual frontend evidence path was not found. "
+                    "Execution verdict and frontend checkpoint classifications are unchanged."
+                ),
+            }
+        )
+        return payload
+    try:
+        kind, imported_path, files = _copy_manual_frontend_evidence(
+            source=source,
+            destination_root=destination_root,
+        )
+    except OSError as exc:
+        payload.update(
+            {
+                "status": "import-error",
+                "imported": False,
+                "bundle_path": destination_root.as_posix(),
+                "message": (
+                    "Operator-supplied manual frontend evidence could not be imported: "
+                    f"{exc}"
+                ),
+            }
+        )
+        return payload
+    payload.update(
+        {
+            "status": "imported",
+            "imported": True,
+            "kind": kind,
+            "bundle_path": imported_path.as_posix(),
+            "files": files,
+            "message": (
+                "Operator-supplied browser screenshots or notes were imported as "
+                "manual, non-gating evidence."
+            ),
+        }
+    )
+    return payload
+
+
+def _manual_frontend_evidence_paths(payload: dict[str, object]) -> tuple[Path, ...]:
+    manual_evidence = payload.get("manual_visual_evidence")
+    if not isinstance(manual_evidence, dict) or manual_evidence.get("imported") is not True:
+        return tuple()
+    bundle_path = manual_evidence.get("bundle_path")
+    if not isinstance(bundle_path, str) or not bundle_path:
+        return tuple()
+    return (Path(bundle_path),)
+
+
 def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, object]) -> Path:
-    lines = ["# Frontend Checkpoints", ""]
+    lines = [
+        "# Frontend Checkpoints",
+        "",
+        (
+            "- Scope: raw UI/API and operator-surface run-integrity evidence; "
+            "not a UI/UX audit, not screenshot evidence, and not a quality gate."
+        ),
+        (
+            "- Manual visual review: inspect the loopback UI in a browser before "
+            "recording an Operator UI/UX decision in `quality-report.md`."
+        ),
+        "",
+        "## Manual Visual Review Checklist",
+        "",
+        "- Visible next action and active stage match the checkpoint stage.",
+        (
+            "- Desktop and mobile topbar labels for work item, run, runtime, and "
+            "readiness remain readable without clipped single-letter chips."
+        ),
+        (
+            "- Recovery states lead with the evidence path that matches the failure "
+            "type: runtime logs for runtime failures, repair or request-change actions "
+            "for validation failures."
+        ),
+        (
+            "- Runtime logs, final artifacts, stage documents, questions, answers, "
+            "repair evidence, and next-flow handoff are reachable from visible controls."
+        ),
+        (
+            "- Long paths, log labels, and action copy avoid horizontal overflow on "
+            "desktop and mobile viewports."
+        ),
+        (
+            "- Record screenshot paths or browser notes in the manual final report, "
+            "or mark the surface `not inspected`."
+        ),
+        "",
+        "## Manual Browser Evidence",
+        "",
+    ]
+    manual_evidence = payload.get("manual_visual_evidence")
+    if isinstance(manual_evidence, dict):
+        lines.extend(
+            (
+                f"- Status: `{manual_evidence.get('status', 'unknown')}`",
+                f"- Non-gating: `{manual_evidence.get('non_gating', True)}`",
+            )
+        )
+        if manual_evidence.get("source_path"):
+            lines.append(f"- Source path: `{manual_evidence['source_path']}`")
+        if manual_evidence.get("bundle_path"):
+            lines.append(f"- Bundle path: `{manual_evidence['bundle_path']}`")
+        lines.append(f"- Note: {manual_evidence.get('message', '')}")
+        files_raw = manual_evidence.get("files")
+        files = files_raw if isinstance(files_raw, list) else []
+        if files:
+            lines.append("- Imported files:")
+            lines.extend(f"  - `{item}`" for item in files if isinstance(item, str))
+    else:
+        lines.append("- Status: `not-provided`")
+    lines.extend(
+        (
+            "- Manual screenshots and browser notes are evidence for the human-authored "
+            "`quality-report.md`; they do not change runner classifications.",
+            "",
+        )
+    )
+    lines.extend(("## Checkpoints", ""))
     checkpoints_raw = payload.get("checkpoints")
     checkpoints = checkpoints_raw if isinstance(checkpoints_raw, list) else []
     if not checkpoints:
@@ -3837,10 +4396,12 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
     for checkpoint in checkpoints:
         if not isinstance(checkpoint, dict):
             continue
+        phase = str(checkpoint.get("phase") or "post-stage")
         lines.extend(
             (
-                f"## {checkpoint.get('stage', 'unknown')}",
+                f"## {checkpoint.get('stage', 'unknown')} / {phase}",
                 "",
+                f"- Phase: `{phase}`",
                 f"- Classification: `{checkpoint.get('classification', 'unknown')}`",
                 f"- Base URL: `{checkpoint.get('base_url', '')}`",
                 f"- Process exit: `{checkpoint.get('process_exit_code', 'n/a')}`",
@@ -3856,6 +4417,20 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
                 f"- `{probe.get('name', 'probe')}` {probe.get('path', '')}: "
                 f"status=`{probe.get('status', 'n/a')}` ok=`{probe.get('ok', False)}`"
             )
+        operator_surface = checkpoint.get("operator_surface")
+        if isinstance(operator_surface, dict):
+            lines.append(
+                f"- Operator surface: ok=`{operator_surface.get('ok', False)}`"
+            )
+            checks_raw = operator_surface.get("checks")
+            checks = checks_raw if isinstance(checks_raw, list) else []
+            for check in checks:
+                if not isinstance(check, dict):
+                    continue
+                lines.append(
+                    f"  - `{check.get('name', 'check')}`: "
+                    f"ok=`{check.get('ok', False)}`"
+                )
         lines.append("")
     path = ctx.bundle_root / FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
@@ -4169,16 +4744,26 @@ def _next_flow_recommendation_payloads(
     runtime_id: str,
 ) -> list[dict[str, object]]:
     completed = status == "pass"
+    new_work_detail = (
+        "Start unrelated work without inheriting completed-run context."
+        if completed
+        else "Start unrelated work without carrying this terminal handoff evidence."
+    )
     follow_up_detail = (
         "Create a scoped follow-up only when the operator selects new work."
         if completed
         else "Create a scoped follow-up from QA findings, blockers, or manual notes."
     )
+    eval_detail = (
+        "Use completed-run evidence for comparison without mutating the source run."
+        if completed
+        else "Use terminal handoff evidence for comparison without repairing the source run."
+    )
     return [
         {
             "action": "create-new-work-item",
             "label": "Create New Work Item",
-            "detail": "Start unrelated work without inheriting completed-run context.",
+            "detail": new_work_detail,
             "enabled": True,
         },
         {
@@ -4196,7 +4781,7 @@ def _next_flow_recommendation_payloads(
         {
             "action": "run-eval-batch",
             "label": "Run Eval / Scenario Batch",
-            "detail": "Use completed-run evidence for comparison without mutating the source run.",
+            "detail": eval_detail,
             "enabled": True,
         },
         {
@@ -4624,16 +5209,22 @@ def _append_frontend_checkpoint(
     *,
     ctx: FlowContext,
     checkpoint: dict[str, object],
-) -> tuple[Path, Path]:
+) -> tuple[Path, ...]:
     payload = _read_frontend_checkpoint_payload(ctx)
     checkpoints = cast(list[object], payload["checkpoints"])
     checkpoints.append(checkpoint)
     json_path = _write_json(ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME, payload)
     markdown_path = _write_frontend_checkpoint_markdown(ctx, payload)
-    return json_path, markdown_path
+    return json_path, markdown_path, *_manual_frontend_evidence_paths(payload)
 
 
-def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification:
+def _run_frontend_checkpoint(
+    ctx: FlowContext,
+    stage: str,
+    *,
+    phase: str = "post-stage",
+    observed_stage_status: str | None = None,
+) -> StepClassification:
     if not _frontend_checkpoints_enabled(ctx):
         return "skipped"
     working_copy = _require_working_copy(ctx)
@@ -4670,6 +5261,13 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
             "created_at_utc": _utc_now(),
             "duration_seconds": duration_seconds,
             "failure_reason": startup_failure_reason,
+            "observed_stage_status": observed_stage_status,
+            "operator_surface": {
+                "ok": False,
+                "checks": [],
+                "failed_checks": ["ui-process-startup"],
+            },
+            "phase": phase,
             "process_exit_code": None,
             "probes": [],
             "stage": stage,
@@ -4677,12 +5275,28 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         evidence_paths = _append_frontend_checkpoint(ctx=ctx, checkpoint=checkpoint)
         _record_step(
             ctx=ctx,
-            action="frontend-checkpoint",
+            action=(
+                "frontend-running-stage-checkpoint"
+                if phase == "running-stage"
+                else "frontend-checkpoint"
+            ),
             classification="fail",
             decision=(
-                "Stop if the stage otherwise passed because UI/API checkpoint failed."
+                "Stop if the stage otherwise passed because UI/API or "
+                "operator-surface checkpoint failed."
             ),
-            plan="Start `aidd ui` on loopback and inspect public operator UI/API endpoints.",
+            plan=(
+                (
+                    "Start `aidd ui` on loopback while the stage is running and inspect "
+                    "public operator UI/API endpoints for wait-state, stage, and log "
+                    "affordance evidence."
+                )
+                if phase == "running-stage"
+                else (
+                    "Start `aidd ui` on loopback and inspect public operator UI/API "
+                    "endpoints plus run/stage/next-action surface evidence."
+                )
+            ),
             stage=stage,
             command_results=(
                 BlackBoxCommandResult(command=command, transcript=transcript),
@@ -4692,6 +5306,11 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         )
         return "fail"
     probes: list[dict[str, object]] = []
+    operator_surface: dict[str, object] = {
+        "ok": False,
+        "checks": [],
+        "failed_checks": ["checkpoint-not-run"],
+    }
     classification: StepClassification = "fail"
     failure_reason: str | None = None
     try:
@@ -4709,15 +5328,35 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         else:
             failure_reason = "Timed out waiting for the UI checkpoint to become ready."
 
+        if failure_reason is None and phase == "running-stage":
+            try:
+                current_status = _observed_running_stage_status(ctx, stage)
+            except (OSError, json.JSONDecodeError, ValueError):
+                current_status = None
+            if current_status is None:
+                classification = "skipped"
+                failure_reason = (
+                    "Running stage state ended before UI checkpoint probes could run."
+                )
+            else:
+                observed_stage_status = current_status
+
         if failure_reason is None:
             semantic_failures: list[str] = []
-            for name, path in _frontend_probe_targets(ctx, stage):
+            targets = (
+                _frontend_running_probe_targets(ctx, stage)
+                if phase == "running-stage"
+                else _frontend_probe_targets(ctx, stage)
+            )
+            for name, path in targets:
                 probe = _http_probe(f"{base_url}{path}")
                 semantic_failure = _frontend_probe_semantic_failure(
                     ctx=ctx,
                     stage=stage,
                     name=name,
                     probe=probe,
+                    phase=phase,
+                    observed_stage_status=observed_stage_status,
                 )
                 enriched_probe = {
                     "name": name,
@@ -4729,12 +5368,31 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
                     enriched_probe["semantic_failure"] = semantic_failure
                     semantic_failures.append(f"{name}: {semantic_failure}")
                 probes.append(enriched_probe)
+            operator_surface = (
+                _frontend_running_stage_surface_checks(
+                    ctx=ctx,
+                    stage=stage,
+                    observed_stage_status=observed_stage_status or "running",
+                    probes=probes,
+                )
+                if phase == "running-stage"
+                else _frontend_operator_surface_checks(
+                    ctx=ctx,
+                    stage=stage,
+                    probes=probes,
+                )
+            )
+            operator_surface_failures = cast(
+                list[object],
+                operator_surface.get("failed_checks", []),
+            )
             classification = (
                 "pass"
                 if all(
                     probe.get("ok") is True and probe.get("semantic_ok") is True
                     for probe in probes
                 )
+                and operator_surface.get("ok") is True
                 else "fail"
             )
             if classification != "pass":
@@ -4742,7 +5400,12 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
                     "One or more UI/API probes failed semantic black-box checks: "
                     + "; ".join(semantic_failures)
                     if semantic_failures
-                    else "One or more UI/API probes returned a non-2xx response."
+                    else (
+                        "One or more operator surface checks failed: "
+                        + ", ".join(str(item) for item in operator_surface_failures)
+                        if operator_surface_failures
+                        else "One or more UI/API probes returned a non-2xx response."
+                    )
                 )
     finally:
         stdout_text, stderr_text, process_return_code = _terminate_process(process)
@@ -4750,7 +5413,7 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
     duration_seconds = time.monotonic() - started
     transcript = HarnessCommandTranscript(
         command=_command_text(command),
-        exit_code=0 if classification == "pass" else 1,
+        exit_code=0 if classification in {"pass", "skipped"} else 1,
         stdout_text=stdout_text,
         stderr_text=stderr_text,
         duration_seconds=duration_seconds,
@@ -4765,6 +5428,9 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
         "created_at_utc": _utc_now(),
         "duration_seconds": duration_seconds,
         "failure_reason": failure_reason,
+        "observed_stage_status": observed_stage_status,
+        "operator_surface": operator_surface,
+        "phase": phase,
         "process_exit_code": process_return_code,
         "probes": probes,
         "stage": stage,
@@ -4772,20 +5438,70 @@ def _run_frontend_checkpoint(ctx: FlowContext, stage: str) -> StepClassification
     evidence_paths = _append_frontend_checkpoint(ctx=ctx, checkpoint=checkpoint)
     _record_step(
         ctx=ctx,
-        action="frontend-checkpoint",
+        action=(
+            "frontend-running-stage-checkpoint"
+            if phase == "running-stage"
+            else "frontend-checkpoint"
+        ),
         classification=classification,
         decision=(
-            "Continue after UI/API checkpoint passed."
+            "Continue after UI/API and operator-surface checkpoint passed."
             if classification == "pass"
-            else "Stop if the stage otherwise passed because UI/API checkpoint failed."
+            else (
+                "Continue because the running-stage state ended before checkpoint "
+                "probes could run."
+            )
+            if classification == "skipped" and phase == "running-stage"
+            else (
+                "Stop if the stage otherwise passed because UI/API or "
+                "operator-surface checkpoint failed."
+            )
         ),
-        plan="Start `aidd ui` on loopback and inspect public operator UI/API endpoints.",
+        plan=(
+            (
+                "Start `aidd ui` on loopback while the stage is running and inspect "
+                "public operator UI/API endpoints for wait-state, stage, and log "
+                "affordance evidence."
+            )
+            if phase == "running-stage"
+            else (
+                "Start `aidd ui` on loopback and inspect public operator UI/API "
+                "endpoints plus run/stage/next-action surface evidence."
+            )
+        ),
         stage=stage,
         command_results=(BlackBoxCommandResult(command=command, transcript=transcript),),
         evidence_paths=evidence_paths,
         details={"failure_reason": failure_reason} if failure_reason else None,
     )
     return classification
+
+
+def _observed_running_stage_status(ctx: FlowContext, stage: str) -> str | None:
+    working_copy = _require_working_copy(ctx)
+    metadata = load_stage_metadata(
+        workspace_root=working_copy / ".aidd",
+        work_item=ctx.work_item,
+        run_id=ctx.run_id,
+        stage=stage,
+    )
+    if metadata is None or metadata.status not in RUNNING_STAGE_METADATA_STATUSES:
+        return None
+    return metadata.status
+
+
+def _combined_frontend_checkpoint_classification(
+    *classifications: StepClassification,
+) -> StepClassification:
+    if any(classification == "fail" for classification in classifications):
+        return "fail"
+    if any(classification == "pass" for classification in classifications):
+        return "pass"
+    if any(classification == "blocked" for classification in classifications):
+        return "blocked"
+    if any(classification == "infra-fail" for classification in classifications):
+        return "infra-fail"
+    return "skipped"
 
 
 def _remediation_action_path(ctx: FlowContext, action_id: str) -> Path:
@@ -5009,6 +5725,23 @@ def _stage_run_observed_paths(ctx: FlowContext, stage: str) -> tuple[Path, ...]:
         attempt_root / "runtime.jsonl",
         attempt_root / "events.jsonl",
         *expected_docs,
+    )
+
+
+def _stage_first_attempt_runtime_log_path(ctx: FlowContext, stage: str) -> Path:
+    working_copy = _require_working_copy(ctx)
+    return (
+        working_copy
+        / ".aidd"
+        / "reports"
+        / "runs"
+        / ctx.work_item
+        / ctx.run_id
+        / "stages"
+        / stage
+        / "attempts"
+        / "attempt-0001"
+        / "runtime.log"
     )
 
 
@@ -5287,21 +6020,108 @@ def _stage_result_validator_verdict_from_text(stage_result_text: str) -> str:
     return "unknown"
 
 
+_STAGE_RESULT_IMMEDIATE_DOWNSTREAM_STAGE: dict[str, str] = {
+    "idea": "research",
+    "research": "plan",
+    "plan": "review-spec",
+    "review-spec": "tasklist",
+    "tasklist": "implement",
+    "implement": "review",
+    "review": "qa",
+}
+_STAGE_ORDER: dict[str, int] = {stage: index for index, stage in enumerate(STAGES)}
+
+
+def _stage_result_next_actions_text(stage_result_text: str) -> str:
+    section_index = MarkdownSectionIndex.from_markdown(stage_result_text)
+    next_actions_match = section_index.first_match(("Next actions",))
+    if next_actions_match is None:
+        return ""
+    return section_index.section_content(next_actions_match[0])
+
+
+def _stage_result_mentions_stage(text: str, stage: str) -> bool:
+    escaped_stage = re.escape(stage)
+    return re.search(rf"(?<![a-z0-9-]){escaped_stage}(?![a-z0-9-])", text) is not None
+
+
+def _stage_result_next_action_findings(
+    *,
+    stage: str,
+    stage_result_text: str,
+) -> list[dict[str, object]]:
+    immediate_stage = _STAGE_RESULT_IMMEDIATE_DOWNSTREAM_STAGE.get(stage)
+    if immediate_stage is None:
+        return []
+    stage_state = _stage_state_from_text(stage_result_text)
+    if stage_state != "passed":
+        return []
+    next_actions_text = _stage_result_next_actions_text(stage_result_text).lower()
+    if not next_actions_text:
+        return []
+    immediate_stage_mentioned = _stage_result_mentions_stage(
+        next_actions_text,
+        immediate_stage,
+    )
+    immediate_stage_index = _STAGE_ORDER[immediate_stage]
+    later_stage_mentions = [
+        later_stage
+        for later_stage in STAGES[immediate_stage_index + 1 :]
+        if _stage_result_mentions_stage(next_actions_text, later_stage)
+    ]
+    if immediate_stage_mentioned:
+        return []
+    if not later_stage_mentions:
+        return [
+            {
+                "kind": "stage-result-next-action-missing-immediate-stage",
+                "severity": "warning",
+                "non_gating": True,
+                "stage": stage,
+                "expected_next_stage": immediate_stage,
+                "message": (
+                    "stage-result.md next actions do not name the immediate "
+                    "canonical next stage."
+                ),
+            }
+        ]
+    return [
+        {
+            "kind": "stage-result-next-action-skips-canonical-stage",
+            "severity": "warning",
+            "non_gating": True,
+            "stage": stage,
+            "expected_next_stage": immediate_stage,
+            "mentioned_later_stages": later_stage_mentions,
+            "message": (
+                "stage-result.md next actions mention a later downstream stage "
+                "without naming the immediate canonical next stage."
+            ),
+        }
+    ]
+
+
 def _stage_audit_consistency_findings(
     *,
+    stage: str,
     stage_result_text: str,
     validator_verdict: str,
 ) -> list[dict[str, object]]:
     stage_result_validator_verdict = _stage_result_validator_verdict_from_text(
         stage_result_text
     )
+    findings = _stage_result_next_action_findings(
+        stage=stage,
+        stage_result_text=stage_result_text,
+    )
     if (
         stage_result_validator_verdict not in {"pass", "fail"}
         or validator_verdict not in {"pass", "fail"}
         or stage_result_validator_verdict == validator_verdict
     ):
-        return []
+        return findings
     return [
+        *findings,
         {
             "kind": "stage-result-validator-verdict-mismatch",
             "severity": "warning",
@@ -5312,7 +6132,7 @@ def _stage_audit_consistency_findings(
                 "stage-result.md declares a validator verdict that differs from "
                 "the canonical stage-audit validator verdict."
             ),
-        }
+        },
     ]
 
 
@@ -5419,6 +6239,7 @@ def _write_stage_audit(
     stage_metadata_status = _stage_metadata_status(ctx, stage)
     validator_verdict = _validator_verdict_from_text(validator_text)
     consistency_findings = _stage_audit_consistency_findings(
+        stage=stage,
         stage_result_text=stage_result_text,
         validator_verdict=validator_verdict,
     )
@@ -5575,13 +6396,30 @@ def _write_stage_audit(
     if consistency_findings:
         md_lines.extend(("", "## Consistency Findings", ""))
         for finding in consistency_findings:
+            finding_details: list[str] = [f"non-gating={finding['non_gating']}"]
+            if finding["kind"] == "stage-result-validator-verdict-mismatch":
+                finding_details = [
+                    f"stage-result={finding['stage_result_validator_verdict']}",
+                    f"audit={finding['audit_validator_verdict']}",
+                    *finding_details,
+                ]
+            if finding["kind"] == "stage-result-next-action-skips-canonical-stage":
+                finding_details = [
+                    f"expected-next-stage={finding['expected_next_stage']}",
+                    "mentioned-later-stages="
+                    + ", ".join(cast(list[str], finding["mentioned_later_stages"])),
+                    *finding_details,
+                ]
+            if finding["kind"] == "stage-result-next-action-missing-immediate-stage":
+                finding_details = [
+                    f"expected-next-stage={finding['expected_next_stage']}",
+                    *finding_details,
+                ]
             md_lines.append(
                 "- "
                 f"`{finding['severity']}` "
                 f"`{finding['kind']}`: {finding['message']} "
-                f"(stage-result={finding['stage_result_validator_verdict']}, "
-                f"audit={finding['audit_validator_verdict']}, "
-                f"non-gating={finding['non_gating']})"
+                f"({'; '.join(finding_details)})"
             )
     if implementation_details is not None:
         tracked_detail_files = cast(
@@ -6036,6 +6874,27 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             }
         },
     )
+    running_frontend_classification: StepClassification = "skipped"
+    running_frontend_checkpoint_observed = False
+
+    def observe_running_frontend_checkpoint() -> None:
+        nonlocal running_frontend_checkpoint_observed, running_frontend_classification
+        if running_frontend_checkpoint_observed or not _frontend_checkpoints_enabled(ctx):
+            return
+        try:
+            observed_status = _observed_running_stage_status(ctx, stage)
+        except (OSError, json.JSONDecodeError, ValueError):
+            return
+        if observed_status is None:
+            return
+        running_frontend_checkpoint_observed = True
+        running_frontend_classification = _run_frontend_checkpoint(
+            ctx,
+            stage,
+            phase="running-stage",
+            observed_stage_status=observed_status,
+        )
+
     stage_result = _run_black_box_command(
         command=stage_command,
         cwd=working_copy,
@@ -6043,6 +6902,10 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         timeout_seconds=stage_timeout_seconds,
         no_progress_timeout_seconds=no_progress_timeout_seconds,
         progress_probe=_stage_progress_probe(ctx, stage),
+        loop_observer=observe_running_frontend_checkpoint,
+        heartbeat_label=f"run-stage `{stage}`",
+        heartbeat_interval_seconds=RUN_STAGE_HEARTBEAT_INTERVAL_SECONDS,
+        heartbeat_runtime_log_path=_stage_first_attempt_runtime_log_path(ctx, stage),
     )
     classification = _classify_stage_run(stage_result)
     timeout_evidence_paths, timeout_reconciliation = _reconcile_timed_out_stage_run(
@@ -6139,10 +7002,18 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
     )
     if inspection_reports_blocked and classification != "infra-fail":
         classification = "blocked"
-    frontend_classification = (
+    post_stage_frontend_classification: StepClassification = (
         "skipped"
-        if stage_result.transcript.timed_out or stage_result.no_progress
+        if stage_result.transcript.timed_out
         else _run_frontend_checkpoint(ctx, stage)
+    )
+    frontend_classification = (
+        post_stage_frontend_classification
+        if stage_result.transcript.timed_out
+        else _combined_frontend_checkpoint_classification(
+            running_frontend_classification,
+            post_stage_frontend_classification,
+        )
     )
     _, _, audit_classification = _write_stage_audit(
         ctx=ctx,
@@ -6984,6 +7855,9 @@ def _write_harness_metadata(
             "frontend_checkpoint_evidence": (
                 ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME
             ).as_posix(),
+            "manual_frontend_evidence": (
+                ctx.bundle_root / MANUAL_FRONTEND_EVIDENCE_DIRNAME
+            ).as_posix(),
             "inspection": [
                 "aidd stage summary",
                 "aidd stage questions",
@@ -7111,6 +7985,31 @@ def _live_interruption_handlers() -> Any:
         raise LiveE2EInterrupted(
             f"Black-box live E2E interrupted by signal {signum}.",
             signum=signum,
+        )
+
+    for signum in (int(signal.SIGINT), int(signal.SIGTERM)):
+        previous_handlers[signum] = signal.getsignal(signum)
+        signal.signal(signum, _handler)
+    try:
+        yield
+    finally:
+        for signum, previous_handler in previous_handlers.items():
+            signal.signal(signum, previous_handler)
+
+
+@contextlib.contextmanager
+def _defer_interruption_signals_during_evidence() -> Iterator[None]:
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    previous_handlers: dict[int, Any] = {}
+
+    def _handler(signum: int, _frame: object) -> None:
+        print(
+            "Additional live E2E interrupt received while preserving resumable "
+            f"evidence; deferring signal {signum} until recording finishes.",
+            file=sys.stderr,
         )
 
     for signum in (int(signal.SIGINT), int(signal.SIGTERM)):
@@ -7477,6 +8376,7 @@ def run_black_box_live_e2e(
     report_root: Path = Path(".aidd/reports/evals"),
     run_id: str | None = None,
     enable_next_flow_follow_up_proof: bool = False,
+    manual_frontend_evidence: Path | None = None,
 ) -> BlackBoxLiveE2EResult:
     resolved_work_root = (work_root or _default_work_root()).resolve(strict=False)
     resolved_report_root = report_root.resolve(strict=False)
@@ -7487,12 +8387,14 @@ def run_black_box_live_e2e(
         report_root=resolved_report_root,
         run_id=run_id,
         enable_next_flow_follow_up_proof=enable_next_flow_follow_up_proof,
+        manual_frontend_evidence=manual_frontend_evidence,
     )
     try:
         with _live_interruption_handlers():
             return _run_black_box_live_e2e_with_context(ctx)
     except LiveE2EInterrupted as exc:
-        _record_interruption(ctx=ctx, interruption=exc)
+        with _defer_interruption_signals_during_evidence():
+            _record_interruption(ctx=ctx, interruption=exc)
         raise
 
 
@@ -7698,6 +8600,14 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
             "and record next-flow-lineage.json without launching a child live flow."
         ),
     )
+    parser.add_argument(
+        "--manual-frontend-evidence",
+        default=None,
+        help=(
+            "Optional file or directory of operator-captured browser screenshots/notes "
+            "to copy into the result bundle as non-gating manual UI/UX evidence."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -7711,6 +8621,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             report_root=Path(args.report_root),
             run_id=None if args.run_id is None else str(args.run_id),
             enable_next_flow_follow_up_proof=bool(args.enable_next_flow_follow_up_proof),
+            manual_frontend_evidence=(
+                None
+                if args.manual_frontend_evidence is None
+                else Path(args.manual_frontend_evidence)
+            ),
         )
     except ValueError as exc:
         print(f"black-box live e2e: {exc}", file=sys.stderr)

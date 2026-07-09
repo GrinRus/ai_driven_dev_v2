@@ -171,6 +171,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    question instead of inventing assumptions.
 9. Update `validator-report.md` and `stage-result.md` so readiness, blockers, and next actions remain
    consistent with implementation evidence.
+   When implementation and validation evidence support success, `stage-result.md` `Next actions`
+   must point to `review` as the immediate downstream stage. Do not tell the operator to proceed
+   directly to `qa`; QA can only run after the canonical `review` stage has completed successfully.
 
 ## Common output skeleton discipline
 
@@ -178,6 +181,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
 - Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
+- Keep `stage-result.md` next-action copy flow-aware: `implement` hands off to `review`, never
+  directly to `qa`.
 
 ## Completion checklist
 

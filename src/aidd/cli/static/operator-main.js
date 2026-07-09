@@ -116,11 +116,19 @@ document.addEventListener("click", async (event) => {
     const stageButton = event.target.closest("[data-stage]");
     if (stageButton) {
       state.activeStage = stageButton.dataset.stage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       if (state.activeTab === "work") state.workDetail = "overview";
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
       await renderAll();
+      return;
+    }
+    const stageRecovery = event.target.closest("[data-stage-recovery]");
+    if (stageRecovery) {
+      activateTab(stageRecovery.dataset.stageRecovery || "recovery");
+      renderProjectHomeRail();
+      await renderCockpit();
       return;
     }
     const projectHomeResume = event.target.closest("[data-project-home-resume]")?.dataset.projectHomeResume;
@@ -209,6 +217,7 @@ document.addEventListener("click", async (event) => {
     }
     if (event.target.closest("[data-next-flow-back-to-sources]")) {
       state.nextFlowWizard.step = "sources";
+      requestNextFlowWizardReveal();
       await renderCockpit();
       return;
     }
@@ -224,6 +233,8 @@ document.addEventListener("click", async (event) => {
       state.nextFlowWizard.step = state.nextFlowWizard.action === "clone-flow" ? "sources" : "definition";
       if (state.nextFlowWizard.action === "clone-flow") {
         state.nextFlowWizard.active = false;
+      } else {
+        requestNextFlowWizardReveal();
       }
       await renderCockpit();
       return;
@@ -361,6 +372,7 @@ document.addEventListener("click", async (event) => {
     const blockerReference = event.target.closest("[data-blocker-stage]");
     if (blockerReference) {
       state.activeStage = blockerReference.dataset.blockerStage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       const kind = blockerReference.dataset.blockerKind;
       setOperatorMode(kind === "questions" ? "questions" : kind === "validation" ? "validation" : "work");
@@ -371,6 +383,7 @@ document.addEventListener("click", async (event) => {
     const recoveryAction = event.target.closest("[data-recovery-action]");
     if (recoveryAction) {
       state.activeStage = recoveryAction.dataset.recoveryStage || state.activeStage;
+      state.activeStageExplicit = true;
       const action = recoveryAction.dataset.recoveryAction;
       state.activeArtifactKey = "";
       if (action === "answer-questions") setOperatorMode("questions");
@@ -383,6 +396,7 @@ document.addEventListener("click", async (event) => {
         await startStage(state.activeStage);
         return;
       }
+      requestCockpitReveal();
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
       await renderAll();
@@ -401,6 +415,10 @@ document.addEventListener("click", async (event) => {
       return;
     }
     if (event.target.id === "refreshButton") {
+      await refresh();
+      return;
+    }
+    if (event.target.closest("[data-refresh-dashboard]")) {
       await refresh();
       return;
     }

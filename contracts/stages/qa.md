@@ -70,6 +70,13 @@ Optional context documents may improve QA depth, but they must not replace imple
   - a dedicated `Release recommendation` section aligned to verdict and risk profile,
   - evidence references linking verdict claims to verification artifacts.
 - release recommendation must be actionable (for example: `proceed`, `proceed-with-conditions`, `hold`).
+- when the QA verdict is `ready` or `ready-with-risks` and the release recommendation is
+  `proceed` or `proceed-with-conditions`, any cited test/type/lint/docs/build verification must
+  be paired with ignored workspace residue evidence from
+  `git status --ignored --short --untracked-files=all` or an equivalent command collected after
+  all QA commands. The `Evidence` entry must be cited from `Verification summary` or `Readiness`
+  and must classify ignored residue as absent, cleaned, selected deliverable output, or
+  setup-baseline residue that is not part of the deliverable.
 - `Known issues` may use an explicit empty marker such as `- Known issues: none.`;
   validators must not treat that marker as a residual risk entry. Any separate residual
   risk item must include explicit severity plus mitigation or ownership.
@@ -143,6 +150,8 @@ Validators for `qa` should check:
   - `ready` with residual risk entries is rejected as internally inconsistent,
 - missing evidence references:
   - material QA claims must reference concrete verification artifacts or execution outputs,
+  - ready/proceed decisions that cite test/type/lint/docs/build checks must also cite
+    post-QA ignored residue evidence and classify any setup-baseline residue,
   - evidence-free pass/ready claims are rejected,
 - optional-check overreach:
   - isolated optional broad-suite failures outside selected scope do not force

@@ -31,6 +31,9 @@ function renderRuntimeSelector() {
 function scrollActiveStageIntoView() {
   const rail = document.getElementById("stageRail");
   if (!rail || !window.matchMedia("(max-width: 760px)").matches) return;
+  if (document.body.classList.contains("terminal-handoff-mode")) return;
+  if (document.body.classList.contains("terminal-repair-mode")) return;
+  if (document.body.classList.contains("post-stage-next-action-mode")) return;
   const active = rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`);
   active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});
 }
@@ -135,14 +138,20 @@ function renderStageRail() {
     const isActive = item.stage === state.activeStage;
     const active = isActive ? " active" : "";
     const status = statusClass(item.status);
+    const attemptCount = Number(item.attempt_count || 0);
+    const retry = stageRetrySummary(item);
+    const attemptTitle = attemptCount > 1
+      ? retry.title
+      : `${attemptCount || 0} attempt${attemptCount === 1 ? "" : "s"}`;
     const markers = [
       item.stale ? `<span class="small-badge warn" title="${escapeHtml(item.stale_reason || "downstream evidence is stale")}">stale</span>` : "",
       item.unresolved_blocking_count ? `<span class="small-badge warn">Q${item.unresolved_blocking_count}</span>` : "",
       item.validator_fail_count ? `<span class="small-badge bad">V${item.validator_fail_count}</span>` : "",
-      item.attempt_count ? `<span class="small-badge">${escapeHtml(item.attempt_count)}x</span>` : ""
+      attemptCount ? `<span class="small-badge ${retry ? "retried" : ""}" title="${escapeHtml(attemptTitle)}">${retry ? `retry ${escapeHtml(attemptCount)}x` : `${escapeHtml(attemptCount)}x`}</span>` : ""
     ].filter(Boolean).join("");
+    const retryAria = retry ? `, ${retry.retryCount === 1 ? "1 retry" : `${retry.retryCount} retries`} recorded` : "";
     return `
-      <button class="stage-card${active}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${isActive ? "step" : "false"}">
+      <button class="stage-card${active}${retry ? " retried" : ""}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${isActive ? "step" : "false"}" aria-label="${escapeHtml(`${item.title}: ${item.status}${retryAria}`)}">
         <span class="stage-index">${index + 1}</span>
         <span class="stage-copy">
           <span class="stage-name">${escapeHtml(item.title)}</span>
@@ -158,12 +167,29 @@ function renderStageRail() {
   requestAnimationFrame(scrollActiveStageIntoView);
 }
 
+function workItemHandoffStatus(item) {
+  const handoff = state.dashboard?.terminal_handoff;
+  if (!handoff || item?.work_item !== state.dashboard?.work_item) return "";
+  return handoff.status || "";
+}
+
 function workItemStatusClass(item) {
+  const handoffStatus = workItemHandoffStatus(item);
+  if (handoffStatus === "failed") return "bad";
+  if (handoffStatus === "completed-with-warning" || handoffStatus === "blocked") return "warn";
   const stateName = String(item?.terminal_state || "ready");
   if (stateName === "completed") return "good";
   if (stateName === "blocked") return "warn";
   if (stateName === "running") return "running";
   return "";
+}
+
+function workItemTerminalLabel(item) {
+  const handoffStatus = workItemHandoffStatus(item);
+  if (handoffStatus === "failed") return "qa not-ready";
+  if (handoffStatus === "completed-with-warning") return "qa risks";
+  if (handoffStatus === "blocked") return "blocked";
+  return item?.terminal_state || "ready";
 }
 
 function projectHomeWorkItems() {
@@ -173,6 +199,17 @@ function projectHomeWorkItems() {
 function currentWorkItemSummary() {
   const workItem = state.dashboard?.work_item || state.projectHome?.selected_work_item || "";
   return projectHomeWorkItems().find((item) => item.work_item === workItem) || null;
+}
+
+function workItemProgressText(item) {
+  if (item?.terminal_state === "completed") {
+    const handoffStatus = workItemHandoffStatus(item);
+    if (handoffStatus === "failed") return `QA not ready / ${item.stage_progress_label}`;
+    if (handoffStatus === "completed-with-warning") return `QA risks / ${item.stage_progress_label}`;
+    if (handoffStatus === "blocked") return `handoff blocked / ${item.stage_progress_label}`;
+    return `flow complete / ${item.stage_progress_label}`;
+  }
+  return `${item?.active_stage || "not started"} / ${item?.stage_progress_label || `0/${STAGES.length}`}`;
 }
 
 function renderProjectSetRootChips(item) {
@@ -209,9 +246,9 @@ function renderProjectHomeRail() {
         <button class="work-item-card ${item.work_item === current?.work_item ? "active" : ""}" data-project-home-resume="${escapeHtml(item.work_item)}" type="button">
           <span>
             <strong>${escapeHtml(item.work_item)}</strong>
-            <small>${escapeHtml(item.active_stage)} / ${escapeHtml(item.stage_progress_label)}</small>
+            <small>${escapeHtml(workItemProgressText(item))}</small>
           </span>
-          <span class="small-badge ${workItemStatusClass(item)}">${escapeHtml(item.terminal_state)}</span>
+          <span class="small-badge ${workItemStatusClass(item)}">${escapeHtml(workItemTerminalLabel(item))}</span>
         </button>
       `).join("") : `<div class="empty-state compact">No work items in this project.</div>`}
     </div>
@@ -220,12 +257,14 @@ function renderProjectHomeRail() {
 
 function renderStageHeader() {
   const item = activeStageItem();
+  const retry = stageRetrySummary(item);
   document.getElementById("stageTitle").textContent = item?.title || stageTitle(state.activeStage);
   document.getElementById("stageSubtitle").textContent = item?.subtitle || stageSubtitle(state.activeStage);
   document.getElementById("stageBadges").innerHTML = [
     `<span class="status-badge ${escapeHtml(statusClass(item?.status))}">${escapeHtml(item?.status || "pending")}</span>`,
     item?.stale ? `<span class="status-badge warn" title="${escapeHtml(item.stale_reason || "downstream evidence is stale")}">stale</span>` : "",
     `<span class="status-badge">Attempts ${escapeHtml(item?.attempt_count || 0)}</span>`,
+    retry ? `<button class="badge-button retried" data-stage-recovery="validation" type="button" title="${escapeHtml(retry.title)}">Retry history</button>` : "",
     `<span class="status-badge">Validation ${escapeHtml(item?.validator_pass_count || 0)}/${escapeHtml(item?.validator_fail_count || 0)}</span>`
   ].filter(Boolean).join("");
 }

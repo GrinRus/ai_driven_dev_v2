@@ -156,10 +156,11 @@ A manual installed UI smoke should use a disposable local fixture project:
 3. Run `aidd doctor` with the fixture config.
 4. Start `aidd ui --config <fixture-config> --host 127.0.0.1 --port <port>` without
    `--work-item`.
-5. In setup mode, validate the absolute fixture project root, select the deterministic
-   runtime explicitly, then create a work item and request through the onboarding form.
-   Verify the create action becomes enabled even when the runtime was selected before
-   the work item id and request text were entered.
+5. In setup mode, validate the absolute fixture project root, confirm the runner picker
+   visually distinguishes the deterministic baseline from native provider runners,
+   select the deterministic runtime explicitly, then create a work item and request
+   through the onboarding form. Verify the create action becomes enabled even when
+   the runtime was selected before the work item id and request text were entered.
 6. Confirm `.aidd/workitems/<id>/context/user-request.md` is created inside the fixture
    project without running `aidd init`.
 7. From the command center, use **Run selected stage** for `idea`, wait until
@@ -309,8 +310,9 @@ assets.
 
 ### Wave 29 Operator Control States
 
-- Onboarding shows project validation, work-item creation, runner cards, recent projects,
-  and project-set validation without overlapping controls.
+- Onboarding shows project validation, work-item creation, runner cards with a visible
+  deterministic-baseline cue, recent projects, and project-set validation without
+  overlapping controls.
 - Active Run shows runner, stage, run id, attempt, elapsed time, last output, status,
   cancel, and link to logs during long jobs.
 - Timeline shows concrete milestones without fake progress and silence warnings clear
@@ -334,6 +336,9 @@ assets.
   mode after refresh.
 - The **Start Next Flow** action band shows Create New Work Item, Start Follow-up Flow,
   Clone This Flow, Run Eval / Scenario Batch, and Archive Run.
+- The action band leads with a dedicated recommended next-decision summary, including
+  the reason for choosing Create New Work Item or Start Follow-up Flow, before showing
+  the full action grid.
 - Recommended next action badges match final QA status: completed runs without blockers
   recommend new work, while failed or blocked handoffs recommend follow-up work.
 - Choosing Archive Run first opens a confirmation state with a reason preview; confirming

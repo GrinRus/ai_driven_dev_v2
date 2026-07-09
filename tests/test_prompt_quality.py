@@ -289,6 +289,130 @@ def test_implement_review_and_qa_require_shared_surface_blast_radius_evidence() 
     assert "must force `QA verdict: not-ready`" in qa_contract
 
 
+def test_implement_stage_result_next_action_stays_flow_aware() -> None:
+    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
+        encoding="utf-8"
+    )
+    implement_contract = Path("contracts/stages/implement.md").read_text(
+        encoding="utf-8"
+    )
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    implement_repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (
+        stage_result_contract,
+        implement_contract,
+        implement_prompt,
+        implement_repair_prompt,
+    ):
+        assert "directly to `qa`" in text
+        assert "`review`" in text
+
+    assert "implement -> review -> qa" in stage_result_contract
+    assert "implement -> review -> qa" in implement_contract
+    assert "`implement` hands off to `review`, never\n  directly to `qa`" in (
+        implement_prompt
+    )
+    assert "downstream-order drift" in implement_repair_prompt
+
+
+def test_middle_stage_result_next_actions_stay_flow_aware() -> None:
+    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
+        encoding="utf-8"
+    )
+    research_contract = Path("contracts/stages/research.md").read_text(encoding="utf-8")
+    research_prompt = Path("prompt-packs/stages/research/run.md").read_text(
+        encoding="utf-8"
+    )
+    research_repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(
+        encoding="utf-8"
+    )
+    plan_contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
+    plan_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+    plan_repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
+        encoding="utf-8"
+    )
+    review_spec_contract = Path("contracts/stages/review-spec.md").read_text(
+        encoding="utf-8"
+    )
+    review_spec_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
+        encoding="utf-8"
+    )
+    review_spec_repair_prompt = Path(
+        "prompt-packs/stages/review-spec/repair.md"
+    ).read_text(encoding="utf-8")
+    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(
+        encoding="utf-8"
+    )
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+    tasklist_repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
+        encoding="utf-8"
+    )
+    live_scenario = Path(
+        "harness/scenarios/live/hono-non-error-throw-handling.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert "`research` -> `plan`" in stage_result_contract
+    assert "`plan` -> `review-spec`" in stage_result_contract
+    assert "`review-spec` -> `tasklist`" in stage_result_contract
+    assert "`tasklist` -> `implement`" in stage_result_contract
+
+    for text in (research_contract, research_prompt, research_repair_prompt):
+        assert "`plan`" in text
+        assert "immediate" in text
+        assert "planning" in text
+
+    for text in (plan_contract, plan_prompt, plan_repair_prompt, live_scenario):
+        assert "`review-spec`" in text
+        assert "immediate" in text
+        assert "implementation" in text
+
+    for text in (
+        review_spec_contract,
+        review_spec_prompt,
+        review_spec_repair_prompt,
+        live_scenario,
+    ):
+        assert "`tasklist`" in text
+        assert "immediate" in text
+        assert "implementation" in text
+
+    for text in (tasklist_contract, tasklist_prompt, tasklist_repair_prompt):
+        assert "`implement`" in text
+        assert "immediate" in text
+        assert "implementation" in text
+
+
+def test_stage_result_prompts_forbid_stale_placeholder_append() -> None:
+    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
+        encoding="utf-8"
+    )
+    stage_preparation = Path("src/aidd/core/stage_preparation.py").read_text(
+        encoding="utf-8"
+    )
+    research_prompt = Path("prompt-packs/stages/research/run.md").read_text(
+        encoding="utf-8"
+    )
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (
+        stage_result_contract,
+        stage_preparation,
+        research_prompt,
+        tasklist_prompt,
+    ):
+        assert "Stage not run yet" in text
+        assert "placeholder" in text.lower()
+
+
 def test_js_ts_helper_internal_claims_require_export_map_evidence() -> None:
     tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
         encoding="utf-8"
@@ -376,6 +500,35 @@ def test_plan_and_tasklist_preserve_authored_verification_commands() -> None:
             or "Do not turn them into required pass criteria" in normalized
             or "not promoted to required pass criteria" in normalized
         )
+
+
+def test_tasklist_prompts_require_verification_notes_for_every_task_id() -> None:
+    contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
+    document_contract = Path("contracts/documents/tasklist.md").read_text(
+        encoding="utf-8"
+    )
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
+        encoding="utf-8"
+    )
+    scenario = Path(
+        "harness/scenarios/live/hono-non-error-throw-handling.yaml"
+    ).read_text(encoding="utf-8")
+
+    for text in (contract, document_contract, run_prompt, repair_prompt, scenario):
+        normalized = " ".join(text.split())
+        assert "`Verification notes`" in text
+        assert "every task id" in normalized
+        assert "command-only" in text
+
+    assert "Do not rely on checks embedded only inside `Ordered tasks`" in " ".join(
+        run_prompt.split()
+    )
+    assert "dedicated per-task `Verification notes` entries" in " ".join(
+        document_contract.split()
+    )
 
 
 def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
@@ -547,6 +700,33 @@ def test_review_and_qa_prompts_require_post_command_residue_truthfulness() -> No
         assert "`QA verdict: ready`" in text or "`not-ready`" in text
         assert "`coverage/`" in text
         assert "residue" in text
+
+
+def test_qa_prompts_require_ready_proceed_ignored_residue_evidence() -> None:
+    run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+    document_contract = Path("contracts/documents/qa-report.md").read_text(
+        encoding="utf-8"
+    )
+    scenario = Path(
+        "harness/scenarios/live/hono-non-error-throw-handling.yaml"
+    ).read_text(encoding="utf-8")
+
+    for text in (run_prompt, repair_prompt, contract, document_contract, scenario):
+        normalized = " ".join(text.split())
+        assert "ready/proceed" in normalized
+        assert "test/type" in normalized
+        assert "`git status --ignored --short --untracked-files=all`" in text
+        assert "ignored residue" in normalized
+
+    for text in (run_prompt, contract):
+        normalized = " ".join(text.split())
+        assert "after all QA commands" in normalized or "post-QA" in normalized
+        assert "`Verification summary`" in text or "Verification summary" in text
+        assert "`Readiness`" in text or "Readiness" in text
 
 
 def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> None:

@@ -51,6 +51,10 @@ Optional context documents may improve task decomposition quality, but they must
   - one dominant output artifact per task so each item remains reviewable as a standalone unit,
   - explicit dependency notes per task (upstream task ids or `none`),
   - verification notes per task naming the primary check, test, or scenario proving completion.
+- the dedicated `Verification notes` section must include at least one bullet or list entry for
+  every task id declared in `Ordered tasks`, including command-only or verification-only tasks.
+  A primary check embedded only inside an `Ordered tasks` entry does not satisfy this dedicated
+  section requirement.
 - task ordering should be executable in dependency order rather than by prose grouping alone.
 - when `context/verification-output.md` names authored verification commands, task verification
   notes must preserve those commands exactly when citing them, including flags, path lists,
@@ -66,6 +70,9 @@ Optional context documents may improve task decomposition quality, but they must
   evidence is not available, choose a non-exported location or record the public API risk for
   downstream implementation and review.
 - `stage-result.md` and `validator-report.md` must stay consistent with the declared tasklist readiness.
+- On success, `stage-result.md` `Next actions` must name `implement` as the immediate canonical
+  downstream stage. Do not write only generic wording such as `implementation` or
+  `implementation stage`.
 
 ## Validation focus
 
@@ -81,6 +88,8 @@ Validators for `tasklist` should check:
   - dependency references are explicit and resolvable to listed task ids or upstream stage artifacts,
 - reviewability:
   - each task has a bounded completion surface and at least one concrete verification note,
+  - the dedicated `Verification notes` section covers every declared task id, including
+    command-only or verification-only tasks,
   - task scope remains small enough for single-pass implementation and review,
 - public-surface planning:
   - JavaScript/TypeScript helper/module tasks include export-map evidence before claiming
@@ -134,4 +143,4 @@ A `tasklist` run is considered ready to progress when:
 - the required output documents exist,
 - validators pass,
 - any required user questions have answers,
-- `stage-result.md` names the next action clearly.
+- `stage-result.md` names `implement` as the immediate next stage when the run succeeds.

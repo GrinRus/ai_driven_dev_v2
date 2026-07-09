@@ -172,7 +172,10 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".topbar #runChip" in layout
     assert ".topbar #workItemChip" in layout
     assert "text-overflow: ellipsis;" in layout
+    assert "body.evidence-log-mode .global-next-action-strip" in layout
     assert ".truncation-notice" in components
+    assert ".definition-list-warning" in components
+    assert ".truncation-notice ul" in components
     assert ".saved-answer" in components
     assert ".activity-detail" in components
     assert ".artifact-row" in components
@@ -182,9 +185,17 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".project-work-item-card" in components
     assert ".project-set-row" in components
     assert ".global-next-action-strip" in components
+    assert ".global-next-action-strip.live-progress-active" in components
+    assert ".live-progress-strip" in components
+    assert ".live-progress-actions" in components
+    assert ".run-progress-notice" in components
+    assert ".run-progress-meta" in components
     assert ".recovery-card" in components
     assert ".recovery-workbench" in components
     assert ".recovery-hero" in components
+    assert ".repair-resolved-summary" in components
+    assert ".output-mirror-notice-list" in components
+    assert ".validation-finding-summary.notice" in components
     assert ".evidence-drilldown" in components
     assert ".interview-loop-screen" in components
     assert ".validation-repair-center" in components
@@ -213,10 +224,20 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".inherited-context-toggle" in components
     assert ".launch-confirmation-grid" in components
     assert ".preflight-check" in components
+    assert ".preflight-blocker-summary" in components
+    assert ".launch-readiness-summary" in components
+    assert ".clone-launch-summary" in components
+    assert ".clone-draft-error-summary" in components
+    assert ".launch-failure-summary" in components
+    assert ".wizard-action-guard" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
     assert ".workbench-main" in responsive
     assert ".global-next-action-strip" in responsive
+    assert ".live-progress-strip" in responsive
+    assert ".live-progress-actions" in responsive
+    assert ".live-progress-meta" in responsive
+    assert ".run-progress-meta" in responsive
     assert ".project-home-grid" in responsive
     assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
@@ -228,6 +249,12 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".interview-loop-screen" in responsive
     assert ".validation-repair-center" in responsive
     assert "body.recovery-mode .cockpit" in responsive
+    assert "body.evidence-log-mode .operator-shell" in responsive
+    assert "body.evidence-log-mode .cockpit" in responsive
+    assert "body.evidence-log-mode .stage-rail" in responsive
+    assert "body.live-job-mode .operator-shell" in responsive
+    assert "body.live-job-mode .cockpit" in responsive
+    assert "body.live-job-mode .stage-rail" in responsive
     assert ".recovery-hero," in responsive
     assert ".workbench-toc-list" in responsive
     assert "scroll-padding-inline: 10px" in responsive
@@ -243,6 +270,49 @@ def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> No
     assert "min-width: 0;" in responsive
     assert ".evidence-table-wrap {" in responsive
     assert "overflow-x: auto;" in responsive
+
+
+def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
+    responsive = _asset_text("/operator-responsive.css")
+
+    assert ".brand-meta {" in responsive
+    assert ".brand-meta code {" in responsive
+    assert ".top-status {" in responsive
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in responsive
+    assert ".top-actions {" in responsive
+    assert ".runtime-picker {" in responsive
+    assert ".runtime-picker select {" in responsive
+    assert ".topbar .status-chip," in responsive
+    assert ".topbar #runChip," in responsive
+    assert ".topbar #workItemChip," in responsive
+    assert ".topbar #localStatus {" in responsive
+    assert "white-space: normal;" in responsive
+    assert "text-overflow: clip;" in responsive
+    assert "overflow-wrap: anywhere;" in responsive
+    assert "grid-column: 1 / -1;" in responsive
+    assert ".path-line {" in responsive
+
+
+def test_operator_responsive_css_keeps_mobile_stage_rail_inside_viewport() -> None:
+    responsive = _asset_text("/operator-responsive.css")
+    api_state = _asset_text("/operator-api-state.js")
+    shell = _asset_text("/operator-shell-rendering.js")
+
+    assert ".stage-list {" in responsive
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in responsive
+    assert "overflow-x: visible;" in responsive
+    assert "scroll-snap-type: none;" in responsive
+    assert ".stage-card {" in responsive
+    assert "min-width: 0;" in responsive
+    assert "width: 100%;" in responsive
+    assert ".next-action-controls {" in responsive
+    assert ".global-next-action-strip .next-button {" in responsive
+    assert "function postStageNextActionIsPrimary(" in api_state
+    assert "post-stage-next-action-mode" in api_state
+    assert "body.post-stage-next-action-mode .operator-shell" in responsive
+    assert "body.post-stage-next-action-mode .cockpit" in responsive
+    assert "body.post-stage-next-action-mode .stage-rail" in responsive
+    assert 'document.body.classList.contains("post-stage-next-action-mode")' in shell
 
 
 def test_operator_workbench_css_wraps_path_lines_without_document_overflow() -> None:
@@ -293,9 +363,23 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
 
     assert '"/operator-api-state.js"' in loader
     assert "const state = {" in api_state
+    assert "function stageRetrySummary(item)" in api_state
+    assert "open Recovery for repair and retry history" in api_state
+    assert "function secondsLabel(value)" in api_state
+    assert "function runtimeOutputFreshnessLabel(job)" in api_state
+    assert "function activeJobIsLive(job = state.activeJobStatus)" in api_state
+    assert "function activeJobPayloadIsLive(job)" in api_state
+    assert "async function recoverActiveJobFromDashboard(job)" in api_state
+    assert "function syncLiveJobBodyClass()" in api_state
+    assert "function syncExternalRunningBodyClass()" in api_state
+    assert "function isNonBlockingValidationNotice(finding)" in api_state
+    assert "function actionableValidationFindings(validation)" in api_state
+    assert "function nonBlockingValidationNotices(validation)" in api_state
+    assert "function primaryValidationFindingForValidation(validation)" in api_state
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
     assert "function renderStageRail()" in shell
+    assert "Retry history" in shell
     assert "projectPath.title = projectRoot;" in shell
     assert "workItemChip.title = workItemLabel;" in shell
     assert "runChip.title = runLabel;" in shell
@@ -322,10 +406,16 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function renderCockpit()" in cockpit
     assert "function renderRecoveryActionBand(diagnostics)" in cockpit
     assert "function renderRepairTimeline(validation)" in cockpit
+    assert "function renderResolvedRepairSummary(validation)" in cockpit
+    assert "function renderRuntimePartialEvidence(firstFailure)" in cockpit
     assert "return renderFlowCompleteState();" in cockpit
     assert 'state.activeTab === "history"' in cockpit
     assert "function renderActivityTable()" in cockpit
+    assert "revealCockpitOnMobile();" in cockpit
+    assert "revealNextFlowWizardOnMobile();" in cockpit
     assert 'document.addEventListener("click"' in main
+    assert 'event.target.closest("[data-refresh-dashboard]")' in main
+    assert "requestCockpitReveal();" in main
     assert "refresh();" in main
 
 
@@ -346,6 +436,8 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'label: "Clone Previous Flow"',
             'id: "eval-scenario-batch"',
             'label: "Eval / Scenario Batch"',
+            "const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set(",
+            '"STRUCT-OUTPUT-PROMOTED"',
             'activeRunId: ""',
             'selectedEvidenceNodeId: ""',
             'selectedEvidenceEdgeId: ""',
@@ -355,7 +447,12 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "sourceFindings: null",
             "followUpDraft: null",
             "selectedSourceIds: []",
+            "launchReadinessChecking: false",
+            'launchReadinessError: ""',
             "projectHome: null",
+            "pendingCockpitReveal: false",
+            "pendingNextFlowWizardReveal: false",
+            "activeStageExplicit: false",
             "const OPERATOR_MODES",
             "const LEGACY_TAB_TO_MODE",
             "const RECOVERY_NEXT_ACTIONS",
@@ -368,11 +465,29 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "function normalizeOperatorMode(tab)",
             "function setOperatorMode(tab)",
             "function isRecoveryNextAction(action)",
+            "function dashboardRuntimeRecoveryAction()",
+            'action?.action === "inspect-runtime-log"',
+            "action.enabled !== false",
             "function activeModeIsEvidenceLog()",
+            "function requestCockpitReveal()",
+            "function requestNextFlowWizardReveal()",
+            "function scrollCockpitToTopOnMobile()",
+            "function revealCockpitOnMobile()",
+            "function scrollNextFlowWizardToTopOnMobile()",
+            "function revealNextFlowWizardOnMobile()",
+            "window.matchMedia(\"(max-width: 760px)\").matches",
+            "window.scrollTo({top: Math.max(0, target), behavior: \"auto\"});",
+            "window.requestAnimationFrame(scrollCockpitToTopOnMobile);",
+            "window.setTimeout(scrollCockpitToTopOnMobile, 80);",
             "function applyOperatorModeBodyClass()",
+            "external-running-stage-mode",
+            "evidence-log-mode",
+            "terminal-handoff-mode",
+            "terminal-repair-mode",
             "function initializeStateFromLocation()",
             "new URLSearchParams(window.location.search)",
             "STAGES.includes(requestedStage)",
+            "state.activeStageExplicit = true;",
             "VALID_TABS.includes(requestedTab)",
             "setOperatorMode(requestedTab);",
             "function syncLocationState()",
@@ -394,8 +509,12 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'title="${escapeHtml(text)}"',
             "${escapeHtml(compactPath(text, maxLength))}",
             "async function fetchDashboard()",
+            "await recoverActiveJobFromDashboard(payload.active_job);",
+            "await pollActiveJob();",
+            "state.activeJobCursor = 0;",
             "async function fetchProjectHome(workItem = \"\")",
             "dashboardUrl()",
+            "if (state.activeStageExplicit) params.set(\"stage\", state.activeStage);",
             "/api/dashboard",
             (
                 "const viewedStage = state.dashboard.active_stage_view?.stage "
@@ -408,6 +527,10 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'state.activeTab = "recovery";',
             'state.recoveryDetail = "questions";',
             'state.recoveryDetail = "validation";',
+            "state.dashboard.first_failure",
+            "dashboardRuntimeRecoveryAction()",
+            'state.recoveryDetail = "logs";',
+            "requestCockpitReveal();",
             "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`",
             'api("/api/runtime-readiness")',
             'if (element.textContent === message) element.textContent = "";',
@@ -415,6 +538,12 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'content.setAttribute("aria-labelledby", `tab-${state.activeTab}`);',
         ),
     )
+    assert (
+        "&& dashboardRuntimeRecoveryAction()\n"
+        "  ) {\n"
+        '    state.activeTab = "recovery";\n'
+        '    state.recoveryDetail = "summary";'
+    ) in api_state
 
 
 def test_operator_onboarding_static_contract_syncs_create_action_state() -> None:
@@ -458,6 +587,40 @@ def test_operator_onboarding_static_contract_syncs_create_action_state() -> None
     assert main.count("syncOnboardingCreateActionState();") == 3
 
 
+def test_operator_onboarding_distinguishes_deterministic_runner_path() -> None:
+    onboarding = _asset_text("/operator-onboarding.js")
+    components = _asset_text("/operator-components.css")
+
+    _assert_contains_all(
+        onboarding,
+        (
+            "function onboardingRunnerProfile(runtime)",
+            "function onboardingRunnerGuidance(runtimes)",
+            'runtimeId === "generic-cli"',
+            "deterministic baseline",
+            "Best first smoke when a wrapper or fixture runtime is configured.",
+            "Native provider runners remain available for real model execution",
+            "every launch still requires an explicit runner selection",
+            '${profile.recommended ? "recommended" : ""}',
+            "runner-card-guidance",
+            "runner-card-meta",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".runner-selection-guidance {",
+            "border-left: 4px solid var(--amber);",
+            ".runner-card.recommended {",
+            "box-shadow: inset 3px 0 0 var(--green);",
+            ".runner-card.recommended.selected {",
+            ".runner-card-meta {",
+            ".runner-card-guidance {",
+            ".runner-card-guidance strong {",
+        ),
+    )
+
+
 def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_contracts() -> None:
     shell = _asset_text("/operator-shell-rendering.js")
 
@@ -472,6 +635,16 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "function runtimeReadinessMessage()",
             "function renderProjectHomeRail()",
             "function currentWorkItemSummary()",
+            "function workItemHandoffStatus(item)",
+            "function workItemTerminalLabel(item)",
+            'if (handoffStatus === "failed") return "bad";',
+            'if (handoffStatus === "failed") return "qa not-ready";',
+            "QA not ready / ${item.stage_progress_label}",
+            "QA risks / ${item.stage_progress_label}",
+            "handoff blocked / ${item.stage_progress_label}",
+            "function workItemProgressText(item)",
+            "flow complete / ${item.stage_progress_label}",
+            "workItemTerminalLabel(item)",
             "function updateContextualTabs()",
             "function tabHasQuestions()",
             "function tabHasValidation()",
@@ -511,6 +684,73 @@ def test_operator_project_rail_uses_distinct_segment_states() -> None:
     assert "workItemsActive" in shell
     assert 'aria-pressed="${projectsActive ? "true" : "false"}"' in shell
     assert 'aria-pressed="${workItemsActive ? "true" : "false"}"' in shell
+
+
+def test_operator_stage_retry_affordance_links_to_recovery_history() -> None:
+    api_state = _asset_text("/operator-api-state.js")
+    shell = _asset_text("/operator-shell-rendering.js")
+    layout = _asset_text("/operator-layout.css")
+    components = _asset_text("/operator-components.css")
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+    main = _asset_text("/operator-main.js")
+
+    _assert_contains_all(
+        api_state,
+        (
+            "function stageRetrySummary(item)",
+            "attemptCount <= 1",
+            "retryCount",
+            "open Recovery for repair and retry history",
+        ),
+    )
+    _assert_contains_all(
+        shell,
+        (
+            "const retry = stageRetrySummary(item);",
+            'class="small-badge ${retry ? "retried" : ""}"',
+            "retry ${escapeHtml(attemptCount)}x",
+            'class="stage-card${active}${retry ? " retried" : ""}"',
+            'data-stage-recovery="validation"',
+            "Retry history",
+        ),
+    )
+    _assert_contains_all(
+        layout,
+        (
+            ".small-badge.retried",
+            ".status-badge.retried",
+            ".badge-button.retried",
+            ".stage-card.retried",
+            ".stage-card.active.retried",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".repair-resolved-summary {",
+            "border-left: 4px solid var(--green);",
+            ".repair-resolved-summary .small-badge {",
+        ),
+    )
+    _assert_contains_all(
+        cockpit,
+        (
+            "function renderResolvedRepairSummary(validation)",
+            "resolved after retry",
+            "resolved across",
+            "Validation is clear after a retry.",
+            "hasRepairAttempts",
+            "hasValidationFindings",
+            "Resolved retry",
+        ),
+    )
+    _assert_contains_all(
+        main,
+        (
+            'closest("[data-stage-recovery]")',
+            'activateTab(stageRecovery.dataset.stageRecovery || "recovery");',
+        ),
+    )
 
 
 def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() -> None:
@@ -564,6 +804,118 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
     )
 
 
+def test_operator_control_center_asset_surfaces_running_stage_progress() -> None:
+    api_state = _asset_text("/operator-api-state.js")
+    control_center = _asset_text("/operator-control-center.js")
+
+    _assert_contains_all(
+        api_state,
+        (
+            "function runtimeOutputFreshnessLabel(job)",
+            "function runtimeLogChunkCount()",
+            "function activeJobLiveLogChunkSummary(job = state.activeJobStatus)",
+            "function activeJobHasNoRuntimeOutput(job = state.activeJobStatus)",
+            "function runtimeOutputMissingLabel(job = state.activeJobStatus)",
+            "function secondsLabel(value)",
+            "function externalRunningStageItem(action = state.dashboard?.next_action)",
+            "function syncExternalRunningBodyClass()",
+            "Last runtime output",
+            "No runtime output captured yet",
+            (
+                "System control messages may exist, but stdout/stderr runtime "
+                "evidence has not arrived yet."
+            ),
+        ),
+    )
+    _assert_contains_all(
+        control_center,
+        (
+            "function renderRunningStageNotice(job)",
+            'class="run-progress-notice" role="status" aria-live="polite"',
+            "Runtime is waiting for an operator approval decision.",
+            "Stage is still running; live logs are the current evidence stream.",
+            "Live log chunks",
+            "${renderRunningStageNotice(job)}",
+            "${escapeHtml(runtimeOutputFreshnessLabel(job))}",
+            "${escapeHtml(logChunkSummary)}",
+            "Last runtime output",
+            "Last runtime line:",
+        ),
+    )
+    assert "not available ago" not in control_center
+
+
+def test_operator_global_next_action_surfaces_live_job_progress() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function activeJobLiveMessage(job)",
+            "function activeJobProgressNotice(job)",
+            "function renderActiveJobProgressNotice(job)",
+            "function renderGlobalLiveProgress(job)",
+            "function externalRunningStageMessage(action, item)",
+            "function renderExternalRunningStageProgress(action)",
+            'class="live-progress-strip" role="status" aria-live="polite"',
+            'class="live-progress-strip external-running-stage" role="status" aria-live="polite"',
+            "Waiting for operator approval",
+            "Running now",
+            "Waiting for first runtime output",
+            "runtimeOutputMissingLabel(job)",
+            "runtimeOutputMissingDetail()",
+            "Cancel requested",
+            "${renderActiveJobProgressNotice(job)}",
+            "running outside UI control",
+            "Refresh status or inspect saved runtime logs",
+            "Runtime is active; live logs are the current evidence stream.",
+            "runtimeOutputFreshnessLabel(job)",
+            "activeJobLiveLogChunkSummary(job)",
+            "Open live logs",
+            "Open runtime logs",
+            "data-refresh-dashboard",
+            "data-cancel-job",
+            "syncLiveJobBodyClass();",
+            'host.classList.toggle("live-progress-active", Boolean(activeJobState));',
+            'host.classList.toggle("external-progress-active", Boolean(externalRunningState));',
+            'host.classList.remove("live-progress-active", "external-progress-active");',
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".global-next-action-strip.live-progress-active {",
+            ".global-next-action-strip.external-progress-active {",
+            ".live-progress-strip {",
+            ".live-progress-strip.external-running-stage {",
+            "grid-template-columns: minmax(0, 1fr);",
+            ".live-progress-copy {",
+            ".live-progress-meta {",
+            ".live-progress-actions {",
+            ".live-progress-notice {",
+            ".live-progress-notice.info {",
+            ".live-progress-notice.warn {",
+        ),
+    )
+    _assert_contains_all(
+        responsive,
+        (
+            ".live-progress-strip {",
+            ".live-progress-actions {",
+            ".live-progress-actions button {",
+            ".live-progress-meta,",
+            "body.live-job-mode .operator-shell {",
+            "body.external-running-stage-mode .operator-shell {",
+            "body.live-job-mode .cockpit {",
+            "body.external-running-stage-mode .cockpit {",
+            "body.live-job-mode .stage-rail {",
+            "body.external-running-stage-mode .stage-rail {",
+        ),
+    )
+
+
 def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> None:
     artifacts = _asset_text("/operator-artifacts-documents.js")
 
@@ -586,6 +938,13 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "function renderWorkbenchViewer(workbench)",
             "function renderWorkbenchDiff(workbench)",
             "function renderWorkbenchTableOfContents(workbench)",
+            "function artifactCategoryFor(item = {})",
+            "function artifactCategoryLabel(category)",
+            "function artifactCategoryDetail(category)",
+            "function artifactOwnershipBadge(item = {})",
+            "function artifactSupportsDownload(item = {})",
+            "function renderArtifactDownloadButton(item = {}, className = \"link-button\")",
+            "function renderArtifactOwnershipNote(item = {})",
             "function markdownHeadingSummary(text)",
             "Table of Contents",
             "function renderRequirementList(requirements)",
@@ -593,6 +952,15 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "function renderMissingEvidence(requirements)",
             "Artifact categories",
             "Canonical stage documents",
+            "Published output mirrors",
+            "Source-of-truth stage files for operator review",
+            "Downstream handoff copies under output/",
+            "canonical source",
+            "handoff mirror",
+            "\"mirror\": \"MR\"",
+            "Canonical source of truth",
+            "Published handoff mirror",
+            "Canonical stage path:",
             "Runtime inputs",
             "Validation evidence",
             "Runtime evidence",
@@ -647,10 +1015,27 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
     assert artifacts.index("${renderEvidenceWorkbenchShell(selection)}") < artifacts.index(
         '<details class="surface evidence-drilldown">'
     )
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+    _assert_contains_all(
+        components,
+        (
+            ".artifact-category-note {",
+            ".artifact-ownership-note {",
+            ".artifact-ownership-note.published-stage-output {",
+            ".artifact-doc-title {",
+            ".markdown-preview code {",
+            ".workbench-side-row span {",
+        ),
+    )
+    assert ".artifact-ownership-note," in responsive
+    assert ".workbench-sidebar," in responsive
 
 
 def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contracts() -> None:
     questions = _asset_text("/operator-questions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
 
     _assert_contains_all(
         questions,
@@ -677,6 +1062,15 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "function questionRequiresResolvedResume(question)",
             "function updateQuestionResumeButtonState(questionId)",
             "function updateQuestionResumeButtonStates()",
+            "function interviewDecisionCounts(view)",
+            "function renderInterviewDecisionSpotlight(view)",
+            "data-interview-decision-spotlight",
+            "No interview questions for this stage",
+            "Blocking questions need resolved answers",
+            "Interview answers need final resolution",
+            "Interview answers saved",
+            "Primary action: answer required questions",
+            "${renderInterviewDecisionSpotlight(view)}",
             "function renderInterviewSummary(view)",
             "function renderBlockedStageContext(view)",
             "Questions / Interview Loop",
@@ -704,6 +1098,19 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "async function resumeAfterAnswers()",
         ),
     )
+    _assert_contains_all(
+        components,
+        (
+            ".interview-decision-spotlight {",
+            "box-shadow: inset 4px 0 0 var(--green);",
+            ".interview-decision-spotlight.warn {",
+            ".interview-decision-spotlight.bad {",
+            ".interview-decision-facts {",
+            "grid-template-columns: repeat(5, minmax(0, 1fr));",
+        ),
+    )
+    assert ".interview-decision-spotlight," in responsive
+    assert ".interview-decision-facts," in responsive
 
 
 def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
@@ -724,7 +1131,9 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "Repair exhausted",
             "Validation still fails after repair attempts.",
             "function renderValidationFindingList(validation)",
-            "validation?.validation_findings || []",
+            "actionableValidationFindings(validation)",
+            "function renderOutputMirrorNoticeList(validation)",
+            "nonBlockingValidationNotices(validation)",
             "function renderRepairTimeline(validation)",
             "function renderBlockedStageRecovery(diagnostics)",
             "Validation / Repair Center",
@@ -733,13 +1142,46 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "Stop Run",
             "Request Change",
             "Validation attempt timeline",
-            "Top validation findings",
+            "Auto-promoted output mirrors",
+            "output/ handoff mirrors",
+            "canonical stage documents",
+            "Actionable validation findings",
             "Blocked questions",
             "Answers path",
             "data-run-repair",
             "data-stop-run",
             'data-tab-shortcut="request"',
         ),
+    )
+
+
+def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+
+    _assert_contains_all(
+        cockpit,
+        (
+            "const RUNTIME_FAILURE_KINDS = new Set([",
+            "runtime-exit-metadata-invalid",
+            "provider-no-progress",
+            "function isRuntimeFirstFailure(firstFailure)",
+            "function runtimeLogEvidencePath(diagnostics)",
+            "function runtimeFailureEvidencePath(firstFailure, diagnostics)",
+            "function renderRuntimePartialEvidence(firstFailure)",
+            "Partial stage evidence",
+            "Inspect partial documents, runtime log, and runtime-exit metadata",
+            "runtime-partial-evidence",
+            'action.action === "resume-stage"',
+            'data-recovery-action="resume-stage"',
+            "Retry stage",
+            'action: "inspect-runtime-log"',
+            "isRuntimeFirstFailure(firstFailure) && runtimeAction",
+            'label: runtimeAction.label || "Open logs"',
+            "Runtime log",
+        ),
+    )
+    assert cockpit.index("isRuntimeFirstFailure(firstFailure) && runtimeAction") < cockpit.index(
+        'if (status === "repair-available")'
     )
 
 
@@ -810,8 +1252,169 @@ def test_operator_implement_review_static_contract_covers_project_set_grouping()
     )
 
 
+def test_operator_implement_review_surfaces_missing_verification_evidence() -> None:
+    control = _asset_text("/operator-control-center.js")
+
+    _assert_contains_all(
+        control,
+        (
+            "function renderImplementationVerificationGap(implementation)",
+            "implementation?.verification_commands || []",
+            "Implementation verification evidence is missing",
+            "No executable command evidence was parsed from implementation-report.md.",
+            "Primary action: Rerun implement or request intervention",
+            "function implementationSummaryWarnings(implementation)",
+            "No executable verification commands",
+            "renderWarnings(implementationSummaryWarnings(implementation))",
+            "function renderImplementationVerificationItems(implementation)",
+            "Skipped: ${escapeHtml(item)}",
+            "Verification evidence missing.",
+            "${renderImplementationVerificationItems(implementation)}",
+            "function implementationVerificationReady(implementation)",
+            "function renderImplementationProceedGuard(implementation)",
+            (
+                "Proceed to review is blocked until implementation records executable "
+                "verification evidence."
+            ),
+            "const verificationReady = implementationVerificationReady(evidence);",
+            'verificationReady && selectedRuntimeReady() ? "" : "disabled"',
+            "${renderImplementationProceedGuard(evidence)}",
+            'kind: "implementation-verification"',
+            'badge: "verification missing"',
+            "${renderImplementationVerificationGap(implementation)}",
+        ),
+    )
+
+
+def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> None:
+    api_state = _asset_text("/operator-api-state.js")
+    control = _asset_text("/operator-control-center.js")
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    _assert_contains_all(
+        api_state,
+        (
+            "reviewFindingsView: null",
+            "reviewFindingsRunId: \"\"",
+            "qaVerdictView: null",
+            "qaVerdictRunId: \"\"",
+            "decision-detail-mode",
+            "[\"review-findings\", \"qa-verdict\"].includes(state.workDetail)",
+        ),
+    )
+    _assert_contains_all(
+        control,
+        (
+            "function renderDecisionSummary({kind, tone, badge, title, body, primary, metrics})",
+            "function renderReviewDecisionSummary(view, findings)",
+            "Review rejected: fix blocking findings before QA",
+            "Review approved: QA can start",
+            "Primary action: Send selected to implement",
+            "function renderRemediationRuntimeGuard(sourceStage, hasRemediationItems)",
+            "Runtime readiness is required before sending ${escapeHtml(label)} back to implement.",
+            "${renderRemediationRuntimeGuard(\"review\", Boolean(findings.length))}",
+            "function renderQaCompletionGuard(view, hasRemediationItems)",
+            "Accept complete is disabled while QA is not-ready.",
+            "Send selected QA risks or issues back to implement, then rerun verification and QA.",
+            "${renderQaCompletionGuard(view, Boolean(sourceItems.length))}",
+            'data-decision-summary="${escapeHtml(kind)}"',
+            "renderReviewDecisionSummary(view, findings)",
+            "function renderQaDecisionSummary(view, risks, issues)",
+            "QA not ready: send selected items back to implement",
+            "QA ready: run can be accepted",
+            "QA ready with follow-up context",
+            "renderQaDecisionSummary(view, risks, issues)",
+            "${renderRemediationRuntimeGuard(\"qa\", Boolean(sourceItems.length))}",
+            "state.reviewFindingsView = view",
+            "state.qaVerdictView = view",
+        ),
+    )
+    _assert_contains_all(
+        next_flow,
+        (
+            "function activeModeDecisionPeek()",
+            "function renderModeDecisionPeek()",
+            "Review approved",
+            "Review rejected",
+            "QA ready",
+            "QA not ready",
+            "${renderModeDecisionPeek()}",
+            "mode-decision-peek",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".decision-summary {",
+            "grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);",
+            ".decision-summary.good {",
+            ".decision-summary.warn {",
+            ".decision-summary.bad {",
+            ".decision-summary-metrics {",
+            "grid-template-columns: repeat(4, minmax(0, 1fr));",
+            ".decision-metric strong {",
+            ".mode-decision-peek {",
+            "display: none;",
+        ),
+    )
+    assert ".decision-summary," in responsive
+    assert ".decision-summary-metrics," in responsive
+    assert ".mode-decision-peek {" in responsive
+    assert "body.decision-detail-mode .operator-shell" in responsive
+    assert "body.decision-detail-mode .cockpit" in responsive
+    assert "body.decision-detail-mode .stage-rail" in responsive
+
+
+def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
+    api_state = _asset_text("/operator-api-state.js")
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    _assert_contains_all(
+        api_state,
+        (
+            "stale-downstream-mode",
+            'state.dashboard?.next_action?.action === "rerun-stale-downstream"',
+            "(state.dashboard?.stages || []).some((item) => item.stale)",
+        ),
+    )
+    _assert_contains_all(
+        next_flow,
+        (
+            "function staleDownstreamStages()",
+            "function staleDownstreamStageLabel(items)",
+            "function staleDownstreamRuntimeGate()",
+            "function renderStaleDownstreamSummary(action)",
+            "data-stale-downstream-summary",
+            "Terminal QA handoff stays blocked until stale downstream evidence is refreshed.",
+            "Rerun downstream",
+            "Select ready runtime",
+            "${renderStaleDownstreamSummary(action)}",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".stale-downstream-summary {",
+            "box-shadow: inset 4px 0 0 var(--amber);",
+            ".stale-downstream-copy {",
+            ".stale-downstream-facts {",
+            "grid-template-columns: repeat(4, minmax(0, 1fr));",
+        ),
+    )
+    assert "body.stale-downstream-mode .operator-shell" in responsive
+    assert "body.stale-downstream-mode .cockpit" in responsive
+    assert ".stale-downstream-summary," in responsive
+    assert ".stale-downstream-facts," in responsive
+
+
 def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> None:
     approvals = _asset_text("/operator-approvals-interventions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
 
     _assert_contains_all(
         approvals,
@@ -828,15 +1431,32 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "function renderApprovalQueueSummary({requests, decisions, pendingIds, diagnostics})",
             "function renderApprovalDiffPreview(request)",
             (
+                "function approvalAuditCounts({requests, decisions, pendingIds, "
+                "diagnostics, auditHistory})"
+            ),
+            (
+                "function renderApprovalDecisionSpotlight({requests, decisions, pendingIds, "
+                "diagnostics, auditHistory})"
+            ),
+            (
                 "function renderApprovalAuditLog(requests, decisions, pendingIds, "
                 "diagnostics = null, auditHistory = null)"
             ),
             "function renderApprovalsSurface({view, diagnostics, requests, decisions, pendingIds})",
+            "data-approval-decision-spotlight",
+            "Runtime approval required",
+            "Runtime request blocked by policy",
+            "Runtime approval stopped",
+            "No runtime approvals are waiting",
             "Request Change / Intervention Composer",
             "Approvals / Runtime Requests",
             "Diff Preview",
             "Approval Audit Log",
             "view?.audit_history",
+            (
+                "renderApprovalDecisionSpotlight({requests, decisions, pendingIds, "
+                "diagnostics, auditHistory})"
+            ),
             "policy-blocked",
             "row.runtime_id",
             "row.decision_action",
@@ -862,6 +1482,19 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             'postJson("/api/stage/interact", payload)',
         ),
     )
+    _assert_contains_all(
+        components,
+        (
+            ".approval-decision-spotlight {",
+            "box-shadow: inset 4px 0 0 var(--green);",
+            ".approval-decision-spotlight.warn {",
+            ".approval-decision-spotlight.bad {",
+            ".approval-decision-facts {",
+            "grid-template-columns: repeat(5, minmax(0, 1fr));",
+        ),
+    )
+    assert ".approval-decision-spotlight," in responsive
+    assert ".approval-decision-facts," in responsive
 
 
 def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> None:
@@ -948,6 +1581,8 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderLineageRows({run, lineage, candidates})",
             "function renderLineageCandidates(candidates)",
             "async function openNextFlowWizard(action)",
+            "async function renderNextFlowWizardStep()",
+            "requestNextFlowWizardReveal();",
             "async function archiveCompletedRun()",
             "function renderNextFlowSourceSelection()",
             "function renderFollowUpDefinition()",
@@ -968,15 +1603,37 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Review Clone Draft",
             "Confirm Launch",
             "function renderPreflightChecks(preflight)",
+            "function blockingPreflightChecks(preflight)",
+            "function renderPreflightBlockedSummary(wizard, preflight, backLabel)",
+            "function renderLaunchFailureSummary(wizard, draft, backLabel)",
+            "function renderLaunchReadinessSummary(wizard)",
+            "function renderCloneLaunchSafetySummary(wizard)",
+            "function renderCloneDraftCreationError(wizard)",
+            "function cloneDraftCreationMessage(error, targetWorkItem)",
+            (
+                "function renderLaunchConfirmationActions({backPrimary, backLabel, "
+                "launchLabel, blocked, launchBusy})"
+            ),
+            "function renderLaunchConfirmationGuards({blocked, readinessBlocked, backLabel})",
             "function renderAuditPreview(draft, preflight)",
             "async function loadLaunchConfirmation()",
             "async function launchNextFlowNow()",
             "async function createFollowUpDraftForLaunch(draft)",
+            "async function refreshRuntimeReadinessForLaunch()",
+            "function resetLaunchReadiness(wizard = state.nextFlowWizard)",
             "function invalidateFollowUpDraftPreview()",
-            'document.querySelector("[data-follow-up-definition-error]")?.remove();',
+            (
+                'document.querySelectorAll("[data-follow-up-definition-error], '
+                '[data-follow-up-list-blocker]")'
+            ),
             "data-follow-up-definition-error",
+            "definitionErrors",
+            "function followUpDraftValidationErrors(draft)",
             "At least one acceptance criterion is required before preflight.",
             "At least one required evidence item is required before preflight.",
+            "Fix these required launch inputs, then retry Continue to preflight.",
+            "data-follow-up-list-blocker",
+            "Required for preflight",
             "async function openCloneFlowDraft()",
             "function renderNewWorkItemHandoff()",
             "function renderEvalBatchHandoff()",
@@ -999,6 +1656,35 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Definition needs attention",
             "Confirm and Launch Next Flow",
             "Preflight results",
+            "data-clone-launch-summary",
+            "Clone does not remediate this handoff",
+            "Clone creates a separate run identity",
+            "Clone reuses configuration in a new run identity",
+            "Clone reuses configuration and baseline; it does not select source findings.",
+            "not selected for clone",
+            "configuration only",
+            "Clone-only flow",
+            "without clearing QA status",
+            "data-clone-draft-error-summary",
+            "Clone Draft Needs Attention",
+            "Clone target is already in use",
+            "A clone draft or work item already exists",
+            "Open the existing work item from Active work items",
+            "Clone still does not remediate QA.",
+            "Preflight blocked before launch",
+            "Launch is disabled until blocking checks pass.",
+            "data-preflight-blocker-summary",
+            "Launch Flow Now is disabled because preflight returned blocking checks.",
+            "data-launch-readiness-summary",
+            "Checking runtime readiness before launch",
+            "Runtime readiness changed before launch",
+            "Launch was not started. Resolve runtime readiness",
+            "Checking Runtime...",
+            "Launch will re-check runtime readiness before starting.",
+            "data-launch-failure-summary",
+            "Launch did not start",
+            "Retry Launch",
+            "The source run remains unchanged.",
             "Audit preview",
             "Launch Flow Now",
             "data-follow-up-field",
@@ -1078,6 +1764,89 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Run archived for operator navigation.",
         ),
     )
+    assert next_flow.index("${backPrimary ? actionRow : \"\"}") < next_flow.index(
+        '<div class="launch-confirmation-grid">'
+    )
+    assert next_flow.index("${backPrimary ? actionGuards : \"\"}") < next_flow.index(
+        '<div class="launch-confirmation-grid">'
+    )
+    assert next_flow.index('<div class="launch-confirmation-grid">') < next_flow.index(
+        "${backPrimary ? \"\" : actionRow}"
+    )
+
+
+def test_operator_next_action_explains_runtime_readiness_blocker_locally() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function nextActionRuntimeBlockerMessage(runtimeBlocked)",
+            "runtimeReadinessMessage()",
+            "function renderNextActionBlocker(message)",
+            'class="next-action-blocker" role="status" aria-live="polite"',
+            "const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);",
+            "${renderNextActionBlocker(blockerMessage)}",
+            '<div class="next-action-button-stack">',
+            "Checking runtime readiness before this action can run.",
+            "Runtime readiness unavailable: ${state.readinessError}",
+            "Selected runtime is not ready for execution.",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".next-action-button-stack {",
+            ".next-action-blocker {",
+            "overflow-wrap: anywhere;",
+            ".global-next-action-strip .next-action-button-stack {",
+            ".global-next-action-strip .next-action-button-stack .next-button {",
+        ),
+    )
+    _assert_contains_all(
+        responsive,
+        (
+            ".global-next-action-strip .next-action-button-stack {",
+            "justify-self: stretch;",
+            ".next-action-blocker {",
+            "max-width: 100%;",
+        ),
+    )
+
+
+def test_operator_next_action_sidebar_is_status_mirror_when_global_cta_is_primary() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function workDetailOwnsPrimarySurface()",
+            '["implement-review", "review-findings", "qa-verdict"].includes(state.workDetail)',
+            "function globalNextActionStripProvidesPrimary()",
+            "state.activeTab === \"recovery\"",
+            "workDetailOwnsPrimarySurface()",
+            'document.body.classList.contains("evidence-log-mode")',
+            "function renderNextActionSidebarMirror({label, statusMessage, tone})",
+            '<div class="next-action-sidebar-mirror">',
+            "Next Action Status",
+            "Primary action is ready in the stage cockpit.",
+            "Primary action is not available yet.",
+            "renderNextActionSidebarMirror({label, statusMessage, tone})",
+            '<button id="nextActionButton" class="next-button"',
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".next-action-sidebar-mirror {",
+            ".next-action-sidebar-mirror .small-badge {",
+            ".next-action-sidebar-mirror strong {",
+            ".next-action-sidebar-mirror span:not(.small-badge) {",
+        ),
+    )
 
 
 def test_operator_static_screen_landmarks_cover_accepted_mission_control_surfaces() -> None:
@@ -1130,7 +1899,10 @@ def test_operator_static_screen_landmarks_cover_accepted_mission_control_surface
 
 
 def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions() -> None:
+    shell = _asset_text("/operator-shell-rendering.js")
     next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
 
     _assert_contains_all(
         next_flow,
@@ -1138,14 +1910,101 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "function renderFlowCompleteState()",
             "terminalHandoffTitle(handoff)",
             "terminalHandoffTone(handoff.status)",
+            "terminalHandoffMark(handoff)",
+            "terminalHandoffMessage(handoff)",
             "handoff.final_qa_status",
             "QA terminal handoff is ready for operator review",
+            "QA did not clear this run",
+            "The terminal handoff is blocked",
+            "QA completed with recorded risks",
             "flow-complete-mark",
             "Start Next Flow",
             "terminal handoff",
+            "function recommendedNextFlowDecision(handoff)",
+            "function renderRecommendedNextFlowDecision(handoff)",
+            "function renderTerminalRepairHighlights(highlights)",
+            "function renderTerminalEvidenceSpotlight(handoff)",
+            "function renderTerminalAttentionSpotlight(handoff)",
+            "const TERMINAL_EVIDENCE_REQUIREMENTS",
+            "function terminalEvidenceArtifacts(artifacts)",
+            "function terminalEvidenceRequirement(key)",
+            "function terminalMissingEvidence(artifacts)",
+            "function handoffMissingTerminalEvidence(handoff)",
+            "function renderTerminalMissingEvidence(missing)",
+            "function renderGlobalTerminalEvidenceActions()",
+            "function terminalEvidenceActionLabel(artifact)",
+            "function terminalRepairDecisionPeek()",
+            "repair resolved",
+            "QA Did Not Clear",
+            "Recorded QA Risks",
+            "Terminal handoff blockers",
+            "Evidence First",
+            "Missing Evidence",
+            "Missing Terminal Evidence",
+            "Missing terminal evidence",
+            "Missing ${escapeHtml(item.label)}",
+            (
+                "Required terminal evidence is missing; restore artifacts before "
+                "starting any next flow."
+            ),
+            "Restore the required terminal evidence before choosing a next-flow action.",
+            "before next-flow",
+            "Terminal evidence shortcuts",
+            "Runtime log",
+            "QA report",
+            "Raw runtime output for the terminal QA attempt.",
+            "Final QA readiness and release recommendation.",
+            "Document validation result for the terminal QA stage.",
+            "Terminal stage status and handoff summary.",
+            "runtime_log",
+            "qa_report",
+            "validator_report",
+            "stage_result",
+            "recommended next decision",
+            "next decision blocked",
+            "Resolved Repairs",
+            "These validation issues were retried and resolved before QA handoff.",
+            "handoff.repair_highlights",
+            "renderTerminalAttentionSpotlight(handoff)",
+            "renderTerminalEvidenceSpotlight(handoff)",
+            "renderGlobalTerminalEvidenceActions()",
+            "data-open-artifact",
+            "QA is ready and no open blockers are recorded",
+            "Terminal QA failed; carry failed evidence into a follow-up",
+            "carry the current findings into follow-up work first",
+            "renderRecommendedNextFlowDecision(handoff)",
+            "function terminalHandoffNeedsRecovery(handoff)",
+            "function terminalNextFlowSafetyNote(handoff, action)",
+            "function separateScopeHandoffMessage(handoff)",
+            "function evalBatchHandoffMessage(handoff)",
+            "Recovery path: carries QA findings, blockers, or manual notes into new scoped work.",
+            "Navigation only: does not resolve QA blockers or carry findings into remediation.",
+            "Separate scope: does not inherit this failed QA evidence.",
+            "Comparison only: does not repair or complete this terminal handoff.",
+            "Separate scope only",
+            "This starts unrelated work only.",
+            "Use Start Follow-up Flow for remediation.",
+            "This uses terminal handoff evidence for review",
+            'blocker${blockerCount === 1 ? " remains" : "s remain"}',
+            "next-flow-safety-note",
+            "function renderArchiveHandoffWarning(handoff)",
+            "function renderTerminalRecoveryWizardAction(handoff)",
+            'data-next-flow-action="start-follow-up-flow"',
+            "Archive does not resolve this handoff",
+            "Use Start Follow-up Flow when QA evidence still needs remediation",
+            "Archive is navigation metadata only; remediation starts with Start Follow-up Flow.",
+            "History is review-only; remediation starts with Start Follow-up Flow.",
+            'const historyActionClass = needsRecovery ? \' class="secondary"\' : "";',
+            (
+                '<button data-tab-shortcut="history" type="button"${historyActionClass}>'
+                "Open Run History</button>"
+            ),
+            "renderTerminalRepairHighlights(handoff.repair_highlights || [])",
             "renderNextFlowActions(handoff)",
+            "activeModeDecisionPeek() || terminalRepairDecisionPeek()",
             "next-flow-action-card",
             "recommended",
+            "recommended after restore",
             "Final artifacts",
             "Blockers / safety",
             "Follow-up candidates",
@@ -1157,6 +2016,48 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             'data-next-flow-action="${escapeHtml(action.action)}"',
         ),
     )
+    _assert_contains_all(
+        components,
+        (
+            ".next-flow-decision-spotlight {",
+            "grid-template-columns: minmax(0, 1fr) auto;",
+            ".next-flow-decision-spotlight .small-badge {",
+            "justify-self: start;",
+            "width: fit-content;",
+            ".next-flow-decision-spotlight button {",
+            "min-width: 156px;",
+            ".next-flow-safety-note {",
+            "font-weight: 800;",
+            ".repair-highlight-spotlight {",
+            "border-left: 4px solid var(--green);",
+            ".repair-highlight-card {",
+            "grid-template-columns: minmax(0, 1fr) auto;",
+            ".repair-highlight-evidence button {",
+            "white-space: nowrap;",
+            ".terminal-attention-spotlight {",
+            "border-left: 4px solid var(--red);",
+            ".terminal-missing-evidence {",
+            ".terminal-missing-row {",
+            ".archive-risk-notice {",
+            ".next-action-evidence-actions {",
+            "flex-wrap: wrap;",
+        ),
+    )
+    assert ".next-flow-decision-spotlight," in responsive
+    assert ".terminal-attention-spotlight," in responsive
+    assert ".repair-highlight-card," in responsive
+    assert ".repair-highlight-evidence," in responsive
+    assert ".next-action-evidence-actions," in responsive
+    assert "body.terminal-handoff-mode .operator-shell" in responsive
+    assert "body.terminal-handoff-mode .cockpit" in responsive
+    assert "body.terminal-handoff-mode .stage-rail" in responsive
+    assert "body.terminal-handoff-mode .project-home-rail" in responsive
+    assert "body.terminal-repair-mode .operator-shell" in responsive
+    assert "body.terminal-repair-mode .cockpit" in responsive
+    assert "body.terminal-repair-mode .stage-rail" in responsive
+    assert "body.terminal-repair-mode .project-home-rail" in responsive
+    assert 'document.body.classList.contains("terminal-handoff-mode")' in shell
+    assert 'document.body.classList.contains("terminal-repair-mode")' in shell
 
 
 def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight() -> None:
@@ -1170,6 +2071,7 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "function renderLaunchConfirmation()",
             "function renderArchiveConfirmation()",
             "function renderSourceSelectionSummary(payload, selectedCount)",
+            "renderNextFlowWizardStep()",
             "source findings",
             "Selected sources",
             "Linked artifacts",
@@ -1194,10 +2096,15 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "manual-source-row",
             "No source links selected.",
             "Preflight blocked",
+            "Definition needs attention",
+            "data-follow-up-list-blocker",
+            "Required for preflight",
             "Running launch preflight...",
             "Flow Launch Wizard",
             "Independent flow",
             "Confirm Archive Run",
+            "renderArchiveHandoffWarning(handoff)",
+            "renderTerminalRecoveryWizardAction(handoff)",
             "data-archive-confirm",
         ),
     )
@@ -1305,6 +2212,7 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'closest("[data-next-flow-continue]")',
             "await loadFollowUpDraft()",
             'closest("[data-next-flow-back-to-sources]")',
+            "requestNextFlowWizardReveal();",
             'closest("[data-next-flow-confirm-preview]")',
             "await loadLaunchConfirmation()",
             'closest("[data-next-flow-back-to-definition]")',
@@ -1432,6 +2340,8 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".small-badge.running" in css
     assert ".small-badge.cancelling" in css
     assert ".small-badge.waiting-for-operator" in css
+    assert ".run-progress-notice" in css
+    assert ".run-progress-meta" in css
     assert ".activity-detail" in css
     assert ".log-actions" in css
     assert ".truncation-notice" in css
@@ -1467,6 +2377,9 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".setup-mode-card" in css
     assert ".previous-run-context" in css
     assert ".flow-complete-state" in css
+    assert ".terminal-attention-spotlight" in css
+    assert ".terminal-evidence-spotlight" in css
+    assert ".terminal-missing-evidence" in css
     assert ".next-flow-action-card" in css
     assert ".next-flow-wizard" in css
     assert ".source-selection-summary" in css

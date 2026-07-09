@@ -24,6 +24,10 @@
   .global-next-action-strip .next-button {
     width: 100%;
   }
+  .global-next-action-strip .next-action-button-stack {
+    justify-self: stretch;
+    width: 100%;
+  }
   .source-selection-summary > div:first-child {
     grid-column: auto;
   }
@@ -39,6 +43,58 @@
   }
 }
 @media (max-width: 760px) {
+  .brand-meta {
+    align-items: flex-start;
+    white-space: normal;
+  }
+  .brand-meta code {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  .top-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .runtime-picker {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    width: 100%;
+  }
+  .runtime-picker select {
+    min-width: 0;
+    width: 100%;
+  }
+  .top-status {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    width: 100%;
+  }
+  .topbar .status-chip,
+  .topbar #runChip,
+  .topbar #workItemChip,
+  .topbar #localStatus {
+    justify-content: center;
+    max-width: 100%;
+    min-width: 0;
+    text-align: center;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  .topbar .status-chip {
+    overflow-wrap: anywhere;
+  }
+  .topbar #localStatus {
+    grid-column: 1 / -1;
+  }
+  .path-line {
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
   .operator-shell {
     display: block;
   }
@@ -46,23 +102,203 @@
     display: flex;
     flex-direction: column;
   }
+  body.evidence-log-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
   body.recovery-mode .cockpit {
+    order: 1;
+  }
+  body.evidence-log-mode .cockpit {
     order: 1;
   }
   body.recovery-mode .stage-rail {
     order: 2;
   }
+  body.evidence-log-mode .stage-rail {
+    order: 2;
+  }
   body.recovery-mode .right-sidebar {
+    order: 3;
+  }
+  body.evidence-log-mode .right-sidebar {
     order: 3;
   }
   body.recovery-mode .bottom-dock {
     order: 4;
   }
+  body.evidence-log-mode .bottom-dock {
+    order: 4;
+  }
   body.recovery-mode .project-home-rail {
+    display: none;
+  }
+  body.evidence-log-mode .project-home-rail {
+    display: none;
+  }
+  body.live-job-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  body.external-running-stage-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  body.terminal-handoff-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  body.decision-detail-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  body.stale-downstream-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  body.terminal-repair-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  body.post-stage-next-action-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  body.live-job-mode .cockpit {
+    order: 1;
+  }
+  body.external-running-stage-mode .cockpit {
+    order: 1;
+  }
+  body.terminal-handoff-mode .cockpit {
+    order: 1;
+  }
+  body.decision-detail-mode .cockpit {
+    order: 1;
+  }
+  body.stale-downstream-mode .cockpit {
+    order: 1;
+  }
+  body.terminal-repair-mode .cockpit {
+    order: 1;
+  }
+  body.post-stage-next-action-mode .cockpit {
+    order: 1;
+  }
+  body.live-job-mode .stage-rail {
+    order: 2;
+  }
+  body.external-running-stage-mode .stage-rail {
+    order: 2;
+  }
+  body.terminal-handoff-mode .stage-rail {
+    order: 2;
+  }
+  body.decision-detail-mode .stage-rail {
+    order: 2;
+  }
+  body.stale-downstream-mode .stage-rail {
+    order: 2;
+  }
+  body.terminal-repair-mode .stage-rail {
+    order: 2;
+  }
+  body.post-stage-next-action-mode .stage-rail {
+    order: 2;
+  }
+  body.live-job-mode .right-sidebar {
+    order: 3;
+  }
+  body.external-running-stage-mode .right-sidebar {
+    order: 3;
+  }
+  body.terminal-handoff-mode .right-sidebar {
+    order: 3;
+  }
+  body.decision-detail-mode .right-sidebar {
+    order: 3;
+  }
+  body.stale-downstream-mode .right-sidebar {
+    order: 3;
+  }
+  body.terminal-repair-mode .right-sidebar {
+    order: 3;
+  }
+  body.post-stage-next-action-mode .right-sidebar {
+    order: 3;
+  }
+  body.live-job-mode .bottom-dock {
+    order: 4;
+  }
+  body.external-running-stage-mode .bottom-dock {
+    order: 4;
+  }
+  body.terminal-handoff-mode .bottom-dock {
+    order: 4;
+  }
+  body.decision-detail-mode .bottom-dock {
+    order: 4;
+  }
+  body.stale-downstream-mode .bottom-dock {
+    order: 4;
+  }
+  body.terminal-repair-mode .bottom-dock {
+    order: 4;
+  }
+  body.post-stage-next-action-mode .bottom-dock {
+    order: 4;
+  }
+  body.live-job-mode .project-home-rail,
+  body.external-running-stage-mode .project-home-rail,
+  body.terminal-handoff-mode .project-home-rail,
+  body.terminal-repair-mode .project-home-rail {
     display: none;
   }
   .global-next-action-strip {
     grid-template-columns: 1fr;
+  }
+  .mode-decision-peek {
+    background: #ffffff;
+    border: 1px solid #cfe3e0;
+    border-radius: 6px;
+    display: grid;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 8px;
+  }
+  .mode-decision-peek.good {
+    border-color: #aacfb9;
+    box-shadow: inset 3px 0 0 var(--green);
+  }
+  .mode-decision-peek.warn {
+    border-color: #e4c783;
+    box-shadow: inset 3px 0 0 var(--amber);
+  }
+  .mode-decision-peek.bad {
+    border-color: #ebb6b1;
+    box-shadow: inset 3px 0 0 var(--red);
+  }
+  .mode-decision-peek .small-badge {
+    justify-self: start;
+    width: fit-content;
+  }
+  .mode-decision-peek strong {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+  .mode-decision-peek span:not(.small-badge) {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .live-progress-strip {
+    grid-template-columns: 1fr;
+  }
+  .live-progress-actions {
+    justify-content: stretch;
+  }
+  .live-progress-actions button {
+    flex: 1 1 150px;
   }
   .next-action-meta {
     grid-template-columns: 1fr;
@@ -73,17 +309,19 @@
     padding: 10px;
   }
   .stage-list {
-    display: flex;
+    display: grid;
     gap: 8px;
-    overflow-x: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
     padding-bottom: 4px;
     scroll-padding-inline: 10px;
-    scroll-snap-type: x proximity;
+    scroll-snap-type: none;
   }
   .stage-card {
-    flex: 0 0 178px;
     min-height: 58px;
+    min-width: 0;
     scroll-snap-align: start;
+    width: 100%;
   }
   .quick-links {
     grid-template-columns: repeat(4, minmax(82px, 1fr));
@@ -102,10 +340,20 @@
   .inline-form-row,
   .artifact-layout,
   .workbench-main,
+  .workbench-sidebar,
+  .artifact-ownership-note,
   .project-setup-grid,
   .setup-mode-grid,
   .flow-complete-hero,
+  .terminal-attention-spotlight,
+  .terminal-evidence-spotlight,
+  .next-flow-decision-spotlight,
+  .decision-summary,
+  .decision-summary-metrics,
+  .stale-downstream-summary,
+  .stale-downstream-facts,
   .handoff-metric-grid,
+  .repair-highlight-card,
   .next-flow-actions-grid,
   .terminal-summary-grid,
   .lineage-flow,
@@ -117,8 +365,12 @@
   .follow-up-definition-grid,
   .launch-confirmation-grid,
   .interview-loop-screen,
+  .interview-decision-spotlight,
+  .interview-decision-facts,
   .validation-repair-center,
   .request-change-grid,
+  .approval-decision-spotlight,
+  .approval-decision-facts,
   .approval-summary-grid,
   .approval-meta-grid,
   .log-source-strip,
@@ -129,6 +381,8 @@
   .repair-timeline,
   .recovery-hero,
   .recovery-facts,
+  .run-progress-meta,
+  .live-progress-meta,
   .bottom-dock {
     grid-template-columns: 1fr;
   }
@@ -137,15 +391,31 @@
   }
   .source-selection-metrics,
   .source-selection-actions,
+  .repair-highlight-evidence,
+  .next-action-evidence-actions,
   .wizard-actions {
     justify-content: stretch;
   }
   .source-selection-actions button,
+  .repair-highlight-evidence button,
+  .next-action-evidence-actions button,
   .wizard-actions button {
     flex: 1 1 150px;
   }
   .next-flow-action-card {
     min-height: 0;
+  }
+  .next-action-copy {
+    align-items: flex-start;
+  }
+  .next-action-controls {
+    grid-template-columns: 1fr;
+  }
+  .global-next-action-strip .next-button {
+    width: 100%;
+  }
+  .next-action-blocker {
+    max-width: 100%;
   }
   .next-flow-action-card p {
     font-size: 11px;

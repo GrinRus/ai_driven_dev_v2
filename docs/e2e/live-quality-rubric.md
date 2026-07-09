@@ -34,6 +34,8 @@ Runner-owned artifacts include:
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
+- `manual-frontend-evidence/` only when the operator passes
+  `--manual-frontend-evidence` with browser notes or screenshots
 - `stage-audits/<stage-run-id>.json`
 - `stage-audits/<stage-run-id>.md`
 - `target-workspace-evidence.json`
@@ -66,8 +68,21 @@ The runner no longer emits `quality-transcript.json`, `acceptance-coverage.*`,
 `operator-quality-analysis-validation.json`.
 
 `frontend-checkpoints.*` are raw run-integrity evidence for the public operator
-surfaces. They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
+surfaces, including HTTP/API probes and operator-surface semantic checks for run,
+stage, next-action, log, and artifact signals.
+They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
+Observed running stages add a `running-stage` checkpoint phase for the disabled
+`wait-for-stage` next action, active running-stage visibility, and runtime-log affordance,
+including the honest pending-log state before `runtime.log` exists. Completed stages keep
+the `post-stage` phase for stage API and artifact reachability.
+`frontend-checkpoints.md` includes a manual visual review checklist for the launching
+agent: visible next action and active stage, readable desktop/mobile topbar labels,
+failure-appropriate recovery primary action, reachable logs/artifacts/questions/answers,
+and no horizontal overflow for long paths, log labels, or action copy.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
+When the operator passes `--manual-frontend-evidence <path>`, the runner copies that
+operator-supplied file or directory into `manual-frontend-evidence/` and references it
+from `frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
 
 The `stage-audits/<implement-stage-run-id>.*` implement audit separates tracked changed files, new untracked product
 files, known harness/config untracked files, and setup-baseline untracked files. New
@@ -78,6 +93,13 @@ JavaScript/TypeScript packages where a new source helper may be public when
 When `stage-audits/<implement-stage-run-id>.*` records `product_untracked_files`, the manual
 `code-quality-report.md` and `quality-report.md` must name those files and state how
 they were reviewed before recording `counted-clean`.
+
+Stage audits also record non-gating `consistency_findings` when generated
+`stage-result.md` operator guidance drifts from canonical evidence. This includes
+validator-verdict mismatches and successful stage `Next actions` that fail to name the
+immediate canonical next stage. Count both generic wording such as `planning` instead
+of `plan` or `implementation stage` instead of `implement`, and later-stage jumps such
+as an `implement` result that points directly to `qa` instead of `review`.
 
 `target-workspace-evidence.*` records the target repository snapshot after setup and
 after the terminal/stop state. It classifies tracked diff, setup-baseline untracked
@@ -334,10 +356,17 @@ implementation work.
 Operator UI/UX review should inspect real AIDD operator workflows: terminal flow
 visibility, stage list navigation, artifact inspection, log inspection,
 questions/answers, repair evidence, and next-flow handoff. API probes alone are not
-UX evidence. Cite screenshots or browser evidence manually when available, and
+UX evidence. Use the manual visual checklist in `frontend-checkpoints.md` as a prompt,
+not as proof by itself. Cite screenshots or browser evidence manually when available,
+including optional `manual-frontend-evidence/` imports, and
 record visual hierarchy, density, labels, truncation for long paths/logs, keyboard
 path, focus visibility, labels or landmarks where manually inspectable,
 desktop/tablet/mobile responsive behavior or explicitly `not inspected`, and
 empty/loading/error/blocking, interview, and repair states. Generated product UI is
 outside this operator-UI review unless the manual report explicitly marks it
 `not-applicable`.
+For long public `run-stage` commands, terminal flow visibility also includes the
+launching harness heartbeat: active stage, elapsed time, last observed runtime/file
+signal, timeout budgets, whether the expected runtime log has seen its first runtime
+event yet, and the best current evidence action such as inspecting stage artifacts
+when watched files are changing before runtime output exists.

@@ -26,6 +26,7 @@ from aidd.core.operator_frontend_models import (
     OperatorPrimaryArtifact,
     OperatorRecoveryAction,
     OperatorRepairCounts,
+    OperatorRepairHighlight,
     OperatorRunArchive,
     OperatorRunLineage,
     OperatorRunSummary,
@@ -124,12 +125,21 @@ _RUNTIME_FAILURE_KINDS = frozenset(
         "non_zero_exit",
         "non-zero-exit",
         "provider_error",
+        "provider-no-progress",
         "runtime-error",
         "runtime-exit-metadata-invalid",
         "runtime-failure",
         "stage-failed",
         "timeout",
     }
+)
+_MAX_TERMINAL_REPAIR_HIGHLIGHTS = 3
+_MAX_REPAIR_REASON_CHARS = 220
+_TERMINAL_REQUIRED_EVIDENCE: tuple[tuple[str, str, str], ...] = (
+    ("runtime_log", "Runtime log", "raw runtime output"),
+    ("qa_report", "QA report", "final QA readiness"),
+    ("validator_report", "Validator report", "terminal validation result"),
+    ("stage_result", "Stage result", "terminal stage summary"),
 )
 
 
@@ -410,6 +420,54 @@ def _stage_rail_items(
                 stale_invalidated_by=(
                     stale_entry.invalidated_by if stale_entry is not None else None
                 ),
+            )
+        )
+    return tuple(items)
+
+
+def _metadata_stage_rail_items(
+    metadata: RunMetadataSummary | None,
+) -> tuple[OperatorStageRailItem, ...]:
+    metadata_by_stage = (
+        {stage.stage: stage for stage in metadata.stages} if metadata is not None else {}
+    )
+    items: list[OperatorStageRailItem] = []
+    for index, stage in enumerate(STAGES):
+        title, subtitle = _STAGE_UI_COPY[stage]
+        metadata_summary = metadata_by_stage.get(stage)
+        status = (
+            metadata_summary.status
+            if metadata_summary is not None
+            else StageState.PENDING.value
+        )
+        can_run = metadata is None and index == 0
+        reason = "not started"
+        if status == StageState.SUCCEEDED.value:
+            reason = "already completed"
+        elif status in _RUNNING_STAGE_STATES:
+            reason = "stage is running"
+        elif status == StageState.BLOCKED.value:
+            reason = "stage is blocked"
+        elif status == StageState.FAILED.value:
+            reason = "stage has failed"
+        elif can_run:
+            reason = "next runnable stage"
+        items.append(
+            OperatorStageRailItem(
+                stage=stage,
+                title=title,
+                subtitle=subtitle,
+                status=status,
+                attempt_count=metadata_summary.attempt_count if metadata_summary else 0,
+                can_run=can_run,
+                reason=reason,
+                question_count=0,
+                unresolved_blocking_count=0,
+                validator_pass_count=0,
+                validator_fail_count=0,
+                stale=False,
+                stale_reason=None,
+                stale_invalidated_by=None,
             )
         )
     return tuple(items)
@@ -719,6 +777,66 @@ def _structured_report_blockers(
     return tuple(blockers)
 
 
+def _missing_terminal_evidence_labels(
+    final_artifacts: tuple[OperatorArtifactRef, ...],
+) -> tuple[str, ...]:
+    available = {artifact.key for artifact in final_artifacts}
+    return tuple(
+        label for key, label, _detail in _TERMINAL_REQUIRED_EVIDENCE if key not in available
+    )
+
+
+def _terminal_missing_evidence_blockers(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary | None,
+    stale_by_stage: dict[str, RemediationStaleStage],
+) -> tuple[OperatorBlocker, ...]:
+    if metadata is None or "qa" in stale_by_stage:
+        return ()
+    terminal_stage = _optional_manifest_stage(metadata.workflow_stage_end)
+    if terminal_stage is not None and terminal_stage != "qa":
+        return ()
+    try:
+        qa_result = resolve_stage_result_summary(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage="qa",
+            run_id=metadata.run_id,
+        )
+    except ValueError:
+        return ()
+    if qa_result.final_state not in {
+        StageState.SUCCEEDED.value,
+        StageState.FAILED.value,
+        StageState.BLOCKED.value,
+    }:
+        return ()
+    missing = _missing_terminal_evidence_labels(
+        _terminal_final_artifacts(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            metadata=metadata,
+        )
+    )
+    if not missing:
+        return ()
+    missing_detail = ", ".join(missing)
+    return (
+        OperatorBlocker(
+            kind="terminal-missing-evidence",
+            title="Missing terminal evidence",
+            detail=(
+                f"Terminal QA handoff is missing {missing_detail}. Restore the "
+                "required evidence before starting any next flow."
+            ),
+            severity="error",
+            stage="qa",
+        ),
+    )
+
+
 def _runtime_exit_signal(
     *,
     workspace_root: Path,
@@ -763,6 +881,7 @@ def _runtime_exit_signal(
     decisive = classification not in {"", "success"} or adapter_outcome in {
         "timeout",
         "provider_error",
+        "provider-no-progress",
         "failed",
         "cancelled",
     }
@@ -773,17 +892,39 @@ def _runtime_exit_signal(
     title = {
         "timeout": "Runtime timeout",
         "provider_error": "Provider error",
-        "cancelled": "Runtime cancelled",
+        "provider-no-progress": "Provider no progress",
+        "cancelled": "Runtime interrupted",
     }.get(classification or adapter_outcome, "Runtime failure")
-    detail_parts = [
+    metadata_parts = [
         f"exit_code={exit_code}" if exit_code is not None else "",
         f"classification={classification}" if classification else "",
         f"adapter_outcome={adapter_outcome}" if adapter_outcome else "",
     ]
+    metadata_detail = ", ".join(part for part in metadata_parts if part)
+    outcome = classification or adapter_outcome
+    recovery_detail = {
+        "cancelled": (
+            "The runtime was interrupted before this stage completed. "
+            "Inspect runtime.log, runtime-exit.json, and partial workspace diff before retrying."
+        ),
+        "provider-no-progress": (
+            "The provider made no progress before AIDD received a completed stage artifact. "
+            "Inspect runtime.log and runtime-exit.json before retrying."
+        ),
+        "timeout": (
+            "The runtime exceeded its configured timeout before this stage completed. "
+            "Inspect runtime.log and runtime-exit.json before retrying."
+        ),
+        "provider_error": (
+            "The provider reported an execution error before this stage completed. "
+            "Inspect runtime.log and runtime-exit.json before retrying."
+        ),
+    }.get(outcome)
+    detail = recovery_detail or metadata_detail or "Runtime exit failed."
     return OperatorFirstFailure(
-        kind=classification or adapter_outcome or "runtime-failure",
+        kind=outcome or "runtime-failure",
         title=title,
-        detail=", ".join(part for part in detail_parts if part) or "Runtime exit failed.",
+        detail=detail,
         stage=stage,
         path=workspace_relative_path(workspace_root, path),
         time_utc=str(payload.get("completed_at_utc") or payload.get("updated_at_utc") or "")
@@ -928,6 +1069,18 @@ def _recovery_actions(
             if first_failure.stage:
                 actions.append(
                     OperatorRecoveryAction(
+                        action="resume-stage",
+                        label="Retry stage",
+                        detail=(
+                            "Run the interrupted stage again in the same run after "
+                            "inspecting runtime evidence."
+                        ),
+                        stage=first_failure.stage,
+                        enabled=True,
+                    )
+                )
+                actions.append(
+                    OperatorRecoveryAction(
                         action="request-change",
                         label="Request change",
                         detail=(
@@ -1002,18 +1155,9 @@ def _next_action(
             stage=active_stage_view.result.stage,
             enabled=True,
         )
-    running_stage = next(
-        (item for item in rail_by_stage.values() if item.status in _RUNNING_STAGE_STATES),
-        None,
-    )
+    running_stage = _running_stage_item(rail_by_stage)
     if running_stage is not None:
-        return OperatorNextAction(
-            action="wait-for-stage",
-            label=f"{running_stage.title} running",
-            detail="Refresh after the active stage leaves preparing, executing, or validating.",
-            stage=running_stage.stage,
-            enabled=False,
-        )
+        return _running_stage_next_action(running_stage)
     failed_validation_stage = next(
         (
             item
@@ -1098,6 +1242,22 @@ def _next_action(
             stage="qa",
             enabled=True,
         )
+    terminal_evidence_blocker = next(
+        (
+            blocker
+            for blocker in report_blockers
+            if blocker.kind == "terminal-missing-evidence"
+        ),
+        None,
+    )
+    if terminal_evidence_blocker is not None:
+        return OperatorNextAction(
+            action="review-complete",
+            label="Restore terminal evidence",
+            detail=terminal_evidence_blocker.detail,
+            stage="qa",
+            enabled=True,
+        )
 
     incomplete = [
         item for item in rail_by_stage.values() if item.status != StageState.SUCCEEDED.value
@@ -1105,8 +1265,11 @@ def _next_action(
     if not incomplete:
         return OperatorNextAction(
             action="review-complete",
-            label="Review complete",
-            detail="All canonical stages have succeeded.",
+            label="Review final artifacts",
+            detail=(
+                "All canonical stages have succeeded. Inspect the QA handoff and final "
+                "evidence before starting the next flow."
+            ),
             stage=None,
             enabled=True,
         )
@@ -1127,6 +1290,25 @@ def _next_action(
         detail=runnable.reason,
         stage=target_stage,
         enabled=True,
+    )
+
+
+def _running_stage_item(
+    rail_by_stage: dict[str, OperatorStageRailItem],
+) -> OperatorStageRailItem | None:
+    return next(
+        (item for item in rail_by_stage.values() if item.status in _RUNNING_STAGE_STATES),
+        None,
+    )
+
+
+def _running_stage_next_action(running_stage: OperatorStageRailItem) -> OperatorNextAction:
+    return OperatorNextAction(
+        action="wait-for-stage",
+        label=f"{running_stage.title} running",
+        detail="Refresh after the active stage leaves preparing, executing, or validating.",
+        stage=running_stage.stage,
+        enabled=False,
     )
 
 
@@ -1590,6 +1772,96 @@ def _terminal_repair_counts(
     return OperatorRepairCounts(attempts=attempts, succeeded=succeeded, failed=failed)
 
 
+def _compact_repair_reason(text: str) -> str:
+    normalized = re.sub(r"\s+", " ", text).strip()
+    normalized = re.sub(r"\s+in `[^`]+`:\s*", ": ", normalized)
+    if not normalized:
+        return ""
+    if len(normalized) <= _MAX_REPAIR_REASON_CHARS:
+        return normalized
+    return f"{normalized[:_MAX_REPAIR_REASON_CHARS - 1].rstrip()}..."
+
+
+def _read_repair_reason(
+    *,
+    workspace_root: Path,
+    repair_brief_path: str | None,
+) -> str | None:
+    if not repair_brief_path:
+        return None
+    path = workspace_root / repair_brief_path
+    if not path.exists() or not path.is_file():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    in_failed_checks = False
+    fallback_bullet: str | None = None
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            heading = line.lstrip("#").strip().lower()
+            in_failed_checks = heading == "failed checks"
+            continue
+        if not line.startswith(("- ", "* ")):
+            continue
+        bullet = line[2:].strip()
+        if not bullet or bullet.lower() == "none":
+            continue
+        if in_failed_checks:
+            return _compact_repair_reason(bullet)
+        if fallback_bullet is None:
+            fallback_bullet = bullet
+    if fallback_bullet is None:
+        return None
+    return _compact_repair_reason(fallback_bullet)
+
+
+def _terminal_repair_highlights(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary,
+) -> tuple[OperatorRepairHighlight, ...]:
+    highlights: list[OperatorRepairHighlight] = []
+    for stage in STAGES:
+        stage_metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=metadata.run_id,
+            stage=stage,
+        )
+        if stage_metadata is None:
+            continue
+        repair_entries = [
+            entry for entry in stage_metadata.repair_history if entry.trigger == "repair"
+        ]
+        for entry in repair_entries:
+            reason = _read_repair_reason(
+                workspace_root=workspace_root,
+                repair_brief_path=entry.repair_brief_path,
+            )
+            if reason is None:
+                reason = f"Attempt {entry.attempt_number}: {entry.outcome}."
+            highlights.append(
+                OperatorRepairHighlight(
+                    stage=stage,
+                    attempt_number=entry.attempt_number,
+                    outcome=entry.outcome,
+                    reason=reason,
+                    validator_report_path=entry.validator_report_path,
+                    repair_brief_path=entry.repair_brief_path,
+                    recorded_at_utc=entry.recorded_at_utc,
+                )
+            )
+    highlights.sort(key=lambda highlight: highlight.recorded_at_utc, reverse=True)
+    return tuple(highlights[:_MAX_TERMINAL_REPAIR_HIGHLIGHTS])
+
+
 def _terminal_approval_counts(
     *,
     workspace_root: Path,
@@ -1655,16 +1927,56 @@ def _next_flow_recommendations(
     *,
     status: str,
     runtime_id: str,
+    missing_terminal_evidence: bool = False,
 ) -> tuple[OperatorNextFlowRecommendation, ...]:
+    if missing_terminal_evidence:
+        return (
+            OperatorNextFlowRecommendation(
+                action="create-new-work-item",
+                label="Create New Work Item",
+                detail="Restore terminal QA evidence before starting unrelated work.",
+                enabled=False,
+            ),
+            OperatorNextFlowRecommendation(
+                action="start-follow-up-flow",
+                label="Start Follow-up Flow",
+                detail="Restore terminal QA evidence before drafting follow-up work.",
+                enabled=False,
+            ),
+            OperatorNextFlowRecommendation(
+                action="clone-flow",
+                label="Clone This Flow",
+                detail="Restore terminal QA evidence before cloning this run.",
+                enabled=False,
+            ),
+            OperatorNextFlowRecommendation(
+                action="run-eval-batch",
+                label="Run Eval / Scenario Batch",
+                detail="Restore terminal QA evidence before using this run for comparison.",
+                enabled=False,
+            ),
+            OperatorNextFlowRecommendation(
+                action="archive-run",
+                label="Archive Run",
+                detail="Restore terminal QA evidence before archiving the handoff.",
+                enabled=False,
+            ),
+        )
     if status == "completed":
+        new_work_detail = "Start unrelated work without inheriting source-run context."
         follow_up_detail = "Create a scoped follow-up only when the operator selects new work."
+        eval_detail = "Use source-run evidence for comparison without mutating the source run."
     else:
+        new_work_detail = "Start unrelated work without carrying this terminal handoff evidence."
         follow_up_detail = "Create a scoped follow-up from QA findings, blockers, or manual notes."
+        eval_detail = (
+            "Use terminal handoff evidence for comparison without repairing the source run."
+        )
     return (
         OperatorNextFlowRecommendation(
             action="create-new-work-item",
             label="Create New Work Item",
-            detail="Start unrelated work without inheriting completed-run context.",
+            detail=new_work_detail,
             enabled=True,
         ),
         OperatorNextFlowRecommendation(
@@ -1682,7 +1994,7 @@ def _next_flow_recommendations(
         OperatorNextFlowRecommendation(
             action="run-eval-batch",
             label="Run Eval / Scenario Batch",
-            detail="Use completed-run evidence for comparison without mutating the source run.",
+            detail=eval_detail,
             enabled=True,
         ),
         OperatorNextFlowRecommendation(
@@ -1725,14 +2037,24 @@ def _terminal_handoff(
     }:
         return None
 
+    final_artifacts = _terminal_final_artifacts(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        metadata=metadata,
+    )
+    missing_terminal_evidence = _missing_terminal_evidence_labels(final_artifacts)
+    qa_verdict = _read_qa_verdict(workspace_root=workspace_root, work_item=work_item)
     final_qa_status = (
-        _read_qa_verdict(workspace_root=workspace_root, work_item=work_item)
-        or qa_result.final_state
+        "evidence-incomplete"
+        if missing_terminal_evidence
+        else qa_verdict or qa_result.final_state
     )
     handoff_status = _terminal_handoff_status(
         qa_stage_state=qa_result.final_state,
         final_qa_status=final_qa_status,
     )
+    if missing_terminal_evidence and handoff_status != "failed":
+        handoff_status = "blocked"
     questions_answered, questions_total = _terminal_question_counts(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -1741,13 +2063,14 @@ def _terminal_handoff(
         status=handoff_status,
         final_qa_status=final_qa_status,
         qa_stage_state=qa_result.final_state,
-        final_artifacts=_terminal_final_artifacts(
+        final_artifacts=final_artifacts,
+        blockers=blockers,
+        repair_counts=_terminal_repair_counts(
             workspace_root=workspace_root,
             work_item=work_item,
             metadata=metadata,
         ),
-        blockers=blockers,
-        repair_counts=_terminal_repair_counts(
+        repair_highlights=_terminal_repair_highlights(
             workspace_root=workspace_root,
             work_item=work_item,
             metadata=metadata,
@@ -1762,6 +2085,7 @@ def _terminal_handoff(
         recommended_next_flow_actions=_next_flow_recommendations(
             status=handoff_status,
             runtime_id=metadata.runtime_id,
+            missing_terminal_evidence=bool(missing_terminal_evidence),
         ),
     )
 
@@ -1792,6 +2116,34 @@ def resolve_operator_dashboard_view(
     active_stage_view: OperatorStageView | None = None
     stale_by_stage: dict[str, RemediationStaleStage] = {}
     if metadata is not None:
+        running_stages = tuple(
+            stage for stage in metadata.stages if stage.status in _RUNNING_STAGE_STATES
+        )
+        if running_stages:
+            stages = _metadata_stage_rail_items(metadata)
+            rail_by_stage = {stage.stage: stage for stage in stages}
+            running_stage = _running_stage_item(rail_by_stage)
+            if running_stage is not None:
+                return OperatorDashboardView(
+                    work_item=work_item,
+                    workspace_root=workspace_root,
+                    project_root=selected_project_root,
+                    active_stage=active_stage,
+                    run=_run_summary(metadata),
+                    stages=stages,
+                    active_stage_view=None,
+                    primary_artifact=None,
+                    next_action=_running_stage_next_action(running_stage),
+                    blockers=(),
+                    first_failure=None,
+                    validation_findings=(),
+                    primary_validation_finding=None,
+                    recovery_actions=(),
+                    evidence_refs=(),
+                    activity=(),
+                    recent_artifacts=(),
+                    terminal_handoff=None,
+                )
         remediation_status = load_remediation_status(
             workspace_root=workspace_root,
             work_item=work_item,
@@ -1815,6 +2167,32 @@ def resolve_operator_dashboard_view(
         stale_by_stage=stale_by_stage,
     )
     rail_by_stage = {stage.stage: stage for stage in stages}
+    running_stage = _running_stage_item(rail_by_stage)
+    if running_stage is not None:
+        return OperatorDashboardView(
+            work_item=work_item,
+            workspace_root=workspace_root,
+            project_root=selected_project_root,
+            active_stage=active_stage,
+            run=(
+                _run_summary(metadata)
+                if metadata
+                else _empty_run_summary(workspace_root=workspace_root, work_item=work_item)
+            ),
+            stages=stages,
+            active_stage_view=None,
+            primary_artifact=None,
+            next_action=_running_stage_next_action(running_stage),
+            blockers=(),
+            first_failure=None,
+            validation_findings=(),
+            primary_validation_finding=None,
+            recovery_actions=(),
+            evidence_refs=(),
+            activity=(),
+            recent_artifacts=(),
+            terminal_handoff=None,
+        )
     primary_artifact = _primary_artifact(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -1839,7 +2217,13 @@ def resolve_operator_dashboard_view(
         work_item=work_item,
         rail_by_stage=rail_by_stage,
     )
-    blockers = (*blockers, *report_blockers)
+    terminal_evidence_blockers = _terminal_missing_evidence_blockers(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        metadata=metadata,
+        stale_by_stage=stale_by_stage,
+    )
+    blockers = (*blockers, *report_blockers, *terminal_evidence_blockers)
     first_failure = _first_failure(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -1863,7 +2247,7 @@ def resolve_operator_dashboard_view(
         active_stage=active_stage,
         active_stage_view=active_stage_view,
         rail_by_stage=rail_by_stage,
-        report_blockers=report_blockers,
+        report_blockers=(*report_blockers, *terminal_evidence_blockers),
         stages_with_operator_requests=stages_with_operator_requests,
     )
     validation_stage = active_stage

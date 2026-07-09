@@ -336,14 +336,27 @@ does not compute `counted-clean`. Manual `quality-report.md` remains the only fi
 
 Keep `Run Integrity` separate from artifact, code, test, and UI/UX quality.
 API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit.
+Observed running stages add a `running-stage` checkpoint phase for the disabled
+`wait-for-stage` next action, active running-stage visibility, and runtime-log affordance,
+including the honest pending-log state before `runtime.log` exists; completed stages keep
+the `post-stage` phase for stage API and artifact reachability.
+`frontend-checkpoints.md` includes a manual visual review checklist for visible next
+action, active stage, desktop/mobile topbar readability, failure-appropriate recovery
+primary action, reachable logs/artifacts/questions/answers, next-flow handoff visibility,
+and long-path/log/action-copy overflow.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
+When the operator passes `--manual-frontend-evidence <path>`, the runner copies that
+operator-supplied file or directory into `manual-frontend-evidence/` and references it
+from `frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
 The `Operator UI/UX decision` is a manual AIDD operator-UI sub-decision only; it
 does not change `verdict.md`, `grader.json`, or any execution status. Inspect
 terminal flow visibility, stage list navigation, artifact/log views, questions and
 answers, repair evidence, next-flow handoff, state clarity, readability, keyboard
 path, focus visibility, responsive behavior, and any manually captured screenshots
-or browser notes. Mark generated product UI as `not-applicable` unless you
-explicitly performed a separate product-UI review.
+or browser notes. Treat the checklist as a prompt, not as proof; record actual
+browser evidence or explicitly mark surfaces `not inspected`. Mark generated
+product UI as `not-applicable` unless you explicitly performed a separate
+product-UI review.
 
 ## Next-flow terminal checkpoint
 
@@ -416,6 +429,7 @@ Expected live artifacts include:
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
+- `manual-frontend-evidence/` only when `--manual-frontend-evidence` is provided
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
 - `next-flow-lineage.json` only when `--enable-next-flow-follow-up-proof` is explicitly enabled

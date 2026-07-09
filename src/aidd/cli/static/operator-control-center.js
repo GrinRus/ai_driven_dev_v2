@@ -5,15 +5,28 @@ function runScopedQuery(stage = null) {
   return params.toString();
 }
 
-function secondsLabel(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return "not available";
-  const seconds = Math.max(0, Number(value));
-  if (seconds < 60) return `${Math.floor(seconds)}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainder = Math.floor(seconds % 60);
-  if (minutes < 60) return `${minutes}m ${remainder}s`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
+function renderRunningStageNotice(job) {
+  const status = String(job?.status || "running");
+  const stage = job?.stage || "workflow";
+  const logChunkSummary = activeJobLiveLogChunkSummary(job);
+  const summary = status === "waiting-for-operator"
+    ? "Runtime is waiting for an operator approval decision."
+    : status === "cancelling"
+      ? "Cancel request is in progress; runtime shutdown evidence will appear in logs."
+      : "Stage is still running; live logs are the current evidence stream.";
+  return `
+    <div class="run-progress-notice" role="status" aria-live="polite">
+      <div>
+        <strong>${escapeHtml(stageTitle(stage))} in progress</strong>
+        <p>${escapeHtml(summary)}</p>
+      </div>
+      <div class="run-progress-meta">
+        <span><strong>Elapsed</strong>${escapeHtml(secondsLabel(job?.elapsed_seconds))}</span>
+        <span><strong>Runtime output</strong>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span>
+        <span><strong>Live log chunks</strong>${escapeHtml(logChunkSummary)}</span>
+      </div>
+    </div>
+  `;
 }
 
 function renderActiveRunPanel() {
@@ -35,18 +48,19 @@ function renderActiveRunPanel() {
   const runtime = selectedRuntimeView();
   const warning = job.silence_warning ? `
     <div class="truncation-notice" role="status">
-      <strong>No output for ${escapeHtml(secondsLabel(job.last_output_age_seconds))}</strong>
-      <span>Last line: ${escapeHtml(job.last_output_text || "no output captured")}</span>
+      <strong>${escapeHtml(runtimeOutputMissingLabel(job))}</strong>
+      <span>Last runtime line: ${escapeHtml(activeJobRuntimeOutputText(job) || "no runtime output captured")}</span>
     </div>
   ` : "";
   panel.innerHTML = `
     <div class="panel-title">Active run <span class="small-badge ${escapeHtml(statusClass(job.status))}">${escapeHtml(job.status || "running")}</span></div>
+    ${renderRunningStageNotice(job)}
     <div class="panel-list">
       <div class="panel-item"><strong>Job</strong><span>${escapeHtml(job.job_id || "-")}</span></div>
       <div class="panel-item"><strong>Stage</strong><span>${escapeHtml(job.stage || "workflow")}</span></div>
       <div class="panel-item"><strong>Runner</strong><span>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "selected runtime")}</span></div>
       <div class="panel-item"><strong>Elapsed</strong><span>${escapeHtml(secondsLabel(job.elapsed_seconds))}</span></div>
-      <div class="panel-item"><strong>Last output</strong><span>${escapeHtml(secondsLabel(job.last_output_age_seconds))} ago</span></div>
+      <div class="panel-item"><strong>Last runtime output</strong><span>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span></div>
       <div class="panel-item"><strong>Timeout</strong><span>${escapeHtml(timeoutSummary(runtime))}</span></div>
       <div class="panel-item"><strong>Command</strong><span title="${escapeHtml(runtime?.command || "")}">${escapeHtml(compactPath(runtime?.command || "not reported", 72))}</span></div>
     </div>
@@ -150,6 +164,64 @@ function renderDiffFilters(files) {
   `;
 }
 
+function renderImplementationVerificationGap(implementation) {
+  const commands = implementation?.verification_commands || [];
+  if (commands.length) return "";
+  const skipped = implementation?.skipped_checks || [];
+  const skippedLabel = skipped.length === 1 ? "1 skipped check" : `${skipped.length} skipped checks`;
+  const skippedVerb = skipped.length === 1 ? "was" : "were";
+  const body = skipped.length
+    ? `${skippedLabel} ${skippedVerb} recorded, but no executable command evidence was parsed from implementation-report.md. Review cannot trust readiness until implementation records what ran.`
+    : "No executable command evidence was parsed from implementation-report.md. Review cannot trust readiness until implementation records what ran.";
+  return renderDecisionSummary({
+    kind: "implementation-verification",
+    tone: "bad",
+    badge: "verification missing",
+    title: "Implementation verification evidence is missing",
+    body,
+    primary: "Primary action: Rerun implement or request intervention",
+    metrics: [
+      {label: "Commands", value: "0", tone: "bad"},
+      {label: "Skipped", value: String(skipped.length), tone: skipped.length ? "warn" : ""},
+      {label: "Touched files", value: String((implementation?.touched_files || []).length)},
+      {label: "Residual risks", value: String((implementation?.residual_risks || []).length)}
+    ]
+  });
+}
+
+function implementationSummaryWarnings(implementation) {
+  const warnings = implementation?.warnings || [];
+  if ((implementation?.verification_commands || []).length) return warnings;
+  return warnings.filter((warning) =>
+    !String(warning || "").includes("No executable verification commands")
+  );
+}
+
+function renderImplementationVerificationItems(implementation) {
+  const commands = implementation?.verification_commands || [];
+  if (commands.length) {
+    return commands.slice(0, 4).map((item) => `<span>${escapeHtml(item)}</span>`).join("");
+  }
+  const skipped = implementation?.skipped_checks || [];
+  if (skipped.length) {
+    return skipped.slice(0, 4).map((item) => `<span>Skipped: ${escapeHtml(item)}</span>`).join("");
+  }
+  return "<span>Verification evidence missing.</span>";
+}
+
+function implementationVerificationReady(implementation) {
+  return Boolean((implementation?.verification_commands || []).length);
+}
+
+function renderImplementationProceedGuard(implementation) {
+  if (implementationVerificationReady(implementation)) return "";
+  return `
+    <p class="form-error" role="status">
+      Proceed to review is blocked until implementation records executable verification evidence.
+    </p>
+  `;
+}
+
 function renderImplementationSummary(implementation) {
   return `
     <section class="surface">
@@ -157,7 +229,8 @@ function renderImplementationSummary(implementation) {
         <span>Implementation summary</span>
         <span class="small-badge">${escapeHtml(implementation?.selected_task_id || "task not detected")}</span>
       </div>
-      ${renderWarnings(implementation?.warnings)}
+      ${renderWarnings(implementationSummaryWarnings(implementation))}
+      ${renderImplementationVerificationGap(implementation)}
       <div class="metric-grid">
         <div class="metric"><span>Touched files</span><strong>${escapeHtml((implementation?.touched_files || []).length)}</strong></div>
         <div class="metric"><span>Verification</span><strong>${escapeHtml((implementation?.verification_commands || []).length)}</strong></div>
@@ -165,7 +238,7 @@ function renderImplementationSummary(implementation) {
         <div class="metric"><span>Residual risks</span><strong>${escapeHtml((implementation?.residual_risks || []).length)}</strong></div>
       </div>
       <div class="compact-list">
-        ${(implementation?.verification_commands || []).slice(0, 4).map((item) => `<span>${escapeHtml(item)}</span>`).join("") || "<span>No verification commands detected.</span>"}
+        ${renderImplementationVerificationItems(implementation)}
       </div>
     </section>
   `;
@@ -189,6 +262,7 @@ async function renderImplementReview() {
     if (!state.implementDiffPath && visible[0]) state.implementDiffPath = visible[0].path;
     const selected = visible.find((file) => file.path === state.implementDiffPath) || visible[0] || null;
     const unchanged = diffView.mentioned_but_unchanged || [];
+    const verificationReady = implementationVerificationReady(evidence);
     content.innerHTML = `
       <div class="implement-review-screen">
         ${renderImplementationSummary(evidence)}
@@ -229,8 +303,9 @@ async function renderImplementReview() {
               ` : `<div class="empty-state">No source diff available.</div>`}
             </section>
           </div>
+          ${renderImplementationProceedGuard(evidence)}
           <div class="wizard-actions">
-            <button data-proceed-stage="review" type="button" ${selectedRuntimeReady() ? "" : "disabled"}>Proceed to review</button>
+            <button data-proceed-stage="review" type="button" ${verificationReady && selectedRuntimeReady() ? "" : "disabled"}>Proceed to review</button>
             <button data-rerun-implement type="button" class="secondary" ${selectedRuntimeReady() ? "" : "disabled"}>Rerun implement</button>
             <button data-open-request-tab type="button" class="secondary">Request intervention</button>
           </div>
@@ -246,6 +321,138 @@ function checkedRemediationIds(sourceStage) {
   return Array.from(document.querySelectorAll(`[data-remediation-source="${sourceStage}"]:checked`))
     .map((input) => input.value)
     .filter(Boolean);
+}
+
+function countLabel(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function renderDecisionSummary({kind, tone, badge, title, body, primary, metrics}) {
+  return `
+    <div class="decision-summary ${escapeHtml(tone)}" data-decision-summary="${escapeHtml(kind)}" role="status" aria-live="polite">
+      <div class="decision-summary-copy">
+        <span class="small-badge ${escapeHtml(tone)}">${escapeHtml(badge)}</span>
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(body)}</p>
+        <small>${escapeHtml(primary)}</small>
+      </div>
+      <div class="decision-summary-metrics">
+        ${metrics.map((metric) => {
+          const metricClass = metric.tone ? ` ${escapeHtml(metric.tone)}` : "";
+          return `
+            <div class="decision-metric${metricClass}">
+              <span>${escapeHtml(metric.label)}</span>
+              <strong>${escapeHtml(metric.value)}</strong>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderReviewDecisionSummary(view, findings) {
+  const status = view.approval_status || "not detected";
+  const mustFix = findings.filter((finding) => finding.disposition === "must-fix").length;
+  const selected = mustFix;
+  const total = findings.length;
+  let tone = "warn";
+  let title = "Review status needs operator confirmation";
+  let body = "The review report did not publish a clear approved/rejected status. Inspect the report or request intervention before progressing.";
+  let primary = "Primary action: Request review intervention";
+  if (status === "rejected") {
+    tone = "bad";
+    title = "Review rejected: fix blocking findings before QA";
+    body = mustFix
+      ? `${countLabel(mustFix, "must-fix finding")} selected for implement remediation. Send them back, then rerun review before QA.`
+      : "Review rejected, but no must-fix items were parsed. Inspect the review report or request intervention before QA.";
+    primary = "Primary action: Send selected to implement";
+  } else if (status === "approved") {
+    tone = "good";
+    title = "Review approved: QA can start";
+    body = total
+      ? `${countLabel(total, "finding")} remain documented for traceability. QA can start when runtime readiness is green.`
+      : "No structured review findings were detected. QA can start when runtime readiness is green.";
+    primary = "Primary action: Proceed to QA";
+  }
+  return renderDecisionSummary({
+    kind: "review",
+    tone,
+    badge: status,
+    title,
+    body,
+    primary,
+    metrics: [
+      {label: "Approval", value: status, tone},
+      {label: "Findings", value: String(total)},
+      {label: "Must fix", value: String(mustFix), tone: mustFix ? "bad" : "good"},
+      {label: "Selected", value: String(selected)}
+    ]
+  });
+}
+
+function renderQaDecisionSummary(view, risks, issues) {
+  const verdict = view.quality_verdict || "not detected";
+  const recommendation = view.release_recommendation || "not detected";
+  const total = risks.length + issues.length;
+  let tone = "warn";
+  let title = "QA verdict needs operator confirmation";
+  let body = "The QA report did not publish a clear ready/not-ready verdict. Inspect the report before accepting or launching follow-up work.";
+  let primary = "Primary action: Start follow-up or request intervention";
+  if (verdict === "not-ready") {
+    tone = "bad";
+    title = "QA not ready: send selected items back to implement";
+    body = total
+      ? `${countLabel(total, "risk or issue", "risks or issues")} are selected for implement remediation. Rerun verification after fixes before accepting the run.`
+      : "QA is not ready, but no structured risks or issues were parsed. Inspect the QA report before accepting.";
+    primary = "Primary action: Send selected to implement";
+  } else if (verdict === "ready" && total) {
+    tone = "warn";
+    title = "QA ready with follow-up context";
+    body = `${countLabel(total, "risk or issue", "risks or issues")} remain documented. Accept only if they are acceptable for this work item, or start a follow-up from the final handoff.`;
+    primary = "Primary action: Accept complete or start follow-up";
+  } else if (verdict === "ready") {
+    tone = "good";
+    title = "QA ready: run can be accepted";
+    body = "No structured QA risks or known issues were detected. Accept complete to finish the governed run.";
+    primary = "Primary action: Accept complete";
+  }
+  return renderDecisionSummary({
+    kind: "qa",
+    tone,
+    badge: verdict,
+    title,
+    body,
+    primary,
+    metrics: [
+      {label: "Verdict", value: verdict, tone},
+      {label: "Recommendation", value: recommendation},
+      {label: "Residual risks", value: String(risks.length), tone: risks.length ? "warn" : "good"},
+      {label: "Known issues", value: String(issues.length), tone: issues.length ? "warn" : "good"}
+    ]
+  });
+}
+
+function renderRemediationRuntimeGuard(sourceStage, hasRemediationItems) {
+  if (!hasRemediationItems || selectedRuntimeReady()) return "";
+  const label = sourceStage === "review" ? "review findings" : "QA risks or issues";
+  return `
+    <p class="form-error" role="status">
+      Runtime readiness is required before sending ${escapeHtml(label)} back to implement.
+    </p>
+  `;
+}
+
+function renderQaCompletionGuard(view, hasRemediationItems) {
+  if (view.quality_verdict !== "not-ready") return "";
+  const nextStep = hasRemediationItems
+    ? "Send selected QA risks or issues back to implement, then rerun verification and QA."
+    : "Inspect the QA report or start a follow-up before completing this run.";
+  return `
+    <p class="form-error" role="status">
+      Accept complete is disabled while QA is not-ready. ${escapeHtml(nextStep)}
+    </p>
+  `;
 }
 
 async function launchRemediation(sourceStage) {
@@ -276,6 +483,9 @@ async function renderReviewFindings() {
   content.innerHTML = `<div class="empty-state loading-state">Loading review findings...</div>`;
   try {
     const view = await api(`/api/review/findings?${runScopedQuery()}`);
+    state.reviewFindingsView = view;
+    state.reviewFindingsRunId = state.activeRunId;
+    if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
     const findings = view.findings || [];
     content.innerHTML = `
       <section class="surface findings-screen">
@@ -284,6 +494,7 @@ async function renderReviewFindings() {
           <span class="small-badge ${view.approval_status === "rejected" ? "bad" : view.approval_status === "approved" ? "good" : "warn"}">${escapeHtml(view.approval_status || "not detected")}</span>
         </div>
         ${renderWarnings(view.warnings)}
+        ${renderReviewDecisionSummary(view, findings)}
         <div class="table-wrap">
           <table class="activity-table">
             <thead><tr><th>Select</th><th>ID</th><th>Severity</th><th>Disposition</th><th>Evidence</th><th>Summary</th></tr></thead>
@@ -305,6 +516,7 @@ async function renderReviewFindings() {
           <span>Operator note for implement</span>
           <textarea data-remediation-note="review" rows="4">Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.</textarea>
         </label>
+        ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
         <div class="wizard-actions">
           <button data-proceed-stage="qa" type="button" ${view.approval_status === "rejected" || !selectedRuntimeReady() ? "disabled" : ""}>Proceed to QA</button>
           <button data-remediation-launch="review" type="button" ${findings.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
@@ -322,6 +534,9 @@ async function renderQaVerdict() {
   content.innerHTML = `<div class="empty-state loading-state">Loading QA verdict...</div>`;
   try {
     const view = await api(`/api/qa/verdict?${runScopedQuery()}`);
+    state.qaVerdictView = view;
+    state.qaVerdictRunId = state.activeRunId;
+    if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
     const risks = view.residual_risks || [];
     const issues = view.known_issues || [];
     const sourceItems = [
@@ -336,6 +551,7 @@ async function renderQaVerdict() {
           <span class="small-badge ${verdictClass}">${escapeHtml(view.quality_verdict || "not detected")}</span>
         </div>
         ${renderWarnings(view.warnings)}
+        ${renderQaDecisionSummary(view, risks, issues)}
         <div class="metric-grid">
           <div class="metric"><span>Release recommendation</span><strong>${escapeHtml(view.release_recommendation || "not detected")}</strong></div>
           <div class="metric"><span>Evidence IDs</span><strong>${escapeHtml((view.evidence_ids || []).length)}</strong></div>
@@ -360,6 +576,8 @@ async function renderQaVerdict() {
           <span>Operator note for implement</span>
           <textarea data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
         </label>
+        ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
+        ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
         <div class="wizard-actions">
           <button data-accept-qa type="button" ${view.quality_verdict === "not-ready" ? "disabled" : ""}>Accept complete</button>
           <button data-remediation-launch="qa" type="button" ${sourceItems.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>

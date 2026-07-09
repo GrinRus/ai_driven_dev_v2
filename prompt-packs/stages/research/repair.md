@@ -66,6 +66,8 @@ Use concrete repair actions:
 - Fix only the sections named by validator findings unless cross-document consistency requires a narrow companion edit.
 - Preserve valid sections and stable ids; do not rewrite complete documents just to satisfy one failed heading.
 - Re-copy the `stage-result.md` and `validator-report.md` skeleton headings from `stage-brief.md` or the document contracts when a common output is malformed.
+- If `stage-result.md` retained the bootstrap placeholder, replace the whole file content; do not
+  keep `# Stage result` / `Stage not run yet.` above the repaired `# Stage Result` document.
 
 ## Repair rules
 
@@ -80,7 +82,9 @@ Use concrete repair actions:
 9. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
 10. Do not claim success unless required headings, validator verdict, stage-result status, and evidence-backed findings are mutually consistent.
 11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
-12. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
+12. When `Status` is `succeeded`, `stage-result.md` `Next actions` must name `plan` as the
+    exact immediate canonical downstream stage; generic `planning` wording is not enough.
+13. Do not create top-level `workitems/...`; canonical stage artifacts are under `.aidd/workitems/...`
     from the repository root.
 
 ## Repair exit checks
@@ -93,4 +97,5 @@ Use concrete repair actions:
   succeeded status,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
+- successful `stage-result.md` next-action copy names the exact immediate next stage id `plan`,
 - unresolved `[blocking]` questions still prevent `succeeded`.

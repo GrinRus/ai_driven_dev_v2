@@ -50,6 +50,9 @@ Optional context documents may refine review quality, but they must not replace 
   context, plan coherence, risk coverage, dependency clarity, acceptance and verification
   coverage, and decomposition readiness.
 - `stage-result.md` and `validator-report.md` must remain consistent with the declared readiness state.
+- On success, `stage-result.md` `Next actions` must name `tasklist` as the immediate
+  canonical downstream stage. Do not tell the operator to proceed to implementation,
+  review, or QA before task decomposition has completed successfully.
 
 ## Validation focus
 
@@ -126,4 +129,4 @@ A `review-spec` run is considered ready to progress when:
 - the required output documents exist,
 - validators pass,
 - any required user questions have answers,
-- `stage-result.md` names the next action clearly.
+- `stage-result.md` names `tasklist` as the immediate next stage when the run succeeds.

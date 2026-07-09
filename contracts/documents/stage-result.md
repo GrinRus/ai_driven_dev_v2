@@ -53,7 +53,7 @@ or validation wording when the canonical validator report proves the draft incon
 
 ## Next actions
 
-- <operator or downstream action>
+- <operator or immediate canonical downstream stage action; on success include the exact next stage id>
 
 ## Terminal state notes
 
@@ -76,6 +76,10 @@ or validation wording when the canonical validator report proves the draft incon
 - `Produced outputs`
   - Must list output documents produced in the final attempt as AIDD workspace-relative paths.
   - Must explicitly note missing required outputs when status is not `succeeded`.
+  - When AIDD rewrites `stage-result.md` to preserve repair history after a validation pass,
+    it must preserve any existing declared primary output documents in this section before
+    listing common outputs such as `stage-result.md`, `validator-report.md`, or
+    `repair-brief.md`.
 - `Validation summary`
   - Must summarize whether validation passed, failed, or was not reached.
   - Must reference `validator-report.md` when validation produced findings.
@@ -85,9 +89,26 @@ or validation wording when the canonical validator report proves the draft incon
 - `Next actions`
   - Must define actionable follow-up steps for operators or the next stage.
   - Must distinguish retry actions from downstream stage progression.
+  - Downstream stage progression must follow canonical stage order
+    (`idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`).
+    For example, a successful `implement` result must point operators to `review`, not
+    directly to `qa`; `qa` is only an appropriate downstream action after `review`
+    has completed successfully.
+  - For a successful non-terminal stage, name the immediate canonical next stage in the
+    operator-facing action:
+    - `idea` -> `research`
+    - `research` -> `plan`
+    - `plan` -> `review-spec`
+    - `review-spec` -> `tasklist`
+    - `tasklist` -> `implement`
+    - `implement` -> `review`
+    - `review` -> `qa`
 - `Terminal state notes`
   - Must explain why the stage ended in the declared terminal status.
   - Must include repair-budget outcome when repair logic was used.
+  - If AIDD normalizes stale runtime status/verdict text after canonical validation
+    passes, terminal notes must not retain runtime-authored claims that the stage
+    ended as `failed`, `blocked`, or `needs-input`.
   - If `repair-brief.md` declares `repair-budget-final-attempt`, status must reflect the actual validation outcome of that attempt, not fail solely because no later rerun is available.
   - If AIDD records `repair-budget-exhausted` after a failed final attempt, status must be `failed`.
 - `Project-set evidence` (conditional)
@@ -100,6 +121,9 @@ or validation wording when the canonical validator report proves the draft incon
 ## Authoring rules
 
 - Use required heading names exactly; do not collapse `Attempt history` into `Status`.
+- Replace any placeholder stage-result content completely. A completed or halted stage result
+  must not retain the bootstrap copy `# Stage result` / `Stage not run yet.` above or inside
+  the real `# Stage Result` document.
 - Keep document paths and artifact references workspace-relative and wrapped in backticks.
 - Treat `workitems/...` as relative to the configured `.aidd/` workspace root.
   From the repository root, canonical stage artifacts live under `.aidd/workitems/...`;
@@ -113,16 +137,27 @@ or validation wording when the canonical validator report proves the draft incon
 - Do not claim success when required outputs or validation evidence are missing.
 - Do not claim `Validator verdict: pass` when the canonical AIDD validator report lists
   findings.
+- Do not skip canonical downstream stages in `Next actions`. The next-action copy is
+  operator guidance, so it must name the immediate retry, repair, question-answering,
+  or next-stage step rather than a later desired terminal state.
+- When status is `succeeded`, the first downstream action must include the immediate next
+  stage id from the canonical chain. Do not describe later work such as implementation,
+  review, QA, or release as the next operator step until the intervening canonical stage
+  has completed.
 - If canonical AIDD validation passes, runtime exit succeeded, and no unresolved blocking
   questions remain, AIDD may normalize a stale draft `Status: failed|blocked` or
   `Validator verdict: fail` to `succeeded` / `pass` before publication and record that
-  normalization in `Terminal state notes`.
+  normalization in `Terminal state notes`. It must remove or replace stale
+  terminal-status notes that contradict the normalized status, while preserving
+  product-quality decisions in the primary stage report such as review rejection or QA
+  readiness.
 - Use explicit `- none` markers instead of leaving required sections empty.
 
 ## Validation cues
 
 - the required heading set is present exactly once,
 - terminal status is from the allowed vocabulary,
+- the document does not retain stale placeholder copy such as `Stage not run yet.`,
 - attempt history is ordered and references attempt outcomes,
 - produced outputs and validation state agree with each other,
 - terminal state notes justify why the run stopped.

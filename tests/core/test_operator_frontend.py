@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from aidd.config import load_config
+from aidd.core import operator_frontend_dashboard as dashboard_module
 from aidd.core.interview import AnswerResolution
 from aidd.core.operator_frontend import (
     persist_operator_answer,
@@ -19,6 +20,10 @@ from aidd.core.operator_frontend import (
     resolve_operator_run_view,
     resolve_operator_stage_document_workbench,
     resolve_operator_stage_view,
+)
+from aidd.core.operator_frontend_artifacts import (
+    operator_artifact_category,
+    operator_artifact_is_canonical,
 )
 from aidd.core.operator_frontend_validation import parse_validator_report_findings
 from aidd.core.operator_intervention import persist_operator_intervention_request
@@ -280,6 +285,14 @@ def _write_valid_plan_outputs(workspace_root: Path, *, body_suffix: str = "") ->
         encoding="utf-8",
     )
     return plan_path
+
+
+def _write_plan_output_mirror(workspace_root: Path) -> Path:
+    output_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "output"
+    output_root.mkdir(parents=True, exist_ok=True)
+    mirror_path = output_root / "plan.md"
+    mirror_path.write_text("# Plan\n\n## Goals\n\n- Published handoff copy.\n", encoding="utf-8")
+    return mirror_path
 
 
 def _prepare_terminal_qa_run(
@@ -628,6 +641,54 @@ def test_operator_dashboard_surfaces_runtime_exit_first_failure_and_blocker(
     assert any(action.action == "inspect-runtime-log" for action in dashboard.recovery_actions)
 
 
+def test_operator_dashboard_surfaces_provider_no_progress_as_runtime_recovery(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    attempt_root.joinpath(RUN_RUNTIME_EXIT_METADATA_FILENAME).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "exit_code": None,
+                "exit_classification": "",
+                "adapter_outcome": "provider-no-progress",
+                "completed_at_utc": "2026-07-09T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="plan",
+        run_id="run-ui",
+    )
+
+    assert dashboard.first_failure is not None
+    assert dashboard.first_failure.kind == "provider-no-progress"
+    assert dashboard.first_failure.title == "Provider no progress"
+    assert dashboard.first_failure.path is not None
+    assert any(blocker.kind == "provider-no-progress" for blocker in dashboard.blockers)
+    assert any(action.action == "inspect-runtime-log" for action in dashboard.recovery_actions)
+    assert any(action.action == "request-change" for action in dashboard.recovery_actions)
+
+
 def test_operator_dashboard_surfaces_cancelled_runtime_exit_as_recovery_blocker(
     tmp_path: Path,
 ) -> None:
@@ -669,8 +730,15 @@ def test_operator_dashboard_surfaces_cancelled_runtime_exit_as_recovery_blocker(
 
     assert dashboard.first_failure is not None
     assert dashboard.first_failure.kind == "cancelled"
+    assert dashboard.first_failure.title == "Runtime interrupted"
+    assert "interrupted before this stage completed" in dashboard.first_failure.detail
+    assert "exit_code=130" not in dashboard.first_failure.detail
     assert any(blocker.kind == "cancelled" for blocker in dashboard.blockers)
     assert any(action.action == "inspect-runtime-log" for action in dashboard.recovery_actions)
+    assert any(
+        action.action == "resume-stage" and action.stage == "plan"
+        for action in dashboard.recovery_actions
+    )
 
 
 def test_operator_dashboard_next_action_reviews_failed_intervention_result(
@@ -893,6 +961,30 @@ def test_operator_dashboard_prioritizes_running_stage_over_stale_validation(
         run_id="run-ui",
         stage="implement",
     )
+    events_path = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage="implement",
+            attempt_number=1,
+        )
+        / RUN_EVENTS_JSONL_FILENAME
+    )
+    events_path.write_text(
+        "\n".join(
+            json.dumps(
+                {
+                    "type": "runtime.event",
+                    "timestamp": f"2026-07-08T19:{index % 60:02d}:00Z",
+                    "message": "running event " + ("x" * 200),
+                }
+            )
+            for index in range(2000)
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     persist_stage_status(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -924,6 +1016,74 @@ def test_operator_dashboard_prioritizes_running_stage_over_stale_validation(
     assert dashboard.next_action.enabled is False
     assert dashboard.next_action.label == "Implement running"
     assert stages["implement"].reason == "stage is running"
+    assert dashboard.active_stage_view is None
+    assert dashboard.primary_artifact is None
+    assert dashboard.activity == ()
+    assert dashboard.recent_artifacts == ()
+
+
+def test_operator_dashboard_running_stage_uses_fast_metadata_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="codex",
+        stage_target="idea",
+        config_snapshot={"mode": "test"},
+    )
+    for stage in ("idea", "research", "plan"):
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+        )
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            status="succeeded",
+        )
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="review-spec",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="review-spec",
+        status="executing",
+    )
+
+    def fail_stage_view(*args: object, **kwargs: object) -> object:
+        raise AssertionError("running dashboard should not need full stage view")
+
+    monkeypatch.setattr(dashboard_module, "resolve_operator_stage_view", fail_stage_view)
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="review-spec",
+        run_id="run-ui",
+    )
+    stages = {item.stage: item for item in dashboard.stages}
+
+    assert dashboard.next_action.action == "wait-for-stage"
+    assert dashboard.next_action.stage == "review-spec"
+    assert dashboard.next_action.enabled is False
+    assert dashboard.active_stage_view is None
+    assert dashboard.activity == ()
+    assert dashboard.recent_artifacts == ()
+    assert stages["review-spec"].status == "executing"
+    assert stages["review-spec"].reason == "stage is running"
 
 
 def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> None:
@@ -937,21 +1097,45 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
         question_id="Q1",
         text="The target release is 0.2.0.",
     )
+    plan_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    plan_root.joinpath("repair-brief.md").write_text(
+        "\n".join(
+            (
+                "# Failed checks",
+                "",
+                (
+                    "- `SEM-INCOMPLETE-SECTION` `medium` in "
+                    "`workitems/WI-UI/stages/plan/plan.md`: Verification notes "
+                    "must cover T7 and T8."
+                ),
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
     persist_repair_history_snapshot(
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
         stage="plan",
         attempt_number=1,
+        trigger="initial",
+        outcome="failed validation",
+        stage_status="repair-needed",
+        validator_report_path=plan_root / "validator-report.md",
+        repair_brief_path=plan_root / "repair-brief.md",
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=2,
         trigger="repair",
         outcome="succeeded",
         stage_status="succeeded",
-        validator_report_path=(
-            workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "validator-report.md"
-        ),
-        repair_brief_path=(
-            workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "repair-brief.md"
-        ),
+        validator_report_path=plan_root / "validator-report.md",
+        repair_brief_path=plan_root / "repair-brief.md",
     )
     _write_operator_approval(
         run_attempt_root(
@@ -971,6 +1155,8 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
     )
 
     assert dashboard.next_action.action == "review-complete"
+    assert dashboard.next_action.label == "Review final artifacts"
+    assert "QA handoff" in dashboard.next_action.detail
     assert dashboard.next_action.enabled is True
     assert dashboard.terminal_handoff is not None
     assert dashboard.terminal_handoff.status == "completed"
@@ -978,6 +1164,15 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
     assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
     assert dashboard.terminal_handoff.repair_counts.attempts == 1
     assert dashboard.terminal_handoff.repair_counts.succeeded == 1
+    assert len(dashboard.terminal_handoff.repair_highlights) == 1
+    repair_highlight = dashboard.terminal_handoff.repair_highlights[0]
+    assert repair_highlight.stage == "plan"
+    assert repair_highlight.attempt_number == 2
+    assert "Verification notes must cover T7 and T8" in repair_highlight.reason
+    assert "workitems/WI-UI/stages/plan/plan.md" not in repair_highlight.reason
+    assert repair_highlight.repair_brief_path == (
+        "workitems/WI-UI/stages/plan/repair-brief.md"
+    )
     assert dashboard.terminal_handoff.approval_counts.requested == 1
     assert dashboard.terminal_handoff.approval_counts.approved == 1
     assert dashboard.terminal_handoff.questions_answered_count == 1
@@ -998,6 +1193,20 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
         "run-eval-batch",
         "archive-run",
     }
+    create_new = next(
+        action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        if action.action == "create-new-work-item"
+    )
+    eval_batch = next(
+        action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        if action.action == "run-eval-batch"
+    )
+    assert "source-run context" in create_new.detail
+    assert "completed-run context" not in create_new.detail
+    assert "source-run evidence" in eval_batch.detail
+    assert "completed-run evidence" not in eval_batch.detail
 
 
 def test_operator_dashboard_next_action_surfaces_rejected_review_report(
@@ -1160,8 +1369,21 @@ def test_operator_dashboard_terminal_handoff_reports_failed_qa(
         for action in dashboard.terminal_handoff.recommended_next_flow_actions
         if action.action == "start-follow-up-flow"
     )
+    create_new = next(
+        action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        if action.action == "create-new-work-item"
+    )
+    eval_batch = next(
+        action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        if action.action == "run-eval-batch"
+    )
     assert follow_up.enabled is True
     assert "blockers" in follow_up.detail
+    assert "terminal handoff evidence" in create_new.detail
+    assert "completed-run context" not in create_new.detail
+    assert "terminal handoff evidence" in eval_batch.detail
 
 
 def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
@@ -1188,6 +1410,86 @@ def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
     assert [blocker.kind for blocker in dashboard.terminal_handoff.blockers] == [
         "qa-ready-with-risks"
     ]
+
+
+def test_operator_dashboard_terminal_handoff_blocks_missing_required_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root)
+    qa_root = workspace_root / "workitems" / "WI-UI" / "stages" / "qa"
+    qa_root.joinpath("qa-report.md").unlink()
+    qa_root.joinpath("output", "qa-report.md").unlink(missing_ok=True)
+    run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+        attempt_number=1,
+    ).unlink()
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.next_action.action == "review-complete"
+    assert dashboard.next_action.label == "Restore terminal evidence"
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "blocked"
+    assert dashboard.terminal_handoff.final_qa_status == "evidence-incomplete"
+    missing_blocker = next(
+        blocker
+        for blocker in dashboard.terminal_handoff.blockers
+        if blocker.kind == "terminal-missing-evidence"
+    )
+    assert "Runtime log" in missing_blocker.detail
+    assert "QA report" in missing_blocker.detail
+    assert {artifact.key for artifact in dashboard.terminal_handoff.final_artifacts} >= {
+        "stage_result",
+        "validator_report",
+    }
+    assert "runtime_log" not in {
+        artifact.key for artifact in dashboard.terminal_handoff.final_artifacts
+    }
+    assert all(
+        not action.enabled
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+    )
+
+
+def test_operator_dashboard_terminal_handoff_marks_runtime_only_gap_incomplete(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_terminal_qa_run(workspace_root, qa_verdict="ready")
+    run_attempt_runtime_log_path(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="qa",
+        attempt_number=1,
+    ).unlink()
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="qa",
+        run_id="run-ui",
+    )
+
+    assert dashboard.terminal_handoff is not None
+    assert dashboard.terminal_handoff.status == "blocked"
+    assert dashboard.terminal_handoff.final_qa_status == "evidence-incomplete"
+    missing_blocker = next(
+        blocker
+        for blocker in dashboard.terminal_handoff.blockers
+        if blocker.kind == "terminal-missing-evidence"
+    )
+    assert "Runtime log" in missing_blocker.detail
+    assert "QA report" not in missing_blocker.detail
 
 
 def test_operator_dashboard_terminal_handoff_accepts_stepwise_final_qa_run(
@@ -1781,6 +2083,7 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
     _write_valid_plan_outputs(workspace_root)
+    _write_plan_output_mirror(workspace_root)
     attempt_path = run_attempt_root(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -1826,6 +2129,9 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     assert graph.incomplete_reasons == ()
     assert nodes["stage:plan"].status == "blocked"
     assert nodes["document:plan"].path == "workitems/WI-UI/stages/plan/plan.md"
+    assert nodes["mirror:output/plan.md"].path == (
+        "workitems/WI-UI/stages/plan/output/plan.md"
+    )
     assert nodes["document:validator_report"].status == "pass"
     assert nodes["document:stage_result"].status == "blocked"
     assert nodes["log:runtime_log"].path == (
@@ -1836,6 +2142,7 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     assert nodes[f"approval-decision:{request.id}"].status == "allow_once"
     assert ("stage:plan", "attempt:1", "attempt") in edges
     assert ("attempt:1", "document:plan", "artifact-index") in edges
+    assert ("attempt:1", "mirror:output/plan.md", "published-output") in edges
     assert ("document:validator_report", "document:stage_result", "validation") in edges
     assert ("log:events_jsonl", "event:1", "event-entry") in edges
     assert (
@@ -1849,6 +2156,10 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     assert refs_by_key["plan"].latest is True
     assert refs_by_key["plan"].available is True
     assert refs_by_key["plan"].safe_key == "plan"
+    assert refs_by_key["output/plan.md"].kind == "mirror"
+    assert refs_by_key["output/plan.md"].category == "published-stage-output"
+    assert refs_by_key["output/plan.md"].canonical is False
+    assert refs_by_key["output/plan.md"].available is True
     assert refs_by_key["questions"].category == "canonical-stage-document"
     assert refs_by_key["questions"].available is False
     assert refs_by_key["validator_report"].category == "validation-evidence"
@@ -1862,6 +2173,28 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
         for node in graph.nodes
     )
     assert all(not Path(ref.path).is_absolute() for ref in graph.artifact_table)
+
+
+def test_operator_artifact_category_distinguishes_published_output_mirrors() -> None:
+    output_path = "workitems/WI-UI/stages/plan/output/plan.md"
+    canonical_path = "workitems/WI-UI/stages/plan/plan.md"
+
+    assert (
+        operator_artifact_category(key="plan", kind="document", path=output_path)
+        == "published-stage-output"
+    )
+    assert (
+        operator_artifact_category(key="plan", kind="document", path=canonical_path)
+        == "canonical-stage-document"
+    )
+    assert (
+        operator_artifact_is_canonical(key="plan", kind="document", path=output_path)
+        is False
+    )
+    assert (
+        operator_artifact_is_canonical(key="plan", kind="document", path=canonical_path)
+        is True
+    )
 
 
 def test_operator_evidence_graph_view_degrades_to_flat_table_without_artifact_index(
@@ -1904,6 +2237,7 @@ def test_operator_stage_document_workbench_returns_present_markdown_contract_con
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
     _write_valid_plan_outputs(workspace_root)
+    _write_plan_output_mirror(workspace_root)
     run_attempt_root(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -1952,6 +2286,7 @@ def test_operator_stage_document_workbench_returns_present_markdown_contract_con
     )
     categories = {ref.label: ref.category for ref in workbench.references}
     assert categories["plan"] == "canonical-stage-document"
+    assert categories["output/plan.md"] == "published-stage-output"
     assert categories["input_bundle"] == "runtime-input"
     assert categories["validator_report"] == "validation-evidence"
     assert any(

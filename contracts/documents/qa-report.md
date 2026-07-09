@@ -20,6 +20,9 @@ Summarize verification evidence, remaining risks, and release readiness.
 - `Release recommendation` declares exactly one supported state:
   `proceed`, `proceed-with-conditions`, or `hold`,
 - material evidence entries use stable `EV-N` ids and/or backticked artifact paths,
+- ready/proceed-style reports that cite test/type/lint/docs/build commands also cite
+  ignored residue evidence from `git status --ignored --short --untracked-files=all`
+  collected after all QA commands, or equivalent post-command workspace hygiene evidence,
 - when `context/acceptance-criteria.md` exists, acceptance coverage is explicit: one top-level
   bullet per `AC-N`, each naming exactly one criterion id and citing same-bullet evidence,
 - `Known issues` may include an empty marker such as `- Known issues: none.`;

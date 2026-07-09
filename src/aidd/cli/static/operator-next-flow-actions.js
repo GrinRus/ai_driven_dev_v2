@@ -190,6 +190,25 @@ function terminalHandoffTitle(handoff) {
   return "Flow Needs Attention";
 }
 
+function terminalHandoffMark(handoff) {
+  if (handoff.status === "failed" || handoff.status === "blocked") return "!";
+  if (handoff.status === "completed-with-warning") return "!";
+  return "OK";
+}
+
+function terminalHandoffMessage(handoff) {
+  if (handoff.status === "failed") {
+    return "QA did not clear this run. Review blockers and final evidence before starting follow-up remediation.";
+  }
+  if (handoff.status === "blocked") {
+    return "The terminal handoff is blocked. Resolve blockers or carry them into follow-up work before starting new scope.";
+  }
+  if (handoff.status === "completed-with-warning") {
+    return "QA completed with recorded risks. Review risk evidence before selecting the next flow.";
+  }
+  return "The QA terminal handoff is ready for operator review and next-flow selection.";
+}
+
 function renderHandoffMetric({label, value, detail, tone = ""}) {
   return `
     <div class="metric handoff-metric">
@@ -234,6 +253,91 @@ function recommendedNextFlowAction(handoff) {
   return "start-follow-up-flow";
 }
 
+function recommendedNextFlowDecision(handoff) {
+  const actionId = recommendedNextFlowAction(handoff);
+  const actions = handoff.recommended_next_flow_actions || [];
+  const action = actions.find((candidate) => candidate.action === actionId) || actions[0] || {};
+  const blockerCount = (handoff.blockers || []).length;
+  const finalStatus = handoff.status || "unknown";
+  const missingTerminalEvidence = handoffMissingTerminalEvidence(handoff);
+  let reason = "Use this path before choosing a less common next-flow option.";
+  if (missingTerminalEvidence) {
+    reason = "Required terminal evidence is missing; restore artifacts before starting any next flow.";
+  } else if (actionId === "create-new-work-item") {
+    reason = "QA is ready and no open blockers are recorded; start unrelated work only after reviewing final evidence.";
+  } else if (finalStatus === "failed") {
+    reason = "Terminal QA failed; carry failed evidence into a follow-up instead of treating this run as done.";
+  } else if (blockerCount) {
+    reason = `${blockerCount} blocker${blockerCount === 1 ? "" : "s"} remain; carry them into follow-up work before starting new scope.`;
+  } else {
+    reason = "The terminal handoff still needs attention; carry the current findings into follow-up work first.";
+  }
+  return {
+    action: actionId,
+    label: action.label || nextFlowButtonLabel({action: actionId, label: "Start Follow-up"}),
+    detail: action.detail || "",
+    enabled: action.enabled !== false,
+    reason
+  };
+}
+
+function renderRecommendedNextFlowDecision(handoff) {
+  const decision = recommendedNextFlowDecision(handoff);
+  const badgeTone = decision.enabled ? "good" : "warn";
+  const badgeLabel = decision.enabled ? "recommended next decision" : "next decision blocked";
+  return `
+    <div class="next-flow-decision-spotlight">
+      <div>
+        <span class="small-badge ${badgeTone}">${badgeLabel}</span>
+        <strong>${escapeHtml(decision.label)}</strong>
+        <p>${escapeHtml(decision.reason)}</p>
+        ${decision.detail ? `<small>${escapeHtml(decision.detail)}</small>` : ""}
+      </div>
+      <button data-next-flow-action="${escapeHtml(decision.action)}" type="button" ${decision.enabled ? "" : 'disabled aria-disabled="true"'}>
+        ${escapeHtml(nextFlowButtonLabel(decision))}
+      </button>
+    </div>
+  `;
+}
+
+function terminalHandoffNeedsRecovery(handoff) {
+  return Boolean(handoff && (handoff.status !== "completed" || (handoff.blockers || []).length));
+}
+
+function terminalNextFlowSafetyNote(handoff, action) {
+  if (!terminalHandoffNeedsRecovery(handoff)) return "";
+  if (action.action === "start-follow-up-flow") {
+    return "Recovery path: carries QA findings, blockers, or manual notes into new scoped work.";
+  }
+  if (action.action === "archive-run") {
+    return "Navigation only: does not resolve QA blockers or carry findings into remediation.";
+  }
+  if (action.action === "create-new-work-item") {
+    return "Separate scope: does not inherit this failed QA evidence.";
+  }
+  if (action.action === "clone-flow") {
+    return "Clone only: creates a new run identity but does not clear this QA decision.";
+  }
+  if (action.action === "run-eval-batch") {
+    return "Comparison only: does not repair or complete this terminal handoff.";
+  }
+  return "Secondary path: confirm it does not bypass unresolved terminal evidence.";
+}
+
+function separateScopeHandoffMessage(handoff) {
+  if (!terminalHandoffNeedsRecovery(handoff)) {
+    return "Create unrelated work from the target project root with a new request. Use Follow-up or Clone when the source run should be inherited.";
+  }
+  return "This starts unrelated work only. It does not inherit or resolve QA findings, blockers, or failed terminal evidence; use Start Follow-up Flow for remediation.";
+}
+
+function evalBatchHandoffMessage(handoff) {
+  if (!terminalHandoffNeedsRecovery(handoff)) {
+    return "Use source-run evidence for scenario planning or manual checkpoint review. This UI action does not launch a nested public-repository flow.";
+  }
+  return "This uses terminal handoff evidence for review, but it does not repair, complete, or archive the failed source run. Use Start Follow-up Flow for remediation.";
+}
+
 function renderNextFlowActions(handoff) {
   const recommended = recommendedNextFlowAction(handoff);
   const actions = handoff.recommended_next_flow_actions || [];
@@ -241,14 +345,24 @@ function renderNextFlowActions(handoff) {
     <div class="next-flow-actions-grid">
       ${actions.map((action) => {
         const isRecommended = action.action === recommended;
+        const safetyNote = terminalNextFlowSafetyNote(handoff, action);
+        const recommendationBadge = isRecommended
+          ? action.enabled
+            ? '<span class="small-badge good">recommended</span>'
+            : '<span class="small-badge warn">recommended after restore</span>'
+          : "";
+        const availabilityBadge = !action.enabled && !isRecommended
+          ? '<span class="small-badge warn">unavailable</span>'
+          : "";
         return `
           <article class="next-flow-action-card${isRecommended ? " recommended" : ""}${action.enabled ? "" : " disabled"}">
             <div class="action-card-title">
               <strong>${escapeHtml(action.label)}</strong>
-              ${isRecommended ? '<span class="small-badge good">recommended</span>' : ""}
-              ${action.enabled ? "" : '<span class="small-badge warn">unavailable</span>'}
+              ${recommendationBadge}
+              ${availabilityBadge}
             </div>
             <p>${escapeHtml(action.detail)}</p>
+            ${safetyNote ? `<small class="next-flow-safety-note">${escapeHtml(safetyNote)}</small>` : ""}
             <button data-next-flow-action="${escapeHtml(action.action)}" type="button" ${action.enabled ? "" : 'disabled aria-disabled="true"'}>
               ${escapeHtml(nextFlowButtonLabel(action))}
             </button>
@@ -257,6 +371,25 @@ function renderNextFlowActions(handoff) {
       }).join("")}
     </div>
   `;
+}
+
+function renderArchiveHandoffWarning(handoff) {
+  if (!terminalHandoffNeedsRecovery(handoff)) return "";
+  const blockerCount = (handoff.blockers || []).length;
+  const blockerCopy = blockerCount
+    ? `${blockerCount} blocker${blockerCount === 1 ? " remains" : "s remain"} on this terminal handoff.`
+    : `Terminal status is ${handoff.status || "not complete"}.`;
+  return `
+    <div class="truncation-notice archive-risk-notice" role="status">
+      <strong>Archive does not resolve this handoff</strong>
+      <span>${escapeHtml(blockerCopy)} Use Start Follow-up Flow when QA evidence still needs remediation; archive only records a navigation decision.</span>
+    </div>
+  `;
+}
+
+function renderTerminalRecoveryWizardAction(handoff) {
+  if (!terminalHandoffNeedsRecovery(handoff)) return "";
+  return `<button data-next-flow-action="start-follow-up-flow" type="button">Start Follow-up Flow</button>`;
 }
 
 function nextFlowSourceRunId() {
@@ -276,6 +409,29 @@ function nextFlowRuntimeId() {
   return state.selectedRuntime || state.dashboard?.run?.runtime_id || "";
 }
 
+const TERMINAL_EVIDENCE_REQUIREMENTS = [
+  {
+    key: "runtime_log",
+    label: "Runtime log",
+    detail: "Raw runtime output for the terminal QA attempt."
+  },
+  {
+    key: "qa_report",
+    label: "QA report",
+    detail: "Final QA readiness and release recommendation."
+  },
+  {
+    key: "validator_report",
+    label: "Validator report",
+    detail: "Document validation result for the terminal QA stage."
+  },
+  {
+    key: "stage_result",
+    label: "Stage result",
+    detail: "Terminal stage status and handoff summary."
+  }
+];
+
 function renderTerminalArtifacts(artifacts) {
   const visible = (artifacts || []).slice(0, 5);
   if (!visible.length) return `<div class="empty-state">No final artifacts recorded.</div>`;
@@ -288,6 +444,134 @@ function renderTerminalArtifacts(artifacts) {
       <span class="small-badge">${escapeHtml(artifact.kind)}</span>
     </button>
   `).join("");
+}
+
+function terminalEvidenceArtifacts(artifacts) {
+  const priority = TERMINAL_EVIDENCE_REQUIREMENTS.map((item) => item.key);
+  const seen = new Set();
+  const byKey = new Map((artifacts || []).map((artifact) => [artifact.key, artifact]));
+  const prioritized = priority
+    .map((key) => byKey.get(key))
+    .filter(Boolean)
+    .map((artifact) => {
+      seen.add(artifact.key);
+      return artifact;
+    });
+  const remaining = (artifacts || []).filter((artifact) => !seen.has(artifact.key));
+  return prioritized.concat(remaining).slice(0, 4);
+}
+
+function terminalEvidenceRequirement(key) {
+  return TERMINAL_EVIDENCE_REQUIREMENTS.find((item) => item.key === key) || {
+    key,
+    label: key,
+    detail: "Expected terminal evidence was not recorded."
+  };
+}
+
+function terminalMissingEvidence(artifacts) {
+  const available = new Set((artifacts || []).map((artifact) => artifact.key));
+  return TERMINAL_EVIDENCE_REQUIREMENTS.filter((item) => !available.has(item.key));
+}
+
+function handoffMissingTerminalEvidence(handoff) {
+  return Boolean(terminalMissingEvidence(handoff?.final_artifacts || []).length);
+}
+
+function renderTerminalMissingEvidence(missing) {
+  if (!missing.length) return "";
+  return `
+    <div class="terminal-missing-evidence" aria-label="Missing terminal evidence">
+      <div class="surface-title compact">
+        <span>Missing Evidence</span>
+        <span class="small-badge warn">${escapeHtml(missing.length)} missing</span>
+      </div>
+      <div class="terminal-missing-list">
+        ${missing.map((item) => `
+          <div class="terminal-missing-row">
+            <strong>${escapeHtml(item.label)}</strong>
+            <span>${escapeHtml(item.detail)}</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderTerminalEvidenceSpotlight(handoff) {
+  const artifacts = terminalEvidenceArtifacts(handoff.final_artifacts || []);
+  const missing = terminalMissingEvidence(handoff.final_artifacts || []);
+  return `
+    <section class="terminal-evidence-spotlight" aria-label="Terminal evidence">
+      <div>
+        <div class="surface-title">
+          <span>Evidence First</span>
+          <span class="small-badge good">before next-flow</span>
+        </div>
+        <p>Open the runtime log and QA evidence before choosing whether to start new work, clone, archive, or launch follow-up remediation.</p>
+      </div>
+      <div class="terminal-evidence-stack">
+        <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
+        ${renderTerminalMissingEvidence(missing)}
+      </div>
+    </section>
+  `;
+}
+
+function renderTerminalAttentionSpotlight(handoff) {
+  const blockers = handoff.blockers || [];
+  if (handoff.status === "completed" && !blockers.length) return "";
+  const missingTerminalEvidence = handoffMissingTerminalEvidence(handoff);
+  const tone = handoff.status === "failed" || handoff.status === "blocked" ? "bad" : "warn";
+  const title = missingTerminalEvidence
+    ? "Missing Terminal Evidence"
+    : handoff.status === "failed" || handoff.status === "blocked"
+    ? "QA Did Not Clear"
+    : "Recorded QA Risks";
+  const detail = missingTerminalEvidence
+    ? "Restore the required terminal evidence before choosing a next-flow action."
+    : blockers.length
+    ? "Inspect these blockers before choosing a next-flow action."
+    : "Review the terminal status and evidence before choosing a next-flow action.";
+  return `
+    <section class="terminal-attention-spotlight ${tone}" aria-label="Terminal handoff blockers">
+      <div>
+        <div class="surface-title">
+          <span>${escapeHtml(title)}</span>
+          <span class="small-badge ${tone}">${escapeHtml(handoff.status)}</span>
+        </div>
+        <p>${escapeHtml(detail)}</p>
+      </div>
+      <div class="terminal-attention-blockers">${renderTerminalBlockers(blockers)}</div>
+    </section>
+  `;
+}
+
+function terminalEvidenceActionLabel(artifact) {
+  return terminalEvidenceRequirement(artifact.key).label;
+}
+
+function renderGlobalTerminalEvidenceActions() {
+  const handoff = state.dashboard?.terminal_handoff;
+  if (!handoff) return "";
+  const artifacts = terminalEvidenceArtifacts(handoff.final_artifacts || [])
+    .filter((artifact) => ["runtime_log", "qa_report"].includes(artifact.key))
+    .slice(0, 2);
+  const missing = terminalMissingEvidence(handoff.final_artifacts || [])
+    .filter((item) => ["runtime_log", "qa_report"].includes(item.key));
+  if (!artifacts.length && !missing.length) return "";
+  return `
+    <div class="next-action-evidence-actions" aria-label="Terminal evidence shortcuts">
+      ${artifacts.map((artifact) => `
+        <button class="secondary" data-artifact-stage="${escapeHtml(artifact.stage)}" data-artifact-key="${escapeHtml(artifact.key)}" data-artifact-kind="${escapeHtml(artifact.kind)}" type="button">
+          ${escapeHtml(terminalEvidenceActionLabel(artifact))}
+        </button>
+      `).join("")}
+      ${missing.map((item) => `
+        <span class="small-badge warn" title="${escapeHtml(item.detail)}">Missing ${escapeHtml(item.label)}</span>
+      `).join("")}
+    </div>
+  `;
 }
 
 function renderTerminalBlockers(blockers) {
@@ -303,6 +587,39 @@ function renderTerminalBlockers(blockers) {
       <span class="small-badge ${blocker.severity === "error" ? "bad" : "warn"}">${escapeHtml(blocker.kind)}</span>
     </button>
   `).join("");
+}
+
+function renderTerminalRepairHighlights(highlights) {
+  if (!highlights?.length) return "";
+  return `
+    <div class="repair-highlight-spotlight">
+      <div class="surface-title">
+        <span>Resolved Repairs</span>
+        <span class="small-badge good">visible in handoff</span>
+      </div>
+      <p>These validation issues were retried and resolved before QA handoff.</p>
+      <div class="repair-highlight-list">
+        ${highlights.map((highlight) => {
+          const stageLabel = stageTitle(highlight.stage);
+          const outcome = String(highlight.outcome || "recorded");
+          const outcomeTone = outcome.toLowerCase().includes("fail") ? "warn" : "good";
+          return `
+            <article class="repair-highlight-card">
+              <div>
+                <span class="small-badge ${outcomeTone}">${escapeHtml(outcome)}</span>
+                <strong>${escapeHtml(stageLabel)} retry ${escapeHtml(highlight.attempt_number || "")}</strong>
+                <p>${escapeHtml(highlight.reason || "Repair reason was not recorded.")}</p>
+              </div>
+              <div class="repair-highlight-evidence">
+                ${highlight.repair_brief_path ? `<button data-open-artifact="${escapeHtml(highlight.repair_brief_path)}" type="button">Repair brief</button>` : ""}
+                ${highlight.validator_report_path ? `<button data-open-artifact="${escapeHtml(highlight.validator_report_path)}" type="button">Validator report</button>` : ""}
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
 }
 
 function renderFollowUpCandidates(handoff) {
@@ -359,14 +676,14 @@ function renderFlowCompleteState() {
     <section class="surface flow-complete-state">
       <div class="flow-complete-hero">
         <div class="flow-complete-title-row">
-          <span class="flow-complete-mark" aria-hidden="true">OK</span>
+          <span class="flow-complete-mark ${terminalHandoffTone(handoff.status)}" aria-hidden="true">${escapeHtml(terminalHandoffMark(handoff))}</span>
           <div>
           <div class="surface-title">
             <span>${escapeHtml(terminalHandoffTitle(handoff))}</span>
             <span class="small-badge ${terminalHandoffTone(handoff.status)}">${escapeHtml(handoff.status)}</span>
           </div>
           <h2>${escapeHtml(handoff.final_qa_status)}</h2>
-          <p>The QA terminal handoff is ready for operator review and next-flow selection.</p>
+          <p>${escapeHtml(terminalHandoffMessage(handoff))}</p>
           </div>
         </div>
         <div class="handoff-runtime">
@@ -374,6 +691,9 @@ function renderFlowCompleteState() {
           <span>${escapeHtml(runtimeId)}</span>
         </div>
       </div>
+      ${renderTerminalAttentionSpotlight(handoff)}
+      ${renderTerminalEvidenceSpotlight(handoff)}
+      ${renderTerminalRepairHighlights(handoff.repair_highlights || [])}
       <div class="handoff-metric-grid">
         ${renderHandoffMetric({label: "Final artifacts", value: artifactCount, detail: "QA documents and logs available.", tone: artifactCount ? "good" : "warn"})}
         ${renderHandoffMetric({label: "Open blockers", value: blockerCount, detail: blockerCount ? "Inspect before launch." : "No blockers detected.", tone: blockerCount ? "bad" : "good"})}
@@ -388,6 +708,7 @@ function renderFlowCompleteState() {
           <span class="small-badge">terminal handoff</span>
         </div>
         <p>Choose the next operator action without mutating the completed source run.</p>
+        ${renderRecommendedNextFlowDecision(handoff)}
         ${renderNextFlowActions(handoff)}
       </div>
       <div class="terminal-summary-grid">
@@ -399,7 +720,7 @@ function renderFlowCompleteState() {
           <div class="surface-title">Blockers / safety</div>
           <div class="panel-list">
             ${renderTerminalBlockers(handoff.blockers || [])}
-            <div class="panel-item"><strong>Source run policy</strong><span>Next-flow actions create new work or navigation decisions; they do not continue the completed run.</span></div>
+            <div class="panel-item"><strong>Source run policy</strong><span>Next-flow actions create new work or navigation decisions; they do not continue the terminal run.</span></div>
             <div class="panel-item"><strong>Runtime fallback</strong><span>Uses recorded runtime ${escapeHtml(runtimeId)}; no generic runtime fallback is hidden in the UI.</span></div>
           </div>
         </section>
@@ -803,6 +1124,16 @@ function selectSourceFindings(mode) {
   }
 }
 
+async function renderNextFlowWizardStep() {
+  requestNextFlowWizardReveal();
+  await renderCockpit();
+}
+
+function resetLaunchReadiness(wizard = state.nextFlowWizard) {
+  wizard.launchReadinessChecking = false;
+  wizard.launchReadinessError = "";
+}
+
 async function openNextFlowWizard(action) {
   const sourceRunId = nextFlowSourceRunId();
   const canReuseSourceFindings = (
@@ -817,7 +1148,7 @@ async function openNextFlowWizard(action) {
     state.nextFlowWizard.loading = false;
     state.nextFlowWizard.error = "";
     activateTab("overview");
-    await renderCockpit();
+    await renderNextFlowWizardStep();
     return;
   }
   state.nextFlowWizard.loading = true;
@@ -827,14 +1158,16 @@ async function openNextFlowWizard(action) {
   state.nextFlowWizard.followUpDraftError = "";
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.preflightError = "";
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchLoading = false;
   state.nextFlowWizard.launchError = "";
+  resetLaunchReadiness();
   state.nextFlowWizard.archiveRunId = "";
   state.nextFlowWizard.archiveReason = "";
   state.nextFlowWizard.selectedSourceIds = [];
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
   try {
     const payload = await api(sourceFindingsUrl());
     state.nextFlowWizard.sourceFindings = payload;
@@ -845,7 +1178,7 @@ async function openNextFlowWizard(action) {
     state.nextFlowWizard.error = error.message;
   } finally {
     state.nextFlowWizard.loading = false;
-    await renderCockpit();
+    await renderNextFlowWizardStep();
   }
 }
 
@@ -857,12 +1190,14 @@ async function openNewWorkItemHandoff() {
   state.nextFlowWizard.error = "";
   state.nextFlowWizard.followUpDraft = null;
   state.nextFlowWizard.preflight = null;
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
+  resetLaunchReadiness();
   state.nextFlowWizard.archiveRunId = "";
   state.nextFlowWizard.archiveReason = "";
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
 }
 
 async function openEvalBatchHandoff() {
@@ -873,12 +1208,14 @@ async function openEvalBatchHandoff() {
   state.nextFlowWizard.error = "";
   state.nextFlowWizard.followUpDraft = null;
   state.nextFlowWizard.preflight = null;
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
+  resetLaunchReadiness();
   state.nextFlowWizard.archiveRunId = "";
   state.nextFlowWizard.archiveReason = "";
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
 }
 
 function cloneDraftFromPayload(payload) {
@@ -926,13 +1263,15 @@ async function openCloneFlowDraft() {
   wizard.followUpDraft = null;
   wizard.preflight = null;
   wizard.preflightError = "";
+  wizard.definitionErrors = [];
   wizard.launchError = "";
+  resetLaunchReadiness(wizard);
   wizard.createdDraft = null;
   wizard.archiveRunId = "";
   wizard.archiveReason = "";
   wizard.preflightLoading = true;
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
   try {
     const payload = await postJson("/api/next-flow/clone-draft/create", {
       source_work_item: nextFlowSourceWorkItem(),
@@ -947,7 +1286,7 @@ async function openCloneFlowDraft() {
   } catch (error) {
     wizard.preflightLoading = false;
     wizard.preflightError = error.message;
-    await renderCockpit();
+    await renderNextFlowWizardStep();
   }
 }
 
@@ -957,21 +1296,26 @@ async function loadLaunchConfirmation() {
   if (!draft) {
     wizard.preflightError = "No next-flow draft is available for preflight.";
     wizard.step = "confirm";
-    await renderCockpit();
+    await renderNextFlowWizardStep();
     return;
   }
-  const definitionError = followUpDraftValidationError(draft);
+  const definitionErrors = followUpDraftValidationErrors(draft);
+  const definitionError = definitionErrors[0] || "";
   if (definitionError) {
     wizard.preflightLoading = false;
     wizard.preflightError = definitionError;
+    wizard.definitionErrors = definitionErrors;
     wizard.step = "definition";
-    await renderCockpit();
+    await renderNextFlowWizardStep();
     return;
   }
   wizard.preflightLoading = true;
   wizard.preflightError = "";
+  wizard.definitionErrors = [];
+  wizard.launchError = "";
+  resetLaunchReadiness(wizard);
   wizard.step = "confirm";
-  await renderCockpit();
+  await renderNextFlowWizardStep();
   try {
     const payload = {
       source_work_item: draft.source_work_item,
@@ -1004,7 +1348,7 @@ async function loadLaunchConfirmation() {
     wizard.preflightError = error.message;
   } finally {
     wizard.preflightLoading = false;
-    await renderCockpit();
+    await renderNextFlowWizardStep();
   }
 }
 
@@ -1059,18 +1403,23 @@ function selectedInheritedContextLines(items = [], fallbackLines = null) {
   );
 }
 
-function followUpDraftValidationError(draft) {
-  if (state.nextFlowWizard.action !== "start-follow-up-flow") return "";
-  if (!String(draft?.new_work_item || "").trim()) return "Work item id is required before preflight.";
-  if (!String(draft?.title || "").trim()) return "Title is required before preflight.";
-  if (!String(draft?.first_stage_input_preview || "").trim()) return "First-stage input preview is required before preflight.";
+function followUpDraftValidationErrors(draft) {
+  if (state.nextFlowWizard.action !== "start-follow-up-flow") return [];
+  const errors = [];
+  if (!String(draft?.new_work_item || "").trim()) errors.push("Work item id is required before preflight.");
+  if (!String(draft?.title || "").trim()) errors.push("Title is required before preflight.");
+  if (!String(draft?.first_stage_input_preview || "").trim()) errors.push("First-stage input preview is required before preflight.");
   if (!(draft?.acceptance_criteria || []).some((item) => String(item || "").trim())) {
-    return "At least one acceptance criterion is required before preflight.";
+    errors.push("At least one acceptance criterion is required before preflight.");
   }
   if (!(draft?.required_evidence || []).some((item) => String(item || "").trim())) {
-    return "At least one required evidence item is required before preflight.";
+    errors.push("At least one required evidence item is required before preflight.");
   }
-  return "";
+  return errors;
+}
+
+function followUpDraftValidationError(draft) {
+  return followUpDraftValidationErrors(draft)[0] || "";
 }
 
 function readFollowUpDraftForm() {
@@ -1100,9 +1449,12 @@ function invalidateFollowUpDraftPreview() {
   if (!state.nextFlowWizard.active || state.nextFlowWizard.step !== "definition") return;
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.preflightError = "";
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
-  document.querySelector("[data-follow-up-definition-error]")?.remove();
+  resetLaunchReadiness();
+  document.querySelectorAll("[data-follow-up-definition-error], [data-follow-up-list-blocker]")
+    .forEach((node) => node.remove());
 }
 
 async function createFollowUpDraftForLaunch(draft) {
@@ -1122,6 +1474,38 @@ async function createFollowUpDraftForLaunch(draft) {
   return payload.created;
 }
 
+async function blockLaunchForRuntimeReadiness(message) {
+  const wizard = state.nextFlowWizard;
+  wizard.launchReadinessChecking = false;
+  wizard.launchReadinessError = message;
+  const runtimeSelect = document.getElementById("runtimeSelect");
+  if (runtimeSelect) runtimeSelect.focus();
+  if (!message.startsWith("Runtime readiness unavailable:")) toast(message);
+  await renderNextFlowWizardStep();
+  return false;
+}
+
+async function refreshRuntimeReadinessForLaunch() {
+  const wizard = state.nextFlowWizard;
+  if (!state.selectedRuntime) {
+    return blockLaunchForRuntimeReadiness(runtimeReadinessMessage());
+  }
+  wizard.launchReadinessChecking = true;
+  wizard.launchReadinessError = "";
+  await renderNextFlowWizardStep();
+  await fetchReadiness();
+  renderRuntimeSelector();
+  renderTopbar();
+  renderSidebar();
+  wizard.launchReadinessChecking = false;
+  const message = runtimeReadinessMessage();
+  if (message) {
+    return blockLaunchForRuntimeReadiness(message);
+  }
+  await renderNextFlowWizardStep();
+  return true;
+}
+
 async function launchNextFlowNow() {
   const wizard = state.nextFlowWizard;
   const draft = readFollowUpDraftForm() || wizard.followUpDraft;
@@ -1129,10 +1513,11 @@ async function launchNextFlowNow() {
     toast("No next-flow draft is ready to launch.");
     return;
   }
-  if (!ensureRunnableRuntime()) return;
-  wizard.launchLoading = true;
   wizard.launchError = "";
-  await renderCockpit();
+  resetLaunchReadiness(wizard);
+  if (!(await refreshRuntimeReadinessForLaunch())) return;
+  wizard.launchLoading = true;
+  await renderNextFlowWizardStep();
   try {
     if (wizard.action === "start-follow-up-flow") {
       await createFollowUpDraftForLaunch(draft);
@@ -1154,7 +1539,8 @@ async function launchNextFlowNow() {
   } catch (error) {
     wizard.launchError = error.message;
     toast(error.message);
-    await renderCockpit();
+    wizard.launchLoading = false;
+    await renderNextFlowWizardStep();
   } finally {
     wizard.launchLoading = false;
   }
@@ -1165,7 +1551,7 @@ async function loadFollowUpDraft() {
   wizard.followUpDraftLoading = true;
   wizard.followUpDraftError = "";
   wizard.step = "definition";
-  await renderCockpit();
+  await renderNextFlowWizardStep();
   try {
     const payload = await postJson("/api/next-flow/follow-up-draft", {
       source_run_id: state.activeRunId,
@@ -1176,7 +1562,7 @@ async function loadFollowUpDraft() {
     wizard.followUpDraftError = error.message;
   } finally {
     wizard.followUpDraftLoading = false;
-    await renderCockpit();
+    await renderNextFlowWizardStep();
   }
 }
 
@@ -1194,13 +1580,15 @@ async function openArchiveConfirmation() {
   state.nextFlowWizard.followUpDraft = null;
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.preflightError = "";
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.launchError = "";
+  resetLaunchReadiness();
   state.nextFlowWizard.archiveRunId = runId;
   state.nextFlowWizard.archiveReason = state.dashboard?.terminal_handoff
     ? `Archived from Flow Complete handoff with status ${state.dashboard.terminal_handoff.status}.`
     : "Archived from Run History.";
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
 }
 
 async function archiveCompletedRun() {
@@ -1230,6 +1618,8 @@ function renderArchiveConfirmation() {
   const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
   const reason = state.nextFlowWizard.archiveReason || "Archived from Flow Complete handoff.";
   const artifacts = state.dashboard?.terminal_handoff?.final_artifacts || [];
+  const handoff = state.dashboard?.terminal_handoff;
+  const needsRecovery = terminalHandoffNeedsRecovery(handoff);
   return `
     <section class="surface next-flow-wizard archive-confirmation">
       <div class="surface-title">
@@ -1247,12 +1637,15 @@ function renderArchiveConfirmation() {
           <strong>Archive keeps evidence readable</strong>
           <span>This records a local navigation decision. It does not delete final artifacts, runtime logs, or stage documents.</span>
         </div>
+        ${renderArchiveHandoffWarning(handoff)}
         <div class="panel-list">
           <div class="panel-item"><strong>Reason preview</strong><span>${escapeHtml(reason)}</span></div>
-          <div class="panel-item"><strong>Source-run policy</strong><span>The completed run stays immutable; archive only changes run navigation metadata.</span></div>
+          <div class="panel-item"><strong>Source-run policy</strong><span>The terminal run stays immutable; archive only changes run navigation metadata.</span></div>
         </div>
       </div>
+      ${needsRecovery ? `<div class="wizard-action-guard">Archive is navigation metadata only; remediation starts with Start Follow-up Flow.</div>` : ""}
       <div class="wizard-actions">
+        ${renderTerminalRecoveryWizardAction(handoff)}
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
         <button data-archive-confirm type="button" class="danger">Confirm Archive Run</button>
       </div>
@@ -1354,6 +1747,9 @@ function nextFlowWizardTypeLabel() {
 function renderNextFlowWizardProgress() {
   const selected = state.nextFlowWizard.selectedSourceIds.length;
   const draft = state.nextFlowWizard.followUpDraft;
+  const cloneFlow = state.nextFlowWizard.action === "clone-flow";
+  const handoff = state.dashboard?.terminal_handoff;
+  const cloneNeedsRecovery = cloneFlow && terminalHandoffNeedsRecovery(handoff);
   const steps = state.nextFlowWizard.action === "clone-flow"
     ? [
         ["type", "Choose Flow Type", nextFlowWizardTypeLabel()],
@@ -1384,8 +1780,11 @@ function renderNextFlowWizardProgress() {
         }).join("")}
       </ol>
       <div class="wizard-policy-note">
-        <strong>Independent flow</strong>
-        <span>The completed source run stays immutable; launch creates a new work item and run identity.</span>
+        <strong>${cloneNeedsRecovery ? "Clone-only flow" : "Independent flow"}</strong>
+        <span>${escapeHtml(cloneNeedsRecovery
+          ? "The source run stays immutable; clone creates a new work item and run identity without clearing QA status."
+          : "The source run stays immutable; launch creates a new work item and run identity."
+        )}</span>
       </div>
     </aside>
   `;
@@ -1488,6 +1887,7 @@ function renderNextFlowSourceSelection() {
 function renderNewWorkItemHandoff() {
   const sourceRun = nextFlowSourceRunId() || "not recorded";
   const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
+  const handoff = state.dashboard?.terminal_handoff;
   return `
     <section class="surface next-flow-wizard">
       <div class="surface-title">
@@ -1501,8 +1901,8 @@ function renderNewWorkItemHandoff() {
         <div class="panel-item"><strong>Policy</strong><span>source run stays immutable</span></div>
       </div>
       <div class="truncation-notice" role="status">
-        <strong>Fresh work item handoff</strong>
-        <span>Create unrelated work from the target project root with a new request. Use Follow-up or Clone when this completed run should be inherited.</span>
+        <strong>${terminalHandoffNeedsRecovery(handoff) ? "Separate scope only" : "Fresh work item handoff"}</strong>
+        <span>${escapeHtml(separateScopeHandoffMessage(handoff))}</span>
       </div>
       <pre>aidd init --work-item &lt;new-id&gt; --request "&lt;new request&gt;" --root .aidd
 aidd ui --work-item &lt;new-id&gt; --root .aidd</pre>
@@ -1516,7 +1916,10 @@ aidd ui --work-item &lt;new-id&gt; --root .aidd</pre>
 function renderEvalBatchHandoff() {
   const sourceRun = nextFlowSourceRunId() || "not recorded";
   const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
-  const artifacts = state.dashboard?.terminal_handoff?.final_artifacts || [];
+  const handoff = state.dashboard?.terminal_handoff;
+  const artifacts = handoff?.final_artifacts || [];
+  const needsRecovery = terminalHandoffNeedsRecovery(handoff);
+  const historyActionClass = needsRecovery ? ' class="secondary"' : "";
   return `
     <section class="surface next-flow-wizard">
       <div class="surface-title">
@@ -1530,13 +1933,15 @@ function renderEvalBatchHandoff() {
         <div class="panel-item"><strong>Scenario checkpoint</strong><span>manual checkpoint only</span></div>
       </div>
       <div class="truncation-notice" role="status">
-        <strong>Eval batch handoff only</strong>
-        <span>Use completed-run evidence for scenario planning or manual checkpoint review. This UI action does not launch a nested public-repository flow.</span>
+        <strong>${needsRecovery ? "Comparison only" : "Eval batch handoff only"}</strong>
+        <span>${escapeHtml(evalBatchHandoffMessage(handoff))}</span>
       </div>
       <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
+      ${needsRecovery ? `<div class="wizard-action-guard">History is review-only; remediation starts with Start Follow-up Flow.</div>` : ""}
       <div class="wizard-actions">
+        ${renderTerminalRecoveryWizardAction(handoff)}
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
-        <button data-tab-shortcut="history" type="button">Open Run History</button>
+        <button data-tab-shortcut="history" type="button"${historyActionClass}>Open Run History</button>
       </div>
     </section>
   `;
@@ -1560,6 +1965,104 @@ function renderPreflightChecks(preflight) {
   `).join("") || `<div class="empty-state">No preflight checks returned.</div>`;
 }
 
+function blockingPreflightChecks(preflight) {
+  return (preflight?.checks || []).filter((check) => check.severity === "blocking");
+}
+
+function renderPreflightBlockedSummary(wizard, preflight, backLabel) {
+  const blockingChecks = blockingPreflightChecks(preflight);
+  if (!wizard.preflightError && !blockingChecks.length) return "";
+  const codes = blockingChecks.map((check) => check.code).filter(Boolean);
+  const firstMessage = blockingChecks[0]?.message || wizard.preflightError || "Preflight is blocked.";
+  const codeBadges = codes.map((code) => (
+    `<span class="small-badge bad">${escapeHtml(code)}</span>`
+  )).join("");
+  const retryTarget = backLabel === "Back to definition"
+    ? "revise the draft or restore the missing source/baseline evidence"
+    : "return to the handoff or restore the missing source/baseline evidence";
+  return `
+    <div class="truncation-notice preflight-blocker-summary" data-preflight-blocker-summary role="alert">
+      <strong>Preflight blocked before launch</strong>
+      <span>${escapeHtml(firstMessage)}</span>
+      ${codeBadges ? `<div class="preflight-blocker-codes">${codeBadges}</div>` : ""}
+      <span>Launch is disabled until blocking checks pass. Use ${escapeHtml(backLabel)} to ${escapeHtml(retryTarget)}, then retry preflight.</span>
+    </div>
+  `;
+}
+
+function renderLaunchFailureSummary(wizard, draft, backLabel) {
+  if (!wizard.launchError) return "";
+  const workItem = String(draft?.new_work_item || "").trim();
+  const target = workItem ? ` for ${workItem}` : "";
+  return `
+    <div class="truncation-notice launch-failure-summary" data-launch-failure-summary role="alert">
+      <strong>Launch did not start${escapeHtml(target)}</strong>
+      <span>${escapeHtml(wizard.launchError)}</span>
+      <span>Use ${escapeHtml(backLabel)} to correct the follow-up work item or launch inputs, then retry launch. The source run remains unchanged.</span>
+    </div>
+  `;
+}
+
+function cloneDraftCreationMessage(error, targetWorkItem) {
+  const raw = String(error || "").trim();
+  if (raw.includes("Request context documents already exist")) {
+    return `A clone draft or work item already exists for ${targetWorkItem}.`;
+  }
+  return raw.replace(/\s*Use --force-context to overwrite them\.?$/i, "").trim()
+    || "Clone draft could not be created.";
+}
+
+function renderCloneDraftCreationError(wizard) {
+  const targetWorkItem = nextFlowDefaultWorkItem("CLONE");
+  const message = cloneDraftCreationMessage(wizard.preflightError, targetWorkItem);
+  const handoff = state.dashboard?.terminal_handoff;
+  const needsRecovery = terminalHandoffNeedsRecovery(handoff);
+  return renderNextFlowWizardShell({
+    sectionClass: "next-flow-wizard clone-draft-error",
+    title: "Clone Draft Needs Attention",
+    badge: "blocked",
+    badgeTone: "bad",
+    body: `
+      <div class="truncation-notice clone-draft-error-summary" data-clone-draft-error-summary role="alert">
+        <strong>Clone target is already in use</strong>
+        <span>${escapeHtml(message)}</span>
+        <span>Open the existing work item from Active work items, or choose another clone target before retrying.</span>
+        ${needsRecovery ? "<span>Clone still does not remediate QA. Use Start Follow-up Flow for implementation work.</span>" : ""}
+      </div>
+      <div class="wizard-actions">
+        <button data-next-flow-back-to-definition type="button">Back to handoff</button>
+      </div>
+      <div class="audit-preview">
+        <div class="panel-item"><strong>Target work item</strong><span>${escapeHtml(targetWorkItem)}</span></div>
+        <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(nextFlowSourceRunId() || "not recorded")}</span></div>
+        <div class="panel-item"><strong>Source state</strong><span>${escapeHtml(needsRecovery ? "still needs recovery" : "unchanged")}</span></div>
+      </div>
+    `
+  });
+}
+
+function renderLaunchReadinessSummary(wizard) {
+  if (wizard.launchReadinessChecking) {
+    return `
+      <div class="truncation-notice launch-readiness-summary" data-launch-readiness-summary role="status">
+        <strong>Checking runtime readiness before launch</strong>
+        <span>Refreshing the selected runtime before creating downstream work.</span>
+      </div>
+    `;
+  }
+  if (!wizard.launchReadinessError) return "";
+  const title = state.selectedRuntime
+    ? "Runtime readiness changed before launch"
+    : "Runtime readiness required before launch";
+  return `
+    <div class="truncation-notice launch-readiness-summary" data-launch-readiness-summary role="alert">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(wizard.launchReadinessError)}</span>
+      <span>Launch was not started. Resolve runtime readiness, then retry; the source run remains unchanged.</span>
+    </div>
+  `;
+}
+
 function renderLaunchSourceLink(item) {
   if (!item.source_path) {
     return `
@@ -1578,6 +2081,9 @@ function renderLaunchSourceLink(item) {
 }
 
 function renderLaunchSourceLinks(draft) {
+  if (state.nextFlowWizard.action === "clone-flow") {
+    return `<div class="empty-state">Clone reuses configuration and baseline; it does not select source findings.</div>`;
+  }
   return (draft?.selected_sources || []).map((item) => renderLaunchSourceLink(item)).join("")
     || `<div class="empty-state">No source links selected.</div>`;
 }
@@ -1585,15 +2091,51 @@ function renderLaunchSourceLinks(draft) {
 function renderAuditPreview(draft, preflight) {
   const sources = draft.selected_sources || [];
   const artifactLinks = sources.filter((item) => item.source_path).length;
+  const cloneFlow = state.nextFlowWizard.action === "clone-flow";
   return `
     <div class="audit-preview">
       <div class="panel-item"><strong>New work item</strong><span>${escapeHtml(draft.new_work_item)}</span></div>
       <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
       <div class="panel-item"><strong>Runtime</strong><span>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "not selected")}</span></div>
       <div class="panel-item"><strong>Resolved baseline</strong><span>${escapeHtml(preflight?.resolved_baseline_id || "not resolved")}</span></div>
-      <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(sources.length)}</span></div>
-      <div class="panel-item"><strong>Source artifact links</strong><span>${escapeHtml(artifactLinks)}</span></div>
+      <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(cloneFlow ? "not selected for clone" : sources.length)}</span></div>
+      <div class="panel-item"><strong>Source artifact links</strong><span>${escapeHtml(cloneFlow ? "configuration only" : artifactLinks)}</span></div>
     </div>
+  `;
+}
+
+function renderCloneLaunchSafetySummary(wizard) {
+  if (wizard.action !== "clone-flow") return "";
+  const handoff = state.dashboard?.terminal_handoff;
+  if (!terminalHandoffNeedsRecovery(handoff)) {
+    return `
+      <div class="truncation-notice clone-launch-summary" data-clone-launch-summary role="status">
+        <strong>Clone creates a separate run identity</strong>
+        <span>Clone reuses runtime, prompt pack, contracts, branch, resource, and baseline configuration. The source run stays read-only.</span>
+      </div>
+    `;
+  }
+  return `
+    <div class="truncation-notice clone-launch-summary" data-clone-launch-summary role="status">
+      <strong>Clone does not remediate this handoff</strong>
+      <span>Clone reuses configuration in a new run identity, but it does not carry QA findings into remediation or clear the failed source run. Use Start Follow-up Flow for remediation.</span>
+    </div>
+  `;
+}
+
+function renderLaunchConfirmationActions({backPrimary, backLabel, launchLabel, blocked, launchBusy}) {
+  return `
+    <div class="wizard-actions">
+      <button data-next-flow-back-to-definition type="button" class="${backPrimary ? "" : "secondary"}">${escapeHtml(backLabel)}</button>
+      <button data-launch-flow-now type="button" class="${backPrimary ? "secondary" : ""}" ${blocked || launchBusy ? "disabled" : ""}>${escapeHtml(launchLabel)}</button>
+    </div>
+  `;
+}
+
+function renderLaunchConfirmationGuards({blocked, readinessBlocked, backLabel}) {
+  return `
+    ${blocked ? `<div class="wizard-action-guard" role="status">Launch Flow Now is disabled because preflight returned blocking checks. Resolve the blockers above, then retry from ${escapeHtml(backLabel)}.</div>` : ""}
+    ${readinessBlocked ? `<div class="wizard-action-guard" role="status">Launch will re-check runtime readiness before starting. Resolve runtime readiness, then retry launch.</div>` : ""}
   `;
 }
 
@@ -1601,6 +2143,9 @@ function renderLaunchConfirmation() {
   const wizard = state.nextFlowWizard;
   const draft = wizard.followUpDraft;
   if (!draft) {
+    if (wizard.action === "clone-flow" && wizard.preflightError) {
+      return renderCloneDraftCreationError(wizard);
+    }
     return `<section class="surface next-flow-wizard"><div class="empty-state">${escapeHtml(wizard.preflightError || "No next-flow draft available for launch confirmation.")}</div></section>`;
   }
   if (wizard.preflightLoading) {
@@ -1608,15 +2153,35 @@ function renderLaunchConfirmation() {
   }
   const preflight = wizard.preflight;
   const blocked = !preflight?.can_launch;
+  const launchFailed = Boolean(wizard.launchError);
+  const readinessBlocked = Boolean(wizard.launchReadinessError);
+  const readinessChecking = Boolean(wizard.launchReadinessChecking);
+  const launchBusy = wizard.launchLoading || readinessChecking;
+  const backPrimary = blocked || launchFailed || readinessBlocked;
   const backLabel = wizard.action === "clone-flow" ? "Back to handoff" : "Back to definition";
+  const launchLabel = readinessChecking
+    ? "Checking Runtime..."
+    : wizard.launchLoading
+    ? "Launching..."
+    : launchFailed || readinessBlocked
+      ? "Retry Launch"
+      : "Launch Flow Now";
+  const actionRow = renderLaunchConfirmationActions({backPrimary, backLabel, launchLabel, blocked, launchBusy});
+  const actionGuards = renderLaunchConfirmationGuards({blocked, readinessBlocked, backLabel});
+  const cloneSafetySummary = renderCloneLaunchSafetySummary(wizard);
   return renderNextFlowWizardShell({
     sectionClass: "next-flow-wizard launch-confirmation",
     title: "Confirm and Launch Next Flow",
     badge: preflight?.status || "blocked",
     badgeTone: preflightTone(preflight?.status || "blocked"),
     body: `
-      ${wizard.preflightError ? `<div class="truncation-notice"><strong>Preflight blocked</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
-      ${wizard.launchError ? `<div class="truncation-notice"><strong>Launch failed</strong><span>${escapeHtml(wizard.launchError)}</span></div>` : ""}
+      ${blocked ? renderPreflightBlockedSummary(wizard, preflight, backLabel) : ""}
+      ${renderLaunchReadinessSummary(wizard)}
+      ${renderLaunchFailureSummary(wizard, draft, backLabel)}
+      ${backPrimary ? "" : cloneSafetySummary}
+      ${backPrimary ? actionRow : ""}
+      ${backPrimary ? actionGuards : ""}
+      ${backPrimary ? cloneSafetySummary : ""}
       <div class="launch-confirmation-grid">
         <section>
           <div class="surface-title">Preflight results</div>
@@ -1629,10 +2194,8 @@ function renderLaunchConfirmation() {
           <div class="recent-artifacts">${renderLaunchSourceLinks(draft)}</div>
         </aside>
       </div>
-      <div class="wizard-actions">
-        <button data-next-flow-back-to-definition type="button" class="secondary">${escapeHtml(backLabel)}</button>
-        <button data-launch-flow-now type="button" ${blocked || wizard.launchLoading ? "disabled" : ""}>${wizard.launchLoading ? "Launching..." : "Launch Flow Now"}</button>
-      </div>
+      ${backPrimary ? "" : actionRow}
+      ${backPrimary ? "" : actionGuards}
     `
   });
 }
@@ -1659,6 +2222,42 @@ function renderInheritedContextToggles(items) {
   `).join("");
 }
 
+function followUpDefinitionErrorsForRender(wizard) {
+  const errors = Array.isArray(wizard.definitionErrors)
+    ? wizard.definitionErrors.filter((item) => String(item || "").trim())
+    : [];
+  if (errors.length) return errors;
+  return wizard.preflightError ? [wizard.preflightError] : [];
+}
+
+function renderFollowUpDefinitionErrorSummary(errors) {
+  if (!errors.length) return "";
+  return `
+    <div class="truncation-notice definition-blocker-summary" data-follow-up-definition-error role="alert">
+      <strong>Definition needs attention</strong>
+      <span>Fix these required launch inputs, then retry Continue to preflight.</span>
+      <ul>
+        ${errors.map((error) => `<li>${escapeHtml(error)}</li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function renderFollowUpListBlocker(errors, listName) {
+  const label = listName === "acceptance_criteria" ? "acceptance criterion" : "required evidence item";
+  const hasBlocker = errors.some((error) => error.toLowerCase().includes(label));
+  if (!hasBlocker) return "";
+  const detail = listName === "acceptance_criteria"
+    ? "Select at least one acceptance criterion or edit the criterion text before retrying Continue."
+    : "Select at least one required evidence item or edit the evidence text before retrying Continue.";
+  return `
+    <div class="definition-list-warning" data-follow-up-list-blocker="${escapeHtml(listName)}">
+      <strong>Required for preflight</strong>
+      <span>${escapeHtml(detail)}</span>
+    </div>
+  `;
+}
+
 function renderFollowUpDefinition() {
   const wizard = state.nextFlowWizard;
   if (wizard.followUpDraftLoading) {
@@ -1673,12 +2272,13 @@ function renderFollowUpDefinition() {
   }
   const acceptanceItems = draft.acceptance_criteria_all || draft.acceptance_criteria;
   const evidenceItems = draft.required_evidence_all || draft.required_evidence;
+  const definitionErrors = followUpDefinitionErrorsForRender(wizard);
   return renderNextFlowWizardShell({
     sectionClass: "next-flow-wizard follow-up-definition",
     title: "Define Follow-up Work Item",
     badge: "editable draft",
     body: `
-      ${wizard.preflightError ? `<div class="truncation-notice" data-follow-up-definition-error><strong>Definition needs attention</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
+      ${renderFollowUpDefinitionErrorSummary(definitionErrors)}
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
         <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(draft.source_work_item)}</span></div>
@@ -1702,8 +2302,10 @@ function renderFollowUpDefinition() {
         </section>
         <aside class="definition-side">
           <div class="surface-title">Acceptance criteria</div>
+          ${renderFollowUpListBlocker(definitionErrors, "acceptance_criteria")}
           <div class="editable-list">${renderEditableList("acceptance_criteria", acceptanceItems, draft.acceptance_criteria_all ? draft.acceptance_criteria : null)}</div>
           <div class="surface-title compact">Required evidence</div>
+          ${renderFollowUpListBlocker(definitionErrors, "required_evidence")}
           <div class="editable-list">${renderEditableList("required_evidence", evidenceItems, draft.required_evidence_all ? draft.required_evidence : null)}</div>
           <div class="surface-title compact">Inherited context</div>
           <div class="inherited-context-list">${renderInheritedContextToggles(draft.inherited_context)}</div>
@@ -1741,6 +2343,314 @@ function activeJobNextActionState(action) {
   };
 }
 
+function activeJobLiveMessage(job) {
+  const status = job?.status || "running";
+  if (status === "waiting-for-operator") return "Waiting for operator approval";
+  if (status === "cancelling") return "Cancelling runtime job";
+  return "Running now";
+}
+
+function activeJobProgressNotice(job) {
+  const status = String(job?.status || "running");
+  if (status === "cancelling" || job?.cancel_requested || job?.cancel_state === "cancelling") {
+    return {
+      tone: "warn",
+      title: "Cancel requested",
+      detail: "Waiting for the runtime to stop. Keep live logs open until cancelled or final evidence appears."
+    };
+  }
+  if (job?.silence_warning) {
+    return {
+      tone: "warn",
+      title: runtimeOutputMissingLabel(job),
+      detail: "Inspect live logs and wait for fresh output, or cancel if the runtime is no longer making progress."
+    };
+  }
+  if (activeJobHasNoRuntimeOutput(job)) {
+    return {
+      tone: "info",
+      title: "Waiting for first runtime output",
+      detail: runtimeOutputMissingDetail()
+    };
+  }
+  return null;
+}
+
+function renderActiveJobProgressNotice(job) {
+  const notice = activeJobProgressNotice(job);
+  if (!notice) return "";
+  return `
+    <div class="live-progress-notice ${escapeHtml(notice.tone)}">
+      <strong>${escapeHtml(notice.title)}</strong>
+      <span>${escapeHtml(notice.detail)}</span>
+    </div>
+  `;
+}
+
+function renderGlobalLiveProgress(job) {
+  if (!job) return "";
+  const status = job.status || "running";
+  const stage = job.stage || state.activeStage || "workflow";
+  const stageLabel = stage ? stageTitle(stage) : "Run";
+  const logChunkSummary = activeJobLiveLogChunkSummary(job);
+  return `
+    <div class="live-progress-strip" role="status" aria-live="polite">
+      <div class="live-progress-copy">
+        <span class="small-badge ${escapeHtml(statusClass(status))}">${escapeHtml(status)}</span>
+        <div>
+          <strong>${escapeHtml(stageLabel)}: ${escapeHtml(activeJobLiveMessage(job))}</strong>
+          <span>${escapeHtml(job.message || "Runtime is active; live logs are the current evidence stream.")}</span>
+        </div>
+      </div>
+      <div class="run-progress-meta live-progress-meta">
+        <span><strong>Elapsed</strong>${escapeHtml(secondsLabel(job.elapsed_seconds))}</span>
+        <span><strong>Runtime output</strong>${escapeHtml(runtimeOutputFreshnessLabel(job))}</span>
+        <span><strong>Live log chunks</strong>${escapeHtml(logChunkSummary)}</span>
+      </div>
+      <div class="live-progress-actions">
+        <button data-tab-shortcut="logs" type="button" class="secondary">Open live logs</button>
+        <button data-cancel-job="${escapeHtml(job.job_id || state.activeJobId || "")}" type="button" class="danger" ${activeJobIsTerminal() ? "disabled" : ""}>${escapeHtml(activeJobCancelLabel())}</button>
+      </div>
+      ${renderActiveJobProgressNotice(job)}
+    </div>
+  `;
+}
+
+function externalRunningStageMessage(action, item) {
+  const status = item?.status || "running";
+  const stage = item?.stage || action?.stage || state.activeStage || "stage";
+  if (status === "preparing") return `${stageTitle(stage)} is preparing runtime input.`;
+  if (status === "validating") return `${stageTitle(stage)} is validating generated documents.`;
+  return `${stageTitle(stage)} is executing outside this browser session.`;
+}
+
+function renderExternalRunningStageProgress(action) {
+  const item = externalRunningStageItem(action);
+  if (!item) return "";
+  const status = item.status || "running";
+  const stage = item.stage || action?.stage || state.activeStage;
+  return `
+    <div class="live-progress-strip external-running-stage" role="status" aria-live="polite">
+      <div class="live-progress-copy">
+        <span class="small-badge ${escapeHtml(statusClass(status))}">${escapeHtml(status)}</span>
+        <div>
+          <strong>${escapeHtml(stageTitle(stage))}: running outside UI control</strong>
+          <span>${escapeHtml(externalRunningStageMessage(action, item))} Refresh status or inspect saved runtime logs while the external command continues.</span>
+        </div>
+      </div>
+      <div class="run-progress-meta live-progress-meta">
+        <span><strong>Attempt</strong>${escapeHtml(item.attempt_count || 0)}</span>
+        <span><strong>Run</strong>${escapeHtml(state.activeRunId || state.dashboard?.run?.run_id || "current")}</span>
+        <span><strong>Runtime</strong>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "selected runtime")}</span>
+      </div>
+      <div class="live-progress-actions">
+        <button data-tab-shortcut="logs" type="button" class="secondary">Open runtime logs</button>
+        <button data-refresh-dashboard type="button">Refresh status</button>
+      </div>
+    </div>
+  `;
+}
+
+function decisionPeekCountLabel(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function reviewDecisionPeek(view) {
+  const status = view?.approval_status || "not detected";
+  const findings = view?.findings || [];
+  const mustFix = findings.filter((finding) => finding.disposition === "must-fix").length;
+  if (status === "approved") {
+    return {
+      tone: "good",
+      badge: status,
+      title: "Review approved",
+      detail: `${decisionPeekCountLabel(findings.length, "finding")} recorded; QA is the next governed stage.`
+    };
+  }
+  if (status === "rejected") {
+    return {
+      tone: "bad",
+      badge: status,
+      title: "Review rejected",
+      detail: mustFix
+        ? `${decisionPeekCountLabel(mustFix, "must-fix finding")} should go back to implement before QA.`
+        : "Inspect review findings or request intervention before QA."
+    };
+  }
+  return {
+    tone: "warn",
+    badge: status,
+    title: "Review status unclear",
+    detail: "Inspect review findings or request intervention before QA."
+  };
+}
+
+function qaDecisionPeek(view) {
+  const verdict = view?.quality_verdict || "not detected";
+  const risks = view?.residual_risks || [];
+  const issues = view?.known_issues || [];
+  const total = risks.length + issues.length;
+  if (verdict === "ready" && !total) {
+    return {
+      tone: "good",
+      badge: verdict,
+      title: "QA ready",
+      detail: "No structured risks or known issues; accept complete when reviewed."
+    };
+  }
+  if (verdict === "ready") {
+    return {
+      tone: "warn",
+      badge: verdict,
+      title: "QA ready with follow-up context",
+      detail: `${decisionPeekCountLabel(total, "risk or issue", "risks or issues")} remain documented for accept or follow-up.`
+    };
+  }
+  if (verdict === "not-ready") {
+    return {
+      tone: "bad",
+      badge: verdict,
+      title: "QA not ready",
+      detail: total
+        ? `${decisionPeekCountLabel(total, "risk or issue", "risks or issues")} should go back to implement before accept.`
+        : "Inspect QA evidence before accepting or launching follow-up."
+    };
+  }
+  return {
+    tone: "warn",
+    badge: verdict,
+    title: "QA verdict unclear",
+    detail: "Inspect QA evidence before accepting or launching follow-up."
+  };
+}
+
+function terminalRepairDecisionPeek() {
+  const highlight = state.dashboard?.terminal_handoff?.repair_highlights?.[0];
+  if (!highlight) return null;
+  return {
+    tone: "good",
+    badge: "repair resolved",
+    title: `${stageTitle(highlight.stage)} retry ${highlight.attempt_number} resolved`,
+    detail: highlight.reason || "Validation passed after repair before terminal handoff."
+  };
+}
+
+function activeModeDecisionPeek() {
+  if (state.activeTab !== "work") return null;
+  if (state.workDetail === "review-findings" && state.reviewFindingsRunId === state.activeRunId && state.reviewFindingsView) {
+    return reviewDecisionPeek(state.reviewFindingsView);
+  }
+  if (state.workDetail === "qa-verdict" && state.qaVerdictRunId === state.activeRunId && state.qaVerdictView) {
+    return qaDecisionPeek(state.qaVerdictView);
+  }
+  return null;
+}
+
+function staleDownstreamStages() {
+  return (state.dashboard?.stages || []).filter((item) => item.stale);
+}
+
+function staleDownstreamStageLabel(items) {
+  const labels = items.map((item) => stageTitle(item.stage));
+  if (!labels.length) return "downstream stages";
+  return labels.join(" -> ");
+}
+
+function staleDownstreamInvalidator(items) {
+  const invalidators = [...new Set(items.map((item) => item.stale_invalidated_by).filter(Boolean))];
+  return invalidators.join(", ") || "remediation request";
+}
+
+function staleDownstreamRuntimeGate() {
+  if (!state.selectedRuntime) {
+    return {label: "Runtime required", nextStep: "Select runtime"};
+  }
+  if (!selectedRuntimeReady()) {
+    return {label: `${state.selectedRuntime} not ready`, nextStep: "Select ready runtime"};
+  }
+  return {label: `${state.selectedRuntime} ready`, nextStep: "Rerun downstream"};
+}
+
+function renderStaleDownstreamSummary(action) {
+  const items = staleDownstreamStages();
+  if (!items.length && action?.action !== "rerun-stale-downstream") return "";
+  const stageLabel = staleDownstreamStageLabel(items);
+  const invalidatedBy = staleDownstreamInvalidator(items);
+  const runtimeGate = staleDownstreamRuntimeGate();
+  const firstReason = items.find((item) => item.stale_reason)?.stale_reason
+    || action?.detail
+    || "A remediation attempt invalidated downstream stage evidence.";
+  return `
+    <div class="stale-downstream-summary" data-stale-downstream-summary role="status" aria-live="polite">
+      <div class="stale-downstream-copy">
+        <span class="small-badge warn">stale downstream</span>
+        <strong>Rerun ${escapeHtml(stageLabel)} after remediation</strong>
+        <p>${escapeHtml(firstReason)}</p>
+        <small>Terminal QA handoff stays blocked until stale downstream evidence is refreshed.</small>
+      </div>
+      <div class="stale-downstream-facts">
+        <span><strong>Stale stages</strong>${escapeHtml(stageLabel)}</span>
+        <span><strong>Invalidated by</strong>${escapeHtml(invalidatedBy)}</span>
+        <span><strong>Runtime</strong>${escapeHtml(runtimeGate.label)}</span>
+        <span><strong>Next step</strong>${escapeHtml(runtimeGate.nextStep)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderModeDecisionPeek() {
+  const peek = activeModeDecisionPeek() || terminalRepairDecisionPeek();
+  if (!peek) return "";
+  return `
+    <div class="mode-decision-peek ${escapeHtml(peek.tone)}" aria-label="Current screen decision summary">
+      <span class="small-badge ${escapeHtml(peek.tone)}">${escapeHtml(peek.badge)}</span>
+      <strong>${escapeHtml(peek.title)}</strong>
+      <span>${escapeHtml(peek.detail)}</span>
+    </div>
+  `;
+}
+
+function nextActionRuntimeBlockerMessage(runtimeBlocked) {
+  if (!runtimeBlocked) return "";
+  if (typeof runtimeReadinessMessage === "function") {
+    return runtimeReadinessMessage();
+  }
+  if (!state.selectedRuntime) return "Select a runtime before this action can run.";
+  if (state.readinessLoading) return "Checking runtime readiness before this action can run.";
+  if (state.readinessError) return `Runtime readiness unavailable: ${state.readinessError}`;
+  return "Selected runtime is not ready for execution.";
+}
+
+function renderNextActionBlocker(message) {
+  if (!message) return "";
+  return `
+    <p class="next-action-blocker" role="status" aria-live="polite">${escapeHtml(message)}</p>
+  `;
+}
+
+function workDetailOwnsPrimarySurface() {
+  return state.activeTab === "work"
+    && ["implement-review", "review-findings", "qa-verdict"].includes(state.workDetail);
+}
+
+function globalNextActionStripProvidesPrimary() {
+  if (state.onboarding?.setupRequired) return false;
+  if (state.activeTab === "recovery") return false;
+  if (workDetailOwnsPrimarySurface()) return false;
+  return !document.body.classList.contains("evidence-log-mode");
+}
+
+function renderNextActionSidebarMirror({label, statusMessage, tone}) {
+  const badge = tone === "good" ? "ready" : "waiting";
+  return `
+    <div class="next-action-sidebar-mirror">
+      <span class="small-badge ${escapeHtml(tone)}">${escapeHtml(badge)}</span>
+      <strong>${escapeHtml(label)}</strong>
+      ${statusMessage ? `<span>${escapeHtml(statusMessage)}</span>` : ""}
+    </div>
+  `;
+}
+
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
@@ -1749,6 +2659,7 @@ function renderNextActionPanel() {
   const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
   const activeJobState = activeJobNextActionState(action);
   const disabled = Boolean(activeJobState) || !(action.enabled || noRunWithRuntime) || runtimeBlocked;
+  const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);
   const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
     : runStageResume
@@ -1765,20 +2676,44 @@ function renderNextActionPanel() {
   const finding = action.action === "inspect-validation" || action.action === "review-intervention"
     ? primaryValidationFinding()
     : null;
+  if (globalNextActionStripProvidesPrimary()) {
+    const statusMessage = blockerMessage ? "" : activeJobState?.detail || (disabled
+      ? "Primary action is not available yet."
+      : "Primary action is ready in the stage cockpit.");
+    const tone = disabled || blockerMessage ? "warn" : "good";
+    document.getElementById("nextActionPanel").innerHTML = `
+      <div class="panel-title">Next Action Status</div>
+      <p>${escapeHtml(detail)}</p>
+      ${renderValidationFindingSummary(finding, {compact: true})}
+      ${renderNextActionSidebarMirror({label, statusMessage, tone})}
+      ${renderNextActionBlocker(blockerMessage)}
+    `;
+    return;
+  }
   document.getElementById("nextActionPanel").innerHTML = `
     <div class="panel-title">Run Next Action</div>
     <p>${escapeHtml(detail)}</p>
     ${renderValidationFindingSummary(finding, {compact: true})}
-    <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+    <div class="next-action-button-stack">
+      <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+      ${renderNextActionBlocker(blockerMessage)}
+    </div>
   `;
 }
 
 function renderGlobalNextActionStrip() {
   const host = document.getElementById("globalNextActionStrip");
   if (!host) return;
-  if (state.activeTab === "recovery" || state.onboarding?.setupRequired) {
+  syncLiveJobBodyClass();
+  syncExternalRunningBodyClass();
+  if (
+    state.activeTab === "recovery"
+    || state.onboarding?.setupRequired
+    || workDetailOwnsPrimarySurface()
+  ) {
     host.hidden = true;
     host.innerHTML = "";
+    host.classList.remove("live-progress-active", "external-progress-active");
     return;
   }
   host.hidden = false;
@@ -1788,6 +2723,7 @@ function renderGlobalNextActionStrip() {
   const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
   const activeJobState = activeJobNextActionState(action);
   const disabled = Boolean(activeJobState) || !(action.enabled || noRunWithRuntime) || runtimeBlocked;
+  const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);
   const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
     : action.action === "run-stage" && state.activeRunId && action.enabled
@@ -1800,10 +2736,15 @@ function renderGlobalNextActionStrip() {
     : action.detail);
   const stage = activeJobState?.stage || (action.stage ? stageTitle(action.stage) : state.dashboard?.active_stage || "run");
   const run = activeJobState?.run || state.activeRunId || "not started";
+  const externalRunningState = externalRunningStageItem(action);
   const finding = action.action === "inspect-validation" || action.action === "review-intervention"
     ? primaryValidationFinding()
     : null;
+  host.classList.toggle("live-progress-active", Boolean(activeJobState));
+  host.classList.toggle("external-progress-active", Boolean(externalRunningState));
   host.innerHTML = `
+    ${activeJobState ? renderGlobalLiveProgress(state.activeJobStatus) : ""}
+    ${externalRunningState ? renderExternalRunningStageProgress(action) : ""}
     <div class="next-action-copy">
       <span class="next-action-icon" aria-hidden="true">&gt;</span>
       <div>
@@ -1811,6 +2752,9 @@ function renderGlobalNextActionStrip() {
         <h2>${escapeHtml(label)}</h2>
         <p>${escapeHtml(detail)}</p>
         ${renderValidationFindingSummary(finding)}
+        ${renderGlobalTerminalEvidenceActions()}
+        ${renderStaleDownstreamSummary(action)}
+        ${renderModeDecisionPeek()}
       </div>
     </div>
     <div class="next-action-controls">
@@ -1819,7 +2763,10 @@ function renderGlobalNextActionStrip() {
         <span><strong>Runtime</strong>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "required")}</span>
         <span><strong>Run</strong>${escapeHtml(run)}</span>
       </div>
-      <button id="globalNextActionButton" class="next-button" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+      <div class="next-action-button-stack">
+        <button id="globalNextActionButton" class="next-button" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+        ${renderNextActionBlocker(blockerMessage)}
+      </div>
     </div>
   `;
 }
@@ -1882,6 +2829,7 @@ async function handleNextAction() {
   if (action.action === "run-stage" || action.action === "resume-stage") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
       await renderAll();
@@ -1896,6 +2844,7 @@ async function handleNextAction() {
   if (action.action === "answer-questions") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
       await renderAll();
@@ -1907,6 +2856,7 @@ async function handleNextAction() {
   if (action.action === "inspect-validation" || action.action === "review-intervention") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
       await renderAll();
@@ -1918,6 +2868,7 @@ async function handleNextAction() {
   if (action.action === "review-findings" || action.action === "qa-verdict") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
+      state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
       await renderAll();

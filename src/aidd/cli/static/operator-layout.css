@@ -85,6 +85,23 @@
   padding: 4px 7px;
   white-space: nowrap;
 }
+.badge-button {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  min-height: 0;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+.badge-button:hover {
+  border-color: var(--teal);
+  color: var(--teal-dark);
+}
 .status-chip.good,
 .status-badge.succeeded,
 .small-badge.good {
@@ -96,6 +113,9 @@
 .status-badge.repair-needed,
 .status-badge.waiting-for-operator,
 .small-badge.waiting-for-operator,
+.small-badge.retried,
+.status-badge.retried,
+.badge-button.retried,
 .small-badge.warn {
   background: #fff8e7;
   border-color: #e8ce8f;
@@ -202,7 +222,8 @@ body.recovery-mode .operator-shell {
   grid-template-rows: minmax(500px, calc(100vh - 98px)) auto;
 }
 body.recovery-mode .right-sidebar,
-body.recovery-mode .global-next-action-strip {
+body.recovery-mode .global-next-action-strip,
+body.evidence-log-mode .global-next-action-strip {
   display: none;
 }
 body.recovery-mode .stage-rail {
@@ -278,6 +299,12 @@ body.setup-active .cockpit {
 .stage-card.active {
   background: #e7f3f1;
   border-color: #a6ccc7;
+}
+.stage-card.retried {
+  box-shadow: inset 3px 0 0 rgba(154, 106, 18, 0.28);
+}
+.stage-card.active.retried {
+  box-shadow: inset 3px 0 0 var(--amber);
 }
 .stage-index {
   align-items: center;

@@ -113,6 +113,9 @@ containing only `ready-with-conditions`.
    sign-off, raise a `[blocking]` question instead of forcing approval status.
 7. Update `validator-report.md` and `stage-result.md` so verdict, blockers, and next actions remain
    consistent with report conclusions.
+   When review and validation evidence support success, `stage-result.md` `Next actions` must
+   point to `tasklist` as the immediate downstream stage. Do not tell the operator to proceed to
+   implementation, review, or QA before the canonical `tasklist` stage has completed successfully.
 
 ## Common output skeleton discipline
 
@@ -120,6 +123,8 @@ containing only `ready-with-conditions`.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
 - Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
+- Keep `stage-result.md` next-action copy flow-aware: `review-spec` hands off to `tasklist`, never
+  directly to `implement`, `review`, or `qa`.
 
 ## Completion checklist
 
@@ -128,4 +133,5 @@ containing only `ready-with-conditions`.
 - recommendations are prioritized Markdown list items and mapped to identified issues,
 - readiness state, required changes, and sign-off decision are coherent,
 - unresolved blocking ambiguity is captured as explicit questions,
-- stage status and validator verdict agree with report outcome.
+- stage status and validator verdict agree with report outcome,
+- successful `stage-result.md` next actions name `tasklist` as the immediate downstream stage.

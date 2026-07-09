@@ -20,6 +20,22 @@ from aidd.core.workspace import (
     workspace_workitems_root,
 )
 
+_RUNTIME_FAILURE_KINDS = frozenset(
+    {
+        "cancelled",
+        "failed",
+        "non_zero_exit",
+        "non-zero-exit",
+        "provider_error",
+        "provider-no-progress",
+        "runtime-error",
+        "runtime-exit-metadata-invalid",
+        "runtime-failure",
+        "stage-failed",
+        "timeout",
+    }
+)
+
 
 def _discover_work_items(workspace_root: Path) -> tuple[OnboardingWorkItemSummary, ...]:
     workitems_root = workspace_workitems_root(workspace_root)
@@ -95,19 +111,19 @@ def _work_item_summary(
         active_stage=STAGES[0],
         project_root=project_root,
     )
+    if (
+        dashboard.first_failure is not None
+        and dashboard.first_failure.kind in _RUNTIME_FAILURE_KINDS
+        and dashboard.first_failure.stage in STAGES
+    ):
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=workspace_root,
+            work_item=item.work_item,
+            active_stage=dashboard.first_failure.stage,
+            project_root=project_root,
+        )
     stages = dashboard.stages
     completed = sum(1 for stage in stages if stage.status == "succeeded")
-    active = next(
-        (
-            stage.stage
-            for stage in stages
-            if stage.status in {"preparing", "executing", "validating"}
-        ),
-        dashboard.next_action.stage or next(
-            (stage.stage for stage in stages if stage.status != "succeeded"),
-            _active_stage_from_run(dashboard.run),
-        ),
-    )
     terminal_state = (
         "completed"
         if dashboard.terminal_handoff is not None
@@ -116,6 +132,21 @@ def _work_item_summary(
         else "running"
         if any(stage.status in {"preparing", "executing", "validating"} for stage in stages)
         else "ready"
+    )
+    active = (
+        "qa"
+        if terminal_state == "completed" and any(stage.stage == "qa" for stage in stages)
+        else next(
+            (
+                stage.stage
+                for stage in stages
+                if stage.status in {"preparing", "executing", "validating"}
+            ),
+            dashboard.next_action.stage or next(
+                (stage.stage for stage in stages if stage.status != "succeeded"),
+                _active_stage_from_run(dashboard.run),
+            ),
+        )
     )
     return OperatorWorkItemSummary(
         work_item=item.work_item,

@@ -99,6 +99,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    clarity.
 8. Update `stage-result.md` so status, blockers, and next actions remain consistent with validator
    and question artifacts.
+   When planning and validation evidence support success, `stage-result.md` `Next actions` must
+   point to `review-spec` as the immediate downstream stage. Do not tell the operator to proceed
+   to task decomposition or implementation before the canonical `review-spec` stage has completed
+   successfully.
 
 ## Common output skeleton discipline
 
@@ -106,6 +110,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
 - Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
+- Keep `stage-result.md` next-action copy flow-aware: `plan` hands off to `review-spec`, never
+  directly to `tasklist`, `implement`, `review`, or `qa`.
 
 ## Completion checklist
 
@@ -117,4 +123,5 @@ normalize if canonical validation proves the terminal status inconsistent.
 - authored verification commands from `context/verification-output.md` are preserved exactly, or
   referenced generically without changing command flags or broadening scope,
 - optional broader checks are not promoted to required pass criteria outside the authored boundary,
-- stage status and validator verdict are consistent with blocker/question state.
+- stage status and validator verdict are consistent with blocker/question state,
+- successful `stage-result.md` next actions name `review-spec` as the immediate downstream stage.

@@ -337,6 +337,17 @@ class OperatorRepairCounts:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorRepairHighlight:
+    stage: str
+    attempt_number: int
+    outcome: str
+    reason: str
+    validator_report_path: str | None
+    repair_brief_path: str | None
+    recorded_at_utc: str
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorApprovalCounts:
     requested: int
     approved: int
@@ -361,6 +372,7 @@ class OperatorTerminalRunHandoff:
     final_artifacts: tuple[OperatorArtifactRef, ...]
     blockers: tuple[OperatorBlocker, ...]
     repair_counts: OperatorRepairCounts
+    repair_highlights: tuple[OperatorRepairHighlight, ...]
     approval_counts: OperatorApprovalCounts
     questions_answered_count: int
     questions_total_count: int
@@ -538,6 +550,7 @@ __all__ = [
     "OperatorQuestionsView",
     "OperatorRawLogSourceDiagnostics",
     "OperatorRepairAttemptDiagnostics",
+    "OperatorRepairHighlight",
     "OperatorRequestChangeContext",
     "OperatorRepairCounts",
     "OperatorRecoveryAction",

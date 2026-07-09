@@ -54,6 +54,9 @@ Use concrete repair actions:
   highest-risk work;
 - unclear approval readiness: clarify `Out of scope`, trade-offs, and acceptance signals;
 - unresolved ambiguity: keep or add a blocking question instead of inventing assumptions.
+- downstream-order drift: if successful `stage-result.md` next actions skip `review-spec` and point
+  to task decomposition, implementation, review, or QA, rewrite the next action to name
+  `review-spec` as the immediate canonical downstream stage.
 
 ## Targeted repair discipline
 
@@ -74,6 +77,8 @@ Use concrete repair actions:
 9. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
 10. Do not claim success unless required headings, validator verdict, stage-result status, and milestone verification mapping are mutually consistent.
 11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+12. When `stage-result.md` status is `succeeded`, its first downstream action must name
+    `review-spec`, not a later canonical stage.
 
 ## Repair exit checks
 
@@ -81,6 +86,7 @@ Use concrete repair actions:
 - milestone sequencing and dependency constraints are coherent and explicit,
 - every milestone has a stable `M<N>` id and verification notes reference those ids,
 - risk mitigation and verification expectations are linked for highest-risk work,
+- successful `stage-result.md` next actions name `review-spec` as the immediate downstream stage,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - `stage-result.md` and `validator-report.md` remain consistent on verdict and blocker state.

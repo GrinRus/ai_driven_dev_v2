@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -110,6 +111,8 @@ def _write_fake_aidd(
     inspect_fail_command: str | None = None,
     log_blocking_text: bool = False,
     stage_result_validator_verdict: str | None = None,
+    stage_result_direct_qa_next_action_stage: str | None = None,
+    stage_result_generic_next_action_stage: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
     ignored_pollution_stage: str | None = None,
     implement_untracked_product_file: str | None = None,
@@ -137,6 +140,8 @@ INSPECT_BLOCK_STAGE = {inspect_block_stage!r}
 INSPECT_FAIL_COMMAND = {inspect_fail_command!r}
 LOG_BLOCKING_TEXT = {log_blocking_text!r}
 STAGE_RESULT_VALIDATOR_VERDICT = {stage_result_validator_verdict!r}
+STAGE_RESULT_DIRECT_QA_NEXT_ACTION_STAGE = {stage_result_direct_qa_next_action_stage!r}
+STAGE_RESULT_GENERIC_NEXT_ACTION_STAGE = {stage_result_generic_next_action_stage!r}
 STRAY_TOP_LEVEL_WORKITEMS_STAGE = {stray_top_level_workitems_stage!r}
 IGNORED_POLLUTION_STAGE = {ignored_pollution_stage!r}
 IMPLEMENT_UNTRACKED_PRODUCT_FILE = {implement_untracked_product_file!r}
@@ -152,6 +157,8 @@ def option(args: list[str], name: str, default: str = "") -> str:
 
 
 def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
+    write_executing_stage_metadata(stage, work_item, run_id)
+    time.sleep(0.75)
     output_root = Path(".aidd") / "workitems" / work_item / "stages" / stage / "output"
     output_root.mkdir(parents=True, exist_ok=True)
     root = output_root.parent
@@ -167,6 +174,11 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
             "## Validation summary\\n\\n"
             f"- Validator verdict: `{{STAGE_RESULT_VALIDATOR_VERDICT}}`\\n\\n"
         )
+    next_actions = ""
+    if stage == STAGE_RESULT_DIRECT_QA_NEXT_ACTION_STAGE:
+        next_actions = "## Next actions\\n\\n- Proceed directly to `qa`.\\n\\n"
+    elif stage == STAGE_RESULT_GENERIC_NEXT_ACTION_STAGE:
+        next_actions = "## Next actions\\n\\n- Proceed to the downstream planning stage.\\n\\n"
     (output_root / "stage-result.md").write_text(
         "# Stage\\n\\n"
         f"{{stage}}\\n\\n"
@@ -174,7 +186,8 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
         "- Attempt `1` (`initial`) -> succeeded.\\n\\n"
         + validation_summary +
         "## Status\\n\\n"
-        "- `succeeded`\\n"
+        "- `succeeded`\\n\\n"
+        + next_actions
     )
     (output_root / "validator-report.md").write_text(
         "# Validator report\\n\\n## Result\\n\\n- Verdict: `pass`\\n"
@@ -224,8 +237,20 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
     (stage_root / "stage-metadata.json").write_text(
         json.dumps(
             {{
+                "schema_version": 1,
+                "run_id": run_id,
+                "work_item_id": work_item,
+                "stage": stage,
                 "status": "succeeded",
-                "status_history": [{{"status": "succeeded"}}],
+                "created_at_utc": "2026-05-25T00:00:00Z",
+                "updated_at_utc": "2026-05-25T00:00:00Z",
+                "status_history": [
+                    {{
+                        "status": "succeeded",
+                        "changed_at_utc": "2026-05-25T00:00:00Z",
+                    }}
+                ],
+                "repair_history": [],
                 "attempt_count": 1,
             }}
         )
@@ -416,6 +441,40 @@ def ui(args: list[str]) -> int:
     work_item = option(args, "--work-item")
     jobs: dict[str, dict[str, object]] = {{}}
 
+    def stage_metadata_status(stage: str, run_id: str) -> str:
+        metadata_path = (
+            Path(".aidd")
+            / "reports"
+            / "runs"
+            / work_item
+            / run_id
+            / "stages"
+            / stage
+            / "stage-metadata.json"
+        )
+        if not metadata_path.exists():
+            return "pending"
+        try:
+            payload = json.loads(metadata_path.read_text())
+        except json.JSONDecodeError:
+            return "pending"
+        status = payload.get("status")
+        return status if isinstance(status, str) and status else "pending"
+
+    def stage_runtime_log_path(stage: str, run_id: str) -> Path:
+        return (
+            Path(".aidd")
+            / "reports"
+            / "runs"
+            / work_item
+            / run_id
+            / "stages"
+            / stage
+            / "attempts"
+            / "attempt-0001"
+            / "runtime.log"
+        )
+
     def job_payload(job_id: str) -> dict[str, object]:
         job = jobs[job_id]
         return {{
@@ -506,7 +565,11 @@ def ui(args: list[str]) -> int:
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             if self.path == "/":
-                body = f"<html><body>AIDD UI {{work_item}}</body></html>".encode()
+                body = (
+                    "<html><body>"
+                    f"<h1>AIDD Operator Console</h1><p>Work item {{work_item}}</p>"
+                    "</body></html>"
+                ).encode()
                 content_type = "text/html; charset=utf-8"
                 self.send_response(200)
                 self.send_header("Content-Type", content_type)
@@ -542,18 +605,77 @@ def ui(args: list[str]) -> int:
                 )
                 stage = params.get("stage", "")
                 run_id = params.get("run_id", "")
-                if self.path.startswith("/api/run"):
+                stage_status = stage_metadata_status(stage, run_id)
+                running_stage = stage_status in {{"preparing", "executing", "validating"}}
+                next_action = (
+                    {{
+                        "action": "wait-for-stage",
+                        "label": f"{{stage}} running",
+                        "detail": "Refresh after the active stage leaves running state.",
+                        "stage": stage,
+                        "enabled": False,
+                    }}
+                    if running_stage
+                    else {{
+                        "action": "run-stage",
+                        "label": "Run next stage",
+                        "detail": "Continue through the governed flow.",
+                        "stage": stage,
+                        "enabled": True,
+                    }}
+                )
+                if self.path.startswith("/api/dashboard"):
+                    payload = {{
+                        "app_version": "test",
+                        "dashboard": {{
+                            "work_item": work_item,
+                            "active_stage": stage,
+                            "run": {{
+                                "run_id": run_id,
+                                "runtime_id": "codex",
+                                "stage_target": stage,
+                            }},
+                            "next_action": next_action,
+                            "terminal_handoff": None,
+                            "recent_artifacts": [
+                                {{"stage": stage, "path": PRIMARY_OUTPUTS.get(stage, "")}}
+                            ],
+                            "evidence_refs": [
+                                {{
+                                    "stage": stage,
+                                    "kind": "artifact",
+                                    "path": PRIMARY_OUTPUTS.get(stage, ""),
+                                }}
+                            ],
+                            "blockers": [],
+                            "recovery_actions": [],
+                        }},
+                    }}
+                elif self.path.startswith("/api/run"):
                     payload = {{
                         "run_id": run_id,
                         "work_item": work_item,
                         "status": "succeeded",
+                        "recent_artifacts": [
+                            {{"stage": stage, "path": PRIMARY_OUTPUTS.get(stage, "")}}
+                        ],
+                        "evidence_refs": [
+                            {{
+                                "stage": stage,
+                                "kind": "artifact",
+                                "path": PRIMARY_OUTPUTS.get(stage, ""),
+                            }}
+                        ],
+                        "blockers": [],
+                        "recovery_actions": [],
                     }}
                 elif self.path.startswith("/api/stage"):
                     payload = {{
                         "run_id": run_id,
                         "work_item": work_item,
                         "stage": stage,
-                        "status": "succeeded",
+                        "status": stage_status,
+                        "final_state": stage_status,
                     }}
                 elif self.path.startswith("/api/questions"):
                     payload = {{
@@ -563,12 +685,22 @@ def ui(args: list[str]) -> int:
                         "questions": [],
                     }}
                 elif self.path.startswith("/api/logs"):
-                    payload = {{
-                        "run_id": run_id,
-                        "work_item": work_item,
-                        "stage": stage,
-                        "chunks": [{{"text": f"stage {{stage}} completed"}}],
-                    }}
+                    runtime_log = stage_runtime_log_path(stage, run_id)
+                    if running_stage and not runtime_log.exists():
+                        payload = {{
+                            "run_id": run_id,
+                            "work_item": work_item,
+                            "stage": stage,
+                            "available": False,
+                            "message": "Runtime log is not available yet.",
+                        }}
+                    else:
+                        payload = {{
+                            "run_id": run_id,
+                            "work_item": work_item,
+                            "stage": stage,
+                            "chunks": [{{"text": f"stage {{stage}} completed"}}],
+                        }}
                 elif self.path.startswith("/api/artifacts"):
                     payload = {{
                         "run_id": run_id,
@@ -951,6 +1083,8 @@ def _prepare_live_test(
     inspect_fail_command: str | None = None,
     log_blocking_text: bool = False,
     stage_result_validator_verdict: str | None = None,
+    stage_result_direct_qa_next_action_stage: str | None = None,
+    stage_result_generic_next_action_stage: str | None = None,
     stray_top_level_workitems_stage: str | None = None,
     ignored_pollution_stage: str | None = None,
     implement_untracked_product_file: str | None = None,
@@ -985,6 +1119,10 @@ def _prepare_live_test(
         inspect_fail_command=inspect_fail_command,
         log_blocking_text=log_blocking_text,
         stage_result_validator_verdict=stage_result_validator_verdict,
+        stage_result_direct_qa_next_action_stage=(
+            stage_result_direct_qa_next_action_stage
+        ),
+        stage_result_generic_next_action_stage=stage_result_generic_next_action_stage,
         stray_top_level_workitems_stage=stray_top_level_workitems_stage,
         ignored_pollution_stage=ignored_pollution_stage,
         implement_untracked_product_file=implement_untracked_product_file,
@@ -1364,11 +1502,90 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
     assert frontend_payload["enabled"] is True
-    assert len(frontend_payload["checkpoints"]) == len(STAGES)
+    assert len(frontend_payload["checkpoints"]) == len(STAGES) * 2
     assert all(
-        checkpoint["classification"] == "pass"
+        checkpoint["classification"] in {"pass", "skipped"}
         for checkpoint in frontend_payload["checkpoints"]
     )
+    assert all(
+        checkpoint["operator_surface"]["ok"] is True
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["classification"] == "pass"
+    )
+    skipped_running_checkpoints = [
+        checkpoint
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["classification"] == "skipped"
+    ]
+    assert all(
+        checkpoint["phase"] == "running-stage"
+        and checkpoint["operator_surface"]["failed_checks"] == ["checkpoint-not-run"]
+        and checkpoint["failure_reason"]
+        == "Running stage state ended before UI checkpoint probes could run."
+        for checkpoint in skipped_running_checkpoints
+    )
+    running_checkpoint = next(
+        checkpoint
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["stage"] == STAGES[0] and checkpoint["phase"] == "running-stage"
+    )
+    assert running_checkpoint["observed_stage_status"] == "executing"
+    assert {
+        check["name"]
+        for check in running_checkpoint["operator_surface"]["checks"]
+    }.issuperset(
+        {
+            "operator-shell-visible",
+            "work-item-context-visible",
+            "run-context-visible",
+            "running-stage-visible",
+            "running-wait-action-visible",
+            "runtime-log-affordance-visible",
+        }
+    )
+    first_operator_surface = next(
+        checkpoint["operator_surface"]
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["stage"] == STAGES[0] and checkpoint["phase"] == "post-stage"
+    )
+    assert {
+        check["name"]
+        for check in first_operator_surface["checks"]
+    }.issuperset(
+        {
+            "operator-shell-visible",
+            "work-item-context-visible",
+            "run-context-visible",
+            "active-stage-visible",
+            "stage-status-visible",
+            "next-action-visible",
+            "runtime-log-surface-visible",
+            "artifact-surface-visible",
+        }
+    )
+    frontend_markdown = (
+        result.bundle_root / "frontend-checkpoints.md"
+    ).read_text(encoding="utf-8")
+    assert "- Scope: raw UI/API and operator-surface run-integrity evidence" in (
+        frontend_markdown
+    )
+    assert "not a UI/UX audit, not screenshot evidence, and not a quality gate" in (
+        frontend_markdown
+    )
+    assert "## Manual Visual Review Checklist" in frontend_markdown
+    assert "Visible next action and active stage match the checkpoint stage." in (
+        frontend_markdown
+    )
+    assert "without clipped single-letter chips" in frontend_markdown
+    assert "Record screenshot paths or browser notes in the manual final report" in (
+        frontend_markdown
+    )
+    assert "- Operator surface: ok=`True`" in frontend_markdown
+    assert "- Phase: `running-stage`" in frontend_markdown
+    assert "`running-wait-action-visible`: ok=`True`" in frontend_markdown
+    assert "`runtime-log-affordance-visible`: ok=`True`" in frontend_markdown
+    assert "- Phase: `post-stage`" in frontend_markdown
+    assert "`next-action-visible`: ok=`True`" in frontend_markdown
     next_flow_payload = json.loads(
         (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
     )
@@ -1406,6 +1623,78 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     )
     assert "Default decision: `no-follow-up`" in next_flow_markdown
     assert "Requires second public-repository flow: `false`" in next_flow_markdown
+
+
+def test_black_box_live_e2e_imports_manual_frontend_evidence_without_gating(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    manual_evidence = tmp_path / "manual-frontend-evidence-source"
+    screenshot_dir = manual_evidence / "screenshots"
+    screenshot_dir.mkdir(parents=True)
+    (manual_evidence / "browser-notes.md").write_text(
+        "# Browser Notes\n\n- Desktop next action looked clear.\n",
+        encoding="utf-8",
+    )
+    (screenshot_dir / "mobile-flow-complete.png").write_bytes(b"fake screenshot")
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        manual_frontend_evidence=manual_evidence,
+    )
+
+    assert result.status == "pass"
+    frontend_payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    assert all(
+        checkpoint["classification"] == "pass"
+        for checkpoint in frontend_payload["checkpoints"]
+    )
+    manual_payload = frontend_payload["manual_visual_evidence"]
+    assert manual_payload["status"] == "imported"
+    assert manual_payload["imported"] is True
+    assert manual_payload["non_gating"] is True
+    assert manual_payload["kind"] == "directory"
+    assert manual_payload["source_path"] == manual_evidence.resolve().as_posix()
+    assert manual_payload["files"] == [
+        "browser-notes.md",
+        "screenshots/mobile-flow-complete.png",
+    ]
+    imported_root = result.bundle_root / "manual-frontend-evidence"
+    assert manual_payload["bundle_path"] == imported_root.as_posix()
+    assert (imported_root / "browser-notes.md").read_text(encoding="utf-8").startswith(
+        "# Browser Notes"
+    )
+    assert (imported_root / "screenshots" / "mobile-flow-complete.png").read_bytes() == (
+        b"fake screenshot"
+    )
+
+    frontend_markdown = (
+        result.bundle_root / "frontend-checkpoints.md"
+    ).read_text(encoding="utf-8")
+    assert "## Manual Browser Evidence" in frontend_markdown
+    assert "- Status: `imported`" in frontend_markdown
+    assert "- Non-gating: `True`" in frontend_markdown
+    assert "`screenshots/mobile-flow-complete.png`" in frontend_markdown
+    assert "they do not change runner classifications" in frontend_markdown
+
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["manual_frontend_evidence_source"] == (
+        manual_evidence.resolve().as_posix()
+    )
+    metadata_payload = json.loads(
+        (result.bundle_root / "harness-metadata.json").read_text(encoding="utf-8")
+    )
+    assert metadata_payload["black_box"]["manual_frontend_evidence"] == (
+        imported_root.as_posix()
+    )
 
 
 def test_black_box_live_product_evaluation_stops_after_stage_for_quality_review(
@@ -2369,6 +2658,105 @@ def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
     assert "non-gating=True" in audit_markdown
 
 
+def test_black_box_live_e2e_records_non_gating_stage_result_next_action_skip(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        stage_result_direct_qa_next_action_stage="implement",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    expected_finding = {
+        "kind": "stage-result-next-action-skips-canonical-stage",
+        "severity": "warning",
+        "non_gating": True,
+        "stage": "implement",
+        "expected_next_stage": "review",
+        "mentioned_later_stages": ["qa"],
+        "message": (
+            "stage-result.md next actions mention a later downstream stage "
+            "without naming the immediate canonical next stage."
+        ),
+    }
+    audit_payload = json.loads(
+        (result.bundle_root / "stage-audits" / "stage-0006-implement.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert audit_payload["stage_state"] == "passed"
+    assert audit_payload["consistency_findings"] == [expected_finding]
+    audit_markdown = (
+        result.bundle_root / "stage-audits" / "stage-0006-implement.md"
+    ).read_text(encoding="utf-8")
+    assert "## Consistency Findings" in audit_markdown
+    assert "`stage-result-next-action-skips-canonical-stage`" in audit_markdown
+    assert "expected-next-stage=review" in audit_markdown
+    assert "mentioned-later-stages=qa" in audit_markdown
+
+    grader_payload = json.loads(
+        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
+    )
+    implement_audit = next(
+        item
+        for item in grader_payload["stage_audits"]
+        if item["stage_run_id"] == "stage-0006-implement"
+    )
+    assert implement_audit["consistency_findings"] == [expected_finding]
+
+
+def test_black_box_live_e2e_records_non_gating_stage_result_next_action_missing_exact_stage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        stage_result_generic_next_action_stage="research",
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    expected_finding = {
+        "kind": "stage-result-next-action-missing-immediate-stage",
+        "severity": "warning",
+        "non_gating": True,
+        "stage": "research",
+        "expected_next_stage": "plan",
+        "message": (
+            "stage-result.md next actions do not name the immediate canonical "
+            "next stage."
+        ),
+    }
+    audit_payload = json.loads(
+        (result.bundle_root / "stage-audits" / "stage-0002-research.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert audit_payload["stage_state"] == "passed"
+    assert audit_payload["consistency_findings"] == [expected_finding]
+    audit_markdown = (
+        result.bundle_root / "stage-audits" / "stage-0002-research.md"
+    ).read_text(encoding="utf-8")
+    assert "`stage-result-next-action-missing-immediate-stage`" in audit_markdown
+    assert "expected-next-stage=plan" in audit_markdown
+
+
 def test_black_box_live_e2e_records_non_gating_target_workspace_pollution(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2924,6 +3312,94 @@ def test_black_box_command_no_progress_allows_live_artifact_heartbeats(
     assert result.transcript.timed_out is False
 
 
+def test_black_box_command_emits_operator_heartbeat_without_polluting_transcript(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runtime_log_path = tmp_path / "runtime.log"
+    command = (
+        sys.executable,
+        "-c",
+        "import time; time.sleep(0.35)",
+    )
+
+    result = _run_black_box_command(
+        command=command,
+        cwd=tmp_path,
+        environment=dict(os.environ),
+        timeout_seconds=5.0,
+        no_progress_timeout_seconds=3.0,
+        heartbeat_label="run-stage `idea`",
+        heartbeat_interval_seconds=0.1,
+        heartbeat_runtime_log_path=runtime_log_path,
+    )
+
+    captured = capsys.readouterr()
+    assert result.exit_code == 0
+    assert result.stdout_text == ""
+    assert result.stderr_text == ""
+    assert captured.out == ""
+    assert "[aidd live] run-stage `idea` still running after" in captured.err
+    assert "last signal: process-started" in captured.err
+    assert "hard timeout: 5s" in captured.err
+    assert "no-progress timeout: 3s" in captured.err
+    assert (
+        f"runtime log: {runtime_log_path.as_posix()} "
+        "(waiting for first runtime event)" in captured.err
+    )
+    assert (
+        "next evidence: stage command is alive; "
+        "waiting for runtime output or file activity" in captured.err
+    )
+
+
+def test_black_box_command_heartbeat_explains_file_activity_before_runtime_log(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runtime_log_path = tmp_path / "runtime.log"
+    progress_file = tmp_path / "progress.txt"
+    command = (
+        sys.executable,
+        "-c",
+        (
+            "import pathlib, time\n"
+            "path = pathlib.Path('progress.txt')\n"
+            "for index in range(4):\n"
+            "    path.write_text(str(index), encoding='utf-8')\n"
+            "    time.sleep(0.08)\n"
+        ),
+    )
+
+    def _probe() -> dict[str, object]:
+        if not progress_file.exists():
+            return {"exists": False}
+        stat = progress_file.stat()
+        return {"exists": True, "mtime_ns": stat.st_mtime_ns, "size": stat.st_size}
+
+    result = _run_black_box_command(
+        command=command,
+        cwd=tmp_path,
+        environment=dict(os.environ),
+        timeout_seconds=5.0,
+        no_progress_timeout_seconds=3.0,
+        progress_probe=_probe,
+        heartbeat_label="run-stage `qa`",
+        heartbeat_interval_seconds=0.1,
+        heartbeat_runtime_log_path=runtime_log_path,
+    )
+
+    captured = capsys.readouterr()
+    assert result.exit_code == 0
+    assert result.stdout_text == ""
+    assert result.stderr_text == ""
+    assert "last signal: watched-files" in captured.err
+    assert (
+        "next evidence: stage files changed before first runtime event; "
+        "inspect artifacts or wait" in captured.err
+    )
+
+
 def test_black_box_live_e2e_records_active_step_while_stage_runs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -3079,6 +3555,83 @@ def test_black_box_live_e2e_interruption_rewrites_flow_report_status(
     state_payload = json.loads(state_paths[0].read_text(encoding="utf-8"))
     assert state_payload["status"] == "interrupted-resumable"
     flow_report = (state_paths[0].parent / "flow-report.md").read_text(encoding="utf-8")
+    assert "- Status: `interrupted-resumable`" in flow_report
+
+
+def test_black_box_live_e2e_defers_repeated_interrupt_while_recording_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    original_run_black_box_command = live_orchestration._run_black_box_command
+    original_write_steps = live_orchestration._write_steps
+    second_interrupt_seen = False
+
+    def _interrupt_idea_stage(*args: object, **kwargs: object) -> BlackBoxCommandResult:
+        command = kwargs.get("command")
+        if isinstance(command, tuple) and command[1:4] == ("stage", "run", "idea"):
+            transcript = HarnessCommandTranscript(
+                command=" ".join(command),
+                exit_code=130,
+                stdout_text="stage started\n",
+                stderr_text="",
+                duration_seconds=0.1,
+                timed_out=False,
+                timeout_seconds=None,
+            )
+            raise LiveE2EInterrupted(
+                "Synthetic test interruption.",
+                signum=2,
+                command_result=BlackBoxCommandResult(
+                    command=command,
+                    transcript=transcript,
+                ),
+                cleanup={"signal": 2},
+            )
+        return original_run_black_box_command(*args, **kwargs)
+
+    def _write_steps_with_repeated_interrupt(
+        bundle_root: Path,
+        steps: list[dict[str, object]],
+    ) -> None:
+        nonlocal second_interrupt_seen
+        latest = steps[-1] if steps else {}
+        if (
+            not second_interrupt_seen
+            and latest.get("action") == "stop"
+            and latest.get("classification") == "infra-fail"
+        ):
+            second_interrupt_seen = True
+            signal.raise_signal(signal.SIGINT)
+        original_write_steps(bundle_root, steps)
+
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._run_black_box_command",
+        _interrupt_idea_stage,
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_e2e_black_box_orchestration._write_steps",
+        _write_steps_with_repeated_interrupt,
+    )
+
+    with pytest.raises(LiveE2EInterrupted):
+        run_black_box_live_e2e(
+            scenario_path=scenario_path,
+            runtime_id="opencode",
+            work_root=work_root,
+            report_root=report_root,
+        )
+
+    assert second_interrupt_seen
+    state_paths = list(report_root.glob("*/flow-state.json"))
+    assert len(state_paths) == 1
+    bundle_root = state_paths[0].parent
+    state_payload = json.loads(state_paths[0].read_text(encoding="utf-8"))
+    steps_payload = json.loads((bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
+    flow_report = (bundle_root / "flow-report.md").read_text(encoding="utf-8")
+    assert state_payload["status"] == "interrupted-resumable"
+    assert steps_payload[-1]["action"] == "stop"
+    assert steps_payload[-1]["classification"] == "infra-fail"
     assert "- Status: `interrupted-resumable`" in flow_report
 
 
@@ -3363,7 +3916,15 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     )
     monkeypatch.setattr(
         "aidd.harness.live_e2e_black_box_orchestration._stage_no_progress_timeout_seconds",
-        lambda scenario: 0.25,
+        lambda scenario: 1.0,
+    )
+    manual_evidence = tmp_path / "provider-no-progress-browser-evidence"
+    manual_evidence.mkdir()
+    (manual_evidence / "browser-notes.md").write_text(
+        "# Browser Notes\n\n"
+        "- Desktop UI showed the failed idea stage after provider no-progress.\n"
+        "- Runtime logs and artifact surfaces stayed reachable for triage.\n",
+        encoding="utf-8",
     )
 
     result = run_black_box_live_e2e(
@@ -3371,6 +3932,7 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
         runtime_id="opencode",
         work_root=work_root,
         report_root=report_root,
+        manual_frontend_evidence=manual_evidence,
     )
 
     assert result.status == "infra-fail"
@@ -3410,7 +3972,7 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     assert no_progress_step["commands"][0]["timeout_seconds"] == 5.0
     no_progress_details = no_progress_step["commands"][0]["no_progress_details"]
     assert no_progress_details["reason"] == "provider-no-progress"
-    assert no_progress_details["no_progress_timeout_seconds"] == 0.25
+    assert no_progress_details["no_progress_timeout_seconds"] == 1.0
     assert "observed_paths" in no_progress_details["observed_files"]
     assert no_progress_step["details"]["no_progress_reconciliation"]["previous_status"] == (
         "executing"
@@ -3431,14 +3993,41 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
         )
     )
     assert audit_payload["classifications"]["stage_run"] == "infra-fail"
-    assert audit_payload["classifications"]["frontend_checkpoint"] == "skipped"
+    assert audit_payload["classifications"]["frontend_checkpoint"] == "pass"
+
+    frontend_payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    no_progress_post_stage = [
+        checkpoint
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["stage"] == "idea" and checkpoint["phase"] == "post-stage"
+    ]
+    assert no_progress_post_stage
+    assert no_progress_post_stage[-1]["classification"] == "pass"
+    frontend_markdown = (result.bundle_root / "frontend-checkpoints.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## idea / post-stage" in frontend_markdown
+    assert "- Phase: `post-stage`" in frontend_markdown
+    manual_payload = frontend_payload["manual_visual_evidence"]
+    imported_root = result.bundle_root / "manual-frontend-evidence"
+    assert manual_payload["status"] == "imported"
+    assert manual_payload["non_gating"] is True
+    assert manual_payload["files"] == ["browser-notes.md"]
+    assert manual_payload["bundle_path"] == imported_root.as_posix()
+    assert (imported_root / "browser-notes.md").read_text(
+        encoding="utf-8"
+    ).startswith("# Browser Notes")
+    assert "## Manual Browser Evidence" in frontend_markdown
+    assert "`browser-notes.md`" in frontend_markdown
 
     run_transcript = json.loads(
         (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
     )
     assert run_transcript["timed_out"] is False
     assert run_transcript["timeout_policy"]["stage_command_timeout_seconds"] == 5.0
-    assert run_transcript["timeout_policy"]["no_progress_timeout_seconds"] == 0.25
+    assert run_transcript["timeout_policy"]["no_progress_timeout_seconds"] == 1.0
 
     stage_timing = json.loads(
         (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
@@ -3450,11 +4039,24 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     )
     assert run_stage_step["timed_out"] is False
     assert run_stage_step["no_progress"] is True
-    assert run_stage_step["no_progress_timeout_seconds"] == 0.25
+    assert run_stage_step["no_progress_timeout_seconds"] == 1.0
 
     log_analysis = (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
     assert "provider-no-progress before completed stage artifact" in log_analysis
-    assert "- No-Progress Timeout: `0.250s`" in log_analysis
+    assert "- No-Progress Timeout: `1.000s`" in log_analysis
+
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["manual_frontend_evidence_source"] == (
+        manual_evidence.resolve().as_posix()
+    )
+    metadata_payload = json.loads(
+        (result.bundle_root / "harness-metadata.json").read_text(encoding="utf-8")
+    )
+    assert metadata_payload["black_box"]["manual_frontend_evidence"] == (
+        imported_root.as_posix()
+    )
 
 
 def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(

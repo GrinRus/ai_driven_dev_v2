@@ -77,7 +77,16 @@ feature_source:
       and regression surface before implementation. Count defects when the plan or
       code broadens public error types unnecessarily, only handles one thrown value
       shape, misses existing Error behavior, or proves behavior with weak/non-focused
-      verification.
+      verification. During stage-quality review, also check that successful
+      `stage-result.md` next actions preserve immediate canonical stage order:
+      `research` must point to `plan`, `plan` must point to `review-spec`,
+      `review-spec` must point to `tasklist`, `tasklist` must point to
+      `implement`, and `implement` must point to `review`, not directly to `qa`.
+      Also count stage-quality defects when `tasklist` fails to include every task id
+      in the dedicated `Verification notes` section, including command-only
+      verification tasks, or when a ready/proceed QA decision cites test/type/build
+      checks without post-QA `git status --ignored --short --untracked-files=all`
+      evidence that classifies ignored residue.
     complexity_axes:
     - cross-module
     - api-policy

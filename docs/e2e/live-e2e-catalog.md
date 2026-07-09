@@ -179,7 +179,7 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
 - Live manifests must declare `live_flow.driver: stepwise-black-box`,
   `live_flow.checkpoint_policy: after-each-step`, and
   `live_flow.frontend_checkpoints: true` so every live run inspects the public
-  CLI, UI, and UI/API surfaces after each stage.
+  CLI, UI, and UI/API surfaces during observed running-stage wait states and after each stage.
 - Manual checkpoint notes should include an operator-intervention checkpoint when
   the run uses `aidd stage interact` or the UI `Request change` panel.
 
@@ -338,8 +338,10 @@ Every maintained live scenario must:
   `quality_bar` is authored task metadata only and must not be treated as an automatic
   live quality gate;
 - for `product-evaluation`, define task `visible_request`, `audit_rubric`, and
-  `complexity_axes`; only `visible_request` is runtime-facing product request context,
-  while `audit_rubric` is for the launching agent's manual review;
+  `complexity_axes`; `user-request.md` stays focused on `visible_request`, while
+  `selected-task.md` also exposes authored task constraints such as `intent`,
+  `target_change`, `expected_scope`, `quality_bar`, and `size_rationale`;
+  `audit_rubric` is for the launching agent's manual review;
 - declare `live_flow.answer_policy: agent-decides` so any stage can block on questions
   and resume after the launching operator-agent writes resolved answers;
 - define authored task `interview` guidance when the scenario is
@@ -384,8 +386,25 @@ Every live eval bundle must aim to contain:
 - `product-evaluation-bundle-summary.md` for terminal `product-evaluation` bundles
 - `frontend-checkpoints.json`
 - `frontend-checkpoints.md`
+- `manual-frontend-evidence/` only when the operator passes
+  `--manual-frontend-evidence` with browser notes or screenshots
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
+
+`frontend-checkpoints.md` starts with a manual visual review checklist for the launching
+agent. It names the browser checks that API probes cannot prove: visible next action and
+active stage, readable desktop/mobile topbar labels, failure-appropriate recovery primary
+action, reachable logs/artifacts/questions/answers, next-flow handoff visibility, and no
+horizontal overflow for long paths, log labels, or action copy. The checklist is operator
+guidance only; it is not runner-generated screenshot evidence and not a UI/UX quality gate.
+When the operator passes `--manual-frontend-evidence <path>`, the runner copies that
+operator-supplied file or directory into `manual-frontend-evidence/` and references it
+from `frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
+When a public stage exposes `preparing`, `executing`, or `validating` metadata while the
+stage command is still alive, `frontend-checkpoints.*` also records a `running-stage`
+phase: disabled `wait-for-stage` next action, active running stage visibility, and runtime
+log affordance, including the pending-log state before `runtime.log` exists. The normal
+`post-stage` phase still records completed stage API and artifact reachability.
 
 The runner does not create `flow-quality-report.md`, `code-quality-report.md`,
 `quality-report.md`, `quality-transcript.json`, `acceptance-coverage.*`,
@@ -437,11 +456,15 @@ After a terminal run, the launching SWE agent may add manual post-run evidence:
   `--enable-next-flow-follow-up-proof`
 
 The manual operator UI/UX decision must inspect AIDD operator workflows rather than
-reinterpret `frontend-checkpoints.*` as UX proof. At minimum, review terminal flow
+reinterpret `frontend-checkpoints.*` HTTP/API and operator-surface semantic checks as
+UX proof. Use the `frontend-checkpoints.md` manual visual checklist as a prompt, then
+record actual browser evidence or explicitly mark surfaces `not inspected`.
+At minimum, review terminal flow
 visibility, stage list navigation, artifact/log views, questions and answers,
 repair evidence, next-flow handoff, state clarity, readability, keyboard/focus
 behavior where manually inspectable, responsive behavior or `not inspected`, and
-any manually captured screenshots or browser notes. Generated product UI is outside this live E2E operator-UI review unless the report marks it `not-applicable`.
+any manually captured screenshots or browser notes, including optional
+`manual-frontend-evidence/` imports. Generated product UI is outside this live E2E operator-UI review unless the report marks it `not-applicable`.
 
 For `product-evaluation`, counted-clean is possible only when every completed stage run has
 a corresponding `stage-quality-audits/<stage-run-id>.md`, the final code review exists in

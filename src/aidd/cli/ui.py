@@ -136,6 +136,10 @@ _CANCELLED_JOB_EXIT_CODE = 130
 _TERMINAL_JOB_STATUSES = frozenset({"cancelled", "completed", "failed"})
 
 
+def _is_runtime_log_stream(stream: str) -> bool:
+    return (stream.strip().lower() or "stdout") != "system"
+
+
 @dataclass(frozen=True, slots=True)
 class UiServerOptions:
     work_item: str | None
@@ -170,6 +174,9 @@ class _UiRunJob:
     cancelled_at_utc: str | None = None
     last_output_at_utc: str | None = None
     last_output_text: str | None = None
+    runtime_output_at_utc: str | None = None
+    runtime_output_text: str | None = None
+    runtime_log_chunk_count: int = 0
     chunks: list[dict[str, object]] = field(default_factory=list)
 
 
@@ -353,6 +360,13 @@ class UiRunJobStore:
         with self._lock:
             return any(job.status not in _TERMINAL_JOB_STATUSES for job in self._jobs.values())
 
+    def active_job(self) -> dict[str, object] | None:
+        with self._lock:
+            for job in reversed(tuple(self._jobs.values())):
+                if job.status not in _TERMINAL_JOB_STATUSES:
+                    return self._view_locked(job)
+        return None
+
     def _require_job(self, job_id: str) -> _UiRunJob:
         try:
             return self._jobs[job_id]
@@ -371,6 +385,10 @@ class UiRunJobStore:
         )
         job.last_output_at_utc = timestamp
         job.last_output_text = text.strip().splitlines()[-1] if text.strip() else None
+        if _is_runtime_log_stream(stream):
+            job.runtime_output_at_utc = timestamp
+            job.runtime_output_text = job.last_output_text
+            job.runtime_log_chunk_count += 1
 
     def _mark_cancelled_locked(self, job: _UiRunJob, *, message: str) -> None:
         timestamp = _utc_now()
@@ -391,11 +409,21 @@ class UiRunJobStore:
         else:
             cancel_state = "none"
         last_output_age_seconds = _seconds_since(job.last_output_at_utc)
+        runtime_output_age_seconds = _seconds_since(job.runtime_output_at_utc)
         elapsed_seconds = _seconds_since(job.created_at_utc)
         silence_warning = (
             job.status not in _TERMINAL_JOB_STATUSES
-            and last_output_age_seconds is not None
-            and last_output_age_seconds >= 120
+            and (
+                (
+                    runtime_output_age_seconds is not None
+                    and runtime_output_age_seconds >= 120
+                )
+                or (
+                    job.runtime_output_at_utc is None
+                    and elapsed_seconds is not None
+                    and elapsed_seconds >= 120
+                )
+            )
         )
         return {
             "job_id": job.job_id,
@@ -412,6 +440,10 @@ class UiRunJobStore:
             "last_output_at_utc": job.last_output_at_utc,
             "last_output_age_seconds": last_output_age_seconds,
             "last_output_text": job.last_output_text,
+            "runtime_output_at_utc": job.runtime_output_at_utc,
+            "runtime_output_age_seconds": runtime_output_age_seconds,
+            "runtime_output_text": job.runtime_output_text,
+            "runtime_log_chunk_count": job.runtime_log_chunk_count,
             "silence_warning": silence_warning,
             "cancel_requested": job.cancel_requested_at_utc is not None,
             "cancel_requested_at_utc": job.cancel_requested_at_utc,
@@ -2037,17 +2069,16 @@ class OperatorUiService:
                         return _json_response({"metadata": None, "message": message})
                     raise
             if path == "/api/dashboard":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                requested_stage = _first_param(params, "stage")
+                stage = requested_stage or STAGES[0]
                 return _json_response(
                     {
                         "app_version": __version__,
-                        "dashboard": resolve_operator_dashboard_view(
-                            workspace_root=self.workspace_root,
-                            work_item=self.work_item,
-                            active_stage=stage,
+                        "active_job": self._jobs.active_job(),
+                        "dashboard": self._dashboard_view(
+                            stage=stage,
                             run_id=_first_param(params, "run_id"),
-                            project_root=self.project_root,
+                            use_terminal_default=requested_stage is None,
                         ),
                     }
                 )
@@ -2081,8 +2112,7 @@ class OperatorUiService:
             if path == "/api/runtime-readiness":
                 return _json_response(self._runtime_readiness())
             if path == "/api/stage":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_stage_view(
                         workspace_root=self.workspace_root,
@@ -2092,8 +2122,7 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/questions":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_questions_view(
                         workspace_root=self.workspace_root,
@@ -2102,8 +2131,7 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/logs":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 run_id = _first_param(params, "run_id")
                 attempt_number = _optional_attempt(params)
                 try:
@@ -2149,8 +2177,7 @@ class OperatorUiService:
             if path.startswith("/api/jobs/"):
                 return self._handle_job_get(path=path, params=params)
             if path == "/api/artifacts":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_artifacts_view(
                         workspace_root=self.workspace_root,
@@ -2161,8 +2188,7 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/stage/workbench":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_stage_document_workbench(
                         workspace_root=self.workspace_root,
@@ -2180,8 +2206,7 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/artifacts/evidence-graph":
-                stage = _first_param(params, "stage", STAGES[0])
-                assert stage is not None
+                stage = _first_param(params, "stage") or STAGES[0]
                 return _json_response(
                     resolve_operator_evidence_graph_view(
                         workspace_root=self.workspace_root,
@@ -2192,9 +2217,8 @@ class OperatorUiService:
                     )
                 )
             if path == "/api/artifacts/document":
-                stage = _first_param(params, "stage", STAGES[0])
+                stage = _first_param(params, "stage") or STAGES[0]
                 key = _first_param(params, "key")
-                assert stage is not None
                 if key is None:
                     raise ValueError("key is required.")
                 return _json_response(
@@ -2212,6 +2236,49 @@ class OperatorUiService:
         except ValueError as exc:
             return _error_response(str(exc))
         return _error_response("not found", status=HTTPStatus.NOT_FOUND)
+
+    def _dashboard_view(
+        self,
+        *,
+        stage: str,
+        run_id: str | None,
+        use_terminal_default: bool,
+    ) -> object:
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            active_stage=stage,
+            run_id=run_id,
+            project_root=self.project_root,
+        )
+        if (
+            use_terminal_default
+            and dashboard.first_failure is not None
+            and dashboard.first_failure.stage
+            and dashboard.first_failure.stage != stage
+            and any(item.stage == dashboard.first_failure.stage for item in dashboard.stages)
+        ):
+            return resolve_operator_dashboard_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                active_stage=dashboard.first_failure.stage,
+                run_id=run_id,
+                project_root=self.project_root,
+            )
+        if (
+            use_terminal_default
+            and dashboard.terminal_handoff is not None
+            and stage != "qa"
+            and any(item.stage == "qa" for item in dashboard.stages)
+        ):
+            return resolve_operator_dashboard_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                active_stage="qa",
+                run_id=run_id,
+                project_root=self.project_root,
+            )
+        return dashboard
 
     def handle_post(self, path: str, payload: dict[str, Any]) -> UiResponse:
         try:
@@ -2287,6 +2354,8 @@ class OperatorUiService:
                 return _json_response(self._open_folder(payload))
             if path == "/api/server/stop":
                 return _json_response(self._request_server_stop())
+        except FileExistsError as exc:
+            return _error_response(str(exc), status=HTTPStatus.CONFLICT)
         except ValueError as exc:
             return _error_response(str(exc))
         return _error_response("not found", status=HTTPStatus.NOT_FOUND)

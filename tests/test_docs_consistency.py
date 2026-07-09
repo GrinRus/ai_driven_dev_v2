@@ -1001,6 +1001,15 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "State clarity:",
         "Generated product UI applicability:",
         "API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit.",
+        "Observed running stages add a `running-stage` checkpoint phase",
+        "`wait-for-stage` next action",
+        "honest pending-log state before `runtime.log` exists",
+        "`post-stage` phase for stage API and artifact reachability",
+        "`frontend-checkpoints.md` includes a manual visual review checklist",
+        "desktop/mobile topbar readability",
+        "failure-appropriate recovery",
+        "Treat the checklist as a prompt, not as proof",
+        "explicitly mark surfaces `not inspected`",
         (
             "top-level `workitems/...` duplicates normally make manual "
             "deliverable quality `not-counted`"
@@ -1017,6 +1026,9 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
             "Screenshots and browser notes are optional manual evidence, "
             "not runner-generated artifacts."
         ),
+        "--manual-frontend-evidence",
+        "manual-frontend-evidence/",
+        "non-gating evidence for the manual `quality-report.md`",
     ):
         assert needle in live_e2e_skill
 
@@ -1036,6 +1048,20 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "`frontend-checkpoints.*` as raw operator-surface availability evidence"
         in aidd_eval_skill
     )
+    assert "Observed running stages add a `running-stage` checkpoint phase" in (
+        aidd_eval_skill
+    )
+    assert "`wait-for-stage` next action" in aidd_eval_skill
+    assert "pending-log state before `runtime.log` exists" in aidd_eval_skill
+    assert "`frontend-checkpoints.md` includes a manual visual review checklist" in (
+        aidd_eval_skill
+    )
+    assert "desktop/mobile topbar readability" in aidd_eval_skill
+    assert "failure-appropriate" in aidd_eval_skill
+    assert "as a prompt, not proof" in aidd_eval_skill
+    assert "`not inspected` in manual reports" in aidd_eval_skill
+    assert "`--manual-frontend-evidence <path>`" in aidd_eval_skill
+    assert "`manual-frontend-evidence/`" in aidd_eval_skill
 
 
 def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
@@ -1062,6 +1088,13 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
         "Operator UI/UX evidence links:",
         "`frontend-checkpoints.*` are raw run-integrity evidence",
         "They are not a UI/UX audit, not screenshot evidence, and not a quality gate.",
+        "Observed running stages add a `running-stage` checkpoint phase",
+        "`wait-for-stage` next action",
+        "pending-log state before `runtime.log` exists",
+        "`post-stage` phase for stage API and artifact reachability",
+        "`frontend-checkpoints.md` includes a manual visual review checklist",
+        "visible next action and active stage",
+        "no horizontal overflow for long paths",
         "# Stage Quality Audit: <stage-run-id>",
         "Stage run id: <stage-run-id>",
         (
@@ -1091,17 +1124,34 @@ def test_live_quality_rubric_requires_manual_operator_ui_ux_review() -> None:
             "Screenshots and browser notes are optional manual evidence, "
             "not runner-generated artifacts."
         ),
+        "`--manual-frontend-evidence <path>`",
+        "`manual-frontend-evidence/`",
+        "non-gating evidence for the manual `quality-report.md`",
         "stage list navigation",
         "artifact inspection",
         "log inspection",
         "questions/answers",
         "repair evidence",
         "next-flow handoff",
+        "Use the manual visual checklist in `frontend-checkpoints.md` as a prompt",
         "desktop/tablet/mobile responsive behavior or explicitly `not inspected`",
     ):
         assert expected in live_rubric
 
     for expected in (
+        "`frontend-checkpoints.md` starts with a manual visual review checklist",
+        "during observed running-stage wait states and after each stage",
+        "`running-stage`",
+        "phase",
+        "disabled `wait-for-stage` next action",
+        "pending-log state before `runtime.log` exists",
+        "`post-stage` phase still records completed stage API",
+        "visible next action",
+        "active stage",
+        "not runner-generated screenshot evidence",
+        "`--manual-frontend-evidence <path>`",
+        "`manual-frontend-evidence/`",
+        "record actual browser evidence or explicitly mark surfaces `not inspected`",
         "manual AIDD operator UI/UX decisions",
         "stage list navigation",
         "artifact/log views",

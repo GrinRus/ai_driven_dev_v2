@@ -171,6 +171,13 @@ normalize if canonical validation proves the terminal status inconsistent.
    `proceed`, `proceed-with-conditions`, or `hold`.
 5. In `Evidence`, label material evidence entries as `EV-1`, `EV-2`, ... and include command
    outcomes or artifact paths in backticks.
+   If the final verdict/recommendation is `ready`/`proceed` or
+   `ready-with-risks`/`proceed-with-conditions` and you cite any test, type, lint, docs, or build
+   command, include a post-QA ignored-residue evidence entry for
+   `git status --ignored --short --untracked-files=all` or an equivalent command. Cite that same
+   `EV-N` entry from `Verification summary` or `Readiness`, and state whether ignored residue is
+   absent, cleaned before QA output, selected deliverable output, or setup-baseline residue outside
+   the deliverable. A clean review report or a pre-QA status command is not enough.
 6. When `context/acceptance-criteria.md` exists, add an acceptance coverage checklist under
    `Evidence` or `Readiness` with one top-level bullet per criterion. Copy this shape:
    ``- AC-1: confirmed. Evidence: EV-1, `context/verification-output.md`. <criterion-specific sentence>.``
@@ -213,6 +220,9 @@ normalize if canonical validation proves the terminal status inconsistent.
   `ready-with-risks` and `proceed-with-conditions`,
 - release recommendation is actionable and consistent with verdict,
 - material claims reference concrete verification evidence,
+- ready/proceed-style conclusions that cite test/type/lint/docs/build commands also cite
+  post-QA ignored residue evidence with `git status --ignored --short --untracked-files=all`
+  or an equivalent command,
 - named execution surfaces match the cited evidence exactly rather than broadening an
   `A/B` acceptance alternative into an unsupported concrete claim,
 - each `AC-N` from acceptance context has its own evidence-backed checklist bullet when acceptance

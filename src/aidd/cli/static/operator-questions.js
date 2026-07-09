@@ -41,6 +41,79 @@ function updateQuestionResumeButtonStates() {
   });
 }
 
+function interviewDecisionCounts(view) {
+  const questions = view?.questions || [];
+  const unresolved = view?.unresolved_blocking_question_ids || [];
+  return {
+    total: questions.length,
+    required: unresolved.length,
+    resolved: questions.filter(
+      (question) => question.answer_resolution === "resolved"
+    ).length,
+    partial: questions.filter(
+      (question) => question.answer_resolution === "partial"
+    ).length,
+    deferred: questions.filter(
+      (question) => question.answer_resolution === "deferred"
+    ).length
+  };
+}
+
+function renderInterviewDecisionSpotlight(view) {
+  const counts = interviewDecisionCounts(view);
+  let tone = "good";
+  let title = "No interview questions for this stage";
+  let body = (
+    "This stage has no model-authored questions. Continue the workflow when runtime "
+    + "readiness allows."
+  );
+  let primary = "Primary action: continue stage flow";
+  if (counts.required) {
+    tone = "bad";
+    title = "Blocking questions need resolved answers";
+    body = (
+      `${counts.required} blocking question${counts.required === 1 ? "" : "s"} must be `
+      + "saved as resolved before the runtime can resume. Answer each active card, choose "
+      + "resolved, then resume the stage."
+    );
+    primary = "Primary action: answer required questions";
+  } else if (counts.partial || counts.deferred) {
+    tone = "warn";
+    title = "Interview answers need final resolution";
+    body = (
+      `${counts.partial} partial and ${counts.deferred} deferred answer`
+      + `${counts.partial + counts.deferred === 1 ? "" : "s"} are saved. Review them before `
+      + "treating the stage context as final."
+    );
+    primary = "Primary action: update partial or deferred answers";
+  } else if (counts.resolved) {
+    title = "Interview answers saved";
+    body = (
+      `${counts.resolved} resolved answer${counts.resolved === 1 ? "" : "s"} are saved in `
+      + "answers.md. Resume the stage when runtime readiness allows."
+    );
+    primary = "Primary action: resume stage";
+  }
+  return `
+    <div class="interview-decision-spotlight ${escapeHtml(tone)}"
+      data-interview-decision-spotlight role="status" aria-live="polite">
+      <div class="interview-decision-copy">
+        <span class="small-badge ${escapeHtml(tone)}">interview loop</span>
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(body)}</p>
+        <small>${escapeHtml(primary)}</small>
+      </div>
+      <div class="interview-decision-facts">
+        <span><strong>Required</strong>${escapeHtml(counts.required)}</span>
+        <span><strong>Resolved</strong>${escapeHtml(counts.resolved)}</span>
+        <span><strong>Partial</strong>${escapeHtml(counts.partial)}</span>
+        <span><strong>Deferred</strong>${escapeHtml(counts.deferred)}</span>
+        <span><strong>Total</strong>${escapeHtml(counts.total)}</span>
+      </div>
+    </div>
+  `;
+}
+
 function renderInterviewSummary(view) {
   const questions = view?.questions || [];
   const unresolved = view?.unresolved_blocking_question_ids || [];
@@ -163,6 +236,7 @@ function renderQuestions() {
           <span>Questions / Interview Loop</span>
           <span class="small-badge ${view?.unresolved_blocking_question_ids?.length ? "bad" : "good"}">${escapeHtml(view?.unresolved_blocking_question_ids?.length || 0)} required</span>
         </div>
+        ${renderInterviewDecisionSpotlight(view)}
         ${renderInterviewSummary(view)}
         ${renderQuestionCards({showResume: true})}
       </section>

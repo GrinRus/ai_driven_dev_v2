@@ -82,30 +82,129 @@ function workbenchStatusClass(status) {
   return "";
 }
 
+function artifactCategoryFor(item = {}) {
+  const explicit = String(item.category || "").trim();
+  if (explicit) return explicit;
+  const path = String(item.path || "").replace(/\\/g, "/").toLowerCase();
+  const key = String(item.key || item.label || "").replace(/-/g, "_").toLowerCase();
+  const kind = String(item.kind || "").toLowerCase();
+  if (kind === "log" || ["runtime_log", "events_jsonl"].includes(key)) return "runtime-evidence";
+  if (path.includes("/stages/") && path.includes("/output/")) return "published-stage-output";
+  if (["input_bundle", "stage_brief", "repair_context", "operator_request"].includes(key) || path.includes("/operator-requests/")) return "runtime-input";
+  if (["validator_report", "repair_brief"].includes(key)) return "validation-evidence";
+  if (path.includes("project-set.md") || key === "project_set_context") return "project-evidence";
+  if (path.includes("/remediations/") || key.includes("lineage")) return "lineage-evidence";
+  return "canonical-stage-document";
+}
+
+function artifactCategoryLabel(category) {
+  return ({
+    "canonical-stage-document": "Canonical stage documents",
+    "published-stage-output": "Published output mirrors",
+    "runtime-input": "Runtime inputs",
+    "validation-evidence": "Validation evidence",
+    "runtime-evidence": "Runtime evidence",
+    "project-evidence": "Project evidence",
+    "lineage-evidence": "Lineage evidence"
+  })[category] || category;
+}
+
+function artifactCategoryDetail(category) {
+  return ({
+    "canonical-stage-document": "Source-of-truth stage files for operator review, diff, and corrections.",
+    "published-stage-output": "Downstream handoff copies under output/. They mirror stage evidence after validation or promotion.",
+    "runtime-input": "Prompt and request context supplied to the runtime for this stage.",
+    "validation-evidence": "Validator and repair records. Use these to understand gates and recovery decisions.",
+    "runtime-evidence": "Raw runtime logs and event streams captured for audit and replay.",
+    "project-evidence": "Project-set and repository context used by the governed flow.",
+    "lineage-evidence": "Follow-up, remediation, clone, or archive provenance for this run."
+  })[category] || "Additional indexed artifact evidence.";
+}
+
+function artifactOwnershipBadge(item = {}) {
+  const category = artifactCategoryFor(item);
+  if (category === "canonical-stage-document") return {label: "canonical source", tone: "good"};
+  if (category === "published-stage-output") return {label: "handoff mirror", tone: "warn"};
+  if (category === "validation-evidence") return {label: "validation", tone: "warn"};
+  if (category === "runtime-evidence") return {label: "runtime log", tone: ""};
+  return {label: "evidence", tone: ""};
+}
+
+function artifactSupportsDownload(item = {}) {
+  const kind = String(item.kind || "").toLowerCase();
+  return kind === "document" || kind === "log";
+}
+
+function renderArtifactDownloadButton(item = {}, className = "link-button") {
+  if (!artifactSupportsDownload(item)) return "";
+  return `<button data-download-artifact="${escapeHtml(item.path || "")}" data-download-artifact-key="${escapeHtml(item.key || "")}" data-download-artifact-kind="${escapeHtml(item.kind || "")}" data-download-artifact-stage="${escapeHtml(item.stage || state.activeStage)}" class="${escapeHtml(className)}" type="button">Download</button>`;
+}
+
+function canonicalCandidatePath(path) {
+  return String(path || "").replace("/output/", "/");
+}
+
+function renderArtifactOwnershipNote(item = {}) {
+  const category = artifactCategoryFor(item);
+  const badge = artifactOwnershipBadge({...item, category});
+  const path = String(item.path || "");
+  const canonicalPath = canonicalCandidatePath(path);
+  let title = "Artifact evidence";
+  let detail = artifactCategoryDetail(category);
+  let extra = "";
+  if (category === "canonical-stage-document") {
+    title = "Canonical source of truth";
+    detail = "Use this stage document for review, source inspection, and scoped corrections. Output mirrors publish validated copies downstream.";
+  } else if (category === "published-stage-output") {
+    title = "Published handoff mirror";
+    detail = "Downstream stages consume this output/ copy. If validation promoted a misplaced file, inspect the canonical stage document and validator report before treating it as source.";
+    if (canonicalPath !== path) extra = pathLine(`Canonical stage path: ${canonicalPath}`, 82);
+  } else if (category === "validation-evidence") {
+    title = "Validation and repair evidence";
+    detail = "This explains validator gates and recovery. It is not the primary runtime-authored stage document.";
+  }
+  return `
+    <div class="artifact-ownership-note ${escapeHtml(category)}" role="note">
+      <span class="small-badge ${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>
+      <div>
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(detail)}</p>
+        ${extra}
+      </div>
+    </div>
+  `;
+}
+
 function renderWorkbenchTree(workbench) {
   const references = workbench.references || [];
   const categories = [
-    ["canonical-stage-document", "Canonical stage documents"],
-    ["runtime-input", "Runtime inputs"],
-    ["validation-evidence", "Validation evidence"],
-    ["runtime-evidence", "Runtime evidence"],
-    ["project-evidence", "Project evidence"],
-    ["lineage-evidence", "Lineage evidence"]
+    "canonical-stage-document",
+    "published-stage-output",
+    "runtime-input",
+    "validation-evidence",
+    "runtime-evidence",
+    "project-evidence",
+    "lineage-evidence"
   ];
-  const grouped = categories.map(([category, label]) => {
-    const refs = references.filter((ref) => (ref.category || "canonical-stage-document") === category);
+  const grouped = categories.map((category) => {
+    const refs = references.filter((ref) => artifactCategoryFor(ref) === category);
     if (!refs.length) return "";
     return `
-      <div class="surface-title compact">${escapeHtml(label)} <span class="small-badge">${escapeHtml(refs.length)}</span></div>
+      <div class="surface-title compact">${escapeHtml(artifactCategoryLabel(category))} <span class="small-badge">${escapeHtml(refs.length)}</span></div>
+      <p class="artifact-category-note">${escapeHtml(artifactCategoryDetail(category))}</p>
       <div class="artifact-list">
         ${refs.map((ref) => {
           const document = ref.kind === "document";
           const actionAttr = document
             ? `data-artifact-key="${escapeHtml(ref.label)}"`
             : `data-open-artifact="${escapeHtml(ref.path)}"`;
+          const badge = artifactOwnershipBadge(ref);
           return `
             <button class="artifact-doc ${ref.label === workbench.selected_key ? "active" : ""}" ${actionAttr} type="button">
-              ${escapeHtml(ref.label)}
+              <span class="artifact-doc-title">
+                <strong>${escapeHtml(ref.label)}</strong>
+                <span class="small-badge ${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>
+              </span>
               <small title="${escapeHtml(ref.path)}">${escapeHtml(ref.kind)} / ${escapeHtml(compactPath(ref.path, 58))}</small>
             </button>
           `;
@@ -163,7 +262,7 @@ function renderWorkbenchReferences(references) {
   return (references || []).map((ref) => `
     <button class="artifact-row" data-open-artifact="${escapeHtml(ref.path)}" type="button">
       <span><strong>${escapeHtml(ref.label)}</strong>${pathLine(ref.path, 58)}</span>
-      <span class="small-badge">${escapeHtml(ref.kind)}</span>
+      <span class="small-badge ${escapeHtml(artifactOwnershipBadge(ref).tone)}">${escapeHtml(artifactOwnershipBadge(ref).label)}</span>
     </button>
   `).join("") || `<div class="empty-state">No references linked.</div>`;
 }
@@ -293,6 +392,11 @@ function renderWorkbenchViewer(workbench) {
         ${documentView.path ? `<button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button>` : ""}
       </div>
     </div>
+    ${renderArtifactOwnershipNote({
+      key: documentView.key || workbench.selected_key,
+      kind: "document",
+      path: documentView.path || ""
+    })}
     <div class="workbench-main">
       <section class="workbench-document-pane">
         ${renderWorkbenchTableOfContents(workbench)}
@@ -371,6 +475,7 @@ function evidenceNodeIcon(kind) {
     "stage": "ST",
     "attempt": "AT",
     "document": "MD",
+    "mirror": "MR",
     "log": "LG",
     "event": "EV",
     "approval-log": "AL",
@@ -529,7 +634,7 @@ function renderArtifactInspector(view, selection) {
   const actionButtons = node.path ? `
     <div class="artifact-action-row">
       <button data-open-artifact="${escapeHtml(node.path)}" class="secondary" type="button">Open</button>
-      <button data-download-artifact="${escapeHtml(node.path)}" data-download-artifact-key="${escapeHtml(key)}" data-download-artifact-kind="${escapeHtml(node.kind)}" data-download-artifact-stage="${escapeHtml(node.stage || state.activeStage)}" class="secondary" type="button">Download</button>
+      ${renderArtifactDownloadButton({...node, key}, "secondary")}
       <button data-copy-artifact-path="${escapeHtml(node.path)}" class="secondary" type="button">Copy Path</button>
     </div>
   ` : "";
@@ -568,16 +673,16 @@ function renderEvidenceArtifactTable(view, selection) {
       <tr class="${selected ? "selected" : ""}">
         <td><button class="link-button" data-evidence-node="${escapeHtml(`${ref.kind}:${ref.key}`)}" type="button">${escapeHtml(ref.key)}</button></td>
         <td>${escapeHtml(ref.kind)}</td>
-        <td>${escapeHtml(ref.category || "canonical-stage-document")}</td>
+        <td>${escapeHtml(artifactCategoryLabel(artifactCategoryFor(ref)))}</td>
         <td>${escapeHtml(ref.stage)}</td>
-        <td>${ref.canonical ? "canonical" : ref.generated === false ? "source" : "generated"} / ${ref.latest === false ? "stale" : "latest"} / ${ref.available === false ? "missing" : "available"}</td>
+        <td>${escapeHtml(artifactOwnershipBadge(ref).label)} / ${ref.latest === false ? "stale" : "latest"} / ${ref.available === false ? "missing" : "available"}</td>
         <td>${escapeHtml(ref.byte_size ?? "unknown")}</td>
         <td>${escapeHtml(ref.updated_at_utc || "unknown")}</td>
         <td>${pathLine(ref.path, 58)}</td>
         <td>
           <div class="artifact-table-actions">
             <button data-open-artifact="${escapeHtml(ref.path)}" class="link-button" type="button">Open</button>
-            <button data-download-artifact="${escapeHtml(ref.path)}" data-download-artifact-key="${escapeHtml(ref.key)}" data-download-artifact-kind="${escapeHtml(ref.kind)}" data-download-artifact-stage="${escapeHtml(ref.stage)}" class="link-button" type="button">Download</button>
+            ${renderArtifactDownloadButton(ref)}
             <button data-copy-artifact-path="${escapeHtml(ref.path)}" class="link-button" type="button">Copy path</button>
           </div>
         </td>
@@ -704,6 +809,7 @@ function artifactKeyForPath(path, stage) {
 async function inspectArtifactReference({stage, key, path, kind}) {
   const targetStage = stage || state.activeStage;
   state.activeStage = targetStage;
+  state.activeStageExplicit = true;
   state.activeArtifactKey = key || artifactKeyForPath(path, targetStage);
   state.selectedEvidenceNodeId = state.activeArtifactKey
     ? `${kind === "log" ? "log" : "document"}:${state.activeArtifactKey}`

@@ -70,6 +70,11 @@ Use concrete repair actions:
 - missing evidence: add direct references to available verification output, verification artifacts,
   or upstream evidence for each material QA claim, using `EV-1`, `EV-2`, ... evidence ids and/or
   backticked artifact paths;
+- missing ready/proceed residue evidence: when the report cites test/type/lint/docs/build checks
+  and keeps `ready`/`proceed` or `ready-with-risks`/`proceed-with-conditions`, add a
+  post-QA `git status --ignored --short --untracked-files=all` evidence entry, cite it from
+  `Verification summary` or `Readiness`, and classify ignored residue as absent, cleaned,
+  selected deliverable output, or setup-baseline residue outside the deliverable;
 - missing acceptance coverage: when `context/acceptance-criteria.md` exists, add one top-level
   checklist bullet per criterion using the shape
   ``- AC-1: confirmed. Evidence: EV-1, `context/verification-output.md`. <criterion-specific sentence>.``;

@@ -268,13 +268,15 @@ def _prepare_completed_qa_run(
     workspace_root: Path,
     *,
     lineage: dict[str, object] | None = None,
+    stage_target: str = "qa",
 ) -> None:
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
     create_run_manifest(
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
         runtime_id="codex",
-        stage_target="qa",
+        stage_target=stage_target,
         config_snapshot={"mode": "ui-terminal-test"},
         workflow_stage_start="idea",
         workflow_stage_end="qa",
@@ -603,6 +605,9 @@ def test_ui_stage_workbench_endpoint_returns_document_state_and_sidebars(
         "# Plan\n\n## Goals\n\n" + "\n".join(f"- Workbench line {index}" for index in range(80)),
         encoding="utf-8",
     )
+    output_path = plan_path.parent / "output" / "plan.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("# Plan\n\n## Goals\n\n- Published handoff copy.\n", encoding="utf-8")
     service = _service(workspace_root)
 
     payload = _payload(
@@ -650,6 +655,12 @@ def test_ui_stage_workbench_endpoint_returns_document_state_and_sidebars(
         item["label"] == "plan" and item["kind"] == "document"
         for item in references  # type: ignore[union-attr]
     )
+    assert any(
+        item["label"] == "output/plan.md"
+        and item["kind"] == "mirror"
+        and item["category"] == "published-stage-output"
+        for item in references  # type: ignore[union-attr]
+    )
     assert versions[0]["label"] == "Attempt 1"  # type: ignore[index]
 
 
@@ -690,6 +701,9 @@ def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     )
     service = _service(workspace_root)
     plan_path = workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "plan.md"
+    output_path = plan_path.parent / "output" / "plan.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("# Plan\n\n## Goals\n\n- Published handoff copy.\n", encoding="utf-8")
     runtime_log_path = run_attempt_runtime_log_path(
         workspace_root=workspace_root,
         work_item="WI-UI",
@@ -722,8 +736,12 @@ def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     }
     assert graph_payload["mode"] == "graph"
     assert nodes["document:plan"]["path"] == "workitems/WI-UI/stages/plan/plan.md"
+    assert nodes["mirror:output/plan.md"]["path"] == (
+        "workitems/WI-UI/stages/plan/output/plan.md"
+    )
     assert nodes["event:1"]["detail"] == "Plan started"
     assert nodes[f"approval-request:{request.id}"]["status"] == "approved"
+    assert ("attempt:1", "mirror:output/plan.md", "published-output") in edges
     assert ("document:validator_report", "document:stage_result", "validation") in edges
     assert all(
         not Path(str(node["path"])).is_absolute()
@@ -732,6 +750,12 @@ def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     )
     assert any(
         ref["key"] == "runtime_log" and ref["kind"] == "log"
+        for ref in graph_payload["artifact_table"]  # type: ignore[index]
+    )
+    assert any(
+        ref["key"] == "output/plan.md"
+        and ref["kind"] == "mirror"
+        and ref["category"] == "published-stage-output"
         for ref in graph_payload["artifact_table"]  # type: ignore[index]
     )
     assert plan_path.read_text(encoding="utf-8") == original_plan
@@ -752,6 +776,11 @@ def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     assert fallback_payload["incomplete_reasons"] == ["artifact-index-missing"]
     assert any(
         ref["key"] == "plan" and ref["path"] == "workitems/WI-UI/stages/plan/plan.md"
+        for ref in fallback_payload["artifact_table"]  # type: ignore[index]
+    )
+    assert any(
+        ref["key"] == "output/plan.md"
+        and ref["path"] == "workitems/WI-UI/stages/plan/output/plan.md"
         for ref in fallback_payload["artifact_table"]  # type: ignore[index]
     )
     assert plan_path.read_text(encoding="utf-8") == original_plan
@@ -931,6 +960,86 @@ def test_ui_dashboard_endpoint_exposes_flow_complete_handoff(
     }
     assert "codex" in actions["clone-flow"]["detail"]
     assert "generic-cli" not in actions["clone-flow"]["detail"]
+
+
+def test_ui_dashboard_endpoint_defaults_completed_flow_to_qa_when_stage_is_omitted(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root, stage_target="idea")
+    context_root = workspace_root / "workitems" / "WI-UI" / "context"
+    context_root.mkdir(parents=True, exist_ok=True)
+    context_root.joinpath("user-request.md").write_text("Ship the terminal UI.\n", encoding="utf-8")
+    service = _service(workspace_root)
+
+    default_payload = _payload(
+        service.handle_get("/api/dashboard", {"run_id": ["run-ui"]})
+    )
+    explicit_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["idea"], "run_id": ["run-ui"]})
+    )
+    project_home_payload = _payload(service.handle_get("/api/project-home", {}))
+
+    assert default_payload["dashboard"]["active_stage"] == "qa"  # type: ignore[index]
+    assert default_payload["dashboard"]["next_action"]["action"] == "review-complete"  # type: ignore[index]
+    assert explicit_payload["dashboard"]["active_stage"] == "idea"  # type: ignore[index]
+    work_items = project_home_payload["project_home"]["work_items"]  # type: ignore[index]
+    assert work_items[0]["active_stage"] == "qa"
+
+
+def test_ui_dashboard_endpoint_defaults_runtime_failure_to_failed_stage_when_stage_is_omitted(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    (attempt_root / RUN_RUNTIME_EXIT_METADATA_FILENAME).write_text(
+        json.dumps(
+            {
+                "exit_code": 130,
+                "exit_classification": "cancelled",
+                "adapter_outcome": "cancelled",
+                "completed_at_utc": "2026-07-09T08:26:12Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    service = _service(workspace_root)
+
+    default_payload = _payload(
+        service.handle_get("/api/dashboard", {"run_id": ["run-ui"]})
+    )
+    explicit_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["idea"], "run_id": ["run-ui"]})
+    )
+    project_home_payload = _payload(service.handle_get("/api/project-home", {}))
+
+    default_dashboard = default_payload["dashboard"]  # type: ignore[index]
+    explicit_dashboard = explicit_payload["dashboard"]  # type: ignore[index]
+    work_items = project_home_payload["project_home"]["work_items"]  # type: ignore[index]
+    assert default_dashboard["active_stage"] == "plan"  # type: ignore[index]
+    assert default_dashboard["first_failure"]["stage"] == "plan"  # type: ignore[index]
+    assert default_dashboard["primary_artifact"]["key"] == "plan"  # type: ignore[index]
+    assert any(
+        action["action"] == "resume-stage" and action["stage"] == "plan"
+        for action in default_dashboard["recovery_actions"]  # type: ignore[index,union-attr]
+    )
+    assert explicit_dashboard["active_stage"] == "idea"  # type: ignore[index]
+    assert explicit_dashboard["first_failure"]["stage"] == "plan"  # type: ignore[index]
+    assert work_items[0]["active_stage"] == "plan"
 
 
 def test_ui_dashboard_endpoint_exposes_run_history_lineage_payload(
@@ -1160,6 +1269,58 @@ def test_ui_next_flow_clone_draft_create_endpoint_writes_core_draft(
         workspace_root / "workitems" / "WI-UI-CLONE" / "context" / "clone-flow-draft.md"
     ).exists()
     assert not (workspace_root / "reports" / "runs" / "WI-UI-CLONE").exists()
+
+
+def test_ui_next_flow_clone_draft_create_conflicts_for_existing_work_item(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = {
+        "source_run_id": "run-ui",
+        "new_work_item": "WI-UI-CLONE",
+        "title": "Duplicate clone work item",
+    }
+    first_response = service.handle_post("/api/next-flow/clone-draft/create", payload)
+    response = service.handle_post("/api/next-flow/clone-draft/create", payload)
+
+    assert first_response.status == HTTPStatus.CREATED
+    assert response.status == HTTPStatus.CONFLICT
+    payload = _error_payload(response)
+    assert (
+        "Request context documents already exist for work item 'WI-UI-CLONE'"
+        in payload["error"]
+    )
+
+
+def test_ui_next_flow_follow_up_draft_create_conflicts_for_existing_work_item(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = {
+        "source_run_id": "run-ui",
+        "new_work_item": "WI-UI-FOLLOW-UP",
+        "title": "Duplicate follow-up work item",
+        "selected_source_ids": ["qa-finding:qa:qa_report"],
+    }
+    first_response = service.handle_post(
+        "/api/next-flow/follow-up-draft/create",
+        payload,
+    )
+    response = service.handle_post("/api/next-flow/follow-up-draft/create", payload)
+
+    assert first_response.status == HTTPStatus.CREATED
+    assert response.status == HTTPStatus.CONFLICT
+    payload = _error_payload(response)
+    assert (
+        "Request context documents already exist for work item 'WI-UI-FOLLOW-UP'"
+        in payload["error"]
+    )
 
 
 def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
@@ -2106,13 +2267,21 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     job_id = str(payload["job_id"])
     running_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
     logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+    dashboard_payload = _payload(service.handle_get("/api/dashboard", {}))
     options = captured["options"]
     assert isinstance(options, StageRunOptions)
     assert running_payload["status"] == "running"
+    assert dashboard_payload["active_job"]["job_id"] == job_id  # type: ignore[index]
+    assert dashboard_payload["active_job"]["status"] == "running"  # type: ignore[index]
+    assert dashboard_payload["active_job"]["runtime_log_chunk_count"] == 1  # type: ignore[index]
     assert isinstance(running_payload["elapsed_seconds"], int)
     assert running_payload["last_output_at_utc"] is not None
     assert running_payload["last_output_age_seconds"] is not None
     assert running_payload["last_output_text"] == "runtime-output-line"
+    assert running_payload["runtime_output_at_utc"] is not None
+    assert running_payload["runtime_output_age_seconds"] is not None
+    assert running_payload["runtime_output_text"] == "runtime-output-line"
+    assert running_payload["runtime_log_chunk_count"] == 1
     assert running_payload["silence_warning"] is False
     assert options.stage == "plan"
     assert options.runtime == "codex"
@@ -2130,6 +2299,57 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+    terminal_dashboard_payload = _payload(service.handle_get("/api/dashboard", {}))
+    assert terminal_dashboard_payload["active_job"] is None
+
+
+def test_ui_live_job_status_distinguishes_system_logs_from_runtime_output(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        started.set()
+        assert release.wait(timeout=2)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+
+    response = service.handle_post(
+        "/api/stage/run",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+            "run_id": "run-ui-system-only",
+            "log_follow": True,
+        },
+    )
+
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+
+    running_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+    logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+
+    assert running_payload["status"] == "running"
+    assert running_payload["last_output_at_utc"] is not None
+    assert running_payload["last_output_age_seconds"] is not None
+    assert running_payload["last_output_text"] == "AIDD UI stage job started."
+    assert running_payload["runtime_output_at_utc"] is None
+    assert running_payload["runtime_output_age_seconds"] is None
+    assert running_payload["runtime_output_text"] is None
+    assert running_payload["runtime_log_chunk_count"] == 0
+    assert running_payload["silence_warning"] is False
+    assert any(
+        chunk["stream"] == "system" and "AIDD UI stage job started." in str(chunk["text"])
+        for chunk in logs_payload["chunks"]  # type: ignore[index]
+    )
+
+    release.set()
+    completed_payload = _wait_job(service, job_id)
+    assert completed_payload["status"] == "completed"
 
 
 def test_ui_operator_control_center_endpoints_return_structured_views(

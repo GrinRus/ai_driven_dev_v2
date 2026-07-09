@@ -166,6 +166,18 @@ launching agent.
 Manual operator UI/UX decisions in that report are human-authored only. Treat
 `frontend-checkpoints.*` as raw operator-surface availability evidence, not as a
 UI/UX audit or screenshot requirement.
+Observed running stages add a `running-stage` checkpoint phase for the disabled
+`wait-for-stage` next action, active running-stage visibility, and runtime-log
+affordance, including the pending-log state before `runtime.log` exists.
+`frontend-checkpoints.md` includes a manual visual review checklist for visible
+next action, active stage, desktop/mobile topbar readability, failure-appropriate
+recovery primary action, reachable logs/artifacts/questions/answers, next-flow
+handoff visibility, and long-path/log/action-copy overflow. Treat that checklist
+as a prompt, not proof; record actual browser evidence or mark surfaces
+`not inspected` in manual reports. When the operator passes
+`--manual-frontend-evidence <path>`, the runner copies that operator-supplied
+file or directory into `manual-frontend-evidence/` and references it from
+`frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
 
 ## Example command shape
 

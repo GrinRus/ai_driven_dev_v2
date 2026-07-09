@@ -107,6 +107,41 @@ def test_reconcile_stage_result_after_validation_pass_rewrites_stale_failure_cla
     assert "stale runtime draft status/verdict was normalized" in stage_result_text
 
 
+def test_reconcile_stage_result_after_validation_pass_removes_stale_terminal_note(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_result_path = _stage_result_path(workspace_root)
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(
+        "# Stage result\n\n"
+        "## Status\n\n"
+        "- Status: `failed`\n\n"
+        "## Validation summary\n\n"
+        "- Validator verdict: `fail`\n"
+        "- Validator report: `workitems/WI-001/stages/review/validator-report.md`\n\n"
+        "## Terminal state notes\n\n"
+        "- Stage ended as `failed` because `review-report.md` rejected the "
+        "implementation.\n"
+        "- Review status: `rejected`; operator remediation required.\n",
+        encoding="utf-8",
+    )
+
+    result_path = reconcile_stage_result_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+
+    assert result_path == stage_result_path
+    stage_result_text = stage_result_path.read_text(encoding="utf-8")
+    assert "- Status: `succeeded`" in stage_result_text
+    assert "- Validator verdict: `pass`" in stage_result_text
+    assert "Stage ended as `failed`" not in stage_result_text
+    assert "stale terminal-status text was removed" in stage_result_text
+    assert "Review status: `rejected`; operator remediation required." in stage_result_text
+
+
 def test_reconcile_stage_result_after_validation_pass_does_not_note_clean_result(
     tmp_path: Path,
 ) -> None:

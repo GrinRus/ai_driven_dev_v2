@@ -181,10 +181,15 @@ def parse_implementation_report_text(
         for line in verification_section
         if re.search(r"\b(skipped|not[- ]run|deferred)\b", line, flags=re.IGNORECASE)
     ]
+    verification_commands = _extract_commandish_items(verification_section)
+    if not verification_commands:
+        local_warnings.append(
+            "No executable verification commands were detected in implementation-report.md."
+        )
     return ImplementationEvidenceView(
         selected_task_id=_extract_selected_task_id(text),
         touched_files=touched_files,
-        verification_commands=_extract_commandish_items(verification_section),
+        verification_commands=verification_commands,
         skipped_checks=_unique(skipped),
         residual_risks=_extract_list_items(risk_section),
         warnings=tuple(local_warnings),

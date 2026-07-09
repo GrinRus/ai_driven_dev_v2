@@ -96,11 +96,16 @@ normalize if canonical validation proves the terminal status inconsistent.
 5. Update `validator-report.md` so findings and verdict match citation coverage and uncertainty state.
 6. Update `stage-result.md` so status, blockers, and next actions are consistent with validator and
    question artifacts.
+   When research and validation evidence support success, `stage-result.md` `Next actions` must
+   name the exact immediate canonical downstream stage id: `plan`. Do not write only generic
+   wording such as `planning` or `planning stage`.
 7. If a critical decision is still unclear, raise a question instead of inventing an answer.
 
 ## Common output skeleton discipline
 
 - Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
+- Replace the entire bootstrap placeholder when writing `stage-result.md`; do not leave
+  `# Stage result` / `Stage not run yet.` above the real `# Stage Result` document.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
 - Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
@@ -114,4 +119,5 @@ normalize if canonical validation proves the terminal status inconsistent.
 - ignored verification residue from research commands is absent, removed, or explicitly reported as
   workspace pollution instead of hidden behind a clean stage status,
 - unresolved uncertainty is explicit and not masked as fact,
+- successful `stage-result.md` next-action copy names the exact immediate next stage id `plan`,
 - unresolved `[blocking]` questions prevent `succeeded`.

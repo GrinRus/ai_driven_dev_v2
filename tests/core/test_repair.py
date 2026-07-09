@@ -575,6 +575,27 @@ def test_render_stage_result_with_repair_history_includes_attempt_lines() -> Non
     assert "`workitems/WI-001/stages/review/repair-brief.md`" in stage_result
 
 
+def test_render_stage_result_with_repair_history_preserves_primary_outputs() -> None:
+    stage_result = render_stage_result_with_repair_history(
+        stage="review",
+        work_item="WI-001",
+        status="succeeded",
+        repair_history=(),
+        produced_output_paths=(
+            "workitems/WI-001/stages/review/review-report.md",
+            "workitems/WI-001/stages/review/stage-result.md",
+        ),
+        validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+    )
+
+    assert "## Produced outputs" in stage_result
+    assert "- `workitems/WI-001/stages/review/review-report.md`" in stage_result
+    assert "- `workitems/WI-001/stages/review/stage-result.md`" in stage_result
+    assert "- `workitems/WI-001/stages/review/validator-report.md`" in stage_result
+    assert stage_result.count("workitems/WI-001/stages/review/stage-result.md") == 1
+    assert "- Advance to the immediate canonical `qa` stage." in stage_result
+
+
 def test_persist_repair_history_snapshot_updates_metadata_and_stage_result(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     create_run_manifest(
@@ -595,9 +616,11 @@ def test_persist_repair_history_snapshot_updates_metadata_and_stage_result(tmp_p
     stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
     validator_report_path = stage_root / "validator-report.md"
     repair_brief_path = stage_root / "repair-brief.md"
+    primary_output_path = stage_root / "plan.md"
     stage_root.mkdir(parents=True, exist_ok=True)
     validator_report_path.write_text("# Validator Report\n", encoding="utf-8")
     repair_brief_path.write_text("# Failed checks\n", encoding="utf-8")
+    primary_output_path.write_text("# Plan\n", encoding="utf-8")
 
     result = persist_repair_history_snapshot(
         workspace_root=workspace_root,
@@ -626,5 +649,6 @@ def test_persist_repair_history_snapshot_updates_metadata_and_stage_result(tmp_p
 
     stage_result_text = result.stage_result_path.read_text(encoding="utf-8")
     assert "- Attempt `1` (`initial`) -> failed validation." in stage_result_text
+    assert "`workitems/WI-001/stages/plan/plan.md`" in stage_result_text
     assert "`workitems/WI-001/stages/plan/validator-report.md`" in stage_result_text
     assert "`workitems/WI-001/stages/plan/repair-brief.md`" in stage_result_text

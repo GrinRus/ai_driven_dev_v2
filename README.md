@@ -215,6 +215,10 @@ progress remains visible as stage state `succeeded` in the rail and artifacts.
 The command center also shows an Active Run panel and Timeline tab for long-running jobs:
 elapsed time, last output age, runner command, stage timeout summary, cancel action, and
 real stage milestones are shown without fake progress percentages.
+When a UI-started job is live, the central next-action strip switches to a live progress
+summary with elapsed time, last runtime output, live log chunk count, an Open live logs
+shortcut, and the cancel action; on mobile that monitoring cockpit is shown before the
+stage rail.
 The UI can write question answers as `[resolved]`, `[partial]`, or `[deferred]` entries
 in the standard `answers.md`; only `[resolved]` answers unblock blocking questions, then
 rerun the selected stage or workflow after answering. Intervention requests are stored as
