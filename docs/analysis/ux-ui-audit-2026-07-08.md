@@ -851,3 +851,14 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 ## Next UX Plan - After Terminal Failed Safety Slice
 
 - Continue targeted unhappy-path coverage for missing terminal evidence and blocked archive/follow-up flows, verifying that disabled next-flow actions have local recovery copy on both desktop and 390px mobile.
+
+## Missing Terminal Evidence Next-Flow Blocked Labels Slice - 2026-07-09
+
+- Served browser QA reused `/tmp/aidd-missing-terminal-evidence-ui`, a terminal handoff fixture where required QA evidence is incomplete and all next-flow actions are disabled.
+- Before the fix, the top `Restore terminal evidence` action and missing-evidence spotlight were clear, and each disabled next-flow card had restore copy. The remaining clarity issue was label hierarchy: `Start Follow-up Flow` appeared as both `recommended` and `unavailable`, which made the blocked recommendation look like a conflicting command state.
+- The recommended decision spotlight now labels disabled recommendations as `next decision blocked`. The disabled recommended action card now says `recommended after restore` instead of pairing `recommended` with `unavailable`.
+- Browser verification after the fix: desktop and mobile had no console/network errors and no horizontal overflow; all next-flow buttons were disabled, `next decision blocked` and `recommended after restore` appeared, `recommended unavailable` was absent, and restore-evidence copy remained visible. Screenshots: `.aidd/reports/ui-missing-terminal-evidence/missing-terminal-evidence-blocked-labels-desktop.png` and `.aidd/reports/ui-missing-terminal-evidence/missing-terminal-evidence-blocked-labels-mobile.png`.
+
+## Next UX Plan - After Missing Evidence Blocked Labels Slice
+
+- Continue targeted unhappy-path coverage with follow-up preflight blocked states and source-selection recovery, checking that first-time operators can identify the required correction before launch.

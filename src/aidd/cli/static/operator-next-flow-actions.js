@@ -284,10 +284,11 @@ function recommendedNextFlowDecision(handoff) {
 function renderRecommendedNextFlowDecision(handoff) {
   const decision = recommendedNextFlowDecision(handoff);
   const badgeTone = decision.enabled ? "good" : "warn";
+  const badgeLabel = decision.enabled ? "recommended next decision" : "next decision blocked";
   return `
     <div class="next-flow-decision-spotlight">
       <div>
-        <span class="small-badge ${badgeTone}">recommended next decision</span>
+        <span class="small-badge ${badgeTone}">${badgeLabel}</span>
         <strong>${escapeHtml(decision.label)}</strong>
         <p>${escapeHtml(decision.reason)}</p>
         ${decision.detail ? `<small>${escapeHtml(decision.detail)}</small>` : ""}
@@ -331,12 +332,20 @@ function renderNextFlowActions(handoff) {
       ${actions.map((action) => {
         const isRecommended = action.action === recommended;
         const safetyNote = terminalNextFlowSafetyNote(handoff, action);
+        const recommendationBadge = isRecommended
+          ? action.enabled
+            ? '<span class="small-badge good">recommended</span>'
+            : '<span class="small-badge warn">recommended after restore</span>'
+          : "";
+        const availabilityBadge = !action.enabled && !isRecommended
+          ? '<span class="small-badge warn">unavailable</span>'
+          : "";
         return `
           <article class="next-flow-action-card${isRecommended ? " recommended" : ""}${action.enabled ? "" : " disabled"}">
             <div class="action-card-title">
               <strong>${escapeHtml(action.label)}</strong>
-              ${isRecommended ? '<span class="small-badge good">recommended</span>' : ""}
-              ${action.enabled ? "" : '<span class="small-badge warn">unavailable</span>'}
+              ${recommendationBadge}
+              ${availabilityBadge}
             </div>
             <p>${escapeHtml(action.detail)}</p>
             ${safetyNote ? `<small class="next-flow-safety-note">${escapeHtml(safetyNote)}</small>` : ""}
