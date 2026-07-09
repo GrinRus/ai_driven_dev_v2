@@ -2217,6 +2217,29 @@
   overflow-wrap: anywhere;
   padding: 7px 9px;
 }
+.next-action-sidebar-mirror {
+  background: #ffffff;
+  border: 1px solid #cfe3e0;
+  border-radius: 6px;
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px;
+}
+.next-action-sidebar-mirror .small-badge {
+  justify-self: start;
+  width: fit-content;
+}
+.next-action-sidebar-mirror strong {
+  font-size: 13px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.next-action-sidebar-mirror span:not(.small-badge) {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
 .global-next-action-strip .next-button {
   margin-top: 0;
   width: auto;

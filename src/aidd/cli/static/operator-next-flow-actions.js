@@ -2284,6 +2284,23 @@ function renderNextActionBlocker(message) {
   `;
 }
 
+function globalNextActionStripProvidesPrimary() {
+  if (state.onboarding?.setupRequired) return false;
+  if (state.activeTab === "recovery") return false;
+  return !document.body.classList.contains("evidence-log-mode");
+}
+
+function renderNextActionSidebarMirror({label, statusMessage, tone}) {
+  const badge = tone === "good" ? "ready" : "waiting";
+  return `
+    <div class="next-action-sidebar-mirror">
+      <span class="small-badge ${escapeHtml(tone)}">${escapeHtml(badge)}</span>
+      <strong>${escapeHtml(label)}</strong>
+      ${statusMessage ? `<span>${escapeHtml(statusMessage)}</span>` : ""}
+    </div>
+  `;
+}
+
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
@@ -2309,6 +2326,20 @@ function renderNextActionPanel() {
   const finding = action.action === "inspect-validation" || action.action === "review-intervention"
     ? primaryValidationFinding()
     : null;
+  if (globalNextActionStripProvidesPrimary()) {
+    const statusMessage = blockerMessage ? "" : activeJobState?.detail || (disabled
+      ? "Primary action is not available yet."
+      : "Primary action is ready in the stage cockpit.");
+    const tone = disabled || blockerMessage ? "warn" : "good";
+    document.getElementById("nextActionPanel").innerHTML = `
+      <div class="panel-title">Next Action Status</div>
+      <p>${escapeHtml(detail)}</p>
+      ${renderValidationFindingSummary(finding, {compact: true})}
+      ${renderNextActionSidebarMirror({label, statusMessage, tone})}
+      ${renderNextActionBlocker(blockerMessage)}
+    `;
+    return;
+  }
   document.getElementById("nextActionPanel").innerHTML = `
     <div class="panel-title">Run Next Action</div>
     <p>${escapeHtml(detail)}</p>

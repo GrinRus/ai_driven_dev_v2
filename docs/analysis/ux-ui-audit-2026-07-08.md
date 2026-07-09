@@ -774,3 +774,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Reassess duplicated next-action placement between the central strip and sidebar now that both can carry status copy; the likely next polish is hierarchy/deduplication rather than more explanatory text.
 - Continue targeted unhappy-path coverage with missing implementation verification artifacts and verify that the disabled CTA helper appears in the real served UI when runtime readiness is slow.
+
+## Next-Action Hierarchy Slice - 2026-07-09
+
+- The right sidebar no longer renders a second primary next-action button when the global next-action strip is available as the primary CTA.
+- In that state the sidebar panel becomes `Next Action Status`: it preserves action label, readiness tone, and runtime blocker copy without adding another command target.
+- If the global strip is hidden, for example in evidence-log mode, the sidebar keeps the original `Run Next Action` button as a fallback.
+- Browser render-check used real static assets at `1280x900` and `390x844`. Primary mode produced one global CTA, zero sidebar CTAs, one sidebar status mirror, and no horizontal overflow. Fallback mode preserved the sidebar CTA.
+- Supplemental screenshot: `.aidd/reports/ui-next-action-hierarchy/next-action-sidebar-mirror-mobile-after-copy.png`.
+
+## Next UX Plan - After Next-Action Hierarchy Slice
+
+- Verify the hierarchy change in the real served UI during the next provider-backed or targeted UI pass, especially terminal handoff and post-stage mobile screens.
+- Continue targeted unhappy-path coverage with missing implementation verification artifacts; this remains the main uncovered product state after the happy-path live pass.

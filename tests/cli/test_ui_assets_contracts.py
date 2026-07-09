@@ -1704,6 +1704,36 @@ def test_operator_next_action_explains_runtime_readiness_blocker_locally() -> No
     )
 
 
+def test_operator_next_action_sidebar_is_status_mirror_when_global_cta_is_primary() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function globalNextActionStripProvidesPrimary()",
+            "state.activeTab === \"recovery\"",
+            'document.body.classList.contains("evidence-log-mode")',
+            "function renderNextActionSidebarMirror({label, statusMessage, tone})",
+            '<div class="next-action-sidebar-mirror">',
+            "Next Action Status",
+            "Primary action is ready in the stage cockpit.",
+            "Primary action is not available yet.",
+            "renderNextActionSidebarMirror({label, statusMessage, tone})",
+            '<button id="nextActionButton" class="next-button"',
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".next-action-sidebar-mirror {",
+            ".next-action-sidebar-mirror .small-badge {",
+            ".next-action-sidebar-mirror strong {",
+            ".next-action-sidebar-mirror span:not(.small-badge) {",
+        ),
+    )
+
+
 def test_operator_static_screen_landmarks_cover_accepted_mission_control_surfaces() -> None:
     html = _asset_text("/")
     next_flow = _asset_text("/operator-next-flow-actions.js")
