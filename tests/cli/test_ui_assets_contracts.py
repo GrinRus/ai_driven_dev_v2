@@ -1610,6 +1610,11 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderCloneLaunchSafetySummary(wizard)",
             "function renderCloneDraftCreationError(wizard)",
             "function cloneDraftCreationMessage(error, targetWorkItem)",
+            (
+                "function renderLaunchConfirmationActions({backPrimary, backLabel, "
+                "launchLabel, blocked, launchBusy})"
+            ),
+            "function renderLaunchConfirmationGuards({blocked, readinessBlocked, backLabel})",
             "function renderAuditPreview(draft, preflight)",
             "async function loadLaunchConfirmation()",
             "async function launchNextFlowNow()",
@@ -1758,6 +1763,15 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "inherited_context: draft.inherited_context_lines",
             "Run archived for operator navigation.",
         ),
+    )
+    assert next_flow.index("${backPrimary ? actionRow : \"\"}") < next_flow.index(
+        '<div class="launch-confirmation-grid">'
+    )
+    assert next_flow.index("${backPrimary ? actionGuards : \"\"}") < next_flow.index(
+        '<div class="launch-confirmation-grid">'
+    )
+    assert next_flow.index('<div class="launch-confirmation-grid">') < next_flow.index(
+        "${backPrimary ? \"\" : actionRow}"
     )
 
 

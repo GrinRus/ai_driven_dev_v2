@@ -2045,7 +2045,7 @@ function renderLaunchReadinessSummary(wizard) {
     <div class="truncation-notice launch-readiness-summary" data-launch-readiness-summary role="alert">
       <strong>${escapeHtml(title)}</strong>
       <span>${escapeHtml(wizard.launchReadinessError)}</span>
-      <span>Launch was not started. Resolve runtime readiness, then retry launch; the source run remains unchanged.</span>
+      <span>Launch was not started. Resolve runtime readiness, then retry; the source run remains unchanged.</span>
     </div>
   `;
 }
@@ -2110,6 +2110,22 @@ function renderCloneLaunchSafetySummary(wizard) {
   `;
 }
 
+function renderLaunchConfirmationActions({backPrimary, backLabel, launchLabel, blocked, launchBusy}) {
+  return `
+    <div class="wizard-actions">
+      <button data-next-flow-back-to-definition type="button" class="${backPrimary ? "" : "secondary"}">${escapeHtml(backLabel)}</button>
+      <button data-launch-flow-now type="button" class="${backPrimary ? "secondary" : ""}" ${blocked || launchBusy ? "disabled" : ""}>${escapeHtml(launchLabel)}</button>
+    </div>
+  `;
+}
+
+function renderLaunchConfirmationGuards({blocked, readinessBlocked, backLabel}) {
+  return `
+    ${blocked ? `<div class="wizard-action-guard" role="status">Launch Flow Now is disabled because preflight returned blocking checks. Resolve the blockers above, then retry from ${escapeHtml(backLabel)}.</div>` : ""}
+    ${readinessBlocked ? `<div class="wizard-action-guard" role="status">Launch will re-check runtime readiness before starting. Resolve runtime readiness, then retry launch.</div>` : ""}
+  `;
+}
+
 function renderLaunchConfirmation() {
   const wizard = state.nextFlowWizard;
   const draft = wizard.followUpDraft;
@@ -2137,6 +2153,9 @@ function renderLaunchConfirmation() {
     : launchFailed || readinessBlocked
       ? "Retry Launch"
       : "Launch Flow Now";
+  const actionRow = renderLaunchConfirmationActions({backPrimary, backLabel, launchLabel, blocked, launchBusy});
+  const actionGuards = renderLaunchConfirmationGuards({blocked, readinessBlocked, backLabel});
+  const cloneSafetySummary = renderCloneLaunchSafetySummary(wizard);
   return renderNextFlowWizardShell({
     sectionClass: "next-flow-wizard launch-confirmation",
     title: "Confirm and Launch Next Flow",
@@ -2144,9 +2163,12 @@ function renderLaunchConfirmation() {
     badgeTone: preflightTone(preflight?.status || "blocked"),
     body: `
       ${blocked ? renderPreflightBlockedSummary(wizard, preflight, backLabel) : ""}
-      ${renderCloneLaunchSafetySummary(wizard)}
       ${renderLaunchReadinessSummary(wizard)}
       ${renderLaunchFailureSummary(wizard, draft, backLabel)}
+      ${backPrimary ? "" : cloneSafetySummary}
+      ${backPrimary ? actionRow : ""}
+      ${backPrimary ? actionGuards : ""}
+      ${backPrimary ? cloneSafetySummary : ""}
       <div class="launch-confirmation-grid">
         <section>
           <div class="surface-title">Preflight results</div>
@@ -2159,12 +2181,8 @@ function renderLaunchConfirmation() {
           <div class="recent-artifacts">${renderLaunchSourceLinks(draft)}</div>
         </aside>
       </div>
-      <div class="wizard-actions">
-        <button data-next-flow-back-to-definition type="button" class="${backPrimary ? "" : "secondary"}">${escapeHtml(backLabel)}</button>
-        <button data-launch-flow-now type="button" class="${backPrimary ? "secondary" : ""}" ${blocked || launchBusy ? "disabled" : ""}>${escapeHtml(launchLabel)}</button>
-      </div>
-      ${blocked ? `<div class="wizard-action-guard" role="status">Launch Flow Now is disabled because preflight returned blocking checks. Resolve the blockers above, then retry from ${escapeHtml(backLabel)}.</div>` : ""}
-      ${readinessBlocked ? `<div class="wizard-action-guard" role="status">Launch will re-check runtime readiness before starting. Resolve runtime readiness, then retry launch.</div>` : ""}
+      ${backPrimary ? "" : actionRow}
+      ${backPrimary ? "" : actionGuards}
     `
   });
 }

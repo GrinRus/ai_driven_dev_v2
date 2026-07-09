@@ -958,3 +958,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Continue clone-flow unhappy-path coverage with runtime readiness changes between confirmation and launch, using a clean clone target so the failure happens after passing draft creation and preflight.
 - Then re-check eval/archive depth states to keep non-remediation paths visibly separate from QA recovery.
+
+## Clone Flow Runtime Readiness Refresh Slice - 2026-07-09
+
+- Served browser QA reused `/tmp/aidd-qa-not-ready-ui` with a clean clone target, passed clone draft creation/preflight, then changed only the fixture `codex` command before clicking `Launch Flow Now`.
+- The launch guard correctly rechecked runtime readiness before posting `/api/next-flow/launch`: clone launch did not start, no downstream run directory was created for `WI-LIVE-HONO-SMOKE-CLONE`, and the screen showed `Runtime readiness changed before launch`.
+- Browser QA found a mobile hierarchy gap before the fix. The readiness alert was visible, but `Back to handoff` and `Retry Launch` rendered after the preflight/audit grid (`actionsY=1785` on `390x844`), far below the first viewport.
+- Launch confirmation now promotes recovery actions and guards before the preflight/audit grid whenever launch is blocked, launch failed, or runtime readiness changed. In those recovery states, clone-only context remains visible below the actions as supporting context; happy confirmation keeps its previous grid-first layout.
+- Browser verification after the fix: desktop and mobile had no console warnings/errors and no horizontal overflow. Desktop showed alert `y=252`, actions `y=340`, clone context `y=410`, and grid `y=495`; mobile showed alert `y=647`, actions fully inside the first viewport (`actionsBottom=781`), clone context `y=836`, and grid `y=949`. Screenshots: `.aidd/reports/ui-clone-flow-readiness/02-clone-readiness-after-desktop.png` and `.aidd/reports/ui-clone-flow-readiness/03-clone-readiness-after-mobile.png`.
+
+## Next UX Plan - After Clone Readiness Slice
+
+- Re-check eval/archive depth states so every non-remediation path remains visibly separate from QA recovery.
+- Revisit expected `409 Conflict` console noise only after the operator-visible clone/eval/archive paths have clear recovery hierarchy.
