@@ -299,6 +299,30 @@ function renderRecommendedNextFlowDecision(handoff) {
   `;
 }
 
+function terminalHandoffNeedsRecovery(handoff) {
+  return Boolean(handoff && (handoff.status !== "completed" || (handoff.blockers || []).length));
+}
+
+function terminalNextFlowSafetyNote(handoff, action) {
+  if (!terminalHandoffNeedsRecovery(handoff)) return "";
+  if (action.action === "start-follow-up-flow") {
+    return "Recovery path: carries QA findings, blockers, or manual notes into new scoped work.";
+  }
+  if (action.action === "archive-run") {
+    return "Navigation only: does not resolve QA blockers or carry findings into remediation.";
+  }
+  if (action.action === "create-new-work-item") {
+    return "Separate scope: does not inherit this failed QA evidence.";
+  }
+  if (action.action === "clone-flow") {
+    return "Clone only: creates a new run identity but does not clear this QA decision.";
+  }
+  if (action.action === "run-eval-batch") {
+    return "Comparison only: does not repair or complete this terminal handoff.";
+  }
+  return "Secondary path: confirm it does not bypass unresolved terminal evidence.";
+}
+
 function renderNextFlowActions(handoff) {
   const recommended = recommendedNextFlowAction(handoff);
   const actions = handoff.recommended_next_flow_actions || [];
@@ -306,6 +330,7 @@ function renderNextFlowActions(handoff) {
     <div class="next-flow-actions-grid">
       ${actions.map((action) => {
         const isRecommended = action.action === recommended;
+        const safetyNote = terminalNextFlowSafetyNote(handoff, action);
         return `
           <article class="next-flow-action-card${isRecommended ? " recommended" : ""}${action.enabled ? "" : " disabled"}">
             <div class="action-card-title">
@@ -314,12 +339,27 @@ function renderNextFlowActions(handoff) {
               ${action.enabled ? "" : '<span class="small-badge warn">unavailable</span>'}
             </div>
             <p>${escapeHtml(action.detail)}</p>
+            ${safetyNote ? `<small class="next-flow-safety-note">${escapeHtml(safetyNote)}</small>` : ""}
             <button data-next-flow-action="${escapeHtml(action.action)}" type="button" ${action.enabled ? "" : 'disabled aria-disabled="true"'}>
               ${escapeHtml(nextFlowButtonLabel(action))}
             </button>
           </article>
         `;
       }).join("")}
+    </div>
+  `;
+}
+
+function renderArchiveHandoffWarning(handoff) {
+  if (!terminalHandoffNeedsRecovery(handoff)) return "";
+  const blockerCount = (handoff.blockers || []).length;
+  const blockerCopy = blockerCount
+    ? `${blockerCount} blocker${blockerCount === 1 ? "" : "s"} remain on this terminal handoff.`
+    : `Terminal status is ${handoff.status || "not complete"}.`;
+  return `
+    <div class="truncation-notice archive-risk-notice" role="status">
+      <strong>Archive does not resolve this handoff</strong>
+      <span>${escapeHtml(blockerCopy)} Start a follow-up when QA evidence still needs remediation; archive only records a navigation decision.</span>
     </div>
   `;
 }
@@ -652,7 +692,7 @@ function renderFlowCompleteState() {
           <div class="surface-title">Blockers / safety</div>
           <div class="panel-list">
             ${renderTerminalBlockers(handoff.blockers || [])}
-            <div class="panel-item"><strong>Source run policy</strong><span>Next-flow actions create new work or navigation decisions; they do not continue the completed run.</span></div>
+            <div class="panel-item"><strong>Source run policy</strong><span>Next-flow actions create new work or navigation decisions; they do not continue the terminal run.</span></div>
             <div class="panel-item"><strong>Runtime fallback</strong><span>Uses recorded runtime ${escapeHtml(runtimeId)}; no generic runtime fallback is hidden in the UI.</span></div>
           </div>
         </section>
@@ -1505,9 +1545,10 @@ function renderArchiveConfirmation() {
           <strong>Archive keeps evidence readable</strong>
           <span>This records a local navigation decision. It does not delete final artifacts, runtime logs, or stage documents.</span>
         </div>
+        ${renderArchiveHandoffWarning(state.dashboard?.terminal_handoff)}
         <div class="panel-list">
           <div class="panel-item"><strong>Reason preview</strong><span>${escapeHtml(reason)}</span></div>
-          <div class="panel-item"><strong>Source-run policy</strong><span>The completed run stays immutable; archive only changes run navigation metadata.</span></div>
+          <div class="panel-item"><strong>Source-run policy</strong><span>The terminal run stays immutable; archive only changes run navigation metadata.</span></div>
         </div>
       </div>
       <div class="wizard-actions">

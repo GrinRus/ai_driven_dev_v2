@@ -1963,14 +1963,20 @@ def _next_flow_recommendations(
             ),
         )
     if status == "completed":
+        new_work_detail = "Start unrelated work without inheriting completed-run context."
         follow_up_detail = "Create a scoped follow-up only when the operator selects new work."
+        eval_detail = "Use completed-run evidence for comparison without mutating the source run."
     else:
+        new_work_detail = "Start unrelated work without carrying this terminal handoff evidence."
         follow_up_detail = "Create a scoped follow-up from QA findings, blockers, or manual notes."
+        eval_detail = (
+            "Use terminal handoff evidence for comparison without repairing the source run."
+        )
     return (
         OperatorNextFlowRecommendation(
             action="create-new-work-item",
             label="Create New Work Item",
-            detail="Start unrelated work without inheriting completed-run context.",
+            detail=new_work_detail,
             enabled=True,
         ),
         OperatorNextFlowRecommendation(
@@ -1988,7 +1994,7 @@ def _next_flow_recommendations(
         OperatorNextFlowRecommendation(
             action="run-eval-batch",
             label="Run Eval / Scenario Batch",
-            detail="Use completed-run evidence for comparison without mutating the source run.",
+            detail=eval_detail,
             enabled=True,
         ),
         OperatorNextFlowRecommendation(

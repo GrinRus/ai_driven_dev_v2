@@ -838,3 +838,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 ## Next UX Plan - After QA Not-Ready Fixture
 
 - Continue the unhappy-path loop with failed terminal handoff recovery from missing or rejected QA evidence, and verify that first-time operators always see the safe next action before archive/follow-up escape hatches.
+
+## Terminal Failed Next-Flow Safety Slice - 2026-07-09
+
+- Served browser QA reused `/tmp/aidd-qa-not-ready-ui`, a terminal QA `not-ready` fixture with one `qa-not-ready` blocker.
+- Before the fix, the top of the mobile handoff correctly showed `Resolve QA verdict`, `QA Did Not Clear`, and evidence-first shortcuts, but the `Start Next Flow` action grid later showed enabled `Create New Work Item`, `Clone This Flow`, `Run Eval / Scenario Batch`, and `Archive Run` with neutral copy. The safe `Start Follow-up Flow` recommendation existed but the secondary escape paths did not explicitly say they would not resolve QA blockers.
+- Terminal next-flow action cards now add status-aware safety notes. `Start Follow-up Flow` is labeled as the recovery path; `Create New Work Item`, `Clone This Flow`, `Run Eval / Scenario Batch`, and `Archive Run` state that they are separate-scope, clone-only, comparison-only, or navigation-only paths.
+- Failed/non-completed recommendation API copy no longer says `completed-run context`; it uses `terminal handoff evidence` instead. The live-E2E recommendation payload mirror was updated to match.
+- Archive confirmation now includes `Archive does not resolve this handoff` when the terminal handoff still needs recovery, including blocker count and a reminder to start follow-up when QA evidence still needs remediation.
+- Browser verification after the fix: desktop and mobile had no console/network errors and no horizontal overflow; action cards included all five safety notes, `completed-run context` was absent, and archive confirmation showed the new risk notice. Screenshots: `.aidd/reports/ui-terminal-failed-recovery/terminal-failed-safety-copy-desktop.png`, `.aidd/reports/ui-terminal-failed-recovery/terminal-failed-safety-copy-mobile.png`, `.aidd/reports/ui-terminal-failed-recovery/terminal-failed-archive-warning-desktop.png`, and `.aidd/reports/ui-terminal-failed-recovery/terminal-failed-archive-warning-mobile.png`.
+
+## Next UX Plan - After Terminal Failed Safety Slice
+
+- Continue targeted unhappy-path coverage for missing terminal evidence and blocked archive/follow-up flows, verifying that disabled next-flow actions have local recovery copy on both desktop and 390px mobile.

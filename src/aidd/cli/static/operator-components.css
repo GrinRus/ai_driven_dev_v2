@@ -808,6 +808,12 @@
   line-height: 1.35;
   margin: 0;
 }
+.next-flow-safety-note {
+  color: #8a4f00;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+}
 .next-flow-action-card button {
   align-self: end;
   margin-top: auto;
@@ -2934,6 +2940,11 @@
   background: #eef7f5;
   border-color: #b7d9d4;
   color: var(--teal-dark);
+}
+.archive-risk-notice {
+  background: #fff5f4;
+  border-color: #e8b1aa;
+  color: var(--red);
 }
 .markdown-preview {
   line-height: 1.48;

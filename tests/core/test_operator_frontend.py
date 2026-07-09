@@ -1355,8 +1355,21 @@ def test_operator_dashboard_terminal_handoff_reports_failed_qa(
         for action in dashboard.terminal_handoff.recommended_next_flow_actions
         if action.action == "start-follow-up-flow"
     )
+    create_new = next(
+        action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        if action.action == "create-new-work-item"
+    )
+    eval_batch = next(
+        action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        if action.action == "run-eval-batch"
+    )
     assert follow_up.enabled is True
     assert "blockers" in follow_up.detail
+    assert "terminal handoff evidence" in create_new.detail
+    assert "completed-run context" not in create_new.detail
+    assert "terminal handoff evidence" in eval_batch.detail
 
 
 def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
