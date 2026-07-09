@@ -1963,9 +1963,9 @@ def _next_flow_recommendations(
             ),
         )
     if status == "completed":
-        new_work_detail = "Start unrelated work without inheriting completed-run context."
+        new_work_detail = "Start unrelated work without inheriting source-run context."
         follow_up_detail = "Create a scoped follow-up only when the operator selects new work."
-        eval_detail = "Use completed-run evidence for comparison without mutating the source run."
+        eval_detail = "Use source-run evidence for comparison without mutating the source run."
     else:
         new_work_detail = "Start unrelated work without carrying this terminal handoff evidence."
         follow_up_detail = "Create a scoped follow-up from QA findings, blockers, or manual notes."

@@ -324,6 +324,20 @@ function terminalNextFlowSafetyNote(handoff, action) {
   return "Secondary path: confirm it does not bypass unresolved terminal evidence.";
 }
 
+function separateScopeHandoffMessage(handoff) {
+  if (!terminalHandoffNeedsRecovery(handoff)) {
+    return "Create unrelated work from the target project root with a new request. Use Follow-up or Clone when the source run should be inherited.";
+  }
+  return "This starts unrelated work only. It does not inherit or resolve QA findings, blockers, or failed terminal evidence; use Start Follow-up Flow for remediation.";
+}
+
+function evalBatchHandoffMessage(handoff) {
+  if (!terminalHandoffNeedsRecovery(handoff)) {
+    return "Use source-run evidence for scenario planning or manual checkpoint review. This UI action does not launch a nested public-repository flow.";
+  }
+  return "This uses terminal handoff evidence for review, but it does not repair, complete, or archive the failed source run. Use Start Follow-up Flow for remediation.";
+}
+
 function renderNextFlowActions(handoff) {
   const recommended = recommendedNextFlowAction(handoff);
   const actions = handoff.recommended_next_flow_actions || [];
@@ -363,7 +377,7 @@ function renderArchiveHandoffWarning(handoff) {
   if (!terminalHandoffNeedsRecovery(handoff)) return "";
   const blockerCount = (handoff.blockers || []).length;
   const blockerCopy = blockerCount
-    ? `${blockerCount} blocker${blockerCount === 1 ? "" : "s"} remain on this terminal handoff.`
+    ? `${blockerCount} blocker${blockerCount === 1 ? " remains" : "s remain"} on this terminal handoff.`
     : `Terminal status is ${handoff.status || "not complete"}.`;
   return `
     <div class="truncation-notice archive-risk-notice" role="status">
@@ -1858,6 +1872,7 @@ function renderNextFlowSourceSelection() {
 function renderNewWorkItemHandoff() {
   const sourceRun = nextFlowSourceRunId() || "not recorded";
   const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
+  const handoff = state.dashboard?.terminal_handoff;
   return `
     <section class="surface next-flow-wizard">
       <div class="surface-title">
@@ -1871,8 +1886,8 @@ function renderNewWorkItemHandoff() {
         <div class="panel-item"><strong>Policy</strong><span>source run stays immutable</span></div>
       </div>
       <div class="truncation-notice" role="status">
-        <strong>Fresh work item handoff</strong>
-        <span>Create unrelated work from the target project root with a new request. Use Follow-up or Clone when this completed run should be inherited.</span>
+        <strong>${terminalHandoffNeedsRecovery(handoff) ? "Separate scope only" : "Fresh work item handoff"}</strong>
+        <span>${escapeHtml(separateScopeHandoffMessage(handoff))}</span>
       </div>
       <pre>aidd init --work-item &lt;new-id&gt; --request "&lt;new request&gt;" --root .aidd
 aidd ui --work-item &lt;new-id&gt; --root .aidd</pre>
@@ -1886,7 +1901,8 @@ aidd ui --work-item &lt;new-id&gt; --root .aidd</pre>
 function renderEvalBatchHandoff() {
   const sourceRun = nextFlowSourceRunId() || "not recorded";
   const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
-  const artifacts = state.dashboard?.terminal_handoff?.final_artifacts || [];
+  const handoff = state.dashboard?.terminal_handoff;
+  const artifacts = handoff?.final_artifacts || [];
   return `
     <section class="surface next-flow-wizard">
       <div class="surface-title">
@@ -1900,8 +1916,8 @@ function renderEvalBatchHandoff() {
         <div class="panel-item"><strong>Scenario checkpoint</strong><span>manual checkpoint only</span></div>
       </div>
       <div class="truncation-notice" role="status">
-        <strong>Eval batch handoff only</strong>
-        <span>Use completed-run evidence for scenario planning or manual checkpoint review. This UI action does not launch a nested public-repository flow.</span>
+        <strong>${terminalHandoffNeedsRecovery(handoff) ? "Comparison only" : "Eval batch handoff only"}</strong>
+        <span>${escapeHtml(evalBatchHandoffMessage(handoff))}</span>
       </div>
       <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
       <div class="wizard-actions">

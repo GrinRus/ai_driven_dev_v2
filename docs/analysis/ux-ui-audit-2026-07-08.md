@@ -917,3 +917,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Continue the next unhappy-path pass with expected conflict-response console noise for blocked preflight and launch failures; decide whether local fetch handling should suppress expected `409 Conflict` errors from browser logs while preserving diagnostic evidence in the UI.
 - Broaden first-time operator coverage around clone/eval/archive flows after the follow-up launch path, checking that each non-remediation path remains visibly secondary when source evidence still needs recovery.
+
+## Secondary Next-Flow Handoff Copy Slice - 2026-07-09
+
+- Served browser QA used `/tmp/aidd-qa-not-ready-ui`, a failed terminal QA handoff where `Start Follow-up Flow` is the safe recovery path and `Create New Work Item`, `Run Eval / Scenario Batch`, and `Archive Run` are enabled secondary paths.
+- The action grid itself was clear: follow-up was recommended, while the secondary cards said separate scope, comparison only, clone only, or navigation only. Screenshot: `.aidd/reports/ui-next-flow-secondary-actions/01-terminal-actions-desktop.png`.
+- Browser QA found a clarity regression after clicking secondary actions. `Create New Work Item` still said `completed run should be inherited`, `Run Eval / Scenario Batch` still said `completed-run evidence`, and archive warning said `1 blocker remain`. These clicked screens could make a failed QA handoff feel like completed work or a remediation path. Before screenshots: `.aidd/reports/ui-next-flow-secondary-actions/02-create-new-work-item-desktop.png`, `.aidd/reports/ui-next-flow-secondary-actions/03-eval-batch-desktop.png`, and `.aidd/reports/ui-next-flow-secondary-actions/04-archive-confirm-desktop.png`.
+- The clicked handoff screens now use terminal-aware copy. Failed handoffs show `Separate scope only` for new work, `Comparison only` for eval, and direct guidance to use `Start Follow-up Flow` for remediation. Completed-run recommendation copy now uses `source-run context/evidence` instead of `completed-run` phrasing.
+- Browser verification after the fix: desktop showed no `completed-run` copy, no duplicate `Comparison only`, `1 blocker remains`, no console errors, and no horizontal overflow. Screenshots: `.aidd/reports/ui-next-flow-secondary-actions/05-create-new-work-item-after-desktop.png`, `.aidd/reports/ui-next-flow-secondary-actions/06-eval-batch-after-desktop.png`, and `.aidd/reports/ui-next-flow-secondary-actions/07-archive-confirm-after-desktop.png`.
+- Mobile `390x844` repeated all three clicked screens. Each notice stayed inside the first viewport (`y=550` for create/eval, archive notices at `y=555` and `y=654`), `scrollWidth=390`, no stale completed-run copy appeared, and console logs stayed clean. Screenshots: `.aidd/reports/ui-next-flow-secondary-actions/08-create-new-work-item-after-mobile.png`, `.aidd/reports/ui-next-flow-secondary-actions/09-eval-batch-after-mobile.png`, and `.aidd/reports/ui-next-flow-secondary-actions/10-archive-confirm-after-mobile.png`.
+
+## Next UX Plan - After Secondary Next-Flow Copy Slice
+
+- Continue clone-flow coverage after a failed or warning terminal handoff, especially clone draft creation and launch confirmation, to verify that clone-only language remains visible through preflight and launch readiness states.
+- Revisit expected `409 Conflict` console noise only if it affects operator-visible UI; current first-time operator gaps are more likely in deeper clone/eval/archive state transitions than in DevTools-only noise.

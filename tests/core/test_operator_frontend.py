@@ -1193,6 +1193,20 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
         "run-eval-batch",
         "archive-run",
     }
+    create_new = next(
+        action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        if action.action == "create-new-work-item"
+    )
+    eval_batch = next(
+        action
+        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        if action.action == "run-eval-batch"
+    )
+    assert "source-run context" in create_new.detail
+    assert "completed-run context" not in create_new.detail
+    assert "source-run evidence" in eval_batch.detail
+    assert "completed-run evidence" not in eval_batch.detail
 
 
 def test_operator_dashboard_next_action_surfaces_rejected_review_report(
