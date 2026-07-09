@@ -430,6 +430,7 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "function activeModeIsEvidenceLog()",
             "function applyOperatorModeBodyClass()",
             "external-running-stage-mode",
+            "terminal-handoff-mode",
             "terminal-repair-mode",
             "function initializeStateFromLocation()",
             "new URLSearchParams(window.location.search)",
@@ -1631,12 +1632,27 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "function recommendedNextFlowDecision(handoff)",
             "function renderRecommendedNextFlowDecision(handoff)",
             "function renderTerminalRepairHighlights(highlights)",
+            "function renderTerminalEvidenceSpotlight(handoff)",
+            "function terminalEvidenceArtifacts(artifacts)",
+            "function renderGlobalTerminalEvidenceActions()",
+            "function terminalEvidenceActionLabel(artifact)",
             "function terminalRepairDecisionPeek()",
             "repair resolved",
+            "Evidence First",
+            "before next-flow",
+            "Terminal evidence shortcuts",
+            "Runtime log",
+            "QA report",
+            "runtime_log",
+            "qa_report",
+            "validator_report",
+            "stage_result",
             "recommended next decision",
             "Resolved Repairs",
             "These validation issues were retried and resolved before QA handoff.",
             "handoff.repair_highlights",
+            "renderTerminalEvidenceSpotlight(handoff)",
+            "renderGlobalTerminalEvidenceActions()",
             "data-open-artifact",
             "QA is ready and no open blockers are recorded",
             "Terminal QA failed; carry failed evidence into a follow-up",
@@ -1674,15 +1690,23 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
             "grid-template-columns: minmax(0, 1fr) auto;",
             ".repair-highlight-evidence button {",
             "white-space: nowrap;",
+            ".next-action-evidence-actions {",
+            "flex-wrap: wrap;",
         ),
     )
     assert ".next-flow-decision-spotlight," in responsive
     assert ".repair-highlight-card," in responsive
     assert ".repair-highlight-evidence," in responsive
+    assert ".next-action-evidence-actions," in responsive
+    assert "body.terminal-handoff-mode .operator-shell" in responsive
+    assert "body.terminal-handoff-mode .cockpit" in responsive
+    assert "body.terminal-handoff-mode .stage-rail" in responsive
+    assert "body.terminal-handoff-mode .project-home-rail" in responsive
     assert "body.terminal-repair-mode .operator-shell" in responsive
     assert "body.terminal-repair-mode .cockpit" in responsive
     assert "body.terminal-repair-mode .stage-rail" in responsive
     assert "body.terminal-repair-mode .project-home-rail" in responsive
+    assert 'document.body.classList.contains("terminal-handoff-mode")' in shell
     assert 'document.body.classList.contains("terminal-repair-mode")' in shell
 
 
@@ -1996,6 +2020,7 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".setup-mode-card" in css
     assert ".previous-run-context" in css
     assert ".flow-complete-state" in css
+    assert ".terminal-evidence-spotlight" in css
     assert ".next-flow-action-card" in css
     assert ".next-flow-wizard" in css
     assert ".source-selection-summary" in css

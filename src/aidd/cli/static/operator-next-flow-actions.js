@@ -332,6 +332,63 @@ function renderTerminalArtifacts(artifacts) {
   `).join("");
 }
 
+function terminalEvidenceArtifacts(artifacts) {
+  const priority = ["runtime_log", "qa_report", "validator_report", "stage_result"];
+  const seen = new Set();
+  const byKey = new Map((artifacts || []).map((artifact) => [artifact.key, artifact]));
+  const prioritized = priority
+    .map((key) => byKey.get(key))
+    .filter(Boolean)
+    .map((artifact) => {
+      seen.add(artifact.key);
+      return artifact;
+    });
+  const remaining = (artifacts || []).filter((artifact) => !seen.has(artifact.key));
+  return prioritized.concat(remaining).slice(0, 4);
+}
+
+function renderTerminalEvidenceSpotlight(handoff) {
+  const artifacts = terminalEvidenceArtifacts(handoff.final_artifacts || []);
+  return `
+    <section class="terminal-evidence-spotlight" aria-label="Terminal evidence">
+      <div>
+        <div class="surface-title">
+          <span>Evidence First</span>
+          <span class="small-badge good">before next-flow</span>
+        </div>
+        <p>Open the runtime log and QA evidence before choosing whether to start new work, clone, archive, or launch follow-up remediation.</p>
+      </div>
+      <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
+    </section>
+  `;
+}
+
+function terminalEvidenceActionLabel(artifact) {
+  if (artifact.key === "runtime_log") return "Runtime log";
+  if (artifact.key === "qa_report") return "QA report";
+  if (artifact.key === "validator_report") return "Validator";
+  if (artifact.key === "stage_result") return "Stage result";
+  return artifact.key;
+}
+
+function renderGlobalTerminalEvidenceActions() {
+  const handoff = state.dashboard?.terminal_handoff;
+  if (!handoff) return "";
+  const artifacts = terminalEvidenceArtifacts(handoff.final_artifacts || [])
+    .filter((artifact) => ["runtime_log", "qa_report"].includes(artifact.key))
+    .slice(0, 2);
+  if (!artifacts.length) return "";
+  return `
+    <div class="next-action-evidence-actions" aria-label="Terminal evidence shortcuts">
+      ${artifacts.map((artifact) => `
+        <button class="secondary" data-artifact-stage="${escapeHtml(artifact.stage)}" data-artifact-key="${escapeHtml(artifact.key)}" data-artifact-kind="${escapeHtml(artifact.kind)}" type="button">
+          ${escapeHtml(terminalEvidenceActionLabel(artifact))}
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderTerminalBlockers(blockers) {
   if (!blockers?.length) {
     return `<div class="panel-item"><strong>Open blockers</strong><span>No blockers detected in the final QA handoff.</span></div>`;
@@ -449,6 +506,7 @@ function renderFlowCompleteState() {
           <span>${escapeHtml(runtimeId)}</span>
         </div>
       </div>
+      ${renderTerminalEvidenceSpotlight(handoff)}
       ${renderTerminalRepairHighlights(handoff.repair_highlights || [])}
       <div class="handoff-metric-grid">
         ${renderHandoffMetric({label: "Final artifacts", value: artifactCount, detail: "QA documents and logs available.", tone: artifactCount ? "good" : "warn"})}
@@ -2125,6 +2183,7 @@ function renderGlobalNextActionStrip() {
         <h2>${escapeHtml(label)}</h2>
         <p>${escapeHtml(detail)}</p>
         ${renderValidationFindingSummary(finding)}
+        ${renderGlobalTerminalEvidenceActions()}
         ${renderStaleDownstreamSummary(action)}
         ${renderModeDecisionPeek()}
       </div>

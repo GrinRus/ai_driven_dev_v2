@@ -121,6 +121,10 @@
     display: flex;
     flex-direction: column;
   }
+  body.terminal-handoff-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
   body.decision-detail-mode .operator-shell {
     display: flex;
     flex-direction: column;
@@ -139,6 +143,9 @@
   body.external-running-stage-mode .cockpit {
     order: 1;
   }
+  body.terminal-handoff-mode .cockpit {
+    order: 1;
+  }
   body.decision-detail-mode .cockpit {
     order: 1;
   }
@@ -152,6 +159,9 @@
     order: 2;
   }
   body.external-running-stage-mode .stage-rail {
+    order: 2;
+  }
+  body.terminal-handoff-mode .stage-rail {
     order: 2;
   }
   body.decision-detail-mode .stage-rail {
@@ -169,6 +179,9 @@
   body.external-running-stage-mode .right-sidebar {
     order: 3;
   }
+  body.terminal-handoff-mode .right-sidebar {
+    order: 3;
+  }
   body.decision-detail-mode .right-sidebar {
     order: 3;
   }
@@ -184,6 +197,9 @@
   body.external-running-stage-mode .bottom-dock {
     order: 4;
   }
+  body.terminal-handoff-mode .bottom-dock {
+    order: 4;
+  }
   body.decision-detail-mode .bottom-dock {
     order: 4;
   }
@@ -195,6 +211,7 @@
   }
   body.live-job-mode .project-home-rail,
   body.external-running-stage-mode .project-home-rail,
+  body.terminal-handoff-mode .project-home-rail,
   body.terminal-repair-mode .project-home-rail {
     display: none;
   }
@@ -289,6 +306,7 @@
   .project-setup-grid,
   .setup-mode-grid,
   .flow-complete-hero,
+  .terminal-evidence-spotlight,
   .next-flow-decision-spotlight,
   .decision-summary,
   .decision-summary-metrics,
@@ -334,11 +352,13 @@
   .source-selection-metrics,
   .source-selection-actions,
   .repair-highlight-evidence,
+  .next-action-evidence-actions,
   .wizard-actions {
     justify-content: stretch;
   }
   .source-selection-actions button,
   .repair-highlight-evidence button,
+  .next-action-evidence-actions button,
   .wizard-actions button {
     flex: 1 1 150px;
   }

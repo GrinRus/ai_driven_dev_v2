@@ -432,3 +432,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes the Hono normalization target before model stages run.
 - Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport and recapture desktop/mobile visual evidence.
 - Add unhappy-path UX coverage for provider no-progress, repeated interrupt, missing verification artifacts, and `not-ready` QA terminal handoff.
+
+## Terminal Evidence First Slice - 2026-07-09
+
+- Flow Complete now promotes terminal evidence before next-flow decisions. The completed-run hero is followed by an `Evidence First` block that prioritizes `runtime_log`, `qa_report`, `validator_report`, and `stage_result` regardless of artifact ordering.
+- The global `Run Next Action` strip now exposes first-viewport `Runtime log` and `QA report` shortcut buttons for terminal handoffs. They reuse the existing artifact inspector handler, so operators can inspect raw runtime and QA evidence before choosing `Review final artifacts`, follow-up, clone, archive, or batch actions.
+- On 390px mobile terminal handoff screens, `terminal-handoff-mode` now raises the cockpit above the stage rail and disables active-stage autoscroll. This keeps the completed QA handoff and evidence shortcuts visible before navigation lists.
+- Browser QA used `/tmp/aidd-ui-evidence-spotlight/.aidd` with a completed `run-ui` fixture served by `aidd ui`. Desktop verification kept `scrollWidth=1280`, showed `Runtime log` / `QA report` shortcuts at the top strip, placed the full evidence block before `Start Next Flow`, and recorded no overflow. Mobile verification kept `scrollWidth=390`, placed the cockpit before the stage rail, and kept both shortcut buttons inside the first viewport. Screenshot evidence: `/tmp/aidd-flow-complete-evidence-desktop.png` and `/tmp/aidd-flow-complete-evidence-mobile.png`.
+- Verification: `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py::test_operator_script_modules_own_static_ui_surfaces tests/cli/test_ui_assets_contracts.py::test_operator_flow_complete_static_contract_covers_terminal_handoff_actions tests/cli/test_ui_assets_contracts.py::test_operator_css_keeps_focus_and_screen_reader_contracts -q`; `node --check src/aidd/cli/static/operator-next-flow-actions.js && node --check src/aidd/cli/static/operator-api-state.js && node --check src/aidd/cli/static/operator-shell-rendering.js`; `uv run --extra dev ruff check tests/cli/test_ui_assets_contracts.py`; `git diff --check`.
+
+## Next UX Plan - After Terminal Evidence First Slice
+
+- Add unhappy-path terminal UX coverage for `not-ready` QA handoff, missing verification artifacts, and failed terminal handoffs.
+- Exercise provider no-progress and repeated interrupt flows with browser evidence, not only API checkpoints.
+- Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes authored constraints before model stages run.

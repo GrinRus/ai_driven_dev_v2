@@ -362,9 +362,11 @@ function applyOperatorModeBodyClass() {
   const terminalRepairActive = Boolean(
     state.dashboard?.terminal_handoff?.repair_highlights?.length
   );
+  const terminalHandoffActive = Boolean(state.dashboard?.terminal_handoff);
   document.body.classList.toggle("recovery-mode", recoveryActive);
   document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
   document.body.classList.toggle("stale-downstream-mode", staleDownstreamActive);
+  document.body.classList.toggle("terminal-handoff-mode", terminalHandoffActive);
   document.body.classList.toggle("terminal-repair-mode", terminalRepairActive);
   syncLiveJobBodyClass();
   syncExternalRunningBodyClass();
