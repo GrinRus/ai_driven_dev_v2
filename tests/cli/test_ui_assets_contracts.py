@@ -753,7 +753,10 @@ def test_operator_control_center_asset_surfaces_running_stage_progress() -> None
             "function syncExternalRunningBodyClass()",
             "Last runtime output",
             "No runtime output captured yet",
-            "System control messages may exist, but stdout/stderr runtime evidence has not arrived yet.",
+            (
+                "System control messages may exist, but stdout/stderr runtime "
+                "evidence has not arrived yet."
+            ),
         ),
     )
     _assert_contains_all(
@@ -1087,6 +1090,7 @@ def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
         (
             "const RUNTIME_FAILURE_KINDS = new Set([",
             "runtime-exit-metadata-invalid",
+            "provider-no-progress",
             "function isRuntimeFirstFailure(firstFailure)",
             "function runtimeLogEvidencePath(diagnostics)",
             "function runtimeFailureEvidencePath(firstFailure, diagnostics)",

@@ -4,6 +4,7 @@ const RUNTIME_FAILURE_KINDS = new Set([
   "non_zero_exit",
   "non-zero-exit",
   "provider_error",
+  "provider-no-progress",
   "runtime-error",
   "runtime-exit-metadata-invalid",
   "runtime-failure",

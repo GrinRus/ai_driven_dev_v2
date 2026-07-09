@@ -517,7 +517,14 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - This protects the next real-provider/browser exercise from losing operator screenshots or notes when the run stops as `provider-no-progress before completed stage artifact`.
 - Verification: `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail -q`; `uv run --extra dev ruff check tests/harness/test_live_e2e_black_box.py`.
 
-## Next UX Plan - After Provider No-Progress Manual Evidence Import
+## Provider No-Progress Recovery Routing Slice - 2026-07-09
 
-- Exercise real provider no-progress with manual browser evidence now that no-progress bundles retain frontend checkpoint evidence and imported browser notes/screenshots.
+- `aidd doctor` and `aidd eval doctor harness/scenarios/live/hono-non-error-throw-handling.yaml --runtime codex` pass in the current local environment, so Codex live evidence is runnable when we choose to spend the provider time budget.
+- Before launching another long/real-provider run, the operator recovery UI was checked for the no-progress failure kind. The backend dashboard and browser cockpit now classify `provider-no-progress` as a runtime failure kind.
+- If a runtime-exit payload or future live/UI bridge reports `provider-no-progress`, the selected-stage recovery surface now prioritizes `Open logs`, includes the failure as a blocker, and still offers `Request change` only after runtime evidence review.
+- Verification: `uv run --extra dev pytest tests/core/test_operator_frontend.py::test_operator_dashboard_surfaces_provider_no_progress_as_runtime_recovery tests/core/test_operator_frontend.py::test_operator_dashboard_surfaces_runtime_exit_first_failure_and_blocker tests/core/test_operator_frontend.py::test_operator_dashboard_surfaces_cancelled_runtime_exit_as_recovery_blocker -q`; `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py::test_operator_recovery_assets_prioritize_runtime_log_recovery tests/cli/test_ui_assets_contracts.py::test_operator_control_center_asset_surfaces_running_stage_progress -q`; `node --check src/aidd/cli/static/operator-stage-cockpit.js`; `uv run --extra dev ruff check src/aidd/core/operator_frontend_dashboard.py tests/core/test_operator_frontend.py tests/cli/test_ui_assets_contracts.py`.
+
+## Next UX Plan - After Provider No-Progress Recovery Routing
+
+- Run a provider-backed AIDD-LIVE-007 refresh or a deliberately bounded provider no-progress exercise with manual browser evidence, now that no-progress bundles, imported browser notes, and recovery routing are protected.
 - Run another medium live E2E pass after the unhappy-path UI slices if provider time budget allows, importing the newest browser evidence into the live bundle.

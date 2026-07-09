@@ -125,6 +125,7 @@ _RUNTIME_FAILURE_KINDS = frozenset(
         "non_zero_exit",
         "non-zero-exit",
         "provider_error",
+        "provider-no-progress",
         "runtime-error",
         "runtime-exit-metadata-invalid",
         "runtime-failure",
@@ -766,6 +767,7 @@ def _runtime_exit_signal(
     decisive = classification not in {"", "success"} or adapter_outcome in {
         "timeout",
         "provider_error",
+        "provider-no-progress",
         "failed",
         "cancelled",
     }
@@ -776,6 +778,7 @@ def _runtime_exit_signal(
     title = {
         "timeout": "Runtime timeout",
         "provider_error": "Provider error",
+        "provider-no-progress": "Provider no progress",
         "cancelled": "Runtime cancelled",
     }.get(classification or adapter_outcome, "Runtime failure")
     detail_parts = [

@@ -640,6 +640,54 @@ def test_operator_dashboard_surfaces_runtime_exit_first_failure_and_blocker(
     assert any(action.action == "inspect-runtime-log" for action in dashboard.recovery_actions)
 
 
+def test_operator_dashboard_surfaces_provider_no_progress_as_runtime_recovery(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    attempt_root.joinpath(RUN_RUNTIME_EXIT_METADATA_FILENAME).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "exit_code": None,
+                "exit_classification": "",
+                "adapter_outcome": "provider-no-progress",
+                "completed_at_utc": "2026-07-09T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="plan",
+        run_id="run-ui",
+    )
+
+    assert dashboard.first_failure is not None
+    assert dashboard.first_failure.kind == "provider-no-progress"
+    assert dashboard.first_failure.title == "Provider no progress"
+    assert dashboard.first_failure.path is not None
+    assert any(blocker.kind == "provider-no-progress" for blocker in dashboard.blockers)
+    assert any(action.action == "inspect-runtime-log" for action in dashboard.recovery_actions)
+    assert any(action.action == "request-change" for action in dashboard.recovery_actions)
+
+
 def test_operator_dashboard_surfaces_cancelled_runtime_exit_as_recovery_blocker(
     tmp_path: Path,
 ) -> None:
