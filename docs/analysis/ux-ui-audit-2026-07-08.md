@@ -622,3 +622,19 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Add a deliberately bounded provider no-progress browser-evidence exercise to verify the unhappy path surfaces runtime-log-first recovery, no-progress notices, and imported screenshot notes together.
 - Start the next UX iteration from provider/no-progress and interruption recovery, because the happy path, terminal handoff, pre-runtime heartbeat, and output-mirror warning hierarchy now have browser evidence.
+
+## Provider No-Progress Browser Evidence Slice - 2026-07-09
+
+- A bounded browser fixture copied the completed AIDD-LIVE-007 target workspace to `/tmp/aidd-provider-no-progress-ui`, removed downstream stages, and reconciled `idea` to `failed` with `runtime-exit.json` classification `provider-no-progress`.
+- Browser QA found two first-time-user defects before the fix. Initial mobile load stayed on `Work`, so the first viewport showed topbar and stage rail instead of runtime recovery guidance. After `Open logs`, mobile `Evidence / logs` placed the stage rail and disabled next-action strip before the runtime log panel.
+- The frontend now treats dashboard `first_failure + inspect-runtime-log recovery action` as an initial Recovery summary entry point even when the global next action is disabled as `No runnable stage`.
+- Mobile `Evidence / logs` now gets an `evidence-log-mode` layout: cockpit first, stage rail below, project rail hidden, and global next-action strip hidden so raw runtime evidence starts immediately after the stage tabs.
+- Recovery actions now request a one-shot mobile cockpit reveal after render. The reveal runs again on the next frame and a short timeout so browser scroll anchoring after a click cannot leave the log heading hidden behind the sticky topbar.
+- Browser verification after the fix: desktop initial no-progress opened Recovery with `Provider no progress`, `runtime-exit.json`, `runtime.log`, and primary `Open logs`; mobile initial Recovery stayed at `scrollWidth=390` with the same evidence in the first viewport; mobile `Open logs` switched to `Evidence`, added `evidence-log-mode`, hid the global strip, kept `scrollWidth=390`, and showed `RUNTIME LOGS / LIVE CONSOLE` plus no-progress raw log lines before the stage rail.
+- Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-no-progress-desktop-recovery.png`, `control-no-progress-mobile-recovery.png`, `control-no-progress-desktop-logs.png`, and `control-no-progress-mobile-logs.png`.
+
+## Next UX Plan - After Provider No-Progress Browser Evidence
+
+- Run focused checks for the no-progress UI slice and keep the new browser evidence as the unhappy-path baseline.
+- Continue unhappy-path coverage with repeated interrupt resume, missing verification artifacts, and `not-ready` QA terminal handoff.
+- Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows.

@@ -222,7 +222,8 @@ body.recovery-mode .operator-shell {
   grid-template-rows: minmax(500px, calc(100vh - 98px)) auto;
 }
 body.recovery-mode .right-sidebar,
-body.recovery-mode .global-next-action-strip {
+body.recovery-mode .global-next-action-strip,
+body.evidence-log-mode .global-next-action-strip {
   display: none;
 }
 body.recovery-mode .stage-rail {

@@ -172,6 +172,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".topbar #runChip" in layout
     assert ".topbar #workItemChip" in layout
     assert "text-overflow: ellipsis;" in layout
+    assert "body.evidence-log-mode .global-next-action-strip" in layout
     assert ".truncation-notice" in components
     assert ".saved-answer" in components
     assert ".activity-detail" in components
@@ -240,6 +241,9 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".interview-loop-screen" in responsive
     assert ".validation-repair-center" in responsive
     assert "body.recovery-mode .cockpit" in responsive
+    assert "body.evidence-log-mode .operator-shell" in responsive
+    assert "body.evidence-log-mode .cockpit" in responsive
+    assert "body.evidence-log-mode .stage-rail" in responsive
     assert "body.live-job-mode .operator-shell" in responsive
     assert "body.live-job-mode .cockpit" in responsive
     assert "body.live-job-mode .stage-rail" in responsive
@@ -390,8 +394,10 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "return renderFlowCompleteState();" in cockpit
     assert 'state.activeTab === "history"' in cockpit
     assert "function renderActivityTable()" in cockpit
+    assert "revealCockpitOnMobile();" in cockpit
     assert 'document.addEventListener("click"' in main
     assert 'event.target.closest("[data-refresh-dashboard]")' in main
+    assert "requestCockpitReveal();" in main
     assert "refresh();" in main
 
 
@@ -424,6 +430,7 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "followUpDraft: null",
             "selectedSourceIds: []",
             "projectHome: null",
+            "pendingCockpitReveal: false",
             "activeStageExplicit: false",
             "const OPERATOR_MODES",
             "const LEGACY_TAB_TO_MODE",
@@ -437,9 +444,20 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "function normalizeOperatorMode(tab)",
             "function setOperatorMode(tab)",
             "function isRecoveryNextAction(action)",
+            "function dashboardRuntimeRecoveryAction()",
+            'action?.action === "inspect-runtime-log"',
+            "action.enabled !== false",
             "function activeModeIsEvidenceLog()",
+            "function requestCockpitReveal()",
+            "function scrollCockpitToTopOnMobile()",
+            "function revealCockpitOnMobile()",
+            "window.matchMedia(\"(max-width: 760px)\").matches",
+            "window.scrollTo({top: Math.max(0, target), behavior: \"auto\"});",
+            "window.requestAnimationFrame(scrollCockpitToTopOnMobile);",
+            "window.setTimeout(scrollCockpitToTopOnMobile, 80);",
             "function applyOperatorModeBodyClass()",
             "external-running-stage-mode",
+            "evidence-log-mode",
             "terminal-handoff-mode",
             "terminal-repair-mode",
             "function initializeStateFromLocation()",
@@ -485,6 +503,10 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'state.activeTab = "recovery";',
             'state.recoveryDetail = "questions";',
             'state.recoveryDetail = "validation";',
+            "state.dashboard.first_failure",
+            "dashboardRuntimeRecoveryAction()",
+            'state.recoveryDetail = "logs";',
+            "requestCockpitReveal();",
             "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`",
             'api("/api/runtime-readiness")',
             'if (element.textContent === message) element.textContent = "";',
@@ -492,6 +514,12 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'content.setAttribute("aria-labelledby", `tab-${state.activeTab}`);',
         ),
     )
+    assert (
+        "&& dashboardRuntimeRecoveryAction()\n"
+        "  ) {\n"
+        '    state.activeTab = "recovery";\n'
+        '    state.recoveryDetail = "summary";'
+    ) in api_state
 
 
 def test_operator_onboarding_static_contract_syncs_create_action_state() -> None:

@@ -98,19 +98,38 @@
     display: flex;
     flex-direction: column;
   }
+  body.evidence-log-mode .operator-shell {
+    display: flex;
+    flex-direction: column;
+  }
   body.recovery-mode .cockpit {
+    order: 1;
+  }
+  body.evidence-log-mode .cockpit {
     order: 1;
   }
   body.recovery-mode .stage-rail {
     order: 2;
   }
+  body.evidence-log-mode .stage-rail {
+    order: 2;
+  }
   body.recovery-mode .right-sidebar {
+    order: 3;
+  }
+  body.evidence-log-mode .right-sidebar {
     order: 3;
   }
   body.recovery-mode .bottom-dock {
     order: 4;
   }
+  body.evidence-log-mode .bottom-dock {
+    order: 4;
+  }
   body.recovery-mode .project-home-rail {
+    display: none;
+  }
+  body.evidence-log-mode .project-home-rail {
     display: none;
   }
   body.live-job-mode .operator-shell {

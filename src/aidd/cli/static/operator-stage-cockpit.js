@@ -1019,4 +1019,5 @@ async function renderAll() {
   renderBottomDock();
   activateTab(state.activeTab, {preserveDetail: true});
   await renderCockpit();
+  revealCockpitOnMobile();
 }

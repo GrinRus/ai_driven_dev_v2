@@ -92,6 +92,7 @@ const state = {
   activeJobLogChunks: [],
   activeJobStatus: null,
   activeJobTimer: null,
+  pendingCockpitReveal: false,
   runAccountability: null,
   runAccountabilityError: "",
   runComparison: null,
@@ -424,8 +425,36 @@ function isRecoveryNextAction(action) {
   return RECOVERY_NEXT_ACTIONS.has(String(action || ""));
 }
 
+function dashboardRuntimeRecoveryAction() {
+  return (state.dashboard?.recovery_actions || []).find((action) =>
+    action?.action === "inspect-runtime-log" && action.enabled !== false
+  ) || null;
+}
+
 function activeModeIsEvidenceLog() {
   return state.activeTab === "evidence" && state.evidenceDetail === "logs";
+}
+
+function requestCockpitReveal() {
+  state.pendingCockpitReveal = true;
+}
+
+function scrollCockpitToTopOnMobile() {
+  if (!window.matchMedia("(max-width: 760px)").matches) return;
+  const cockpit = document.querySelector(".cockpit");
+  if (!cockpit) return;
+  const topbar = document.querySelector(".topbar");
+  const topbarHeight = topbar ? topbar.getBoundingClientRect().height : 0;
+  const target = cockpit.getBoundingClientRect().top + window.scrollY - topbarHeight;
+  window.scrollTo({top: Math.max(0, target), behavior: "auto"});
+}
+
+function revealCockpitOnMobile() {
+  if (!state.pendingCockpitReveal) return;
+  state.pendingCockpitReveal = false;
+  scrollCockpitToTopOnMobile();
+  window.requestAnimationFrame(scrollCockpitToTopOnMobile);
+  window.setTimeout(scrollCockpitToTopOnMobile, 80);
 }
 
 function activeJobIsLive(job = state.activeJobStatus) {
@@ -474,6 +503,7 @@ function syncExternalRunningBodyClass() {
 function applyOperatorModeBodyClass() {
   document.body.dataset.operatorMode = state.activeTab;
   const recoveryActive = state.activeTab === "recovery";
+  const evidenceLogActive = activeModeIsEvidenceLog();
   const decisionDetailActive = state.activeTab === "work"
     && ["review-findings", "qa-verdict"].includes(state.workDetail);
   const staleDownstreamActive = state.dashboard?.next_action?.action === "rerun-stale-downstream"
@@ -483,6 +513,7 @@ function applyOperatorModeBodyClass() {
   );
   const terminalHandoffActive = Boolean(state.dashboard?.terminal_handoff);
   document.body.classList.toggle("recovery-mode", recoveryActive);
+  document.body.classList.toggle("evidence-log-mode", evidenceLogActive);
   document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
   document.body.classList.toggle("stale-downstream-mode", staleDownstreamActive);
   document.body.classList.toggle("terminal-handoff-mode", terminalHandoffActive);
@@ -592,6 +623,15 @@ async function fetchDashboard() {
     if (nextAction === "answer-questions") state.recoveryDetail = "questions";
     else if (nextAction === "inspect-validation" || nextAction === "review-intervention") state.recoveryDetail = "validation";
     else if (nextAction === "inspect-runtime-log") state.recoveryDetail = "logs";
+    requestCockpitReveal();
+  } else if (
+    state.activeTab === "work"
+    && state.dashboard.first_failure
+    && dashboardRuntimeRecoveryAction()
+  ) {
+    state.activeTab = "recovery";
+    state.recoveryDetail = "summary";
+    requestCockpitReveal();
   }
 }
 

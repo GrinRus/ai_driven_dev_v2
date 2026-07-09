@@ -393,6 +393,7 @@ document.addEventListener("click", async (event) => {
         await startStage(state.activeStage);
         return;
       }
+      requestCockpitReveal();
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
       await renderAll();
