@@ -779,17 +779,38 @@ def _runtime_exit_signal(
         "timeout": "Runtime timeout",
         "provider_error": "Provider error",
         "provider-no-progress": "Provider no progress",
-        "cancelled": "Runtime cancelled",
+        "cancelled": "Runtime interrupted",
     }.get(classification or adapter_outcome, "Runtime failure")
-    detail_parts = [
+    metadata_parts = [
         f"exit_code={exit_code}" if exit_code is not None else "",
         f"classification={classification}" if classification else "",
         f"adapter_outcome={adapter_outcome}" if adapter_outcome else "",
     ]
+    metadata_detail = ", ".join(part for part in metadata_parts if part)
+    outcome = classification or adapter_outcome
+    recovery_detail = {
+        "cancelled": (
+            "The runtime was interrupted before this stage completed. "
+            "Inspect runtime.log, runtime-exit.json, and partial workspace diff before retrying."
+        ),
+        "provider-no-progress": (
+            "The provider made no progress before AIDD received a completed stage artifact. "
+            "Inspect runtime.log and runtime-exit.json before retrying."
+        ),
+        "timeout": (
+            "The runtime exceeded its configured timeout before this stage completed. "
+            "Inspect runtime.log and runtime-exit.json before retrying."
+        ),
+        "provider_error": (
+            "The provider reported an execution error before this stage completed. "
+            "Inspect runtime.log and runtime-exit.json before retrying."
+        ),
+    }.get(outcome)
+    detail = recovery_detail or metadata_detail or "Runtime exit failed."
     return OperatorFirstFailure(
-        kind=classification or adapter_outcome or "runtime-failure",
+        kind=outcome or "runtime-failure",
         title=title,
-        detail=", ".join(part for part in detail_parts if part) or "Runtime exit failed.",
+        detail=detail,
         stage=stage,
         path=workspace_relative_path(workspace_root, path),
         time_utc=str(payload.get("completed_at_utc") or payload.get("updated_at_utc") or "")

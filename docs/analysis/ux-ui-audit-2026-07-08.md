@@ -638,3 +638,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Run focused checks for the no-progress UI slice and keep the new browser evidence as the unhappy-path baseline.
 - Continue unhappy-path coverage with repeated interrupt resume, missing verification artifacts, and `not-ready` QA terminal handoff.
 - Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows.
+
+## Interrupted Runtime Recovery Browser Evidence Slice - 2026-07-09
+
+- A controlled browser fixture copied the completed AIDD-LIVE-007 target workspace to `/tmp/aidd-interrupted-run-ui`, removed downstream stages, and reconciled `implement` to `failed` with `runtime-exit.json` classification `cancelled` and `exit_code=130`.
+- Browser QA found one first-time-user defect before the fix: Recovery opened automatically, but the summary title/detail read like raw adapter metadata (`Runtime cancelled`, `exit_code=130`, `classification=cancelled`, `adapter_outcome=cancelled`) instead of telling the operator what happened and what evidence to inspect next.
+- Runtime-exit recovery copy now maps `cancelled` to `Runtime interrupted` and explains that the runtime stopped before the stage completed. The recovery summary leads operators to `runtime.log`, `runtime-exit.json`, and the partial workspace diff before retrying, while raw exit metadata remains available in the evidence document instead of the hero text.
+- Browser verification after the fix: desktop Recovery opened at `scrollWidth=1280`, with `Runtime interrupted`, primary `Open logs`, `runtime-exit.json`, and `runtime.log` visible; mobile Recovery at `390x844` stayed at `scrollWidth=390`, kept technical metadata out of the hero, and placed `Open logs` at `544px` within the first viewport.
+- Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-interrupted-runtime-desktop-recovery.png` and `control-interrupted-runtime-mobile-recovery.png`.
+
+## Next UX Plan - After Interrupted Runtime Recovery Evidence
+
+- Continue unhappy-path coverage with repeated interrupt resume from a partially completed stage, missing verification artifacts, and `not-ready` QA terminal handoff.
+- Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows, preserving the current happy-path and runtime-recovery baselines.
