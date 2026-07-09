@@ -610,3 +610,15 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Create or force a bounded live/browser exercise that produces `STRUCT-OUTPUT-PROMOTED`, then capture desktop/mobile evidence for the `Auto-promoted output mirrors` notice block.
 - Add a deliberately bounded provider no-progress browser-evidence exercise to verify the unhappy path surfaces runtime-log-first recovery, no-progress notices, and imported screenshot notes together.
 - Keep the current happy-path terminal handoff and Validation / Repair Center behavior as the baseline for future UI regressions.
+
+## Controlled Output Mirror Warning Exercise - 2026-07-09
+
+- A bounded browser fixture copied the completed AIDD-LIVE-007 workspace to `/tmp/aidd-output-warning-ui` and injected one representative `STRUCT-OUTPUT-PROMOTED` warning into the `plan` validator report.
+- Desktop Validation / Repair Center showed `Auto-promoted output mirrors`, `1 mirror notice`, the `STRUCT-OUTPUT-PROMOTED` code, canonical source-document copy, and a separate `Actionable validation findings` section with `No actionable validator findings parsed.`
+- Mobile Validation / Repair Center at `390x844` showed the same notice hierarchy with `scrollWidth=390` and no sampled overflow for buttons, badges, paths, validation summaries, output-mirror notices, or panel items.
+- Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-plan-output-warning-desktop-full.png` and `control-plan-output-warning-mobile-full.png`.
+
+## Next UX Plan - After Controlled Output Mirror Warning Exercise
+
+- Add a deliberately bounded provider no-progress browser-evidence exercise to verify the unhappy path surfaces runtime-log-first recovery, no-progress notices, and imported screenshot notes together.
+- Start the next UX iteration from provider/no-progress and interruption recovery, because the happy path, terminal handoff, pre-runtime heartbeat, and output-mirror warning hierarchy now have browser evidence.
