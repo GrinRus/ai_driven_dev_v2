@@ -800,3 +800,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Verify this missing-verification cue in a served fixture or provider run where implementation output lacks executable command evidence.
 - Continue non-happy-path review with intentionally rejected review findings and QA remediation loops to make sure the operator always sees the next safe action before any proceed/accept action.
+
+## Served Implementation Verification Gap Fixture - 2026-07-09
+
+- A controlled served fixture copied the passing Hono live target to `/tmp/aidd-implementation-verification-gap-ui` and changed only the canonical/output `implementation-report.md` verification section to skipped/not-run evidence with no executable commands.
+- `/api/implement/evidence` returned zero verification commands, two skipped checks, and the explicit `No executable verification commands were detected in implementation-report.md.` warning.
+- Browser QA found one product-focus defect before the fix: on mobile `390x844`, the terminal handoff global next-action strip pushed the missing-verification summary to `y=841`, effectively at the bottom edge of the first viewport.
+- Implement Review now suppresses the global next-action strip so the detail screen can lead with implementation evidence quality. The completed-run next action remains available as the sidebar fallback below the detail content.
+- `Proceed to review` is now disabled when implementation evidence has no executable verification commands, with a local guard message beside the action row.
+- Browser verification after the fix: desktop and mobile had no console/network errors and no horizontal overflow; mobile showed the verification-gap summary at `y=520`, inside the first viewport, with skipped-check detail visible and no duplicate `No verification commands detected` copy. The action row showed the guard `Proceed to review is blocked until implementation records executable verification evidence.` Screenshots: `.aidd/reports/ui-implementation-verification-gap/served-implementation-verification-gap-final-desktop.png` and `served-implementation-verification-gap-final-mobile.png`.
+
+## Next UX Plan - After Served Verification Gap Fixture
+
+- Continue the unhappy-path loop with intentionally rejected review findings and QA remediation surfaces, checking that remediation is the dominant first action and proceed/accept actions are either blocked or clearly secondary.

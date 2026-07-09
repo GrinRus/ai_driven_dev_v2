@@ -1260,6 +1260,15 @@ def test_operator_implement_review_surfaces_missing_verification_evidence() -> N
             "Skipped: ${escapeHtml(item)}",
             "Verification evidence missing.",
             "${renderImplementationVerificationItems(implementation)}",
+            "function implementationVerificationReady(implementation)",
+            "function renderImplementationProceedGuard(implementation)",
+            (
+                "Proceed to review is blocked until implementation records executable "
+                "verification evidence."
+            ),
+            "const verificationReady = implementationVerificationReady(evidence);",
+            'verificationReady && selectedRuntimeReady() ? "" : "disabled"',
+            "${renderImplementationProceedGuard(evidence)}",
             'kind: "implementation-verification"',
             'badge: "verification missing"',
             "${renderImplementationVerificationGap(implementation)}",
@@ -1738,6 +1747,7 @@ def test_operator_next_action_sidebar_is_status_mirror_when_global_cta_is_primar
         (
             "function globalNextActionStripProvidesPrimary()",
             "state.activeTab === \"recovery\"",
+            "state.workDetail === \"implement-review\"",
             'document.body.classList.contains("evidence-log-mode")',
             "function renderNextActionSidebarMirror({label, statusMessage, tone})",
             '<div class="next-action-sidebar-mirror">',

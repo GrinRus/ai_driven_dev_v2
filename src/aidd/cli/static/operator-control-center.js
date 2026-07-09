@@ -209,6 +209,19 @@ function renderImplementationVerificationItems(implementation) {
   return "<span>Verification evidence missing.</span>";
 }
 
+function implementationVerificationReady(implementation) {
+  return Boolean((implementation?.verification_commands || []).length);
+}
+
+function renderImplementationProceedGuard(implementation) {
+  if (implementationVerificationReady(implementation)) return "";
+  return `
+    <p class="form-error" role="status">
+      Proceed to review is blocked until implementation records executable verification evidence.
+    </p>
+  `;
+}
+
 function renderImplementationSummary(implementation) {
   return `
     <section class="surface">
@@ -249,6 +262,7 @@ async function renderImplementReview() {
     if (!state.implementDiffPath && visible[0]) state.implementDiffPath = visible[0].path;
     const selected = visible.find((file) => file.path === state.implementDiffPath) || visible[0] || null;
     const unchanged = diffView.mentioned_but_unchanged || [];
+    const verificationReady = implementationVerificationReady(evidence);
     content.innerHTML = `
       <div class="implement-review-screen">
         ${renderImplementationSummary(evidence)}
@@ -289,8 +303,9 @@ async function renderImplementReview() {
               ` : `<div class="empty-state">No source diff available.</div>`}
             </section>
           </div>
+          ${renderImplementationProceedGuard(evidence)}
           <div class="wizard-actions">
-            <button data-proceed-stage="review" type="button" ${selectedRuntimeReady() ? "" : "disabled"}>Proceed to review</button>
+            <button data-proceed-stage="review" type="button" ${verificationReady && selectedRuntimeReady() ? "" : "disabled"}>Proceed to review</button>
             <button data-rerun-implement type="button" class="secondary" ${selectedRuntimeReady() ? "" : "disabled"}>Rerun implement</button>
             <button data-open-request-tab type="button" class="secondary">Request intervention</button>
           </div>

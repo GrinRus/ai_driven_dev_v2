@@ -2287,6 +2287,7 @@ function renderNextActionBlocker(message) {
 function globalNextActionStripProvidesPrimary() {
   if (state.onboarding?.setupRequired) return false;
   if (state.activeTab === "recovery") return false;
+  if (state.activeTab === "work" && state.workDetail === "implement-review") return false;
   return !document.body.classList.contains("evidence-log-mode");
 }
 
@@ -2356,7 +2357,11 @@ function renderGlobalNextActionStrip() {
   if (!host) return;
   syncLiveJobBodyClass();
   syncExternalRunningBodyClass();
-  if (state.activeTab === "recovery" || state.onboarding?.setupRequired) {
+  if (
+    state.activeTab === "recovery"
+    || state.onboarding?.setupRequired
+    || (state.activeTab === "work" && state.workDetail === "implement-review")
+  ) {
     host.hidden = true;
     host.innerHTML = "";
     host.classList.remove("live-progress-active", "external-progress-active");
