@@ -379,3 +379,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Tighten QA prompt guidance so ready/proceed decisions cite `git status --ignored --short --untracked-files=all` on the first attempt whenever test/type/build checks are cited.
 - Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport and recapture desktop/mobile browser evidence.
 - Keep the heartbeat behavior as accepted unless a later run shows line length/readability problems in narrower terminals.
+
+## Prompt Repair Prevention Slice - 2026-07-08
+
+- `tasklist` contracts and prompts now state that the dedicated `Verification notes` section must include every task id from `Ordered tasks`, including command-only or verification-only tasks; checks embedded only in `Ordered tasks` are not enough.
+- `qa` contracts and prompts now state that ready/proceed-style reports citing test/type/lint/docs/build commands must include post-QA `git status --ignored --short --untracked-files=all` evidence, cite it from `Verification summary` or `Readiness`, and classify ignored residue.
+- AIDD-LIVE-007 now treats both repeat repair causes as stage-quality audit defects, keeping the medium live scenario aligned with the observed UX friction.
+- Prompt-quality coverage now guards these instructions across stage contracts, document contracts, run prompts, repair prompts, and the live scenario manifest.
+- Verification: `uv run --extra dev pytest tests/test_prompt_quality.py -q`; `uv run --extra dev pytest tests/harness/test_scenario_loader_model.py::test_hono_non_error_live_scenario_preserves_public_type_contracts -q`; `uv run --extra dev pytest tests/test_docs_consistency.py -q`; `uv run --extra dev ruff check tests/test_prompt_quality.py`; `git diff --check`.
+
+## Next UX Plan - After Prompt Repair Prevention Slice
+
+- Rerun the medium AIDD-LIVE-007 flow and check whether `tasklist` and `qa` now pass on the first attempt without repair.
+- Promote a direct runtime-log/evidence affordance into the terminal Flow Complete first viewport and recapture desktop/mobile browser evidence.
+- Expand unhappy-path UX coverage beyond successful repair: provider no-progress, repeated interrupt, missing verification artifacts, and `not-ready` QA terminal handoff.

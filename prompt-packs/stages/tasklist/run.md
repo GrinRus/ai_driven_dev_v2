@@ -73,7 +73,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 2. Keep one dominant output artifact per task so each item can be implemented and reviewed in one pass.
 3. Record explicit dependencies for every task (`none` or concrete task/upstream ids).
 4. Keep task ordering executable in dependency order, not only grouped by topic.
-5. Add at least one concrete verification note per task (test/check/scenario).
+5. Add at least one concrete verification note per task (test/check/scenario). The dedicated
+   `Verification notes` section must contain a bullet or list item for every task id declared in
+   `Ordered tasks`, including command-only or verification-only tasks. Do not rely on checks
+   embedded only inside `Ordered tasks`; those checks must be repeated or summarized under the
+   matching task id in `Verification notes`.
 6. Do not mark stage `succeeded` when upstream `review-spec` readiness/sign-off has unresolved
    blocking conditions.
 7. When `context/verification-output.md` names authored verification commands, copy those commands
@@ -97,6 +101,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    contracts is not a blocker because `stage-brief.md` carries the required skeletons.
 2. Build `tasklist.md` with sections required by contract (`Task summary`, `Ordered tasks`,
    `Dependencies`, `Verification notes`).
+   In `Verification notes`, create one entry for each task id from `Ordered tasks`; command-only
+   verification tasks still need their own entry even if their task title already names the
+   command.
 3. Ensure dependency references are resolvable and avoid hidden prerequisites.
 4. Keep task scope bounded; split bundled work into separate ordered tasks.
 5. Use `context/verification-output.md` as the verification boundary when present; if you need to
@@ -125,7 +132,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 - tasklist decomposition is ordered and dependency-executable,
 - each task has one dominant deliverable and explicit dependency note,
-- verification notes are concrete and task-specific,
+- verification notes are concrete, task-specific, and include every declared task id,
+- command-only or verification-only task ids are present in the dedicated `Verification notes`
+  section, not only in `Ordered tasks`,
 - authored verification commands from `context/verification-output.md` are preserved exactly, or
   referenced generically without changing command flags or broadening scope,
 - optional broader checks are not promoted to required pass criteria outside the authored boundary,

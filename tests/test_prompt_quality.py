@@ -502,6 +502,35 @@ def test_plan_and_tasklist_preserve_authored_verification_commands() -> None:
         )
 
 
+def test_tasklist_prompts_require_verification_notes_for_every_task_id() -> None:
+    contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
+    document_contract = Path("contracts/documents/tasklist.md").read_text(
+        encoding="utf-8"
+    )
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
+        encoding="utf-8"
+    )
+    scenario = Path(
+        "harness/scenarios/live/hono-non-error-throw-handling.yaml"
+    ).read_text(encoding="utf-8")
+
+    for text in (contract, document_contract, run_prompt, repair_prompt, scenario):
+        normalized = " ".join(text.split())
+        assert "`Verification notes`" in text
+        assert "every task id" in normalized
+        assert "command-only" in text
+
+    assert "Do not rely on checks embedded only inside `Ordered tasks`" in " ".join(
+        run_prompt.split()
+    )
+    assert "dedicated per-task `Verification notes` entries" in " ".join(
+        document_contract.split()
+    )
+
+
 def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
     run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
         encoding="utf-8"
@@ -671,6 +700,33 @@ def test_review_and_qa_prompts_require_post_command_residue_truthfulness() -> No
         assert "`QA verdict: ready`" in text or "`not-ready`" in text
         assert "`coverage/`" in text
         assert "residue" in text
+
+
+def test_qa_prompts_require_ready_proceed_ignored_residue_evidence() -> None:
+    run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(
+        encoding="utf-8"
+    )
+    contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
+    document_contract = Path("contracts/documents/qa-report.md").read_text(
+        encoding="utf-8"
+    )
+    scenario = Path(
+        "harness/scenarios/live/hono-non-error-throw-handling.yaml"
+    ).read_text(encoding="utf-8")
+
+    for text in (run_prompt, repair_prompt, contract, document_contract, scenario):
+        normalized = " ".join(text.split())
+        assert "ready/proceed" in normalized
+        assert "test/type" in normalized
+        assert "`git status --ignored --short --untracked-files=all`" in text
+        assert "ignored residue" in normalized
+
+    for text in (run_prompt, contract):
+        normalized = " ".join(text.split())
+        assert "after all QA commands" in normalized or "post-QA" in normalized
+        assert "`Verification summary`" in text or "Verification summary" in text
+        assert "`Readiness`" in text or "Readiness" in text
 
 
 def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> None:

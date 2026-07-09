@@ -17,6 +17,10 @@ Break the plan into reviewable implementation tasks with sequencing and verifica
 - the required headings are present,
 - the content is non-placeholder and stage-relevant,
 - task references use stable ids consistently, for example `T1`, `T2` or `TL-1`, `TL-2`,
+- `Verification notes` uses bullet items that reference every task id from `Ordered tasks`,
+  including command-only or verification-only tasks,
+- checks embedded only inside `Ordered tasks` do not replace the dedicated per-task
+  `Verification notes` entries,
 - upstream references are present when the stage requires them.
 
 ## Notes

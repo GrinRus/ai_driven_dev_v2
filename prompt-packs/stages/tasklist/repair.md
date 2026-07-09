@@ -57,7 +57,10 @@ Use concrete repair actions:
 
 - bundled task scope: split into smaller ordered tasks with one dominant deliverable each;
 - hidden or unclear prerequisites: add explicit dependency ids or `none`, then reorder tasks;
-- weak verification guidance: add concrete primary checks per task (test/check/scenario);
+- weak verification guidance: add concrete primary checks per task (test/check/scenario), with
+  one dedicated `Verification notes` entry for every task id declared in `Ordered tasks`,
+  including command-only or
+  verification-only tasks;
 - unresolved upstream blocking conditions: keep/add `[blocking]` questions instead of forcing
   `succeeded`;
 - stage/validator drift: align blocker list, terminal status, and next actions with validator
@@ -93,7 +96,9 @@ Use concrete repair actions:
 
 - no task bundles unrelated outcomes or hides prerequisites,
 - dependencies are explicit and ordering is executable,
-- every task has at least one concrete verification note,
+- every task has at least one concrete verification note in the dedicated `Verification notes`
+  section,
+- command-only or verification-only task ids are covered explicitly in `Verification notes`,
 - unresolved blocking ambiguity is represented in questions/blockers,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
