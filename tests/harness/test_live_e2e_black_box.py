@@ -3930,7 +3930,23 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
         )
     )
     assert audit_payload["classifications"]["stage_run"] == "infra-fail"
-    assert audit_payload["classifications"]["frontend_checkpoint"] == "skipped"
+    assert audit_payload["classifications"]["frontend_checkpoint"] == "pass"
+
+    frontend_payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    no_progress_post_stage = [
+        checkpoint
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["stage"] == "idea" and checkpoint["phase"] == "post-stage"
+    ]
+    assert no_progress_post_stage
+    assert no_progress_post_stage[-1]["classification"] == "pass"
+    frontend_markdown = (result.bundle_root / "frontend-checkpoints.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## idea / post-stage" in frontend_markdown
+    assert "- Phase: `post-stage`" in frontend_markdown
 
     run_transcript = json.loads(
         (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")

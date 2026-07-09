@@ -6975,12 +6975,12 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         classification = "blocked"
     post_stage_frontend_classification: StepClassification = (
         "skipped"
-        if stage_result.transcript.timed_out or stage_result.no_progress
+        if stage_result.transcript.timed_out
         else _run_frontend_checkpoint(ctx, stage)
     )
     frontend_classification = (
         post_stage_frontend_classification
-        if stage_result.transcript.timed_out or stage_result.no_progress
+        if stage_result.transcript.timed_out
         else _combined_frontend_checkpoint_classification(
             running_frontend_classification,
             post_stage_frontend_classification,

@@ -496,8 +496,15 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - This targets the earlier P1 repeated-interrupt finding from `eval-live-007-codex-20260708T190645Z`: the operator should be able to resume from a durable bundle after interruption instead of debugging a half-recorded eval state.
 - Verification: `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_interruption_rewrites_flow_report_status tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_defers_repeated_interrupt_while_recording_evidence -q`; `uv run --extra dev ruff check src/aidd/harness/live_e2e_black_box_orchestration.py tests/harness/test_live_e2e_black_box.py`; `uv run --extra dev python -m mypy src/aidd/harness/live_e2e_black_box_orchestration.py`; `git diff --check`.
 
-## Next UX Plan - After Repeated Interrupt Evidence Slice
+## Provider No-Progress Frontend Evidence Slice - 2026-07-09
 
-- Exercise real provider no-progress with browser evidence, now that system-only logs no longer mask provider silence and interruption evidence recording is robust under repeated signals.
+- Live E2E no-progress runs no longer skip post-stage frontend checkpoint evidence after the provider process is stopped and the stage metadata is reconciled to `failed`.
+- The bundle now records `frontend-checkpoints.json` and `frontend-checkpoints.md` for provider no-progress failures, proving that the loopback operator UI/API can still expose work item, run, failed stage, next action, runtime logs, and artifact surfaces while the execution verdict remains `infra-fail`.
+- Running-stage checkpoints may still be skipped when the active stage disappears before probes finish, and hard command timeouts still skip post-stage frontend probing. The new behavior is scoped to provider no-progress because the process has been explicitly stopped and the failed stage state is inspectable.
+- Verification: `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py::test_black_box_command_no_progress_stops_live_process tests/harness/test_live_e2e_black_box.py::test_black_box_command_no_progress_allows_live_artifact_heartbeats tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail -q`; `uv run --extra dev ruff check src/aidd/harness/live_e2e_black_box_orchestration.py tests/harness/test_live_e2e_black_box.py`; `uv run --extra dev python -m mypy src/aidd/harness/live_e2e_black_box_orchestration.py`; `git diff --check`.
+
+## Next UX Plan - After Provider No-Progress Frontend Evidence Slice
+
+- Exercise real provider no-progress with manual browser evidence now that synthetic no-progress bundles retain frontend checkpoint evidence.
 - Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes authored constraints before model stages run.
 - Run another medium live E2E pass after the unhappy-path UI slices if provider time budget allows, importing the newest browser evidence into the live bundle.
