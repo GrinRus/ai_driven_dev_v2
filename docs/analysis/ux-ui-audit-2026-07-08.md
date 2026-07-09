@@ -528,3 +528,31 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Run a provider-backed AIDD-LIVE-007 refresh or a deliberately bounded provider no-progress exercise with manual browser evidence, now that no-progress bundles, imported browser notes, and recovery routing are protected.
 - Run another medium live E2E pass after the unhappy-path UI slices if provider time budget allows, importing the newest browser evidence into the live bundle.
+
+## Refresh Run - 2026-07-09T06:56Z
+
+- `eval-live-007-codex-20260709T065643Z`: terminal execution verdict `pass`.
+- Source revision under test: `2af292ada3490ede3692d1a5c08db5f61bc0ef77`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Quality gates: all eight manual stage-quality audits chose `continue`.
+- Runner repair attempts: `0`; quality remediation cycles: `0`.
+- Target implementation quality: review approved the four-file Hono patch and QA reported `ready` / `proceed`; focused Vitest passed with 234 tests and `tsc --noEmit` passed.
+- Context clarity validated live: the provider produced normalization-at-boundary behavior, preserved public `Error`-compatible contracts, and retained original non-Error values through `cause`.
+- Frontend checkpoints: all running-stage and post-stage API/operator-surface checks passed, including active running stage, disabled `wait-for-stage`, runtime-log affordance, post-stage artifacts, questions, and logs.
+- Final manual reports: `.aidd/reports/evals/eval-live-007-codex-20260709T065643Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+- Manual browser evidence: not imported for this refresh; visual desktop/mobile readability is therefore not proven by screenshot evidence in this bundle.
+
+## Refresh Findings - 2026-07-09T06:56Z
+
+- P1 resolved: the selected-task context slice now works in a full provider-backed medium flow. The Hono implementation followed the authored normalization target instead of the weaker raw-value interpretation seen in `eval-live-007-codex-20260709T000228Z`.
+- P1 resolved: provider no-progress recovery routing did not regress the happy path. The run completed all stages and still preserved runtime-log-first recovery evidence in checkpoints.
+- P2 remains: pre-runtime-log progress is still semantically ambiguous. The CLI heartbeat is useful, but several stages reported `runtime.log not yet created` while artifacts, output documents, or target diffs were already changing. A first-time operator needs clearer copy for adapter lifecycle and stage-file activity before the first runtime event.
+- P2 remains: no manual browser screenshots or notes were imported. The frontend checkpoints prove UI/API availability and operator-surface affordances, but not visual hierarchy, first-viewport clarity, or mobile readability for this exact run.
+- P3 remains: QA low warnings for `STRUCT-OUTPUT-PROMOTED` were safe and auto-promoted, but the operator surface should more clearly distinguish auto-reconciled output mirrors from blocking validation findings.
+
+## Next UX Plan - After 2026-07-09T06:56Z Refresh
+
+- Add a clearer pre-runtime-log provider progress state: adapter launched, waiting for first runtime event, latest stage file activity, and the current best evidence action.
+- Make auto-promoted output warnings visually distinct from blocking validation findings and explain canonical source documents versus `output/` mirrors.
+- Rerun AIDD-LIVE-007 with imported desktop/mobile manual browser evidence after the next UI polish slice.
+- Add a deliberately bounded provider no-progress browser-evidence exercise to verify the unhappy path now that recovery routing and manual evidence import are protected.
