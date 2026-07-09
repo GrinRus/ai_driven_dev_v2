@@ -813,3 +813,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 ## Next UX Plan - After Served Verification Gap Fixture
 
 - Continue the unhappy-path loop with intentionally rejected review findings and QA remediation surfaces, checking that remediation is the dominant first action and proceed/accept actions are either blocked or clearly secondary.
+
+## Served Rejected Review Remediation Fixture - 2026-07-09
+
+- A controlled served fixture copied the missing-verification target to `/tmp/aidd-review-rejected-ui` and changed only `review-report.md` to `rejected` with one `high` / `must-fix` finding tied to missing implementation verification evidence.
+- `/api/review/findings` returned approval status `rejected` and one checked `RV-1` must-fix finding.
+- Browser QA found the same detail-screen focus defect before the fix: on mobile `390x844`, the terminal global next-action strip pushed the rejected-review decision summary to `y=951`, outside the first viewport.
+- Work detail screens that own their next action (`implement-review`, `review-findings`, and `qa-verdict`) now suppress the global next-action strip. Their completed-run action stays available as the sidebar fallback instead of competing with the detail decision.
+- Review and QA remediation action rows now show a local runtime-readiness guard when selected remediation cannot launch because the runtime is not ready.
+- Browser verification after the fix: desktop and mobile had no console/network errors and no horizontal overflow; mobile showed the rejected-review summary at `y=508`, one checked finding, disabled `Proceed to QA`, disabled `Send selected to implement`, and the local guard `Runtime readiness is required before sending review findings back to implement.` Screenshot: `.aidd/reports/ui-review-remediation/served-review-rejected-final-mobile.png`.
+
+## Next UX Plan - After Rejected Review Fixture
+
+- Continue the unhappy-path loop with QA `not-ready` remediation in the served UI, checking that remediation is dominant and `Accept complete` remains blocked or clearly unsafe.

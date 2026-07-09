@@ -433,6 +433,16 @@ function renderQaDecisionSummary(view, risks, issues) {
   });
 }
 
+function renderRemediationRuntimeGuard(sourceStage, hasRemediationItems) {
+  if (!hasRemediationItems || selectedRuntimeReady()) return "";
+  const label = sourceStage === "review" ? "review findings" : "QA risks or issues";
+  return `
+    <p class="form-error" role="status">
+      Runtime readiness is required before sending ${escapeHtml(label)} back to implement.
+    </p>
+  `;
+}
+
 async function launchRemediation(sourceStage) {
   if (!ensureRunnableRuntime()) return;
   const ids = checkedRemediationIds(sourceStage);
@@ -494,6 +504,7 @@ async function renderReviewFindings() {
           <span>Operator note for implement</span>
           <textarea data-remediation-note="review" rows="4">Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.</textarea>
         </label>
+        ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
         <div class="wizard-actions">
           <button data-proceed-stage="qa" type="button" ${view.approval_status === "rejected" || !selectedRuntimeReady() ? "disabled" : ""}>Proceed to QA</button>
           <button data-remediation-launch="review" type="button" ${findings.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
@@ -553,6 +564,7 @@ async function renderQaVerdict() {
           <span>Operator note for implement</span>
           <textarea data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
         </label>
+        ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
         <div class="wizard-actions">
           <button data-accept-qa type="button" ${view.quality_verdict === "not-ready" ? "disabled" : ""}>Accept complete</button>
           <button data-remediation-launch="qa" type="button" ${sourceItems.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>

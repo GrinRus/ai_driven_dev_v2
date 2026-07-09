@@ -2284,10 +2284,15 @@ function renderNextActionBlocker(message) {
   `;
 }
 
+function workDetailOwnsPrimarySurface() {
+  return state.activeTab === "work"
+    && ["implement-review", "review-findings", "qa-verdict"].includes(state.workDetail);
+}
+
 function globalNextActionStripProvidesPrimary() {
   if (state.onboarding?.setupRequired) return false;
   if (state.activeTab === "recovery") return false;
-  if (state.activeTab === "work" && state.workDetail === "implement-review") return false;
+  if (workDetailOwnsPrimarySurface()) return false;
   return !document.body.classList.contains("evidence-log-mode");
 }
 
@@ -2360,7 +2365,7 @@ function renderGlobalNextActionStrip() {
   if (
     state.activeTab === "recovery"
     || state.onboarding?.setupRequired
-    || (state.activeTab === "work" && state.workDetail === "implement-review")
+    || workDetailOwnsPrimarySurface()
   ) {
     host.hidden = true;
     host.innerHTML = "";
