@@ -668,7 +668,15 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Browser verification after the fix: desktop at `1280x900` stayed at `scrollWidth=1280`, showed `handoff blocked / 8/8`, `FLOW NEEDS ATTENTION`, `Evidence-Incomplete`, `MISSING TERMINAL EVIDENCE`, missing `Runtime log` / `QA report`, and disabled next-flow actions. Mobile at `390x844` stayed at `scrollWidth=390` and showed `Restore terminal evidence` plus missing evidence in the first viewport.
 - Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-missing-terminal-evidence-desktop-after.png` and `control-missing-terminal-evidence-mobile-after.png`.
 
+## Follow-up Launch Preflight Mobile Reveal Slice - 2026-07-09
+
+- A controlled browser fixture copied the completed AIDD-LIVE-007 target workspace to `/tmp/aidd-follow-up-preflight-ui` and exercised the completed-flow `Start Follow-up Flow` path through source selection, editable work-item definition, and preflight confirmation.
+- Browser QA found one first-time-user defect before the fix: on 390px mobile, clicking `Start Follow-up` left the page scrolled into supporting artifacts instead of revealing the wizard. The page had no horizontal overflow (`scrollWidth=390`), but the wizard was above the viewport (`top=-2237`, `scrollY=3036`), so the operator landed on unrelated runtime artifact rows.
+- Next-flow wizard transitions now request their own one-shot mobile reveal, separate from the general cockpit reveal. Opening follow-up, new work-item, eval-batch, clone, archive, definition, preflight, launch-loading, and back-navigation states scroll the wizard top below the sticky topbar after render.
+- Browser verification after the fix: mobile at `390x844` stayed at `scrollWidth=390`, placed the wizard at `top=310`, and kept the source, definition, and preflight steps readable from the wizard top. Desktop stayed at `scrollWidth=1280` with the same follow-up preflight content and no layout regression.
+- Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-follow-up-preflight-mobile-after.png` and `control-follow-up-preflight-desktop-after.png`.
+
 ## Next UX Plan - After Missing Terminal Evidence Control
 
-- Continue unhappy-path coverage with repeated interrupt resume from a partially completed stage and follow-up/remediation launch preflight states.
-- Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows, preserving the current happy-path, no-progress, interruption, QA-not-ready, and missing-evidence baselines.
+- Continue unhappy-path coverage with repeated interrupt resume from a partially completed stage.
+- Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows, preserving the current happy-path, no-progress, interruption, QA-not-ready, missing-evidence, and follow-up-preflight baselines.

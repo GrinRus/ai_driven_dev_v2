@@ -1056,6 +1056,11 @@ function selectSourceFindings(mode) {
   }
 }
 
+async function renderNextFlowWizardStep() {
+  requestNextFlowWizardReveal();
+  await renderCockpit();
+}
+
 async function openNextFlowWizard(action) {
   const sourceRunId = nextFlowSourceRunId();
   const canReuseSourceFindings = (
@@ -1070,7 +1075,7 @@ async function openNextFlowWizard(action) {
     state.nextFlowWizard.loading = false;
     state.nextFlowWizard.error = "";
     activateTab("overview");
-    await renderCockpit();
+    await renderNextFlowWizardStep();
     return;
   }
   state.nextFlowWizard.loading = true;
@@ -1087,7 +1092,7 @@ async function openNextFlowWizard(action) {
   state.nextFlowWizard.archiveReason = "";
   state.nextFlowWizard.selectedSourceIds = [];
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
   try {
     const payload = await api(sourceFindingsUrl());
     state.nextFlowWizard.sourceFindings = payload;
@@ -1098,7 +1103,7 @@ async function openNextFlowWizard(action) {
     state.nextFlowWizard.error = error.message;
   } finally {
     state.nextFlowWizard.loading = false;
-    await renderCockpit();
+    await renderNextFlowWizardStep();
   }
 }
 
@@ -1115,7 +1120,7 @@ async function openNewWorkItemHandoff() {
   state.nextFlowWizard.archiveRunId = "";
   state.nextFlowWizard.archiveReason = "";
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
 }
 
 async function openEvalBatchHandoff() {
@@ -1131,7 +1136,7 @@ async function openEvalBatchHandoff() {
   state.nextFlowWizard.archiveRunId = "";
   state.nextFlowWizard.archiveReason = "";
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
 }
 
 function cloneDraftFromPayload(payload) {
@@ -1185,7 +1190,7 @@ async function openCloneFlowDraft() {
   wizard.archiveReason = "";
   wizard.preflightLoading = true;
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
   try {
     const payload = await postJson("/api/next-flow/clone-draft/create", {
       source_work_item: nextFlowSourceWorkItem(),
@@ -1200,7 +1205,7 @@ async function openCloneFlowDraft() {
   } catch (error) {
     wizard.preflightLoading = false;
     wizard.preflightError = error.message;
-    await renderCockpit();
+    await renderNextFlowWizardStep();
   }
 }
 
@@ -1210,7 +1215,7 @@ async function loadLaunchConfirmation() {
   if (!draft) {
     wizard.preflightError = "No next-flow draft is available for preflight.";
     wizard.step = "confirm";
-    await renderCockpit();
+    await renderNextFlowWizardStep();
     return;
   }
   const definitionError = followUpDraftValidationError(draft);
@@ -1218,13 +1223,13 @@ async function loadLaunchConfirmation() {
     wizard.preflightLoading = false;
     wizard.preflightError = definitionError;
     wizard.step = "definition";
-    await renderCockpit();
+    await renderNextFlowWizardStep();
     return;
   }
   wizard.preflightLoading = true;
   wizard.preflightError = "";
   wizard.step = "confirm";
-  await renderCockpit();
+  await renderNextFlowWizardStep();
   try {
     const payload = {
       source_work_item: draft.source_work_item,
@@ -1257,7 +1262,7 @@ async function loadLaunchConfirmation() {
     wizard.preflightError = error.message;
   } finally {
     wizard.preflightLoading = false;
-    await renderCockpit();
+    await renderNextFlowWizardStep();
   }
 }
 
@@ -1385,7 +1390,7 @@ async function launchNextFlowNow() {
   if (!ensureRunnableRuntime()) return;
   wizard.launchLoading = true;
   wizard.launchError = "";
-  await renderCockpit();
+  await renderNextFlowWizardStep();
   try {
     if (wizard.action === "start-follow-up-flow") {
       await createFollowUpDraftForLaunch(draft);
@@ -1407,7 +1412,7 @@ async function launchNextFlowNow() {
   } catch (error) {
     wizard.launchError = error.message;
     toast(error.message);
-    await renderCockpit();
+    await renderNextFlowWizardStep();
   } finally {
     wizard.launchLoading = false;
   }
@@ -1418,7 +1423,7 @@ async function loadFollowUpDraft() {
   wizard.followUpDraftLoading = true;
   wizard.followUpDraftError = "";
   wizard.step = "definition";
-  await renderCockpit();
+  await renderNextFlowWizardStep();
   try {
     const payload = await postJson("/api/next-flow/follow-up-draft", {
       source_run_id: state.activeRunId,
@@ -1429,7 +1434,7 @@ async function loadFollowUpDraft() {
     wizard.followUpDraftError = error.message;
   } finally {
     wizard.followUpDraftLoading = false;
-    await renderCockpit();
+    await renderNextFlowWizardStep();
   }
 }
 
@@ -1453,7 +1458,7 @@ async function openArchiveConfirmation() {
     ? `Archived from Flow Complete handoff with status ${state.dashboard.terminal_handoff.status}.`
     : "Archived from Run History.";
   activateTab("overview");
-  await renderCockpit();
+  await renderNextFlowWizardStep();
 }
 
 async function archiveCompletedRun() {

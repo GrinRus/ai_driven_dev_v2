@@ -395,6 +395,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert 'state.activeTab === "history"' in cockpit
     assert "function renderActivityTable()" in cockpit
     assert "revealCockpitOnMobile();" in cockpit
+    assert "revealNextFlowWizardOnMobile();" in cockpit
     assert 'document.addEventListener("click"' in main
     assert 'event.target.closest("[data-refresh-dashboard]")' in main
     assert "requestCockpitReveal();" in main
@@ -431,6 +432,7 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "selectedSourceIds: []",
             "projectHome: null",
             "pendingCockpitReveal: false",
+            "pendingNextFlowWizardReveal: false",
             "activeStageExplicit: false",
             "const OPERATOR_MODES",
             "const LEGACY_TAB_TO_MODE",
@@ -449,8 +451,11 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "action.enabled !== false",
             "function activeModeIsEvidenceLog()",
             "function requestCockpitReveal()",
+            "function requestNextFlowWizardReveal()",
             "function scrollCockpitToTopOnMobile()",
             "function revealCockpitOnMobile()",
+            "function scrollNextFlowWizardToTopOnMobile()",
+            "function revealNextFlowWizardOnMobile()",
             "window.matchMedia(\"(max-width: 760px)\").matches",
             "window.scrollTo({top: Math.max(0, target), behavior: \"auto\"});",
             "window.requestAnimationFrame(scrollCockpitToTopOnMobile);",
@@ -1508,6 +1513,8 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderLineageRows({run, lineage, candidates})",
             "function renderLineageCandidates(candidates)",
             "async function openNextFlowWizard(action)",
+            "async function renderNextFlowWizardStep()",
+            "requestNextFlowWizardReveal();",
             "async function archiveCompletedRun()",
             "function renderNextFlowSourceSelection()",
             "function renderFollowUpDefinition()",
@@ -1831,6 +1838,7 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "function renderLaunchConfirmation()",
             "function renderArchiveConfirmation()",
             "function renderSourceSelectionSummary(payload, selectedCount)",
+            "renderNextFlowWizardStep()",
             "source findings",
             "Selected sources",
             "Linked artifacts",
@@ -1966,6 +1974,7 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'closest("[data-next-flow-continue]")',
             "await loadFollowUpDraft()",
             'closest("[data-next-flow-back-to-sources]")',
+            "requestNextFlowWizardReveal();",
             'closest("[data-next-flow-confirm-preview]")',
             "await loadLaunchConfirmation()",
             'closest("[data-next-flow-back-to-definition]")',

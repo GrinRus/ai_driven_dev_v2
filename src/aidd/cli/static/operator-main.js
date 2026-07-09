@@ -217,6 +217,7 @@ document.addEventListener("click", async (event) => {
     }
     if (event.target.closest("[data-next-flow-back-to-sources]")) {
       state.nextFlowWizard.step = "sources";
+      requestNextFlowWizardReveal();
       await renderCockpit();
       return;
     }
@@ -232,6 +233,8 @@ document.addEventListener("click", async (event) => {
       state.nextFlowWizard.step = state.nextFlowWizard.action === "clone-flow" ? "sources" : "definition";
       if (state.nextFlowWizard.action === "clone-flow") {
         state.nextFlowWizard.active = false;
+      } else {
+        requestNextFlowWizardReveal();
       }
       await renderCockpit();
       return;

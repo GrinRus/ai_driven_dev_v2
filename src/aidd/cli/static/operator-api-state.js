@@ -93,6 +93,7 @@ const state = {
   activeJobStatus: null,
   activeJobTimer: null,
   pendingCockpitReveal: false,
+  pendingNextFlowWizardReveal: false,
   runAccountability: null,
   runAccountabilityError: "",
   runComparison: null,
@@ -439,6 +440,10 @@ function requestCockpitReveal() {
   state.pendingCockpitReveal = true;
 }
 
+function requestNextFlowWizardReveal() {
+  state.pendingNextFlowWizardReveal = true;
+}
+
 function scrollCockpitToTopOnMobile() {
   if (!window.matchMedia("(max-width: 760px)").matches) return;
   const cockpit = document.querySelector(".cockpit");
@@ -455,6 +460,24 @@ function revealCockpitOnMobile() {
   scrollCockpitToTopOnMobile();
   window.requestAnimationFrame(scrollCockpitToTopOnMobile);
   window.setTimeout(scrollCockpitToTopOnMobile, 80);
+}
+
+function scrollNextFlowWizardToTopOnMobile() {
+  if (!window.matchMedia("(max-width: 760px)").matches) return;
+  const wizard = document.querySelector(".next-flow-wizard");
+  if (!wizard) return;
+  const topbar = document.querySelector(".topbar");
+  const topbarHeight = topbar ? topbar.getBoundingClientRect().height : 0;
+  const target = wizard.getBoundingClientRect().top + window.scrollY - topbarHeight - 8;
+  window.scrollTo({top: Math.max(0, target), behavior: "auto"});
+}
+
+function revealNextFlowWizardOnMobile() {
+  if (!state.pendingNextFlowWizardReveal) return;
+  state.pendingNextFlowWizardReveal = false;
+  scrollNextFlowWizardToTopOnMobile();
+  window.requestAnimationFrame(scrollNextFlowWizardToTopOnMobile);
+  window.setTimeout(scrollNextFlowWizardToTopOnMobile, 80);
 }
 
 function activeJobIsLive(job = state.activeJobStatus) {

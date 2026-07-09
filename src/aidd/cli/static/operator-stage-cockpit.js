@@ -510,6 +510,7 @@ async function renderCockpit() {
     }
     content.innerHTML = renderOverview();
     void loadRunAccountabilityCard();
+    revealNextFlowWizardOnMobile();
     return;
   }
   if (state.activeTab === "recovery") {
