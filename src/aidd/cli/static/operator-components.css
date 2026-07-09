@@ -1231,6 +1231,21 @@
 .preflight-check .path-line {
   grid-column: 1 / span 2;
 }
+.preflight-blocker-summary {
+  gap: 6px;
+}
+.preflight-blocker-codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.wizard-action-guard {
+  color: #6f4b06;
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: -2px;
+  text-align: right;
+}
 .question-list {
   display: grid;
   gap: 10px;

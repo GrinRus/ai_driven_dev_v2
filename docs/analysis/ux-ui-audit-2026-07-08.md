@@ -876,3 +876,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Continue follow-up launch unhappy-path coverage with server-returned preflight blockers and launch failures, especially duplicate work item ids, missing baseline/source-run evidence, and runtime readiness changes after the draft step.
 - Verify that server-side blocked preflight states make `Back to definition` the obvious recovery path and do not leave `Launch Flow Now` looking like the next safe action.
+
+## Follow-Up Server Preflight Blocked Slice - 2026-07-09
+
+- Served browser QA used `/tmp/aidd-follow-up-preflight-blocked-ui`, copied from the completed Hono smoke target, with only the source run manifest changed to reference a missing baseline id.
+- Before the fix, `/api/next-flow/preflight` correctly returned `409 Conflict` with `baseline-missing`, and `Launch Flow Now` was disabled. The clarity gap was the top alert: it only said `next-flow launch preflight blocked`, while `Back to definition` remained visually secondary and the disabled launch button had no local explanation.
+- The launch confirmation screen now renders `Preflight blocked before launch`, shows the blocking check code chips, promotes the back action when preflight blocks launch, demotes disabled launch to a secondary button, and adds a local guard explaining that launch is disabled until blocking checks pass.
+- Browser verification after the fix: desktop and mobile showed `baseline-missing`, the baseline manifest message, primary `Back to definition`, secondary disabled `Launch Flow Now`, and the guard `Launch Flow Now is disabled because preflight returned blocking checks.` Mobile `390px` kept `scrollWidth=390`; the only console error was the expected preflight `409 Conflict`. Screenshots: `.aidd/reports/ui-follow-up-server-preflight/02-server-preflight-blocked-after-desktop.png` and `.aidd/reports/ui-follow-up-server-preflight/03-server-preflight-blocked-after-mobile.png`.
+- Happy-path preflight was rechecked on `/tmp/aidd-follow-up-preflight-ui`: `Launch Flow Now` stayed enabled and primary, `Back to definition` stayed secondary, no blocker summary or guard rendered, and no console errors appeared. Screenshot: `.aidd/reports/ui-follow-up-server-preflight/04-server-preflight-happy-regression.png`.
+
+## Next UX Plan - After Server Preflight Blocked Slice
+
+- Continue follow-up launch unhappy-path coverage with launch endpoint failures after a passing preflight, especially duplicate/new work item conflicts and runtime readiness changes between preflight and launch.
+- Check whether expected `409 Conflict` preflight responses should be handled without browser console noise, or whether the current logged network error is acceptable as diagnostic evidence.

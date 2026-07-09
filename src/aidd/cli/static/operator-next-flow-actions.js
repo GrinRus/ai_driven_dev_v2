@@ -1883,6 +1883,31 @@ function renderPreflightChecks(preflight) {
   `).join("") || `<div class="empty-state">No preflight checks returned.</div>`;
 }
 
+function blockingPreflightChecks(preflight) {
+  return (preflight?.checks || []).filter((check) => check.severity === "blocking");
+}
+
+function renderPreflightBlockedSummary(wizard, preflight, backLabel) {
+  const blockingChecks = blockingPreflightChecks(preflight);
+  if (!wizard.preflightError && !blockingChecks.length) return "";
+  const codes = blockingChecks.map((check) => check.code).filter(Boolean);
+  const firstMessage = blockingChecks[0]?.message || wizard.preflightError || "Preflight is blocked.";
+  const codeBadges = codes.map((code) => (
+    `<span class="small-badge bad">${escapeHtml(code)}</span>`
+  )).join("");
+  const retryTarget = backLabel === "Back to definition"
+    ? "revise the draft or restore the missing source/baseline evidence"
+    : "return to the handoff or restore the missing source/baseline evidence";
+  return `
+    <div class="truncation-notice preflight-blocker-summary" data-preflight-blocker-summary role="alert">
+      <strong>Preflight blocked before launch</strong>
+      <span>${escapeHtml(firstMessage)}</span>
+      ${codeBadges ? `<div class="preflight-blocker-codes">${codeBadges}</div>` : ""}
+      <span>Launch is disabled until blocking checks pass. Use ${escapeHtml(backLabel)} to ${escapeHtml(retryTarget)}, then retry preflight.</span>
+    </div>
+  `;
+}
+
 function renderLaunchSourceLink(item) {
   if (!item.source_path) {
     return `
@@ -1938,7 +1963,7 @@ function renderLaunchConfirmation() {
     badge: preflight?.status || "blocked",
     badgeTone: preflightTone(preflight?.status || "blocked"),
     body: `
-      ${wizard.preflightError ? `<div class="truncation-notice"><strong>Preflight blocked</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
+      ${blocked ? renderPreflightBlockedSummary(wizard, preflight, backLabel) : ""}
       ${wizard.launchError ? `<div class="truncation-notice"><strong>Launch failed</strong><span>${escapeHtml(wizard.launchError)}</span></div>` : ""}
       <div class="launch-confirmation-grid">
         <section>
@@ -1953,9 +1978,10 @@ function renderLaunchConfirmation() {
         </aside>
       </div>
       <div class="wizard-actions">
-        <button data-next-flow-back-to-definition type="button" class="secondary">${escapeHtml(backLabel)}</button>
-        <button data-launch-flow-now type="button" ${blocked || wizard.launchLoading ? "disabled" : ""}>${wizard.launchLoading ? "Launching..." : "Launch Flow Now"}</button>
+        <button data-next-flow-back-to-definition type="button" class="${blocked ? "" : "secondary"}">${escapeHtml(backLabel)}</button>
+        <button data-launch-flow-now type="button" class="${blocked ? "secondary" : ""}" ${blocked || wizard.launchLoading ? "disabled" : ""}>${wizard.launchLoading ? "Launching..." : "Launch Flow Now"}</button>
       </div>
+      ${blocked ? `<div class="wizard-action-guard" role="status">Launch Flow Now is disabled because preflight returned blocking checks. Resolve the blockers above, then retry from ${escapeHtml(backLabel)}.</div>` : ""}
     `
   });
 }

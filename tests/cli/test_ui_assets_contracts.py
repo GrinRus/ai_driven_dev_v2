@@ -224,6 +224,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".inherited-context-toggle" in components
     assert ".launch-confirmation-grid" in components
     assert ".preflight-check" in components
+    assert ".preflight-blocker-summary" in components
+    assert ".wizard-action-guard" in components
     assert ".log-panel" in components
     assert "@media (max-width: 760px)" in responsive
     assert ".workbench-main" in responsive
@@ -1595,6 +1597,8 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Review Clone Draft",
             "Confirm Launch",
             "function renderPreflightChecks(preflight)",
+            "function blockingPreflightChecks(preflight)",
+            "function renderPreflightBlockedSummary(wizard, preflight, backLabel)",
             "function renderAuditPreview(draft, preflight)",
             "async function loadLaunchConfirmation()",
             "async function launchNextFlowNow()",
@@ -1634,6 +1638,10 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Definition needs attention",
             "Confirm and Launch Next Flow",
             "Preflight results",
+            "Preflight blocked before launch",
+            "Launch is disabled until blocking checks pass.",
+            "data-preflight-blocker-summary",
+            "Launch Flow Now is disabled because preflight returned blocking checks.",
             "Audit preview",
             "Launch Flow Now",
             "data-follow-up-field",
