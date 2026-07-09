@@ -1663,6 +1663,47 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
     )
 
 
+def test_operator_next_action_explains_runtime_readiness_blocker_locally() -> None:
+    next_flow = _asset_text("/operator-next-flow-actions.js")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    _assert_contains_all(
+        next_flow,
+        (
+            "function nextActionRuntimeBlockerMessage(runtimeBlocked)",
+            "runtimeReadinessMessage()",
+            "function renderNextActionBlocker(message)",
+            'class="next-action-blocker" role="status" aria-live="polite"',
+            "const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);",
+            "${renderNextActionBlocker(blockerMessage)}",
+            '<div class="next-action-button-stack">',
+            "Checking runtime readiness before this action can run.",
+            "Runtime readiness unavailable: ${state.readinessError}",
+            "Selected runtime is not ready for execution.",
+        ),
+    )
+    _assert_contains_all(
+        components,
+        (
+            ".next-action-button-stack {",
+            ".next-action-blocker {",
+            "overflow-wrap: anywhere;",
+            ".global-next-action-strip .next-action-button-stack {",
+            ".global-next-action-strip .next-action-button-stack .next-button {",
+        ),
+    )
+    _assert_contains_all(
+        responsive,
+        (
+            ".global-next-action-strip .next-action-button-stack {",
+            "justify-self: stretch;",
+            ".next-action-blocker {",
+            "max-width: 100%;",
+        ),
+    )
+
+
 def test_operator_static_screen_landmarks_cover_accepted_mission_control_surfaces() -> None:
     html = _asset_text("/")
     next_flow = _asset_text("/operator-next-flow-actions.js")

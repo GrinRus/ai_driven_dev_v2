@@ -761,3 +761,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Add a local explanation for disabled next-action buttons while runtime readiness is still checking.
 - Continue targeted unhappy-path coverage with missing implementation verification artifacts, using the current no-progress, interrupted, QA-not-ready, missing-terminal-evidence, follow-up-preflight, and repeated-interrupt baselines as reference.
 - Run another provider-backed medium flow after the next unhappy-path or next-action hierarchy slice if provider time budget allows.
+
+## Runtime Readiness Disabled CTA Slice - 2026-07-09
+
+- The post-stage next-action CTA now renders a button-local blocker message when the selected action needs a runtime and runtime readiness is still checking or not ready.
+- The message reuses the existing runtime-readiness wording so the top status, central next-action strip, and sidebar action stay consistent. Examples: `Checking runtime readiness before this action can run.` and `Selected runtime is not ready for execution.`
+- The helper is rendered as `role="status"` / `aria-live="polite"` under both next-action buttons, with bounded width on desktop and full-width behavior on mobile.
+- Browser render-check used real static assets at `1280x900` and `390x844` for both readiness-checking and selected-runtime-not-ready states. Both CTAs were disabled, both local messages appeared, and document `scrollWidth` stayed equal to `clientWidth`.
+- Supplemental screenshots were saved under `.aidd/reports/ui-readiness-blocker/next-action-readiness-desktop.png` and `next-action-readiness-mobile.png`.
+
+## Next UX Plan - After Runtime Readiness CTA Slice
+
+- Reassess duplicated next-action placement between the central strip and sidebar now that both can carry status copy; the likely next polish is hierarchy/deduplication rather than more explanatory text.
+- Continue targeted unhappy-path coverage with missing implementation verification artifacts and verify that the disabled CTA helper appears in the real served UI when runtime readiness is slow.

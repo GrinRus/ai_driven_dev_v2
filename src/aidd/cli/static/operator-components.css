@@ -2199,9 +2199,34 @@
   color: var(--text);
   font-size: 12px;
 }
+.next-action-button-stack {
+  display: grid;
+  gap: 6px;
+  justify-self: stretch;
+  min-width: 0;
+}
+.next-action-blocker {
+  background: #fff9ed;
+  border: 1px solid #e4c783;
+  border-radius: 6px;
+  color: #6d5420;
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 0;
+  max-width: 260px;
+  overflow-wrap: anywhere;
+  padding: 7px 9px;
+}
 .global-next-action-strip .next-button {
   margin-top: 0;
   width: auto;
+}
+.global-next-action-strip .next-action-button-stack {
+  justify-self: end;
+  width: min(100%, 260px);
+}
+.global-next-action-strip .next-action-button-stack .next-button {
+  width: 100%;
 }
 
 .recovery-card {

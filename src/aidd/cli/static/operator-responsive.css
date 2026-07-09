@@ -24,6 +24,10 @@
   .global-next-action-strip .next-button {
     width: 100%;
   }
+  .global-next-action-strip .next-action-button-stack {
+    justify-self: stretch;
+    width: 100%;
+  }
   .source-selection-summary > div:first-child {
     grid-column: auto;
   }
@@ -409,6 +413,9 @@
   }
   .global-next-action-strip .next-button {
     width: 100%;
+  }
+  .next-action-blocker {
+    max-width: 100%;
   }
   .next-flow-action-card p {
     font-size: 11px;

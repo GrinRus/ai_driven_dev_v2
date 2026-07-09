@@ -2266,6 +2266,24 @@ function renderModeDecisionPeek() {
   `;
 }
 
+function nextActionRuntimeBlockerMessage(runtimeBlocked) {
+  if (!runtimeBlocked) return "";
+  if (typeof runtimeReadinessMessage === "function") {
+    return runtimeReadinessMessage();
+  }
+  if (!state.selectedRuntime) return "Select a runtime before this action can run.";
+  if (state.readinessLoading) return "Checking runtime readiness before this action can run.";
+  if (state.readinessError) return `Runtime readiness unavailable: ${state.readinessError}`;
+  return "Selected runtime is not ready for execution.";
+}
+
+function renderNextActionBlocker(message) {
+  if (!message) return "";
+  return `
+    <p class="next-action-blocker" role="status" aria-live="polite">${escapeHtml(message)}</p>
+  `;
+}
+
 function renderNextActionPanel() {
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
@@ -2274,6 +2292,7 @@ function renderNextActionPanel() {
   const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
   const activeJobState = activeJobNextActionState(action);
   const disabled = Boolean(activeJobState) || !(action.enabled || noRunWithRuntime) || runtimeBlocked;
+  const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);
   const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
     : runStageResume
@@ -2294,7 +2313,10 @@ function renderNextActionPanel() {
     <div class="panel-title">Run Next Action</div>
     <p>${escapeHtml(detail)}</p>
     ${renderValidationFindingSummary(finding, {compact: true})}
-    <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+    <div class="next-action-button-stack">
+      <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+      ${renderNextActionBlocker(blockerMessage)}
+    </div>
   `;
 }
 
@@ -2316,6 +2338,7 @@ function renderGlobalNextActionStrip() {
   const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
   const activeJobState = activeJobNextActionState(action);
   const disabled = Boolean(activeJobState) || !(action.enabled || noRunWithRuntime) || runtimeBlocked;
+  const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);
   const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
     : action.action === "run-stage" && state.activeRunId && action.enabled
@@ -2355,7 +2378,10 @@ function renderGlobalNextActionStrip() {
         <span><strong>Runtime</strong>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "required")}</span>
         <span><strong>Run</strong>${escapeHtml(run)}</span>
       </div>
-      <button id="globalNextActionButton" class="next-button" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+      <div class="next-action-button-stack">
+        <button id="globalNextActionButton" class="next-button" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+        ${renderNextActionBlocker(blockerMessage)}
+      </div>
     </div>
   `;
 }
