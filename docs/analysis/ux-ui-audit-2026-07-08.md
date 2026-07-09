@@ -731,3 +731,33 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Re-run or resume a provider-backed medium flow on a package/source build containing the refined running dashboard fast path, and confirm all running-stage checkpoints pass past `review-spec`.
 - Continue the same UX loop toward `tasklist`, `implement`, `review`, and `qa`, with manual mobile screenshots for post-stage next actions and non-happy-path recovery states.
 - Add targeted missing implementation verification artifact coverage if the provider-backed refresh does not naturally produce that state.
+
+## Refresh Run - 2026-07-09T11:45Z
+
+- `eval-live-007-codex-20260709T114546Z`: provider-backed `AIDD-LIVE-007` / `codex` refresh on installed `0.1.0a15.dev0` package built from `2e831c71eb19fa504b19ac659e9eb912ff199ab8`.
+- Execution verdict: `pass`; grader execution status: `pass`; terminal consistency: flow-state, verdict, and grader all `pass`.
+- Stage path: `idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa`.
+- Quality gates: all eight manual stage-quality audits chose `continue`; no quality remediation cycles and no runner stage repair attempts.
+- Running-stage checkpoints: all eight stages passed, including the previously failing `/api/dashboard?stage=review-spec&run_id=...` probe. This confirms the metadata fast path fixed the live `review-spec` running-dashboard timeout on a fresh installed package.
+- Post-stage checkpoints: all eight stages passed with dashboard, run, stage, questions, logs, and artifacts APIs available where applicable.
+- Manual browser evidence: installed UI screenshots were captured under `.aidd/reports/evals/eval-live-007-codex-20260709T114546Z/manual-frontend-evidence/screenshots/` for post-stage `idea`, `research`, `plan`, `review-spec`, `tasklist`, `implement`, `review`, and terminal QA handoff.
+- Desktop/mobile UI checks: inspected `1280x900` and `390x844`; observed no horizontal overflow, no console/network errors, visible next actions, active stage context, and cockpit-before-rail ordering on mobile post-stage/terminal modes.
+- Target implementation quality: review approved the scoped Hono non-Error throw patch; QA reported `ready` / `proceed`; focused Vitest passed with 237 tests, `tsc --noEmit` passed, and `git diff --check` passed.
+- Final manual reports: `.aidd/reports/evals/eval-live-007-codex-20260709T114546Z/flow-quality-report.md`, `code-quality-report.md`, and `quality-report.md`.
+
+## Refresh Findings - 2026-07-09T11:45Z
+
+- P1 resolved: the `review-spec` running-stage dashboard timeout did not recur. `review-spec / running-stage` returned dashboard status `200`, and later `tasklist`, `implement`, `review`, and `qa` running checkpoints also returned dashboard status `200`.
+- P1 resolved for the current happy path: terminal QA handoff is first-time-user understandable on desktop and 390px mobile. The screen shows `FLOW COMPLETE`, `Review final artifacts`, runtime log, QA report, validator report, final artifacts, zero blockers, and next-flow actions without horizontal overflow.
+- P2 remains: post-stage screens still duplicate the primary next action in the central cockpit and right sidebar. This is operable and clear enough to continue, but it adds visual noise and should be evaluated as part of next-action hierarchy polish.
+- P2 remains: runtime readiness can briefly disable post-stage next-action buttons while the nearest explanation is the top runtime status rather than button-local copy. In this run readiness settled after roughly 10-15 seconds and actions became enabled.
+- P2 remains: long native-provider stages still spend minutes before the first runtime event; the heartbeat now explains `waiting for first runtime event` and points to stage-file activity, but the product should keep distinguishing provider lifecycle, stage-file writes, and model output clearly.
+- P2 remains for broader scope: this pass is strong happy-path evidence with terminal handoff visuals, but it does not replace targeted unhappy-path coverage for missing implementation verification artifacts or other intentionally failed delivery states.
+
+## Next UX Plan - After 2026-07-09T11:45Z Refresh
+
+- Treat the running-dashboard metadata fast path and post-stage mobile next-action layout as accepted for the current happy path unless a later provider run regresses them.
+- Simplify or better differentiate duplicated next-action placement between the central cockpit and sidebar, especially on terminal and post-stage screens.
+- Add a local explanation for disabled next-action buttons while runtime readiness is still checking.
+- Continue targeted unhappy-path coverage with missing implementation verification artifacts, using the current no-progress, interrupted, QA-not-ready, missing-terminal-evidence, follow-up-preflight, and repeated-interrupt baselines as reference.
+- Run another provider-backed medium flow after the next unhappy-path or next-action hierarchy slice if provider time budget allows.
