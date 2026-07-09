@@ -503,8 +503,14 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Running-stage checkpoints may still be skipped when the active stage disappears before probes finish, and hard command timeouts still skip post-stage frontend probing. The new behavior is scoped to provider no-progress because the process has been explicitly stopped and the failed stage state is inspectable.
 - Verification: `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py::test_black_box_command_no_progress_stops_live_process tests/harness/test_live_e2e_black_box.py::test_black_box_command_no_progress_allows_live_artifact_heartbeats tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail -q`; `uv run --extra dev ruff check src/aidd/harness/live_e2e_black_box_orchestration.py tests/harness/test_live_e2e_black_box.py`; `uv run --extra dev python -m mypy src/aidd/harness/live_e2e_black_box_orchestration.py`; `git diff --check`.
 
-## Next UX Plan - After Provider No-Progress Frontend Evidence Slice
+## AIDD-LIVE-007 Bootstrap Spot-check Slice - 2026-07-09
+
+- The selected-task context clarity fix is now covered against the maintained medium `AIDD-LIVE-007` manifest, not only a synthetic authored task fixture.
+- The regression proves live workspace bootstrap writes Hono's visible request to `user-request.md` while exposing the authored `target_change` and `quality_bar` in `context/selected-task.md` before any model stage runs.
+- This closes the P2 ambiguity from `eval-live-007-codex-20260709T000228Z`: downstream stages now receive the non-Error normalization target and public type compatibility quality bar as first-class context instead of relying on the shorter visible request alone.
+- Verification: `uv run --extra dev pytest tests/harness/test_live_workspace_bootstrap.py -q`; `uv run --extra dev ruff check tests/harness/test_live_workspace_bootstrap.py`.
+
+## Next UX Plan - After AIDD-LIVE-007 Bootstrap Spot-check
 
 - Exercise real provider no-progress with manual browser evidence now that synthetic no-progress bundles retain frontend checkpoint evidence.
-- Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes authored constraints before model stages run.
 - Run another medium live E2E pass after the unhappy-path UI slices if provider time budget allows, importing the newest browser evidence into the live bundle.
