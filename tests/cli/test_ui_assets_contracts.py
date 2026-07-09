@@ -226,6 +226,7 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".preflight-check" in components
     assert ".preflight-blocker-summary" in components
     assert ".launch-readiness-summary" in components
+    assert ".clone-launch-summary" in components
     assert ".launch-failure-summary" in components
     assert ".wizard-action-guard" in components
     assert ".log-panel" in components
@@ -1605,6 +1606,7 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "function renderPreflightBlockedSummary(wizard, preflight, backLabel)",
             "function renderLaunchFailureSummary(wizard, draft, backLabel)",
             "function renderLaunchReadinessSummary(wizard)",
+            "function renderCloneLaunchSafetySummary(wizard)",
             "function renderAuditPreview(draft, preflight)",
             "async function loadLaunchConfirmation()",
             "async function launchNextFlowNow()",
@@ -1646,6 +1648,15 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Definition needs attention",
             "Confirm and Launch Next Flow",
             "Preflight results",
+            "data-clone-launch-summary",
+            "Clone does not remediate this handoff",
+            "Clone creates a separate run identity",
+            "Clone reuses configuration in a new run identity",
+            "Clone reuses configuration and baseline; it does not select source findings.",
+            "not selected for clone",
+            "configuration only",
+            "Clone-only flow",
+            "without clearing QA status",
             "Preflight blocked before launch",
             "Launch is disabled until blocking checks pass.",
             "data-preflight-blocker-summary",

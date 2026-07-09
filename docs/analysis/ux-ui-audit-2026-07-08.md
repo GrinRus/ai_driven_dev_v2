@@ -931,3 +931,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Continue clone-flow coverage after a failed or warning terminal handoff, especially clone draft creation and launch confirmation, to verify that clone-only language remains visible through preflight and launch readiness states.
 - Revisit expected `409 Conflict` console noise only if it affects operator-visible UI; current first-time operator gaps are more likely in deeper clone/eval/archive state transitions than in DevTools-only noise.
+
+## Clone Flow Launch Safety Slice - 2026-07-09
+
+- Served browser QA reused `/tmp/aidd-qa-not-ready-ui`, a failed terminal QA handoff where `Clone This Flow` is enabled but is not the remediation path for the `qa-not-ready` blocker.
+- The clone action card itself was clear before the fix: it said `Clone only` and `Clone only: creates a new run identity but does not clear this QA decision.` Screenshot: `.aidd/reports/ui-clone-flow-safety/01-clone-card-before-desktop.png`.
+- Browser QA found the clarity gap after clicking clone. The confirmation screen fell back to generic `Independent flow` copy, `Selected sources: 0`, `Source artifact links: 0`, and `No source links selected.`, which made clone look like an ordinary safe launch with missing evidence rather than a separate run identity that does not remediate QA. Screenshot: `.aidd/reports/ui-clone-flow-safety/02-clone-confirm-before-desktop.png`.
+- Clone launch confirmation now keeps the clone-only contract visible through preflight. Failed handoffs show `Clone-only flow`, `Clone does not remediate this handoff`, and direct guidance to use `Start Follow-up Flow` for remediation.
+- The audit preview now says `Selected sources: not selected for clone` and `Source artifact links: configuration only`; the source-link empty state explains that clone reuses configuration and baseline rather than selecting findings.
+- Browser verification after the fix: desktop and mobile showed the clone-only policy, remediation warning, clone-specific audit preview values, enabled `Launch Flow Now`, no stale `completed source run` copy, no `No source links selected.`, no existing-context error, no console warnings/errors, and no horizontal overflow. Screenshots: `.aidd/reports/ui-clone-flow-safety/03-clone-confirm-after-desktop.png` and `.aidd/reports/ui-clone-flow-safety/04-clone-confirm-after-mobile.png`.
+
+## Next UX Plan - After Clone Flow Safety Slice
+
+- Continue clone-flow launch unhappy-path coverage after a passing preflight, especially duplicate clone target conflicts and runtime readiness changes between confirmation and launch.
+- Re-check secondary eval/archive launch-depth states after clone coverage so every non-remediation path remains visibly separate from QA recovery.

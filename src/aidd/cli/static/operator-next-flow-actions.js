@@ -1738,6 +1738,9 @@ function nextFlowWizardTypeLabel() {
 function renderNextFlowWizardProgress() {
   const selected = state.nextFlowWizard.selectedSourceIds.length;
   const draft = state.nextFlowWizard.followUpDraft;
+  const cloneFlow = state.nextFlowWizard.action === "clone-flow";
+  const handoff = state.dashboard?.terminal_handoff;
+  const cloneNeedsRecovery = cloneFlow && terminalHandoffNeedsRecovery(handoff);
   const steps = state.nextFlowWizard.action === "clone-flow"
     ? [
         ["type", "Choose Flow Type", nextFlowWizardTypeLabel()],
@@ -1768,8 +1771,11 @@ function renderNextFlowWizardProgress() {
         }).join("")}
       </ol>
       <div class="wizard-policy-note">
-        <strong>Independent flow</strong>
-        <span>The completed source run stays immutable; launch creates a new work item and run identity.</span>
+        <strong>${cloneNeedsRecovery ? "Clone-only flow" : "Independent flow"}</strong>
+        <span>${escapeHtml(cloneNeedsRecovery
+          ? "The source run stays immutable; clone creates a new work item and run identity without clearing QA status."
+          : "The source run stays immutable; launch creates a new work item and run identity."
+        )}</span>
       </div>
     </aside>
   `;
@@ -2024,6 +2030,9 @@ function renderLaunchSourceLink(item) {
 }
 
 function renderLaunchSourceLinks(draft) {
+  if (state.nextFlowWizard.action === "clone-flow") {
+    return `<div class="empty-state">Clone reuses configuration and baseline; it does not select source findings.</div>`;
+  }
   return (draft?.selected_sources || []).map((item) => renderLaunchSourceLink(item)).join("")
     || `<div class="empty-state">No source links selected.</div>`;
 }
@@ -2031,14 +2040,34 @@ function renderLaunchSourceLinks(draft) {
 function renderAuditPreview(draft, preflight) {
   const sources = draft.selected_sources || [];
   const artifactLinks = sources.filter((item) => item.source_path).length;
+  const cloneFlow = state.nextFlowWizard.action === "clone-flow";
   return `
     <div class="audit-preview">
       <div class="panel-item"><strong>New work item</strong><span>${escapeHtml(draft.new_work_item)}</span></div>
       <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
       <div class="panel-item"><strong>Runtime</strong><span>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "not selected")}</span></div>
       <div class="panel-item"><strong>Resolved baseline</strong><span>${escapeHtml(preflight?.resolved_baseline_id || "not resolved")}</span></div>
-      <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(sources.length)}</span></div>
-      <div class="panel-item"><strong>Source artifact links</strong><span>${escapeHtml(artifactLinks)}</span></div>
+      <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(cloneFlow ? "not selected for clone" : sources.length)}</span></div>
+      <div class="panel-item"><strong>Source artifact links</strong><span>${escapeHtml(cloneFlow ? "configuration only" : artifactLinks)}</span></div>
+    </div>
+  `;
+}
+
+function renderCloneLaunchSafetySummary(wizard) {
+  if (wizard.action !== "clone-flow") return "";
+  const handoff = state.dashboard?.terminal_handoff;
+  if (!terminalHandoffNeedsRecovery(handoff)) {
+    return `
+      <div class="truncation-notice clone-launch-summary" data-clone-launch-summary role="status">
+        <strong>Clone creates a separate run identity</strong>
+        <span>Clone reuses runtime, prompt pack, contracts, branch, resource, and baseline configuration. The source run stays read-only.</span>
+      </div>
+    `;
+  }
+  return `
+    <div class="truncation-notice clone-launch-summary" data-clone-launch-summary role="status">
+      <strong>Clone does not remediate this handoff</strong>
+      <span>Clone reuses configuration in a new run identity, but it does not carry QA findings into remediation or clear the failed source run. Use Start Follow-up Flow for remediation.</span>
     </div>
   `;
 }
@@ -2074,6 +2103,7 @@ function renderLaunchConfirmation() {
     badgeTone: preflightTone(preflight?.status || "blocked"),
     body: `
       ${blocked ? renderPreflightBlockedSummary(wizard, preflight, backLabel) : ""}
+      ${renderCloneLaunchSafetySummary(wizard)}
       ${renderLaunchReadinessSummary(wizard)}
       ${renderLaunchFailureSummary(wizard, draft, backLabel)}
       <div class="launch-confirmation-grid">
