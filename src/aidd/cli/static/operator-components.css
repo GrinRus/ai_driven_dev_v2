@@ -2017,6 +2017,34 @@
 .live-progress-actions button {
   margin-top: 0;
 }
+.live-progress-notice {
+  align-items: center;
+  border: 1px solid #b8d7f4;
+  border-radius: 6px;
+  color: var(--ink);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 4px 8px;
+  grid-column: 1 / -1;
+  line-height: 1.35;
+  padding: 8px 10px;
+}
+.live-progress-notice.info {
+  background: #eef6ff;
+  border-color: #b8d7f4;
+}
+.live-progress-notice.warn {
+  background: #fff9ed;
+  border-color: #e4c783;
+}
+.live-progress-notice strong {
+  font-size: 12px;
+}
+.live-progress-notice span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
 
 .next-action-copy {
   align-items: center;

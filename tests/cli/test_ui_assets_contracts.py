@@ -769,6 +769,8 @@ def test_operator_global_next_action_surfaces_live_job_progress() -> None:
         next_flow,
         (
             "function activeJobLiveMessage(job)",
+            "function activeJobProgressNotice(job)",
+            "function renderActiveJobProgressNotice(job)",
             "function renderGlobalLiveProgress(job)",
             "function externalRunningStageMessage(action, item)",
             "function renderExternalRunningStageProgress(action)",
@@ -776,6 +778,10 @@ def test_operator_global_next_action_surfaces_live_job_progress() -> None:
             'class="live-progress-strip external-running-stage" role="status" aria-live="polite"',
             "Waiting for operator approval",
             "Running now",
+            "Waiting for first runtime output",
+            "No output for ${secondsLabel(job.last_output_age_seconds)}",
+            "Cancel requested",
+            "${renderActiveJobProgressNotice(job)}",
             "running outside UI control",
             "Refresh status or inspect saved runtime logs",
             "Runtime is active; live logs are the current evidence stream.",
@@ -802,6 +808,9 @@ def test_operator_global_next_action_surfaces_live_job_progress() -> None:
             ".live-progress-copy {",
             ".live-progress-meta {",
             ".live-progress-actions {",
+            ".live-progress-notice {",
+            ".live-progress-notice.info {",
+            ".live-progress-notice.warn {",
         ),
     )
     _assert_contains_all(

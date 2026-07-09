@@ -1988,6 +1988,45 @@ function activeJobLiveMessage(job) {
   return "Running now";
 }
 
+function activeJobProgressNotice(job) {
+  const status = String(job?.status || "running");
+  if (status === "cancelling" || job?.cancel_requested || job?.cancel_state === "cancelling") {
+    return {
+      tone: "warn",
+      title: "Cancel requested",
+      detail: "Waiting for the runtime to stop. Keep live logs open until cancelled or final evidence appears."
+    };
+  }
+  if (job?.silence_warning) {
+    return {
+      tone: "warn",
+      title: `No output for ${secondsLabel(job.last_output_age_seconds)}`,
+      detail: "Inspect live logs and wait for fresh output, or cancel if the runtime is no longer making progress."
+    };
+  }
+  const logChunkCount = state.activeJobLogChunks?.length || 0;
+  const hasNoOutput = job?.last_output_at_utc === null || job?.last_output_at_utc === undefined;
+  if (hasNoOutput && logChunkCount === 0) {
+    return {
+      tone: "info",
+      title: "Waiting for first runtime output",
+      detail: "The job has started, but no runtime evidence has arrived yet. Live logs will update first."
+    };
+  }
+  return null;
+}
+
+function renderActiveJobProgressNotice(job) {
+  const notice = activeJobProgressNotice(job);
+  if (!notice) return "";
+  return `
+    <div class="live-progress-notice ${escapeHtml(notice.tone)}">
+      <strong>${escapeHtml(notice.title)}</strong>
+      <span>${escapeHtml(notice.detail)}</span>
+    </div>
+  `;
+}
+
 function renderGlobalLiveProgress(job) {
   if (!job) return "";
   const status = job.status || "running";
@@ -2012,6 +2051,7 @@ function renderGlobalLiveProgress(job) {
         <button data-tab-shortcut="logs" type="button" class="secondary">Open live logs</button>
         <button data-cancel-job="${escapeHtml(job.job_id || state.activeJobId || "")}" type="button" class="danger" ${activeJobIsTerminal() ? "disabled" : ""}>${escapeHtml(activeJobCancelLabel())}</button>
       </div>
+      ${renderActiveJobProgressNotice(job)}
     </div>
   `;
 }

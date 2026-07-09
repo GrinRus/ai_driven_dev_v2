@@ -468,8 +468,15 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Browser QA used `/tmp/aidd-ui-terminal-missing/.aidd` with a completed QA fixture where `qa-report.md` and the terminal `runtime.log` were removed after fixture creation. Desktop verification kept `scrollWidth=1280`, showed `Missing Runtime log` / `Missing QA report` in the top strip, listed `validator_report` and `stage_result` as available, and rendered two missing rows in `Evidence First`. Mobile verification at `390px` kept both missing badges inside the first viewport, kept missing rows inside `56..337px`, moved the stage rail below the cockpit, and kept `scrollWidth=390`. Screenshot evidence: `/tmp/aidd-terminal-missing-evidence-desktop.png` and `/tmp/aidd-terminal-missing-evidence-mobile.png`.
 - Verification: `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py::test_operator_flow_complete_static_contract_covers_terminal_handoff_actions tests/cli/test_ui_assets_contracts.py::test_operator_css_keeps_focus_and_screen_reader_contracts -q`; `node --check src/aidd/cli/static/operator-next-flow-actions.js`; `git diff --check`.
 
-## Next UX Plan - After Missing Terminal Evidence Slice
+## Live No-Progress Notice Slice - 2026-07-09
 
-- Exercise provider no-progress and repeated interrupt flows with browser evidence, not only API checkpoints.
+- The global live progress strip now makes provider silence explicit instead of hiding it inside the runtime-output metric. It renders a blue notice while waiting for the first runtime output, an amber notice when `silence_warning` is true, and an amber cancel-pending notice when `cancel_state` / `cancel_requested` indicates shutdown is in progress.
+- The notices keep the operator action local to the strip: inspect `Open live logs`, wait for fresh output, or use the existing cancel action if the runtime is no longer making progress. Cancelling now states that the UI is waiting for final shutdown evidence instead of looking like a completed stop.
+- Browser QA used `/tmp/aidd-live-progress-qa.html` served from localhost with production `operator.css` from the running UI. Desktop verification at `1280x720` measured a `1150px` live strip, `1128px` notices, no notice or strip overflow, and no browser console errors. Mobile verification at `390px` measured `336px` strips and `314px` notices, no overflow, and no browser console errors. Screenshot evidence: `/tmp/aidd-live-progress-no-output-desktop-1280.jpg` and `/tmp/aidd-live-progress-no-output-mobile.png`.
+- Verification: `uv run --extra dev pytest tests/cli/test_ui_assets_contracts.py -q`; `uv run --extra dev pytest tests/cli/test_ui.py::test_ui_cancel_terminates_generic_cli_runtime_and_records_evidence -q` (passed on retry after the first run timed out waiting for the existing long-running runtime fixture to emit its start line before cancellation).
+
+## Next UX Plan - After Live No-Progress Notice Slice
+
+- Exercise real provider no-progress and repeated interrupt flows with browser evidence, not only controlled rendered states or API checkpoints.
 - Rerun or spot-check AIDD-LIVE-007 context bootstrap to confirm `selected-task.md` now exposes authored constraints before model stages run.
 - Run another medium live E2E pass after the unhappy-path UI slices if provider time budget allows, importing the newest browser evidence into the live bundle.
