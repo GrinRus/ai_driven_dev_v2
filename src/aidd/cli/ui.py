@@ -360,6 +360,13 @@ class UiRunJobStore:
         with self._lock:
             return any(job.status not in _TERMINAL_JOB_STATUSES for job in self._jobs.values())
 
+    def active_job(self) -> dict[str, object] | None:
+        with self._lock:
+            for job in reversed(tuple(self._jobs.values())):
+                if job.status not in _TERMINAL_JOB_STATUSES:
+                    return self._view_locked(job)
+        return None
+
     def _require_job(self, job_id: str) -> _UiRunJob:
         try:
             return self._jobs[job_id]
@@ -2067,6 +2074,7 @@ class OperatorUiService:
                 return _json_response(
                     {
                         "app_version": __version__,
+                        "active_job": self._jobs.active_job(),
                         "dashboard": self._dashboard_view(
                             stage=stage,
                             run_id=_first_param(params, "run_id"),

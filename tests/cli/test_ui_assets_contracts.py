@@ -346,6 +346,8 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function secondsLabel(value)" in api_state
     assert "function runtimeOutputFreshnessLabel(job)" in api_state
     assert "function activeJobIsLive(job = state.activeJobStatus)" in api_state
+    assert "function activeJobPayloadIsLive(job)" in api_state
+    assert "async function recoverActiveJobFromDashboard(job)" in api_state
     assert "function syncLiveJobBodyClass()" in api_state
     assert "function syncExternalRunningBodyClass()" in api_state
     assert "async function api(path, options = {})" in api_state
@@ -457,6 +459,9 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             'title="${escapeHtml(text)}"',
             "${escapeHtml(compactPath(text, maxLength))}",
             "async function fetchDashboard()",
+            "await recoverActiveJobFromDashboard(payload.active_job);",
+            "await pollActiveJob();",
+            "state.activeJobCursor = 0;",
             "async function fetchProjectHome(workItem = \"\")",
             "dashboardUrl()",
             "if (state.activeStageExplicit) params.set(\"stage\", state.activeStage);",

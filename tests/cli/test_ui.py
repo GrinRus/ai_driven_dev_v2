@@ -2160,9 +2160,13 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     job_id = str(payload["job_id"])
     running_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
     logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+    dashboard_payload = _payload(service.handle_get("/api/dashboard", {}))
     options = captured["options"]
     assert isinstance(options, StageRunOptions)
     assert running_payload["status"] == "running"
+    assert dashboard_payload["active_job"]["job_id"] == job_id  # type: ignore[index]
+    assert dashboard_payload["active_job"]["status"] == "running"  # type: ignore[index]
+    assert dashboard_payload["active_job"]["runtime_log_chunk_count"] == 1  # type: ignore[index]
     assert isinstance(running_payload["elapsed_seconds"], int)
     assert running_payload["last_output_at_utc"] is not None
     assert running_payload["last_output_age_seconds"] is not None
@@ -2188,6 +2192,8 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
+    terminal_dashboard_payload = _payload(service.handle_get("/api/dashboard", {}))
+    assert terminal_dashboard_payload["active_job"] is None
 
 
 def test_ui_live_job_status_distinguishes_system_logs_from_runtime_output(

@@ -401,6 +401,28 @@ function activeJobIsLive(job = state.activeJobStatus) {
   return ["running", "waiting-for-operator", "cancelling"].includes(job.status || "running");
 }
 
+function activeJobPayloadIsLive(job) {
+  if (!job?.job_id) return false;
+  return ["running", "waiting-for-operator", "cancelling"].includes(job.status || "running");
+}
+
+async function recoverActiveJobFromDashboard(job) {
+  if (!activeJobPayloadIsLive(job)) return;
+  if (state.activeJobId === job.job_id && state.activeJobStatus) {
+    state.activeJobStatus = {...state.activeJobStatus, ...job};
+    return;
+  }
+  state.activeJobId = job.job_id;
+  state.activeJobCursor = 0;
+  state.activeJobLogChunks = [];
+  state.activeJobStatus = job;
+  if (state.activeJobTimer) clearInterval(state.activeJobTimer);
+  await pollActiveJob();
+  if (activeJobPayloadIsLive(state.activeJobStatus)) {
+    state.activeJobTimer = setInterval(pollActiveJob, 1000);
+  }
+}
+
 function syncLiveJobBodyClass() {
   document.body.classList.toggle("live-job-mode", activeJobIsLive());
 }
@@ -514,6 +536,7 @@ function sourceFindingsUrl() {
 async function fetchDashboard() {
   const payload = await api(dashboardUrl());
   state.dashboard = payload.dashboard;
+  await recoverActiveJobFromDashboard(payload.active_job);
   const version = String(payload.app_version || "").trim();
   document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
   const viewedStage = state.dashboard.active_stage_view?.stage || state.dashboard.active_stage;
