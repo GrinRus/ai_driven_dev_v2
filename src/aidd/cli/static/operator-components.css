@@ -1240,6 +1240,9 @@
 .clone-launch-summary {
   gap: 6px;
 }
+.clone-draft-error-summary {
+  gap: 6px;
+}
 .preflight-blocker-codes {
   display: flex;
   flex-wrap: wrap;

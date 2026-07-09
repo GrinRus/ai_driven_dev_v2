@@ -945,3 +945,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 
 - Continue clone-flow launch unhappy-path coverage after a passing preflight, especially duplicate clone target conflicts and runtime readiness changes between confirmation and launch.
 - Re-check secondary eval/archive launch-depth states after clone coverage so every non-remediation path remains visibly separate from QA recovery.
+
+## Clone Flow Duplicate Target Slice - 2026-07-09
+
+- Served browser QA reused `/tmp/aidd-qa-not-ready-ui` with an existing `WI-LIVE-HONO-SMOKE-CLONE` work item to reproduce the duplicate clone target path.
+- Before the fix, clicking `Clone This Flow` rendered a bare empty state with the raw service message, no alert semantics, no recovery action, and CLI-only `--force-context` copy. Screenshot: `.aidd/reports/ui-clone-flow-duplicate/01-duplicate-clone-before-desktop.png`.
+- The clone draft failure state now stays inside the flow wizard, shows `Clone Draft Needs Attention`, marks the state as `blocked`, explains that the clone target is already in use, and promotes `Back to handoff` as the immediate recovery action.
+- The message now tells the operator to open the existing work item from `Active work items` or choose another clone target before retrying. For failed QA handoffs, it also repeats that clone does not remediate QA and points to `Start Follow-up Flow`.
+- Browser verification after the fix: desktop and mobile had no console warnings/errors, no horizontal overflow, no bare empty state, no `--force-context` copy, one `role=alert` clone-draft summary, one `Back to handoff` button, and audit values for target work item, source run, and source state. On mobile `390x844`, the recovery button was fully inside the first viewport (`actionsBottom=826`). Screenshots: `.aidd/reports/ui-clone-flow-duplicate/02-duplicate-clone-after-desktop.png` and `.aidd/reports/ui-clone-flow-duplicate/03-duplicate-clone-after-mobile.png`.
+
+## Next UX Plan - After Clone Duplicate Target Slice
+
+- Continue clone-flow unhappy-path coverage with runtime readiness changes between confirmation and launch, using a clean clone target so the failure happens after passing draft creation and preflight.
+- Then re-check eval/archive depth states to keep non-remediation paths visibly separate from QA recovery.

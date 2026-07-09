@@ -1990,6 +1990,44 @@ function renderLaunchFailureSummary(wizard, draft, backLabel) {
   `;
 }
 
+function cloneDraftCreationMessage(error, targetWorkItem) {
+  const raw = String(error || "").trim();
+  if (raw.includes("Request context documents already exist")) {
+    return `A clone draft or work item already exists for ${targetWorkItem}.`;
+  }
+  return raw.replace(/\s*Use --force-context to overwrite them\.?$/i, "").trim()
+    || "Clone draft could not be created.";
+}
+
+function renderCloneDraftCreationError(wizard) {
+  const targetWorkItem = nextFlowDefaultWorkItem("CLONE");
+  const message = cloneDraftCreationMessage(wizard.preflightError, targetWorkItem);
+  const handoff = state.dashboard?.terminal_handoff;
+  const needsRecovery = terminalHandoffNeedsRecovery(handoff);
+  return renderNextFlowWizardShell({
+    sectionClass: "next-flow-wizard clone-draft-error",
+    title: "Clone Draft Needs Attention",
+    badge: "blocked",
+    badgeTone: "bad",
+    body: `
+      <div class="truncation-notice clone-draft-error-summary" data-clone-draft-error-summary role="alert">
+        <strong>Clone target is already in use</strong>
+        <span>${escapeHtml(message)}</span>
+        <span>Open the existing work item from Active work items, or choose another clone target before retrying.</span>
+        ${needsRecovery ? "<span>Clone still does not remediate QA. Use Start Follow-up Flow for implementation work.</span>" : ""}
+      </div>
+      <div class="wizard-actions">
+        <button data-next-flow-back-to-definition type="button">Back to handoff</button>
+      </div>
+      <div class="audit-preview">
+        <div class="panel-item"><strong>Target work item</strong><span>${escapeHtml(targetWorkItem)}</span></div>
+        <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(nextFlowSourceRunId() || "not recorded")}</span></div>
+        <div class="panel-item"><strong>Source state</strong><span>${escapeHtml(needsRecovery ? "still needs recovery" : "unchanged")}</span></div>
+      </div>
+    `
+  });
+}
+
 function renderLaunchReadinessSummary(wizard) {
   if (wizard.launchReadinessChecking) {
     return `
@@ -2076,6 +2114,9 @@ function renderLaunchConfirmation() {
   const wizard = state.nextFlowWizard;
   const draft = wizard.followUpDraft;
   if (!draft) {
+    if (wizard.action === "clone-flow" && wizard.preflightError) {
+      return renderCloneDraftCreationError(wizard);
+    }
     return `<section class="surface next-flow-wizard"><div class="empty-state">${escapeHtml(wizard.preflightError || "No next-flow draft available for launch confirmation.")}</div></section>`;
   }
   if (wizard.preflightLoading) {
