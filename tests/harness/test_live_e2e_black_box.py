@@ -3864,12 +3864,21 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
         "aidd.harness.live_e2e_black_box_orchestration._stage_no_progress_timeout_seconds",
         lambda scenario: 1.0,
     )
+    manual_evidence = tmp_path / "provider-no-progress-browser-evidence"
+    manual_evidence.mkdir()
+    (manual_evidence / "browser-notes.md").write_text(
+        "# Browser Notes\n\n"
+        "- Desktop UI showed the failed idea stage after provider no-progress.\n"
+        "- Runtime logs and artifact surfaces stayed reachable for triage.\n",
+        encoding="utf-8",
+    )
 
     result = run_black_box_live_e2e(
         scenario_path=scenario_path,
         runtime_id="opencode",
         work_root=work_root,
         report_root=report_root,
+        manual_frontend_evidence=manual_evidence,
     )
 
     assert result.status == "infra-fail"
@@ -3947,6 +3956,17 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     )
     assert "## idea / post-stage" in frontend_markdown
     assert "- Phase: `post-stage`" in frontend_markdown
+    manual_payload = frontend_payload["manual_visual_evidence"]
+    imported_root = result.bundle_root / "manual-frontend-evidence"
+    assert manual_payload["status"] == "imported"
+    assert manual_payload["non_gating"] is True
+    assert manual_payload["files"] == ["browser-notes.md"]
+    assert manual_payload["bundle_path"] == imported_root.as_posix()
+    assert (imported_root / "browser-notes.md").read_text(
+        encoding="utf-8"
+    ).startswith("# Browser Notes")
+    assert "## Manual Browser Evidence" in frontend_markdown
+    assert "`browser-notes.md`" in frontend_markdown
 
     run_transcript = json.loads(
         (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
@@ -3970,6 +3990,19 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     log_analysis = (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
     assert "provider-no-progress before completed stage artifact" in log_analysis
     assert "- No-Progress Timeout: `1.000s`" in log_analysis
+
+    state_payload = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state_payload["manual_frontend_evidence_source"] == (
+        manual_evidence.resolve().as_posix()
+    )
+    metadata_payload = json.loads(
+        (result.bundle_root / "harness-metadata.json").read_text(encoding="utf-8")
+    )
+    assert metadata_payload["black_box"]["manual_frontend_evidence"] == (
+        imported_root.as_posix()
+    )
 
 
 def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(

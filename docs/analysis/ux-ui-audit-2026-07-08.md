@@ -510,7 +510,14 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - This closes the P2 ambiguity from `eval-live-007-codex-20260709T000228Z`: downstream stages now receive the non-Error normalization target and public type compatibility quality bar as first-class context instead of relying on the shorter visible request alone.
 - Verification: `uv run --extra dev pytest tests/harness/test_live_workspace_bootstrap.py -q`; `uv run --extra dev ruff check tests/harness/test_live_workspace_bootstrap.py`.
 
-## Next UX Plan - After AIDD-LIVE-007 Bootstrap Spot-check
+## Provider No-Progress Manual Evidence Import Slice - 2026-07-09
 
-- Exercise real provider no-progress with manual browser evidence now that synthetic no-progress bundles retain frontend checkpoint evidence.
+- Provider no-progress `infra-fail` bundles now have regression coverage for imported manual browser evidence, not only API checkpoint evidence.
+- The no-progress harness regression passes `manual_frontend_evidence`, verifies `frontend-checkpoints.json` records it as non-gating imported evidence, verifies `frontend-checkpoints.md` links `browser-notes.md`, and confirms `flow-state.json` / `harness-metadata.json` preserve the evidence source and bundle path.
+- This protects the next real-provider/browser exercise from losing operator screenshots or notes when the run stops as `provider-no-progress before completed stage artifact`.
+- Verification: `uv run --extra dev pytest tests/harness/test_live_e2e_black_box.py::test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail -q`; `uv run --extra dev ruff check tests/harness/test_live_e2e_black_box.py`.
+
+## Next UX Plan - After Provider No-Progress Manual Evidence Import
+
+- Exercise real provider no-progress with manual browser evidence now that no-progress bundles retain frontend checkpoint evidence and imported browser notes/screenshots.
 - Run another medium live E2E pass after the unhappy-path UI slices if provider time budget allows, importing the newest browser evidence into the live bundle.
