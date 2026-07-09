@@ -1021,6 +1021,18 @@ def _recovery_actions(
             if first_failure.stage:
                 actions.append(
                     OperatorRecoveryAction(
+                        action="resume-stage",
+                        label="Retry stage",
+                        detail=(
+                            "Run the interrupted stage again in the same run after "
+                            "inspecting runtime evidence."
+                        ),
+                        stage=first_failure.stage,
+                        enabled=True,
+                    )
+                )
+                actions.append(
+                    OperatorRecoveryAction(
                         action="request-change",
                         label="Request change",
                         detail=(

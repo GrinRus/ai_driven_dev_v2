@@ -322,6 +322,46 @@ function recoveryFailureTitle(firstFailure, diagnostics) {
   return "Recovery required";
 }
 
+function renderRuntimePartialEvidence(firstFailure) {
+  if (!isRuntimeFirstFailure(firstFailure)) return "";
+  const stage = firstFailure?.stage || state.activeStage;
+  const refs = (state.dashboard?.evidence_refs || []).filter((ref) =>
+    (ref.stage || state.activeStage) === stage
+  );
+  if (!refs.length) return "";
+  const recoveryActions = (state.dashboard?.recovery_actions || []).filter((action) =>
+    (action.stage || stage) === stage
+  );
+  const retryAction = recoveryActions.find((action) => action.action === "resume-stage");
+  const requestAction = recoveryActions.find((action) => action.action === "request-change");
+  const documentRefs = refs.filter((ref) => ref.kind === "document");
+  const logRefs = refs.filter((ref) => ref.kind === "log");
+  const selectedRefs = [...documentRefs.slice(0, 3), ...logRefs.slice(0, 3)].slice(0, 6);
+  const rows = selectedRefs.map((ref) => `
+    <button class="artifact-row" data-evidence-stage="${escapeHtml(ref.stage || stage)}" data-evidence-path="${escapeHtml(ref.path)}" data-evidence-kind="${escapeHtml(ref.kind)}" type="button">
+      <span><strong>${escapeHtml(ref.label)}</strong>${pathLine(ref.path)}</span>
+      <span class="small-badge">${escapeHtml(ref.kind)}</span>
+    </button>
+  `).join("");
+  const actions = retryAction || requestAction ? `
+    <div class="wizard-actions">
+      ${retryAction ? `<button data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(stage)}" type="button" ${retryAction.enabled ? "" : "disabled"}>${escapeHtml(retryAction.label || "Retry stage")}</button>` : ""}
+      ${requestAction ? `<button class="secondary" data-recovery-action="request-change" data-recovery-stage="${escapeHtml(stage)}" type="button" ${requestAction.enabled ? "" : "disabled"}>${escapeHtml(requestAction.label || "Request change")}</button>` : ""}
+    </div>
+  ` : "";
+  return `
+    <section class="surface recovery-section runtime-partial-evidence">
+      <div class="surface-title">
+        <span>Partial stage evidence</span>
+        <span class="small-badge warn">${escapeHtml(selectedRefs.length)} refs</span>
+      </div>
+      <p>The runtime stopped before this stage completed. Inspect partial documents, runtime log, and runtime-exit metadata before retrying or requesting a change.</p>
+      <div class="recent-artifacts">${rows}</div>
+      ${actions}
+    </section>
+  `;
+}
+
 function renderRecoveryWorkbench() {
   const view = activeStageView();
   const diagnostics = view?.diagnostics || {};
@@ -390,6 +430,7 @@ function renderRecoveryWorkbench() {
           </div>
         ` : ""}
       </div>
+      ${renderRuntimePartialEvidence(firstFailure)}
       ${unresolvedQuestions.length || (questions.questions || []).length ? `
         <section class="surface recovery-section">
           <div class="surface-title">

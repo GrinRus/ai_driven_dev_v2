@@ -734,6 +734,10 @@ def test_operator_dashboard_surfaces_cancelled_runtime_exit_as_recovery_blocker(
     assert "exit_code=130" not in dashboard.first_failure.detail
     assert any(blocker.kind == "cancelled" for blocker in dashboard.blockers)
     assert any(action.action == "inspect-runtime-log" for action in dashboard.recovery_actions)
+    assert any(
+        action.action == "resume-stage" and action.stage == "plan"
+        for action in dashboard.recovery_actions
+    )
 
 
 def test_operator_dashboard_next_action_reviews_failed_intervention_result(

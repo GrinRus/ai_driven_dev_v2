@@ -20,6 +20,22 @@ from aidd.core.workspace import (
     workspace_workitems_root,
 )
 
+_RUNTIME_FAILURE_KINDS = frozenset(
+    {
+        "cancelled",
+        "failed",
+        "non_zero_exit",
+        "non-zero-exit",
+        "provider_error",
+        "provider-no-progress",
+        "runtime-error",
+        "runtime-exit-metadata-invalid",
+        "runtime-failure",
+        "stage-failed",
+        "timeout",
+    }
+)
+
 
 def _discover_work_items(workspace_root: Path) -> tuple[OnboardingWorkItemSummary, ...]:
     workitems_root = workspace_workitems_root(workspace_root)
@@ -95,6 +111,17 @@ def _work_item_summary(
         active_stage=STAGES[0],
         project_root=project_root,
     )
+    if (
+        dashboard.first_failure is not None
+        and dashboard.first_failure.kind in _RUNTIME_FAILURE_KINDS
+        and dashboard.first_failure.stage in STAGES
+    ):
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=workspace_root,
+            work_item=item.work_item,
+            active_stage=dashboard.first_failure.stage,
+            project_root=project_root,
+        )
     stages = dashboard.stages
     completed = sum(1 for stage in stages if stage.status == "succeeded")
     terminal_state = (

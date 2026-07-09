@@ -2253,6 +2253,20 @@ class OperatorUiService:
         )
         if (
             use_terminal_default
+            and dashboard.first_failure is not None
+            and dashboard.first_failure.stage
+            and dashboard.first_failure.stage != stage
+            and any(item.stage == dashboard.first_failure.stage for item in dashboard.stages)
+        ):
+            return resolve_operator_dashboard_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                active_stage=dashboard.first_failure.stage,
+                run_id=run_id,
+                project_root=self.project_root,
+            )
+        if (
+            use_terminal_default
             and dashboard.terminal_handoff is not None
             and stage != "qa"
             and any(item.stage == "qa" for item in dashboard.stages)

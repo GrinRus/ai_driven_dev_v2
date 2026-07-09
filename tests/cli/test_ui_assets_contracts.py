@@ -391,6 +391,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function renderRecoveryActionBand(diagnostics)" in cockpit
     assert "function renderRepairTimeline(validation)" in cockpit
     assert "function renderResolvedRepairSummary(validation)" in cockpit
+    assert "function renderRuntimePartialEvidence(firstFailure)" in cockpit
     assert "return renderFlowCompleteState();" in cockpit
     assert 'state.activeTab === "history"' in cockpit
     assert "function renderActivityTable()" in cockpit
@@ -1148,6 +1149,13 @@ def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
             "function isRuntimeFirstFailure(firstFailure)",
             "function runtimeLogEvidencePath(diagnostics)",
             "function runtimeFailureEvidencePath(firstFailure, diagnostics)",
+            "function renderRuntimePartialEvidence(firstFailure)",
+            "Partial stage evidence",
+            "Inspect partial documents, runtime log, and runtime-exit metadata",
+            "runtime-partial-evidence",
+            'action.action === "resume-stage"',
+            'data-recovery-action="resume-stage"',
+            "Retry stage",
             'action: "inspect-runtime-log"',
             "isRuntimeFirstFailure(firstFailure) && runtimeAction",
             'label: runtimeAction.label || "Open logs"',

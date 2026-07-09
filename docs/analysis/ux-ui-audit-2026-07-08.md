@@ -676,7 +676,16 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 - Browser verification after the fix: mobile at `390x844` stayed at `scrollWidth=390`, placed the wizard at `top=310`, and kept the source, definition, and preflight steps readable from the wizard top. Desktop stayed at `scrollWidth=1280` with the same follow-up preflight content and no layout regression.
 - Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-follow-up-preflight-mobile-after.png` and `control-follow-up-preflight-desktop-after.png`.
 
-## Next UX Plan - After Missing Terminal Evidence Control
+## Repeated Interrupt Resume Browser Evidence Slice - 2026-07-09
 
-- Continue unhappy-path coverage with repeated interrupt resume from a partially completed stage.
-- Rerun a provider-backed medium flow after the next unhappy-path UI slice if provider time budget allows, preserving the current happy-path, no-progress, interruption, QA-not-ready, missing-evidence, and follow-up-preflight baselines.
+- A controlled browser fixture copied the completed AIDD-LIVE-007 target workspace to `/tmp/aidd-repeated-interrupt-ui`, removed downstream `review` / `qa`, marked `implement` as `failed`, changed its latest `runtime-exit.json` to `cancelled` / `exit_code=130`, and preserved `implementation-report.md` plus runtime logs as partial stage evidence.
+- Browser/API QA found two first-time-user defects before the fix. `/api/dashboard` without an explicit `stage` opened `active_stage=idea` even though `first_failure.stage=implement`, so Recovery said `Runtime interrupted` while the selected stage facts said `Idea` / `succeeded`. The Work item rail also said `idea / 5/8`, and the central Recovery surface did not show partial output documents or a visible `Retry stage` action.
+- Dashboard defaulting now resolves omitted-stage runtime failures to the first failure stage, while explicit `stage=...` deep links remain honored. Project Home work-item summaries use the same runtime-failure stage default, so blocked cards no longer contradict the cockpit.
+- Runtime failure recovery now exposes `Retry stage` as a guided recovery action after `Open logs`, and the central Recovery workbench shows `Partial stage evidence` with stage documents and log refs before the retry/request-change actions.
+- Browser verification after the fix: desktop stayed at `scrollWidth=1280`, opened `Implement` / `failed`, showed the work-item card as `implement / 5/8`, listed `implementation-report.md`, `validator-report.md`, `runtime-exit.json`, runtime logs, `Retry stage`, and `Request change`. Mobile at `390x844` stayed at `scrollWidth=390`, kept `Runtime interrupted`, `Open logs`, partial evidence, `Retry stage`, and `Request change` readable without horizontal overflow. Mobile `Open logs` switched to `evidence-log-mode`, stayed on `Implement`, and showed the interrupted runtime log line.
+- Supplemental screenshots were saved under the local eval bundle as `manual-frontend-evidence/screenshots/control-repeated-interrupt-desktop-after.png`, `control-repeated-interrupt-mobile-after.png`, and `control-repeated-interrupt-mobile-logs-after.png`.
+
+## Next UX Plan - After Repeated Interrupt Resume
+
+- Rerun a provider-backed medium flow if provider time budget allows, preserving the current happy-path, no-progress, interruption, QA-not-ready, missing-evidence, follow-up-preflight, and repeated-interrupt baselines.
+- Continue targeted unhappy-path coverage with missing implementation verification artifacts if the provider-backed refresh does not naturally exercise that state.

@@ -987,6 +987,61 @@ def test_ui_dashboard_endpoint_defaults_completed_flow_to_qa_when_stage_is_omitt
     assert work_items[0]["active_stage"] == "qa"
 
 
+def test_ui_dashboard_endpoint_defaults_runtime_failure_to_failed_stage_when_stage_is_omitted(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    (attempt_root / RUN_RUNTIME_EXIT_METADATA_FILENAME).write_text(
+        json.dumps(
+            {
+                "exit_code": 130,
+                "exit_classification": "cancelled",
+                "adapter_outcome": "cancelled",
+                "completed_at_utc": "2026-07-09T08:26:12Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    service = _service(workspace_root)
+
+    default_payload = _payload(
+        service.handle_get("/api/dashboard", {"run_id": ["run-ui"]})
+    )
+    explicit_payload = _payload(
+        service.handle_get("/api/dashboard", {"stage": ["idea"], "run_id": ["run-ui"]})
+    )
+    project_home_payload = _payload(service.handle_get("/api/project-home", {}))
+
+    default_dashboard = default_payload["dashboard"]  # type: ignore[index]
+    explicit_dashboard = explicit_payload["dashboard"]  # type: ignore[index]
+    work_items = project_home_payload["project_home"]["work_items"]  # type: ignore[index]
+    assert default_dashboard["active_stage"] == "plan"  # type: ignore[index]
+    assert default_dashboard["first_failure"]["stage"] == "plan"  # type: ignore[index]
+    assert default_dashboard["primary_artifact"]["key"] == "plan"  # type: ignore[index]
+    assert any(
+        action["action"] == "resume-stage" and action["stage"] == "plan"
+        for action in default_dashboard["recovery_actions"]  # type: ignore[index,union-attr]
+    )
+    assert explicit_dashboard["active_stage"] == "idea"  # type: ignore[index]
+    assert explicit_dashboard["first_failure"]["stage"] == "plan"  # type: ignore[index]
+    assert work_items[0]["active_stage"] == "plan"
+
+
 def test_ui_dashboard_endpoint_exposes_run_history_lineage_payload(
     tmp_path: Path,
 ) -> None:
