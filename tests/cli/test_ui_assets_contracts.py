@@ -174,6 +174,8 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert "text-overflow: ellipsis;" in layout
     assert "body.evidence-log-mode .global-next-action-strip" in layout
     assert ".truncation-notice" in components
+    assert ".definition-list-warning" in components
+    assert ".truncation-notice ul" in components
     assert ".saved-answer" in components
     assert ".activity-detail" in components
     assert ".artifact-row" in components
@@ -1598,10 +1600,18 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "async function launchNextFlowNow()",
             "async function createFollowUpDraftForLaunch(draft)",
             "function invalidateFollowUpDraftPreview()",
-            'document.querySelector("[data-follow-up-definition-error]")?.remove();',
+            (
+                'document.querySelectorAll("[data-follow-up-definition-error], '
+                '[data-follow-up-list-blocker]")'
+            ),
             "data-follow-up-definition-error",
+            "definitionErrors",
+            "function followUpDraftValidationErrors(draft)",
             "At least one acceptance criterion is required before preflight.",
             "At least one required evidence item is required before preflight.",
+            "Fix these required launch inputs, then retry Continue to preflight.",
+            "data-follow-up-list-blocker",
+            "Required for preflight",
             "async function openCloneFlowDraft()",
             "function renderNewWorkItemHandoff()",
             "function renderEvalBatchHandoff()",
@@ -2010,6 +2020,9 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "manual-source-row",
             "No source links selected.",
             "Preflight blocked",
+            "Definition needs attention",
+            "data-follow-up-list-blocker",
+            "Required for preflight",
             "Running launch preflight...",
             "Flow Launch Wizard",
             "Independent flow",

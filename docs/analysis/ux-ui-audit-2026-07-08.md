@@ -862,3 +862,17 @@ The main UX gap is not missing capability; it is decision priority. A new operat
 ## Next UX Plan - After Missing Evidence Blocked Labels Slice
 
 - Continue targeted unhappy-path coverage with follow-up preflight blocked states and source-selection recovery, checking that first-time operators can identify the required correction before launch.
+
+## Follow-Up Definition Preflight Blockers Slice - 2026-07-09
+
+- Served browser QA reused `/tmp/aidd-follow-up-preflight-ui`, the completed Hono smoke target with a terminal QA handoff and optional follow-up flow.
+- Source-selection recovery was already acceptable: clearing all source findings disabled `Continue to Define Work Item`, showed `Selection required`, kept `Select recommended` visible, and had no horizontal overflow. Evidence: `.aidd/reports/ui-follow-up-preflight/03-source-clear.png`.
+- Browser QA found a clarity gap in the definition step before the fix: when both acceptance criteria and required evidence were deselected, the wizard showed only the first blocker (`At least one acceptance criterion is required before preflight.`). A first-time operator would need multiple retry cycles to discover that evidence was also required.
+- Follow-up definition validation now collects all local blockers, renders them together in the `Definition needs attention` summary, and adds near-list recovery notes for `acceptance_criteria` and `required_evidence`.
+- Browser verification after the fix: desktop showed both blockers in one alert and both `Required for preflight` list-level recovery notes. Mobile `390px` kept `scrollWidth=390`, both action buttons fit inside the viewport, and no warning text overflowed. Screenshots: `.aidd/reports/ui-follow-up-preflight/07-definition-blockers-fixed.png` and `.aidd/reports/ui-follow-up-preflight/08-definition-blockers-fixed-mobile.png`.
+- Happy preflight was rechecked with a unique follow-up work item id. The confirmation screen showed five passing preflight checks and `Launch Flow Now` enabled. Screenshot: `.aidd/reports/ui-follow-up-preflight/09-confirm-preflight-happy.png`.
+
+## Next UX Plan - After Follow-Up Definition Blockers Slice
+
+- Continue follow-up launch unhappy-path coverage with server-returned preflight blockers and launch failures, especially duplicate work item ids, missing baseline/source-run evidence, and runtime readiness changes after the draft step.
+- Verify that server-side blocked preflight states make `Back to definition` the obvious recovery path and do not leave `Launch Flow Now` looking like the next safe action.

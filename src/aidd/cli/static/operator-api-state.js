@@ -149,6 +149,7 @@ const state = {
     preflight: null,
     preflightLoading: false,
     preflightError: "",
+    definitionErrors: [],
     createdDraft: null,
     launchLoading: false,
     launchError: "",

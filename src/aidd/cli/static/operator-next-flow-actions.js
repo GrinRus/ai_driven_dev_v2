@@ -1134,6 +1134,7 @@ async function openNextFlowWizard(action) {
   state.nextFlowWizard.followUpDraftError = "";
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.preflightError = "";
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchLoading = false;
   state.nextFlowWizard.launchError = "";
@@ -1164,6 +1165,7 @@ async function openNewWorkItemHandoff() {
   state.nextFlowWizard.error = "";
   state.nextFlowWizard.followUpDraft = null;
   state.nextFlowWizard.preflight = null;
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
   state.nextFlowWizard.archiveRunId = "";
@@ -1180,6 +1182,7 @@ async function openEvalBatchHandoff() {
   state.nextFlowWizard.error = "";
   state.nextFlowWizard.followUpDraft = null;
   state.nextFlowWizard.preflight = null;
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
   state.nextFlowWizard.archiveRunId = "";
@@ -1233,6 +1236,7 @@ async function openCloneFlowDraft() {
   wizard.followUpDraft = null;
   wizard.preflight = null;
   wizard.preflightError = "";
+  wizard.definitionErrors = [];
   wizard.launchError = "";
   wizard.createdDraft = null;
   wizard.archiveRunId = "";
@@ -1267,16 +1271,19 @@ async function loadLaunchConfirmation() {
     await renderNextFlowWizardStep();
     return;
   }
-  const definitionError = followUpDraftValidationError(draft);
+  const definitionErrors = followUpDraftValidationErrors(draft);
+  const definitionError = definitionErrors[0] || "";
   if (definitionError) {
     wizard.preflightLoading = false;
     wizard.preflightError = definitionError;
+    wizard.definitionErrors = definitionErrors;
     wizard.step = "definition";
     await renderNextFlowWizardStep();
     return;
   }
   wizard.preflightLoading = true;
   wizard.preflightError = "";
+  wizard.definitionErrors = [];
   wizard.step = "confirm";
   await renderNextFlowWizardStep();
   try {
@@ -1366,18 +1373,23 @@ function selectedInheritedContextLines(items = [], fallbackLines = null) {
   );
 }
 
-function followUpDraftValidationError(draft) {
-  if (state.nextFlowWizard.action !== "start-follow-up-flow") return "";
-  if (!String(draft?.new_work_item || "").trim()) return "Work item id is required before preflight.";
-  if (!String(draft?.title || "").trim()) return "Title is required before preflight.";
-  if (!String(draft?.first_stage_input_preview || "").trim()) return "First-stage input preview is required before preflight.";
+function followUpDraftValidationErrors(draft) {
+  if (state.nextFlowWizard.action !== "start-follow-up-flow") return [];
+  const errors = [];
+  if (!String(draft?.new_work_item || "").trim()) errors.push("Work item id is required before preflight.");
+  if (!String(draft?.title || "").trim()) errors.push("Title is required before preflight.");
+  if (!String(draft?.first_stage_input_preview || "").trim()) errors.push("First-stage input preview is required before preflight.");
   if (!(draft?.acceptance_criteria || []).some((item) => String(item || "").trim())) {
-    return "At least one acceptance criterion is required before preflight.";
+    errors.push("At least one acceptance criterion is required before preflight.");
   }
   if (!(draft?.required_evidence || []).some((item) => String(item || "").trim())) {
-    return "At least one required evidence item is required before preflight.";
+    errors.push("At least one required evidence item is required before preflight.");
   }
-  return "";
+  return errors;
+}
+
+function followUpDraftValidationError(draft) {
+  return followUpDraftValidationErrors(draft)[0] || "";
 }
 
 function readFollowUpDraftForm() {
@@ -1407,9 +1419,11 @@ function invalidateFollowUpDraftPreview() {
   if (!state.nextFlowWizard.active || state.nextFlowWizard.step !== "definition") return;
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.preflightError = "";
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.createdDraft = null;
   state.nextFlowWizard.launchError = "";
-  document.querySelector("[data-follow-up-definition-error]")?.remove();
+  document.querySelectorAll("[data-follow-up-definition-error], [data-follow-up-list-blocker]")
+    .forEach((node) => node.remove());
 }
 
 async function createFollowUpDraftForLaunch(draft) {
@@ -1501,6 +1515,7 @@ async function openArchiveConfirmation() {
   state.nextFlowWizard.followUpDraft = null;
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.preflightError = "";
+  state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.launchError = "";
   state.nextFlowWizard.archiveRunId = runId;
   state.nextFlowWizard.archiveReason = state.dashboard?.terminal_handoff
@@ -1967,6 +1982,42 @@ function renderInheritedContextToggles(items) {
   `).join("");
 }
 
+function followUpDefinitionErrorsForRender(wizard) {
+  const errors = Array.isArray(wizard.definitionErrors)
+    ? wizard.definitionErrors.filter((item) => String(item || "").trim())
+    : [];
+  if (errors.length) return errors;
+  return wizard.preflightError ? [wizard.preflightError] : [];
+}
+
+function renderFollowUpDefinitionErrorSummary(errors) {
+  if (!errors.length) return "";
+  return `
+    <div class="truncation-notice definition-blocker-summary" data-follow-up-definition-error role="alert">
+      <strong>Definition needs attention</strong>
+      <span>Fix these required launch inputs, then retry Continue to preflight.</span>
+      <ul>
+        ${errors.map((error) => `<li>${escapeHtml(error)}</li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function renderFollowUpListBlocker(errors, listName) {
+  const label = listName === "acceptance_criteria" ? "acceptance criterion" : "required evidence item";
+  const hasBlocker = errors.some((error) => error.toLowerCase().includes(label));
+  if (!hasBlocker) return "";
+  const detail = listName === "acceptance_criteria"
+    ? "Select at least one acceptance criterion or edit the criterion text before retrying Continue."
+    : "Select at least one required evidence item or edit the evidence text before retrying Continue.";
+  return `
+    <div class="definition-list-warning" data-follow-up-list-blocker="${escapeHtml(listName)}">
+      <strong>Required for preflight</strong>
+      <span>${escapeHtml(detail)}</span>
+    </div>
+  `;
+}
+
 function renderFollowUpDefinition() {
   const wizard = state.nextFlowWizard;
   if (wizard.followUpDraftLoading) {
@@ -1981,12 +2032,13 @@ function renderFollowUpDefinition() {
   }
   const acceptanceItems = draft.acceptance_criteria_all || draft.acceptance_criteria;
   const evidenceItems = draft.required_evidence_all || draft.required_evidence;
+  const definitionErrors = followUpDefinitionErrorsForRender(wizard);
   return renderNextFlowWizardShell({
     sectionClass: "next-flow-wizard follow-up-definition",
     title: "Define Follow-up Work Item",
     badge: "editable draft",
     body: `
-      ${wizard.preflightError ? `<div class="truncation-notice" data-follow-up-definition-error><strong>Definition needs attention</strong><span>${escapeHtml(wizard.preflightError)}</span></div>` : ""}
+      ${renderFollowUpDefinitionErrorSummary(definitionErrors)}
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
         <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(draft.source_work_item)}</span></div>
@@ -2010,8 +2062,10 @@ function renderFollowUpDefinition() {
         </section>
         <aside class="definition-side">
           <div class="surface-title">Acceptance criteria</div>
+          ${renderFollowUpListBlocker(definitionErrors, "acceptance_criteria")}
           <div class="editable-list">${renderEditableList("acceptance_criteria", acceptanceItems, draft.acceptance_criteria_all ? draft.acceptance_criteria : null)}</div>
           <div class="surface-title compact">Required evidence</div>
+          ${renderFollowUpListBlocker(definitionErrors, "required_evidence")}
           <div class="editable-list">${renderEditableList("required_evidence", evidenceItems, draft.required_evidence_all ? draft.required_evidence : null)}</div>
           <div class="surface-title compact">Inherited context</div>
           <div class="inherited-context-list">${renderInheritedContextToggles(draft.inherited_context)}</div>
