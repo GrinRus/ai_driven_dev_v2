@@ -8819,3 +8819,793 @@ Sync notes:
   candidate-only Rich product-evaluation manifest for literal bracketed markup
   rendering. The catalog marks it as a candidate draft, not maintained coverage;
   `docs/e2e/scenario-matrix.md` was intentionally not expanded.
+
+---
+
+## Wave 34 — codebase audit remediation (`planned`)
+
+Goal: remediate the confirmed correctness, reliability, compatibility, testability,
+maintainability, and defensive-boundary findings in
+`docs/analysis/codebase-audit-2026-07-10.md` without changing the eight-stage workflow,
+weakening document-first validation, or using provider-authenticated live E2E as an
+implementation gate.
+
+Delivery order:
+
+1. restore validation trust and transactional publication;
+2. serialize local mutations and bound runtime lifecycle/evidence;
+3. make deterministic automation and release checks executable;
+4. reduce the measured hotspots and remove confirmed dead surfaces;
+5. apply defensive hardening that remains relevant for local CLI, adapter, harness,
+   workspace, and persisted-evidence paths.
+
+Scope decision:
+
+- `SEC-01`, `SEC-03`, and `SEC-04` remain in scope as defensive hardening because
+  their invariants govern local CLI, adapter, harness, workspace, and persisted-evidence
+  paths, not only the browser frontend.
+- `SEC-02` is not an implementation target in this wave. The supported frontend remains
+  a private, single-operator local UI with a loopback default, a visible warning for
+  non-loopback binds, and explicit opt-in for remote approval writes.
+- Reopen `SEC-02` before non-loopback operation becomes a supported or recommended
+  deployment mode, before the UI is shared across users or hosts, or before an external
+  service embeds the mutation API.
+
+Non-goals:
+
+- frontend authentication, session tokens, Origin/CSRF/Host enforcement, or remote
+  multi-user deployment;
+- provider-authenticated live E2E, penetration testing, or performance certification;
+- promotion of audit hypotheses or raw static-analysis signals into accepted work;
+- public API, CLI, contract, or persisted-schema changes during planning. Any
+  implementation-time compatibility change must be explicit in its local task.
+
+### Epic W34-E1 — validation and contract trust (`planned`)
+Linked stories: `US-02`, `US-03`, `US-04`, `US-10`, `US-12`
+
+#### Slice W34-E1-S1 — canonical stage-result gate (`planned`)
+Goal: prevent an invalid common stage checkpoint from being normalized, published, or
+used for downstream progression.
+
+Dependencies:
+
+- none
+
+Local tasks:
+
+- `W34-E1-S1-T1` Add canonical `stage-result.md` semantic rules and a final
+  post-normalization publication invariant. [`BUG-01`]
+  - Scope: common-document validation and the final stage publication gate.
+  - Verification: an eight-stage matrix rejects wrong stage, missing declared output,
+    incoherent status/history, blocker mismatch, and skipped next stage.
+
+Exit evidence:
+
+- no stage can publish success when its canonical result contradicts stage identity,
+  outputs, attempt history, blockers, or next-stage order.
+
+#### Slice W34-E1-S2 — stage-specific cross-document evidence (`planned`)
+Goal: bind authored stage claims to the primary and upstream evidence that gives those
+claims meaning.
+
+Dependencies:
+
+- `W34-E1-S1-T1`
+
+Local tasks:
+
+- `W34-E1-S2-T1` Add a typed evidence context and bind implementation output to the
+  selected task, changed paths, allowed scope, and authored checks. [`ARCH-01`]
+  - Scope: implement-stage cross-document rules.
+  - Verification: wrong-task, missing-path, out-of-scope, and skipped-authored-check
+    fixtures fail with stable findings.
+- `W34-E1-S2-T2` Bind tasklist IDs, dependencies, and verification obligations to plan
+  context. [`ARCH-01`]
+  - Scope: tasklist cross-document rules.
+  - Verification: missing and mismatched task obligations fail without changing valid
+    tasklist behavior.
+- `W34-E1-S2-T3` Bind review findings and evidence references to implementation
+  artifacts. [`ARCH-01`]
+  - Scope: review cross-document rules.
+  - Verification: nonexistent finding, evidence, and changed-path references fail.
+- `W34-E1-S2-T4` Bind QA verdicts, risks, and checks to review and implementation
+  evidence. [`ARCH-01`]
+  - Scope: QA cross-document rules.
+  - Verification: unsupported verdict, risk, and check relationships fail.
+
+Exit evidence:
+
+- tasklist, implement, review, and QA outputs cannot pass by satisfying local shape
+  while contradicting their authored context.
+
+#### Slice W34-E1-S3 — validator report protocol and examples (`planned`)
+Goal: make renderer, contract, prompts, consumers, and examples use one versioned
+validator vocabulary.
+
+Dependencies:
+
+- `W34-E1-S1-T1`
+
+Local tasks:
+
+- `W34-E1-S3-T1` Create a canonical validator field/code registry and synchronize the
+  renderer, contract, repair prompts, and dual-read consumers. [`COMPAT-01`]
+  - Scope: validator-report protocol only.
+  - Verification: every emitted field/code and every retained legacy alias is covered
+    by a registry-driven protocol test.
+- `W34-E1-S3-T2` Normalize all eight success examples and exact invalid/repair
+  expectations against the canonical protocol. [`COMPAT-02`]
+  - Scope: contract examples and full-stack validator fixtures.
+  - Verification: every success example passes, while invalid and repair examples emit
+    their exact expected codes.
+
+Exit evidence:
+
+- examples teach the behavior production validators enforce;
+- legacy validator-report consumers have a documented dual-read window.
+
+#### Slice W34-E1-S4 — item- and section-scoped semantic rules (`planned`)
+Goal: close parser false passes and false failures caused by whole-document or
+whole-section matching.
+
+Dependencies:
+
+- `W34-E1-S2`
+
+Local tasks:
+
+- `W34-E1-S4-T1` Reuse the canonical section-aware interview parser in
+  cross-validation. [`BUG-02`]
+  - Scope: interview cross-document rule.
+  - Verification: question-shaped prose outside the authoritative Questions section is
+    ignored while real unanswered questions still block.
+- `W34-E1-S4-T2` Validate mitigation and owner metadata inside each QA risk item.
+  [`BUG-03`]
+  - Scope: QA semantic rule.
+  - Verification: a neighboring-risk isolation test reports the exact untreated risk.
+- `W34-E1-S4-T3` Discover every task ID and reject mixed ID styles explicitly.
+  [`BUG-04`]
+  - Scope: tasklist ID and coverage rules.
+  - Verification: every mixed-style task is still checked for dependency and
+    verification coverage.
+- `W34-E1-S4-T4` Require command- or artifact-shaped executable evidence instead of
+  prose tool names. [`BUG-05`]
+  - Scope: implementation evidence grammar.
+  - Verification: a table covers accepted commands/artifacts and rejected prose-only
+    claims.
+
+Exit evidence:
+
+- evidence is evaluated inside its authoritative item/section rather than borrowed from
+  unrelated prose.
+
+#### Slice W34-E1-S5 — validator change isolation (`planned`)
+Goal: reduce contract synchronization cost after correctness behavior is characterized.
+
+Dependencies:
+
+- `W34-E1-S2`
+- `W34-E1-S3`
+- `W34-E1-S4`
+
+Local tasks:
+
+- `W34-E1-S5-T1` Add one production-equivalent full-stack contract fixture runner.
+  [`REF-04`]
+  - Scope: validator test infrastructure.
+  - Verification: every stage example uses the same runner and production registry.
+- `W34-E1-S5-T2` Split cross-document rules by invariant and stage behind the current
+  public facade. [`REF-04`]
+  - Scope: validator implementation modules.
+  - Verification: the public finding protocol and focused stage matrices remain
+    unchanged.
+- `W34-E1-S5-T3` Partition the monolithic semantic test module by stage and shared
+  invariant. [`REF-04`]
+  - Scope: validator tests only.
+  - Verification: the same regression cases are collected with no duplicate fixture
+    ownership.
+- `W34-E1-S5-T4` Remove unreachable validator scaffolds and unused constants after a
+  public-import compatibility check. [`DEAD-02`]
+  - Scope: validator dead surface only.
+  - Verification: import inventory and the complete validator suite pass.
+- `W34-E1-S5-T5` Remove the unused packaged `common/run-rules.md` fragment without
+  changing active prompt composition. [`DEAD-02`]
+  - Scope: packaged prompt resources.
+  - Verification: wheel inventory passes and active prompt hashes remain unchanged.
+
+Exit evidence:
+
+- contract changes have one full-stack test path and stage-local ownership;
+- confirmed unreachable validator and prompt-pack surface is absent.
+
+### Epic W34-E2 — transactional state and immutable evidence (`planned`)
+Linked stories: `US-02`, `US-03`, `US-06`, `US-10`, `US-11`
+
+#### Slice W34-E2-S1 — atomic stage publication (`planned`)
+Goal: make durable success observable only after canonical output publication commits.
+
+Dependencies:
+
+- `W34-E1-S1-T1` for the final semantic gate
+
+Local tasks:
+
+- `W34-E2-S1-T1` Publish outputs through staged-directory verification and atomic
+  replace. [`REL-02`]
+  - Scope: stage output publisher.
+  - Verification: injected create, copy, verify, and replace failures expose neither a
+    partial mirror nor a committed destination.
+- `W34-E2-S1-T2` Persist `succeeded` only after reconciliation and publication commit.
+  [`REL-02`]
+  - Scope: stage runner success transition.
+  - Verification: every injected publication failure leaves a truthful non-success
+    state.
+- `W34-E2-S1-T3` Terminalize raised adapter exceptions with failed state and diagnostic
+  evidence. [`REL-07`]
+  - Scope: stage runner exception boundary.
+  - Verification: an injected adapter exception proves `executing -> failed` and
+    preserves owned document restoration.
+
+Exit evidence:
+
+- a succeeded stage always has complete canonical outputs;
+- a raised adapter failure never leaves a durable executing stage.
+
+#### Slice W34-E2-S2 — canonical run identity and continuation (`planned`)
+Goal: make resume, latest-run selection, and manifest reuse agree on one authoritative
+run identity.
+
+Dependencies:
+
+- none for `T1` and `T2`
+- `W34-E2-S2-T3` depends on `T1` and `T2`
+
+Local tasks:
+
+- `W34-E2-S2-T1` Validate immutable runtime, target, and configuration fields when an
+  existing run manifest is reused. [`COMPAT-03`]
+  - Scope: run manifest creation/reuse.
+  - Verification: identical resume succeeds and every immutable-field mismatch is
+    rejected explicitly.
+- `W34-E2-S2-T2` Use one latest-run resolver with sub-second identity and a shared tie
+  policy. [`BUG-07`]
+  - Scope: run lookup, inspection, and resume resolution.
+  - Verification: two same-second manifests resolve identically through every public
+    consumer.
+- `W34-E2-S2-T3` Add explicit `--run-id` workflow continuation for non-first
+  `--from-stage` starts. [`BUG-06`]
+  - Scope: CLI workflow selection and core continuation service.
+  - Verification: every non-first starting stage continues the requested run and
+    validates its upstream prerequisites.
+
+Exit evidence:
+
+- the CLI can resume any valid non-first stage without allocating a contradictory run;
+- every consumer chooses the same latest run.
+
+#### Slice W34-E2-S3 — immutable completed-run overlays and accountability (`planned`)
+Goal: preserve completed-run bytes while exposing truthful operator state and all prompts
+actually used.
+
+Dependencies:
+
+- `W34-E2-S2-T1`
+
+Local tasks:
+
+- `W34-E2-S3-T1` Move archive decisions to a separate append-only operator
+  overlay/index. [`ARCH-03`]
+  - Scope: archive write/read model.
+  - Verification: source manifest bytes and hash are identical before and after archive.
+- `W34-E2-S3-T2` Aggregate immutable per-attempt prompt provenance across executed
+  stages. [`ARCH-02`]
+  - Scope: run accountability read model.
+  - Verification: an idea-to-QA fixture exposes every executed prompt set and attempt
+    mode.
+
+Exit evidence:
+
+- completed-run source evidence is immutable;
+- full-flow accountability lists prompts actually used at every executed stage.
+
+### Epic W34-E3 — local operator concurrency and bounded UI state (`planned`)
+Linked stories: `US-03`, `US-06`, `US-10`, `US-11`
+
+#### Slice W34-E3-S1 — serialized run mutation (`planned`)
+Goal: admit only one conflicting mutation for a run while allocating durable identities
+atomically across CLI and UI processes.
+
+Dependencies:
+
+- none
+
+Local tasks:
+
+- `W34-E3-S1-T1` Add a filesystem-backed run-mutation lease and atomic run/attempt
+  allocation. [`REL-01`, `REF-02`]
+  - Scope: core run store and identity allocation.
+  - Verification: concurrent CLI/UI allocation yields unique IDs and one mutation owner.
+- `W34-E3-S1-T2` Route stage, workflow, and remediation UI mutations through keyed
+  admission with deterministic conflict responses. [`REL-01`, `REF-02`]
+  - Scope: UI application service.
+  - Verification: overlapping same-run requests admit one job and reject the others
+    without creating attempts.
+
+Exit evidence:
+
+- same-run mutations cannot race metadata, attempts, or publication;
+- non-conflicting runs remain independently executable.
+
+#### Slice W34-E3-S2 — terminal-safe operator decisions (`planned`)
+Goal: keep runtime decisions immutable and make cancellation terminate all waiters.
+
+Dependencies:
+
+- `W34-E3-S1-T1`
+
+Local tasks:
+
+- `W34-E3-S2-T1` Resolve each approval exactly once with compare-and-set semantics.
+  [`REL-09`, `REF-02`]
+  - Scope: approval decision service.
+  - Verification: concurrent opposite decisions yield one durable winner shared by the
+    runtime and audit ledger.
+- `W34-E3-S2-T2` Wake decision waiters on cancellation and reject decisions for
+  terminal jobs. [`REL-08`, `REF-02`]
+  - Scope: job/approval lifecycle.
+  - Verification: the waiter exits within a bound and no post-cancel continuation is
+    possible.
+
+Exit evidence:
+
+- runtime behavior and durable approval history cannot disagree;
+- cancelled jobs retain no live decision-wait thread.
+
+#### Slice W34-E3-S3 — bounded local UI retention (`planned`)
+Goal: keep a long-lived local server within explicit memory and response budgets.
+
+Dependencies:
+
+- `W34-E3-S1-T2`
+
+Local tasks:
+
+- `W34-E3-S3-T1` Store live chunks in a byte-bounded ring, cap responses, and evict
+  terminal jobs by TTL/count. [`PERF-01`]
+  - Scope: UI job registry.
+  - Verification: a high-volume stress fixture stays within fixed memory and response
+    budgets while durable logs remain available.
+
+Exit evidence:
+
+- local UI memory no longer grows without bound with job count or log volume.
+
+#### Slice W34-E3-S4 — UI service change isolation (`planned`)
+Goal: separate routing, job/approval state, dashboard reduction, and next-flow rendering
+after their corrected behavior is characterized.
+
+Dependencies:
+
+- `W34-E3-S1`
+- `W34-E3-S2`
+- `W34-E3-S3`
+- executable frontend tests from `W34-E5-S3`
+
+Local tasks:
+
+- `W34-E3-S4-T1` Add characterization fixtures for corrected routes, jobs, approvals,
+  and dashboard states. [`REF-02`]
+  - Scope: UI tests.
+  - Verification: API/state snapshots cover mutation conflicts, decisions,
+    cancellation, retention, and terminal views.
+- `W34-E3-S4-T2` Extract thin HTTP route handlers from `cli/ui.py`. [`REF-02`]
+  - Scope: UI routing only.
+  - Verification: endpoint contract fixtures remain unchanged.
+- `W34-E3-S4-T3` Extract pure dashboard reducers and evidence collectors. [`REF-02`]
+  - Scope: core dashboard read model.
+  - Verification: deterministic state-to-view fixtures remain equivalent.
+- `W34-E3-S4-T4` Split the next-flow browser hotspot into controller and view modules.
+  [`REF-02`]
+  - Scope: packaged JavaScript.
+  - Verification: DOM-state and packaged-asset tests preserve behavior and module
+    loading.
+
+Exit evidence:
+
+- UI routing, mutation ownership, read-model reduction, and browser next-flow behavior
+  can change independently.
+
+### Epic W34-E4 — bounded adapter lifecycle and truthful runtime evidence (`planned`)
+Linked stories: `US-01`, `US-06`, `US-08`, `US-10`
+
+#### Slice W34-E4-S1 — bounded process supervision (`planned`)
+Goal: make every transport start supervision before blocking I/O and own its complete
+process lifecycle.
+
+Dependencies:
+
+- none for characterization and timeout validation
+- integration tasks depend on the shared supervisor task
+
+Local tasks:
+
+- `W34-E4-S1-T1` Add provider-free adapter lifecycle characterization fixtures.
+  [`REF-03`]
+  - Scope: cross-adapter tests only.
+  - Verification: a startup, bidirectional-I/O, timeout, cancellation, parent-exit, and
+    descendant-exit matrix runs without provider authentication.
+- `W34-E4-S1-T2` Reject non-finite runtime budgets at configuration and execution
+  boundaries. [`BUG-08`]
+  - Scope: timeout contract.
+  - Verification: parameterized tests cover non-finite values, booleans, zero,
+    negatives, and valid finite values.
+- `W34-E4-S1-T3` Start readers, deadline, and cancellation supervision before managed
+  stdin delivery. [`REL-03`]
+  - Scope: shared streaming and Qwen prompt startup.
+  - Verification: a large bidirectional fake runtime terminates under both timeout and
+    explicit cancellation.
+- `W34-E4-S1-T4` Add a shared owned-process-group supervisor with bounded drain and
+  termination. [`REF-03`]
+  - Scope: adapter lifecycle primitive.
+  - Verification: a disposable parent/child process-tree test proves bounded group
+    shutdown.
+- `W34-E4-S1-T5` Adopt the owned-process supervisor in streamed, Codex-live, and
+  Qwen-live execution. [`REL-05`, `REL-10`]
+  - Scope: transport lifecycle integration.
+  - Verification: descendants exit after timeout, denial, cancellation, parent exit,
+    and inherited-pipe drain expiry.
+- `W34-E4-S1-T6` Propagate cancellation through Codex live startup, active turn, and
+  approval wait. [`REL-04`]
+  - Scope: Codex live transport.
+  - Verification: three-state cancellation tests persist a cancelled outcome.
+- `W34-E4-S1-T7` Propagate cancellation through Qwen live startup, active turn, and
+  approval wait. [`REL-04`]
+  - Scope: Qwen live transport.
+  - Verification: three-state cancellation tests persist a cancelled outcome.
+- `W34-E4-S1-T8` Preserve incomplete trailing Qwen JSONL frames until a complete record
+  arrives. [`REL-06`]
+  - Scope: Qwen event reader.
+  - Verification: a representative event is split at every byte boundary; malformed
+    complete lines and duplicate IDs remain deterministic.
+
+Exit evidence:
+
+- configured timeout and cancellation cover prompt delivery, active execution, approval
+  waits, pipe drain, and descendant shutdown.
+
+#### Slice W34-E4-S2 — runtime outcome and evidence truth (`planned`)
+Goal: make every blocked, failed, cancelled, or early-stopped runtime attempt leave one
+normalized and comparable evidence envelope.
+
+Dependencies:
+
+- `W34-E4-S1`
+
+Local tasks:
+
+- `W34-E4-S2-T1` Define typed stop reasons and one runtime-evidence commit contract.
+  [`REF-03`]
+  - Scope: shared adapter result model.
+  - Verification: a cross-adapter outcome table covers success, failure, timeout,
+    cancellation, denial, blocked, and launch failure.
+- `W34-E4-S2-T2` Persist truthful Codex early-stop and blocked outcomes through the
+  shared contract. [`BUG-09`, `REL-11`]
+  - Scope: Codex live path.
+  - Verification: denial, startup-timeout, and blocked branches agree between outer
+    status, raw log, and `runtime-exit.json`.
+- `W34-E4-S2-T3` Persist canonical Qwen blocked outcomes through the shared contract.
+  [`REL-11`]
+  - Scope: Qwen live path.
+  - Verification: a blocked attempt retains stdout/stderr, raw log, and blocked exit
+    evidence.
+- `W34-E4-S2-T4` Normalize executable-launch failures for every registered runtime.
+  [`REL-12`]
+  - Scope: adapter surface.
+  - Verification: a missing-executable conformance matrix produces equivalent durable
+    evidence for every maintained runtime.
+- `W34-E4-S2-T5` Add a disk-backed runtime-log sink with bounded in-memory tails and
+  counters. [`PERF-02`]
+  - Scope: shared runtime capture layer.
+  - Verification: a high-volume fake runtime preserves the complete disk log within a
+    fixed resident-memory budget.
+
+Exit evidence:
+
+- runtime status, raw logs, and exit metadata agree for every terminal and blocked path;
+- verbose runtimes cannot force unbounded in-memory capture.
+
+#### Slice W34-E4-S3 — adapter context and capability compatibility (`planned`)
+Goal: make advertised capabilities and configured execution context match what each
+adapter actually runs.
+
+Dependencies:
+
+- `W34-E4-S1-T1`
+- `W34-E4-S2-T1`
+
+Local tasks:
+
+- `W34-E4-S3-T1` Propagate Qwen intervention mode and operator-request metadata.
+  [`COMPAT-04`]
+  - Scope: Qwen context, environment, and native prompt assembly.
+  - Verification: native and adapter-flags intervention fixtures preserve both fields.
+- `W34-E4-S3-T2` Align Claude capability reporting with executable registered
+  transports. [`COMPAT-05`]
+  - Scope: Claude probe and adapter surface.
+  - Verification: probe-to-execution conformance covers every claimed live path.
+- `W34-E4-S3-T3` Preserve supported Codex live arguments and reject unsupported options
+  explicitly. [`COMPAT-06`]
+  - Scope: Codex live command/thread mapping.
+  - Verification: one supported option is preserved and one unsupported option is
+    rejected before launch.
+
+Exit evidence:
+
+- permission mode does not silently drop configured behavior;
+- doctor/capability output never promises an unimplemented execution path.
+
+### Epic W34-E5 — executable automation, durable bundles, and release checks (`planned`)
+Linked stories: `US-07`, `US-09`, `US-10`, `US-11`
+
+#### Slice W34-E5-S1 — deterministic CI scenario lane (`planned`)
+Goal: turn `automation_lane: ci` into an executable local-only contract without adding
+provider-live work to CI/CD.
+
+Dependencies:
+
+- the P1 validation gate in `W34-E1-S1` before the lane becomes required
+
+Local tasks:
+
+- `W34-E5-S1-T1` Repair stale CI-labelled smoke manifests and fixtures. [`BUG-11`]
+  - Scope: deterministic scenarios and local fixtures.
+  - Verification: each manifest passes from a freshly materialized fixture.
+- `W34-E5-S1-T2` Expose a deterministic local-only `aidd eval execute` entry point
+  over the existing pipeline without restoring the removed legacy live-run command.
+  [`TEST-01`, `DEAD-01`]
+  - Scope: CLI and harness entry point.
+  - Verification: one smoke covers prepare, execute, verify, teardown, and bundle
+    persistence while rejecting live/provider-auth manifests.
+- `W34-E5-S1-T3` Execute every discovered CI-lane manifest in CI. [`TEST-01`]
+  - Scope: CI workflow integration.
+  - Verification: discovered manifest IDs equal executed manifest IDs exactly.
+
+Exit evidence:
+
+- every CI-labelled scenario is executable and actually executed;
+- the deterministic pipeline has a supported product entry point.
+
+#### Slice W34-E5-S2 — bounded harness lifecycle and immutable bundles (`planned`)
+Goal: bound the complete deterministic lifecycle and freeze completed evidence by value.
+
+Dependencies:
+
+- `W34-E5-S1-T1`
+
+Local tasks:
+
+- `W34-E5-S2-T1` Apply one lifecycle budget and owned process groups to setup, run,
+  verify, and teardown. [`REL-13`, `REF-01`]
+  - Scope: deterministic harness runner.
+  - Verification: timeout and descendant-exit tests cover every phase.
+- `W34-E5-S2-T2` Materialize result bundles by copy, hash, and atomic replace instead
+  of hard links. [`REL-14`]
+  - Scope: result bundle writer.
+  - Verification: later source mutation cannot alter the destination and injected copy
+    failure leaves no partial bundle.
+- `W34-E5-S2-T3` Make the running-stage frontend checkpoint transition-aware.
+  [`TEST-03`, `REF-01`]
+  - Scope: black-box checkpoint probe.
+  - Verification: a barrier test completes the stage during probing and routes to the
+    normal post-stage checkpoint without a false failure.
+
+Exit evidence:
+
+- setup, run, verify, and teardown share one bounded lifecycle;
+- completed bundles and checkpoint decisions remain stable under source mutation and
+  concurrent stage transitions.
+
+#### Slice W34-E5-S3 — classification, release, and packaged-UI gates (`planned`)
+Goal: make automated classifications and release/package evidence reject ambiguous or
+non-executable claims.
+
+Dependencies:
+
+- none for classifier and release tasks
+- JavaScript DOM tests build on the syntax gate
+
+Local tasks:
+
+- `W34-E5-S3-T1` Replace divergent eval classifiers with one typed earliest-failure
+  classifier. [`BUG-10`]
+  - Scope: eval log analysis.
+  - Verification: structured/text fixture tables cover assertions, HTTP errors, missing
+    executables/files, DNS, and timeout, and both public APIs agree.
+- `W34-E5-S3-T2` Bound release preflight subprocess and network failures. [`REL-15`]
+  - Scope: release preflight script.
+  - Verification: timeout, transport, TLS/DNS, registry, and server failures still emit
+    valid structured blocker output.
+- `W34-E5-S3-T3` Validate release evidence by exact host, path, semantic version, and
+  exit status. [`BUG-12`]
+  - Scope: release evidence collector.
+  - Verification: unrelated hosts, prefix versions, and error-bearing transcripts fail.
+- `W34-E5-S3-T4` Run `node --check` for every packaged JavaScript asset in CI.
+  [`TEST-02`]
+  - Scope: package and CI syntax gate.
+  - Verification: asset discovery is exhaustive and an intentional syntax error fails.
+- `W34-E5-S3-T5` Add lightweight DOM-state tests for module ordering, stale responses,
+  cancellation, and error rendering. [`TEST-02`]
+  - Scope: packaged frontend behavior tests.
+  - Verification: out-of-order and rejected mocked responses exercise deterministic
+    state recovery.
+
+Exit evidence:
+
+- failure taxonomy, release evidence, and packaged browser behavior have executable
+  negative-path gates.
+
+#### Slice W34-E5-S4 — live orchestration change isolation (`planned`)
+Goal: split the measured 8.6k-line live orchestration hotspot behind characterized typed
+boundaries after lifecycle and classification behavior is corrected.
+
+Dependencies:
+
+- `W34-E5-S2`
+- `W34-E5-S3-T1`
+
+Local tasks:
+
+- `W34-E5-S4-T1` Extract durable flow-state and resume coordination from live
+  orchestration. [`REF-01`]
+  - Scope: harness flow-state service.
+  - Verification: deterministic resume and idempotency suites preserve bundle behavior.
+- `W34-E5-S4-T2` Extract process/checkpoint probe coordination behind typed results.
+  [`REF-01`]
+  - Scope: live process and checkpoint services.
+  - Verification: stage, frontend, cancellation, and transition fixtures preserve
+    current external decisions.
+- `W34-E5-S4-T3` Extract pure quality-policy evaluation from orchestration. [`REF-01`]
+  - Scope: quality policy only.
+  - Verification: existing fixture verdicts remain equivalent.
+- `W34-E5-S4-T4` Extract report and bundle renderers behind typed inputs. [`REF-01`]
+  - Scope: live report writers.
+  - Verification: golden JSON and Markdown bundle tests remain stable.
+
+Exit evidence:
+
+- process lifecycle, durable flow state, checkpoints, quality policy, and report writing
+  can evolve independently.
+
+### Epic W34-E6 — remaining confirmed dead surfaces (`planned`)
+Linked stories: `US-01`, `US-08`, `US-09`, `US-10`
+
+#### Slice W34-E6-S1 — compatibility-checked removal (`planned`)
+Goal: remove production and dependency surface that has no supported runtime,
+compatibility, registry, or resource entry point.
+
+Dependencies:
+
+- correctness/reliability slices in `W34-E1` and `W34-E4` before deleting adjacent
+  compatibility code
+
+Local tasks:
+
+- `W34-E6-S1-T1` Remove superseded Claude question/resume code and
+  implementation-only tests after a public-import compatibility review. [`DEAD-03`]
+  - Scope: Claude adapter legacy surface.
+  - Verification: registered adapter integration tests cover the retained shared path.
+- `W34-E6-S1-T2` Remove the unreferenced core interview capability helper after a
+  public-import check. [`DEAD-04`]
+  - Scope: core interview surface.
+  - Verification: import inventory and the interview suite pass.
+- `W34-E6-S1-T3` Remove the three unused direct runtime dependencies and regenerate the
+  lock. [`DEAD-05`]
+  - Scope: project dependencies and lock only.
+  - Verification: locked sync, wheel build/install, and package/validator tests pass.
+
+Exit evidence:
+
+- every removed symbol/resource/dependency has a recorded compatibility exclusion and
+  retained integration coverage.
+
+### Epic W34-E7 — defensive local trust boundaries (`planned`)
+Linked stories: `US-01`, `US-03`, `US-07`, `US-08`, `US-10`, `US-12`
+
+#### Slice W34-E7-S1 — typed runtime operator policy (`planned`)
+Goal: replace permissive lexical decisions with explicit local capability policy.
+
+Dependencies:
+
+- none for the typed policy model
+- enforcement follows characterization of current runtime operator decisions
+
+Local tasks:
+
+- `W34-E7-S1-T1` Define typed capability rules for runtime operator requests.
+  [`SEC-01`]
+  - Scope: runtime operator policy model.
+  - Verification: a defensive decision table covers known capabilities, unknown
+    requests, and policy-blocked operations without executing provider-live commands.
+- `W34-E7-S1-T2` Apply protected-data and core-evidence boundaries consistently to
+  reads, writes, and destructive operations, and fail closed when no verifiable
+  boundary exists. [`SEC-01`]
+  - Scope: runtime operator policy enforcement.
+  - Verification: disposable local fixtures prove protected evidence is never
+    auto-approved and ordinary bounded project operations retain intended behavior.
+
+Exit evidence:
+
+- broadly capable or unknown operations cannot receive permissive approval from lexical
+  inference alone.
+
+#### Slice W34-E7-S2 — shared identifier containment (`planned`)
+Goal: make every user-controlled identifier resolve to one contained component before
+the first write.
+
+Dependencies:
+
+- reuse existing project-root containment primitives where they satisfy the new shared
+  identifier contract
+
+Local tasks:
+
+- `W34-E7-S2-T1` Add shared typed identifier validation and resolve-and-contain
+  primitives. [`SEC-03`]
+  - Scope: common identifier/path boundary.
+  - Verification: defensive fixtures cover valid components, invalid components, root
+    escape, and unsafe ancestor resolution without recording sensitive paths.
+- `W34-E7-S2-T2` Adopt the shared boundary for workspace, work-item, run, attempt, and
+  operator-overlay paths. [`SEC-03`]
+  - Scope: core and CLI persisted paths.
+  - Verification: every core write-path family passes the shared containment matrix.
+- `W34-E7-S2-T3` Adopt the shared boundary for scenario, eval-run, and result-bundle
+  paths. [`SEC-03`]
+  - Scope: harness and eval persisted paths.
+  - Verification: every harness/bundle write-path family passes the same containment
+    matrix.
+
+Exit evidence:
+
+- core and harness identifiers share one fail-closed containment contract.
+
+#### Slice W34-E7-S3 — fail-closed safety configuration (`planned`)
+Goal: reject ambiguous or unknown safety-sensitive configuration before runtime
+execution.
+
+Dependencies:
+
+- `W34-E4-S1-T2` for the shared runtime budget contract
+
+Local tasks:
+
+- `W34-E7-S3-T1` Distinguish missing from blank values, validate known safety keys, and
+  reject unknown or malformed safety fields. [`SEC-04`]
+  - Scope: configuration loading and validation.
+  - Verification: a defensive config matrix covers absent defaults, blank values,
+    unknown keys, malformed safety fields, and valid explicit settings.
+
+Exit evidence:
+
+- malformed safety configuration cannot silently fall back to permissive behavior.
+
+Wave 34 exit evidence:
+
+- every confirmed audit finding is mapped to a roadmap local task or, for `SEC-02`, an
+  explicit deployment-boundary deferral with reopen triggers;
+- all P1 non-security findings have deterministic regressions and no remaining accepted
+  P1 state/evidence invariant gap;
+- CI executes every declared deterministic CI scenario and every packaged JavaScript
+  file has an executable syntax gate;
+- provider-authenticated live E2E remains outside the implementation gate;
+- full configured lint, type, test, build, wheel-smoke, and documentation consistency
+  checks pass before the wave is closed.
+
+Sync notes:
+
+- `2026-07-10` Wave 34 was opened from
+  `docs/analysis/codebase-audit-2026-07-10.md`. The first promoted task restores the
+  canonical `stage-result.md` gate; independent transactional publication, local
+  mutation serialization, adapter characterization, runtime policy, and identifier
+  boundary foundations are queued behind it or alongside it according to their explicit
+  dependencies. Frontend session/origin hardening is intentionally not queued while the
+  supported UI remains private, local, and single-operator.

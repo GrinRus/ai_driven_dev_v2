@@ -6,15 +6,51 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Next
 
-No unblocked local task is currently promoted.
+- `W34-E1-S1-T1` — Add canonical `stage-result.md` semantic rules and a final
+  post-normalization publication invariant.
 
 ## Soon
 
-No dependent local task is currently queued.
+- `W34-E1-S2-T1` — Add a typed evidence context and bind implementation output to
+  selected task, changed paths, allowed scope, and authored checks.
+- `W34-E2-S1-T1` — Publish stage outputs through staged-directory verification and
+  atomic replace.
+- `W34-E3-S1-T1` — Add a filesystem-backed run-mutation lease and atomic run/attempt
+  allocation.
+- `W34-E4-S1-T1` — Add provider-free adapter lifecycle characterization fixtures.
+- `W34-E7-S1-T1` — Define typed capability rules for runtime operator requests.
+- `W34-E7-S2-T1` — Add shared typed identifier validation and resolve-and-contain
+  primitives.
 
 ## Parking lot
 
-No parked local task is currently queued.
+- `W34-E1-S3-T1` — Create a canonical validator field/code registry and synchronize
+  renderer, contract, repair prompts, and dual-read consumers.
+- `W34-E1-S4-T1` — Reuse the canonical section-aware interview parser in
+  cross-validation.
+- `W34-E1-S5-T1` — Add one production-equivalent full-stack contract fixture runner.
+- `W34-E2-S2-T1` — Validate immutable runtime, target, and configuration fields when
+  an existing run manifest is reused.
+- `W34-E2-S3-T1` — Move archive decisions to a separate append-only operator
+  overlay/index.
+- `W34-E3-S2-T1` — Resolve each approval exactly once with compare-and-set semantics.
+- `W34-E3-S3-T1` — Store live chunks in a byte-bounded ring, cap responses, and evict
+  terminal jobs by TTL/count.
+- `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
+  and dashboard states.
+- `W34-E4-S2-T1` — Define typed stop reasons and one runtime-evidence commit contract.
+- `W34-E4-S3-T1` — Propagate Qwen intervention mode and operator-request metadata.
+- `W34-E5-S1-T1` — Repair stale CI-labelled smoke manifests and fixtures.
+- `W34-E5-S2-T1` — Apply one lifecycle budget and owned process groups to setup, run,
+  verify, and teardown.
+- `W34-E5-S3-T1` — Replace divergent eval classifiers with one typed earliest-failure
+  classifier.
+- `W34-E5-S4-T1` — Extract durable flow-state and resume coordination from live
+  orchestration.
+- `W34-E6-S1-T1` — Remove superseded Claude question/resume code after a public-import
+  compatibility review.
+- `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
+  configuration.
 
 ## Update rules
 
@@ -27,6 +63,14 @@ No parked local task is currently queued.
 
 ## Queue sync notes
 
+- `2026-07-10` Wave 34 opened from
+  `docs/analysis/codebase-audit-2026-07-10.md`. `W34-E1-S1-T1` is promoted to
+  `Next`; cross-document evidence, atomic publication, local mutation serialization,
+  provider-free adapter characterization, runtime policy, and identifier containment
+  foundations are in `Soon`. One entry task for each dependent slice is visible in
+  `Parking lot`; remaining dependent local tasks stay in the canonical roadmap until
+  their predecessor is complete. Frontend session/origin hardening is intentionally not
+  queued while `aidd ui` remains a private, single-operator local frontend.
 - `2026-06-22` Wave 32 was opened for the `AIDD-LIVE-011` exact-PyPI raw-log
   rendering defect. `W32-E1-S1-T1` is promoted to `Next`; the task is scoped to
   CLI log rendering plus focused regression coverage and a source-checkout live rerun.
