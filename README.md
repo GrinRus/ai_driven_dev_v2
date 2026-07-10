@@ -14,10 +14,8 @@ idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 
 ## Alpha status and safety
 
-Latest published prerelease: `0.1.0a14`.
-Latest accepted published prerelease evidence: `0.1.0a14`.
-Current release-candidate package version on this branch: `0.1.0a15`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a14`.
+Latest published prerelease: `0.1.0a15`.
+Latest accepted published prerelease evidence: `0.1.0a15`.
 The `main` branch is development source and may contain unreleased changes.
 Source checkouts are not accepted package-channel evidence until the GitHub Release,
 PyPI publish, `pipx`, and `uv tool` verification jobs succeed for a tagged release.
@@ -59,7 +57,7 @@ Claude Code, Codex, OpenCode, or other runtime CLIs separately.
 Install the latest published prerelease:
 
 ```bash
-pipx install "ai-driven-dev-v2==0.1.0a14"
+pipx install "ai-driven-dev-v2==0.1.0a15"
 aidd --version
 aidd doctor
 ```
@@ -69,7 +67,7 @@ aidd doctor
 Install the latest published prerelease:
 
 ```bash
-uv tool install "ai-driven-dev-v2==0.1.0a14"
+uv tool install "ai-driven-dev-v2==0.1.0a15"
 aidd --version
 aidd doctor
 ```
@@ -97,7 +95,7 @@ uv run aidd --version
 uv run aidd doctor
 ```
 
-The latest published prerelease is `v0.1.0a14`. Use the pinned `pipx` or
+The latest published prerelease is `v0.1.0a15`. Use the pinned `pipx` or
 `uv tool` install commands above when you need accepted package-channel behavior;
 source checkouts may contain unreleased changes after the latest package.
 

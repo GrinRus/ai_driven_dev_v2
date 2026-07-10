@@ -7,7 +7,7 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No unreleased changes after `0.1.0a15` release-candidate preparation.
+- Open development after accepted `v0.1.0a15` package-channel evidence.
 
 ## 0.1.0a15 - 2026-07-09
 
