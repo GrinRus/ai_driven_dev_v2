@@ -1,13 +1,9 @@
 # Release Notes: v0.1.0a15
 
-Status: draft, not tagged or published.
+Status: published on 2026-07-10 and accepted.
 
-Current release-candidate package version: `0.1.0a15`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a14`.
-
-The `0.1.0a15` package must not be described as the latest accepted published prerelease
-until the GitHub Release workflow publishes to PyPI and verifies `pipx` plus `uv tool`
-installability.
+Accepted package version: `0.1.0a15`.
+Previous accepted published prerelease evidence: `0.1.0a14`.
 
 ## Summary
 
@@ -51,16 +47,15 @@ Docker/GHCR remains outside the supported alpha release contract.
 - AIDD remains alpha software for local evaluation and controlled operator trials.
 - Manual external eval evidence remains local operator audit evidence and is not CI/CD,
   not a release workflow, not GitHub Actions, and not a release gate.
-- Package verification has not yet run for `v0.1.0a15`; this draft becomes accepted
-  release evidence only after the GitHub Release workflow publishes and verifies the
-  package.
+- Package verification passed for `v0.1.0a15` through the GitHub Release workflow and
+  independent local `uv tool` smoke.
 
 ## Release checklist
 
 - GitHub Release target: `release/v0.1.0a15`.
 - Release branch: `release/v0.1.0a15`.
 - Release workflow: run by GitHub Release `published` event only.
-- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs are
-  still pending until publication.
-- PyPI: pending `https://pypi.org/project/ai-driven-dev-v2/0.1.0a15/`.
-- `pipx` and `uv tool` verification: pending package-channel evidence.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed
+  in `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/29069296628`.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a15/`.
+- `pipx` and `uv tool` verification: accepted package-channel evidence.
