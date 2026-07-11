@@ -21,6 +21,8 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 - `W34-E7-S1-T1` — Define typed capability rules for runtime operator requests.
 - `W34-E7-S2-T1` — Add shared typed identifier validation and resolve-and-contain
   primitives.
+- `W35-E1-S1-T1` — Define the accepted operator state hierarchy, progressive
+  disclosure, and one-primary-action contract.
 
 ## Parking lot
 
@@ -51,6 +53,26 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
   compatibility review.
 - `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
   configuration.
+- `W35-E2-S1-T1` — Select and document a maintained provider-free browser driver and
+  packaged-UI test policy.
+- `W35-E3-S1-T1` — Add semantic typography, spacing, radius, elevation, control-size,
+  state, focus, and motion tokens.
+- `W35-E4-S1-T1` — Add the Project -> Work item -> Runtime -> Review/Launch onboarding
+  state machine.
+- `W35-E5-S1-T1` — Add a visibility policy for zero-value sidebar and bottom-dock
+  sections.
+- `W35-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
+  context/status bar and maintenance overflow.
+- `W35-E6-S1-T1` — Add a URL-state codec for work item, run, stage, mode, detail, and
+  artifact selection.
+- `W35-E6-S2-T1` — Define and implement a scoped noncanonical browser-session draft
+  store.
+- `W35-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
+  bounded backoff.
+- `W35-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
+  suppression, conflict readback, and retryable failure state.
+- `W35-E7-S1-T1` — Add the project validation, create/resume, runtime review, and
+  first-launch browser journey.
 
 ## Update rules
 
@@ -63,6 +85,15 @@ Use `docs/backlog/roadmap.md` for the full hierarchy and status of every wave, e
 
 ## Queue sync notes
 
+- `2026-07-11` Wave 35 was added from the operator UX/UI audit while Wave 34 remains
+  active. `W34-E1-S1-T1` remains the sole `Next`; the accepted UX-contract task
+  `W35-E1-S1-T1` was appended to `Soon`. Entry tasks `W35-E2-S1-T1`,
+  `W35-E3-S1-T1`, `W35-E4-S1-T1`, `W35-E5-S1-T1`, `W35-E5-S2-T1`,
+  `W35-E6-S1-T1`, `W35-E6-S2-T1`, `W35-E6-S3-T1`, `W35-E6-S4-T1`, and
+  `W35-E7-S1-T1` were appended to `Parking lot`; their dependent tasks remain in the
+  canonical roadmap. Server-side mutation, approval, retention, runtime-evidence,
+  run-identity, archive, DOM-test, and next-flow-split foundations remain Wave 34
+  responsibilities and are not duplicated.
 - `2026-07-10` Wave 34 opened from
   `docs/analysis/codebase-audit-2026-07-10.md`. `W34-E1-S1-T1` is promoted to
   `Next`; cross-document evidence, atomic publication, local mutation serialization,
