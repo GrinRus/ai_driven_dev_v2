@@ -56,6 +56,12 @@ environment variables when you need a custom wrapper:
 - `AIDD_EVAL_CLAUDE_CODE_COMMAND` for `claude-code`
 - `AIDD_EVAL_CODEX_COMMAND` for `codex`
 - `AIDD_EVAL_OPENCODE_COMMAND` for `opencode`
+- `AIDD_EVAL_QWEN_COMMAND` for experimental `qwen`
+
+Without an override, live E2E invokes Codex with `gpt-5.5` and
+`model_reasoning_effort="xhigh"`. This pin is specific to the manual live-evaluation
+lane; Claude Code, Qwen, and OpenCode retain the native model defaults supplied by their
+providers.
 
 When set, the value must point to an **AIDD-compatible wrapper command**:
 
@@ -96,6 +102,7 @@ Optional wrapper override:
 export AIDD_EVAL_CODEX_COMMAND='<aidd-compatible codex wrapper>'
 export AIDD_EVAL_OPENCODE_COMMAND='<aidd-compatible opencode wrapper>'
 export AIDD_EVAL_CLAUDE_CODE_COMMAND='<aidd-compatible claude-code wrapper>'
+export AIDD_EVAL_QWEN_COMMAND='<aidd-compatible qwen wrapper>'
 ```
 
 ## Canonical local launch

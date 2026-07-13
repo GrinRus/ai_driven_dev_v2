@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shlex
 import tomllib
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from aidd.harness.scenarios import (
     ScenarioRepoSource,
     ScenarioRunConfig,
 )
-from aidd.runtime_catalog import RuntimeExecutionMode
+from aidd.runtime_catalog import RuntimeExecutionMode, get_runtime_definition
 
 
 def _empty_live_command_env() -> dict[str, str]:
@@ -114,6 +115,14 @@ def test_resolve_live_runtime_command_entries_defaults_codex_to_native() -> None
     assert entries["codex"].execution_mode is RuntimeExecutionMode.NATIVE
     assert entries["codex"].command.startswith("codex exec")
     assert entries["codex"].source == "default-native"
+    assert shlex.split(entries["codex"].command) == [
+        *shlex.split(get_runtime_definition("codex").default_command)[:-1],
+        "--model",
+        "gpt-5.5",
+        "--config",
+        'model_reasoning_effort="xhigh"',
+        "-",
+    ]
 
 
 def test_resolve_live_runtime_command_entries_defaults_claude_code_to_native() -> None:
@@ -122,7 +131,7 @@ def test_resolve_live_runtime_command_entries_defaults_claude_code_to_native() -
     )
 
     assert entries["claude-code"].execution_mode is RuntimeExecutionMode.NATIVE
-    assert entries["claude-code"].command.startswith("claude -p")
+    assert entries["claude-code"].command == get_runtime_definition("claude-code").default_command
     assert entries["claude-code"].source == "default-native"
 
 
@@ -158,7 +167,7 @@ def test_resolve_live_runtime_command_entries_defaults_qwen_to_native() -> None:
     )
 
     assert entries["qwen"].execution_mode is RuntimeExecutionMode.NATIVE
-    assert entries["qwen"].command.startswith("qwen --approval-mode yolo")
+    assert entries["qwen"].command == get_runtime_definition("qwen").default_command
     assert entries["qwen"].source == "default-native"
 
 
@@ -196,7 +205,8 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert "[runtime.codex]" in config_text
     assert (
         'command = "codex exec --dangerously-bypass-approvals-and-sandbox '
-        '--skip-git-repo-check --json -"'
+        "--skip-git-repo-check --json --model gpt-5.5 "
+        "--config 'model_reasoning_effort=\\\"xhigh\\\"' -\""
         in config_text
     )
     assert 'mode = "native"' in config_text
@@ -277,7 +287,8 @@ def test_write_live_runtime_config_preserves_real_runtime_defaults(tmp_path: Pat
     assert "permission_policy" not in config["runtime"]["codex"]
     assert (
         config["runtime"]["codex"]["command"]
-        == "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
+        == "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check "
+        "--json --model gpt-5.5 --config 'model_reasoning_effort=\"xhigh\"' -"
     )
 
 
