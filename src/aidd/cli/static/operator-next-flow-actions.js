@@ -2791,6 +2791,33 @@ async function startStage(stage = state.activeStage) {
   await startJobPolling(job);
 }
 
+async function startImplementationTask(taskId) {
+  if (!ensureRunnableRuntime()) return;
+  if (!state.activeRunId) {
+    toast("No run selected.");
+    return;
+  }
+  const job = await postJson("/api/tasks/run", {
+    task_id: taskId,
+    run_id: state.activeRunId,
+    runtime: state.selectedRuntime
+  });
+  await startJobPolling(job);
+}
+
+async function startTaskFinalization() {
+  if (!ensureRunnableRuntime()) return;
+  if (!state.activeRunId) {
+    toast("No run selected.");
+    return;
+  }
+  const job = await postJson("/api/tasks/finalize", {
+    run_id: state.activeRunId,
+    runtime: state.selectedRuntime
+  });
+  await startJobPolling(job);
+}
+
 async function rerunStaleDownstream() {
   if (!ensureRunnableRuntime()) return;
   if (!state.activeRunId) {

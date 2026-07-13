@@ -208,6 +208,13 @@ adapter readiness state, not patched in the UI.
 
 The first implementation should expose:
 
+- an implementation-task panel backed by the same task ledger as the CLI, including task status,
+  full card fields, dependencies, acceptance criteria, attempt history, abandoned attempts,
+  blockers, aggregate finalization state, and Run/Resume/Finalize actions;
+- run-scoped task list/detail reads and a mutation endpoint that requires run id and runtime and
+  acquires the shared run lease before creating a background job, returning HTTP `409` while
+  another workflow, stage, task, or finalization mutation owns the lease;
+
 - work-item selection;
 - runtime selection from registered runtimes;
 - full-flow start/resume;

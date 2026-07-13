@@ -23,6 +23,7 @@ from aidd.cli.support import (
     _tail_lines,
     console,
 )
+from aidd.cli.task import task_finalize, task_list, task_run, task_show
 from aidd.cli.ui import ui_command
 from aidd.core.stage_graph import select_next_runnable_stage, summarize_workflow_advancement
 
@@ -58,6 +59,10 @@ __all__ = [
     "stage_run",
     "stage_summary",
     "summarize_workflow_advancement",
+    "task_list",
+    "task_finalize",
+    "task_run",
+    "task_show",
     "ui_command",
 ]
 
@@ -80,10 +85,12 @@ run_app = typer.Typer(
     invoke_without_command=True,
     no_args_is_help=False,
 )
+task_app = typer.Typer(help="Task-level implementation commands.", add_completion=False)
 
 app.add_typer(stage_app, name="stage")
 app.add_typer(eval_app, name="eval")
 app.add_typer(run_app, name="run")
+app.add_typer(task_app, name="task")
 
 
 def _version_callback(value: bool) -> None:
@@ -120,6 +127,10 @@ stage_app.command("questions")(stage_questions)
 stage_app.command("summary")(stage_summary)
 eval_app.command("doctor")(eval_doctor)
 eval_app.command("summary")(eval_summary)
+task_app.command("list")(task_list)
+task_app.command("show")(task_show)
+task_app.command("run")(task_run)
+task_app.command("finalize")(task_finalize)
 
 
 def main() -> None:

@@ -125,6 +125,42 @@ def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: 
     assert payload["schema_version"] == 1
 
 
+@pytest.mark.parametrize(
+    ("runtime_id", "stage_target", "config_snapshot", "expected_field"),
+    (
+        ("codex", "plan", {"runtime_command": "runner-a"}, "runtime_id"),
+        ("generic-cli", "qa", {"runtime_command": "runner-a"}, "stage_target"),
+        ("generic-cli", "plan", {"runtime_command": "runner-b"}, "runtime_command"),
+    ),
+)
+def test_create_run_manifest_rejects_immutable_reuse_mismatch(
+    tmp_path: Path,
+    runtime_id: str,
+    stage_target: str,
+    config_snapshot: dict[str, str],
+    expected_field: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"runtime_command": "runner-a"},
+    )
+
+    with pytest.raises(ValueError, match=expected_field):
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            runtime_id=runtime_id,
+            stage_target=stage_target,
+            config_snapshot=config_snapshot,
+        )
+
+
 def test_create_run_manifest_records_packaged_resource_revision_and_adapter_id(
     tmp_path: Path,
 ) -> None:

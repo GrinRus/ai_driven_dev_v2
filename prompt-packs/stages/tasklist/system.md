@@ -17,6 +17,9 @@ Non-negotiable rules:
 - write Markdown artifacts only; do not switch to JSON schema output,
 - do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - keep task entries uniquely identified and imperative,
+- write every task as an H3 task card with `Outcome`, `Dominant deliverable`, `In scope`,
+  and at least one unique `<task-id>-AC<n>` acceptance criterion,
 - keep one dominant output artifact per task and avoid hidden prerequisite work,
 - include explicit dependencies (`none` or concrete upstream ids) and one primary verification signal per task,
 - keep `stage-result.md` and `validator-report.md` consistent with tasklist readiness and question status.
+- do not emit the legacy compact bullet-only tasklist shape.

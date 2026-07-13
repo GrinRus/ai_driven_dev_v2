@@ -25,6 +25,7 @@ from aidd.validators.semantic_rules.common import (
     validate_placeholder_sections,
     work_item_root_from_output_path,
 )
+from aidd.validators.task_evidence import validate_aggregate_task_evidence
 
 NO_REVIEW_FINDINGS_PATTERN = re.compile(
     r"\b(?:"
@@ -94,8 +95,7 @@ def _validate_finding_entry(
             context.finding(
                 code=INCOMPLETE_SECTION_CODE,
                 message=(
-                    "Each finding must include a stable id "
-                    "(for example `RV-1` or `REV-001`)."
+                    "Each finding must include a stable id (for example `RV-1` or `REV-001`)."
                 ),
                 severity="medium",
                 location=findings_section.location,
@@ -143,9 +143,7 @@ def _validate_finding_entry(
         )
 
     has_implementation_evidence = IMPLEMENT_FILE_ENTRY_PATTERN.search(finding_item) is not None
-    has_acceptance_reference = (
-        REVIEW_ACCEPTANCE_CRITERIA_PATTERN.search(finding_item) is not None
-    )
+    has_acceptance_reference = REVIEW_ACCEPTANCE_CRITERIA_PATTERN.search(finding_item) is not None
     if not has_implementation_evidence and not has_acceptance_reference:
         findings.append(
             context.finding(
@@ -250,9 +248,7 @@ def _is_git_tracked_path(path: str, project_root: Path) -> bool:
 
 
 def _repo_relative(path: Path, project_root: Path) -> str:
-    return path.resolve(strict=False).relative_to(
-        project_root.resolve(strict=False)
-    ).as_posix()
+    return path.resolve(strict=False).relative_to(project_root.resolve(strict=False)).as_posix()
 
 
 def _bounded_existing_path_samples(path: Path, project_root: Path) -> tuple[str, ...]:
@@ -298,8 +294,7 @@ def _active_setup_residue_paths(context: SemanticDocumentContext) -> tuple[str, 
         if not child.is_file():
             continue
         if not any(
-            child.name.startswith(prefix)
-            for prefix in SETUP_RESIDUE_TOP_LEVEL_FILE_PREFIXES
+            child.name.startswith(prefix) for prefix in SETUP_RESIDUE_TOP_LEVEL_FILE_PREFIXES
         ):
             continue
         candidate_paths.append(_repo_relative(child, project_root))
@@ -379,9 +374,10 @@ def _validate_findings_section(
     findings_section: SemanticSection,
 ) -> tuple[int, tuple[ValidationFinding, ...]]:
     finding_items = extract_review_finding_blocks(findings_section.content)
-    if _contains_no_review_findings_declaration(
-        findings_section.content
-    ) and REVIEW_FINDING_ID_PATTERN.search(findings_section.content) is None:
+    if (
+        _contains_no_review_findings_declaration(findings_section.content)
+        and REVIEW_FINDING_ID_PATTERN.search(findings_section.content) is None
+    ):
         return 0, tuple()
     if _declares_no_review_findings(findings_section.content) and (
         not finding_items
@@ -502,6 +498,15 @@ def validate_review_report(context: SemanticDocumentContext) -> tuple[Validation
         )
     )
     findings.extend(validate_placeholder_sections(context))
+    evidence_section = context.section_by_candidates(
+        candidates=("Evidence", "Review summary", "Summary")
+    )
+    findings.extend(
+        validate_aggregate_task_evidence(
+            context=context,
+            evidence=evidence_section,
+        )
+    )
     return tuple(findings)
 
 

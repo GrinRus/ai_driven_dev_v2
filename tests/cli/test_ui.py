@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import inspect
 import json
+import os
 import shlex
+import socket
 import subprocess
 import sys
 import threading
@@ -42,6 +44,7 @@ from aidd.core.run_store import (
     run_attempt_root,
     run_attempt_runtime_log_path,
     run_manifest_path,
+    run_root,
     write_attempt_artifact_index,
 )
 from aidd.core.runtime_operator import (
@@ -153,6 +156,46 @@ def _payload(response) -> dict[str, object]:
 def _payload_with_status(response, status: int) -> dict[str, object]:
     assert response.status == status
     return json.loads(response.body.decode("utf-8"))
+
+
+def _seed_rich_tasklist(workspace_root: Path) -> None:
+    path = (
+        workspace_root
+        / "workitems"
+        / "WI-UI"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        """# Tasklist
+
+## Task summary
+
+One complete UI-visible implementation task.
+
+## Ordered tasks
+
+### TL-1 — Add task progress
+
+- Outcome: Task progress is visible.
+- Dominant deliverable: The operator task panel renders state.
+- In scope: `src/aidd/cli/ui.py` and `tests/cli/test_ui.py`.
+- Acceptance criteria:
+  - TL-1-AC1: The task endpoint returns status and acceptance evidence.
+
+## Dependencies
+
+- TL-1: none
+
+## Verification notes
+
+- TL-1: UI endpoint contract test
+""",
+        encoding="utf-8",
+    )
 
 
 def _error_payload(response) -> dict[str, object]:
@@ -4038,3 +4081,87 @@ def test_ui_command_is_registered() -> None:
 
     assert "ui" in command_names
     assert work_item_parameter.default is None
+
+
+def test_ui_tasks_endpoint_returns_rich_task_state(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _seed_rich_tasklist(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(service.handle_get("/api/tasks", {}))
+
+    tasks = payload["tasks"]
+    assert isinstance(tasks, list)
+    task = tasks[0]
+    assert isinstance(task, dict)
+    assert task["id"] == "TL-1"
+    assert task["status"] == "pending"
+    assert task["ready"] is True
+    acceptance = task["acceptance_criteria"]
+    assert isinstance(acceptance, list)
+    assert acceptance[0]["id"] == "TL-1-AC1"
+    finalization = payload["finalization"]
+    assert isinstance(finalization, dict)
+    assert finalization["status"] == "pending"
+    assert finalization["attempts"] == []
+
+
+def test_ui_task_run_requires_explicit_run_id(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _seed_rich_tasklist(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/tasks/run",
+        {"task_id": "TL-1", "runtime": "generic-cli"},
+    )
+
+    payload = _payload_with_status(response, 400)
+    assert payload["error"] == "run_id is required."
+
+
+def test_ui_task_run_returns_conflict_before_background_job(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _seed_rich_tasklist(workspace_root)
+    service = _service(workspace_root)
+    selected_run_root = run_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-1",
+    )
+    lease_path = selected_run_root / ".mutation-lease"
+    lease_path.mkdir(parents=True)
+    (lease_path / "owner.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "operation": "workflow",
+                "token": "external",
+                "pid": os.getpid(),
+                "hostname": socket.gethostname(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    response = service.handle_post(
+        "/api/tasks/run",
+        {"task_id": "TL-1", "runtime": "generic-cli", "run_id": "run-1"},
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.CONFLICT)
+    assert "workflow" in str(payload["error"])
+
+
+def test_ui_task_finalize_requires_explicit_run_id(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _seed_rich_tasklist(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_post(
+        "/api/tasks/finalize",
+        {"runtime": "generic-cli"},
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.BAD_REQUEST)
+    assert payload["error"] == "run_id is required."

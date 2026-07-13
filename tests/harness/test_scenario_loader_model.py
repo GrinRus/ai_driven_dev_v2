@@ -528,6 +528,29 @@ def test_deterministic_workflow_scenarios_cover_medium_ci_and_large_manual_bucke
     assert large_manual.run.stage_end == "qa"
 
 
+def test_task_execution_scenario_declares_incremental_full_flow_evidence() -> None:
+    scenario = load_scenario(
+        Path("harness/scenarios/deterministic/minimal-python-task-execution.yaml")
+    )
+
+    assert scenario.scenario_id == "AIDD-DETERMINISTIC-004"
+    assert scenario.scenario_class == "deterministic-workflow"
+    assert scenario.feature_size == "medium"
+    assert scenario.automation_lane == "ci"
+    assert scenario.canonical_runtime == "generic-cli"
+    assert scenario.run.stage_start == "tasklist"
+    assert scenario.run.stage_end == "qa"
+    assert scenario.run.interview_required is True
+    assert scenario.feature_source is not None
+    assert scenario.feature_source.seed_id == "minimal-python-task-execution"
+    verification = "\n".join(scenario.verify.commands)
+    assert "task-ledger.json" in verification
+    assert "implementation-report.md" in verification
+    assert "qa-report.md" in verification
+    assert "finalization/attempts/attempt-0002" in verification
+    assert "answers.md" in verification
+
+
 def test_project_set_deterministic_scenario_declares_two_root_context_checks() -> None:
     scenario = load_scenario(
         Path("harness/scenarios/deterministic/project-set-plan-context.yaml")

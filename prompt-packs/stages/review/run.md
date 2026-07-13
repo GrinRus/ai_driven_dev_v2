@@ -62,6 +62,16 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Review discipline
 
+When the upstream tasklist uses rich task cards, verify that every implemented task stays
+within its `In scope` boundary and that every `<task-id>-AC<n>` criterion has concrete
+implementation evidence. Missing task or acceptance coverage is a `must-fix` finding.
+
+Add a `Task acceptance evidence` H2 section with exactly one top-level bullet per criterion:
+`- Task: \`TL-1\`; Acceptance: \`TL-1-AC1\`; Status: \`pass\`; Evidence: \`path\`; Notes: ...`.
+Use only `pass`, `fail`, or `not-verified`. Each entry must contain one task id, its matching
+acceptance id, and concrete evidence. Any `fail` or `not-verified` entry requires a non-approved
+review verdict.
+
 1. Findings must have stable ids, explicit severity, explicit disposition, and rationale tied to
    implementation evidence or acceptance-criteria mismatch.
    Use either top-level bullet findings or `### RV-*` / `### REV-*` finding subsections; when using

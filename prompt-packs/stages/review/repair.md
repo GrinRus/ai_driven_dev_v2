@@ -60,6 +60,10 @@ Use concrete repair actions:
   acceptance-criteria mismatch; add an explicit `Evidence:` line that cites
   `implementation-report.md`, a changed file path, or an acceptance-criteria id such as `AC-1`;
   if no such evidence exists, mark the finding `invalid` or remove it;
+- incomplete task acceptance evidence: rebuild `Task acceptance evidence` with exactly one
+  structured bullet per `<task-id>-AC<n>` pair, one pair per bullet, a `pass`, `fail`, or
+  `not-verified` status, and an `EV-N` id or backticked artifact path; use
+  `Review status: rejected` while any entry is non-pass;
 - no active findings: write exactly `- none` or `No review findings were identified.` in the
   `Findings` section instead of creating placeholder finding metadata;
 - missing severity: assign explicit severity (`critical`, `high`, `medium`, `low`) per finding;

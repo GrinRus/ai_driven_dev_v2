@@ -20,6 +20,10 @@
 
 - RC-1: Add retry-path telemetry for persistence failure flow before QA handoff.
 
+## Task acceptance evidence
+
+- Task: `TL-1`; Acceptance: `TL-1-AC1`; Status: `pass`; Evidence: `workitems/WI-REVIEW-EXAMPLE/stages/implement/output/implementation-report.md`; Notes: The reviewed implementation evidence satisfies the bounded criterion.
+
 ## Accepted risks
 
 - AR-1: Mixed-state retry timing coverage may be deferred to the next local task if RC-1 is completed first.

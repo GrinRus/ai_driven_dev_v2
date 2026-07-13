@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from aidd.validators.evidence_context import load_implementation_evidence_context
 from aidd.validators.models import ValidationFinding
 from aidd.validators.semantic_rules.common import (
     IMPLEMENT_ARTIFACT_REFERENCE_PATTERN,
@@ -56,9 +57,8 @@ def _validate_selected_task(
     context: SemanticDocumentContext,
     selected_task: SemanticSection,
 ) -> tuple[ValidationFinding, ...]:
-    if (
-        extract_tasklist_task_ids(selected_task.content)
-        or SELECTED_TASK_ID_PATTERN.search(selected_task.content)
+    if extract_tasklist_task_ids(selected_task.content) or SELECTED_TASK_ID_PATTERN.search(
+        selected_task.content
     ):
         return tuple()
     return (
@@ -80,9 +80,10 @@ def _validate_change_summary(
     summary: SemanticSection,
 ) -> tuple[ValidationFinding, ...]:
     compact_summary_content = _compact_text(summary.content)
-    if compact_summary_content.lower() not in {"none", "- none"} and len(
-        compact_summary_content
-    ) >= 30:
+    if (
+        compact_summary_content.lower() not in {"none", "- none"}
+        and len(compact_summary_content) >= 30
+    ):
         return tuple()
     return (
         context.finding(
@@ -127,8 +128,7 @@ def _validate_real_touched_file_entries(
             context.finding(
                 code=INCOMPLETE_SECTION_CODE,
                 message=(
-                    "Each `Touched files` entry must include short change intent "
-                    "after the path."
+                    "Each `Touched files` entry must include short change intent after the path."
                 ),
                 severity="medium",
                 location=touched_files.location,
@@ -163,10 +163,7 @@ def _validate_noop_touched_file_entries(
         findings.append(
             context.finding(
                 code=INCOMPLETE_EXECUTION_SUMMARY_CODE,
-                message=(
-                    "No-op output must include an actionable next step in "
-                    "`Follow-up notes`."
-                ),
+                message=("No-op output must include an actionable next step in `Follow-up notes`."),
                 severity="medium",
                 location=follow_up.location,
             )
@@ -244,8 +241,7 @@ def _validate_verification_item(
             context.finding(
                 code=UNVERIFIABLE_CHECK_CLAIM_CODE,
                 message=(
-                    "Verification note includes outcome claim without executable "
-                    "command evidence."
+                    "Verification note includes outcome claim without executable command evidence."
                 ),
                 severity="high",
                 location=verification.location,
@@ -327,6 +323,73 @@ def validate_implementation_report(
         )
     )
     findings.extend(_validate_verification_notes(context=context, verification=verification))
+    evidence_context = load_implementation_evidence_context(
+        workspace_root=context.workspace_root,
+        work_item=context.output_path.parts[context.output_path.parts.index("workitems") + 1],
+    )
+    if evidence_context.selected_task_id is not None:
+        report_text = "\n".join(context.markdown_lines)
+        if evidence_context.selected_task_id not in extract_tasklist_task_ids(
+            selected_task.content
+        ):
+            findings.append(
+                context.finding(
+                    code=INCOMPLETE_SECTION_CODE,
+                    message=(
+                        "Implementation report does not match selected task "
+                        f"`{evidence_context.selected_task_id}`."
+                    ),
+                    severity="high",
+                    location=selected_task.location,
+                )
+            )
+        for acceptance_id in evidence_context.acceptance_ids:
+            if acceptance_id not in report_text:
+                findings.append(
+                    context.finding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            "Implementation report must cite selected task acceptance "
+                            f"criterion `{acceptance_id}`."
+                        ),
+                        severity="high",
+                        location=verification.location,
+                    )
+                )
+        for command in evidence_context.required_verification_commands:
+            if command not in report_text:
+                findings.append(
+                    context.finding(
+                        code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+                        message=(
+                            "Implementation report must preserve the selected/authored "
+                            f"verification command exactly: `{command}`."
+                        ),
+                        severity="high",
+                        location=verification.location,
+                    )
+                )
+        if evidence_context.allowed_scope_paths:
+            touched_paths = {
+                match.group(1).strip().strip("/")
+                for match in IMPLEMENT_FILE_ENTRY_PATTERN.finditer(touched_files.content)
+            }
+            for touched_path in sorted(touched_paths):
+                if not any(
+                    touched_path == allowed or touched_path.startswith(f"{allowed}/")
+                    for allowed in evidence_context.allowed_scope_paths
+                ):
+                    findings.append(
+                        context.finding(
+                            code=MISSING_DIFF_EVIDENCE_CODE,
+                            message=(
+                                f"Touched path `{touched_path}` is outside the authored "
+                                "allowed write scope."
+                            ),
+                            severity="high",
+                            location=touched_files.location,
+                        )
+                    )
     findings.extend(validate_placeholder_sections(context))
     return tuple(findings)
 

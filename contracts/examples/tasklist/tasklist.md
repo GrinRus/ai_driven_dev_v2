@@ -1,43 +1,47 @@
 # Tasklist
 
-## Source summary
+## Task summary
 
-- Plan source: `workitems/WI-TASKLIST-EXAMPLE/stages/plan/output/plan.md`
-- Review-spec source: `workitems/WI-TASKLIST-EXAMPLE/stages/review-spec/output/review-spec-report.md`
-- Readiness baseline: `approved-with-conditions` with required rollback and ownership clarifications already applied.
+Decompose the approved rollout work into three implementation-ready task cards with
+explicit dependency order, bounded scope, acceptance criteria, and authored checks.
 
-## Ordered task decomposition
+## Ordered tasks
 
-### TL-1 Define rollout guardrails contract update
+### TL-1 — Define rollout guardrails
 
-- Dominant output artifact: `contracts/stages/implement.md`
-- Dependencies: `none`
-- Verification notes:
-  - `uv run pytest tests/test_contract_registry.py tests/core/test_stage_registry.py -q`
-  - Confirm `implement` contract includes explicit rollback trigger requirements.
+- Outcome: The implement-stage contract states the required rollback triggers.
+- Dominant deliverable: `contracts/stages/implement.md` contains the guardrails.
+- In scope: `contracts/stages/implement.md` and focused registry coverage under `tests/`.
+- Acceptance criteria:
+  - TL-1-AC1: The contract names explicit rollback trigger requirements.
 
-### TL-2 Add execution-state persistence wiring
+### TL-2 — Add execution-state persistence
 
-- Dominant output artifact: `src/aidd/core/stage_runner.py`
-- Dependencies: `TL-1`
-- Verification notes:
-  - `uv run pytest tests/core/test_stage_runner.py -q`
-  - Verify persisted stage state records unresolved blocking questions as `blocked`.
+- Outcome: Blocked interview state is persisted and can be resumed after answers.
+- Dominant deliverable: `src/aidd/core/stage_runner.py` persists the transition.
+- In scope: `src/aidd/core/stage_runner.py` and `tests/core/test_stage_runner.py`.
+- Implementation constraints: Keep adapter interfaces unchanged.
+- Acceptance criteria:
+  - TL-2-AC1: An unresolved blocking question persists stage status `blocked`.
+  - TL-2-AC2: A matching resolved answer allows the next attempt to resume.
 
-### TL-3 Cover unblock transition behavior with tests
+### TL-3 — Cover unblock transitions
 
-- Dominant output artifact: `tests/core/test_stage_runner.py`
-- Dependencies: `TL-2`
-- Verification notes:
-  - `uv run pytest tests/core/test_stage_runner.py -q`
-  - Validate unblock transition once matching `[resolved]` answers are present.
+- Outcome: Regression coverage proves the blocked-to-resume lifecycle.
+- Dominant deliverable: `tests/core/test_stage_runner.py` covers both transitions.
+- In scope: `tests/core/test_stage_runner.py`.
+- Out of scope: Provider-authenticated external end-to-end validation.
+- Acceptance criteria:
+  - TL-3-AC1: The focused test fails without the persistence behavior and passes with it.
 
-## Assumptions
+## Dependencies
 
-- [non-blocking] Existing workspace layout remains unchanged for this iteration.
-- [non-blocking] Adapter runtime interface remains stable while tasklist work is executed.
+- TL-1: none
+- TL-2: TL-1
+- TL-3: TL-2
 
-## Handoff notes
+## Verification notes
 
-- Execute tasks in listed order because TL-2 consumes contract behavior defined in TL-1.
-- Do not start TL-3 before TL-2 is merged; assertions depend on new state transitions.
+- TL-1: `uv run pytest tests/test_contract_registry.py tests/core/test_stage_registry.py -q`
+- TL-2: `uv run pytest tests/core/test_stage_runner.py -q`
+- TL-3: `uv run pytest tests/core/test_stage_runner.py -q`

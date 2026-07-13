@@ -93,6 +93,27 @@ def _summarize_workflow_advancement(
 
 def _run_stage_from_workflow(request: WorkflowStageExecutionRequest) -> None:
     try:
+        if request.stage == "implement":
+            from aidd.cli.task import execute_all_tasks
+
+            execute_all_tasks(
+                work_item=request.work_item,
+                run_id=request.run_id,
+                runtime=request.runtime_id,
+                root=request.workspace_root,
+                config=request.config_path,
+                log_follow=request.log_follow,
+                stage_runner=lambda options: _invoke_stage_run(
+                    stage=options.stage,
+                    work_item=options.work_item,
+                    runtime=options.runtime,
+                    run_id=options.run_id or request.run_id,
+                    root=options.root or request.workspace_root,
+                    config=options.config,
+                    log_follow=options.log_follow,
+                ),
+            )
+            return
         _invoke_stage_run(
             stage=request.stage,
             work_item=request.work_item,
@@ -180,14 +201,10 @@ def run_callback(
         raise typer.Exit(code=2)
     if from_stage not in STAGES:
         supported = ", ".join(STAGES)
-        raise typer.BadParameter(
-            f"Unknown stage '{from_stage}'. Expected one of: {supported}"
-        )
+        raise typer.BadParameter(f"Unknown stage '{from_stage}'. Expected one of: {supported}")
     if to_stage not in STAGES:
         supported = ", ".join(STAGES)
-        raise typer.BadParameter(
-            f"Unknown stage '{to_stage}'. Expected one of: {supported}"
-        )
+        raise typer.BadParameter(f"Unknown stage '{to_stage}'. Expected one of: {supported}")
     if STAGES.index(from_stage) > STAGES.index(to_stage):
         raise typer.BadParameter(
             f"Option '--from-stage' ({from_stage}) must not come after '--to-stage' ({to_stage})."
@@ -207,11 +224,15 @@ def run_callback(
     workspace_root = (root if root is not None else cfg.workspace_root).resolve(strict=False)
     runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
     runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
+    runtime_config = cfg.runtime_config(runtime)
     config_snapshot = {
         "config_path": config.as_posix(),
         "workspace_root": workspace_root.as_posix(),
         "runtime_command": runtime_command,
         "runtime_execution_mode": runtime_execution_mode.value,
+        "runtime_permission_policy": runtime_config.permission_policy.value,
+        "runtime_interaction_mode": runtime_config.interaction_mode.value,
+        "runtime_auto_approval_preset": runtime_config.auto_approval_preset.value,
         "log_follow": log_follow,
         "mode": "workflow",
     }
@@ -313,10 +334,7 @@ def run_show(
     run_table.add_row(
         "prompt packs",
         _path_summary(
-            tuple(
-                f"{entry.path} ({entry.sha256})"
-                for entry in summary.prompt_pack_provenance
-            )
+            tuple(f"{entry.path} ({entry.sha256})" for entry in summary.prompt_pack_provenance)
         ),
     )
     run_table.add_row("created at (UTC)", summary.created_at_utc or "unknown")
@@ -385,8 +403,7 @@ def run_logs(
         log_text = _tail_lines(log_text, line_count=lines)
 
     console.print(
-        "Run log: "
-        f"run_id={summary.run_id} stage={summary.stage} attempt={summary.attempt_number}"
+        f"Run log: run_id={summary.run_id} stage={summary.stage} attempt={summary.attempt_number}"
     )
     console.print(f"Path: {summary.runtime_log_path.as_posix()}")
     if not log_text:

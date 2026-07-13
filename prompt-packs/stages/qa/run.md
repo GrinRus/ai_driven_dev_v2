@@ -67,6 +67,16 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## QA discipline
 
+When the upstream tasklist uses rich task cards, build acceptance coverage from every
+`<task-id>-AC<n>` criterion. A ready verdict requires evidence for every criterion belonging
+to every completed task; do not infer coverage from task titles or aggregate prose.
+
+Add a `Task acceptance evidence` H2 section with exactly one top-level bullet per criterion:
+`- Task: \`TL-1\`; Acceptance: \`TL-1-AC1\`; Status: \`pass\`; Evidence: \`path\`; Notes: ...`.
+Use only `pass`, `fail`, or `not-verified`. Each entry must contain one task id, its matching
+acceptance id, and concrete evidence. Any `fail` or `not-verified` entry requires
+`QA verdict: not-ready` and release recommendation `hold`.
+
 1. Do not declare `succeeded`, `ready`, or `proceed` when upstream `review` is unresolved or
    explicitly `rejected`.
 2. Do not pass QA when verification output/artifacts are missing for material claims.

@@ -127,6 +127,10 @@ Optional context documents may improve QA depth, but they must not replace imple
   calls when the upstream artifacts made them part of the plan. A clean review report alone is not
   enough to proceed when QA can observe a missed planned requirement or mechanism in the diff,
   tests, or implementation evidence.
+- When the upstream tasklist uses rich task cards, `qa-report.md` must contain a
+  `Task acceptance evidence` section with exactly one structured top-level entry per
+  `<task-id>-AC<n>` criterion. Entries use `pass`, `fail`, or `not-verified`, cite an evidence id
+  or artifact path, and any non-pass entry requires `QA verdict: not-ready` plus `hold`.
 - When the diff changes a shared public-surface mechanism such as a CLI decorator, parser/helper,
   router/error boundary, schema transform helper, or public API adapter, `QA verdict: ready`
   requires blast-radius evidence for affected sibling commands, routes, generated outputs, or
@@ -144,6 +148,7 @@ Validators for `qa` should check:
 
 - required output existence and heading coverage for `qa-report.md`, `stage-result.md`, and `validator-report.md`,
 - consistency with upstream review decision and verification evidence artifacts,
+- exact, non-duplicate structured task-acceptance coverage for rich tasklists,
 - unsupported verdicts:
   - quality verdict and release recommendation must follow from cited evidence and risk profile,
   - verdicts that contradict material unresolved findings or missing checks are rejected,

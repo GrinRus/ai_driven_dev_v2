@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from aidd.core.run_store import create_run_manifest, work_item_runs_root
+from aidd.core.mutation_lease import acquire_run_mutation_lease
+from aidd.core.run_store import create_run_manifest, run_root, work_item_runs_root
 from aidd.core.stage_graph import (
     StageAdvancementSummary,
     select_next_runnable_stage,
@@ -101,7 +102,7 @@ def _validate_stage_bounds(*, stage_start: str, stage_end: str) -> None:
         )
 
 
-def run_workflow(
+def _run_workflow_without_lease(
     *,
     request: WorkflowRunRequest,
     stage_executor: WorkflowStageExecutor,
@@ -230,9 +231,7 @@ def run_workflow(
         )
     )
     incomplete = tuple(
-        summary
-        for summary in advancement
-        if summary.current_status != StageState.SUCCEEDED.value
+        summary for summary in advancement if summary.current_status != StageState.SUCCEEDED.value
     )
     if incomplete:
         if emit is not None:
@@ -253,6 +252,36 @@ def run_workflow(
         completed=True,
         incomplete=(),
     )
+
+
+def run_workflow(
+    *,
+    request: WorkflowRunRequest,
+    stage_executor: WorkflowStageExecutor,
+    emit: WorkflowEventSink | None = None,
+    stage_selector: WorkflowStageSelector | None = None,
+    advancement_summarizer: WorkflowAdvancementSummarizer | None = None,
+) -> WorkflowRunResult:
+    selected_run_id = request.run_id or allocate_workflow_run_id(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+    )
+    selected_request = replace(request, run_id=selected_run_id)
+    with acquire_run_mutation_lease(
+        run_root(
+            workspace_root=request.workspace_root,
+            work_item=request.work_item,
+            run_id=selected_run_id,
+        ),
+        operation="workflow",
+    ):
+        return _run_workflow_without_lease(
+            request=selected_request,
+            stage_executor=stage_executor,
+            emit=emit,
+            stage_selector=stage_selector,
+            advancement_summarizer=advancement_summarizer,
+        )
 
 
 __all__ = [

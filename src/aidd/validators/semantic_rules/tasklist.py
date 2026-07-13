@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
+from aidd.core.task_plan import TaskPlanParseError, parse_task_plan
 from aidd.validators.models import ValidationFinding
 from aidd.validators.semantic_rules.common import (
     INCOMPLETE_SECTION_CODE,
@@ -11,7 +12,6 @@ from aidd.validators.semantic_rules.common import (
     SemanticSection,
     extract_bullet_items,
     extract_tasklist_task_ids,
-    normalized_heading,
     validate_placeholder_sections,
 )
 
@@ -125,10 +125,15 @@ def _validate_dependencies(
         )
 
     referenced_task_ids = extract_tasklist_task_ids(section.content)
-    if tasklist_task_ids and not referenced_task_ids and compact_content.lower() not in {
-        "none",
-        "- none",
-    }:
+    if (
+        tasklist_task_ids
+        and not referenced_task_ids
+        and compact_content.lower()
+        not in {
+            "none",
+            "- none",
+        }
+    ):
         return (
             context.finding(
                 code=INCOMPLETE_SECTION_CODE,
@@ -176,10 +181,7 @@ def _validate_verification_notes(
         return (
             context.finding(
                 code=INCOMPLETE_SECTION_CODE,
-                message=(
-                    "Section `Verification notes` must use bullet items mapped "
-                    "to task ids."
-                ),
+                message=("Section `Verification notes` must use bullet items mapped to task ids."),
                 severity="medium",
                 location=section.location,
             ),
@@ -251,13 +253,21 @@ _SECTION_RULES: dict[
 
 def validate_tasklist(context: SemanticDocumentContext) -> tuple[ValidationFinding, ...]:
     findings: list[ValidationFinding] = list(validate_placeholder_sections(context))
-    tasklist_task_ids = _tasklist_task_ids(context)
-
-    for section in context.iter_required_sections():
-        section_rule = _SECTION_RULES.get(normalized_heading(section.name))
-        if section_rule is None:
-            continue
-        findings.extend(section_rule(context, section, tasklist_task_ids))
+    summary = context.section_by_candidates(candidates=("Task summary",))
+    findings.extend(_validate_task_summary(context, summary, set()))
+    try:
+        parse_task_plan("\n".join(context.markdown_lines))
+    except TaskPlanParseError as exc:
+        ordered_tasks = context.section_by_candidates(candidates=("Ordered tasks",))
+        findings.extend(
+            context.finding(
+                code=INCOMPLETE_SECTION_CODE,
+                message=issue,
+                severity="medium",
+                location=ordered_tasks.location,
+            )
+            for issue in exc.issues
+        )
 
     return tuple(findings)
 

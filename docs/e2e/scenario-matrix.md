@@ -57,7 +57,7 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | Bucket | Required coverage | Maintained scenarios |
 | --- | --- | --- |
 | deterministic stage | `small + ci` | `AIDD-SMOKE-001` |
-| deterministic workflow | `medium + ci` | `AIDD-DETERMINISTIC-001`, `AIDD-DETERMINISTIC-003` |
+| deterministic workflow | `medium + ci` | `AIDD-DETERMINISTIC-001`, `AIDD-DETERMINISTIC-003`, `AIDD-DETERMINISTIC-004` |
 | deterministic workflow | `large + manual` | `AIDD-DETERMINISTIC-002` |
 | live full flow regression | `small + manual + flow-regression` | `AIDD-LIVE-004`, `AIDD-LIVE-005` |
 | live full flow product evaluation | `medium + manual + product-evaluation` | `AIDD-LIVE-007` |
@@ -125,6 +125,7 @@ Qwen when local auth is ready.
 | `AIDD-DETERMINISTIC-001` | `harness/scenarios/deterministic/minimal-python-bounded-workflow.yaml` | `deterministic-workflow` | `medium` | n/a | `ci` | `opencode` | `generic-cli`, `claude-code`, `opencode` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-002` | `harness/scenarios/deterministic/minimal-python-full-workflow.yaml` | `deterministic-workflow` | `large` | n/a | `manual` | `generic-cli` | `generic-cli`, `claude-code` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-003` | `harness/scenarios/deterministic/project-set-plan-context.yaml` | `deterministic-workflow` | `medium` | n/a | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
+| `AIDD-DETERMINISTIC-004` | `harness/scenarios/deterministic/minimal-python-task-execution.yaml` | `deterministic-workflow` | `medium` | n/a | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
 | `AIDD-LIVE-004` | `harness/scenarios/live/httpx-cli-docs-sync.yaml` | `live-full-flow` | `small` | `flow-regression` | `manual` | `codex` | `codex`, `qwen` | `authored-task-pool` |
 | `AIDD-LIVE-005` | `harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml` | `live-full-flow` | `small` | `flow-regression` | `manual` | `codex` | `codex`, `opencode`, `claude-code` | `authored-task-pool` |
 | `AIDD-LIVE-006` | `harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml` | `live-full-flow-interview` | `xlarge` | `product-evaluation` | `manual` | `opencode` | `codex`, `opencode` | `authored-task-pool` |
@@ -133,6 +134,10 @@ Qwen when local auth is ready.
 | `AIDD-LIVE-010` | `harness/scenarios/live/openapi-typescript-discriminator-composition.yaml` | `live-full-flow-interview` | `large` | `product-evaluation` | `manual` | `opencode` | `codex`, `opencode` | `authored-task-pool` |
 | `AIDD-LIVE-011` | `harness/scenarios/live/pytest-collection-error-summary.yaml` | `live-full-flow-interview` | `xlarge` | `product-evaluation` | `manual` | `opencode` | `codex`, `opencode` | `authored-task-pool` |
 | `AIDD-LIVE-012` | `harness/scenarios/live/starlette-streaming-error-boundary.yaml` | `live-full-flow` | `large` | `product-evaluation` | `manual` | `codex` | `codex`, `claude-code` | `authored-task-pool` |
+
+`AIDD-DETERMINISTIC-004` is the provider-free incremental-execution recovery lane. It covers a
+three-task dependency chain, task-local scope/diff repair, blocking interview resume, fail-fast
+state, repeatable aggregate finalization, and structured review/QA evidence.
 
 ## Feature Selection Policy
 

@@ -48,6 +48,13 @@ Optional context documents may improve task decomposition quality, but they must
 - `tasklist.md` must include:
   - an ordered decomposition of implementation tasks with stable task ids and imperative titles
     (for example `T1`, `T2` or `TL-1`, `TL-2`; use one style consistently),
+  - one H3 task card per task id with non-empty `Outcome`, `Dominant deliverable`, and
+    `In scope` fields,
+  - at least one safe backticked repository-relative file or directory prefix in every `In scope`
+    field; absolute paths, `..` traversal, and glob syntax are invalid,
+  - at least one unique task-local acceptance criterion per card using the exact id shape
+    `<task-id>-AC<n>`,
+  - an `Acceptance criteria` field containing those task-local criteria,
   - one dominant output artifact per task so each item remains reviewable as a standalone unit,
   - explicit dependency notes per task (upstream task ids or `none`),
   - verification notes per task naming the primary check, test, or scenario proving completion.
@@ -55,7 +62,10 @@ Optional context documents may improve task decomposition quality, but they must
   every task id declared in `Ordered tasks`, including command-only or verification-only tasks.
   A primary check embedded only inside an `Ordered tasks` entry does not satisfy this dedicated
   section requirement.
-- task ordering should be executable in dependency order rather than by prose grouping alone.
+- task ordering must already be executable in dependency order rather than being silently
+  reordered; dependencies may reference only earlier task cards.
+- compact bullet-only tasklists are not accepted; the H3 task-card form is required and there
+  is no legacy one-shot fallback for newly validated tasklists.
 - when `context/verification-output.md` names authored verification commands, task verification
   notes must preserve those commands exactly when citing them, including flags, path lists,
   environment variables, and coverage/cache-disabling options such as `--coverage.enabled=false`;
@@ -83,9 +93,14 @@ Validators for `tasklist` should check:
 - task independence:
   - each task has one dominant deliverable rather than bundled unrelated outcomes,
   - dependency notes avoid hidden coupling and do not rely on unspecified prerequisites,
+  - task cards contain the required outcome, deliverable, scope, and acceptance fields,
+  - task-local scope contains safe repository-relative path prefixes,
+  - acceptance ids are task-local, well-formed, and globally unique,
 - ordering clarity:
   - task order is executable in dependency order and avoids contradictory sequencing,
   - dependency references are explicit and resolvable to listed task ids or upstream stage artifacts,
+  - dependency graphs reject self-references and cycles,
+  - dependency entries reject later tasks even when the resulting graph is otherwise acyclic,
 - reviewability:
   - each task has a bounded completion surface and at least one concrete verification note,
   - the dedicated `Verification notes` section covers every declared task id, including

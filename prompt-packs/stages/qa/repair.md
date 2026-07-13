@@ -80,6 +80,10 @@ Use concrete repair actions:
   ``- AC-1: confirmed. Evidence: EV-1, `context/verification-output.md`. <criterion-specific sentence>.``;
   each bullet must name exactly one `AC-N` id and cite same-bullet evidence. Replace range claims
   such as `AC-1 through AC-4` with separate criterion bullets;
+- incomplete rich-task evidence: rebuild `Task acceptance evidence` with exactly one structured
+  bullet per `<task-id>-AC<n>` pair, one pair per bullet, a `pass`, `fail`, or `not-verified`
+  status, and an `EV-N` id or backticked artifact path; keep `QA verdict: not-ready` and `hold`
+  while any entry is non-pass;
 - verdict mismatch: align verdict and release recommendation with unresolved findings and
   critical-check availability;
 - missed tasklist/plan requirement: when upstream tasklist or plan artifacts name a nontrivial

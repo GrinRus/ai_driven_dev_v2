@@ -247,6 +247,13 @@ Each stage has:
 - repair policy,
 - prompt pack.
 
+The `implement` stage additionally owns an internal task-execution loop. The validated
+`tasklist.md` remains the definition source, while a system-owned ledger records mutable task
+status and task-local attempts. Aggregate publication has a separate durable finalization state so
+successful tasks survive validation or publication failure and can be finalized again without
+rerunning implementation. Review and QA remain stage-level aggregate gates. See
+`task-execution.md`.
+
 ## 8. Stage execution algorithm
 
 For every stage run:
