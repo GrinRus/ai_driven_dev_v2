@@ -170,6 +170,10 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   - `AIDD_EVAL_QWEN_COMMAND` for experimental `qwen`
 - When no override is set, the evaluator validates the default native provider command
   locally before cloning or installing artifacts.
+- The default native `codex` live command explicitly uses `gpt-5.5` with
+  `model_reasoning_effort="xhigh"`. This live-E2E-only pin keeps manual provider evidence
+  comparable; it does not change normal AIDD or Codex CLI defaults. Native `claude-code`,
+  `qwen`, and `opencode` commands retain the model defaults supplied by their providers.
 - Override values must point to locally available wrapper commands that accept the AIDD
   adapter contract flags.
 - GitHub Actions workflows must not reference `harness/scenarios/live/`.

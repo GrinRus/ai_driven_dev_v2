@@ -10549,3 +10549,52 @@ Sync notes:
   acceptance entry tasks remain in `Parking lot`. Server-side mutation, approval,
   retention, runtime-evidence, run-identity, archive, DOM-test, and next-flow-split
   foundations remain owned by Wave 34 and are consumed through explicit dependencies.
+
+---
+
+## Wave 37 — reproducible live-provider model baselines (`done`)
+
+Goal: make the Codex model and reasoning configuration used by manual live E2E explicit
+and repeatable without changing product-runtime defaults or overriding the native defaults
+of the other providers.
+
+Non-goals:
+
+- changing the runtime catalog or normal operator-run defaults;
+- pinning a Qwen, Claude Code, or OpenCode model;
+- executing a provider-authenticated live scenario as an implementation gate.
+
+### Epic W37-E1 — live runtime baseline configuration (`done`)
+Linked stories: `US-01`, `US-07`, `US-08`, `US-10`
+
+#### Slice W37-E1-S1 — Codex live model pin (`done`)
+Goal: generate a native Codex live-E2E command that explicitly selects `gpt-5.5` and
+`xhigh` reasoning while retaining provider-supplied native commands for the other runtimes.
+
+Dependencies:
+
+- the existing native live-runtime command resolver and generated live config.
+
+Local tasks:
+
+- `W37-E1-S1-T1` (done) Configure the default live Codex command with `gpt-5.5` and
+  `xhigh` reasoning.
+  - Scope: `src/aidd/harness/live_runtime_config.py`, focused harness tests, and the
+    live-E2E runbook.
+  - Verification: focused runtime-config tests prove the generated Codex command carries
+    both overrides while Claude Code and Qwen preserve their runtime-catalog defaults.
+
+Exit evidence:
+
+- generated live config records the selected Codex model and reasoning effort;
+- provider-command overrides still take precedence, and unoverridden Qwen and Claude Code
+  commands remain native provider defaults.
+
+Sync notes:
+
+- `2026-07-13` Opened from the requested live-E2E reproducibility change; it is an
+  isolated harness configuration task and does not alter product runtime defaults.
+- `2026-07-13` Completed `W37-E1-S1-T1`: generated live Codex config now uses
+  `gpt-5.5` with `model_reasoning_effort="xhigh"`; Claude Code and Qwen retain their
+  catalog defaults, and focused harness, eval-doctor, static, and documentation checks
+  pass.
