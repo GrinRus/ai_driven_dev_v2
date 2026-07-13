@@ -35,6 +35,8 @@ from aidd.core.stage_terminal import reconcile_stage_result_after_validation_pas
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 from aidd.validators.cross_document import BLOCKING_UNANSWERED_CODE
 from aidd.validators.models import ValidationFinding
+from aidd.validators.reports import write_validator_report
+from aidd.validators.semantic import validate_semantic_outputs
 
 
 def derive_validation_verdict(
@@ -60,6 +62,7 @@ def persist_validation_state(
     verdict: ValidationVerdict,
     from_state: StageState = StageState.VALIDATING,
     changed_at_utc: datetime | None = None,
+    defer_success_persistence: bool = False,
 ) -> StageValidationState:
     next_state_map = {
         ValidationVerdict.PASS: StageState.SUCCEEDED,
@@ -70,14 +73,24 @@ def persist_validation_state(
     next_state = next_state_map[verdict]
     transition_stage_state(from_state=from_state, to_state=next_state)
 
-    stage_metadata_path = persist_stage_status(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        status=next_state.value,
-        changed_at_utc=changed_at_utc,
-    )
+    if next_state is StageState.SUCCEEDED and defer_success_persistence:
+        # Success is a commit state. Keep durable metadata in `validating` until
+        # reconciliation and atomic publication both complete.
+        stage_metadata_path = run_stage_metadata_path(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+    else:
+        stage_metadata_path = persist_stage_status(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            status=next_state.value,
+            changed_at_utc=changed_at_utc,
+        )
     return StageValidationState(
         stage=stage,
         work_item=work_item,
@@ -98,6 +111,7 @@ def persist_validation_state_with_repair_budget(
     repair_policy: RepairBudgetPolicy | None = None,
     from_state: StageState = StageState.VALIDATING,
     changed_at_utc: datetime | None = None,
+    defer_success_persistence: bool = False,
 ) -> RepairBudgetValidationTransition:
     resolved_verdict = verdict
     budget_exhausted = False
@@ -124,6 +138,7 @@ def persist_validation_state_with_repair_budget(
         verdict=resolved_verdict,
         from_state=from_state,
         changed_at_utc=changed_at_utc,
+        defer_success_persistence=defer_success_persistence,
     )
     return RepairBudgetValidationTransition(
         stage=stage,
@@ -340,6 +355,7 @@ def decide_post_validation_transition(
     *,
     workspace_root: Path | None = None,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    defer_success_publication: bool = False,
 ) -> PostValidationTransition:
     next_state = validation_state.next_state
     stage_metadata_path = validation_state.stage_metadata_path
@@ -362,17 +378,60 @@ def decide_post_validation_transition(
             status=StageState.BLOCKED.value,
         )
     elif workspace_root is not None and next_state == StageState.SUCCEEDED:
-        reconcile_stage_result_after_validation_pass(
-            workspace_root=workspace_root,
-            work_item=validation_state.work_item,
-            stage=validation_state.stage,
-        )
-        publish_stage_outputs_after_validation_pass(
+        try:
+            reconcile_stage_result_after_validation_pass(
+                workspace_root=workspace_root,
+                work_item=validation_state.work_item,
+                stage=validation_state.stage,
+            )
+            final_findings = validate_semantic_outputs(
+                stage=validation_state.stage,
+                work_item=validation_state.work_item,
+                workspace_root=workspace_root,
+                contracts_root=contracts_root,
+                validate_stage_result_document=True,
+            )
+            if final_findings:
+                validator_report_path = (
+                    workspace_root
+                    / "workitems"
+                    / validation_state.work_item
+                    / "stages"
+                    / validation_state.stage
+                    / "validator-report.md"
+                )
+                write_validator_report(
+                    path=validator_report_path,
+                    findings=final_findings,
+                )
+                raise ValueError("Final post-normalization stage-result validation failed.")
+            if not defer_success_publication:
+                publish_stage_outputs_after_validation_pass(
+                    workspace_root=workspace_root,
+                    work_item=validation_state.work_item,
+                    run_id=validation_state.run_id,
+                    stage=validation_state.stage,
+                    contracts_root=contracts_root,
+                )
+        except BaseException:
+            persist_stage_status(
+                workspace_root=workspace_root,
+                work_item=validation_state.work_item,
+                run_id=validation_state.run_id,
+                stage=validation_state.stage,
+                status=StageState.FAILED.value,
+            )
+            raise
+        stage_metadata_path = persist_stage_status(
             workspace_root=workspace_root,
             work_item=validation_state.work_item,
             run_id=validation_state.run_id,
             stage=validation_state.stage,
-            contracts_root=contracts_root,
+            status=(
+                StageState.PENDING.value
+                if defer_success_publication
+                else StageState.SUCCEEDED.value
+            ),
         )
 
     action_map: dict[StageState, PostValidationAction] = {

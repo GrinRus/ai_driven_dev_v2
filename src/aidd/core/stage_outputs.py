@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from shutil import copy2
+from shutil import copy2, rmtree
+from uuid import uuid4
 
 from aidd.core.stage_models import (
     AdapterInvocationBundle,
@@ -142,9 +143,7 @@ def discover_stage_markdown_outputs(
         )
 
     expected_markdown_documents = tuple(
-        path
-        for path in invocation_bundle.expected_output_documents
-        if path.suffix.lower() == ".md"
+        path for path in invocation_bundle.expected_output_documents if path.suffix.lower() == ".md"
     )
     promoted_misplaced_documents = _promote_misplaced_stage_output_documents(
         expected_markdown_documents=expected_markdown_documents
@@ -255,7 +254,7 @@ def publish_stage_outputs_after_validation_pass(
         work_item=work_item,
         stage=stage,
     )
-    published_output_root.mkdir(parents=True, exist_ok=True)
+    published_output_root.parent.mkdir(parents=True, exist_ok=True)
 
     declared_primary_outputs = resolve_expected_output_documents(
         stage=stage,
@@ -271,18 +270,52 @@ def publish_stage_outputs_after_validation_pass(
         )
     )
 
-    published_documents: list[Path] = []
-    for source_document in source_documents:
-        if source_document.suffix.lower() != ".md":
-            continue
-        if not source_document.exists():
-            raise FileNotFoundError(
-                "Stage output publishing requires an existing source document: "
-                f"{workspace_relative_path(workspace_root, source_document)}"
+    publication_token = uuid4().hex
+    staging_root = published_output_root.with_name(
+        f".{published_output_root.name}.staging-{publication_token}"
+    )
+    backup_root = published_output_root.with_name(
+        f".{published_output_root.name}.backup-{publication_token}"
+    )
+    staging_root.mkdir(parents=False, exist_ok=False)
+    expected_names: list[str] = []
+    try:
+        for source_document in source_documents:
+            if source_document.suffix.lower() != ".md":
+                continue
+            if not source_document.exists():
+                raise FileNotFoundError(
+                    "Stage output publishing requires an existing source document: "
+                    f"{workspace_relative_path(workspace_root, source_document)}"
+                )
+            copy2(source_document, staging_root / source_document.name)
+            expected_names.append(source_document.name)
+
+        staged_names = sorted(path.name for path in staging_root.iterdir() if path.is_file())
+        if staged_names != sorted(expected_names):
+            raise RuntimeError(
+                "Staged stage-output verification failed: expected "
+                f"{sorted(expected_names)}, found {staged_names}."
             )
-        destination_document = published_output_root / source_document.name
-        copy2(source_document, destination_document)
-        published_documents.append(destination_document)
+
+        had_existing_publication = published_output_root.exists()
+        if had_existing_publication:
+            published_output_root.replace(backup_root)
+        try:
+            staging_root.replace(published_output_root)
+        except BaseException:
+            if had_existing_publication and backup_root.exists():
+                backup_root.replace(published_output_root)
+            raise
+        if backup_root.exists():
+            rmtree(backup_root)
+    finally:
+        if staging_root.exists():
+            rmtree(staging_root)
+        if backup_root.exists() and not published_output_root.exists():
+            backup_root.replace(published_output_root)
+
+    published_documents = [published_output_root / name for name in expected_names]
 
     return StageOutputPublication(
         stage=stage,

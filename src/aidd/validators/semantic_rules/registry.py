@@ -33,6 +33,7 @@ from aidd.validators.semantic_rules.qa import RULES as QA_RULES
 from aidd.validators.semantic_rules.research import RULES as RESEARCH_RULES
 from aidd.validators.semantic_rules.review import RULES as REVIEW_RULES
 from aidd.validators.semantic_rules.review_spec import RULES as REVIEW_SPEC_RULES
+from aidd.validators.semantic_rules.stage_result import validate_stage_result
 from aidd.validators.semantic_rules.tasklist import RULES as TASKLIST_RULES
 
 _RULE_GROUPS = (
@@ -47,9 +48,7 @@ _RULE_GROUPS = (
 )
 
 SEMANTIC_RULES: dict[tuple[str, str], SemanticRule] = {
-    (rule.stage, rule.document_name): rule
-    for rules in _RULE_GROUPS
-    for rule in rules
+    (rule.stage, rule.document_name): rule for rules in _RULE_GROUPS for rule in rules
 }
 
 
@@ -63,6 +62,7 @@ def validate_semantic_outputs(
     work_item: str,
     workspace_root: Path,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    validate_stage_result_document: bool = False,
 ) -> tuple[ValidationFinding, ...]:
     load_stage_manifest(stage=stage, contracts_root=contracts_root)
     expected_outputs = resolve_expected_output_documents(
@@ -93,6 +93,12 @@ def validate_semantic_outputs(
             required_sections=required_sections,
             markdown_text=loaded_document.body,
         )
+        if output_path.name == "stage-result.md":
+            if validate_stage_result_document:
+                findings.extend(validate_stage_result(context))
+            else:
+                findings.extend(validate_placeholder_sections(context))
+            continue
         rule = semantic_rule_for(stage=stage, document_name=output_path.name)
         if rule is None:
             findings.extend(validate_placeholder_sections(context))

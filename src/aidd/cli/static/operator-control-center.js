@@ -244,6 +244,43 @@ function renderImplementationSummary(implementation) {
   `;
 }
 
+function renderTaskProgress(taskView) {
+  const tasks = taskView?.tasks || [];
+  if (!tasks.length) return "";
+  const finalization = taskView?.finalization || {status: "pending", attempts: []};
+  return `
+    <section class="surface">
+      <div class="surface-title">
+        <span>Implementation tasks</span>
+        <span class="small-badge">${escapeHtml(tasks.filter((task) => task.status === "succeeded").length)} / ${escapeHtml(tasks.length)}</span>
+      </div>
+      <div class="compact-list">
+        ${tasks.map((task) => `
+          <article class="panel-item">
+            <strong>${escapeHtml(task.id)} · ${escapeHtml(task.title)}</strong>
+            <span>${escapeHtml(task.status)} · dependencies: ${escapeHtml((task.dependencies || []).join(", ") || "none")} · attempts: ${escapeHtml(task.attempt_count || 0)}</span>
+            <span>${escapeHtml(task.outcome || "")}</span>
+            <span>Deliverable: ${escapeHtml(task.dominant_deliverable || "")}</span>
+            <span>Scope: ${escapeHtml(task.in_scope || "")}</span>
+            <span>Verification: ${escapeHtml(task.verification || "")}</span>
+            <span>${(task.acceptance_criteria || []).map((item) => `${escapeHtml(item.id)}: ${escapeHtml(item.text || "")}`).join(" · ")}</span>
+            ${(task.attempts || []).map((attempt) => `<span>Attempt ${escapeHtml(attempt.number)} · ${escapeHtml(attempt.status)} · ${escapeHtml(attempt.path)}</span>`).join("")}
+            ${task.blocker ? `<span class="form-error">Blocker: ${escapeHtml(task.blocker)}</span>` : ""}
+            ${task.status !== "succeeded" ? `<button data-run-task="${escapeHtml(task.id)}" type="button" ${task.ready && selectedRuntimeReady() ? "" : "disabled"}>${task.status === "pending" ? "Run" : "Resume"}</button>` : ""}
+          </article>
+        `).join("")}
+        <article class="panel-item">
+          <strong>Aggregate publication · ${escapeHtml(finalization.status || "pending")}</strong>
+          <span>Attempts: ${escapeHtml(finalization.attempt_count || 0)}</span>
+          ${(finalization.attempts || []).map((attempt) => `<span>Finalize ${escapeHtml(attempt.number)} · ${escapeHtml(attempt.status)} · ${escapeHtml(attempt.path)}</span>`).join("")}
+          ${finalization.blocker ? `<span class="form-error">Blocker: ${escapeHtml(finalization.blocker)}</span>` : ""}
+          ${taskView.all_succeeded && finalization.status !== "succeeded" ? `<button data-finalize-tasks type="button" ${selectedRuntimeReady() ? "" : "disabled"}>${finalization.status === "failed" ? "Resume publication" : "Finalize"}</button>` : ""}
+        </article>
+      </div>
+    </section>
+  `;
+}
+
 async function renderImplementReview() {
   const content = document.getElementById("cockpitContent");
   if (!state.activeRunId) {
@@ -253,9 +290,10 @@ async function renderImplementReview() {
   content.innerHTML = `<div class="empty-state loading-state">Loading repository diff...</div>`;
   try {
     const params = runScopedQuery("implement");
-    const [diffView, evidence] = await Promise.all([
+    const [diffView, evidence, taskView] = await Promise.all([
       api(`/api/repository/diff?${params}`),
-      api(`/api/implement/evidence?${runScopedQuery()}`)
+      api(`/api/implement/evidence?${runScopedQuery()}`),
+      api(`/api/tasks?${runScopedQuery()}`).catch(() => ({tasks: []}))
     ]);
     const files = diffView.source_files || [];
     const visible = filteredDiffFiles(files);
@@ -266,6 +304,7 @@ async function renderImplementReview() {
     content.innerHTML = `
       <div class="implement-review-screen">
         ${renderImplementationSummary(evidence)}
+        ${renderTaskProgress(taskView)}
         <section class="surface">
           <div class="surface-title">
             <span>Repository diff</span>

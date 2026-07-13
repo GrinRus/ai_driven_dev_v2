@@ -48,6 +48,9 @@ For each finding:
    - task independence,
    - ordering/dependency clarity,
    - reviewability/verification notes,
+   - missing task-card outcome, deliverable, scope, or acceptance criteria,
+   - malformed or duplicate task/acceptance ids, unsafe scope paths, forward dependencies, and
+     dependency cycles,
    - cross-document status drift;
 2. patch the smallest affected section in `tasklist.md`;
 3. re-check dependency references and task ordering after every dependency edit;
@@ -56,7 +59,11 @@ For each finding:
 Use concrete repair actions:
 
 - bundled task scope: split into smaller ordered tasks with one dominant deliverable each;
-- hidden or unclear prerequisites: add explicit dependency ids or `none`, then reorder tasks;
+- incomplete task card: preserve its id and add concrete `Outcome`, `Dominant deliverable`,
+  `In scope`, and an `Acceptance criteria` field with unique `<task-id>-AC<n>` entries; make
+  `In scope` include safe backticked repository-relative file or directory prefixes;
+- hidden or unclear prerequisites: add explicit dependency ids or `none`, then reorder tasks so
+  every dependency references an earlier card;
 - weak verification guidance: add concrete primary checks per task (test/check/scenario), with
   one dedicated `Verification notes` entry for every task id declared in `Ordered tasks`,
   including command-only or
@@ -95,6 +102,7 @@ Use concrete repair actions:
 ## Repair exit checks
 
 - no task bundles unrelated outcomes or hides prerequisites,
+- every task uses the complete H3 task-card shape and has well-formed acceptance ids,
 - dependencies are explicit and ordering is executable,
 - every task has at least one concrete verification note in the dedicated `Verification notes`
   section,

@@ -213,12 +213,9 @@ def _should_include_existing_stage_outputs_for_resume(
     )
     if metadata is None:
         return False
-    return (
-        metadata.status == StageState.PREPARING.value
-        and any(
-            status_change.status == StageState.BLOCKED.value
-            for status_change in metadata.status_history
-        )
+    return metadata.status == StageState.PREPARING.value and any(
+        status_change.status == StageState.BLOCKED.value
+        for status_change in metadata.status_history
     )
 
 
@@ -228,11 +225,14 @@ def _read_stage_answers_text(
     work_item: str,
     stage: str,
 ) -> str | None:
-    answers_path = workspace_stage_root(
-        root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-    ) / "answers.md"
+    answers_path = (
+        workspace_stage_root(
+            root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
+        / "answers.md"
+    )
     if not answers_path.exists():
         return None
     return answers_path.read_text(encoding="utf-8")
@@ -243,8 +243,7 @@ def _answers_text_is_no_answer_placeholder(answers_text: str) -> bool:
     if "no answer" not in normalized and "no answers" not in normalized:
         return False
     return not any(
-        marker in normalized
-        for marker in ("[resolved]", "[partial]", "[deferred]", " a1 ", "`a1`")
+        marker in normalized for marker in ("[resolved]", "[partial]", "[deferred]", " a1 ", "`a1`")
     )
 
 
@@ -255,11 +254,14 @@ def _restore_operator_owned_answers_after_runtime_attempt(
     stage: str,
     answers_text_before_attempt: str | None,
 ) -> None:
-    answers_path = workspace_stage_root(
-        root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-    ) / "answers.md"
+    answers_path = (
+        workspace_stage_root(
+            root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
+        / "answers.md"
+    )
     try:
         questions = load_questions_document(
             workspace_root=workspace_root,
@@ -329,6 +331,11 @@ def run_single_stage_orchestration(
     project_set: ResolvedProjectSet | None = None,
     changed_at_utc: datetime | None = None,
     intervention_request_path: Path | None = None,
+    defer_success_publication: bool = False,
+    validation_finding_provider: Callable[
+        [StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]
+    ]
+    | None = None,
 ) -> StageOrchestrationResult:
     answers_text_before_attempt = _read_stage_answers_text(
         workspace_root=workspace_root,
@@ -525,6 +532,13 @@ def run_single_stage_orchestration(
         discovery=discovery,
         contracts_root=contracts_root,
     )
+    if validation_finding_provider is not None:
+        task_findings = validation_finding_provider(execution_state, discovery)
+        if task_findings:
+            validation_result = _append_validation_findings(
+                validation_result=validation_result,
+                findings=(*validation_result.findings, *task_findings),
+            )
     if exhausted_repair_budget and exhausted_stage_result_path is not None:
         findings = validation_result.findings
         if not any(finding.code == "CROSS-REPAIR-BUDGET-EXHAUSTED" for finding in findings):
@@ -567,6 +581,7 @@ def run_single_stage_orchestration(
         repair_policy=repair_policy,
         from_state=StageState.VALIDATING,
         changed_at_utc=changed_at_utc,
+        defer_success_persistence=True,
     )
     if _should_persist_terminal_repair_history(
         workspace_root=workspace_root,
@@ -594,6 +609,7 @@ def run_single_stage_orchestration(
         validation_transition.validation_state,
         workspace_root=workspace_root,
         contracts_root=contracts_root,
+        defer_success_publication=defer_success_publication,
     )
     return StageOrchestrationResult(
         stage=stage,

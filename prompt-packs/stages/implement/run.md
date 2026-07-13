@@ -62,6 +62,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 1. When `context/task-selection.md` is provided, the selected task id must be explicit in the implementation
    report. If upstream `tasklist.md` decomposes that selected task into local ids such as `T1` or
    `TL-1`, use those local ids to structure touched-file and verification evidence where practical.
+   Treat the selected task card's `Outcome`, `In scope`, and every `<task-id>-AC<n>` item
+   as hard implementation boundaries. Cite every acceptance id in the implementation report
+   with implementation or verification evidence.
 2. When `context/allowed-write-scope.md` is provided, it is a hard boundary for touched files.
 3. When provided, `context/acceptance-criteria.md` and `context/verification-output.md` define the
    authored acceptance and verification baseline for the implementation.

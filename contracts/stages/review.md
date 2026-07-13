@@ -107,6 +107,10 @@ Optional context documents may improve review depth, but they must not replace i
   calls when the upstream artifacts made them part of the plan. If a planned behavior, mitigation,
   mechanism, or verification detail is missing from code, tests, or implementation evidence, record
   a finding unless upstream artifacts explicitly supersede that requirement.
+- When the upstream tasklist uses rich task cards, `review-report.md` must contain a
+  `Task acceptance evidence` section with exactly one structured top-level entry per
+  `<task-id>-AC<n>` criterion. Entries use `pass`, `fail`, or `not-verified`, cite an evidence id
+  or artifact path, and any non-pass entry requires `Review status: rejected`.
 - When the diff changes a shared public-surface mechanism such as a CLI decorator, parser/helper,
   router/error boundary, schema transform helper, or public API adapter, review must check affected
   sibling commands, routes, generated outputs, or documented public surfaces. Missing help/usage,
@@ -130,6 +134,7 @@ Validators for `review` should check:
 - required output existence and heading coverage for `review-report.md`, `stage-result.md`, and `validator-report.md`,
 - consistency with implementation evidence, diff context, and acceptance criteria,
 - consistency with available tasklist/plan requirements and risk mitigations,
+- exact, non-duplicate structured task-acceptance coverage for rich tasklists,
 - unsupported findings:
   - findings must reference observable implementation evidence or acceptance-criteria mismatch,
   - speculative or evidence-free findings must be rejected,

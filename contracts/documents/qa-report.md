@@ -11,6 +11,7 @@ Summarize verification evidence, remaining risks, and release readiness.
 - `Evidence`
 - `Known issues`
 - `Readiness`
+- `Task acceptance evidence` when the upstream tasklist uses rich task cards
 
 ## Validation cues
 
@@ -31,6 +32,10 @@ Summarize verification evidence, remaining risks, and release readiness.
   and `proceed-with-conditions` for real remaining risks, or move satisfied
   selected-boundary tradeoff notes out of residual-risk bullets,
 - upstream references are present when the stage requires them.
+- `Task acceptance evidence` contains exactly one top-level entry per task acceptance criterion:
+  `- Task: \`TL-1\`; Acceptance: \`TL-1-AC1\`; Status: \`pass\`; Evidence: \`path\`; Notes: ...`,
+- supported statuses are `pass`, `fail`, and `not-verified`; `fail` or `not-verified` requires
+  `QA verdict: not-ready` and release recommendation `hold`.
 
 ## Notes
 

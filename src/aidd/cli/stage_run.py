@@ -22,6 +22,7 @@ from aidd.cli.support import (
     console,
 )
 from aidd.config import load_config
+from aidd.core.mutation_lease import acquire_run_mutation_lease
 from aidd.core.operator_intervention import (
     ensure_intervention_allowed_for_downstream,
     persist_operator_intervention_request,
@@ -41,6 +42,7 @@ from aidd.core.run_store import (
     load_stage_metadata,
     next_attempt_number,
     run_attempt_root,
+    run_root,
 )
 from aidd.core.runtime_operator import (
     OPERATOR_REQUESTS_FILENAME,
@@ -56,6 +58,7 @@ from aidd.core.stage_runner import (
     PostValidationAction,
     StageExecutionState,
     StageOrchestrationResult,
+    StageOutputDiscovery,
     run_single_stage_orchestration,
     update_stage_unblock_state,
 )
@@ -70,6 +73,7 @@ from aidd.runtime_permissions import (
     RuntimeOperatorDecisionSource,
     RuntimePermissionPolicy,
 )
+from aidd.validators.models import ValidationFinding
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +88,13 @@ class StageRunOptions:
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
     runtime_operator_decision_provider: RuntimeOperatorDecisionProvider | None = None
     cancel_requested: Callable[[], bool] | None = None
+    defer_success_publication: bool = False
+    validation_finding_provider: (
+        Callable[
+            [StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]
+        ]
+        | None
+    ) = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -183,9 +194,9 @@ def _validate_stage_run_options(options: StageRunOptions) -> None:
 
 def _resolve_stage_run_config(options: StageRunOptions) -> StageRunRuntimeConfig:
     cfg = load_config(options.config)
-    workspace_root = (
-        options.root if options.root is not None else cfg.workspace_root
-    ).resolve(strict=False)
+    workspace_root = (options.root if options.root is not None else cfg.workspace_root).resolve(
+        strict=False
+    )
     repository_root = Path.cwd().resolve(strict=True)
     project_set = (
         resolve_project_set(
@@ -455,9 +466,7 @@ def _run_stage_attempts(
                 )
                 console.print("Stage run result: action=wait state=blocked")
                 if unblock_state.stage_metadata_path is not None:
-                    console.print(
-                        f"Stage metadata: {unblock_state.stage_metadata_path.as_posix()}"
-                    )
+                    console.print(f"Stage metadata: {unblock_state.stage_metadata_path.as_posix()}")
                 unapproved_operator_ids, operator_requests_path = (
                     _unapproved_stage_operator_requests(
                         workspace_root=runtime_config.workspace_root,
@@ -494,6 +503,8 @@ def _run_stage_attempts(
                 repair_policy=runtime_config.repair_policy,
                 project_set=runtime_config.project_set,
                 intervention_request_path=current_intervention_request_path,
+                defer_success_publication=options.defer_success_publication,
+                validation_finding_provider=options.validation_finding_provider,
             )
         except (FileNotFoundError, ValueError) as exc:
             console.print(f"Error: {exc}")
@@ -509,8 +520,7 @@ def _run_stage_attempts(
         )
         console.print(f"Repair brief prepared: {repair_brief_path.as_posix()}")
         console.print(
-            "Repair retry scheduled: "
-            f"attempt={orchestration.execution_state.attempt_number + 1}"
+            f"Repair retry scheduled: attempt={orchestration.execution_state.attempt_number + 1}"
         )
 
     assert orchestration is not None
@@ -582,9 +592,7 @@ def _write_run_manifest(
             "runtime_execution_mode": runtime_config.runtime_execution_mode.value,
             "runtime_permission_policy": runtime_config.runtime_permission_policy.value,
             "runtime_interaction_mode": runtime_config.runtime_interaction_mode.value,
-            "runtime_auto_approval_preset": (
-                runtime_config.runtime_auto_approval_preset.value
-            ),
+            "runtime_auto_approval_preset": (runtime_config.runtime_auto_approval_preset.value),
             "runtime_timeout_seconds": runtime_config.runtime_timeout_seconds,
             "log_follow": options.log_follow,
         },
@@ -624,15 +632,13 @@ def _print_stage_run_result(
     console.print(f"Runtime log: {runtime_log_path.as_posix()}")
     if orchestration.validation_result is not None:
         console.print(
-            "Validator report: "
-            f"{orchestration.validation_result.validator_report_path.as_posix()}"
+            f"Validator report: {orchestration.validation_result.validator_report_path.as_posix()}"
         )
     if orchestration.adapter_outcome.details:
         console.print(f"Adapter outcome: {orchestration.adapter_outcome.details}")
     if orchestration.adapter_outcome.operator_requests_path is not None:
         console.print(
-            "Operator requests: "
-            f"{orchestration.adapter_outcome.operator_requests_path.as_posix()}"
+            f"Operator requests: {orchestration.adapter_outcome.operator_requests_path.as_posix()}"
         )
     if orchestration.adapter_outcome.operator_decisions_path is not None:
         console.print(
@@ -711,26 +717,35 @@ def run_stage_command(options: StageRunOptions) -> None:
         options=options,
         runtime_config=runtime_config,
     )
-    _write_run_manifest(options=options, runtime_config=runtime_config, run_id=run_id)
-    prompt_pack_file_paths = resolve_prompt_pack_file_paths(stage=options.stage)
+    selected_run_root = run_root(
+        workspace_root=runtime_config.workspace_root,
+        work_item=options.work_item,
+        run_id=run_id,
+    )
+    with acquire_run_mutation_lease(
+        selected_run_root,
+        operation=f"stage:{options.stage}",
+    ):
+        _write_run_manifest(options=options, runtime_config=runtime_config, run_id=run_id)
+        prompt_pack_file_paths = resolve_prompt_pack_file_paths(stage=options.stage)
 
-    _print_stage_run_start(
-        options=options,
-        run_id=run_id,
-        is_resume_candidate=is_resume_candidate,
-    )
-    orchestration, stage_attempt_count = _run_stage_attempts(
-        options=options,
-        runtime_config=runtime_config,
-        run_id=run_id,
-        prompt_pack_file_paths=tuple(prompt_pack_file_paths),
-    )
-    _print_stage_run_result(
-        orchestration=orchestration,
-        stage_attempt_count=stage_attempt_count,
-    )
-    if orchestration.transition.action is not PostValidationAction.ADVANCE:
-        raise typer.Exit(code=1)
+        _print_stage_run_start(
+            options=options,
+            run_id=run_id,
+            is_resume_candidate=is_resume_candidate,
+        )
+        orchestration, stage_attempt_count = _run_stage_attempts(
+            options=options,
+            runtime_config=runtime_config,
+            run_id=run_id,
+            prompt_pack_file_paths=tuple(prompt_pack_file_paths),
+        )
+        _print_stage_run_result(
+            orchestration=orchestration,
+            stage_attempt_count=stage_attempt_count,
+        )
+        if orchestration.transition.action is not PostValidationAction.ADVANCE:
+            raise typer.Exit(code=1)
 
 
 def run_stage_interact_command(options: StageInteractOptions) -> None:

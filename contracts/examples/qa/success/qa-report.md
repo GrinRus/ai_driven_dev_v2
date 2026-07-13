@@ -31,3 +31,7 @@
 - EV-1: `context/verification-output.md` shows regression suite `138/138` passed.
 - EV-2: `context/verification-artifacts.md` includes smoke logs and artifact hashes for the release candidate build.
 - EV-3: `workitems/WI-QA-EXAMPLE/stages/review/output/review-report.md` reports `approved-with-conditions` with no unresolved must-fix findings.
+
+## Task acceptance evidence
+
+- Task: `TL-1`; Acceptance: `TL-1-AC1`; Status: `pass`; Evidence: EV-1, `context/verification-output.md`; Notes: The required regression behavior passed.

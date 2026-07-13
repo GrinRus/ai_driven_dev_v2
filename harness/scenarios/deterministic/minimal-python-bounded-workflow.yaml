@@ -32,6 +32,11 @@ verify:
   - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
   - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/stage-result.md
   - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/validator-report.md
+  - rg -n '^### (TL-[0-9]+|T[0-9]+) .+' .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
+  - rg -n 'Outcome:|Dominant deliverable:|In scope:|Acceptance criteria:' .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
+  pass_conditions:
+  - Required tasklist output documents exist.
+  - Every task uses the rich task-card shape with task-local acceptance criteria.
 limits:
   timeout_minutes: 5
 interview:

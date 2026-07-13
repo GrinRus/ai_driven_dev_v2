@@ -31,15 +31,15 @@ def _write_config(tmp_path: Path) -> Path:
     config_path.write_text(
         (
             "[workspace]\n"
-            "root = \".aidd\"\n\n"
+            'root = ".aidd"\n\n'
             "[runtime.generic_cli]\n"
-            f"command = \"{_RUNTIME_COMMANDS['generic-cli']}\"\n\n"
+            f'command = "{_RUNTIME_COMMANDS["generic-cli"]}"\n\n'
             "[runtime.claude_code]\n"
-            f"command = \"{_RUNTIME_COMMANDS['claude-code']}\"\n\n"
+            f'command = "{_RUNTIME_COMMANDS["claude-code"]}"\n\n'
             "[runtime.codex]\n"
-            f"command = \"{_RUNTIME_COMMANDS['codex']}\"\n\n"
+            f'command = "{_RUNTIME_COMMANDS["codex"]}"\n\n'
             "[runtime.opencode]\n"
-            f"command = \"{_RUNTIME_COMMANDS['opencode']}\"\n"
+            f'command = "{_RUNTIME_COMMANDS["opencode"]}"\n'
         ),
         encoding="utf-8",
     )
@@ -57,6 +57,12 @@ def _seed_required_context(workspace_root: Path, *, work_item: str) -> None:
     )
 
 
+def _write_fake_project_change(project_root: Path) -> None:
+    path = project_root / "src" / "example.py"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("SYNTHETIC_IMPLEMENTATION = True\n", encoding="utf-8")
+
+
 def _write_fake_stage_outputs(
     workspace_root: Path,
     *,
@@ -68,7 +74,56 @@ def _write_fake_stage_outputs(
         work_item=work_item,
         stage=stage,
     ):
-        content = f"# {draft_path.stem.title()}\n\nSynthetic output for {stage}.\n"
+        if stage == "tasklist" and draft_path.name == "tasklist.md":
+            content = """# Tasklist
+
+## Task summary
+
+One implementation-ready task used by the workflow test double.
+
+## Ordered tasks
+
+### TL-1 — Execute the synthetic implementation
+
+- Outcome: The synthetic implementation stage succeeds.
+- Dominant deliverable: The fixture implementation report is produced.
+- In scope: `src/example.py` and `tests/cli/test_run_workflow.py`.
+- Acceptance criteria:
+  - TL-1-AC1: Implement is dispatched once through task execution.
+
+## Dependencies
+
+- TL-1: none
+
+## Verification notes
+
+- TL-1: workflow dispatch assertion
+"""
+        elif stage == "implement" and draft_path.name == "implementation-report.md":
+            content = """# Implementation Report
+
+## Selected task
+
+- Task id: `TL-1`
+
+## Change summary
+
+The synthetic implementation completed the selected workflow dispatch task and recorded evidence.
+
+## Touched files
+
+- `src/example.py` - synthetic implementation change for the workflow double.
+
+## Verification notes
+
+- `TL-1-AC1`: `python -c 'print(1)'` -> pass (workflow dispatch assertion).
+
+## Follow-up notes
+
+- none
+"""
+        else:
+            content = f"# {draft_path.stem.title()}\n\nSynthetic output for {stage}.\n"
         draft_path.parent.mkdir(parents=True, exist_ok=True)
         draft_path.write_text(content, encoding="utf-8")
         published_path = draft_path.parent / "output" / draft_path.name
@@ -235,6 +290,7 @@ def test_run_executes_runnable_stages_in_dependency_order(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
+    monkeypatch.chdir(tmp_path)
     config_path = _write_config(tmp_path)
     executed_stages: list[str] = []
     _seed_required_context(workspace_root, work_item="WI-010")
@@ -261,6 +317,8 @@ def test_run_executes_runnable_stages_in_dependency_order(
             run_id=run_id,
             stage=stage,
         )
+        if stage == "implement":
+            _write_fake_project_change(tmp_path)
 
     monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
 
@@ -364,6 +422,7 @@ def test_run_dispatches_workflow_for_supported_non_generic_runtimes(
     selected_runtime: str,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
+    monkeypatch.chdir(tmp_path)
     config_path = _write_config(tmp_path)
     executed_stages: list[str] = []
     _seed_required_context(workspace_root, work_item="WI-012")
@@ -390,6 +449,8 @@ def test_run_dispatches_workflow_for_supported_non_generic_runtimes(
             run_id=run_id,
             stage=stage,
         )
+        if stage == "implement":
+            _write_fake_project_change(tmp_path)
 
     monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
 
@@ -487,9 +548,7 @@ def test_run_black_box_local_project_from_request_init_through_inspection(
     local_project = tmp_path / "local-project"
     local_project.mkdir()
     runtime_script = _write_black_box_runtime_script(tmp_path)
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(runtime_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(runtime_script.as_posix())}"
     config_path = _write_config(local_project)
     config_text = config_path.read_text(encoding="utf-8")
     config_path.write_text(
@@ -579,6 +638,7 @@ def test_run_manifest_persists_runtime_specific_command_snapshot(
     selected_runtime: str,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
+    monkeypatch.chdir(tmp_path)
     config_path = _write_config(tmp_path)
     _seed_required_context(workspace_root, work_item="WI-014")
 
@@ -603,6 +663,8 @@ def test_run_manifest_persists_runtime_specific_command_snapshot(
             run_id=run_id,
             stage=stage,
         )
+        if stage == "implement":
+            _write_fake_project_change(tmp_path)
 
     monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
     result = runner.invoke(

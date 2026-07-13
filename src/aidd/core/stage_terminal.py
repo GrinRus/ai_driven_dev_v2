@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from aidd.core.stage_registry import resolve_expected_output_documents
+from aidd.core.stages import next_stage
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
@@ -42,8 +44,14 @@ _STALE_TERMINAL_STATUS_NOTE_PATTERN = re.compile(
     r")\b.*`?(?:failed|blocked|needs-input)`?.*$",
     re.IGNORECASE,
 )
-_VALIDATION_PASS_NORMALIZATION_MARKER = (
-    "stale runtime draft status/verdict was normalized"
+_VALIDATION_PASS_NORMALIZATION_MARKER = "stale runtime draft status/verdict was normalized"
+_NEXT_ACTIONS_PATTERN = re.compile(
+    r"(?P<prefix>#{1,6}\s+Next actions\s*\n+)(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
+    re.IGNORECASE | re.DOTALL,
+)
+_PRODUCED_OUTPUTS_PATTERN = re.compile(
+    r"(?P<prefix>#{1,6}\s+Produced outputs\s*\n+)(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
+    re.IGNORECASE | re.DOTALL,
 )
 
 
@@ -127,11 +135,7 @@ def _replace_or_add_status_section(markdown: str) -> str:
     replacement_body = _TERMINAL_STATUS_PATTERN.sub("failed", body, count=1)
     if replacement_body == body:
         replacement_body = "- `failed`\n"
-    return (
-        markdown[: match.start("body")]
-        + replacement_body
-        + markdown[match.end("body") :]
-    )
+    return markdown[: match.start("body")] + replacement_body + markdown[match.end("body") :]
 
 
 def _replace_or_add_success_status_section(markdown: str) -> str:
@@ -143,11 +147,7 @@ def _replace_or_add_success_status_section(markdown: str) -> str:
     replacement_body = _TERMINAL_STATUS_PATTERN.sub("succeeded", body, count=1)
     if replacement_body == body:
         replacement_body = "- `succeeded`\n"
-    return (
-        markdown[: match.start("body")]
-        + replacement_body
-        + markdown[match.end("body") :]
-    )
+    return markdown[: match.start("body")] + replacement_body + markdown[match.end("body") :]
 
 
 def _append_exhausted_budget_terminal_note(markdown: str) -> str:
@@ -199,11 +199,7 @@ def _replace_or_add_validator_pass_claim(markdown: str) -> str:
     if replacement_body == body:
         prefix = "" if not body or body.endswith("\n") else "\n"
         replacement_body = body + prefix + "- Validator verdict: `pass`\n"
-    return (
-        markdown[: match.start("body")]
-        + replacement_body
-        + markdown[match.end("body") :]
-    )
+    return markdown[: match.start("body")] + replacement_body + markdown[match.end("body") :]
 
 
 def _append_validator_pass_terminal_note(markdown: str) -> str:
@@ -219,6 +215,38 @@ def _append_validator_pass_terminal_note(markdown: str) -> str:
         return markdown.rstrip() + "\n\n## Terminal state notes" + note
 
     return markdown[: match.end("body")] + note + markdown[match.end("body") :]
+
+
+def _replace_success_next_action(markdown: str, *, stage: str) -> str:
+    downstream = next_stage(stage)
+    if downstream is None:
+        return markdown
+    replacement = f"- Continue to `{downstream}`.\n"
+    match = _NEXT_ACTIONS_PATTERN.search(markdown)
+    if match is None:
+        return markdown.rstrip() + f"\n\n## Next actions\n\n{replacement}"
+    return markdown[: match.start("body")] + replacement + markdown[match.end("body") :]
+
+
+def _replace_success_produced_outputs(
+    markdown: str,
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> str:
+    paths = resolve_expected_output_documents(
+        stage=stage,
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+    body = "".join(
+        f"- `{_workspace_relative_path(workspace_root, path)}`\n" for path in paths
+    )
+    match = _PRODUCED_OUTPUTS_PATTERN.search(markdown)
+    if match is None:
+        return markdown.rstrip() + "\n\n## Produced outputs\n\n" + body
+    return markdown[: match.start("body")] + body + markdown[match.end("body") :]
 
 
 def _replace_stale_terminal_status_notes_for_validation_pass(markdown: str) -> str:
@@ -249,9 +277,7 @@ def _replace_stale_terminal_status_notes_for_validation_pass(markdown: str) -> s
         return markdown
 
     return (
-        markdown[: match.start("body")]
-        + "".join(replacement_lines)
-        + markdown[match.end("body") :]
+        markdown[: match.start("body")] + "".join(replacement_lines) + markdown[match.end("body") :]
     )
 
 
@@ -264,9 +290,7 @@ def _has_stale_failure_claim_for_validation_pass(markdown: str) -> bool:
     validation_summary_match = _VALIDATION_SUMMARY_PATTERN.search(markdown)
     has_stale_validator_verdict = (
         validation_summary_match is not None
-        and _STALE_VALIDATOR_VERDICT_LINE_PATTERN.search(
-            validation_summary_match.group("body")
-        )
+        and _STALE_VALIDATOR_VERDICT_LINE_PATTERN.search(validation_summary_match.group("body"))
         is not None
     )
     return has_stale_status or has_stale_validator_verdict
@@ -311,8 +335,14 @@ def reconcile_stage_result_after_validation_pass(
 
     text = stage_result_path.read_text(encoding="utf-8", errors="replace")
     has_stale_failure_claim = _has_stale_failure_claim_for_validation_pass(text)
-    updated = _replace_or_add_validator_pass_claim(
-        _replace_or_add_success_status_section(text)
+    updated = _replace_success_produced_outputs(
+        _replace_success_next_action(
+            _replace_or_add_validator_pass_claim(_replace_or_add_success_status_section(text)),
+            stage=stage,
+        ),
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
     )
     if has_stale_failure_claim:
         updated = _replace_stale_terminal_status_notes_for_validation_pass(updated)

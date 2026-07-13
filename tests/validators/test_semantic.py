@@ -19,10 +19,119 @@ from aidd.validators.semantic import (
     has_non_placeholder_text,
     validate_semantic_outputs,
 )
+from aidd.validators.semantic_rules.common import SemanticDocumentContext
+from aidd.validators.task_evidence import validate_aggregate_task_evidence
 
 _SEMANTIC_FIXTURES_ROOT = Path(__file__).parent / "fixtures" / "semantic"
 
 
+def _write_rich_tasklist_for_evidence(workspace_root: Path, work_item: str) -> None:
+    path = (
+        workspace_root
+        / "workitems"
+        / work_item
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        """# Tasklist
+
+## Task summary
+
+One bounded task supplies structured aggregate evidence.
+
+## Ordered tasks
+
+### TL-1 — Add evidence
+
+- Outcome: Evidence is explicit.
+- Dominant deliverable: `src/example.py` records the behavior.
+- In scope: `src/example.py`.
+- Acceptance criteria:
+  - TL-1-AC1: The evidence-backed behavior is present.
+
+## Dependencies
+
+- TL-1: none
+
+## Verification notes
+
+- TL-1: `pytest tests/test_example.py -q`
+""",
+        encoding="utf-8",
+    )
+
+
+def test_structured_task_evidence_accepts_one_exact_entry_per_criterion(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-EVIDENCE"
+    _write_rich_tasklist_for_evidence(workspace_root, work_item)
+    output_path = (
+        workspace_root / "workitems" / work_item / "stages" / "review" / "review-report.md"
+    )
+    markdown = (
+        "# Review Report\n\n"
+        "## Verdict\n\n- Review status: approved\n\n"
+        "## Task acceptance evidence\n\n"
+        "- Task: `TL-1`; Acceptance: `TL-1-AC1`; Status: `pass`; "
+        "Evidence: `stages/implement/task.md`; Notes: verified.\n"
+    )
+    context = SemanticDocumentContext.from_markdown(
+        stage="review",
+        output_path=output_path,
+        workspace_root=workspace_root,
+        required_sections=(),
+        markdown_text=markdown,
+    )
+
+    findings = validate_aggregate_task_evidence(
+        context=context,
+        evidence=context.section_by_candidates(candidates=("Task acceptance evidence",)),
+    )
+
+    assert findings == ()
+
+
+def test_structured_task_evidence_rejects_duplicate_and_non_pass_approved_entry(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-EVIDENCE"
+    _write_rich_tasklist_for_evidence(workspace_root, work_item)
+    output_path = (
+        workspace_root / "workitems" / work_item / "stages" / "review" / "review-report.md"
+    )
+    entry = (
+        "- Task: `TL-1`; Acceptance: `TL-1-AC1`; Status: `fail`; "
+        "Evidence: EV-1; Notes: failed.\n"
+    )
+    markdown = (
+        "# Review Report\n\n"
+        "## Verdict\n\n- Review status: approved\n\n"
+        "## Task acceptance evidence\n\n"
+        f"{entry}{entry}"
+    )
+    context = SemanticDocumentContext.from_markdown(
+        stage="review",
+        output_path=output_path,
+        workspace_root=workspace_root,
+        required_sections=(),
+        markdown_text=markdown,
+    )
+
+    findings = validate_aggregate_task_evidence(
+        context=context,
+        evidence=context.section_by_candidates(candidates=("Task acceptance evidence",)),
+    )
+    messages = "\n".join(finding.message for finding in findings)
+
+    assert "contains duplicates" in messages
+    assert "requires `Review status: rejected`" in messages
 def _git(project_root: Path, *args: str) -> None:
     subprocess.run(
         ("git", "-C", project_root.as_posix(), *args),
@@ -1840,7 +1949,7 @@ def test_validate_semantic_outputs_accepts_valid_tasklist_fixture_bundle() -> No
     assert findings == ()
 
 
-def test_validate_semantic_outputs_accepts_compact_tasklist_ids(tmp_path: Path) -> None:
+def test_validate_semantic_outputs_rejects_legacy_compact_tasklist_ids(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_tasklist_document(
         workspace_root,
@@ -1884,7 +1993,8 @@ def test_validate_semantic_outputs_accepts_compact_tasklist_ids(tmp_path: Path) 
         workspace_root=workspace_root,
     )
 
-    assert findings == ()
+    assert findings
+    assert any("missing required field" in finding.message for finding in findings)
 
 
 def test_validate_semantic_outputs_ignores_tradeoff_ids_when_tasklist_uses_tl_ids(
@@ -1930,7 +2040,8 @@ def test_validate_semantic_outputs_ignores_tradeoff_ids_when_tasklist_uses_tl_id
         workspace_root=workspace_root,
     )
 
-    assert findings == ()
+    assert findings
+    assert any("missing required field" in finding.message for finding in findings)
 
 
 def test_validate_semantic_outputs_ignores_review_and_acceptance_ids_when_tasklist_uses_t_ids(
@@ -1975,7 +2086,8 @@ def test_validate_semantic_outputs_ignores_review_and_acceptance_ids_when_taskli
         workspace_root=workspace_root,
     )
 
-    assert findings == ()
+    assert findings
+    assert any("missing required field" in finding.message for finding in findings)
 
 
 def test_validate_semantic_outputs_flags_invalid_tasklist_fixture_bundle() -> None:
@@ -1987,61 +2099,12 @@ def test_validate_semantic_outputs_flags_invalid_tasklist_fixture_bundle() -> No
         workspace_root=workspace_root,
     )
 
-    assert findings == (
-        ValidationFinding(
-            code=INCOMPLETE_SECTION_CODE,
-            message=(
-                "Section `Task summary` is too brief to explain decomposition "
-                "scope and sequencing intent."
-            ),
-            severity="medium",
-            location=ValidationIssueLocation(
-                workspace_relative_path=(
-                    "workitems/WI-SEM-TASKLIST-INVALID/stages/tasklist/tasklist.md"
-                ),
-                line_number=3,
-            ),
-        ),
-        ValidationFinding(
-            code=INCOMPLETE_SECTION_CODE,
-            message="Section `Dependencies` references unknown task ids: TL-9.",
-            severity="medium",
-            location=ValidationIssueLocation(
-                workspace_relative_path=(
-                    "workitems/WI-SEM-TASKLIST-INVALID/stages/tasklist/tasklist.md"
-                ),
-                line_number=12,
-            ),
-        ),
-        ValidationFinding(
-            code=INCOMPLETE_SECTION_CODE,
-            message=(
-                "Section `Dependencies` must include explicit entries "
-                "for each task id. Missing: TL-1."
-            ),
-            severity="medium",
-            location=ValidationIssueLocation(
-                workspace_relative_path=(
-                    "workitems/WI-SEM-TASKLIST-INVALID/stages/tasklist/tasklist.md"
-                ),
-                line_number=12,
-            ),
-        ),
-        ValidationFinding(
-            code=INCOMPLETE_SECTION_CODE,
-            message=(
-                "Section `Verification notes` must include at least one "
-                "check per task id. Missing: TL-2."
-            ),
-            severity="medium",
-            location=ValidationIssueLocation(
-                workspace_relative_path=(
-                    "workitems/WI-SEM-TASKLIST-INVALID/stages/tasklist/tasklist.md"
-                ),
-                line_number=16,
-            ),
-        ),
-    )
+    messages = {finding.message for finding in findings}
+    assert (
+        "Section `Task summary` is too brief to explain decomposition scope and "
+        "sequencing intent."
+    ) in messages
+    assert "`Ordered tasks` must contain H3 task cards with stable task ids." in messages
 
 
 def test_validate_semantic_outputs_accepts_valid_implement_fixture_bundle() -> None:

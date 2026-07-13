@@ -8863,7 +8863,7 @@ Non-goals:
 ### Epic W34-E1 — validation and contract trust (`planned`)
 Linked stories: `US-02`, `US-03`, `US-04`, `US-10`, `US-12`
 
-#### Slice W34-E1-S1 — canonical stage-result gate (`planned`)
+#### Slice W34-E1-S1 — canonical stage-result gate (`done`)
 Goal: prevent an invalid common stage checkpoint from being normalized, published, or
 used for downstream progression.
 
@@ -8873,7 +8873,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E1-S1-T1` Add canonical `stage-result.md` semantic rules and a final
+- `W34-E1-S1-T1` (done) Add canonical `stage-result.md` semantic rules and a final
   post-normalization publication invariant. [`BUG-01`]
   - Scope: common-document validation and the final stage publication gate.
   - Verification: an eight-stage matrix rejects wrong stage, missing declared output,
@@ -8894,7 +8894,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E1-S2-T1` Add a typed evidence context and bind implementation output to the
+- `W34-E1-S2-T1` (done) Add a typed evidence context and bind implementation output to the
   selected task, changed paths, allowed scope, and authored checks. [`ARCH-01`]
   - Scope: implement-stage cross-document rules.
   - Verification: wrong-task, missing-path, out-of-scope, and skipped-authored-check
@@ -9030,12 +9030,12 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E2-S1-T1` Publish outputs through staged-directory verification and atomic
+- `W34-E2-S1-T1` (done) Publish outputs through staged-directory verification and atomic
   replace. [`REL-02`]
   - Scope: stage output publisher.
   - Verification: injected create, copy, verify, and replace failures expose neither a
     partial mirror nor a committed destination.
-- `W34-E2-S1-T2` Persist `succeeded` only after reconciliation and publication commit.
+- `W34-E2-S1-T2` (done) Persist `succeeded` only after reconciliation and publication commit.
   [`REL-02`]
   - Scope: stage runner success transition.
   - Verification: every injected publication failure leaves a truthful non-success
@@ -9062,7 +9062,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E2-S2-T1` Validate immutable runtime, target, and configuration fields when an
+- `W34-E2-S2-T1` (done) Validate immutable runtime, target, and configuration fields when an
   existing run manifest is reused. [`COMPAT-03`]
   - Scope: run manifest creation/reuse.
   - Verification: identical resume succeeds and every immutable-field mismatch is
@@ -9111,7 +9111,7 @@ Exit evidence:
 ### Epic W34-E3 — local operator concurrency and bounded UI state (`planned`)
 Linked stories: `US-03`, `US-06`, `US-10`, `US-11`
 
-#### Slice W34-E3-S1 — serialized run mutation (`planned`)
+#### Slice W34-E3-S1 — serialized run mutation (`done`)
 Goal: admit only one conflicting mutation for a run while allocating durable identities
 atomically across CLI and UI processes.
 
@@ -9121,11 +9121,11 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E3-S1-T1` Add a filesystem-backed run-mutation lease and atomic run/attempt
+- `W34-E3-S1-T1` (done) Add a filesystem-backed run-mutation lease and atomic run/attempt
   allocation. [`REL-01`, `REF-02`]
   - Scope: core run store and identity allocation.
   - Verification: concurrent CLI/UI allocation yields unique IDs and one mutation owner.
-- `W34-E3-S1-T2` Route stage, workflow, and remediation UI mutations through keyed
+- `W34-E3-S1-T2` (done) Route stage, workflow, and remediation UI mutations through keyed
   admission with deterministic conflict responses. [`REL-01`, `REF-02`]
   - Scope: UI application service.
   - Verification: overlapping same-run requests admit one job and reject the others
@@ -9549,7 +9549,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E7-S2-T1` Add shared typed identifier validation and resolve-and-contain
+- `W34-E7-S2-T1` (done) Add shared typed identifier validation and resolve-and-contain
   primitives. [`SEC-03`]
   - Scope: common identifier/path boundary.
   - Verification: defensive fixtures cover valid components, invalid components, root
@@ -9612,7 +9612,161 @@ Sync notes:
 
 ---
 
-## Wave 35 — operator UX coherence and resilience (`planned`)
+## Wave 35 — implementation-ready tasks and incremental execution (`done`)
+
+Goal: turn the approved tasklist into complete task cards and execute them incrementally without
+changing the canonical eight-stage workflow.
+
+Dependencies:
+
+- `W34-E1-S1-T1`, `W34-E1-S2-T1`
+- `W34-E2-S1-T1`, `W34-E2-S1-T2`, `W34-E2-S2-T1`
+- `W34-E3-S1-T1`, `W34-E3-S1-T2`
+- `W34-E7-S2-T1`
+
+### Epic W35-E1 — implementation-ready task cards (`done`)
+Linked stories: `US-02`, `US-03`, `US-04`, `US-10`, `US-13`
+
+#### Slice W35-E1-S1 — rich task-card contract (`done`)
+Goal: require every task to carry enough bounded intent and acceptance evidence for execution.
+
+Local tasks:
+
+- `W35-E1-S1-T1` (done) Define the rich Markdown task-card contract and canonical example.
+  - Scope: tasklist contracts and examples.
+  - Verification: contract registry and example checks pass.
+- `W35-E1-S1-T2` (done) Parse and validate task cards, acceptance ids, and dependency graphs.
+  - Scope: typed task plan and semantic validator.
+  - Verification: valid/invalid fixture matrix passes.
+- `W35-E1-S1-T3` (done) Align tasklist, implement, review, and QA prompt packs with task-card evidence.
+  - Scope: stage prompt packs.
+  - Verification: prompt quality checks pass.
+- `W35-E1-S1-T4` (done) Add a deterministic rich-tasklist workflow scenario.
+  - Scope: provider-free harness fixtures.
+  - Verification: valid output passes and incomplete output repairs or stops.
+
+#### Slice W35-E1-S2 — deterministic task boundaries (`done`)
+Goal: make task scope and ordering mechanically enforceable before implementation starts.
+
+Dependencies: `W35-E1-S1`.
+
+Local tasks:
+
+- `W35-E1-S2-T1` (done) Define safe repository-relative path prefixes for `In scope`.
+  - Scope: tasklist contracts and canonical examples.
+  - Verification: contract registry and example checks pass.
+- `W35-E1-S2-T2` (done) Reject unsafe scope paths and forward dependency references.
+  - Scope: typed task-plan parser and semantic tasklist validation.
+  - Verification: validator fixture matrix passes.
+- `W35-E1-S2-T3` (done) Align tasklist run and repair prompts with deterministic boundaries.
+  - Scope: tasklist prompt pack.
+  - Verification: prompt-quality checks pass.
+- `W35-E1-S2-T4` (done) Add provider-free invalid boundary fixtures.
+  - Scope: deterministic tasklist scenario inputs.
+  - Verification: missing scope paths, escapes, forward dependencies, and scope conflicts stop or repair.
+
+### Epic W35-E2 — durable per-task execution (`done`)
+Linked stories: `US-03`, `US-04`, `US-06`, `US-10`, `US-11`, `US-13`
+
+#### Slice W35-E2-S1 — task plan and ledger (`done`)
+Goal: derive safe dependency order and mutable execution state from immutable tasklist Markdown.
+
+Local tasks:
+
+- `W35-E2-S1-T1` (done) Document task source-of-truth, persistence, and compatibility decisions.
+- `W35-E2-S1-T2` (done) Implement the typed task plan and dependency resolver.
+- `W35-E2-S1-T3` (done) Implement the atomic source-hashed task ledger and state transitions.
+
+#### Slice W35-E2-S2 — task-scoped implementation (`done`)
+Goal: execute and repair one dependency-ready task at a time, then publish aggregate evidence.
+
+Local tasks:
+
+- `W35-E2-S2-T1` (done) Capture task-scoped repository baselines and attempt evidence.
+- `W35-E2-S2-T2` (done) Bind implementation validation to task scope and acceptance ids.
+- `W35-E2-S2-T3` (done) Run the automatic fail-fast dependency loop with manual resume.
+- `W35-E2-S2-T4` (done) Aggregate task reports and commit implement success after publication.
+
+#### Slice W35-E2-S3 — operator task controls (`done`)
+Goal: expose the same task state and safe mutations through CLI and the local frontend.
+
+Local tasks:
+
+- `W35-E2-S3-T1` (done) Add `aidd task list`, `show`, and `run` commands.
+- `W35-E2-S3-T2` (done) Add UI-neutral task reads and run-scoped mutation API.
+- `W35-E2-S3-T3` (done) Render task progress and Run/Resume controls in the operator UI.
+
+#### Slice W35-E2-S4 — aggregate gates and deterministic evidence (`done`)
+Goal: prove every task and acceptance criterion before review/QA progression.
+
+Local tasks:
+
+- `W35-E2-S4-T1` (done) Bind review and QA evidence to every completed task and acceptance id.
+- `W35-E2-S4-T2` (done) Add provider-free failure, repair, resume, and aggregate full-flow coverage.
+
+#### Slice W35-E2-S5 — crash-safe task lifecycle (`done`)
+Goal: make task attempts, interview resume, diff repair, and aggregate finalization recoverable.
+
+Dependencies: `W35-E2-S1`, `W35-E2-S2`, `W34-E3-S1`.
+
+Local tasks:
+
+- `W35-E2-S5-T1` (done) Add dead-owner recovery and transferable run mutation leases.
+- `W35-E2-S5-T2` (done) Add ledger schema v2 finalization state and transitions.
+- `W35-E2-S5-T3` (done) Allocate task attempts atomically and reconcile abandoned execution.
+- `W35-E2-S5-T4` (done) Preserve task-owned questions and answers across blocked resume.
+- `W35-E2-S5-T5` (done) Run task diff and scope validation inside the implement repair loop.
+- `W35-E2-S5-T6` (done) Persist independent aggregate finalization attempts.
+- `W35-E2-S5-T7` (done) Retry aggregate validation and atomic publication without rerunning tasks.
+
+#### Slice W35-E2-S6 — operator recovery parity (`done`)
+Goal: expose complete task state and conflict-safe task/finalization mutations through CLI and UI.
+
+Dependencies: `W35-E2-S5`.
+
+Local tasks:
+
+- `W35-E2-S6-T1` (done) Add a shared task read model with attempts and finalization state.
+- `W35-E2-S6-T2` (done) Complete task CLI detail, manifest preflight, and `task finalize`.
+- `W35-E2-S6-T3` (done) Add synchronous UI admission and task finalization API.
+- `W35-E2-S6-T4` (done) Render attempt history and finalization recovery in the operator UI.
+
+#### Slice W35-E2-S7 — structured aggregate acceptance evidence (`done`)
+Goal: require review and QA to record one evidence-backed result per task acceptance criterion.
+
+Dependencies: `W35-E1-S2`, `W35-E2-S5`, `W35-E2-S6`.
+
+Local tasks:
+
+- `W35-E2-S7-T1` (done) Define structured review and QA task-acceptance evidence.
+- `W35-E2-S7-T2` (done) Validate exact task/acceptance evidence coverage and verdict alignment.
+- `W35-E2-S7-T3` (done) Align review and QA prompts with structured aggregate evidence.
+- `W35-E2-S7-T4` (done) Extend the provider-free task execution recovery scenario.
+
+Wave 35 exit evidence:
+
+- compact legacy tasklists fail without fallback;
+- task execution is dependency-ordered, task-scoped, resumable, and fail-fast;
+- implement success is published only after every task succeeds;
+- CLI and UI expose consistent task state;
+- deterministic checks cover repair, conflicts, hash mismatch, aggregation, review, and QA.
+
+Corrective audit:
+
+- `2026-07-12` Wave 35 was reopened after failure-path review found lost interview answers,
+  unrecoverable `executing` tasks, non-repeatable aggregate publication, late diff validation,
+  weak aggregate evidence matching, and asynchronous UI mutation conflicts. Existing completed
+  tasks remain historical implementation evidence; corrective slices close these gaps before the
+  wave can be marked done again.
+- `2026-07-12` Corrective slices completed deterministic task-scope/order validation,
+  crash-safe leases and attempts, blocked Q/A resume, in-loop diff repair, ledger-v2 aggregate
+  finalization, `aidd task finalize`, synchronous UI conflicts, full task reads, and structured
+  review/QA acceptance evidence. Ruff, mypy, `1358` pytest tests, package build/smoke, scenario
+  loading, generic-cli eval doctor, and diff checks passed.
+
+---
+
+## Wave 36 — operator UX coherence and resilience (`planned`)
 
 Goal: turn the capability-rich local operator UI into one coherent, truthful, resilient,
 and measurable operator path across setup, active execution, recovery, evidence review,
@@ -9652,7 +9806,7 @@ Scope decisions:
 - mobile is monitoring, question answering, approval, recovery, and next-decision first;
   dense diff, evidence-graph, and lineage work remains desktop-first but reachable as an
   explicit mobile drill-down;
-- Wave 35 owns operator-facing semantics, packaged browser behavior, design-system
+- Wave 36 owns operator-facing semantics, packaged browser behavior, design-system
   primitives, responsive hierarchy, navigation, and rendered acceptance evidence;
 - Wave 34 remains authoritative for server-side mutation leases, approval compare-and-set,
   bounded job retention, runtime outcome/evidence truth, capability policy, canonical run
@@ -9678,10 +9832,10 @@ Story check:
   frontend story, not new product scope, so `docs/product/user-stories.md` does not need
   a scope update.
 
-### Epic W35-E1 — accepted UX contract and measurable hierarchy (`planned`)
+### Epic W36-E1 — accepted UX contract and measurable hierarchy (`planned`)
 Linked stories: `US-05`, `US-06`, `US-09`, `US-11`, `US-12`
 
-#### Slice W35-E1-S1 — operator coherence contract (`planned`)
+#### Slice W36-E1-S1 — operator coherence contract (`planned`)
 Goal: define one task-first state hierarchy and one primary-decision rule before changing
 the rendered shell.
 
@@ -9691,17 +9845,17 @@ Dependencies:
 
 Local tasks:
 
-- `W35-E1-S1-T1` Define the accepted Setup / Active / Recovery / Evidence / History
+- `W36-E1-S1-T1` Define the accepted Setup / Active / Recovery / Evidence / History
   hierarchy, progressive-disclosure rules, and one-primary-action contract.
   - Scope: `docs/architecture/operator-frontend.md` only.
   - Verification: a docs consistency matrix names the primary job, primary action,
     supporting evidence, and recovery path for every top-level state.
-- `W35-E1-S1-T2` Define the mobile operator job boundary and viewport ordering/budgets
+- `W36-E1-S1-T2` Define the mobile operator job boundary and viewport ordering/budgets
   for `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900`.
   - Scope: operator frontend architecture only.
   - Verification: the contract names the first-viewport action, maximum compact-header
     footprint, drill-down behavior, and required mobile jobs at every breakpoint.
-- `W35-E1-S1-T3` Replace checklist-only navigation wording with a canonical operator
+- `W36-E1-S1-T3` Replace checklist-only navigation wording with a canonical operator
   state/route matrix.
   - Scope: `docs/e2e/operator-ui-local-project.md` only.
   - Verification: setup, no-run, running, reconnecting, question, validation failure,
@@ -9715,27 +9869,27 @@ Exit evidence:
 - mobile behavior is a deliberate product contract rather than an accumulation of
   state-specific CSS ordering rules.
 
-#### Slice W35-E1-S2 — truthful control and quality contract (`planned`)
+#### Slice W36-E1-S2 — truthful control and quality contract (`planned`)
 Goal: make visible controls and quality claims correspond to distinct behavior and
 measurable evidence.
 
 Dependencies:
 
-- `W35-E1-S1`
+- `W36-E1-S1`
 
 Local tasks:
 
-- `W35-E1-S2-T1` Define an action-to-service semantics table for setup, create,
+- `W36-E1-S2-T1` Define an action-to-service semantics table for setup, create,
   resume, follow-up, clone, eval, archive, workflow, and stage actions.
   - Scope: operator frontend architecture only.
   - Verification: every visible selectable action has a distinct outcome and service
     path, or is explicitly removed.
-- `W35-E1-S2-T2` Define truthful UI vocabulary for runtime readiness, authentication
+- `W36-E1-S2-T2` Define truthful UI vocabulary for runtime readiness, authentication
   evidence, safety/write scope, approval breadth, connectivity, and mutation state.
   - Scope: operator UX vocabulary in architecture docs.
   - Verification: ambiguous normative claims such as undifferentiated `ready` or
     `safe` are absent from the accepted vocabulary.
-- `W35-E1-S2-T3` Define measurable operator UX thresholds and evidence fields.
+- `W36-E1-S2-T3` Define measurable operator UX thresholds and evidence fields.
   - Scope: local-project UI E2E acceptance docs.
   - Verification: the template records first-action visibility, header footprint,
     touch targets, focus entry, contrast, overflow, reconnect outcome, task completion,
@@ -9747,33 +9901,33 @@ Exit evidence:
 - UI quality is evaluated by rendered and task-completion evidence rather than asset
   string presence alone.
 
-### Epic W35-E2 — executable rendered-browser foundation (`planned`)
+### Epic W36-E2 — executable rendered-browser foundation (`planned`)
 Linked stories: `US-07`, `US-09`, `US-11`
 
-#### Slice W35-E2-S1 — deterministic packaged-UI browser harness (`planned`)
+#### Slice W36-E2-S1 — deterministic packaged-UI browser harness (`planned`)
 Goal: execute the packaged local UI in a real browser against provider-free states with
 deterministic cleanup.
 
 Dependencies:
 
-- `W35-E1-S1`
+- `W36-E1-S1`
 - `W34-E5-S3-T4`
 - `W34-E5-S3-T5`
 
 Local tasks:
 
-- `W35-E2-S1-T1` Select and document the maintained provider-free browser driver and
+- `W36-E2-S1-T1` Select and document the maintained provider-free browser driver and
   packaging policy for served UI checks.
   - Scope: browser-test architecture and development dependencies.
   - Verification: the decision preserves the no-Node/Vite product runtime, names the
     executable test command, and replaces the blanket no-browser-driver wording in the
     local-project lane.
-- `W35-E2-S1-T2` Add a disposable seeded-project launcher and executable browser harness
+- `W36-E2-S1-T2` Add a disposable seeded-project launcher and executable browser harness
   for packaged UI assets.
   - Scope: UI browser test infrastructure.
   - Verification: one command serves a temporary project, opens every required viewport,
     records console/network state, and removes project-local `.aidd/` state on exit.
-- `W35-E2-S1-T3` Add provider-free fixture builders for setup, no-run, running,
+- `W36-E2-S1-T3` Add provider-free fixture builders for setup, no-run, running,
   question, runtime-failure, approval, QA, remediation, and terminal states.
   - Scope: deterministic UI fixtures only.
   - Verification: every declared fixture opens through the public local UI without
@@ -9784,28 +9938,28 @@ Exit evidence:
 - packaged browser behavior is executable and repeatable without a provider runtime;
 - fixture state and screenshots never leak into the repository worktree.
 
-#### Slice W35-E2-S2 — rendered geometry and accessibility assertions (`planned`)
+#### Slice W36-E2-S2 — rendered geometry and accessibility assertions (`planned`)
 Goal: fail deterministically when the rendered UI loses first-viewport priority,
 accessibility semantics, or viewport containment.
 
 Dependencies:
 
-- `W35-E2-S1`
-- `W35-E1-S2-T3`
+- `W36-E2-S1`
+- `W36-E1-S2-T3`
 
 Local tasks:
 
-- `W35-E2-S2-T1` Add executable accessible-name, label, focus-order, contrast,
+- `W36-E2-S2-T1` Add executable accessible-name, label, focus-order, contrast,
   target-size, and reduced-motion assertions.
   - Scope: browser assertion helpers.
   - Verification: one intentionally invalid fixture fails each accessibility rule with
     the owning selector and measured value.
-- `W35-E2-S2-T2` Add executable sticky-header, primary-action, clipping, overlap,
+- `W36-E2-S2-T2` Add executable sticky-header, primary-action, clipping, overlap,
   nested-scroll, and horizontal-overflow assertions.
   - Scope: browser geometry assertions.
   - Verification: intentionally bad header, offscreen CTA, clipped label, scroll-trap,
     and overflow fixtures fail at the expected viewport.
-- `W35-E2-S2-T3` Add deterministic screenshot and DOM-measure evidence output.
+- `W36-E2-S2-T3` Add deterministic screenshot and DOM-measure evidence output.
   - Scope: browser evidence writer.
   - Verification: each run produces bounded viewport metadata, screenshot paths,
     console/network summaries, accessibility results, and cleanup status.
@@ -9815,30 +9969,30 @@ Exit evidence:
 - the defects measured in the `2026-07-11` review are executable regressions rather
   than manual observations only.
 
-### Epic W35-E3 — semantic design system and accessibility (`planned`)
+### Epic W36-E3 — semantic design system and accessibility (`planned`)
 Linked stories: `US-02`, `US-05`, `US-06`, `US-11`
 
-#### Slice W35-E3-S1 — semantic tokens and density (`planned`)
+#### Slice W36-E3-S1 — semantic tokens and density (`planned`)
 Goal: make repeated visual decisions come from one semantic token contract.
 
 Dependencies:
 
-- `W35-E1-S1`
-- rendered verification uses `W35-E2-S2`
+- `W36-E1-S1`
+- rendered verification uses `W36-E2-S2`
 
 Local tasks:
 
-- `W35-E3-S1-T1` Add semantic typography, spacing, radius, elevation, control-size,
+- `W36-E3-S1-T1` Add semantic typography, spacing, radius, elevation, control-size,
   status, focus, and motion tokens.
   - Scope: `operator-tokens.css` only.
   - Verification: token inventory tests cover every accepted role and enforce a bounded
     raw-value budget outside the token layer.
-- `W35-E3-S1-T2` Replace duplicate status and surface palettes with semantic color
+- `W36-E3-S1-T2` Replace duplicate status and surface palettes with semantic color
   roles.
   - Scope: packaged CSS color consumption.
   - Verification: computed-style fixtures preserve state meaning and meet accepted
     contrast thresholds.
-- `W35-E3-S1-T3` Define compact desktop and touch mobile density modes from shared
+- `W36-E3-S1-T3` Define compact desktop and touch mobile density modes from shared
   control tokens.
   - Scope: token and responsive density rules.
   - Verification: measured controls meet the compact desktop contract and the `44px`
@@ -9849,27 +10003,27 @@ Exit evidence:
 - type, spacing, radius, color, focus, motion, and control size have one source of truth;
 - responsive density does not depend on ad hoc component overrides.
 
-#### Slice W35-E3-S2 — complete form and interaction controls (`planned`)
+#### Slice W36-E3-S2 — complete form and interaction controls (`planned`)
 Goal: make every input and clickable surface visually consistent and state-complete.
 
 Dependencies:
 
-- `W35-E3-S1`
-- `W35-E2-S2`
+- `W36-E3-S1`
+- `W36-E2-S2`
 
 Local tasks:
 
-- `W35-E3-S2-T1` Normalize button, text-input, select, textarea, and checkbox anatomy
+- `W36-E3-S2-T1` Normalize button, text-input, select, textarea, and checkbox anatomy
   and typography.
   - Scope: base control CSS.
   - Verification: onboarding, question, intervention, comparison, and next-flow forms
     share computed height, font, border, radius, and focus roles.
-- `W35-E3-S2-T2` Add shared hover, active, focus-visible, disabled, invalid, pending,
+- `W36-E3-S2-T2` Add shared hover, active, focus-visible, disabled, invalid, pending,
   selected, and loading states.
   - Scope: interactive control states.
   - Verification: one browser fixture exercises every state with pointer, keyboard,
     and touch-density assertions.
-- `W35-E3-S2-T3` Normalize segmented filters, radio-like selectors, clickable rows,
+- `W36-E3-S2-T3` Normalize segmented filters, radio-like selectors, clickable rows,
   and pressed/selected ARIA state.
   - Scope: composite browser controls.
   - Verification: log filters, viewer modes, runtime cards, artifact rows, and evidence
@@ -9880,28 +10034,28 @@ Exit evidence:
 - native text inputs no longer fall outside the product control system;
 - pointer, keyboard, and assistive-technology state agree for every control family.
 
-#### Slice W35-E3-S3 — reusable decision and state surfaces (`planned`)
+#### Slice W36-E3-S3 — reusable decision and state surfaces (`planned`)
 Goal: replace locally duplicated card variants with a small shared product-surface
 anatomy.
 
 Dependencies:
 
-- `W35-E3-S1`
-- `W35-E3-S2`
+- `W36-E3-S1`
+- `W36-E3-S2`
 
 Local tasks:
 
-- `W35-E3-S3-T1` Consolidate decision spotlight, banner, notice, metric, and status
+- `W36-E3-S3-T1` Consolidate decision spotlight, banner, notice, metric, and status
   anatomy behind shared render helpers and classes.
   - Scope: packaged frontend component primitives.
   - Verification: interview, approval, review, QA, recovery, and terminal fixtures render
     from the shared variants without losing their decision semantics.
-- `W35-E3-S3-T2` Consolidate empty, loading, error, reconnecting, and unavailable
+- `W36-E3-S3-T2` Consolidate empty, loading, error, reconnecting, and unavailable
   surfaces with local recovery actions.
   - Scope: packaged state-surface primitives.
   - Verification: every state exposes a title, consequence, recovery action when
     possible, and correct live-region or busy semantics.
-- `W35-E3-S3-T3` Reduce nested-card hierarchy in Work, Recovery, and Evidence surfaces.
+- `W36-E3-S3-T3` Reduce nested-card hierarchy in Work, Recovery, and Evidence surfaces.
   - Scope: panel/card layout classes.
   - Verification: rendered fixtures keep one framed primary surface per hierarchy level
     and preserve clear primary/supporting visual weight.
@@ -9912,28 +10066,28 @@ Exit evidence:
   spotlight families;
 - default work screens no longer give every metadata group equal card weight.
 
-#### Slice W35-E3-S4 — keyboard and readable semantics (`planned`)
+#### Slice W36-E3-S4 — keyboard and readable semantics (`planned`)
 Goal: close the measured accessible-name, focus-entry, contrast, and numerical scanning
 gaps.
 
 Dependencies:
 
-- `W35-E3-S2`
-- `W35-E2-S2-T1`
+- `W36-E3-S2`
+- `W36-E2-S2-T1`
 
 Local tasks:
 
-- `W35-E3-S4-T1` Add a skip-to-work path and deterministic focus entry/return for
+- `W36-E3-S4-T1` Add a skip-to-work path and deterministic focus entry/return for
   top-level modes and detail surfaces.
   - Scope: shell markup and focus controller.
   - Verification: keyboard-only traversal reaches the primary action before maintenance
     controls and returns focus after dialogs, drill-downs, and recovery actions.
-- `W35-E3-S4-T2` Fix stage accessible names and dynamic onboarding/form label
+- `W36-E3-S4-T2` Fix stage accessible names and dynamic onboarding/form label
   associations.
   - Scope: rendered accessibility markup.
   - Verification: all eight stage buttons pass label-content-name matching and every
     generated form field has a stable id, name, and associated label.
-- `W35-E3-S4-T3` Raise borderline contrast, readable minimums, and tabular numeric
+- `W36-E3-S4-T3` Raise borderline contrast, readable minimums, and tabular numeric
   treatment.
   - Scope: typography and color CSS.
   - Verification: automated contrast checks pass and timers, attempts, counts, and
@@ -9946,37 +10100,37 @@ Exit evidence:
 - keyboard users can enter the operator job without traversing the complete service
   toolbar first.
 
-### Epic W35-E4 — progressive onboarding and truthful runtime context (`planned`)
+### Epic W36-E4 — progressive onboarding and truthful runtime context (`planned`)
 Linked stories: `US-01`, `US-09`, `US-11`, `US-12`
 
-#### Slice W35-E4-S1 — branching setup flow (`planned`)
+#### Slice W36-E4-S1 — branching setup flow (`planned`)
 Goal: make project, work-item, runtime, and launch decisions sequential and truthful
 instead of six equally weighted setup panels.
 
 Dependencies:
 
-- `W35-E1-S1`
-- `W35-E1-S2-T1`
-- `W35-E3-S2`
+- `W36-E1-S1`
+- `W36-E1-S2-T1`
+- `W36-E3-S2`
 
 Local tasks:
 
-- `W35-E4-S1-T1` Add an explicit Project -> Work item -> Runtime -> Review/Launch
+- `W36-E4-S1-T1` Add an explicit Project -> Work item -> Runtime -> Review/Launch
   onboarding state machine with deterministic Back and Continue transitions.
   - Scope: `operator-onboarding.js` state controller.
   - Verification: a transition table covers validation success/failure, create, resume,
     runtime selection, backward navigation, and launch readiness.
-- `W35-E4-S1-T2` Render Create and Resume as sibling work-item branches and allow
+- `W36-E4-S1-T2` Render Create and Resume as sibling work-item branches and allow
   inspection before runtime selection.
   - Scope: onboarding work-item step.
   - Verification: resume opens existing context without a runtime or launch request,
     while mutation actions remain runtime-gated.
-- `W35-E4-S1-T3` Move project-set and configuration details behind an Advanced
+- `W36-E4-S1-T3` Move project-set and configuration details behind an Advanced
   disclosure.
   - Scope: onboarding project/work-item layout.
   - Verification: create or resume remains inside the first setup viewport at `390x844`
     and `1440x900`, while advanced project-set validation remains reachable.
-- `W35-E4-S1-T4` Remove no-run mode cards that do not change execution semantics and
+- `W36-E4-S1-T4` Remove no-run mode cards that do not change execution semantics and
   keep follow-up, clone, eval, and archive actions on terminal source-run handoffs.
   - Scope: setup and terminal action rendering.
   - Verification: the action-to-service matrix proves each remaining selector has a
@@ -9988,29 +10142,29 @@ Exit evidence:
   project-set configuration;
 - the UI contains no selectable execution mode that dispatches the same generic launch.
 
-#### Slice W35-E4-S2 — dimensioned runtime readiness and safety (`planned`)
+#### Slice W36-E4-S2 — dimensioned runtime readiness and safety (`planned`)
 Goal: show only runtime readiness and write-scope claims backed by observable evidence.
 
 Dependencies:
 
-- `W35-E1-S2-T2`
+- `W36-E1-S2-T2`
 - `W34-E4-S2-T1`
 - `W34-E4-S3`
 - `W34-E7-S1-T2`
 
 Local tasks:
 
-- `W35-E4-S2-T1` Expose binary, execution-command, authentication, and capability
+- `W36-E4-S2-T1` Expose binary, execution-command, authentication, and capability
   readiness dimensions without inferring unavailable evidence.
   - Scope: core runtime readiness read model.
   - Verification: detected, unavailable, auth-verified, auth-failed, auth-unverified,
     and legacy fixtures produce typed dimensions with compatibility fields.
-- `W35-E4-S2-T2` Project the latest per-runtime launch outcome and timestamp from
+- `W36-E4-S2-T2` Project the latest per-runtime launch outcome and timestamp from
   canonical attempt evidence.
   - Scope: core operator runtime-history read model.
   - Verification: no-history, success, failure, blocked, cancelled, and legacy attempts
     resolve deterministically without reading outside `.aidd/`.
-- `W35-E4-S2-T3` Render dimensioned readiness, protected write scope, and last-launch
+- `W36-E4-S2-T3` Render dimensioned readiness, protected write scope, and last-launch
   evidence in onboarding and the command shell.
   - Scope: packaged runtime/safety UI.
   - Verification: truth-copy fixtures contain no undifferentiated authentication claim
@@ -10022,42 +10176,42 @@ Exit evidence:
   previous launch outcome;
 - the operator sees the actual protected-data/write boundary before execution.
 
-### Epic W35-E5 — simplified workbench and compact responsive shell (`planned`)
+### Epic W36-E5 — simplified workbench and compact responsive shell (`planned`)
 Linked stories: `US-02`, `US-03`, `US-05`, `US-06`, `US-11`
 
-#### Slice W35-E5-S1 — progressive workbench disclosure (`planned`)
+#### Slice W36-E5-S1 — progressive workbench disclosure (`planned`)
 Goal: keep the current operator decision and primary document visible while demoting
 zero-value and secondary evidence.
 
 Dependencies:
 
-- `W35-E1-S1`
-- `W35-E3-S3`
+- `W36-E1-S1`
+- `W36-E3-S3`
 - executable behavior verification builds on `W34-E5-S3-T5`
 
 Local tasks:
 
-- `W35-E5-S1-T1` Add a visibility policy that hides zero-value right-rail sections
+- `W36-E5-S1-T1` Add a visibility policy that hides zero-value right-rail sections
   and collapses secondary bottom-dock evidence until requested.
   - Scope: shell rendering policy.
   - Verification: no-run, healthy running, blocked, terminal, and history fixtures show
     only panels with current operator value.
-- `W35-E5-S1-T2` Consolidate duplicate cockpit/sidebar recovery summaries into one
+- `W36-E5-S1-T2` Consolidate duplicate cockpit/sidebar recovery summaries into one
   central decision surface with one Evidence link.
   - Scope: recovery rendering.
   - Verification: every blocker fixture exposes one recovery landmark, one primary
     action, and one supporting evidence path.
-- `W35-E5-S1-T3` Consolidate global and sidebar next-action status into one primary
+- `W36-E5-S1-T3` Consolidate global and sidebar next-action status into one primary
   control plus compact contextual metadata.
   - Scope: next-action rendering.
   - Verification: each work, recovery, evidence, detail, and terminal state contains no
     duplicate primary command target.
-- `W35-E5-S1-T4` Move Refresh, Open `.aidd`, Stop server, and other maintenance commands
+- `W36-E5-S1-T4` Move Refresh, Open `.aidd`, Stop server, and other maintenance commands
   into a labelled overflow surface.
   - Scope: shell maintenance controls.
   - Verification: service commands remain keyboard-accessible but no longer precede the
     primary operator task in focus or visual order.
-- `W35-E5-S1-T5` Establish one primary content scroll owner and remove cockpit/sidebar
+- `W36-E5-S1-T5` Establish one primary content scroll owner and remove cockpit/sidebar
   scroll traps on supported desktop viewports.
   - Scope: desktop shell layout.
   - Verification: `1280x900` and `1440x900` fixtures expose one primary vertical scroll
@@ -10069,35 +10223,35 @@ Exit evidence:
   Blockers, Recovery, Activity, and Evidence panels;
 - the first viewport communicates context, one decision, and the primary work surface.
 
-#### Slice W35-E5-S2 — compact mobile operator shell (`planned`)
+#### Slice W36-E5-S2 — compact mobile operator shell (`planned`)
 Goal: keep the current decision visible on narrow viewports without pretending dense
 desktop evidence is a mobile-first surface.
 
 Dependencies:
 
-- `W35-E5-S1`
-- `W35-E3-S1`
-- `W35-E3-S2`
-- `W35-E3-S4`
+- `W36-E5-S1`
+- `W36-E3-S1`
+- `W36-E3-S2`
+- `W36-E3-S4`
 
 Local tasks:
 
-- `W35-E5-S2-T1` Replace the measured `275px` sticky mobile header with a compact
+- `W36-E5-S2-T1` Replace the measured `275px` sticky mobile header with a compact
   context/status bar and maintenance overflow.
   - Scope: topbar markup and responsive CSS.
   - Verification: `320x568` and `390x844` fixtures meet the accepted header budget and
     never cover the mode tabs or primary action.
-- `W35-E5-S2-T2` Keep the active blocker or global Next Action in the first mobile
+- `W36-E5-S2-T2` Keep the active blocker or global Next Action in the first mobile
   viewport and move dense evidence to explicit drill-down.
   - Scope: responsive workbench ordering.
   - Verification: no-run, post-stage, live, approval, recovery, remediation, and terminal
     fixtures expose the accepted primary decision without initial scrolling.
-- `W35-E5-S2-T3` Replace repeated per-body-mode ordering selectors with one mobile
+- `W36-E5-S2-T3` Replace repeated per-body-mode ordering selectors with one mobile
   priority layout contract.
   - Scope: responsive shell state classes.
   - Verification: every declared operator state maps to the same context -> decision ->
     work -> evidence -> history ordering rule.
-- `W35-E5-S2-T4` Keep stage navigation and primary labels legible at `320px` and `390px`.
+- `W36-E5-S2-T4` Keep stage navigation and primary labels legible at `320px` and `390px`.
   - Scope: responsive stage rail and label wrapping.
   - Verification: shared touch targets pass, no active stage or primary label clips,
     and document scroll width equals viewport width.
@@ -10108,32 +10262,32 @@ Exit evidence:
   tasks;
 - dense diff, graph, and history views remain reachable through deliberate drill-downs.
 
-### Epic W35-E6 — durable navigation, drafts, reconnect, and action integrity (`planned`)
+### Epic W36-E6 — durable navigation, drafts, reconnect, and action integrity (`planned`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`
 
-#### Slice W35-E6-S1 — URL-backed work-item and run navigation (`planned`)
+#### Slice W36-E6-S1 — URL-backed work-item and run navigation (`planned`)
 Goal: make reload, Browser Back, deep links, and lineage navigation preserve the selected
 operator context.
 
 Dependencies:
 
-- `W35-E1-S1-T3`
+- `W36-E1-S1-T3`
 - `W34-E2-S2-T2`
 - archive navigation consumes `W34-E2-S3-T1`
 
 Local tasks:
 
-- `W35-E6-S1-T1` Add a URL-state codec for work item, run, stage, mode, detail, and
+- `W36-E6-S1-T1` Add a URL-state codec for work item, run, stage, mode, detail, and
   artifact selection.
   - Scope: packaged browser state module.
   - Verification: round-trip, missing, legacy, stale, and invalid-value cases resolve to
     safe deterministic state.
-- `W35-E6-S1-T2` Wire push, replace, popstate, and reload restoration through the URL
+- `W36-E6-S1-T2` Wire push, replace, popstate, and reload restoration through the URL
   codec.
   - Scope: shell navigation controller.
   - Verification: a browser history sequence preserves Logs versus Artifacts, selected
     stage, selected run, and artifact drill-down across Back, Forward, and reload.
-- `W35-E6-S1-T3` Make work-item, historical-run, parent, and child-lineage rows routable
+- `W36-E6-S1-T3` Make work-item, historical-run, parent, and child-lineage rows routable
   and remove duplicate Resume/Open-latest controls.
   - Scope: Project Home and History rendering.
   - Verification: each visible action has one distinct route outcome and archived runs
@@ -10144,29 +10298,29 @@ Exit evidence:
 - operator location survives reload and browser navigation;
 - Project Home and History no longer expose different labels for the same action.
 
-#### Slice W35-E6-S2 — browser-session draft and dirty-state safety (`planned`)
+#### Slice W36-E6-S2 — browser-session draft and dirty-state safety (`planned`)
 Goal: preserve unsaved operator input across UI navigation without treating drafts as
 canonical workflow evidence.
 
 Dependencies:
 
-- `W35-E1-S1`
-- `W35-E3-S2`
+- `W36-E1-S1`
+- `W36-E3-S2`
 - next-flow adoption depends on `W34-E3-S4-T4`
 
 Local tasks:
 
-- `W35-E6-S2-T1` Define and implement a scoped noncanonical browser-session draft store
+- `W36-E6-S2-T1` Define and implement a scoped noncanonical browser-session draft store
   with explicit retention and cleanup.
   - Scope: shared packaged JavaScript state utility.
   - Verification: drafts isolate project, work item, run, stage, form, and source id;
     successful submit clears only the owning draft.
-- `W35-E6-S2-T2` Adopt draft restore and leave-warning behavior for question and
+- `W36-E6-S2-T2` Adopt draft restore and leave-warning behavior for question and
   intervention forms.
   - Scope: question/intervention browser modules.
   - Verification: stage/tab switch, reload, failed submit, and successful submit preserve
     or clear the expected draft only.
-- `W35-E6-S2-T3` Adopt draft restore and leave-warning behavior for follow-up and clone
+- `W36-E6-S2-T3` Adopt draft restore and leave-warning behavior for follow-up and clone
   definition forms.
   - Scope: next-flow browser controller.
   - Verification: wizard Back, reload, preflight failure, retry, and successful launch
@@ -10179,7 +10333,7 @@ Exit evidence:
 - draft state never becomes canonical `answers.md`, intervention, or next-flow evidence
   before explicit submission.
 
-#### Slice W35-E6-S3 — reconnecting live observation (`planned`)
+#### Slice W36-E6-S3 — reconnecting live observation (`planned`)
 Goal: recover live monitoring after transient API failure without losing log position or
 misrepresenting the runtime as stopped.
 
@@ -10187,21 +10341,21 @@ Dependencies:
 
 - `W34-E3-S3-T1`
 - `W34-E5-S3-T5`
-- `W35-E3-S3-T2`
+- `W36-E3-S3-T2`
 
 Local tasks:
 
-- `W35-E6-S3-T1` Replace terminal-on-error interval polling with a cursor-preserving
+- `W36-E6-S3-T1` Replace terminal-on-error interval polling with a cursor-preserving
   retry state machine and bounded exponential backoff.
   - Scope: `operator-logs-jobs.js` polling controller.
   - Verification: failure -> retry -> recovery, repeated failure, cancellation, and
     terminal-job sequences produce no duplicate or skipped chunks.
-- `W35-E6-S3-T2` Render offline, reconnecting, recovered, expired-job, and manual
+- `W36-E6-S3-T2` Render offline, reconnecting, recovered, expired-job, and manual
   Reconnect states.
   - Scope: live connection status surface.
   - Verification: each sequence names whether the runtime may still be running and
     offers the correct local recovery action.
-- `W35-E6-S3-T3` Reconcile active job, dashboard, logs, and selected stage after
+- `W36-E6-S3-T3` Reconcile active job, dashboard, logs, and selected stage after
   recovery or terminal-job eviction.
   - Scope: browser state reconciliation.
   - Verification: reconnect and eviction fixtures converge on the server-authoritative
@@ -10213,7 +10367,7 @@ Exit evidence:
 - reconnect and eviction states remain truthful about runtime ownership and durable
   evidence.
 
-#### Slice W35-E6-S4 — client mutation and approval integrity (`planned`)
+#### Slice W36-E6-S4 — client mutation and approval integrity (`planned`)
 Goal: give every mutating control an immediate pending state and reconcile conflicts to
 the single durable server outcome.
 
@@ -10225,30 +10379,30 @@ Dependencies:
 
 Local tasks:
 
-- `W35-E6-S4-T1` Add a shared keyed client mutation guard with pending lock, duplicate
+- `W36-E6-S4-T1` Add a shared keyed client mutation guard with pending lock, duplicate
   suppression, conflict readback, and retryable failure state.
   - Scope: packaged API/state utility.
   - Verification: double-click and concurrent-control fixtures send one request per key
     and preserve a retry path after failure.
-- `W35-E6-S4-T2` Adopt the mutation guard for workflow, stage, and remediation launch
+- `W36-E6-S4-T2` Adopt the mutation guard for workflow, stage, and remediation launch
   controls.
   - Scope: run mutation controls.
   - Verification: pending, same-run conflict, different-run concurrency, failure, and
     success states match server admission.
-- `W35-E6-S4-T3` Adopt the mutation guard for answer and intervention writes.
+- `W36-E6-S4-T3` Adopt the mutation guard for answer and intervention writes.
   - Scope: question/intervention mutation controls.
   - Verification: failed writes retain drafts, successful writes clear drafts, and
     duplicate submissions create one durable artifact.
-- `W35-E6-S4-T4` Adopt the mutation guard for next-flow draft, preflight, and launch.
+- `W36-E6-S4-T4` Adopt the mutation guard for next-flow draft, preflight, and launch.
   - Scope: next-flow browser controller.
   - Verification: repeated actions cannot create duplicate work items or runs and the
     source run remains unchanged after failure.
-- `W35-E6-S4-T5` Add approval reason capture and explicit confirmation for
+- `W36-E6-S4-T5` Add approval reason capture and explicit confirmation for
   `allow_for_session` with controls disabled while submitting.
   - Scope: approval decision UI.
   - Verification: no session-wide approval POST occurs before confirmation and the
     submitted reason/breadth remain visible in the preview.
-- `W35-E6-S4-T6` Reconcile approval compare-and-set or terminal conflicts to the durable
+- `W36-E6-S4-T6` Reconcile approval compare-and-set or terminal conflicts to the durable
   winning decision and audit row.
   - Scope: approval conflict UI.
   - Verification: concurrent opposite decisions display one server-authoritative winner
@@ -10260,41 +10414,41 @@ Exit evidence:
 - runtime approval breadth is explicit and the UI/audit view agrees with the durable
   compare-and-set winner.
 
-### Epic W35-E7 — executable UX acceptance and rollout evidence (`planned`)
+### Epic W36-E7 — executable UX acceptance and rollout evidence (`planned`)
 Linked stories: `US-07`, `US-09`, `US-11`, `US-12`
 
-#### Slice W35-E7-S1 — canonical operator browser journeys (`planned`)
+#### Slice W36-E7-S1 — canonical operator browser journeys (`planned`)
 Goal: prove the critical operator jobs through provider-free rendered journeys rather
 than isolated asset and endpoint assertions.
 
 Dependencies:
 
-- `W35-E2`
-- affected `W35-E3` through `W35-E6` surfaces
+- `W36-E2`
+- affected `W36-E3` through `W36-E6` surfaces
 
 Local tasks:
 
-- `W35-E7-S1-T1` Add the project validation, create/resume branch, runtime review, and
+- `W36-E7-S1-T1` Add the project validation, create/resume branch, runtime review, and
   first-launch browser journey.
   - Scope: onboarding browser scenario family.
   - Verification: every required viewport completes create or resume with one primary
     action, no geometry/accessibility failure, and no provider authentication.
-- `W35-E7-S1-T2` Add the running, transient reconnect, blocking-question, and approval
+- `W36-E7-S1-T2` Add the running, transient reconnect, blocking-question, and approval
   browser journey.
   - Scope: live-control browser scenario family.
   - Verification: progress, reconnect, draft, decision, and durable readback states pass
     without console/network ambiguity.
-- `W35-E7-S1-T3` Add the runtime-failure and validation repair/exhaustion browser
+- `W36-E7-S1-T3` Add the runtime-failure and validation repair/exhaustion browser
   journey.
   - Scope: runtime/validation recovery scenario family.
   - Verification: each failure exposes the correct first evidence, one primary recovery
     action, and a truthful stopped/running state.
-- `W35-E7-S1-T4` Add the QA not-ready, remediation, stale downstream, and terminal
+- `W36-E7-S1-T4` Add the QA not-ready, remediation, stale downstream, and terminal
   handoff browser journey.
   - Scope: delivery-decision browser scenario family.
   - Verification: unsafe completion remains blocked, remediation/rerun is explicit, and
     terminal evidence/next-flow decisions stay reachable.
-- `W35-E7-S1-T5` Add the run-history, lineage, archive, and next-flow browser journey.
+- `W36-E7-S1-T5` Add the run-history, lineage, archive, and next-flow browser journey.
   - Scope: history and continuation browser scenario family.
   - Verification: Back/reload/deep links preserve run identity and completed source-run
     artifacts remain immutable and inspectable.
@@ -10305,27 +10459,27 @@ Exit evidence:
   viewports;
 - browser scenarios prove task completion, not only page/API reachability.
 
-#### Slice W35-E7-S2 — enforced packaged-UI gate (`planned`)
+#### Slice W36-E7-S2 — enforced packaged-UI gate (`planned`)
 Goal: make every declared browser journey executable in the maintained deterministic
 quality lane.
 
 Dependencies:
 
-- `W35-E7-S1`
+- `W36-E7-S1`
 - `W34-E5-S3`
 
 Local tasks:
 
-- `W35-E7-S2-T1` Add one command that discovers and executes every declared packaged-UI
+- `W36-E7-S2-T1` Add one command that discovers and executes every declared packaged-UI
   browser scenario.
   - Scope: local/CI UI test entry point.
   - Verification: discovered scenario ids equal executed scenario ids exactly and live
     provider manifests are rejected.
-- `W35-E7-S2-T2` Add the packaged-UI browser command to CI and release preflight.
+- `W36-E7-S2-T2` Add the packaged-UI browser command to CI and release preflight.
   - Scope: deterministic CI/release integration.
   - Verification: an intentional geometry, accessibility, console, or journey failure
     blocks the gate while provider credentials remain unnecessary.
-- `W35-E7-S2-T3` Update the local-project UI evidence template and record one
+- `W36-E7-S2-T3` Update the local-project UI evidence template and record one
   source-installed full browser pass.
   - Scope: operator E2E docs and manual evidence.
   - Verification: docs consistency and the evidence checklist record version, fixture,
@@ -10336,29 +10490,29 @@ Exit evidence:
 - packaged UI regressions cannot pass through static string contracts alone;
 - release evidence includes one complete provider-free rendered operator pass.
 
-#### Slice W35-E7-S3 — observed first-time-operator acceptance (`planned`)
+#### Slice W36-E7-S3 — observed first-time-operator acceptance (`planned`)
 Goal: verify that the simplified UI is understandable to operators who did not implement
 it.
 
 Dependencies:
 
-- `W35-E7-S2`
-- `W35-E1-S2-T3`
+- `W36-E7-S2`
+- `W36-E1-S2-T3`
 
 Local tasks:
 
-- `W35-E7-S3-T1` Write the observed operator task script and scoring template for
+- `W36-E7-S3-T1` Write the observed operator task script and scoring template for
   setup, first launch, monitoring, question recovery, runtime failure, QA remediation,
   and terminal continuation.
   - Scope: operator acceptance documentation.
   - Verification: every task records completion, elapsed time, wrong actions, assistance,
     confidence, and first decisive confusion.
-- `W35-E7-S3-T2` Record five first-time-operator sessions against the source-installed
+- `W36-E7-S3-T2` Record five first-time-operator sessions against the source-installed
   packaged UI.
   - Scope: manual operator acceptance evidence.
   - Verification: one anonymized report contains all required task metrics, browser and
     viewport context, blockers, and no sensitive project/runtime evidence.
-- `W35-E7-S3-T3` Reconcile accepted session findings into roadmap tasks and beta-readiness
+- `W36-E7-S3-T3` Reconcile accepted session findings into roadmap tasks and beta-readiness
   evidence.
   - Scope: planning and product-readiness docs.
   - Verification: every reportable finding is closed, deferred with rationale, or mapped
@@ -10369,7 +10523,7 @@ Exit evidence:
 - task success and operator confidence confirm the UI hierarchy instead of relying only
   on implementer-authored checks.
 
-Wave 35 exit evidence:
+Wave 36 exit evidence:
 
 - setup, active execution, recovery, evidence, history, and terminal handoff each expose
   one primary decision and bounded supporting evidence;
@@ -10384,14 +10538,14 @@ Wave 35 exit evidence:
   geometry, interaction, console/network, and accessibility assertions;
 - five observed first-time-operator sessions meet the accepted completion/confidence bar
   or leave explicit follow-up tasks before beta UX is claimed;
-- no Wave 34 backend responsibility is duplicated inside Wave 35.
+- no Wave 34 backend responsibility is duplicated inside Wave 36.
 
 Sync notes:
 
-- `2026-07-11` Wave 35 was added by user direction from the operator UX/UI audit as a
-  later product-experience plan while Wave 34 remains active. The accepted-contract entry
-  task is visible in `Soon`; selected browser-foundation, design-system, onboarding,
-  responsive-shell, navigation, draft, reconnect, mutation/approval, and acceptance
-  entry tasks are visible in `Parking lot`. Server-side mutation, approval, retention,
-  runtime-evidence, run-identity, archive, DOM-test, and next-flow-split foundations
-  remain owned by Wave 34 and are consumed through explicit dependencies.
+- `2026-07-13` The unstarted operator UX plan was renumbered from Wave 35 to Wave 36
+  when the completed incremental-task Wave 35 was integrated. The accepted-contract
+  entry task remains visible in `Soon`; selected browser-foundation, design-system,
+  onboarding, responsive-shell, navigation, draft, reconnect, mutation/approval, and
+  acceptance entry tasks remain in `Parking lot`. Server-side mutation, approval,
+  retention, runtime-evidence, run-identity, archive, DOM-test, and next-flow-split
+  foundations remain owned by Wave 34 and are consumed through explicit dependencies.

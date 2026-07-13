@@ -134,6 +134,18 @@ Success signals:
 - stage artifacts, questions, logs, and validation evidence preserve project ownership and cross-project links,
 - execution stays bounded to the declared project set while runtime-specific discovery remains outside core workflow semantics.
 
+### US-13 — incremental task execution
+
+As an **operator**, I want an approved tasklist to execute one dependency-ready task at a
+time so that failures can be repaired or resumed without losing task-local scope and evidence.
+
+Success signals:
+
+- every task has a durable outcome, scope, acceptance criteria, dependencies, and verification;
+- automatic execution follows dependency order and stops on the first blocked or failed task;
+- CLI and frontend can inspect and resume one task without bypassing dependencies;
+- review and QA receive aggregate evidence only after every implementation task succeeds.
+
 ## Future beta readiness gate
 
 Beta readiness is a future acceptance gate, not a claim about the current alpha

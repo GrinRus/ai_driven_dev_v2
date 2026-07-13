@@ -27,6 +27,7 @@ from aidd.validators.semantic_rules.common import (
     validate_placeholder_sections,
     validate_setup_ignored_workspace_status_evidence,
 )
+from aidd.validators.task_evidence import validate_aggregate_task_evidence
 
 AC_ID_PATTERN = re.compile(r"\bAC-\d+\b", flags=re.IGNORECASE)
 
@@ -170,10 +171,7 @@ def _validate_residual_risks(
         findings.append(
             context.finding(
                 code=RISK_UNDERREPORT_CODE,
-                message=(
-                    "Residual risk summary must include mitigation and/or ownership "
-                    "notes."
-                ),
+                message=("Residual risk summary must include mitigation and/or ownership notes."),
                 severity="medium",
                 location=risks.location,
             )
@@ -209,9 +207,7 @@ def _validate_evidence_references(
         )
 
     for evidence_item in evidence_entries:
-        has_artifact_path_reference = (
-            IMPLEMENT_FILE_ENTRY_PATTERN.search(evidence_item) is not None
-        )
+        has_artifact_path_reference = IMPLEMENT_FILE_ENTRY_PATTERN.search(evidence_item) is not None
         has_evidence_id = QA_EVIDENCE_ID_PATTERN.search(evidence_item) is not None
         if has_artifact_path_reference or has_evidence_id:
             continue
@@ -246,10 +242,7 @@ def _validate_verdict_recommendation_alignment(
         findings.append(
             context.finding(
                 code=UNSUPPORTED_VERDICT_CODE,
-                message=(
-                    "Verdict `not-ready` must align with release recommendation "
-                    "`hold`."
-                ),
+                message=("Verdict `not-ready` must align with release recommendation `hold`."),
                 severity="high",
                 location=recommendation.location,
             )
@@ -461,6 +454,15 @@ def validate_qa_report(context: SemanticDocumentContext) -> tuple[ValidationFind
         )
     )
     findings.extend(validate_placeholder_sections(context))
+    evidence_section = context.section_by_candidates(
+        candidates=("Acceptance coverage", "Evidence", "Verification summary")
+    )
+    findings.extend(
+        validate_aggregate_task_evidence(
+            context=context,
+            evidence=evidence_section,
+        )
+    )
     return tuple(findings)
 
 

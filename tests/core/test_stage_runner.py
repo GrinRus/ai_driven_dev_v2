@@ -1136,6 +1136,49 @@ def test_publish_stage_outputs_makes_downstream_output_references_satisfiable(
     ).exists()
 
 
+def test_publish_stage_outputs_restores_previous_publication_on_replace_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+    )
+    _materialize_expected_outputs(bundle.expected_output_documents)
+    publish_stage_outputs_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-idea",
+        stage="idea",
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "idea"
+    published_brief = stage_root / "output" / "idea-brief.md"
+    previous = published_brief.read_text(encoding="utf-8")
+    (stage_root / "idea-brief.md").write_text("# Idea Brief\n\nreplacement\n", encoding="utf-8")
+    original_replace = Path.replace
+
+    def _replace_with_failure(source: Path, target: Path) -> Path:
+        if source.name.startswith(".output.staging-") and target.name == "output":
+            raise OSError("injected publication failure")
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", _replace_with_failure)
+
+    with pytest.raises(OSError, match="injected publication failure"):
+        publish_stage_outputs_after_validation_pass(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-idea",
+            stage="idea",
+        )
+
+    assert published_brief.read_text(encoding="utf-8") == previous
+    assert not tuple(stage_root.glob(".output.staging-*"))
+    assert not tuple(stage_root.glob(".output.backup-*"))
+
+
 def test_run_single_stage_orchestration_executes_generic_cli_happy_path(
     tmp_path: Path,
 ) -> None:
@@ -1887,6 +1930,68 @@ def test_run_single_stage_orchestration_repairs_malformed_questions_document(
     assert "`INTERVIEW-MALFORMED-DOCUMENT`" in validator_report_text
     assert "Invalid question entry at line 9" in validator_report_text
     assert "`- <QID> [resolved|partial|deferred] <text>` for answers" in validator_report_text
+
+
+def test_run_single_stage_orchestration_routes_task_diff_findings_into_repair(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        del execution_state
+        stage_root = (
+            workspace_root
+            / "workitems"
+            / invocation.work_item
+            / "stages"
+            / invocation.stage
+        )
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+        validation_finding_provider=lambda execution_state, discovery: (
+            ValidationFinding(
+                code="SEM-TASK-DIFF-MISMATCH",
+                message=(
+                    f"Injected task diff mismatch for attempt {execution_state.attempt_number}; "
+                    f"discovered {len(discovery.discovered_markdown_documents)} documents."
+                ),
+            ),
+        ),
+    )
+
+    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.validation_result is not None
+    assert any(
+        finding.code == "SEM-TASK-DIFF-MISMATCH"
+        for finding in orchestration.validation_result.findings
+    )
 
 
 def test_run_single_stage_orchestration_repairs_malformed_answers_document(
@@ -3221,12 +3326,15 @@ def test_decide_post_validation_transition_allows_success_when_questions_resolve
         "# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approval is recorded.\n",
         encoding="utf-8",
     )
-    preparation_bundle = prepare_stage_bundle(
+    prepare_stage_bundle(
         workspace_root=workspace_root,
         work_item="WI-001",
         stage="plan",
     )
-    _materialize_expected_outputs(preparation_bundle.expected_output_documents)
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    for name, content in _valid_plan_output_documents().items():
+        (stage_root / name).write_text(content, encoding="utf-8")
 
     validation_state = persist_validation_state(
         workspace_root=workspace_root,
@@ -3251,6 +3359,60 @@ def test_decide_post_validation_transition_allows_success_when_questions_resolve
     assert (published_root / "plan.md").read_text(encoding="utf-8") == (
         stage_root / "plan.md"
     ).read_text(encoding="utf-8")
+
+
+def test_decide_post_validation_transition_can_defer_task_scoped_publication(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+    prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    for name, content in _valid_plan_output_documents().items():
+        (stage_root / name).write_text(content, encoding="utf-8")
+    validation_state = persist_validation_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        verdict=ValidationVerdict.PASS,
+    )
+
+    transition = decide_post_validation_transition(
+        validation_state,
+        workspace_root=workspace_root,
+        defer_success_publication=True,
+    )
+
+    assert transition.action == PostValidationAction.ADVANCE
+    assert not (stage_root / "output" / "plan.md").exists()
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.PENDING.value
 
 
 def test_decide_post_validation_transition_reconciles_stale_stage_result_on_pass(
@@ -3288,10 +3450,20 @@ def test_decide_post_validation_transition_reconciles_stale_stage_result_on_pass
     )
     stage_result_path.write_text(
         "# Stage result\n\n"
+        "## Stage\n\n"
+        "- Stage: `plan`\n\n"
+        "## Attempt history\n\n"
+        "- Attempt 1 (`initial`): runtime draft completed.\n\n"
         "## Status\n\n"
         "- Status: `failed`\n\n"
+        "## Produced outputs\n\n"
+        "- `workitems/WI-001/stages/plan/output/plan.md`\n\n"
         "## Validation summary\n\n"
         "- Validator verdict: `fail`\n\n"
+        "## Blockers\n\n"
+        "- none\n\n"
+        "## Next actions\n\n"
+        "- retry validation\n\n"
         "## Terminal state notes\n\n"
         "- Runtime draft still had stale failure text.\n",
         encoding="utf-8",

@@ -45,6 +45,12 @@ from aidd.cli.ui_http import (
 )
 from aidd.config import AiddConfig, load_config
 from aidd.core.interview import AnswerResolution
+from aidd.core.mutation_lease import (
+    RunMutationConflict,
+    acquire_run_mutation_lease_handle,
+    release_run_mutation_lease,
+    use_transferred_run_mutation_lease,
+)
 from aidd.core.next_flow import (
     CloneFlowDraftRequest,
     FollowUpDraftRequest,
@@ -94,6 +100,7 @@ from aidd.core.run_store import (
     next_attempt_number,
     persist_run_archive_decision,
     run_attempt_root,
+    run_root,
 )
 from aidd.core.runtime_operator import (
     OPERATOR_DECISIONS_FILENAME,
@@ -113,11 +120,13 @@ from aidd.core.runtime_readiness import (
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stages import STAGES, is_valid_stage
+from aidd.core.task_read_model import resolve_task_read_model
 from aidd.core.workflow_service import (
     WorkflowRunRequest,
     WorkflowRunResult,
     WorkflowStageExecutionError,
     WorkflowStageExecutionRequest,
+    allocate_workflow_run_id,
     run_workflow,
 )
 from aidd.runtime_catalog import runtime_definitions
@@ -411,18 +420,12 @@ class UiRunJobStore:
         last_output_age_seconds = _seconds_since(job.last_output_at_utc)
         runtime_output_age_seconds = _seconds_since(job.runtime_output_at_utc)
         elapsed_seconds = _seconds_since(job.created_at_utc)
-        silence_warning = (
-            job.status not in _TERMINAL_JOB_STATUSES
-            and (
-                (
-                    runtime_output_age_seconds is not None
-                    and runtime_output_age_seconds >= 120
-                )
-                or (
-                    job.runtime_output_at_utc is None
-                    and elapsed_seconds is not None
-                    and elapsed_seconds >= 120
-                )
+        silence_warning = job.status not in _TERMINAL_JOB_STATUSES and (
+            (runtime_output_age_seconds is not None and runtime_output_age_seconds >= 120)
+            or (
+                job.runtime_output_at_utc is None
+                and elapsed_seconds is not None
+                and elapsed_seconds >= 120
             )
         )
         return {
@@ -908,11 +911,7 @@ def _next_flow_source_findings_payload(dashboard: Any) -> dict[str, object]:
     )
     all_items = [*qa_items, *review_items, *failed_items, *manual_items]
     recommended_items = [item for item in all_items if item["recommended"]]
-    clean_terminal = (
-        handoff is not None
-        and handoff.status == "completed"
-        and not handoff.blockers
-    )
+    clean_terminal = handoff is not None and handoff.status == "completed" and not handoff.blockers
     return {
         "source_work_item": dashboard.work_item,
         "source_run_id": run.run_id,
@@ -978,8 +977,7 @@ def _selected_next_flow_source_items(
     missing_ids = tuple(item_id for item_id in selected_source_ids if item_id not in items_by_id)
     if missing_ids:
         raise ValueError(
-            "Selected source findings do not match this source run: "
-            f"{', '.join(missing_ids)}."
+            f"Selected source findings do not match this source run: {', '.join(missing_ids)}."
         )
     selected_items = tuple(items_by_id[item_id] for item_id in selected_source_ids)
     if not selected_items:
@@ -996,9 +994,7 @@ def _follow_up_source_selections_from_items(
         source_path = item.get("source_path")
         if not isinstance(source_path, str) or not source_path.strip():
             if item.get("kind") != "manual-request":
-                raise ValueError(
-                    f"Selected source '{item_id}' has no source artifact path."
-                )
+                raise ValueError(f"Selected source '{item_id}' has no source artifact path.")
             source_path = None
         raw_stage = item.get("stage")
         selections.append(
@@ -1333,12 +1329,8 @@ def _operator_approval_audit_history(
                 "decision_action": decision.action.value if decision is not None else None,
                 "decision_source": decision.source.value if decision is not None else None,
                 "decision_reason": decision.reason if decision is not None else None,
-                "decision_at_utc": (
-                    decision.created_at_utc if decision is not None else None
-                ),
-                "requests_path": (
-                    requests_path.as_posix() if requests_path is not None else None
-                ),
+                "decision_at_utc": (decision.created_at_utc if decision is not None else None),
+                "requests_path": (requests_path.as_posix() if requests_path is not None else None),
                 "decisions_path": (
                     decisions_path.as_posix() if decisions_path is not None else None
                 ),
@@ -1401,9 +1393,7 @@ def _collect_runtime_readiness_probe_reports(
             definition.runtime_id,
             RuntimeReadinessProbeReport(
                 provider_available=provider_report.available,
-                execution_command_available=_execution_command_available(
-                    runtime_config.command
-                ),
+                execution_command_available=_execution_command_available(runtime_config.command),
                 provider_version=provider_report.version_text,
                 provider_command=provider_report.command,
             ),
@@ -1450,7 +1440,9 @@ class OperatorUiService:
             if options.work_item is not None
             else None
         )
-        self._recent_project_roots: list[Path] = [project_root] if options.work_item is not None else []
+        self._recent_project_roots: list[Path] = (
+            [project_root] if options.work_item is not None else []
+        )
         self._operator_waiters_lock = threading.Lock()
         self._operator_waiters: dict[str, _UiOperatorDecisionWaiter] = {}
 
@@ -1574,6 +1566,112 @@ class OperatorUiService:
                 recent_project_roots=tuple(self._recent_project_roots),
             ),
         }
+
+    def _task_view(self, params: dict[str, list[str]]) -> object:
+        run_id = _first_param(params, "run_id")
+        task_id = _first_param(params, "task_id")
+        model = resolve_task_read_model(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=run_id,
+        )
+        tasks = list(cast(list[dict[str, object]], model["tasks"]))
+        if task_id is not None:
+            tasks = [task for task in tasks if task.get("id") == task_id]
+        if task_id is not None and not tasks:
+            raise ValueError(f"Unknown task id `{task_id}`.")
+        return {**model, "tasks": tasks}
+
+    def _start_task_job(self, payload: dict[str, Any]) -> object:
+        task_id = str(payload.get("task_id", "")).strip()
+        run_id = str(payload.get("run_id", "")).strip()
+        runtime = str(payload.get("runtime", "")).strip()
+        if not task_id:
+            raise ValueError("task_id is required.")
+        if not run_id:
+            raise ValueError("run_id is required.")
+        if not runtime:
+            raise ValueError("runtime is required.")
+        lease = acquire_run_mutation_lease_handle(
+            run_root(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                run_id=run_id,
+            ),
+            operation=f"ui-task:{task_id}",
+        )
+
+        def _target(job_id: str) -> object:
+            from aidd.cli.task import execute_task_by_id
+            try:
+                ledger = execute_task_by_id(
+                    task_id=task_id,
+                    work_item=self.work_item,
+                    run_id=run_id,
+                    runtime=runtime,
+                    root=self.workspace_root,
+                    config=self.config_path,
+                    log_follow=True,
+                    stage_runner=self._stage_runner,
+                    mutation_lease=lease,
+                )
+            except Exception:
+                release_run_mutation_lease(lease)
+                raise
+            return {
+                "task_id": task_id,
+                "run_id": run_id,
+                "status": ledger.entry(task_id).status.value,
+            }
+
+        try:
+            return self._start_job(kind="task", stage="implement", target=_target)
+        except Exception:
+            release_run_mutation_lease(lease)
+            raise
+
+    def _start_task_finalize_job(self, payload: dict[str, Any]) -> object:
+        run_id = str(payload.get("run_id", "")).strip()
+        runtime = str(payload.get("runtime", "")).strip()
+        if not run_id:
+            raise ValueError("run_id is required.")
+        if not runtime:
+            raise ValueError("runtime is required.")
+        lease = acquire_run_mutation_lease_handle(
+            run_root(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                run_id=run_id,
+            ),
+            operation="ui-task:finalize",
+        )
+
+        def _target(job_id: str) -> object:
+            del job_id
+            from aidd.cli.task import finalize_implementation
+
+            try:
+                ledger = finalize_implementation(
+                    work_item=self.work_item,
+                    run_id=run_id,
+                    runtime=runtime,
+                    root=self.workspace_root,
+                    config=self.config_path,
+                    mutation_lease=lease,
+                )
+            except Exception:
+                release_run_mutation_lease(lease)
+                raise
+            return {
+                "run_id": run_id,
+                "status": ledger.finalization.status.value,
+            }
+
+        try:
+            return self._start_job(kind="task-finalize", stage="implement", target=_target)
+        except Exception:
+            release_run_mutation_lease(lease)
+            raise
 
     def _work_item_resume_context(self, params: dict[str, list[str]]) -> object:
         work_item = _first_param(params, "work_item")
@@ -1819,9 +1917,7 @@ class OperatorUiService:
         source_ids = self._validated_remediation_source_ids(
             source_stage=source_stage,
             source_ids=_remediation_source_ids_from_payload(payload),
-            allow_operator_audit_source_ids=bool(
-                payload.get("allow_operator_audit_source_ids")
-            ),
+            allow_operator_audit_source_ids=bool(payload.get("allow_operator_audit_source_ids")),
         )
         return create_remediation_request(
             workspace_root=self.workspace_root,
@@ -1840,9 +1936,7 @@ class OperatorUiService:
         source_ids = self._validated_remediation_source_ids(
             source_stage=source_stage,
             source_ids=_remediation_source_ids_from_payload(payload),
-            allow_operator_audit_source_ids=bool(
-                payload.get("allow_operator_audit_source_ids")
-            ),
+            allow_operator_audit_source_ids=bool(payload.get("allow_operator_audit_source_ids")),
         )
         request = create_remediation_request(
             workspace_root=self.workspace_root,
@@ -1930,9 +2024,7 @@ class OperatorUiService:
                     job_id=job_id,
                 )
                 results.append(result)
-                result_exit = (
-                    int(result.get("exit_code", 1)) if isinstance(result, Mapping) else 1
-                )
+                result_exit = int(result.get("exit_code", 1)) if isinstance(result, Mapping) else 1
                 if result_exit != 0:
                     exit_code = result_exit
                     completed = False
@@ -1993,9 +2085,7 @@ class OperatorUiService:
                     log_follow=log_follow,
                     job_id=job_id,
                 )
-                exit_code = (
-                    int(result.get("exit_code", 1)) if isinstance(result, Mapping) else 1
-                )
+                exit_code = int(result.get("exit_code", 1)) if isinstance(result, Mapping) else 1
                 completed = exit_code == 0
             except typer.Exit as exc:
                 exit_code = int(exc.exit_code or 1)
@@ -2092,6 +2182,8 @@ class OperatorUiService:
                 return _json_response(self._repository_diff(params))
             if path == "/api/implement/evidence":
                 return _json_response(self._implementation_evidence(params))
+            if path == "/api/tasks":
+                return _json_response(self._task_view(params))
             if path == "/api/review/findings":
                 return _json_response(self._review_findings(params))
             if path == "/api/qa/verdict":
@@ -2197,12 +2289,8 @@ class OperatorUiService:
                         key=_first_param(params, "key"),
                         run_id=_first_param(params, "run_id"),
                         attempt_number=_optional_attempt(params),
-                        preview_limit_bytes=_optional_positive_int_param(
-                            params, "preview_limit"
-                        ),
-                        source_limit_bytes=_optional_positive_int_param(
-                            params, "source_limit"
-                        ),
+                        preview_limit_bytes=_optional_positive_int_param(params, "preview_limit"),
+                        source_limit_bytes=_optional_positive_int_param(params, "source_limit"),
                     )
                 )
             if path == "/api/artifacts/evidence-graph":
@@ -2316,6 +2404,16 @@ class OperatorUiService:
                 return _json_response(self._start_stage_job(payload))
             if path == "/api/stage/interact":
                 return _json_response(self._start_stage_interact_job(payload))
+            if path == "/api/tasks/run":
+                return _json_response(
+                    self._start_task_job(payload),
+                    status=HTTPStatus.ACCEPTED,
+                )
+            if path == "/api/tasks/finalize":
+                return _json_response(
+                    self._start_task_finalize_job(payload),
+                    status=HTTPStatus.ACCEPTED,
+                )
             if path == "/api/remediation/request":
                 return _json_response(
                     self._create_remediation_request(payload),
@@ -2356,6 +2454,8 @@ class OperatorUiService:
                 return _json_response(self._request_server_stop())
         except FileExistsError as exc:
             return _error_response(str(exc), status=HTTPStatus.CONFLICT)
+        except RunMutationConflict as exc:
+            return _error_response(str(exc), status=HTTPStatus.CONFLICT)
         except ValueError as exc:
             return _error_response(str(exc))
         return _error_response("not found", status=HTTPStatus.NOT_FOUND)
@@ -2372,11 +2472,7 @@ class OperatorUiService:
             return _json_response(self._jobs.view(parts[2]))
         if len(parts) == 4 and parts[:2] == ["api", "jobs"] and parts[3] == "logs":
             return _json_response(self._jobs.logs(parts[2], cursor=_cursor_param(params)))
-        if (
-            len(parts) == 4
-            and parts[:2] == ["api", "jobs"]
-            and parts[3] == "operator-requests"
-        ):
+        if len(parts) == 4 and parts[:2] == ["api", "jobs"] and parts[3] == "operator-requests":
             return _json_response(self._job_operator_requests(parts[2]))
         return _error_response("not found", status=HTTPStatus.NOT_FOUND)
 
@@ -2703,7 +2799,10 @@ class OperatorUiService:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
-        run_id = _optional_run_id_from_payload(payload)
+        run_id = _optional_run_id_from_payload(payload) or allocate_workflow_run_id(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+        )
         log_follow = bool(payload.get("log_follow", True))
         prepared_payload = dict(payload)
         prepared_payload["runtime"] = runtime
@@ -2711,11 +2810,24 @@ class OperatorUiService:
         prepared_payload["to_stage"] = stage_end
         prepared_payload["run_id"] = run_id
         prepared_payload["log_follow"] = log_follow
+        lease = acquire_run_mutation_lease_handle(
+            run_root(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                run_id=run_id,
+            ),
+            operation="ui-workflow",
+        )
 
         def _target(job_id: str) -> object:
-            return self._run_workflow(prepared_payload, job_id=job_id)
+            with use_transferred_run_mutation_lease(lease):
+                return self._run_workflow(prepared_payload, job_id=job_id)
 
-        return self._start_job(kind="workflow", stage=None, target=_target)
+        try:
+            return self._start_job(kind="workflow", stage=None, target=_target)
+        except Exception:
+            release_run_mutation_lease(lease)
+            raise
 
     def _next_flow_preflight(self, payload: dict[str, Any]) -> UiResponse:
         result = validate_next_flow_launch_preflight(
@@ -3046,11 +3158,15 @@ class OperatorUiService:
         cfg = load_config(self.config_path)
         runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
         runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
+        runtime_config = cfg.runtime_config(runtime)
         config_snapshot: dict[str, Any] = {
             "config_path": self.config_path.as_posix(),
             "workspace_root": self.workspace_root.as_posix(),
             "runtime_command": runtime_command,
             "runtime_execution_mode": runtime_execution_mode.value,
+            "runtime_permission_policy": runtime_config.permission_policy.value,
+            "runtime_interaction_mode": runtime_config.interaction_mode.value,
+            "runtime_auto_approval_preset": runtime_config.auto_approval_preset.value,
             "log_follow": log_follow,
             "mode": "ui-workflow",
         }

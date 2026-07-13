@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from aidd.core.identifiers import resolve_contained_component
 from aidd.core.models.run import RepairHistoryEntry, RunArtifactIndex, StageRunMetadata
 from aidd.core.resources import resolve_resource_layout_from_contracts_root
 from aidd.core.run_provenance import (
@@ -71,11 +72,19 @@ def run_store_root(workspace_root: Path) -> Path:
 
 
 def work_item_runs_root(workspace_root: Path, work_item: str) -> Path:
-    return run_store_root(workspace_root=workspace_root) / work_item
+    return resolve_contained_component(
+        run_store_root(workspace_root=workspace_root),
+        work_item,
+        label="work item id",
+    )
 
 
 def run_root(workspace_root: Path, work_item: str, run_id: str) -> Path:
-    return work_item_runs_root(workspace_root=workspace_root, work_item=work_item) / run_id
+    return resolve_contained_component(
+        work_item_runs_root(workspace_root=workspace_root, work_item=work_item),
+        run_id,
+        label="run id",
+    )
 
 
 def run_stages_root(workspace_root: Path, work_item: str, run_id: str) -> Path:
@@ -86,11 +95,15 @@ def run_stages_root(workspace_root: Path, work_item: str, run_id: str) -> Path:
 
 
 def run_stage_root(workspace_root: Path, work_item: str, run_id: str, stage: str) -> Path:
-    return run_stages_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-    ) / stage
+    return resolve_contained_component(
+        run_stages_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+        ),
+        stage,
+        label="stage id",
+    )
 
 
 def format_attempt_directory_name(attempt_number: int) -> str:
@@ -219,14 +232,19 @@ def create_next_attempt_directory(
         run_id=run_id,
         stage=stage,
     )
-    attempt_path = run_attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    )
-    attempt_path.mkdir(parents=False, exist_ok=False)
+    while True:
+        attempt_path = run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        try:
+            attempt_path.mkdir(parents=False, exist_ok=False)
+            break
+        except FileExistsError:
+            attempt_number += 1
     resolved_repository_root = _resolve_repository_root(
         contracts_root=contracts_root,
         repository_root=repository_root,
@@ -250,12 +268,15 @@ def run_manifest_path(workspace_root: Path, work_item: str, run_id: str) -> Path
 
 
 def run_stage_metadata_path(workspace_root: Path, work_item: str, run_id: str, stage: str) -> Path:
-    return run_stage_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-    ) / RUN_STAGE_METADATA_FILENAME
+    return (
+        run_stage_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        / RUN_STAGE_METADATA_FILENAME
+    )
 
 
 def load_stage_metadata(
@@ -399,61 +420,76 @@ def _canonical_log_paths(
             path=runtime_log,
         )
     }
-    runtime_exit_metadata = run_attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    ) / RUN_RUNTIME_EXIT_METADATA_FILENAME
+    runtime_exit_metadata = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / RUN_RUNTIME_EXIT_METADATA_FILENAME
+    )
     if runtime_exit_metadata.exists():
         logs["runtime_exit_metadata"] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=runtime_exit_metadata,
         )
-    runtime_jsonl = run_attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    ) / RUN_RUNTIME_JSONL_FILENAME
+    runtime_jsonl = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / RUN_RUNTIME_JSONL_FILENAME
+    )
     if runtime_jsonl.exists():
         logs["runtime_jsonl"] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=runtime_jsonl,
         )
-    events_jsonl = run_attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    ) / RUN_EVENTS_JSONL_FILENAME
+    events_jsonl = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / RUN_EVENTS_JSONL_FILENAME
+    )
     if events_jsonl.exists():
         logs["events_jsonl"] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=events_jsonl,
         )
-    operator_requests = run_attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    ) / OPERATOR_REQUESTS_FILENAME
+    operator_requests = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / OPERATOR_REQUESTS_FILENAME
+    )
     if operator_requests.exists():
         logs["operator_requests"] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=operator_requests,
         )
-    operator_decisions = run_attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    ) / OPERATOR_DECISIONS_FILENAME
+    operator_decisions = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / OPERATOR_DECISIONS_FILENAME
+    )
     if operator_decisions.exists():
         logs["operator_decisions"] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
@@ -553,7 +589,7 @@ def write_attempt_artifact_index(
     return artifact_index_path
 
 
-def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
+def write_json_payload(path: Path, payload: dict[str, Any]) -> None:
     serialized_payload = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = path.with_name(f".{path.name}.tmp")
@@ -563,6 +599,9 @@ def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
     finally:
         if temp_path.exists():
             temp_path.unlink()
+
+
+_write_json_payload = write_json_payload
 
 
 def _touch_manifest_timestamp(
@@ -724,6 +763,62 @@ def create_run_manifest(
         run_id=run_id,
     )
     if manifest_path.exists():
+        existing = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if not isinstance(existing, dict):
+            raise ValueError("Existing run manifest must be a JSON object.")
+        mismatches: list[str] = []
+        if str(existing.get("runtime_id", "")) != runtime_id:
+            mismatches.append("runtime_id")
+        existing_adapter = str(existing.get("adapter_id", existing.get("runtime_id", "")))
+        if existing_adapter != (adapter_id or runtime_id):
+            mismatches.append("adapter_id")
+        bounds = existing.get("workflow_bounds")
+        requested_target_is_bounded = False
+        if isinstance(bounds, dict):
+            start = bounds.get("start")
+            end = bounds.get("end")
+            if workflow_stage_start is not None and workflow_stage_start != start:
+                mismatches.append("workflow_bounds.start")
+            if workflow_stage_end is not None and workflow_stage_end != end:
+                mismatches.append("workflow_bounds.end")
+            try:
+                from aidd.core.stages import STAGES
+
+                requested_target_is_bounded = (
+                    isinstance(start, str)
+                    and isinstance(end, str)
+                    and start in STAGES
+                    and end in STAGES
+                    and stage_target in STAGES
+                    and STAGES.index(start) <= STAGES.index(stage_target) <= STAGES.index(end)
+                )
+            except ValueError:
+                requested_target_is_bounded = False
+        if (
+            str(existing.get("stage_target", "")) != stage_target
+            and not requested_target_is_bounded
+        ):
+            mismatches.append("stage_target")
+        existing_config = existing.get("config_snapshot")
+        if isinstance(existing_config, dict):
+            for key in (
+                "workspace_root",
+                "runtime_command",
+                "runtime_execution_mode",
+                "runtime_permission_policy",
+                "runtime_interaction_mode",
+                "runtime_auto_approval_preset",
+            ):
+                if (key in existing_config or key in config_snapshot) and (
+                    existing_config.get(key) != config_snapshot.get(key)
+                ):
+                    mismatches.append(f"config_snapshot.{key}")
+        if mismatches:
+            raise ValueError(
+                "Existing run manifest conflicts with immutable fields: "
+                + ", ".join(sorted(set(mismatches)))
+                + "."
+            )
         return manifest_path
 
     run_stage_root(
@@ -791,9 +886,7 @@ def persist_run_archive_decision(
         run_id=run_id,
     )
     if not manifest_path.exists():
-        raise ValueError(
-            f"Run manifest is missing for work item '{work_item}', run '{run_id}'."
-        )
+        raise ValueError(f"Run manifest is missing for work item '{work_item}', run '{run_id}'.")
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(

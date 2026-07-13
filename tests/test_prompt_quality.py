@@ -531,6 +531,26 @@ def test_tasklist_prompts_require_verification_notes_for_every_task_id() -> None
     )
 
 
+def test_tasklist_contract_and_prompts_require_rich_task_cards() -> None:
+    document_contract = Path("contracts/documents/tasklist.md").read_text(
+        encoding="utf-8"
+    )
+    stage_contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (document_contract, stage_contract, run_prompt, repair_prompt):
+        assert "Outcome" in text
+        assert "Dominant deliverable" in text
+        assert "In scope" in text
+        assert "Acceptance criteria" in text
+        assert "<task-id>-AC<n>" in text
+
+
 def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
     run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
         encoding="utf-8"

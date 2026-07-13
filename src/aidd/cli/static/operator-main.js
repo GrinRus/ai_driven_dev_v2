@@ -266,6 +266,15 @@ document.addEventListener("click", async (event) => {
       await startStage(proceedStage);
       return;
     }
+    const taskId = event.target.closest("[data-run-task]")?.dataset.runTask;
+    if (taskId) {
+      await startImplementationTask(taskId);
+      return;
+    }
+    if (event.target.closest("[data-finalize-tasks]")) {
+      await startTaskFinalization();
+      return;
+    }
     if (event.target.closest("[data-rerun-implement]")) {
       await startStage("implement");
       return;

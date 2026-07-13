@@ -71,8 +71,19 @@ normalize if canonical validation proves the terminal status inconsistent.
 1. Use stable task ids and imperative task titles. Use one id style consistently, such as
    `T1`, `T2`, ... or `TL-1`, `TL-2`, ....
 2. Keep one dominant output artifact per task so each item can be implemented and reviewed in one pass.
+   Render each item as `### <task-id> — <imperative title>` followed by non-empty
+   `Outcome`, `Dominant deliverable`, and `In scope` bullets. Add an `Acceptance criteria`
+   bullet with one or more nested criteria using the exact `<task-id>-AC<n>` shape,
+   for example `<task-id>-AC1` and `<task-id>-AC2`. Acceptance ids must be unique
+   across the document.
+   `In scope` must name at least one backticked repository-relative file or directory prefix.
+   Do not use absolute paths, `..` traversal, or glob syntax. Explanatory prose does not replace
+   concrete path prefixes.
 3. Record explicit dependencies for every task (`none` or concrete task/upstream ids).
 4. Keep task ordering executable in dependency order, not only grouped by topic.
+   Dependencies may reference only earlier task cards. Reject self-dependencies, unknown task ids,
+   forward references, and dependency cycles rather than hiding them in prose or expecting AIDD to
+   reorder the cards.
 5. Add at least one concrete verification note per task (test/check/scenario). The dedicated
    `Verification notes` section must contain a bullet or list item for every task id declared in
    `Ordered tasks`, including command-only or verification-only tasks. Do not rely on checks
@@ -106,6 +117,7 @@ normalize if canonical validation proves the terminal status inconsistent.
    command.
 3. Ensure dependency references are resolvable and avoid hidden prerequisites.
 4. Keep task scope bounded; split bundled work into separate ordered tasks.
+   Compact bullet-only tasks are invalid; use the complete H3 task-card shape for every id.
 5. Use `context/verification-output.md` as the verification boundary when present; if you need to
    mention an authored command, quote it exactly rather than paraphrasing executable details.
 6. When naming JS/TS helper or module paths, include export-map/public-surface evidence in the
@@ -132,6 +144,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 - tasklist decomposition is ordered and dependency-executable,
 - each task has one dominant deliverable and explicit dependency note,
+- each task card has an outcome, in-scope boundary, and task-local acceptance criteria,
+- every in-scope boundary contains safe backticked repository-relative path prefixes,
 - verification notes are concrete, task-specific, and include every declared task id,
 - command-only or verification-only task ids are present in the dedicated `Verification notes`
   section, not only in `Ordered tasks`,
