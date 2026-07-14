@@ -10,6 +10,11 @@ This file is the canonical implementation plan for AIDD.
 - `planned` — accepted but not active
 - `later` — useful but intentionally deferred
 
+Status markers apply to waves, epics, slices, and local tasks. An unmarked local task
+inherits the nearest enclosing status. A task promoted to the active `Next`
+queue must be marked `next` explicitly. Historical disposition notes such as
+`superseded by ...` may follow a terminal status, but are not additional active states.
+
 ## Planning model
 
 - **Wave** — broad delivery phase
@@ -2493,7 +2498,8 @@ Queue restoration policy (roadmap all `done` + backlog empty):
    - first actionable task(s) to `Next`;
    - dependent near-term tasks to `Soon`;
    - deferred visibility items to `Parking lot`.
-6. Add a dated sync note in roadmap or backlog describing the queue restoration event and the first promoted task IDs.
+6. Replace the bounded current reconciliation note in backlog with the restoration event
+   and first promoted task IDs; do not append a permanent queue-movement journal.
 7. Run the backlog sync checklist before implementation starts:
    - every backlog ID exists in roadmap;
    - only local task IDs appear in backlog;
@@ -7061,7 +7067,7 @@ Local tasks:
   - Scope: local UI command options, server options, and setup-mode routing.
   - Verification: CLI UI tests prove no-work-item launch serves setup mode and existing
     `--work-item` launch still opens the command center.
-- `W27-E2-S1-T2` (superseded) Add an explicit onboarding launcher only after the contract preserves bare
+- `W27-E2-S1-T2` (done; superseded) Add an explicit onboarding launcher only after the contract preserves bare
   `aidd`, `aidd --help`, and existing subcommand behavior.
   - Decision: no separate launcher is needed for the accepted path. `aidd ui` without
     `--work-item` is the supported UI-first setup entrypoint, while bare `aidd` and
@@ -7207,7 +7213,7 @@ Local tasks:
   - Scope: onboarding UI and project-set config/write path.
   - Verification: tests cover stable ids, duplicate ids, duplicate roots, missing roots,
     parent escapes, symlink escapes, and `project-set.md` context persistence.
-- `W27-E4-S1-T2` (superseded) Add a recent-project switcher as noncanonical UI cache while keeping
+- `W27-E4-S1-T2` (done; superseded) Add a recent-project switcher as noncanonical UI cache while keeping
   each active workflow, job, and `.aidd` workspace scoped to one selected project.
   - Decision: recent unrelated project switching remains deferred. The shipped UI keeps
     one active selected project/workspace per process and uses project-set declarations
@@ -7436,7 +7442,7 @@ Local tasks:
   - Verification: smoke notes show terminal job cleanup, real timeline milestones,
     source diff separated from `.aidd` artifacts, parsed review/QA summaries, stale
     downstream badges, and explicit rerun of `review -> qa`.
-- `W28-E3-S1-T2` (superseded) Fix the first confirmed source-only operator-control-center defect from
+- `W28-E3-S1-T2` (done; superseded) Fix the first confirmed source-only operator-control-center defect from
   the W28 smoke.
   - Decision: the W28 source smoke and focused deterministic checks found no source-only
     operator-control-center defect requiring a fix task.
@@ -7706,7 +7712,7 @@ Local tasks:
   - Scope: manual/browser evidence outside generated source artifacts.
   - Verification: evidence includes onboarding, command center, logs/timeline, artifacts,
     implement diff, review findings, QA verdict, remediation, and stale downstream states.
-- `W29-E2-S1-T4` (superseded) Convert the first repeatable browser UX defect into a targeted
+- `W29-E2-S1-T4` (done; superseded) Convert the first repeatable browser UX defect into a targeted
   fix task after evidence exists.
   - Scope: planning documents only.
   - Verification: superseded for this evidence pass because the Manual+Browser smoke found
@@ -8891,6 +8897,9 @@ claims meaning.
 Dependencies:
 
 - `W34-E1-S1-T1`
+- `W35-E1-S1`
+- `W35-E1-S2`
+- `W35-E2-S7`
 
 Local tasks:
 
@@ -8899,19 +8908,23 @@ Local tasks:
   - Scope: implement-stage cross-document rules.
   - Verification: wrong-task, missing-path, out-of-scope, and skipped-authored-check
     fixtures fail with stable findings.
-- `W34-E1-S2-T2` Bind tasklist IDs, dependencies, and verification obligations to plan
-  context. [`ARCH-01`]
+- `W34-E1-S2-T2` (`next`) Bind rich task-card outcomes, acceptance IDs, dependency
+  obligations, and authored verification to plan milestones, dependencies, and
+  verification notes. [`ARCH-01`]
   - Scope: tasklist cross-document rules.
-  - Verification: missing and mismatched task obligations fail without changing valid
-    tasklist behavior.
-- `W34-E1-S2-T3` Bind review findings and evidence references to implementation
-  artifacts. [`ARCH-01`]
+  - Verification: missing and mismatched plan obligations fail without reimplementing
+    task-plan parsing or changing valid rich-tasklist behavior.
+- `W34-E1-S2-T3` Bind non-task review findings, changed paths, and artifact/evidence
+  references to implementation artifacts. [`ARCH-01`]
+  - Dependencies: `W34-E1-S2-T2`.
   - Scope: review cross-document rules.
-  - Verification: nonexistent finding, evidence, and changed-path references fail.
-- `W34-E1-S2-T4` Bind QA verdicts, risks, and checks to review and implementation
-  evidence. [`ARCH-01`]
+  - Verification: nonexistent finding, evidence, and changed-path references fail while
+    exact task/acceptance coverage remains owned by `W35-E2-S7`.
+- `W34-E1-S2-T4` Bind non-task QA risks, checks, and verdict relationships to review and
+  implementation evidence. [`ARCH-01`]
   - Scope: QA cross-document rules.
-  - Verification: unsupported verdict, risk, and check relationships fail.
+  - Verification: unsupported risk, check, and cross-stage verdict relationships fail
+    without duplicating the exact task/acceptance gate from `W35-E2-S7`.
 
 Exit evidence:
 
@@ -8928,16 +8941,40 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E1-S3-T1` Create a canonical validator field/code registry and synchronize the
-  renderer, contract, repair prompts, and dual-read consumers. [`COMPAT-01`]
-  - Scope: validator-report protocol only.
-  - Verification: every emitted field/code and every retained legacy alias is covered
-    by a registry-driven protocol test.
+- `W34-E1-S3-T1` Define the canonical versioned validator field/code registry.
+  [`COMPAT-01`]
+  - Scope: validator-report protocol registry only.
+  - Verification: every normative field/code and retained legacy alias has one
+    registry entry and schema test.
 - `W34-E1-S3-T2` Normalize all eight success examples and exact invalid/repair
   expectations against the canonical protocol. [`COMPAT-02`]
+  - Dependencies: `W34-E1-S3-T3`, `W34-E1-S3-T4`, `W34-E1-S3-T5`,
+    `W34-E1-S3-T6`.
   - Scope: contract examples and full-stack validator fixtures.
   - Verification: every success example passes, while invalid and repair examples emit
     their exact expected codes.
+- `W34-E1-S3-T3` Make the validator report renderer emit registry-owned vocabulary.
+  [`COMPAT-01`]
+  - Dependencies: `W34-E1-S3-T1`.
+  - Scope: validator report rendering only.
+  - Verification: renderer output is exhausted by the registry-driven protocol matrix.
+- `W34-E1-S3-T4` Align the validator-report Markdown contract with the registry.
+  [`COMPAT-01`]
+  - Dependencies: `W34-E1-S3-T1`.
+  - Scope: durable validator-report contract only.
+  - Verification: contract examples and registry fields/codes agree exactly.
+- `W34-E1-S3-T5` Align validation repair prompts with the registry vocabulary.
+  [`COMPAT-01`]
+  - Dependencies: `W34-E1-S3-T1`.
+  - Scope: validator repair prompt packs only.
+  - Verification: prompt-quality checks reject unknown fields/codes and retain declared
+    legacy aliases only.
+- `W34-E1-S3-T6` Adopt the registry in dual-read validator-report consumers.
+  [`COMPAT-01`]
+  - Dependencies: `W34-E1-S3-T1`.
+  - Scope: validator-report readers only.
+  - Verification: canonical and declared legacy fixtures read equivalently while
+    undeclared aliases fail.
 
 Exit evidence:
 
@@ -8963,11 +9000,11 @@ Local tasks:
   [`BUG-03`]
   - Scope: QA semantic rule.
   - Verification: a neighboring-risk isolation test reports the exact untreated risk.
-- `W34-E1-S4-T3` Discover every task ID and reject mixed ID styles explicitly.
-  [`BUG-04`]
-  - Scope: tasklist ID and coverage rules.
-  - Verification: every mixed-style task is still checked for dependency and
-    verification coverage.
+- `W34-E1-S4-T3` Preserve independent mixed-ID and missing-coverage findings through
+  the canonical Wave 35 task-plan parser. [`BUG-04`]
+  - Scope: tasklist semantic regression coverage only.
+  - Verification: a mixed-style tasklist with missing dependency/verification coverage
+    emits both stable findings without introducing a second task grammar.
 - `W34-E1-S4-T4` Require command- or artifact-shaped executable evidence instead of
   prose tool names. [`BUG-05`]
   - Scope: implementation evidence grammar.
@@ -9007,7 +9044,8 @@ Local tasks:
 - `W34-E1-S5-T4` Remove unreachable validator scaffolds and unused constants after a
   public-import compatibility check. [`DEAD-02`]
   - Scope: validator dead surface only.
-  - Verification: import inventory and the complete validator suite pass.
+  - Verification: the pre-Wave-35 tasklist semantic pipeline and other unreachable
+    surfaces are absent; import inventory and the complete validator suite pass.
 - `W34-E1-S5-T5` Remove the unused packaged `common/run-rules.md` fragment without
   changing active prompt composition. [`DEAD-02`]
   - Scope: packaged prompt resources.
@@ -9040,7 +9078,7 @@ Local tasks:
   - Scope: stage runner success transition.
   - Verification: every injected publication failure leaves a truthful non-success
     state.
-- `W34-E2-S1-T3` Terminalize raised adapter exceptions with failed state and diagnostic
+- `W34-E2-S1-T3` (`next`) Terminalize raised adapter exceptions with failed state and diagnostic
   evidence. [`REL-07`]
   - Scope: stage runner exception boundary.
   - Verification: an injected adapter exception proves `executing -> failed` and
@@ -9229,7 +9267,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E4-S1-T1` Add provider-free adapter lifecycle characterization fixtures.
+- `W34-E4-S1-T1` (`next`) Add provider-free adapter lifecycle characterization fixtures.
   [`REF-03`]
   - Scope: cross-adapter tests only.
   - Verification: a startup, bidirectional-I/O, timeout, cancellation, parent-exit, and
@@ -9249,11 +9287,12 @@ Local tasks:
   - Scope: adapter lifecycle primitive.
   - Verification: a disposable parent/child process-tree test proves bounded group
     shutdown.
-- `W34-E4-S1-T5` Adopt the owned-process supervisor in streamed, Codex-live, and
-  Qwen-live execution. [`REL-05`, `REL-10`]
-  - Scope: transport lifecycle integration.
-  - Verification: descendants exit after timeout, denial, cancellation, parent exit,
-    and inherited-pipe drain expiry.
+- `W34-E4-S1-T5` Adopt the owned-process supervisor in shared streamed execution.
+  [`REL-05`, `REL-10`]
+  - Dependencies: `W34-E4-S1-T4`.
+  - Scope: shared streamed transport lifecycle only.
+  - Verification: descendants exit after timeout, cancellation, parent exit, and
+    inherited-pipe drain expiry.
 - `W34-E4-S1-T6` Propagate cancellation through Codex live startup, active turn, and
   approval wait. [`REL-04`]
   - Scope: Codex live transport.
@@ -9267,6 +9306,18 @@ Local tasks:
   - Scope: Qwen event reader.
   - Verification: a representative event is split at every byte boundary; malformed
     complete lines and duplicate IDs remain deterministic.
+- `W34-E4-S1-T9` Adopt the owned-process supervisor in Codex-live execution.
+  [`REL-05`, `REL-10`]
+  - Dependencies: `W34-E4-S1-T4`, `W34-E4-S1-T5`.
+  - Scope: Codex-live lifecycle integration only.
+  - Verification: Codex descendants exit after timeout, denial, cancellation, parent
+    exit, and bounded drain expiry.
+- `W34-E4-S1-T10` Adopt the owned-process supervisor in Qwen-live execution.
+  [`REL-05`, `REL-10`]
+  - Dependencies: `W34-E4-S1-T4`, `W34-E4-S1-T5`.
+  - Scope: Qwen-live lifecycle integration only.
+  - Verification: Qwen descendants exit after timeout, denial, cancellation, parent
+    exit, and bounded drain expiry.
 
 Exit evidence:
 
@@ -9438,6 +9489,16 @@ Local tasks:
   - Scope: packaged frontend behavior tests.
   - Verification: out-of-order and rejected mocked responses exercise deterministic
     state recovery.
+- `W34-E5-S3-T6` Make the built-wheel resource smoke offline-deterministic and bounded.
+  [`TEST-05`]
+  - Scope: package resource smoke test only.
+  - Verification: `UV_OFFLINE=1` package-resource tests pass using the built wheel and
+    every subprocess has an explicit timeout.
+- `W34-E5-S3-T7` Include release scripts in the strict mypy gate and fix their typed
+  boundary returns. [`TEST-06`]
+  - Scope: release-script typing plus configured mypy commands.
+  - Verification: `python -m mypy src scripts` passes through local, CI, and release
+    commands.
 
 Exit evidence:
 
@@ -9450,8 +9511,9 @@ boundaries after lifecycle and classification behavior is corrected.
 
 Dependencies:
 
-- `W34-E5-S2`
-- `W34-E5-S3-T1`
+- `W34-E5-S4-T5` has no prerequisite
+- decomposition tasks `W34-E5-S4-T1..T4` depend on `W34-E5-S2` and
+  `W34-E5-S3-T1`
 
 Local tasks:
 
@@ -9459,22 +9521,31 @@ Local tasks:
   orchestration. [`REF-01`]
   - Scope: harness flow-state service.
   - Verification: deterministic resume and idempotency suites preserve bundle behavior.
-- `W34-E5-S4-T2` Extract process/checkpoint probe coordination behind typed results.
-  [`REF-01`]
-  - Scope: live process and checkpoint services.
-  - Verification: stage, frontend, cancellation, and transition fixtures preserve
-    current external decisions.
+- `W34-E5-S4-T2` Consolidate process/checkpoint coordination and
+  `BlackBoxCommandResult` behind the existing steps module. [`REF-01`, `REF-05`]
+  - Scope: live process, result-model, and checkpoint services.
+  - Verification: facade and orchestration expose one result type, duplicate process
+    helpers are absent, and lifecycle/monkeypatch fixtures preserve decisions.
 - `W34-E5-S4-T3` Extract pure quality-policy evaluation from orchestration. [`REF-01`]
   - Scope: quality policy only.
   - Verification: existing fixture verdicts remain equivalent.
-- `W34-E5-S4-T4` Extract report and bundle renderers behind typed inputs. [`REF-01`]
-  - Scope: live report writers.
-  - Verification: golden JSON and Markdown bundle tests remain stable.
+- `W34-E5-S4-T4` Make the existing reports module authoritative for atomic report,
+  transcript, and bundle rendering. [`REF-01`, `REF-05`]
+  - Scope: live report writers only.
+  - Verification: duplicate orchestration helpers are absent and golden JSON/Markdown
+    bundles remain byte-stable.
+- `W34-E5-S4-T5` Replace the fake runtime's unconditional stage delay with an opt-in
+  transition barrier for checkpoint tests. [`TEST-04`]
+  - Scope: live black-box test fixture only.
+  - Verification: the same flow cases pass without fixed sleep outside explicit
+    running-stage/checkpoint scenarios.
 
 Exit evidence:
 
 - process lifecycle, durable flow state, checkpoints, quality policy, and report writing
-  can evolve independently.
+  can evolve independently;
+- extracted report/step modules have production consumers and ordinary provider-free
+  flows no longer pay a real-time checkpoint delay.
 
 ### Epic W34-E6 — remaining confirmed dead surfaces (`planned`)
 Linked stories: `US-01`, `US-08`, `US-09`, `US-10`
@@ -9485,8 +9556,9 @@ compatibility, registry, or resource entry point.
 
 Dependencies:
 
-- correctness/reliability slices in `W34-E1` and `W34-E4` before deleting adjacent
-  compatibility code
+- `W34-E6-S1-T4` and `W34-E6-S1-T5` have no prerequisite
+- compatibility-code and runtime-dependency removal follows the adjacent
+  correctness/reliability slices in `W34-E1` and `W34-E4`
 
 Local tasks:
 
@@ -9502,11 +9574,51 @@ Local tasks:
   lock. [`DEAD-05`]
   - Scope: project dependencies and lock only.
   - Verification: locked sync, wheel build/install, and package/validator tests pass.
+- `W34-E6-S1-T4` Remove the obsolete raw repository inventory `manifest.txt`.
+  [`DEAD-06`]
+  - Scope: generated root inventory only.
+  - Verification: tracked files contain no cache, bytecode, or removed-file inventory;
+    the explicitly historical `MANIFEST.md` remains available.
+- `W34-E6-S1-T5` Remove the dormant MkDocs documentation extra and its lock/config
+  surface. [`DEAD-07`]
+  - Scope: project optional dependencies, lock, and Dependabot grouping only.
+  - Verification: locked sync, wheel build, and documentation consistency pass without
+    a MkDocs dependency subtree.
 
 Exit evidence:
 
 - every removed symbol/resource/dependency has a recorded compatibility exclusion and
   retained integration coverage.
+
+#### Slice W34-E6-S2 — dependency maintenance queue reconciliation (`planned`)
+Goal: retire obsolete update proposals and refresh only dependency surfaces still owned
+by the repository after dead packages are removed.
+
+Dependencies:
+
+- `W34-E6-S1-T3`
+- `W34-E6-S1-T5`
+
+Local tasks:
+
+- `W34-E6-S2-T1` Close or supersede dependency update proposals that target removed
+  packages. [`DEAD-05`, `DEAD-07`]
+  - Scope: obsolete dependency-update pull requests only.
+  - Verification: no open update proposal references a dependency absent from the
+    canonical project configuration.
+- `W34-E6-S2-T2` Rebase and apply compatible updates for retained Python runtime and
+  development dependencies. [`MAINT-01`]
+  - Scope: retained Python dependency declarations and lock only.
+  - Verification: locked sync, lint, strict typing, full tests, and wheel smoke pass.
+- `W34-E6-S2-T3` Rebase and apply compatible pinned GitHub Actions updates.
+  [`MAINT-01`]
+  - Scope: maintained workflow action pins only.
+  - Verification: workflow validation and all required GitHub checks pass.
+
+Exit evidence:
+
+- the automated dependency queue contains only maintained surfaces and its compatible
+  updates have current verification evidence.
 
 ### Epic W34-E7 — defensive local trust boundaries (`planned`)
 Linked stories: `US-01`, `US-03`, `US-07`, `US-08`, `US-10`, `US-12`
@@ -9521,7 +9633,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E7-S1-T1` Define typed capability rules for runtime operator requests.
+- `W34-E7-S1-T1` (`next`) Define typed capability rules for runtime operator requests.
   [`SEC-01`]
   - Scope: runtime operator policy model.
   - Verification: a defensive decision table covers known capabilities, unknown
@@ -9529,6 +9641,7 @@ Local tasks:
 - `W34-E7-S1-T2` Apply protected-data and core-evidence boundaries consistently to
   reads, writes, and destructive operations, and fail closed when no verifiable
   boundary exists. [`SEC-01`]
+  - Dependencies: `W34-E7-S1-T1`.
   - Scope: runtime operator policy enforcement.
   - Verification: disposable local fixtures prove protected evidence is never
     auto-approved and ordinary bounded project operations retain intended behavior.
@@ -9554,14 +9667,26 @@ Local tasks:
   - Scope: common identifier/path boundary.
   - Verification: defensive fixtures cover valid components, invalid components, root
     escape, and unsafe ancestor resolution without recording sensitive paths.
-- `W34-E7-S2-T2` Adopt the shared boundary for workspace, work-item, run, attempt, and
-  operator-overlay paths. [`SEC-03`]
-  - Scope: core and CLI persisted paths.
-  - Verification: every core write-path family passes the shared containment matrix.
+- `W34-E7-S2-T2` (`next`) Adopt the shared boundary for workspace and work-item paths.
+  [`SEC-03`]
+  - Scope: core workspace/work-item persisted paths only.
+  - Verification: every workspace/work-item write-path family passes the shared
+    containment matrix.
 - `W34-E7-S2-T3` Adopt the shared boundary for scenario, eval-run, and result-bundle
   paths. [`SEC-03`]
   - Scope: harness and eval persisted paths.
   - Verification: every harness/bundle write-path family passes the same containment
+    matrix.
+- `W34-E7-S2-T4` Adopt the shared boundary for run and attempt paths. [`SEC-03`]
+  - Dependencies: `W34-E7-S2-T2`.
+  - Scope: core run/attempt persisted paths only.
+  - Verification: every run/attempt write-path family passes the shared containment
+    matrix.
+- `W34-E7-S2-T5` Adopt the shared boundary for operator-overlay and CLI-created paths.
+  [`SEC-03`]
+  - Dependencies: `W34-E7-S2-T2`, `W34-E7-S2-T4`.
+  - Scope: operator overlay and CLI persisted paths only.
+  - Verification: every overlay/CLI write-path family passes the shared containment
     matrix.
 
 Exit evidence:
@@ -9588,6 +9713,103 @@ Exit evidence:
 
 - malformed safety configuration cannot silently fall back to permissive behavior.
 
+#### Slice W34-E7-S4 — canonical allowed-write-scope boundary (`planned`)
+Goal: make validation, task execution, and Implement Review resolve one authoritative
+scope document with identical path-prefix semantics.
+
+Dependencies:
+
+- `W34-E7-S2-T1`
+
+Local tasks:
+
+- `W34-E7-S4-T1` (`next`) Add a typed canonical `AllowedWriteScope` parser, resolver,
+  and safe prefix predicate. [`BUG-13`, `ARCH-06`]
+  - Scope: core allowed-write-scope model only.
+  - Verification: a parity table covers files, top-level/nested directories, missing
+    scope, malformed values, escapes, and platform separators.
+- `W34-E7-S4-T2` Migrate semantic validation to the canonical allowed-write-scope
+  boundary. [`BUG-13`, `ARCH-06`]
+  - Dependencies: `W34-E7-S4-T1`.
+  - Scope: semantic validator scope consumer only.
+  - Verification: validator fixtures classify the canonical parity table exactly.
+- `W34-E7-S4-T3` Migrate task diff/scope gates to the canonical allowed-write-scope
+  boundary. [`BUG-13`, `ARCH-06`]
+  - Dependencies: `W34-E7-S4-T1`.
+  - Scope: task execution scope consumer only.
+  - Verification: task diff fixtures classify the canonical parity table exactly and
+    retain fail-closed repair behavior.
+- `W34-E7-S4-T4` Migrate repository diff and Implement Review reads to the canonical
+  allowed-write-scope boundary. [`BUG-13`, `ARCH-06`]
+  - Dependencies: `W34-E7-S4-T1`.
+  - Scope: repository diff/read-model consumer only.
+  - Verification: the canonical `workitems/<id>/context/allowed-write-scope.md` fixture
+    drives Implement Review and matches the parity table.
+
+Exit evidence:
+
+- validator, task execution, and Implement Review classify the same canonical parity
+  table; no supported consumer reads a stage-local shadow scope or private path grammar.
+
+### Epic W34-E8 — planning and architecture source-of-truth hygiene (`planned`)
+Linked stories: `US-06`, `US-10`, `US-11`, `US-12`
+
+#### Slice W34-E8-S1 — bounded canonical planning queue (`planned`)
+Goal: keep roadmap status authoritative and backlog limited to current execution intent.
+
+Dependencies:
+
+- none
+
+Local tasks:
+
+- `W34-E8-S1-T1` (done) Remove the historical backlog journal and make queue
+  reconciliation notes bounded instead of append-only. [`PLAN-01`]
+  - Scope: backlog queue and restoration policy only.
+  - Verification: the active queue is preserved, every queued ID resolves in roadmap,
+    and backlog contains one current reconciliation note.
+- `W34-E8-S1-T2` Normalize inherited local-task status and historical disposition
+  semantics across roadmap and backlog placement. [`PLAN-01`]
+  - Scope: planning status model only.
+  - Verification: `Next` tasks are explicitly `next`, queued tasks are non-terminal,
+    and every marker follows the documented vocabulary.
+- `W34-E8-S1-T3` Replace wave-specific backlog assertions with generic roadmap/backlog
+  integrity checks. [`PLAN-02`]
+  - Scope: planning documentation tests only.
+  - Verification: synthetic orphan, duplicate, queued-done, non-local, status-mismatch,
+    and invalid-Soon-dependency fixtures fail deterministically.
+
+Exit evidence:
+
+- backlog is a bounded execution queue rather than a second historical source;
+- generic checks enforce ID, status, and dependency invariants for future waves.
+
+#### Slice W34-E8-S2 — stable target-architecture wording (`planned`)
+Goal: describe implemented ownership and supported behavior without completed-wave or
+unimplemented-mode claims.
+
+Dependencies:
+
+- none
+
+Local tasks:
+
+- `W34-E8-S2-T1` Replace stale planned frontend/project-set and completed-wave wording
+  with stable implemented ownership boundaries. [`ARCH-07`]
+  - Scope: target architecture and matching documentation assertions only.
+  - Verification: architecture docs describe current ownership without Wave 29 policy
+    text or contradicting the planned browser-driver decision.
+- `W34-E8-S2-T2` Reconcile the CLI runtime-log contract with `US-06` and current CLI
+  behavior. [`ARCH-07`]
+  - Scope: product/architecture documentation decision only.
+  - Verification: docs consistently specify raw logs and structured evidence; any new
+    user-selectable log mode is deferred to a separate product slice.
+
+Exit evidence:
+
+- target architecture describes current supported behavior and no longer embeds a
+  completed implementation wave as permanent policy.
+
 Wave 34 exit evidence:
 
 - every confirmed audit finding is mapped to a roadmap local task or, for `SEC-02`, an
@@ -9602,6 +9824,12 @@ Wave 34 exit evidence:
 
 Sync notes:
 
+- `2026-07-14` The incremental cleanup/refactoring review in
+  `docs/analysis/repository-cleanup-audit-2026-07-14.md` reopened Wave 35 for the
+  task-aware implementation-entrypoint invariant, added the canonical
+  allowed-write-scope boundary, reconciled incomplete harness extraction and
+  deterministic-gate cleanup with existing Wave 34 ownership, and created `W34-E8` for
+  planning/architecture source-of-truth hygiene.
 - `2026-07-10` Wave 34 was opened from
   `docs/analysis/codebase-audit-2026-07-10.md`. The first promoted task restores the
   canonical `stage-result.md` gate; independent transactional publication, local
@@ -9612,7 +9840,7 @@ Sync notes:
 
 ---
 
-## Wave 35 — implementation-ready tasks and incremental execution (`done`)
+## Wave 35 — implementation-ready tasks and incremental execution (`planned`)
 
 Goal: turn the approved tasklist into complete task cards and execute them incrementally without
 changing the canonical eight-stage workflow.
@@ -9665,7 +9893,7 @@ Local tasks:
   - Scope: deterministic tasklist scenario inputs.
   - Verification: missing scope paths, escapes, forward dependencies, and scope conflicts stop or repair.
 
-### Epic W35-E2 — durable per-task execution (`done`)
+### Epic W35-E2 — durable per-task execution (`planned`)
 Linked stories: `US-03`, `US-04`, `US-06`, `US-10`, `US-11`, `US-13`
 
 #### Slice W35-E2-S1 — task plan and ledger (`done`)
@@ -9743,13 +9971,143 @@ Local tasks:
 - `W35-E2-S7-T3` (done) Align review and QA prompts with structured aggregate evidence.
 - `W35-E2-S7-T4` (done) Extend the provider-free task execution recovery scenario.
 
+#### Slice W35-E2-S8 — task-aware implementation entrypoint integrity (`planned`)
+Goal: make every public implementation entrypoint preserve dependency order, task-local
+evidence, aggregate finalization, and remediation truth.
+
+Dependencies:
+
+- `W35-E1-S1`
+- `W35-E1-S2`
+- `W35-E2-S5`
+- `W35-E2-S6`
+- `W35-E2-S7`
+
+Local tasks:
+
+- `W35-E2-S8-T1` (`next`) Define the task-aware semantics and failure behavior for
+  workflow, stage run/interact, task run/finalize, UI stage controls, and remediation.
+  [`CORR-01`]
+  - Scope: task-execution architecture and entrypoint contract only.
+  - Verification: one matrix names task selection, ledger/finalization transitions,
+    publication eligibility, and fail-closed behavior for every entrypoint.
+- `W35-E2-S8-T2` Move implementation execution/finalization policy into one typed core
+  service with domain results and errors. [`CORR-01`, `ARCH-04`]
+  - Dependencies: `W35-E2-S8-T1`.
+  - Scope: core implementation execution boundary only.
+  - Verification: core tests preserve task-loop behavior and the service imports no
+    CLI or Typer modules.
+- `W35-E2-S8-T3` Route workflow, stage, interact, and task CLI commands through the
+  core implementation service. [`CORR-01`, `ARCH-04`]
+  - Dependencies: `W35-E2-S8-T2`.
+  - Scope: CLI adapters only.
+  - Verification: CLI entrypoint fixtures cannot invoke or publish raw one-shot
+    `implement` outside the task-aware contract.
+- `W35-E2-S8-T4` Route UI stage, task, interact, and remediation mutations through the
+  core implementation service. [`CORR-01`, `ARCH-04`]
+  - Dependencies: `W35-E2-S8-T2`.
+  - Scope: private operator API/application adapters only.
+  - Verification: remediation rebuilds task/finalization evidence before downstream
+    stages become stale or eligible, and UI imports no CLI business service.
+- `W35-E2-S8-T5` Require a complete successful task ledger and aggregate finalization
+  before review or QA eligibility. [`CORR-01`]
+  - Dependencies: `W35-E2-S8-T2`.
+  - Scope: stage progression and cross-stage validation defense only.
+  - Verification: forged generic implement success cannot unlock review/QA without
+    matching task and finalization evidence.
+- `W35-E2-S8-T6` Add a provider-free implementation-entrypoint conformance matrix and
+  extend the deterministic task-execution scenario. [`CORR-01`, `TEST-07`]
+  - Dependencies: `W35-E2-S8-T3`, `W35-E2-S8-T4`, `W35-E2-S8-T5`.
+  - Scope: CLI/API/workflow/remediation regression coverage only.
+  - Verification: every entrypoint records task attempts/diffs, respects dependencies,
+    fails closed without ready context, and publishes only after aggregate success.
+
+Exit evidence:
+
+- there is no public path from raw `implement` execution to canonical success;
+- CLI, UI, workflow, remediation, review, and QA observe the same task ledger and
+  finalization policy.
+
+#### Slice W35-E2-S9 — task-execution change isolation (`planned`)
+Goal: reduce change coupling after all entrypoints use the same characterized core
+service.
+
+Dependencies:
+
+- `W35-E2-S8`
+
+Local tasks:
+
+- `W35-E2-S9-T1` Extract task attempt, recovery, and interview-evidence lifecycle from
+  the task-execution hotspot. [`REF-06`]
+  - Scope: core task attempt lifecycle only.
+  - Verification: blocked/resumed/crashed attempt fixtures remain equivalent.
+- `W35-E2-S9-T2` Extract typed repository baseline, diff, and scope evidence helpers.
+  [`REF-06`]
+  - Dependencies: `W34-E7-S4`.
+  - Scope: core task repository evidence only; reuse `AllowedWriteScope` without a new
+    scope grammar.
+  - Verification: tracked, untracked, deleted, symlink, and out-of-scope fixtures retain
+    exact findings.
+- `W35-E2-S9-T3` Extract aggregate report, validation, publication, and finalization
+  coordination. [`REF-06`]
+  - Scope: core implementation finalization only.
+  - Verification: retry, publication failure, and successful aggregate fixtures retain
+    ledger/status equivalence.
+- `W35-E2-S9-T4` Partition task execution tests by plan, attempt, repository evidence,
+  and finalization ownership. [`REF-06`]
+  - Dependencies: `W35-E2-S9-T1`, `W35-E2-S9-T2`, `W35-E2-S9-T3`.
+  - Scope: task execution tests and import-boundary assertion only.
+  - Verification: the same cases are collected and an architecture test rejects core
+    task semantics owned or re-exported by CLI/UI modules.
+
+Exit evidence:
+
+- task attempts, repository evidence, and aggregate finalization can evolve behind one
+  stable application boundary.
+
+#### Slice W35-E2-S10 — bounded task repository evidence (`planned`)
+Goal: avoid repeated full-repository hashing and duplicate attempt payloads while
+preserving immutable task evidence.
+
+Dependencies:
+
+- `W35-E2-S9-T1`
+- `W35-E2-S9-T2`
+- `W35-E2-S9-T3`
+
+Local tasks:
+
+- `W35-E2-S10-T1` Capture one immutable `RepositorySnapshot` per checkpoint and reuse
+  it across validation and task completion. [`PERF-03`]
+  - Scope: task repository scan lifecycle only.
+  - Verification: a synthetic large-repository fixture asserts one scan per checkpoint
+    while preserving exact diff/scope findings.
+- `W35-E2-S10-T2` Define the canonical task-attempt evidence layout, reference,
+  retention, and compatibility contract. [`PERF-03`]
+  - Scope: task attempt evidence architecture only.
+  - Verification: the decision selects one copy/reference model, forbids hard links,
+    and names integrity, cleanup, resume, and read-model behavior.
+- `W35-E2-S10-T3` Migrate duplicated global-attempt payloads to the canonical task
+  evidence contract. [`PERF-03`]
+  - Dependencies: `W35-E2-S10-T2`.
+  - Scope: task attempt evidence materialization only.
+  - Verification: bundle-size, integrity, cleanup, resume, and read-model fixtures pass
+    without hard links or duplicated evidence payloads.
+
+Exit evidence:
+
+- successful and repaired tasks have bounded repository scans and one contract-owned
+  immutable representation for each evidence payload.
+
 Wave 35 exit evidence:
 
 - compact legacy tasklists fail without fallback;
 - task execution is dependency-ordered, task-scoped, resumable, and fail-fast;
 - implement success is published only after every task succeeds;
 - CLI and UI expose consistent task state;
-- deterministic checks cover repair, conflicts, hash mismatch, aggregation, review, and QA.
+- deterministic checks cover repair, conflicts, hash mismatch, aggregation, review, and QA;
+- every implementation entrypoint is task-aware and task evidence is bounded.
 
 Corrective audit:
 
@@ -9763,6 +10121,10 @@ Corrective audit:
   finalization, `aidd task finalize`, synchronous UI conflicts, full task reads, and structured
   review/QA acceptance evidence. Ruff, mypy, `1358` pytest tests, package build/smoke, scenario
   loading, generic-cli eval doctor, and diff checks passed.
+- `2026-07-14` Wave 35 was reopened after repository review proved that generic CLI/UI
+  stage and remediation entrypoints can still publish one-shot `implement` success
+  outside the task ledger. Corrective slice `W35-E2-S8` restores one core task-aware
+  execution boundary before further task-execution refactoring or optimization.
 
 ---
 
@@ -9918,20 +10280,28 @@ Local tasks:
 
 - `W36-E2-S1-T1` Select and document the maintained provider-free browser driver and
   packaging policy for served UI checks.
-  - Scope: browser-test architecture and development dependencies.
+  - Scope: browser-test architecture and documentation policy only.
   - Verification: the decision preserves the no-Node/Vite product runtime, names the
     executable test command, and replaces the blanket no-browser-driver wording in the
     local-project lane.
 - `W36-E2-S1-T2` Add a disposable seeded-project launcher and executable browser harness
   for packaged UI assets.
+  - Dependencies: `W36-E2-S1-T4`.
   - Scope: UI browser test infrastructure.
   - Verification: one command serves a temporary project, opens every required viewport,
     records console/network state, and removes project-local `.aidd/` state on exit.
 - `W36-E2-S1-T3` Add provider-free fixture builders for setup, no-run, running,
   question, runtime-failure, approval, QA, remediation, and terminal states.
+  - Dependencies: `W36-E2-S1-T2`.
   - Scope: deterministic UI fixtures only.
   - Verification: every declared fixture opens through the public local UI without
     provider authentication or arbitrary path reads.
+- `W36-E2-S1-T4` Add the selected browser driver as a development-only dependency and
+  lock its executable smoke command.
+  - Dependencies: `W36-E2-S1-T1`.
+  - Scope: development dependency, lock, and browser smoke command only.
+  - Verification: locked sync and one provider-free packaged-UI launch pass without
+    changing runtime package dependencies.
 
 Exit evidence:
 
@@ -10310,21 +10680,28 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S2-T1` Define and implement a scoped noncanonical browser-session draft store
-  with explicit retention and cleanup.
-  - Scope: shared packaged JavaScript state utility.
-  - Verification: drafts isolate project, work item, run, stage, form, and source id;
-    successful submit clears only the owning draft.
+- `W36-E6-S2-T1` Define the key, retention, and cleanup contract for noncanonical
+  browser-session drafts.
+  - Scope: operator frontend architecture only.
+  - Verification: the contract isolates project, work item, run, stage, form, and source
+    id and names exact submit/expiry cleanup behavior.
 - `W36-E6-S2-T2` Adopt draft restore and leave-warning behavior for question and
   intervention forms.
+  - Dependencies: `W36-E6-S2-T4`.
   - Scope: question/intervention browser modules.
   - Verification: stage/tab switch, reload, failed submit, and successful submit preserve
     or clear the expected draft only.
 - `W36-E6-S2-T3` Adopt draft restore and leave-warning behavior for follow-up and clone
   definition forms.
+  - Dependencies: `W36-E6-S2-T4`.
   - Scope: next-flow browser controller.
   - Verification: wizard Back, reload, preflight failure, retry, and successful launch
     preserve or clear the expected draft.
+- `W36-E6-S2-T4` Implement the scoped noncanonical browser-session draft store.
+  - Dependencies: `W36-E6-S2-T1`.
+  - Scope: shared packaged JavaScript state utility only.
+  - Verification: contract fixtures isolate every key dimension and successful submit
+    clears only the owning draft.
 
 Exit evidence:
 
@@ -10475,15 +10852,26 @@ Local tasks:
   - Scope: local/CI UI test entry point.
   - Verification: discovered scenario ids equal executed scenario ids exactly and live
     provider manifests are rejected.
-- `W36-E7-S2-T2` Add the packaged-UI browser command to CI and release preflight.
-  - Scope: deterministic CI/release integration.
+- `W36-E7-S2-T2` Add the packaged-UI browser command to CI.
+  - Dependencies: `W36-E7-S2-T1`.
+  - Scope: deterministic CI integration only.
   - Verification: an intentional geometry, accessibility, console, or journey failure
-    blocks the gate while provider credentials remain unnecessary.
-- `W36-E7-S2-T3` Update the local-project UI evidence template and record one
-  source-installed full browser pass.
-  - Scope: operator E2E docs and manual evidence.
+    blocks CI while provider credentials remain unnecessary.
+- `W36-E7-S2-T3` Update the local-project UI evidence template for full browser passes.
+  - Dependencies: `W36-E7-S2-T1`.
+  - Scope: operator E2E documentation only.
   - Verification: docs consistency and the evidence checklist record version, fixture,
     viewports, journeys, accessibility, console/network state, and cleanup.
+- `W36-E7-S2-T4` Add the packaged-UI browser command to release preflight.
+  - Dependencies: `W36-E7-S2-T2`.
+  - Scope: deterministic release-preflight integration only.
+  - Verification: an intentional browser journey failure blocks release preparation
+    without provider credentials.
+- `W36-E7-S2-T5` Record one source-installed full provider-free browser pass.
+  - Dependencies: `W36-E7-S2-T1`, `W36-E7-S2-T3`.
+  - Scope: manual operator browser evidence only.
+  - Verification: one completed template records version, fixtures, viewports, journeys,
+    accessibility, console/network state, and cleanup.
 
 Exit evidence:
 
@@ -10543,12 +10931,15 @@ Wave 36 exit evidence:
 Sync notes:
 
 - `2026-07-13` The unstarted operator UX plan was renumbered from Wave 35 to Wave 36
-  when the completed incremental-task Wave 35 was integrated. The accepted-contract
-  entry task remains visible in `Soon`; selected browser-foundation, design-system,
+  when the incremental-task Wave 35 was integrated. The accepted-contract entry task
+  was initially visible in `Soon`; selected browser-foundation, design-system,
   onboarding, responsive-shell, navigation, draft, reconnect, mutation/approval, and
-  acceptance entry tasks remain in `Parking lot`. Server-side mutation, approval,
+  acceptance entry tasks were placed in `Parking lot`. Server-side mutation, approval,
   retention, runtime-evidence, run-identity, archive, DOM-test, and next-flow-split
   foundations remain owned by Wave 34 and are consumed through explicit dependencies.
+- `2026-07-14` Queue reconciliation deliberately moved `W36-E1-S1-T1` to `Parking lot`
+  while Wave 35 entrypoint integrity and the ready Wave 34 foundations remain the active
+  correction path.
 
 ---
 
