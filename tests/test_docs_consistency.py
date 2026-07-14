@@ -413,6 +413,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     )[0]
     w24_s2 = roadmap.split("#### Slice W24-E1-S2", 1)[1].split("## Wave", 1)[0]
     w26 = roadmap.split("## Wave 26", 1)[1]
+    w36 = roadmap.split("## Wave 36", 1)[1].split("## Wave 37", 1)[0]
     backlog_next = backlog.split("## Next", 1)[1].split("## Soon", 1)[0]
     backlog_soon = backlog.split("## Soon", 1)[1].split("## Parking lot", 1)[0]
     backlog_parking = backlog.split("## Parking lot", 1)[1].split("## Update rules", 1)[0]
@@ -589,27 +590,37 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W26-E4-S2-T2`" not in backlog_parking
     assert "`W26-E4-S2-T3`" not in backlog_parking
     assert "`W26-E5-S1-T1`" not in backlog_parking
+    assert "`W36-E1-S1-T1`" not in backlog_next
+    assert "`W36-E1-S1-T1`" not in backlog_soon
+    assert "`W36-E1-S1-T1`" not in backlog_parking
+    assert "`W36-E1-S1-T2`" not in backlog_next
+    assert "`W36-E1-S1-T2`" not in backlog_soon
+    assert "`W36-E1-S1-T2`" not in backlog_parking
+    assert "`W36-E1-S1-T3`" in backlog_parking
+    assert "Document & Evidence Studio migration (`planned`)" in w36
+    assert "legacy_only | candidate | parity_closed" in w36
+    assert "three destinations and one presentation preference" in operator_frontend
+    assert "Guided Delivery preference" in operator_frontend
     visual_reference_dir = (
-        repo_root / "docs" / "architecture" / "assets" / "operator-ui-mission-control"
+        repo_root
+        / "docs"
+        / "architecture"
+        / "assets"
+        / "operator-ui-document-evidence-studio"
     )
     visual_references = (
-        "13-integrated-operator-workbench.png",
-        "01-project-setup-previous-run.png",
-        "02-active-run-command-center.png",
-        "02b-flow-complete-start-next-flow.png",
-        "03-stage-document-workbench.png",
-        "04-questions-interview-loop.png",
-        "05-validation-repair-center.png",
-        "06-runtime-logs-live-console.png",
-        "07-artifacts-evidence-graph.png",
-        "08-approvals-request-change.png",
-        "09-run-history-lineage.png",
-        "10-start-next-flow-source-findings.png",
-        "11-define-follow-up-work-item.png",
-        "12-confirm-launch-next-flow.png",
+        "01-inbox-desktop.png",
+        "02-guided-setup-desktop.png",
+        "03-active-studio-desktop.png",
+        "04-validation-repair-desktop.png",
+        "05-quality-gate-desktop.png",
+        "06-history-filmstrip-desktop.png",
+        "07-flow-complete-desktop.png",
+        "08-question-mobile.png",
     )
     for filename in visual_references:
         assert filename in operator_frontend
+        assert filename in w36
         assert (visual_reference_dir / filename).is_file()
 
 
