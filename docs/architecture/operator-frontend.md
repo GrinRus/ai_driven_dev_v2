@@ -1,5 +1,15 @@
 # Operator Frontend Contract
 
+Document status:
+
+- sections 1 through 7 define workflow invariants, write boundaries, compatibility surfaces,
+  and the currently implemented packaged frontend baseline;
+- sections 8 and 9 define the accepted target information architecture, presentation contract,
+  reference screens, and migration acceptance criteria;
+- when presentation terminology conflicts, sections 8 and 9 supersede earlier references to
+  Mission Control, cockpit, right-rail, bottom-dock, or Work / Recovery / Evidence / History
+  navigation; the earlier service, artifact, safety, and workflow semantics remain binding.
+
 ## 1. Purpose
 
 The operator frontend is a user-facing surface for the existing governed AIDD
@@ -58,13 +68,13 @@ The first frontend contract covers these flows:
    - preserve blocking vs non-blocking question semantics;
    - resume only through the normal core path after answers are present.
    - when blocking questions exist, make the answer form the selected-stage
-     cockpit priority and use the current run id when resuming the selected stage.
+     Decision Bar priority and use the current run id when resuming the selected stage.
 
 4. **Recovery-first operation**
-   - present blocked runs through four top-level modes only: Work, Recovery,
-     Evidence, and History;
-   - auto-select Recovery when the next action is blocking questions, failed
-     validation, intervention review, or runtime-log inspection;
+   - present blocked runs as contextual Recovery inside Studio, reached from Inbox or an exact
+     work-item/run/stage deep link; Evidence remains a contextual drill-down;
+   - select the exact Recovery context when the next action is blocking questions, failed
+     validation, intervention review, approval, or runtime-log inspection;
    - show one dominant recovery summary with affected stage, exact blocker
      reason, affected document/line when available, operator hint, one primary
      action, and one secondary Evidence link;
@@ -399,104 +409,484 @@ job registry.
 
 ## 8. Accepted next-generation UX direction
 
-The accepted operator frontend direction is a Mission Control console. It keeps the
-canonical stage timeline visible, gives the run-global next action primary weight, and
-keeps documents, validation evidence, artifacts, approvals, and logs one click away.
+The accepted direction is **Document & Evidence Studio**: a document-centered operator
+experience with four coordinated modes and one shared workflow authority. It replaces the
+previous Mission Control visual hierarchy as the target for future frontend work. The old
+reference assets remain historical implementation context; they are not the target design.
 
-The locked screen inventory is:
+The concept uses one mental model:
 
-1. Project Setup / Work Item Picker with optional previous-run context.
-2. Active Run Command Center for in-progress `idea -> qa` execution.
-3. Stage Document Workbench for Markdown preview/source/diff and contract checks.
-4. Questions / Interview Loop for unresolved model questions and persisted answers.
-5. Validation / Repair Center for validation failures, repair attempts, and explicit stop.
-6. Runtime Logs / Live Console for raw adapter/runtime logs and correlated events.
-7. Artifacts / Evidence Graph for provenance between documents, logs, reports, and stages.
-8. Approvals / Request Change for runtime approvals and stage-scoped interventions.
-9. Timeline / Active Run Control for long-running job visibility and silence warnings.
-10. Implement Review for real repository diff and claim-to-evidence checks.
-11. Review Findings for structured approval state and remediation source selection.
-12. QA Verdict for readiness, residual risks, known issues, and remediation source selection.
-13. Run History / Scenario Matrix / Eval Reports for comparisons and systemic issues.
-14. Start Next Flow Wizard for completed-run handoff.
-15. Define Follow-up Work Item for new work item scope and inherited context.
-16. Confirm and Launch Next Flow for preflight, audit preview, and launch.
+- **Inbox** answers: "What requires my decision now?"
+- **Studio** answers: "Which canonical document, decision, or evidence am I reviewing?"
+- **History** uses an execution Filmstrip to answer: "How did this run reach this state?"
+- **Guided Delivery** answers: "What should I do next, why, and what will it change?"
 
-The visual references for this direction are stored in
-`docs/architecture/assets/operator-ui-mission-control/`:
+Guided Delivery is a presentation mode over the same core services, not a second workflow.
+Inbox and History are rebuildable read models over `.aidd/`, not sources of truth. Studio
+does not turn generated documents into an unaudited editor: answers, intervention requests,
+remediation requests, approvals, and launch requests continue to use the write boundaries in
+section 4.
 
-- `13-integrated-operator-workbench.png`
-- `01-project-setup-previous-run.png`
-- `02-active-run-command-center.png`
-- `02b-flow-complete-start-next-flow.png`
-- `03-stage-document-workbench.png`
-- `04-questions-interview-loop.png`
-- `05-validation-repair-center.png`
-- `06-runtime-logs-live-console.png`
-- `07-artifacts-evidence-graph.png`
-- `08-approvals-request-change.png`
-- `09-run-history-lineage.png`
-- `10-start-next-flow-source-findings.png`
-- `11-define-follow-up-work-item.png`
-- `12-confirm-launch-next-flow.png`
+### 8.1 Users and primary jobs
 
-`13-integrated-operator-workbench.png` is the current integrated reference for future
-UI implementation. It combines the project/work-item layer, active-run command center,
-Markdown document workbench, run timeline diagnostics, and question/repair recovery
-assistant into one operator workbench direction. Future UI changes should preserve the
-same hierarchy: project and work item context first, one run-global next action with
-primary weight, documents and artifacts as the central work surface, timeline/log
-diagnostics as drill-down evidence, and guided recovery cards for questions, validation
-failures, repairs, and interventions.
+| User | Primary jobs |
+| --- | --- |
+| First-time operator | Select a project, create or resume a work item, choose a runtime, launch safely, and understand why progression stopped. |
+| Experienced operator | Clear blocking decisions quickly, inspect the exact stage and attempt, repair or remediate, and continue without losing context. |
+| Maintainer or evaluator | Compare runs, prompt and validator evidence, attempts, and the first decisive failure. |
+| Platform engineer or adapter author | Inspect runtime readiness, capabilities, approvals, raw logs, and adapter evidence without changing core semantics. |
 
-When the current run is active, the command center prioritizes blocked questions,
-validation failures, approvals, resumable stages, and log visibility. When the run reaches
-a terminal state after `qa`, the same command center switches to **Flow Complete** and the
-primary action band becomes **Start Next Flow**.
+The interface keeps canonical nouns such as `Project`, `Work Item`, `Run`, `Stage`,
+`Attempt`, `Runtime`, `Artifact`, and `Evidence`. Guided Delivery explains those terms in
+context instead of inventing a separate simplified vocabulary.
 
-The accepted completed-flow actions are:
+### 8.2 Information architecture
 
-- **Create New Work Item**: starts a fresh work item without previous-run context.
-- **Start Follow-up Flow**: creates a new work item from selected QA findings, review
-  notes, failed evidence, or a manual request.
-- **Clone This Flow**: creates a new flow from the same runtime, prompt pack, contracts,
-  branch, and baseline configuration, with optional edits before launch.
-- **Run Eval / Scenario Batch**: sends the completed run into comparison or scenario
-  evidence workflows without changing the completed run.
-- **Archive Run**: marks the completed run as closed for operator navigation.
+The visible object hierarchy is:
 
-The completed-run action band must lead with one recommended next decision and a short
-reason before showing the full action grid. Clean completed runs without blockers
-recommend **Create New Work Item**; failed, blocked, or warning handoffs recommend
-**Start Follow-up Flow** so source findings are carried forward before unrelated scope.
+```text
+Project root -> Work Item -> Run -> Stage -> Attempt / Task attempt -> Artifact / Evidence
+```
 
-Follow-up and cloned flows are independent work items and runs. They may inherit selected
-context references, but they must not continue or mutate the completed source run. The UI
-must show source run, source work item, baseline, inherited artifacts, and audit preview
-before launch.
+The stable global navigation model contains three destinations and one presentation preference:
+
+1. **Inbox** — default entry for an existing project-local workspace.
+2. **Studio** — the selected work item, run, stage, document, and current decision.
+3. **History** — expanded Filmstrip, run comparison, and lineage.
+4. **Guided Delivery preference** — a persistent presentation toggle and contextual guide, not
+   a destination or separate workflow route.
+
+Maintenance actions such as **Refresh**, **Open `.aidd`**, and **Stop server** live in a
+labelled overflow menu. Questions, approvals, Request Change, evidence details, logs, and
+comparison are contextual surfaces; they are not permanent global destinations.
+
+Entry behavior is deterministic:
+
+- an invalid project root or missing work item opens Guided Setup;
+- an initialized workspace opens Inbox;
+- a deep link restores the exact work item, run, stage, mode, attempt, and artifact when
+  those objects still exist;
+- an active job has one server-authoritative live state shared by Inbox and Studio;
+- a completed run appears as a next-decision item while the source run remains immutable.
+
+Inbox is scoped to the currently selected project-local `.aidd/`. A future cross-project
+Inbox requires a separate safe context registry and is outside this contract.
+
+### 8.3 Inbox mode
+
+Inbox is a bounded decision queue, not an activity feed or a dashboard of every available
+metric. Its ordered sections are:
+
+1. **Needs your decision** — blocking question, runtime approval, validation or runtime
+   failure, repair exhaustion, or remediation decision.
+2. **Running now** — active jobs, last output age, silence warning, and reconnect state.
+3. **Ready to continue** — an eligible stage or task, or stale downstream rerun.
+4. **Flow complete** — terminal QA handoff and the recommended next-flow decision.
+
+Each item shows the work-item/run/stage breadcrumb, factual state, timestamp, one primary
+action, one **View evidence** action, and runtime or attempt identity when relevant. Blocking
+items cannot be dismissed. Any noncanonical snooze behavior must be local-only and must not
+hide a blocker.
+
+The frontend must not derive workflow policy from presentation state. Priority, eligibility,
+the first decisive failure, and the primary action come from core-owned read models. Inbox
+may aggregate those facts but must not create an alternate progression engine.
+
+### 8.4 Studio mode
+
+Studio is the default working surface and the visual foundation for the entire concept.
+Desktop order is:
+
+1. compact project/work-item/run/runtime context bar;
+2. a **Decision Bar** with one primary action and a short factual reason;
+3. canonical eight-stage navigation;
+4. a central **Document Canvas** with `Preview`, `Source`, and `Diff` views;
+5. a contextual **Evidence Inspector**, hidden when it has no decision value;
+6. a collapsed Filmstrip that expands into attempt and event diagnostics.
+
+The stage navigation communicates canonical progression. The Filmstrip communicates temporal
+history. They must not duplicate the same status list.
+
+The Document Canvas prioritizes the canonical Markdown artifact. Generated stage outputs,
+validator reports, repair briefs, implementation reports, and runtime logs are read-only.
+Corrections use **Answer question**, **Request Change**, repair, remediation, or the relevant
+runtime approval path. Opening the inspector must not obscure the document that gives the
+evidence its meaning.
+
+For `implement`, Studio adds the dependency-ready task ledger, task-attempt evidence, real
+repository diff, aggregate publication state, and finalization recovery. Successful tasks
+remain preserved when a later task, validation, or finalization attempt fails.
+
+### 8.5 History and Filmstrip mode
+
+A Filmstrip frame represents a real stage attempt, task attempt, or durable aggregate
+milestone. Events are markers inside a frame; event-per-frame rendering is too noisy.
+
+Each available frame shows:
+
+- stage or task id and attempt number;
+- attempt mode: normal, repair, intervention, remediation, or finalization;
+- runtime, status, start time, and duration;
+- validator outcome;
+- question, approval, repair, runtime failure, and publication markers;
+- the first decisive failure or primary artifact when available.
+
+Selecting a frame opens only evidence that actually exists. **Compare** shows an artifact or
+validator delta only when both sides were durably retained. **Open logs** opens the exact
+attempt and correlated event range. The interface must say that a historical snapshot is
+unavailable rather than reconstructing one from current files.
+
+A live frame shows elapsed time, last output age, and silence or reconnect status without a
+fabricated percentage. Looking at an older frame pauses auto-follow and exposes **Return to
+live**. On mobile, Filmstrip becomes a vertical chronological drill-down instead of a wide
+horizontal scroll surface.
+
+History preserves parent/source/current/child lineage, archive state, and read-only access to
+artifacts and logs. Comparison remains within the active work item or explicit source lineage;
+unrelated projects are not silently compared.
+
+### 8.6 Guided Delivery mode
+
+Guided Delivery is enabled by default for clean setup and can be toggled without losing the
+selected context. Its setup sequence has at most four decision steps:
+
+1. **Project** — validate the root and resolved `.aidd/`; keep `project_set` under
+   **Advanced**.
+2. **Work Item** — show peer **Create** and **Resume** paths with request/context preview.
+3. **Runtime** — show binary, command, authentication evidence, capabilities, permission
+   policy, and last launch evidence separately.
+4. **Review & Launch** — summarize work item, runtime, action, scope, and evidence
+   destination before launch.
+
+During a run, the guide becomes one contextual explanation: what happened, why the stage
+stopped or is ready, what the operator must decide, which durable artifact will be written,
+one primary action, and **View evidence**. At terminal QA it becomes a Start Next Flow guide.
+
+Guided Delivery and Studio must call the same service path for the same action and must
+produce the same durable result. Guided preference may be stored as noncanonical browser
+state; it must never alter runtime selection, eligibility, validation, or artifacts.
+
+### 8.7 Main operator journey
+
+1. Enter through Guided Setup or Inbox.
+2. Select the highest-priority decision or a ready work item.
+3. Open Studio at the exact run, stage, document, and evidence context.
+4. Act on one core-provided next action.
+5. After launch, observe real milestones in the same Studio; a live Filmstrip frame appears.
+6. Resolve a question, approval, validation failure, runtime failure, or repair stop without
+   losing the selected document and attempt.
+7. Run `implement` task by dependency-ready task and finalize the aggregate before review.
+8. Send rejected review findings or not-ready QA risks to `implement` through a durable
+   remediation request.
+9. Rerun stale downstream `review` and `qa`; stale QA is never terminal.
+10. Enter Flow Complete only after fresh terminal QA, then create an independent next outcome.
+
+The core-provided primary action may be **Run workflow**, **Run selected stage**,
+**Run task**, **Resume task**, **Finalize implement**, **Answer question**,
+**Review request**, **Run Repair**, **Request Change**, **Send selected to implement**,
+**Rerun stale downstream**, or **Start Next Flow**. Labels must describe the actual service
+call and must not collapse distinct actions into generic **Continue** when consequences differ.
+
+### 8.8 Screen inventory
+
+| Surface | Purpose | Primary action |
+| --- | --- | --- |
+| Guided Setup | Project -> Work Item -> Runtime -> Review & Launch | Current setup step or **Launch workflow** |
+| Inbox | Show decisions and active work for the selected project | Action of the highest-priority item |
+| Work Item Studio, no run | Review intake, context, and launch readiness | **Review & Launch** |
+| Active Stage Studio | Keep document, live state, and current decision together | Core-provided next action |
+| Recovery Studio | Resolve question, approval, failure, repair, or intervention | One eligible recovery action |
+| Implement Workspace | Run tasks, inspect attempts and diff, then finalize | **Run/Resume task** or **Finalize implement** |
+| Review / QA Decision | Review findings, verdict, risks, and evidence ids | Eligible progression or **Send selected to implement** |
+| Filmstrip Diagnostics | Inspect attempts, milestones, logs, and retained comparisons | **Open selected evidence** |
+| Flow Complete | Review immutable handoff and select disposition | Recommended next-flow action |
+| History / Lineage | Open, compare, or archive related runs | **Open run** or **Compare** |
+
+The accepted completed-flow outcomes remain:
+
+- **Create New Work Item** — unrelated scope with no inherited source context;
+- **Start Follow-up Flow** — a new work item from selected QA, review, validation, log, or
+  artifact evidence;
+- **Clone This Flow** — a new run identity from the same configuration and baseline with an
+  editable launch preview;
+- **Run Eval / Scenario Batch** — comparison evidence outside the completed source run;
+- **Archive Run** — local operator intent without deleting evidence.
+
+Only one is promoted. Clean completed runs without blockers recommend **Create New Work
+Item**. Failed, blocked, or warning handoffs recommend **Start Follow-up Flow**. The remaining
+outcomes live under **Other next actions**, not an equal-weight card grid.
+
+Here, failed, blocked, or warning handoff means a fresh terminal QA verdict. Missing QA,
+stale QA, and runs that have not reached terminal QA do not enter Flow Complete and receive no
+terminal recommendation.
+
+Follow-up and cloned flows show source work item, source run, baseline, inherited artifacts,
+and audit preview before launch. They always receive new identities and never mutate the
+completed source run.
+
+### 8.9 State and recovery matrix
+
+| State | Surface | Primary action | Required behavior |
+| --- | --- | --- | --- |
+| Invalid or missing project root | Guided Setup | **Validate project** | Field-level error and no workspace mutation. |
+| Valid project, no work items | Inbox empty state | **Create Work Item** | Hide empty Evidence and History regions. |
+| Work item, no run | Studio | **Review & Launch** | Explicit runtime required. |
+| Running, output fresh | Active Studio | **Open live output** | Cancel remains secondary and dangerous. |
+| Polling failure or reconnecting | Active Studio | Automatic retry or **Reconnect** | Runtime may still be running; preserve log cursor. |
+| Waiting runtime approval | Recovery Studio | **Review request** | Keep separate from product questions; show scope, breadth, reason, and audit state. |
+| Blocking question | Recovery Studio | **Answer question** | Preserve resolved/partial/deferred semantics; only resolved unblocks. |
+| Validation failed, repair available | Recovery Studio | **Run Repair** | Show exact finding, document, line, hint, and attempt budget. |
+| Repair exhausted or explicit stop | Recovery Studio | **Request Change** | Never infer repair availability from stale artifacts. |
+| Runtime or provider failure | Recovery Studio | **Review failure** then eligible retry | Do not consume validation repair budget. |
+| Intervention allowed | Studio | **Submit & run** | Persist Markdown request and revalidate normally. |
+| Intervention blocked by succeeded downstream | Recovery Studio | **Open remediation options** | Never bypass downstream invalidation policy. |
+| Implement task blocked or failed | Implement Workspace | **Resume task** or answer | Keep dependencies and successful tasks intact. |
+| Review rejected or QA not ready | Review / QA Decision | **Send selected to implement** | Persist selected finding or risk ids. |
+| Successful remediation | Recovery Studio | **Rerun stale downstream** | Stale QA never opens Flow Complete. |
+| Fresh terminal QA | Flow Complete | Recommended next-flow decision | Keep source run immutable. |
+| Archived or historical run | History | **Open evidence** | Read-only; archive is not deletion. |
+| Missing or malformed legacy evidence | Studio | **View available source** | Name the missing artifact, degrade safely, and never invent data. |
+| Loading | Current surface | None | Stable skeleton and disabled mutation controls. |
+| Mutation pending or conflict | Current surface | Pending or **Read latest state** | Suppress duplicates and show the durable server winner. |
+
+### 8.10 Interaction contract
+
+- Every state and viewport has exactly one visually primary action.
+- Disabled controls explain the missing runtime, prerequisite, dependency, or stale state.
+- Workflow, stage, task, intervention, remediation, follow-up, and clone launches require an
+  explicit runtime id wherever the existing service contract requires one.
+- Every mutation enters an immediate pending state and uses keyed duplicate suppression.
+- A conflict triggers server readback, never optimistic overwrite.
+- Cancel job, deny, session-wide approval, archive, and next-flow launch show consequences;
+  session-wide approval requires a separate confirmation.
+- Cancellation progresses through **Cancel requested**, **Cancelling**, and **Cancelled**;
+  the UI does not claim immediate process termination.
+- Question, intervention, follow-up, and clone drafts survive supported navigation and reload.
+  Successful submit clears only the owning draft; a browser draft is never canonical evidence.
+- Browser URL state includes work item, run, stage, mode, attempt/detail, and artifact.
+- Back, Forward, and reload restore the selected context or fall back explicitly when it is
+  unavailable.
+- Live polling uses cursor-preserving bounded backoff. Raw logs are not a noisy `aria-live`
+  region; a separate polite status reports chunk count, output age, reconnect, and terminal
+  transitions.
+
+Document and evidence behavior is fixed:
+
+- the primary document remains visible when the inspector opens;
+- Preview preserves Markdown heading, list, table, link, and code semantics;
+- Source is selectable, copyable plain text;
+- Diff includes textual added/removed/changed meaning, not color alone;
+- exact paths are copyable but visually secondary;
+- a missing artifact is named instead of producing an empty surface;
+- raw logs are an explicit drill-down with native/system/normalized filters and visible
+  truncation state;
+- no surface may read arbitrary paths or rewrite generated evidence inline.
+
+### 8.11 Responsive and accessibility contract
+
+The layout has one primary vertical scroll owner. Desktop may use three workbench columns;
+tablet moves the Evidence Inspector into a drawer; mobile uses a single decision-first column.
+
+| Viewport | Layout behavior |
+| --- | --- |
+| `>= 1280px` | Compact context bar; 208-224px stage/artifact rail; flexible Document Canvas; 300-336px inspector when valuable; collapsed bottom Filmstrip. |
+| `768-1279px` | Horizontal stage navigation; full-width document; inspector and Filmstrip in labelled drawers. |
+| `< 768px` | Context bar no taller than 80px; current decision in the first viewport; document follows; evidence and vertical Filmstrip open as bottom sheets or dedicated drill-downs. |
+
+Further requirements:
+
+- **Skip to current decision** is the first focusable control.
+- Focus order is context, primary decision, document, supporting evidence, maintenance.
+- Dialogs and drawers trap focus while open and restore it to their trigger.
+- Stage navigation is an ordered semantic control with visible names in accessible names;
+  status is separate text.
+- Filmstrip is an ordered list or navigation with `aria-current`; Arrow, Home, and End are
+  optional accelerators and never replace Tab.
+- Status is never communicated only through color, shape, or motion.
+- Touch targets are at least 44x44px.
+- The primary decision is visible without initial scroll at `320x568` and `390x844`.
+- Text contrast is at least 4.5:1; control boundaries and focus indicators are at least 3:1.
+- `prefers-reduced-motion` removes pulses and nonessential transitions while keeping live
+  state text.
+- Dense diff, graph, and lineage views are deliberate mobile drill-downs. Monitoring,
+  questions, approvals, recovery, and the next decision are first-viewport tasks.
+- Declared viewports have no page-level horizontal overflow, clipped primary labels, or
+  nested scroll traps.
+
+### 8.12 Visual system
+
+The visual language is editorial, calm, and evidence-first. It uses the existing light
+foundation and deep-teal product identity, but removes the equal-weight card wall. White space,
+typographic hierarchy, dividers, and a single decision color carry structure. Status colors are
+signals, not section backgrounds.
+
+Semantic token direction:
+
+| Token | Reference value | Use |
+| --- | --- | --- |
+| `--bg` | `#f6f7f5` | Application canvas. |
+| `--surface` | `#ffffff` | Document, drawer, and primary working surface. |
+| `--surface-soft` | `#f0f3f0` | Grouped navigation and secondary evidence. |
+| `--surface-inverse` | `#073b3c` | Compact brand/context chrome only. |
+| `--text` | `#14201b` | Primary text. |
+| `--muted` | `#5e6a63` | Secondary text that still meets body contrast. |
+| `--line` | `#d7ddd8` | Dividers and low-emphasis boundaries. |
+| `--action-primary` | `#0b696b` | The single primary action and selected navigation. |
+| `--action-primary-hover` | `#084f51` | Primary hover/active state. |
+| `--status-success` | `#16784a` | Success signal with text/icon reinforcement. |
+| `--status-warning` | `#8b5d08` | Waiting, stale, or repair signal. |
+| `--status-danger` | `#a52a31` | Failed, rejected, and destructive signal. |
+| `--status-info` | `#1f5e98` | Running and informational signal. |
+| `--focus` | `#245fb3` | High-contrast focus ring independent of status. |
+
+Implementation should introduce these semantic aliases rather than spreading raw hex values.
+Compatibility mappings may preserve existing `--teal`, `--green`, `--amber`, `--red`, and
+`--blue` variables during migration.
+
+Typography uses the existing Inter/system stack for UI and the existing monospace stack for
+paths, source, logs, hashes, and ids. Reference roles are 32/40 for a guided page title, 24/32
+for a Studio document title, 18/26 for section headings, 14/21 for body text, 12/16 for labels,
+and 13/20 monospace for source. Body UI text must not fall below 12px.
+
+The spacing scale is 4, 8, 12, 16, 24, and 32px. Guided surfaces use relaxed 16-24px gaps;
+repeated operational lists use compact 8-12px gaps. Controls use a 6px radius, working
+surfaces 8px, dialogs 10px, and pills only for status or compact filters. Borders establish
+most layers; elevation is reserved for overlays. Motion uses 120ms control feedback, 180ms
+drawer transitions, and 240ms context changes, all with reduced-motion alternatives.
+
+### 8.13 Component contract
+
+| Component | Required anatomy and variants |
+| --- | --- |
+| Decision Bar | Reason, factual status, one primary action, optional evidence link; ready, running, waiting, blocked, failed, complete, and reconnecting variants. |
+| Inbox Item | Breadcrumb, title, explanation, timestamp, runtime/attempt metadata, primary action, evidence action; decision, running, ready, and complete variants. |
+| Document Canvas | Artifact title/path, Preview/Source/Diff switch, content, missing/truncated notice, copy/open actions; read-only in every variant. |
+| Evidence Inspector | Finding or evidence title, provenance, exact source reference, related artifacts, contextual action; hidden when empty. |
+| Stage Navigation | Eight canonical stages, active selection, status text, stale marker, keyboard navigation; compact desktop and horizontal tablet variants. |
+| Filmstrip Frame | Stage/task, attempt mode, runtime, timestamps, outcome, markers, artifact/log links; live, selected, failed, repaired, and unavailable-snapshot states. |
+| Guided Step | Step name, why it matters, inputs, validation feedback, primary action, back action, advanced disclosure. |
+| Recovery Summary | First decisive failure, scope, evidence, repair availability, consequences, one recovery action. |
+| Runtime Readiness | Binary, command, authentication evidence, capabilities, permission policy, last launch; ready, incomplete, unsupported, and stale-evidence variants. |
+| Status Marker | Icon, text, and optional timestamp; never color-only. |
+| Empty/Error/Reconnecting Surface | Named state, truthful consequence, available evidence, one safe action; stable dimensions to avoid layout shift. |
+
+Every component must define hover, active, focus-visible, disabled, pending, selected, invalid,
+empty, and loading behavior where the state is applicable. Compact and relaxed density variants
+share anatomy and semantics; they do not create separate action paths.
+
+### 8.14 Visual references
+
+The accepted reference set is stored in
+`docs/architecture/assets/operator-ui-document-evidence-studio/`:
+
+1. `01-inbox-desktop.png` — the decision-first project entry.
+2. `02-guided-setup-desktop.png` — the four-step first-run setup.
+3. `03-active-studio-desktop.png` — the default document-centered live workspace.
+4. `04-validation-repair-desktop.png` — exact validator finding and repair action.
+5. `05-quality-gate-desktop.png` — implementation/review/QA evidence and remediation.
+6. `06-history-filmstrip-desktop.png` — attempt history, selected evidence, and lineage.
+7. `07-flow-complete-desktop.png` — immutable handoff and one recommended next outcome.
+8. `08-question-mobile.png` — compact mobile context and first-viewport human decision.
+
+#### Inbox
+
+![Decision-first Inbox](assets/operator-ui-document-evidence-studio/01-inbox-desktop.png)
+
+#### Guided Setup
+
+![Four-step Guided Setup](assets/operator-ui-document-evidence-studio/02-guided-setup-desktop.png)
+
+#### Active Studio
+
+![Document-centered active Studio](assets/operator-ui-document-evidence-studio/03-active-studio-desktop.png)
+
+#### Validation recovery
+
+![Validation finding and repair](assets/operator-ui-document-evidence-studio/04-validation-repair-desktop.png)
+
+#### Quality gate
+
+![Review evidence and remediation](assets/operator-ui-document-evidence-studio/05-quality-gate-desktop.png)
+
+#### History Filmstrip
+
+![Attempt history and selected evidence](assets/operator-ui-document-evidence-studio/06-history-filmstrip-desktop.png)
+
+#### Flow Complete
+
+![Immutable handoff and next outcome](assets/operator-ui-document-evidence-studio/07-flow-complete-desktop.png)
+
+#### Mobile question
+
+![First-viewport mobile decision](assets/operator-ui-document-evidence-studio/08-question-mobile.png)
+
+These are hierarchy and interaction references, not pixel-perfect implementation fixtures.
+If generated text conflicts with this contract, the written contract wins.
+The shared visual brief and per-screen generation prompts are preserved in
+`docs/architecture/assets/operator-ui-document-evidence-studio/generation-prompts.md`.
+
+### 8.15 Risks and locked decisions
+
+- Inbox must remain a read model; frontend-only prioritization is prohibited.
+- Studio remains read-only for generated evidence; direct document editing is out of scope.
+- Filmstrip exposes only durable attempts, events, logs, and artifacts; it must not imply
+  snapshots that are not retained.
+- Guided Delivery and expert mode share endpoints and action semantics.
+- Evidence panels use zero-value visibility: an empty inspector or graph is hidden.
+- Mobile is decision and monitoring first; dense desktop evidence uses drill-down.
+- Blocking Inbox items cannot be dismissed.
+- Filmstrip uses attempts or task attempts as frames and events as markers.
+- English remains the canonical UI vocabulary for this iteration; localization is a later
+  product decision.
+
+The remaining implementation question is whether the project-level Inbox needs a new
+core-owned aggregate read model or a deterministic aggregation of existing per-run next-action
+models. Either implementation must preserve core ownership of priority and eligibility.
 
 ## 9. UX validation checklist for the accepted direction
 
 Before implementation is considered done, the local UI evidence lane must prove:
 
-- setup mode can create or resume a work item from a selected project root without changing
-  existing CLI command behavior;
-- runtime selection remains explicit before any workflow, stage, intervention, follow-up,
-  or clone launch;
-- a completed `qa` run renders the Flow Complete state and handoff summary;
-- Start Next Flow actions are visible without hiding final artifacts, logs, approvals,
-  and validation evidence;
-- follow-up creation records selected source findings and inherited context explicitly;
-- launch preflight creates a new work item/run identity and source-run lineage evidence;
-- run history can show parent and child relationships and still open raw logs/artifacts;
-- run history can compare two run ids from the active work item by prompt hashes, stage
-  statuses, artifact hashes, and validator outcomes without mutating `.aidd/`;
-- long-running UI-started jobs show real timeline events and silence warnings without
-  fake progress;
-- `implement` shows the real repository diff, untracked files, `.aidd/` artifact
-  separation, and mismatches between `implementation-report.md` claims and file changes;
-- rejected review findings or not-ready QA risks can be sent back to `implement` through
-  durable remediation requests;
-- remediation marks downstream `review` and `qa` stale through overlay metadata and stale
-  `qa` is not shown as a terminal handoff until downstream rerun succeeds;
-- mobile and keyboard paths can reach completed-run actions and the wizard controls.
+- clean setup completes in no more than four decision steps and exposes Create and Resume
+  before advanced project-set options;
+- an existing project opens in Inbox with the first actionable item and primary action visible
+  without scrolling;
+- an Inbox item opens the exact work item, run, stage, document, and recovery/evidence context;
+- Guided Delivery and Studio call the same service path and create the same durable artifacts;
+- Studio's first viewport contains context, one current decision, and the primary document;
+  empty supporting panels are hidden;
+- all eight canonical stages remain available while Filmstrip separately renders real attempts,
+  task attempts, and milestones;
+- blocking questions, approvals, runtime failures, repair available/exhausted, intervention,
+  task failure, remediation, and stale downstream states follow the matrix in section 8.9;
+- explicit runtime selection remains required before workflow, stage, task, intervention,
+  remediation, follow-up, and clone launch wherever required by the service contract;
+- long-running jobs show elapsed time, last output age, real milestones, silence, reconnect, and
+  cancellation state without fake progress;
+- reconnect preserves log position and never claims that a runtime stopped without server
+  evidence;
+- question, intervention, follow-up, and clone drafts survive supported navigation and failed
+  submission but never become canonical evidence before submit;
+- duplicate or conflicting mutations create at most one durable outcome and reconcile to the
+  server-authoritative result;
+- `implement` preserves successful task attempts, shows the real repository diff and claim
+  mismatches, and blocks review until aggregate finalization succeeds;
+- rejected review findings or not-ready QA risks can be sent to `implement` through durable
+  remediation requests;
+- successful remediation marks downstream review and QA stale, and stale QA never renders Flow
+  Complete;
+- fresh terminal QA renders an immutable handoff with one recommended outcome and secondary
+  actions under progressive disclosure;
+- follow-up and clone launch create new identities, preserve source lineage, and never mutate the
+  completed run;
+- History can open parent and child evidence and compare retained prompt, artifact, stage, and
+  validator facts without mutating `.aidd/`;
+- Back, Forward, reload, and deep links preserve or explicitly recover the selected context;
+- `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900` pass first-action visibility,
+  target-size, focus-order, contrast, clipping, overlap, nested-scroll, and overflow checks;
+- keyboard-only operation reaches Inbox actions, document views, evidence, Filmstrip frames,
+  question and approval decisions, remediation, Flow Complete, and next-flow launch;
+- provider-free browser journeys cover setup, Inbox, active run, question, approval, runtime
+  failure, repair/exhaustion, task resume, QA remediation, terminal handoff, and History;
+- observed first-time-operator sessions validate setup, first launch, question recovery, and
+  terminal continuation, or each decisive failure becomes a roadmap task.

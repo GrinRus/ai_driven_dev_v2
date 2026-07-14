@@ -10128,78 +10128,216 @@ Corrective audit:
 
 ---
 
-## Wave 36 — operator UX coherence and resilience (`planned`)
+## Wave 36 — Document & Evidence Studio migration (`planned`)
 
-Goal: turn the capability-rich local operator UI into one coherent, truthful, resilient,
-and measurable operator path across setup, active execution, recovery, evidence review,
-history, and terminal handoff without changing the canonical stage graph or creating a
-second workflow engine.
+Goal: migrate the capability-rich packaged Operator UI to the accepted Document & Evidence
+Studio experience through bounded vertical slices across Guided Setup, Inbox, Studio,
+Recovery, History, and Flow Complete without changing the canonical stage graph, mutation
+semantics, artifact ownership, or `aidd ui` entrypoint.
 
-Planning evidence:
+The migration is a strangler rollout, not a big-bang rewrite. Legacy and Studio renderers may
+temporarily consume the same server-authoritative payloads, but they must share action dispatch
+and mutation services. A temporary browser-only presentation selector may change the renderer;
+it must never select a different endpoint, runtime, eligibility rule, or workflow path. Rollback
+changes presentation only and never rewrites canonical `.aidd/` state.
 
-- `docs/analysis/ux-ui-audit-2026-07-08.md` records the browser-backed happy-path and
-  failure-state UX iterations that established the current recovery and terminal-handoff
-  baseline;
-- `docs/analysis/codebase-audit-2026-07-10.md` confirms the mutation, approval,
-  retention, runtime-evidence, frontend-test, and change-isolation foundations that
-  remain owned by Wave 34;
-- a fresh `2026-07-11` Chrome review of current `main` measured a `275.2px` sticky
-  header in a `390x844` viewport, first-launch primary action below the first viewport,
-  a `2802px` mobile onboarding page, twenty controls below the shared `44px` touch
-  target, two borderline contrast failures, and accessible-name mismatches on all eight
-  stage buttons while confirming no horizontal page overflow and no ordinary JS/network
-  errors.
+### Wave 36 reference authority
 
-Delivery order:
+When references disagree, use this order:
 
-1. lock the accepted operator state hierarchy, truthful action semantics, mobile product
-   boundary, and measurable quality thresholds;
-2. add provider-free rendered-browser assertions before broad visual restructuring;
-3. establish semantic tokens, shared controls, interaction states, and accessibility
-   primitives;
-4. replace peer-panel onboarding and the dense shell with progressive, task-first
-   surfaces;
-5. add durable navigation, draft safety, reconnect behavior, and client-side action
-   integrity on top of the corrected Wave 34 backend contracts;
-6. enforce canonical browser journeys and record observed first-time-operator evidence.
+1. [Operator Frontend Contract](../architecture/operator-frontend.md) sections 8 and 9 for the target information
+   architecture, four-mode concept, state matrix, component contract, references, and UX
+   acceptance criteria;
+2. sections 1 through 7 of the same document for workflow invariants, write boundaries,
+   current endpoints/read models, and compatibility behavior; their Mission Control,
+   cockpit, right-rail, bottom-dock, and Work / Recovery / Evidence / History presentation
+   terms are implemented-baseline evidence, not target design;
+3. [target architecture](../architecture/target-architecture.md),
+   [task execution](../architecture/task-execution.md), and
+   [project-set workspace](../architecture/project-set-workspace.md) for workflow, task,
+   completed-run, and project-root ownership;
+4. [user stories](../product/user-stories.md) for product outcomes and scope;
+5. the [reference-screen prompt set](../architecture/assets/operator-ui-document-evidence-studio/generation-prompts.md)
+   and linked images for visual hierarchy, density, and responsive intent only;
+6. current core/UI read models, service contracts, and deterministic tests for compatibility;
+7. analysis reports and the previous Mission Control assets as historical baseline evidence,
+   never as normative target design.
+
+Canonical design references:
+
+- [accepted UX direction](../architecture/operator-frontend.md#8-accepted-next-generation-ux-direction);
+- [UX validation checklist](../architecture/operator-frontend.md#9-ux-validation-checklist-for-the-accepted-direction);
+- [reference-screen prompt set](../architecture/assets/operator-ui-document-evidence-studio/generation-prompts.md);
+- [document contracts](../architecture/document-contracts.md) and
+  [runtime matrix](../architecture/runtime-matrix.md);
+- [local-project Operator UI E2E lane](../e2e/operator-ui-local-project.md) for the current
+  executable baseline and evidence schema; its legacy route names remain baseline-only until
+  `W36-E1-S1-T3` replaces them with the accepted state/route matrix.
+
+Compatibility and acceptance references:
+
+- core read-model ownership: [models](../../src/aidd/core/operator_frontend_models.py),
+  [dashboard](../../src/aidd/core/operator_frontend_dashboard.py),
+  [project home](../../src/aidd/core/operator_frontend_project_home.py),
+  [artifacts](../../src/aidd/core/operator_frontend_artifacts.py), and
+  [timeline](../../src/aidd/core/operator_timeline.py);
+- local service/package boundary: [UI service](../../src/aidd/cli/ui.py),
+  [HTTP layer](../../src/aidd/cli/ui_http.py), and
+  [asset manifest](../../src/aidd/cli/ui_assets.py);
+- shared browser seam: [packaged entry](../../src/aidd/cli/static/index.html),
+  [bootstrap](../../src/aidd/cli/static/operator.js),
+  [API/state](../../src/aidd/cli/static/operator-api-state.js), and
+  [main composition](../../src/aidd/cli/static/operator-main.js);
+- current surface owners to strangle, not fork: [cockpit](../../src/aidd/cli/static/operator-stage-cockpit.js),
+  [documents/evidence](../../src/aidd/cli/static/operator-artifacts-documents.js),
+  [questions](../../src/aidd/cli/static/operator-questions.js),
+  [approvals/interventions](../../src/aidd/cli/static/operator-approvals-interventions.js),
+  [next flow](../../src/aidd/cli/static/operator-next-flow-actions.js),
+  [logs/jobs](../../src/aidd/cli/static/operator-logs-jobs.js), and
+  [onboarding](../../src/aidd/cli/static/operator-onboarding.js);
+- visual-system baseline: [tokens](../../src/aidd/cli/static/operator-tokens.css),
+  [base](../../src/aidd/cli/static/operator-base.css),
+  [layout](../../src/aidd/cli/static/operator-layout.css),
+  [components](../../src/aidd/cli/static/operator-components.css), and
+  [responsive rules](../../src/aidd/cli/static/operator-responsive.css);
+- service/package compatibility: [UI service tests](../../tests/cli/test_ui.py),
+  [asset contracts](../../tests/cli/test_ui_assets_contracts.py), and
+  [package resources](../../tests/test_packaging_resources.py);
+- canonical behavior evidence: [operator frontend](../../tests/core/test_operator_frontend.py),
+  [timeline](../../tests/core/test_operator_timeline.py),
+  [task execution](../../tests/core/test_task_execution.py),
+  [remediation](../../tests/core/test_remediation.py),
+  [run comparison](../../tests/core/test_run_comparison.py), and
+  [runtime operator](../../tests/core/test_runtime_operator.py);
+- [docs consistency](../../tests/test_docs_consistency.py) for architecture, queue, and
+  visual-reference synchronization.
+
+Historical planning evidence:
+
+- [UX/UI audit 2026-07-08](../analysis/ux-ui-audit-2026-07-08.md) records browser-backed
+  happy-path and failure-state iterations for the current UI;
+- [codebase audit 2026-07-10](../analysis/codebase-audit-2026-07-10.md) records Wave 34 backend
+  and test foundations;
+- the `2026-07-11` Chrome review measured a `275.2px` sticky header at `390x844`, a
+  first-launch primary action below the first viewport, a `2802px` mobile onboarding page,
+  twenty controls below `44px`, two borderline contrast failures, and accessible-name
+  mismatches on all eight stage buttons.
+
+External pattern references are non-normative and may inform interaction checks only:
+
+- [Linear Inbox](https://linear.app/docs/inbox) for keyboard-friendly attention queue and
+  list-to-detail navigation; AIDD blocking items remain core-prioritized and cannot be snoozed
+  or dismissed;
+- [GOV.UK Check answers](https://design-system.service.gov.uk/patterns/check-answers/) and
+  [Complete multiple tasks](https://design-system.service.gov.uk/patterns/complete-multiple-tasks/)
+  for Guided Setup review, status, Back, and input-preservation behavior;
+- [GitHub Actions workflow-run logs](https://docs.github.com/en/actions/how-tos/monitor-workflows/use-workflow-run-logs)
+  and [previous run attempts](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
+  for run/job/step hierarchy, exact failure evidence, retained logs/artifacts, and explicit
+  attempt selection;
+- [Sentry Issue Details](https://docs.sentry.io/product/issues/issue-details/) for a decisive
+  problem summary followed by stack/breadcrumb evidence and contextual drill-down;
+- [Prefect Artifacts](https://docs.prefect.io/v3/concepts/artifacts) for human-readable artifacts
+  tied to exact flow/task runs and retained versions.
+
+These references do not authorize copying product visuals, hiding missing evidence, inventing
+progress, or changing AIDD workflow semantics. The local authority order above always wins.
+
+### Reference-screen crosswalk
+
+| Reference | Target surface | Owning slice | Supporting contract | Executable journey | Primary acceptance |
+| --- | --- | --- | --- | --- | --- |
+| [01-inbox-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/01-inbox-desktop.png) | Project-local decision queue | `W36-E5-S3` | `W36-E5-S0` and `W36-E5-S1` | `W36-E7-S1-T12` | First core-approved decision and action are visible without scrolling. |
+| [02-guided-setup-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/02-guided-setup-desktop.png) | Four-step Guided Setup | `W36-E4-S1` | `W36-E3-S2` and `W36-E3-S3` | `W36-E7-S1-T1` | Create/Resume and explicit runtime selection complete through one service path. |
+| [03-active-studio-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/03-active-studio-desktop.png) | Live document-centered Studio | `W36-E5-S4` | `W36-E5-S1` | `W36-E7-S1-T2` and `W36-E7-S1-T7` | Context, Decision Bar, primary document, and live evidence share the first desktop viewport. |
+| [04-validation-repair-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/04-validation-repair-desktop.png) | Validation recovery | `W36-E5-S6` | `W36-E6-S3` | `W36-E7-S1-T3` | Exact finding and `Run Repair` versus `Request Change` semantics remain truthful. |
+| [05-quality-gate-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/05-quality-gate-desktop.png) | Implement/Review/QA quality gate | `W36-E5-S7` | `W35-E2-S8` | `W36-E7-S1-T4` and `W36-E7-S1-T9` | Real diff, claim evidence, remediation selection, and stale downstream state agree. |
+| [06-history-filmstrip-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/06-history-filmstrip-desktop.png) | Attempt History Filmstrip | `W36-E5-S8` | `W36-E6-S1` | `W36-E7-S1-T5` | Only durable attempts, events, artifacts, and lineage are selectable. |
+| [07-flow-complete-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/07-flow-complete-desktop.png) | Immutable terminal handoff | `W36-E5-S9` | `W36-E6-S2` and `W36-E6-S4` | `W36-E7-S1-T8` | Fresh QA exposes one core-recommended outcome and never mutates the source run. |
+| [08-question-mobile.png](../architecture/assets/operator-ui-document-evidence-studio/08-question-mobile.png) | First-viewport mobile question | `W36-E5-S5` | `W36-E5-S2` | `W36-E7-S1-T6` | Question, resolution status, and submit action fit the decision-first mobile contract. |
+
+Generated text is not normative. The written architecture contract and service semantics win
+when a reference image differs from executable behavior.
+
+### Migration phases
+
+1. **Contract freeze** — finish the route/action/quality matrices in `W36-E1`; the accepted
+   concept and viewport contract are already recorded by `W36-E1-S1-T1..T2`.
+2. **Executable baseline** — land the provider-free packaged-browser harness and reproduce
+   current geometry, accessibility, console, and network state before restructuring.
+3. **Additive foundations** — add the core terminal recommendation, semantic tokens, shared
+   controls/state surfaces, URL state, scoped drafts, reconnect, and mutation guards without
+   changing the default renderer.
+4. **Guided Setup** — migrate Project -> Work Item -> Runtime -> Review & Launch and prove the
+   first-launch journey before closing its parity entry; physical legacy removal waits for the
+   cutover phase.
+5. **Inbox and active Studio** — add the project-local attention projection, mode shell,
+   Decision Bar, Document Canvas, Evidence Inspector, and live observation.
+6. **Recovery and quality gates** — migrate questions/interventions, approvals,
+   runtime/validation/repair, task finalization, Review, QA, remediation, and stale reruns one
+   state family at a time.
+7. **History and handoff** — migrate Filmstrip, comparison, lineage, Flow Complete, and all
+   next-flow outcomes while preserving source-run immutability.
+8. **Cutover and cleanup** — promote Studio only after per-surface parity, retain a bounded
+   presentation-only rollback window, then remove legacy renderers and selectors separately.
+9. **Acceptance** — enforce all discovered browser journeys in CI/release preflight and record
+   first-time-operator evidence.
+
+Each migrated state family must land its own browser journey before its parity entry closes.
+All legacy renderers remain available through the bounded rollback window and are removed only
+in the cutover phase. The final acceptance epic aggregates already-executable journeys; it is
+not the first time they are tested.
+
+### Hard dependency gates
+
+| Gate | Blocks |
+| --- | --- |
+| `W36-E1-S1..S2` | Broad visual restructuring or route removal. |
+| `W34-E5-S3-T4..T5` and `W36-E2` | Default-shell, responsive, and renderer-parity claims. |
+| `W35-E2-S8` | Full-flow launch redesign, implement task controls, remediation, Review/QA eligibility, and default cutover. |
+| `W34-E2-S2-T2` | Resume, History, Lineage, and durable deep-link sign-off. |
+| `W34-E2-S3-T1..T2` | Archive and prompt-accountability presentation. |
+| `W34-E3-S2` | Approval renderer replacement and session-breadth confirmation. |
+| `W34-E3-S3-T1` | Long-running/reconnect sign-off. |
+| `W34-E4-S2` and `W34-E4-S3` | Runtime-failure vocabulary and dimensioned readiness. |
+| `W34-E7-S1` | Capability and protected-data/write-scope claims. |
+| `W34-E3-S4-T4` | Follow-up/clone draft and next-flow renderer cutover. |
+| Per-surface browser parity | Default routing for that surface and eventual legacy removal. |
 
 Scope decisions:
 
 - mobile is monitoring, question answering, approval, recovery, and next-decision first;
-  dense diff, evidence-graph, and lineage work remains desktop-first but reachable as an
-  explicit mobile drill-down;
+  dense diff, evidence graph, comparison, and lineage remain desktop-first drill-downs;
 - Wave 36 owns operator-facing semantics, packaged browser behavior, design-system
-  primitives, responsive hierarchy, navigation, and rendered acceptance evidence;
+  primitives, responsive hierarchy, navigation, renderer migration, and rendered evidence;
 - Wave 34 remains authoritative for server-side mutation leases, approval compare-and-set,
-  bounded job retention, runtime outcome/evidence truth, capability policy, canonical run
-  identity, archive overlays, lightweight DOM foundations, and next-flow module splitting;
-- the supported frontend remains private, local, single-operator, and loopback-first.
+  bounded retention, runtime outcome/evidence truth, capability policy, run identity, archive
+  overlays, lightweight DOM foundations, and next-flow module splitting;
+- Wave 35 remains authoritative for task-aware implement entrypoint and finalization integrity;
+- the frontend remains private, local, single-operator, and loopback-first.
 
 Non-goals:
 
-- a new stage, workflow engine, adapter, artifact authority, or provider-specific UI
-  semantics;
-- remote multi-user deployment, frontend authentication, or reopening the deferred
-  Wave 34 `SEC-02` boundary;
-- marketing-page styling, decorative motion, or mobile parity that shrinks dense desktop
-  evidence surfaces until they are unreadable;
-- provider-authenticated live E2E as an implementation gate.
+- a new stage, workflow engine, adapter, artifact authority, provider-specific UI semantics,
+  or unaudited inline editing of generated evidence;
+- remote multi-user deployment, frontend authentication, or cross-project Inbox aggregation;
+- marketing-page styling, decorative motion, or unreadable mobile parity for dense evidence;
+- provider-authenticated live E2E as an implementation gate;
+- deleting legacy renderers in the same task that first introduces their replacement.
 
 Story check:
 
-- the wave directly strengthens `US-05`, `US-06`, `US-09`, `US-11`, and `US-12` and
-  preserves the validation, accountability, and runtime-portability intent of `US-01`,
-  `US-03`, and `US-10`;
-- this is implementation and acceptance clarification inside the existing operator
-  frontend story, not new product scope, so `docs/product/user-stories.md` does not need
-  a scope update.
+- the wave strengthens `US-02`, `US-03`, `US-05`, `US-06`, `US-09`, `US-10`, `US-11`,
+  `US-12`, and `US-13` while preserving runtime portability from `US-01`;
+- this is implementation and acceptance detail inside existing product scope, so
+  `docs/product/user-stories.md` does not require a scope update.
 
 ### Epic W36-E1 — accepted UX contract and measurable hierarchy (`planned`)
 Linked stories: `US-05`, `US-06`, `US-09`, `US-11`, `US-12`
 
 #### Slice W36-E1-S1 — operator coherence contract (`planned`)
-Goal: define one task-first state hierarchy and one primary-decision rule before changing
-the rendered shell.
+Goal: lock Inbox, Studio, History, and Guided Delivery semantics plus one primary-decision
+rule before changing the rendered shell.
 
 Dependencies:
 
@@ -10207,12 +10345,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E1-S1-T1` Define the accepted Setup / Active / Recovery / Evidence / History
-  hierarchy, progressive-disclosure rules, and one-primary-action contract.
+- `W36-E1-S1-T1` (done) Lock Inbox / Studio / History destinations, Guided Delivery
+  presentation, contextual Recovery/Evidence, and the one-primary-action contract.
   - Scope: `docs/architecture/operator-frontend.md` only.
   - Verification: a docs consistency matrix names the primary job, primary action,
     supporting evidence, and recovery path for every top-level state.
-- `W36-E1-S1-T2` Define the mobile operator job boundary and viewport ordering/budgets
+- `W36-E1-S1-T2` (done) Define the mobile operator job boundary and viewport ordering/budgets
   for `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900`.
   - Scope: operator frontend architecture only.
   - Verification: the contract names the first-viewport action, maximum compact-header
@@ -10220,9 +10358,9 @@ Local tasks:
 - `W36-E1-S1-T3` Replace checklist-only navigation wording with a canonical operator
   state/route matrix.
   - Scope: `docs/e2e/operator-ui-local-project.md` only.
-  - Verification: setup, no-run, running, reconnecting, question, validation failure,
-    approval, remediation, terminal, and history states each map to an explicit route
-    and expected decision surface.
+  - Verification: Guided Setup, Inbox, active Studio, reconnecting, Question/Approval
+    Recovery, Validation Recovery, Quality Gate, Flow Complete, and History each map to
+    an explicit route, context key, and expected decision surface.
 
 Exit evidence:
 
@@ -10284,6 +10422,12 @@ Local tasks:
   - Verification: the decision preserves the no-Node/Vite product runtime, names the
     executable test command, and replaces the blanket no-browser-driver wording in the
     local-project lane.
+- `W36-E2-S1-T4` Add the selected browser driver as a development-only dependency and
+  lock its executable smoke command.
+  - Dependencies: `W36-E2-S1-T1`.
+  - Scope: development dependency, lock, and browser smoke command only.
+  - Verification: locked sync and one provider-free packaged-UI launch pass without
+    changing runtime package dependencies.
 - `W36-E2-S1-T2` Add a disposable seeded-project launcher and executable browser harness
   for packaged UI assets.
   - Dependencies: `W36-E2-S1-T4`.
@@ -10296,12 +10440,6 @@ Local tasks:
   - Scope: deterministic UI fixtures only.
   - Verification: every declared fixture opens through the public local UI without
     provider authentication or arbitrary path reads.
-- `W36-E2-S1-T4` Add the selected browser driver as a development-only dependency and
-  lock its executable smoke command.
-  - Dependencies: `W36-E2-S1-T1`.
-  - Scope: development dependency, lock, and browser smoke command only.
-  - Verification: locked sync and one provider-free packaged-UI launch pass without
-    changing runtime package dependencies.
 
 Exit evidence:
 
@@ -10339,6 +10477,53 @@ Exit evidence:
 - the defects measured in the `2026-07-11` review are executable regressions rather
   than manual observations only.
 
+#### Slice W36-E2-S3 — presentation-only migration seam (`planned`)
+Goal: migrate one rendered surface at a time while preserving one API client, one action
+dispatcher, stable package assets, and a bounded renderer rollback path.
+
+Dependencies:
+
+- `W36-E1-S1-T3`
+- `W36-E2-S1`
+- `W34-E5-S3-T5`
+
+Local tasks:
+
+- `W36-E2-S3-T1` Extract shared non-next-flow dashboard loading, context selection, and
+  mutation dispatch from legacy render ownership; next-flow splitting remains owned by
+  `W34-E3-S4-T4` until that task closes.
+  - Scope: packaged browser state/action seam only.
+  - Verification: legacy fixtures produce equivalent requests and durable readback through
+    the shared seam before any Studio renderer is enabled.
+- `W36-E2-S3-T2` Add a temporary browser-only `ui=studio|legacy` presentation selector while
+  keeping `/`, packaged asset URLs, `aidd ui`, and action endpoints stable.
+  - Scope: browser bootstrap and renderer selection only.
+  - Verification: an executable truth table covers `missing | studio | legacy` against
+    `legacy_only | candidate | parity_closed`: before cutover missing uses legacy; `studio`
+    renders candidate or closed Studio surfaces and falls back only for `legacy_only`; `legacy`
+    forces every retained rollback renderer; invalid follows the current missing-value rule.
+- `W36-E2-S3-T3` Add a per-surface parity manifest with owning slice, rollout state
+  (`legacy_only | candidate | parity_closed`), rollback renderer, required fixture, browser
+  journey, and legacy-removal gate.
+  - Scope: packaged-browser migration metadata and tests.
+  - Verification: every declared surface has exactly one owner and no surface can switch
+    default before its required journey passes.
+- `W36-E2-S3-T4` Make the parity manifest drive per-surface renderer resolution so migrated
+  Studio surfaces and unmigrated legacy fallbacks can coexist inside either bootstrap mode.
+  - Scope: browser renderer resolver only.
+  - Verification: mixed-state fixtures implement the selector/parity truth table, retain one
+    shared state/action seam, and fall back deterministically without changing service requests;
+    browser journeys can exercise a `candidate` before closure, while missing/default and
+    `ui=legacy` never expose candidates during the rollback window.
+
+Exit evidence:
+
+- renderer selection cannot change workflow or mutation semantics;
+- rollback is presentation-only and does not alter canonical `.aidd/` state;
+- retained legacy renderers remain reachable through missing/default and `ui=legacy` even after
+  parity closes, until the bounded cutover task removes the rollback path;
+- the migration can cut over one surface without requiring all other surfaces to be ready.
+
 ### Epic W36-E3 — semantic design system and accessibility (`planned`)
 Linked stories: `US-02`, `US-05`, `US-06`, `US-11`
 
@@ -10348,6 +10533,7 @@ Goal: make repeated visual decisions come from one semantic token contract.
 Dependencies:
 
 - `W36-E1-S1`
+- `W36-E1-S2`
 - rendered verification uses `W36-E2-S2`
 
 Local tasks:
@@ -10415,20 +10601,33 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S3-T1` Consolidate decision spotlight, banner, notice, metric, and status
-  anatomy behind shared render helpers and classes.
-  - Scope: packaged frontend component primitives.
-  - Verification: interview, approval, review, QA, recovery, and terminal fixtures render
-    from the shared variants without losing their decision semantics.
+- `W36-E3-S3-T1` Implement the shared Decision Bar and Status Marker anatomy.
+  - Scope: packaged decision-surface primitives only.
+  - Verification: action, pending, blocked, complete, stale, and no-action fixtures retain one
+    primary slot plus non-color status text without owning surface-specific policy.
 - `W36-E3-S3-T2` Consolidate empty, loading, error, reconnecting, and unavailable
   surfaces with local recovery actions.
   - Scope: packaged state-surface primitives.
   - Verification: every state exposes a title, consequence, recovery action when
     possible, and correct live-region or busy semantics.
-- `W36-E3-S3-T3` Reduce nested-card hierarchy in Work, Recovery, and Evidence surfaces.
+- `W36-E3-S3-T3` Establish the editorial hierarchy for Document Canvas, conditional
+  Evidence Inspector, and History without an equal-weight card wall.
   - Scope: panel/card layout classes.
   - Verification: rendered fixtures keep one framed primary surface per hierarchy level
     and preserve clear primary/supporting visual weight.
+- `W36-E3-S3-T4` Implement the shared Inbox Item anatomy without eligibility or priority
+  logic in the browser.
+  - Scope: packaged Inbox item primitive only.
+  - Verification: blocking, running, ready, terminal, and malformed fixtures render the
+    core/service-provided route and action without recomputing either.
+- `W36-E3-S3-T5` Implement the shared Guided Step anatomy.
+  - Scope: packaged Guided Delivery primitive only.
+  - Verification: current, complete, invalid, optional, and disabled step fixtures retain one
+    explanation, input group, primary action, Back action, and advanced disclosure.
+- `W36-E3-S3-T6` Implement the shared Recovery Summary anatomy.
+  - Scope: packaged Recovery primitive only.
+  - Verification: question, approval, runtime, validation, intervention, and quality-gate
+    fixtures retain one decisive failure, one evidence path, and one primary recovery slot.
 
 Exit evidence:
 
@@ -10447,7 +10646,7 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S4-T1` Add a skip-to-work path and deterministic focus entry/return for
+- `W36-E3-S4-T1` Add a skip-to-current-decision path and deterministic focus entry/return for
   top-level modes and detail surfaces.
   - Scope: shell markup and focus controller.
   - Verification: keyboard-only traversal reaches the primary action before maintenance
@@ -10480,8 +10679,9 @@ instead of six equally weighted setup panels.
 Dependencies:
 
 - `W36-E1-S1`
-- `W36-E1-S2-T1`
+- `W36-E1-S2`
 - `W36-E3-S2`
+- `W36-E6-S4-T1`
 
 Local tasks:
 
@@ -10501,10 +10701,27 @@ Local tasks:
   - Verification: create or resume remains inside the first setup viewport at `390x844`
     and `1440x900`, while advanced project-set validation remains reachable.
 - `W36-E4-S1-T4` Remove no-run mode cards that do not change execution semantics and
-  keep follow-up, clone, eval, and archive actions on terminal source-run handoffs.
-  - Scope: setup and terminal action rendering.
-  - Verification: the action-to-service matrix proves each remaining selector has a
-    distinct endpoint/outcome.
+  leave terminal follow-up, clone, eval, and archive presentation to `W36-E5-S9`.
+  - Scope: Guided Setup presentation only; the legacy renderer remains available for rollback.
+  - Verification: the setup action-to-service matrix proves each remaining selector has a
+    distinct endpoint/outcome and no terminal disposition leaks into first-run setup.
+- `W36-E4-S1-T5` Add the Guided Delivery preference and contextual explanation card over
+  the same selected context and service actions used by Studio.
+  - Scope: Guided Delivery browser presentation only.
+  - Verification: toggling Guided Delivery preserves project, work item, run, stage,
+    runtime, request payload, and durable result for the same action.
+- `W36-E4-S1-T6` Bind the new Review & Launch control to the shared mutation dispatcher only
+  after task-aware workflow entrypoint integrity is restored.
+  - Dependencies: `W35-E2-S8`, `W36-E6-S4-T1`.
+  - Scope: Guided Setup launch binding only.
+  - Verification: Guided and legacy launch controls dispatch an identical task-aware request,
+    duplicate input creates at most one job, and durable readback selects one result.
+- `W36-E4-S1-T7` Promote the verified Guided Setup candidate to `parity_closed` while retaining
+  legacy setup for both missing/default and explicit rollback modes until cutover.
+  - Dependencies: `W36-E4-S1-T6`, `W36-E7-S1-T1`.
+  - Scope: Guided Setup parity-manifest entry only.
+  - Verification: the required journey passes in the Studio renderer and explicit rollback
+    reaches the legacy setup through the same service path.
 
 Exit evidence:
 
@@ -10517,7 +10734,7 @@ Goal: show only runtime readiness and write-scope claims backed by observable ev
 
 Dependencies:
 
-- `W36-E1-S2-T2`
+- `W36-E1-S2`
 - `W34-E4-S2-T1`
 - `W34-E4-S3`
 - `W34-E7-S1-T2`
@@ -10535,7 +10752,7 @@ Local tasks:
   - Verification: no-history, success, failure, blocked, cancelled, and legacy attempts
     resolve deterministically without reading outside `.aidd/`.
 - `W36-E4-S2-T3` Render dimensioned readiness, protected write scope, and last-launch
-  evidence in onboarding and the command shell.
+  evidence in Guided Setup and the Studio launch context.
   - Scope: packaged runtime/safety UI.
   - Verification: truth-copy fixtures contain no undifferentiated authentication claim
     or `No upstream write` promise.
@@ -10546,43 +10763,72 @@ Exit evidence:
   previous launch outcome;
 - the operator sees the actual protected-data/write boundary before execution.
 
-### Epic W36-E5 — simplified workbench and compact responsive shell (`planned`)
-Linked stories: `US-02`, `US-03`, `US-05`, `US-06`, `US-11`
+### Epic W36-E5 — Document & Evidence Studio vertical migration (`planned`)
+Linked stories: `US-02`, `US-03`, `US-05`, `US-06`, `US-10`, `US-11`, `US-13`
 
-#### Slice W36-E5-S1 — progressive workbench disclosure (`planned`)
+#### Slice W36-E5-S0 — core operator decision foundations (`planned`)
+Goal: make terminal recommendation policy available to Inbox and Flow Complete before either
+renderer binds a primary action.
+
+Dependencies:
+
+- `W36-E1-S2-T1`
+- reuse the accepted terminal-run handoff read model and allowed-outcomes contract
+
+Local tasks:
+
+- `W36-E5-S0-T1` Add one core-owned `recommended_outcome` and rationale to the terminal-run
+  handoff read model without removing the complete allowed-outcomes list.
+  - Scope: core terminal handoff recommendation policy only.
+  - Verification: clean fresh terminal QA recommends Create New Work Item; fresh failed,
+    blocked, or warning QA recommends Start Follow-up Flow; missing, stale, and nonterminal QA
+    produce no Flow Complete recommendation.
+- `W36-E5-S0-T2` Expose the recommendation through the existing additive terminal-handoff API
+  contract with explicit legacy fallback semantics.
+  - Scope: local UI terminal-handoff response contract only.
+  - Verification: endpoint fixtures preserve allowed outcomes and source identity while old
+    payloads resolve to an explicit no-recommendation compatibility state.
+
+Exit evidence:
+
+- renderer code owns neither terminal eligibility nor recommendation priority;
+- Inbox and Flow Complete consume one stable, backward-compatible decision contract.
+
+#### Slice W36-E5-S1 — shared Studio hierarchy and progressive disclosure (`planned`)
 Goal: keep the current operator decision and primary document visible while demoting
 zero-value and secondary evidence.
 
 Dependencies:
 
 - `W36-E1-S1`
+- `W36-E1-S2`
 - `W36-E3-S3`
 - executable behavior verification builds on `W34-E5-S3-T5`
 
 Local tasks:
 
-- `W36-E5-S1-T1` Add a visibility policy that hides zero-value right-rail sections
-  and collapses secondary bottom-dock evidence until requested.
+- `W36-E5-S1-T1` Add a visibility policy that hides a zero-value Evidence Inspector
+  and keeps secondary Filmstrip/log evidence collapsed until requested.
   - Scope: shell rendering policy.
   - Verification: no-run, healthy running, blocked, terminal, and history fixtures show
     only panels with current operator value.
-- `W36-E5-S1-T2` Consolidate duplicate cockpit/sidebar recovery summaries into one
-  central decision surface with one Evidence link.
+- `W36-E5-S1-T2` Consolidate duplicate recovery summaries into one Recovery Summary
+  inside the Studio Decision Bar with one Evidence link.
   - Scope: recovery rendering.
   - Verification: every blocker fixture exposes one recovery landmark, one primary
     action, and one supporting evidence path.
-- `W36-E5-S1-T3` Consolidate global and sidebar next-action status into one primary
-  control plus compact contextual metadata.
-  - Scope: next-action rendering.
-  - Verification: each work, recovery, evidence, detail, and terminal state contains no
-    duplicate primary command target.
+- `W36-E5-S1-T3` Implement one policy-free primary-action slot for vertical surfaces to bind
+  to their own core/service-provided decision and compact metadata.
+  - Scope: shared Decision Bar slot composition only.
+  - Verification: surface fixtures can bind one action or an explicit no-action state, while
+    the shared layer contains no eligibility, priority, or terminal-recommendation policy.
 - `W36-E5-S1-T4` Move Refresh, Open `.aidd`, Stop server, and other maintenance commands
   into a labelled overflow surface.
   - Scope: shell maintenance controls.
   - Verification: service commands remain keyboard-accessible but no longer precede the
     primary operator task in focus or visual order.
-- `W36-E5-S1-T5` Establish one primary content scroll owner and remove cockpit/sidebar
-  scroll traps on supported desktop viewports.
+- `W36-E5-S1-T5` Establish one Studio content scroll owner so the inspector, drawers,
+  and Filmstrip create no nested scroll traps on supported desktop viewports.
   - Scope: desktop shell layout.
   - Verification: `1280x900` and `1440x900` fixtures expose one primary vertical scroll
     path while sticky context and drill-down panels remain reachable.
@@ -10600,6 +10846,8 @@ desktop evidence is a mobile-first surface.
 Dependencies:
 
 - `W36-E5-S1`
+- `W36-E5-S3-T1..T4`
+- `W36-E5-S4-T1..T4`
 - `W36-E3-S1`
 - `W36-E3-S2`
 - `W36-E3-S4`
@@ -10611,17 +10859,19 @@ Local tasks:
   - Scope: topbar markup and responsive CSS.
   - Verification: `320x568` and `390x844` fixtures meet the accepted header budget and
     never cover the mode tabs or primary action.
-- `W36-E5-S2-T2` Keep the active blocker or global Next Action in the first mobile
+- `W36-E5-S2-T2` Keep the current Decision Bar or Inbox action in the first mobile
   viewport and move dense evidence to explicit drill-down.
   - Scope: responsive workbench ordering.
-  - Verification: no-run, post-stage, live, approval, recovery, remediation, and terminal
-    fixtures expose the accepted primary decision without initial scrolling.
+  - Verification: no-run Inbox, post-stage, and active Studio fixtures expose the accepted
+    primary decision without initial scrolling; vertical Recovery/History/terminal slices own
+    their state-specific mobile parity.
 - `W36-E5-S2-T3` Replace repeated per-body-mode ordering selectors with one mobile
-  priority layout contract.
+  priority layout contract: context -> decision -> document -> evidence/history drill-down.
   - Scope: responsive shell state classes.
   - Verification: every declared operator state maps to the same context -> decision ->
-    work -> evidence -> history ordering rule.
-- `W36-E5-S2-T4` Keep stage navigation and primary labels legible at `320px` and `390px`.
+    document -> evidence/history drill-down ordering rule.
+- `W36-E5-S2-T4` Keep compact stage navigation and primary labels legible at `320px` and
+  `390px` without rendering the desktop stage rail as a tiny grid.
   - Scope: responsive stage rail and label wrapping.
   - Verification: shared touch targets pass, no active stage or primary label clips,
     and document scroll width equals viewport width.
@@ -10631,6 +10881,421 @@ Exit evidence:
 - mobile monitoring, answers, approvals, recovery, and next decisions are first-viewport
   tasks;
 - dense diff, graph, and history views remain reachable through deliberate drill-downs.
+
+#### Slice W36-E5-S3 — project-local Inbox (`planned`)
+Goal: replace Project Home/dashboard scanning with a core-owned, bounded decision queue for
+the selected project root.
+
+Dependencies:
+
+- `W36-E1-S1`
+- `W36-E1-S2`
+- `W36-E2-S3`
+- `W36-E3-S3`
+- `W36-E5-S0`
+- Inbox routing consumes `W36-E6-S1-T1..T2`
+- reuse the accepted Wave 31 project-home, next-action, blocker, and first-failure read models
+
+Local tasks:
+
+- `W36-E5-S3-T1` Implement a typed core-owned durable Inbox projection with Needs your
+  decision, Ready to continue, and Flow complete sections.
+  - Scope: core operator frontend read models only.
+  - Verification: provider-free fixtures prove deterministic priority, exact work-item/run/stage
+    references, one core-approved action, and no frontend-derived eligibility or live-job claim.
+- `W36-E5-S3-T2` Add typed work-item/run/stage correlation to bounded UI job summaries and
+  compose the project-local Running now overlay without changing durable Inbox eligibility.
+  - Dependencies: `W34-E3-S3-T1`.
+  - Scope: CLI UI job summary and Inbox composition service only.
+  - Verification: zero, one, concurrent, terminal, evicted, and legacy job fixtures produce a
+    bounded Running now section whose references agree with durable run state.
+- `W36-E5-S3-T3` Expose the composed Inbox through an additive local UI read endpoint with
+  bounded project-local data.
+  - Scope: CLI UI read route and response contract only.
+  - Verification: endpoint tests cover empty, blocking, running, ready, terminal, legacy, and
+    malformed evidence without arbitrary path access.
+- `W36-E5-S3-T4` Render Inbox sections and route each item to the exact Studio context through
+  the shared action/state seam.
+  - Scope: packaged Inbox renderer only.
+  - Verification: one browser fixture per section opens the expected work item, run, stage,
+    artifact/evidence detail, and primary action.
+- `W36-E5-S3-T5` Promote the verified Inbox candidate to `parity_closed` while retaining legacy
+  Project Home for both missing/default and explicit rollback modes until cutover.
+  - Dependencies: `W36-E7-S1-T12`.
+  - Scope: Inbox parity-manifest entry only.
+  - Verification: `ui=studio` exposes no duplicate decision, while missing/default and
+    `ui=legacy` preserve Project Home through the same read/action seam until cutover.
+
+Exit evidence:
+
+- the first actionable item and its primary action are visible without scrolling;
+- Inbox is a rebuildable read model and cannot become a second workflow engine;
+- blocking items cannot be hidden by presentation-only dismissal.
+
+#### Slice W36-E5-S4 — active Document & Evidence Studio (`planned`)
+Goal: make context, one Decision Bar, the selected Markdown document, and bounded evidence the
+default active-run workspace.
+
+Dependencies:
+
+- `W36-E1-S2`
+- `W36-E2-S3`
+- `W36-E3`
+- `W36-E5-S1`
+- `W36-E6-S1-T1..T2`
+- `W36-E6-S4-T1`
+- `W34-E5-S3-T5`
+
+Local tasks:
+
+- `W36-E5-S4-T1` Compose the active Studio view from shared mode navigation, compact context
+  bar, canonical stage navigation, and Decision Bar slots.
+  - Scope: packaged active-Studio markup and renderer only.
+  - Verification: no-run, active, blocked, and terminal fixtures preserve context and expose
+    exactly one primary action across supported desktop viewports.
+- `W36-E5-S4-T2` Render the read-only Document Canvas with Preview, Source, and Diff over the
+  existing safe workbench/document endpoints.
+  - Scope: packaged document renderer only.
+  - Verification: Markdown, source, diff, missing, malformed, and truncated fixtures retain
+    semantics, copyability, safe keys, and document-first visual priority.
+- `W36-E5-S4-T3` Render the conditional Evidence Inspector with finding, provenance, related
+  artifact, and exact source-reference variants.
+  - Scope: packaged evidence renderer only.
+  - Verification: zero-value evidence hides the inspector while validator, provenance,
+    implementation, and legacy fixtures show only retained evidence.
+- `W36-E5-S4-T4` Integrate live elapsed time, last-output age, real milestones, silence state,
+  and Open live output into Studio without embedding raw logs in the default viewport.
+  - Dependencies: `W36-E6-S3`.
+  - Scope: active Studio observation renderer only.
+  - Verification: running, silent, cancelling, completed, and externally completed jobs show no
+    fake progress and agree with persisted runtime evidence.
+- `W36-E5-S4-T5` Promote the verified active-Studio candidate to `parity_closed` while retaining
+  the legacy cockpit/sidebar renderer for missing/default and explicit rollback until cutover.
+  - Dependencies: `W36-E7-S1-T2`, `W36-E7-S1-T7`.
+  - Scope: active-Studio parity-manifest entry only.
+  - Verification: `ui=studio` contains no duplicate workbench, while missing/default and
+    `ui=legacy` retain artifact, question, recovery, and live-log reachability until cutover.
+
+Exit evidence:
+
+- the first desktop viewport contains context, one current decision, and the primary document;
+- generated evidence remains read-only and corrections retain durable audited paths;
+- stage progression and attempt history remain distinct concepts.
+
+#### Slice W36-E5-S5 — human-decision Recovery Studio (`planned`)
+Goal: migrate questions, interventions, and runtime approvals into one contextual decision
+surface without conflating their durable semantics.
+
+Dependencies:
+
+- `W36-E5-S4`
+- `W36-E6-S2`
+- `W36-E6-S4`
+- approval replacement depends on `W34-E3-S2`
+
+Local tasks:
+
+- `W36-E5-S5-T1` Render blocking questions with exact QID, resolved/partial/deferred status,
+  draft recovery, and answer-and-resume behavior.
+  - Scope: question Recovery renderer only.
+  - Verification: resolved unblocks, partial/deferred remain blocking when required, failed
+    submit preserves the draft, and durable `answers.md` readback wins.
+- `W36-E5-S5-T2` Render Request Change and intervention context as durable stage-scoped input,
+  including downstream-success rejection and remediation routing.
+  - Scope: intervention Recovery renderer only.
+  - Verification: allowed submit creates one operator-request document and blocked intervention
+    creates none while preserving the selected stage/run.
+- `W36-E5-S5-T3` Render runtime approval scope, breadth, reason, risk, pending state, session
+  confirmation, and durable winning decision separately from product questions.
+  - Scope: approval Recovery renderer only.
+  - Verification: allow/deny/cancel/conflict fixtures agree with the compare-and-set audit row and
+    no broad approval posts before confirmation.
+- `W36-E5-S5-T4` Implement the decision-first mobile question and approval layouts with compact
+  context, 44px controls, and evidence drill-down.
+  - Dependencies: `W36-E5-S2`.
+  - Scope: human-decision responsive presentation only.
+  - Verification: `320x568` and `390x844` keyboard/touch journeys expose the full decision and
+    primary submit without horizontal overflow or initial scroll.
+- `W36-E5-S5-T5` Promote the verified question candidate to `parity_closed` while retaining the
+  legacy question renderer for missing/default and explicit rollback.
+  - Dependencies: `W36-E7-S1-T6`.
+  - Scope: question parity-manifest entry only.
+  - Verification: the question fixture closes independently and durable answer/resume behavior
+    is equivalent in `ui=studio`, missing/default, and `ui=legacy` modes.
+- `W36-E5-S5-T6` Promote the verified intervention candidate to `parity_closed` while retaining
+  the legacy intervention renderer for missing/default and explicit rollback.
+  - Dependencies: `W36-E7-S1-T10`.
+  - Scope: intervention parity-manifest entry only.
+  - Verification: allowed and blocked intervention fixtures close independently with identical
+    durable request behavior.
+- `W36-E5-S5-T7` Promote the verified approval candidate to `parity_closed` while retaining the
+  legacy approval renderer for missing/default and explicit rollback.
+  - Dependencies: `W36-E7-S1-T11`.
+  - Scope: approval parity-manifest entry only.
+  - Verification: allow, deny, cancel, session, and conflict fixtures close independently and
+    preserve the same compare-and-set winner.
+
+Exit evidence:
+
+- question answers, runtime approvals, and intervention requests remain distinct durable paths;
+- every human blocker exposes one decision, one evidence path, and truthful readback.
+
+#### Slice W36-E5-S6 — runtime and validation Recovery Studio (`planned`)
+Goal: surface the first decisive runtime or validation failure with the one eligible recovery
+action and exact retained evidence.
+
+Dependencies:
+
+- `W36-E5-S4`
+- `W36-E6-S3`
+- `W34-E3-S3-T1`
+- `W34-E4-S2`
+
+Local tasks:
+
+- `W36-E5-S6-T1` Render runtime/provider failure, stopped state, last durable signal, and
+  eligible retry without consuming or implying validation repair budget.
+  - Scope: runtime-failure Recovery renderer only.
+  - Verification: unavailable executable, authentication, timeout, cancellation, no-progress,
+    and legacy fixtures show the typed outcome and correct safe action.
+- `W36-E5-S6-T2` Render transient offline, reconnecting, recovered, expired-job, and manual
+  Reconnect states while preserving durable log/artifact access.
+  - Scope: connection Recovery renderer only.
+  - Verification: cursor-preserving failure/recovery fixtures show no skipped or duplicated
+    chunks and never claim runtime termination without server evidence.
+- `W36-E5-S6-T3` Render validation findings with exact document/line/rule/provenance and make
+  Run Repair primary only when the backend reports repair available.
+  - Scope: validation Recovery renderer only.
+  - Verification: repair-available, repaired, exhausted, explicit-stop, stale-artifact, and
+    malformed-report fixtures choose the correct action and evidence.
+- `W36-E5-S6-T4` Render Request Change as primary after repair exhaustion/explicit stop and keep
+  raw logs/attempt history as secondary drill-down.
+  - Scope: repair-exhaustion Recovery renderer only.
+  - Verification: no exhausted state exposes an enabled Run Repair and the intervention request
+    retains the selected run/stage context.
+- `W36-E5-S6-T5` Implement decision-first mobile runtime and validation Recovery layouts over
+  the shared compact shell.
+  - Dependencies: `W36-E5-S2`.
+  - Scope: failure/recovery responsive presentation only.
+  - Verification: `320x568` and `390x844` show the typed failure, one eligible recovery action,
+    and evidence drill-down without horizontal overflow or initial decision scroll.
+- `W36-E5-S6-T6` Promote the verified runtime/validation candidates to `parity_closed` while
+  retaining legacy failure cards for missing/default and explicit rollback.
+  - Dependencies: `W36-E7-S1-T3`.
+  - Scope: runtime/validation parity-manifest entries only.
+  - Verification: both entries close and first-failure, repair-history, raw-log, and request
+    paths remain equivalent in `ui=studio`, missing/default, and `ui=legacy` modes.
+
+Exit evidence:
+
+- runtime failure, validation repair, and human correction remain truthful distinct paths;
+- recovery never silently progresses or invents missing evidence.
+
+#### Slice W36-E5-S7 — implement, Review, and QA quality gates (`planned`)
+Goal: migrate task execution, repository evidence, Review findings, QA verdict, remediation,
+and stale downstream recovery without weakening task-aware eligibility.
+
+Dependencies:
+
+- `W35-E2-S8`
+- `W36-E5-S4`
+- `W36-E6-S2`
+- `W36-E6-S4`
+
+Local tasks:
+
+- `W36-E5-S7-T1` Render dependency-ready tasks, task attempts, blocked/failed recovery, and
+  aggregate finalization inside Studio from the canonical task read model.
+  - Scope: implement task workspace renderer only.
+  - Verification: run/resume/fail/recover/finalize fixtures preserve successful tasks and never
+    enable Review before successful aggregate finalization.
+- `W36-E5-S7-T2` Render the real repository diff, untracked/deleted files, `.aidd/` separation,
+  scope status, and implementation-report claim mismatch in the Document Canvas.
+  - Scope: implement evidence renderer only.
+  - Verification: repository-diff fixtures match core evidence and use textual added/removed/
+    changed meaning in addition to color.
+- `W36-E5-S7-T3` Render structured Review findings and QA verdict, residual risks, known issues,
+  acceptance ids, and evidence links.
+  - Scope: Review/QA quality-gate renderer only.
+  - Verification: approval/rejection/not-ready/blocked/missing-evidence fixtures agree with the
+    canonical reports and validators.
+- `W36-E5-S7-T4` Render selected remediation to `implement`, pending readback, and explicit
+  downstream Review/QA stale rerun.
+  - Scope: quality-gate remediation renderer only.
+  - Verification: one durable remediation request is created, fresh downstream stages become
+    stale, stale QA never becomes terminal, and rerun uses the selected runtime.
+- `W36-E5-S7-T5` Promote the verified implement/Review/QA candidates to `parity_closed` while
+  retaining legacy surfaces for missing/default and explicit rollback.
+  - Dependencies: `W36-E7-S1-T4`, `W36-E7-S1-T9`.
+  - Scope: task/quality-gate parity-manifest entries only.
+  - Verification: entries close while task ledger, finalization, diff, findings, remediation,
+    stale-state, `ui=studio`, missing/default, and `ui=legacy` tests remain green.
+
+Exit evidence:
+
+- every Review/QA claim remains bound to task and repository evidence;
+- no UI entrypoint bypasses the task ledger or aggregate finalization gate.
+
+#### Slice W36-E5-S8 — History Filmstrip and retained evidence (`planned`)
+Goal: expose causal attempt/task history, comparison, lineage, and archive state using only
+durably retained evidence.
+
+Dependencies:
+
+- `W36-E5-S4`
+- `W36-E6-S1`
+- `W34-E2-S2-T2`
+- comparison/accountability consume `W34-E2-S3-T2`
+- archive presentation consumes `W34-E2-S3-T1`
+
+Local tasks:
+
+- `W36-E5-S8-T1` Implement a typed Filmstrip frame projection for stage attempts, task
+  attempts, and aggregate finalization milestones with events as markers.
+  - Scope: core operator timeline/read model only.
+  - Verification: normal, repair, intervention, remediation, task, finalization, live, and
+    legacy fixtures produce stable frame identity and retain the first decisive failure.
+- `W36-E5-S8-T2` Render the collapsed Studio Filmstrip and expanded History timeline with
+  selected artifact/log evidence and Return to live behavior.
+  - Scope: packaged Filmstrip/History renderer only.
+  - Verification: frame selection, historical auto-follow pause, exact log range, missing
+    snapshot, and current-live return behave deterministically.
+- `W36-E5-S8-T3` Render run comparison plus retained prompt, artifact, stage, and validator
+  deltas.
+  - Scope: History comparison renderer only.
+  - Verification: Back/reload restores both runs and every displayed delta links to retained
+    source evidence or an explicit unavailable-snapshot state.
+- `W36-E5-S8-T4` Render parent, source, and child run lineage without presenting lineage as
+  mutable workflow state.
+  - Scope: History lineage renderer only.
+  - Verification: every routable relation resolves through canonical run identity and opening a
+    relation leaves both source and target manifests byte-identical.
+- `W36-E5-S8-T5` Render archive state as the append-only overlay owned by `W34-E2-S3-T1`.
+  - Scope: History archive-state renderer only.
+  - Verification: archive inspection changes no completed-run bytes/hashes and all retained
+    documents, logs, comparison, and lineage remain inspectable.
+- `W36-E5-S8-T6` Render Filmstrip as a vertical chronological mobile drill-down rather than a
+  horizontal scroll trap.
+  - Dependencies: `W36-E5-S2`.
+  - Scope: History responsive presentation only.
+  - Verification: `320x568` and `390x844` expose frame status, evidence action, and return path
+    without page-level horizontal overflow.
+- `W36-E5-S8-T7` Promote the verified History candidate to `parity_closed` while retaining the
+  legacy timeline/history renderer for missing/default and explicit rollback.
+  - Dependencies: `W36-E7-S1-T5`.
+  - Scope: History parity-manifest entry only.
+  - Verification: the entry closes and timeline, comparison, lineage, archive, and raw evidence
+    remain reachable in `ui=studio`, missing/default, and `ui=legacy` modes.
+
+Exit evidence:
+
+- History never implies a document/repository snapshot that was not retained;
+- stage progression, causal attempts, and run lineage remain distinguishable and routable.
+
+#### Slice W36-E5-S9 — Flow Complete and independent next outcomes (`planned`)
+Goal: make fresh terminal QA produce an immutable handoff with one recommended disposition and
+all secondary outcomes behind progressive disclosure.
+
+Dependencies:
+
+- `W36-E5-S0`
+- `W36-E5-S7`
+- `W36-E5-S8`
+- `W36-E6-S2`
+- `W36-E6-S4`
+- `W34-E2-S3-T1`
+- `W34-E3-S4-T4`
+
+Local tasks:
+
+- `W36-E5-S9-T3` Render immutable Flow Complete evidence, the core recommendation, and Other next
+  actions only for fresh eligible terminal QA.
+  - Scope: terminal handoff renderer only.
+  - Verification: clean, failed, blocked, and warning fresh terminal fixtures show the exact
+    core recommendation; missing, stale, and nonterminal QA do not render Flow Complete.
+- `W36-E5-S9-T4` Render follow-up definition, inherited context, source evidence, preflight, and
+  launch through the shared draft/mutation seams.
+  - Scope: follow-up next-flow renderer only.
+  - Verification: Back/reload/failure/retry preserve the follow-up draft, successful launch
+    creates one new work-item/run identity, and the source run remains byte-identical.
+- `W36-E5-S9-T5` Render clone definition, inherited context, source evidence, preflight, and
+  launch through the shared draft/mutation seams.
+  - Scope: clone next-flow renderer only.
+  - Verification: Back/reload/failure/retry preserve the clone draft, successful launch creates
+    one independent identity, and the source run remains byte-identical.
+- `W36-E5-S9-T6` Render the existing Run Eval / Scenario Batch manual handoff as a non-repair
+  comparison disposition under Other next actions.
+  - Scope: terminal eval handoff renderer only; no new mutation endpoint.
+  - Verification: the action opens exact source/version/scenario context and operator commands,
+    sends no workflow mutation request, and leaves source-run evidence unchanged.
+- `W36-E5-S9-T7` Render Archive Run as an append-only visibility disposition under Other next
+  actions.
+  - Scope: terminal archive disposition renderer only.
+  - Verification: archive writes only the owned overlay and completed documents, artifacts,
+    logs, comparison, and lineage remain inspectable.
+- `W36-E5-S9-T8` Render the recommended next decision and Other next actions as a compact mobile
+  drill-down over the shared responsive shell.
+  - Dependencies: `W36-E5-S2`.
+  - Scope: Flow Complete responsive presentation only.
+  - Verification: `320x568` and `390x844` show final status, one recommendation, and a reachable
+    secondary-outcomes disclosure without horizontal overflow or initial decision scroll.
+- `W36-E5-S9-T9` Promote the verified Flow Complete candidate to `parity_closed` while retaining
+  the equal-weight legacy action grid/wizard for missing/default and explicit rollback.
+  - Dependencies: `W36-E7-S1-T8`.
+  - Scope: terminal/next-flow parity-manifest entry only.
+  - Verification: the parity entry closes and all accepted outcomes remain keyboard-reachable
+    with distinct service semantics in `ui=studio`, missing/default, and `ui=legacy` modes.
+
+Exit evidence:
+
+- completed source runs remain immutable;
+- one recommended outcome leads, while all accepted independent outcomes remain reachable.
+
+#### Slice W36-E5-S10 — default cutover and legacy removal (`planned`)
+Goal: make Studio the only maintained renderer after a bounded rollback window and delete
+presentation code that no longer owns a supported surface.
+
+Dependencies:
+
+- `W36-E4-S1-T7`
+- `W36-E5-S3-T5`, `W36-E5-S4-T5`, `W36-E5-S5-T5..T7`, `W36-E5-S6-T6`,
+  `W36-E5-S7-T5`, `W36-E5-S8-T7`, and `W36-E5-S9-T9`
+- `W36-E7-S1-T1..T12`
+- `W36-E7-S2-T1`
+
+Local tasks:
+
+- `W36-E5-S10-T1` Switch the missing/default presentation selector to Studio after every
+  per-surface parity entry is closed while retaining explicit `ui=legacy` rollback.
+  - Scope: packaged renderer default only.
+  - Verification: the full provider-free browser command passes in default Studio mode and the
+    explicit rollback renderer still dispatches identical service actions.
+- `W36-E5-S10-T2` Record one source-installed rollback-window pass while both presentation
+  selectors remain supported.
+  - Scope: cutover evidence only.
+  - Verification: isolated fixture copies prove equivalent endpoint/payload semantics and
+    normalized outcomes in default and rollback modes; immutable source-run evidence remains
+    byte-identical where the journey contract requires it.
+- `W36-E5-S10-T3` Remove the temporary legacy selector when no accepted journey requires it.
+  - Scope: browser bootstrap selector only.
+  - Verification: missing, invalid, and former legacy selector values resolve to Studio without
+    changing packaged URLs, service requests, or durable state.
+- `W36-E5-S10-T4` Remove unreferenced legacy render modules, selectors, body-mode ordering,
+  package resources, and compatibility tests that no longer protect a supported contract.
+  - Scope: packaged frontend cleanup only.
+  - Verification: exhaustive asset discovery, JavaScript syntax, package-resource, DOM, and
+    browser suites pass with no legacy renderer references.
+- `W36-E5-S10-T5` Reconcile operator docs and screenshots to the Studio-only surface after
+  implementation parity.
+  - Scope: README, handbook, local-project E2E, and architecture implementation-status text.
+  - Verification: docs consistency finds no current-behavior claim or image that points to the
+    removed renderer while historical assets remain clearly non-normative.
+
+Exit evidence:
+
+- `aidd ui` opens Studio through stable packaged assets and existing service semantics;
+- no duplicate renderer, action dispatcher, or dead legacy selector remains;
+- rollback evidence exists without retaining a permanent second frontend.
 
 ### Epic W36-E6 — durable navigation, drafts, reconnect, and action integrity (`planned`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`
@@ -10647,26 +11312,26 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S1-T1` Add a URL-state codec for work item, run, stage, mode, detail, and
-  artifact selection.
+- `W36-E6-S1-T1` Add a URL-state codec for Inbox / Studio / History mode, work item,
+  run, stage, attempt or task-attempt detail, and artifact selection.
   - Scope: packaged browser state module.
   - Verification: round-trip, missing, legacy, stale, and invalid-value cases resolve to
     safe deterministic state.
 - `W36-E6-S1-T2` Wire push, replace, popstate, and reload restoration through the URL
-  codec.
+  codec across Inbox, Studio, History, and contextual drawers.
   - Scope: shell navigation controller.
   - Verification: a browser history sequence preserves Logs versus Artifacts, selected
     stage, selected run, and artifact drill-down across Back, Forward, and reload.
-- `W36-E6-S1-T3` Make work-item, historical-run, parent, and child-lineage rows routable
-  and remove duplicate Resume/Open-latest controls.
-  - Scope: Project Home and History rendering.
-  - Verification: each visible action has one distinct route outcome and archived runs
-    retain artifact/history inspection.
+- `W36-E6-S1-T3` Define shared route intents for Inbox work-item, historical-run, parent, and
+  child-lineage bindings without owning their vertical renderers.
+  - Scope: URL/navigation intent controller only.
+  - Verification: E5-owned Inbox and History fixtures bind each visible action to one distinct
+    route outcome, and archived runs retain artifact/history inspection.
 
 Exit evidence:
 
 - operator location survives reload and browser navigation;
-- Project Home and History no longer expose different labels for the same action.
+- Inbox and History no longer expose different labels for the same action.
 
 #### Slice W36-E6-S2 — browser-session draft and dirty-state safety (`planned`)
 Goal: preserve unsaved operator input across UI navigation without treating drafts as
@@ -10685,6 +11350,11 @@ Local tasks:
   - Scope: operator frontend architecture only.
   - Verification: the contract isolates project, work item, run, stage, form, and source
     id and names exact submit/expiry cleanup behavior.
+- `W36-E6-S2-T4` Implement the scoped noncanonical browser-session draft store.
+  - Dependencies: `W36-E6-S2-T1`.
+  - Scope: shared packaged JavaScript state utility only.
+  - Verification: contract fixtures isolate every key dimension and successful submit
+    clears only the owning draft.
 - `W36-E6-S2-T2` Adopt draft restore and leave-warning behavior for question and
   intervention forms.
   - Dependencies: `W36-E6-S2-T4`.
@@ -10697,11 +11367,6 @@ Local tasks:
   - Scope: next-flow browser controller.
   - Verification: wizard Back, reload, preflight failure, retry, and successful launch
     preserve or clear the expected draft.
-- `W36-E6-S2-T4` Implement the scoped noncanonical browser-session draft store.
-  - Dependencies: `W36-E6-S2-T1`.
-  - Scope: shared packaged JavaScript state utility only.
-  - Verification: contract fixtures isolate every key dimension and successful submit
-    clears only the owning draft.
 
 Exit evidence:
 
@@ -10771,16 +11436,19 @@ Local tasks:
   - Verification: failed writes retain drafts, successful writes clear drafts, and
     duplicate submissions create one durable artifact.
 - `W36-E6-S4-T4` Adopt the mutation guard for next-flow draft, preflight, and launch.
+  - Dependencies: `W34-E3-S4-T4`.
   - Scope: next-flow browser controller.
   - Verification: repeated actions cannot create duplicate work items or runs and the
     source run remains unchanged after failure.
 - `W36-E6-S4-T5` Add approval reason capture and explicit confirmation for
   `allow_for_session` with controls disabled while submitting.
+  - Dependencies: `W34-E3-S2`.
   - Scope: approval decision UI.
   - Verification: no session-wide approval POST occurs before confirmation and the
     submitted reason/breadth remain visible in the preview.
 - `W36-E6-S4-T6` Reconcile approval compare-and-set or terminal conflicts to the durable
   winning decision and audit row.
+  - Dependencies: `W34-E3-S2`.
   - Scope: approval conflict UI.
   - Verification: concurrent opposite decisions display one server-authoritative winner
     and no stale pending controls.
@@ -10792,7 +11460,7 @@ Exit evidence:
   compare-and-set winner.
 
 ### Epic W36-E7 — executable UX acceptance and rollout evidence (`planned`)
-Linked stories: `US-07`, `US-09`, `US-11`, `US-12`
+Linked stories: `US-07`, `US-09`, `US-11`, `US-12`, `US-13`
 
 #### Slice W36-E7-S1 — canonical operator browser journeys (`planned`)
 Goal: prove the critical operator jobs through provider-free rendered journeys rather
@@ -10801,34 +11469,81 @@ than isolated asset and endpoint assertions.
 Dependencies:
 
 - `W36-E2`
-- affected `W36-E3` through `W36-E6` surfaces
+- `W36-E1-S2-T3`
 
 Local tasks:
 
-- `W36-E7-S1-T1` Add the project validation, create/resume branch, runtime review, and
-  first-launch browser journey.
+- `W36-E7-S1-T1` Add the Guided Setup project validation, create/resume, runtime review,
+  first launch, and resulting Inbox entry browser journey.
+  - Dependencies: `W36-E4-S1-T1..T6`, `W36-E4-S2`, `W36-E5-S2`,
+    `W36-E5-S3-T1..T4`.
   - Scope: onboarding browser scenario family.
   - Verification: every required viewport completes create or resume with one primary
     action, no geometry/accessibility failure, and no provider authentication.
-- `W36-E7-S1-T2` Add the running, transient reconnect, blocking-question, and approval
-  browser journey.
-  - Scope: live-control browser scenario family.
-  - Verification: progress, reconnect, draft, decision, and durable readback states pass
-    without console/network ambiguity.
-- `W36-E7-S1-T3` Add the runtime-failure and validation repair/exhaustion browser
+- `W36-E7-S1-T2` Add the active Studio running, silence, cancellation, transient
+  reconnect, and return-to-live browser journey.
+  - Dependencies: `W36-E5-S2`, `W36-E5-S4-T1..T4`, `W36-E6-S3`.
+  - Scope: live Studio browser scenario family.
+  - Verification: real milestones, last output, cursor recovery, cancel lifecycle, and
+    durable logs pass without console/network ambiguity or fake progress.
+- `W36-E7-S1-T3` Add the Runtime/Validation Recovery Studio repair/exhaustion browser
   journey.
+  - Dependencies: `W36-E5-S6-T1..T5`.
   - Scope: runtime/validation recovery scenario family.
   - Verification: each failure exposes the correct first evidence, one primary recovery
     action, and a truthful stopped/running state.
-- `W36-E7-S1-T4` Add the QA not-ready, remediation, stale downstream, and terminal
-  handoff browser journey.
+- `W36-E7-S1-T4` Add the Review/QA quality-gate, remediation, and stale downstream
+  browser journey.
+  - Dependencies: `W35-E2-S8`, `W36-E5-S7-T2..T4`.
   - Scope: delivery-decision browser scenario family.
-  - Verification: unsafe completion remains blocked, remediation/rerun is explicit, and
-    terminal evidence/next-flow decisions stay reachable.
-- `W36-E7-S1-T5` Add the run-history, lineage, archive, and next-flow browser journey.
+  - Verification: unsafe completion remains blocked, remediation/rerun is explicit, and stale
+    QA keeps Flow Complete absent until a later fresh-QA journey proves terminal eligibility.
+- `W36-E7-S1-T5` Add the History Filmstrip, comparison, lineage, and archive browser
+  journey.
+  - Dependencies: `W36-E5-S8-T1..T6`.
   - Scope: history and continuation browser scenario family.
   - Verification: Back/reload/deep links preserve run identity and completed source-run
     artifacts remain immutable and inspectable.
+- `W36-E7-S1-T6` Add the blocking-question answer/resume Recovery Studio browser journey.
+  - Dependencies: `W36-E5-S5-T1`, `W36-E5-S5-T4`.
+  - Scope: product-question browser scenario family.
+  - Verification: draft restore, resolved/partial/deferred state, failed/successful durable
+    readback, answer/resume, and current run/stage context pass on desktop and mobile.
+- `W36-E7-S1-T7` Add the Document Canvas and Evidence Inspector browser journey.
+  - Dependencies: `W36-E5-S4-T2..T3`.
+  - Scope: document/evidence browser scenario family.
+  - Verification: Preview/Source/Diff, safe artifact selection, validator provenance,
+    missing evidence, zero-value hiding, and raw-log drill-down pass without arbitrary
+    path reads.
+- `W36-E7-S1-T8` Add the Flow Complete, follow-up, clone, eval, and archive disposition
+  browser journey.
+  - Dependencies: `W36-E5-S0`, `W36-E5-S9-T3..T8`.
+  - Scope: terminal and next-outcome browser scenario family.
+  - Verification: clean versus failed/blocked/warning fresh QA, stale/nonterminal exclusion,
+    one core-recommended action, drafts/preflight, independent identities, truthful manual eval
+    handoff, archive overlay, and byte-identical source-run evidence all pass.
+- `W36-E7-S1-T9` Add the implement task run/resume, failed-attempt recovery, repository
+  evidence, and aggregate-finalization browser journey.
+  - Dependencies: `W35-E2-S8`, `W36-E5-S7-T1..T4`.
+  - Scope: task-aware implement browser scenario family.
+  - Verification: dependency readiness, preserved successes, diff/scope evidence,
+    finalization recovery, and Review eligibility agree with the canonical task ledger.
+- `W36-E7-S1-T10` Add the Request Change/intervention Recovery Studio browser journey.
+  - Dependencies: `W36-E5-S5-T2`, `W36-E5-S5-T4`.
+  - Scope: intervention browser scenario family.
+  - Verification: draft restore, allowed request, downstream-success rejection, one durable
+    operator request, remediation routing, and current run/stage context pass.
+- `W36-E7-S1-T11` Add the runtime-approval Recovery Studio browser journey.
+  - Dependencies: `W36-E5-S5-T3`, `W36-E5-S5-T4`.
+  - Scope: runtime-approval browser scenario family.
+  - Verification: allow, deny, cancel, session confirmation, pending state, compare-and-set
+    conflict, durable winner, and current run/stage context pass on desktop and mobile.
+- `W36-E7-S1-T12` Add the project-local Inbox priority and routing browser journey.
+  - Dependencies: `W36-E5-S0`, `W36-E5-S2`, `W36-E5-S3-T1..T4`.
+  - Scope: Inbox browser scenario family.
+  - Verification: Needs your decision, Running now, Ready to continue, and Flow complete
+    fixtures preserve deterministic order, one core-approved action, exact Studio routing,
+    first-viewport visibility, keyboard navigation, and blocking-item non-dismissal.
 
 Exit evidence:
 
@@ -10890,8 +11605,8 @@ Dependencies:
 Local tasks:
 
 - `W36-E7-S3-T1` Write the observed operator task script and scoring template for
-  setup, first launch, monitoring, question recovery, runtime failure, QA remediation,
-  and terminal continuation.
+  Guided Setup, Inbox triage, active Studio monitoring, question recovery, runtime
+  failure, QA remediation, History inspection, and terminal continuation.
   - Scope: operator acceptance documentation.
   - Verification: every task records completion, elapsed time, wrong actions, assistance,
     confidence, and first decisive confusion.
@@ -10913,8 +11628,12 @@ Exit evidence:
 
 Wave 36 exit evidence:
 
-- setup, active execution, recovery, evidence, history, and terminal handoff each expose
-  one primary decision and bounded supporting evidence;
+- Guided Setup, Inbox, active Studio, contextual Recovery/Evidence, History, and Flow
+  Complete each expose one primary decision and bounded supporting evidence;
+- all eight accepted reference screens map to an implemented surface and executable
+  journey, with the written architecture contract winning over generated text;
+- the Studio renderer is the only maintained default and no duplicate legacy renderer,
+  action dispatcher, or dead selector remains after the bounded rollback window;
 - no selectable control promises behavior that its service call does not perform;
 - runtime readiness, authentication evidence, write scope, connectivity, and approval
   breadth are truthfully distinguished;
@@ -10940,6 +11659,12 @@ Sync notes:
 - `2026-07-14` Queue reconciliation deliberately moved `W36-E1-S1-T1` to `Parking lot`
   while Wave 35 entrypoint integrity and the ready Wave 34 foundations remain the active
   correction path.
+- `2026-07-14` The accepted Document & Evidence Studio contract and eight reference screens
+  replaced Mission Control as the target design. `W36-E1-S1-T1` and `W36-E1-S1-T2` are now
+  complete; Wave 36 retains its id and becomes the canonical migration wave rather than
+  duplicating the work in a new wave. The plan adds a presentation-only strangler seam,
+  vertical Inbox/Studio/Recovery/History/Flow Complete slices, per-surface browser parity,
+  and bounded legacy cutover while keeping Wave 34/35 integrity gates authoritative.
 
 ---
 

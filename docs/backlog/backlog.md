@@ -68,28 +68,46 @@ slice, and local task.
 - `W35-E2-S9-T1` — Extract task attempt, recovery, and interview-evidence lifecycle from
   the task-execution hotspot.
 - `W35-E2-S10-T1` — Reuse one immutable repository snapshot per task checkpoint.
-- `W36-E1-S1-T1` — Define the accepted operator state hierarchy, progressive
-  disclosure, and one-primary-action contract.
+- `W36-E1-S1-T3` — Replace checklist-only navigation wording with the canonical
+  Guided Setup / Inbox / Studio / History state-route matrix.
 - `W36-E2-S1-T1` — Select and document a maintained provider-free browser driver and
   packaged-UI test policy.
+- `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
+  dispatch from legacy renderer ownership.
 - `W36-E3-S1-T1` — Add semantic typography, spacing, radius, elevation, control-size,
   state, focus, and motion tokens.
 - `W36-E4-S1-T1` — Add the Project -> Work item -> Runtime -> Review/Launch onboarding
   state machine.
-- `W36-E5-S1-T1` — Add a visibility policy for zero-value sidebar and bottom-dock
-  sections.
+- `W36-E5-S1-T1` — Hide a zero-value Evidence Inspector and keep Filmstrip/log evidence
+  collapsed until requested.
 - `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
   context/status bar and maintenance overflow.
-- `W36-E6-S1-T1` — Add a URL-state codec for work item, run, stage, mode, detail, and
-  artifact selection.
+- `W36-E5-S3-T1` — Implement the typed project-local Inbox projection and deterministic
+  priority sections.
+- `W36-E5-S4-T1` — Compose the active Studio view from shared mode navigation, compact
+  context bar, stage navigation, and Decision Bar slots.
+- `W36-E5-S5-T1` — Render blocking questions with durable resolution and draft-recovery
+  semantics in Recovery Studio.
+- `W36-E5-S6-T1` — Render typed runtime failure and the eligible recovery action without
+  conflating validation repair.
+- `W36-E5-S7-T1` — Render canonical implement tasks, attempts, recovery, and aggregate
+  finalization inside Studio.
+- `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
+  task attempts, and finalization milestones.
+- `W36-E5-S0-T1` — Add one core-owned recommended outcome and rationale to the terminal
+  handoff read model.
+- `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
+  parity entries close.
+- `W36-E6-S1-T1` — Add a URL-state codec for Inbox / Studio / History, work item, run,
+  stage, attempt/task-attempt detail, and artifact selection.
 - `W36-E6-S2-T1` — Define the scoped browser-session draft key, retention, and cleanup
   contract.
 - `W36-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
   bounded backoff.
 - `W36-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
   suppression, conflict readback, and retryable failure state.
-- `W36-E7-S1-T1` — Add the project validation, create/resume, runtime review, and
-  first-launch browser journey.
+- `W36-E7-S1-T1` — Add the Guided Setup project validation, create/resume, runtime
+  review, first-launch, and resulting Inbox browser journey.
 
 ## Update rules
 
@@ -106,9 +124,10 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-14` Reconciled the repository cleanup/refactoring audit. Wave 35 is reopened
-  for the P1 task-aware implementation-entrypoint correction; the canonical
-  allowed-write-scope boundary and five ready Wave 34 foundations are also in `Next`.
-  `Soon` now contains only their direct successors, Wave 36 is deliberately deferred,
-  and the former append-only queue journal is retained by Git history rather than this
-  active file.
+- `2026-07-14` Wave 35 remains reopened for the P1 task-aware implementation-entrypoint
+  correction; the canonical allowed-write-scope boundary and ready Wave 34 foundations
+  remain in `Next`, with only direct successors in `Soon`. The accepted Document &
+  Evidence Studio plan now lives in Wave 36: completed contract tasks were removed from
+  this queue, and the route-matrix, migration-seam, Inbox, Studio, Recovery, History,
+  Flow Complete, and cutover entry tasks remain deliberately in `Parking lot` behind
+  their Wave 34/35 and browser-foundation gates.
