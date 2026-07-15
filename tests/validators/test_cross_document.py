@@ -12,6 +12,9 @@ from aidd.validators.cross_document import (
     REPAIR_BRIEF_NOT_REFERENCED_CODE,
     REPAIR_BUDGET_EXHAUSTED_CODE,
     REPAIR_MENTION_WITHOUT_BRIEF_CODE,
+    REVIEW_IMPLEMENT_EVIDENCE_CODE,
+    REVIEW_IMPLEMENT_FINDING_CODE,
+    REVIEW_IMPLEMENT_PATH_CODE,
     TASKLIST_PLAN_DEPENDENCY_CODE,
     TASKLIST_PLAN_MILESTONE_CODE,
     TASKLIST_PLAN_VERIFICATION_CODE,
@@ -100,6 +103,42 @@ def _copy_example_bundle(
     stage_root.mkdir(parents=True, exist_ok=True)
     for source_path in example_root.glob("*.md"):
         shutil.copy2(source_path, stage_root / source_path.name)
+
+
+def _write_review_implementation_pair(
+    workspace_root: Path,
+    *,
+    review_evidence: str = "`implementation-report.md`, `src/app.py`, and EV-1",
+    follow_up_reference: str = "RV-1",
+) -> None:
+    implement_output = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "output"
+    )
+    implement_output.mkdir(parents=True, exist_ok=True)
+    (implement_output / "implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n- `src/app.py` - implemented behavior.\n\n"
+        "## Verification notes\n\n- EV-1: `pytest -q` -> pass.\n",
+        encoding="utf-8",
+    )
+    (implement_output / "stage-result.md").write_text("# Stage Result\n", encoding="utf-8")
+    (implement_output / "validator-report.md").write_text(
+        "# Validator Report\n", encoding="utf-8"
+    )
+    review_root = _stage_root(workspace_root)
+    review_root.mkdir(parents=True, exist_ok=True)
+    (review_root / "review-report.md").write_text(
+        "# Review Report\n\n"
+        "## Findings\n\n"
+        "### RV-1 - Bounded follow-up\n\n"
+        "- Severity: low\n"
+        "- Disposition: follow-up\n"
+        f"- Evidence: {review_evidence}.\n"
+        "- Rationale: because the evidence supports the bounded finding.\n\n"
+        "## Required follow-up\n\n"
+        f"- Track {follow_up_reference}.\n",
+        encoding="utf-8",
+    )
 
 
 def _write_plan_tasklist_pair(
@@ -803,3 +842,83 @@ def test_validate_cross_document_consistency_avoids_false_negative_on_unresolved
             ),
         ),
     )
+
+
+def test_review_cross_validation_accepts_resolved_implementation_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_implementation_pair(workspace_root)
+
+    findings = validate_cross_document_consistency(
+        stage="review", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()
+
+
+def test_review_cross_validation_rejects_undeclared_finding_reference(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_implementation_pair(workspace_root, follow_up_reference="RV-9")
+
+    findings = validate_cross_document_consistency(
+        stage="review", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings] == [REVIEW_IMPLEMENT_FINDING_CODE]
+    assert "RV-9" in findings[0].message
+
+
+def test_review_cross_validation_rejects_missing_artifact_and_evidence_id(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_implementation_pair(
+        workspace_root,
+        review_evidence="`missing-report.md` and EV-9",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings] == [
+        REVIEW_IMPLEMENT_EVIDENCE_CODE,
+        REVIEW_IMPLEMENT_EVIDENCE_CODE,
+    ]
+    assert any("EV-9" in finding.message for finding in findings)
+    assert any("missing-report.md" in finding.message for finding in findings)
+
+
+def test_review_cross_validation_requires_exact_changed_path(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_implementation_pair(
+        workspace_root,
+        review_evidence="`implementation-report.md` and `tests/app.py`",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings] == [REVIEW_IMPLEMENT_PATH_CODE]
+    assert "tests/app.py" in findings[0].message
+
+
+def test_review_cross_validation_defers_when_implementation_report_is_missing(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    review_root = _stage_root(workspace_root)
+    review_root.mkdir(parents=True)
+    (review_root / "review-report.md").write_text(
+        "# Review Report\n\n## Findings\n\n- none\n", encoding="utf-8"
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()

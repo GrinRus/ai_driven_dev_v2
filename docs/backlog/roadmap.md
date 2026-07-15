@@ -8914,7 +8914,7 @@ Local tasks:
   - Scope: tasklist cross-document rules.
   - Verification: missing and mismatched plan obligations fail without reimplementing
     task-plan parsing or changing valid rich-tasklist behavior.
-- `W34-E1-S2-T3` (`next`) Bind non-task review findings, changed paths, and artifact/evidence
+- `W34-E1-S2-T3` (done) Bind non-task review findings, changed paths, and artifact/evidence
   references to implementation artifacts. [`ARCH-01`]
   - Dependencies: `W34-E1-S2-T2`.
   - Scope: review cross-document rules.
