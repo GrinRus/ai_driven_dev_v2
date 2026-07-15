@@ -5,15 +5,15 @@ import shutil
 from collections.abc import Callable
 from pathlib import Path
 
+from aidd.core.implementation_finalization import (
+    TaskFinalizationContext,
+    render_aggregate_implementation_report,
+)
 from aidd.core.implementation_service import AggregateFinalizationOutcome
 from aidd.core.run_store import persist_stage_status
 from aidd.core.stage_outputs import publish_stage_outputs_after_validation_pass
 from aidd.core.state_machine import StageState
-from aidd.core.task_execution import (
-    TaskFinalizationContext,
-    load_task_execution_plan,
-    render_aggregate_implementation_report,
-)
+from aidd.core.task_attempt_lifecycle import load_task_execution_plan
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.reports import write_validator_report
 from aidd.validators.semantic import validate_semantic_outputs

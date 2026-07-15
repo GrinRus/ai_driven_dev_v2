@@ -5,14 +5,16 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
 
+from aidd.core.implementation_finalization import (
+    TaskFinalizationContext,
+    complete_task_finalization,
+    prepare_task_finalization,
+)
 from aidd.core.task_execution import (
     TaskExecutionContext,
-    TaskFinalizationContext,
     complete_task_execution,
-    complete_task_finalization,
     load_task_execution_plan,
     prepare_task_execution,
-    prepare_task_finalization,
     reconcile_task_execution_state,
 )
 from aidd.core.task_ledger import (
@@ -99,9 +101,7 @@ class TaskAttemptExecutor(Protocol):
 
 
 class AggregateFinalizer(Protocol):
-    def __call__(
-        self, context: TaskFinalizationContext
-    ) -> AggregateFinalizationOutcome: ...
+    def __call__(self, context: TaskFinalizationContext) -> AggregateFinalizationOutcome: ...
 
 
 class ImplementationExecutionService:
@@ -192,9 +192,7 @@ class ImplementationExecutionService:
                 succeeded=False,
                 blocker=str(exc) or exc.__class__.__name__,
             )
-            raise ImplementationPortError(
-                "Task attempt executor failed.", ledger=failed
-            ) from exc
+            raise ImplementationPortError("Task attempt executor failed.", ledger=failed) from exc
         ledger = complete_task_execution(
             context=context,
             workspace_root=request.workspace_root,
@@ -230,9 +228,7 @@ class ImplementationExecutionService:
         )
         return self._result(ledger)
 
-    def finalize(
-        self, request: ImplementationExecutionRequest
-    ) -> ImplementationExecutionResult:
+    def finalize(self, request: ImplementationExecutionRequest) -> ImplementationExecutionResult:
         ledger = load_task_ledger(
             workspace_root=request.workspace_root,
             work_item=request.work_item,
@@ -260,9 +256,7 @@ class ImplementationExecutionService:
                 succeeded=False,
                 blocker=str(exc) or exc.__class__.__name__,
             )
-            raise ImplementationPortError(
-                "Aggregate finalizer failed.", ledger=failed
-            ) from exc
+            raise ImplementationPortError("Aggregate finalizer failed.", ledger=failed) from exc
         ledger = complete_task_finalization(
             context=context,
             workspace_root=request.workspace_root,
@@ -273,9 +267,7 @@ class ImplementationExecutionService:
         )
         return self._result(ledger, published=outcome.published)
 
-    def run_all(
-        self, request: ImplementationExecutionRequest
-    ) -> ImplementationExecutionResult:
+    def run_all(self, request: ImplementationExecutionRequest) -> ImplementationExecutionResult:
         ledger = self._ledger(request)
         while not ledger.all_succeeded():
             if any(

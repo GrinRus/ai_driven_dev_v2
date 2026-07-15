@@ -10049,7 +10049,7 @@ Local tasks:
     scope grammar.
   - Verification: tracked, untracked, deleted, symlink, and out-of-scope fixtures retain
     exact findings.
-- `W35-E2-S9-T3` Extract aggregate report, validation, publication, and finalization
+- `W35-E2-S9-T3` (done) Extract aggregate report, validation, publication, and finalization
   coordination. [`REF-06`]
   - Scope: core implementation finalization only.
   - Verification: retry, publication failure, and successful aggregate fixtures retain

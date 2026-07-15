@@ -7,13 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W35-E2-S9-T3` — Extract aggregate report, validation, publication, and finalization
-  coordination.
+- `W35-E2-S9-T4` — Partition task execution tests by plan, attempt, repository evidence,
+  and finalization ownership.
 
 ## Soon
 
-- `W35-E2-S9-T4` — Partition task execution tests by plan, attempt, repository evidence,
-  and finalization ownership.
 
 ## Parking lot
 
