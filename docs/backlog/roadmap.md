@@ -9991,7 +9991,7 @@ Local tasks:
   - Scope: task-execution architecture and entrypoint contract only.
   - Verification: one matrix names task selection, ledger/finalization transitions,
     publication eligibility, and fail-closed behavior for every entrypoint.
-- `W35-E2-S8-T2` (`next`) Move implementation execution/finalization policy into one typed core
+- `W35-E2-S8-T2` (done) Move implementation execution/finalization policy into one typed core
   service with domain results and errors. [`CORR-01`, `ARCH-04`]
   - Dependencies: `W35-E2-S8-T1`.
   - Scope: core implementation execution boundary only.

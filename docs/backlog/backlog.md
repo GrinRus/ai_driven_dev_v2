@@ -7,8 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W35-E2-S8-T2` — Move implementation execution and finalization policy into one typed
-  core service after the entrypoint contract is fixed.
 - `W34-E7-S4-T2` — Migrate semantic validation after the canonical
   allowed-write-scope boundary exists.
 - `W34-E1-S2-T3` — Bind non-task review findings and evidence references after plan/task
