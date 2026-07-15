@@ -203,3 +203,34 @@ def resolve_validator_finding_code(
 def canonical_validator_finding_code(code: str) -> str:
     spec = resolve_validator_finding_code(code)
     return spec.replacement or spec.code
+
+
+def render_validator_report_skeleton() -> str:
+    """Render the canonical prompt-facing validator-report protocol skeleton."""
+
+    lines = ["```md", "# Validator Report", ""]
+    fields_by_section = {
+        section: tuple(
+            field for field in VALIDATOR_REPORT_FIELDS if field.section is section
+        )
+        for section in ValidatorReportSection
+    }
+    placeholders = {
+        "total_issues": "<number>",
+        "blocking_issues": "<yes|no>",
+        "affected_documents": "<workspace-relative paths or none>",
+        "dominant_failure_categories": "<ordered categories or none>",
+        "finding_occurrences": "<raw count; remove line when no duplicates were collapsed>",
+        "verdict": "`<pass|fail>`",
+        "repair_required": "<yes|no>",
+    }
+    for section in ValidatorReportSection:
+        lines.extend((f"## {section.value}", ""))
+        fields = fields_by_section[section]
+        if fields:
+            lines.extend(f"- {field.label}: {placeholders[field.key]}" for field in fields)
+        else:
+            lines.append("- none")
+        lines.append("")
+    lines.append("```")
+    return "\n".join(lines)

@@ -8975,7 +8975,7 @@ Local tasks:
   - Scope: validator-report readers only.
   - Verification: canonical and declared legacy fixtures read equivalently while
     undeclared aliases fail.
-- `W34-E1-S3-T7` Render the prompt-facing validator-report skeleton from the canonical
+- `W34-E1-S3-T7` (done) Render the prompt-facing validator-report skeleton from the canonical
   registry.
   - Dependencies: `W34-E1-S3-T1`, `W34-E1-S3-T4`.
   - Scope: common stage-brief validator skeleton only.

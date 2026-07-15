@@ -20,6 +20,7 @@ from aidd.core.stage_registry import (
     resolve_required_input_documents,
 )
 from aidd.core.state_machine import StageState
+from aidd.validators.protocol import render_validator_report_skeleton
 
 _STAGE_RESULT_SKELETON = """```md
 # Stage Result
@@ -60,36 +61,9 @@ _STAGE_RESULT_SKELETON = """```md
 - <why the stage ended in the declared status>
 ```"""
 
-_VALIDATOR_REPORT_SKELETON = """```md
-# Validator Report
-
-## Summary
-
-- Total issues: `<number>`
-- Blocking issues: `<yes|no>`
-- Affected documents: `<workspace-relative paths or none>`
-
-## Structural checks
-
-- none
-
-## Semantic checks
-
-- none
-
-## Cross-document checks
-
-- none
-
-## Result
-
-- Validator verdict: `<pass|fail>`
-- Repair required: `<yes|no>`
-```"""
-
 _COMMON_OUTPUT_SKELETONS = {
     "stage-result.md": _STAGE_RESULT_SKELETON,
-    "validator-report.md": _VALIDATOR_REPORT_SKELETON,
+    "validator-report.md": render_validator_report_skeleton(),
 }
 _SKIPPED_CONTRACT_SKELETONS = {"answers.md", "questions.md"}
 
