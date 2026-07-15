@@ -95,6 +95,7 @@ class StageRunOptions:
         ]
         | None
     ) = None
+    intervention_request_path: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -323,6 +324,10 @@ def _execute_adapter_invocation(
     )
     stage_documents_root.mkdir(parents=True, exist_ok=True)
     stage_brief_path = stage_documents_root / "stage-brief.md"
+    if not stage_brief_path.resolve(strict=False).is_relative_to(
+        runtime_config.workspace_root.resolve(strict=False)
+    ):
+        raise ValueError("Stage brief path escapes workspace root.")
     stage_brief_path.write_text(invocation.stage_brief_markdown, encoding="utf-8")
     prompt_pack_paths_for_runtime = _active_prompt_pack_paths(
         prompt_pack_paths=tuple(prompt_pack_file_paths),
@@ -710,7 +715,7 @@ def _expected_stage_document_path(
     return None
 
 
-def run_stage_command(options: StageRunOptions) -> None:
+def run_stage_attempt_command(options: StageRunOptions) -> None:
     _validate_stage_run_options(options)
     runtime_config = _resolve_stage_run_config(options)
     run_id, is_resume_candidate = _selected_or_new_run_id(
@@ -739,6 +744,7 @@ def run_stage_command(options: StageRunOptions) -> None:
             runtime_config=runtime_config,
             run_id=run_id,
             prompt_pack_file_paths=tuple(prompt_pack_file_paths),
+            intervention_request_path=options.intervention_request_path,
         )
         _print_stage_run_result(
             orchestration=orchestration,
@@ -746,6 +752,35 @@ def run_stage_command(options: StageRunOptions) -> None:
         )
         if orchestration.transition.action is not PostValidationAction.ADVANCE:
             raise typer.Exit(code=1)
+
+
+def run_stage_command(options: StageRunOptions) -> None:
+    if options.stage != "implement":
+        run_stage_attempt_command(options)
+        return
+
+    _validate_stage_run_options(options)
+    runtime_config = _resolve_stage_run_config(options)
+    run_id, _ = _selected_or_new_run_id(options=options, runtime_config=runtime_config)
+    selected_run_root = run_root(
+        workspace_root=runtime_config.workspace_root,
+        work_item=options.work_item,
+        run_id=run_id,
+    )
+    with acquire_run_mutation_lease(selected_run_root, operation="stage:implement:prepare"):
+        _write_run_manifest(options=options, runtime_config=runtime_config, run_id=run_id)
+
+    from aidd.cli.task import execute_all_tasks
+
+    execute_all_tasks(
+        work_item=options.work_item,
+        run_id=run_id,
+        runtime=options.runtime,
+        root=runtime_config.workspace_root,
+        config=options.config,
+        log_follow=options.log_follow,
+        stage_runner=run_stage_attempt_command,
+    )
 
 
 def run_stage_interact_command(options: StageInteractOptions) -> None:
@@ -799,6 +834,29 @@ def run_stage_interact_command(options: StageInteractOptions) -> None:
         run_id=run_id,
         request_path=operator_request.request_path,
     )
+    if options.stage == "implement":
+        from aidd.cli.task import interact_with_implementation
+
+        try:
+            ledger = interact_with_implementation(
+                work_item=options.work_item,
+                run_id=run_id,
+                runtime=options.runtime,
+                root=runtime_config.workspace_root,
+                config=options.config,
+                log_follow=options.log_follow,
+                intervention_request_path=operator_request.request_path,
+                stage_runner=run_stage_attempt_command,
+            )
+        except ValueError as exc:
+            console.print(f"Error: {exc}")
+            raise typer.Exit(code=2) from exc
+        console.print(
+            "Stage interaction completed: "
+            f"stage=implement run_id={run_id} "
+            f"finalization={ledger.finalization.status.value}"
+        )
+        return
     orchestration, stage_attempt_count = _run_stage_attempts(
         options=stage_run_options,
         runtime_config=runtime_config,
@@ -819,6 +877,7 @@ def run_stage_interact_command(options: StageInteractOptions) -> None:
 __all__ = [
     "StageInteractOptions",
     "StageRunOptions",
+    "run_stage_attempt_command",
     "run_stage_interact_command",
     "run_stage_command",
 ]

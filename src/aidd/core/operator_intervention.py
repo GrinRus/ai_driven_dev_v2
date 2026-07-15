@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from aidd.core.identifiers import contained_component_path
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import load_stage_metadata, run_manifest_path
 from aidd.core.stage_paths import workspace_relative_path
@@ -51,9 +52,11 @@ def _validate_stage(stage: str) -> None:
 
 def operator_requests_root(*, workspace_root: Path, work_item: str, stage: str) -> Path:
     _validate_stage(stage)
-    return (
-        workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
-        / OPERATOR_REQUESTS_DIRNAME
+    return contained_component_path(
+        workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage),
+        OPERATOR_REQUESTS_DIRNAME,
+        boundary_root=workspace_root,
+        label="operator requests directory",
     )
 
 

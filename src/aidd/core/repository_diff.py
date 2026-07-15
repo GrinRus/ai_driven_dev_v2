@@ -4,6 +4,11 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from aidd.core.allowed_write_scope import (
+    AllowedWriteScope,
+    AllowedWriteScopeError,
+    resolve_allowed_write_scope,
+)
 from aidd.core.operator_reports import ImplementationEvidenceView, resolve_implementation_evidence
 from aidd.core.project_set import PROJECT_SET_CONTEXT_FILENAME
 from aidd.core.workspace import work_item_context_root
@@ -172,37 +177,13 @@ def _file_diff(
     return bounded, truncated, tuple(warnings)
 
 
-def _read_allowed_scope_paths(*, workspace_root: Path, work_item: str) -> tuple[str, ...]:
-    scope_path = (
-        workspace_root
-        / "workitems"
-        / work_item
-        / "stages"
-        / "implement"
-        / "context"
-        / "allowed-write-scope.md"
-    )
-    if not scope_path.exists():
-        return ()
-    text = scope_path.read_text(encoding="utf-8", errors="replace")
-    values: list[str] = []
-    for line in text.splitlines():
-        for chunk in line.split("`")[1::2]:
-            path = chunk.strip().strip("/")
-            if path:
-                values.append(path)
-    return tuple(dict.fromkeys(values))
-
-
-def _allowed_scope_status(path: str, allowed_paths: tuple[str, ...]) -> str:
-    if not allowed_paths:
-        return "unknown"
-    normalized = path.strip("/")
-    for allowed in allowed_paths:
-        allowed_normalized = allowed.strip("/")
-        if normalized == allowed_normalized or normalized.startswith(f"{allowed_normalized}/"):
-            return "inside"
-    return "outside"
+def _allowed_scope_status(path: str, allowed_scope: AllowedWriteScope | None) -> str:
+    if allowed_scope is None:
+        return "not-authored"
+    try:
+        return "inside" if allowed_scope.allows(path) else "outside"
+    except AllowedWriteScopeError:
+        return "outside"
 
 
 def _project_set_context_path(*, workspace_root: Path, work_item: str) -> Path:
@@ -297,7 +278,7 @@ def resolve_repository_diff(
         )
 
     mentioned = set(implementation.touched_files)
-    allowed_paths = _read_allowed_scope_paths(workspace_root=workspace_root, work_item=work_item)
+    allowed_scope = resolve_allowed_write_scope(workspace_root, work_item)
     project_set_roots = _project_set_roots(
         project_root=resolved_project,
         workspace_root=workspace_root,
@@ -333,7 +314,7 @@ def resolve_repository_diff(
             allowed_scope_status=(
                 "aidd-artifact"
                 if category == "aidd-artifact"
-                else _allowed_scope_status(relative_path, allowed_paths)
+                else _allowed_scope_status(relative_path, allowed_scope)
             ),
             scope_status=scope_status,
             root_id=root.root_id if root is not None else None,

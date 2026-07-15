@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 from rich.table import Table
 
+from aidd.cli.stage_run import run_stage_attempt_command
 from aidd.cli.support import (
     _WORKFLOW_RUN_SUPPORTED_RUNTIMES,
     _path_summary,
@@ -103,15 +104,7 @@ def _run_stage_from_workflow(request: WorkflowStageExecutionRequest) -> None:
                 root=request.workspace_root,
                 config=request.config_path,
                 log_follow=request.log_follow,
-                stage_runner=lambda options: _invoke_stage_run(
-                    stage=options.stage,
-                    work_item=options.work_item,
-                    runtime=options.runtime,
-                    run_id=options.run_id or request.run_id,
-                    root=options.root or request.workspace_root,
-                    config=options.config,
-                    log_follow=options.log_follow,
-                ),
+                stage_runner=_run_implementation_attempt_from_workflow,
             )
             return
         _invoke_stage_run(
@@ -130,6 +123,27 @@ def _run_stage_from_workflow(request: WorkflowStageExecutionRequest) -> None:
             stage=request.stage,
             exit_code=int(exc.exit_code),
         ) from exc
+
+
+def _run_implementation_attempt_from_workflow(options: object) -> None:
+    from aidd.cli import main as cli_main
+    from aidd.cli.stage import stage_run as registered_stage_run
+    from aidd.cli.stage_run import StageRunOptions
+
+    if not isinstance(options, StageRunOptions):
+        raise TypeError("Expected StageRunOptions.")
+    if cli_main.stage_run is registered_stage_run:
+        run_stage_attempt_command(options)
+        return
+    _invoke_stage_run(
+        stage=options.stage,
+        work_item=options.work_item,
+        runtime=options.runtime,
+        run_id=options.run_id or "",
+        root=options.root or Path(".aidd"),
+        config=options.config,
+        log_follow=options.log_follow,
+    )
 
 
 def _print_workflow_event(

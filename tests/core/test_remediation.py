@@ -123,3 +123,48 @@ def test_mark_downstream_stale_and_clear_preserves_request_list(tmp_path: Path) 
     )
     assert [item.stage for item in cleared.stale_stages] == ["qa"]
     assert cleared.requests == (request,)
+
+
+@pytest.mark.parametrize(
+    "run_id",
+    ("", ".", "..", "../run", "run/child", r"run\child", "/absolute"),
+)
+def test_remediation_rejects_invalid_run_ids_without_partial_state(
+    tmp_path: Path,
+    run_id: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    with pytest.raises(ValueError):
+        create_remediation_request(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            source_stage="review",
+            source_ids=("RV-1",),
+            operator_note="Fix it.",
+        )
+
+    assert not (workspace_root / "workitems").exists()
+
+
+def test_remediation_rejects_symlinked_overlay_escape(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _create_run(workspace_root)
+    work_item_root = workspace_root / "workitems" / "WI-UI"
+    work_item_root.mkdir(parents=True, exist_ok=True)
+    outside = tmp_path / "outside-remediations"
+    outside.mkdir()
+    (work_item_root / "remediations").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="owning root|storage boundary"):
+        create_remediation_request(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            source_stage="review",
+            source_ids=("RV-1",),
+            operator_note="Fix it.",
+        )
+
+    assert list(outside.iterdir()) == []

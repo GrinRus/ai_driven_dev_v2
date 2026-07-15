@@ -9,17 +9,8 @@ slice, and local task.
 
 ## Soon
 
-- `W35-E2-S8-T3` — Route workflow, stage, interact, and task CLI commands through the
-  typed implementation service.
-- `W35-E2-S8-T4` — Route UI stage, task, interact, and remediation mutations through
-  the typed implementation service.
-- `W35-E2-S8-T5` — Require successful task ledger finalization before review or QA.
-- `W34-E7-S4-T3` — Migrate task diff and scope gates to canonical allowed-write-scope.
-- `W34-E7-S4-T4` — Migrate repository diff and Implement Review reads to canonical
-  allowed-write-scope.
-- `W34-E1-S2-T4` — Bind QA risks, checks, and verdicts to review and implementation
-  evidence.
-- `W34-E7-S2-T5` — Adopt identifier containment for operator-overlay and CLI paths.
+- `W35-E2-S8-T6` — Add a provider-free implementation-entrypoint conformance matrix
+  and extend the deterministic task-execution scenario.
 
 ## Parking lot
 

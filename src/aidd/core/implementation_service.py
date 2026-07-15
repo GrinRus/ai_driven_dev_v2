@@ -21,6 +21,7 @@ from aidd.core.task_ledger import (
     TaskLedger,
     ensure_task_ledger,
     load_task_ledger,
+    persist_task_ledger,
 )
 
 
@@ -202,6 +203,30 @@ class ImplementationExecutionService:
             project_root=request.project_root,
             succeeded=outcome.succeeded,
             blocker=outcome.blocker,
+        )
+        return self._result(ledger)
+
+    def resolve_next(
+        self, request: ImplementationExecutionRequest
+    ) -> ImplementationExecutionResult:
+        """Resolve the next legal implementation target without executing it."""
+
+        return self._result(self._ledger(request))
+
+    def reopen_for_remediation(
+        self,
+        request: ImplementationExecutionRequest,
+        *,
+        remediation_id: str,
+    ) -> ImplementationExecutionResult:
+        ledger = self._ledger(request).reopen_last_task_for_remediation(
+            blocker=f"Remediation `{remediation_id}` requires a new task attempt."
+        )
+        persist_task_ledger(
+            workspace_root=request.workspace_root,
+            work_item=request.work_item,
+            run_id=request.run_id,
+            ledger=ledger,
         )
         return self._result(ledger)
 

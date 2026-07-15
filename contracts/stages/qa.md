@@ -119,6 +119,13 @@ Optional context documents may improve QA depth, but they must not replace imple
   mitigation/evidence, broadened scope, or a contradiction in review/verification artifacts.
 - evidence entries must use stable ids in the `EV-1`, `EV-2`, ... style and/or backticked
   artifact paths so validators can trace claims mechanically.
+- Every non-empty residual-risk entry must cite an exact upstream review finding (`RV-*` or
+  `REV-*`), accepted-risk (`AR-*`), implementation/review evidence id, or an existing exact
+  workspace-relative artifact path. Basename-only and fuzzy references are not traceable.
+- Every material verification-check or evidence entry must resolve to an upstream evidence id or
+  an existing exact workspace-relative artifact path.
+- QA must preserve the upstream decision: a rejected review or an unresolved `must-fix` finding
+  requires `QA verdict: not-ready` and release recommendation `hold`.
 - `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.
 - When upstream `tasklist` or `plan` artifacts are available, `QA verdict: ready` requires
   evidence that nontrivial task details, required mitigations, and explicit risk-verification

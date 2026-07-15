@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from aidd.core.identifiers import contained_component_path
 from aidd.core.run_store import run_manifest_path, run_root
 from aidd.core.stages import STAGES, stage_index
 from aidd.core.workspace import work_item_root
@@ -50,7 +51,18 @@ def _utc_now() -> str:
 
 
 def _remediation_root(*, workspace_root: Path, work_item: str, run_id: str) -> Path:
-    return work_item_root(root=workspace_root, work_item=work_item) / REMEDIATIONS_DIRNAME / run_id
+    remediations_root = contained_component_path(
+        work_item_root(root=workspace_root, work_item=work_item),
+        REMEDIATIONS_DIRNAME,
+        boundary_root=workspace_root,
+        label="remediations directory",
+    )
+    return contained_component_path(
+        remediations_root,
+        run_id,
+        boundary_root=workspace_root,
+        label="run id",
+    )
 
 
 def _request_number(path: Path) -> int | None:

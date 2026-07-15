@@ -7,6 +7,13 @@ from aidd.core.run_store import persist_stage_status, run_manifest_path
 from aidd.core.stage_registry import resolve_expected_output_documents
 from aidd.core.stages import STAGES
 from aidd.core.state_machine import StageState
+from aidd.core.task_ledger import (
+    TaskExecutionStatus,
+    TaskFinalizationStatus,
+    TaskLedger,
+    persist_task_ledger,
+)
+from aidd.core.task_plan import parse_task_plan
 from aidd.core.workflow_service import (
     WorkflowRunEvent,
     WorkflowRunRequest,
@@ -50,6 +57,31 @@ def _write_fake_stage_outputs(
         stage=stage,
     ):
         content = f"# {draft_path.stem.title()}\n\nSynthetic output for {stage}.\n"
+        if stage == "tasklist" and draft_path.name == "tasklist.md":
+            content = """# Tasklist
+
+## Task summary
+
+One synthetic workflow task.
+
+## Ordered tasks
+
+### TL-1 — Complete workflow implementation
+
+- Outcome: The workflow implementation is complete.
+- Dominant deliverable: `src/example.py`.
+- In scope: `src/example.py`.
+- Acceptance criteria:
+  - TL-1-AC1: The synthetic workflow evidence exists.
+
+## Dependencies
+
+- TL-1: none
+
+## Verification notes
+
+- TL-1: `pytest -q`
+"""
         draft_path.parent.mkdir(parents=True, exist_ok=True)
         draft_path.write_text(content, encoding="utf-8")
         published_path = draft_path.parent / "output" / draft_path.name
@@ -76,6 +108,37 @@ def _mark_fake_stage_succeeded(
         stage=stage,
         status=StageState.SUCCEEDED.value,
     )
+    if stage == "implement":
+        tasklist_path = (
+            workspace_root
+            / "workitems"
+            / work_item
+            / "stages"
+            / "tasklist"
+            / "output"
+            / "tasklist.md"
+        )
+        plan = parse_task_plan(tasklist_path.read_text(encoding="utf-8"))
+        ledger = TaskLedger.create(plan)
+        ledger = ledger.transition("TL-1", TaskExecutionStatus.EXECUTING, attempt_number=1)
+        ledger = ledger.transition("TL-1", TaskExecutionStatus.SUCCEEDED)
+        finalization_relative = (
+            f"reports/runs/{work_item}/{run_id}/stages/implement/"
+            "finalization-attempts/attempt-0001"
+        )
+        ledger = ledger.transition_finalization(
+            TaskFinalizationStatus.EXECUTING,
+            attempt_number=1,
+            latest_attempt_path=finalization_relative,
+        )
+        ledger = ledger.transition_finalization(TaskFinalizationStatus.SUCCEEDED)
+        persist_task_ledger(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            ledger=ledger,
+        )
+        (workspace_root / finalization_relative).mkdir(parents=True, exist_ok=True)
 
 
 def test_run_workflow_executes_stages_without_typer_dependency(tmp_path: Path) -> None:

@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from aidd.core.identifiers import SafeIdentifier, resolve_contained_component
+from aidd.core.identifiers import (
+    SafeIdentifier,
+    contained_component_path,
+    resolve_contained_component,
+)
 from aidd.core.stages import STAGES
 
 WORKSPACE_CONFIG_DIRNAME = "config"
@@ -95,7 +99,12 @@ def work_item_metadata_path(root: Path, work_item: str) -> Path:
 
 
 def stage_root(root: Path, work_item: str, stage: str) -> Path:
-    return work_item_stages_root(root=root, work_item=work_item) / stage
+    return contained_component_path(
+        work_item_stages_root(root=root, work_item=work_item),
+        stage,
+        boundary_root=root,
+        label="stage",
+    )
 
 
 def stage_input_root(root: Path, work_item: str, stage: str) -> Path:

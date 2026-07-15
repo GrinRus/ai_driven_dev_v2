@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core.allowed_write_scope import AllowedWriteScopeError
 from aidd.core.repository_diff import resolve_repository_diff
 
 
@@ -45,8 +46,8 @@ def _write_implementation_report(workspace_root: Path, *, text: str | None = Non
         ),
         encoding="utf-8",
     )
-    context_root = report_root / "context"
-    context_root.mkdir()
+    context_root = workspace_root / "workitems" / "WI-UI" / "context"
+    context_root.mkdir(parents=True, exist_ok=True)
     context_root.joinpath("allowed-write-scope.md").write_text(
         "# Allowed Write Scope\n\n- `app.py`\n",
         encoding="utf-8",
@@ -204,6 +205,54 @@ def test_repository_diff_rejects_symlink_escape(tmp_path: Path) -> None:
     project_root.joinpath("escape.txt").symlink_to(outside)
 
     with pytest.raises(ValueError, match="inside project root"):
+        resolve_repository_diff(
+            project_root=project_root,
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+        )
+
+
+def test_repository_diff_uses_component_boundary_and_not_authored_status(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "project"
+    _init_repo(project_root)
+    workspace_root = project_root / ".aidd"
+    _write_implementation_report(workspace_root)
+    scope_path = workspace_root / "workitems" / "WI-UI" / "context" / "allowed-write-scope.md"
+    scope_path.write_text("# Allowed Write Scope\n\n- `src`\n", encoding="utf-8")
+    (project_root / "src").mkdir()
+    (project_root / "src" / "inside.py").write_text("inside = True\n", encoding="utf-8")
+    (project_root / "src2").mkdir()
+    (project_root / "src2" / "outside.py").write_text("outside = True\n", encoding="utf-8")
+
+    scoped = resolve_repository_diff(
+        project_root=project_root,
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+    )
+    statuses = {item.path: item.allowed_scope_status for item in scoped.source_files}
+    assert statuses["src/inside.py"] == "inside"
+    assert statuses["src2/outside.py"] == "outside"
+
+    scope_path.unlink()
+    unscoped = resolve_repository_diff(
+        project_root=project_root,
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+    )
+    assert all(item.allowed_scope_status == "not-authored" for item in unscoped.source_files)
+
+
+def test_repository_diff_rejects_malformed_canonical_scope(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    _init_repo(project_root)
+    workspace_root = project_root / ".aidd"
+    _write_implementation_report(workspace_root)
+    scope_path = workspace_root / "workitems" / "WI-UI" / "context" / "allowed-write-scope.md"
+    scope_path.write_text("# Allowed Write Scope\n\n- `../escape.py`\n", encoding="utf-8")
+
+    with pytest.raises(AllowedWriteScopeError):
         resolve_repository_diff(
             project_root=project_root,
             workspace_root=workspace_root,

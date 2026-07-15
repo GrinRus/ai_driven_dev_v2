@@ -1,21 +1,32 @@
 from __future__ import annotations
 
 import json
-import shutil
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NoReturn, cast
 
 import typer
 from rich.table import Table
 
-from aidd.cli.stage_run import StageRunOptions, run_stage_command
+from aidd.application.implementation import aggregate_finalization_port
+from aidd.cli.stage_run import StageRunOptions, run_stage_attempt_command
 from aidd.cli.support import (
     _runtime_command_for_runtime,
     _runtime_execution_mode_for_runtime,
     console,
 )
 from aidd.config import load_config
+from aidd.core.implementation_service import (
+    AggregateFinalizer,
+    ImplementationExecutionRequest,
+    ImplementationExecutionService,
+    ImplementationExecutionStatus,
+    ImplementationNextTarget,
+    ImplementationPortError,
+    ImplementationTaskSelectionError,
+    TaskAttemptExecutor,
+    TaskAttemptOutcome,
+)
 from aidd.core.mutation_lease import (
     RunMutationLease,
     acquire_run_mutation_lease,
@@ -23,33 +34,20 @@ from aidd.core.mutation_lease import (
 )
 from aidd.core.run_store import (
     create_run_manifest,
-    persist_stage_status,
     run_manifest_path,
     run_root,
 )
-from aidd.core.stage_outputs import publish_stage_outputs_after_validation_pass
-from aidd.core.state_machine import StageState
 from aidd.core.task_execution import (
-    complete_task_execution,
-    complete_task_finalization,
+    TaskExecutionContext,
     load_task_execution_plan,
-    prepare_task_execution,
-    prepare_task_finalization,
-    reconcile_task_execution_state,
-    render_aggregate_implementation_report,
     task_validation_findings,
 )
 from aidd.core.task_ledger import (
-    TaskExecutionStatus,
-    TaskFinalizationStatus,
     TaskLedger,
-    ensure_task_ledger,
     load_task_ledger,
 )
 from aidd.core.task_plan import TaskPlan
 from aidd.core.task_read_model import resolve_task_read_model
-from aidd.validators.reports import write_validator_report
-from aidd.validators.semantic import validate_semantic_outputs
 
 StageRunner = Callable[[StageRunOptions], None]
 
@@ -215,93 +213,106 @@ def task_show(
                         )
 
 
-def _copy_finalization_artifacts(stage_root: Path, attempt_path: Path) -> None:
-    for name in ("implementation-report.md", "validator-report.md", "stage-result.md"):
-        source = stage_root / name
-        if source.exists():
-            shutil.copy2(source, attempt_path / name)
+def _task_attempt_port(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    runtime: str,
+    config: Path,
+    log_follow: bool,
+    project_root: Path,
+    stage_runner: StageRunner,
+    intervention_request_path: Path | None = None,
+) -> Callable[[TaskExecutionContext], TaskAttemptOutcome]:
+    def _execute(context: TaskExecutionContext) -> TaskAttemptOutcome:
+        try:
+            stage_runner(
+                StageRunOptions(
+                    stage="implement",
+                    work_item=work_item,
+                    runtime=runtime,
+                    run_id=run_id,
+                    root=workspace_root,
+                    config=config,
+                    log_follow=log_follow,
+                    defer_success_publication=True,
+                    validation_finding_provider=lambda execution_state, discovery: (
+                        task_validation_findings(
+                            context=context,
+                            workspace_root=workspace_root,
+                            work_item=work_item,
+                            project_root=project_root,
+                            execution_state=execution_state,
+                            discovery=discovery,
+                        )
+                    ),
+                    intervention_request_path=intervention_request_path,
+                )
+            )
+        except typer.Exit as exc:
+            return TaskAttemptOutcome(
+                succeeded=False,
+                blocker=f"implement stage stopped with exit code {exc.exit_code}.",
+            )
+        return TaskAttemptOutcome(succeeded=True)
+
+    return _execute
 
 
-def _finalize_implementation_without_lease(
-    *, workspace_root: Path, work_item: str, run_id: str, ledger: TaskLedger
-) -> TaskLedger:
-    context = prepare_task_finalization(
+def _implementation_service(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    runtime: str,
+    config: Path,
+    log_follow: bool,
+    project_root: Path,
+    stage_runner: StageRunner,
+    intervention_request_path: Path | None = None,
+) -> ImplementationExecutionService:
+    return ImplementationExecutionService(
+        task_executor=cast(
+            TaskAttemptExecutor,
+            _task_attempt_port(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                runtime=runtime,
+                config=config,
+                log_follow=log_follow,
+                project_root=project_root,
+                stage_runner=stage_runner,
+                intervention_request_path=intervention_request_path,
+            ),
+        ),
+        aggregate_finalizer=cast(
+            AggregateFinalizer,
+            aggregate_finalization_port(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+            ),
+        ),
+    )
+
+
+def _execution_request(
+    *, workspace_root: Path, work_item: str, run_id: str, project_root: Path
+) -> ImplementationExecutionRequest:
+    return ImplementationExecutionRequest(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
-        ledger=ledger,
+        project_root=project_root,
     )
-    stage_root = workspace_root / "workitems" / work_item / "stages" / "implement"
-    diagnostics_path = context.attempt_path / "publication-diagnostics.json"
-    try:
-        plan = load_task_execution_plan(workspace_root=workspace_root, work_item=work_item)
-        report = render_aggregate_implementation_report(
-            plan=plan,
-            ledger=context.ledger,
-            workspace_root=workspace_root,
-        )
-        report_path = stage_root / "implementation-report.md"
-        report_path.write_text(report, encoding="utf-8")
-        findings = validate_semantic_outputs(
-            stage="implement",
-            work_item=work_item,
-            workspace_root=workspace_root,
-        )
-        validator_report_path = stage_root / "validator-report.md"
-        write_validator_report(path=validator_report_path, findings=findings)
-        _copy_finalization_artifacts(stage_root, context.attempt_path)
-        if findings:
-            raise ValueError("Aggregate implementation report failed validation.")
-        publish_stage_outputs_after_validation_pass(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage="implement",
-        )
-        persist_stage_status(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage="implement",
-            status=StageState.SUCCEEDED.value,
-        )
-        diagnostics_path.write_text(
-            json.dumps({"status": "succeeded"}, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        return complete_task_finalization(
-            context=context,
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            succeeded=True,
-        )
-    except Exception as exc:
-        blocker = str(exc) or exc.__class__.__name__
-        diagnostics_path.write_text(
-            json.dumps(
-                {"status": "failed", "error": blocker}, indent=2, sort_keys=True
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-        _copy_finalization_artifacts(stage_root, context.attempt_path)
-        persist_stage_status(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage="implement",
-            status=StageState.FAILED.value,
-        )
-        complete_task_finalization(
-            context=context,
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            succeeded=False,
-            blocker=blocker,
-        )
-        raise
+
+
+def _raise_port_cause(exc: ImplementationPortError) -> NoReturn:
+    if isinstance(exc.__cause__, Exception):
+        raise exc.__cause__.with_traceback(exc.__cause__.__traceback__)
+    raise exc
 
 
 def execute_task_by_id(
@@ -313,8 +324,9 @@ def execute_task_by_id(
     root: Path | None,
     config: Path,
     log_follow: bool,
-    stage_runner: StageRunner = run_stage_command,
+    stage_runner: StageRunner = run_stage_attempt_command,
     mutation_lease: RunMutationLease | None = None,
+    intervention_request_path: Path | None = None,
 ) -> TaskLedger:
     workspace_root = _workspace_root(root, config)
     project_root = Path.cwd().resolve(strict=True)
@@ -339,69 +351,34 @@ def execute_task_by_id(
         )
     )
     with lease_context:
-        context = prepare_task_execution(
+        service = _implementation_service(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
-            task_id=task_id,
+            runtime=runtime,
+            config=config,
+            log_follow=log_follow,
             project_root=project_root,
+            stage_runner=stage_runner,
+            intervention_request_path=intervention_request_path,
         )
-        succeeded = False
-        blocker: str | None = None
-        unexpected_error: Exception | None = None
         try:
-            stage_runner(
-                StageRunOptions(
-                    stage="implement",
+            result = service.run_task(
+                _execution_request(
+                    workspace_root=workspace_root,
                     work_item=work_item,
-                    runtime=runtime,
                     run_id=run_id,
-                    root=workspace_root,
-                    config=config,
-                    log_follow=log_follow,
-                    defer_success_publication=True,
-                    validation_finding_provider=lambda execution_state, discovery: (
-                        task_validation_findings(
-                            context=context,
-                            workspace_root=workspace_root,
-                            work_item=work_item,
-                            project_root=project_root,
-                            execution_state=execution_state,
-                            discovery=discovery,
-                        )
-                    ),
-                )
+                    project_root=project_root,
+                ),
+                task_id=task_id,
             )
-            succeeded = True
-        except typer.Exit as exc:
-            blocker = f"implement stage stopped with exit code {exc.exit_code}."
-        except Exception as exc:  # preserve durable task failure before surfacing the error
-            blocker = str(exc) or exc.__class__.__name__
-            unexpected_error = exc
-        ledger = complete_task_execution(
-            context=context,
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            project_root=project_root,
-            succeeded=succeeded,
-            blocker=blocker,
-        )
-        task_succeeded = (
-            succeeded and ledger.entry(task_id).status is TaskExecutionStatus.SUCCEEDED
-        )
-        if task_succeeded and ledger.all_succeeded():
-            ledger = _finalize_implementation_without_lease(
-                workspace_root=workspace_root,
-                work_item=work_item,
-                run_id=run_id,
-                ledger=ledger,
-            )
-        if not task_succeeded:
-            if unexpected_error is not None:
-                raise unexpected_error
-            raise typer.Exit(code=1)
-        return ledger
+        except ImplementationPortError as exc:
+            _raise_port_cause(exc)
+        if result.status is not ImplementationExecutionStatus.SUCCEEDED:
+            entry = result.ledger.entry(task_id)
+            if entry.status.value != "succeeded":
+                raise typer.Exit(code=1)
+        return result.ledger
 
 
 def finalize_implementation(
@@ -435,12 +412,27 @@ def finalize_implementation(
         else acquire_run_mutation_lease(selected_run_root, operation="task:finalize")
     )
     with lease_context:
-        return _finalize_implementation_without_lease(
+        service = _implementation_service(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
-            ledger=ledger,
+            runtime=runtime,
+            config=config,
+            log_follow=False,
+            project_root=Path.cwd().resolve(strict=True),
+            stage_runner=run_stage_attempt_command,
         )
+        try:
+            return service.finalize(
+                _execution_request(
+                    workspace_root=workspace_root,
+                    work_item=work_item,
+                    run_id=run_id,
+                    project_root=Path.cwd().resolve(strict=True),
+                )
+            ).ledger
+        except ImplementationPortError as exc:
+            _raise_port_cause(exc)
 
 
 def execute_all_tasks(
@@ -451,36 +443,89 @@ def execute_all_tasks(
     root: Path,
     config: Path,
     log_follow: bool,
-    stage_runner: StageRunner = run_stage_command,
+    stage_runner: StageRunner = run_stage_attempt_command,
 ) -> TaskLedger:
-    plan = load_task_execution_plan(workspace_root=root, work_item=work_item)
-    ledger = ensure_task_ledger(
+    project_root = Path.cwd().resolve(strict=True)
+    _validate_run_manifest_identity(
         workspace_root=root,
         work_item=work_item,
         run_id=run_id,
-        plan=plan,
+        runtime=runtime,
+        config=config,
     )
-    ledger = reconcile_task_execution_state(
+    service = _implementation_service(
         workspace_root=root,
         work_item=work_item,
         run_id=run_id,
-        ledger=ledger,
+        runtime=runtime,
+        config=config,
+        log_follow=log_follow,
+        project_root=project_root,
+        stage_runner=stage_runner,
     )
-    while not ledger.all_succeeded():
-        blocked_or_failed = next(
-            (
-                entry
-                for entry in ledger.tasks
-                if entry.status in {TaskExecutionStatus.BLOCKED, TaskExecutionStatus.FAILED}
-            ),
-            None,
-        )
-        if blocked_or_failed is not None:
-            raise typer.Exit(code=1)
-        ready = ledger.ready_task_ids()
-        if not ready:
-            raise ValueError("Task execution has no dependency-ready task.")
-        ledger = execute_task_by_id(
+    selected_run_root = run_root(workspace_root=root, work_item=work_item, run_id=run_id)
+    with acquire_run_mutation_lease(selected_run_root, operation="task:all"):
+        try:
+            result = service.run_all(
+                _execution_request(
+                    workspace_root=root,
+                    work_item=work_item,
+                    run_id=run_id,
+                    project_root=project_root,
+                )
+            )
+        except ImplementationPortError as exc:
+            _raise_port_cause(exc)
+    if result.status is not ImplementationExecutionStatus.SUCCEEDED:
+        raise typer.Exit(code=1)
+    return result.ledger
+
+
+def interact_with_implementation(
+    *,
+    work_item: str,
+    run_id: str,
+    runtime: str,
+    root: Path,
+    config: Path,
+    log_follow: bool,
+    intervention_request_path: Path,
+    stage_runner: StageRunner,
+) -> TaskLedger:
+    project_root = Path.cwd().resolve(strict=True)
+    _validate_run_manifest_identity(
+        workspace_root=root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime=runtime,
+        config=config,
+    )
+    service = _implementation_service(
+        workspace_root=root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime=runtime,
+        config=config,
+        log_follow=log_follow,
+        project_root=project_root,
+        stage_runner=stage_runner,
+        intervention_request_path=intervention_request_path,
+    )
+    request = _execution_request(
+        workspace_root=root,
+        work_item=work_item,
+        run_id=run_id,
+        project_root=project_root,
+    )
+    target = service.resolve_next(request)
+    if target.next_target is ImplementationNextTarget.TASK:
+        ready = target.ledger.ready_task_ids()
+        if len(ready) != 1:
+            raise ImplementationTaskSelectionError(
+                "Implementation interaction requires exactly one ready or resumable task.",
+                ledger=target.ledger,
+            )
+        return execute_task_by_id(
             task_id=ready[0],
             work_item=work_item,
             run_id=run_id,
@@ -489,21 +534,20 @@ def execute_all_tasks(
             config=config,
             log_follow=log_follow,
             stage_runner=stage_runner,
+            intervention_request_path=intervention_request_path,
         )
-    if ledger.finalization.status is not TaskFinalizationStatus.SUCCEEDED:
-        selected_run_root = run_root(
-            workspace_root=root,
+    if target.next_target is ImplementationNextTarget.FINALIZATION:
+        return finalize_implementation(
             work_item=work_item,
             run_id=run_id,
+            runtime=runtime,
+            root=root,
+            config=config,
         )
-        with acquire_run_mutation_lease(selected_run_root, operation="task:finalize"):
-            ledger = _finalize_implementation_without_lease(
-                workspace_root=root,
-                work_item=work_item,
-                run_id=run_id,
-                ledger=ledger,
-            )
-    return ledger
+    raise ImplementationTaskSelectionError(
+        "Implementation interaction has no pending task or finalization target.",
+        ledger=target.ledger,
+    )
 
 
 def task_run(

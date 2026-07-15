@@ -85,7 +85,9 @@ acceptance id, and concrete evidence. Any `fail` or `not-verified` entry require
    direct ASGI invocation, browser UI, CLI, fixture, or generated output unless the cited
    evidence explicitly shows that surface. If acceptance criteria name alternatives such as
    `ASGI/TestClient`, state the exact surface that was actually exercised.
-4. Residual risks must include severity and explicit mitigation/ownership notes.
+4. Residual risks must include severity, explicit mitigation/ownership notes, and an exact
+   upstream `RV-*`/`REV-*`/`AR-*` or evidence/artifact reference. Use full workspace-relative
+   artifact paths; basename-only references do not establish traceability.
 5. Blocking uncertainty must become a `[blocking]` question with release recommendation `hold`.
 6. When present, the selected task and `context/verification-output.md` define the authored
    verification boundary. Do not downgrade to `ready-with-risks` or `proceed-with-conditions` only because

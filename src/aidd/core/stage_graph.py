@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from aidd.core.implementation_eligibility import implementation_finalization_blocker
 from aidd.core.run_store import load_stage_metadata
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import (
@@ -192,6 +193,17 @@ def evaluate_stage_eligibility(
         )
         if not path.exists()
     )
+    if stage in {"review", "qa"}:
+        finalization_blocker = implementation_finalization_blocker(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+        )
+        if finalization_blocker is not None:
+            missing_inputs = (
+                *missing_inputs,
+                f"implementation-finalization: {finalization_blocker}",
+            )
 
     return StageEligibility(
         stage=stage,
