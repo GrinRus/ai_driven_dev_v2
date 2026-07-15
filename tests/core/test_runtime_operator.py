@@ -4,11 +4,17 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 from aidd.core.runtime_operator import (
+    RUNTIME_OPERATOR_CAPABILITY_RULES,
     RuntimeOperatorBroker,
+    RuntimeOperatorCapability,
+    RuntimeOperatorCapabilityDisposition,
     RuntimeOperatorDecision,
     RuntimeOperatorPolicy,
     RuntimeOperatorRequest,
+    assess_runtime_operator_request,
     load_operator_decisions,
     load_operator_requests,
 )
@@ -192,7 +198,8 @@ def test_broad_policy_asks_for_network_package_and_git_publish_commands(
             cwd=project_root,
         )
 
-        assert policy.evaluate(request) is None
+        decision = policy.evaluate(request)
+        assert decision is None or decision.action is RuntimeOperatorDecisionAction.DENY
 
 
 def test_broker_waits_on_decision_provider_after_persisting_request(tmp_path: Path) -> None:
@@ -255,7 +262,7 @@ def test_broker_returns_none_for_unapproved_request_without_provider(tmp_path: P
     assert load_operator_decisions(broker.decisions_path) == ()
 
 
-def test_broad_policy_asks_for_file_deletes_inside_project_root(tmp_path: Path) -> None:
+def test_broad_policy_denies_file_deletes_inside_project_root(tmp_path: Path) -> None:
     policy = _policy(tmp_path)
     request = RuntimeOperatorRequest.create(
         runtime_id="generic-cli",
@@ -264,10 +271,12 @@ def test_broad_policy_asks_for_file_deletes_inside_project_root(tmp_path: Path) 
         paths=(policy.project_roots[0] / "src" / "obsolete.py",),
     )
 
-    assert policy.evaluate(request) is None
+    decision = policy.evaluate(request)
+    assert decision is not None
+    assert decision.action is RuntimeOperatorDecisionAction.DENY
 
 
-def test_broad_policy_asks_for_file_deletes_inside_aidd_workspace(tmp_path: Path) -> None:
+def test_broad_policy_denies_file_deletes_inside_aidd_workspace(tmp_path: Path) -> None:
     policy = _policy(tmp_path)
     request = RuntimeOperatorRequest.create(
         runtime_id="generic-cli",
@@ -276,7 +285,148 @@ def test_broad_policy_asks_for_file_deletes_inside_aidd_workspace(tmp_path: Path
         paths=(policy.workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "old.md",),
     )
 
-    assert policy.evaluate(request) is None
+    decision = policy.evaluate(request)
+    assert decision is not None
+    assert decision.action is RuntimeOperatorDecisionAction.DENY
+
+
+@pytest.mark.parametrize(
+    ("kind", "capability"),
+    [
+        (RuntimeOperatorRequestKind.FILE_READ, RuntimeOperatorCapability.PROJECT_READ),
+        (RuntimeOperatorRequestKind.FILE_LIST, RuntimeOperatorCapability.PROJECT_READ),
+        (RuntimeOperatorRequestKind.FILE_GLOB, RuntimeOperatorCapability.PROJECT_READ),
+        (RuntimeOperatorRequestKind.FILE_GREP, RuntimeOperatorCapability.PROJECT_READ),
+        (RuntimeOperatorRequestKind.FILE_CREATE, RuntimeOperatorCapability.PROJECT_WRITE),
+        (RuntimeOperatorRequestKind.FILE_EDIT, RuntimeOperatorCapability.PROJECT_WRITE),
+        (RuntimeOperatorRequestKind.FILE_WRITE, RuntimeOperatorCapability.PROJECT_WRITE),
+        (RuntimeOperatorRequestKind.FILE_DELETE, RuntimeOperatorCapability.DELETE),
+        (RuntimeOperatorRequestKind.NETWORK, RuntimeOperatorCapability.NETWORK),
+        (RuntimeOperatorRequestKind.MCP_TOOL, RuntimeOperatorCapability.MCP_TOOL),
+        (RuntimeOperatorRequestKind.SUBAGENT, RuntimeOperatorCapability.SUBAGENT),
+        (
+            RuntimeOperatorRequestKind.RUNTIME_PERMISSION,
+            RuntimeOperatorCapability.RUNTIME_PERMISSION,
+        ),
+        (RuntimeOperatorRequestKind.UNKNOWN, RuntimeOperatorCapability.UNKNOWN),
+    ],
+)
+def test_typed_capability_registry_covers_non_shell_request_kinds(
+    kind: RuntimeOperatorRequestKind,
+    capability: RuntimeOperatorCapability,
+) -> None:
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="implement",
+        kind=kind,
+    )
+
+    assessment = assess_runtime_operator_request(request)
+
+    assert assessment.capability is capability
+    assert assessment.rule is RUNTIME_OPERATOR_CAPABILITY_RULES[capability]
+
+
+@pytest.mark.parametrize(
+    ("command", "capability", "disposition"),
+    [
+        (
+            "git status --short",
+            RuntimeOperatorCapability.SHELL_INSPECT,
+            RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE,
+        ),
+        (
+            "pytest -q",
+            RuntimeOperatorCapability.SHELL_VERIFY,
+            RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE,
+        ),
+        (
+            "npm install",
+            RuntimeOperatorCapability.PACKAGE_MUTATION,
+            RuntimeOperatorCapabilityDisposition.REQUIRES_OPERATOR,
+        ),
+        (
+            "git commit -m test",
+            RuntimeOperatorCapability.VCS_MUTATION,
+            RuntimeOperatorCapabilityDisposition.REQUIRES_OPERATOR,
+        ),
+        (
+            "git push origin main",
+            RuntimeOperatorCapability.PUBLISH,
+            RuntimeOperatorCapabilityDisposition.REQUIRES_OPERATOR,
+        ),
+        (
+            "rm -rf src/generated",
+            RuntimeOperatorCapability.DESTRUCTIVE,
+            RuntimeOperatorCapabilityDisposition.DENY,
+        ),
+        (
+            "unrecognized-tool do-thing",
+            RuntimeOperatorCapability.UNKNOWN,
+            RuntimeOperatorCapabilityDisposition.REQUIRES_OPERATOR,
+        ),
+        (
+            "python 'unterminated",
+            RuntimeOperatorCapability.UNKNOWN,
+            RuntimeOperatorCapabilityDisposition.REQUIRES_OPERATOR,
+        ),
+    ],
+)
+def test_shell_capability_classifier_is_typed_and_fail_closed(
+    command: str,
+    capability: RuntimeOperatorCapability,
+    disposition: RuntimeOperatorCapabilityDisposition,
+) -> None:
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="implement",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": command},
+    )
+
+    assessment = assess_runtime_operator_request(request)
+
+    assert assessment.capability is capability
+    assert assessment.rule.disposition is disposition
+
+
+def test_unknown_and_destructive_capabilities_follow_policy_modes(tmp_path: Path) -> None:
+    brokered = _policy(tmp_path)
+    unknown = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="implement",
+        kind=RuntimeOperatorRequestKind.UNKNOWN,
+    )
+    destructive = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="implement",
+        kind=RuntimeOperatorRequestKind.FILE_DELETE,
+        paths=(brokered.project_roots[0] / "old.py",),
+    )
+
+    assert brokered.evaluate(unknown) is None
+    denied = brokered.evaluate(destructive)
+    assert denied is not None and denied.action is RuntimeOperatorDecisionAction.DENY
+
+    deny_unapproved = RuntimeOperatorPolicy(
+        permission_policy=RuntimePermissionPolicy.DENY_UNAPPROVED,
+        auto_approval_preset=AutoApprovalPreset.BROAD,
+        project_roots=brokered.project_roots,
+        workspace_root=brokered.workspace_root,
+    )
+    unknown_denied = deny_unapproved.evaluate(unknown)
+    assert unknown_denied is not None
+    assert unknown_denied.action is RuntimeOperatorDecisionAction.DENY
+
+    full_access = RuntimeOperatorPolicy(
+        permission_policy=RuntimePermissionPolicy.FULL_ACCESS,
+        auto_approval_preset=AutoApprovalPreset.OFF,
+        project_roots=brokered.project_roots,
+        workspace_root=brokered.workspace_root,
+    )
+    destructive_allowed = full_access.evaluate(destructive)
+    assert destructive_allowed is not None
+    assert destructive_allowed.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
 
 
 def test_broad_policy_does_not_auto_approve_shell_commands_outside_project_root(
@@ -531,7 +681,8 @@ def test_broad_policy_does_not_auto_approve_unbounded_aidd_workspace_shell(
             cwd=policy.project_roots[0],
         )
 
-        assert policy.evaluate(request) is None
+        decision = policy.evaluate(request)
+        assert decision is None or decision.action is RuntimeOperatorDecisionAction.DENY
 
 
 def test_policy_denies_protected_paths_and_destructive_shell(tmp_path: Path) -> None:

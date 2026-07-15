@@ -85,13 +85,24 @@ def test_onboarding_rejects_unsafe_work_item_ids(tmp_path: Path) -> None:
     project_root.mkdir()
     service = OnboardingService(launch_root=tmp_path)
 
-    for work_item in ("../WI-ESCAPE", "WI/NESTED", "WI\\NESTED", ".", ".."):
+    for work_item in (
+        "",
+        "../WI-ESCAPE",
+        "WI/NESTED",
+        "WI\\NESTED",
+        "/WI-ABS",
+        ".",
+        "..",
+        "bad$id",
+        "X" * 129,
+    ):
         with pytest.raises(ValueError, match="work_item"):
             service.create_work_item(
                 raw_project_root="project",
                 work_item=work_item,
                 request_text="Do not escape workspace.",
             )
+        assert not (project_root / ".aidd").exists()
 
 
 def test_onboarding_preserves_existing_request_context_without_force(tmp_path: Path) -> None:

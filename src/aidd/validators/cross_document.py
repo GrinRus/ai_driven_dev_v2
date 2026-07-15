@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, load_stage_manifest
+from aidd.core.task_plan import TaskCard, TaskPlanParseError, parse_task_plan
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
 ANSWER_WITHOUT_QUESTION_CODE = "CROSS-ANSWER-WITHOUT-QUESTION"
@@ -14,6 +15,9 @@ REPAIR_BRIEF_NOT_REFERENCED_CODE = "CROSS-REPAIR-BRIEF-NOT-REFERENCED"
 BLOCKING_UNANSWERED_CODE = "CROSS-BLOCKING-UNANSWERED"
 REPAIR_BUDGET_EXHAUSTED_CODE = "CROSS-REPAIR-BUDGET-EXHAUSTED"
 PROJECT_SET_EVIDENCE_MISSING_CODE = "CROSS-PROJECT-SET-EVIDENCE-MISSING"
+TASKLIST_PLAN_MILESTONE_CODE = "CROSS-TASKLIST-PLAN-MILESTONE"
+TASKLIST_PLAN_DEPENDENCY_CODE = "CROSS-TASKLIST-PLAN-DEPENDENCY"
+TASKLIST_PLAN_VERIFICATION_CODE = "CROSS-TASKLIST-PLAN-VERIFICATION"
 
 _QUESTION_ID_PATTERN = re.compile(
     r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(blocking|non-blocking)\]`?"
@@ -24,6 +28,20 @@ _ANSWER_ID_PATTERN = re.compile(
 _REPAIR_BUDGET_EXHAUSTED_TOKEN = "repair-budget-exhausted"
 _STAGE_STATUS_PATTERN = re.compile(r"`?(succeeded|failed|blocked|needs-input)`?", re.IGNORECASE)
 _PROJECT_SET_ROW_PATTERN = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|")
+_MILESTONE_ID_PATTERN = re.compile(r"\b(M[1-9]\d*)\b", re.IGNORECASE)
+_COMMAND_PREFIXES = (
+    "uv ",
+    "pytest ",
+    "python ",
+    "ruff ",
+    "mypy ",
+    "git ",
+    "npm ",
+    "pnpm ",
+    "yarn ",
+    "cargo ",
+    "go test",
+)
 
 
 def _stage_root(*, workspace_root: Path, work_item: str, stage: str) -> Path:
@@ -240,6 +258,213 @@ def _validate_project_set_stage_result_evidence(
     return tuple(findings)
 
 
+def _section_text(markdown: str, heading: str) -> str:
+    return "\n".join(line for _, line in _extract_section_lines(markdown, heading))
+
+
+def _ordered_plan_milestones(plan_text: str) -> tuple[str, ...]:
+    milestones: list[str] = []
+    for _, line in _extract_section_lines(plan_text, "Milestones"):
+        match = re.match(r"^\s*[-*+]\s+`?(M[1-9]\d*)`?\s*:", line, re.IGNORECASE)
+        if match is not None:
+            milestones.append(match.group(1).upper())
+    return tuple(dict.fromkeys(milestones))
+
+
+def _task_milestones(task: TaskCard) -> tuple[str, ...]:
+    authored_text = "\n".join(
+        (
+            task.outcome,
+            task.context or "",
+            *(criterion.text for criterion in task.acceptance_criteria),
+            task.verification,
+        )
+    )
+    return tuple(
+        dict.fromkeys(
+            match.group(1).upper()
+            for match in _MILESTONE_ID_PATTERN.finditer(authored_text)
+        )
+    )
+
+
+def _plan_milestone_dependencies(plan_text: str) -> tuple[tuple[str, str], ...]:
+    edges: list[tuple[str, str]] = []
+    for _, line in _extract_section_lines(plan_text, "Dependencies"):
+        if not re.search(r"\b(depends? on|after|requires?)\b", line, re.IGNORECASE):
+            continue
+        ids = [match.group(1).upper() for match in _MILESTONE_ID_PATTERN.finditer(line)]
+        if len(ids) < 2:
+            continue
+        edges.extend((ids[0], dependency) for dependency in ids[1:])
+    return tuple(dict.fromkeys(edges))
+
+
+def _milestone_verification_commands(plan_text: str) -> dict[str, tuple[str, ...]]:
+    commands: dict[str, list[str]] = {}
+    for _, line in _extract_section_lines(plan_text, "Verification notes"):
+        milestone_match = _MILESTONE_ID_PATTERN.search(line)
+        if milestone_match is None:
+            continue
+        milestone = milestone_match.group(1).upper()
+        for value in re.findall(r"`([^`]+)`", line):
+            normalized = value.strip()
+            if normalized.casefold().startswith(_COMMAND_PREFIXES):
+                commands.setdefault(milestone, []).append(normalized)
+    return {key: tuple(dict.fromkeys(values)) for key, values in commands.items()}
+
+
+def _task_has_ancestor_milestone(
+    *,
+    task_id: str,
+    milestone: str,
+    dependencies: dict[str, tuple[str, ...]],
+    task_milestones: dict[str, tuple[str, ...]],
+) -> bool:
+    pending = list(dependencies.get(task_id, ()))
+    visited: set[str] = set()
+    while pending:
+        dependency = pending.pop()
+        if dependency in visited:
+            continue
+        visited.add(dependency)
+        if milestone in task_milestones.get(dependency, ()):
+            return True
+        pending.extend(dependencies.get(dependency, ()))
+    return False
+
+
+def _validate_tasklist_against_plan(
+    *,
+    workspace_root: Path,
+    tasklist_path: Path,
+    tasklist_text: str,
+    plan_text: str,
+) -> tuple[ValidationFinding, ...]:
+    try:
+        task_plan = parse_task_plan(tasklist_text)
+    except TaskPlanParseError:
+        return ()
+
+    milestones = _ordered_plan_milestones(plan_text)
+    if not milestones:
+        return ()
+    known = set(milestones)
+    positions = {milestone: index for index, milestone in enumerate(milestones)}
+    mappings = {task.id: _task_milestones(task) for task in task_plan.tasks}
+    tasklist_relative = _workspace_relative(tasklist_path, workspace_root)
+    findings: list[ValidationFinding] = []
+
+    for task in task_plan.tasks:
+        task_line = next(
+            (
+                number
+                for number, line in enumerate(tasklist_text.splitlines(), start=1)
+                if re.match(rf"^###\s+{re.escape(task.id)}\b", line.strip())
+            ),
+            None,
+        )
+        mapped = mappings[task.id]
+        unknown = tuple(item for item in mapped if item not in known)
+        if not mapped or unknown:
+            detail = "no plan milestone" if not mapped else "unknown " + ", ".join(unknown)
+            findings.append(
+                ValidationFinding(
+                    code=TASKLIST_PLAN_MILESTONE_CODE,
+                    message=f"Task `{task.id}` maps to {detail}; cite an existing milestone id.",
+                    severity="high",
+                    location=ValidationIssueLocation(tasklist_relative, task_line),
+                )
+            )
+
+    covered = {
+        milestone
+        for mapped in mappings.values()
+        for milestone in mapped
+        if milestone in known
+    }
+    for milestone in milestones:
+        if milestone not in covered:
+            findings.append(
+                ValidationFinding(
+                    code=TASKLIST_PLAN_MILESTONE_CODE,
+                    message=f"Plan milestone `{milestone}` is not covered by any task card.",
+                    severity="high",
+                    location=ValidationIssueLocation(tasklist_relative),
+                )
+            )
+
+    dependencies = {task.id: task.dependencies for task in task_plan.tasks}
+    for task in task_plan.tasks:
+        current_positions = [positions[item] for item in mappings[task.id] if item in positions]
+        for dependency_id in task.dependencies:
+            dependency_positions = [
+                positions[item] for item in mappings.get(dependency_id, ()) if item in positions
+            ]
+            inverted = (
+                current_positions
+                and dependency_positions
+                and max(dependency_positions) > min(current_positions)
+            )
+            if inverted:
+                findings.append(
+                    ValidationFinding(
+                        code=TASKLIST_PLAN_DEPENDENCY_CODE,
+                        message=(
+                            f"Task `{task.id}` depends on `{dependency_id}`, which maps to a later "
+                            "plan milestone."
+                        ),
+                        severity="high",
+                        location=ValidationIssueLocation(tasklist_relative),
+                    )
+                )
+
+    for target, prerequisite in _plan_milestone_dependencies(plan_text):
+        if target not in known or prerequisite not in known:
+            continue
+        for task in task_plan.tasks:
+            if target not in mappings[task.id]:
+                continue
+            if prerequisite in mappings[task.id] or _task_has_ancestor_milestone(
+                task_id=task.id,
+                milestone=prerequisite,
+                dependencies=dependencies,
+                task_milestones=mappings,
+            ):
+                continue
+            findings.append(
+                ValidationFinding(
+                    code=TASKLIST_PLAN_DEPENDENCY_CODE,
+                    message=(
+                        f"Task `{task.id}` covers `{target}` but its dependency chain does not "
+                        f"preserve plan prerequisite `{prerequisite}`."
+                    ),
+                    severity="high",
+                    location=ValidationIssueLocation(tasklist_relative),
+                )
+            )
+
+    for milestone, commands in _milestone_verification_commands(plan_text).items():
+        mapped_verification = "\n".join(
+            task.verification for task in task_plan.tasks if milestone in mappings[task.id]
+        )
+        for command in commands:
+            if command in mapped_verification:
+                continue
+            findings.append(
+                ValidationFinding(
+                    code=TASKLIST_PLAN_VERIFICATION_CODE,
+                    message=(
+                        f"Tasks mapped to `{milestone}` must preserve authored verification "
+                        f"command `{command}` exactly."
+                    ),
+                    severity="high",
+                    location=ValidationIssueLocation(tasklist_relative),
+                )
+            )
+    return tuple(findings)
+
+
 def validate_cross_document_consistency(
     *,
     stage: str,
@@ -256,6 +481,8 @@ def validate_cross_document_consistency(
     repair_brief_path = stage_root / "repair-brief.md"
     stage_result_path = stage_root / "stage-result.md"
     project_set_path = workspace_root / "workitems" / work_item / "context" / "project-set.md"
+    tasklist_path = stage_root / "tasklist.md"
+    plan_path = workspace_root / "workitems" / work_item / "stages" / "plan" / "output" / "plan.md"
 
     findings: list[ValidationFinding] = []
 
@@ -264,6 +491,8 @@ def validate_cross_document_consistency(
     stage_result_text = _read_optional(stage_result_path)
     repair_brief_text = _read_optional(repair_brief_path)
     project_set_text = _read_optional(project_set_path)
+    tasklist_text = _read_optional(tasklist_path)
+    plan_text = _read_optional(plan_path)
 
     question_ids: dict[str, int] = {}
     answer_ids: dict[str, int] = {}
@@ -410,6 +639,16 @@ def validate_cross_document_consistency(
                 project_set_text=project_set_text,
                 stage_result_path=stage_result_path,
                 stage_result_text=stage_result_text,
+            )
+        )
+
+    if stage == "tasklist" and tasklist_text is not None and plan_text is not None:
+        findings.extend(
+            _validate_tasklist_against_plan(
+                workspace_root=workspace_root,
+                tasklist_path=tasklist_path,
+                tasklist_text=tasklist_text,
+                plan_text=plan_text,
             )
         )
 

@@ -15,6 +15,7 @@ from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
 from aidd.core.run_store import (
     load_stage_metadata,
     persist_stage_status,
+    write_adapter_exception_artifact,
     write_attempt_artifact_index,
 )
 from aidd.core.stage_interview_routing import (
@@ -420,7 +421,61 @@ def run_single_stage_orchestration(
         raise
     try:
         adapter_outcome = adapter_executor(adapter_invocation, execution_state)
-    finally:
+    except Exception as adapter_exception:
+        original_exception = adapter_exception
+
+        def run_cleanup(action_name: str, action: Callable[[], object]) -> None:
+            try:
+                action()
+            except Exception as cleanup_error:
+                original_exception.add_note(
+                    f"Could not {action_name}: {type(cleanup_error).__name__}: {cleanup_error}"
+                )
+
+        run_cleanup(
+            "persist failed stage state",
+            lambda: _fail_after_adapter_error(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                changed_at_utc=changed_at_utc,
+            ),
+        )
+        try:
+            write_adapter_exception_artifact(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                attempt_number=execution_state.attempt_number,
+                exception=adapter_exception,
+            )
+        except Exception as cleanup_error:
+            adapter_exception.add_note(
+                "Could not write adapter exception evidence: "
+                f"{type(cleanup_error).__name__}: {cleanup_error}"
+            )
+        run_cleanup(
+            "restore core-owned repair brief",
+            lambda: restore_core_owned_repair_brief(
+                invocation_bundle=adapter_invocation,
+                workspace_root=workspace_root,
+            ),
+        )
+        run_cleanup(
+            "write attempt artifact index",
+            lambda: write_attempt_artifact_index(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                attempt_number=execution_state.attempt_number,
+                contracts_root=contracts_root,
+            ),
+        )
+        raise
+    else:
         restore_core_owned_repair_brief(
             invocation_bundle=adapter_invocation,
             workspace_root=workspace_root,

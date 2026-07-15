@@ -42,6 +42,7 @@ RUN_RUNTIME_LOG_FILENAME = "runtime.log"
 RUN_RUNTIME_JSONL_FILENAME = "runtime.jsonl"
 RUN_EVENTS_JSONL_FILENAME = "events.jsonl"
 RUN_RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
+RUN_ADAPTER_EXCEPTION_FILENAME = "adapter-exception.json"
 
 
 def _format_utc_timestamp(timestamp: datetime | None = None) -> str:
@@ -179,6 +180,57 @@ def run_attempt_artifact_index_path(
         )
         / RUN_ARTIFACT_INDEX_FILENAME
     )
+
+
+def run_attempt_adapter_exception_path(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> Path:
+    return (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / RUN_ADAPTER_EXCEPTION_FILENAME
+    )
+
+
+def write_adapter_exception_artifact(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+    exception: Exception,
+) -> Path:
+    path = run_attempt_adapter_exception_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    message = " ".join(str(exception).split())[:2000]
+    payload = {
+        "schema_version": 1,
+        "kind": "adapter-exception",
+        "exception_type": type(exception).__name__,
+        "message": message,
+        "work_item_id": work_item,
+        "run_id": run_id,
+        "stage": stage,
+        "attempt_number": attempt_number,
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
 
 
 def _parse_attempt_directory_name(name: str) -> int | None:
@@ -434,6 +486,18 @@ def _canonical_log_paths(
         logs["runtime_exit_metadata"] = _workspace_relative_canonical_path(
             workspace_root=workspace_root,
             path=runtime_exit_metadata,
+        )
+    adapter_exception = run_attempt_adapter_exception_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    if adapter_exception.exists():
+        logs["adapter_exception"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=adapter_exception,
         )
     runtime_jsonl = (
         run_attempt_root(

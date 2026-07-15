@@ -7,21 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W35-E2-S8-T1` — Define task-aware semantics for every implementation entrypoint and
-  remediation path.
-- `W34-E7-S4-T1` — Add one typed canonical allowed-write-scope parser, resolver, and
-  prefix predicate.
-- `W34-E1-S2-T2` — Bind rich task-card obligations to plan milestones, dependencies,
-  and verification notes.
-- `W34-E2-S1-T3` — Terminalize raised adapter exceptions with failed state and
-  diagnostic evidence.
-- `W34-E4-S1-T1` — Add provider-free adapter lifecycle characterization fixtures.
-- `W34-E7-S1-T1` — Define typed capability rules for runtime operator requests.
-- `W34-E7-S2-T2` — Adopt the shared identifier boundary for workspace and work-item
-  paths.
-
-## Soon
-
 - `W35-E2-S8-T2` — Move implementation execution and finalization policy into one typed
   core service after the entrypoint contract is fixed.
 - `W34-E7-S4-T2` — Migrate semantic validation after the canonical
@@ -32,6 +17,9 @@ slice, and local task.
   capability policy exists.
 - `W34-E7-S2-T4` — Adopt identifier containment for run and attempt paths after the
   workspace/work-item rollout.
+
+## Soon
+
 
 ## Parking lot
 
@@ -124,10 +112,7 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-14` Wave 35 remains reopened for the P1 task-aware implementation-entrypoint
-  correction; the canonical allowed-write-scope boundary and ready Wave 34 foundations
-  remain in `Next`, with only direct successors in `Soon`. The accepted Document &
-  Evidence Studio plan now lives in Wave 36: completed contract tasks were removed from
-  this queue, and the route-matrix, migration-seam, Inbox, Studio, Recovery, History,
-  Flow Complete, and cutover entry tasks remain deliberately in `Parking lot` behind
-  their Wave 34/35 and browser-foundation gates.
+- `2026-07-15` The seven foundation tasks selected from `Next` are complete. Their five
+  direct successors now form the bounded `Next` queue in dependency order; `Soon` is
+  intentionally empty, and the Wave 36 UI work remains in `Parking lot` behind the
+  Wave 34/35 and browser-foundation gates.

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from aidd.core.identifiers import SafeIdentifier, resolve_contained_component
 from aidd.core.stages import STAGES
 
 WORKSPACE_CONFIG_DIRNAME = "config"
@@ -50,6 +51,11 @@ _STAGE_FILE_TEMPLATES: dict[str, str] = {
 
 
 def workspace_workitems_root(root: Path) -> Path:
+    resolve_contained_component(
+        root,
+        WORKSPACE_WORKITEMS_DIRNAME,
+        label="workspace workitems directory",
+    )
     return root / WORKSPACE_WORKITEMS_DIRNAME
 
 
@@ -66,7 +72,14 @@ def workspace_traces_root(root: Path) -> Path:
 
 
 def work_item_root(root: Path, work_item: str) -> Path:
-    return workspace_workitems_root(root) / work_item
+    workitems_root = workspace_workitems_root(root)
+    safe_work_item = SafeIdentifier.parse(work_item, label="work_item")
+    resolve_contained_component(
+        workitems_root,
+        safe_work_item.value,
+        label="work_item",
+    )
+    return workitems_root / safe_work_item.value
 
 
 def work_item_context_root(root: Path, work_item: str) -> Path:
@@ -94,6 +107,7 @@ def stage_output_root(root: Path, work_item: str, stage: str) -> Path:
 
 
 def create_workspace_tree(root: Path, work_item: str) -> Path:
+    item_root = work_item_root(root=root, work_item=work_item)
     workspace_config_root(root).mkdir(parents=True, exist_ok=True)
     (workspace_reports_root(root) / WORKSPACE_REPORTS_RUNS_DIRNAME).mkdir(
         parents=True,
@@ -112,7 +126,6 @@ def create_workspace_tree(root: Path, work_item: str) -> Path:
         exist_ok=True,
     )
 
-    item_root = work_item_root(root=root, work_item=work_item)
     work_item_context_root(root=root, work_item=work_item).mkdir(parents=True, exist_ok=True)
 
     for stage in STAGES:

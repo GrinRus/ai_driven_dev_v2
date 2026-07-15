@@ -736,6 +736,41 @@ def test_run_single_stage_orchestration_restores_repair_brief_when_adapter_raise
         )
 
     assert repair_brief_path.read_text(encoding="utf-8") == original_brief
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    assert [change.status for change in metadata.status_history[-2:]] == [
+        StageState.EXECUTING.value,
+        StageState.FAILED.value,
+    ]
+    attempt_path = sorted(
+        run_attempts_root(workspace_root, "WI-001", "run-001", "plan").glob("attempt-*")
+    )[-1]
+    exception_payload = json.loads(
+        (attempt_path / "adapter-exception.json").read_text(encoding="utf-8")
+    )
+    assert exception_payload == {
+        "schema_version": 1,
+        "kind": "adapter-exception",
+        "exception_type": "RuntimeError",
+        "message": "adapter crashed",
+        "work_item_id": "WI-001",
+        "run_id": "run-001",
+        "stage": "plan",
+        "attempt_number": int(attempt_path.name.removeprefix("attempt-")),
+    }
+    artifact_index = json.loads(
+        (attempt_path / "artifact-index.json").read_text(encoding="utf-8")
+    )
+    assert artifact_index["logs"]["adapter_exception"].endswith(
+        "/adapter-exception.json"
+    )
+    assert not (attempt_path / "runtime-exit.json").exists()
 
 
 def test_prepare_adapter_invocation_requires_existing_input_documents(tmp_path: Path) -> None:

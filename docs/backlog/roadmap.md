@@ -8908,13 +8908,13 @@ Local tasks:
   - Scope: implement-stage cross-document rules.
   - Verification: wrong-task, missing-path, out-of-scope, and skipped-authored-check
     fixtures fail with stable findings.
-- `W34-E1-S2-T2` (`next`) Bind rich task-card outcomes, acceptance IDs, dependency
+- `W34-E1-S2-T2` (done) Bind rich task-card outcomes, acceptance IDs, dependency
   obligations, and authored verification to plan milestones, dependencies, and
   verification notes. [`ARCH-01`]
   - Scope: tasklist cross-document rules.
   - Verification: missing and mismatched plan obligations fail without reimplementing
     task-plan parsing or changing valid rich-tasklist behavior.
-- `W34-E1-S2-T3` Bind non-task review findings, changed paths, and artifact/evidence
+- `W34-E1-S2-T3` (`next`) Bind non-task review findings, changed paths, and artifact/evidence
   references to implementation artifacts. [`ARCH-01`]
   - Dependencies: `W34-E1-S2-T2`.
   - Scope: review cross-document rules.
@@ -9059,7 +9059,7 @@ Exit evidence:
 ### Epic W34-E2 — transactional state and immutable evidence (`planned`)
 Linked stories: `US-02`, `US-03`, `US-06`, `US-10`, `US-11`
 
-#### Slice W34-E2-S1 — atomic stage publication (`planned`)
+#### Slice W34-E2-S1 — atomic stage publication (`done`)
 Goal: make durable success observable only after canonical output publication commits.
 
 Dependencies:
@@ -9078,7 +9078,7 @@ Local tasks:
   - Scope: stage runner success transition.
   - Verification: every injected publication failure leaves a truthful non-success
     state.
-- `W34-E2-S1-T3` (`next`) Terminalize raised adapter exceptions with failed state and diagnostic
+- `W34-E2-S1-T3` (done) Terminalize raised adapter exceptions with failed state and diagnostic
   evidence. [`REL-07`]
   - Scope: stage runner exception boundary.
   - Verification: an injected adapter exception proves `executing -> failed` and
@@ -9267,7 +9267,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E4-S1-T1` (`next`) Add provider-free adapter lifecycle characterization fixtures.
+- `W34-E4-S1-T1` (done) Add provider-free adapter lifecycle characterization fixtures.
   [`REF-03`]
   - Scope: cross-adapter tests only.
   - Verification: a startup, bidirectional-I/O, timeout, cancellation, parent-exit, and
@@ -9633,12 +9633,12 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E7-S1-T1` (`next`) Define typed capability rules for runtime operator requests.
+- `W34-E7-S1-T1` (done) Define typed capability rules for runtime operator requests.
   [`SEC-01`]
   - Scope: runtime operator policy model.
   - Verification: a defensive decision table covers known capabilities, unknown
     requests, and policy-blocked operations without executing provider-live commands.
-- `W34-E7-S1-T2` Apply protected-data and core-evidence boundaries consistently to
+- `W34-E7-S1-T2` (`next`) Apply protected-data and core-evidence boundaries consistently to
   reads, writes, and destructive operations, and fail closed when no verifiable
   boundary exists. [`SEC-01`]
   - Dependencies: `W34-E7-S1-T1`.
@@ -9667,7 +9667,7 @@ Local tasks:
   - Scope: common identifier/path boundary.
   - Verification: defensive fixtures cover valid components, invalid components, root
     escape, and unsafe ancestor resolution without recording sensitive paths.
-- `W34-E7-S2-T2` (`next`) Adopt the shared boundary for workspace and work-item paths.
+- `W34-E7-S2-T2` (done) Adopt the shared boundary for workspace and work-item paths.
   [`SEC-03`]
   - Scope: core workspace/work-item persisted paths only.
   - Verification: every workspace/work-item write-path family passes the shared
@@ -9677,7 +9677,7 @@ Local tasks:
   - Scope: harness and eval persisted paths.
   - Verification: every harness/bundle write-path family passes the same containment
     matrix.
-- `W34-E7-S2-T4` Adopt the shared boundary for run and attempt paths. [`SEC-03`]
+- `W34-E7-S2-T4` (`next`) Adopt the shared boundary for run and attempt paths. [`SEC-03`]
   - Dependencies: `W34-E7-S2-T2`.
   - Scope: core run/attempt persisted paths only.
   - Verification: every run/attempt write-path family passes the shared containment
@@ -9723,12 +9723,12 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E7-S4-T1` (`next`) Add a typed canonical `AllowedWriteScope` parser, resolver,
+- `W34-E7-S4-T1` (done) Add a typed canonical `AllowedWriteScope` parser, resolver,
   and safe prefix predicate. [`BUG-13`, `ARCH-06`]
   - Scope: core allowed-write-scope model only.
   - Verification: a parity table covers files, top-level/nested directories, missing
     scope, malformed values, escapes, and platform separators.
-- `W34-E7-S4-T2` Migrate semantic validation to the canonical allowed-write-scope
+- `W34-E7-S4-T2` (`next`) Migrate semantic validation to the canonical allowed-write-scope
   boundary. [`BUG-13`, `ARCH-06`]
   - Dependencies: `W34-E7-S4-T1`.
   - Scope: semantic validator scope consumer only.
@@ -9985,13 +9985,13 @@ Dependencies:
 
 Local tasks:
 
-- `W35-E2-S8-T1` (`next`) Define the task-aware semantics and failure behavior for
+- `W35-E2-S8-T1` (done) Define the task-aware semantics and failure behavior for
   workflow, stage run/interact, task run/finalize, UI stage controls, and remediation.
   [`CORR-01`]
   - Scope: task-execution architecture and entrypoint contract only.
   - Verification: one matrix names task selection, ledger/finalization transitions,
     publication eligibility, and fail-closed behavior for every entrypoint.
-- `W35-E2-S8-T2` Move implementation execution/finalization policy into one typed core
+- `W35-E2-S8-T2` (`next`) Move implementation execution/finalization policy into one typed core
   service with domain results and errors. [`CORR-01`, `ARCH-04`]
   - Dependencies: `W35-E2-S8-T1`.
   - Scope: core implementation execution boundary only.

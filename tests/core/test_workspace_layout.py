@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from aidd.core.stages import STAGES
 from aidd.core.workspace import (
     DEFAULT_CONTRACT_REFERENCES_FILENAME,
@@ -55,6 +57,62 @@ def test_workspace_helpers_follow_canonical_layout(tmp_path: Path) -> None:
     assert stage_root(root, work_item, stage) == expected_stage_root
     assert stage_input_root(root, work_item, stage) == expected_input_root
     assert stage_output_root(root, work_item, stage) == expected_output_root
+
+
+@pytest.mark.parametrize(
+    "work_item",
+    (
+        "",
+        " ",
+        ".",
+        "..",
+        "../WI-1",
+        "WI/1",
+        "WI\\1",
+        "/WI-1",
+        "bad$id",
+        "X" * 129,
+    ),
+)
+def test_workspace_rejects_unsafe_work_item_before_any_write(
+    tmp_path: Path,
+    work_item: str,
+) -> None:
+    root = tmp_path / ".aidd"
+
+    with pytest.raises(ValueError, match="work_item"):
+        create_workspace_tree(root=root, work_item=work_item)
+
+    assert not root.exists()
+
+
+@pytest.mark.skipif(not hasattr(Path, "symlink_to"), reason="symlinks unavailable")
+def test_workspace_rejects_workitems_symlink_escape(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    outside = tmp_path / "outside"
+    root.mkdir()
+    outside.mkdir()
+    (root / WORKSPACE_WORKITEMS_DIRNAME).symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="resolve directly below"):
+        create_workspace_tree(root=root, work_item="WI-1")
+
+    assert tuple(outside.iterdir()) == ()
+
+
+@pytest.mark.skipif(not hasattr(Path, "symlink_to"), reason="symlinks unavailable")
+def test_workspace_rejects_work_item_symlink_escape(tmp_path: Path) -> None:
+    root = tmp_path / ".aidd"
+    outside = tmp_path / "outside"
+    workitems = root / WORKSPACE_WORKITEMS_DIRNAME
+    workitems.mkdir(parents=True)
+    outside.mkdir()
+    (workitems / "WI-1").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="resolve directly below"):
+        create_workspace_tree(root=root, work_item="WI-1")
+
+    assert tuple(outside.iterdir()) == ()
 
 
 def test_init_workspace_seeds_non_control_stage_files(tmp_path: Path) -> None:
