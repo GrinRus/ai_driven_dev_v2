@@ -7,6 +7,7 @@ from aidd.validators.evidence_context import load_implementation_evidence_contex
 from aidd.validators.models import ValidationFinding
 from aidd.validators.semantic_rules.common import (
     IMPLEMENT_ARTIFACT_REFERENCE_PATTERN,
+    IMPLEMENT_ASSERTION_REFERENCE_PATTERN,
     IMPLEMENT_COMPLETION_CLAIM_PATTERN,
     IMPLEMENT_FILE_ENTRY_PATTERN,
     IMPLEMENT_NOOP_JUSTIFICATION_PATTERN,
@@ -236,6 +237,7 @@ def _validate_verification_item(
     has_result_reference = IMPLEMENT_RESULT_PATTERN.search(verification_item) is not None
     has_artifact_reference = (
         IMPLEMENT_ARTIFACT_REFERENCE_PATTERN.search(verification_item) is not None
+        or IMPLEMENT_ASSERTION_REFERENCE_PATTERN.search(verification_item) is not None
     )
     if has_result_reference and not has_command_reference and not has_artifact_reference:
         return (

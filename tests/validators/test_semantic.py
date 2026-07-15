@@ -2842,6 +2842,8 @@ def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
             "- Bun runner passed.\n"
             "- Prettier passed.\n"
             "- TypeScript tsc passed.\n\n"
+            "- pytest passed.\n"
+            "- Checked with ruff and it succeeded.\n\n"
             "## Risks\n\n"
             "- No residual risk remains.\n\n"
             "## Follow-up\n\n"
@@ -2856,6 +2858,8 @@ def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
     )
 
     assert [finding.code for finding in findings] == [
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
         UNVERIFIABLE_CHECK_CLAIM_CODE,
         UNVERIFIABLE_CHECK_CLAIM_CODE,
         UNVERIFIABLE_CHECK_CLAIM_CODE,

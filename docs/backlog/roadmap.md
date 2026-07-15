@@ -8987,7 +8987,7 @@ Exit evidence:
 - examples teach the behavior production validators enforce;
 - legacy validator-report consumers have a documented dual-read window.
 
-#### Slice W34-E1-S4 — item- and section-scoped semantic rules (`planned`)
+#### Slice W34-E1-S4 — item- and section-scoped semantic rules (`done`)
 Goal: close parser false passes and false failures caused by whole-document or
 whole-section matching.
 
@@ -9011,7 +9011,7 @@ Local tasks:
   - Scope: tasklist semantic regression coverage only.
   - Verification: a mixed-style tasklist with missing dependency/verification coverage
     emits both stable findings without introducing a second task grammar.
-- `W34-E1-S4-T4` Require command- or artifact-shaped executable evidence instead of
+- `W34-E1-S4-T4` (done) Require command- or artifact-shaped executable evidence instead of
   prose tool names. [`BUG-05`]
   - Scope: implementation evidence grammar.
   - Verification: a table covers accepted commands/artifacts and rejected prose-only
