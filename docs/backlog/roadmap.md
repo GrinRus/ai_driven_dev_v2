@@ -10038,7 +10038,7 @@ Dependencies:
 
 Local tasks:
 
-- `W35-E2-S9-T1` Extract task attempt, recovery, and interview-evidence lifecycle from
+- `W35-E2-S9-T1` (done) Extract task attempt, recovery, and interview-evidence lifecycle from
   the task-execution hotspot. [`REF-06`]
   - Scope: core task attempt lifecycle only.
   - Verification: blocked/resumed/crashed attempt fixtures remain equivalent.

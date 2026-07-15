@@ -15,7 +15,6 @@ from aidd.core.allowed_write_scope import (
     resolve_allowed_write_scope,
 )
 from aidd.core.identifiers import contained_component_path
-from aidd.core.interview import stage_has_unresolved_blocking_questions
 from aidd.core.run_store import (
     load_stage_metadata,
     next_attempt_number,
@@ -24,31 +23,28 @@ from aidd.core.run_store import (
     run_stage_root,
 )
 from aidd.core.stage_models import StageExecutionState, StageOutputDiscovery
-from aidd.core.stage_validation import update_stage_unblock_state
 from aidd.core.state_machine import StageState
+from aidd.core.task_attempt_lifecycle import (
+    TaskExecutionContext,
+    TaskResumeBlockedError,
+    complete_task_attempt,
+    copy_interview_evidence,
+    existing_attempts,
+    load_task_execution_plan,
+    prepare_task_attempt,
+    published_tasklist_path,
+    reconcile_staging_attempts,
+    reconcile_task_execution_state,
+    write_task_selection_context,
+)
 from aidd.core.task_ledger import (
     TaskExecutionStatus,
     TaskFinalizationStatus,
     TaskLedger,
-    ensure_task_ledger,
     persist_task_ledger,
-    task_root,
 )
-from aidd.core.task_plan import TaskCard, TaskPlan, parse_task_plan
+from aidd.core.task_plan import TaskPlan
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
-
-
-@dataclass(frozen=True, slots=True)
-class TaskExecutionContext:
-    plan: TaskPlan
-    ledger: TaskLedger
-    task: TaskCard
-    global_attempt_start: int
-    task_attempt_path: Path
-
-
-class TaskResumeBlockedError(ValueError):
-    """Raised when a blocked task still requires operator input."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,214 +54,7 @@ class TaskFinalizationContext:
     attempt_number: int
 
 
-def published_tasklist_path(*, workspace_root: Path, work_item: str) -> Path:
-    return (
-        workspace_root / "workitems" / work_item / "stages" / "tasklist" / "output" / "tasklist.md"
-    )
-
-
-def load_task_execution_plan(*, workspace_root: Path, work_item: str) -> TaskPlan:
-    path = published_tasklist_path(
-        workspace_root=workspace_root,
-        work_item=work_item,
-    )
-    if not path.exists():
-        raise ValueError(f"Published tasklist is missing: {path.as_posix()}.")
-    return parse_task_plan(path.read_text(encoding="utf-8"))
-
-
-def _task_selection_path(*, workspace_root: Path, work_item: str) -> Path:
-    return workspace_root / "workitems" / work_item / "context" / "task-selection.md"
-
-
-def _selected_task_id(*, workspace_root: Path, work_item: str) -> str | None:
-    path = _task_selection_path(workspace_root=workspace_root, work_item=work_item)
-    if not path.exists():
-        return None
-    match = re.search(r"Task id\s*:\s*`([^`]+)`", path.read_text(encoding="utf-8"))
-    return match.group(1).upper() if match is not None else None
-
-
-def write_task_selection_context(*, workspace_root: Path, work_item: str, task: TaskCard) -> Path:
-    path = _task_selection_path(workspace_root=workspace_root, work_item=work_item)
-    lines = [
-        "# Task Selection",
-        "",
-        "## Selected task",
-        "",
-        f"- Task id: `{task.id}`",
-        f"- Title: {task.title}",
-        f"- Outcome: {task.outcome}",
-        f"- Dominant deliverable: {task.dominant_deliverable}",
-        f"- In scope: {task.in_scope}",
-        "",
-        "## Acceptance criteria",
-        "",
-    ]
-    lines.extend(f"- `{criterion.id}`: {criterion.text}" for criterion in task.acceptance_criteria)
-    lines.extend(
-        [
-            "",
-            "## Dependencies",
-            "",
-            "- " + (", ".join(f"`{item}`" for item in task.dependencies) or "none"),
-            "",
-            "## Verification",
-            "",
-            f"- {task.verification}",
-            "",
-        ]
-    )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines), encoding="utf-8")
-    return path
-
-
-def _attempt_state_path(attempt_path: Path) -> Path:
-    return attempt_path / "attempt-state.json"
-
-
-def _write_attempt_state(
-    attempt_path: Path,
-    *,
-    task_id: str,
-    attempt_number: int,
-    status: str,
-    blocker: str | None = None,
-) -> None:
-    _attempt_state_path(attempt_path).write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "task_id": task_id,
-                "attempt_number": attempt_number,
-                "status": status,
-                "blocker": blocker,
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-
-
-def _task_attempts_root(
-    *, workspace_root: Path, work_item: str, run_id: str, task_id: str
-) -> Path:
-    return contained_component_path(
-        task_root(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            task_id=task_id,
-        ),
-        "attempts",
-        boundary_root=workspace_root,
-        label="task attempts directory",
-    )
-
-
-def _existing_task_attempts(attempts_root: Path) -> tuple[tuple[int, Path], ...]:
-    attempts: list[tuple[int, Path]] = []
-    if not attempts_root.exists():
-        return ()
-    for path in attempts_root.glob("attempt-[0-9][0-9][0-9][0-9]"):
-        try:
-            number = int(path.name.removeprefix("attempt-"))
-        except ValueError:
-            continue
-        attempts.append((number, path))
-    return tuple(sorted(attempts))
-
-
-def _reconcile_staging_attempts(
-    attempts_root: Path,
-    *,
-    task_id: str,
-) -> None:
-    if not attempts_root.exists():
-        return
-    for staging in sorted(attempts_root.glob(".attempt-*-*.staging")):
-        match = re.match(r"^\.attempt-(\d+)-", staging.name)
-        if match is None:
-            continue
-        number = int(match.group(1))
-        target = attempts_root / f"attempt-{number:04d}"
-        if target.exists():
-            shutil.rmtree(staging, ignore_errors=True)
-            continue
-        staging.replace(target)
-        _write_attempt_state(
-            target,
-            task_id=task_id,
-            attempt_number=number,
-            status="abandoned",
-            blocker="Task attempt was abandoned during atomic preparation.",
-        )
-
-
-def reconcile_task_execution_state(
-    *, workspace_root: Path, work_item: str, run_id: str, ledger: TaskLedger
-) -> TaskLedger:
-    """Terminalize abandoned task attempts after the run lease has been acquired."""
-
-    reconciled = ledger
-    for entry in ledger.tasks:
-        attempts_root = _task_attempts_root(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            task_id=entry.id,
-        )
-        _reconcile_staging_attempts(attempts_root, task_id=entry.id)
-        attempts = _existing_task_attempts(attempts_root)
-        for number, path in attempts:
-            if number > entry.attempt_count:
-                _write_attempt_state(
-                    path,
-                    task_id=entry.id,
-                    attempt_number=number,
-                    status="abandoned",
-                    blocker="Task attempt was abandoned before ledger commit.",
-                )
-        if entry.status is not TaskExecutionStatus.EXECUTING:
-            continue
-        if entry.latest_attempt_path is not None:
-            attempt_path = workspace_root / entry.latest_attempt_path
-            if attempt_path.exists():
-                _write_attempt_state(
-                    attempt_path,
-                    task_id=entry.id,
-                    attempt_number=entry.attempt_count,
-                    status="abandoned",
-                    blocker="Task execution was interrupted before a terminal result.",
-                )
-        reconciled = reconciled.transition(
-            entry.id,
-            TaskExecutionStatus.FAILED,
-            blocker="Task execution was interrupted; resume creates a new attempt.",
-        )
-    if reconciled != ledger:
-        persist_task_ledger(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            ledger=reconciled,
-        )
-    return reconciled
-
-
-def _copy_interview_evidence(stage_root: Path, attempt_path: Path) -> None:
-    for name in ("questions.md", "answers.md"):
-        source = stage_root / name
-        if source.exists():
-            shutil.copy2(source, attempt_path / name)
-
-
-def _finalization_attempts_root(
-    *, workspace_root: Path, work_item: str, run_id: str
-) -> Path:
+def _finalization_attempts_root(*, workspace_root: Path, work_item: str, run_id: str) -> Path:
     finalization_root = contained_component_path(
         run_stage_root(
             workspace_root=workspace_root,
@@ -302,11 +91,9 @@ def prepare_task_finalization(
         work_item=work_item,
         run_id=run_id,
     )
-    _reconcile_staging_attempts(attempts_root, task_id="finalization")
-    existing = _existing_task_attempts(attempts_root)
-    number = max(
-        (ledger.finalization.attempt_count, *(item for item, _ in existing))
-    ) + 1
+    reconcile_staging_attempts(attempts_root, task_id="finalization")
+    existing = existing_attempts(attempts_root)
+    number = max((ledger.finalization.attempt_count, *(item for item, _ in existing))) + 1
     attempts_root.mkdir(parents=True, exist_ok=True)
     staging = attempts_root / f".attempt-{number:04d}-{uuid4().hex}.staging"
     staging.mkdir()
@@ -354,9 +141,7 @@ def complete_task_finalization(
     succeeded: bool,
     blocker: str | None = None,
 ) -> TaskLedger:
-    status = (
-        TaskFinalizationStatus.SUCCEEDED if succeeded else TaskFinalizationStatus.FAILED
-    )
+    status = TaskFinalizationStatus.SUCCEEDED if succeeded else TaskFinalizationStatus.FAILED
     ledger = context.ledger.transition_finalization(status, blocker=blocker)
     persist_task_ledger(
         workspace_root=workspace_root,
@@ -448,9 +233,7 @@ def _repository_file_snapshot(project_root: Path) -> dict[str, str]:
             continue
         relative = Path(relative_path)
         if relative.is_absolute() or ".." in relative.parts:
-            raise ValueError(
-                f"Repository snapshot path escapes project root: {relative_path}."
-            )
+            raise ValueError(f"Repository snapshot path escapes project root: {relative_path}.")
         snapshot[relative_path] = _hash_repository_file(project_root / relative_path)
     return snapshot
 
@@ -472,142 +255,13 @@ def prepare_task_execution(
     task_id: str,
     project_root: Path,
 ) -> TaskExecutionContext:
-    plan = load_task_execution_plan(
-        workspace_root=workspace_root,
-        work_item=work_item,
-    )
-    ledger = ensure_task_ledger(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        plan=plan,
-    )
-    ledger = reconcile_task_execution_state(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        ledger=ledger,
-    )
-    task = plan.by_id().get(task_id)
-    if task is None:
-        raise ValueError(f"Unknown task id `{task_id}`.")
-    entry = ledger.entry(task_id)
-    if entry.status is TaskExecutionStatus.SUCCEEDED:
-        raise ValueError(f"Task `{task_id}` has already succeeded.")
-    resume_blocked_task = entry.status is TaskExecutionStatus.BLOCKED
-    if resume_blocked_task:
-        unblock = update_stage_unblock_state(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage="implement",
-        )
-        metadata = load_stage_metadata(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage="implement",
-        )
-        resumed_preparing = (
-            metadata is not None
-            and metadata.status == StageState.PREPARING.value
-            and any(change.status == StageState.BLOCKED.value for change in metadata.status_history)
-            and not stage_has_unresolved_blocking_questions(
-                workspace_root=workspace_root,
-                work_item=work_item,
-                stage="implement",
-            )
-        )
-        if not unblock.unblocked and not resumed_preparing:
-            raise TaskResumeBlockedError(
-                f"Task `{task_id}` is still blocked by unresolved questions or approvals."
-            )
-    attempts_root = _task_attempts_root(
+    return prepare_task_attempt(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
         task_id=task_id,
-    )
-    _reconcile_staging_attempts(attempts_root, task_id=task_id)
-    existing_attempts = _existing_task_attempts(attempts_root)
-    task_attempt_number = max(
-        (entry.attempt_count, *(number for number, _ in existing_attempts))
-    ) + 1
-    attempts_root.mkdir(parents=True, exist_ok=True)
-    staging_path = attempts_root / f".attempt-{task_attempt_number:04d}-{uuid4().hex}.staging"
-    staging_path.mkdir()
-    baseline = _snapshot_payload(project_root=project_root, task_id=task_id)
-    (staging_path / "repository-baseline.json").write_text(
-        json.dumps(baseline, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    _write_attempt_state(
-        staging_path,
-        task_id=task_id,
-        attempt_number=task_attempt_number,
-        status="preparing",
-    )
-    task_attempt_path = contained_component_path(
-        attempts_root,
-        f"attempt-{task_attempt_number:04d}",
-        boundary_root=workspace_root,
-        label="task attempt id",
-    )
-    staging_path.replace(task_attempt_path)
-    implement_stage_root = (
-        workspace_root / "workitems" / work_item / "stages" / "implement"
-    )
-    for document_name in (
-        "implementation-report.md",
-        "stage-result.md",
-        "validator-report.md",
-        "repair-brief.md",
-    ):
-        (implement_stage_root / document_name).unlink(missing_ok=True)
-    preserve_interview = resume_blocked_task or _selected_task_id(
-        workspace_root=workspace_root,
-        work_item=work_item,
-    ) == task_id
-    if preserve_interview:
-        _copy_interview_evidence(implement_stage_root, task_attempt_path)
-    else:
-        for document_name in ("questions.md", "answers.md"):
-            (implement_stage_root / document_name).unlink(missing_ok=True)
-    write_task_selection_context(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        task=task,
-    )
-    workspace_relative_attempt = task_attempt_path.relative_to(workspace_root).as_posix()
-    ledger = ledger.transition(
-        task_id,
-        TaskExecutionStatus.EXECUTING,
-        attempt_number=task_attempt_number,
-        latest_attempt_path=workspace_relative_attempt,
-    )
-    persist_task_ledger(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        ledger=ledger,
-    )
-    _write_attempt_state(
-        task_attempt_path,
-        task_id=task_id,
-        attempt_number=task_attempt_number,
-        status="executing",
-    )
-    return TaskExecutionContext(
-        plan=plan,
-        ledger=ledger,
-        task=task,
-        global_attempt_start=next_attempt_number(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage="implement",
-        ),
-        task_attempt_path=task_attempt_path,
+        project_root=project_root,
+        repository_baseline=_snapshot_payload,
     )
 
 
@@ -636,9 +290,10 @@ def _snapshot_global_attempts(
             destination = context.task_attempt_path / f"stage-attempt-{attempt_number:04d}"
             shutil.copytree(source, destination)
             input_bundle = destination / "input-bundle.md"
-            if input_bundle.exists() and not (
-                context.task_attempt_path / "input-bundle.md"
-            ).exists():
+            if (
+                input_bundle.exists()
+                and not (context.task_attempt_path / "input-bundle.md").exists()
+            ):
                 shutil.copy2(input_bundle, context.task_attempt_path / "input-bundle.md")
             runtime_log = destination / "runtime.log"
             if runtime_log.exists():
@@ -703,6 +358,7 @@ def _task_diff_evidence(
     except AllowedWriteScopeError as exc:
         issues.extend(f"Allowed write scope: {issue}" for issue in exc.issues)
     allowed_scope_paths = list(allowed_scope.prefixes) if allowed_scope is not None else []
+
     def _globally_allowed(path: str) -> bool:
         if allowed_scope is None:
             return True
@@ -729,9 +385,7 @@ def _task_diff_evidence(
         if not any(
             path == allowed or path.startswith(f"{allowed}/") for allowed in task_scope_paths
         )
-        or (
-            allowed_scope is not None and not _globally_allowed(path)
-        )
+        or (allowed_scope is not None and not _globally_allowed(path))
     )
     if out_of_scope:
         issues.append(
@@ -833,7 +487,7 @@ def complete_task_execution(
             context.task_attempt_path / "implementation-report.md",
         )
     implement_stage_root = implementation_report.parent
-    _copy_interview_evidence(implement_stage_root, context.task_attempt_path)
+    copy_interview_evidence(implement_stage_root, context.task_attempt_path)
     final_status = _snapshot_payload(project_root=project_root, task_id=context.task.id)
     (context.task_attempt_path / "repository-final.json").write_text(
         json.dumps(final_status, indent=2, sort_keys=True) + "\n",
@@ -853,7 +507,6 @@ def complete_task_execution(
     if succeeded and task_diff_issues:
         succeeded = False
         blocker = " ".join(task_diff_issues)
-    workspace_relative_attempt = context.task_attempt_path.relative_to(workspace_root).as_posix()
     status = TaskExecutionStatus.SUCCEEDED if succeeded else TaskExecutionStatus.FAILED
     metadata = load_stage_metadata(
         workspace_root=workspace_root,
@@ -861,30 +514,15 @@ def complete_task_execution(
         run_id=run_id,
         stage="implement",
     )
-    if (
-        not succeeded
-        and metadata is not None
-        and metadata.status == StageState.BLOCKED.value
-    ):
+    if not succeeded and metadata is not None and metadata.status == StageState.BLOCKED.value:
         status = TaskExecutionStatus.BLOCKED
-    ledger = context.ledger.transition(
-        context.task.id,
-        status,
-        latest_attempt_path=workspace_relative_attempt,
-        blocker=blocker,
-    )
-    _write_attempt_state(
-        context.task_attempt_path,
-        task_id=context.task.id,
-        attempt_number=ledger.entry(context.task.id).attempt_count,
-        status=status.value,
-        blocker=blocker,
-    )
-    persist_task_ledger(
+    ledger = complete_task_attempt(
+        context=context,
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
-        ledger=ledger,
+        status=status,
+        blocker=blocker,
     )
     if not ledger.all_succeeded():
         persist_stage_status(
@@ -971,10 +609,12 @@ def render_aggregate_implementation_report(
 
 __all__ = [
     "TaskExecutionContext",
+    "TaskResumeBlockedError",
     "complete_task_execution",
     "load_task_execution_plan",
     "prepare_task_execution",
     "published_tasklist_path",
+    "reconcile_task_execution_state",
     "render_aggregate_implementation_report",
     "write_task_selection_context",
 ]
