@@ -7,12 +7,14 @@ slice, and local task.
 
 ## Next
 
+- `W34-E1-S3-T2` — Normalize all eight success examples and exact invalid/repair
+  expectations against the canonical protocol.
+
 ## Soon
 
 
 ## Parking lot
 
-- `W34-E1-S3-T1` — Define the canonical versioned validator field/code registry.
 - `W34-E1-S4-T1` — Reuse the canonical section-aware interview parser in
   cross-validation.
 - `W34-E1-S5-T1` — Add one production-equivalent full-stack contract fixture runner.
@@ -98,7 +100,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` Wave 35 is complete: task checkpoints reuse immutable repository
-  snapshots and task attempts reference canonical global runtime evidence without
-  payload copies or hard links. `Next` and `Soon` are empty pending a separate backlog
-  reconciliation; `Parking lot` remains unchanged.
+- `2026-07-15` validator-report protocol v1 now owns registry, renderer, contract,
+  stage-brief skeleton, repair guidance, and all production readers. `W34-E1-S3-T2`
+  is next for the separate eight-stage example and exact invalid/repair normalization.

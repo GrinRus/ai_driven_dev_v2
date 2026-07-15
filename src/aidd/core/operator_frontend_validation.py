@@ -1,48 +1,9 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from aidd.core.operator_frontend_models import OperatorValidationFindingView
-
-_FINDING_LINE_PATTERN = re.compile(
-    r"^\s*-\s+`(?P<code>[^`]+)`\s+\(`(?P<severity>[^`]+)`\)\s+"
-    r"in\s+(?P<location>`[^`]+`(?::\d+)?|unknown location|[^:]+):\s+"
-    r"(?P<message>.+?)\s*$"
-)
-_BACKTICKED_LOCATION_PATTERN = re.compile(
-    r"^`(?P<path>[^`]+)`(?::(?P<line>\d+))?$"
-)
-_REPEATED_SUFFIX_PATTERN = re.compile(
-    r"^(?P<message>.+?)\s+\(repeated (?P<count>\d+) times\)$"
-)
-
-
-def _finding_category(code: str) -> str:
-    normalized = code.strip().upper()
-    if normalized.startswith("STRUCT-"):
-        return "structural"
-    if normalized.startswith("SEM-"):
-        return "semantic"
-    if normalized.startswith("CROSS-"):
-        return "cross-document"
-    if normalized.startswith("INTERVIEW-"):
-        return "interview"
-    return "other"
-
-
-def _parse_location(raw_location: str) -> tuple[str | None, int | None]:
-    normalized = raw_location.strip()
-    if normalized.lower() == "unknown location":
-        return None, None
-    match = _BACKTICKED_LOCATION_PATTERN.match(normalized)
-    if match is None:
-        return normalized or None, None
-    line_number = match.group("line")
-    return (
-        match.group("path"),
-        int(line_number) if line_number is not None else None,
-    )
+from aidd.validators.protocol import parse_validator_report
 
 
 def _operator_hint(code: str, message: str) -> str | None:
@@ -64,14 +25,6 @@ def _operator_hint(code: str, message: str) -> str | None:
     if normalized_code == "CROSS-BLOCKING-UNANSWERED":
         return "Answer blocking questions with `[resolved]` entries before resuming."
     return None
-
-
-def _message_and_occurrence_count(message: str) -> tuple[str, int]:
-    normalized = message.strip()
-    match = _REPEATED_SUFFIX_PATTERN.match(normalized)
-    if match is None:
-        return normalized, 1
-    return match.group("message").strip(), int(match.group("count"))
 
 
 def _merge_duplicate_findings(
@@ -109,26 +62,20 @@ def _merge_duplicate_findings(
 def parse_validator_report_findings(
     markdown_text: str,
 ) -> tuple[OperatorValidationFindingView, ...]:
-    findings: list[OperatorValidationFindingView] = []
-    for line in markdown_text.splitlines():
-        match = _FINDING_LINE_PATTERN.match(line)
-        if match is None:
-            continue
-        path, line_number = _parse_location(match.group("location"))
-        code = match.group("code").strip()
-        message, occurrence_count = _message_and_occurrence_count(match.group("message"))
-        findings.append(
+    report = parse_validator_report(markdown_text)
+    findings = [
             OperatorValidationFindingView(
-                category=_finding_category(code),
-                code=code,
-                severity=match.group("severity").strip(),
-                path=path,
-                line_number=line_number,
-                message=message,
-                occurrence_count=occurrence_count,
-                operator_hint=_operator_hint(code=code, message=message),
+                category=finding.category,
+                code=finding.code,
+                severity=finding.severity,
+                path=finding.source_path,
+                line_number=finding.source_line_number,
+                message=finding.message,
+                occurrence_count=finding.occurrence_count,
+                operator_hint=_operator_hint(code=finding.code, message=finding.message),
             )
-        )
+            for finding in report.findings
+        ]
     return _merge_duplicate_findings(findings)
 
 

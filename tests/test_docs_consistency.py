@@ -16,6 +16,7 @@ from aidd.core.stage_registry import (
 )
 from aidd.core.stages import STAGES
 from aidd.runtime_catalog import runtime_definitions, runtime_ids
+from aidd.validators.protocol import VALIDATOR_FINDING_CODES, VALIDATOR_REPORT_FIELDS
 
 _USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
 _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
@@ -177,6 +178,35 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
         )
         assert "Treat `validator-report.md` as draft evidence" in run_prompt
         assert "Treat `stage-result.md` as a truthful summary draft" in run_prompt
+
+
+def test_validator_report_contract_matches_protocol_registry() -> None:
+    repo_root = _repo_root()
+    contract = (
+        repo_root / "contracts" / "documents" / "validator-report.md"
+    ).read_text(encoding="utf-8")
+    canonical_vocabulary = contract.split(
+        "## Canonical issue-code vocabulary", maxsplit=1
+    )[1].split("## Legacy read aliases", maxsplit=1)[0]
+    legacy_vocabulary = contract.split("## Legacy read aliases", maxsplit=1)[1].split(
+        "## Severity rules", maxsplit=1
+    )[0]
+
+    for field in VALIDATOR_REPORT_FIELDS:
+        assert f"{field.label}:" in contract
+        for alias in field.aliases:
+            assert f"field `{alias}` resolves to canonical field `{field.label}`" in contract
+
+    canonical_codes = {
+        spec.code for spec in VALIDATOR_FINDING_CODES if spec.status == "canonical"
+    }
+    documented_canonical_codes = set(
+        re.findall(r"`((?:CROSS|INTERVIEW|SEM|STRUCT)-[A-Z0-9-]+)`", canonical_vocabulary)
+    )
+    assert documented_canonical_codes == canonical_codes
+    for spec in VALIDATOR_FINDING_CODES:
+        if spec.status == "legacy":
+            assert f"code `{spec.code}`" in legacy_vocabulary
 
 
 def test_live_docs_classify_malformed_interview_documents_as_stage_output_failure() -> None:

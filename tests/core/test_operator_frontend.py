@@ -60,6 +60,7 @@ from aidd.runtime_permissions import (
     RuntimeOperatorRequestKind,
     RuntimeOperatorRisk,
 )
+from aidd.validators.protocol import ValidatorReportProtocolError
 
 
 def _prepare_run(workspace_root: Path) -> None:
@@ -158,6 +159,15 @@ def test_parse_validator_report_findings_extracts_location_and_message() -> None
     assert findings[1].path == "workitems/WI-UI/stages/plan/questions.md"
     assert findings[1].line_number == 12
     assert findings[1].message == "Q1 is unresolved."
+    assert findings[0].code == "STRUCT-MISSING-REQUIRED-DOCUMENT"
+
+
+def test_operator_validator_reader_rejects_unknown_protocol_code() -> None:
+    with pytest.raises(ValidatorReportProtocolError):
+        parse_validator_report_findings(
+            "## Semantic checks\n\n"
+            "- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: Unknown.\n"
+        )
 
 
 def test_parse_validator_report_findings_collapses_duplicate_command_claims() -> None:
@@ -558,7 +568,7 @@ def test_operator_dashboard_next_action_inspects_failed_validation(
                 "",
                 "## Semantic checks",
                 "",
-                "- `SEM-MISSING-ROLLBACK` (`high`) in "
+                    "- `SEM-INCOMPLETE-SECTION` (`high`) in "
                 "`workitems/WI-UI/stages/plan/plan.md`: Missing rollback plan.",
                 "",
                 "## Result",
@@ -581,7 +591,7 @@ def test_operator_dashboard_next_action_inspects_failed_validation(
     assert dashboard.first_failure is not None
     assert dashboard.first_failure.kind == "validation-failed"
     assert dashboard.primary_validation_finding is not None
-    assert dashboard.primary_validation_finding.code == "SEM-MISSING-ROLLBACK"
+    assert dashboard.primary_validation_finding.code == "SEM-INCOMPLETE-SECTION"
     assert dashboard.primary_validation_finding.path == (
         "workitems/WI-UI/stages/plan/plan.md"
     )
@@ -590,7 +600,7 @@ def test_operator_dashboard_next_action_inspects_failed_validation(
         dashboard.active_stage_view.diagnostics.validation.primary_validation_finding
         == dashboard.primary_validation_finding
     )
-    assert any("SEM-MISSING-ROLLBACK" in blocker.detail for blocker in dashboard.blockers)
+    assert any("SEM-INCOMPLETE-SECTION" in blocker.detail for blocker in dashboard.blockers)
     assert dashboard.recovery_actions
     assert any(blocker.kind == "validation" for blocker in dashboard.blockers)
 

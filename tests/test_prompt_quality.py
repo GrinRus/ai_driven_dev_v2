@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 
 from aidd.core.stages import STAGES
+from aidd.validators.protocol import VALIDATOR_FINDING_CODES, VALIDATOR_REPORT_FIELDS
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -34,6 +36,30 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     assert "`- Q1 [resolved]: ...` is invalid" in prompt_text
     assert "`- Q1: [resolved] ...`" in prompt_text
     assert "do not create `[resolved]`" in prompt_text
+
+
+@pytest.mark.parametrize("stage", STAGES)
+def test_stage_repair_prompt_uses_only_registered_validator_protocol_vocabulary(
+    stage: str,
+) -> None:
+    prompt_path = Path("prompt-packs") / "stages" / stage / "repair.md"
+    prompt_text = prompt_path.read_text(encoding="utf-8")
+    protocol_block = prompt_text.split("## Validator-report protocol v1", maxsplit=1)[1].split(
+        "\n## ", maxsplit=1
+    )[0]
+
+    for field in VALIDATOR_REPORT_FIELDS:
+        assert f"`{field.label}`" in protocol_block
+        for alias in field.aliases:
+            assert f"`{alias}`" in protocol_block
+    registered_codes = {spec.code for spec in VALIDATOR_FINDING_CODES}
+    prompt_codes = set(
+        re.findall(r"`((?:CROSS|INTERVIEW|SEM|STRUCT)-[A-Z0-9-]+)`", protocol_block)
+    )
+    assert prompt_codes <= registered_codes
+    assert "read-only legacy field aliases" in protocol_block
+    assert "read-only legacy codes" in protocol_block
+    assert "invalid protocol vocabulary" in protocol_block
 
 
 @pytest.mark.parametrize("stage", STAGES)

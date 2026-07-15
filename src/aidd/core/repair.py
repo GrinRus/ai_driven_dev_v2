@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -14,6 +13,7 @@ from aidd.core.run_store import (
     run_attempts_root,
 )
 from aidd.core.workspace import stage_root as workspace_stage_root
+from aidd.validators.protocol import parse_validator_report
 
 _IMMEDIATE_DOWNSTREAM_STAGE: dict[str, str] = {
     "idea": "research",
@@ -24,13 +24,6 @@ _IMMEDIATE_DOWNSTREAM_STAGE: dict[str, str] = {
     "implement": "review",
     "review": "qa",
 }
-
-_VALIDATOR_FINDING_PATTERN = re.compile(
-    r"^- `(?P<code>[^`]+)` "
-    r"\(`(?P<severity>critical|high|medium|low)`\) "
-    r"in (?P<location>.+?): (?P<message>.+)$"
-)
-
 
 @dataclass(frozen=True, slots=True)
 class ValidatorReportFinding:
@@ -106,25 +99,6 @@ class RepairHistoryPersistenceResult:
     stage_result_path: Path
 
 
-def _extract_location_path(location: str) -> str | None:
-    normalized = location.strip()
-    if not normalized or normalized == "unknown location":
-        return None
-
-    if "`" in normalized:
-        match = re.search(r"`([^`]+)`", normalized)
-        if match is None:
-            return None
-        return match.group(1).strip() or None
-
-    if ":" in normalized:
-        path_part, maybe_line = normalized.rsplit(":", maxsplit=1)
-        if maybe_line.isdigit():
-            normalized = path_part
-
-    return normalized or None
-
-
 def _normalize_workspace_relative_path(
     *,
     path: str | Path,
@@ -158,22 +132,16 @@ def parse_validator_report_findings(
     *,
     validator_report_markdown: str,
 ) -> tuple[ValidatorReportFinding, ...]:
-    findings: list[ValidatorReportFinding] = []
-    for raw_line in validator_report_markdown.splitlines():
-        match = _VALIDATOR_FINDING_PATTERN.match(raw_line.strip())
-        if match is None:
-            continue
-
-        findings.append(
+    report = parse_validator_report(validator_report_markdown)
+    return tuple(
             ValidatorReportFinding(
-                code=match.group("code"),
-                severity=match.group("severity"),
-                message=match.group("message"),
-                source_path=_extract_location_path(match.group("location")),
+                code=finding.code,
+                severity=finding.severity,
+                message=finding.message,
+                source_path=finding.source_path,
             )
+            for finding in report.findings
         )
-
-    return tuple(findings)
 
 
 def _render_failed_checks(findings: tuple[ValidatorReportFinding, ...]) -> list[str]:

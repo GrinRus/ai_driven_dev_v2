@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,11 +8,12 @@ from aidd.core.run_inspection import RunMetadataSummary, resolve_run_metadata_su
 from aidd.core.run_lookup import latest_attempt_number
 from aidd.core.run_store import load_attempt_artifact_index, load_stage_metadata
 from aidd.core.stages import STAGES
+from aidd.validators.protocol import (
+    ValidatorReportProtocolError,
+    parse_validator_report,
+)
 
 _MAX_COMPARISON_ARTIFACT_BYTES = 512 * 1024
-_VALIDATOR_VERDICT_PATTERN = re.compile(
-    r"(?im)^\s*-\s*Verdict:\s*`?([a-z][a-z0-9_-]*)`?"
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -267,9 +267,14 @@ def _hash_workspace_artifact(
                 f"Run '{run_id}' validator report for stage '{stage}' is not UTF-8.",
             )
         else:
-            match = _VALIDATOR_VERDICT_PATTERN.search(text)
-            if match is not None:
-                verdict = match.group(1).lower()
+            try:
+                verdict = parse_validator_report(text).verdict
+            except ValidatorReportProtocolError as exc:
+                _append_warning(
+                    warnings,
+                    f"Run '{run_id}' validator report for stage '{stage}' is corrupted: "
+                    f"{exc}",
+                )
     return digest, byte_size, truncated, verdict
 
 

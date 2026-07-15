@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
+from aidd.validators.protocol import (
+    VALIDATOR_FINDING_CODES,
+    ValidatorReportProtocolError,
+)
 from aidd.validators.reports import render_validator_report, write_validator_report
 
 
@@ -40,7 +46,7 @@ def test_render_validator_report_groups_findings_and_renders_location() -> None:
             ),
         ),
         ValidationFinding(
-            code="CROSS-REFERENCE-MISMATCH",
+            code="CROSS-QA-UPSTREAM-VERDICT",
             message="Stage result status conflicts with validator verdict.",
             severity="medium",
             location=ValidationIssueLocation(
@@ -110,3 +116,25 @@ def test_write_validator_report_writes_rendered_markdown(tmp_path: Path) -> None
     assert content.startswith("# Validator Report")
     assert "- Total issues: 1" in content
     assert "- Verdict: `fail`" in content
+
+
+@pytest.mark.parametrize(
+    "code",
+    [spec.code for spec in VALIDATOR_FINDING_CODES if spec.status == "canonical"],
+)
+def test_render_validator_report_places_every_canonical_code_in_registered_section(
+    code: str,
+) -> None:
+    report = render_validator_report(
+        findings=(ValidationFinding(code=code, message="Protocol matrix finding."),)
+    )
+
+    assert report.count(f"`{code}`") == 1
+
+
+@pytest.mark.parametrize("code", ["STRUCT-MISSING-DOCUMENT", "SEM-UNKNOWN-CODE"])
+def test_render_validator_report_rejects_legacy_and_unknown_codes(code: str) -> None:
+    with pytest.raises(ValidatorReportProtocolError):
+        render_validator_report(
+            findings=(ValidationFinding(code=code, message="Must not be rendered."),)
+        )

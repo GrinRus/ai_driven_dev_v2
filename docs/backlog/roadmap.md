@@ -8941,7 +8941,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E1-S3-T1` Define the canonical versioned validator field/code registry.
+- `W34-E1-S3-T1` (done) Define the canonical versioned validator field/code registry.
   [`COMPAT-01`]
   - Scope: validator-report protocol registry only.
   - Verification: every normative field/code and retained legacy alias has one
@@ -8949,32 +8949,38 @@ Local tasks:
 - `W34-E1-S3-T2` Normalize all eight success examples and exact invalid/repair
   expectations against the canonical protocol. [`COMPAT-02`]
   - Dependencies: `W34-E1-S3-T3`, `W34-E1-S3-T4`, `W34-E1-S3-T5`,
-    `W34-E1-S3-T6`.
+    `W34-E1-S3-T6`, `W34-E1-S3-T7`.
   - Scope: contract examples and full-stack validator fixtures.
   - Verification: every success example passes, while invalid and repair examples emit
     their exact expected codes.
-- `W34-E1-S3-T3` Make the validator report renderer emit registry-owned vocabulary.
+- `W34-E1-S3-T3` (done) Make the validator report renderer emit registry-owned vocabulary.
   [`COMPAT-01`]
   - Dependencies: `W34-E1-S3-T1`.
   - Scope: validator report rendering only.
   - Verification: renderer output is exhausted by the registry-driven protocol matrix.
-- `W34-E1-S3-T4` Align the validator-report Markdown contract with the registry.
+- `W34-E1-S3-T4` (done) Align the validator-report Markdown contract with the registry.
   [`COMPAT-01`]
   - Dependencies: `W34-E1-S3-T1`.
   - Scope: durable validator-report contract only.
   - Verification: contract examples and registry fields/codes agree exactly.
-- `W34-E1-S3-T5` Align validation repair prompts with the registry vocabulary.
+- `W34-E1-S3-T5` (done) Align validation repair prompts with the registry vocabulary.
   [`COMPAT-01`]
   - Dependencies: `W34-E1-S3-T1`.
   - Scope: validator repair prompt packs only.
   - Verification: prompt-quality checks reject unknown fields/codes and retain declared
     legacy aliases only.
-- `W34-E1-S3-T6` Adopt the registry in dual-read validator-report consumers.
+- `W34-E1-S3-T6` (done) Adopt the registry in dual-read validator-report consumers.
   [`COMPAT-01`]
   - Dependencies: `W34-E1-S3-T1`.
   - Scope: validator-report readers only.
   - Verification: canonical and declared legacy fixtures read equivalently while
     undeclared aliases fail.
+- `W34-E1-S3-T7` (done) Render the prompt-facing validator-report skeleton from the canonical
+  registry.
+  - Dependencies: `W34-E1-S3-T1`, `W34-E1-S3-T4`.
+  - Scope: common stage-brief validator skeleton only.
+  - Verification: prepared stage briefs use exactly the canonical registered fields and
+    do not preserve a second handwritten validator-report vocabulary.
 
 Exit evidence:
 

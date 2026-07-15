@@ -22,6 +22,7 @@ from aidd.core.repair import (
 )
 from aidd.core.run_store import create_run_manifest, load_stage_metadata, persist_stage_status
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
+from aidd.validators.protocol import ValidatorReportProtocolError
 from aidd.validators.reports import render_validator_report
 
 
@@ -157,6 +158,24 @@ def test_parse_validator_report_findings_extracts_codes_and_locations() -> None:
     assert findings[1].source_path == "workitems/WI-001/stages/plan/plan.md"
 
 
+def test_repair_reader_normalizes_legacy_code_and_rejects_unknown_code() -> None:
+    legacy = parse_validator_report_findings(
+        validator_report_markdown=(
+            "## Structural checks\n\n"
+            "- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: Missing.\n"
+        )
+    )
+
+    assert legacy[0].code == "STRUCT-MISSING-REQUIRED-DOCUMENT"
+    with pytest.raises(ValidatorReportProtocolError):
+        parse_validator_report_findings(
+            validator_report_markdown=(
+                "## Semantic checks\n\n"
+                "- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: Unknown.\n"
+            )
+        )
+
+
 def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     validator_report_path = (
@@ -173,7 +192,7 @@ def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_p
                 ),
             ),
             ValidationFinding(
-                code="CROSS-REFERENCE-MISMATCH",
+                code="CROSS-REPAIR-BRIEF-NOT-REFERENCED",
                 message="Stage result status conflicts with validator verdict.",
                 severity="low",
                 location=ValidationIssueLocation(

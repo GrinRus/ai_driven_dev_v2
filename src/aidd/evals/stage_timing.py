@@ -9,6 +9,10 @@ from typing import TYPE_CHECKING, Any
 
 from aidd.core.stages import STAGES
 from aidd.evals.self_repair_probes import probes_for_stage, validate_probe_catalog
+from aidd.validators.protocol import (
+    ValidatorReportProtocolError,
+    parse_validator_report,
+)
 
 if TYPE_CHECKING:
     from aidd.harness.install_artifact import HarnessInstallResult
@@ -231,9 +235,6 @@ _STATUS_SECTION_PATTERN = re.compile(
     r"^#{1,6}\s+Status\s*\n+(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
     re.IGNORECASE | re.DOTALL | re.MULTILINE,
 )
-_CANONICAL_FAILURE_CODE_PATTERN = re.compile(r"- `(?P<code>[A-Z][A-Z0-9_-]+)`")
-
-
 def _stage_result_status(stage_result_text: str) -> str | None:
     match = _STATUS_SECTION_PATTERN.search(stage_result_text)
     if match is None:
@@ -246,11 +247,23 @@ def _stage_result_status(stage_result_text: str) -> str | None:
 
 
 def _validator_report_has_open_findings(validator_report_text: str) -> bool:
-    normalized = validator_report_text.lower()
+    try:
+        report = parse_validator_report(validator_report_text)
+    except ValidatorReportProtocolError:
+        return True
+    repair_required = report.field("repair_required")
+    blocking_issues = report.field("blocking_issues")
     return (
-        "verdict: `fail`" in normalized
-        or "repair required for progression: yes" in normalized
-        or "blocking issues: yes" in normalized
+        report.verdict == "fail"
+        or bool(report.findings)
+        or (
+            repair_required is not None
+            and repair_required.value.strip("`").strip().casefold() == "yes"
+        )
+        or (
+            blocking_issues is not None
+            and blocking_issues.value.strip("`").strip().casefold() == "yes"
+        )
     )
 
 
@@ -258,8 +271,11 @@ def _first_validator_failure_code(work_item_stage_root: Path | None) -> str | No
     if work_item_stage_root is None:
         return None
     validator_report_text = _read_text(work_item_stage_root / "validator-report.md")
-    match = _CANONICAL_FAILURE_CODE_PATTERN.search(validator_report_text)
-    return None if match is None else match.group("code")
+    try:
+        report = parse_validator_report(validator_report_text)
+    except ValidatorReportProtocolError:
+        return None
+    return report.findings[0].code if report.findings else None
 
 
 def _terminal_docs_consistent(work_item_stage_root: Path | None) -> bool | None:
