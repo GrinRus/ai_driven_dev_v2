@@ -9638,7 +9638,7 @@ Local tasks:
   - Scope: runtime operator policy model.
   - Verification: a defensive decision table covers known capabilities, unknown
     requests, and policy-blocked operations without executing provider-live commands.
-- `W34-E7-S1-T2` (`next`) Apply protected-data and core-evidence boundaries consistently to
+- `W34-E7-S1-T2` (done) Apply protected-data and core-evidence boundaries consistently to
   reads, writes, and destructive operations, and fail closed when no verifiable
   boundary exists. [`SEC-01`]
   - Dependencies: `W34-E7-S1-T1`.

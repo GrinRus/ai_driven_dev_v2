@@ -7,8 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W34-E7-S1-T2` — Enforce protected-data and evidence boundaries after the typed
-  capability policy exists.
 - `W34-E7-S2-T4` — Adopt identifier containment for run and attempt paths after the
   workspace/work-item rollout.
 
