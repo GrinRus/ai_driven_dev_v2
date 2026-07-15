@@ -6,6 +6,11 @@ from pathlib import Path
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, load_stage_manifest
 from aidd.core.task_plan import TaskCard, TaskPlanParseError, parse_task_plan
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
+from aidd.validators.semantic_rules.common import (
+    IMPLEMENT_FILE_ENTRY_PATTERN,
+    REVIEW_FINDING_ID_PATTERN,
+    extract_review_finding_blocks,
+)
 
 ANSWER_WITHOUT_QUESTION_CODE = "CROSS-ANSWER-WITHOUT-QUESTION"
 DUPLICATE_QUESTION_ID_CODE = "CROSS-DUPLICATE-QUESTION-ID"
@@ -18,6 +23,9 @@ PROJECT_SET_EVIDENCE_MISSING_CODE = "CROSS-PROJECT-SET-EVIDENCE-MISSING"
 TASKLIST_PLAN_MILESTONE_CODE = "CROSS-TASKLIST-PLAN-MILESTONE"
 TASKLIST_PLAN_DEPENDENCY_CODE = "CROSS-TASKLIST-PLAN-DEPENDENCY"
 TASKLIST_PLAN_VERIFICATION_CODE = "CROSS-TASKLIST-PLAN-VERIFICATION"
+REVIEW_IMPLEMENT_FINDING_CODE = "CROSS-REVIEW-IMPLEMENT-FINDING"
+REVIEW_IMPLEMENT_EVIDENCE_CODE = "CROSS-REVIEW-IMPLEMENT-EVIDENCE"
+REVIEW_IMPLEMENT_PATH_CODE = "CROSS-REVIEW-IMPLEMENT-PATH"
 
 _QUESTION_ID_PATTERN = re.compile(
     r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(blocking|non-blocking)\]`?"
@@ -42,6 +50,9 @@ _COMMAND_PREFIXES = (
     "cargo ",
     "go test",
 )
+_EVIDENCE_ID_PATTERN = re.compile(r"\bEV-\d+\b", re.IGNORECASE)
+_BACKTICKED_REFERENCE_PATTERN = re.compile(r"`([^`]+)`")
+_ARTIFACT_SUFFIXES = frozenset({".md", ".json", ".jsonl", ".log", ".txt"})
 
 
 def _stage_root(*, workspace_root: Path, work_item: str, stage: str) -> Path:
@@ -262,6 +273,15 @@ def _section_text(markdown: str, heading: str) -> str:
     return "\n".join(line for _, line in _extract_section_lines(markdown, heading))
 
 
+def _level_two_section_text(markdown: str, heading: str) -> str:
+    match = re.search(
+        rf"^##\s+{re.escape(heading)}\s*$\n(?P<body>.*?)(?=^##\s+|\Z)",
+        markdown,
+        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
+    )
+    return match.group("body").strip() if match is not None else ""
+
+
 def _ordered_plan_milestones(plan_text: str) -> tuple[str, ...]:
     milestones: list[str] = []
     for _, line in _extract_section_lines(plan_text, "Milestones"):
@@ -465,6 +485,122 @@ def _validate_tasklist_against_plan(
     return tuple(findings)
 
 
+def _review_implementation_findings(
+    *,
+    workspace_root: Path,
+    review_path: Path,
+    review_text: str,
+    implementation_output_root: Path,
+    implementation_text: str,
+) -> tuple[ValidationFinding, ...]:
+    review_relative = _workspace_relative(review_path, workspace_root)
+    findings_section = _level_two_section_text(review_text, "Findings")
+    finding_blocks = extract_review_finding_blocks(findings_section)
+    declared: dict[str, int] = {}
+    findings: list[ValidationFinding] = []
+    for block in finding_blocks:
+        match = REVIEW_FINDING_ID_PATTERN.search(block)
+        if match is None:
+            continue
+        finding_id = match.group(0).strip("`").upper()
+        declared[finding_id] = declared.get(finding_id, 0) + 1
+    for finding_id, count in declared.items():
+        if count == 1:
+            continue
+        findings.append(
+            ValidationFinding(
+                code=REVIEW_IMPLEMENT_FINDING_CODE,
+                message=f"Review finding `{finding_id}` must be declared exactly once.",
+                severity="high",
+                location=ValidationIssueLocation(review_relative),
+            )
+        )
+
+    review_without_findings = re.sub(
+        r"^##\s+Findings\s*$.*?(?=^##\s+|\Z)",
+        "",
+        review_text,
+        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
+    )
+    for match in REVIEW_FINDING_ID_PATTERN.finditer(review_without_findings):
+        finding_id = match.group(0).strip("`").upper()
+        if declared.get(finding_id) == 1:
+            continue
+        findings.append(
+            ValidationFinding(
+                code=REVIEW_IMPLEMENT_FINDING_CODE,
+                message=f"Review references undeclared finding `{finding_id}`.",
+                severity="high",
+                location=ValidationIssueLocation(review_relative),
+            )
+        )
+
+    touched_paths = {
+        match.group(0).strip("`").strip().strip("/")
+        for match in IMPLEMENT_FILE_ENTRY_PATTERN.finditer(
+            _level_two_section_text(implementation_text, "Touched files")
+        )
+    }
+    available_artifacts = {
+        path.name for path in implementation_output_root.iterdir() if path.is_file()
+    }
+    available_evidence_ids = {
+        match.group(0).upper()
+        for match in _EVIDENCE_ID_PATTERN.finditer(implementation_text)
+    }
+
+    for block in finding_blocks:
+        evidence_lines = "\n".join(
+            line for line in block.splitlines() if re.search(r"\bevidence\s*:", line, re.I)
+        )
+        for evidence_match in _EVIDENCE_ID_PATTERN.finditer(evidence_lines):
+            evidence_id = evidence_match.group(0).upper()
+            if evidence_id in available_evidence_ids:
+                continue
+            findings.append(
+                ValidationFinding(
+                    code=REVIEW_IMPLEMENT_EVIDENCE_CODE,
+                    message=f"Review references unknown implementation evidence `{evidence_id}`.",
+                    severity="high",
+                    location=ValidationIssueLocation(review_relative),
+                )
+            )
+        for value in _BACKTICKED_REFERENCE_PATTERN.findall(evidence_lines):
+            reference = value.strip().removeprefix("./").rstrip("/")
+            if not reference:
+                continue
+            suffix = Path(reference).suffix.lower()
+            if "/" not in reference and suffix in _ARTIFACT_SUFFIXES:
+                if reference not in available_artifacts:
+                    findings.append(
+                        ValidationFinding(
+                            code=REVIEW_IMPLEMENT_EVIDENCE_CODE,
+                            message=(
+                                "Review references missing implementation artifact "
+                                f"`{reference}`."
+                            ),
+                            severity="high",
+                            location=ValidationIssueLocation(review_relative),
+                        )
+                    )
+                continue
+            if "/" not in reference and not suffix:
+                continue
+            if reference not in touched_paths:
+                findings.append(
+                    ValidationFinding(
+                        code=REVIEW_IMPLEMENT_PATH_CODE,
+                        message=(
+                            f"Review references changed path `{reference}` not declared "
+                            "by implementation."
+                        ),
+                        severity="high",
+                        location=ValidationIssueLocation(review_relative),
+                    )
+                )
+    return tuple(findings)
+
+
 def validate_cross_document_consistency(
     *,
     stage: str,
@@ -483,6 +619,11 @@ def validate_cross_document_consistency(
     project_set_path = workspace_root / "workitems" / work_item / "context" / "project-set.md"
     tasklist_path = stage_root / "tasklist.md"
     plan_path = workspace_root / "workitems" / work_item / "stages" / "plan" / "output" / "plan.md"
+    review_path = stage_root / "review-report.md"
+    implementation_output_root = (
+        workspace_root / "workitems" / work_item / "stages" / "implement" / "output"
+    )
+    implementation_report_path = implementation_output_root / "implementation-report.md"
 
     findings: list[ValidationFinding] = []
 
@@ -493,6 +634,8 @@ def validate_cross_document_consistency(
     project_set_text = _read_optional(project_set_path)
     tasklist_text = _read_optional(tasklist_path)
     plan_text = _read_optional(plan_path)
+    review_text = _read_optional(review_path)
+    implementation_text = _read_optional(implementation_report_path)
 
     question_ids: dict[str, int] = {}
     answer_ids: dict[str, int] = {}
@@ -649,6 +792,17 @@ def validate_cross_document_consistency(
                 tasklist_path=tasklist_path,
                 tasklist_text=tasklist_text,
                 plan_text=plan_text,
+            )
+        )
+
+    if stage == "review" and review_text is not None and implementation_text is not None:
+        findings.extend(
+            _review_implementation_findings(
+                workspace_root=workspace_root,
+                review_path=review_path,
+                review_text=review_text,
+                implementation_output_root=implementation_output_root,
+                implementation_text=implementation_text,
             )
         )
 

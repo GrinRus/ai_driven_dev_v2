@@ -8914,7 +8914,7 @@ Local tasks:
   - Scope: tasklist cross-document rules.
   - Verification: missing and mismatched plan obligations fail without reimplementing
     task-plan parsing or changing valid rich-tasklist behavior.
-- `W34-E1-S2-T3` (`next`) Bind non-task review findings, changed paths, and artifact/evidence
+- `W34-E1-S2-T3` (done) Bind non-task review findings, changed paths, and artifact/evidence
   references to implementation artifacts. [`ARCH-01`]
   - Dependencies: `W34-E1-S2-T2`.
   - Scope: review cross-document rules.
@@ -9623,7 +9623,7 @@ Exit evidence:
 ### Epic W34-E7 — defensive local trust boundaries (`planned`)
 Linked stories: `US-01`, `US-03`, `US-07`, `US-08`, `US-10`, `US-12`
 
-#### Slice W34-E7-S1 — typed runtime operator policy (`planned`)
+#### Slice W34-E7-S1 — typed runtime operator policy (`done`)
 Goal: replace permissive lexical decisions with explicit local capability policy.
 
 Dependencies:
@@ -9638,7 +9638,7 @@ Local tasks:
   - Scope: runtime operator policy model.
   - Verification: a defensive decision table covers known capabilities, unknown
     requests, and policy-blocked operations without executing provider-live commands.
-- `W34-E7-S1-T2` (`next`) Apply protected-data and core-evidence boundaries consistently to
+- `W34-E7-S1-T2` (done) Apply protected-data and core-evidence boundaries consistently to
   reads, writes, and destructive operations, and fail closed when no verifiable
   boundary exists. [`SEC-01`]
   - Dependencies: `W34-E7-S1-T1`.
@@ -9677,7 +9677,7 @@ Local tasks:
   - Scope: harness and eval persisted paths.
   - Verification: every harness/bundle write-path family passes the same containment
     matrix.
-- `W34-E7-S2-T4` (`next`) Adopt the shared boundary for run and attempt paths. [`SEC-03`]
+- `W34-E7-S2-T4` (done) Adopt the shared boundary for run and attempt paths. [`SEC-03`]
   - Dependencies: `W34-E7-S2-T2`.
   - Scope: core run/attempt persisted paths only.
   - Verification: every run/attempt write-path family passes the shared containment
@@ -9728,7 +9728,7 @@ Local tasks:
   - Scope: core allowed-write-scope model only.
   - Verification: a parity table covers files, top-level/nested directories, missing
     scope, malformed values, escapes, and platform separators.
-- `W34-E7-S4-T2` (`next`) Migrate semantic validation to the canonical allowed-write-scope
+- `W34-E7-S4-T2` (done) Migrate semantic validation to the canonical allowed-write-scope
   boundary. [`BUG-13`, `ARCH-06`]
   - Dependencies: `W34-E7-S4-T1`.
   - Scope: semantic validator scope consumer only.
@@ -9991,7 +9991,7 @@ Local tasks:
   - Scope: task-execution architecture and entrypoint contract only.
   - Verification: one matrix names task selection, ledger/finalization transitions,
     publication eligibility, and fail-closed behavior for every entrypoint.
-- `W35-E2-S8-T2` (`next`) Move implementation execution/finalization policy into one typed core
+- `W35-E2-S8-T2` (done) Move implementation execution/finalization policy into one typed core
   service with domain results and errors. [`CORR-01`, `ARCH-04`]
   - Dependencies: `W35-E2-S8-T1`.
   - Scope: core implementation execution boundary only.

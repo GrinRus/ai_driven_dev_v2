@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from aidd.core.allowed_write_scope import AllowedWriteScopeError
 from aidd.validators.evidence_context import load_implementation_evidence_context
 from aidd.validators.models import ValidationFinding
 from aidd.validators.semantic_rules.common import (
@@ -323,10 +324,23 @@ def validate_implementation_report(
         )
     )
     findings.extend(_validate_verification_notes(context=context, verification=verification))
-    evidence_context = load_implementation_evidence_context(
-        workspace_root=context.workspace_root,
-        work_item=context.output_path.parts[context.output_path.parts.index("workitems") + 1],
-    )
+    work_item = context.output_path.parts[context.output_path.parts.index("workitems") + 1]
+    try:
+        evidence_context = load_implementation_evidence_context(
+            workspace_root=context.workspace_root,
+            work_item=work_item,
+        )
+    except AllowedWriteScopeError as exc:
+        findings.append(
+            context.finding(
+                code=MISSING_DIFF_EVIDENCE_CODE,
+                message=str(exc),
+                severity="high",
+                location=touched_files.location,
+            )
+        )
+        findings.extend(validate_placeholder_sections(context))
+        return tuple(findings)
     if evidence_context.selected_task_id is not None:
         report_text = "\n".join(context.markdown_lines)
         if evidence_context.selected_task_id not in extract_tasklist_task_ids(
@@ -369,16 +383,17 @@ def validate_implementation_report(
                         location=verification.location,
                     )
                 )
-        if evidence_context.allowed_scope_paths:
+        if evidence_context.allowed_write_scope is not None:
             touched_paths = {
-                match.group(1).strip().strip("/")
+                match.group(0).strip("`").strip().strip("/")
                 for match in IMPLEMENT_FILE_ENTRY_PATTERN.finditer(touched_files.content)
             }
             for touched_path in sorted(touched_paths):
-                if not any(
-                    touched_path == allowed or touched_path.startswith(f"{allowed}/")
-                    for allowed in evidence_context.allowed_scope_paths
-                ):
+                try:
+                    allowed = evidence_context.allowed_write_scope.allows(touched_path)
+                except AllowedWriteScopeError:
+                    allowed = False
+                if not allowed:
                     findings.append(
                         context.finding(
                             code=MISSING_DIFF_EVIDENCE_CODE,

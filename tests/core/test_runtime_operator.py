@@ -8,6 +8,7 @@ import pytest
 
 from aidd.core.runtime_operator import (
     RUNTIME_OPERATOR_CAPABILITY_RULES,
+    ProtectedRuntimePathKind,
     RuntimeOperatorBroker,
     RuntimeOperatorCapability,
     RuntimeOperatorCapabilityDisposition,
@@ -15,6 +16,7 @@ from aidd.core.runtime_operator import (
     RuntimeOperatorPolicy,
     RuntimeOperatorRequest,
     assess_runtime_operator_request,
+    classify_protected_runtime_path,
     load_operator_decisions,
     load_operator_requests,
 )
@@ -104,7 +106,7 @@ def test_broad_policy_does_not_treat_project_config_json_as_provider_config(
     assert decision.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
 
 
-def test_broad_policy_auto_allows_aidd_workspace_reads_and_writes_on_any_stage(
+def test_broad_policy_allows_stage_documents_but_denies_core_evidence_writes(
     tmp_path: Path,
 ) -> None:
     policy = _policy(tmp_path)
@@ -153,9 +155,11 @@ def test_broad_policy_auto_allows_aidd_workspace_reads_and_writes_on_any_stage(
     )
 
     assert all(decision is not None for decision in decisions)
-    assert {decision.action for decision in decisions if decision is not None} == {
-        RuntimeOperatorDecisionAction.ALLOW_ONCE
-    }
+    assert [decision.action for decision in decisions if decision is not None] == [
+        RuntimeOperatorDecisionAction.ALLOW_ONCE,
+        RuntimeOperatorDecisionAction.ALLOW_ONCE,
+        RuntimeOperatorDecisionAction.DENY,
+    ]
 
 
 def test_broad_policy_denies_sensitive_aidd_workspace_writes(tmp_path: Path) -> None:
@@ -729,6 +733,118 @@ def test_policy_denies_protected_paths_and_destructive_shell(tmp_path: Path) -> 
     assert home_delete_decision.action is RuntimeOperatorDecisionAction.DENY
     assert compound_delete_decision is not None
     assert compound_delete_decision.action is RuntimeOperatorDecisionAction.DENY
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "expected"),
+    (
+        (".aidd/reports/runs/WI/run-1/runtime.log", ProtectedRuntimePathKind.CORE_EVIDENCE),
+        (".aidd/reports/runs/WI/run-1/run-manifest.json", ProtectedRuntimePathKind.CORE_EVIDENCE),
+        (".aidd/workitems/WI/stages/plan/repair-brief.md", ProtectedRuntimePathKind.SENSITIVE_DATA),
+        ("repo/.env.local", ProtectedRuntimePathKind.SENSITIVE_DATA),
+        ("repo/src/app.py", None),
+    ),
+)
+def test_protected_runtime_path_classification_is_centralized(
+    tmp_path: Path,
+    relative_path: str,
+    expected: ProtectedRuntimePathKind | None,
+) -> None:
+    assert classify_protected_runtime_path(tmp_path / relative_path) is expected
+
+
+def test_protected_reads_require_operator_or_fail_closed(tmp_path: Path) -> None:
+    brokered = _policy(tmp_path)
+    protected_path = (
+        brokered.workspace_root
+        / "reports"
+        / "runs"
+        / "WI-001"
+        / "run-1"
+        / "runtime.log"
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="review",
+        kind=RuntimeOperatorRequestKind.FILE_READ,
+        paths=(protected_path,),
+    )
+    deny_unapproved = RuntimeOperatorPolicy(
+        permission_policy=RuntimePermissionPolicy.DENY_UNAPPROVED,
+        auto_approval_preset=AutoApprovalPreset.BROAD,
+        project_roots=brokered.project_roots,
+        workspace_root=brokered.workspace_root,
+    )
+
+    assert brokered.evaluate(request) is None
+    denied = deny_unapproved.evaluate(request)
+    assert denied is not None
+    assert denied.action is RuntimeOperatorDecisionAction.DENY
+
+
+def test_protected_mutations_are_denied_but_full_access_stays_compatible(
+    tmp_path: Path,
+) -> None:
+    brokered = _policy(tmp_path)
+    protected_path = brokered.workspace_root / "reports" / "runs" / "run-manifest.json"
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="implement",
+        kind=RuntimeOperatorRequestKind.FILE_WRITE,
+        paths=(protected_path,),
+    )
+    full_access = RuntimeOperatorPolicy(
+        permission_policy=RuntimePermissionPolicy.FULL_ACCESS,
+        auto_approval_preset=AutoApprovalPreset.OFF,
+        project_roots=brokered.project_roots,
+        workspace_root=brokered.workspace_root,
+    )
+
+    denied = brokered.evaluate(request)
+    allowed = full_access.evaluate(request)
+
+    assert denied is not None and denied.action is RuntimeOperatorDecisionAction.DENY
+    assert allowed is not None and allowed.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
+
+
+def test_shell_and_unbounded_reads_never_auto_approve_protected_evidence(
+    tmp_path: Path,
+) -> None:
+    policy = _policy(tmp_path)
+    project_root = policy.project_roots[0]
+    requests = (
+        RuntimeOperatorRequest.create(
+            runtime_id="generic-cli",
+            stage="review",
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": "rg ERROR .aidd/reports/runs/WI/run-1/runtime.log"},
+            cwd=project_root,
+        ),
+        RuntimeOperatorRequest.create(
+            runtime_id="generic-cli",
+            stage="review",
+            kind=RuntimeOperatorRequestKind.FILE_LIST,
+            cwd=project_root,
+        ),
+    )
+
+    assert all(policy.evaluate(request) is None for request in requests)
+
+
+def test_symlink_escape_is_not_auto_approved(tmp_path: Path) -> None:
+    policy = _policy(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link = policy.project_roots[0] / "linked"
+    link.symlink_to(outside, target_is_directory=True)
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="research",
+        kind=RuntimeOperatorRequestKind.FILE_READ,
+        paths=(link / "notes.md",),
+    )
+
+    assert policy.evaluate(request) is None
 
 
 def test_broker_persists_requests_and_policy_decisions(tmp_path: Path) -> None:

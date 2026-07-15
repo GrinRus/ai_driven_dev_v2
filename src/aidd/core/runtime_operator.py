@@ -89,6 +89,23 @@ _PROTECTED_FILE_NAMES = frozenset(
         "id_ed25519",
     }
 )
+_CORE_EVIDENCE_FILE_NAMES = frozenset(
+    {
+        "adapter-exception.json",
+        "artifact-index.json",
+        "attempt-state.json",
+        "events.jsonl",
+        "finalization-state.json",
+        "publication-diagnostics.json",
+        "run-manifest.json",
+        "runtime-exit.json",
+        "runtime.jsonl",
+        "runtime.log",
+        "stage-metadata.json",
+        "task-diff.json",
+        "task-ledger.json",
+    }
+)
 _SHELL_CONTROL_RE = re.compile(r"(\|\||&&|;|>>?|<|\$\(|`)")
 _SAFE_INSPECT_COMMANDS = frozenset({"pwd", "ls", "find", "rg", "grep"})
 _SAFE_GIT_SUBCOMMANDS = frozenset({"status", "diff", "log"})
@@ -149,6 +166,11 @@ class RuntimeOperatorCapability(StrEnum):
     RUNTIME_PERMISSION = "runtime-permission"
     DESTRUCTIVE = "destructive"
     UNKNOWN = "unknown"
+
+
+class ProtectedRuntimePathKind(StrEnum):
+    SENSITIVE_DATA = "sensitive-data"
+    CORE_EVIDENCE = "core-evidence"
 
 
 class RuntimeOperatorCapabilityDisposition(StrEnum):
@@ -554,7 +576,12 @@ class RuntimeOperatorPolicy:
         ):
             return None
 
-        if request.kind in _READ_KINDS and self._paths_within_read_roots(request):
+        if (
+            request.kind in _READ_KINDS
+            and request.paths
+            and self._first_protected_path(request) is None
+            and self._paths_within_read_roots(request)
+        ):
             return _decision(
                 request=request,
                 action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
@@ -592,6 +619,10 @@ class RuntimeOperatorPolicy:
         if not command.strip():
             return None
         if not self._cwd_within_project_roots(request):
+            return None
+        assert request.cwd is not None
+        explicit_paths = _explicit_shell_paths(command=command, cwd=request.cwd)
+        if any(_is_protected_path(path) for path in explicit_paths):
             return None
         if _requires_operator_for_shell(command):
             return None
@@ -996,6 +1027,8 @@ def _is_aidd_workspace_shell_path(
     workspace_root: Path,
     allowed_roots: tuple[Path, ...],
 ) -> bool:
+    if _is_protected_path(path):
+        return False
     if _is_relative_to(path, workspace_root):
         return True
     return (
@@ -1219,20 +1252,28 @@ def _contains_destructive_root_or_home_remove(tokens: tuple[str, ...]) -> bool:
     return False
 
 
-def _is_protected_path(path: Path) -> bool:
+def classify_protected_runtime_path(path: Path) -> ProtectedRuntimePathKind | None:
     lowered_parts = tuple(part.lower() for part in path.parts)
     name = path.name.lower()
     if name.startswith(".env"):
-        return True
+        return ProtectedRuntimePathKind.SENSITIVE_DATA
     if _AIDD_WORKSPACE_DIRNAME in lowered_parts:
         aidd_index = lowered_parts.index(_AIDD_WORKSPACE_DIRNAME)
         if any(part in _PROTECTED_AIDD_DIR_NAMES for part in lowered_parts[aidd_index + 1 :]):
-            return True
+            return ProtectedRuntimePathKind.SENSITIVE_DATA
+        if name in _CORE_EVIDENCE_FILE_NAMES:
+            return ProtectedRuntimePathKind.CORE_EVIDENCE
     if any(part in _PROTECTED_NAMES for part in lowered_parts):
-        return True
+        return ProtectedRuntimePathKind.SENSITIVE_DATA
     if name in _PROTECTED_FILE_NAMES:
-        return True
-    return any(marker in name for marker in ("credential", "secret", "token"))
+        return ProtectedRuntimePathKind.SENSITIVE_DATA
+    if any(marker in name for marker in ("credential", "secret", "token")):
+        return ProtectedRuntimePathKind.SENSITIVE_DATA
+    return None
+
+
+def _is_protected_path(path: Path) -> bool:
+    return classify_protected_runtime_path(path) is not None
 
 
 def _is_relative_to_any(path: Path, roots: tuple[Path, ...]) -> bool:
@@ -1318,7 +1359,9 @@ __all__ = [
     "RuntimeOperatorDecisionProvider",
     "RuntimeOperatorPolicy",
     "RuntimeOperatorRequest",
+    "ProtectedRuntimePathKind",
     "assess_runtime_operator_request",
+    "classify_protected_runtime_path",
     "append_operator_decision",
     "append_operator_request",
     "load_operator_decisions",

@@ -36,4 +36,20 @@ def resolve_contained_component(
     return resolved
 
 
-__all__ = ["SafeIdentifier", "resolve_contained_component"]
+def contained_component_path(
+    root: Path,
+    identifier: str,
+    *,
+    boundary_root: Path,
+    label: str = "identifier",
+) -> Path:
+    safe = SafeIdentifier.parse(identifier, label=label)
+    resolved_boundary = boundary_root.resolve(strict=False)
+    resolved_root = root.resolve(strict=False)
+    if not resolved_root.is_relative_to(resolved_boundary):
+        raise ValueError(f"{label} owning root must stay inside its storage boundary.")
+    resolve_contained_component(root, safe.value, label=label)
+    return root / safe.value
+
+
+__all__ = ["SafeIdentifier", "contained_component_path", "resolve_contained_component"]
