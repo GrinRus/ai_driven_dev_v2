@@ -7,11 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S3-T5` — Align validation repair prompts with the registry vocabulary.
+- `W34-E1-S3-T6` — Adopt the registry in dual-read validator-report consumers.
 
 ## Soon
 
-- `W34-E1-S3-T6` — Adopt the registry in dual-read validator-report consumers.
 
 ## Parking lot
 

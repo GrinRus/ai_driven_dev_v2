@@ -30,6 +30,24 @@ Do not inspect AIDD validator implementation files, installed package files, or 
 during repair. Use `validator-report.md`, `repair-brief.md`, and the named contracts as the repair
 scope. After updating the required documents and checking consistency, stop.
 
+## Validator-report protocol v1
+
+When repairing a draft `validator-report.md`:
+
+- write only the canonical fields `Total issues`, `Blocking issues`, `Affected documents`,
+  `Dominant failure categories`, optional `Finding occurrences`, `Verdict`, and
+  `Repair required for progression`;
+- copy only finding codes declared by `contracts/documents/validator-report.md`; do not
+  invent, rename, or generalize a code;
+- treat `Validator verdict` and `Repair required` as read-only legacy field aliases and
+  rewrite them to their canonical labels;
+- treat `STRUCT-MISSING-DOCUMENT`, `STRUCT-MISSING-HEADING`,
+  `STRUCT-EMPTY-SECTION`, and `CROSS-REFERENCE-MISMATCH` as read-only legacy codes;
+  never author them in repaired output.
+
+Canonical output is mandatory even when the input used a declared legacy alias. Any other field
+alias or finding code is invalid protocol vocabulary; do not preserve it.
+
 Interview document format is strict. `questions.md` bullets use `- Q1 [blocking|non-blocking] ...`;
 `answers.md` bullets must reuse the same question id with `[resolved|partial|deferred]`, for example
 `- Q1 [resolved] ...`. Do not put a colon after the marker; `- Q1 [resolved]: ...` is invalid.
