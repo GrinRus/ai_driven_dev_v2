@@ -8997,7 +8997,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E1-S4-T1` Reuse the canonical section-aware interview parser in
+- `W34-E1-S4-T1` (done) Reuse the canonical section-aware interview parser in
   cross-validation. [`BUG-02`]
   - Scope: interview cross-document rule.
   - Verification: question-shaped prose outside the authoritative Questions section is

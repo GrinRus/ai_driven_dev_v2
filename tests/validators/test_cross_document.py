@@ -9,6 +9,7 @@ from aidd.validators.cross_document import (
     DUPLICATE_ANSWER_ID_CODE,
     DUPLICATE_QUESTION_ID_CODE,
     IMPLEMENTATION_FINALIZATION_CODE,
+    MALFORMED_INTERVIEW_DOCUMENT_CODE,
     PROJECT_SET_EVIDENCE_MISSING_CODE,
     QA_REVIEW_RISK_CODE,
     QA_UPSTREAM_EVIDENCE_CODE,
@@ -552,6 +553,108 @@ def test_validate_cross_document_consistency_ignores_inline_answer_references(
     )
 
     assert findings == ()
+
+
+def test_validate_cross_document_consistency_ignores_interview_prose_outside_sections(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        (
+            "# Questions\n\n## Questions\n\n- none\n\n"
+            "## Examples\n\n- `Q9` `[blocking]` Example only.\n"
+        ),
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        (
+            "# Answers\n\n## Answers\n\n- none\n\n"
+            "## Notes\n\n- `Q8` `[resolved]` Historical example only.\n"
+        ),
+        encoding="utf-8",
+    )
+    (stage_root / "stage-result.md").write_text(
+        "# Stage\n\nreview\n\n## Status\n\n- `succeeded`\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_cross_document_consistency_reports_malformed_interview_document(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/review/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n- Q1: [blocking] Confirm scope.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        "# Answers\n\n## Answers\n\n- none\n",
+        encoding="utf-8",
+    )
+    (stage_root / "stage-result.md").write_text("# Stage\n\nreview\n", encoding="utf-8")
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=MALFORMED_INTERVIEW_DOCUMENT_CODE,
+            message=(
+                "Malformed interview document `questions.md`: Invalid question entry at "
+                "line 5: expected `- <QID> [blocking|non-blocking] <text>`."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path="workitems/WI-001/stages/review/questions.md",
+                line_number=5,
+            ),
+        ),
+    )
 
 
 def test_validate_cross_document_consistency_reports_repair_mismatch_cases(

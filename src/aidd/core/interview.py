@@ -98,6 +98,39 @@ class InterviewAnswer:
         object.__setattr__(self, "text", normalized_text)
 
 
+@dataclass(frozen=True, slots=True)
+class ParsedInterviewQuestion:
+    value: InterviewQuestion
+    line_number: int
+
+
+@dataclass(frozen=True, slots=True)
+class ParsedInterviewAnswer:
+    value: InterviewAnswer
+    line_number: int
+
+
+class InterviewMarkdownParseError(ValueError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        document_name: str,
+        kind: str,
+        line_number: int,
+        entry_id: str | None = None,
+        parsed_questions: tuple[ParsedInterviewQuestion, ...] = (),
+        parsed_answers: tuple[ParsedInterviewAnswer, ...] = (),
+    ) -> None:
+        super().__init__(message)
+        self.document_name = document_name
+        self.kind = kind
+        self.line_number = line_number
+        self.entry_id = entry_id
+        self.parsed_questions = parsed_questions
+        self.parsed_answers = parsed_answers
+
+
 def question_policy_from_marker(marker: str) -> QuestionPolicy:
     normalized = marker.strip()
     if normalized.startswith("[") and normalized.endswith("]"):
@@ -132,8 +165,8 @@ def answer_resolution_from_marker(marker: str) -> AnswerResolution:
     )
 
 
-def parse_questions_markdown(markdown_text: str) -> tuple[InterviewQuestion, ...]:
-    parsed: list[InterviewQuestion] = []
+def parse_question_entries(markdown_text: str) -> tuple[ParsedInterviewQuestion, ...]:
+    parsed: list[ParsedInterviewQuestion] = []
     seen_ids: set[str] = set()
 
     for line_number, line in _interview_section_lines(
@@ -148,9 +181,13 @@ def parse_questions_markdown(markdown_text: str) -> tuple[InterviewQuestion, ...
 
         match = _QUESTION_LINE_PATTERN.match(stripped)
         if match is None:
-            raise ValueError(
+            raise InterviewMarkdownParseError(
                 "Invalid question entry at line "
-                f"{line_number}: expected `- <QID> [blocking|non-blocking] <text>`."
+                f"{line_number}: expected `- <QID> [blocking|non-blocking] <text>`.",
+                document_name="questions.md",
+                kind="invalid-entry",
+                line_number=line_number,
+                parsed_questions=tuple(parsed),
             )
 
         question = InterviewQuestion(
@@ -159,13 +196,22 @@ def parse_questions_markdown(markdown_text: str) -> tuple[InterviewQuestion, ...
             text=match.group(3),
         )
         if question.question_id in seen_ids:
-            raise ValueError(
-                f"Duplicate question id `{question.question_id}` in questions markdown content."
+            raise InterviewMarkdownParseError(
+                f"Duplicate question id `{question.question_id}` in questions markdown content.",
+                document_name="questions.md",
+                kind="duplicate-id",
+                line_number=line_number,
+                entry_id=question.question_id,
+                parsed_questions=tuple(parsed),
             )
         seen_ids.add(question.question_id)
-        parsed.append(question)
+        parsed.append(ParsedInterviewQuestion(value=question, line_number=line_number))
 
     return tuple(parsed)
+
+
+def parse_questions_markdown(markdown_text: str) -> tuple[InterviewQuestion, ...]:
+    return tuple(entry.value for entry in parse_question_entries(markdown_text))
 
 
 def _interview_section_lines(
@@ -205,8 +251,8 @@ def render_questions_markdown(questions: Iterable[InterviewQuestion]) -> str:
     return "\n".join(lines)
 
 
-def parse_answers_markdown(markdown_text: str) -> tuple[InterviewAnswer, ...]:
-    parsed: list[InterviewAnswer] = []
+def parse_answer_entries(markdown_text: str) -> tuple[ParsedInterviewAnswer, ...]:
+    parsed: list[ParsedInterviewAnswer] = []
     seen_ids: set[str] = set()
 
     for line_number, line in _interview_section_lines(
@@ -221,9 +267,13 @@ def parse_answers_markdown(markdown_text: str) -> tuple[InterviewAnswer, ...]:
 
         match = _ANSWER_LINE_PATTERN.match(stripped)
         if match is None:
-            raise ValueError(
+            raise InterviewMarkdownParseError(
                 "Invalid answer entry at line "
-                f"{line_number}: expected `- <QID> [resolved|partial|deferred] <text>`."
+                f"{line_number}: expected `- <QID> [resolved|partial|deferred] <text>`.",
+                document_name="answers.md",
+                kind="invalid-entry",
+                line_number=line_number,
+                parsed_answers=tuple(parsed),
             )
 
         answer = InterviewAnswer(
@@ -232,13 +282,22 @@ def parse_answers_markdown(markdown_text: str) -> tuple[InterviewAnswer, ...]:
             text=match.group(3),
         )
         if answer.question_id in seen_ids:
-            raise ValueError(
-                f"Duplicate answer id `{answer.question_id}` in answers markdown content."
+            raise InterviewMarkdownParseError(
+                f"Duplicate answer id `{answer.question_id}` in answers markdown content.",
+                document_name="answers.md",
+                kind="duplicate-id",
+                line_number=line_number,
+                entry_id=answer.question_id,
+                parsed_answers=tuple(parsed),
             )
         seen_ids.add(answer.question_id)
-        parsed.append(answer)
+        parsed.append(ParsedInterviewAnswer(value=answer, line_number=line_number))
 
     return tuple(parsed)
+
+
+def parse_answers_markdown(markdown_text: str) -> tuple[InterviewAnswer, ...]:
+    return tuple(entry.value for entry in parse_answer_entries(markdown_text))
 
 
 def render_answers_markdown(answers: Iterable[InterviewAnswer]) -> str:
