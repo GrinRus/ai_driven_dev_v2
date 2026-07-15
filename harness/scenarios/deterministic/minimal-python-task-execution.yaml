@@ -6,8 +6,8 @@ canonical_runtime: generic-cli
 repo:
   url: harness/fixtures/minimal-python
 objective: Prove dependency-ordered task execution, task-local repair, blocked interview
-  resume, crash-safe evidence, repeatable finalization, and aggregate review/QA evidence
-  without provider authentication.
+  resume, crash-safe evidence, repeatable finalization, entrypoint parity, fail-closed
+  progression, and aggregate review/QA evidence without provider authentication.
 task: Execute a three-task rich tasklist against the local fixture and preserve task-local
   attempts plus the aggregate implementation report.
 stage_scope:
@@ -35,12 +35,16 @@ verify:
   - test -f .aidd/workitems/WI-DETERMINISTIC-TASKS/stages/qa/output/qa-report.md
   - test -d .aidd/reports/runs/WI-DETERMINISTIC-TASKS/*/stages/implement/finalization/attempts/attempt-0002
   - test -f .aidd/workitems/WI-DETERMINISTIC-TASKS/stages/implement/answers.md
+  - test -f .aidd/reports/runs/WI-DETERMINISTIC-TASKS/*/stages/implement/tasks/TL-2/attempts/attempt-0002/task-diff.json
+  - test -f .aidd/reports/runs/WI-DETERMINISTIC-TASKS/*/stages/implement/tasks/TL-3/attempts/attempt-0002/attempt-state.json
   pass_conditions:
   - Every task reaches succeeded in dependency order.
   - Task-local attempt evidence includes the failed and repaired middle task.
   - Blocking questions and resolved answers survive the resumed final task attempt.
   - Aggregate publication fails once and succeeds through task finalize without rerunning tasks.
   - Review and QA contain one structured evidence entry per task acceptance criterion.
+  - Workflow, stage, task, interaction, UI, and remediation entrypoints use the same task-aware execution boundary.
+  - Stale source, missing ready context, or incomplete finalization cannot publish implement success or unlock review and QA.
 limits:
   timeout_minutes: 10
 interview:

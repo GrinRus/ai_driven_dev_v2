@@ -132,8 +132,9 @@ from aidd.core.runtime_readiness import (
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stages import STAGES, is_valid_stage
-from aidd.core.task_execution import TaskExecutionContext, task_validation_findings
+from aidd.core.task_attempt_lifecycle import TaskExecutionContext
 from aidd.core.task_read_model import resolve_task_read_model
+from aidd.core.task_repository_evidence import task_validation_findings
 from aidd.core.workflow_service import (
     WorkflowRunRequest,
     WorkflowRunResult,
@@ -1681,9 +1682,7 @@ class OperatorUiService:
                         run_id=run_id,
                         job_id=job_id,
                     )
-                    ledger = service.finalize(
-                        self._implementation_request(run_id=run_id)
-                    ).ledger
+                    ledger = service.finalize(self._implementation_request(run_id=run_id)).ledger
             except Exception:
                 release_run_mutation_lease(lease)
                 raise

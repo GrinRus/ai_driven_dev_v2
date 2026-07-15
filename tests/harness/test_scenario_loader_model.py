@@ -549,6 +549,13 @@ def test_task_execution_scenario_declares_incremental_full_flow_evidence() -> No
     assert "qa-report.md" in verification
     assert "finalization/attempts/attempt-0002" in verification
     assert "answers.md" in verification
+    assert "tasks/TL-2/attempts/attempt-0002/task-diff.json" in verification
+    assert "tasks/TL-3/attempts/attempt-0002/attempt-state.json" in verification
+    manifest = Path(
+        "harness/scenarios/deterministic/minimal-python-task-execution.yaml"
+    ).read_text(encoding="utf-8")
+    assert "entrypoints use the same task-aware execution boundary" in manifest
+    assert "cannot publish implement success" in manifest
 
 
 def test_project_set_deterministic_scenario_declares_two_root_context_checks() -> None:

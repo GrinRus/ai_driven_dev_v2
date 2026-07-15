@@ -9,8 +9,8 @@ slice, and local task.
 
 ## Soon
 
-- `W35-E2-S8-T6` — Add a provider-free implementation-entrypoint conformance matrix
-  and extend the deterministic task-execution scenario.
+- `W35-E2-S10-T1` — Reuse one immutable repository snapshot per task checkpoint.
+
 
 ## Parking lot
 
@@ -44,9 +44,6 @@ slice, and local task.
   semantics.
 - `W34-E8-S2-T1` — Replace stale planned/completed-wave architecture wording with
   stable implemented ownership boundaries.
-- `W35-E2-S9-T1` — Extract task attempt, recovery, and interview-evidence lifecycle from
-  the task-execution hotspot.
-- `W35-E2-S10-T1` — Reuse one immutable repository snapshot per task checkpoint.
 - `W36-E1-S1-T3` — Replace checklist-only navigation wording with the canonical
   Guided Setup / Inbox / Studio / History state-route matrix.
 - `W36-E2-S1-T1` — Select and document a maintained provider-free browser driver and
@@ -103,6 +100,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` The five follow-up tasks selected from `Next` are complete. Their seven
-  direct successors are staged in `Soon` pending a separate bounded queue selection;
-  `Parking lot` remains unchanged.
+- `2026-07-15` Implementation entrypoint conformance and task-execution isolation are
+  complete. The bounded repository-snapshot successor `W35-E2-S10-T1` is staged in
+  `Soon` for a separate reconciliation. `Parking lot` remains otherwise unchanged.

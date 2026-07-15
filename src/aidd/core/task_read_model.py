@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from aidd.core.run_store import run_stage_root
-from aidd.core.task_execution import load_task_execution_plan
+from aidd.core.task_attempt_lifecycle import load_task_execution_plan
 from aidd.core.task_ledger import TaskLedger, load_task_ledger, task_root
 
 

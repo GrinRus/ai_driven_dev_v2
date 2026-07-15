@@ -9971,7 +9971,7 @@ Local tasks:
 - `W35-E2-S7-T3` (done) Align review and QA prompts with structured aggregate evidence.
 - `W35-E2-S7-T4` (done) Extend the provider-free task execution recovery scenario.
 
-#### Slice W35-E2-S8 — task-aware implementation entrypoint integrity (`planned`)
+#### Slice W35-E2-S8 — task-aware implementation entrypoint integrity (`done`)
 Goal: make every public implementation entrypoint preserve dependency order, task-local
 evidence, aggregate finalization, and remediation truth.
 
@@ -10015,7 +10015,7 @@ Local tasks:
   - Scope: stage progression and cross-stage validation defense only.
   - Verification: forged generic implement success cannot unlock review/QA without
     matching task and finalization evidence.
-- `W35-E2-S8-T6` Add a provider-free implementation-entrypoint conformance matrix and
+- `W35-E2-S8-T6` (done) Add a provider-free implementation-entrypoint conformance matrix and
   extend the deterministic task-execution scenario. [`CORR-01`, `TEST-07`]
   - Dependencies: `W35-E2-S8-T3`, `W35-E2-S8-T4`, `W35-E2-S8-T5`.
   - Scope: CLI/API/workflow/remediation regression coverage only.
@@ -10028,7 +10028,7 @@ Exit evidence:
 - CLI, UI, workflow, remediation, review, and QA observe the same task ledger and
   finalization policy.
 
-#### Slice W35-E2-S9 — task-execution change isolation (`planned`)
+#### Slice W35-E2-S9 — task-execution change isolation (`done`)
 Goal: reduce change coupling after all entrypoints use the same characterized core
 service.
 
@@ -10038,23 +10038,23 @@ Dependencies:
 
 Local tasks:
 
-- `W35-E2-S9-T1` Extract task attempt, recovery, and interview-evidence lifecycle from
+- `W35-E2-S9-T1` (done) Extract task attempt, recovery, and interview-evidence lifecycle from
   the task-execution hotspot. [`REF-06`]
   - Scope: core task attempt lifecycle only.
   - Verification: blocked/resumed/crashed attempt fixtures remain equivalent.
-- `W35-E2-S9-T2` Extract typed repository baseline, diff, and scope evidence helpers.
+- `W35-E2-S9-T2` (done) Extract typed repository baseline, diff, and scope evidence helpers.
   [`REF-06`]
   - Dependencies: `W34-E7-S4`.
   - Scope: core task repository evidence only; reuse `AllowedWriteScope` without a new
     scope grammar.
   - Verification: tracked, untracked, deleted, symlink, and out-of-scope fixtures retain
     exact findings.
-- `W35-E2-S9-T3` Extract aggregate report, validation, publication, and finalization
+- `W35-E2-S9-T3` (done) Extract aggregate report, validation, publication, and finalization
   coordination. [`REF-06`]
   - Scope: core implementation finalization only.
   - Verification: retry, publication failure, and successful aggregate fixtures retain
     ledger/status equivalence.
-- `W35-E2-S9-T4` Partition task execution tests by plan, attempt, repository evidence,
+- `W35-E2-S9-T4` (done) Partition task execution tests by plan, attempt, repository evidence,
   and finalization ownership. [`REF-06`]
   - Dependencies: `W35-E2-S9-T1`, `W35-E2-S9-T2`, `W35-E2-S9-T3`.
   - Scope: task execution tests and import-boundary assertion only.
