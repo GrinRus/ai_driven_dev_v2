@@ -3,13 +3,20 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from aidd.core.implementation_eligibility import implementation_finalization_blocker
+from aidd.core.run_lookup import latest_run_id
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, load_stage_manifest
 from aidd.core.task_plan import TaskCard, TaskPlanParseError, parse_task_plan
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.semantic_rules.common import (
     IMPLEMENT_FILE_ENTRY_PATTERN,
     REVIEW_FINDING_ID_PATTERN,
+    extract_qa_release_recommendation,
+    extract_qa_verdict,
     extract_review_finding_blocks,
+    extract_risk_blocks,
+    is_empty_risk_entry,
+    is_risk_metadata_entry,
 )
 
 ANSWER_WITHOUT_QUESTION_CODE = "CROSS-ANSWER-WITHOUT-QUESTION"
@@ -26,6 +33,10 @@ TASKLIST_PLAN_VERIFICATION_CODE = "CROSS-TASKLIST-PLAN-VERIFICATION"
 REVIEW_IMPLEMENT_FINDING_CODE = "CROSS-REVIEW-IMPLEMENT-FINDING"
 REVIEW_IMPLEMENT_EVIDENCE_CODE = "CROSS-REVIEW-IMPLEMENT-EVIDENCE"
 REVIEW_IMPLEMENT_PATH_CODE = "CROSS-REVIEW-IMPLEMENT-PATH"
+QA_REVIEW_RISK_CODE = "CROSS-QA-REVIEW-RISK"
+QA_UPSTREAM_EVIDENCE_CODE = "CROSS-QA-UPSTREAM-EVIDENCE"
+QA_UPSTREAM_VERDICT_CODE = "CROSS-QA-UPSTREAM-VERDICT"
+IMPLEMENTATION_FINALIZATION_CODE = "CROSS-IMPLEMENTATION-FINALIZATION"
 
 _QUESTION_ID_PATTERN = re.compile(
     r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(blocking|non-blocking)\]`?"
@@ -53,6 +64,8 @@ _COMMAND_PREFIXES = (
 _EVIDENCE_ID_PATTERN = re.compile(r"\bEV-\d+\b", re.IGNORECASE)
 _BACKTICKED_REFERENCE_PATTERN = re.compile(r"`([^`]+)`")
 _ARTIFACT_SUFFIXES = frozenset({".md", ".json", ".jsonl", ".log", ".txt"})
+_REVIEW_ACCEPTED_RISK_PATTERN = re.compile(r"\bAR-[1-9]\d*\b", re.IGNORECASE)
+_QA_EVIDENCE_ENTRY_PATTERN = re.compile(r"^\s*-\s+", re.MULTILINE)
 
 
 def _stage_root(*, workspace_root: Path, work_item: str, stage: str) -> Path:
@@ -601,6 +614,132 @@ def _review_implementation_findings(
     return tuple(findings)
 
 
+def _qa_upstream_findings(
+    *,
+    workspace_root: Path,
+    qa_path: Path,
+    qa_text: str,
+    review_path: Path,
+    review_text: str,
+    implementation_output_root: Path,
+    implementation_text: str,
+) -> tuple[ValidationFinding, ...]:
+    qa_relative = _workspace_relative(qa_path, workspace_root)
+    available_ids = {
+        match.group(0).strip("`").upper()
+        for pattern, text in (
+            (REVIEW_FINDING_ID_PATTERN, review_text),
+            (_REVIEW_ACCEPTED_RISK_PATTERN, review_text),
+            (_EVIDENCE_ID_PATTERN, review_text),
+            (_EVIDENCE_ID_PATTERN, implementation_text),
+        )
+        for match in pattern.finditer(text)
+    }
+    upstream_roots = (review_path.parent, implementation_output_root)
+    available_paths = {
+        _workspace_relative(path, workspace_root)
+        for root in upstream_roots
+        if root.is_dir()
+        for path in root.iterdir()
+        if path.is_file()
+    }
+
+    def _resolved_reference(text: str) -> bool:
+        if any(
+            match.group(0).upper() in available_ids
+            for match in _EVIDENCE_ID_PATTERN.finditer(text)
+        ):
+            return True
+        if any(
+            match.group(0).strip("`").upper() in available_ids
+            for pattern in (REVIEW_FINDING_ID_PATTERN, _REVIEW_ACCEPTED_RISK_PATTERN)
+            for match in pattern.finditer(text)
+        ):
+            return True
+        return any(
+            value.strip().removeprefix("./").rstrip("/") in available_paths
+            for value in _BACKTICKED_REFERENCE_PATTERN.findall(text)
+        )
+
+    findings: list[ValidationFinding] = []
+    risk_section = _level_two_section_text(qa_text, "Residual risks") or _level_two_section_text(
+        qa_text, "Known issues"
+    )
+    risk_entries = tuple(
+        item
+        for item in extract_risk_blocks(risk_section)
+        if not is_empty_risk_entry(item) and not is_risk_metadata_entry(item)
+    )
+    for risk in risk_entries:
+        if _resolved_reference(risk):
+            continue
+        findings.append(
+            ValidationFinding(
+                code=QA_REVIEW_RISK_CODE,
+                message=(
+                    "Each QA residual risk must cite exact upstream review or "
+                    "implementation evidence."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(qa_relative),
+            )
+        )
+
+    evidence_sections = "\n".join(
+        _level_two_section_text(qa_text, heading)
+        for heading in ("Evidence references", "Evidence", "Verification summary")
+    )
+    for entry in re.split(r"(?=^\s*-\s+)", evidence_sections, flags=re.MULTILINE):
+        if _QA_EVIDENCE_ENTRY_PATTERN.match(entry) is None:
+            continue
+        if _resolved_reference(entry):
+            continue
+        findings.append(
+            ValidationFinding(
+                code=QA_UPSTREAM_EVIDENCE_CODE,
+                message=(
+                    "QA evidence entry does not resolve to exact upstream evidence or "
+                    "an artifact path."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(qa_relative),
+            )
+        )
+
+    review_status_match = re.search(
+        r"Review status\s*:\s*`?(approved-with-conditions|approved|rejected)`?",
+        review_text,
+        re.IGNORECASE,
+    )
+    review_rejected = (
+        review_status_match is not None
+        and review_status_match.group(1).lower() == "rejected"
+    )
+    unresolved_must_fix = any(
+        "must-fix" in block.casefold()
+        for block in extract_review_finding_blocks(
+            _level_two_section_text(review_text, "Findings")
+        )
+    )
+    verdict = extract_qa_verdict(qa_text, prefer_labeled=True)
+    recommendation = extract_qa_release_recommendation(qa_text)
+    if (review_rejected or unresolved_must_fix) and (
+        verdict != "not-ready" or recommendation != "hold"
+    ):
+        findings.append(
+            ValidationFinding(
+                code=QA_UPSTREAM_VERDICT_CODE,
+                message=(
+                    "Rejected review or unresolved must-fix evidence requires "
+                    "`QA verdict: not-ready` and release recommendation `hold`."
+                ),
+                severity="critical",
+                location=ValidationIssueLocation(qa_relative),
+            )
+        )
+    return tuple(findings)
+
+
 def validate_cross_document_consistency(
     *,
     stage: str,
@@ -620,6 +759,16 @@ def validate_cross_document_consistency(
     tasklist_path = stage_root / "tasklist.md"
     plan_path = workspace_root / "workitems" / work_item / "stages" / "plan" / "output" / "plan.md"
     review_path = stage_root / "review-report.md"
+    qa_path = stage_root / "qa-report.md"
+    upstream_review_path = (
+        workspace_root
+        / "workitems"
+        / work_item
+        / "stages"
+        / "review"
+        / "output"
+        / "review-report.md"
+    )
     implementation_output_root = (
         workspace_root / "workitems" / work_item / "stages" / "implement" / "output"
     )
@@ -635,6 +784,8 @@ def validate_cross_document_consistency(
     tasklist_text = _read_optional(tasklist_path)
     plan_text = _read_optional(plan_path)
     review_text = _read_optional(review_path)
+    qa_text = _read_optional(qa_path)
+    upstream_review_text = _read_optional(upstream_review_path)
     implementation_text = _read_optional(implementation_report_path)
 
     question_ids: dict[str, int] = {}
@@ -805,5 +956,55 @@ def validate_cross_document_consistency(
                 implementation_text=implementation_text,
             )
         )
+
+    if (
+        stage == "qa"
+        and qa_text is not None
+        and upstream_review_text is not None
+        and implementation_text is not None
+    ):
+        findings.extend(
+            _qa_upstream_findings(
+                workspace_root=workspace_root,
+                qa_path=qa_path,
+                qa_text=qa_text,
+                review_path=upstream_review_path,
+                review_text=upstream_review_text,
+                implementation_output_root=implementation_output_root,
+                implementation_text=implementation_text,
+            )
+        )
+
+    published_tasklist = (
+        workspace_root
+        / "workitems"
+        / work_item
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    if stage in {"review", "qa"} and published_tasklist.exists():
+        run_id = latest_run_id(workspace_root=workspace_root, work_item=work_item)
+        blocker = (
+            "Implementation run is missing."
+            if run_id is None
+            else implementation_finalization_blocker(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+            )
+        )
+        if blocker is not None:
+            findings.append(
+                ValidationFinding(
+                    code=IMPLEMENTATION_FINALIZATION_CODE,
+                    message=blocker,
+                    severity="critical",
+                    location=ValidationIssueLocation(
+                        _workspace_relative(stage_root, workspace_root)
+                    ),
+                )
+            )
 
     return tuple(findings)

@@ -386,17 +386,13 @@ def _approval_queue_diagnostics(
         stage=stage,
     )
     if attempt_root is None:
-        requests_path = (
-            workspace_root
-            / "workitems"
-            / work_item
-            / "runs"
-            / run_id
-            / "stages"
-            / stage
-            / "attempt-0001"
-            / OPERATOR_REQUESTS_FILENAME
-        )
+        requests_path = run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=1,
+        ) / OPERATOR_REQUESTS_FILENAME
         decisions_path = requests_path.with_name(OPERATOR_DECISIONS_FILENAME)
         requests: tuple[RuntimeOperatorRequest, ...] = ()
         decisions: tuple[RuntimeOperatorDecision, ...] = ()

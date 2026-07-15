@@ -15,7 +15,9 @@ from aidd.core.mutation_lease import (
 )
 from aidd.core.run_store import persist_stage_status
 from aidd.core.task_execution import (
+    TaskExecutionContext,
     TaskResumeBlockedError,
+    _task_diff_evidence,
     complete_task_execution,
     prepare_task_execution,
 )
@@ -150,6 +152,62 @@ def test_parse_task_plan_rejects_duplicate_and_mixed_task_ids() -> None:
     )
     with pytest.raises(TaskPlanParseError, match="must not mix"):
         parse_task_plan(mixed)
+
+
+def test_task_diff_uses_canonical_scope_component_boundary_and_malformed_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    plan = parse_task_plan(
+        _tasklist().replace(
+            "`contracts/example.md` and `tests/test_contract.py`.",
+            "`src`.",
+        )
+    )
+    attempt = tmp_path / "attempt"
+    attempt.mkdir()
+    (attempt / "repository-baseline.json").write_text(
+        json.dumps({"files": {}}),
+        encoding="utf-8",
+    )
+    context = TaskExecutionContext(
+        plan=plan,
+        ledger=TaskLedger.create(plan),
+        task=plan.tasks[0],
+        global_attempt_start=1,
+        task_attempt_path=attempt,
+    )
+    monkeypatch.setattr(
+        "aidd.core.task_execution._repository_file_snapshot",
+        lambda _: {"src2/app.py": "changed"},
+    )
+    scope_path = (
+        workspace_root / "workitems" / "WI-1" / "context" / "allowed-write-scope.md"
+    )
+    scope_path.parent.mkdir(parents=True)
+    scope_path.write_text("# Allowed Write Scope\n\n- `src`\n", encoding="utf-8")
+
+    _, issues = _task_diff_evidence(
+        context=context,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        project_root=project_root,
+        report="## Touched files\n\n- `src2/app.py`\n",
+    )
+    assert any("outside allowed write scope" in issue for issue in issues)
+
+    scope_path.write_text("# Allowed Write Scope\n\n- `../escape`\n", encoding="utf-8")
+    _, malformed_issues = _task_diff_evidence(
+        context=context,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        project_root=project_root,
+        report="## Touched files\n\n- `src2/app.py`\n",
+    )
+    assert any("Allowed write scope" in issue for issue in malformed_issues)
 
 
 def test_parse_task_plan_rejects_malformed_and_duplicate_acceptance_ids() -> None:

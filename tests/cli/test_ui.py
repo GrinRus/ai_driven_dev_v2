@@ -17,6 +17,7 @@ from typing import Any
 import typer
 
 from aidd.cli import main as cli_main
+from aidd.cli import ui as ui_module
 from aidd.cli.stage_run import StageInteractOptions, StageRunOptions
 from aidd.cli.ui import (
     OperatorUiService,
@@ -74,6 +75,10 @@ from aidd.runtime_permissions import (
     RuntimeOperatorRisk,
     RuntimePermissionPolicy,
 )
+
+
+def test_ui_implementation_adapter_does_not_import_cli_task_business_service() -> None:
+    assert "aidd.cli.task" not in inspect.getsource(ui_module)
 
 
 def _service(
@@ -2537,7 +2542,7 @@ def test_ui_remediation_launch_requires_runtime_before_request_creation(
     assert requests["requests"] == []
 
 
-def test_ui_remediation_launch_runs_implement_and_marks_downstream_stale(
+def test_ui_remediation_launch_requires_finalization_before_marking_downstream_stale(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -2572,15 +2577,12 @@ def test_ui_remediation_launch_runs_implement_and_marks_downstream_stale(
         item["stage"]: item
         for item in dashboard["dashboard"]["stages"]  # type: ignore[index]
     }
-    assert [options.stage for options in captured] == ["implement"]
-    assert captured[0].runtime == "generic-cli"
-    assert captured[0].run_id == "run-ui"
-    assert completed["status"] == "completed"
-    assert completed["result"]["completed"] is True  # type: ignore[index]
-    assert [item["stage"] for item in status["stale_stages"]] == ["review", "qa"]  # type: ignore[index]
-    assert stages["review"]["stale"] is True
-    assert stages["qa"]["stale"] is True
-    assert dashboard["dashboard"]["terminal_handoff"] is None  # type: ignore[index]
+    assert captured == []
+    assert completed["status"] == "failed"
+    assert "tasklist" in str(completed).lower()
+    assert status["stale_stages"] == []
+    assert stages["review"]["stale"] is False
+    assert stages["qa"]["stale"] is False
 
 
 def test_ui_remediation_request_rejects_ids_missing_from_source_report(
@@ -2637,11 +2639,12 @@ def test_ui_remediation_launch_accepts_operator_audit_source_id_with_explicit_fl
     )
 
     payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
-    _wait_job(service, str(payload["job_id"]))
+    completed = _wait_job(service, str(payload["job_id"]))
     requests = _payload(
         service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]})
     )
-    assert captured
+    assert completed["status"] == "failed"
+    assert captured == []
     assert requests["requests"][0]["source_ids"] == ["OP-RV-1"]  # type: ignore[index]
 
 

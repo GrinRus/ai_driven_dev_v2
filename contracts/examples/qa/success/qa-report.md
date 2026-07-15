@@ -12,10 +12,10 @@
 
 ## Residual risks
 
-- QR-1 (`medium`): Background retry telemetry is still partial for one non-critical edge path.
+- QR-1 (`medium`, Evidence: EV-1): Background retry telemetry is still partial for one non-critical edge path.
   - Mitigation: add follow-up instrumentation task in the next sprint.
   - Owner: platform maintainer.
-- QR-2 (`low`): Load-test coverage remains below the desired release-policy threshold for weekend traffic peaks.
+- QR-2 (`low`, Evidence: EV-2): Load-test coverage remains below the desired release-policy threshold for weekend traffic peaks.
   - Mitigation: run extended load profile before the next minor release.
   - Owner: QA lead.
 

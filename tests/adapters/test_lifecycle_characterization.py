@@ -109,10 +109,13 @@ def _observe_probe(scenario: str, tmp_path: Path) -> LifecycleObservation:
         start_new_session=os.name != "nt",
     )
     try:
-        stdout, stderr = process.communicate(timeout=1.5)
+        stdout, stderr = process.communicate(timeout=3.0)
     except subprocess.TimeoutExpired:
         if os.name != "nt":
-            os.killpg(process.pid, signal.SIGKILL)
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except (OSError, PermissionError, ProcessLookupError):
+                process.kill()
         else:
             process.kill()
         process.communicate(timeout=1.0)

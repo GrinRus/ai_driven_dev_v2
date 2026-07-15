@@ -8920,7 +8920,7 @@ Local tasks:
   - Scope: review cross-document rules.
   - Verification: nonexistent finding, evidence, and changed-path references fail while
     exact task/acceptance coverage remains owned by `W35-E2-S7`.
-- `W34-E1-S2-T4` Bind non-task QA risks, checks, and verdict relationships to review and
+- `W34-E1-S2-T4` (done) Bind non-task QA risks, checks, and verdict relationships to review and
   implementation evidence. [`ARCH-01`]
   - Scope: QA cross-document rules.
   - Verification: unsupported risk, check, and cross-stage verdict relationships fail
@@ -9682,7 +9682,7 @@ Local tasks:
   - Scope: core run/attempt persisted paths only.
   - Verification: every run/attempt write-path family passes the shared containment
     matrix.
-- `W34-E7-S2-T5` Adopt the shared boundary for operator-overlay and CLI-created paths.
+- `W34-E7-S2-T5` (done) Adopt the shared boundary for operator-overlay and CLI-created paths.
   [`SEC-03`]
   - Dependencies: `W34-E7-S2-T2`, `W34-E7-S2-T4`.
   - Scope: operator overlay and CLI persisted paths only.
@@ -9733,13 +9733,13 @@ Local tasks:
   - Dependencies: `W34-E7-S4-T1`.
   - Scope: semantic validator scope consumer only.
   - Verification: validator fixtures classify the canonical parity table exactly.
-- `W34-E7-S4-T3` Migrate task diff/scope gates to the canonical allowed-write-scope
+- `W34-E7-S4-T3` (done) Migrate task diff/scope gates to the canonical allowed-write-scope
   boundary. [`BUG-13`, `ARCH-06`]
   - Dependencies: `W34-E7-S4-T1`.
   - Scope: task execution scope consumer only.
   - Verification: task diff fixtures classify the canonical parity table exactly and
     retain fail-closed repair behavior.
-- `W34-E7-S4-T4` Migrate repository diff and Implement Review reads to the canonical
+- `W34-E7-S4-T4` (done) Migrate repository diff and Implement Review reads to the canonical
   allowed-write-scope boundary. [`BUG-13`, `ARCH-06`]
   - Dependencies: `W34-E7-S4-T1`.
   - Scope: repository diff/read-model consumer only.
@@ -9997,19 +9997,19 @@ Local tasks:
   - Scope: core implementation execution boundary only.
   - Verification: core tests preserve task-loop behavior and the service imports no
     CLI or Typer modules.
-- `W35-E2-S8-T3` Route workflow, stage, interact, and task CLI commands through the
+- `W35-E2-S8-T3` (done) Route workflow, stage, interact, and task CLI commands through the
   core implementation service. [`CORR-01`, `ARCH-04`]
   - Dependencies: `W35-E2-S8-T2`.
   - Scope: CLI adapters only.
   - Verification: CLI entrypoint fixtures cannot invoke or publish raw one-shot
     `implement` outside the task-aware contract.
-- `W35-E2-S8-T4` Route UI stage, task, interact, and remediation mutations through the
+- `W35-E2-S8-T4` (done) Route UI stage, task, interact, and remediation mutations through the
   core implementation service. [`CORR-01`, `ARCH-04`]
   - Dependencies: `W35-E2-S8-T2`.
   - Scope: private operator API/application adapters only.
   - Verification: remediation rebuilds task/finalization evidence before downstream
     stages become stale or eligible, and UI imports no CLI business service.
-- `W35-E2-S8-T5` Require a complete successful task ledger and aggregate finalization
+- `W35-E2-S8-T5` (done) Require a complete successful task ledger and aggregate finalization
   before review or QA eligibility. [`CORR-01`]
   - Dependencies: `W35-E2-S8-T2`.
   - Scope: stage progression and cross-stage validation defense only.

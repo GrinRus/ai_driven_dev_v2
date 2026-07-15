@@ -264,6 +264,17 @@ def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
             "upstream research/plan evidence, or downgrade the claim to a bounded low/info "
             "observation or question."
         )
+    if finding.code in {"CROSS-QA-REVIEW-RISK", "CROSS-QA-UPSTREAM-EVIDENCE"}:
+        return (
+            "Replace fuzzy or basename-only QA references with an exact upstream `RV-*`, "
+            "`REV-*`, `AR-*`, or evidence id, or with a full workspace-relative path to an "
+            "existing review/implementation artifact."
+        )
+    if finding.code == "CROSS-QA-UPSTREAM-VERDICT":
+        return (
+            "Align QA with upstream review evidence: unresolved `must-fix` or rejected review "
+            "requires `QA verdict: not-ready` and release recommendation `hold`."
+        )
     if (
         finding.code == "SEM-UNVERIFIABLE-CHECK-CLAIM"
         and (

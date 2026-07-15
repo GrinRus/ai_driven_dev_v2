@@ -156,7 +156,7 @@ def test_task_run_rejects_runtime_mismatch_before_creating_ledger(tmp_path: Path
     )
 
 
-def test_automatic_tasks_fail_fast_and_manual_resume_publishes_aggregate(
+def test_automatic_tasks_fail_fast_and_manual_resume_requires_explicit_finalization(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -293,6 +293,16 @@ Two dependent implementation-ready tasks exercise fail-fast and resume.
 
     assert resumed.all_succeeded()
     assert resumed.entry("TL-2").attempt_count == 2
+    assert not published_report.exists()
+
+    finalized = finalize_implementation(
+        work_item="WI-TASK",
+        run_id="run-1",
+        runtime="generic-cli",
+        root=workspace_root,
+        config=Path("aidd.example.toml"),
+    )
+    assert finalized.finalization.status.value == "succeeded"
     aggregate = published_report.read_text(encoding="utf-8")
     assert "`TL-1`" in aggregate
     assert "`TL-2`" in aggregate
@@ -363,18 +373,30 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
             )
         return ()
 
-    monkeypatch.setattr("aidd.cli.task.validate_semantic_outputs", _aggregate_validation)
+    monkeypatch.setattr(
+        "aidd.application.implementation.validate_semantic_outputs",
+        _aggregate_validation,
+    )
+
+    executed = execute_task_by_id(
+        task_id="TL-1",
+        work_item="WI-TASK",
+        run_id="run-1",
+        runtime="generic-cli",
+        root=workspace_root,
+        config=Path("aidd.example.toml"),
+        log_follow=False,
+        stage_runner=_stage_runner,
+    )
+    assert executed.all_succeeded()
 
     with pytest.raises(ValueError, match="Aggregate implementation report failed"):
-        execute_task_by_id(
-            task_id="TL-1",
+        finalize_implementation(
             work_item="WI-TASK",
             run_id="run-1",
             runtime="generic-cli",
             root=workspace_root,
             config=Path("aidd.example.toml"),
-            log_follow=False,
-            stage_runner=_stage_runner,
         )
 
     failed = load_task_ledger(

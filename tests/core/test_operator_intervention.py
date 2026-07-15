@@ -373,3 +373,22 @@ def test_intervention_terminal_attempt_records_intervention_history_after_prior_
     ]
     stage_result_text = stage_root.joinpath("stage-result.md").read_text(encoding="utf-8")
     assert "- Attempt `2` (`intervention`) -> succeeded." in stage_result_text
+
+
+def test_operator_intervention_rejects_symlinked_overlay_escape(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_root = workspace_root / "workitems" / "WI-OP" / "stages" / "plan"
+    stage_root.mkdir(parents=True)
+    outside = tmp_path / "outside-operator-requests"
+    outside.mkdir()
+    (stage_root / "operator-requests").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="owning root|storage boundary"):
+        persist_operator_intervention_request(
+            workspace_root=workspace_root,
+            work_item="WI-OP",
+            stage="plan",
+            request_text="Add rollback risks.",
+        )
+
+    assert list(outside.iterdir()) == []

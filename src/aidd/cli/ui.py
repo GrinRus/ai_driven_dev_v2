@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -23,9 +24,11 @@ import typer
 
 from aidd import __version__
 from aidd.adapters.surface import get_runtime_adapter_surface
+from aidd.application.implementation import aggregate_finalization_port
 from aidd.cli.stage_run import (
     StageInteractOptions,
     StageRunOptions,
+    run_stage_attempt_command,
     run_stage_command,
     run_stage_interact_command,
 )
@@ -44,9 +47,17 @@ from aidd.cli.ui_http import (
     _read_json_body,
 )
 from aidd.config import AiddConfig, load_config
+from aidd.core.implementation_eligibility import implementation_finalization_blocker
+from aidd.core.implementation_service import (
+    AggregateFinalizer,
+    ImplementationExecutionRequest,
+    ImplementationExecutionService,
+    TaskAttemptOutcome,
+)
 from aidd.core.interview import AnswerResolution
 from aidd.core.mutation_lease import (
     RunMutationConflict,
+    acquire_run_mutation_lease,
     acquire_run_mutation_lease_handle,
     release_run_mutation_lease,
     use_transferred_run_mutation_lease,
@@ -100,6 +111,7 @@ from aidd.core.run_store import (
     next_attempt_number,
     persist_run_archive_decision,
     run_attempt_root,
+    run_manifest_path,
     run_root,
 )
 from aidd.core.runtime_operator import (
@@ -120,6 +132,7 @@ from aidd.core.runtime_readiness import (
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stages import STAGES, is_valid_stage
+from aidd.core.task_execution import TaskExecutionContext, task_validation_findings
 from aidd.core.task_read_model import resolve_task_read_model
 from aidd.core.workflow_service import (
     WorkflowRunRequest,
@@ -1425,6 +1438,9 @@ class OperatorUiService:
         project_root = options.root.resolve(strict=False).parent
         self._workflow_runner = workflow_runner
         self._stage_runner = stage_runner
+        self._implementation_stage_runner = (
+            run_stage_attempt_command if stage_runner is run_stage_command else stage_runner
+        )
         self._stage_interact_runner = stage_interact_runner
         self._readiness_probe_provider = readiness_probe_provider
         self._folder_opener = folder_opener
@@ -1600,24 +1616,30 @@ class OperatorUiService:
             ),
             operation=f"ui-task:{task_id}",
         )
+        try:
+            self._validate_implementation_runtime(run_id=run_id, runtime=runtime)
+        except Exception:
+            release_run_mutation_lease(lease)
+            raise
 
         def _target(job_id: str) -> object:
-            from aidd.cli.task import execute_task_by_id
             try:
-                ledger = execute_task_by_id(
-                    task_id=task_id,
-                    work_item=self.work_item,
-                    run_id=run_id,
-                    runtime=runtime,
-                    root=self.workspace_root,
-                    config=self.config_path,
-                    log_follow=True,
-                    stage_runner=self._stage_runner,
-                    mutation_lease=lease,
-                )
+                with use_transferred_run_mutation_lease(lease):
+                    service = self._implementation_service(
+                        runtime=runtime,
+                        run_id=run_id,
+                        job_id=job_id,
+                    )
+                    result = service.run_task(
+                        self._implementation_request(run_id=run_id),
+                        task_id=task_id,
+                    )
+                    ledger = result.ledger
             except Exception:
                 release_run_mutation_lease(lease)
                 raise
+            if ledger.entry(task_id).status.value != "succeeded":
+                raise ValueError(f"Implementation task `{task_id}` did not succeed.")
             return {
                 "task_id": task_id,
                 "run_id": run_id,
@@ -1645,20 +1667,23 @@ class OperatorUiService:
             ),
             operation="ui-task:finalize",
         )
+        try:
+            self._validate_implementation_runtime(run_id=run_id, runtime=runtime)
+        except Exception:
+            release_run_mutation_lease(lease)
+            raise
 
         def _target(job_id: str) -> object:
-            del job_id
-            from aidd.cli.task import finalize_implementation
-
             try:
-                ledger = finalize_implementation(
-                    work_item=self.work_item,
-                    run_id=run_id,
-                    runtime=runtime,
-                    root=self.workspace_root,
-                    config=self.config_path,
-                    mutation_lease=lease,
-                )
+                with use_transferred_run_mutation_lease(lease):
+                    service = self._implementation_service(
+                        runtime=runtime,
+                        run_id=run_id,
+                        job_id=job_id,
+                    )
+                    ledger = service.finalize(
+                        self._implementation_request(run_id=run_id)
+                    ).ledger
             except Exception:
                 release_run_mutation_lease(lease)
                 raise
@@ -1672,6 +1697,89 @@ class OperatorUiService:
         except Exception:
             release_run_mutation_lease(lease)
             raise
+
+    def _implementation_request(self, *, run_id: str) -> ImplementationExecutionRequest:
+        return ImplementationExecutionRequest(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=run_id,
+            project_root=self.project_root,
+        )
+
+    def _validate_implementation_runtime(self, *, run_id: str, runtime: str) -> None:
+        path = run_manifest_path(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=run_id,
+        )
+        if not path.is_file():
+            raise ValueError(f"Run manifest does not exist for run `{run_id}`.")
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        manifest_runtime = payload.get("runtime_id") if isinstance(payload, dict) else None
+        if manifest_runtime != runtime:
+            raise ValueError(
+                f"Runtime `{runtime}` does not match run manifest runtime "
+                f"`{manifest_runtime or ''}`."
+            )
+
+    def _implementation_service(
+        self,
+        *,
+        runtime: str,
+        run_id: str,
+        job_id: str,
+    ) -> ImplementationExecutionService:
+        def _execute(context: TaskExecutionContext) -> TaskAttemptOutcome:
+            try:
+                self._implementation_stage_runner(
+                    StageRunOptions(
+                        stage="implement",
+                        work_item=self.work_item,
+                        runtime=runtime,
+                        run_id=run_id,
+                        root=self.workspace_root,
+                        config=self.config_path,
+                        log_follow=True,
+                        runtime_chunk_sink=lambda stream, text: self._jobs.append_chunk(
+                            job_id,
+                            stream=stream,
+                            text=text,
+                        ),
+                        runtime_operator_decision_provider=(
+                            _UiRuntimeOperatorDecisionProvider(service=self, job_id=job_id)
+                        ),
+                        cancel_requested=lambda: self._jobs.cancel_requested(job_id),
+                        defer_success_publication=True,
+                        validation_finding_provider=lambda execution_state, discovery: (
+                            task_validation_findings(
+                                context=context,
+                                workspace_root=self.workspace_root,
+                                work_item=self.work_item,
+                                project_root=self.project_root,
+                                execution_state=execution_state,
+                                discovery=discovery,
+                            )
+                        ),
+                    )
+                )
+            except typer.Exit as exc:
+                return TaskAttemptOutcome(
+                    succeeded=False,
+                    blocker=f"implement stage stopped with exit code {exc.exit_code}.",
+                )
+            return TaskAttemptOutcome(succeeded=True)
+
+        return ImplementationExecutionService(
+            task_executor=_execute,
+            aggregate_finalizer=cast(
+                AggregateFinalizer,
+                aggregate_finalization_port(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=run_id,
+                ),
+            ),
+        )
 
     def _work_item_resume_context(self, params: dict[str, list[str]]) -> object:
         work_item = _first_param(params, "work_item")
@@ -1950,6 +2058,22 @@ class OperatorUiService:
         log_follow = bool(payload.get("log_follow", True))
 
         def _target(job_id: str) -> object:
+            with acquire_run_mutation_lease(
+                run_root(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=request.run_id,
+                ),
+                operation="ui-remediation:reopen",
+            ):
+                self._implementation_service(
+                    runtime=runtime,
+                    run_id=request.run_id,
+                    job_id=job_id,
+                ).reopen_for_remediation(
+                    self._implementation_request(run_id=request.run_id),
+                    remediation_id=request.request_id,
+                )
             result = self._run_stage(
                 stage="implement",
                 runtime=runtime,
@@ -1960,6 +2084,12 @@ class OperatorUiService:
             completed = bool(
                 result.get("completed", False) if isinstance(result, Mapping) else False
             )
+            finalization_blocker = implementation_finalization_blocker(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                run_id=request.run_id,
+            )
+            completed = completed and finalization_blocker is None
             status = (
                 mark_downstream_stale(
                     workspace_root=self.workspace_root,
@@ -1981,6 +2111,7 @@ class OperatorUiService:
                 "status": status,
                 "exit_code": result.get("exit_code", 0) if isinstance(result, Mapping) else 1,
                 "completed": completed,
+                "finalization_blocker": finalization_blocker,
             }
 
         job = cast(

@@ -10,6 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
+from aidd.core.allowed_write_scope import (
+    AllowedWriteScopeError,
+    resolve_allowed_write_scope,
+)
 from aidd.core.identifiers import contained_component_path
 from aidd.core.interview import stage_has_unresolved_blocking_questions
 from aidd.core.run_store import (
@@ -693,27 +697,25 @@ def _task_diff_evidence(
             + ", ".join(unsupported_report_paths)
             + "."
         )
-    scope_path = workspace_root / "workitems" / work_item / "context" / "allowed-write-scope.md"
-    allowed_scope_paths: list[str] = []
-    if scope_path.exists():
-        for value in re.findall(
-            r"`([^`]+)`",
-            scope_path.read_text(encoding="utf-8", errors="replace"),
-        ):
-            normalized = value.strip().strip("/")
-            if normalized:
-                allowed_scope_paths.append(normalized)
+    allowed_scope = None
+    try:
+        allowed_scope = resolve_allowed_write_scope(workspace_root, work_item)
+    except AllowedWriteScopeError as exc:
+        issues.extend(f"Allowed write scope: {issue}" for issue in exc.issues)
+    allowed_scope_paths = list(allowed_scope.prefixes) if allowed_scope is not None else []
+    def _globally_allowed(path: str) -> bool:
+        if allowed_scope is None:
+            return True
+        try:
+            return allowed_scope.allows(path)
+        except AllowedWriteScopeError:
+            return False
+
     task_scope_paths = list(context.task.scope_paths)
     task_scope_outside_global = sorted(
         path
         for path in task_scope_paths
-        if allowed_scope_paths
-        and not any(
-            path == allowed
-            or path.startswith(f"{allowed}/")
-            or allowed.startswith(f"{path}/")
-            for allowed in allowed_scope_paths
-        )
+        if allowed_scope is not None and not _globally_allowed(path)
     )
     if task_scope_outside_global:
         issues.append(
@@ -728,11 +730,7 @@ def _task_diff_evidence(
             path == allowed or path.startswith(f"{allowed}/") for allowed in task_scope_paths
         )
         or (
-            allowed_scope_paths
-            and not any(
-                path == allowed or path.startswith(f"{allowed}/")
-                for allowed in allowed_scope_paths
-            )
+            allowed_scope is not None and not _globally_allowed(path)
         )
     )
     if out_of_scope:

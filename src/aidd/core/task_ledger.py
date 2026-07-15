@@ -225,6 +225,31 @@ class TaskLedger:
             task.status is TaskExecutionStatus.SUCCEEDED for task in self.tasks
         )
 
+    def reopen_last_task_for_remediation(self, *, blocker: str) -> TaskLedger:
+        if not self.tasks:
+            raise ValueError("Task ledger has no task to remediate.")
+        selected = self.tasks[-1]
+        if selected.status is not TaskExecutionStatus.SUCCEEDED:
+            raise ValueError("Remediation requires the selected task to have succeeded.")
+        timestamp = _now()
+        reopened = replace(
+            selected,
+            status=TaskExecutionStatus.PENDING,
+            blocker=blocker,
+            updated_at_utc=timestamp,
+        )
+        return replace(
+            self,
+            tasks=tuple(reopened if task.id == selected.id else task for task in self.tasks),
+            finalization=replace(
+                self.finalization,
+                status=TaskFinalizationStatus.PENDING,
+                blocker="Remediation requires aggregate finalization.",
+                updated_at_utc=timestamp,
+            ),
+            updated_at_utc=timestamp,
+        )
+
     def transition(
         self,
         task_id: str,

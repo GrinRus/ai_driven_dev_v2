@@ -8,7 +8,11 @@ from aidd.validators.cross_document import (
     BLOCKING_UNANSWERED_CODE,
     DUPLICATE_ANSWER_ID_CODE,
     DUPLICATE_QUESTION_ID_CODE,
+    IMPLEMENTATION_FINALIZATION_CODE,
     PROJECT_SET_EVIDENCE_MISSING_CODE,
+    QA_REVIEW_RISK_CODE,
+    QA_UPSTREAM_EVIDENCE_CODE,
+    QA_UPSTREAM_VERDICT_CODE,
     REPAIR_BRIEF_NOT_REFERENCED_CODE,
     REPAIR_BUDGET_EXHAUSTED_CODE,
     REPAIR_MENTION_WITHOUT_BRIEF_CODE,
@@ -922,3 +926,127 @@ def test_review_cross_validation_defers_when_implementation_report_is_missing(
     )
 
     assert findings == ()
+
+
+def _write_qa_upstream_bundle(
+    workspace_root: Path,
+    *,
+    risk: str = "- QR-1 (`medium`, Evidence: EV-1): bounded residual risk.",
+    evidence: str = (
+        "- EV-1: `workitems/WI-001/stages/implement/output/implementation-report.md` "
+        "passed."
+    ),
+    review_status: str = "approved-with-conditions",
+    disposition: str = "follow-up",
+) -> None:
+    implement_root = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "output"
+    )
+    implement_root.mkdir(parents=True, exist_ok=True)
+    (implement_root / "implementation-report.md").write_text(
+        "# Implementation Report\n\n## Verification notes\n\n- EV-1: `pytest -q` -> pass.\n",
+        encoding="utf-8",
+    )
+    review_root = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "review" / "output"
+    )
+    review_root.mkdir(parents=True, exist_ok=True)
+    (review_root / "review-report.md").write_text(
+        "# Review Report\n\n"
+        f"## Findings\n\n- RV-1 (`medium`, `{disposition}`): bounded finding.\n\n"
+        f"## Approval status\n\nReview status: {review_status}\n",
+        encoding="utf-8",
+    )
+    qa_root = workspace_root / "workitems" / "WI-001" / "stages" / "qa"
+    qa_root.mkdir(parents=True, exist_ok=True)
+    (qa_root / "qa-report.md").write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\nQA verdict: ready-with-risks\n\n"
+        f"## Residual risks\n\n{risk}\n\n"
+        "## Release recommendation\n\n- proceed-with-conditions\n\n"
+        f"## Evidence references\n\n{evidence}\n",
+        encoding="utf-8",
+    )
+
+
+def test_qa_cross_validation_accepts_exact_upstream_traceability(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()
+
+
+def test_qa_cross_validation_rejects_unresolved_risk_and_evidence(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(
+        workspace_root,
+        risk="- QR-1 (`medium`): untraceable residual risk.",
+        evidence="- EV-9: `implementation-report.md` allegedly passed.",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings] == [
+        QA_REVIEW_RISK_CODE,
+        QA_UPSTREAM_EVIDENCE_CODE,
+    ]
+
+
+def test_qa_cross_validation_rejects_verdict_that_contradicts_review(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(
+        workspace_root,
+        review_status="rejected",
+        disposition="must-fix",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings] == [QA_UPSTREAM_VERDICT_CODE]
+
+
+def test_qa_cross_validation_defers_when_upstream_output_is_missing(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    qa_root = workspace_root / "workitems" / "WI-001" / "stages" / "qa"
+    qa_root.mkdir(parents=True)
+    (qa_root / "qa-report.md").write_text("# QA Report\n", encoding="utf-8")
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()
+
+
+def test_review_cross_validation_rejects_generic_success_without_task_finalization(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    tasklist = (
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    tasklist.parent.mkdir(parents=True)
+    tasklist.write_text(
+        "# Tasklist\n\n## Task summary\n\nA forged generic implementation success.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings] == [IMPLEMENTATION_FINALIZATION_CODE]
