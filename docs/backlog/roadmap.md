@@ -9971,7 +9971,7 @@ Local tasks:
 - `W35-E2-S7-T3` (done) Align review and QA prompts with structured aggregate evidence.
 - `W35-E2-S7-T4` (done) Extend the provider-free task execution recovery scenario.
 
-#### Slice W35-E2-S8 — task-aware implementation entrypoint integrity (`planned`)
+#### Slice W35-E2-S8 — task-aware implementation entrypoint integrity (`done`)
 Goal: make every public implementation entrypoint preserve dependency order, task-local
 evidence, aggregate finalization, and remediation truth.
 
@@ -10015,7 +10015,7 @@ Local tasks:
   - Scope: stage progression and cross-stage validation defense only.
   - Verification: forged generic implement success cannot unlock review/QA without
     matching task and finalization evidence.
-- `W35-E2-S8-T6` Add a provider-free implementation-entrypoint conformance matrix and
+- `W35-E2-S8-T6` (done) Add a provider-free implementation-entrypoint conformance matrix and
   extend the deterministic task-execution scenario. [`CORR-01`, `TEST-07`]
   - Dependencies: `W35-E2-S8-T3`, `W35-E2-S8-T4`, `W35-E2-S8-T5`.
   - Scope: CLI/API/workflow/remediation regression coverage only.
