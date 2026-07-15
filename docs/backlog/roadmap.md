@@ -9728,7 +9728,7 @@ Local tasks:
   - Scope: core allowed-write-scope model only.
   - Verification: a parity table covers files, top-level/nested directories, missing
     scope, malformed values, escapes, and platform separators.
-- `W34-E7-S4-T2` (`next`) Migrate semantic validation to the canonical allowed-write-scope
+- `W34-E7-S4-T2` (done) Migrate semantic validation to the canonical allowed-write-scope
   boundary. [`BUG-13`, `ARCH-06`]
   - Dependencies: `W34-E7-S4-T1`.
   - Scope: semantic validator scope consumer only.

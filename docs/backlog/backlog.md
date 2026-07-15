@@ -7,8 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W34-E7-S4-T2` — Migrate semantic validation after the canonical
-  allowed-write-scope boundary exists.
 - `W34-E1-S2-T3` — Bind non-task review findings and evidence references after plan/task
   obligations are aligned.
 - `W34-E7-S1-T2` — Enforce protected-data and evidence boundaries after the typed
