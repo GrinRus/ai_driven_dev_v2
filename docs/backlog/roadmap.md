@@ -8931,7 +8931,7 @@ Exit evidence:
 - tasklist, implement, review, and QA outputs cannot pass by satisfying local shape
   while contradicting their authored context.
 
-#### Slice W34-E1-S3 — validator report protocol and examples (`planned`)
+#### Slice W34-E1-S3 — validator report protocol and examples (`done`)
 Goal: make renderer, contract, prompts, consumers, and examples use one versioned
 validator vocabulary.
 
@@ -8946,7 +8946,7 @@ Local tasks:
   - Scope: validator-report protocol registry only.
   - Verification: every normative field/code and retained legacy alias has one
     registry entry and schema test.
-- `W34-E1-S3-T2` Normalize all eight success examples and exact invalid/repair
+- `W34-E1-S3-T2` (done) Normalize all eight success examples and exact invalid/repair
   expectations against the canonical protocol. [`COMPAT-02`]
   - Dependencies: `W34-E1-S3-T3`, `W34-E1-S3-T4`, `W34-E1-S3-T5`,
     `W34-E1-S3-T6`, `W34-E1-S3-T7`.

@@ -7,16 +7,19 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S3-T2` — Normalize all eight success examples and exact invalid/repair
-  expectations against the canonical protocol.
+- `W34-E1-S4-T1` — Reuse the canonical section-aware interview parser in
+  cross-validation.
 
 ## Soon
 
+- `W34-E1-S4-T2` — Validate mitigation and owner metadata inside each QA risk item.
+- `W34-E1-S4-T3` — Preserve independent mixed-ID and missing-coverage findings through
+  the canonical Wave 35 task-plan parser.
+- `W34-E1-S4-T4` — Require command- or artifact-shaped executable evidence instead of
+  prose tool names.
 
 ## Parking lot
 
-- `W34-E1-S4-T1` — Reuse the canonical section-aware interview parser in
-  cross-validation.
 - `W34-E1-S5-T1` — Add one production-equivalent full-stack contract fixture runner.
 - `W34-E2-S3-T1` — Move archive decisions to a separate append-only operator
   overlay/index.

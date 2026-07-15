@@ -5,7 +5,7 @@
 - Total issues: 3
 - Blocking issues: yes
 - Affected documents: `workitems/WI-PLAN-EXAMPLE/stages/plan/output/plan.md`, `workitems/WI-PLAN-EXAMPLE/stages/plan/output/questions.md`
-- Dominant failure categories: sequencing and approval-readiness gaps
+- Dominant failure categories: incomplete risk and verification coverage
 
 ## Structural checks
 
@@ -13,8 +13,8 @@
 
 ## Semantic checks
 
-- `SEM-UNSUPPORTED-CLAIM` (`high`) in `workitems/WI-PLAN-EXAMPLE/stages/plan/output/plan.md`: milestone sequencing lacks dependency-aware rationale.
-- `STRUCT-EMPTY-SECTION` (`high`) in `workitems/WI-PLAN-EXAMPLE/stages/plan/output/plan.md`: `Verification notes` does not provide milestone-risk coverage.
+- `SEM-INCOMPLETE-SECTION` (`medium`) in `workitems/WI-PLAN-EXAMPLE/stages/plan/output/plan.md`: each `Risks` item must include mitigation direction.
+- `SEM-INCOMPLETE-SECTION` (`medium`) in `workitems/WI-PLAN-EXAMPLE/stages/plan/output/plan.md`: `Verification notes` cannot be `none` and must map checks to milestone ids.
 
 ## Cross-document checks
 

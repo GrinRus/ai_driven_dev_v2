@@ -1,24 +1,25 @@
 # Implementation Report
 
-## Selected task
+## Summary
 
-- Task id: `TL-2`
-- Task title: Add execution-state persistence wiring
-
-## Change summary
-
-Implemented execution-state persistence updates so blocked interview states are recorded deterministically and can be resumed after answers are provided.
+- Selected task: `TL-2` — Add execution-state persistence wiring.
+- Implemented deterministic blocked-state persistence and resume behavior for `TL-2-AC1` and `TL-2-AC2`.
 
 ## Touched files
 
 - `src/aidd/core/stage_runner.py` - persist blocked status when unresolved blocking questions are present.
 - `tests/core/test_stage_runner.py` - add regression coverage for unblock transition after `[resolved]` answers.
 
-## Verification notes
+## Verification
 
 - `uv run pytest tests/core/test_stage_runner.py -q` -> pass
 - `uv run ruff check src/aidd/core/stage_runner.py tests/core/test_stage_runner.py` -> pass
+- `git status --ignored --short --untracked-files=all` -> pass; no new ignored workspace residue.
 
-## Follow-up notes
+## Risks
 
-- [non-blocking] Broader integration coverage for interview persistence can be added in a later local task.
+- [non-blocking] Broader integration coverage for mixed interview states remains outside `TL-2`.
+
+## Follow-up
+
+- Track mixed answered/unanswered interview sequences as a separate bounded task.

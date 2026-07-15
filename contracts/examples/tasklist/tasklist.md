@@ -9,7 +9,7 @@ explicit dependency order, bounded scope, acceptance criteria, and authored chec
 
 ### TL-1 — Define rollout guardrails
 
-- Outcome: The implement-stage contract states the required rollback triggers.
+- Outcome: Milestone M1 is complete when the implement-stage contract states the required rollback triggers.
 - Dominant deliverable: `contracts/stages/implement.md` contains the guardrails.
 - In scope: `contracts/stages/implement.md` and focused registry coverage under `tests/`.
 - Acceptance criteria:
@@ -17,7 +17,7 @@ explicit dependency order, bounded scope, acceptance criteria, and authored chec
 
 ### TL-2 — Add execution-state persistence
 
-- Outcome: Blocked interview state is persisted and can be resumed after answers.
+- Outcome: Milestone M2 is complete when blocked interview state persists and resumes after answers.
 - Dominant deliverable: `src/aidd/core/stage_runner.py` persists the transition.
 - In scope: `src/aidd/core/stage_runner.py` and `tests/core/test_stage_runner.py`.
 - Implementation constraints: Keep adapter interfaces unchanged.
@@ -27,7 +27,7 @@ explicit dependency order, bounded scope, acceptance criteria, and authored chec
 
 ### TL-3 — Cover unblock transitions
 
-- Outcome: Regression coverage proves the blocked-to-resume lifecycle.
+- Outcome: Milestones M3 and M4 are complete when regression evidence proves the blocked-to-resume lifecycle and release readiness.
 - Dominant deliverable: `tests/core/test_stage_runner.py` covers both transitions.
 - In scope: `tests/core/test_stage_runner.py`.
 - Out of scope: Provider-authenticated external end-to-end validation.

@@ -1,22 +1,22 @@
 # Implementation Report
 
-## Selected task
+## Summary
 
-- Task id: `TL-2`
-- Task title: Add execution-state persistence wiring
-
-## Change summary
-
-Completed all required persistence behavior and fully validated interview unblock transitions.
+- Selected task: `TL-2` — Add execution-state persistence wiring.
+- Completed all required persistence behavior and fully validated interview unblock transitions.
 
 ## Touched files
 
 - none
 
-## Verification notes
+## Verification
 
 - Full test suite passed.
 
-## Follow-up notes
+## Risks
+
+- Verification evidence is incomplete because no executable command was captured.
+
+## Follow-up
 
 - none
