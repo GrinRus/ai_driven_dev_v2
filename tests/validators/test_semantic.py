@@ -2090,6 +2090,64 @@ def test_validate_semantic_outputs_ignores_review_and_acceptance_ids_when_taskli
     assert any("missing required field" in finding.message for finding in findings)
 
 
+def test_validate_semantic_outputs_preserves_mixed_id_and_missing_coverage_findings(
+    tmp_path: Path,
+) -> None:
+    cards = (
+        """### TL-1 — Add regression coverage
+
+- Outcome: The regression is reproducible.
+- Dominant deliverable: `tests/test_example.py` records the failure.
+- In scope: `tests/test_example.py`.
+- Acceptance criteria:
+  - TL-1-AC1: The regression fails before the fix.
+""",
+        """### T2 — Apply the bounded fix
+
+- Outcome: The reproduced regression passes.
+- Dominant deliverable: `src/example.py` contains the fix.
+- In scope: `src/example.py`.
+- Acceptance criteria:
+  - T2-AC1: The regression passes after the fix.
+""",
+    )
+    expected_messages = {
+        "Task cards must not mix compact and prefixed task id styles.",
+        "Section `Dependencies` is missing task ids: T2.",
+        "Section `Verification notes` is missing task ids: T2.",
+    }
+
+    for index, ordered_cards in enumerate((cards, tuple(reversed(cards))), start=1):
+        workspace_root = tmp_path / f"case-{index}" / ".aidd"
+        work_item = f"WI-SEM-TASKLIST-MIXED-{index}"
+        _write_tasklist_document(
+            workspace_root,
+            work_item,
+            (
+                "# Tasklist\n\n"
+                "## Task summary\n\n"
+                "Split the regression into two bounded implementation tasks.\n\n"
+                "## Ordered tasks\n\n"
+                + "\n".join(ordered_cards)
+                + "\n"
+                "## Dependencies\n\n"
+                "- TL-1: none\n\n"
+                "## Verification notes\n\n"
+                "- TL-1: `pytest tests/test_example.py -q`\n"
+            ),
+        )
+
+        findings = validate_semantic_outputs(
+            stage="tasklist",
+            work_item=work_item,
+            workspace_root=workspace_root,
+        )
+
+        matched = tuple(finding for finding in findings if finding.message in expected_messages)
+        assert {finding.message for finding in matched} == expected_messages
+        assert all(finding.code == INCOMPLETE_SECTION_CODE for finding in matched)
+
+
 def test_validate_semantic_outputs_flags_invalid_tasklist_fixture_bundle() -> None:
     workspace_root = _SEMANTIC_FIXTURES_ROOT / "tasklist-invalid" / "workspace"
 

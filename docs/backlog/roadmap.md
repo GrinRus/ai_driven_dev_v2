@@ -9006,7 +9006,7 @@ Local tasks:
   [`BUG-03`]
   - Scope: QA semantic rule.
   - Verification: a neighboring-risk isolation test reports the exact untreated risk.
-- `W34-E1-S4-T3` Preserve independent mixed-ID and missing-coverage findings through
+- `W34-E1-S4-T3` (done) Preserve independent mixed-ID and missing-coverage findings through
   the canonical Wave 35 task-plan parser. [`BUG-04`]
   - Scope: tasklist semantic regression coverage only.
   - Verification: a mixed-style tasklist with missing dependency/verification coverage
