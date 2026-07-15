@@ -9,8 +9,6 @@ slice, and local task.
 
 ## Soon
 
-- `W35-E2-S10-T1` — Reuse one immutable repository snapshot per task checkpoint.
-
 
 ## Parking lot
 
@@ -100,6 +98,7 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` Implementation entrypoint conformance and task-execution isolation are
-  complete. The bounded repository-snapshot successor `W35-E2-S10-T1` is staged in
-  `Soon` for a separate reconciliation. `Parking lot` remains otherwise unchanged.
+- `2026-07-15` Wave 35 is complete: task checkpoints reuse immutable repository
+  snapshots and task attempts reference canonical global runtime evidence without
+  payload copies or hard links. `Next` and `Soon` are empty pending a separate backlog
+  reconciliation; `Parking lot` remains unchanged.

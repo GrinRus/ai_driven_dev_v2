@@ -7,6 +7,7 @@ import pytest
 
 CORE_TASK_SEMANTICS = {
     "RepositorySnapshot",
+    "TaskAttemptEvidenceReferences",
     "TaskExecutionContext",
     "TaskFinalizationContext",
     "complete_task_attempt",

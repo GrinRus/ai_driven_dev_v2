@@ -4,11 +4,17 @@ import json
 from pathlib import Path
 
 from aidd.core.run_store import run_stage_root
+from aidd.core.task_attempt_evidence import resolve_task_attempt_evidence
 from aidd.core.task_attempt_lifecycle import load_task_execution_plan
 from aidd.core.task_ledger import TaskLedger, load_task_ledger, task_root
 
 
-def _attempts(root: Path, *, workspace_root: Path) -> list[dict[str, object]]:
+def _attempts(
+    root: Path,
+    *,
+    workspace_root: Path,
+    task_evidence_identity: tuple[str, str, str] | None = None,
+) -> list[dict[str, object]]:
     attempts: list[dict[str, object]] = []
     if not root.exists():
         return attempts
@@ -24,14 +30,27 @@ def _attempts(root: Path, *, workspace_root: Path) -> list[dict[str, object]]:
                     payload = loaded
             except (OSError, ValueError, TypeError):
                 payload = {"status": "unknown"}
-        attempts.append(
-            {
-                "number": int(path.name.removeprefix("attempt-")),
-                "path": path.relative_to(workspace_root).as_posix(),
-                "status": str(payload.get("status", "unknown")),
-                "blocker": payload.get("blocker"),
+        item: dict[str, object] = {
+            "number": int(path.name.removeprefix("attempt-")),
+            "path": path.relative_to(workspace_root).as_posix(),
+            "status": str(payload.get("status", "unknown")),
+            "blocker": payload.get("blocker"),
+        }
+        if task_evidence_identity is not None:
+            work_item, run_id, task_id = task_evidence_identity
+            evidence = resolve_task_attempt_evidence(
+                task_attempt_path=path,
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                task_id=task_id,
+                task_attempt_number=int(path.name.removeprefix("attempt-")),
+            )
+            item["runtime_evidence"] = {
+                "layout": evidence.layout,
+                "stage_attempts": [reference.to_dict() for reference in evidence.stage_attempts],
             }
-        )
+        attempts.append(item)
     return attempts
 
 
@@ -68,6 +87,7 @@ def resolve_task_read_model(
                 )
                 / "attempts",
                 workspace_root=workspace_root,
+                task_evidence_identity=(work_item, run_id, entry.id),
             )
             if run_id is not None
             else []

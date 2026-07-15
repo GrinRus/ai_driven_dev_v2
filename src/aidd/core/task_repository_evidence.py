@@ -179,16 +179,13 @@ def task_diff_evidence(
     context: TaskExecutionContext,
     workspace_root: Path,
     work_item: str,
-    project_root: Path,
+    final_snapshot: RepositorySnapshot,
     report: str | None,
 ) -> tuple[dict[str, object], tuple[str, ...]]:
     baseline_files = load_repository_snapshot(
         context.task_attempt_path / "repository-baseline.json"
     ).file_map()
-    final_files = capture_repository_snapshot(
-        project_root=project_root,
-        task_id=context.task.id,
-    ).file_map()
+    final_files = final_snapshot.file_map()
     observed = tuple(
         sorted(
             path
@@ -286,11 +283,19 @@ def task_validation_findings(
         / "implementation-report.md"
     )
     report = report_path.read_text(encoding="utf-8") if report_path.exists() else None
+    final_snapshot = capture_repository_snapshot(
+        project_root=project_root,
+        task_id=context.task.id,
+    )
+    write_repository_snapshot(
+        context.task_attempt_path / "repository-final.json",
+        final_snapshot,
+    )
     payload, issues = task_diff_evidence(
         context=context,
         workspace_root=workspace_root,
         work_item=work_item,
-        project_root=project_root,
+        final_snapshot=final_snapshot,
         report=report,
     )
     (execution_state.attempt_path / "task-diff.json").write_text(

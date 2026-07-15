@@ -5,18 +5,24 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core import task_repository_evidence as repository_evidence
 from aidd.core.implementation_service import (
     ImplementationExecutionRequest,
     _complete_task_execution,
     _prepare_task_execution,
 )
+from aidd.core.stage_models import StageExecutionState, StageOutputDiscovery
 from aidd.core.task_attempt_lifecycle import TaskExecutionContext
 from aidd.core.task_ledger import (
     TaskExecutionStatus,
     TaskLedger,
 )
 from aidd.core.task_plan import parse_task_plan
-from aidd.core.task_repository_evidence import task_diff_evidence
+from aidd.core.task_repository_evidence import (
+    RepositorySnapshot,
+    task_diff_evidence,
+    task_validation_findings,
+)
 
 
 def _tasklist(*, second_dependency: str = "TL-1") -> str:
@@ -129,11 +135,13 @@ def test_task_diff_uses_canonical_scope_component_boundary_and_malformed_failure
         ledger=TaskLedger.create(plan),
         task=plan.tasks[0],
         global_attempt_start=1,
+        task_attempt_number=1,
         task_attempt_path=attempt,
     )
-    monkeypatch.setattr(
-        "aidd.core.task_repository_evidence.repository_file_snapshot",
-        lambda _: {"src2/app.py": "changed"},
+    final_snapshot = RepositorySnapshot(
+        task_id="TL-1",
+        status=(),
+        files=(("src2/app.py", "changed"),),
     )
     scope_path = workspace_root / "workitems" / "WI-1" / "context" / "allowed-write-scope.md"
     scope_path.parent.mkdir(parents=True)
@@ -143,7 +151,7 @@ def test_task_diff_uses_canonical_scope_component_boundary_and_malformed_failure
         context=context,
         workspace_root=workspace_root,
         work_item="WI-1",
-        project_root=project_root,
+        final_snapshot=final_snapshot,
         report="## Touched files\n\n- `src2/app.py`\n",
     )
     assert any("outside allowed write scope" in issue for issue in issues)
@@ -153,7 +161,7 @@ def test_task_diff_uses_canonical_scope_component_boundary_and_malformed_failure
         context=context,
         workspace_root=workspace_root,
         work_item="WI-1",
-        project_root=project_root,
+        final_snapshot=final_snapshot,
         report="## Touched files\n\n- `src2/app.py`\n",
     )
     assert any("Allowed write scope" in issue for issue in malformed_issues)
@@ -243,3 +251,90 @@ def test_task_attempt_fails_when_reported_paths_do_not_match_local_diff(tmp_path
     assert entry.blocker is not None
     assert "contracts/example.md" in entry.blocker
     assert "src/other.py" in entry.blocker
+
+
+def test_task_completion_reuses_one_snapshot_per_validation_checkpoint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    source_path = tmp_path / "contracts" / "example.md"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("before\n", encoding="utf-8")
+    for number in range(100):
+        fixture = tmp_path / "large-repository" / f"file-{number:04d}.txt"
+        fixture.parent.mkdir(parents=True, exist_ok=True)
+        fixture.write_text(f"fixture {number}\n", encoding="utf-8")
+
+    original_scan = repository_evidence.repository_file_snapshot
+    scan_count = 0
+
+    def counted_scan(project_root: Path) -> dict[str, str]:
+        nonlocal scan_count
+        scan_count += 1
+        return original_scan(project_root)
+
+    monkeypatch.setattr(repository_evidence, "repository_file_snapshot", counted_scan)
+    context = prepare_task_execution(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+    )
+    source_path.write_text("after\n", encoding="utf-8")
+    report_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "implement" / "implementation-report.md"
+    )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        "# Implementation Report\n\n## Touched files\n\n"
+        "- `contracts/example.md` - updated contract.\n",
+        encoding="utf-8",
+    )
+
+    for attempt_number in (1, 2):
+        attempt_path = workspace_root / "global-attempts" / f"attempt-{attempt_number:04d}"
+        attempt_path.mkdir(parents=True)
+        execution_state = StageExecutionState(
+            stage="implement",
+            work_item="WI-1",
+            run_id="run-1",
+            attempt_number=attempt_number,
+            attempt_path=attempt_path,
+            stage_metadata_path=attempt_path.parent / "stage-metadata.json",
+        )
+        discovery = StageOutputDiscovery(
+            stage="implement",
+            work_item="WI-1",
+            run_id="run-1",
+            attempt_number=attempt_number,
+            expected_markdown_documents=(),
+            discovered_markdown_documents=(),
+            missing_markdown_documents=(),
+        )
+        assert not task_validation_findings(
+            context=context,
+            workspace_root=workspace_root,
+            work_item="WI-1",
+            project_root=tmp_path,
+            execution_state=execution_state,
+            discovery=discovery,
+        )
+
+    ledger = complete_task_execution(
+        context=context,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        project_root=tmp_path,
+        succeeded=True,
+    )
+
+    assert ledger.entry("TL-1").status is TaskExecutionStatus.SUCCEEDED
+    assert scan_count == 3  # one baseline plus one scan for each validation checkpoint

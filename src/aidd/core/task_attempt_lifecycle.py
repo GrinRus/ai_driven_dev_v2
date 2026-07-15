@@ -29,6 +29,7 @@ class TaskExecutionContext:
     ledger: TaskLedger
     task: TaskCard
     global_attempt_start: int
+    task_attempt_number: int
     task_attempt_path: Path
 
 
@@ -387,6 +388,7 @@ def prepare_task_attempt(
             run_id=run_id,
             stage="implement",
         ),
+        task_attempt_number=task_attempt_number,
         task_attempt_path=task_attempt_path,
     )
 
