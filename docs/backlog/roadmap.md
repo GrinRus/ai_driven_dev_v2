@@ -8941,7 +8941,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E1-S3-T1` Define the canonical versioned validator field/code registry.
+- `W34-E1-S3-T1` (done) Define the canonical versioned validator field/code registry.
   [`COMPAT-01`]
   - Scope: validator-report protocol registry only.
   - Verification: every normative field/code and retained legacy alias has one
@@ -8949,7 +8949,7 @@ Local tasks:
 - `W34-E1-S3-T2` Normalize all eight success examples and exact invalid/repair
   expectations against the canonical protocol. [`COMPAT-02`]
   - Dependencies: `W34-E1-S3-T3`, `W34-E1-S3-T4`, `W34-E1-S3-T5`,
-    `W34-E1-S3-T6`.
+    `W34-E1-S3-T6`, `W34-E1-S3-T7`.
   - Scope: contract examples and full-stack validator fixtures.
   - Verification: every success example passes, while invalid and repair examples emit
     their exact expected codes.
@@ -8975,6 +8975,12 @@ Local tasks:
   - Scope: validator-report readers only.
   - Verification: canonical and declared legacy fixtures read equivalently while
     undeclared aliases fail.
+- `W34-E1-S3-T7` Render the prompt-facing validator-report skeleton from the canonical
+  registry.
+  - Dependencies: `W34-E1-S3-T1`, `W34-E1-S3-T4`.
+  - Scope: common stage-brief validator skeleton only.
+  - Verification: prepared stage briefs use exactly the canonical registered fields and
+    do not preserve a second handwritten validator-report vocabulary.
 
 Exit evidence:
 

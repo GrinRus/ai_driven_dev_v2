@@ -7,12 +7,16 @@ slice, and local task.
 
 ## Next
 
+- `W34-E1-S3-T3` — Make the validator report renderer emit registry-owned vocabulary.
+
 ## Soon
 
+- `W34-E1-S3-T4` — Align the validator-report Markdown contract with the registry.
+- `W34-E1-S3-T5` — Align validation repair prompts with the registry vocabulary.
+- `W34-E1-S3-T6` — Adopt the registry in dual-read validator-report consumers.
 
 ## Parking lot
 
-- `W34-E1-S3-T1` — Define the canonical versioned validator field/code registry.
 - `W34-E1-S4-T1` — Reuse the canonical section-aware interview parser in
   cross-validation.
 - `W34-E1-S5-T1` — Add one production-equivalent full-stack contract fixture runner.
@@ -98,7 +102,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` Wave 35 is complete: task checkpoints reuse immutable repository
-  snapshots and task attempts reference canonical global runtime evidence without
-  payload copies or hard links. `Next` and `Soon` are empty pending a separate backlog
-  reconciliation; `Parking lot` remains unchanged.
+- `2026-07-15` `W34-E1-S3-T1` established validator-report protocol v1. Renderer,
+  contract, repair prompts, and dual-read consumers now form the bounded current queue;
+  the discovered stage-brief skeleton follow-up is recorded as `W34-E1-S3-T7`.
