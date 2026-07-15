@@ -10083,12 +10083,12 @@ Local tasks:
   - Scope: task repository scan lifecycle only.
   - Verification: a synthetic large-repository fixture asserts one scan per checkpoint
     while preserving exact diff/scope findings.
-- `W35-E2-S10-T2` (next) Define the canonical task-attempt evidence layout, reference,
+- `W35-E2-S10-T2` (done) Define the canonical task-attempt evidence layout, reference,
   retention, and compatibility contract. [`PERF-03`]
   - Scope: task attempt evidence architecture only.
   - Verification: the decision selects one copy/reference model, forbids hard links,
     and names integrity, cleanup, resume, and read-model behavior.
-- `W35-E2-S10-T3` Migrate duplicated global-attempt payloads to the canonical task
+- `W35-E2-S10-T3` (next) Migrate duplicated global-attempt payloads to the canonical task
   evidence contract. [`PERF-03`]
   - Dependencies: `W35-E2-S10-T2`.
   - Scope: task attempt evidence materialization only.

@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W35-E2-S10-T2` — Define the canonical task-attempt evidence layout, reference,
-  retention, and compatibility contract.
-
-## Soon
-
 - `W35-E2-S10-T3` — Migrate duplicated global-attempt payloads to the canonical task
   evidence contract.
+
+## Soon
 
 
 ## Parking lot
@@ -104,6 +101,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` Immutable repository snapshots are now reused across task validation and
-  completion. The task-evidence contract is active in `Next`, with materialization in
-  `Soon`; `Parking lot` remains unchanged.
+- `2026-07-15` Immutable repository snapshots and the canonical task-attempt reference
+  contract are complete. Reference-based materialization is active in `Next`;
+  `Parking lot` remains unchanged.

@@ -42,6 +42,52 @@ remote-host, or malformed owners remain conflicts. UI mutation endpoints acquire
 returning a background job id. Stage success remains uncommitted until the final aggregate
 implementation report passes validation and atomic publication succeeds.
 
+## Task-attempt evidence ownership
+
+Global implement attempts under `stages/implement/attempts/attempt-000N/` are the canonical,
+single-copy owners of runtime payloads: `input-bundle.md`, `runtime.log`, repair context,
+adapter/runtime metadata, operator request/decision logs, and `artifact-index.json`. Task attempts
+under `stages/implement/tasks/<task-id>/attempts/attempt-000N/` own only task state,
+`repository-baseline.json`, `repository-final.json`, `task-diff.json`, the task implementation
+report, and task-owned question/answer evidence. Runtime payloads must not be copied or hard-linked
+into a task attempt.
+
+Each new task attempt records its global attempts in an atomically replaced
+`stage-attempt-references.json` schema-v1 manifest:
+
+```json
+{
+  "schema_version": 1,
+  "task_id": "TL-2",
+  "task_attempt_number": 2,
+  "stage": "implement",
+  "stage_attempts": [
+    {
+      "attempt_number": 7,
+      "path": "reports/runs/WI-1/run-1/stages/implement/attempts/attempt-0007"
+    }
+  ]
+}
+```
+
+References are ordered by global attempt number and may name only canonical attempt paths produced
+by the run-store helpers for the same workspace, work item, run, and `implement` stage. Loading
+fails closed when a path is absolute, escapes through lexical or symlink traversal, does not exist,
+does not match its declared attempt number, or has an artifact index whose run/stage/attempt
+identity disagrees with the reference. Referenced attempt directories are immutable after
+terminalization; their existing artifact indexes remain the integrity and discovery boundary.
+
+A task resume allocates a new task attempt and a new manifest containing only the global attempts
+created for that task attempt. Interrupted manifest writes leave no partial canonical manifest.
+Global and task attempts share run retention: a referenced global attempt is never cleaned up
+independently, while deleting an entire run removes both owner and references together.
+
+Readers prefer the schema-v1 reference manifest. For runs created before this contract, absence of
+the manifest enables read-only compatibility with embedded `stage-attempt-000N/` directories and
+legacy top-level runtime files. A malformed or dangling new manifest is corruption and never falls
+back to legacy copies. Writers create only the reference layout; no background migration rewrites
+historical runs.
+
 ## Public entrypoint contract
 
 When a validated rich `tasklist.md` exists, every public `implement` mutation is task-aware.
