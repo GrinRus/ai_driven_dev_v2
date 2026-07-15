@@ -11,6 +11,7 @@ from aidd.evals.log_analysis import (
     parse_validator_report_failures,
     parse_validator_report_failures_text,
 )
+from aidd.validators.protocol import ValidatorReportProtocolError
 
 
 def test_parse_validator_report_failures_extracts_findings() -> None:
@@ -20,7 +21,7 @@ def test_parse_validator_report_failures_extracts_findings() -> None:
             "",
             "## Structural checks",
             "",
-            "- `STRUCT-001` (`high`) in "
+            "- `STRUCT-MISSING-REQUIRED-SECTION` (`high`) in "
             "`workitems/WI-001/stages/qa/stage-result.md`: missing section",
             "",
             "## Result",
@@ -33,7 +34,7 @@ def test_parse_validator_report_failures_extracts_findings() -> None:
 
     assert len(events) == 1
     assert events[0].category == "validator"
-    assert "STRUCT-001 (high)" in events[0].message
+    assert "STRUCT-MISSING-REQUIRED-SECTION (high)" in events[0].message
     assert events[0].line_number == 5
 
 
@@ -45,6 +46,24 @@ def test_parse_validator_report_failures_uses_verdict_when_findings_missing() ->
     assert len(events) == 1
     assert events[0].category == "validator"
     assert events[0].message == "validator report verdict is fail"
+
+
+def test_log_analysis_reader_accepts_declared_legacy_vocabulary() -> None:
+    events = parse_validator_report_failures_text(
+        "## Structural checks\n\n"
+        "- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: missing.\n\n"
+        "## Result\n\n- Validator verdict: `fail`\n"
+    )
+
+    assert "STRUCT-MISSING-REQUIRED-DOCUMENT" in events[0].message
+
+
+def test_log_analysis_reader_rejects_unknown_protocol_code() -> None:
+    with pytest.raises(ValidatorReportProtocolError):
+        parse_validator_report_failures_text(
+            "## Semantic checks\n\n"
+            "- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: unknown.\n"
+        )
 
 
 def test_parse_validator_report_failures_rejects_missing_file(tmp_path: Path) -> None:

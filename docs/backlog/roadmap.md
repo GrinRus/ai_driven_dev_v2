@@ -8969,7 +8969,7 @@ Local tasks:
   - Scope: validator repair prompt packs only.
   - Verification: prompt-quality checks reject unknown fields/codes and retain declared
     legacy aliases only.
-- `W34-E1-S3-T6` Adopt the registry in dual-read validator-report consumers.
+- `W34-E1-S3-T6` (done) Adopt the registry in dual-read validator-report consumers.
   [`COMPAT-01`]
   - Dependencies: `W34-E1-S3-T1`.
   - Scope: validator-report readers only.

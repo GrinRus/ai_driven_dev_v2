@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -25,6 +24,7 @@ from aidd.core.run_store import (
 )
 from aidd.core.run_store import run_stages_root as run_stage_roots_path
 from aidd.core.workspace import work_item_metadata_path
+from aidd.validators.protocol import parse_validator_report
 
 
 @dataclass(frozen=True, slots=True)
@@ -713,12 +713,7 @@ def _validator_counts_from_history(*, outcomes: tuple[str, ...]) -> tuple[int, i
 def _validator_verdict_from_report(report_path: Path) -> str | None:
     if not report_path.exists():
         return None
-
-    for line in report_path.read_text(encoding="utf-8").splitlines():
-        matched = re.search(r"- Verdict:\s*`(?P<verdict>pass|fail)`", line)
-        if matched is not None:
-            return matched.group("verdict")
-    return None
+    return parse_validator_report(report_path.read_text(encoding="utf-8")).verdict
 
 
 def _normalize_repair_output_paths(

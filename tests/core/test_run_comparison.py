@@ -198,6 +198,58 @@ def test_run_comparison_detects_prompt_stage_artifact_and_validator_drift(
     assert validator_delta.target_verdict == "pass"
 
 
+def test_run_comparison_dual_reads_legacy_verdict_and_flags_unknown_alias(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    for run_id in ("run-a", "run-b"):
+        _prepare_comparison_run(
+            workspace_root,
+            run_id=run_id,
+            status="failed",
+            prompt_hash="a" * 64,
+            input_bundle="input\n",
+            validator_verdict="fail",
+        )
+    _write_run_artifact(
+        workspace_root,
+        run_id="run-b",
+        key="validator_report",
+        filename="validator-report.md",
+        text="## Result\n\n- Validator verdict: `fail`\n",
+    )
+
+    legacy_view = resolve_run_comparison(
+        workspace_root=workspace_root,
+        work_item="WI-CMP",
+        baseline_run_id="run-a",
+        target_run_id="run-b",
+    )
+    legacy_delta = next(
+        item for item in legacy_view.validator_outcome_deltas if item.stage == "plan"
+    )
+    assert legacy_delta.baseline_verdict == legacy_delta.target_verdict == "fail"
+
+    _write_run_artifact(
+        workspace_root,
+        run_id="run-b",
+        key="validator_report",
+        filename="validator-report.md",
+        text="## Result\n\n- Validation result: `fail`\n",
+    )
+    malformed_view = resolve_run_comparison(
+        workspace_root=workspace_root,
+        work_item="WI-CMP",
+        baseline_run_id="run-a",
+        target_run_id="run-b",
+    )
+
+    assert any(
+        "validator report" in warning and "corrupted" in warning
+        for warning in malformed_view.warnings
+    )
+
+
 def test_run_comparison_warns_for_missing_legacy_provenance_and_unsafe_artifact(
     tmp_path: Path,
 ) -> None:

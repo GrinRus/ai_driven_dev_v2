@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S3-T6` — Adopt the registry in dual-read validator-report consumers.
+- `W34-E1-S3-T2` — Normalize all eight success examples and exact invalid/repair
+  expectations against the canonical protocol.
 
 ## Soon
 
@@ -99,6 +100,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` `W34-E1-S3-T1` established validator-report protocol v1. Renderer,
-  contract, repair prompts, and dual-read consumers now form the bounded current queue;
-  the discovered stage-brief skeleton follow-up is recorded as `W34-E1-S3-T7`.
+- `2026-07-15` validator-report protocol v1 now owns registry, renderer, contract,
+  stage-brief skeleton, repair guidance, and all production readers. `W34-E1-S3-T2`
+  is next for the separate eight-stage example and exact invalid/repair normalization.

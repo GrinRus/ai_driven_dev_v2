@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
+
+from aidd.validators.protocol import parse_validator_report
 
 RuntimeEventCategory = Literal[
     "error",
@@ -61,10 +62,6 @@ class FailureBoundarySelection:
     reason: str
 
 
-VALIDATOR_FINDING_PATTERN = re.compile(
-    r"^- `(?P<code>[^`]+)` \(`(?P<severity>[^`]+)`\) in (?P<location>.+?): (?P<message>.+)$"
-)
-VALIDATOR_VERDICT_PATTERN = re.compile(r"^- Verdict:\s*`(?P<verdict>pass|fail)`\s*$")
 PROFILE_KEY_LABELS = {
     "claudecodeversion": "runtime_version",
     "model": "model",
@@ -315,39 +312,36 @@ def coarse_events_from_normalized_events(
 def parse_validator_report_failures_text(
     validator_report_text: str,
 ) -> tuple[CoarseRuntimeEvent, ...]:
-    findings: list[CoarseRuntimeEvent] = []
-    verdict: str | None = None
-    verdict_line_number: int | None = None
-
-    for line_number, raw_line in enumerate(validator_report_text.splitlines(), start=1):
-        normalized_line = raw_line.strip()
-        if not normalized_line:
-            continue
-        if verdict_match := VALIDATOR_VERDICT_PATTERN.match(normalized_line):
-            verdict = verdict_match.group("verdict")
-            verdict_line_number = line_number
-            continue
-        if finding_match := VALIDATOR_FINDING_PATTERN.match(normalized_line):
-            code = finding_match.group("code")
-            severity = finding_match.group("severity")
-            location = finding_match.group("location")
-            message = finding_match.group("message")
-            findings.append(
-                CoarseRuntimeEvent(
-                    line_number=line_number,
-                    category="validator",
-                    message=(
-                        f"{code} ({severity}) in {location}: {message}"
-                    ),
+    report = parse_validator_report(validator_report_text)
+    findings = tuple(
+        CoarseRuntimeEvent(
+            line_number=finding.report_line_number,
+            category="validator",
+            message=(
+                f"{finding.code} ({finding.severity}) in "
+                + (
+                    "unknown location"
+                    if finding.source_path is None
+                    else f"`{finding.source_path}`"
+                    + (
+                        f":{finding.source_line_number}"
+                        if finding.source_line_number is not None
+                        else ""
+                    )
                 )
-            )
+                + f": {finding.message}"
+            ),
+        )
+        for finding in report.findings
+    )
 
     if findings:
-        return tuple(findings)
-    if verdict == "fail":
+        return findings
+    verdict_field = report.field("verdict")
+    if report.verdict == "fail":
         return (
             CoarseRuntimeEvent(
-                line_number=verdict_line_number or 1,
+                line_number=verdict_field.line_number if verdict_field is not None else 1,
                 category="validator",
                 message="validator report verdict is fail",
             ),

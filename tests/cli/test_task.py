@@ -367,7 +367,7 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
         if validation_calls == 1:
             return (
                 ValidationFinding(
-                    code="SEM-AGGREGATE-TEST",
+                        code="SEM-INCOMPLETE-EXECUTION-SUMMARY",
                     message="Injected aggregate validation failure.",
                 ),
             )

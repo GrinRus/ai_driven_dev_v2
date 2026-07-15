@@ -13,6 +13,7 @@ from aidd.validators.protocol import (
     ValidatorReportProtocolError,
     ValidatorReportSection,
     canonical_validator_finding_code,
+    parse_validator_report,
     resolve_validator_finding_code,
     resolve_validator_report_field,
     validator_report_field,
@@ -90,3 +91,57 @@ def test_all_validator_finding_literals_are_registered() -> None:
 
     registered = {spec.code for spec in VALIDATOR_FINDING_CODES}
     assert emitted_literals <= registered
+
+
+def test_validator_report_reader_normalizes_declared_legacy_vocabulary() -> None:
+    canonical = parse_validator_report(
+        """# Validator Report
+
+## Structural checks
+
+- `STRUCT-MISSING-REQUIRED-DOCUMENT` (`high`) in `plan.md`: Missing document.
+
+## Result
+
+- Verdict: `fail`
+- Repair required for progression: yes
+"""
+    )
+    legacy = parse_validator_report(
+        """# Validator Report
+
+## Structural checks
+
+- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: Missing document.
+
+## Result
+
+- Validator verdict: `fail`
+- Repair required: yes
+"""
+    )
+
+    assert legacy.verdict == canonical.verdict == "fail"
+    assert legacy.findings == canonical.findings
+    assert all(field.used_legacy_alias for field in legacy.fields)
+
+
+@pytest.mark.parametrize(
+    "markdown",
+    [
+        "## Result\n\n- Validation result: `fail`\n",
+        (
+            "## Semantic checks\n\n"
+            "- `SEM-UNDECLARED-CODE` (`high`) in `plan.md`: Unknown.\n"
+        ),
+        (
+            "## Structural checks\n\n"
+            "- `SEM-PLACEHOLDER-CONTENT` (`high`) in `plan.md`: Wrong section.\n"
+        ),
+    ],
+)
+def test_validator_report_reader_rejects_undeclared_or_misplaced_vocabulary(
+    markdown: str,
+) -> None:
+    with pytest.raises(ValidatorReportProtocolError):
+        parse_validator_report(markdown)
