@@ -16,6 +16,13 @@ as draft evidence and may be replaced by the canonical AIDD validator report.
 - `Cross-document checks`
 - `Result`
 
+## Protocol version
+
+This contract defines validator-report protocol v1. AIDD writers must emit the canonical
+field labels and finding codes below. During the v1 compatibility window, readers may also
+accept only the aliases declared under `Legacy read aliases`. Removing those aliases requires
+a new major validator-report protocol version.
+
 ## Required skeleton
 
 ```md
@@ -26,6 +33,8 @@ as draft evidence and may be replaced by the canonical AIDD validator report.
 - Total issues: `<number>`
 - Blocking issues: `<yes|no>`
 - Affected documents: `<workspace-relative paths or none>`
+- Dominant failure categories: `<ordered categories or none>`
+- Finding occurrences: `<raw finding count; include only when duplicates were collapsed>`
 
 ## Structural checks
 
@@ -41,8 +50,8 @@ as draft evidence and may be replaced by the canonical AIDD validator report.
 
 ## Result
 
-- Validator verdict: `<pass|fail>`
-- Repair required: `<yes|no>`
+- Verdict: `<pass|fail>`
+- Repair required for progression: `<yes|no>`
 ```
 
 ## Field notes
@@ -66,18 +75,68 @@ as draft evidence and may be replaced by the canonical AIDD validator report.
   - Must declare one terminal validator verdict: `pass` or `fail`.
   - Must list whether repair is required for stage progression.
 
-## Issue-code vocabulary
+## Canonical issue-code vocabulary
 
-Use stable, uppercase codes with subsystem prefixes:
+Every canonical finding code has one protocol-owned report section. AIDD writers must not
+publish codes outside this list.
 
-- `STRUCT-MISSING-DOCUMENT` for missing required files.
-- `STRUCT-MISSING-HEADING` for missing required sections.
-- `STRUCT-EMPTY-SECTION` for required sections with no meaningful content.
-- `SEM-PLACEHOLDER-CONTENT` for unresolved placeholder text in required fields.
-- `SEM-UNSUPPORTED-CLAIM` for assertions without evidence required by the contract.
-- `CROSS-REFERENCE-MISMATCH` for broken or contradictory document references.
-- `CROSS-BLOCKING-UNANSWERED` for unresolved blocking questions that prevent progression.
-- `CROSS-REPAIR-BUDGET-EXHAUSTED` for terminal repair-budget exhaustion that stops progression.
+### Structural checks
+
+- `INTERVIEW-MALFORMED-DOCUMENT`
+- `STRUCT-DUPLICATE-REQUIRED-SECTION`
+- `STRUCT-EMPTY-REQUIRED-SECTION`
+- `STRUCT-MISSING-REQUIRED-DOCUMENT`
+- `STRUCT-MISSING-REQUIRED-SECTION`
+- `STRUCT-OUTPUT-PROMOTED`
+- `STRUCT-STALE-STAGE-RESULT-PLACEHOLDER`
+
+### Semantic checks
+
+- `SEM-INCOMPLETE-EXECUTION-SUMMARY`
+- `SEM-INCOMPLETE-SECTION`
+- `SEM-MISSING-DIFF-EVIDENCE`
+- `SEM-MISSING-EVIDENCE-LINK`
+- `SEM-MISSING-EVIDENCE-REF`
+- `SEM-PLACEHOLDER-CONTENT`
+- `SEM-RISK-UNDERREPORT`
+- `SEM-TASK-DIFF-MISMATCH`
+- `SEM-TASK-SCOPE-MISMATCH`
+- `SEM-UNSUPPORTED-CLAIM`
+- `SEM-UNSUPPORTED-VERDICT`
+- `SEM-UNVERIFIABLE-CHECK-CLAIM`
+
+### Cross-document checks
+
+- `CROSS-ANSWER-WITHOUT-QUESTION`
+- `CROSS-BLOCKING-UNANSWERED`
+- `CROSS-DUPLICATE-ANSWER-ID`
+- `CROSS-DUPLICATE-QUESTION-ID`
+- `CROSS-IMPLEMENTATION-FINALIZATION`
+- `CROSS-PROJECT-SET-EVIDENCE-MISSING`
+- `CROSS-QA-REVIEW-RISK`
+- `CROSS-QA-UPSTREAM-EVIDENCE`
+- `CROSS-QA-UPSTREAM-VERDICT`
+- `CROSS-REPAIR-BRIEF-NOT-REFERENCED`
+- `CROSS-REPAIR-BUDGET-EXHAUSTED`
+- `CROSS-REPAIR-MENTION-WITHOUT-BRIEF`
+- `CROSS-REVIEW-IMPLEMENT-EVIDENCE`
+- `CROSS-REVIEW-IMPLEMENT-FINDING`
+- `CROSS-REVIEW-IMPLEMENT-PATH`
+- `CROSS-TASKLIST-PLAN-DEPENDENCY`
+- `CROSS-TASKLIST-PLAN-MILESTONE`
+- `CROSS-TASKLIST-PLAN-VERIFICATION`
+
+## Legacy read aliases
+
+Protocol v1 readers accept these historical forms, but writers must never emit them:
+
+- field `Validator verdict` resolves to canonical field `Verdict`;
+- field `Repair required` resolves to canonical field `Repair required for progression`;
+- code `STRUCT-MISSING-DOCUMENT` resolves to `STRUCT-MISSING-REQUIRED-DOCUMENT`;
+- code `STRUCT-MISSING-HEADING` resolves to `STRUCT-MISSING-REQUIRED-SECTION`;
+- code `STRUCT-EMPTY-SECTION` resolves to `STRUCT-EMPTY-REQUIRED-SECTION`;
+- code `CROSS-REFERENCE-MISMATCH` remains readable as a legacy cross-document code but
+  has no canonical replacement because its historical meaning is ambiguous.
 
 ## Severity rules
 
@@ -94,6 +153,8 @@ Use stable, uppercase codes with subsystem prefixes:
 ## Authoring rules
 
 - Keep each finding as one atomic issue with one issue code and one severity.
+- Render each finding as
+  `- \`CODE\` (\`severity\`) in \`workspace-relative/path\`: actionable message`.
 - Include workspace-relative document paths in backticks for every finding.
 - Collapse exact duplicate findings with the same issue code, severity, location, and
   message into one bullet with an occurrence count instead of repeating identical bullets.

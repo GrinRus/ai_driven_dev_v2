@@ -8958,7 +8958,7 @@ Local tasks:
   - Dependencies: `W34-E1-S3-T1`.
   - Scope: validator report rendering only.
   - Verification: renderer output is exhausted by the registry-driven protocol matrix.
-- `W34-E1-S3-T4` Align the validator-report Markdown contract with the registry.
+- `W34-E1-S3-T4` (done) Align the validator-report Markdown contract with the registry.
   [`COMPAT-01`]
   - Dependencies: `W34-E1-S3-T1`.
   - Scope: durable validator-report contract only.

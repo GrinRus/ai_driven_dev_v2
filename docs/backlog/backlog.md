@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S3-T4` — Align the validator-report Markdown contract with the registry.
+- `W34-E1-S3-T7` — Render the prompt-facing validator-report skeleton from the
+  canonical registry.
 
 ## Soon
 
